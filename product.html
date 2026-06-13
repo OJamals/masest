@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product | MASEST VertKleen</title>
+<meta name="description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation for zero-hazard industrial chemistry.">
+<meta name="theme-color" content="#fafbfc">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<meta property="og:title" content="Product | MASEST VertKleen">
+<meta property="og:description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MASEST VertKleen">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<noscript>
+<nav class="nojs-nav" aria-label="Site">
+  <a href="index.html"><b>MASEST</b></a>
+  <a href="products.html">Products</a>
+  <a href="industries.html">Industries</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+</nav>
+<div class="wrap" style="padding:28px 28px 0"><p class="cmp-note">Product details need JavaScript. Browse the full line on the <a href="products.html" style="font-weight:700;text-decoration:underline">products page</a> or <a href="contact.html" style="font-weight:700;text-decoration:underline">contact us</a> directly.</p></div>
+</noscript>
+
+<main id="main">
+<section class="page-hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="breadcrumb"><a href="products.html">Products</a> / <span id="bcName">&hellip;</span></div>
+      <span class="eyebrow" id="pReplaces"></span>
+      <h1 class="display" id="pName"></h1>
+      <p class="subhead" id="pDesc"></p>
+      <div class="hero-ctas" style="margin-top:30px">
+        <a class="btn btn-primary" id="pQuoteBtn" href="contact.html">Request a Quote</a>
+        <a class="btn btn-ghost" href="contact.html?type=distributor">Become a Distributor</a>
+      </div>
+    </div>
+    <div class="hmis-panel">
+      <div class="panel-title" id="panelTitle">HMIS Hazard Rating</div>
+      <div class="hmis-rows" id="panelRows"></div>
+      <div class="panel-foot" id="panelFoot"></div>
+    </div>
+  </div>
+</section>
+
+<!-- KEY SPECS -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <h2 class="headline">Why it wins.</h2>
+    </div>
+    <div class="spec-list reveal" id="pSpecs"></div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <h2 class="headline">What tough jobs does it solve?</h2>
+      <p class="subhead">Field-proven in heavy industry, from cooling tower fills at Brevard County Schools to restaurant hoods and pipeline terminals.</p>
+    </div>
+    <div class="reveal" id="pUses" style="display:grid;gap:12px;max-width:760px"></div>
+  </div>
+</section>
+
+<!-- TECH DOCS -->
+<section style="padding-top:0">
+  <div class="wrap" style="max-width:760px">
+    <div class="section-head reveal">
+      <h2 class="headline">Proof, on paper.</h2>
+      <p class="subhead">Documentation is sent on request, typically within one business day, while the verified asset library is finalized.</p>
+    </div>
+    <div class="reveal" id="pDocs"></div>
+  </div>
+</section>
+
+<!-- CTA: single dark block at page end -->
+<section class="block-dark on-dark" style="text-align:center">
+  <div class="wrap reveal">
+    <h2 class="headline" id="ctaHead">Ready to switch?</h2>
+    <p class="subhead" style="max-width:540px;margin:18px auto 36px">Quotes route by industry, volume, and location to the right MASEST sales contact.</p>
+    <a class="btn btn-primary" id="pQuoteBtn2" href="contact.html">Request a Quote</a>
+  </div>
+</section>
+</main>
+
+<script src="js/main.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const id = new URLSearchParams(location.search).get("id") || "hcr";
+    if (!PRODUCTS[id]) { location.replace("products.html"); return; }
+    const p = PRODUCTS[id];
+    document.title = p.name + " | MASEST VertKleen";
+    document.getElementById("bcName").textContent = p.name;
+    document.getElementById("pReplaces").textContent = p.replaces;
+    document.getElementById("pName").textContent = p.name;
+    document.getElementById("pDesc").textContent = p.desc;
+    document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";
+    const quoteHref = "contact.html?product=" + encodeURIComponent(p.name);
+    document.getElementById("pQuoteBtn").href = quoteHref;
+    document.getElementById("pQuoteBtn2").href = quoteHref;
+
+    // HMIS panel (real product data)
+    const rows = document.getElementById("panelRows");
+    if (p.hmis === "0-0-0") {
+      rows.innerHTML = ["Health", "Flammability", "Reactivity"].map(l =>
+        `<div class="hmis-row"><span class="lbl">${l}</span><span class="val">0</span></div>`).join("");
+      document.getElementById("panelFoot").textContent = "Safe on skin and eyes, non-fuming, non-corrosive to equipment and seals.";
+    } else {
+      rows.innerHTML = `<div class="hmis-row"><span class="lbl">Classification</span><span class="val" style="width:auto;padding:0 14px;font-size:.9rem">Low</span></div>`;
+      document.getElementById("panelFoot").textContent = "EPA-registered, general-use. The program's one mild-hazard product; every other VertKleen product is HMIS 0-0-0.";
+    }
+
+    document.getElementById("pSpecs").innerHTML = p.specs.map(([ico, b, s]) =>
+      `<div class="spec-item"><i class="ph ${ico}" aria-hidden="true"></i><div><b>${b}</b><span>${s}</span></div></div>`).join("");
+
+    document.getElementById("pUses").innerHTML = p.uses.map(u =>
+      `<div class="spec-item"><i class="ph ph-check" aria-hidden="true"></i><div><b>${u}</b></div></div>`).join("");
+
+    document.getElementById("pDocs").innerHTML = p.docs.map(d =>
+      `<div class="doc-row"><div><b>${d}</b><span>PDF, available on request</span></div>
+       <a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(p.name)}&doc=${encodeURIComponent(d)}" aria-label="Request ${d} for ${p.name}">Request</a></div>`).join("");
+
+    initReveal();
+  });
+</script>
+</body>
+</html>

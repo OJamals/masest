@@ -1,0 +1,390 @@
+/* ============================================================
+   MASEST / VertKleen — Scrollytelling story v5 (homepage opener)
+   GSAP ScrollTrigger engine, native browser scroll (js/story.js).
+   Dark, cinematic, art-directed; hands off to the light factual
+   sections below. Reduced-motion + no-JS = static stacked layout.
+   ============================================================ */
+
+.story {
+  --s-bg: #0b0d12;
+  --s-bg-2: #10141c;
+  --s-ink: #f4f6f8;
+  --s-mut: rgba(244, 246, 248, .62);
+  --s-danger: #ff6a45;
+  --s-danger-ink: #ff8a6c;
+  --s-danger-soft: rgba(255, 106, 69, .14);
+  --s-safe: #34e0c8;
+  --s-safe-soft: rgba(52, 224, 200, .14);
+  --s-line: rgba(255, 255, 255, .12);
+  --s-ease: cubic-bezier(.16, 1, .3, 1);
+
+  position: relative;
+  background: var(--s-bg);
+  color: var(--s-ink);
+  isolation: isolate;
+}
+
+/* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
+.story .act { position: relative; height: 145vh; }
+.story .act[data-act="1"] { height: 175vh; }   /* photo reel needs road */
+.story .act[data-act="3"] { height: 160vh; }   /* HMIS factor-by-factor */
+.story .act[data-act="4"] { height: 190vh; }   /* chemicals one by one */
+.story .act-savior { height: 130vh; }
+.story .stage {
+  position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 620px;
+  overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(120% 90% at 50% 0%, var(--s-bg-2) 0%, var(--s-bg) 60%);
+}
+
+/* Layers */
+.story .bd {
+  position: absolute; inset: -4%; width: 108%; height: 108%;
+  object-fit: cover; z-index: 0; will-change: transform; pointer-events: none;
+}
+.story .fx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; pointer-events: none; }
+
+/* Cinematic finish: vignette + static film grain on every stage */
+.story .stage::before {
+  content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  background:
+    radial-gradient(130% 100% at 50% 50%, transparent 55%, rgba(5, 6, 9, .55) 100%),
+    linear-gradient(180deg, rgba(5, 6, 9, .35) 0%, transparent 14%, transparent 86%, rgba(5, 6, 9, .4) 100%);
+}
+.story .stage::after {
+  content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- Chapter rail ---------- */
+.story-rail {
+  position: sticky; top: 50vh; height: 0; z-index: 30;
+  pointer-events: none;
+}
+.rail-inner {
+  position: absolute; left: clamp(14px, 2.4vw, 34px); transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 18px; pointer-events: auto;
+}
+.rail-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: none; border: 0; padding: 4px; cursor: pointer;
+  color: var(--s-mut); font: inherit; text-align: left;
+}
+.rail-btn b {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  font-size: .66rem; font-weight: 800; letter-spacing: .04em; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--s-line); background: rgba(11, 13, 18, .55);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: border-color .4s var(--s-ease), color .4s var(--s-ease), background .4s var(--s-ease);
+}
+.rail-btn span {
+  font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  opacity: 0; transform: translateX(-6px); transition: opacity .4s var(--s-ease), transform .4s var(--s-ease);
+  white-space: nowrap;
+}
+.rail-btn:hover span, .rail-btn.is-on span { opacity: 1; transform: none; }
+.rail-btn.is-on b { border-color: var(--s-danger-ink); color: var(--s-danger-ink); background: rgba(255, 106, 69, .1); }
+.rail-btn.is-on.safe b { border-color: var(--s-safe); color: var(--s-safe); background: rgba(52, 224, 200, .1); }
+@media (max-width: 900px) { .story-rail { display: none; } }
+
+/* ---------- Copy blocks ---------- */
+.story .act-copy { position: relative; z-index: 5; width: min(680px, 86vw); padding: 0 28px; }
+.story .act-copy.bl { justify-self: start; align-self: end; padding-bottom: 12vh; padding-left: clamp(56px, 8vw, 110px); }
+.story .act-copy.top { position: absolute; top: clamp(88px, 13vh, 150px); left: 0; right: 0; margin: 0 auto; text-align: center; z-index: 5; }
+.story .act-copy.onscrim { padding-top: 18px; padding-bottom: 22px; border-radius: 20px;
+  background: radial-gradient(120% 150% at 50% 0%, rgba(8, 10, 14, .8) 0%, rgba(8, 10, 14, .45) 55%, transparent 80%); }
+
+.story .kicker {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: .74rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--s-mut); margin-bottom: 18px;
+}
+.story .kicker::before { content: ""; width: 22px; height: 1.5px; background: currentColor; opacity: .7; }
+.story .kicker.danger { color: var(--s-danger-ink); }
+.story .kicker.safe { color: var(--s-safe); }
+
+.story .act-h {
+  font-size: clamp(2rem, 4.6vw, 3.5rem); font-weight: 900; line-height: 1.04;
+  letter-spacing: -.035em; text-wrap: balance; margin: 0;
+  text-shadow: 0 2px 32px rgba(7, 9, 13, .65);
+}
+.story .act-p {
+  margin-top: 20px; font-size: clamp(1.02rem, 1.5vw, 1.2rem); line-height: 1.6;
+  color: var(--s-mut); max-width: 54ch; text-wrap: pretty;
+  text-shadow: 0 2px 24px rgba(7, 9, 13, .6);
+}
+.story .act-copy.top .act-p { margin-left: auto; margin-right: auto; }
+
+/* Chemical id tag */
+.story .chem-tag {
+  display: inline-flex; align-items: center; gap: 12px; margin-top: 28px;
+  padding: 11px 18px; border-radius: 999px; border: 1px solid var(--s-line);
+  background: rgba(255, 255, 255, .04); font-size: .92rem; font-weight: 600;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.story .chem-tag b { font-variant-numeric: tabular-nums; color: var(--s-danger-ink); font-weight: 800; letter-spacing: .02em; }
+.story .chem-tag .pulse {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--s-danger);
+  box-shadow: 0 0 0 0 rgba(255, 106, 69, .6); animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 106, 69, .55); }
+  70% { box-shadow: 0 0 0 12px rgba(255, 106, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 106, 69, 0); }
+}
+
+/* Reveal driver: JS sets opacity/transform every frame */
+.story.story-ready [data-at] { opacity: 0; transform: translateY(28px); will-change: opacity, transform; }
+
+/* ---------- Scroll cue ---------- */
+.story .scroll-cue {
+  position: absolute; z-index: 6; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--s-mut);
+}
+.story .scroll-cue i { font-size: 1.1rem; animation: bob 1.8s var(--s-ease) infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+/* ============================================================
+   ACT 1 — THE ENEMY (curated field-photo reel)
+   ============================================================ */
+.reel {
+  position: absolute; z-index: 3; margin: 0;
+  right: clamp(20px, 7vw, 110px); top: 50%; transform: translateY(-54%);
+  width: min(430px, 64vw); aspect-ratio: 9 / 10;
+}
+.reel-slide {
+  position: absolute; inset: 0; margin: 0; opacity: 0; will-change: opacity, transform;
+  border-radius: 18px; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: #14171e;
+  box-shadow: 0 40px 80px -36px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .07);
+}
+.reel-slide img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(.92) contrast(1.04);
+}
+.reel-slide::after {  /* legibility scrim under the caption */
+  content: ""; position: absolute; inset: auto 0 0 0; height: 46%;
+  background: linear-gradient(180deg, transparent, rgba(7, 9, 13, .88));
+}
+.reel-slide figcaption {
+  position: absolute; z-index: 1; left: 22px; right: 22px; bottom: 18px;
+}
+.reel-slide figcaption b {
+  display: block; font-size: clamp(1.5rem, 2.6vw, 2.1rem); font-weight: 900;
+  letter-spacing: -.02em; line-height: 1.1; color: var(--s-ink);
+}
+.reel-slide figcaption span {
+  display: block; margin-top: 6px; font-size: .92rem; line-height: 1.45; color: var(--s-mut);
+}
+.reel-tag {
+  position: absolute; z-index: 2; top: -14px; left: 18px;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--s-line); background: rgba(11, 13, 18, .85);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--s-mut);
+}
+.reel-tag i { color: var(--s-danger-ink); font-size: .9rem; }
+.reel-idx {
+  position: absolute; z-index: 2; top: -12px; right: 18px;
+  font-size: .78rem; font-weight: 700; letter-spacing: .08em; color: var(--s-mut);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   ACT 2 — THE BUILDUP (debris canvas + anchored caption chips)
+   ============================================================ */
+.pipe-chips { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.pipe-chips .chip {
+  position: absolute; display: inline-flex; align-items: center; gap: 9px;
+  padding: 9px 15px; border-radius: 999px;
+  border: 1px solid var(--s-line); background: rgba(11, 13, 18, .78);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  font-size: .84rem; font-weight: 700; letter-spacing: .02em; color: var(--s-ink);
+  white-space: nowrap;
+}
+.pipe-chips .chip i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+/* Anchored just outside the pipe (canvas band runs 52% to 84% of stage height) */
+.chip.c-scale  { left: 17%; top: 46.5%; } .chip.c-scale i  { background: #c9d4d0; }
+.chip.c-rust   { left: 22%; top: 87.5%; } .chip.c-rust i   { background: #9c4a2d; }
+.chip.c-grease { left: 64%; top: 46.5%; } .chip.c-grease i { background: #a98a3f; }
+.chip.c-bio    { left: 56%; top: 87.5%; } .chip.c-bio i    { background: #5d8a52; }
+
+/* ============================================================
+   ACT 3 — THE SCORE (HMIS explained, factor by factor)
+   ============================================================ */
+.hmis-rig {
+  position: relative; z-index: 5; width: min(880px, 90vw); margin: 18vh auto 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 30px;
+}
+.hmis-factors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.factor {
+  position: relative; border-radius: 18px; padding: 26px 22px; text-align: center;
+  border: 1px solid var(--s-line); background: rgba(255, 255, 255, .03);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.factor .bar { height: 5px; border-radius: 3px; margin-bottom: 18px; }
+.f-health .bar { background: #3b82f6; }
+.f-flam .bar  { background: #ef4444; }
+.f-react .bar { background: #f5b301; }
+.factor .fico { display: block; font-size: clamp(2rem, 4.4vw, 2.9rem); line-height: 1; color: var(--s-ink); }
+.factor .flabel { display: block; margin-top: 12px; font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--s-ink); }
+.factor .fmeaning { display: block; margin-top: 8px; font-size: .86rem; line-height: 1.5; color: var(--s-mut); }
+
+.scale-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
+.scale-track {
+  position: relative; height: 14px; border-radius: 999px;
+  background: linear-gradient(90deg, #1d2a2f 0%, #6b3a2e 55%, var(--s-danger) 100%);
+}
+.scale-ticks { display: flex; justify-content: space-between; margin-top: 8px; font-size: .72rem; color: var(--s-mut); font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   ACT 4 — THE CHEMICALS (dots drop onto the shared scale)
+   ============================================================ */
+.chem-rig {
+  position: relative; z-index: 5; width: min(880px, 90vw); margin: 24vh auto 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 18px;
+}
+.chem-scale { position: relative; padding-top: 26px; padding-bottom: 4px; }
+.chem-scale .scale-track { overflow: visible; }
+/* Dots cluster tightly around their score: small horizontal jitter,
+   shallow vertical offsets, labels alternating above/below */
+.cdot {
+  position: absolute; top: 50%;
+  left: clamp(0%, calc((var(--v, 3) + var(--vj, 0)) / 4 * 100%), 100%);
+  transform: translate(-50%, -50%) translateY(var(--lift, 0px));
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--s-danger); border: 2.5px solid var(--s-bg);
+  box-shadow: 0 0 0 1.5px var(--s-danger), 0 6px 14px rgba(255, 106, 69, .45);
+  opacity: 0; will-change: opacity, left;
+}
+.cdot[data-dot="0"] { --vj: -0.10; --lift: -12px; }
+.cdot[data-dot="1"] { --vj: -0.03; --lift: 12px; }
+.cdot[data-dot="2"] { --vj: 0.04;  --lift: -12px; }
+.cdot[data-dot="3"] { --vj: 0.11;  --lift: 12px; }
+.cdot span {
+  position: absolute; left: 50%; top: -130%; transform: translateX(-50%);
+  font-size: .62rem; font-weight: 800; letter-spacing: .06em; color: var(--s-danger-ink);
+}
+.cdot[data-dot="1"] span, .cdot[data-dot="3"] span { top: auto; bottom: -130%; }
+.chem-scale.safe .cdot { background: var(--s-safe); box-shadow: 0 0 0 1.5px var(--s-safe), 0 6px 14px rgba(52, 224, 200, .4); }
+.chem-scale.safe .cdot span { color: var(--s-safe); }
+
+.chem-list { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.chem-card {
+  border-radius: 16px; padding: 18px 20px;
+  border: 1px solid var(--s-line); background: rgba(255, 255, 255, .03);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.chem-card .chead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.chem-card .chead b { font-size: 1.02rem; font-weight: 800; letter-spacing: -.01em; }
+.chem-card .vs {
+  font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--s-mut); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--s-line);
+}
+.chem-card .lockup { margin-left: auto; display: inline-flex; gap: 4px; font-variant-numeric: tabular-nums; }
+.chem-card .lockup em {
+  font-style: normal; width: 26px; height: 30px; border-radius: 7px;
+  display: grid; place-items: center; font-size: .95rem; font-weight: 900;
+  background: var(--s-danger-soft); color: var(--s-danger-ink); border: 1px solid rgba(255, 106, 69, .3);
+}
+.chem-card p { margin: 10px 0 0; font-size: .9rem; line-height: 1.55; color: var(--s-mut); }
+.chem-out, .chem-final { margin: 4px auto 0; text-align: center; max-width: 62ch; font-size: 1rem; line-height: 1.6; color: var(--s-mut); }
+.chem-out b { color: var(--s-danger-ink); font-weight: 800; }
+.chem-final { font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 800; color: var(--s-ink); }
+.chem-final b { color: var(--s-safe); font-weight: 900; }
+
+/* ============================================================
+   ACT 5 — SAVIOR (VertKleen)
+   ============================================================ */
+.act-savior .stage { background: linear-gradient(180deg, var(--s-bg) 0%, #0f1a1e 55%, #0c1417 100%); }
+.savior-wrap { position: relative; z-index: 5; width: min(900px, 90vw); text-align: center; padding: 0 24px; }
+.savior-badge {
+  display: inline-flex; align-items: center; gap: 9px; margin-bottom: 22px;
+  padding: 8px 16px; border-radius: 999px; border: 1px solid var(--s-safe-soft);
+  background: var(--s-safe-soft); color: var(--s-safe);
+  font-size: .76rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+}
+.savior-wrap h2 {
+  font-size: clamp(2.4rem, 6vw, 4.6rem); font-weight: 900; letter-spacing: -.045em; line-height: 1.02;
+  margin: 0; text-wrap: balance;
+}
+.savior-wrap h2 .accent { color: var(--s-safe); }
+.savior-wrap .lede { margin: 22px auto 0; max-width: 50ch; font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--s-mut); line-height: 1.55; }
+.savior-zero { display: inline-flex; gap: 14px; margin: 38px 0 6px; font-variant-numeric: tabular-nums; }
+.savior-zero .z {
+  width: clamp(74px, 13vw, 116px); aspect-ratio: 5 / 6; border-radius: 20px;
+  display: grid; place-items: center; font-size: clamp(3.4rem, 8vw, 5.6rem); font-weight: 900;
+  letter-spacing: -.05em; color: var(--s-safe);
+  background: linear-gradient(180deg, rgba(52, 224, 200, .12), rgba(52, 224, 200, .03));
+  border: 1px solid rgba(52, 224, 200, .28);
+  box-shadow: 0 30px 60px -34px rgba(52, 224, 200, .35);
+}
+.savior-cap { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: var(--s-mut); margin-bottom: 26px; }
+.savior-proof { display: flex; gap: 14px; justify-content: center; }
+.savior-proof figure { margin: 0; width: clamp(110px, 16vw, 168px); }
+.savior-proof img {
+  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px;
+  border: 1px solid rgba(52, 224, 200, .25); display: block;
+  filter: saturate(.95);
+}
+.savior-proof figcaption { margin-top: 8px; font-size: .76rem; font-weight: 700; letter-spacing: .04em; color: var(--s-mut); }
+.savior-proof-cap { margin: 14px 0 30px; font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
+.savior-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.savior-ctas .btn-primary { background: var(--s-safe); color: #06231f; box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(52, 224, 200, .6); }
+.savior-ctas .btn-primary:hover { background: #5fe9d6; }
+.savior-ctas .btn-ghost { background: rgba(255, 255, 255, .04); color: #fff; border: 1.5px solid rgba(255, 255, 255, .28); }
+.savior-ctas .btn-ghost:hover { border-color: #fff; background: rgba(255, 255, 255, .1); }
+
+/* ============================================================
+   REDUCED MOTION + NO-JS FALLBACK: stacked, fully visible.
+   story.js never adds .story-ready in either case.
+   ============================================================ */
+.story:not(.story-ready) .act { height: auto; }
+.story:not(.story-ready) .stage { position: relative; height: auto; min-height: 0; padding: 80px 0; }
+.story:not(.story-ready) [data-at] { opacity: 1; transform: none; }
+.story:not(.story-ready) .fx-canvas,
+.story:not(.story-ready) .story-rail,
+.story:not(.story-ready) .cdot,
+.story:not(.story-ready) .scroll-cue { display: none; }
+.story:not(.story-ready) .bd { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .5; }
+.story:not(.story-ready) .act-copy.top { position: static; margin: 0 auto; }
+.story:not(.story-ready) .act-copy.bl { padding-left: 28px; align-self: center; }
+.story:not(.story-ready) .reel {
+  position: relative; right: auto; top: auto; transform: none;
+  width: min(640px, 90vw); aspect-ratio: auto; margin: 30px auto 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+.story:not(.story-ready) .reel-slide { position: relative; opacity: 1; aspect-ratio: 9 / 10; }
+.story:not(.story-ready) .reel-tag, .story:not(.story-ready) .reel-idx { display: none; }
+.story:not(.story-ready) .pipe-chips {
+  position: static; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 26px;
+}
+.story:not(.story-ready) .pipe-chips .chip { position: static; }
+.story:not(.story-ready) .hmis-rig, .story:not(.story-ready) .chem-rig { margin-top: 30px; }
+@media (prefers-reduced-motion: reduce) {
+  .story .scroll-cue i, .story .chem-tag .pulse { animation: none; }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 760px) {
+  .story .act { height: 165vh; }
+  .story .act[data-act="1"] { height: 220vh; }
+  .story .act[data-act="4"] { height: 230vh; }
+  .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
+  .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
+  .chip.c-scale  { left: 6%; top: 44.5%; }
+  .chip.c-rust   { left: 10%; top: 87.5%; }
+  .chip.c-grease { left: 54%; top: 44.5%; }
+  .chip.c-bio    { left: 42%; top: 87.5%; }
+  .hmis-factors { gap: 10px; }
+  .factor { padding: 18px 10px; border-radius: 14px; }
+  .factor .fmeaning { font-size: .78rem; }
+  .hmis-rig { margin-top: 24vh; }
+  .chem-list { grid-template-columns: 1fr; gap: 10px; }
+  .chem-card { padding: 14px 16px; }
+  .chem-card p { font-size: .84rem; }
+  .chem-rig { margin-top: 23vh; gap: 16px; }
+  .savior-proof figure { width: 27vw; }
+}
