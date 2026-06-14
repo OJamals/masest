@@ -434,7 +434,6 @@ function renderChrome() {
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Company</div>
-          <a href="${root}why-vertkleen.html">Why VertKleen</a>
           <a href="${root}industries.html">Industries</a>
           <a href="${root}about.html">About Us</a>
           <a href="${root}contact.html">Contact</a>

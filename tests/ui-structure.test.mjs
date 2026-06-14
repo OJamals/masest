@@ -92,14 +92,13 @@ test("program function map is optional below the tiers", () => {
 test("proof page leads with conversion proof, not internal notes", () => {
   const proof = read("proof.html");
   const heroIndex = proof.indexOf("The same job, on real sites.");
-  const quickProofIndex = proof.indexOf('class="proof-decision-strip');
   const libraryIndex = proof.indexOf('class="proof-library');
 
   assert.ok(heroIndex > -1, "expected proof hero");
-  assert.ok(quickProofIndex > -1, "expected quick proof decision strip");
-  assert.ok(libraryIndex > -1, "expected full library to remain");
-  assert.ok(heroIndex < quickProofIndex, "hero should lead quick proof");
-  assert.ok(quickProofIndex < libraryIndex, "quick proof should precede library");
+  assert.ok(libraryIndex > -1, "expected proof library");
+  assert.ok(heroIndex < libraryIndex, "hero should lead proof library");
+  assert.doesNotMatch(proof, /proof-decision-strip/);
+  assert.doesNotMatch(proof, /class="proof-decision"/);
   assert.match(proof, /Book a Free Chemical Audit/);
   assert.match(proof, /30 min/);
   assert.match(proof, /Brewery CIP/);
@@ -202,30 +201,6 @@ test("resources page puts dense technical tables behind disclosure", () => {
   assert.match(css, /\.resource-router \.route-card strong[\s\S]*grid-column: 2/);
 });
 
-test("why page routes buyers before dense comparison tables", () => {
-  const why = read("why-vertkleen.html");
-  const css = read("css/style.css");
-  const storyIndex = why.indexOf('id="story"');
-  const routerIndex = why.indexOf('class="why-router');
-  const disclosureIndex = why.indexOf('class="resource-disclosure why-comparison-disclosure');
-  const tablesIndex = why.indexOf("Now score the chemicals doing this work.");
-
-  assert.ok(storyIndex > -1, "expected why story to remain");
-  assert.ok(routerIndex > -1, "expected why buyer router");
-  assert.ok(disclosureIndex > -1, "expected why comparison disclosure");
-  assert.ok(tablesIndex > -1, "expected comparison tables to remain");
-  assert.ok(storyIndex < routerIndex, "story should introduce router");
-  assert.ok(routerIndex < disclosureIndex, "router should precede dense tables");
-  assert.ok(disclosureIndex < tablesIndex, "comparison tables should be inside disclosure");
-  assert.match(why, /Match the safer line/);
-  assert.match(why, /Review field proof/);
-  assert.match(why, /Book a free audit/);
-  assert.doesNotMatch(why.slice(disclosureIndex, why.indexOf(">", disclosureIndex)), /\sopen\b/);
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.why-router \.route-grid/);
-  assert.match(css, /\.why-comparison-disclosure summary b[\s\S]*white-space: normal/);
-  assert.doesNotMatch(why.match(/class="why-router[^"]*"/)?.[0] || "", /reveal/);
-});
-
 test("about page routes buyers before service breadth", () => {
   const about = read("about.html");
   const css = read("css/style.css");
@@ -267,8 +242,14 @@ test("scrolly proof images are not lazy-gated", () => {
 test("simplified routes avoid black cards and cramped section seams", () => {
   const css = read("css/style.css");
 
-  assert.doesNotMatch(css, /\.route-card-strong[\s\S]{0,120}background: var\(--ink\)/);
-  assert.doesNotMatch(css, /\.btn-ink[\s\S]{0,120}background: var\(--ink\)/);
+  assert.doesNotMatch(css, /\.eyebrow::before/);
+  assert.match(css, new RegExp("\\.route-card[\\s\\S]*grid-template-columns: 44px 1fr"));
+  assert.match(css, new RegExp("\\.route-card span[\\s\\S]*grid-row: 1 / span 2"));
+  assert.match(css, new RegExp("\\.route-card strong,\\s*\\.route-card b[\\s\\S]*grid-column: 2"));
+  assert.match(css, new RegExp("\\.resource-disclosure[\\s\\S]*max-width: var\\(--maxw\\)"));
+  assert.match(css, new RegExp("\\.resource-disclosure[\\s\\S]*margin-inline: auto"));
+  assert.doesNotMatch(css, new RegExp("\\.route-card-strong[\\s\\S]{0,120}background: var\\(--ink\\)"));
+  assert.doesNotMatch(css, new RegExp("\\.btn-ink[\\s\\S]{0,120}background: var\\(--ink\\)"));
   assert.match(css, /\.section-slim \+ \.resource-disclosure/);
   assert.match(css, /\.resource-disclosure \+ section/);
 });

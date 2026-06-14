@@ -46,6 +46,7 @@
   --ease-out-soft: cubic-bezier(.22, .61, .36, 1);
 
   --font: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -54,7 +55,7 @@ html { -webkit-text-size-adjust: 100%; }
   html { scroll-behavior: smooth; }
 }
 body {
-  font-family: var(--font);
+  font-family: var(--body-font);
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -85,7 +86,7 @@ i.ph, i.ph-fill { line-height: 1; }
 .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
 
 /* ---------- Typography ---------- */
-h1, h2, h3 { letter-spacing: -0.022em; line-height: 1.06; font-weight: 700; text-wrap: balance; }
+h1, h2, h3 { font-family: var(--font); letter-spacing: -0.022em; line-height: 1.06; font-weight: 700; text-wrap: balance; }
 .display {
   font-size: clamp(2.6rem, 5.4vw, 4.2rem); font-weight: 900;
   letter-spacing: -0.035em; line-height: 1.02;
@@ -103,11 +104,6 @@ h1, h2, h3 { letter-spacing: -0.022em; line-height: 1.06; font-weight: 700; text
   letter-spacing: .14em; text-transform: uppercase;
   color: var(--accent-ink); margin-bottom: 16px;
 }
-.eyebrow::before {
-  content: ""; width: 22px; height: 1.5px; background: var(--accent);
-  display: inline-block; border-radius: 2px;
-}
-
 /* ---------- Nav (height 64px, one line) ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;
@@ -138,7 +134,7 @@ h1, h2, h3 { letter-spacing: -0.022em; line-height: 1.06; font-weight: 700; text
   max-width: var(--maxw); margin: 0 auto; padding: 0 28px;
   display: flex; align-items: center; justify-content: space-between; height: 66px;
 }
-.nav-logo { display: flex; align-items: center; gap: 11px; font-weight: 900; font-size: 1.05rem; letter-spacing: .04em; }
+.nav-logo { display: flex; align-items: center; gap: 11px; font-family: var(--font); font-weight: 900; font-size: 1.05rem; letter-spacing: .04em; }
 .nav-logo .logo-mark {
  position: relative; width: 31px; height: 31px; border-radius: 9px; background: var(--ink);
   display: grid; place-items: center; font-size: .85rem; font-weight: 900;
@@ -449,8 +445,28 @@ section { padding: var(--space-section) 0; }
 }
 .route-card-strong b { color: var(--muted); }
 .route-card-strong:hover {
-  background: var(--accent-ink);
-  border-color: var(--accent-ink);
+  background: var(--surface);
+  border-color: rgba(14, 124, 134, .34);
+}
+
+.buyer-router .route-card {
+  border-color: #dde3e6;
+  background: linear-gradient(180deg, var(--surface) 0%, #f7f9fa 100%);
+}
+.buyer-router .route-card:hover {
+  border-color: rgba(14, 124, 134, .42);
+  background: var(--surface);
+}
+.buyer-router .route-card i {
+  background: #eef5f5;
+  box-shadow: inset 0 0 0 1px rgba(14, 124, 134, .12);
+}
+.buyer-router .route-card-strong {
+  border-color: rgba(14, 124, 134, .24);
+  background: linear-gradient(180deg, #f7fbfb 0%, #edf6f6 100%);
+}
+.buyer-router .route-card-strong:hover {
+  background: var(--surface);
 }
 
 .conversion-proof {
@@ -579,7 +595,7 @@ section { padding: var(--space-section) 0; }
   letter-spacing: -.02em;
 }
 .resource-disclosure summary b {
-  white-space: nowrap;
+  white-space: normal;
   padding: 10px 16px;
   border-radius: 999px;
   background: var(--accent-soft);
@@ -769,7 +785,7 @@ section { padding: var(--space-section) 0; }
   border: 1.5px solid #c9ccd1; font-family: var(--font); font-size: .95rem;
   background: #fff; color: var(--ink); transition: border-color .2s, box-shadow .2s;
 }
-.field input::placeholder, .field textarea::placeholder { color: #8a8f96; }
+.field input::placeholder, .field textarea::placeholder { color: #6f757c; }
 .field input:focus, .field select:focus, .field textarea:focus {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(14,124,134,.15);
 }
@@ -1941,11 +1957,10 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 .sample-hint { font-size: .84rem; color: var(--muted); margin-top: 8px; }
 .sample-hint.err { color: #b3261e; font-weight: 600; }
 
-/* ── Document/report previews: open source PDF in a new tab, show full page (no crop) ── */
-.doc-link { display: block; position: relative; background: #eef0f3; line-height: 0; cursor: pointer; }
+/* ── Document/report previews: clipped thumbnail (uniform card rows); badge + click open the PDF ── */
+.doc-link { display: block; position: relative; background: #f1f3f4; line-height: 0; cursor: pointer; overflow: hidden; height: 100%; }
 .doc-link img {
-  width: 100%; height: auto !important; min-height: 0 !important;
-  aspect-ratio: auto !important; object-fit: contain !important; max-height: 72vh;
+  width: 100%; height: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block;
 }
 .doc-badge {
   position: absolute; top: 10px; right: 10px; z-index: 2;
@@ -1979,4 +1994,162 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 @media (prefers-reduced-motion: no-preference) {
   #lightbox[open] { animation: lbfade .18s ease; }
   @keyframes lbfade { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* Buyer routers: keep numbered choices as real cards, never inline text. */
+.route-card {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 8px 14px;
+  align-items: center;
+}
+.route-card span {
+  grid-row: 1 / span 2;
+}
+.route-card strong,
+.route-card b {
+  grid-column: 2;
+}
+.resource-disclosure {
+  max-width: var(--maxw);
+  margin-inline: auto;
+}
+
+/* Site-wide Impeccable cleanup: reduce detector-slop patterns without
+   changing the existing industrial design language. */
+.hero-kicker {
+  color: var(--accent-ink);
+  font-size: .84rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  line-height: 1.2;
+  margin-bottom: 18px;
+}
+
+.display {
+  font-size: 4rem;
+  font-size: clamp(3rem, 5.8vw, 5rem);
+  font-weight: 900;
+  letter-spacing: -.035em;
+}
+
+.headline,
+.buyer-router h2,
+.section-head h2 {
+  font-size: 2.5rem;
+  font-size: clamp(1.9rem, 3.6vw, 2.7rem);
+}
+
+.nav-logo .logo-mark span {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.btn-primary {
+  box-shadow: 0 1px 2px rgba(20,24,32,.18), 0 10px 22px -14px rgba(20,24,32,.42);
+}
+.btn-primary:hover {
+  box-shadow: 0 2px 6px rgba(20,24,32,.20), 0 14px 28px -16px rgba(20,24,32,.46);
+}
+
+.table-scroll {
+  padding: 16px !important;
+}
+.table-scroll .cmp-table {
+  border-radius: calc(var(--r-card) - 4px);
+}
+
+.stat-band .stat {
+  padding-inline: clamp(20px, 3vw, 36px) !important;
+}
+.stat-band .stat:first-child {
+  padding-left: 0;
+}
+
+.product-flow .flow-item,
+.flow-item {
+  padding: clamp(26px, 3vw, 36px) !important;
+}
+
+.resource-disclosure-body {
+  padding: 24px !important;
+}
+
+.trust-strip {
+  padding-block: clamp(36px, 5vw, 58px);
+}
+
+.block-dark .btn-primary,
+.on-dark .btn-primary {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: none;
+}
+.block-dark .btn-primary:hover,
+.on-dark .btn-primary:hover {
+  background: #edf2f3;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+/* Products router: override generic CTA tile route-card rules near EOF. */
+.buyer-router .route-grid > .route-card {
+  align-items: center;
+  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 7px 14px;
+  justify-items: start;
+  min-height: 92px;
+  padding: 16px 18px;
+  text-align: left;
+}
+.buyer-router .route-grid > .route-card i {
+  align-self: center;
+  grid-column: 1;
+  grid-row: 1 / 3;
+  justify-self: center;
+  width: 38px;
+  height: 38px;
+}
+.buyer-router .route-grid > .route-card span {
+  align-self: end;
+  grid-column: 2;
+  grid-row: 1;
+  line-height: 1.16;
+  text-align: left;
+}
+.buyer-router .route-grid > .route-card strong,
+.buyer-router .route-grid > .route-card b {
+  align-self: start;
+  grid-column: 2;
+  grid-row: 2;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.buyer-router .route-grid > .route-card:has(strong) {
+  grid-template-columns: minmax(64px, auto) minmax(0, 1fr);
+}
+.buyer-router .route-grid > .route-card:has(strong) span {
+  align-self: center;
+  grid-column: 1;
+  grid-row: 1 / 3;
+  color: var(--accent-ink);
+  font-family: var(--font);
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  line-height: 1.15;
+  text-align: left;
+}
+.buyer-router .route-grid > .route-card:has(strong) strong {
+  align-self: end;
+  grid-column: 2;
+  grid-row: 1;
+  line-height: 1.2;
+}
+.buyer-router .route-grid > .route-card:has(strong) b {
+  align-self: start;
+  grid-column: 2;
+  grid-row: 2;
+  line-height: 1.35;
 }

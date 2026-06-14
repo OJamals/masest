@@ -98,7 +98,7 @@ const INDUSTRIES = [
 ];
 
 const NAV = [
-  ["index.html", "Home"], ["why-vertkleen.html", "Why VertKleen"],
+  ["index.html", "Home"],
   ["products.html", "Products"], ["programs.html", "Programs"],
   ["proof.html", "Proof"], ["industries.html", "Industries"],
   ["about.html", "About"], ["contact.html", "Contact"]
