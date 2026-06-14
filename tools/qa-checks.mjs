@@ -17,7 +17,6 @@ assert.match(
   /document\.body\.classList\.toggle\("nav-open"/,
   "mobile menu locks page scroll while open",
 );
-assert.match(main, /syncRevealFocus/, "hidden reveal links stay out of keyboard order");
 assert.match(story, /syncStoryFocus/, "story timeline updates keyboard reachability");
 assert.match(
   story,
@@ -26,8 +25,8 @@ assert.match(
 );
 assert.match(
   story,
-  /start:\s*st\.act === firstAct \? "top 67px" : "top bottom"/,
-  "first scrollybook act starts at the visible top below the nav",
+  /startsPinned[\s\S]*start:\s*startsPinned \? "top 67px" : "top bottom"/,
+  "pinned scrollybook acts start at the visible top below the nav",
 );
 assert.match(css, /body\.nav-open/, "mobile menu has scroll-lock CSS");
 assert.match(

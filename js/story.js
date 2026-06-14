@@ -120,19 +120,11 @@ states.forEach(function (st) {
   var cue = story.querySelector(".scroll-cue");
 
   function onActScrub(st) {
-    updateBd(st);
     if (st.i === 0) {
       updateReel(st);
       if (cue) cue.style.opacity = Math.max(0, 1 - st.p * 8);
     }
     if (st.act === chemAct) updateChems(st);
-  }
-
-  /* Backdrop parallax */
-  function updateBd(st) {
-    var img = st.bd === undefined ? (st.bd = st.act.querySelector(".bd")) : st.bd;
-    if (!img) return;
-    img.style.transform = "translateY(" + ((st.p - 0.5) * -36) + "px) scale(" + (1.06 - st.p * 0.04) + ")";
   }
 
   /* ---- ACT 1: field-photo reel crossfade ---- */
