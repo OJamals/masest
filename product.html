@@ -11,7 +11,7 @@
 <meta property="og:description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -94,8 +94,30 @@
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const id = new URLSearchParams(location.search).get("id") || "hcr";
-    if (!PRODUCTS[id]) { location.replace("products.html"); return; }
     const p = PRODUCTS[id];
+    if (!p) {
+      document.title = "Product not found | MASEST VertKleen";
+      document.getElementById("main").innerHTML = `
+        <section class="hero-split">
+          <div class="wrap grid-2">
+            <div>
+              <p class="eyebrow">Product</p>
+              <h1 class="display">We could not find that product.</h1>
+              <p class="subhead">The link may be outdated or mistyped. Browse the current VertKleen line, or send the MASEST team the application you are trying to solve.</p>
+              <div class="hero-actions">
+                <a class="btn btn-primary" href="products.html">View Products</a>
+                <a class="btn btn-secondary" href="contact.html">Request a Quote</a>
+              </div>
+            </div>
+            <div class="hmis-panel">
+              <p class="eyebrow">Current line</p>
+              <h2 class="headline" style="font-size:1.85rem">HMIS 0-0-0 replacements for acid, alkaline, and water-treatment programs.</h2>
+              <p class="cmp-note">Documentation and product matching are available through the quote form.</p>
+            </div>
+          </div>
+        </section>`;
+      return;
+    }
     document.title = p.name + " | MASEST VertKleen";
     document.getElementById("bcName").textContent = p.name;
     document.getElementById("pReplaces").textContent = p.replaces;

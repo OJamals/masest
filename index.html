@@ -11,9 +11,7 @@
 <meta property="og:description" content="HMIS 0-0-0 replacements for hydrochloric acid, caustic soda, and hazardous biocides. Industrial performance, zero hazard.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
-<link rel="preconnect" href="https://unpkg.com" crossorigin>
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/story.css">
 </head>
@@ -201,7 +199,7 @@
       <div class="savior-wrap">
         <span class="savior-badge" data-at="0"><i class="ph ph-shield-check" aria-hidden="true"></i> Enter VertKleen</span>
         <h2 data-at="0">The same job. <span class="accent">Zero</span> hazard.</h2>
-        <p class="lede" data-at="1">VertKleen strips the same scale, cuts the same grease, and kills the same bacteria. Splash it on your skin and nothing happens. The danger is the only thing that is gone.</p>
+        <p class="lede" data-at="1">VertKleen is built to do the same work with a dramatically lower hazard profile: HMIS 0-0-0 across the core line, no fume drama, and simpler handling for occupied sites.</p>
         <div class="savior-zero" data-at="2">
           <div class="z">0</div><div class="z">0</div><div class="z">0</div>
         </div>
@@ -350,7 +348,7 @@
       <a class="cat-card reveal" href="products.html#alkaline">
         <i class="ph ph-drop-half cat-ico" aria-hidden="true"></i>
         <h3>Retire the caustic.</h3>
-        <p>NSF/ANSI 60 replacements for sodium and potassium hydroxide, plus the world's only neutral pH-7 degreaser.</p>
+        <p>NSF/ANSI 60 replacements for sodium and potassium hydroxide, plus neutral-pH degreasing for sensitive surfaces and seals.</p>
         <span class="link">Browse alkaline replacements</span>
       </a>
     </div>
@@ -365,12 +363,48 @@
       <p class="subhead">Each product is a direct, drop-in replacement for a specific hazardous chemical. Find the one that matches what you use today.</p>
     </div>
     <figure class="photo photo-wide reveal" style="margin-bottom:22px">
-      <img src="img/field/products.webp" alt="VertKleen product jugs lined up with labeled sample jars: CR HD, Descaler, HCR, and more" loading="lazy" decoding="async">
-      <figcaption>The VertKleen line, bottled and labeled at MASEST on Florida's Space Coast.</figcaption>
+      <img src="img/proof/product-line-2026.jpeg" alt="VertKleen CR and HCR product jugs with readable field labels" loading="lazy" decoding="async">
+      <figcaption>VertKleen CR and HCR, bottled and labeled at MASEST on Florida's Space Coast.</figcaption>
     </figure>
     <div class="feat-grid" id="featuredProducts"></div>
     <div style="margin-top:36px" class="reveal">
       <a class="btn btn-ink" href="products.html">View All Products</a>
+    </div>
+  </div>
+</section>
+
+<section class="proof-section section-slim">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Applied proof</span>
+      <h2 class="headline">Proof from the field.</h2>
+      <p class="subhead">The updated source library adds real customer environments: distribution centers, breweries, building exteriors, HVAC systems, and maintenance crews replacing harsh legacy chemistry.</p>
+    </div>
+    <div class="proof-grid">
+      <article class="proof-card reveal">
+        <figure><img src="img/proof/walmart-dc-proof.png" alt="VertKleen Walmart distribution center brochure preview" loading="lazy" decoding="async"></figure>
+        <div>
+          <span>Distribution</span>
+          <h3>Walmart distribution centers</h3>
+          <p>CRHD positioned as a safer industrial degreaser replacement for high-traffic DC and FC cleaning programs.</p>
+        </div>
+      </article>
+      <article class="proof-card reveal">
+        <figure><img src="img/proof/brewery-cip-proof.png" alt="VertKleen brewery CIP trial report preview" loading="lazy" decoding="async"></figure>
+        <div>
+          <span>Food &amp; beverage</span>
+          <h3>Brewery CIP</h3>
+          <p>CR and HCR trial material documents brewery tanks, heat exchangers, and CIP/SIP cleaning workflows.</p>
+        </div>
+      </article>
+      <article class="proof-card reveal">
+        <figure><img src="img/proof/drone-wash-proof.png" alt="Drone-applied VertKleen building wash in progress" loading="lazy" decoding="async"></figure>
+        <div>
+          <span>Facilities</span>
+          <h3>Drone-applied building wash</h3>
+          <p>MultiWash proof assets show exterior scale, algae, and grime removal on occupied property maintenance work.</p>
+        </div>
+      </article>
     </div>
   </div>
 </section>
@@ -392,7 +426,7 @@
       <span class="eyebrow">Industries</span>
       <h2 class="headline">Proven where it's toughest.</h2>
     </div>
-    <div class="snap-row">
+    <div class="snap-row reveal" tabindex="0" aria-label="Industries served by VertKleen">
       <div class="snap-card"><i class="ph ph-barrel" aria-hidden="true"></i><h3>Oil &amp; Gas</h3><p>Drilling rigs and pipeline terminals</p></div>
       <div class="snap-card"><i class="ph ph-boat" aria-hidden="true"></i><h3>Marine</h3><p>Cruise ship and vessel operations</p></div>
       <div class="snap-card"><i class="ph ph-crane-tower" aria-hidden="true"></i><h3>Construction</h3><p>Equipment, concrete, and site maintenance</p></div>
@@ -455,8 +489,8 @@
 
 <script src="js/main.js"></script>
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
 <script src="js/story.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", () => {

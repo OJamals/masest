@@ -11,7 +11,7 @@
 <meta property="og:description" content="Request a VertKleen quote or distributor connection. Tell us your product interest, industry, volume, location, and timeline.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -35,10 +35,10 @@
   </div>
 </section>
 
-<section>
+<section class="quote-section">
   <div class="wrap" style="max-width:860px">
     <div class="form-card reveal">
-      <form id="quoteForm">
+      <form id="quoteForm" data-endpoint="https://formsubmit.co/ajax/matthew@masest.co">
         <div class="form-grid">
           <div class="field"><label for="fName">Full Name *</label><input id="fName" name="name" required autocomplete="name" placeholder="Marisol Vega"></div>
           <div class="field"><label for="fCompany">Company *</label><input id="fCompany" name="company" required autocomplete="organization" placeholder="Gulf Coast Mechanical"></div>
@@ -114,11 +114,29 @@
           </div>
         </div>
       </form>
-      <div class="form-success" id="formSuccess" role="status" aria-live="polite">
-        <i class="ph ph-check-circle" aria-hidden="true"></i>
-        <h2 class="headline" style="font-size:1.7rem">Almost there: send the email.</h2>
-        <p class="subhead" style="margin:12px auto 0">Your email app should have opened with the request prefilled; hit send and the MASEST team will follow up within one business day. If nothing opened, email <a href="mailto:matthew@masest.co" style="font-weight:700;color:var(--accent-ink)">matthew@masest.co</a> or call <a href="tel:+18134063852" style="font-weight:700;color:var(--accent-ink)">(813) 406-3852</a>.</p>
-        <button class="btn btn-ghost btn-sm" id="formEdit" type="button" style="margin-top:22px">Edit my request</button>
+    <div class="form-success" id="formSuccess" role="status" aria-live="polite">
+      <i class="ph ph-check-circle" aria-hidden="true"></i>
+      <h2 class="headline" id="formSuccessTitle" style="font-size:1.7rem">Request received.</h2>
+      <p class="subhead" id="formSuccessCopy" style="margin:12px auto 0">MASEST has received your quote request. A sales or technical contact will review the details and follow up directly.</p>
+      <p style="margin-top:22px"><a class="btn btn-primary" id="mailtoFallback" href="mailto:matthew@masest.co">Open Email Draft</a></p>
+      <button class="btn btn-ghost btn-sm" id="formEdit" type="button" style="margin-top:14px">Edit my request</button>
+    </div>
+    </div>
+    <div class="quote-assurance" aria-label="What happens after you send a request">
+      <div>
+        <span>01</span>
+        <b>Application matched</b>
+        <p>MASEST reviews the legacy chemical, system type, and operating constraints.</p>
+      </div>
+      <div>
+        <span>02</span>
+        <b>Documentation pulled</b>
+        <p>SDS, HMIS, certification, and program notes are attached when available.</p>
+      </div>
+      <div>
+        <span>03</span>
+        <b>Quote routed</b>
+        <p>Volume, location, and timeline determine the right sales or technical contact.</p>
       </div>
     </div>
   </div>

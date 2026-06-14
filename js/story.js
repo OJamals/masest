@@ -31,7 +31,7 @@
      A 1.2-unit hold keeps the finished composition on stage
      until the act unpins and slides away naturally.
      ============================================================ */
-  var BEAT_IN = 0.8, BEAT_OUT = 0.5, HOLD = 1.2;
+  var BEAT_IN = 0.65, BEAT_OUT = 0.25, HOLD = 1.65;
   var acts = gsap.utils.toArray(story.querySelectorAll(".act"));
   var firstAct = acts[0];
 
@@ -44,21 +44,46 @@
       if (el._at > maxAt) maxAt = el._at;
       if (el._out > maxAt) maxAt = el._out;
     });
-    return { act: act, i: i, p: 0, active: false, fx: null, maxAt: maxAt, els: els, T: maxAt + BEAT_IN + HOLD };
+    return { act: act, stage: act.querySelector(".stage"), i: i, p: 0, active: false, fx: null, maxAt: maxAt, els: els, T: maxAt + BEAT_IN + HOLD };
   });
+
+  function syncStoryFocus() {
+    states.forEach(function (st) {
+      var visible = st.active || st.act === firstAct && window.scrollY < st.act.offsetHeight;
+      var focusables = st.act.querySelectorAll("a[href], button, input, select, textarea, [tabindex]");
+      st.act.setAttribute("aria-hidden", visible ? "false" : "true");
+      focusables.forEach(function (el) {
+        if (!el.dataset.storyTabindexSet) {
+          el.dataset.storyTabindexSet = "1";
+          el.dataset.storyTabindex = el.getAttribute("tabindex") || "";
+        }
+        if (visible) {
+          if (el.dataset.storyTabindex) el.setAttribute("tabindex", el.dataset.storyTabindex);
+          else el.removeAttribute("tabindex");
+        } else {
+          el.setAttribute("tabindex", "-1");
+        }
+      });
+    });
+  }
 
   states.forEach(function (st) {
     var tl = gsap.timeline({
       defaults: { ease: "power2.out" },
       scrollTrigger: {
         trigger: st.act,
-        start: "top top",
+        start: st.act === firstAct ? "top top" : "top bottom",
         end: "bottom bottom",
         scrub: 0.5,
+        onEnter: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
+        onEnterBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
+        onLeave: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 0 }); },
+        onLeaveBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
         onToggle: function (self) {
           st.active = self.isActive;
           if (self.isActive) resizeFx(st);
           updateRail();
+          syncStoryFocus();
         }
       },
       onUpdate: function () {
@@ -78,7 +103,7 @@
           el._at);
       }
       if (el._out >= 0) {
-        tl.to(el, { autoAlpha: 0, y: -16, duration: BEAT_OUT, ease: "power2.in" }, el._out);
+        tl.to(el, { autoAlpha: 0, y: -16, duration: BEAT_OUT, ease: "power2.in" }, Math.max(0, el._out - BEAT_OUT));
       }
     });
     tl.set({}, {}, st.T);                               /* endcap: hold before unpin */
@@ -233,7 +258,7 @@
   function fxDebris(st, c, dt, time) {
     var ctx = c.ctx, w = c.w(), h = c.h();
     ctx.clearRect(0, 0, w, h);
-    var topY = h * 0.52, botY = h * 0.84;       /* pipe sits in the lower half, clear of the copy */
+    var topY = h * 0.58, botY = h * 0.88;       /* pipe sits in the lower third, clear of the copy */
     var px0 = w * 0.10, px1 = w * 0.95;          /* inset pipe segment, clear of the chapter rail */
     var pw = px1 - px0;
     var maxCrust = (botY - topY) * 0.30;
@@ -421,10 +446,27 @@
     });
   });
   var railCurrent = -1;
+  var railTicking = false;
+  function nearestRailIndex() {
+    var y = window.scrollY + window.innerHeight * 0.5;
+    var current = 0;
+    var best = Infinity;
+    for (var i = 0; i < states.length; i++) {
+      var top = states[i].act.getBoundingClientRect().top + window.scrollY;
+      var mid = top + states[i].act.offsetHeight * 0.5;
+      var dist = Math.abs(y - mid);
+      if (dist < best) {
+        best = dist;
+        current = i;
+      }
+    }
+    return current;
+  }
   function updateRail() {
     if (!railBtns.length) return;
     var current = -1;
     for (var i = 0; i < states.length; i++) if (states[i].active) { current = i; }
+    if (current < 0) current = nearestRailIndex();
     if (current === railCurrent) return;
     railCurrent = current;
     for (var j = 0; j < railBtns.length; j++) {
@@ -432,6 +474,23 @@
       railBtns[j].classList.toggle("safe", current === states.length - 1);
     }
   }
+  function scheduleRailUpdate() {
+    if (railTicking) return;
+    railTicking = true;
+    requestAnimationFrame(function () {
+      railTicking = false;
+      updateRail();
+      syncStoryFocus();
+    });
+  }
+  window.addEventListener("scroll", scheduleRailUpdate, { passive: true });
+  updateRail();
+  syncStoryFocus();
+
+  /* Paint the opening act at rest so the first field photo and the
+     parallax backdrop are visible on load, before any scroll — without
+     this the reel sits at its CSS opacity:0 until the first scroll. */
+  if (states[0]) { states[0].p = 0; onActScrub(states[0]); }
 
   var resizeTimer = null;
   window.addEventListener("resize", function () {

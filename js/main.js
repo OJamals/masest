@@ -52,8 +52,8 @@ const PRODUCTS = {
     replaces: "Replaces caustic and solvent degreasers",
     hmis: "0-0-0",
     icon: "ph-drop",
-    tag: "The world's only neutral pH-7 degreaser. Solvent-grade cutting power, safe on every surface and seal.",
-    desc: "The world's only neutral pH-7 degreaser. All the cutting power of high-pH and solvent degreasers, with no flammability, no fumes, and no damage to surfaces or seals.",
+    tag: "Neutral pH-7 degreaser with solvent-grade cutting power for sensitive surfaces and seals.",
+    desc: "A neutral pH-7 degreaser with the cutting power expected from high-pH and solvent degreasers, without flammability, harsh fumes, or surface damage.",
     uses: [
       "Heavy equipment and machinery degreasing",
       "Marine, oil and gas, and aviation surfaces",
@@ -74,8 +74,8 @@ const PRODUCTS = {
     replaces: "Replaces general-purpose caustic cleaners",
     hmis: "0-0-0",
     icon: "ph-sparkle",
-    tag: "Multi-surface industrial cleaner. Powerful enough for industry, safe around kids and staff.",
-    desc: "A versatile multi-surface cleaner for facilities, drains, concrete, and pressure-washing applications. Powerful enough for industry, safe around kids and staff.",
+    tag: "Multi-surface industrial cleaner for occupied facilities, drains, concrete, and pressure-washing programs.",
+    desc: "A versatile multi-surface cleaner for facilities, drains, concrete, and pressure-washing applications, with a handling profile suited to occupied campuses.",
     uses: [
       "Concrete drains and hardscape cleaning",
       "Pressure-washing programs",
@@ -83,7 +83,7 @@ const PRODUCTS = {
       "Educational and healthcare environments"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Safe around kids, staff, and the environment"],
+      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
       ["ph-atom", "SynClean powered", "Patented cleaning technology"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates and phosphates"],
       ["ph-truck", "Non-hazmat shipping", "Lower freight cost worldwide"]
@@ -175,7 +175,9 @@ function renderChrome() {
   skip.href = "#main";
   skip.textContent = "Skip to content";
   const nav = document.createElement("header");
-  nav.className = "nav";
+  // Start in the dark-glass treatment when this page opens on the dark story,
+  // so the first paint matches the backdrop (no white-bar flash before onScroll).
+  nav.className = document.getElementById("story") ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
       <a class="nav-logo" href="index.html"><span class="logo-mark"><span>M</span></span>MASEST</a>
@@ -192,9 +194,20 @@ function renderChrome() {
   document.body.prepend(skip);
   const burger = document.getElementById("navBurger");
   const navLinks = document.getElementById("navLinks");
-  burger.addEventListener("click", () => {
-    const open = navLinks.classList.toggle("open");
+  const setMenuOpen = open => {
+    navLinks.classList.toggle("open", open);
+    document.body.classList.toggle("nav-open", open);
     burger.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  burger.addEventListener("click", () => {
+    setMenuOpen(!navLinks.classList.contains("open"));
+  });
+  const closeMenu = () => {
+    setMenuOpen(false);
+  };
+  navLinks.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeMenu();
   });
 
   // Elevate the nav once the page scrolls away from the top; while it
@@ -208,6 +221,7 @@ function renderChrome() {
   window.addEventListener("scroll", onScroll, { passive: true });
 
   const foot = document.createElement("footer");
+  foot.className = "reveal";
   foot.innerHTML = `
     <div class="wrap">
       <div class="foot-grid">
@@ -216,19 +230,19 @@ function renderChrome() {
           <p>Safe, powerful, environmentally friendly alternatives to hazardous chemicals. Family-owned on Florida's Space Coast, trusted in 50+ countries.</p>
         </div>
         <div>
-          <h4>Products</h4>
+          <div class="foot-title">Products</div>
           <a href="products.html#acid">Acid Replacements</a>
           <a href="products.html#alkaline">Alkaline Replacements</a>
           <a href="products.html#water">Water Treatment</a>
         </div>
         <div>
-          <h4>Company</h4>
+          <div class="foot-title">Company</div>
           <a href="industries.html">Industries</a>
           <a href="about.html">About Us</a>
           <a href="contact.html">Contact</a>
         </div>
         <div>
-          <h4>Contact</h4>
+          <div class="foot-title">Contact</div>
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
           <a href="tel:+18134063852">(813) 406-3852</a>
           <p style="margin-top:10px;font-size:.8rem;line-height:1.7">CAGE 0B2Q3<br>NAICS 424690<br>SAM.gov registered<br>Minority-owned (self-certified)</p>
@@ -244,22 +258,51 @@ function renderChrome() {
 
 /* ---------- Scroll reveal (IntersectionObserver, reduced-motion safe) ---------- */
 function initReveal() {
+  const syncRevealFocus = (el, visible) => {
+    const focusables = [];
+    const selector = "a[href], button, input, select, textarea, [tabindex], .table-scroll";
+    if (el.matches(selector)) focusables.push(el);
+    focusables.push(...el.querySelectorAll(selector));
+    focusables.forEach(focusable => {
+      if (!focusable.dataset.revealTabindexSet) {
+        focusable.dataset.revealTabindexSet = "1";
+        focusable.dataset.revealTabindex = focusable.getAttribute("tabindex") || "";
+      }
+      if (visible) {
+        if (focusable.dataset.revealTabindex) focusable.setAttribute("tabindex", focusable.dataset.revealTabindex);
+        else focusable.removeAttribute("tabindex");
+      } else {
+        focusable.setAttribute("tabindex", "-1");
+      }
+    });
+  };
+
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    document.querySelectorAll(".reveal").forEach(el => el.classList.add("in"));
+    document.querySelectorAll(".reveal").forEach(el => {
+      el.classList.add("in");
+      syncRevealFocus(el, true);
+    });
     return;
   }
+
+  document.body.classList.add("reveal-ready");
   const io = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add("in");
+        syncRevealFocus(e.target, true);
+        io.unobserve(e.target);
+      }
+    });
   }, { threshold: 0.12 });
-  // dataset guard: initReveal may run again after late-injected content
+
   document.querySelectorAll(".reveal").forEach(el => {
     if (el.dataset.revealObserved) return;
     el.dataset.revealObserved = "1";
+    syncRevealFocus(el, el.classList.contains("in"));
     io.observe(el);
   });
 }
-
-/* ---------- Product card renderer ---------- */
 function productCard(id, heroCard = false) {
   const p = PRODUCTS[id];
   const badge = p.hmis === "0-0-0"
@@ -286,6 +329,18 @@ const SALES_EMAIL = "matthew@masest.co";
 
 function smoothPref() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
+
+async function submitRequest(form, data) {
+  const endpoint = form.dataset.endpoint;
+  if (!endpoint) return { fallbackOnly: true };
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Accept": "application/json" },
+    body: data
+  });
+  if (!res.ok) throw new Error("Request failed");
+  return { fallbackOnly: false };
 }
 
 function initQuoteForm() {
@@ -351,20 +406,44 @@ function initQuoteForm() {
     const lines = [];
     for (const [k, v] of data.entries()) if (String(v).trim()) lines.push((labels[k] || k) + ": " + v);
     const subject = "Quote request: " + (data.get("product") || "VertKleen") + " (" + (data.get("company") || data.get("name")) + ")";
-    location.href = "mailto:" + SALES_EMAIL +
+    const mailto = "mailto:" + SALES_EMAIL +
       "?subject=" + encodeURIComponent(subject) +
       "&body=" + encodeURIComponent(lines.join("\n"));
+    const fallback = document.getElementById("mailtoFallback");
+    if (fallback) fallback.href = mailto;
 
-    form.style.display = "none";
-    const ok = document.getElementById("formSuccess");
-    ok.style.display = "block";
-    ok.scrollIntoView({ behavior: smoothPref(), block: "center" });
-    const edit = document.getElementById("formEdit");
-    if (edit) edit.onclick = () => {
-      ok.style.display = "none";
-      form.style.display = "";
-      form.querySelector("input, select, textarea").focus();
-    };
+    const submit = form.querySelector('[type="submit"]');
+    if (submit) submit.disabled = true;
+    submitRequest(form, data).then((result) => {
+      form.style.display = "none";
+      const ok = document.getElementById("formSuccess");
+      const title = document.getElementById("formSuccessTitle");
+      const copy = document.getElementById("formSuccessCopy");
+      const mail = document.getElementById("mailtoFallback");
+      const accepted = !result.fallbackOnly;
+      if (title) title.textContent = accepted ? "Request received." : "Almost there: send the request.";
+      if (copy) {
+        copy.innerHTML = accepted
+          ? "MASEST has received your quote request. A sales or technical contact will review the details and follow up directly."
+          : 'Use the prepared email link below, then hit send in your email app. If your device blocks email links, email <a href="mailto:matthew@masest.co" style="font-weight:700;color:var(--accent-ink)">matthew@masest.co</a> or call <a href="tel:+18134063852" style="font-weight:700;color:var(--accent-ink)">(813) 406-3852</a>.';
+      }
+      if (mail) mail.style.display = accepted ? "none" : "";
+      ok.style.display = "block";
+      ok.scrollIntoView({ behavior: smoothPref(), block: "center" });
+      const edit = document.getElementById("formEdit");
+      if (edit) edit.onclick = () => {
+        ok.style.display = "none";
+        form.style.display = "";
+        if (submit) submit.disabled = false;
+        form.querySelector("input, select, textarea").focus();
+      };
+    }).catch(() => {
+      if (submit) submit.disabled = false;
+      alert("We could not send this request automatically. Please use the prepared email link below.");
+      const ok = document.getElementById("formSuccess");
+      ok.style.display = "block";
+      ok.scrollIntoView({ behavior: smoothPref(), block: "center" });
+    });
   });
 }
 

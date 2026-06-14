@@ -25,11 +25,11 @@
 }
 
 /* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
-.story .act { position: relative; height: 145vh; }
-.story .act[data-act="1"] { height: 175vh; }   /* photo reel needs road */
-.story .act[data-act="3"] { height: 160vh; }   /* HMIS factor-by-factor */
-.story .act[data-act="4"] { height: 190vh; }   /* chemicals one by one */
-.story .act-savior { height: 130vh; }
+.story .act { position: relative; height: 220vh; }
+.story .act[data-act="1"] { height: 180vh; }   /* photo reel needs less sequencing */
+.story .act[data-act="3"] { height: 240vh; }   /* HMIS factor-by-factor */
+.story .act[data-act="4"] { height: 260vh; }   /* chemicals one by one */
+.story .act-savior { height: 220vh; }
 .story .stage {
   position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 620px;
   overflow: hidden; display: grid; place-items: center;
@@ -89,7 +89,7 @@
 /* ---------- Copy blocks ---------- */
 .story .act-copy { position: relative; z-index: 5; width: min(680px, 86vw); padding: 0 28px; }
 .story .act-copy.bl { justify-self: start; align-self: end; padding-bottom: 12vh; padding-left: clamp(56px, 8vw, 110px); }
-.story .act-copy.top { position: absolute; top: clamp(88px, 13vh, 150px); left: 0; right: 0; margin: 0 auto; text-align: center; z-index: 5; }
+.story .act-copy.top { position: absolute; top: clamp(64px, 9vh, 130px); left: 0; right: 0; margin: 0 auto; text-align: center; z-index: 5; }
 .story .act-copy.onscrim { padding-top: 18px; padding-bottom: 22px; border-radius: 20px;
   background: radial-gradient(120% 150% at 50% 0%, rgba(8, 10, 14, .8) 0%, rgba(8, 10, 14, .45) 55%, transparent 80%); }
 
@@ -159,6 +159,8 @@
   background: #14171e;
   box-shadow: 0 40px 80px -36px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .07);
 }
+/* First photo shows immediately on load; the scrub takes over on first scroll. */
+.reel-slide[data-slide="0"] { opacity: 1; }
 .reel-slide img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
   filter: saturate(.92) contrast(1.04);
@@ -205,11 +207,11 @@
   white-space: nowrap;
 }
 .pipe-chips .chip i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-/* Anchored just outside the pipe (canvas band runs 52% to 84% of stage height) */
-.chip.c-scale  { left: 17%; top: 46.5%; } .chip.c-scale i  { background: #c9d4d0; }
-.chip.c-rust   { left: 22%; top: 87.5%; } .chip.c-rust i   { background: #9c4a2d; }
-.chip.c-grease { left: 64%; top: 46.5%; } .chip.c-grease i { background: #a98a3f; }
-.chip.c-bio    { left: 56%; top: 87.5%; } .chip.c-bio i    { background: #5d8a52; }
+/* Anchored just outside the pipe (canvas band runs 58% to 88% of stage height) */
+.chip.c-scale  { left: 17%; top: 53%; } .chip.c-scale i  { background: #c9d4d0; }
+.chip.c-rust   { left: 22%; top: 91%; } .chip.c-rust i   { background: #9c4a2d; }
+.chip.c-grease { left: 64%; top: 53%; } .chip.c-grease i { background: #a98a3f; }
+.chip.c-bio    { left: 56%; top: 91%; } .chip.c-bio i    { background: #5d8a52; }
 
 /* ============================================================
    ACT 3 — THE SCORE (HMIS explained, factor by factor)
@@ -301,36 +303,36 @@
 .act-savior .stage { background: linear-gradient(180deg, var(--s-bg) 0%, #0f1a1e 55%, #0c1417 100%); }
 .savior-wrap { position: relative; z-index: 5; width: min(900px, 90vw); text-align: center; padding: 0 24px; }
 .savior-badge {
-  display: inline-flex; align-items: center; gap: 9px; margin-bottom: 22px;
+  display: inline-flex; align-items: center; gap: 9px; margin-bottom: clamp(12px, 2vh, 22px);
   padding: 8px 16px; border-radius: 999px; border: 1px solid var(--s-safe-soft);
   background: var(--s-safe-soft); color: var(--s-safe);
   font-size: .76rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
 }
 .savior-wrap h2 {
-  font-size: clamp(2.4rem, 6vw, 4.6rem); font-weight: 900; letter-spacing: -.045em; line-height: 1.02;
+  font-size: clamp(2.2rem, 5vw, 3.7rem); font-weight: 900; letter-spacing: -.045em; line-height: 1.02;
   margin: 0; text-wrap: balance;
 }
 .savior-wrap h2 .accent { color: var(--s-safe); }
-.savior-wrap .lede { margin: 22px auto 0; max-width: 50ch; font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--s-mut); line-height: 1.55; }
-.savior-zero { display: inline-flex; gap: 14px; margin: 38px 0 6px; font-variant-numeric: tabular-nums; }
+.savior-wrap .lede { margin: clamp(12px, 2vh, 22px) auto 0; max-width: 50ch; font-size: clamp(1rem, 1.4vw, 1.18rem); color: var(--s-mut); line-height: 1.5; }
+.savior-zero { display: inline-flex; gap: 14px; margin: clamp(16px, 3vh, 34px) 0 6px; font-variant-numeric: tabular-nums; }
 .savior-zero .z {
-  width: clamp(74px, 13vw, 116px); aspect-ratio: 5 / 6; border-radius: 20px;
-  display: grid; place-items: center; font-size: clamp(3.4rem, 8vw, 5.6rem); font-weight: 900;
+  width: clamp(62px, 10vw, 98px); aspect-ratio: 5 / 6; border-radius: 18px;
+  display: grid; place-items: center; font-size: clamp(2.9rem, 6.5vw, 4.7rem); font-weight: 900;
   letter-spacing: -.05em; color: var(--s-safe);
   background: linear-gradient(180deg, rgba(52, 224, 200, .12), rgba(52, 224, 200, .03));
   border: 1px solid rgba(52, 224, 200, .28);
   box-shadow: 0 30px 60px -34px rgba(52, 224, 200, .35);
 }
-.savior-cap { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: var(--s-mut); margin-bottom: 26px; }
+.savior-cap { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: var(--s-mut); margin-bottom: clamp(12px, 2.2vh, 24px); }
 .savior-proof { display: flex; gap: 14px; justify-content: center; }
-.savior-proof figure { margin: 0; width: clamp(110px, 16vw, 168px); }
+.savior-proof figure { margin: 0; width: clamp(96px, 12vw, 132px); }
 .savior-proof img {
   width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px;
   border: 1px solid rgba(52, 224, 200, .25); display: block;
   filter: saturate(.95);
 }
 .savior-proof figcaption { margin-top: 8px; font-size: .76rem; font-weight: 700; letter-spacing: .04em; color: var(--s-mut); }
-.savior-proof-cap { margin: 14px 0 30px; font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
+.savior-proof-cap { margin: clamp(10px, 1.6vh, 14px) 0 clamp(16px, 2.6vh, 28px); font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
 .savior-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 .savior-ctas .btn-primary { background: var(--s-safe); color: #06231f; box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(52, 224, 200, .6); }
 .savior-ctas .btn-primary:hover { background: #5fe9d6; }
@@ -369,15 +371,18 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 760px) {
-  .story .act { height: 165vh; }
-  .story .act[data-act="1"] { height: 220vh; }
-  .story .act[data-act="4"] { height: 230vh; }
+  .story .act { height: 215vh; }
+  .story .act[data-act="1"] { height: 180vh; }
+  .story .act[data-act="3"] { height: 235vh; }
+  .story .act[data-act="4"] { height: 255vh; }
+  .story .act-savior { height: 215vh; }
   .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
   .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
-  .chip.c-scale  { left: 6%; top: 44.5%; }
-  .chip.c-rust   { left: 10%; top: 87.5%; }
-  .chip.c-grease { left: 54%; top: 44.5%; }
-  .chip.c-bio    { left: 42%; top: 87.5%; }
+  .chip.c-scale  { left: 6%; top: 51%; }
+  .chip.c-rust   { left: 10%; top: 90.5%; }
+  .chip.c-grease { left: 54%; top: 51%; }
+  .pipe-chips .chip { max-width: min(44vw, 172px); white-space: normal; line-height: 1.15; }
+  .chip.c-bio    { left: auto; right: 6%; top: 90.5%; }
   .hmis-factors { gap: 10px; }
   .factor { padding: 18px 10px; border-radius: 14px; }
   .factor .fmeaning { font-size: .78rem; }
@@ -385,6 +390,12 @@
   .chem-list { grid-template-columns: 1fr; gap: 10px; }
   .chem-card { padding: 14px 16px; }
   .chem-card p { font-size: .84rem; }
-  .chem-rig { margin-top: 23vh; gap: 16px; }
+  .chem-rig { margin-top: 14vh; gap: 10px; }
+  .chem-scale { order: -1; padding-top: 18px; }
+  .chem-list { gap: 8px; }
+  .chem-card { padding: 12px 14px; }
+  .chem-card .chead { gap: 8px; }
+  .chem-card p { font-size: .78rem; line-height: 1.38; }
+  .chem-card .vs { font-size: .62rem; }
   .savior-proof figure { width: 27vw; }
 }
