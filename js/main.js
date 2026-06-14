@@ -363,7 +363,7 @@ function renderChrome() {
   nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-logo" href="${root}index.html"><span class="logo-mark"><span>M</span></span>MASEST</a>
+      <a class="nav-logo" href="${root}index.html"><img class="logo-image" src="${root}img/masest-logo.png" alt="MASEST"></a>
       <nav class="nav-links" id="navLinks">
         ${links.map(([href, label]) =>
           `<a href="${root}${href}"${page === href ? ' class="active"' : ""}>${label}</a>`).join("")}
