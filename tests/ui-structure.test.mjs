@@ -251,3 +251,24 @@ test("about page routes buyers before service breadth", () => {
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.about-router \.route-grid/);
   assert.match(css, /\.about-services-disclosure summary b[\s\S]*white-space: normal/);
 });
+
+test("scrolly proof images are not lazy-gated", () => {
+  const home = read("index.html");
+  const actFive = home.match(/<section class="act act-savior"[\s\S]*?<\/section>/)?.[0] || "";
+
+  assert.ok(actFive, "expected act five scrolly section");
+  assert.match(actFive, /img\/field\/fill-before-enhanced\.webp/);
+  assert.match(actFive, /img\/field\/filters-after-enhanced\.webp/);
+  assert.doesNotMatch(actFive, /loading="lazy"/);
+  assert.match(home, /<link rel="preload" as="image" href="img\/field\/fill-before-enhanced\.webp"/);
+  assert.match(home, /<link rel="preload" as="image" href="img\/field\/filters-after-enhanced\.webp"/);
+});
+
+test("simplified routes avoid black cards and cramped section seams", () => {
+  const css = read("css/style.css");
+
+  assert.doesNotMatch(css, /\.route-card-strong[\s\S]{0,120}background: var\(--ink\)/);
+  assert.doesNotMatch(css, /\.btn-ink[\s\S]{0,120}background: var\(--ink\)/);
+  assert.match(css, /\.section-slim \+ \.resource-disclosure/);
+  assert.match(css, /\.resource-disclosure \+ section/);
+});
