@@ -300,28 +300,6 @@ const PRODUCTS = {
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "HCR & Descaler Userguide"]
   },
-  crnsf60: {
-    name: "VertKleen CR NSF 60",
-    cat: "alkaline",
-    replaces: "Replaces caustic soda in NSF/ANSI 60 water-treatment use",
-    hmis: "0-0-0",
-    icon: "ph-seal-check",
-    tag: "NSF/ANSI 60 caustic replacement and pH adjuster for water-treatment programs.",
-    desc: "The NSF/ANSI 60 water-treatment version of VertKleen CR, used where caustic replacement needs documented drinking-water-system chemistry.",
-    uses: [
-      "pH adjustment in water-treatment programs",
-      "Cooling tower and closed-loop treatment support",
-      "District, campus, and municipal facility programs",
-      "Documentation-heavy procurement environments"
-    ],
-    specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
-      ["ph-seal-check", "NSF/ANSI 60", "For water-treatment chemistry documentation"],
-      ["ph-atom", "Caustic replacement", "Replaces sodium and potassium hydroxide functions"],
-      ["ph-clipboard-text", "Program documentation", "Fits ASHRAE 188 and procurement documentation workflows"]
-    ],
-    docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Certification", "Cooling Tower Program Brochure"]
-  },
   glycols: {
     name: "VertKleen Glycols",
     cat: "water",
@@ -349,7 +327,7 @@ const PRODUCTS = {
 
 const CATALOG_ORDER = [
   "hcr", "descaler", "crs", "cr", "crhd", "neutral", "multiwash",
-  "watersafe60", "crnsf60", "purgo", "dbnpa", "glycols", "lam3", "alumibrite", "torque"
+  "watersafe60", "purgo", "dbnpa", "glycols", "lam3", "alumibrite", "torque"
 ];
 
 const PRODUCT_CATALOG_COPY = {
@@ -400,12 +378,6 @@ const PRODUCT_CATALOG_COPY = {
     summary: "For cooling towers and closed loops that need documented asset protection without heavy-metal inhibitor blends.",
     fits: ["cooling towers", "closed loops", "campuses", "hospitals"],
     proof: "NSF/ANSI 60 and program documents"
-  },
-  crnsf60: {
-    job: "Water-treatment pH adjustment",
-    summary: "A documented caustic replacement for NSF/ANSI 60 water-treatment programs and procurement-heavy facilities.",
-    fits: ["pH adjustment", "cooling towers", "municipal", "campuses"],
-    proof: "NSF/ANSI 60 certificate and program documents"
   },
   purgo: {
     job: "Microbiological control",
