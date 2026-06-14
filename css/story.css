@@ -407,3 +407,56 @@
   .chem-card .vs { font-size: .62rem; }
   .savior-proof figure { width: 27vw; }
 }
+
+/* Image polish layer: keeps the real field evidence, but frames it with more
+   deliberate industrial contrast and stronger small-screen legibility. */
+.story .bd {
+  filter: saturate(1.06) contrast(1.08) brightness(.82);
+}
+
+.reel-slide {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .04), transparent 28%),
+    #101319;
+  border-color: rgba(255, 255, 255, .2);
+  box-shadow:
+    0 42px 92px -40px rgba(0, 0, 0, .92),
+    0 0 0 1px rgba(255, 255, 255, .03),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+.reel-slide img {
+  transform: scale(1.012);
+  filter: saturate(1.02) contrast(1.08) brightness(.96);
+}
+
+.reel-slide figcaption {
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .8);
+}
+
+.savior-proof figure {
+  width: clamp(112px, 13vw, 148px);
+}
+
+.savior-proof img {
+  filter: saturate(1.04) contrast(1.08) brightness(1.02);
+  box-shadow:
+    0 18px 42px -28px rgba(52, 224, 200, .38),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
+@media (min-width: 901px) {
+  .story .act[data-act="1"] .act-copy.bl {
+    padding-bottom: clamp(260px, 32vh, 420px);
+  }
+}
+
+@media (max-width: 760px) {
+  .savior-proof {
+    gap: 10px;
+  }
+
+  .savior-proof figure {
+    width: min(28vw, 120px);
+  }
+}

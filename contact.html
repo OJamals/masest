@@ -3,90 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Request a Quote | MASEST VertKleen</title>
-<meta name="description" content="Request a VertKleen quote or distributor connection. Tell us your product interest, industry, volume, location, and timeline.">
+<title>Request | MASEST VertKleen</title>
+<meta name="description" content="Request a quote, free chemical audit, sample kit, or distributor conversation with MASEST VertKleen.">
 <meta name="theme-color" content="#fafbfc">
-<link rel="icon" type="image/png" href="img/favicon.png">
-<meta property="og:title" content="Request a Quote | MASEST VertKleen">
-<meta property="og:description" content="Request a VertKleen quote or distributor connection. Tell us your product interest, industry, volume, location, and timeline.">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="MASEST VertKleen">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
 <noscript>
-<nav class="nojs-nav" aria-label="Site">
-  <a href="index.html"><b>MASEST</b></a>
-  <a href="products.html">Products</a>
-  <a href="industries.html">Industries</a>
-  <a href="about.html">About</a>
-  <a href="contact.html">Contact</a>
-</nav>
+  <nav class="nojs-nav">
+    <a href="index.html">Home</a>
+    <a href="why-vertkleen.html">Why VertKleen</a>
+    <a href="products.html">Products</a>
+    <a href="programs.html">Programs</a>
+    <a href="proof.html">Proof</a>
+    <a href="industries.html">Industries</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+  </nav>
 </noscript>
 
 <main id="main">
-<section class="page-hero">
-  <div class="wrap">
-    <span class="eyebrow">Contact</span>
-    <h1 class="display">Let's get you to zero hazard.</h1>
-    <p class="subhead">Tell us about your operation. Quotes route by industry, volume, and location directly to the MASEST sales team, typically within one business day.</p>
-  </div>
-</section>
+  <section class="hero-split">
+    <div class="wrap">
+      <span class="eyebrow">Contact</span>
+      <h1 class="display">Let's get you to zero hazard.</h1>
+      <p class="subhead">Choose the right path: quote, free chemical audit, sample kit, or distributor conversation. Requests route by industry, product, volume, and location.</p>
+    </div>
+  </section>
 
-<section class="quote-section">
-  <div class="wrap" style="max-width:860px">
-    <div class="form-card reveal">
-      <form id="quoteForm" data-endpoint="https://formsubmit.co/ajax/matthew@masest.co">
-        <div class="form-grid">
-          <div class="field"><label for="fName">Full Name *</label><input id="fName" name="name" required autocomplete="name" placeholder="Marisol Vega"></div>
-          <div class="field"><label for="fCompany">Company *</label><input id="fCompany" name="company" required autocomplete="organization" placeholder="Gulf Coast Mechanical"></div>
-          <div class="field"><label for="fEmail">Work Email *</label><input id="fEmail" name="email" type="email" required autocomplete="email" placeholder="m.vega@gulfcoastmech.com"></div>
-          <div class="field"><label for="fPhone">Phone</label><input id="fPhone" name="phone" type="tel" autocomplete="tel" placeholder="(727) 348-6519"></div>
+  <section class="section section-slim">
+    <div class="wrap contact-layout">
+      <form class="form-card" id="quoteForm" data-endpoint="https://formspree.io/f/xzzgvqaq">
+        <div class="field-grid">
+          <div class="field"><label for="fName">Full Name *</label><input id="fName" name="name" type="text" placeholder="Marisol Vega" required></div>
+          <div class="field"><label for="fCompany">Company *</label><input id="fCompany" name="company" type="text" placeholder="Gulf Coast Mechanical" required></div>
+          <div class="field"><label for="fEmail">Email *</label><input id="fEmail" name="email" type="email" placeholder="m.vega@gulfcoastmech.com" required></div>
+          <div class="field"><label for="fPhone">Phone</label><input id="fPhone" name="phone" type="tel" placeholder="(727) 348-6519"></div>
+
           <div class="field">
-            <label for="fType">Inquiry Type *</label>
+            <label for="fType">Request Type *</label>
             <select id="fType" name="type" required>
               <option value="quote">Product Quote</option>
+              <option value="audit">Free Chemical Audit</option>
+              <option value="sample">Sample Kit Request</option>
               <option value="distributor">Distributor / Partner Inquiry</option>
               <option value="technical">Technical Question</option>
               <option value="government">Government / Federal Procurement</option>
             </select>
           </div>
+
           <div class="field">
             <label for="fProduct">Product Interest *</label>
             <select id="fProduct" name="product" required>
               <option value="">Select a product</option>
               <option>VertKleen HCR</option>
               <option>VertKleen CR</option>
+              <option>VertKleen CRHD</option>
+              <option>VertKleen Descaler</option>
               <option>VertKleen Neutral</option>
               <option>VertKleen MultiWash</option>
+              <option>VertKleen AlumiBrite</option>
+              <option>VertKleen Torque</option>
+              <option>VertKleen LAM3</option>
               <option>WaterSafe60</option>
               <option>Purgo</option>
-              <option>DBNPA Tablets</option>
+              <option>DBNPA Tablet</option>
+              <option>VertKleen Glycol</option>
               <option>Full Cooling Tower Program</option>
               <option>Not sure, recommend for me</option>
             </select>
           </div>
+
           <div class="field">
             <label for="fIndustry">Industry *</label>
             <select id="fIndustry" name="industry" required>
               <option value="">Select industry</option>
               <option>Oil &amp; Gas</option>
-              <option>Marine / Cruise</option>
+              <option>Marine</option>
+              <option>Manufacturing</option>
+              <option>Food &amp; Beverage</option>
+              <option>Healthcare</option>
               <option>Construction</option>
               <option>Military / Government</option>
-              <option>Commercial HVAC / Water Treatment</option>
-              <option>Healthcare</option>
               <option>Education</option>
-              <option>Manufacturing / Warehousing</option>
-              <option>Food &amp; Beverage</option>
+              <option>HVAC / Water Treatment</option>
               <option>Other</option>
             </select>
           </div>
+
           <div class="field">
-            <label for="fVolume">Estimated Volume *</label>
-            <select id="fVolume" name="volume" required>
+            <label for="fVolume">Volume / Intent</label>
+            <select id="fVolume" name="volume">
               <option value="">Select volume</option>
               <option>Sample / Trial</option>
               <option>1-10 pails</option>
@@ -96,10 +105,11 @@
               <option>Ongoing program supply</option>
             </select>
           </div>
-          <div class="field"><label for="fLocation">Location (City, Country) *</label><input id="fLocation" name="location" required placeholder="Tampa, USA"></div>
+
+          <div class="field"><label for="fLocation">Location</label><input id="fLocation" name="location" type="text" placeholder="Tampa, USA"></div>
           <div class="field">
-            <label for="fTimeline">Timeline *</label>
-            <select id="fTimeline" name="timeline" required>
+            <label for="fTimeline">Timeline</label>
+            <select id="fTimeline" name="timeline">
               <option value="">Select timeline</option>
               <option>Immediate (this month)</option>
               <option>This quarter</option>
@@ -107,81 +117,72 @@
               <option>Researching options</option>
             </select>
           </div>
-          <div class="field full"><label for="fMsg">What are you replacing, or what's the job?</label><textarea id="fMsg" name="message" rows="4" placeholder="e.g., We currently descale cooling tower fill with hydrochloric acid twice a year"></textarea></div>
-          <div class="full" style="text-align:center;margin-top:8px">
-            <button class="btn btn-primary" type="submit" style="min-width:220px;justify-content:center">Submit Request</button>
-            <p class="form-note">* Required. Your information goes only to the MASEST sales team, never sold or shared.</p>
-          </div>
         </div>
-      </form>
-    <div class="form-success" id="formSuccess" role="status" aria-live="polite">
-      <i class="ph ph-check-circle" aria-hidden="true"></i>
-      <h2 class="headline" id="formSuccessTitle" style="font-size:1.7rem">Request received.</h2>
-      <p class="subhead" id="formSuccessCopy" style="margin:12px auto 0">MASEST has received your quote request. A sales or technical contact will review the details and follow up directly.</p>
-      <p style="margin-top:22px"><a class="btn btn-primary" id="mailtoFallback" href="mailto:matthew@masest.co">Open Email Draft</a></p>
-      <button class="btn btn-ghost btn-sm" id="formEdit" type="button" style="margin-top:14px">Edit my request</button>
-    </div>
-    </div>
-    <div class="quote-assurance" aria-label="What happens after you send a request">
-      <div>
-        <span>01</span>
-        <b>Application matched</b>
-        <p>MASEST reviews the legacy chemical, system type, and operating constraints.</p>
-      </div>
-      <div>
-        <span>02</span>
-        <b>Documentation pulled</b>
-        <p>SDS, HMIS, certification, and program notes are attached when available.</p>
-      </div>
-      <div>
-        <span>03</span>
-        <b>Quote routed</b>
-        <p>Volume, location, and timeline determine the right sales or technical contact.</p>
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- DIRECT CONTACT -->
-<section style="padding-top:0">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <h2 class="headline">Prefer to talk?</h2>
+        <div class="field" style="margin-top:18px">
+          <label for="fMessage">Current chemical / site notes</label>
+          <textarea id="fMessage" name="message" rows="5" placeholder="e.g., We currently descale cooling tower fill with hydrochloric acid twice a year"></textarea>
+        </div>
+
+        <button class="btn btn-primary" type="submit" style="min-width:220px;justify-content:center">Submit Request</button>
+        <p class="form-note">* Required. Your information goes only to the MASEST sales team, never sold or shared.</p>
+      </form>
+
+      <div class="form-card form-success" id="formSuccess" style="display:none">
+        <h2 class="headline" id="formSuccessTitle" style="font-size:1.7rem">Request received.</h2>
+        <p id="formSuccessCopy">MASEST has received your request. A sales or technical contact will review the details and follow up directly.</p>
+        <a class="btn btn-ghost" id="mailtoFallback" href="mailto:matthew@masest.co">Open Email Draft</a>
+      </div>
+
+      <aside class="contact-cards">
+        <div class="contact-card">
+          <i class="ph ph-envelope-simple" aria-hidden="true"></i>
+          <h3>Sales</h3>
+          <p>Matt Seedial, COO</p>
+          <a href="tel:+18134063852">(813) 406-3852</a>
+          <a href="mailto:matthew@masest.co">matthew@masest.co</a>
+        </div>
+        <div class="contact-card">
+          <i class="ph ph-wrench" aria-hidden="true"></i>
+          <h3>Technical</h3>
+          <p>Mike Seedial, Technical Director</p>
+          <a href="tel:+18134517565">(813) 451-7565</a>
+          <a href="mailto:mseedial@masest.co">mseedial@masest.co</a>
+        </div>
+        <div class="contact-card">
+          <i class="ph ph-seal-check" aria-hidden="true"></i>
+          <h3>Government Buyers</h3>
+          <p>SAM.gov registered<br>CAGE 0B2Q3, NAICS 424690</p>
+        </div>
+      </aside>
     </div>
-    <div class="contact-cards">
-      <div class="contact-card reveal">
-        <i class="ph ph-phone" aria-hidden="true"></i>
-        <h3>Sales</h3>
-        <p>Matt Seedial, COO<br>
-          <a href="tel:+18134063852">(813) 406-3852</a><br>
-          <a href="mailto:matthew@masest.co">matthew@masest.co</a></p>
-      </div>
-      <div class="contact-card reveal">
-        <i class="ph ph-wrench" aria-hidden="true"></i>
-        <h3>Technical</h3>
-        <p>Mike Seedial, Technical Director<br>
-          <a href="tel:+18134517565">(813) 451-7565</a><br>
-          <a href="mailto:mseedial@masest.co">mseedial@masest.co</a></p>
-      </div>
-      <div class="contact-card reveal">
-        <i class="ph ph-bank" aria-hidden="true"></i>
-        <h3>Government Buyers</h3>
-        <p>SAM.gov registered<br>CAGE 0B2Q3, NAICS 424690<br>Minority-owned (self-certified)</p>
+  </section>
+
+  <section class="section section-slim">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">After submit</span>
+        <h2 class="headline">Request received.</h2>
+        <p class="subhead">MASEST reviews the request type, legacy chemical, system, operating constraints, documentation needs, location, and timeline before routing follow-up.</p>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 </main>
 
 <script src="js/main.js"></script>
 <script>
-  // Pre-fill from URL params (?type=distributor, ?industry=...)
-  document.addEventListener("DOMContentLoaded", () => {
-    const q = new URLSearchParams(location.search);
-    const t = q.get("type"), ind = q.get("industry");
-    if (t) { const s = document.getElementById("fType"); [...s.options].forEach(o => { if (o.value === t) s.value = t; }); }
-    if (ind) { const s = document.getElementById("fIndustry"); [...s.options].forEach(o => { if (o.text === ind) s.value = o.value || o.text; }); }
-  });
+(() => {
+  const params = new URLSearchParams(location.search);
+  const setSelect = (id, value) => {
+    const el = document.getElementById(id);
+    if (!el || !value) return;
+    const option = Array.from(el.options).find((item) => item.value === value || item.text === value);
+    if (option) el.value = option.value;
+  };
+  setSelect("fType", params.get("type"));
+  setSelect("fProduct", params.get("product"));
+  setSelect("fIndustry", params.get("industry"));
+})();
 </script>
 </body>
 </html>

@@ -72,7 +72,7 @@
       defaults: { ease: "power2.out" },
       scrollTrigger: {
         trigger: st.act,
-        start: st.act === firstAct ? "top top" : "top bottom",
+        start: st.act === firstAct ? "top 67px" : "top bottom",
         end: "bottom bottom",
         scrub: 0.5,
         onEnter: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },

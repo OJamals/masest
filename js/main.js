@@ -8,6 +8,7 @@ const PRODUCTS = {
     replaces: "Replaces hydrochloric acid",
     hmis: "0-0-0",
     icon: "ph-flask",
+    image: "img/products/hvac-hcr.webp",
     tag: "Biodegradable acid replacement for descaling, rust removal, and passivation. No fumes, no burns, no hazmat handling.",
     desc: "A biodegradable, SynTec-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. No fumes, no burns, no hazmat handling.",
     uses: [
@@ -30,6 +31,7 @@ const PRODUCTS = {
     replaces: "Replaces caustic soda and sodium hydroxide",
     hmis: "0-0-0",
     icon: "ph-drop-half",
+    image: "img/products/hvac-cr.webp",
     tag: "NSF/ANSI 60 caustic replacement and pH adjuster. High-pH cleaning power at a zero hazard rating.",
     desc: "An NSF/ANSI 60 caustic replacement and pH adjuster covering high-pH alkaline needs: degreasing, hood filters, floors, and pH control, all at a zero hazard rating.",
     uses: [
@@ -135,7 +137,7 @@ const PRODUCTS = {
     docs: ["Safety Data Sheet (SDS)", "FIFRA 25(b) Documentation", "Cooling Tower Program Brochure"]
   },
   dbnpa: {
-    name: "DBNPA Tablets",
+    name: "DBNPA Tablet",
     cat: "water",
     replaces: "Replaces glutaraldehyde 50%",
     hmis: "Low hazard",
@@ -154,6 +156,118 @@ const PRODUCTS = {
       ["ph-info", "Program note", "The program's one mild-hazard product. Every other VertKleen product is HMIS 0-0-0."]
     ],
     docs: ["Safety Data Sheet (SDS)", "EPA Registration Documentation"]
+  },
+  crhd: {
+    name: "VertKleen CRHD",
+    cat: "alkaline",
+    replaces: "Replaces Simple Green, Zep, and solvent degreasers",
+    hmis: "0-0-0",
+    icon: "ph-spray-bottle",
+    image: "img/products/crhd.webp",
+    tag: "High-detergency alkaline degreaser, about 50% active and low-foam, for floors, equipment, drains, and engine bays.",
+    desc: "A high-detergency, low-foam alkaline degreaser at roughly 50% active strength, built to replace solvent and butyl degreasers on the heaviest grease without flammability or harsh fumes.",
+    uses: [
+      "Warehouse and plant floors, forklifts, and engine bays",
+      "Grease traps, drains, and commercial kitchen hoods",
+      "Heavy oil and hydraulic-fluid degreasing",
+      "Field-proven replacing Simple Green at Walmart distribution centers"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-gauge", "About 50% active", "Higher active strength than common 15% degreasers"],
+      ["ph-seal-check", "OEM cleared", "Approved by Crown Forklift and Plug Power; meets Boeing and Airbus cleaning specs"],
+      ["ph-truck", "Non-hazmat shipping", "No DOT hazmat freight, lower shipping cost"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "Case Study: Walmart Distribution Centers"]
+  },
+  descaler: {
+    name: "VertKleen Descaler",
+    cat: "acid",
+    replaces: "Replaces muriatic acid, CLR, and Calci-Solve",
+    hmis: "0-0-0",
+    icon: "ph-snowflake",
+    image: "img/products/descaler.webp",
+    tag: "Acid-free descaler for coils, towers, and plumbing. Fin-safe on aluminum and copper, with a fraction of the corrosion of conventional acids.",
+    desc: "An acid-free descaler (marketed as CRS in the dealership channel) that clears calcium, rust, and scale from coils, cooling towers, plumbing, and fire pumps. Fin-safe on aluminum and copper, chloride-free, and safe to municipal drains.",
+    uses: [
+      "Aluminum and copper coil descaling, fin-safe",
+      "Cooling towers, plumbing, and ammonia coils",
+      "Fire-pump and solenoid descaling",
+      "Refrigeration systems: chloride-free, safe on the ammonia charge"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Zero hazard rating, no NFPA pictograms"],
+      ["ph-trend-down", "Far less corrosion", "0.59 mpy versus hydrochloric at 609 mpy in VertKleen testing"],
+      ["ph-snowflake", "Fin-safe and chloride-free", "Protects aluminum, copper, steel, and stainless"],
+      ["ph-drop", "Municipal-drain safe", "No acid neutralization or special disposal"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Descaler vs Acids Corrosion Data", "Case Study: Walmart Refrigeration Systems"]
+  },
+  alumibrite: {
+    name: "VertKleen AlumiBrite",
+    cat: "specialty",
+    replaces: "Replaces hydrofluoric and hydrochloric aluminum brighteners",
+    hmis: "0-0-0",
+    icon: "ph-car",
+    tag: "Synthetic-acid aluminum brightener with no hydrofluoric or hydrochloric acid, for wheels, trim, and aluminum restoration.",
+    desc: "A synthetic-acid aluminum brightener that restores wheels, trim, and marine aluminum without hydrofluoric or hydrochloric acid, the standard brighteners that burn skin and pit metal.",
+    uses: [
+      "Wheels, trim, and aluminum restoration",
+      "Fleet, RV, and marine aluminum",
+      "Detailing and dealership reconditioning",
+      "Field-proven on a commercial tourist airboat"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "No hydrofluoric or hydrochloric acid"],
+      ["ph-atom", "Synthetic acid", "SynTec brightening without the burn and fume risk"],
+      ["ph-chart-line-up", "Brightening Index 90.1", "Outperformed hydrochloric acid at 86.3 in VertKleen testing"],
+      ["ph-leaf", "Biodegradable", "Low-impact discharge profile"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  torque: {
+    name: "VertKleen Torque",
+    cat: "specialty",
+    replaces: "Replaces separate wash, wax, and bug removers",
+    hmis: "0-0-0",
+    icon: "ph-sparkle",
+    tag: "All-in-one wash and wax for vehicles, fleet, RV, and marine, formulated to stay OEM warranty-safe.",
+    desc: "An all-in-one wash and wax that cleans and protects in a single step across vehicles, fleet, RV, and marine, formulated to stay within OEM finish-care requirements.",
+    uses: [
+      "Vehicle, fleet, and RV wash and wax",
+      "Marine and boat exteriors",
+      "Dealership and detailing programs",
+      "Field-proven on a 43-foot Yellowfin vessel"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-sparkle", "Wash and wax in one", "Cleans and protects in a single pass"],
+      ["ph-seal-check", "OEM warranty-safe", "Formulated to meet finish-care requirements"],
+      ["ph-leaf", "Biodegradable", "Low VOC, easy discharge"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  lam3: {
+    name: "VertKleen LAM3",
+    cat: "specialty",
+    replaces: "Replaces Wet & Forget and bleach roof cleaners",
+    hmis: "0-0-0",
+    icon: "ph-house-line",
+    tag: "Spray-and-walk-away remover for lichen, algae, moss, mold, and mildew on roofs, pavers, stucco, and siding.",
+    desc: "A neutral, spray-and-walk-away treatment that clears lichen, algae, moss, mold, and mildew from roofs, pavers, stucco, siding, and concrete, with no bleach and no harm to surrounding plants.",
+    uses: [
+      "Roofs, siding, stucco, and pavers",
+      "Concrete, walkways, and exterior walls",
+      "Pond and fountain algae",
+      "Field-proven clearing mildew from a painted column over two weeks"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Neutral pH, no bleach, no fumes"],
+      ["ph-plant", "Plant and pet safe", "No harm to flora or fauna around the work area"],
+      ["ph-timer", "Spray and walk away", "Keeps working up to a month; reapply about every six months"],
+      ["ph-leaf", "100% biodegradable", "Non-skin-irritant in OECD 404 testing"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Data Sheet (TDS)", "Front and Back Label"]
   }
 };
 
@@ -165,7 +279,10 @@ function renderChrome() {
   const page = pageName();
   const links = [
     ["index.html", "Home"],
+    ["why-vertkleen.html", "Why VertKleen"],
     ["products.html", "Products"],
+    ["programs.html", "Programs"],
+    ["proof.html", "Proof"],
     ["industries.html", "Industries"],
     ["about.html", "About"],
     ["contact.html", "Contact"]
@@ -177,7 +294,8 @@ function renderChrome() {
   const nav = document.createElement("header");
   // Start in the dark-glass treatment when this page opens on the dark story,
   // so the first paint matches the backdrop (no white-bar flash before onScroll).
-  nav.className = document.getElementById("story") ? "nav over-dark" : "nav";
+  const story = document.getElementById("story");
+  nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
       <a class="nav-logo" href="index.html"><span class="logo-mark"><span>M</span></span>MASEST</a>
@@ -216,12 +334,11 @@ function renderChrome() {
     if (e.key === "Escape") closeMenu();
   });
 
-  // Elevate the nav once the page scrolls away from the top; while it
-  // overlaps the dark story opener, switch it to a dark glass treatment
-  const story = document.getElementById("story");
+  // Elevate the nav once the page scrolls away from the top.
+  const useDarkNav = document.body.dataset.nav === "dark";
   const onScroll = () => {
     nav.classList.toggle("scrolled", window.scrollY > 8);
-    if (story) nav.classList.toggle("over-dark", story.getBoundingClientRect().bottom > 66);
+    nav.classList.toggle("over-dark", useDarkNav || (story && story.getBoundingClientRect().bottom > 66));
   };
   onScroll();
   window.addEventListener("scroll", onScroll, { passive: true });
@@ -240,9 +357,14 @@ function renderChrome() {
           <a href="products.html#acid">Acid Replacements</a>
           <a href="products.html#alkaline">Alkaline Replacements</a>
           <a href="products.html#water">Water Treatment</a>
+          <a href="products.html#specialty">Specialty &amp; Exterior</a>
+          <a href="resources.html">Resources &amp; SDS</a>
         </div>
         <div>
           <div class="foot-title">Company</div>
+          <a href="why-vertkleen.html">Why VertKleen</a>
+          <a href="programs.html">Programs &amp; Pricing</a>
+          <a href="proof.html">Proof &amp; Case Studies</a>
           <a href="industries.html">Industries</a>
           <a href="about.html">About Us</a>
           <a href="contact.html">Contact</a>
@@ -263,6 +385,22 @@ function renderChrome() {
 }
 
 /* ---------- Scroll reveal (IntersectionObserver, reduced-motion safe) ---------- */
+function initResponsiveTables() {
+  document.querySelectorAll(".cmp-table").forEach(table => {
+    const headers = Array.from(table.querySelectorAll("thead th")).map(th =>
+      th.textContent.trim().replace(/\s+/g, " ")
+    );
+    if (!headers.length) return;
+
+    table.querySelectorAll("tbody tr").forEach(row => {
+      Array.from(row.children).forEach((cell, index) => {
+        if (headers[index]) cell.dataset.label = headers[index];
+      });
+    });
+    table.classList.add("responsive-labels");
+  });
+}
+
 function initReveal() {
   const syncRevealFocus = (el, visible) => {
     const focusables = [];
@@ -327,6 +465,25 @@ function productCard(id, heroCard = false) {
   </div>`;
 }
 
+/* ---------- Before/after slider (drag, keyboard, reduced-motion safe) ----------
+   Markup: <div class="ba" data-ba> with .ba-after img, .ba-before > img,
+   an input[type=range].ba-range, and a .ba-handle. The range drives reveal. */
+function initBeforeAfter() {
+  document.querySelectorAll("[data-ba]").forEach(ba => {
+    const range = ba.querySelector(".ba-range");
+    const handle = ba.querySelector(".ba-handle");
+    if (!range) return;
+    const apply = () => {
+      const v = range.value;
+      ba.style.setProperty("--pos", v + "%");
+      if (handle) handle.style.left = v + "%";
+      range.setAttribute("aria-valuenow", v);
+    };
+    range.addEventListener("input", apply);
+    apply();
+  });
+}
+
 /* ---------- Quote form ----------
    No backend yet: submission opens a prefilled email to the sales
    team (mailto handoff) and says so honestly. The form stays
@@ -347,6 +504,27 @@ async function submitRequest(form, data) {
   });
   if (!res.ok) throw new Error("Request failed");
   return { fallbackOnly: false };
+}
+
+function initProofFilters() {
+  const filters = [...document.querySelectorAll("[data-proof-filter]")];
+  const cards = [...document.querySelectorAll("[data-proof-card]")];
+  if (!filters.length || !cards.length) return;
+
+  filters.forEach((filter) => {
+    filter.addEventListener("click", () => {
+      const kind = filter.dataset.proofFilter;
+      filters.forEach((item) => {
+        const active = item === filter;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      cards.forEach((card) => {
+        const visible = kind === "all" || card.dataset.proofKind === kind;
+        card.hidden = !visible;
+      });
+    });
+  });
 }
 
 function initQuoteForm() {
@@ -456,5 +634,8 @@ function initQuoteForm() {
 document.addEventListener("DOMContentLoaded", () => {
   renderChrome();
   initQuoteForm();
+  initBeforeAfter();
+  initProofFilters();
+  initResponsiveTables();
   initReveal();
 });

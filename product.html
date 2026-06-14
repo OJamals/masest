@@ -6,7 +6,7 @@
 <title>Product | MASEST VertKleen</title>
 <meta name="description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation for zero-hazard industrial chemistry.">
 <meta name="theme-color" content="#fafbfc">
-<link rel="icon" type="image/png" href="img/favicon.png">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png">
 <meta property="og:title" content="Product | MASEST VertKleen">
 <meta property="og:description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation.">
 <meta property="og:type" content="website">
@@ -19,7 +19,10 @@
 <noscript>
 <nav class="nojs-nav" aria-label="Site">
   <a href="index.html"><b>MASEST</b></a>
+  <a href="why-vertkleen.html">Why VertKleen</a>
   <a href="products.html">Products</a>
+  <a href="programs.html">Programs</a>
+  <a href="proof.html">Proof</a>
   <a href="industries.html">Industries</a>
   <a href="about.html">About</a>
   <a href="contact.html">Contact</a>
@@ -41,6 +44,7 @@
       </div>
     </div>
     <div class="hmis-panel">
+      <img id="pImage" class="product-shot" src="img/products/hvac-hcr.webp" alt="" hidden>
       <div class="panel-title" id="panelTitle">HMIS Hazard Rating</div>
       <div class="hmis-rows" id="panelRows"></div>
       <div class="panel-foot" id="panelFoot"></div>
@@ -123,6 +127,12 @@
     document.getElementById("pReplaces").textContent = p.replaces;
     document.getElementById("pName").textContent = p.name;
     document.getElementById("pDesc").textContent = p.desc;
+    if (p.image) {
+      const img = document.getElementById("pImage");
+      img.src = p.image;
+      img.alt = p.name + " product container";
+      img.hidden = false;
+    }
     document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";
     const quoteHref = "contact.html?product=" + encodeURIComponent(p.name);
     document.getElementById("pQuoteBtn").href = quoteHref;
