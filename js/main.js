@@ -194,6 +194,12 @@ function renderChrome() {
   document.body.prepend(skip);
   const burger = document.getElementById("navBurger");
   const navLinks = document.getElementById("navLinks");
+  const navCta = nav.querySelector(".nav-cta");
+  const syncNavCtaLabel = () => {
+    navCta.textContent = window.matchMedia("(max-width: 360px)").matches ? "Quote" : "Request a Quote";
+  };
+  syncNavCtaLabel();
+  window.addEventListener("resize", syncNavCtaLabel);
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);

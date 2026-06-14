@@ -22,6 +22,10 @@
   background: var(--s-bg);
   color: var(--s-ink);
   isolation: isolate;
+  left: 50%;
+  margin-left: -50vw;
+  overflow-x: clip;
+  width: 100vw;
 }
 
 /* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
@@ -32,6 +36,7 @@
 .story .act-savior { height: 220vh; }
 .story .stage {
   position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 620px;
+  width: 100vw;
   overflow: hidden; display: grid; place-items: center;
   background: radial-gradient(120% 90% at 50% 0%, var(--s-bg-2) 0%, var(--s-bg) 60%);
 }
@@ -190,6 +195,9 @@
 .reel-tag i { color: var(--s-danger-ink); font-size: .9rem; }
 .reel-idx {
   position: absolute; z-index: 20; top: -12px; right: 18px;
+  padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--s-line); background: rgba(11, 13, 18, .85);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   font-size: .78rem; font-weight: 700; letter-spacing: .08em; color: var(--s-mut);
   font-variant-numeric: tabular-nums;
 }
