@@ -275,7 +275,6 @@ const PRODUCTS = {
     replaces: "Replaces muriatic acid for rust, scale, and calcium",
     hmis: "0-0-0",
     icon: "ph-wrench",
-    image: "img/products/descaler.webp",
     tag: "Non-corrosive HCl replacement for underbody rust removal, coils, cooling towers, and water-side scale.",
     desc: "A non-corrosive hydrochloric-acid replacement for rust, calcium, scale, and water-side buildup where metal safety matters.",
     uses: [
@@ -298,7 +297,6 @@ const PRODUCTS = {
     replaces: "Replaces caustic soda in NSF/ANSI 60 water-treatment use",
     hmis: "0-0-0",
     icon: "ph-seal-check",
-    image: "img/products/hvac-cr.webp",
     tag: "NSF/ANSI 60 caustic replacement and pH adjuster for water-treatment programs.",
     desc: "The NSF/ANSI 60 water-treatment version of VertKleen CR, used where caustic replacement needs documented drinking-water-system chemistry.",
     uses: [
