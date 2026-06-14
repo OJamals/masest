@@ -277,6 +277,9 @@ function pageName() {
 }
 function renderChrome() {
   const page = pageName();
+  // Pages under /industries/ sit one level deep; prefix chrome links with the
+  // right root so the shared nav/footer resolve from any directory depth.
+  const root = /\/industries\//.test(location.pathname) ? "../" : "";
   const links = [
     ["index.html", "Home"],
     ["why-vertkleen.html", "Why VertKleen"],
@@ -298,13 +301,13 @@ function renderChrome() {
   nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-logo" href="index.html"><span class="logo-mark"><span>M</span></span>MASEST</a>
+      <a class="nav-logo" href="${root}index.html"><span class="logo-mark"><span>M</span></span>MASEST</a>
       <nav class="nav-links" id="navLinks">
         ${links.map(([href, label]) =>
-          `<a href="${href}"${page === href ? ' class="active"' : ""}>${label}</a>`).join("")}
+          `<a href="${root}${href}"${page === href ? ' class="active"' : ""}>${label}</a>`).join("")}
       </nav>
       <div style="display:flex;align-items:center;gap:12px">
-        <a class="nav-cta" href="contact.html">Request a Quote</a>
+        <a class="nav-cta" href="${root}contact.html">Request a Quote</a>
         <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
       </div>
     </div>`;
@@ -354,20 +357,20 @@ function renderChrome() {
         </div>
         <div>
           <div class="foot-title">Products</div>
-          <a href="products.html#acid">Acid Replacements</a>
-          <a href="products.html#alkaline">Alkaline Replacements</a>
-          <a href="products.html#water">Water Treatment</a>
-          <a href="products.html#specialty">Specialty &amp; Exterior</a>
-          <a href="resources.html">Resources &amp; SDS</a>
+          <a href="${root}products.html#acid">Acid Replacements</a>
+          <a href="${root}products.html#alkaline">Alkaline Replacements</a>
+          <a href="${root}products.html#water">Water Treatment</a>
+          <a href="${root}products.html#specialty">Specialty &amp; Exterior</a>
+          <a href="${root}resources.html">Resources &amp; SDS</a>
         </div>
         <div>
           <div class="foot-title">Company</div>
-          <a href="why-vertkleen.html">Why VertKleen</a>
-          <a href="programs.html">Programs &amp; Pricing</a>
-          <a href="proof.html">Proof &amp; Case Studies</a>
-          <a href="industries.html">Industries</a>
-          <a href="about.html">About Us</a>
-          <a href="contact.html">Contact</a>
+          <a href="${root}why-vertkleen.html">Why VertKleen</a>
+          <a href="${root}programs.html">Programs &amp; Pricing</a>
+          <a href="${root}proof.html">Proof &amp; Case Studies</a>
+          <a href="${root}industries.html">Industries</a>
+          <a href="${root}about.html">About Us</a>
+          <a href="${root}contact.html">Contact</a>
         </div>
         <div>
           <div class="foot-title">Contact</div>
@@ -545,6 +548,37 @@ function initQuoteForm() {
     if (msg && !msg.value) msg.value = "Please send the " + doc + (pre ? " for " + pre : "") + ".";
     if (type) type.value = "technical";
   }
+  const indParam = params.get("industry");
+  if (indParam) {
+    const isel = form.querySelector('[name="industry"]');
+    if (isel) [...isel.options].forEach(o => { if (o.value === indParam || o.text === indParam) isel.value = o.value || o.text; });
+  }
+
+  // ── Adaptive request type: the chooser swaps which field set is required/shown ──
+  const typeInput = form.querySelector('[name="type"]');
+  const groups = [...form.querySelectorAll("[data-intent-group]")];
+  const choices = [...form.querySelectorAll(".cta-choice")];
+  const INTENTS = ["quote", "audit", "sample", "distributor"];
+  function applyIntent(intent) {
+    if (!INTENTS.includes(intent)) intent = "quote";
+    if (typeInput) typeInput.value = intent;
+    choices.forEach(b => {
+      const on = b.dataset.intent === intent;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    groups.forEach(g => {
+      const on = g.dataset.intentGroup === intent;
+      g.hidden = !on;
+      g.querySelectorAll("[data-req]").forEach(el => { el.required = on; if (!on) setErr(el, ""); });
+    });
+  }
+  choices.forEach(b => b.addEventListener("click", () => applyIntent(b.dataset.intent)));
+  // Initial intent: a chooser type (?type or a prior set value) wins; otherwise default to quote
+  // while preserving non-chooser types (technical/government) on the hidden input.
+  const reqType = params.get("type") || (typeInput ? typeInput.value : "");
+  if (INTENTS.includes(reqType)) applyIntent(reqType);
+  else { applyIntent("quote"); if (typeInput && reqType) typeInput.value = reqType; }
 
   // Inline validation: per-field messages instead of browser bubbles only
   form.setAttribute("novalidate", "");
@@ -566,12 +600,24 @@ function initQuoteForm() {
   function validate() {
     let firstBad = null;
     form.querySelectorAll("input, select, textarea").forEach(el => {
+      if (el.closest("[data-intent-group][hidden]")) { setErr(el, ""); return; }
       let text = "";
       if (el.required && !el.value.trim()) text = "This field is required.";
       else if (el.type === "email" && el.value && !el.checkValidity()) text = "Enter a valid email address.";
       setErr(el, text);
       if (text && !firstBad) firstBad = el;
     });
+    const sampleGroup = form.querySelector('[data-intent-group="sample"]');
+    if (sampleGroup && !sampleGroup.hidden) {
+      const picks = sampleGroup.querySelectorAll('input[name="samples"]:checked').length;
+      const hint = document.getElementById("sampleHint");
+      const okPicks = picks >= 3 && picks <= 5;
+      if (hint) {
+        hint.textContent = okPicks ? "3 to 5 products selected." : "Select 3 to 5 products (you have " + picks + ").";
+        hint.classList.toggle("err", !okPicks);
+      }
+      if (!okPicks && !firstBad) firstBad = sampleGroup.querySelector('input[name="samples"]');
+    }
     return firstBad;
   }
   form.addEventListener("input", e => setErr(e.target, ""));
@@ -583,13 +629,16 @@ function initQuoteForm() {
 
     const data = new FormData(form);
     const labels = {
-      name: "Name", company: "Company", email: "Email", phone: "Phone", type: "Inquiry type",
+      name: "Name", company: "Company", email: "Email", phone: "Phone", type: "Request type",
       product: "Product", industry: "Industry", volume: "Volume", location: "Location",
-      timeline: "Timeline", message: "Message"
+      timeline: "Timeline", system: "System / asset", audit_timeframe: "Preferred timeframe",
+      samples: "Sample products", ship_to: "Ship-to address", company_type: "Company type",
+      territory: "Territory / region", message: "Notes"
     };
     const lines = [];
     for (const [k, v] of data.entries()) if (String(v).trim()) lines.push((labels[k] || k) + ": " + v);
-    const subject = "Quote request: " + (data.get("product") || "VertKleen") + " (" + (data.get("company") || data.get("name")) + ")";
+    const reqLabel = (data.get("type") || "quote").replace(/^./, c => c.toUpperCase());
+    const subject = reqLabel + " request: " + (data.get("product") || data.get("industry") || "VertKleen") + " (" + (data.get("company") || data.get("name")) + ")";
     const mailto = "mailto:" + SALES_EMAIL +
       "?subject=" + encodeURIComponent(subject) +
       "&body=" + encodeURIComponent(lines.join("\n"));
@@ -608,7 +657,7 @@ function initQuoteForm() {
       if (title) title.textContent = accepted ? "Request received." : "Almost there: send the request.";
       if (copy) {
         copy.innerHTML = accepted
-          ? "MASEST has received your quote request. A sales or technical contact will review the details and follow up directly."
+          ? "MASEST has received your request. A sales or technical contact will review the details and follow up directly."
           : 'Use the prepared email link below, then hit send in your email app. If your device blocks email links, email <a href="mailto:matthew@masest.co" style="font-weight:700;color:var(--accent-ink)">matthew@masest.co</a> or call <a href="tel:+18134063852" style="font-weight:700;color:var(--accent-ink)">(813) 406-3852</a>.';
       }
       if (mail) mail.style.display = accepted ? "none" : "";
@@ -631,9 +680,23 @@ function initQuoteForm() {
   });
 }
 
+function initIndustryProducts() {
+  document.querySelectorAll("[data-ind-products]").forEach((box) => {
+    const ids = (box.dataset.indProducts || "").split(/\s+/).filter((id) => PRODUCTS[id]);
+    if (!ids.length) return;
+    box.innerHTML = ids.map((id) => productCard(id)).join("");
+    // Industry pages live one level deep; rewrite product/quote links to resolve from /industries/.
+    box.querySelectorAll("a[href]").forEach((a) => {
+      const h = a.getAttribute("href");
+      if (h && !/^(https?:|mailto:|tel:|#|\.\.\/|\/)/.test(h)) a.setAttribute("href", "../" + h);
+    });
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   renderChrome();
   initQuoteForm();
+  initIndustryProducts();
   initBeforeAfter();
   initProofFilters();
   initResponsiveTables();

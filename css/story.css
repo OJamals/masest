@@ -32,7 +32,7 @@
 .story .act { position: relative; height: 220vh; padding: 0; }
 .story .act[data-act="1"] { height: 180vh; }   /* photo reel needs less sequencing */
 .story .act[data-act="3"] { height: 240vh; }   /* HMIS factor-by-factor */
-.story .act[data-act="4"] { height: 260vh; }   /* chemicals one by one */
+.story .act[data-act="4"] { height: 310vh; }   /* chemicals one by one */
 .story .act-savior { height: 220vh; }
 .story .stage {
   position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 620px;
@@ -456,7 +456,24 @@
     gap: 10px;
   }
 
-  .savior-proof figure {
-    width: min(28vw, 120px);
-  }
+.savior-proof figure {
+  width: min(28vw, 120px);
+}
+}
+
+/* Keep the story openers procedural: the motion comes from canvas fumes/motes,
+   not blurred photo collages behind the content. */
+.story .act[data-act="1"] .stage {
+  background:
+    radial-gradient(45% 38% at 70% 25%, rgba(255, 106, 69, .12), transparent 64%),
+    radial-gradient(55% 46% at 28% 64%, rgba(52, 224, 200, .08), transparent 68%),
+    radial-gradient(110% 90% at 50% 0%, #151924 0%, #090c12 64%);
+}
+
+.story .act-savior .stage {
+  background:
+    radial-gradient(45% 44% at 50% 38%, rgba(52, 224, 200, .18), transparent 68%),
+    radial-gradient(70% 58% at 78% 12%, rgba(52, 224, 200, .10), transparent 70%),
+    radial-gradient(110% 90% at 50% 0%, #101821 0%, #070a10 64%);
+}
 }
