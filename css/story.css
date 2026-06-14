@@ -77,13 +77,15 @@
 }
 .rail-btn b {
   width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
-  font-size: .66rem; font-weight: 800; letter-spacing: .04em; font-variant-numeric: tabular-nums;
+  font-family: var(--body-font);
+  font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-variant-numeric: tabular-nums;
   border: 1px solid var(--s-line); background: rgba(11, 13, 18, .55);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   transition: border-color .4s var(--s-ease), color .4s var(--s-ease), background .4s var(--s-ease);
 }
 .rail-btn span {
-  font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: none;
+  font-family: var(--body-font);
+  font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
   opacity: 0; transform: translateX(-6px); transition: opacity .4s var(--s-ease), transform .4s var(--s-ease);
   white-space: nowrap;
 }
@@ -102,7 +104,7 @@
 .story .kicker {
   display: inline-flex; align-items: center; gap: 9px;
   font-family: var(--body-font);
-  font-size: .9rem; font-weight: 500; letter-spacing: 0; text-transform: none;
+  font-size: .74rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
   color: var(--s-mut); margin-bottom: 18px;
 }
 .story .kicker::before { content: ""; width: 22px; height: 1.5px; background: currentColor; opacity: .7; }
@@ -366,6 +368,50 @@
 .savior-ctas .btn-primary:hover { background: #5fe9d6; }
 .savior-ctas .btn-ghost { background: rgba(255, 255, 255, .04); color: #fff; border: 1.5px solid rgba(255, 255, 255, .28); }
 .savior-ctas .btn-ghost:hover { border-color: #fff; background: rgba(255, 255, 255, .1); }
+
+/* ============================================================
+   SHORT-VIEWPORT FIT — Acts 4 & 5
+   The stage is a pinned 100vh box with vertically-centered content.
+   On laptop heights the savior stack (~829px) and the chem rig + slider
+   exceed the fold, clipping the badge (top) and the proof row / HMIS
+   scale (bottom). Tighten the vertical rhythm so both fit < 100vh.
+   ============================================================ */
+@media (min-width: 761px) and (max-height: 960px) {
+  /* Act 4 — chemicals + shared scale */
+  .act-chems .act-copy.top { margin-bottom: clamp(6px, 1.2vh, 16px); }
+  .act-chems .act-h { font-size: clamp(1.7rem, 3.4vw, 2.5rem); }
+  .act-chems .chem-rig { gap: 10px; }
+  .act-chems .chem-card { padding: 12px 16px; }
+  .act-chems .chem-card p { margin-top: 7px; font-size: .86rem; line-height: 1.45; }
+  .act-chems .chem-scale { padding-top: 10px; }
+  .act-chems .chem-out { font-size: .92rem; line-height: 1.45; }
+  .act-chems .chem-final { font-size: clamp(1.05rem, 1.7vw, 1.3rem); }
+
+  /* Act 5 — savior stack */
+  .act-savior .savior-badge { margin-bottom: 8px; }
+  .act-savior .savior-wrap h2 { font-size: clamp(2rem, 4.2vw, 3rem); }
+  .act-savior .savior-wrap .lede { margin-top: 8px; font-size: 1rem; max-width: 54ch; }
+  .act-savior .savior-zero { margin: 10px 0 4px; gap: 12px; }
+  .act-savior .savior-zero .z { width: clamp(50px, 7.2vw, 74px); border-radius: 14px; font-size: clamp(2.4rem, 5vw, 3.6rem); }
+  .act-savior .savior-cap { margin-bottom: 10px; }
+  .act-savior .savior-proof { gap: 12px; }
+  .act-savior .savior-proof figure { width: clamp(88px, 9.5vw, 112px); }
+  .act-savior .savior-proof figcaption { margin-top: 5px; font-size: .7rem; }
+}
+
+/* Clear the fixed nav so the "Enter VertKleen" badge never tucks under it,
+   then scale the savior stack to fit the height that's left. .savior-wrap is
+   NOT GSAP-transformed, so a CSS scale is safe and stays centered via the
+   stage's place-items:center. Steps cascade — shortest matching rule wins. */
+@media (min-width: 761px) {
+  .act-savior .stage { padding-top: 64px; box-sizing: border-box; }
+  .act-savior .savior-wrap { transform-origin: center center; }
+}
+@media (min-width: 761px) and (max-height: 800px) { .act-savior .savior-wrap { transform: scale(.94); } }
+@media (min-width: 761px) and (max-height: 730px) { .act-savior .savior-wrap { transform: scale(.88); } }
+@media (min-width: 761px) and (max-height: 670px) { .act-savior .savior-wrap { transform: scale(.81); } }
+@media (min-width: 761px) and (max-height: 610px) { .act-savior .savior-wrap { transform: scale(.74); } }
+@media (min-width: 761px) and (max-height: 560px) { .act-savior .savior-wrap { transform: scale(.68); } }
 
 /* ============================================================
    REDUCED MOTION + NO-JS FALLBACK: stacked, fully visible.

@@ -132,10 +132,18 @@ h1, h2, h3 { font-family: var(--font); letter-spacing: -0.022em; line-height: 1.
 .nav.over-dark .nav-burger span { background: #f4f6f8; }
 .nav-inner {
   max-width: var(--maxw); margin: 0 auto; padding: 0 28px;
-  display: flex; align-items: center; justify-content: space-between; height: 66px;
+  display: flex; align-items: center; justify-content: space-between; height: 56px;
 }
 .nav-logo { display: flex; align-items: center; gap: 11px; font-family: var(--font); font-weight: 900; font-size: 1.05rem; letter-spacing: .04em; }
-.nav-logo .logo-image { width: 56px; height: auto; display: block; }
+/* Both logo PNGs share an identical square canvas, so a single height fills
+   the header top-to-bottom and renders the same size on either background. */
+.nav-logo .logo-image { height: 52px; width: auto; display: block; }
+/* Logo swaps by nav background for contrast: dark-ink mark on the default
+   (light) nav, gradient mark when the nav rides over a dark hero. */
+.nav-logo .logo-ink  { display: block; }
+.nav-logo .logo-grad { display: none; }
+.nav.over-dark .nav-logo .logo-ink  { display: none; }
+.nav.over-dark .nav-logo .logo-grad { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.28)); }
 .nav-logo .logo-mark {
  position: relative; width: 31px; height: 31px; border-radius: 9px; background: var(--ink);
   display: grid; place-items: center; font-size: .85rem; font-weight: 900;
@@ -899,7 +907,7 @@ figure.photo figcaption {
   padding: 16px 28px; border-bottom: 1px solid var(--line); background: var(--surface);
   font-size: .92rem; font-weight: 700;
 }
-.nojs-logo img { width: 56px; height: auto; display: block; }
+.nojs-logo img { width: 50px; height: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.22)); }
 .nojs-nav a:hover { color: var(--accent-ink); }
 
 /* ---------- Contact cards ---------- */
@@ -991,6 +999,8 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
     line-height: 1.45;
   }
 }
+.foot-logo-link { display: inline-block; margin-bottom: 16px; }
+.foot-logo { width: 84px; height: auto; display: block; filter: drop-shadow(0 1px 3px rgba(0,0,0,.4)); }
 .foot-brand { font-weight: 900; color: #fff; font-size: 1.15rem; margin-bottom: 12px; }
 .foot-bottom { border-top: 1px solid rgba(255,255,255,.14); padding-top: 26px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: rgba(255,255,255,.75); }
 
