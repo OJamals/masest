@@ -268,6 +268,74 @@ const PRODUCTS = {
       ["ph-leaf", "100% biodegradable", "Non-skin-irritant in OECD 404 testing"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Data Sheet (TDS)", "Front and Back Label"]
+  },
+  crs: {
+    name: "VertKleen CRS",
+    cat: "acid",
+    replaces: "Replaces muriatic acid for rust, scale, and calcium",
+    hmis: "0-0-0",
+    icon: "ph-wrench",
+    image: "img/products/descaler.webp",
+    tag: "Non-corrosive HCl replacement for underbody rust removal, coils, cooling towers, and water-side scale.",
+    desc: "A non-corrosive hydrochloric-acid replacement for rust, calcium, scale, and water-side buildup where metal safety matters.",
+    uses: [
+      "Underbody and equipment rust removal",
+      "HVAC coils and cooling towers",
+      "Water lines, fixtures, and scale-prone plumbing",
+      "Dealership and facility maintenance programs"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-drop-half", "HCl replacement", "Built for acid-cleaning jobs without muriatic-acid handling"],
+      ["ph-waves", "Water-side scale", "Targets calcium, rust, and mineral buildup"],
+      ["ph-leaf", "Lower-impact discharge", "Use ratios align with the VertKleen dilution guide"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "HCR & Descaler Userguide"]
+  },
+  crnsf60: {
+    name: "VertKleen CR NSF 60",
+    cat: "alkaline",
+    replaces: "Replaces caustic soda in NSF/ANSI 60 water-treatment use",
+    hmis: "0-0-0",
+    icon: "ph-seal-check",
+    image: "img/products/hvac-cr.webp",
+    tag: "NSF/ANSI 60 caustic replacement and pH adjuster for water-treatment programs.",
+    desc: "The NSF/ANSI 60 water-treatment version of VertKleen CR, used where caustic replacement needs documented drinking-water-system chemistry.",
+    uses: [
+      "pH adjustment in water-treatment programs",
+      "Cooling tower and closed-loop treatment support",
+      "District, campus, and municipal facility programs",
+      "Documentation-heavy procurement environments"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-seal-check", "NSF/ANSI 60", "For water-treatment chemistry documentation"],
+      ["ph-atom", "Caustic replacement", "Replaces sodium and potassium hydroxide functions"],
+      ["ph-clipboard-text", "Program documentation", "Fits ASHRAE 188 and procurement documentation workflows"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Certification", "Cooling Tower Program Brochure"]
+  },
+  glycols: {
+    name: "VertKleen Glycols",
+    cat: "water",
+    replaces: "Supplies inhibited PG and EG glycol programs",
+    hmis: "Program item",
+    icon: "ph-thermometer-cold",
+    tag: "Florida-sourced inhibited propylene and ethylene glycol for facility water loops and district programs.",
+    desc: "A glycol supply program for inhibited PG and EG concentrates and ready-to-use blends, priced for local pickup and facility maintenance programs.",
+    uses: [
+      "Chilled-water and hydronic loop freeze protection",
+      "School district and campus maintenance purchasing",
+      "Propylene glycol and ethylene glycol supply",
+      "Local pickup in Tampa, Lakeland, Cocoa, and Melbourne programs"
+    ],
+    specs: [
+      ["ph-map-pin", "Florida sourced", "Supplied through Florida-based distributors with local pickup"],
+      ["ph-currency-dollar", "Bid-ready list", "Brevard Schools list pricing source available"],
+      ["ph-package", "Multiple packs", "5-gal pails and 55-gal drums"],
+      ["ph-clipboard-text", "Program fit", "Pairs with cooling-tower and water-treatment scopes"]
+    ],
+    docs: ["Glycol Price List", "Technical Data Sheet (TDS)", "Program Quote Worksheet"]
   }
 };
 

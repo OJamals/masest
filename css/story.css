@@ -305,6 +305,22 @@
 .chem-final { font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 800; color: var(--s-ink); }
 .chem-final b { color: var(--s-safe); font-weight: 900; }
 
+/* Act 4 layout: the headline (.act-copy.top, absolutely floated at the stage top)
+   and the tall 2x2 .chem-rig were positioned independently — on laptop heights the
+   centered rig rose under the headline and clipped its second line. On desktop/laptop,
+   lay the whole act out as one vertically-centered flex column so headline and rig
+   stack as a single group and can never overlap. Mobile (<=760px) keeps its own
+   single-column flow defined above. */
+@media (min-width: 761px) {
+  .act-chems .stage { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .act-chems .act-copy.top { position: static; top: auto; margin: 0 0 clamp(10px, 1.8vh, 28px); }
+  /* Tighten the rig so headline + full rig clear short laptop heights (~720px)
+     without the trailing punchline clipping past the fold. */
+  .act-chems .chem-rig { margin: 0; gap: 12px; }
+  .act-chems .chem-scale { padding-top: 14px; }
+  .act-chems .chem-card { padding-top: 14px; padding-bottom: 14px; }
+}
+
 /* ============================================================
    ACT 5 — SAVIOR (VertKleen)
    ============================================================ */

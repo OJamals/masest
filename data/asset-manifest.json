@@ -1,0 +1,119 @@
+{
+  "sourceRoot": "/Users/omar/Desktop/masest",
+  "policy": "Public proof assets must stay source-backed: every published proof image maps to a corpus source, source document, destination asset, and accessible alt text.",
+  "updated": "2026-06-14",
+  "assets": [
+    {
+      "id": "ddc-rust-test",
+      "use": ["proof", "hvac-water"],
+      "source": "website_assets/03_case_study_photos/VertKleen_HCR_Rust_and_Descaling_Test_for_DDC_En",
+      "sourceDoc": "VertKleen HCR-Rust and Descaling Test for DDC Eng.pdf",
+      "destination": "img/proof/cases/ddc-rust.webp",
+      "alt": "Rusted HVAC component cleared with VertKleen HCR"
+    },
+    {
+      "id": "brewery-cip-trials",
+      "use": ["proof", "food-beverage"],
+      "source": "website_assets/03_case_study_photos/VertKleen_CR_and_HCR_Brewery_Trial_HellnBlazes_B",
+      "sourceDoc": "VertKleen CR and HCR Brewery Trial-HellnBlazes Brewing.pdf",
+      "destination": "img/proof/cases/brewery.webp",
+      "alt": "Brewery tank and heat exchanger cleaned with VertKleen CR and HCR"
+    },
+    {
+      "id": "walmart-dc-crhd",
+      "use": ["proof", "distribution"],
+      "source": "website_assets/03_case_study_photos/VertKleen_CRHD_being_used_as_a_replacement_to_Si",
+      "sourceDoc": "VertKleen CRHD being used as a replacement to Simple green at Walmart Distribution centers.docx",
+      "destination": "img/proof/walmart-dc-proof-enhanced.webp",
+      "alt": "Walmart distribution center floor and equipment degreasing"
+    },
+    {
+      "id": "yellowfin-torque-wash",
+      "use": ["proof", "marine"],
+      "source": "website_assets/03_case_study_photos/VertKleen_Torque_Wash_on_a_43_Yellow_Fin_vessel",
+      "sourceDoc": "MASEST-VertKleen- Wash on a 43 Yellow Fin vessel.pdf",
+      "destination": "img/proof/cases/marine.webp",
+      "alt": "43-foot Yellowfin vessel washed and waxed with VertKleen Torque"
+    },
+    {
+      "id": "uf-shands-drone-wash",
+      "use": ["proof", "facilities"],
+      "source": "website_assets/02_curated_photos/Side by side comparisons- Before and After cleaning with VertDrone.JPG",
+      "sourceDoc": "VertKleen Triple Zero on site at the University of Florida with Clean Team USA.docx",
+      "destination": "img/before-after/drone.webp",
+      "alt": "Occupied campus exterior cleaned by drone, before and after"
+    },
+    {
+      "id": "neatfreaks-hood-degrease",
+      "use": ["proof", "food-service"],
+      "source": "website_assets/03_case_study_photos/VertKleen_CR_Commercial_Hood_Cleaning_NeatFreaks",
+      "sourceDoc": "VertKleen CR- Commercial Hood Cleaning- NeatFreaks.pdf",
+      "destination": "img/proof/cases/hood.webp",
+      "alt": "Commercial kitchen hood and range degreased with VertKleen"
+    },
+    {
+      "id": "fire-pump-descaler",
+      "use": ["proof", "facilities"],
+      "source": "website_assets/03_case_study_photos/VertKleen_Descaler_used_in_Fire_Protection_Syste",
+      "sourceDoc": "VertKleen Descaler used in Fire Protection System.pdf",
+      "destination": "img/proof/cases/fire-pump.webp",
+      "alt": "Fire-pump component descaled with VertKleen Descaler"
+    },
+    {
+      "id": "residential-ac-coil",
+      "use": ["proof", "hvac-water"],
+      "source": "website_assets/03_case_study_photos/VertKleen_Descaler_Res_AC_coil_cleaned_and_prese",
+      "sourceDoc": "VertKleen Descaler-Res AC coil cleaned and preserved.pdf",
+      "destination": "img/proof/cases/ac-coil.webp",
+      "alt": "Residential AC coil cleaned with VertKleen Descaler"
+    },
+    {
+      "id": "airboat-alumibrite",
+      "use": ["proof", "marine"],
+      "source": "website_assets/03_case_study_photos/VertKleen_Alumni_Brite_Torque_and_N_clean_commer",
+      "sourceDoc": "VertKleen Alumni Brite, Torque and N clean commercial tourist airboat.pdf",
+      "destination": "img/proof/cases/airboat.webp",
+      "alt": "Commercial airboat aluminum restored with VertKleen AlumiBrite"
+    },
+    {
+      "id": "brevard-farm-hvac",
+      "use": ["proof", "hvac-water"],
+      "source": "website_assets/03_case_study_photos/VertKleen_HCR_Brevard_County_HVAC_farm_rust_remo",
+      "sourceDoc": "VertKleen HCR-Brevard HVAC farm removal cleaning.pdf",
+      "destination": "img/proof/cases/farm-rust.webp",
+      "alt": "Diamond-plate steel rust removed with VertKleen HCR"
+    },
+    {
+      "id": "property-grout-moss",
+      "use": ["proof", "property"],
+      "source": "website_assets/03_case_study_photos/VertKleen_CR_applications_grout_moss_grime_algae",
+      "sourceDoc": "VertKleen CR applications- grout.moss. grime.algae.pdf",
+      "destination": "img/proof/cases/grout-moss.webp",
+      "alt": "Exterior grout, grime, and algae cleared with VertKleen"
+    },
+    {
+      "id": "commercial-kitchen-crhd",
+      "use": ["proof", "food-service"],
+      "source": "website_assets/03_case_study_photos/VertKleen_CRHD_Commercial_kitchen_cleaning",
+      "sourceDoc": "VertKleen CRHD- Commercial kitchen cleaning.pdf",
+      "destination": "img/proof/cases/kitchen.webp",
+      "alt": "Commercial kitchen deep degreased with VertKleen CRHD"
+    },
+    {
+      "id": "carib-brewery-lab",
+      "use": ["proof", "food-beverage", "table"],
+      "source": "website_assets/04_charts_tables/Carib_brewery_lab_results.png",
+      "sourceDoc": "VertKleen-Green chemicals. Test report Carib Brewery.pdf",
+      "destination": "img/proof/carib-brewery-table.png",
+      "alt": "Carib Brewery lab comparison table"
+    },
+    {
+      "id": "moss-before-after",
+      "use": ["proof", "before-after", "property"],
+      "source": "website_assets/02_curated_photos/Before with thick moss 1.JPEG",
+      "sourceDoc": "VertKleen CR applications- grout.moss. grime.algae.pdf",
+      "destination": "img/before-after/moss-before.webp",
+      "alt": "Exterior surface before treatment, covered in heavy moss"
+    }
+  ]
+}
