@@ -642,7 +642,7 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 /* Comparison helper note under the homepage table */
 .cmp-note { margin-top: 16px; font-size: .86rem; color: var(--muted); max-width: 70ch; line-height: 1.6; }
 .cmp-table .job { font-weight: 700; color: var(--ink); }
-.cmp-table .hmis-tag { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.cmp-table .hmis-tag { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; word-break: keep-all; overflow-wrap: normal; hyphens: none; }
 
 /* ---------- Reveal (motion 4: fluid CSS, reduced-motion safe) ---------- */
 @media (prefers-reduced-motion: no-preference) {
