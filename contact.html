@@ -12,16 +12,14 @@
 </head>
 <body>
 <noscript>
-  <nav class="nojs-nav">
-    <a href="index.html">Home</a>
-    <a href="why-vertkleen.html">Why VertKleen</a>
-    <a href="products.html">Products</a>
-    <a href="programs.html">Programs</a>
-    <a href="proof.html">Proof</a>
-    <a href="industries.html">Industries</a>
-    <a href="about.html">About</a>
-    <a href="contact.html">Contact</a>
-  </nav>
+  <nav class="nojs-nav" aria-label="Site">
+  <strong>MASEST</strong>
+  <a href="products.html">Products</a>
+  <a href="programs.html">Programs</a>
+  <a href="proof.html">Proof</a>
+  <a href="industries.html">Industries</a>
+  <a href="contact.html?type=quote">Request a Quote</a>
+</nav>
 </noscript>
 
 <main id="main">
@@ -38,7 +36,7 @@
       <form class="form-card" id="quoteForm" data-endpoint="https://formspree.io/f/xzzgvqaq">
         <input type="hidden" name="type" id="fType" value="quote">
 
-        <div class="cta-chooser" role="group" aria-label="What do you need?">
+        <div class="cta-chooser contact-intent" role="group" aria-label="What do you need?">
           <button type="button" class="cta-choice active" data-intent="quote" aria-pressed="true"><i class="ph ph-tag" aria-hidden="true"></i> Quote</button>
           <button type="button" class="cta-choice" data-intent="audit" aria-pressed="false"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Free Audit</button>
           <button type="button" class="cta-choice" data-intent="sample" aria-pressed="false"><i class="ph ph-package" aria-hidden="true"></i> Sample Kit</button>

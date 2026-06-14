@@ -104,7 +104,7 @@
       "use": ["proof", "food-beverage", "table"],
       "source": "website_assets/04_charts_tables/Carib_brewery_lab_results.png",
       "sourceDoc": "VertKleen-Green chemicals. Test report Carib Brewery.pdf",
-      "destination": "img/proof/carib-brewery-table.png",
+      "destination": "img/proof/carib-brewery-table.webp",
       "alt": "Carib Brewery lab comparison table"
     },
     {

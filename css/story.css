@@ -349,6 +349,8 @@
 }
 .savior-cap { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: var(--s-mut); margin-bottom: clamp(12px, 2.2vh, 24px); }
 .savior-proof { display: flex; gap: 14px; justify-content: center; }
+.savior-proof-before { gap: 10px; margin-bottom: 8px; }
+.savior-proof-before figure { opacity: .72; transform: scale(.82); transform-origin: center bottom; }
 .savior-proof figure { margin: 0; width: clamp(96px, 12vw, 132px); }
 .savior-proof img {
   width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px;
@@ -421,7 +423,13 @@
   .chem-card .chead { gap: 8px; }
   .chem-card p { font-size: .78rem; line-height: 1.38; }
   .chem-card .vs { font-size: .62rem; }
-  .savior-proof figure { width: 27vw; }
+ .savior-zero { margin: 10px 0 8px; gap: 8px; }
+ .savior-zero .z { width: clamp(54px, 18vw, 68px); border-radius: 14px; }
+ .savior-proof { gap: 8px; }
+ .savior-proof-before { margin-bottom: 2px; }
+ .savior-proof figure { width: 22vw; }
+ .savior-proof figcaption { margin-top: 4px; font-size: .68rem; }
+ .savior-proof-cap { margin: 6px 0 12px; font-size: .72rem; line-height: 1.35; }
 }
 
 /* Image polish layer: keeps the real field evidence, but frames it with more

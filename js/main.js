@@ -347,14 +347,10 @@ function renderChrome() {
   // right root so the shared nav/footer resolve from any directory depth.
   const root = /\/industries\//.test(location.pathname) ? "../" : "";
   const links = [
-    ["index.html", "Home"],
-    ["why-vertkleen.html", "Why VertKleen"],
     ["products.html", "Products"],
     ["programs.html", "Programs"],
     ["proof.html", "Proof"],
-    ["industries.html", "Industries"],
-    ["about.html", "About"],
-    ["contact.html", "Contact"]
+    ["industries.html", "Industries"]
   ];
   const skip = document.createElement("a");
   skip.className = "skip-link";
@@ -420,20 +416,25 @@ function renderChrome() {
         <div>
           <div class="foot-brand">MASEST VertKleen&trade;</div>
           <p>Safe, powerful, environmentally friendly alternatives to hazardous chemicals. Family-owned on Florida's Space Coast, trusted in 50+ countries.</p>
+          <div class="foot-kicker">Primary path</div>
+          <a class="btn btn-primary foot-quote" href="${root}contact.html?type=quote">Quote</a>
         </div>
-        <div>
-          <div class="foot-title">Products</div>
+        <div class="foot-secondary">
+          <div class="foot-title">Product Categories</div>
           <a href="${root}products.html#acid">Acid Replacements</a>
           <a href="${root}products.html#alkaline">Alkaline Replacements</a>
           <a href="${root}products.html#water">Water Treatment</a>
           <a href="${root}products.html#specialty">Specialty &amp; Exterior</a>
-          <a href="${root}resources.html">Resources &amp; SDS</a>
         </div>
-        <div>
-          <div class="foot-title">Company</div>
-          <a href="${root}why-vertkleen.html">Why VertKleen</a>
+        <div class="foot-secondary">
+          <div class="foot-title">Resources + SDS</div>
+          <a href="${root}resources.html">Resources &amp; SDS</a>
           <a href="${root}programs.html">Programs &amp; Pricing</a>
           <a href="${root}proof.html">Proof &amp; Case Studies</a>
+        </div>
+        <div class="foot-secondary">
+          <div class="foot-title">Company</div>
+          <a href="${root}why-vertkleen.html">Why VertKleen</a>
           <a href="${root}industries.html">Industries</a>
           <a href="${root}about.html">About Us</a>
           <a href="${root}contact.html">Contact</a>
@@ -526,11 +527,10 @@ function productCard(id, heroCard = false) {
     <div class="prod-top"><i class="ph ${p.icon}" aria-hidden="true"></i>${badge}</div>
     <span class="replaces">${p.replaces}</span>
     <h3>${p.name}</h3>
-    <p>${p.tag}</p>
-    <div class="prod-actions">
-      <a class="btn btn-ink btn-sm" href="product.html?id=${id}">View Details</a>
-      <a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(p.name)}">Request a Quote</a>
-    </div>
+      <p>${p.tag}</p>
+      <div class="prod-actions">
+        <a class="btn btn-ink btn-sm" href="product.html?id=${id}">View Details</a>
+      </div>
   </div>`;
 }
 
@@ -759,6 +759,36 @@ function initIndustryProducts() {
   });
 }
 
+// Click any content photo to view it full-size. Document previews (.doc-link) open their
+// PDF instead, and before/after sliders ([data-ba]) keep their drag behavior — both excluded.
+function initLightbox() {
+  const ZOOM_SCOPE = ".proof-card, .case-card, .ind-gallery, figure.photo";
+  const dlg = document.createElement("dialog");
+  dlg.id = "lightbox";
+  dlg.innerHTML =
+    '<button type="button" class="lb-close" aria-label="Close">×</button>' +
+    '<figure class="lb-fig"><img class="lb-img" alt=""><figcaption class="lb-cap"></figcaption></figure>';
+  document.body.appendChild(dlg);
+  const lbImg = dlg.querySelector(".lb-img");
+  const lbCap = dlg.querySelector(".lb-cap");
+  const close = () => { if (dlg.open) dlg.close(); };
+
+  document.addEventListener("click", (e) => {
+    const img = e.target.closest("img");
+    if (!img || !img.closest(ZOOM_SCOPE)) return;
+    if (img.closest(".doc-link, [data-ba]")) return; // docs open PDF; sliders drag
+    e.preventDefault();
+    lbImg.src = img.currentSrc || img.src;
+    lbImg.alt = img.alt || "";
+    lbCap.textContent = img.alt || "";
+    if (typeof dlg.showModal === "function") dlg.showModal();
+  });
+
+  dlg.querySelector(".lb-close").addEventListener("click", close);
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); }); // backdrop
+  dlg.addEventListener("close", () => { lbImg.removeAttribute("src"); });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   renderChrome();
   initQuoteForm();
@@ -767,4 +797,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initProofFilters();
   initResponsiveTables();
   initReveal();
+  initLightbox();
 });

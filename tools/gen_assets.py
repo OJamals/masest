@@ -30,14 +30,13 @@ def save(im, dest_rel, width):
     return os.path.getsize(dest)
 
 def emit(src, name):
-    """Write <name>.webp (wide) + <name>-sm.webp (thumb). name includes subdir."""
+    """Write <name>.webp (wide). name includes subdir. Site uses wide only; -sm thumbs
+    were unreferenced dead weight (removed 2026-06-14), so no thumb is emitted."""
     if not os.path.exists(src):
         print("  MISS", src); return
     with Image.open(src) as im:
         a = save(im.copy(), name + ".webp", WIDE)
-    with Image.open(src) as im:
-        b = save(im.copy(), name + "-sm.webp", THUMB)
-    print(f"  ok {name}  wide={a//1024}k thumb={b//1024}k  <- {os.path.basename(src)}")
+    print(f"  ok {name}  wide={a//1024}k  <- {os.path.basename(src)}")
 
 def largest(folder, n=1):
     files = []
