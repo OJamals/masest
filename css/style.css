@@ -796,7 +796,7 @@ section { padding: var(--space-section) 0; }
 .form-success i { font-size: 3rem; color: var(--accent); margin-bottom: 12px; }
 
 /* ---------- Page hero (interior, light) ---------- */
-.page-hero { padding: 76px 0 64px; border-bottom: 1px solid var(--line); }
+.page-hero { padding: 76px 0 64px; }
 .page-hero .subhead { margin-top: 16px; }
 .breadcrumb { font-size: .85rem; color: var(--muted); margin-bottom: 16px; }
 .breadcrumb a:hover { color: var(--ink); }
@@ -1574,8 +1574,6 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 .case-source { font-size: .75rem; color: var(--muted); }
 
 .proof-library {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
 }
 .proof-filterbar {
   display: flex;
