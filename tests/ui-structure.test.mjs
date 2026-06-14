@@ -38,6 +38,45 @@ test("products page starts with a buyer router before the dense matrix", () => {
   assert.ok(routerIndex < matrixIndex, "router should appear before dense matrix");
 });
 
+test("products page leads with a shopper-friendly product catalog", () => {
+  const products = read("products.html");
+  const catalogIndex = products.indexOf('class="product-catalog');
+  const proofIndex = products.indexOf('class="conversion-proof');
+  const matrixIndex = products.indexOf("The function-by-function case");
+
+  assert.ok(catalogIndex > -1, "expected catalog section on products page");
+  assert.ok(catalogIndex < proofIndex, "catalog should come before proof details");
+  assert.ok(proofIndex < matrixIndex, "dense matrix should stay after proof");
+  assert.match(products, /Shop by job/);
+  assert.match(products, /View details/);
+  assert.match(products, /product\.html\?id=hcr/);
+});
+
+test("products page includes a scrollable product shelf", () => {
+  const products = read("products.html");
+  const main = read("js/main.js");
+
+  assert.match(products, /id="productShelf"/);
+  assert.match(products, /class="catalog-jumpbar/);
+  assert.match(products, /data-rail-next="productShelf"/);
+  assert.match(products, /data-rail-next="degreaseProducts"/);
+  assert.match(products, /CATALOG_ORDER\.map\(productShelfCard\)/);
+  assert.match(main, /const CATALOG_ORDER/);
+  assert.match(main, /function productShelfCard/);
+  assert.match(main, /function initRailControls/);
+});
+
+test("product details include source-backed media galleries", () => {
+  const product = read("product.html");
+  const main = read("js/main.js");
+
+  assert.match(product, /id="pMediaSection"/);
+  assert.match(product, /id="pMedia"/);
+  assert.match(product, /PRODUCT_GALLERY\[id\]/);
+  assert.match(main, /img\/proof\/cases\/ddc-rust\.webp/);
+  assert.match(main, /img\/proof\/cases\/marine\.webp/);
+});
+
 test("programs page moves glycol pricing into an optional disclosure", () => {
   const programs = read("programs.html");
   const pricingIndex = programs.indexOf("Glycol price list");

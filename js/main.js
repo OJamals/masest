@@ -8,7 +8,7 @@ const PRODUCTS = {
     replaces: "Replaces hydrochloric acid",
     hmis: "0-0-0",
     icon: "ph-flask",
-    image: "img/products/hvac-hcr.webp",
+ image: "img/products/hvac-hcr-studio.webp",
     tag: "Biodegradable acid replacement for descaling, rust removal, and passivation. No fumes, no burns, no hazmat handling.",
     desc: "A biodegradable, SynTec-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. No fumes, no burns, no hazmat handling.",
     uses: [
@@ -31,7 +31,7 @@ const PRODUCTS = {
     replaces: "Replaces caustic soda and sodium hydroxide",
     hmis: "0-0-0",
     icon: "ph-drop-half",
-    image: "img/products/hvac-cr.webp",
+ image: "img/products/hvac-cr-studio.webp",
     tag: "NSF/ANSI 60 caustic replacement and pH adjuster. High-pH cleaning power at a zero hazard rating.",
     desc: "An NSF/ANSI 60 caustic replacement and pH adjuster covering high-pH alkaline needs: degreasing, hood filters, floors, and pH control, all at a zero hazard rating.",
     uses: [
@@ -53,7 +53,8 @@ const PRODUCTS = {
     cat: "alkaline",
     replaces: "Replaces caustic and solvent degreasers",
     hmis: "0-0-0",
-    icon: "ph-drop",
+ icon: "ph-drop",
+ image: "img/products/neutral-studio.webp",
     tag: "Neutral pH-7 degreaser with solvent-grade cutting power for sensitive surfaces and seals.",
     desc: "A neutral pH-7 degreaser with the cutting power expected from high-pH and solvent degreasers, without flammability, harsh fumes, or surface damage.",
     uses: [
@@ -75,7 +76,8 @@ const PRODUCTS = {
     cat: "alkaline",
     replaces: "Replaces general-purpose caustic cleaners",
     hmis: "0-0-0",
-    icon: "ph-sparkle",
+ icon: "ph-sparkle",
+ image: "img/products/multiwash-studio.webp",
     tag: "Multi-surface industrial cleaner for occupied facilities, drains, concrete, and pressure-washing programs.",
     desc: "A versatile multi-surface cleaner for facilities, drains, concrete, and pressure-washing applications, with a handling profile suited to occupied campuses.",
     uses: [
@@ -97,7 +99,8 @@ const PRODUCTS = {
     cat: "water",
     replaces: "Replaces phosphate, zinc, and molybdate blends",
     hmis: "0-0-0",
-    icon: "ph-waves",
+ icon: "ph-waves",
+ image: "img/products/watersafe60-studio.webp",
     tag: "NSF/ANSI 60 scale and corrosion inhibitor with no heavy metals.",
     desc: "An NSF/ANSI 60 scale and corrosion inhibitor with no heavy metals: no zinc, no molybdate, no chromate. Equivalent asset protection at a zero hazard rating.",
     uses: [
@@ -119,7 +122,8 @@ const PRODUCTS = {
     cat: "water",
     replaces: "Replaces bromine and sodium hypochlorite",
     hmis: "0-0-0",
-    icon: "ph-shield-plus",
+ icon: "ph-shield-plus",
+ image: "img/products/purgo-studio.webp",
     tag: "FIFRA 25(b) minimum-risk oxidizing biocide for microbiological and Legionella-risk control.",
     desc: "A FIFRA 25(b) minimum-risk oxidizing biocide replacing stabilized bromine and bleach (HMIS 3-0-1) for microbiological and Legionella-risk control.",
     uses: [
@@ -141,7 +145,8 @@ const PRODUCTS = {
     cat: "water",
     replaces: "Replaces glutaraldehyde 50%",
     hmis: "Low hazard",
-    icon: "ph-pill",
+ icon: "ph-pill",
+ image: "img/products/dbnpa-studio.webp",
     tag: "Controlled-release non-oxidizing biocide. One tablet per quarter.",
     desc: "EPA-registered, general-use controlled-release tablets, dosed at one tablet per quarter, satisfying the non-oxidizing biocide rotation without flammable, toxic glutaraldehyde.",
     uses: [
@@ -163,7 +168,7 @@ const PRODUCTS = {
     replaces: "Replaces Simple Green, Zep, and solvent degreasers",
     hmis: "0-0-0",
     icon: "ph-spray-bottle",
-    image: "img/products/crhd.webp",
+ image: "img/products/crhd-studio.webp",
     tag: "High-detergency alkaline degreaser, about 50% active and low-foam, for floors, equipment, drains, and engine bays.",
     desc: "A high-detergency, low-foam alkaline degreaser at roughly 50% active strength, built to replace solvent and butyl degreasers on the heaviest grease without flammability or harsh fumes.",
     uses: [
@@ -186,7 +191,7 @@ const PRODUCTS = {
     replaces: "Replaces muriatic acid, CLR, and Calci-Solve",
     hmis: "0-0-0",
     icon: "ph-snowflake",
-    image: "img/products/descaler.webp",
+ image: "img/products/descaler-studio.webp",
     tag: "Acid-free descaler for coils, towers, and plumbing. Fin-safe on aluminum and copper, with a fraction of the corrosion of conventional acids.",
     desc: "An acid-free descaler (marketed as CRS in the dealership channel) that clears calcium, rust, and scale from coils, cooling towers, plumbing, and fire pumps. Fin-safe on aluminum and copper, chloride-free, and safe to municipal drains.",
     uses: [
@@ -208,7 +213,8 @@ const PRODUCTS = {
     cat: "specialty",
     replaces: "Replaces hydrofluoric and hydrochloric aluminum brighteners",
     hmis: "0-0-0",
-    icon: "ph-car",
+ icon: "ph-car",
+ image: "img/products/alumibrite-studio.webp",
     tag: "Synthetic-acid aluminum brightener with no hydrofluoric or hydrochloric acid, for wheels, trim, and aluminum restoration.",
     desc: "A synthetic-acid aluminum brightener that restores wheels, trim, and marine aluminum without hydrofluoric or hydrochloric acid, the standard brighteners that burn skin and pit metal.",
     uses: [
@@ -230,7 +236,8 @@ const PRODUCTS = {
     cat: "specialty",
     replaces: "Replaces separate wash, wax, and bug removers",
     hmis: "0-0-0",
-    icon: "ph-sparkle",
+ icon: "ph-sparkle",
+ image: "img/products/torque-studio.webp",
     tag: "All-in-one wash and wax for vehicles, fleet, RV, and marine, formulated to stay OEM warranty-safe.",
     desc: "An all-in-one wash and wax that cleans and protects in a single step across vehicles, fleet, RV, and marine, formulated to stay within OEM finish-care requirements.",
     uses: [
@@ -252,7 +259,8 @@ const PRODUCTS = {
     cat: "specialty",
     replaces: "Replaces Wet & Forget and bleach roof cleaners",
     hmis: "0-0-0",
-    icon: "ph-house-line",
+ icon: "ph-house-line",
+ image: "img/products/lam3-studio.webp",
     tag: "Spray-and-walk-away remover for lichen, algae, moss, mold, and mildew on roofs, pavers, stucco, and siding.",
     desc: "A neutral, spray-and-walk-away treatment that clears lichen, algae, moss, mold, and mildew from roofs, pavers, stucco, siding, and concrete, with no bleach and no harm to surrounding plants.",
     uses: [
@@ -274,7 +282,8 @@ const PRODUCTS = {
     cat: "acid",
     replaces: "Replaces muriatic acid for rust, scale, and calcium",
     hmis: "0-0-0",
-    icon: "ph-wrench",
+ icon: "ph-wrench",
+ image: "img/products/crs-studio.webp",
     tag: "Non-corrosive HCl replacement for underbody rust removal, coils, cooling towers, and water-side scale.",
     desc: "A non-corrosive hydrochloric-acid replacement for rust, calcium, scale, and water-side buildup where metal safety matters.",
     uses: [
@@ -318,7 +327,8 @@ const PRODUCTS = {
     cat: "water",
     replaces: "Supplies inhibited PG and EG glycol programs",
     hmis: "Program item",
-    icon: "ph-thermometer-cold",
+ icon: "ph-thermometer-cold",
+ image: "img/products/glycols-studio.webp",
     tag: "Florida-sourced inhibited propylene and ethylene glycol for facility water loops and district programs.",
     desc: "A glycol supply program for inhibited PG and EG concentrates and ready-to-use blends, priced for local pickup and facility maintenance programs.",
     uses: [
@@ -337,11 +347,146 @@ const PRODUCTS = {
   }
 };
 
+const CATALOG_ORDER = [
+  "hcr", "descaler", "crs", "cr", "crhd", "neutral", "multiwash",
+  "watersafe60", "crnsf60", "purgo", "dbnpa", "glycols", "lam3", "alumibrite", "torque"
+];
+
+const PRODUCT_CATALOG_COPY = {
+  hcr: {
+    job: "Rust, scale, and heavy deposits",
+    summary: "Use when rust staining, mineral scale, or passivation work needs industrial strength without harsh acid handling.",
+    fits: ["HVAC", "metal restoration", "concrete", "pipelines"],
+    proof: "Field photos and cooling-tower case notes"
+  },
+  descaler: {
+    job: "Coils, towers, and heat-transfer equipment",
+    summary: "A safer descaling choice for aluminum fins, copper, steel, plumbing, fire pumps, and refrigeration equipment.",
+    fits: ["coils", "cooling towers", "plumbing", "fire pumps"],
+    proof: "Corrosion data and refrigeration-system proof"
+  },
+  crs: {
+    job: "Water-side scale and rust",
+    summary: "For underbody rust, fixtures, coils, and water lines where metal safety matters as much as cleaning power.",
+    fits: ["underbodies", "fixtures", "coils", "water lines"],
+    proof: "User guide and application notes"
+  },
+  cr: {
+    job: "High-pH cleaning and water-treatment support",
+    summary: "For teams that need caustic-level cleaning or pH adjustment with a zero-hazard handling profile.",
+    fits: ["hoods", "floors", "CIP", "water treatment"],
+    proof: "NSF/ANSI 60 documentation and trial notes"
+  },
+  crhd: {
+    job: "Heavy grease and industrial soil",
+    summary: "A high-active degreaser for floors, forklifts, drains, engine bays, and kitchen buildup without solvent odor.",
+    fits: ["floors", "forklifts", "drains", "engine bays"],
+    proof: "Distribution-center and OEM-cleared proof"
+  },
+  neutral: {
+    job: "Sensitive surfaces and seals",
+    summary: "Choose this when grease needs to move but the surface, seal, metal, or finish cannot take harsh cleaners.",
+    fits: ["equipment", "marine", "aviation", "fleet"],
+    proof: "SDS and technical application sheet"
+  },
+  multiwash: {
+    job: "Everyday facility washing",
+    summary: "A versatile cleaner for occupied buildings, concrete, drains, pressure washing, and routine maintenance.",
+    fits: ["campuses", "concrete", "drains", "pressure washing"],
+    proof: "Exterior wash photos and application notes"
+  },
+  watersafe60: {
+    job: "Scale and corrosion control",
+    summary: "For cooling towers and closed loops that need documented asset protection without heavy-metal inhibitor blends.",
+    fits: ["cooling towers", "closed loops", "campuses", "hospitals"],
+    proof: "NSF/ANSI 60 and program documents"
+  },
+  crnsf60: {
+    job: "Water-treatment pH adjustment",
+    summary: "A documented caustic replacement for NSF/ANSI 60 water-treatment programs and procurement-heavy facilities.",
+    fits: ["pH adjustment", "cooling towers", "municipal", "campuses"],
+    proof: "NSF/ANSI 60 certificate and program documents"
+  },
+  purgo: {
+    job: "Microbiological control",
+    summary: "For water-treatment programs that need oxidizing control with easier occupied-site handling.",
+    fits: ["towers", "Legionella plans", "campuses", "general use"],
+    proof: "Program documents and safety notes"
+  },
+  dbnpa: {
+    job: "Quarterly tablet biocide",
+    summary: "A controlled-release tablet for the non-oxidizing rotation in cooling-tower programs.",
+    fits: ["quarterly dosing", "cooling towers", "low-dose programs"],
+    proof: "EPA registration documentation"
+  },
+  glycols: {
+    job: "Freeze-protection programs",
+    summary: "Florida-sourced inhibited propylene and ethylene glycol for hydronic loops and district maintenance.",
+    fits: ["hydronic loops", "schools", "healthcare", "local pickup"],
+    proof: "Price list and quote worksheet"
+  },
+  lam3: {
+    job: "Moss, algae, mold, and mildew",
+    summary: "Spray and walk away on roofs, pavers, siding, stucco, concrete, ponds, and exterior walls.",
+    fits: ["roofs", "pavers", "siding", "stucco"],
+    proof: "Before-and-after exterior photos"
+  },
+  alumibrite: {
+    job: "Aluminum brightening",
+    summary: "Restore wheels, trim, RV, fleet, and marine aluminum without traditional brightener burn and fume risk.",
+    fits: ["wheels", "trim", "RV", "marine"],
+    proof: "Brightening index and field photo"
+  },
+  torque: {
+    job: "Vehicle, fleet, RV, and marine wash",
+    summary: "Clean and protect finishes in one wash-and-wax step for vehicles, fleets, RVs, and boats.",
+    fits: ["vehicles", "fleets", "RVs", "boats"],
+    proof: "Finish-care notes and field proof"
+  }
+};
+
+const PRODUCT_GALLERY = {
+  hcr: [
+    ["img/proof/cases/ddc-rust.webp", "Rusted HVAC component cleared with VertKleen HCR", "DDC rust and scale test"],
+    ["img/proof/cases/farm-rust.webp", "Diamond-plate steel rust removed with VertKleen HCR", "Brevard HVAC farm rust removal"],
+    ["img/proof/cases/brewery.webp", "Brewery tank and heat exchanger cleaned with VertKleen CR and HCR", "Brewery CIP trial"]
+  ],
+  cr: [
+    ["img/proof/cases/brewery.webp", "Brewery tank and heat exchanger cleaned with VertKleen CR and HCR", "Brewery CIP trial"],
+    ["img/proof/cases/hood.webp", "Commercial kitchen hood and range degreased with VertKleen CR", "Commercial hood cleaning"],
+    ["img/before-after/cr-after.webp", "Exterior surface after VertKleen CR cleaning", "After cleaning"]
+  ],
+  crhd: [
+    ["img/proof/walmart-dc-proof-enhanced.webp", "Walmart distribution center floor and equipment degreasing", "Distribution center degreasing"],
+    ["img/proof/cases/kitchen.webp", "Commercial kitchen deep degreased with VertKleen CRHD", "Commercial kitchen cleaning"]
+  ],
+  descaler: [
+    ["img/proof/cases/fire-pump.webp", "Fire-pump component descaled with VertKleen Descaler", "Fire protection system"],
+    ["img/proof/cases/ac-coil.webp", "Residential AC coil cleaned with VertKleen Descaler", "AC coil cleaning"]
+  ],
+  multiwash: [
+    ["img/proof/drone-wash-proof-enhanced.webp", "Occupied campus exterior cleaned by drone with VertKleen MultiWash", "Occupied campus wash"],
+    ["img/before-after/drone.webp", "Before and after exterior drone cleaning", "Before and after"]
+  ],
+  lam3: [
+    ["img/proof/cases/grout-moss.webp", "Exterior grout, grime, and algae cleared with VertKleen", "Exterior biogrowth cleaning"],
+    ["img/before-after/moss-before.webp", "Exterior surface before treatment, covered in heavy moss", "Before treatment"],
+    ["img/before-after/moss-after.webp", "Exterior surface after moss treatment", "After treatment"]
+  ],
+  alumibrite: [
+    ["img/proof/cases/airboat.webp", "Commercial airboat aluminum restored with VertKleen AlumiBrite", "Airboat aluminum restoration"]
+  ],
+  torque: [
+    ["img/proof/cases/marine.webp", "43-foot Yellowfin vessel washed and waxed with VertKleen Torque", "Vessel wash and wax"]
+  ]
+};
+
 /* ---------- Nav / footer injection ---------- */
 function pageName() {
   return location.pathname.split("/").pop() || "index.html";
 }
 function renderChrome() {
+  document.querySelector(".nojs-nav")?.setAttribute("hidden", "");
   const page = pageName();
   // Pages under /industries/ sit one level deep; prefix chrome links with the
   // right root so the shared nav/footer resolve from any directory depth.
@@ -422,10 +567,10 @@ function renderChrome() {
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Product Categories</div>
-          <a href="${root}products.html#acid">Acid Replacements</a>
-          <a href="${root}products.html#alkaline">Alkaline Replacements</a>
+          <a href="${root}products.html#descale">Rust &amp; Scale</a>
+          <a href="${root}products.html#degrease">Grease &amp; Grime</a>
           <a href="${root}products.html#water">Water Treatment</a>
-          <a href="${root}products.html#specialty">Specialty &amp; Exterior</a>
+          <a href="${root}products.html#exterior">Exterior &amp; Specialty</a>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Resources + SDS</div>
@@ -519,19 +664,44 @@ function initReveal() {
 }
 function productCard(id, heroCard = false) {
   const p = PRODUCTS[id];
-  const badge = p.hmis === "0-0-0"
-    ? '<span class="hmis-badge">HMIS 0-0-0</span>'
-    : '<span class="hmis-badge note">LOW HAZARD</span>';
+  const catalog = PRODUCT_CATALOG_COPY[id] || {};
+ const badge = p.hmis === "0-0-0"
+ ? '<span class="hmis-badge">HMIS 0-0-0</span>'
+ : '<span class="hmis-badge note">LOW HAZARD</span>';
+  const media = p.image
+    ? `<a class="prod-media" href="product.html?id=${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="lazy"></a>`
+    : "";
+  const fitList = (catalog.fits || []).map((fit) => `<li>${fit}</li>`).join("");
   return `
   <div class="prod-card${heroCard ? " hero-card" : ""} reveal">
+    ${media}
     <div class="prod-top"><i class="ph ${p.icon}" aria-hidden="true"></i>${badge}</div>
-    <span class="replaces">${p.replaces}</span>
+    <span class="catalog-type">${catalog.job || p.replaces}</span>
     <h3>${p.name}</h3>
-      <p>${p.tag}</p>
+      <p>${catalog.summary || p.tag}</p>
+      ${fitList ? `<ul class="product-fit-list">${fitList}</ul>` : ""}
+      <span class="product-proof-line">${catalog.proof || "Stats, studies, and documents on the detail page"}</span>
       <div class="prod-actions">
-        <a class="btn btn-ink btn-sm" href="product.html?id=${id}">View Details</a>
+        <a class="btn btn-ink btn-sm" href="product.html?id=${id}">Pictures, Stats, Proof</a>
       </div>
   </div>`;
+}
+
+function productShelfCard(id) {
+  const p = PRODUCTS[id];
+  const catalog = PRODUCT_CATALOG_COPY[id] || {};
+  if (!p) return "";
+  const media = p.image
+    ? `<img src="${p.image}" alt="${p.name} product photo" loading="lazy">`
+    : `<i class="ph ${p.icon}" aria-hidden="true"></i>`;
+  return `
+    <a class="catalog-shelf-card" href="product.html?id=${id}">
+      <span class="catalog-shelf-media">${media}</span>
+      <span class="catalog-shelf-copy">
+        <b>${p.name}</b>
+        <em>${catalog.job || p.replaces}</em>
+      </span>
+    </a>`;
 }
 
 /* ---------- Before/after slider (drag, keyboard, reduced-motion safe) ----------
@@ -789,6 +959,53 @@ function initLightbox() {
   dlg.addEventListener("close", () => { lbImg.removeAttribute("src"); });
 }
 
+function initRailControls() {
+  document.querySelectorAll("[data-rail-prev], [data-rail-next]").forEach((button) => {
+    const targetId = button.dataset.railPrev || button.dataset.railNext;
+    const rail = document.getElementById(targetId);
+    if (!rail) return;
+    const dir = button.dataset.railNext ? 1 : -1;
+    button.addEventListener("click", () => {
+      const first = rail.firstElementChild;
+      const step = first ? first.getBoundingClientRect().width + 16 : rail.clientWidth * 0.8;
+      rail.scrollBy({ left: dir * step, behavior: smoothPref() });
+      rail.focus({ preventScroll: true });
+    });
+  });
+}
+
+function initCatalogJumps() {
+  const offset = () => {
+    const nav = document.querySelector(".site-header");
+    return (nav?.getBoundingClientRect().height || 64) + 24;
+  };
+
+  document.querySelectorAll(".catalog-jumpbar a[href^='#']").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const target = document.querySelector(link.getAttribute("href"));
+      if (!target) return;
+      event.preventDefault();
+      window.scrollTo({
+        top: target.getBoundingClientRect().top + window.scrollY - offset(),
+        behavior: smoothPref()
+      });
+      history.replaceState(null, "", link.getAttribute("href"));
+    });
+  });
+}
+
+function initProductDisclosures() {
+  document.querySelectorAll(".matrix-disclosure").forEach((details) => {
+    const action = details.querySelector("summary strong");
+    if (!action) return;
+    const sync = () => {
+      action.textContent = details.open ? "Close matrix" : "Open matrix";
+    };
+    details.addEventListener("toggle", sync);
+    sync();
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   renderChrome();
   initQuoteForm();
@@ -798,4 +1015,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initResponsiveTables();
   initReveal();
   initLightbox();
+  initRailControls();
+  initCatalogJumps();
+  initProductDisclosures();
 });

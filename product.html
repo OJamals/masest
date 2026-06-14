@@ -71,6 +71,16 @@
   </div>
 </section>
 
+<section class="section-slim product-media-section" id="pMediaSection" hidden>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <h2 class="headline">Product and field photos.</h2>
+      <p class="subhead">Studio images, proof photos, and source-backed field results where available.</p>
+    </div>
+    <div class="product-media-row reveal" id="pMedia"></div>
+  </div>
+</section>
+
 <!-- TECH DOCS -->
 <section style="padding-top:0">
   <div class="wrap">
@@ -150,10 +160,32 @@
     document.getElementById("pSpecs").innerHTML = p.specs.map(([ico, b, s]) =>
       `<div class="spec-item"><i class="ph ${ico}" aria-hidden="true"></i><div><b>${b}</b><span>${s}</span></div></div>`).join("");
 
-    document.getElementById("pUses").innerHTML = p.uses.map(u =>
-      `<div class="spec-item"><i class="ph ph-check" aria-hidden="true"></i><div><b>${u}</b></div></div>`).join("");
+ document.getElementById("pUses").innerHTML = p.uses.map(u =>
+ `<div class="spec-item"><i class="ph ph-check" aria-hidden="true"></i><div><b>${u}</b></div></div>`).join("");
 
-    document.getElementById("pDocs").innerHTML = p.docs.map(d =>
+ const mediaItems = [
+  p.image ? [p.image, `${p.name} product photo`, "Product photo"] : null,
+  ...(PRODUCT_GALLERY[id] || [])
+ ].filter(Boolean);
+ const mediaSection = document.getElementById("pMediaSection");
+  if (mediaItems.length) {
+    mediaSection.hidden = false;
+    const media = document.getElementById("pMedia");
+    media.replaceChildren(...mediaItems.map(([src, alt, label]) => {
+      const figure = document.createElement("figure");
+      const img = document.createElement("img");
+      const caption = document.createElement("figcaption");
+      figure.className = "product-media-card";
+      img.src = src;
+      img.alt = alt;
+      img.loading = "lazy";
+      caption.textContent = label;
+      figure.append(img, caption);
+      return figure;
+    }));
+  }
+
+ document.getElementById("pDocs").innerHTML = p.docs.map(d =>
       `<div class="doc-row"><div><b>${d}</b><span>PDF, available on request</span></div>
        <a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(p.name)}&doc=${encodeURIComponent(d)}" aria-label="Request ${d} for ${p.name}">Request</a></div>`).join("");
 
