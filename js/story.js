@@ -67,12 +67,13 @@
     });
   }
 
-  states.forEach(function (st) {
-    var tl = gsap.timeline({
-      defaults: { ease: "power2.out" },
-      scrollTrigger: {
-        trigger: st.act,
-        start: st.act === firstAct ? "top 67px" : "top bottom",
+states.forEach(function (st) {
+  var startsPinned = st.act === firstAct || st.act.classList.contains("act-chems");
+  var tl = gsap.timeline({
+    defaults: { ease: "power2.out" },
+    scrollTrigger: {
+      trigger: st.act,
+      start: startsPinned ? "top 67px" : "top bottom",
         end: "bottom bottom",
         scrub: 0.5,
         onEnter: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
