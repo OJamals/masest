@@ -2174,11 +2174,12 @@ line-height: 1.35;
 }
 
 .product-job-router .section-head {
-  display: grid;
-  grid-template-columns: minmax(220px, .36fr) 1fr;
-  gap: 18px 30px;
-  align-items: end;
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 0;
+  align-self: center;
 }
 
 .product-job-router .section-head .headline {
