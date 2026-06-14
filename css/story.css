@@ -25,7 +25,7 @@
 }
 
 /* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
-.story .act { position: relative; height: 220vh; }
+.story .act { position: relative; height: 220vh; padding: 0; }
 .story .act[data-act="1"] { height: 180vh; }   /* photo reel needs less sequencing */
 .story .act[data-act="3"] { height: 240vh; }   /* HMIS factor-by-factor */
 .story .act[data-act="4"] { height: 260vh; }   /* chemicals one by one */
@@ -149,7 +149,7 @@
    ============================================================ */
 .reel {
   position: absolute; z-index: 3; margin: 0;
-  right: clamp(20px, 7vw, 110px); top: 50%; transform: translateY(-54%);
+  right: clamp(20px, 7vw, 110px); top: clamp(88px, 11vh, 112px); transform: none;
   width: min(430px, 64vw); aspect-ratio: 9 / 10;
 }
 .reel-slide {
@@ -180,7 +180,7 @@
   display: block; margin-top: 6px; font-size: .92rem; line-height: 1.45; color: var(--s-mut);
 }
 .reel-tag {
-  position: absolute; z-index: 2; top: -14px; left: 18px;
+  position: absolute; z-index: 20; top: -14px; left: 18px;
   display: inline-flex; align-items: center; gap: 7px;
   padding: 7px 14px; border-radius: 999px;
   border: 1px solid var(--s-line); background: rgba(11, 13, 18, .85);
@@ -189,7 +189,7 @@
 }
 .reel-tag i { color: var(--s-danger-ink); font-size: .9rem; }
 .reel-idx {
-  position: absolute; z-index: 2; top: -12px; right: 18px;
+  position: absolute; z-index: 20; top: -12px; right: 18px;
   font-size: .78rem; font-weight: 700; letter-spacing: .08em; color: var(--s-mut);
   font-variant-numeric: tabular-nums;
 }
