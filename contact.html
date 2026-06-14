@@ -36,6 +36,15 @@
   <section class="section section-slim">
     <div class="wrap contact-layout">
       <form class="form-card" id="quoteForm" data-endpoint="https://formspree.io/f/xzzgvqaq">
+        <input type="hidden" name="type" id="fType" value="quote">
+
+        <div class="cta-chooser" role="group" aria-label="What do you need?">
+          <button type="button" class="cta-choice active" data-intent="quote" aria-pressed="true"><i class="ph ph-tag" aria-hidden="true"></i> Quote</button>
+          <button type="button" class="cta-choice" data-intent="audit" aria-pressed="false"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Free Audit</button>
+          <button type="button" class="cta-choice" data-intent="sample" aria-pressed="false"><i class="ph ph-package" aria-hidden="true"></i> Sample Kit</button>
+          <button type="button" class="cta-choice" data-intent="distributor" aria-pressed="false"><i class="ph ph-handshake" aria-hidden="true"></i> Distributor</button>
+        </div>
+
         <div class="field-grid">
           <div class="field"><label for="fName">Full Name *</label><input id="fName" name="name" type="text" placeholder="Marisol Vega" required></div>
           <div class="field"><label for="fCompany">Company *</label><input id="fCompany" name="company" type="text" placeholder="Gulf Coast Mechanical" required></div>
@@ -43,20 +52,29 @@
           <div class="field"><label for="fPhone">Phone</label><input id="fPhone" name="phone" type="tel" placeholder="(727) 348-6519"></div>
 
           <div class="field">
-            <label for="fType">Request Type *</label>
-            <select id="fType" name="type" required>
-              <option value="quote">Product Quote</option>
-              <option value="audit">Free Chemical Audit</option>
-              <option value="sample">Sample Kit Request</option>
-              <option value="distributor">Distributor / Partner Inquiry</option>
-              <option value="technical">Technical Question</option>
-              <option value="government">Government / Federal Procurement</option>
+            <label for="fIndustry">Industry *</label>
+            <select id="fIndustry" name="industry" required>
+              <option value="">Select industry</option>
+              <option>Oil &amp; Gas</option>
+              <option>Marine</option>
+              <option>Manufacturing</option>
+              <option>Food &amp; Beverage</option>
+              <option>Healthcare</option>
+              <option>Construction</option>
+              <option>Military / Government</option>
+              <option>Education</option>
+              <option>HVAC / Water Treatment</option>
+              <option>Plumbing</option>
+              <option>Other</option>
             </select>
           </div>
+          <div class="field"><label for="fLocation">Location</label><input id="fLocation" name="location" type="text" placeholder="Tampa, USA"></div>
+        </div>
 
+        <div class="field-grid" data-intent-group="quote">
           <div class="field">
             <label for="fProduct">Product Interest *</label>
-            <select id="fProduct" name="product" required>
+            <select id="fProduct" name="product" data-req>
               <option value="">Select a product</option>
               <option>VertKleen HCR</option>
               <option>VertKleen CR</option>
@@ -75,24 +93,6 @@
               <option>Not sure, recommend for me</option>
             </select>
           </div>
-
-          <div class="field">
-            <label for="fIndustry">Industry *</label>
-            <select id="fIndustry" name="industry" required>
-              <option value="">Select industry</option>
-              <option>Oil &amp; Gas</option>
-              <option>Marine</option>
-              <option>Manufacturing</option>
-              <option>Food &amp; Beverage</option>
-              <option>Healthcare</option>
-              <option>Construction</option>
-              <option>Military / Government</option>
-              <option>Education</option>
-              <option>HVAC / Water Treatment</option>
-              <option>Other</option>
-            </select>
-          </div>
-
           <div class="field">
             <label for="fVolume">Volume / Intent</label>
             <select id="fVolume" name="volume">
@@ -105,8 +105,6 @@
               <option>Ongoing program supply</option>
             </select>
           </div>
-
-          <div class="field"><label for="fLocation">Location</label><input id="fLocation" name="location" type="text" placeholder="Tampa, USA"></div>
           <div class="field">
             <label for="fTimeline">Timeline</label>
             <select id="fTimeline" name="timeline">
@@ -117,6 +115,55 @@
               <option>Researching options</option>
             </select>
           </div>
+        </div>
+
+        <div class="field-grid" data-intent-group="audit" hidden>
+          <div class="field"><label for="fSystem">System or asset to audit *</label><input id="fSystem" name="system" type="text" placeholder="Cooling tower, CIP line, fleet wash bay" data-req></div>
+          <div class="field">
+            <label for="fAuditWhen">Preferred timeframe</label>
+            <select id="fAuditWhen" name="audit_timeframe">
+              <option value="">Select timeframe</option>
+              <option>This month</option>
+              <option>This quarter</option>
+              <option>Flexible</option>
+            </select>
+          </div>
+        </div>
+
+        <div data-intent-group="sample" hidden>
+          <div class="field">
+            <label>Pick 3 to 5 products to trial *</label>
+            <div class="sample-picker">
+              <label><input type="checkbox" name="samples" value="VertKleen HCR"> VertKleen HCR</label>
+              <label><input type="checkbox" name="samples" value="VertKleen CR"> VertKleen CR</label>
+              <label><input type="checkbox" name="samples" value="VertKleen CRHD"> VertKleen CRHD</label>
+              <label><input type="checkbox" name="samples" value="VertKleen Descaler"> VertKleen Descaler</label>
+              <label><input type="checkbox" name="samples" value="VertKleen Neutral"> VertKleen Neutral</label>
+              <label><input type="checkbox" name="samples" value="VertKleen MultiWash"> VertKleen MultiWash</label>
+              <label><input type="checkbox" name="samples" value="VertKleen AlumiBrite"> VertKleen AlumiBrite</label>
+              <label><input type="checkbox" name="samples" value="VertKleen Torque"> VertKleen Torque</label>
+              <label><input type="checkbox" name="samples" value="VertKleen LAM3"> VertKleen LAM3</label>
+              <label><input type="checkbox" name="samples" value="WaterSafe60"> WaterSafe60</label>
+              <label><input type="checkbox" name="samples" value="Purgo"> Purgo</label>
+              <label><input type="checkbox" name="samples" value="DBNPA Tablet"> DBNPA Tablet</label>
+            </div>
+            <p class="sample-hint" id="sampleHint">Select 3 to 5 products.</p>
+          </div>
+          <div class="field" style="margin-top:14px"><label for="fShipTo">Ship-to address *</label><textarea id="fShipTo" name="ship_to" rows="3" placeholder="Facility name, street, city, state, ZIP" data-req></textarea></div>
+        </div>
+
+        <div class="field-grid" data-intent-group="distributor" hidden>
+          <div class="field">
+            <label for="fCompanyType">Company type *</label>
+            <select id="fCompanyType" name="company_type" data-req>
+              <option value="">Select type</option>
+              <option>Building service contractor (BSC)</option>
+              <option>Distributor / reseller</option>
+              <option>White-label / private label</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label for="fTerritory">Territory / region *</label><input id="fTerritory" name="territory" type="text" placeholder="Southeast US, Caribbean, ..." data-req></div>
         </div>
 
         <div class="field" style="margin-top:18px">
@@ -170,19 +217,5 @@
 </main>
 
 <script src="js/main.js"></script>
-<script>
-(() => {
-  const params = new URLSearchParams(location.search);
-  const setSelect = (id, value) => {
-    const el = document.getElementById(id);
-    if (!el || !value) return;
-    const option = Array.from(el.options).find((item) => item.value === value || item.text === value);
-    if (option) el.value = option.value;
-  };
-  setSelect("fType", params.get("type"));
-  setSelect("fProduct", params.get("product"));
-  setSelect("fIndustry", params.get("industry"));
-})();
-</script>
 </body>
 </html>

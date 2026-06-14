@@ -1560,3 +1560,4 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 }
 .sample-picker input { width: auto; accent-color: var(--accent); }
 .sample-hint { font-size: .84rem; color: var(--muted); margin-top: 8px; }
+.sample-hint.err { color: #b3261e; font-weight: 600; }
