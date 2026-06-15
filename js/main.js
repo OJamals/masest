@@ -300,34 +300,11 @@ const PRODUCTS = {
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "HCR & Descaler Userguide"]
   },
-  glycols: {
-    name: "VertKleen Glycols",
-    cat: "water",
-    replaces: "Supplies inhibited PG and EG glycol programs",
-    hmis: "Program item",
- icon: "ph-thermometer-cold",
- image: "img/products/glycols-studio.webp",
-    tag: "Florida-sourced inhibited propylene and ethylene glycol for facility water loops and district programs.",
-    desc: "A glycol supply program for inhibited PG and EG concentrates and ready-to-use blends, priced for local pickup and facility maintenance programs.",
-    uses: [
-      "Chilled-water and hydronic loop freeze protection",
-      "School district and campus maintenance purchasing",
-      "Propylene glycol and ethylene glycol supply",
-      "Local pickup in Tampa, Lakeland, Cocoa, and Melbourne programs"
-    ],
-    specs: [
-      ["ph-map-pin", "Florida sourced", "Supplied through Florida-based distributors with local pickup"],
-      ["ph-currency-dollar", "Bid-ready list", "Brevard Schools list pricing source available"],
-      ["ph-package", "Multiple packs", "5-gal pails and 55-gal drums"],
-      ["ph-clipboard-text", "Program fit", "Pairs with cooling-tower and water-treatment scopes"]
-    ],
-    docs: ["Glycol Price List", "Technical Data Sheet (TDS)", "Program Quote Worksheet"]
-  }
 };
 
 const CATALOG_ORDER = [
   "hcr", "descaler", "crs", "cr", "crhd", "neutral", "multiwash",
-  "watersafe60", "purgo", "dbnpa", "glycols", "lam3", "alumibrite", "torque"
+  "watersafe60", "purgo", "dbnpa", "lam3", "alumibrite", "torque"
 ];
 
 const PRODUCT_CATALOG_COPY = {
@@ -390,12 +367,6 @@ const PRODUCT_CATALOG_COPY = {
     summary: "A controlled-release tablet for the non-oxidizing rotation in cooling-tower programs.",
     fits: ["quarterly dosing", "cooling towers", "low-dose programs"],
     proof: "EPA registration documentation"
-  },
-  glycols: {
-    job: "Freeze-protection programs",
-    summary: "Florida-sourced inhibited propylene and ethylene glycol for hydronic loops and district maintenance.",
-    fits: ["hydronic loops", "schools", "healthcare", "local pickup"],
-    proof: "Price list and quote worksheet"
   },
   lam3: {
     job: "Moss, algae, mold, and mildew",
