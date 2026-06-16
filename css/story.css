@@ -10,11 +10,11 @@
   --s-bg-2: #10141c;
   --s-ink: #f4f6f8;
   --s-mut: rgba(244, 246, 248, .62);
-  --s-danger: #ff6a45;
+  --s-danger: #a93420;
   --s-danger-ink: #ff8a6c;
-  --s-danger-soft: rgba(255, 106, 69, .14);
-  --s-safe: #10b3a3;
-  --s-safe-text: #34dccb;
+  --s-danger-soft: rgba(169, 52, 32, .14);
+  --s-safe: #08796f;
+  --s-safe-text: #cffff8;
   --s-safe-soft: rgba(16, 179, 163, .18);
   --s-line: rgba(255, 255, 255, .12);
   --s-ease: cubic-bezier(.16, 1, .3, 1);
@@ -90,7 +90,7 @@
   white-space: nowrap;
 }
 .rail-btn:hover span, .rail-btn.is-on span { opacity: 1; transform: none; }
-.rail-btn.is-on b { border-color: var(--s-danger-ink); color: var(--s-danger-ink); background: rgba(255, 106, 69, .1); }
+.rail-btn.is-on b { border-color: var(--s-danger-ink); color: var(--s-danger-ink); background: rgba(169, 52, 32, .1); }
 .rail-btn.is-on.safe b { border-color: var(--s-safe-text); color: var(--s-safe-text); background: rgba(16, 179, 163, .18); }
 @media (max-width: 900px) { .story-rail { display: none; } }
 
@@ -133,12 +133,12 @@
 .story .chem-tag b { font-variant-numeric: tabular-nums; color: var(--s-danger-ink); font-weight: 800; letter-spacing: .02em; }
 .story .chem-tag .pulse {
   width: 9px; height: 9px; border-radius: 50%; background: var(--s-danger);
-  box-shadow: 0 0 0 0 rgba(255, 106, 69, .6); animation: pulse 2s infinite;
+  box-shadow: 0 0 0 0 rgba(169, 52, 32, .6); animation: pulse 2s infinite;
 }
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 106, 69, .55); }
-  70% { box-shadow: 0 0 0 12px rgba(255, 106, 69, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 106, 69, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(169, 52, 32, .55); }
+  70% { box-shadow: 0 0 0 12px rgba(169, 52, 32, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(169, 52, 32, 0); }
 }
 
 /* Reveal driver: JS sets opacity/transform every frame */
@@ -219,11 +219,12 @@
   white-space: nowrap;
 }
 .pipe-chips .chip i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-/* Anchored just outside the pipe (canvas band runs 58% to 88% of stage height) */
-.chip.c-scale  { left: 17%; top: 53%; } .chip.c-scale i  { background: #c9d4d0; }
-.chip.c-rust   { left: 22%; top: 91%; } .chip.c-rust i   { background: #9c4a2d; }
-.chip.c-grease { left: 64%; top: 53%; } .chip.c-grease i { background: #a98a3f; }
-.chip.c-bio    { left: 56%; top: 91%; } .chip.c-bio i    { background: #5d8a52; }
+/* Anchored just outside the vertical zig-zag pipe, aligned to each enemy's
+   home stretch (PIPE_N in story.js: verticals at x 0.56/0.88/0.54/0.80). */
+.chip.c-scale  { left: 69%; top: 20%; } .chip.c-scale i  { background: #c9d4d0; }
+.chip.c-rust   { left: 80%; top: 44%; } .chip.c-rust i   { background: #c2553a; }
+.chip.c-grease { left: 35%; top: 57%; } .chip.c-grease i { background: #c2a04e; }
+.chip.c-bio    { left: 58%; top: 90%; } .chip.c-bio i    { background: #6fa863; }
 
 /* ============================================================
    ACT 3 — THE SCORE (HMIS explained, factor by factor)
@@ -270,7 +271,7 @@
   transform: translate(-50%, -50%) translateY(var(--lift, 0px));
   width: 20px; height: 20px; border-radius: 50%;
   background: var(--s-danger); border: 2.5px solid var(--s-bg);
-  box-shadow: 0 0 0 1.5px var(--s-danger), 0 6px 14px rgba(255, 106, 69, .45);
+  box-shadow: 0 0 0 1.5px var(--s-danger), 0 6px 14px rgba(169, 52, 32, .45);
   opacity: 0; will-change: opacity, left;
 }
 .cdot[data-dot="0"] { --vj: -0.10; --lift: -12px; }
@@ -282,8 +283,15 @@
   font-size: .62rem; font-weight: 800; letter-spacing: .06em; color: var(--s-danger-ink);
 }
 .cdot[data-dot="1"] span, .cdot[data-dot="3"] span { top: auto; bottom: -130%; }
-.chem-scale.safe .cdot { background: var(--s-safe); box-shadow: 0 0 0 1.5px var(--s-safe), 0 6px 14px rgba(40, 200, 182, .34); }
-.chem-scale.safe .cdot span { color: var(--s-safe-text); }
+.chem-scale.safe .cdot { background: var(--s-safe); box-shadow: 0 0 0 1.5px var(--s-safe), 0 6px 14px rgba(8, 121, 111, .36); }
+.story .chem-scale .cdot { color: #f4f6f8; }
+.chem-scale.safe .cdot,
+.chem-scale.safe .cdot span { color: #f4f6f8; }
+.chem-card .lockup em { color: #2a0b05; }
+.story .chem-card .lockup em,
+.story .chem-scale .cdot {
+  color: #f4f6f8;
+}
 
 .chem-list { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .chem-card {
@@ -301,13 +309,27 @@
 .chem-card .lockup em {
   font-style: normal; width: 26px; height: 30px; border-radius: 7px;
   display: grid; place-items: center; font-size: .95rem; font-weight: 900;
-  background: var(--s-danger-soft); color: var(--s-danger-ink); border: 1px solid rgba(255, 106, 69, .3);
+  background: var(--s-danger-soft); color: var(--s-danger-ink); border: 1px solid rgba(169, 52, 32, .3);
 }
 .chem-card p { margin: 10px 0 0; font-size: .9rem; line-height: 1.55; color: var(--s-mut); }
 .chem-out, .chem-final { margin: 4px auto 0; text-align: center; max-width: 62ch; font-size: 1rem; line-height: 1.6; color: var(--s-mut); }
 .chem-out b { color: var(--s-danger-ink); font-weight: 800; }
 .chem-final { font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 800; color: var(--s-ink); }
 .chem-final b { color: var(--s-safe-text); font-weight: 900; }
+
+/* Enemy-first cards: a small cast-color cue before the enemy name (matches
+   the Act 2 chips), and the chemical it forces rendered as a tagged tool. */
+.chem-card .chead .ecue {
+  width: 8px; height: 8px; border-radius: 50%; flex: none;
+  display: inline-block; margin-right: 7px; vertical-align: middle;
+}
+.ecue.c-scale  { background: #c9d4d0; }
+.ecue.c-rust   { background: #c2553a; }
+.ecue.c-grease { background: #c2a04e; }
+.ecue.c-bio    { background: #6fa863; }
+/* Dot label morphs enemy -> chemical; both spans stack, JS crossfades opacity */
+.cdot .enemy, .cdot .chem { transition: opacity .25s linear; }
+.cdot .chem { opacity: 0; }
 
 /* Act 4 layout: the headline (.act-copy.top, absolutely floated at the stage top)
    and the tall 2x2 .chem-rig were positioned independently — on laptop heights the
@@ -347,9 +369,9 @@
   width: clamp(62px, 10vw, 98px); aspect-ratio: 5 / 6; border-radius: 18px;
   display: grid; place-items: center; font-size: clamp(2.9rem, 6.5vw, 4.7rem); font-weight: 900;
   letter-spacing: -.05em; color: var(--s-safe-text);
-  background: linear-gradient(180deg, rgba(40, 200, 182, .12), rgba(40, 200, 182, .03));
-  border: 1px solid rgba(40, 200, 182, .28);
-  box-shadow: 0 30px 60px -34px rgba(40, 200, 182, .35);
+  background: linear-gradient(180deg, rgba(8, 121, 111, .18), rgba(8, 121, 111, .06));
+  border: 1px solid rgba(8, 121, 111, .42);
+  box-shadow: 0 30px 60px -34px rgba(8, 121, 111, .46);
 }
 .savior-cap { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: var(--s-mut); margin-bottom: clamp(12px, 2.2vh, 24px); }
 .savior-proof { display: flex; gap: 14px; justify-content: center; }
@@ -358,13 +380,13 @@
 .savior-proof figure { margin: 0; width: clamp(96px, 12vw, 132px); }
 .savior-proof img {
   width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px;
-  border: 1px solid rgba(40, 200, 182, .25); display: block;
+  border: 1px solid rgba(8, 121, 111, .38); display: block;
   filter: saturate(.95);
 }
 .savior-proof figcaption { margin-top: 8px; font-size: .76rem; font-weight: 700; letter-spacing: .04em; color: var(--s-mut); }
 .savior-proof-cap { margin: clamp(10px, 1.6vh, 14px) 0 clamp(16px, 2.6vh, 28px); font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
 .savior-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.savior-ctas .btn-primary { background: var(--s-safe); color: #06231f; box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(40, 200, 182, .6); }
+.savior-ctas .btn-primary { background: var(--s-safe); color: #f4f6f8; box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(8, 121, 111, .62); }
 .savior-ctas .btn-primary:hover { background: #5fe9d6; }
 .savior-ctas .btn-ghost { background: rgba(255, 255, 255, .04); color: #fff; border: 1.5px solid rgba(255, 255, 255, .28); }
 .savior-ctas .btn-ghost:hover { border-color: #fff; background: rgba(255, 255, 255, .1); }
@@ -513,7 +535,7 @@
 .savior-proof img {
   filter: saturate(1.04) contrast(1.08) brightness(1.02);
   box-shadow:
-    0 18px 42px -28px rgba(40, 200, 182, .38),
+    0 18px 42px -28px rgba(8, 121, 111, .48),
     inset 0 1px 0 rgba(255, 255, 255, .1);
 }
 
@@ -537,15 +559,32 @@
    not blurred photo collages behind the content. */
 .story .act[data-act="1"] .stage {
   background:
-    radial-gradient(45% 38% at 70% 25%, rgba(255, 106, 69, .12), transparent 64%),
-    radial-gradient(55% 46% at 28% 64%, rgba(40, 200, 182, .08), transparent 68%),
+    radial-gradient(45% 38% at 70% 25%, rgba(169, 52, 32, .12), transparent 64%),
+    radial-gradient(55% 46% at 28% 64%, rgba(8, 121, 111, .12), transparent 68%),
     radial-gradient(110% 90% at 50% 0%, #151924 0%, #090c12 64%);
 }
 
 .story .act-savior .stage {
   background:
-    radial-gradient(45% 44% at 50% 38%, rgba(40, 200, 182, .18), transparent 68%),
-    radial-gradient(70% 58% at 78% 12%, rgba(40, 200, 182, .10), transparent 70%),
+    radial-gradient(45% 44% at 50% 38%, rgba(8, 121, 111, .22), transparent 68%),
+    radial-gradient(70% 58% at 78% 12%, rgba(8, 121, 111, .14), transparent 70%),
     radial-gradient(110% 90% at 50% 0%, #101821 0%, #070a10 64%);
+}
+
+.story .kicker {
+  font-size: .82rem;
+  letter-spacing: .045em !important;
+  text-transform: none !important;
+}
+
+.story .chem-tag,
+.story .scale-head,
+.story .scale-ticks {
+  text-transform: none !important;
+}
+
+.story .savior-cap {
+  letter-spacing: .045em !important;
+  text-transform: none !important;
 }
 }

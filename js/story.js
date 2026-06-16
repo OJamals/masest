@@ -158,14 +158,21 @@ states.forEach(function (st) {
   var chemAct = story.querySelector(".act-chems");
   var chemScale = chemAct ? chemAct.querySelector(".chem-scale") : null;
   var cdots = chemAct ? gsap.utils.toArray(chemAct.querySelectorAll(".cdot")) : [];
+  var cEnemy = cdots.map(function (d) { return d.querySelector(".enemy"); });
+  var cChem = cdots.map(function (d) { return d.querySelector(".chem"); });
 
   function updateChems(st) {
     if (!cdots.length) return;
     var z = smooth((st.p - beatFrac(st, 6)) / INW(st));
+    /* morph each dot's label from the enemy (known from Act 2) to the
+       hazardous chemical it forces, as the "score" beat reads */
+    var m = smooth((st.p - beatFrac(st, 5)) / INW(st));
     for (var k = 0; k < cdots.length; k++) {
       var inT = smooth((st.p - beatFrac(st, k + 1)) / INW(st));
       cdots[k].style.opacity = inT;
       cdots[k].style.setProperty("--v", 3 * (1 - z));
+      if (cEnemy[k]) cEnemy[k].style.opacity = 1 - m;
+      if (cChem[k]) cChem[k].style.opacity = m;
     }
     if (chemScale) chemScale.classList.toggle("safe", z > 0.12);
   }
@@ -235,153 +242,218 @@ states.forEach(function (st) {
     ctx.globalAlpha = 1;
   }
 
-  /* --- ACT 2: DEBRIS — carried by flow, sticking to the pipe walls ---
-     Four debris types claim four wall regions, matching the chips:
-     scale (top-left), rust (bottom-left), grease (top-right), biofilm
-     (bottom-right). Crust accumulates; the channel visibly narrows
-     and the flow speeds up through the choke (continuity). */
+  /* --- ACT 2: DEBRIS — falls into a vertical zig-zag pipe ---
+     The pipe is a polyline that descends through elbows. Debris is
+     advected along the pipe's arc length (gravity biases it toward the
+     down-wall), and crust accumulates per arc-length bucket — heaviest
+     at the elbows, where real systems clog first. Each enemy type favors
+     a home stretch of the run, matching the four chips. The bore visibly
+     narrows and flow speeds through the chokes (continuity preserved). */
   var DEB_TYPES = [
-    { c: "201,212,208", wall: 0, x0: 0.08, x1: 0.44 },  /* scale  */
-    { c: "156,74,45",  wall: 1, x0: 0.10, x1: 0.48 },   /* rust   */
-    { c: "169,138,63", wall: 0, x0: 0.54, x1: 0.92 },   /* grease */
-    { c: "93,138,82",  wall: 1, x0: 0.52, x1: 0.90 }    /* biofilm*/
+    { c: "201,212,208", hs: 0.26 },  /* scale   — top horizontal run */
+    { c: "194,85,58",   hs: 0.48 },  /* rust    — right vertical     */
+    { c: "194,160,78",  hs: 0.68 },  /* grease  — middle bend        */
+    { c: "111,168,99",  hs: 0.88 }   /* biofilm — lower run / exit   */
   ];
-  var BUCKET = 14;
+  /* normalized centerline (fractions of the stage). The chip CSS
+     positions in story.css are hand-aligned to these points. */
+  var PIPE_N = [
+    [0.56, -0.06], [0.56, 0.26], [0.88, 0.26], [0.88, 0.60],
+    [0.54, 0.60], [0.54, 0.92], [0.80, 0.92], [0.80, 1.06]
+  ];
+  var BUCKET_N = 64;
+
+  function buildPipe(w, h) {
+    var bore = clamp(38, 82, h * 0.108);
+    var pts = PIPE_N.map(function (p) { return { x: p[0] * w, y: p[1] * h }; });
+    var segs = [], cum = [0], L = 0;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var a = pts[i], b = pts[i + 1];
+      var dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+      var tx = dx / len, ty = dy / len;
+      segs.push({ a: a, b: b, len: len, tx: tx, ty: ty, nx: -ty, ny: tx });
+      L += len; cum.push(L);
+    }
+    return { pts: pts, segs: segs, cum: cum, L: L, bore: bore };
+  }
+  /* arc position s -> world point + tangent + normal of its segment
+     (gp = normal·gravity, i.e. how much "down" pushes along +normal) */
+  function atS(P, s) {
+    s = clamp(0, P.L, s);
+    var i = P.segs.length - 1;
+    for (var k = 0; k < P.segs.length; k++) { if (s <= P.cum[k + 1]) { i = k; break; } }
+    var sg = P.segs[i], t = (s - P.cum[i]) / sg.len;
+    return {
+      x: sg.a.x + (sg.b.x - sg.a.x) * t, y: sg.a.y + (sg.b.y - sg.a.y) * t,
+      nx: sg.nx, ny: sg.ny, gp: sg.ny
+    };
+  }
+  function strokePipe(ctx, P) {
+    ctx.beginPath();
+    ctx.moveTo(P.pts[0].x, P.pts[0].y);
+    for (var i = 1; i < P.pts.length; i++) ctx.lineTo(P.pts[i].x, P.pts[i].y);
+    ctx.stroke();
+  }
+  function spawnPart(D, s) {
+    var t = DEB_TYPES[(Math.random() * 4) | 0];
+    D.parts.push({ t: t, s: s, o: rnd(-D.half * 0.4, D.half * 0.4), v: rnd(0.9, 1.8), r: rnd(2.2, 4.4) });
+  }
+  function depositDebris(D, s, side, t, r) {
+    var b = Math.max(0, Math.min(BUCKET_N, (s / D.bs) | 0));
+    var arr = D.crust[side], col = D.ccol[side];
+    arr[b] = Math.min(D.maxCrust, arr[b] + r * 1.5);
+    col[b] = t.c;
+    if (b > 0) { arr[b - 1] = Math.min(D.maxCrust, arr[b - 1] + r * 0.6); if (!col[b - 1]) col[b - 1] = t.c; }
+    if (b < BUCKET_N) { arr[b + 1] = Math.min(D.maxCrust, arr[b + 1] + r * 0.6); if (!col[b + 1]) col[b + 1] = t.c; }
+  }
 
   function fxDebris(st, c, dt, time) {
     var ctx = c.ctx, w = c.w(), h = c.h();
     ctx.clearRect(0, 0, w, h);
-    var topY = h * 0.58, botY = h * 0.88;       /* pipe sits in the lower third, clear of the copy */
-    var px0 = w * 0.10, px1 = w * 0.95;          /* inset pipe segment, clear of the chapter rail */
-    var pw = px1 - px0;
-    var maxCrust = (botY - topY) * 0.30;
-    function bandX(ty) { return [px0 + ty.x0 * pw, px0 + ty.x1 * pw]; }
 
-    if (!st.deb) {
-      var nb = Math.ceil(w / BUCKET) + 1;
+    if (!st.deb || st.deb.w !== w || st.deb.h !== h) {
+      var P = buildPipe(w, h);
+      var half = P.bore / 2, maxCrust = half * 0.9, bs = P.L / BUCKET_N;
       st.deb = {
-        crust: [new Float32Array(nb), new Float32Array(nb)],
-        stuck: [], parts: [], flow: []
+        w: w, h: h, P: P, half: half, maxCrust: maxCrust, bs: bs,
+        crust: [new Float32Array(BUCKET_N + 1), new Float32Array(BUCKET_N + 1)], /* thickness, side 0:+normal 1:-normal */
+        ccol: [new Array(BUCKET_N + 1), new Array(BUCKET_N + 1)],                 /* dominant enemy color per bucket */
+        parts: [], flow: []
       };
-      for (var i = 0; i < 26; i++) st.deb.flow.push({ x: rnd(px0, px1), y: rnd(topY + 10, botY - 10), v: rnd(1.4, 2.6), len: rnd(26, 60) });
-      /* pre-seed crust to match scroll progress, so a mid-act jump
-         (or fast scroll) still shows the buildup story so far */
-      var seed = Math.floor(smooth(st.p) * 380);
+      for (var fi = 0; fi < 22; fi++) st.deb.flow.push({ s: rnd(0, P.L), o: rnd(-half * 0.5, half * 0.5), len: rnd(20, 46) });
+      /* pre-seed crust to scroll progress, so a mid-act jump still shows
+         the buildup story so far (heaviest near each enemy's home) */
+      var seed = Math.floor(smooth(st.p) * 420);
       for (var sd = 0; sd < seed; sd++) {
         var ty0 = DEB_TYPES[(Math.random() * 4) | 0];
-        var bx0 = bandX(ty0);
-        var sx = rnd(bx0[0], bx0[1]);
-        var arr0 = st.deb.crust[ty0.wall];
-        var b0 = (sx / BUCKET) | 0;
-        if (b0 < 0 || b0 >= arr0.length) continue;
-        var sr = rnd(2.2, 4.6);
-        var sy = ty0.wall === 0 ? topY + arr0[b0] + sr * 0.4 : botY - arr0[b0] - sr * 0.4;
-        st.deb.stuck.push({ x: sx, y: sy, r: sr, c: ty0.c });
-        arr0[b0] = Math.min(maxCrust, arr0[b0] + sr * 0.85);
-        if (b0 > 0) arr0[b0 - 1] = Math.min(maxCrust, arr0[b0 - 1] + sr * 0.4);
-        if (b0 < arr0.length - 1) arr0[b0 + 1] = Math.min(maxCrust, arr0[b0 + 1] + sr * 0.4);
+        var ss = clamp(0, P.L, (ty0.hs + rnd(-0.13, 0.13)) * P.L);
+        depositDebris(st.deb, ss, Math.random() < 0.5 ? 0 : 1, ty0, rnd(2.2, 4.4));
       }
-      /* populate the channel immediately (no empty-pipe cold start) */
-      for (var ip = 0; ip < 36; ip++) {
-        var ty1 = DEB_TYPES[(Math.random() * 4) | 0];
-        st.deb.parts.push({ t: ty1, x: rnd(px0, px1), y: rnd(topY + 14, botY - 14), vx: rnd(1.0, 2.0), vy: 0, r: rnd(2.2, 4.6) });
-      }
+      for (var ip = 0; ip < 30; ip++) spawnPart(st.deb, rnd(0, P.L * 0.9));
     }
-    var D = st.deb;
-    function crustAt(side, x) { return D.crust[side][Math.max(0, Math.min(D.crust[side].length - 1, (x / BUCKET) | 0))]; }
+    var D = st.deb, P = D.P, half = D.half;
+    function bkt(s) { return Math.max(0, Math.min(BUCKET_N, (s / D.bs) | 0)); }
+    function crustAt(side, s) { return D.crust[side][bkt(s)]; }
+    function openAt(s) { return Math.max(12, (half - crustAt(0, s)) + (half - crustAt(1, s))); }
+    function flowSpeed(s) { return clamp(1, 3.2, P.bore / openAt(s)); }
+    /* elbow proximity 0..1 (higher = nearer a bend) boosts deposition —
+       real systems clog at the bends first */
+    function elbowBoost(s) {
+      var best = 0;
+      for (var e = 1; e < P.cum.length - 1; e++) {
+        var f = 1 - Math.abs(s - P.cum[e]) / (P.bore * 1.7);
+        if (f > best) best = f;
+      }
+      return best < 0 ? 0 : best;
+    }
 
-    /* pipe casing: solid walls, soft interior, flanged ends */
-    var grad = ctx.createLinearGradient(0, topY, 0, botY);
-    grad.addColorStop(0, "rgba(255,255,255,0.07)");
-    grad.addColorStop(0.2, "rgba(255,255,255,0.025)");
-    grad.addColorStop(0.8, "rgba(255,255,255,0.025)");
-    grad.addColorStop(1, "rgba(255,255,255,0.07)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(px0, topY, pw, botY - topY);
-    ctx.fillStyle = "rgba(255,255,255,0.30)";
-    ctx.fillRect(px0, topY - 4, pw, 4);
-    ctx.fillRect(px0, botY, pw, 4);
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
-    ctx.fillRect(px0, topY - 13, pw, 8);
-    ctx.fillRect(px0, botY + 5, pw, 8);
-    /* flanges */
-    ctx.fillStyle = "rgba(255,255,255,0.16)";
-    ctx.fillRect(px0 - 7, topY - 20, 7, botY - topY + 40);
-    ctx.fillRect(px1, topY - 20, 7, botY - topY + 40);
+    /* ---- casing: outer wall, dark bore, flanged elbows (not clipped) ---- */
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = P.bore + 10; strokePipe(ctx, P);
+    ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = P.bore + 2;  strokePipe(ctx, P);
+    ctx.strokeStyle = "rgba(8,10,14,0.55)";     ctx.lineWidth = P.bore;      strokePipe(ctx, P);
+    ctx.fillStyle = "rgba(255,255,255,0.14)";
+    for (var jt = 1; jt < P.pts.length - 1; jt++) {
+      var pj = P.pts[jt];
+      ctx.fillRect(pj.x - (half + 7), pj.y - 5, P.bore + 14, 10);
+      ctx.fillRect(pj.x - 5, pj.y - (half + 7), 10, P.bore + 14);
+    }
 
-    /* clip everything moving to the pipe interior */
+    /* ---- clip moving parts to the pipe interior (offset polygon) ---- */
     ctx.save();
     ctx.beginPath();
-    ctx.rect(px0, topY, pw, botY - topY);
-    ctx.clip();
+    for (var lp = 0; lp < P.pts.length; lp++) {
+      var sgl = P.segs[Math.min(lp, P.segs.length - 1)];
+      var lx = P.pts[lp].x + sgl.nx * half, ly = P.pts[lp].y + sgl.ny * half;
+      lp === 0 ? ctx.moveTo(lx, ly) : ctx.lineTo(lx, ly);
+    }
+    for (var rp = P.pts.length - 1; rp >= 0; rp--) {
+      var sgr = P.segs[Math.min(rp, P.segs.length - 1)];
+      ctx.lineTo(P.pts[rp].x - sgr.nx * half, P.pts[rp].y - sgr.ny * half);
+    }
+    ctx.closePath(); ctx.clip();
 
-    /* flow streaks: confined to the open channel, faster where narrow */
-    ctx.strokeStyle = "rgba(244,246,248,0.13)";
-    ctx.lineWidth = 1.2;
+    /* crust band (under the flow + moving debris) */
+    drawCrust(ctx, D);
+
+    /* flow streaks: faster where the bore is choked */
+    ctx.strokeStyle = "rgba(244,246,248,0.12)"; ctx.lineWidth = 1.2;
     for (var f = 0; f < D.flow.length; f++) {
       var fl = D.flow[f];
-      var cT = crustAt(0, fl.x), cB = crustAt(1, fl.x);
-      var open = (botY - cB) - (topY + cT);
-      var speedUp = clamp(1, 3, (botY - topY) / Math.max(40, open));
-      fl.x += fl.v * speedUp * dt * 60;
-      if (fl.x - fl.len > px1) { fl.x = px0 - fl.len + 10; fl.y = rnd(topY + 10, botY - 10); }
-      var yC = clamp(topY + cT + 6, botY - cB - 6, fl.y + Math.sin(time * 1.3 + fl.x * 0.01) * 4);
-      ctx.beginPath(); ctx.moveTo(fl.x - fl.len, yC); ctx.lineTo(fl.x, yC); ctx.stroke();
+      fl.s += (0.9 + flowSpeed(fl.s)) * dt * 60;
+      if (fl.s > P.L) { fl.s = rnd(0, 30); fl.o = rnd(-half * 0.5, half * 0.5); }
+      var a0 = atS(P, fl.s - fl.len), a1 = atS(P, fl.s);
+      ctx.beginPath();
+      ctx.moveTo(a0.x + a0.nx * fl.o, a0.y + a0.ny * fl.o);
+      ctx.lineTo(a1.x + a1.nx * fl.o, a1.y + a1.ny * fl.o);
+      ctx.stroke();
     }
 
-    /* spawn + advect debris */
-    var stickP = 0.03 + st.p * 0.16;
-    while (D.parts.length < 44) {
-      var ty = DEB_TYPES[(Math.random() * 4) | 0];
-      D.parts.push({ t: ty, x: px0 + rnd(-50, -6), y: rnd(topY + 14, botY - 14), vx: rnd(1.0, 2.0), vy: 0, r: rnd(2.2, 4.6) });
-    }
+    /* spawn + advect debris down the run */
+    var stickBase = 0.02 + st.p * 0.10;
+    while (D.parts.length < 40) spawnPart(D, rnd(-30, 10));
+    ctx.globalAlpha = 0.9;
     for (var k = D.parts.length - 1; k >= 0; k--) {
       var d = D.parts[k];
-      var wallY = d.t.wall === 0 ? topY + crustAt(0, d.x) : botY - crustAt(1, d.x);
-      var bx = bandX(d.t);
-      var inBand = d.x > bx[0] && d.x < bx[1];
-      /* steer toward home wall while in its band; drift otherwise */
-      d.vy += inBand ? (wallY - d.y) * 0.0024 : Math.sin(time + d.x * 0.02) * 0.004;
-      d.vy *= 0.97;
-      d.x += d.vx * dt * 60; d.y += d.vy * dt * 60;
-      d.y = clamp(topY + 3, botY - 3, d.y);
-      if (d.x > px1 + 20) { D.parts.splice(k, 1); continue; }
-      /* stick when touching the crust surface inside the band */
-      if (inBand && Math.abs(d.y - wallY) < 5 && Math.random() < stickP) {
-        if (D.stuck.length < 1000) {
-          D.stuck.push({ x: d.x, y: wallY + (d.t.wall === 0 ? d.r * 0.4 : -d.r * 0.4), r: d.r, c: d.t.c });
-          var b = (d.x / BUCKET) | 0;
-          var arr = D.crust[d.t.wall];
-          if (b >= 0 && b < arr.length) {
-            arr[b] = Math.min(maxCrust, arr[b] + d.r * 0.85);
-            if (b > 0) arr[b - 1] = Math.min(maxCrust, arr[b - 1] + d.r * 0.4);
-            if (b < arr.length - 1) arr[b + 1] = Math.min(maxCrust, arr[b + 1] + d.r * 0.4);
-          }
-        }
-        D.parts.splice(k, 1);
-        continue;
+      var here = atS(P, d.s);
+      d.s += d.v * flowSpeed(d.s) * dt * 60;
+      if (d.s > P.L) { D.parts.splice(k, 1); continue; }
+      /* gravity (projected onto the segment normal) pulls toward the
+         down-wall; add a little jitter */
+      d.o += here.gp * 0.5 + Math.sin(time * 1.2 + d.s * 0.05) * 0.18;
+      var side = d.o >= 0 ? 0 : 1;
+      var openSide = half - crustAt(side, d.s);
+      if (d.o > openSide) d.o = openSide; if (d.o < -(half - crustAt(1, d.s))) d.o = -(half - crustAt(1, d.s));
+      var homeNear = 1 - Math.min(1, Math.abs(d.s / P.L - d.t.hs) * 2.2);
+      var stickP = stickBase * (0.5 + elbowBoost(d.s) * 1.8) * (0.7 + homeNear * 0.9);
+      if (Math.abs(d.o) > (half - crustAt(side, d.s)) - 3 && Math.random() < stickP) {
+        depositDebris(D, d.s, side, d.t, d.r);
+        D.parts.splice(k, 1); continue;
       }
-      ctx.globalAlpha = 0.9;
       ctx.fillStyle = "rgb(" + d.t.c + ")";
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.arc(here.x + here.nx * d.o, here.y + here.ny * d.o, d.r, 0, 6.2832); ctx.fill();
     }
 
-    /* accumulated crust: one batched path per debris color */
-    ctx.globalAlpha = 0.92;
-    for (var t = 0; t < DEB_TYPES.length; t++) {
-      var col = DEB_TYPES[t].c;
-      ctx.fillStyle = "rgb(" + col + ")";
-      ctx.beginPath();
-      for (var s = 0; s < D.stuck.length; s++) {
-        var q = D.stuck[s];
-        if (q.c !== col) continue;
-        ctx.moveTo(q.x + q.r, q.y);
-        ctx.arc(q.x, q.y, q.r, 0, 6.2832);
-      }
-      ctx.fill();
-    }
     ctx.globalAlpha = 1;
     ctx.restore();
+  }
+
+  /* crust as a filled thickness band hugging each wall — the bore visibly
+     closes toward the chokes. One quad per bucket, colored by the enemy
+     that built it. */
+  function drawCrust(ctx, D) {
+    var P = D.P, half = D.half, bs = D.bs;
+    for (var side = 0; side < 2; side++) {
+      var sign = side === 0 ? 1 : -1, arr = D.crust[side], col = D.ccol[side];
+      for (var b = 0; b < BUCKET_N; b++) {
+        var t0 = arr[b], t1 = arr[b + 1];
+        if (t0 < 0.6 && t1 < 0.6) continue;
+        var a0 = atS(P, b * bs), a1 = atS(P, (b + 1) * bs);
+        ctx.fillStyle = "rgb(" + (col[b] || "201,212,208") + ")";
+        ctx.beginPath();
+        ctx.moveTo(a0.x + a0.nx * sign * half, a0.y + a0.ny * sign * half);
+        ctx.lineTo(a0.x + a0.nx * sign * (half - t0), a0.y + a0.ny * sign * (half - t0));
+        ctx.lineTo(a1.x + a1.nx * sign * (half - t1), a1.y + a1.ny * sign * (half - t1));
+        ctx.lineTo(a1.x + a1.nx * sign * half, a1.y + a1.ny * sign * half);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    /* darken the inner lip for depth */
+    ctx.strokeStyle = "rgba(8,10,14,0.5)"; ctx.lineWidth = 1.5;
+    for (var sd = 0; sd < 2; sd++) {
+      var sg = sd === 0 ? 1 : -1, a = D.crust[sd];
+      ctx.beginPath();
+      var started = false;
+      for (var bb = 0; bb <= BUCKET_N; bb++) {
+        if (a[bb] < 0.6) { started = false; continue; }
+        var pp = atS(P, bb * bs);
+        var ix = pp.x + pp.nx * sg * (half - a[bb]), iy = pp.y + pp.ny * sg * (half - a[bb]);
+        started ? ctx.lineTo(ix, iy) : ctx.moveTo(ix, iy);
+        started = true;
+      }
+      ctx.stroke();
+    }
   }
 
   /* --- ACT 5: clean teal motes drifting up --- */
