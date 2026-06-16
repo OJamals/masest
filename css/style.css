@@ -520,6 +520,7 @@ section { padding: var(--space-section) 0; }
   letter-spacing: -.02em;
 }
 .resource-disclosure summary b {
+  display: inline-block;
   white-space: normal;
   padding: 10px 16px;
   border-radius: 999px;
@@ -552,6 +553,12 @@ section { padding: var(--space-section) 0; }
     align-items: flex-start;
     flex-direction: column;
     padding: 20px;
+  }
+  .resource-disclosure summary > span {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
   .resource-disclosure-body {
     padding: 0 20px 20px;
