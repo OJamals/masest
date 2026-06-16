@@ -864,10 +864,15 @@ function initIndustryProducts() {
     const ids = (box.dataset.indProducts || "").split(/\s+/).filter((id) => PRODUCTS[id]);
     if (!ids.length) return;
     box.innerHTML = ids.map((id) => productCard(id)).join("");
-    // Industry pages live one level deep; rewrite product/quote links to resolve from /industries/.
+    // Industry pages live one level deep; rewrite relative product assets and
+    // links to resolve from /industries/.
     box.querySelectorAll("a[href]").forEach((a) => {
       const h = a.getAttribute("href");
       if (h && !/^(https?:|mailto:|tel:|#|\.\.\/|\/)/.test(h)) a.setAttribute("href", "../" + h);
+    });
+    box.querySelectorAll("img[src]").forEach((img) => {
+      const src = img.getAttribute("src");
+      if (src && !/^(https?:|data:|#|\.\.\/|\/)/.test(src)) img.setAttribute("src", "../" + src);
     });
   });
 }
