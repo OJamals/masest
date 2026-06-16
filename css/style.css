@@ -23,6 +23,7 @@
   --accent-ink: #0a5b62;
   --accent-soft: #e3f0f1;
   --accent-tint: #f1f8f8;
+  --danger: #a63a2e;          /* form errors, hazard markers — AA on white (6.4:1) */
   --brand-grad: linear-gradient(118deg, #6d28c9, #149aa6);
 
   /* Elevation: soft, layered, low-opacity — the Apple-grade material */
@@ -686,7 +687,7 @@ section { padding: var(--space-section) 0; }
   color: var(--muted); border-bottom: 1px solid var(--ink);
 }
 .cmp-table tbody tr + tr td { border-top: 1px solid var(--line); }
-.cmp-table .haz { color: #a63a2e; font-weight: 700; }
+.cmp-table .haz { color: var(--danger); font-weight: 700; }
 .cmp-table .safe { color: var(--accent-ink); font-weight: 700; }
 .cmp-table a b { color: var(--accent-ink); }
 .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-card); }
@@ -707,10 +708,14 @@ section { padding: var(--space-section) 0; }
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(14,124,134,.15);
 }
 .form-note { font-size: .82rem; color: var(--muted); margin-top: 14px; }
-.field-err { display: block; margin-top: 6px; font-size: .8rem; font-weight: 700; color: #a63a2e; }
-.field [aria-invalid="true"] { border-color: #a63a2e; }
+.field-err { display: block; margin-top: 6px; font-size: .8rem; font-weight: 700; color: var(--danger); }
+.field [aria-invalid="true"] { border-color: var(--danger); }
 .form-success { display: none; text-align: center; padding: 40px 20px; }
 .form-success i { font-size: 3rem; color: var(--accent); margin-bottom: 12px; }
+.form-success-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 18px; }
+/* Beats the .btn `display: inline-flex !important` touch-target rule. */
+.form-success-actions [hidden] { display: none !important; }
+#formSuccessTitle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
 
 /* ---------- Page hero (interior, light) ---------- */
 .page-hero { padding: 76px 0 64px; }
@@ -776,6 +781,9 @@ figure.photo figcaption {
 
 /* Field-proof split section */
 .field-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 56px; align-items: center; }
+/* Form rows: top-align so an inline error growing one cell never vertically
+   shifts its partner. The centered base is for the content image+text layout. */
+#quoteForm .field-grid { grid-template-columns: 1fr 1fr; gap: 18px 24px; align-items: start; }
 
 @media (max-width: 680px) {
   #quoteForm .field-grid {
@@ -928,7 +936,7 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 /* Pain points: colored top-rule, no card chrome (distinct from bento) */
 .pain-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; margin-top: 8px; }
 .pain-item { padding-top: 20px; border-top: 2px solid #e4b6ad; }
-.pain-item i { font-size: 1.6rem; color: #a63a2e; display: block; margin-bottom: 14px; }
+.pain-item i { font-size: 1.6rem; color: var(--danger); display: block; margin-bottom: 14px; }
 .pain-item h3 { font-size: 1.06rem; margin-bottom: 6px; }
 .pain-item p { color: var(--muted); font-size: .92rem; }
 
@@ -1873,7 +1881,7 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 }
 .sample-picker input { width: auto; accent-color: var(--accent); }
 .sample-hint { font-size: .84rem; color: var(--muted); margin-top: 8px; }
-.sample-hint.err { color: #b3261e; font-weight: 600; }
+.sample-hint.err { color: var(--danger); font-weight: 700; }
 
 /* ── Document/report previews: clipped thumbnail (uniform card rows); badge + click open the PDF ── */
 .doc-link { display: block; position: relative; background: #f1f3f4; line-height: 0; cursor: pointer; overflow: hidden; height: 100%; }
@@ -2883,4 +2891,69 @@ line-height: 1.35;
     width: 100%;
     justify-content: center;
   }
+}
+
+/* Shared hardening for missing/deferred documentary media. */
+.media-fallback {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+  background:
+    linear-gradient(135deg, rgba(14,124,134,.12), rgba(21,23,28,.04)),
+    repeating-linear-gradient(90deg, rgba(21,23,28,.035) 0 1px, transparent 1px 12px),
+    var(--surface);
+}
+
+.media-fallback img[hidden] {
+  display: none !important;
+}
+
+.media-fallback-label {
+  max-width: min(28ch, calc(100% - 32px));
+  color: var(--ink-soft);
+  font-size: .82rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.catalog-shelf-media.media-fallback {
+  min-height: 128px;
+  border-radius: 13px;
+}
+
+.proof-card figure.media-fallback,
+.case-card figure.media-fallback,
+.product-media-card.media-fallback,
+.ind-gallery figure.media-fallback {
+  aspect-ratio: 4 / 3;
+}
+
+@media (max-width: 680px) {
+  .nav-links.open {
+    box-shadow: 0 18px 38px -28px rgba(21,23,28,.45);
+  }
+
+  .nav-links a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .nav-links a.active {
+    color: var(--accent-ink);
+  }
+
+  .media-fallback {
+    min-height: 132px;
+  }
+}
+
+.hmis-tag.safe,
+.cmp-table .safe {
+  color: #062321;
 }

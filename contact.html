@@ -56,6 +56,10 @@
     <div class="wrap contact-layout">
       <form class="form-card" id="quoteForm" data-endpoint="https://formspree.io/f/xzzgvqaq">
         <input type="hidden" name="type" id="fType" value="quote">
+        <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
+          <label for="fGotcha">Leave this field empty</label>
+          <input id="fGotcha" name="_gotcha" type="text" tabindex="-1" autocomplete="off">
+        </div>
 
         <div class="cta-chooser contact-intent" role="group" aria-label="What do you need?">
           <button type="button" class="cta-choice active" data-intent="quote" aria-pressed="true"><i class="ph ph-tag" aria-hidden="true"></i> Quote</button>
@@ -195,10 +199,13 @@
         <p class="form-note">* Required. Your information goes only to the MASEST sales team, never sold or shared.</p>
       </form>
 
-      <div class="form-card form-success" id="formSuccess" style="display:none">
-        <h2 class="headline" id="formSuccessTitle" style="font-size:1.7rem">Request received.</h2>
+      <div class="form-card form-success" id="formSuccess" style="display:none" role="status" aria-live="polite">
+        <h2 class="headline" id="formSuccessTitle" tabindex="-1" style="font-size:1.7rem">Request received.</h2>
         <p id="formSuccessCopy">MASEST has received your request. A sales or technical contact will review the details and follow up directly.</p>
-        <a class="btn btn-ghost" id="mailtoFallback" href="mailto:matthew@masest.co">Open Email Draft</a>
+        <div class="form-success-actions">
+          <a class="btn btn-ghost" id="mailtoFallback" href="mailto:matthew@masest.co">Open Email Draft</a>
+          <button type="button" class="btn btn-ghost" id="formEdit">Edit my request</button>
+        </div>
       </div>
 
       <aside class="contact-cards">

@@ -440,6 +440,12 @@ function renderChrome() {
     ["proof.html", "Proof"],
     ["industries.html", "Industries"]
   ];
+  const isActive = (href) => {
+    if (page === href) return true;
+    if (href === "products.html" && page === "product.html") return true;
+    if (href === "industries.html" && /\/industries\//.test(location.pathname)) return true;
+    return false;
+  };
   const skip = document.createElement("a");
   skip.className = "skip-link";
   skip.href = "#main";
@@ -454,7 +460,7 @@ function renderChrome() {
       <a class="nav-logo" href="${root}index.html"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true"></a>
       <nav class="nav-links" id="navLinks">
         ${links.map(([href, label]) =>
-          `<a href="${root}${href}"${page === href ? ' class="active"' : ""}>${label}</a>`).join("")}
+          `<a href="${root}${href}"${isActive(href) ? ' class="active" aria-current="page"' : ""}>${label}</a>`).join("")}
       </nav>
       <div style="display:flex;align-items:center;gap:12px">
         <a class="nav-cta" href="${root}contact.html">Request a Quote</a>
@@ -475,6 +481,7 @@ function renderChrome() {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);
     burger.setAttribute("aria-expanded", open ? "true" : "false");
+    burger.setAttribute("aria-label", open ? "Close menu" : "Menu");
   };
   burger.addEventListener("click", () => {
     setMenuOpen(!navLinks.classList.contains("open"));
@@ -679,13 +686,21 @@ function smoothPref() {
 async function submitRequest(form, data) {
   const endpoint = form.dataset.endpoint;
   if (!endpoint) return { fallbackOnly: true };
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Accept": "application/json" },
-    body: data
-  });
-  if (!res.ok) throw new Error("Request failed");
-  return { fallbackOnly: false };
+  // Abort a hung endpoint so the user is never stranded on a disabled button.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Accept": "application/json" },
+      body: data,
+      signal: ctrl.signal
+    });
+    if (!res.ok) throw new Error("Request failed");
+    return { fallbackOnly: false };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function initProofFilters() {
@@ -825,37 +840,40 @@ function initQuoteForm() {
     if (fallback) fallback.href = mailto;
 
     const submit = form.querySelector('[type="submit"]');
-    if (submit) submit.disabled = true;
-    submitRequest(form, data).then((result) => {
+    const submitLabel = submit ? submit.textContent : "";
+    if (submit) { submit.disabled = true; submit.textContent = "Sending…"; }
+
+    // One outcome panel for every ending. accepted=true → the endpoint took it;
+    // accepted=false → no endpoint or the request failed/timed out, so the
+    // prepared email is the real path. No alert, no form-plus-panel double view.
+    const showOutcome = (accepted) => {
       form.style.display = "none";
       const ok = document.getElementById("formSuccess");
       const title = document.getElementById("formSuccessTitle");
       const copy = document.getElementById("formSuccessCopy");
       const mail = document.getElementById("mailtoFallback");
-      const accepted = !result.fallbackOnly;
       if (title) title.textContent = accepted ? "Request received." : "Almost there: send the request.";
       if (copy) {
         copy.innerHTML = accepted
           ? "MASEST has received your request. A sales or technical contact will review the details and follow up directly."
-          : 'Use the prepared email link below, then hit send in your email app. If your device blocks email links, email <a href="mailto:matthew@masest.co" style="font-weight:700;color:var(--accent-ink)">matthew@masest.co</a> or call <a href="tel:+18134063852" style="font-weight:700;color:var(--accent-ink)">(813) 406-3852</a>.';
+          : 'We couldn’t submit automatically. Use the prepared email link below, then hit send in your email app. If your device blocks email links, email <a href="mailto:matthew@masest.co" style="font-weight:700;color:var(--accent-ink)">matthew@masest.co</a> or call <a href="tel:+18134063852" style="font-weight:700;color:var(--accent-ink)">(813) 406-3852</a>.';
       }
-      if (mail) mail.style.display = accepted ? "none" : "";
+      if (mail) mail.hidden = accepted;
       ok.style.display = "block";
       ok.scrollIntoView({ behavior: smoothPref(), block: "center" });
+      if (title) title.focus();
       const edit = document.getElementById("formEdit");
       if (edit) edit.onclick = () => {
         ok.style.display = "none";
         form.style.display = "";
-        if (submit) submit.disabled = false;
+        if (submit) { submit.disabled = false; submit.textContent = submitLabel; }
         form.querySelector("input, select, textarea").focus();
       };
-    }).catch(() => {
-      if (submit) submit.disabled = false;
-      alert("We could not send this request automatically. Please use the prepared email link below.");
-      const ok = document.getElementById("formSuccess");
-      ok.style.display = "block";
-      ok.scrollIntoView({ behavior: smoothPref(), block: "center" });
-    });
+    };
+
+    submitRequest(form, data)
+      .then((result) => showOutcome(!result.fallbackOnly))
+      .catch(() => showOutcome(false));
   });
 }
 
@@ -885,7 +903,7 @@ function initLightbox() {
   dlg.id = "lightbox";
   dlg.innerHTML =
     '<button type="button" class="lb-close" aria-label="Close">×</button>' +
-    '<figure class="lb-fig"><img class="lb-img" alt=""><figcaption class="lb-cap"></figcaption></figure>';
+    '<figure class="lb-fig"><img class="lb-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt=""><figcaption class="lb-cap"></figcaption></figure>';
   document.body.appendChild(dlg);
   const lbImg = dlg.querySelector(".lb-img");
   const lbCap = dlg.querySelector(".lb-cap");
@@ -954,10 +972,33 @@ function initProductDisclosures() {
   });
 }
 
+function initImageFallbacks() {
+  const frameSelector = ".catalog-shelf-media, .product-media-card, .proof-card figure, .case-card figure, .ind-gallery figure, figure.photo, .proof-thumb, .row-thumb";
+  const labelFor = (img) => {
+    const figcaption = img.closest("figure")?.querySelector("figcaption")?.textContent?.trim();
+    return figcaption || img.getAttribute("alt") || "Visual reference pending";
+  };
+  const showFallback = (img) => {
+    const frame = img.closest(frameSelector);
+    if (!frame || frame.classList.contains("media-fallback")) return;
+    frame.classList.add("media-fallback");
+    img.hidden = true;
+    const label = document.createElement("span");
+    label.className = "media-fallback-label";
+    label.textContent = labelFor(img);
+    frame.appendChild(label);
+  };
+  document.querySelectorAll("img").forEach((img) => {
+    img.addEventListener("error", () => showFallback(img), { once: true });
+    if (img.complete && img.naturalWidth === 0) showFallback(img);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   renderChrome();
   initQuoteForm();
   initIndustryProducts();
+  initImageFallbacks();
   initBeforeAfter();
   initProofFilters();
   initResponsiveTables();
