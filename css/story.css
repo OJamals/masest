@@ -307,7 +307,7 @@
 .chem-out, .chem-final { margin: 4px auto 0; text-align: center; max-width: 62ch; font-size: 1rem; line-height: 1.6; color: var(--s-mut); }
 .chem-out b { color: var(--s-danger-ink); font-weight: 800; }
 .chem-final { font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 800; color: var(--s-ink); }
-.chem-final b { color: var(--s-safe); font-weight: 900; }
+.chem-final b { color: var(--s-safe-text); font-weight: 900; }
 
 /* Act 4 layout: the headline (.act-copy.top, absolutely floated at the stage top)
    and the tall 2x2 .chem-rig were positioned independently — on laptop heights the
@@ -333,20 +333,20 @@
 .savior-badge {
   display: inline-flex; align-items: center; gap: 9px; margin-bottom: clamp(12px, 2vh, 22px);
   padding: 8px 16px; border-radius: 999px; border: 1px solid var(--s-safe-soft);
-  background: var(--s-safe-soft); color: var(--s-safe);
+  background: var(--s-safe-soft); color: var(--s-safe-text);
   font-size: .76rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
 }
 .savior-wrap h2 {
   font-size: clamp(2.2rem, 5vw, 3.7rem); font-weight: 900; letter-spacing: -.045em; line-height: 1.02;
   margin: 0; text-wrap: balance;
 }
-.savior-wrap h2 .accent { color: var(--s-safe); }
+.savior-wrap h2 .accent { color: var(--s-safe-text); }
 .savior-wrap .lede { margin: clamp(12px, 2vh, 22px) auto 0; max-width: 50ch; font-size: clamp(1rem, 1.4vw, 1.18rem); color: var(--s-mut); line-height: 1.5; }
 .savior-zero { display: inline-flex; gap: 14px; margin: clamp(16px, 3vh, 34px) 0 6px; font-variant-numeric: tabular-nums; }
 .savior-zero .z {
   width: clamp(62px, 10vw, 98px); aspect-ratio: 5 / 6; border-radius: 18px;
   display: grid; place-items: center; font-size: clamp(2.9rem, 6.5vw, 4.7rem); font-weight: 900;
-  letter-spacing: -.05em; color: var(--s-safe);
+  letter-spacing: -.05em; color: var(--s-safe-text);
   background: linear-gradient(180deg, rgba(40, 200, 182, .12), rgba(40, 200, 182, .03));
   border: 1px solid rgba(40, 200, 182, .28);
   box-shadow: 0 30px 60px -34px rgba(40, 200, 182, .35);
