@@ -285,6 +285,14 @@
 .cdot[data-dot="1"] span, .cdot[data-dot="3"] span { top: auto; bottom: -130%; }
 .chem-scale.safe .cdot { background: var(--s-safe); box-shadow: 0 0 0 1.5px var(--s-safe), 0 6px 14px rgba(8, 121, 111, .36); }
 .story .chem-scale .cdot { color: #f4f6f8; }
+/* Four distinct label levels so labels stay legible when all four dots
+   converge on the same value (at 3, then at 0). Shadow lifts them off
+   the track. */
+.cdot[data-dot="0"] span { top: -205%; bottom: auto; }
+.cdot[data-dot="2"] span { top: -110%; bottom: auto; }
+.cdot[data-dot="1"] span { top: auto; bottom: -110%; }
+.cdot[data-dot="3"] span { top: auto; bottom: -205%; }
+.story .chem-scale .cdot span { text-shadow: 0 1px 3px rgba(8, 10, 14, .75); white-space: nowrap; }
 .chem-scale.safe .cdot,
 .chem-scale.safe .cdot span { color: #f4f6f8; }
 .chem-card .lockup em { color: #2a0b05; }
