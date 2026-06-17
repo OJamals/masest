@@ -218,8 +218,124 @@
 }
 
 /* ============================================================
-   ACT 2 — THE BUILDUP (debris canvas + anchored caption chips)
+   ACT 2 — THE BUILDUP (SVG pipe flow + anchored caption chips)
    ============================================================ */
+.pipe-diagram {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 68%;
+  width: min(1120px, 92vw);
+  height: auto;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  pointer-events: none;
+}
+.pipe-diagram path,
+.pipe-diagram line {
+  vector-effect: non-scaling-stroke;
+}
+.pipe-shadow,
+.pipe-shell,
+.pipe-bore,
+.pipe-flow,
+.pipe-buildup {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pipe-shadow {
+  stroke: rgba(0, 0, 0, .42);
+  stroke-width: 92;
+  filter: blur(14px);
+  opacity: .75;
+}
+.pipe-shell {
+  stroke: url("#pipeSteel");
+  stroke-width: 74;
+  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, .45));
+}
+.pipe-bore {
+  stroke: rgba(7, 10, 15, .92);
+  stroke-width: 44;
+}
+.pipe-flow-core {
+  stroke: url("#pipeFlow");
+  stroke-width: 16;
+  stroke-dasharray: 34 28;
+  stroke-dashoffset: 0;
+  opacity: .72;
+  filter: url("#pipeGlow");
+}
+.pipe-flow-pulse {
+  stroke: rgba(255, 255, 255, .88);
+  stroke-width: 5;
+  stroke-dasharray: 5 35;
+  stroke-dashoffset: 0;
+  opacity: .66;
+}
+.pipe-buildup {
+  --build: 0;
+  stroke-width: calc(4px + var(--build) * 10px);
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - var(--build));
+  opacity: calc(.20 + var(--build) * .68);
+  filter: drop-shadow(0 0 calc(var(--build) * 8px) rgba(255, 255, 255, .13));
+}
+.pipe-scale { stroke: rgb(201, 212, 208); }
+.pipe-rust { stroke: rgb(194, 85, 58); }
+.pipe-grease { stroke: rgb(194, 160, 78); }
+.pipe-bio { stroke: rgb(111, 168, 99); }
+.pipe-callouts line {
+  stroke: color-mix(in oklab, var(--c, var(--s-line)), transparent 24%);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.pipe-callout foreignObject { overflow: visible; }
+.pipe-callout .chip {
+  --burn: 0;
+  --c: var(--s-line);
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  width: max-content;
+  max-width: 154px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--c) calc(30% + var(--burn) * 30%), transparent);
+  background: color-mix(in oklab, #141821 84%, var(--c) calc(10% + var(--burn) * 12%));
+  color: var(--s-ink);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, .30);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+}
+.pipe-callout .chip i {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 calc(5px + var(--burn) * 18px) color-mix(in oklab, var(--c), transparent 30%);
+}
+.pipe-callout .chip.is-burning i::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border: 1px solid color-mix(in oklab, var(--c), transparent 30%);
+  border-radius: inherit;
+  animation: chipPulse 2.2s var(--s-ease) infinite;
+}
+.callout-scale { --c: #c9d4d0; }
+.callout-rust { --c: #c2553a; }
+.callout-grease { --c: #c2a04e; }
+.callout-bio { --c: #6fa863; }
 .pipe-chips { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 /* --burn (0..1) is driven by scroll in story.js: each chip ignites as its debris
    type accumulates in the pipe, so the label conveys the physics, not just a fade. */
@@ -264,9 +380,9 @@
    pipe (PIPE_N in story.js: run mouths at x 0.25/0.44/0.63/0.84). Sit below the
    centered copy so chips never collide with the headline or paragraph. */
 .chip.c-scale  { left: clamp(236px, 20vw, 306px); top: 43%; --c: #c9d4d0; }
-.chip.c-rust   { left: 35%; top: 53%; --c: #c2553a; }
-.chip.c-grease { left: 56%; top: 63%; --c: #c2a04e; }
-.chip.c-bio    { left: 74%; top: 78%; --c: #6fa863; }
+.chip.c-rust   { left: 36%; top: 54%; --c: #c2553a; }
+.chip.c-grease { left: 58%; top: 62%; --c: #c2a04e; }
+.chip.c-bio    { left: 76%; top: 48%; --c: #6fa863; }
 
 /* ============================================================
    ACT 3 — THE SCORE (HMIS explained, factor by factor)
@@ -540,11 +656,11 @@
   .story .act-savior { height: 235vh; }
   .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
   .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
-  .chip.c-scale  { left: 6%; top: 51%; }
-  .chip.c-rust   { left: 28%; top: 58%; }
-  .chip.c-grease { left: 52%; top: 67%; }
+  .chip.c-scale  { left: 6%; top: 53%; }
+  .chip.c-rust   { left: 28%; top: 60%; }
+  .chip.c-grease { left: 52%; top: 70%; }
   .pipe-chips .chip { max-width: min(44vw, 172px); white-space: normal; line-height: 1.15; }
-  .chip.c-bio    { left: auto; right: 6%; top: 78%; }
+  .chip.c-bio    { left: auto; right: 6%; top: 54%; }
   .hmis-factors { gap: 10px; }
   .factor { padding: 18px 10px; border-radius: 14px; }
   .factor .fmeaning { font-size: .78rem; }

@@ -89,15 +89,64 @@
   </section>
 
   <!-- ACT 2: THE BUILDUP (ambient debris accumulating inside a pipe) -->
-  <section class="act" data-act="2" data-fx="debris">
+  <section class="act" data-act="2" data-fx="pipe">
     <div class="stage">
-      <canvas class="fx-canvas" aria-hidden="true"></canvas>
-      <div class="pipe-chips" aria-hidden="true">
-        <span class="chip c-scale" data-at="1"><i></i>Scale</span>
-        <span class="chip c-rust" data-at="2"><i></i>Rust</span>
-        <span class="chip c-grease" data-at="3"><i></i>Grease</span>
-        <span class="chip c-bio" data-at="4"><i></i>Biofilm</span>
-      </div>
+      <svg class="pipe-diagram" viewBox="0 0 1200 650" role="img" aria-label="Industrial piping showing scale, rust, grease, and biofilm buildup restricting flow">
+        <defs>
+          <linearGradient id="pipeSteel" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stop-color="#5f6976"/>
+            <stop offset="42%" stop-color="#242b33"/>
+            <stop offset="100%" stop-color="#0b1016"/>
+          </linearGradient>
+          <linearGradient id="pipeFlow" x1="0" x2="1">
+            <stop offset="0%" stop-color="#77e3ff"/>
+            <stop offset="46%" stop-color="#dff7ff"/>
+            <stop offset="100%" stop-color="#70f0c2"/>
+          </linearGradient>
+          <filter id="pipeGlow" x="-20%" y="-40%" width="140%" height="180%">
+            <feGaussianBlur stdDeviation="7" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <path class="pipe-shadow" d="M110 330 C235 248 315 246 424 302 S640 405 780 328 S980 209 1095 296"/>
+        <path class="pipe-shell" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
+        <path class="pipe-bore" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
+        <path class="pipe-flow pipe-flow-core" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
+        <path class="pipe-flow pipe-flow-pulse" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
+        <path class="pipe-buildup pipe-scale" data-at="1" pathLength="1" d="M258 252 C306 230 356 236 426 278"/>
+        <path class="pipe-buildup pipe-rust" data-at="2" pathLength="1" d="M455 307 C520 348 604 383 690 354"/>
+        <path class="pipe-buildup pipe-grease" data-at="3" pathLength="1" d="M616 383 C672 395 740 360 793 315"/>
+        <path class="pipe-buildup pipe-bio" data-at="4" pathLength="1" d="M826 290 C915 218 1018 206 1085 266"/>
+        <g class="pipe-callouts" aria-hidden="true">
+          <g class="pipe-callout callout-scale">
+            <line x1="316" y1="238" x2="263" y2="192"/>
+            <foreignObject x="146" y="148" width="146" height="58">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="chip c-scale" data-at="1"><i></i>Scale</div>
+            </foreignObject>
+          </g>
+          <g class="pipe-callout callout-rust">
+            <line x1="518" y1="336" x2="446" y2="390"/>
+            <foreignObject x="388" y="390" width="132" height="58">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="chip c-rust" data-at="2"><i></i>Rust</div>
+            </foreignObject>
+          </g>
+          <g class="pipe-callout callout-grease">
+            <line x1="744" y1="389" x2="764" y2="436"/>
+            <foreignObject x="764" y="436" width="154" height="58">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="chip c-grease" data-at="3"><i></i>Grease</div>
+            </foreignObject>
+          </g>
+          <g class="pipe-callout callout-bio">
+            <line x1="1038" y1="230" x2="1032" y2="184"/>
+            <foreignObject x="1012" y="126" width="160" height="58">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="chip c-bio" data-at="4"><i></i>Biofilm</div>
+            </foreignObject>
+          </g>
+        </g>
+      </svg>
       <div class="act-copy top onscrim" data-at="0">
         <span class="kicker danger" data-at="0">How it builds</span>
         <h2 class="act-h" data-at="0">Left alone, the system chokes.</h2>
@@ -112,7 +161,7 @@
       <div class="act-copy top">
         <span class="kicker" data-at="0">The conventional answer</span>
         <h2 class="act-h" data-at="0">HMIS gives the danger a number.</h2>
-        <p class="act-p" data-at="1" data-out="2">Crews fight buildup with acids, caustics, and biocides. Industry rates the danger of each one with HMIS, the Hazardous Materials Identification System: three numbers, each from 0 to 4.</p>
+        <p class="act-p" data-at="1" data-out="4.1">Crews fight buildup with acids, caustics, and biocides. Industry rates the danger of each one with HMIS, the Hazardous Materials Identification System: three numbers, each from 0 to 4.</p>
       </div>
       <div class="hmis-rig">
         <div class="hmis-factors">

@@ -508,6 +508,7 @@ function renderChrome() {
         ${links.map(navItem).join("")}
       </nav>
       <div class="nav-actions">
+        <a class="nav-account" href="${root}account.html"><span>Sign in</span></a>
         <a class="nav-cart" href="${root}cart.html" aria-label="Open cart"><span>Cart</span><b class="cart-count" data-cart-count hidden>0</b></a>
         <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
       </div>
