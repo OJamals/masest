@@ -273,6 +273,11 @@
     try { data = await me(); } catch (e) {}
     if (data && data.needs_profile) { showComplete(); return; }
     showSummary(data);
+    // If we arrived from checkout (account.html?return=cart.html), go back once signed in.
+    if (data) {
+      const ret = new URLSearchParams(location.search).get("return");
+      if (ret && /^[a-z0-9._\/-]+\.html(\?[^\s"'<>]*)?(#[^\s"'<>]*)?$/i.test(ret) && !ret.includes("//")) { location.replace(ret); return; }
+    }
     if (data) renderOrders();
   }
 

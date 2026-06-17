@@ -10,6 +10,11 @@
   <link rel="stylesheet" href="css/style.css">
   <script src="js/config.js" defer></script>
   <script src="js/main.js" defer></script>
+  <style>
+    .cart-account { font-size:.85rem; color:var(--ink-soft); background:var(--accent-tint); border:1px solid var(--line); border-radius:var(--r-input); padding:10px 12px; margin:0 0 14px; line-height:1.5; }
+    .cart-account a { color:var(--accent-ink); font-weight:700; }
+    .cart-account i { color:var(--accent); }
+  </style>
 </head>
 <body>
 <noscript>
@@ -37,6 +42,7 @@
       <aside class="cart-summary" aria-label="Cart checkout">
         <p class="eyebrow">Next step</p>
         <h2>Checkout or quote.</h2>
+        <div id="cartAccount" class="cart-account" hidden></div>
         <p id="cartStatus" class="cart-status" role="status" aria-live="polite">Cart totals are confirmed at checkout by the server.</p>
         <div class="ship-est" id="shipEst" hidden>
           <label class="field-label" for="shipZone">Estimated freight</label>
@@ -61,6 +67,7 @@
 </main>
 <script type="module">
   import { checkout, clear, items, remove, setQty } from "./js/cart.js";
+  import { me } from "./js/auth.js";
 
   const money = (n) => new Intl.NumberFormat("en-US", {
     style: "currency", currency: "USD", maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
@@ -319,8 +326,27 @@
   checkoutNet.addEventListener("click", () => runCheckout("net"));
   email?.addEventListener("input", syncQuoteHref);
   document.getElementById("shipZone")?.addEventListener("change", updateShipping);
+  // Account strip: guests get a sign-in/register option (returns to cart); members see their account.
+  async function renderCartAccount() {
+    const box = document.getElementById("cartAccount");
+    if (!box) return;
+    let data = null;
+    try { data = await me(); } catch {}
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    if (data && !data.needs_profile) {
+      const approved = data.company?.status === "approved";
+      box.innerHTML = `<i class="ph ph-user-circle" aria-hidden="true"></i> Signed in as <b>${esc(data.email)}</b>${approved ? " · account approved for NET terms" : " · pending approval"}.`;
+      const email = document.getElementById("checkoutEmail");
+      if (email && !email.value) email.value = data.email || "";
+    } else {
+      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Checking out as a guest. <a href="account.html?return=cart.html">Sign in or create an account</a> for NET terms and saved details — your cart stays with you.`;
+    }
+    box.hidden = false;
+  }
+
   render(); // fast first paint with raw SKUs
   loadCatalog().then(render); // re-render with variant names + shipping once catalog loads
+  renderCartAccount();
 </script>
 </body>
 </html>
