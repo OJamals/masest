@@ -18,12 +18,15 @@ Products & stock (edit price/mode/stock/active, add SKU, soft-delete) · Message
 Offers (broadcast in-app notification to an audience, optional Resend email) · Traffic & SEO (first-party
 pageview analytics + live SEO audit of the marketing pages + sitemap/robots links).
 
-### API (Netlify functions, all v2 ESM)
-User (Bearer token): `account-orders`, `account-order`, `account-addresses`, `account-messages`,
-`account-notifications`, `account-profile`, `account-billing-portal`.
-Admin (staff gate): `admin-stats`, `admin-orders`, `admin-companies`, `admin-products`, `admin-messages`,
-`admin-offers`, `admin-traffic`. Public: `track` (pageview beacon).
-Shared gate `requireStaff()` added to `netlify/lib/supabase.js`. Beacon `js/track.js` wired into all 8 public pages.
+### API — implemented for BOTH runtimes (repo keeps both ports in sync)
+- **Cloudflare Pages (LIVE — `functions/api/...`)**: `account/order`, `account/addresses`, `account/messages`,
+  `account/notifications`, `account/profile`, `account/billing-portal`; `admin/stats`, `admin/orders`,
+  `admin/companies`, `admin/products`, `admin/messages`, `admin/offers`, `admin/traffic`; `track`.
+  (`account/orders` already existed.) Shared gate `requireStaff()` added to `functions/_lib/supabase.js`.
+- **Netlify (legacy mirror — `netlify/functions/*.js`)**: same endpoints in Netlify v2 format, kept in sync
+  in case Netlify is ever revived. Netlify is currently credit-blocked, so these are not live.
+
+Beacon `js/track.js` wired into all 8 public pages.
 
 ### Data — `supabase/schema-phase5.sql` (additive)
 New tables `messages`, `notifications`, `offers`, `page_views`; new columns
@@ -33,13 +36,16 @@ New tables `messages`, `notifications`, `offers`, `page_views`; new columns
 ## Owner steps to make it fully live
 
 1. **Run the migration.** Supabase SQL editor → paste `supabase/schema-phase5.sql` → run. Safe to re-run.
-2. **Set `ADMIN_EMAILS`** in Netlify env (comma-separated). This is the *authoritative* staff gate — any
-   signed-in Supabase user whose email is listed can use `admin.html` and `/api/admin/*`. Default seed:
-   `aoaljamal@gmail.com`. Then register/sign in with that email at `account.html`, open `/admin.html`.
+2. **Set `ADMIN_EMAILS`** in the **Cloudflare Pages** dashboard (project `masest-commerce` → Settings →
+   Environment variables, set for **Production and Preview**), comma-separated. This is the *authoritative*
+   staff gate — any signed-in Supabase user whose email is listed can use `admin.html` and `/api/admin/*`.
+   Default seed: `aoaljamal@gmail.com`. CF env vars only apply to deploys made *after* saving → redeploy.
+   Then register/sign in with that email at `account.html` and open `/admin.html`.
 3. **Stripe Customer Portal**: activate it once in the Stripe Dashboard (Settings → Billing → Customer portal),
-   else `account-billing-portal` errors. `STRIPE_SECRET_KEY` must be set (already used by checkout).
+   else `account/billing-portal` errors. `STRIPE_SECRET_KEY` must be set (already used by checkout).
 4. **(optional) `RESEND_API_KEY` + `RESEND_FROM`** to let admin offers also email recipients.
-5. Redeploy (push to `netlify-commerce`).
+5. Redeploy: push to `netlify-commerce` (Cloudflare Pages auto-builds it via `node tools/cf-build.mjs`).
+   Verify env presence at `/api/health`.
 
 ## Security notes
 - Admin authority is enforced **server-side** (`requireStaff` → `ADMIN_EMAILS`), never trusting the client.
