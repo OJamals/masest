@@ -67,6 +67,22 @@
         <!-- Your business -->
         <div class="biz-card" id="bizProfile"></div>
 
+        <!-- Team (company admins only) -->
+        <div class="biz-card" id="bizTeam" hidden>
+          <h2>Team members</h2>
+          <p class="lead">Invite teammates to your company account — invited emails join automatically when they register and sign in.</p>
+          <div id="teamMembers"><p class="muted">Loading…</p></div>
+          <form id="inviteForm" class="form-card" style="padding:0;border:0;box-shadow:none;margin-top:16px">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+              <div class="field" style="flex:1;min-width:220px"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
+              <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
+              <button class="btn btn-primary btn-sm" type="submit">Send invite</button>
+            </div>
+            <span class="biz-status" id="inviteStatus" role="status" aria-live="polite"></span>
+          </form>
+          <div id="teamInvites" style="margin-top:10px"></div>
+        </div>
+
         <!-- Programs -->
         <div class="biz-card">
           <h2>VertKleen service programs</h2>

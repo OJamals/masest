@@ -79,6 +79,42 @@ function wireBulk() {
   });
 }
 
+/* ---------- team (company admins) ---------- */
+async function loadTeam() {
+  let t;
+  try { t = await api('/api/account/team'); } catch { $('teamMembers').innerHTML = '<p class="biz-status" data-state="err">Could not load team.</p>'; return; }
+  $('teamMembers').innerHTML = (t.members || []).map((m) =>
+    `<div class="biz-row"><span>${esc(m.full_name || m.email || 'Member')}${m.email && m.full_name ? ` <span class="muted">· ${esc(m.email)}</span>` : ''}</span><b>${esc(m.role)}</b></div>`).join('') || '<p class="muted">No members yet.</p>';
+  $('teamInvites').innerHTML = (t.invites || []).map((iv) =>
+    `<div class="biz-row"><span>${esc(iv.email)} <span class="badge" data-s="pending">invited</span></span><button class="btn btn-ghost btn-sm" data-revoke="${esc(iv.id)}">Revoke</button></div>`).join('');
+  $('teamInvites').querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await api('/api/account/team', { method: 'DELETE', body: { id: b.dataset.revoke } }); loadTeam(); }
+    catch { b.disabled = false; }
+  }));
+}
+function initTeam() {
+  $('bizTeam').hidden = false;
+  loadTeam();
+  $('inviteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('inviteEmail').value.trim();
+    const role = $('inviteRole').value;
+    const st = $('inviteStatus');
+    if (!email) return;
+    st.textContent = 'Sending invite…'; st.dataset.state = '';
+    try {
+      await api('/api/account/team', { method: 'POST', body: { email, role } });
+      $('inviteEmail').value = '';
+      st.textContent = 'Invite sent.'; st.dataset.state = 'ok';
+      loadTeam();
+    } catch (err) {
+      const map = { already_invited: 'That email is already invited.', invalid_email: 'Enter a valid email.', company_admin_required: 'Only company admins can invite.' };
+      st.textContent = map[err.data?.error] || 'Could not send the invite.'; st.dataset.state = 'err';
+    }
+  });
+}
+
 async function boot() {
   let data = null;
   try { data = await me(); } catch { data = null; }
@@ -93,5 +129,6 @@ async function boot() {
   renderProfile(data);
   renderTiers();
   wireBulk();
+  if (data.profile?.role === 'admin') initTeam();
 }
 boot();
