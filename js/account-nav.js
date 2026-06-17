@@ -2,10 +2,15 @@
  * Logged out: a "Sign in" button. Signed in: an account dropdown (Dashboard, Orders,
  * Messages, Notifications, Settings, Admin if staff, Sign out). Loaded by main.js after
  * the nav is built: import('js/account-nav.js').then(m => m.initAccountNav({ nav, root })). */
-import { me, logout } from './auth.js';
-
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const firstName = (n) => String(n || '').trim().split(/\s+/)[0] || 'Account';
+
+// Cheap logged-in check: Supabase persists its session under sb-<ref>-auth-token in localStorage.
+// Lets anonymous visitors skip loading the Supabase SDK entirely (lighter marketing pages).
+function hasSession() {
+  try { return Object.keys(localStorage).some((k) => k.startsWith('sb-') && k.includes('-auth-token')); }
+  catch { return false; }
+}
 
 const MENU = [
   ['ph-squares-four', 'Dashboard', 'dashboard.html'],
@@ -61,8 +66,11 @@ export async function initAccountNav({ nav, root = '' } = {}) {
   if (!actions || actions.querySelector('.nav-account')) return;
   injectStyle();
 
-  let data = null;
-  try { data = await me(); } catch { data = null; }
+  // Only load the Supabase SDK + call me() when a session exists; otherwise render Sign in instantly.
+  let logout, data = null;
+  if (hasSession()) {
+    try { const m = await import('./auth.js'); logout = m.logout; data = await m.me(); } catch { data = null; }
+  }
 
   const mount = document.createElement('div');
   mount.className = 'nav-account';
