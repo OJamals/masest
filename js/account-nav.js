@@ -9,6 +9,7 @@ const firstName = (n) => String(n || '').trim().split(/\s+/)[0] || 'Account';
 
 const MENU = [
   ['ph-squares-four', 'Dashboard', 'dashboard.html'],
+  ['ph-briefcase', 'Business', 'business.html'],
   ['ph-package', 'Orders', 'dashboard.html#orders'],
   ['ph-chat-circle', 'Messages', 'dashboard.html#messages'],
   ['ph-bell', 'Notifications', 'dashboard.html#notifications'],

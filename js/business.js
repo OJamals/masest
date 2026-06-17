@@ -1,0 +1,97 @@
+/* MASEST — Business hub controller. Gated to signed-in B2B accounts.
+ * Program-enrollment and bulk-order requests are posted through the company support thread
+ * (/api/account/messages), so staff see them in the admin Messages tab — no extra tables. */
+import { me, api } from './auth.js';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const TIERS = [
+  { key: 'Bronze', tag: 'Entry', desc: 'Quarterly treatment + SDS/compliance pack. Good for a single system or seasonal use.' },
+  { key: 'Silver', tag: 'Standard', desc: 'Monthly treatment, priority dispatch, and usage tracking across multiple systems.' },
+  { key: 'Gold', tag: 'Preferred', desc: 'Scheduled service visits, NET terms, and account-manager support for multi-site operations.' },
+  { key: 'Platinum', tag: 'Enterprise', desc: 'Custom program, dedicated manager, on-site reviews, and consolidated billing.' },
+];
+
+function renderProfile(data) {
+  const c = data.company || {};
+  const badge = `<span class="badge" data-s="${esc(c.status || 'pending')}">${esc(c.status || 'pending')}</span>`;
+  $('bizProfile').innerHTML = `
+    <h2>Your business</h2>
+    <div class="biz-row"><span>Company</span><b>${esc(c.name || '—')}</b></div>
+    <div class="biz-row"><span>Status</span>${badge}</div>
+    <div class="biz-row"><span>NET terms</span><b>${data.can_use_net_terms ? 'NET-' + c.net_terms_days : 'Not enabled'}</b></div>
+    <div class="biz-row"><span>Tax-exempt</span><b>${c.tax_exempt ? 'Yes' : 'No'}</b></div>
+    <div class="actions">
+      <a class="btn btn-ghost btn-sm" href="dashboard.html#profile">Edit profile</a>
+      <a class="btn btn-ghost btn-sm" href="dashboard.html#addresses">Manage addresses</a>
+      ${data.can_checkout ? '<a class="btn btn-ghost btn-sm" href="products.html">Browse catalog</a>' : ''}
+    </div>
+    ${c.status !== 'approved' ? '<p class="muted" style="margin-top:12px">Online ordering and NET terms unlock once MASEST approves your account.</p>' : ''}`;
+}
+
+function renderTiers() {
+  $('tierGrid').innerHTML = TIERS.map((t) => `
+    <div class="tier">
+      <div class="tier-tag">${esc(t.tag)}</div>
+      <h3>${esc(t.key)}</h3>
+      <p>${esc(t.desc)}</p>
+      <button type="button" class="btn btn-primary btn-sm" data-tier="${esc(t.key)}">Request enrollment</button>
+    </div>`).join('');
+  $('tierGrid').querySelectorAll('[data-tier]').forEach((b) => b.addEventListener('click', () => requestProgram(b.dataset.tier, b)));
+}
+
+async function requestProgram(tier, btn) {
+  const status = $('programStatus');
+  btn.disabled = true;
+  status.textContent = `Sending ${tier} enrollment request…`; status.dataset.state = '';
+  try {
+    await api('/api/account/messages', { method: 'POST', body: {
+      body: `Program enrollment request — ${tier} tier. Please scope a plan and pricing for our operation.`,
+    } });
+    status.textContent = `${tier} request sent — your account team will follow up in your dashboard messages.`;
+    status.dataset.state = 'ok';
+  } catch (e) {
+    status.textContent = e.status === 401 ? 'Please sign in again.' : 'Could not send the request. Try again.';
+    status.dataset.state = 'err';
+  } finally { btn.disabled = false; }
+}
+
+function wireBulk() {
+  $('bulkForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = $('bulkStatus');
+    const itemsText = $('bulkItems').value.trim();
+    if (!itemsText) { status.textContent = 'List what you need first.'; status.dataset.state = 'err'; return; }
+    const notes = $('bulkNotes').value.trim();
+    status.textContent = 'Sending bulk request…'; status.dataset.state = '';
+    try {
+      await api('/api/account/messages', { method: 'POST', body: {
+        body: `Bulk / standing order request:\n${itemsText}${notes ? `\nNotes: ${notes}` : ''}`,
+      } });
+      e.target.reset();
+      status.textContent = 'Bulk request sent — we’ll reply with a quote in your dashboard messages.';
+      status.dataset.state = 'ok';
+    } catch (err) {
+      status.textContent = err.status === 401 ? 'Please sign in again.' : 'Could not send. Try again.';
+      status.dataset.state = 'err';
+    }
+  });
+}
+
+async function boot() {
+  let data = null;
+  try { data = await me(); } catch { data = null; }
+  if (!data) { $('bizGuest').hidden = false; return; }
+  if (data.needs_profile) {
+    $('bizGuest').hidden = false;
+    $('bizGuest').querySelector('p').textContent = 'Your email is confirmed — finish setting up your business account to access programs and bulk ordering.';
+    $('bizGuest').querySelector('a').textContent = 'Finish setting up';
+    return;
+  }
+  $('bizApp').hidden = false;
+  renderProfile(data);
+  renderTiers();
+  wireBulk();
+}
+boot();
