@@ -41,6 +41,16 @@ function injectStyle() {
   .acct-dd-menu i { font-size:1.15rem; color:var(--ink-soft,#393d44); }
   .acct-dd-menu .acct-signout { border-top:1px solid var(--line,#e4e6e9); margin-top:6px; padding-top:12px; color:#b42318; }
   .acct-dd-menu .acct-admin { color:var(--accent-ink,#0a5b62); }
+  /* Cart: transparent shopping-cart icon with a count bubble (replaces the "Cart" text pill) */
+  .nav-cart { position:relative; display:inline-grid; place-items:center; width:42px; height:42px; border-radius:50%; background:transparent; color:var(--ink,#15171c); padding:0; }
+  .nav-cart:hover { background:rgba(0,0,0,.06); }
+  .nav.over-dark .nav-cart { color:#fff; }
+  .nav.over-dark .nav-cart:hover { background:rgba(255,255,255,.12); }
+  .nav-cart i { font-size:1.45rem; line-height:1; }
+  .nav-cart .cart-count { position:absolute; top:1px; right:1px; min-width:17px; height:17px; padding:0 4px; border-radius:999px;
+    background:var(--accent,#0e7c86); color:#fff; font-size:.64rem; font-weight:800; display:grid; place-items:center; line-height:1; box-shadow:0 0 0 2px var(--surface,#fff); }
+  .nav.over-dark .nav-cart .cart-count { box-shadow:0 0 0 2px #0b0d12; }
+  .nav-cart .cart-count[hidden] { display:none; }
   @media (max-width:860px){ .acct-name{ display:none; } }`;
   document.head.appendChild(s);
 }
