@@ -43,6 +43,14 @@
   .msg { max-width: 80%; padding: 9px 13px; border-radius: 13px; font-size: .9rem; }
   .msg.staff { align-self: flex-end; background: var(--ink); color: #fff; } .msg.buyer { align-self: flex-start; background: var(--accent-soft); }
   .seo-ok { color: var(--accent-ink); font-weight: 700; } .seo-warn { color: #b45309; font-weight: 700; } .seo-bad { color: #b42318; font-weight: 700; }
+  /* Responsive: wide tables scroll instead of breaking; message grid stacks. */
+  .adm-card { overflow-x: auto; }
+  @media (max-width: 760px) {
+    #msgGrid { grid-template-columns: 1fr !important; }
+    table.adm { min-width: 560px; }
+    .adm-tabs { gap: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .adm-tab { transition: none; } }
 </style>
 </head>
 <body>
