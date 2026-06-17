@@ -276,6 +276,7 @@ scoped to the hero */
   display: grid; grid-template-columns: 1.06fr .94fr; gap: clamp(40px, 5vw, 72px); align-items: center;
 }
 .hero-copy .subhead { margin: 22px 0 34px; max-width: 30ch; }
+.contact-hero .subhead { margin-top: clamp(32px, 4vw, 48px); }
 .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
 
 /* Signature Triple-Zero lockup: the brand argument as the hero's hero. */
