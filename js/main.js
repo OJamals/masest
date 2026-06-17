@@ -463,7 +463,6 @@ function renderChrome() {
   const root = /\/industries\//.test(location.pathname) ? "../" : "";
   const links = [
     { href: "products.html", label: "Products" },
-    { href: "programs.html", label: "Programs" },
     {
       key: "useCases",
       label: "Use Cases",
@@ -510,7 +509,6 @@ function renderChrome() {
       </nav>
       <div class="nav-actions">
         <a class="nav-cart" href="${root}cart.html" aria-label="Open cart"><span>Cart</span><b class="cart-count" data-cart-count hidden>0</b></a>
-        <a class="nav-cta" href="${root}contact.html">Request a Quote</a>
         <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
       </div>
     </div>`;
@@ -518,7 +516,6 @@ function renderChrome() {
   document.body.prepend(skip);
   const burger = document.getElementById("navBurger");
   const navLinks = document.getElementById("navLinks");
-  const navCta = nav.querySelector(".nav-cta");
   const cartCount = nav.querySelector("[data-cart-count]");
   const updateCartCount = () => {
     let total = 0;
@@ -536,7 +533,6 @@ function renderChrome() {
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   const syncNavCtaLabel = () => {
-    navCta.textContent = window.matchMedia("(max-width: 360px)").matches ? "Quote" : "Request a Quote";
   };
   syncNavCtaLabel();
   window.addEventListener("resize", syncNavCtaLabel);
@@ -576,7 +572,6 @@ function renderChrome() {
           <div class="foot-brand">MASEST VertKleen&trade;</div>
           <p>Safe, powerful, environmentally friendly alternatives to hazardous chemicals. Family-owned on Florida's Space Coast, trusted in 50+ countries.</p>
           <div class="foot-kicker">Primary path</div>
-          <a class="btn btn-primary foot-quote" href="${root}contact.html?type=quote">Quote</a>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Product Categories</div>
@@ -761,11 +756,6 @@ const commerceState = {
   promise: null
 };
 
-function quoteHref(id) {
-  const p = PRODUCTS[id];
-  return `contact.html?type=quote&product=${encodeURIComponent(p?.name || id)}`;
-}
-
 function fmtMoney(n, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -775,8 +765,28 @@ function fmtMoney(n, currency = "USD") {
 }
 
 function normalizeCommerceRow(row) {
-  const sku = String(row?.sku || "").trim().toLowerCase();
-  const variants = (Array.isArray(row?.product_variants) ? row.product_variants : [])
+  const parent = row?.products && typeof row.products === "object" ? row.products : row;
+  const sku = String(parent?.sku || row?.sku || "").trim().toLowerCase();
+  const rawVariants = row?.vsku
+    ? [{
+      vsku: row.vsku,
+      label: row.label || "Each",
+      gallons: row.gallons,
+      price: row.price,
+      currency: row.currency || parent?.currency,
+      active: row.active,
+      sort: row.sort || 0,
+    }]
+    : Array.isArray(row?.product_variants) && row.product_variants.length ? row.product_variants : [{
+      vsku: row?.sku,
+      label: "Each",
+      gallons: row?.gallons || 0,
+      price: row?.price,
+      currency: row?.currency,
+      active: row?.active,
+      sort: 0,
+    }];
+  const variants = rawVariants
     .filter(v => v && v.active !== false && v.price != null && Number(v.price) > 0)
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     .map(v => ({
@@ -784,14 +794,14 @@ function normalizeCommerceRow(row) {
       label: v.label,
       gallons: Number(v.gallons) || 0,
       price: Number(v.price),
-      currency: String(v.currency || row?.currency || "usd").toUpperCase()
+      currency: String(v.currency || parent?.currency || row?.currency || "usd").toUpperCase()
     }));
   return {
     sku,
-    active: row?.active !== false,
-    mode: row?.mode,
+    active: parent?.active !== false && row?.active !== false,
+    mode: parent?.mode || row?.mode,
     variants,
-    purchasable: !!(sku && row?.active !== false && row?.mode === "buy" && variants.length)
+    purchasable: !!(sku && parent?.active !== false && row?.active !== false && (parent?.mode || row?.mode) === "buy" && variants.length)
   };
 }
 
@@ -805,12 +815,22 @@ async function loadCommerceCatalog() {
       if (!response.ok) throw new Error("catalog_unavailable");
       const payload = await response.json();
       const rows = Array.isArray(payload?.products) ? payload.products : [];
-      commerceState.products = new Map(
-        rows
-          .map(normalizeCommerceRow)
-          .filter(row => row.sku)
-          .map(row => [row.sku, row])
-      );
+      commerceState.products = rows
+        .map(normalizeCommerceRow)
+        .filter(row => row.sku)
+        .reduce((map, row) => {
+          const existing = map.get(row.sku);
+          if (!existing) {
+            map.set(row.sku, row);
+            return map;
+          }
+          existing.active = existing.active && row.active;
+          existing.mode = existing.mode || row.mode;
+          existing.variants = existing.variants.concat(row.variants)
+            .sort((a, b) => (a.gallons || 0) - (b.gallons || 0));
+          existing.purchasable = existing.purchasable || row.purchasable;
+          return map;
+        }, new Map());
       commerceState.loaded = true;
       return commerceState.products;
     })
@@ -825,9 +845,7 @@ async function loadCommerceCatalog() {
 function commerceActionHTML(id, variant = "chip") {
   const row = commerceState.products.get(String(id).toLowerCase());
   const p = PRODUCTS[id];
-  const quoteClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-quote";
-  const quote = `<a class="${quoteClass}" href="${quoteHref(id)}">Request quote</a>`;
-  if (!row?.purchasable || !row.variants.length) return quote;
+  if (!row?.purchasable || !row.variants.length) return "";
   const opts = row.variants
     .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${v.label} · ${fmtMoney(v.price, v.currency)}</option>`)
     .join("");
@@ -837,6 +855,14 @@ function commerceActionHTML(id, variant = "chip") {
     + `<select class="commerce-vol" aria-label="Volume for ${p?.name || id}">${opts}</select>`
     + `<button class="${btnClass}" type="button" data-cart-add="${first}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
     + `</span>`;
+}
+
+function bulkPriceHTML(id) {
+  const row = commerceState.products.get(String(id).toLowerCase());
+  const variant = row?.variants?.find(v => Number(v.gallons) === 55);
+  if (!variant || !Number.isFinite(Number(variant.price))) return "";
+  const perGallon = Number(variant.price) / 55;
+  return `<span class="shop-card-bulk">${fmtMoney(perGallon, variant.currency)}/gal at 55 gal</span>`;
 }
 
 // Add the selected volume variant (or the button's default vsku) to the cart, with transient feedback.
@@ -887,7 +913,8 @@ function catalogCard(id) {
           <span class="shop-card-cta">View details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
         </span>
       </a>
-      <span class="shop-card-commerce" data-commerce-action="${id}"></span>
+        ${bulkPriceHTML(id)}
+        <span class="shop-card-commerce" data-commerce-action="${id}"></span>
     </article>`;
 }
 
@@ -1029,7 +1056,7 @@ function initShop() {
   }
 
   apply();
-  loadCommerceCatalog().then(() => refreshCommerceActions(grid));
+  loadCommerceCatalog().then(apply);
 
   if (catHash) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
 }

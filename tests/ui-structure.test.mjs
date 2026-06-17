@@ -10,7 +10,7 @@ test("global navigation stays focused on buyer decisions", () => {
 
   assert.ok(navBlock, "expected renderChrome nav links block");
   assert.match(navBlock[0], /products\.html/);
-  assert.match(navBlock[0], /programs\.html/);
+  assert.doesNotMatch(navBlock[0], /programs\.html/);
   assert.match(navBlock[0], /proof\.html/);
   assert.match(navBlock[0], /industries\.html/);
   assert.doesNotMatch(navBlock[0], /why-vertkleen\.html/);
@@ -75,6 +75,11 @@ test("products page wires the checker and grid from product data", () => {
   assert.match(main, /<article class="shop-card"/);
   assert.match(main, /class="shop-card-link" href="product\.html\?id=/);
   assert.doesNotMatch(main, /<a class="shop-card"[\s\S]*?<button class="shop-card-add"/);
+  assert.doesNotMatch(main, /shop-card-quote/);
+  assert.match(main, /shop-card-bulk/);
+  assert.match(read("products.html"), /programs\.html/);
+  assert.match(read("products.html"), /contact\.html\?type=distributor/);
+  assert.doesNotMatch(read("products.html"), /Request a Quote/);
 });
 
 test("product details include source-backed media galleries", () => {
@@ -83,6 +88,8 @@ test("product details include source-backed media galleries", () => {
 
   assert.match(product, /id="pMediaSection"/);
   assert.match(product, /id="pMedia"/);
+  assert.doesNotMatch(product, /Request a Quote/);
+  assert.doesNotMatch(product, /type=distributor/);
   assert.match(product, /PRODUCT_GALLERY\[id\]/);
   assert.match(main, /img\/proof\/cases\/ddc-rust\.webp/);
   assert.match(main, /img\/proof\/cases\/marine\.webp/);
@@ -200,14 +207,14 @@ test("no-js fallback nav stays focused on primary categories", () => {
     const html = read(page);
     const nav = html.match(/<nav class="nojs-nav"[\s\S]*?<\/nav>/)?.[0] || "";
 
-    assert.ok(nav, `${page} should keep no-js nav`);
-    assert.match(nav, /Products/);
-    assert.match(nav, /Programs/);
-    assert.match(nav, /Use Cases/);
-    assert.match(nav, /Industries/);
-    assert.match(nav, /Field Results/);
-    assert.match(nav, /Resources/);
-    assert.match(nav, /Request a Quote/);
+  assert.ok(nav, `${page} should keep no-js nav`);
+  assert.match(nav, /Products/);
+  assert.doesNotMatch(nav, /Programs/);
+  assert.match(nav, /Use Cases/);
+  assert.match(nav, /Industries/);
+  assert.match(nav, /Field Results/);
+  assert.match(nav, /Resources/);
+  assert.doesNotMatch(nav, /Request a Quote/);
     assert.doesNotMatch(nav, />Home</);
     assert.doesNotMatch(nav, />Why VertKleen</);
     assert.doesNotMatch(nav, />About/);

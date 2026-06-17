@@ -20,12 +20,10 @@
 <nav class="nojs-nav" aria-label="Site">
   <a href="index.html"><b>MASEST</b></a>
   <a href="products.html">Products</a>
-  <a href="programs.html">Programs</a>
   <span>Use Cases</span>
   <a href="industries.html">Industries</a>
   <a href="proof.html">Field Results</a>
   <a href="resources.html">Resources</a>
-  <a href="contact.html?type=quote">Request a Quote</a>
 </nav>
 <div class="wrap" style="padding:28px 28px 0"><p class="cmp-note">Product details need JavaScript. Browse the full line on the <a href="products.html" style="font-weight:700;text-decoration:underline">products page</a> or <a href="contact.html" style="font-weight:700;text-decoration:underline">contact us</a> directly.</p></div>
 </noscript>
@@ -39,9 +37,7 @@
       <h1 class="display" id="pName"></h1>
       <p class="subhead" id="pDesc"></p>
       <div class="hero-ctas" style="margin-top:30px">
-        <a class="btn btn-primary" id="pQuoteBtn" href="contact.html">Request a Quote</a>
         <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
-        <a class="btn btn-ghost" href="contact.html?type=distributor">Become a Distributor</a>
       </div>
       <p class="cart-feedback" id="pCartFeedback" role="status" aria-live="polite" hidden></p>
     </div>
@@ -101,7 +97,7 @@
   <div class="wrap reveal">
     <h2 class="headline" id="ctaHead">Ready to switch?</h2>
     <p class="subhead" style="max-width:540px;margin:18px auto 36px">Quotes route by industry, volume, and location to the right MASEST sales contact.</p>
-    <a class="btn btn-primary" id="pQuoteBtn2" href="contact.html">Request a Quote</a>
+    <a class="btn btn-primary" href="cart.html">Open cart</a>
   </div>
 </section>
 </main>
@@ -122,7 +118,7 @@
               <p class="subhead">The link may be outdated or mistyped. Browse the current VertKleen line, or send the MASEST team the application you are trying to solve.</p>
               <div class="hero-actions">
                 <a class="btn btn-primary" href="products.html">View Products</a>
-                <a class="btn btn-secondary" href="contact.html">Request a Quote</a>
+                <a class="btn btn-secondary" href="cart.html">Open cart</a>
               </div>
             </div>
             <div class="hmis-panel">
@@ -147,8 +143,6 @@
     }
     document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";
     const quoteHref = "contact.html?product=" + encodeURIComponent(p.name);
-    document.getElementById("pQuoteBtn").href = quoteHref;
-    document.getElementById("pQuoteBtn2").href = quoteHref;
     const buyBtn = document.getElementById("pBuyBtn");
     const cartFeedback = document.getElementById("pCartFeedback");
     fetch("/api/products", { headers: { Accept: "application/json" }, cache: "no-store" })

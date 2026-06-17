@@ -3187,6 +3187,19 @@ fully clickable cards) ---- */
 .shop-card-commerce {
   margin: 0 16px 16px;
 }
+.shop-card-bulk {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 10px;
+  padding: 5px 9px;
+  border: 1px solid rgba(14, 124, 134, .24);
+  border-radius: 999px;
+  background: rgba(14, 124, 134, .08);
+  color: var(--accent-ink);
+  font-size: .74rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
 .shop-card-quote {
   display: inline-flex;
   min-height: 34px;

@@ -49,11 +49,40 @@ test("catalog stays quote-only when commerce metadata is unavailable", async () 
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
 
       assert.equal(await page.locator("[data-cart-add]").count(), 0);
-      assert.equal(await page.locator(".shop-card-quote").count(), 13);
+        assert.equal(await page.locator(".shop-card-quote").count(), 0);
 
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "networkidle" });
       assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
       assert.equal(await page.locator("#checkoutNet").isDisabled(), true);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("product catalog shows programs, distributor CTA, and 55-gallon price per gallon", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await routeProducts(page, [
+        {
+          sku: "hcr",
+          active: true,
+          mode: "buy",
+          product_variants: [
+            { vsku: "hcr-5", label: "5 gal pail", gallons: 5, price: 175, currency: "usd", active: true, sort: 1 },
+            { vsku: "hcr-55", label: "55 gal drum", gallons: 55, price: 1375, currency: "usd", active: true, sort: 2 },
+          ],
+        },
+      ]);
+
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+
+      assert.equal(await page.locator(".shop-card-quote").count(), 0);
+      await page.getByRole("link", { name: /Compare programs/i }).waitFor();
+      await page.getByRole("link", { name: /Become a distributor/i }).waitFor();
+      await page.getByText("$25/gal at 55 gal").waitFor();
     } finally {
       await browser.close();
     }
