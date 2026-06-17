@@ -47,7 +47,7 @@ export async function companyForUser(sb, userId) {
 export async function requireStaff(request, env) {
   const { user } = await userFromRequest(request, env);
   if (!user) return { user: null, staff: false };
-  const allow = (env.ADMIN_EMAILS || '')
+  const allow = (env.ADMIN_EMAILS || env.ADMIN_EMAIL || '')
     .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   let staff = allow.includes(String(user.email || '').toLowerCase());
   // Fallback: a profiles.is_staff=true flag (settable only server-side / via SQL) also grants staff,
