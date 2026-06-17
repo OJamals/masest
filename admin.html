@@ -89,6 +89,7 @@
           <button class="adm-tab" role="tab" data-tab="companies" aria-selected="false"><i class="ph ph-buildings"></i> Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
           <button class="adm-tab" role="tab" data-tab="products" aria-selected="false"><i class="ph ph-flask"></i> Products &amp; stock</button>
           <button class="adm-tab" role="tab" data-tab="messages" aria-selected="false"><i class="ph ph-chats"></i> Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
+          <button class="adm-tab" role="tab" data-tab="quotes" aria-selected="false"><i class="ph ph-clipboard-text"></i> Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
           <button class="adm-tab" role="tab" data-tab="offers" aria-selected="false"><i class="ph ph-megaphone"></i> Offers</button>
           <button class="adm-tab" role="tab" data-tab="traffic" aria-selected="false"><i class="ph ph-chart-line"></i> Traffic &amp; SEO</button>
         </div>
@@ -123,6 +124,12 @@
             <div class="adm-card thread-list" id="admThreads"><p class="muted">Loading…</p></div>
             <div class="adm-card" id="admThreadView"><p class="muted">Select a conversation.</p></div>
           </div>
+        </div>
+        <div class="adm-panel" data-panel="quotes" role="tabpanel" hidden>
+          <div class="adm-card"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <label>Filter <select id="qFilter"><option value="">All</option><option value="new">New</option><option value="contacted">Contacted</option><option value="closed">Closed</option><option value="spam">Spam</option></select></label>
+            <input id="qSearch" type="search" class="adm-search" placeholder="Search quotes…">
+          </div><div id="admQuotes"><p class="muted">Loading…</p></div></div>
         </div>
         <div class="adm-panel" data-panel="offers" role="tabpanel" hidden>
           <div class="adm-card"><h3 style="font-size:1.05rem;margin-bottom:10px">Send an offer / announcement</h3>

@@ -15,7 +15,7 @@ function selectTab(name) {
   document.querySelectorAll('.adm-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   document.querySelectorAll('.adm-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   history.replaceState(null, '', '#' + name);
-  ({ orders: renderOrders, companies: renderCompanies, products: renderProducts, messages: renderThreads, offers: renderOffers, traffic: renderTraffic }[name])?.(false);
+  ({ orders: renderOrders, companies: renderCompanies, products: renderProducts, messages: renderThreads, quotes: renderQuotes, offers: renderOffers, traffic: renderTraffic }[name])?.(false);
 }
 function wireTabs() {
   document.querySelectorAll('.adm-tab').forEach((b) => b.addEventListener('click', () => selectTab(b.dataset.tab)));
@@ -195,6 +195,83 @@ async function openThread(companyId) {
   });
 }
 
+/* ---------- quotes (inbound leads from /api/quote) ---------- */
+const QSTATUS = ['new', 'contacted', 'closed', 'spam'];
+async function loadQuoteBadge() { try { badge('aBadgeQuotes', (await api('/api/admin/quotes')).new_count || 0); } catch {} }
+
+async function renderQuotes() {
+  const box = $('admQuotes'); box.innerHTML = '<p class="muted">Loading…</p>';
+  let data;
+  try { data = await api('/api/admin/quotes'); } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load.</p>'; return; }
+  badge('aBadgeQuotes', data.new_count || 0);
+  if (data.needs_migration) {
+    box.innerHTML = '<p class="muted">No quotes captured in the database yet. Emails already send on every submission — run <code>supabase/schema-quotes.sql</code> to also store and triage leads here.</p>';
+    return;
+  }
+  const quotes = data.quotes || [];
+  if (!quotes.length) { box.innerHTML = '<p class="muted">No quote requests yet.</p>'; return; }
+  box.innerHTML = quotes.map(quoteItem).join('');
+  box.querySelectorAll('[data-qsave]').forEach((b) => b.addEventListener('click', () => saveQuote(b.dataset.qsave, b)));
+  box.querySelectorAll('select[data-qstatus]').forEach((s) => s.addEventListener('change', () => saveQuote(s.dataset.qstatus, s)));
+  filterQuotes();
+}
+
+function quoteItem(q) {
+  const skip = new Set(['name', 'company', 'email', 'phone', 'message', 'type']);
+  const extra = Object.entries(q.payload || {})
+    .filter(([k, v]) => !skip.has(k) && String(Array.isArray(v) ? v.join('') : (v ?? '')).trim())
+    .map(([k, v]) => `<div class="dash-row" style="padding:3px 0"><span class="muted">${esc(k)}</span><span>${esc(Array.isArray(v) ? v.join(', ') : v)}</span></div>`).join('');
+  const haystack = [q.name, q.company, q.email, q.product, q.industry, q.location, q.message, JSON.stringify(q.payload || {})].join(' ').toLowerCase();
+  const subj = encodeURIComponent('Re: your MASEST ' + (q.type || 'quote') + ' request');
+  return `<details class="quote-item" data-status="${esc(q.status)}" data-text="${esc(haystack)}" style="border-bottom:1px solid rgba(0,0,0,.08);padding:10px 0">
+    <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;list-style:none">
+      <span><b>${esc(q.company || q.name || '—')}</b> <span class="muted">· ${esc(q.type)}${q.product ? ' · ' + esc(q.product) : (q.industry ? ' · ' + esc(q.industry) : '')}</span><br>
+        <span class="muted" style="font-size:.8rem">${fmtDT(q.created_at)} · ${esc(q.email || '')}</span></span>
+      ${statusBadge(q.status)}</summary>
+    <div style="padding:10px 0 4px">
+      <div class="dash-row" style="padding:3px 0"><span class="muted">Name</span><span>${esc(q.name || '—')}</span></div>
+      <div class="dash-row" style="padding:3px 0"><span class="muted">Email</span><span><a href="mailto:${esc(q.email || '')}">${esc(q.email || '—')}</a></span></div>
+      ${q.phone ? `<div class="dash-row" style="padding:3px 0"><span class="muted">Phone</span><span>${esc(q.phone)}</span></div>` : ''}
+      ${extra}
+      ${q.message ? `<p style="margin:8px 0;white-space:pre-wrap">${esc(q.message)}</p>` : ''}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px">
+        <label style="font-size:.82rem">Status <select data-qstatus="${esc(q.id)}">${QSTATUS.map((s) => `<option value="${s}"${s === q.status ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
+        <a class="btn btn-ghost btn-sm" href="mailto:${esc(q.email || '')}?subject=${subj}">Reply by email</a>
+      </div>
+      <div class="field" style="margin-top:8px"><label style="font-size:.82rem">Internal notes</label><textarea data-qnotes rows="2">${esc(q.notes || '')}</textarea></div>
+      <button class="btn btn-primary btn-sm" data-qsave="${esc(q.id)}" style="margin-top:6px">Save</button>
+      <span class="adm-status" data-qstat role="status" aria-live="polite"></span>
+    </div></details>`;
+}
+
+async function saveQuote(id, el) {
+  const root = el.closest('.quote-item'); if (!root) return;
+  const status = root.querySelector('select[data-qstatus]')?.value;
+  const notes = root.querySelector('textarea[data-qnotes]')?.value ?? '';
+  const stat = root.querySelector('[data-qstat]');
+  if (stat) { stat.textContent = 'Saving…'; stat.dataset.state = ''; }
+  try {
+    await api('/api/admin/quotes', { method: 'POST', body: { id, status, notes } });
+    if (stat) { stat.textContent = 'Saved.'; stat.dataset.state = 'ok'; }
+    root.dataset.status = status;
+    const b = root.querySelector('summary .badge'); if (b) { b.textContent = String(status).replace('_', ' '); b.dataset.s = status; }
+    refreshQuoteBadge();
+    filterQuotes();
+  } catch { if (stat) { stat.textContent = 'Failed.'; stat.dataset.state = 'err'; } }
+}
+
+function refreshQuoteBadge() {
+  badge('aBadgeQuotes', [...document.querySelectorAll('#admQuotes .quote-item')].filter((it) => it.dataset.status === 'new').length);
+}
+function filterQuotes() {
+  const q = ($('qSearch')?.value || '').trim().toLowerCase();
+  const f = $('qFilter')?.value || '';
+  document.querySelectorAll('#admQuotes .quote-item').forEach((it) => {
+    const ok = (!q || (it.dataset.text || '').includes(q)) && (!f || it.dataset.status === f);
+    it.style.display = ok ? '' : 'none';
+  });
+}
+
 /* ---------- offers ---------- */
 function wireOfferForm() {
   $('offerForm').addEventListener('submit', async (e) => {
@@ -277,8 +354,10 @@ async function enterApp(stats) {
   $('admGate').hidden = true; $('admApp').hidden = false;
   wireTabs(); wireProductForm(); wireOfferForm();
   wireSearch('ordSearch', 'admOrders'); wireSearch('coSearch', 'admCompanies'); wireSearch('prodSearch', 'admProducts');
+  $('qSearch')?.addEventListener('input', filterQuotes); $('qFilter')?.addEventListener('change', filterQuotes);
   renderStats(stats);
-  const start = ['orders', 'companies', 'products', 'messages', 'offers', 'traffic'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
+  loadQuoteBadge();
+  const start = ['orders', 'companies', 'products', 'messages', 'quotes', 'offers', 'traffic'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
   selectTab(start);
 }
 async function boot() {
