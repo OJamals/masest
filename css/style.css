@@ -2788,6 +2788,15 @@ body.reveal-ready .matrix-disclosure.reveal {
 .nav-menu a::after { display: none; }
 .nav-menu a:hover,
 .nav-menu a.active { background: var(--accent-tint); }
+/* Dropdown panel is always a light/white surface — keep its link text dark in every nav
+   state. In over-dark, links inherit the light .nav-links color (#f4f6f8) → invisible on
+   white, and the over-dark hover rule paints #fff; override both, scoped to the panel. */
+.nav-menu a { color: var(--ink-soft); }
+.nav-menu a:hover,
+.nav-menu a.active { color: var(--ink); }
+.nav.over-dark .nav-menu a { color: var(--ink-soft); }
+.nav.over-dark .nav-menu a:hover,
+.nav.over-dark .nav-menu a.active { color: var(--ink); }
 .nav.over-dark .nav-group summary { color: #f4f6f8; }
 .nav.over-dark .nav-group summary:hover,
 .nav.over-dark .nav-group summary.active { color: #fff; }
