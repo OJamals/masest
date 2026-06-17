@@ -49,6 +49,14 @@ export async function requireStaff(request, env) {
   if (!user) return { user: null, staff: false };
   const allow = (env.ADMIN_EMAILS || '')
     .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const staff = allow.includes(String(user.email || '').toLowerCase());
+  let staff = allow.includes(String(user.email || '').toLowerCase());
+  // Fallback: a profiles.is_staff=true flag (settable only server-side / via SQL) also grants staff,
+  // so staff can be added/removed in the DB without a Cloudflare redeploy of ADMIN_EMAILS.
+  if (!staff) {
+    try {
+      const { data } = await adminClient(env).from('profiles').select('is_staff').eq('id', user.id).maybeSingle();
+      staff = !!data?.is_staff;
+    } catch { /* is_staff column may not exist pre-migration → env gate only */ }
+  }
   return { user, staff };
 }

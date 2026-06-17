@@ -48,6 +48,13 @@ export async function requireStaff(req) {
   if (!user) return { user: null, staff: false };
   const allow = (process.env.ADMIN_EMAILS || '')
     .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const staff = allow.includes(String(user.email || '').toLowerCase());
+  let staff = allow.includes(String(user.email || '').toLowerCase());
+  // Fallback: profiles.is_staff=true (server/SQL-set only) also grants staff — no redeploy needed.
+  if (!staff) {
+    try {
+      const { data } = await adminClient().from('profiles').select('is_staff').eq('id', user.id).maybeSingle();
+      staff = !!data?.is_staff;
+    } catch { /* pre-migration */ }
+  }
   return { user, staff };
 }

@@ -55,8 +55,13 @@ New tables `messages`, `notifications`, `offers`, `page_views`; new columns
 - Payment stays PCI SAQ-A: card management is the hosted Stripe portal; no card data on our pages.
 - `account/dashboard/admin/cart` are `noindex`; `admin.html` is `noindex,nofollow`; `robots.txt` disallows them.
 
+## Staff without a redeploy
+`requireStaff` grants staff if the email is in `ADMIN_EMAILS` **or** the user's `profiles.is_staff=true`.
+So after a person registers you can grant them via SQL (no CF env change / redeploy):
+`update public.profiles set is_staff = true where id = (select id from auth.users where email = 'them@x.com');`
+`is_staff` is only settable server-side (RLS denies client writes), so users cannot self-promote.
+
 ## Deferred (next)
-- Decrement `products.stock` on paid orders inside `stripe-webhook.js` (columns + admin UI exist; wire the hook).
 - Multi-user company invites; per-user (vs per-company) notifications targeting.
 - Klaviyo *campaign* creation for offers (today: in-app notification + optional Resend blast).
 - QBO invoice sync for NET orders (Phase 3) surfaced in the admin Orders tab.
