@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order confirmed | MASEST VertKleen</title>
+<meta name="description" content="Your VertKleen order is confirmed.">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/story.css">
+<link rel="stylesheet" href="css/commerce.css">
+</head>
+<body>
+
+<main id="main">
+  <section class="section" style="padding-top:120px">
+    <div class="wrap">
+      <div class="form-card order-card">
+        <i class="ph ph-check-circle" aria-hidden="true"></i>
+        <h1 class="headline" style="font-size:1.8rem;margin:10px 0 6px">Order confirmed.</h1>
+        <p style="color:var(--ink-soft)">Thank you. A receipt is on its way to your email. Our team will follow up with shipping details.</p>
+        <p id="orderRef" style="font-size:.8rem;color:var(--ink-soft);margin-top:10px"></p>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap">
+          <a class="btn btn-primary" href="products.html">Continue shopping</a>
+          <a class="btn btn-ghost" href="index.html">Home</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
+<script type="module">
+  import * as cart from "./js/cart.js";
+  cart.clear(); // payment succeeded — empty the cart
+  const id = new URLSearchParams(location.search).get("session_id");
+  if (id) document.getElementById("orderRef").textContent = "Reference: " + id.slice(-12);
+</script>
+</body>
+</html>

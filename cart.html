@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart | MASEST VertKleen</title>
+<meta name="description" content="Your VertKleen cart.">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/story.css">
+<link rel="stylesheet" href="css/commerce.css">
+</head>
+<body>
+
+<noscript>
+<nav class="nojs-nav" aria-label="Site">
+  <a href="index.html"><b>MASEST</b></a>
+  <a href="products.html">Products</a>
+  <a href="contact.html">Contact</a>
+</nav>
+</noscript>
+
+<main id="main">
+  <section class="hero-split">
+    <div class="wrap">
+      <h1 class="display">Your cart.</h1>
+      <p class="subhead">Review your items. Tax and shipping are calculated at checkout. Quote-only products are requested through the quote form.</p>
+    </div>
+  </section>
+
+  <section class="section section-slim">
+    <div class="wrap cart-wrap">
+
+      <div id="cartEmpty" class="cart-empty" hidden>
+        <h2 class="headline" style="font-size:1.4rem">Your cart is empty.</h2>
+        <p>Browse the catalog to add products.</p>
+        <a class="btn btn-primary" href="products.html">View products</a>
+      </div>
+
+      <div id="cartContent" hidden>
+        <div class="cart-list" id="cartList"></div>
+        <div class="form-card cart-summary">
+          <div class="cart-sub"><span>Subtotal</span><span id="cartSubtotal">&mdash;</span></div>
+          <p class="cart-note" id="cartNote"></p>
+          <div class="cart-actions">
+            <button type="button" class="btn btn-primary btn-block" id="payBtn">Checkout &mdash; card or ACH</button>
+            <button type="button" class="btn btn-ghost btn-block" id="netBtn">Place on account (NET terms)</button>
+            <p class="cart-status" id="cartStatus" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
+
+<script type="module">
+  import * as cart from "./js/cart.js";
+  // auth.js (loads Supabase from CDN) is imported lazily only when NET checkout is used,
+  // so the cart always renders even if the CDN is slow/unavailable.
+
+  const $ = (id) => document.getElementById(id);
+  const money = (n, c = "usd") => new Intl.NumberFormat("en-US", { style: "currency", currency: c }).format(n);
+
+  // Catalog (names + live prices + mode). Server is still source of truth at checkout.
+  let bySku = {};
+  try {
+    const data = await fetch("/api/products").then((r) => r.json());
+    bySku = Object.fromEntries((data.products || []).map((p) => [p.sku, p]));
+  } catch (e) { /* render with sku fallbacks */ }
+
+  function setStatus(msg, state) { const s = $("cartStatus"); s.textContent = msg || ""; s.dataset.state = state || ""; }
+
+  function render() {
+    const items = cart.items();
+    $("cartEmpty").hidden = items.length > 0;
+    $("cartContent").hidden = items.length === 0;
+    if (!items.length) return;
+
+    let subtotal = 0, anyPriced = false, anyUnpriced = false;
+    $("cartList").innerHTML = items.map(({ sku, qty }) => {
+      const p = bySku[sku] || { name: sku, price: null, currency: "usd" };
+      const priced = p.price != null;
+      if (priced) { subtotal += Number(p.price) * qty; anyPriced = true; } else { anyUnpriced = true; }
+      const priceCell = priced
+        ? `<div class="cart-row-price">${money(Number(p.price) * qty, p.currency)}<span class="unit">${money(Number(p.price), p.currency)} each</span></div>`
+        : `<div class="cart-row-quote">Price on request</div>`;
+      return `
+        <div class="cart-row" data-sku="${sku}">
+          <div class="cart-row-main">
+            <div class="cart-row-name">${p.name}</div>
+            <div class="cart-row-meta">${sku.toUpperCase()}</div>
+          </div>
+          <div class="cart-qty">
+            <button type="button" data-act="dec" aria-label="Decrease quantity">&minus;</button>
+            <input type="number" min="1" value="${qty}" aria-label="Quantity" data-act="qty">
+            <button type="button" data-act="inc" aria-label="Increase quantity">+</button>
+          </div>
+          ${priceCell}
+          <button type="button" class="cart-row-remove" data-act="remove" aria-label="Remove ${p.name}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        </div>`;
+    }).join("");
+
+    $("cartSubtotal").textContent = anyPriced ? money(subtotal) : "Quote only";
+    $("cartNote").textContent = anyUnpriced
+      ? "Some items are quote-only (or not yet priced for online order) — checkout covers priced items; request the rest via the quote form."
+      : "Tax and shipping calculated at checkout.";
+    $("payBtn").disabled = !anyPriced;
+  }
+
+  // Row controls (event delegation)
+  $("cartList").addEventListener("click", (e) => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    const row = e.target.closest(".cart-row"); const sku = row?.dataset.sku; if (!sku) return;
+    const cur = cart.items().find((i) => i.sku === sku)?.qty || 1;
+    if (btn.dataset.act === "inc") cart.setQty(sku, cur + 1);
+    else if (btn.dataset.act === "dec") cart.setQty(sku, cur - 1);
+    else if (btn.dataset.act === "remove") cart.remove(sku);
+  });
+  $("cartList").addEventListener("change", (e) => {
+    if (e.target.dataset.act !== "qty") return;
+    const sku = e.target.closest(".cart-row")?.dataset.sku;
+    if (sku) cart.setQty(sku, parseInt(e.target.value, 10) || 0);
+  });
+
+  document.addEventListener("cart:updated", render);
+
+  function mapError(code) {
+    return ({
+      not_purchasable: "Some items aren't available for online purchase yet — please use the quote form.",
+      cart_empty: "Your cart is empty.",
+      stripe_not_configured: "Checkout is temporarily unavailable.",
+      auth_required_for_net: "Sign in to a business account to order on NET terms.",
+      net_terms_unavailable: "NET terms aren't enabled on your account yet.",
+    })[code] || "Checkout failed. Please try again.";
+  }
+
+  $("payBtn").addEventListener("click", async () => {
+    $("payBtn").disabled = true; setStatus("Redirecting to secure checkout…", "");
+    try { await cart.checkout({ mode: "pay" }); }
+    catch (err) { setStatus(mapError(err.message), "err"); $("payBtn").disabled = false; }
+  });
+
+  $("netBtn").addEventListener("click", async () => {
+    setStatus("", "");
+    let token = null;
+    try {
+      const { supabase } = await import("./js/auth.js");
+      const { data } = await supabase.auth.getSession();
+      token = data?.session?.access_token;
+    } catch (e) { /* CDN/auth unavailable */ }
+    if (!token) { setStatus("Sign in to a business account to use NET terms.", "err"); return; }
+    $("netBtn").disabled = true;
+    try {
+      const out = await cart.checkout({ mode: "net", token });
+      setStatus(out.message || "Order placed on account.", "ok");
+      render();
+    } catch (err) { setStatus(mapError(err.message), "err"); }
+    finally { $("netBtn").disabled = false; }
+  });
+
+  render();
+</script>
+</body>
+</html>

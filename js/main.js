@@ -490,6 +490,7 @@ function renderChrome() {
           `<a href="${root}${href}"${isActive(href) ? ' class="active" aria-current="page"' : ""}>${label}</a>`).join("")}
       </nav>
       <div style="display:flex;align-items:center;gap:12px">
+        <a class="nav-cart" href="${root}cart.html" id="navCart" aria-label="Cart"><i class="ph ph-shopping-cart" aria-hidden="true"></i><span class="nav-cart-count" id="navCartCount" hidden>0</span></a>
         <a class="nav-cta" href="${root}contact.html">Request a Quote</a>
         <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
       </div>
@@ -504,6 +505,18 @@ function renderChrome() {
   };
   syncNavCtaLabel();
   window.addEventListener("resize", syncNavCtaLabel);
+
+  // Cart badge: reflect localStorage cart count; live-update on cart events + cross-tab.
+  const updateCartBadge = () => {
+    let n = 0;
+    try { n = Object.values(JSON.parse(localStorage.getItem("masest_cart") || "{}")).reduce((a, b) => a + (+b || 0), 0); } catch (e) {}
+    const el = document.getElementById("navCartCount");
+    if (el) { el.textContent = n; el.hidden = n <= 0; }
+  };
+  updateCartBadge();
+  ["cart:updated", "masest:cart"].forEach(ev => document.addEventListener(ev, updateCartBadge));
+  window.addEventListener("storage", e => { if (e.key === "masest_cart") updateCartBadge(); });
+
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);

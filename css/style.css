@@ -2981,3 +2981,10 @@ fully clickable cards) ---- */
   .shop-toolbar { flex-direction: column; align-items: stretch; }
   .shop-sort { justify-content: space-between; }
 }
+
+/* Cart badge in nav (global — injected by main.js on every page) */
+.nav-cart { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; color: var(--ink); font-size: 1.35rem; text-decoration: none; transition: background .2s; flex: none; }
+.nav.over-dark .nav-cart { color: #fff; }
+.nav-cart:hover { background: rgba(0,0,0,.06); }
+.nav.over-dark .nav-cart:hover { background: rgba(255,255,255,.12); }
+.nav-cart-count { position: absolute; top: 1px; right: 1px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--accent); color: #fff; font-size: .66rem; font-weight: 700; display: flex; align-items: center; justify-content: center; line-height: 1; }
