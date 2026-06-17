@@ -19,7 +19,7 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
   const to = buyerEmailFromStripeSession(session);
   if (!apiKey || !to) return;
 
-  const from = env.RESEND_FROM || 'MASEST <noreply@send.masest.co>';
+  const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
   const currency = (session.currency || 'usd').toUpperCase();
   const fmt = (n) => `${currency} ${Number(n || 0).toFixed(2)}`;
   const ref = order?.id ? ` #${order.id}` : '';

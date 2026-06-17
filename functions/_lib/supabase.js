@@ -78,7 +78,7 @@ export async function companyEmails(sb, companyId) {
 // Fire-and-forget transactional email via Resend. No-op unless RESEND_API_KEY + recipients exist.
 export async function sendEmail(env, { to, subject, html }) {
   if (!env.RESEND_API_KEY || !Array.isArray(to) || !to.length) return false;
-  const from = env.RESEND_FROM || 'MASEST <noreply@send.masest.co>';
+  const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',

@@ -63,7 +63,7 @@ export async function onRequest({ request, env }) {
 
     // Best-effort invite email.
     if (env.RESEND_API_KEY) {
-      const from = env.RESEND_FROM || 'MASEST <noreply@send.masest.co>';
+      const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
       const appUrl = env.APP_URL || new URL(request.url).origin;
       try {
         await fetch('https://api.resend.com/emails', {
