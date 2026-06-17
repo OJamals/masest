@@ -7,4 +7,4 @@ window.MASEST_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz
 window.MASEST_STRIPE_PK = 'pk_test_51TjBFdHfKF76gAoJLvVOMtE9BLgIyAaFvvyuRl4sAxXpfljwdJQqq4PBlE09kxQAYQUgfkdDlHsXY7MAxZN1FkmM00oTFFf6V6';            // Stripe publishable key pk_live_... (public)
 window.MASEST_CRISP_ID = 'bc6be1cf-f005-40b6-ad3e-24fe68ee9b2a';             // Crisp Website ID (public)
 window.MASEST_KLAVIYO_COMPANY = 'Ww6Ryz';      // Klaviyo public company/site ID (public)
-window.MASEST_TURNSTILE_SITEKEY = '';          // Cloudflare Turnstile site key (public). Set this AND enable CAPTCHA in Supabase Auth together, or login/register breaks.
+window.MASEST_TURNSTILE_SITEKEY = '0x4AAAAAADmaD_pRgYim8QF5';   // Cloudflare Turnstile site key (public). Pairs with the secret set in Supabase Auth CAPTCHA.
