@@ -12,6 +12,9 @@ const fmtDT = (s) => { try { return new Date(s).toLocaleString(undefined, { mont
 
 let ACCOUNT = null;            // /api/account/me snapshot
 const loaded = {};             // which tabs have been populated
+let lastMsgCount = -1;         // messages currently rendered in the thread (for live-poll diffing)
+let pollTimer = null;          // live-refresh interval handle
+const POLL_MS = 30000;         // poll cadence while the tab is visible
 
 /* ---------- tabs / routing ---------- */
 function selectTab(name) {
@@ -106,6 +109,7 @@ async function renderMessages() {
   const thread = $('msgThread');
   let msgs = [];
   try { msgs = (await api('/api/account/messages')).messages; } catch { thread.innerHTML = '<p class="dash-status" data-state="err">Could not load messages.</p>'; return; }
+  lastMsgCount = msgs.length;
   setBadge('badgeMessages', 0); // opening the tab marks staff msgs read server-side
   if (!msgs.length) { thread.innerHTML = '<p class="muted">No messages yet. Send us a question — orders, pricing, NET terms, anything.</p>'; }
   else {
@@ -229,6 +233,43 @@ function wireProfileForm() {
   $('pfLogout').addEventListener('click', async () => { await logout(); location.href = 'account.html'; });
 }
 
+/* ---------- live refresh ----------
+ * While the dashboard is open and visible, poll for new notifications/messages so staff
+ * replies surface without a manual reload. Cheap: one GET per cycle, paused when hidden. */
+function syncNavDot(unread) {
+  // Keep the nav-avatar badge (rendered by account-nav.js) in step with the live count.
+  const av = document.querySelector('.acct-avatar'); if (!av) return;
+  let dot = av.querySelector('.acct-notif-dot');
+  if (unread > 0) {
+    if (!dot) { dot = document.createElement('span'); dot.className = 'acct-notif-dot'; av.appendChild(dot); }
+    dot.textContent = unread > 9 ? '9+' : String(unread);
+  } else if (dot) { dot.remove(); }
+}
+
+async function pollLive() {
+  if (document.hidden) return;
+  let unread = 0;
+  try { unread = (await api('/api/account/notifications')).unread || 0; } catch { return; }
+  setBadge('badgeNotifs', unread);
+  syncNavDot(unread);
+  // If the Messages tab is open, fold in any new staff replies (only re-render when the
+  // thread actually grew, so we don't yank the scroll position while the user is reading).
+  const msgPanel = document.querySelector('[data-panel="messages"]');
+  if (msgPanel && !msgPanel.hidden) {
+    try {
+      const msgs = (await api('/api/account/messages')).messages || [];
+      if (msgs.length > lastMsgCount) { loaded.messages = false; await renderMessages(); }
+    } catch { /* keep current view */ }
+  }
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(pollLive, POLL_MS);
+  // Catch up immediately whenever the user returns to the tab.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pollLive(); });
+}
+
 /* ---------- boot ---------- */
 async function boot() {
   try { ACCOUNT = await me(); } catch { ACCOUNT = null; }
@@ -240,5 +281,6 @@ async function boot() {
   const start = ['orders', 'messages', 'notifications', 'addresses', 'payment', 'profile'].includes(location.hash.slice(1))
     ? location.hash.slice(1) : 'overview';
   selectTab(start);
+  startPolling();
 }
 boot();
