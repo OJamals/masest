@@ -3390,3 +3390,115 @@ fully clickable cards) ---- */
     clip-path: inset(50%);
   }
 }
+
+/* Commerce refinement: keep catalog and product decisions in scan range. */
+body .product-catalog-hero {
+  padding-bottom: clamp(28px, 4vw, 52px);
+}
+
+body .swap-finder-sec {
+  padding-bottom: clamp(28px, 4vw, 46px);
+}
+
+body .swap-finder {
+  padding: clamp(16px, 2vw, 24px);
+}
+
+body .swap-matrix {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body .swap-head {
+  display: none;
+}
+
+body .swap-row {
+  min-height: 0;
+  padding: 10px 12px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  text-align: left;
+}
+
+body .swap-legacy,
+body .swap-job,
+body .swap-vk {
+  min-width: 0;
+}
+
+body .swap-vk {
+  justify-self: start;
+}
+
+body .shop-sec {
+  padding-top: clamp(32px, 5vw, 58px);
+}
+
+body .page-hero {
+  padding-top: clamp(44px, 5vw, 58px);
+  padding-bottom: clamp(38px, 5vw, 54px);
+}
+
+body .page-hero .hero-grid {
+  align-items: start;
+}
+
+body .page-hero .hmis-panel {
+  justify-self: end;
+  max-width: 430px;
+  padding: 24px;
+}
+
+body .page-hero .product-shot {
+  max-height: 240px;
+  width: 100%;
+  object-fit: contain;
+}
+
+main:has(#pMediaSection) > section:not(.page-hero):not(.block-dark) {
+  padding-top: clamp(34px, 4vw, 48px);
+  padding-bottom: clamp(34px, 4vw, 48px);
+}
+
+main:has(#pMediaSection) .section-head {
+  margin-bottom: clamp(22px, 3vw, 34px);
+}
+
+@media (max-width: 720px) {
+  body .catalog-hero-media {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+    gap: 12px;
+  }
+
+  body .catalog-photo-large {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  body .catalog-photo img {
+    aspect-ratio: 1 / 1;
+    max-height: 220px;
+  }
+
+  body .swap-matrix {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 620px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+  }
+
+  body .swap-row {
+    padding: 11px;
+    grid-template-columns: 1fr;
+  }
+
+  body .swap-row > span:not(.swap-legacy):not(.swap-vk),
+  body .swap-job {
+    display: none;
+  }
+}

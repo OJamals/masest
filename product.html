@@ -155,9 +155,19 @@
       .then(async response => {
         if (!response.ok) throw new Error("catalog_unavailable");
         const payload = await response.json();
-        const row = (payload.products || []).find(item => String(item.sku).toLowerCase() === id);
-        if (!row || row.active === false || row.mode !== "buy") return;
-        const variants = (Array.isArray(row.product_variants) && row.product_variants.length ? row.product_variants : [{
+        const row = (payload.products || []).find(item =>
+          String(item.sku).toLowerCase() === id || String(item.products?.sku || "").toLowerCase() === id
+        );
+        const parent = row?.products && typeof row.products === "object" ? row.products : row;
+        if (!row || row.active === false || parent.active === false || (parent.mode || row.mode) !== "buy") return;
+        const variants = (row.vsku ? [{
+          vsku: row.vsku,
+          label: row.label || "Each",
+          price: row.price,
+          currency: row.currency || parent.currency,
+          active: row.active,
+          sort: row.sort || 0,
+        }] : Array.isArray(row.product_variants) && row.product_variants.length ? row.product_variants : [{
           vsku: row.sku,
           label: "Each",
           price: row.price,

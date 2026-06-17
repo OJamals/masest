@@ -83,6 +83,20 @@
       if (!r.ok) return;
       const data = await r.json();
       (data.products || []).forEach(p => {
+        const parent = p.products && typeof p.products === "object" ? p.products : p;
+        if (p.vsku) {
+          const productName = parent.name || p.name || p.sku;
+          const label = p.label || "Each";
+          vmap.set(p.vsku, {
+            name: `${productName} — ${label}`,
+            gallons: Number(p.gallons) || 0,
+            price: p.price == null ? null : Number(p.price),
+            currency: p.currency || parent.currency || "usd",
+            purchasable: parent.active !== false && (parent.mode || p.mode) === "buy" && p.active !== false && p.price != null,
+          });
+          return;
+        }
+
         const variants = Array.isArray(p.product_variants) ? p.product_variants : [];
         if (!variants.length) {
           vmap.set(p.sku, {

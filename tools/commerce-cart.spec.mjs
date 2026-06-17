@@ -56,6 +56,40 @@ test("cart shows server catalog prices and estimated subtotal", async ({ page })
   await expect(page.getByText("$47.50")).toBeVisible();
 });
 
+test("cart accepts flattened connector variant rows", async ({ page }) => {
+  await page.route("**/api/products", async route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [
+        {
+          sku: "crhd-5",
+          vsku: "crhd-5",
+          label: "5 gal pail",
+          gallons: 5,
+          price: 125,
+          currency: "usd",
+          active: true,
+          mode: "buy",
+          name: "VertKleen CRHD",
+          products: { sku: "crhd", name: "VertKleen CRHD", mode: "buy", active: true },
+        },
+      ],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    localStorage.setItem("masest_cart", JSON.stringify({ "crhd-5": 2 }));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+
+  await expect(page.getByText("VertKleen CRHD — 5 gal pail")).toBeVisible();
+  await expect(page.getByText("$125.00 each")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeEnabled();
+  await expect(page.locator("#shipEstOut")).toContainText("10 gal");
+});
+
 test("cart disables direct checkout when quote-only items are present", async ({ page }) => {
   await page.route("**/api/products", async (route) => {
     await route.fulfill({
