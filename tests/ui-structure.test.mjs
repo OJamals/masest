@@ -222,6 +222,15 @@ test("no-js fallback nav stays focused on primary categories", () => {
   }
 });
 
+test("industry generator keeps fallback nav off the removed Programs tab", () => {
+  const generator = read("tools/gen_industries.mjs");
+  const navBlock = generator.match(/const NAV = \[[\s\S]*?\];/);
+  assert.ok(navBlock, "expected generated industry nav source");
+  assert.doesNotMatch(navBlock[0], /Programs/);
+  assert.doesNotMatch(navBlock[0], /programs\.html/);
+  assert.match(navBlock[0], /Use Cases/);
+});
+
 test("no-js fallback groups industries and field results under use cases", () => {
   const pages = ["index.html", "proof.html", "industries.html", "resources.html"];
 

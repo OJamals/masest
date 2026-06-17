@@ -98,10 +98,9 @@ const INDUSTRIES = [
 ];
 
 const NAV = [
-  ["index.html", "Home"],
-  ["products.html", "Products"], ["programs.html", "Programs"],
-  ["proof.html", "Proof"], ["industries.html", "Industries"],
-  ["about.html", "About"], ["contact.html", "Contact"]
+  ["index.html", "MASEST"], ["products.html", "Products"], [null, "Use Cases"],
+  ["industries.html", "Industries"], ["proof.html", "Field Results"],
+  ["resources.html", "Resources"]
 ];
 
 // Per-industry field gallery. Images live at img/industries/<slug>/g{1,2,3}.webp
@@ -204,8 +203,11 @@ function galleryBlock(ind) {
 }
 
 function page(ind) {
-  const nav = NAV.map(([href, label]) =>
-    `    <a href="../${href}"${href === "industries.html" ? ' aria-current="page"' : ""}>${label}</a>`).join("\n");
+  const nav = NAV.map(([href, label]) => {
+    if (!href) return `    <span>${label}</span>`;
+    const content = label === "MASEST" ? `<b>${label}</b>` : label;
+    return `    <a href="../${href}"${href === "industries.html" ? ' aria-current="page"' : ""}>${content}</a>`;
+  }).join("\n");
   const plain = ind.h1.replace(/&amp;/g, "&").replace(/<[^>]+>/g, "");
   return `<!DOCTYPE html>
 <html lang="en">
@@ -215,7 +217,7 @@ function page(ind) {
 <title>${ind.name} | MASEST VertKleen</title>
 <meta name="description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta name="theme-color" content="#fafbfc">
-<link rel="icon" type="image/png" href="../img/favicon-enhanced.png">
+<link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css">
 </head>
