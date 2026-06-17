@@ -42,139 +42,208 @@
      browser scroll). Frame scrub, particle physics, chapter rail.
      Degrades to a stacked, fully-visible layout without JS.
      ============================================================ -->
-<!-- ============================================================
-     STORY: reimagined scrollybook showpiece (GSAP master timeline)
-     One pinned stage, labeled scenes, native scroll, ScrollTrigger snap.
-     ============================================================ -->
-<div class="story" id="story" role="region" aria-label="Why VertKleen replaces hazardous chemicals" data-motion-budget="balanced" data-story-mode="showpiece">
-  <div class="story-scroll" aria-hidden="true">
-    <div class="story-pin">
-      <canvas class="story-canvas" aria-hidden="true"></canvas>
-      <div class="story-grid" aria-hidden="true"></div>
-      <div class="story-vignette" aria-hidden="true"></div>
+<div class="story" id="story" role="region" aria-label="The story of conventional chemicals versus VertKleen">
 
-      <nav class="story-rail" aria-label="Story chapters">
-        <button class="rail-btn is-on" type="button" data-story-label="field" aria-current="step"><b>1</b><span>The enemy</span></button>
-        <button class="rail-btn" type="button" data-story-label="buildup"><b>2</b><span>The buildup</span></button>
-        <button class="rail-btn" type="button" data-story-label="hmis"><b>3</b><span>The score</span></button>
-        <button class="rail-btn" type="button" data-story-label="legacy"><b>4</b><span>The hazard</span></button>
-        <button class="rail-btn safe" type="button" data-story-label="zero"><b>5</b><span>The zero</span></button>
-      </nav>
-
-      <div class="story-scene">
-        <section class="story-copy" data-scene="field">
-          <span class="story-kicker danger">Industrial enemies</span>
-          <h1>Every plant fights the same enemies.</h1>
-          <p>Scale, rust, grease, biofilm, oil, and carbon attack uptime from every side.</p>
-        </section>
-
-        <section class="story-copy" data-scene="buildup">
-          <span class="story-kicker danger">Systems choke slowly</span>
-          <h2>Left alone, the system chokes.</h2>
-          <p>Layers harden, flow narrows, energy climbs, and maintenance crews get pushed toward harsher chemistry.</p>
-        </section>
-
-        <section class="story-copy" data-scene="hmis">
-          <span class="story-kicker">The danger gets a number</span>
-          <h2>HMIS makes the tradeoff visible.</h2>
-          <p>Health, flammability, and reactivity are each scored from 0 to 4. Legacy products often solve one problem by creating another.</p>
-        </section>
-
-        <section class="story-copy" data-scene="legacy">
-          <span class="story-kicker danger">The legacy move</span>
-          <h2>The old answer hits hard.</h2>
-          <p>Acids, caustics, biocides, and solvents can work fast, but they bring fume, burn, storage, and handling risk into the job.</p>
-        </section>
-
-        <section class="story-copy story-copy-zero" data-scene="zero">
-          <span class="story-kicker safe">Enter VertKleen</span>
-          <h2>The same job. <span>Zero hazard.</span></h2>
-          <p>VertKleen is built to replace hazardous industrial chemicals with HMIS 0-0-0 chemistry across the core line.</p>
-        </section>
-
-        <div class="story-layer story-field" data-scene="field">
-          <figure class="field-card" data-card="0">
-            <img src="img/story/scale.webp" alt="Scale narrowing an industrial passage" decoding="async">
-            <figcaption><b>Scale</b><span>Mineral buildup choking transfer.</span></figcaption>
-          </figure>
-          <figure class="field-card" data-card="1">
-            <img src="img/story/rust.webp" alt="Rust on industrial metal" decoding="async">
-            <figcaption><b>Rust</b><span>Oxidation eating steel.</span></figcaption>
-          </figure>
-          <figure class="field-card" data-card="2">
-            <img src="img/story/grease.webp" alt="Grease on industrial equipment" decoding="async">
-            <figcaption><b>Grease</b><span>Films that trap heat and risk.</span></figcaption>
-          </figure>
-          <figure class="field-card" data-card="3">
-            <img src="img/story/grime.webp" alt="Industrial grime and carbon buildup" decoding="async">
-            <figcaption><b>Grime</b><span>Carbon, oil, and residue.</span></figcaption>
-          </figure>
-        </div>
-
-        <div class="story-layer story-buildup" data-scene="buildup">
-          <div class="flow-meter" aria-hidden="true">
-            <div class="pipe-run"><i></i><i></i><i></i></div>
-            <div class="clog c-scale">Scale</div>
-            <div class="clog c-rust">Rust</div>
-            <div class="clog c-grease">Grease</div>
-            <div class="clog c-bio">Biofilm</div>
-          </div>
-        </div>
-
-        <div class="story-layer story-hmis" data-scene="hmis">
-          <div class="hmis-panel">
-            <div class="hmis-face">
-              <span class="hmis-needle"></span>
-              <strong>3</strong>
-              <em>Serious hazard</em>
-            </div>
-            <div class="hmis-bars">
-              <div style="--ax:#3b82f6"><b>Health</b><span><i></i></span><em>0-4</em></div>
-              <div style="--ax:#ef4444"><b>Flammability</b><span><i></i></span><em>0-4</em></div>
-              <div style="--ax:#f5b301"><b>Reactivity</b><span><i></i></span><em>0-4</em></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="story-layer story-legacy" data-scene="legacy">
-          <div class="hazard-scale" aria-hidden="true"><span>0 none</span><span>1</span><span>2</span><span>3 serious</span><span>4 severe</span></div>
-          <div class="chemical-stack">
-            <article class="chem-card" data-chem="hcl"><span>Scale &amp; rust</span><b>Hydrochloric acid</b><em>3&nbsp;0&nbsp;1</em></article>
-            <article class="chem-card" data-chem="naoh"><span>Grease</span><b>Caustic soda</b><em>3&nbsp;0&nbsp;1</em></article>
-            <article class="chem-card" data-chem="glut"><span>Biofilm</span><b>Glutaraldehyde</b><em>3&nbsp;2&nbsp;0</em></article>
-            <article class="chem-card" data-chem="solvent"><span>Oil &amp; carbon</span><b>Chlorinated solvent</b><em>3&nbsp;1&nbsp;1</em></article>
-          </div>
-        </div>
-
-        <div class="story-layer story-zero" data-scene="zero">
-          <div class="zero-mark" aria-label="HMIS zero zero zero">
-            <b>0</b><b>0</b><b>0</b>
-            <span>Health &middot; Flammability &middot; Reactivity</span>
-          </div>
-          <div class="proof-strip" aria-label="Before and after field proof">
-            <figure><img src="img/field/fill-before-enhanced.webp" alt="Cooling tower fill before VertKleen" decoding="async"><img src="img/field/fill-after-enhanced.webp" alt="Cooling tower fill after VertKleen" decoding="async"><figcaption>Cooling fill</figcaption></figure>
-            <figure><img src="img/field/plate-before-enhanced.webp" alt="Plate before VertKleen cleaning" decoding="async"><img src="img/field/plate-after-enhanced.webp" alt="Plate after VertKleen cleaning" decoding="async"><figcaption>Heat transfer</figcaption></figure>
-            <figure><img src="img/field/filters-before-enhanced.webp" alt="Filters before VertKleen cleaning" decoding="async"><img src="img/field/filters-after-enhanced.webp" alt="Filters after VertKleen cleaning" decoding="async"><figcaption>Airflow</figcaption></figure>
-          </div>
-          <p class="savior-procurement">Procurement asks for proof, not theater: field results, SDS documentation, and a quote path tied to your site conditions.</p>
-          <div class="savior-ctas">
-            <a class="btn btn-primary" href="products.html">Meet the Line</a>
-            <a class="btn btn-ghost" href="contact.html?type=audit&amp;source=scrollybook" aria-label="Skip story and request a chemical audit">Request a Chemical Audit</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="scroll-cue"><span>Scroll</span><i class="ph ph-caret-down" aria-hidden="true"></i></div>
+  <!-- Chapter rail (pins for the whole story) -->
+  <div class="story-rail" aria-hidden="true">
+    <div class="rail-inner">
+      <button class="rail-btn" type="button" tabindex="-1"><b>1</b><span>The enemy</span></button>
+      <button class="rail-btn" type="button" tabindex="-1"><b>2</b><span>The buildup</span></button>
+      <button class="rail-btn" type="button" tabindex="-1"><b>3</b><span>The score</span></button>
+      <button class="rail-btn" type="button" tabindex="-1"><b>4</b><span>The chemicals</span></button>
+      <button class="rail-btn" type="button" tabindex="-1"><b>5</b><span>The zero</span></button>
     </div>
   </div>
 
-  <noscript>
-    <div class="story-fallback">
-      <h2>The same job. Zero hazard.</h2>
-      <p>VertKleen replaces hazardous industrial chemicals with HMIS 0-0-0 chemistry across the core line.</p>
-      <a class="btn btn-primary" href="contact.html?type=audit&amp;source=scrollybook">Request a Chemical Audit</a>
+  <!-- ACT 1: THE ENEMY (curated reel of real field photos) -->
+  <section class="act" data-act="1" data-fx="fumes">
+    <div class="stage">
+      <canvas class="fx-canvas" aria-hidden="true"></canvas>
+      <div class="reel" role="group" aria-label="Field photos of industrial scale, rust, grease, and grime">
+        <figure class="reel-slide" data-slide="0">
+          <img src="img/story/scale.webp" alt="Pipe section nearly closed by calcium carbonate scale" fetchpriority="high" decoding="async">
+          <figcaption><b>Scale</b><span>Mineral buildup narrowing the passage.</span></figcaption>
+        </figure>
+        <figure class="reel-slide" data-slide="1">
+          <img src="img/story/rust.webp" alt="Close-up of pitted, oxidized industrial steel" loading="lazy" decoding="async">
+          <figcaption><b>Rust</b><span>Oxidation eating into exposed steel.</span></figcaption>
+        </figure>
+        <figure class="reel-slide" data-slide="2">
+          <img src="img/story/grease.webp" alt="Greasy industrial machinery in a factory" loading="lazy" decoding="async">
+          <figcaption><b>Grease</b><span>Industrial residue coating hard-working equipment.</span></figcaption>
+        </figure>
+        <figure class="reel-slide" data-slide="3">
+          <img src="img/story/grime.webp" alt="Concrete surface stained with grime and water marks" loading="lazy" decoding="async">
+          <figcaption><b>Grime</b><span>Concrete stained by residue and water marks.</span></figcaption>
+        </figure>
+        <span class="reel-tag"><i class="ph ph-camera" aria-hidden="true"></i> From the field</span>
+        <span class="reel-idx">1 / 4</span>
+      </div>
+      <div class="act-copy bl">
+        <span class="kicker danger" data-at="0">What maintenance is up against</span>
+        <h2 class="act-h" data-at="0">Every plant fights the same enemies.</h2>
+        <p class="act-p" data-at="1">Scale that chokes heat transfer. Rust that eats steel. Grease that feeds fire risk. Bacteria that wait in warm water. These are the problems MASEST teams are called in to solve.</p>
+      </div>
+      <div class="scroll-cue"><span>Scroll</span><i class="ph ph-caret-down" aria-hidden="true"></i></div>
     </div>
-  </noscript>
+  </section>
+
+  <!-- ACT 2: THE BUILDUP (ambient debris accumulating inside a pipe) -->
+  <section class="act" data-act="2" data-fx="debris">
+    <div class="stage">
+      <canvas class="fx-canvas" aria-hidden="true"></canvas>
+      <div class="pipe-chips" aria-hidden="true">
+        <span class="chip c-scale" data-at="1"><i></i>Scale</span>
+        <span class="chip c-rust" data-at="2"><i></i>Rust</span>
+        <span class="chip c-grease" data-at="3"><i></i>Grease</span>
+        <span class="chip c-bio" data-at="4"><i></i>Biofilm</span>
+      </div>
+      <div class="act-copy top onscrim" data-at="0">
+        <span class="kicker danger" data-at="0">How it builds</span>
+        <h2 class="act-h" data-at="0">Left alone, the system chokes.</h2>
+        <p class="act-p" data-at="1">Minerals crystallize into scale. Steel oxidizes into rust. Grease films harden. Biofilm spreads &mdash; the living layer that shelters Legionella. Each layer costs energy, capacity, and safety.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACT 3: THE SCORE (what HMIS is, one factor at a time) -->
+  <section class="act act-hmis" id="hmis" data-act="3">
+    <div class="stage">
+      <div class="act-copy top">
+        <span class="kicker" data-at="0">The conventional answer</span>
+        <h2 class="act-h" data-at="0">HMIS gives the danger a number.</h2>
+        <p class="act-p" data-at="1" data-out="2">Crews fight buildup with acids, caustics, and biocides. Industry rates the danger of each one with HMIS, the Hazardous Materials Identification System: three numbers, each from 0 to 4.</p>
+      </div>
+      <div class="hmis-rig">
+        <div class="hmis-factors">
+          <div class="factor f-health" data-at="1">
+            <div class="bar"></div>
+            <span class="fico"><i class="ph ph-heartbeat" aria-hidden="true"></i></span>
+            <span class="flabel">Health</span>
+            <span class="fmeaning">Can it hurt people? 0 means no expected injury. 4 can be life-threatening.</span>
+          </div>
+          <div class="factor f-flam" data-at="2">
+            <div class="bar"></div>
+            <span class="fico"><i class="ph ph-flame" aria-hidden="true"></i></span>
+            <span class="flabel">Flammability</span>
+            <span class="fmeaning">Will it burn? 0 means it will not burn. 4 ignites at room temperature.</span>
+          </div>
+          <div class="factor f-react" data-at="3">
+            <div class="bar"></div>
+            <span class="fico"><i class="ph ph-atom" aria-hidden="true"></i></span>
+            <span class="flabel">Reactivity</span>
+            <span class="fmeaning">Will it react violently? 0 is stable. 4 can detonate.</span>
+          </div>
+        </div>
+        <div class="hmis-scale" data-at="4">
+          <div class="scale-head"><span>Every chemical gets all three scores on this scale</span><span>0 = none &nbsp;&rarr;&nbsp; 4 = severe</span></div>
+          <div class="scale-track"></div>
+          <div class="scale-ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACT 4: THE CHEMICALS (dropped onto the scale one by one) -->
+  <section class="act act-chems" data-act="4">
+    <div class="stage">
+      <div class="act-copy top">
+        <span class="kicker danger" data-at="0" data-out="3">Read the labels</span>
+        <h2 class="act-h" data-at="0" data-out="3">Every enemy forces a hazardous chemical.</h2>
+      </div>
+      <div class="chem-rig">
+        <div class="chem-list" data-at=".15">
+          <div class="chem-card" data-at=".25">
+            <div class="chead">
+              <b><i class="ecue c-scale"></i>Scale &amp; rust</b><span class="vs">Hydrochloric acid</span>
+              <span class="lockup"><em>3</em><em>0</em><em>1</em></span>
+            </div>
+            <p>The legacy move is hydrochloric acid: fast on mineral scale, harsh on skin, metal, and wiring.</p>
+          </div>
+          <div class="chem-card" data-at=".55">
+            <div class="chead">
+              <b><i class="ecue c-grease"></i>Grease</b><span class="vs">Caustic soda</span>
+              <span class="lockup"><em>3</em><em>0</em><em>1</em></span>
+            </div>
+            <p>Caustic soda cuts fat by turning it into soap. On skin, it keeps reacting until fully rinsed.</p>
+          </div>
+          <div class="chem-card" data-at=".85">
+            <div class="chead">
+              <b><i class="ecue c-bio"></i>Bacteria &amp; biofilm</b><span class="vs">Glutrdhde 50%</span>
+              <span class="lockup"><em>3</em><em>2</em><em>0</em></span>
+            </div>
+            <p>Biocides like glutaraldehyde knock back biofilm and the Legionella inside it &mdash; at the cost of inhalation and handling risk.</p>
+          </div>
+          <div class="chem-card" data-at="1.15">
+            <div class="chead">
+              <b><i class="ecue c-solvent"></i>Oil &amp; carbon</b><span class="vs">Chlorinated solvent</span>
+              <span class="lockup"><em>3</em><em>1</em><em>1</em></span>
+            </div>
+            <p>Chlorinated solvents strip oil and carbon fast, then linger as toxic vapor that's hard to ventilate.</p>
+          </div>
+        </div>
+        <div class="chem-scale" data-at="1.55">
+          <div class="scale-track">
+            <div class="cdot" data-dot="0" style="--v:3"><span class="enemy">Rust</span><span class="chem">Muriatic</span></div>
+            <div class="cdot" data-dot="1" style="--v:3"><span class="enemy">Grease</span><span class="chem">Lye</span></div>
+            <div class="cdot" data-dot="2" style="--v:3"><span class="enemy">Biofilm</span><span class="chem">Glut</span></div>
+            <div class="cdot" data-dot="3" style="--v:3"><span class="enemy">Oil</span><span class="chem">Solvent</span></div>
+          </div>
+          <div class="scale-ticks"><span>0 none</span><span>1</span><span>2</span><span>3 serious</span><span>4 severe</span></div>
+        </div>
+        <p class="chem-out" data-at="2.35">Most legacy answers land at <b>3 for health</b>: serious injury is possible after brief exposure.</p>
+        <p class="chem-final" data-at="3">Then make every number fall to <b>zero</b>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACT 5: THE SAVIOR -->
+  <section class="act act-savior" data-act="5" data-fx="motes">
+    <div class="stage">
+      <canvas class="fx-canvas" aria-hidden="true"></canvas>
+      <div class="savior-wrap">
+        <span class="savior-badge" data-at="0"><i class="ph ph-shield-check" aria-hidden="true"></i> Enter VertKleen</span>
+        <h2 data-at="0">The same job. <span class="accent">Zero</span> hazard.</h2>
+        <p class="lede" data-at="1">VertKleen replaces the hazardous step with HMIS 0-0-0 chemistry across the core line: no fumes, no evacuation, and simpler handling for occupied sites.</p>
+        <div class="savior-zero" data-at="2">
+          <div class="z">0</div><div class="z">0</div><div class="z">0</div>
+        </div>
+        <div class="savior-cap" data-at="2">Health &middot; Flammability &middot; Reactivity</div>
+        <div class="savior-proof" data-at="3" aria-label="Before and after photos from the same jobs">
+          <figure class="proof-pair">
+            <div class="proof-pair-frame">
+              <img src="img/field/fill-before-enhanced.webp" alt="Cooling tower fill media before cleaning" decoding="async">
+              <span class="proof-arrow" aria-hidden="true"></span>
+              <img src="img/field/fill-after-enhanced.webp" alt="The same cooling tower fill media, clean" decoding="async">
+            </div>
+            <figcaption><span>Before</span><b>After</b></figcaption>
+          </figure>
+          <figure class="proof-pair">
+            <div class="proof-pair-frame">
+              <img src="img/field/plate-before-enhanced.webp" alt="Diamond-plate floor before rust removal" decoding="async">
+              <span class="proof-arrow" aria-hidden="true"></span>
+              <img src="img/field/plate-after-enhanced.webp" alt="The same diamond-plate floor, restored" decoding="async">
+            </div>
+            <figcaption><span>Before</span><b>After</b></figcaption>
+          </figure>
+          <figure class="proof-pair">
+            <div class="proof-pair-frame">
+              <img src="img/field/filters-before-enhanced.webp" alt="Hood filters before grease removal" decoding="async">
+              <span class="proof-arrow" aria-hidden="true"></span>
+              <img src="img/field/filters-after-enhanced.webp" alt="The same hood filters, grease free" decoding="async">
+            </div>
+            <figcaption><span>Before</span><b>After</b></figcaption>
+          </figure>
+        </div>
+        <div class="savior-proof-cap" data-at="3">Field results from MASEST jobs. Before and after VertKleen.</div>
+        <div class="savior-ctas" data-at="4">
+          <a class="btn btn-primary" href="products.html">Meet the Line</a>
+          <a class="btn btn-ghost" href="contact.html">Request a Quote</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <!-- TRUST STRIP: hairline columns -->

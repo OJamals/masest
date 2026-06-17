@@ -299,26 +299,23 @@ test("about page routes buyers before service breadth", () => {
 
 test("scrolly proof images are not lazy-gated", () => {
   const home = read("index.html");
-  const zeroLayer = home.match(/<div class="story-layer story-zero"[\s\S]*?<\/div>\n      <\/div>/)?.[0] || "";
+  const actFive = home.match(/<section class="act act-savior"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.ok(zeroLayer, "expected zero scrolly layer");
-  assert.match(zeroLayer, /img\/field\/fill-before-enhanced\.webp/);
-  assert.match(zeroLayer, /img\/field\/fill-after-enhanced\.webp/);
-  assert.match(zeroLayer, /img\/field\/plate-before-enhanced\.webp/);
-  assert.match(zeroLayer, /img\/field\/plate-after-enhanced\.webp/);
-  assert.doesNotMatch(zeroLayer, /loading="lazy"/);
+  assert.ok(actFive, "expected act five scrolly section");
+  assert.match(actFive, /img\/field\/fill-before-enhanced\.webp/);
+  assert.match(actFive, /img\/field\/filters-after-enhanced\.webp/);
+  assert.doesNotMatch(actFive, /loading="lazy"/);
+  assert.match(home, /<link rel="preload" as="image" href="img\/field\/fill-before-enhanced\.webp"/);
+  assert.match(home, /<link rel="preload" as="image" href="img\/field\/filters-after-enhanced\.webp"/);
 });
 
 test("scrolly chemical pills stay compact", () => {
-  const home = read("index.html");
-  const css = read("css/story.css");
-  const legacyLayer = home.match(/<div class="story-layer story-legacy"[\s\S]*?<\/div>\n\s*<div class="story-layer story-zero"/)?.[0] || "";
+  const index = read("index.html");
+  const actFour = index.match(/<section class="act act-chems"[\s\S]*?<\/section>/)?.[0];
 
-  assert.ok(legacyLayer, "expected legacy scrolly layer");
-  assert.match(legacyLayer, /class="chem-card"/);
-  assert.match(css, /\.chemical-stack[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(css, /\.chem-card[\s\S]*min-height: 142px/);
-  assert.match(css, /@media \(max-width: 520px\)[\s\S]*\.chem-card:nth-child\(n\+3\)/);
+  assert.ok(actFour, "expected act four scrolly section");
+  assert.match(actFour, /Glutrdhde 50%/);
+  assert.doesNotMatch(actFour, /<span class="vs">Glutaraldehyde 50%<\/span>/);
 });
 
 test("simplified routes avoid black cards and cramped section seams", () => {
