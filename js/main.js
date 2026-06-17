@@ -532,6 +532,8 @@ function renderChrome() {
   window.addEventListener("storage", updateCartCount);
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
+  // Account control: login button when logged out, account dropdown when signed in.
+  import("/js/account-nav.js").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
   const syncNavCtaLabel = () => {
   };
   syncNavCtaLabel();
