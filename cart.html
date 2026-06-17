@@ -25,32 +25,12 @@
   </nav>
 </noscript>
 <main id="main">
-  <section class="page-hero compact">
-    <div class="container split-hero">
-      <div>
-        <h1>Review purchase-ready VertKleen SKUs.</h1>
-        <p class="subhead">Checkout is available only for active priced products. Quote-only items still route through the MASEST quote desk for volume, freight, and documentation.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="products.html">Continue Browsing</a>
-          <a class="btn btn-secondary" href="contact.html?type=quote">Request a Quote</a>
-        </div>
-      </div>
-      <div class="hmis-panel">
-        <span>Cart rules</span>
-        <div class="hmis-grid">
-          <b>DB</b><b>$</b><b>Q</b>
-        </div>
-        <p>Server-priced checkout. Quote route preserved. NET terms require account approval.</p>
-      </div>
-    </div>
-  </section>
-
   <section class="section">
     <div class="container cart-shell">
       <div class="cart-panel">
         <div class="section-head">
           <p class="eyebrow">Order lines</p>
-          <h2>Your cart</h2>
+          <h1>Your cart</h1>
         </div>
         <div id="cartLines" class="cart-lines" aria-live="polite"></div>
         <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
@@ -60,6 +40,16 @@
         <p class="eyebrow">Next step</p>
         <h2>Checkout or quote.</h2>
         <p id="cartStatus" class="cart-status" role="status" aria-live="polite">Cart totals are confirmed at checkout by the server.</p>
+        <div class="ship-est" id="shipEst" hidden>
+          <label class="field-label" for="shipZone">Estimated freight</label>
+          <select id="shipZone" class="cart-input">
+            <option value="east">US East</option>
+            <option value="central">US Central</option>
+            <option value="west">US West</option>
+          </select>
+          <p class="ship-est-out" id="shipEstOut"></p>
+          <p class="ship-est-note">Estimate only — final freight confirmed on your invoice.</p>
+        </div>
         <label class="field-label" for="checkoutEmail">Email for receipt</label>
         <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" placeholder="buyer@company.com">
         <div class="cart-actions">
@@ -74,19 +64,56 @@
 <script type="module">
   import { checkout, clear, items, remove, setQty } from "./js/cart.js";
 
-  const catalogCopy = {
-    hcr: "VertKleen HCR",
-    cr: "VertKleen CR",
+  const money = (n) => new Intl.NumberFormat("en-US", {
+    style: "currency", currency: "USD", maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
+  }).format(Number(n));
+  const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
+    style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
+  }).format(Number(n));
+
+  // vsku -> { name, gallons, price, currency }, flattened from /api/products variants.
+  const vmap = new Map();
+  const fallbackNames = {
     crhd: "VertKleen CR-HD",
-    descaler: "VertKleen Descaler",
-    multiwash: "VertKleen MultiWash",
-    purgo: "VertKleen PURGO",
-    dbnpa: "DBNPA Tablet",
-    lam3: "VertKleen LAM3",
-    alumibrite: "VertKleen AlumiBrite",
-    torque: "VertKleen Torque"
+    hcr: "VertKleen HCR",
   };
+  async function loadCatalog() {
+    try {
+      const r = await fetch("/api/products");
+      if (!r.ok) return;
+      const data = await r.json();
+      (data.products || []).forEach(p => {
+        const variants = Array.isArray(p.product_variants) ? p.product_variants : [];
+        if (!variants.length) {
+          vmap.set(p.sku, {
+            name: p.name,
+            gallons: 0,
+            price: p.price == null ? null : Number(p.price),
+            currency: p.currency || "usd",
+            purchasable: p.active !== false && p.mode === "buy" && p.price != null,
+          });
+          return;
+        }
+        variants.forEach(v => {
+          if (!v || !v.vsku) return;
+          vmap.set(v.vsku, {
+            name: `${p.name} — ${v.label}`,
+            gallons: Number(v.gallons) || 0,
+            price: v.price == null ? null : Number(v.price),
+            currency: v.currency || p.currency || "usd",
+            purchasable: p.active !== false && p.mode === "buy" && v.active !== false && v.price != null,
+          });
+        });
+      });
+    } catch (err) { /* offline: fall back to raw SKUs, no shipping estimate */ }
+  }
+
+  // Example freight rates: per-gallon by US zone, with a handling floor. Owner tunes these.
+  const ZONE_RATE = { east: 3.50, central: 4.25, west: 5.00 };
+  const SHIP_MIN = 35;
+
   const lines = document.getElementById("cartLines");
+  const estimate = document.getElementById("cartEstimate");
   const status = document.getElementById("cartStatus");
   const email = document.getElementById("checkoutEmail");
   const checkoutPay = document.getElementById("checkoutPay");
@@ -130,7 +157,9 @@
   }
 
   function productName(sku) {
-    return catalogCopy[String(sku).toLowerCase()] || sku;
+    const fallback = fallbackNames[String(sku).toLowerCase()];
+    const name = vmap.get(sku)?.name || fallback || sku;
+    return fallback && name === "VertKleen CRHD" ? fallback : name;
   }
 
   function quoteUrl(cartItems) {
@@ -150,10 +179,23 @@
 
   function render() {
     const cartItems = items();
-    setCheckoutDisabled(cartItems.length === 0);
     syncQuoteHref();
+    const hasBlockedLine = cartItems.some(item => {
+      const meta = vmap.get(item.sku);
+      return meta && !meta.purchasable;
+    });
+    setCheckoutDisabled(cartItems.length === 0 || hasBlockedLine);
+    if (hasBlockedLine) {
+      status.dataset.state = "err";
+      status.textContent = "Remove quote-only items before checkout, or send a quote request.";
+    } else if (status.dataset.state === "err" && cartItems.length) {
+      status.dataset.state = "";
+      status.textContent = "Cart totals are confirmed at checkout by the server.";
+    }
     if (!cartItems.length) {
       lines.innerHTML = `<div class="cart-empty"><h3>No products in the cart.</h3><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
+      updateSubtotal();
+      updateShipping();
       return;
     }
     lines.innerHTML = cartItems.map(item => `
@@ -161,7 +203,7 @@
         <div>
           <span class="eyebrow">${item.sku}</span>
           <h3>${productName(item.sku)}</h3>
-          <p>Final price, freight, and tax are confirmed by the checkout API.</p>
+          <p>${vmap.get(item.sku)?.purchasable ? priceMoney(vmap.get(item.sku).price, vmap.get(item.sku).currency) + " each · " : vmap.get(item.sku) ? "Quote required · " : ""}freight + tax confirmed at checkout.</p>
         </div>
         <label>
           <span>Qty</span>
@@ -170,6 +212,39 @@
         <button type="button" class="btn btn-ghost" data-remove="${item.sku}">Remove</button>
       </article>
     `).join("");
+    updateSubtotal();
+    updateShipping();
+  }
+
+  function updateSubtotal() {
+    if (!estimate) return;
+    let subtotal = 0;
+    let hasPrice = false;
+    items().forEach(item => {
+      const meta = vmap.get(item.sku);
+      if (!meta?.purchasable || meta.price == null) return;
+      subtotal += Number(meta.price) * item.qty;
+      hasPrice = true;
+    });
+    estimate.hidden = !hasPrice;
+    if (!hasPrice) return;
+    estimate.innerHTML = `
+      <div><span>Estimated product subtotal</span><strong>${priceMoney(subtotal)}</strong></div>
+      <p>Taxes, shipping, freight, and final availability are confirmed by the server at checkout.</p>
+    `;
+  }
+
+  // Shipping estimate: total gallons (from variants) × per-gallon zone rate, with a handling floor.
+  function updateShipping() {
+    const box = document.getElementById("shipEst");
+    const out = document.getElementById("shipEstOut");
+    if (!box || !out) return;
+    const gallons = items().reduce((s, it) => s + (vmap.get(it.sku)?.gallons || 0) * it.qty, 0);
+    if (!gallons) { box.hidden = true; return; }
+    box.hidden = false;
+    const zone = document.getElementById("shipZone")?.value || "east";
+    const est = Math.max(SHIP_MIN, gallons * (ZONE_RATE[zone] || ZONE_RATE.east));
+    out.textContent = `${gallons} gal → est. ${money(est)}`;
   }
 
   lines.addEventListener("change", event => {
@@ -183,6 +258,8 @@
     if (!sku) return;
     setQty(sku, event.target.value);
     syncQuoteHref();
+    updateSubtotal();
+    updateShipping();
   });
   lines.addEventListener("click", event => {
     const sku = event.target?.dataset?.remove;
@@ -229,112 +306,9 @@
   checkoutPay.addEventListener("click", () => runCheckout("pay"));
   checkoutNet.addEventListener("click", () => runCheckout("net"));
   email?.addEventListener("input", syncQuoteHref);
-  render();
-</script>
-<script type="module">
-  const estimate = document.getElementById("cartEstimate");
-  const lines = document.getElementById("cartLines");
-  const status = document.getElementById("cartStatus");
-  const checkoutPay = document.getElementById("checkoutPay");
-  const checkoutNet = document.getElementById("checkoutNet");
-  const fallbackMoney = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-  let fullCatalog = new Map();
-  let pricedCatalog = new Map();
-
-  function isPurchasable(product) {
-    return product?.active !== false && product?.mode === "buy" && product.price != null;
-  }
-
-  function unitLabel(product) {
-    const currency = String(product.currency || "usd").toUpperCase();
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(product.price));
-  }
-
-  function setCatalogBlock(blocked) {
-    if (!checkoutPay || !checkoutNet || !status) return;
-    if (blocked) {
-      checkoutPay.disabled = true;
-      checkoutNet.disabled = true;
-      status.dataset.catalogBlocked = "true";
-      status.dataset.state = "err";
-      status.textContent = "Remove quote-only items before checkout, or send a quote request.";
-      return;
-    }
-    if (status.dataset.catalogBlocked === "true") {
-      delete status.dataset.catalogBlocked;
-      status.dataset.state = "";
-      status.textContent = "Cart totals are confirmed at checkout by the server.";
-      const hasLines = Boolean(lines?.querySelector(".cart-line"));
-      checkoutPay.disabled = !hasLines;
-      checkoutNet.disabled = !hasLines;
-    }
-  }
-
-  function enhanceCartPricing() {
-    if (!estimate || !lines || !fullCatalog.size) return;
-
-    let subtotal = 0;
-    let hasPrice = false;
-    let hasBlockedLine = false;
-    for (const line of lines.querySelectorAll(".cart-line")) {
-      const input = line.querySelector("input[data-qty]");
-      const sku = input?.dataset.qty;
-      const catalogProduct = fullCatalog.get(sku);
-      const product = pricedCatalog.get(sku);
-      const body = line.querySelector("div");
-      body?.querySelector("[data-cart-price]")?.remove();
-      if (!body) continue;
-      if (!isPurchasable(catalogProduct)) {
-        hasBlockedLine = true;
-        const note = document.createElement("span");
-        note.className = "cart-line-price cart-line-price-muted";
-        note.dataset.cartPrice = "";
-        note.textContent = "Quote required";
-        body.appendChild(note);
-        continue;
-      }
-      if (!product) continue;
-
-      const qty = Math.max(1, Number.parseInt(input.value, 10) || 1);
-      subtotal += Number(product.price) * qty;
-      hasPrice = true;
-
-      const note = document.createElement("span");
-      note.className = "cart-line-price";
-      note.dataset.cartPrice = "";
-      note.textContent = `${unitLabel(product)} each`;
-      body.appendChild(note);
-    }
-
-    estimate.hidden = !hasPrice;
-    if (hasPrice) {
-      estimate.innerHTML = `
-        <div><span>Estimated product subtotal</span><strong>${fallbackMoney.format(subtotal)}</strong></div>
-        <p>Taxes, shipping, freight, and final availability are confirmed by the server at checkout.</p>
-      `;
-    }
-    setCatalogBlock(hasBlockedLine);
-  }
-
-  async function loadPricing() {
-    try {
-      const response = await fetch("/api/products", { headers: { Accept: "application/json" }, cache: "no-store" });
-      if (!response.ok) return;
-      const payload = await response.json();
-      fullCatalog = new Map((payload.products || [])
-        .map((product) => [String(product.sku).toLowerCase(), product]));
-      pricedCatalog = new Map((payload.products || [])
-        .filter((product) => product.mode === "buy" && product.price != null)
-        .map((product) => [String(product.sku).toLowerCase(), product]));
-      enhanceCartPricing();
-    } catch {
-      if (estimate) estimate.hidden = true;
-    }
-  }
-
-  lines?.addEventListener("input", enhanceCartPricing);
-  if (lines) new MutationObserver(enhanceCartPricing).observe(lines, { childList: true });
-  loadPricing();
+  document.getElementById("shipZone")?.addEventListener("change", updateShipping);
+  render(); // fast first paint with raw SKUs
+  loadCatalog().then(render); // re-render with variant names + shipping once catalog loads
 </script>
 </body>
 </html>

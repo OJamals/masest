@@ -16,27 +16,41 @@ export default async (req) => {
   const mode = body.mode === 'net' ? 'net' : 'pay';
   if (!wanted.length) return json(400, { error: 'cart_empty' });
 
+  // Cart keys are variant SKUs (vsku). Re-price from product_variants, not the parent product.
   const skus = [...new Set(wanted.map((i) => String(i.sku)))];
   const qtyBySku = Object.fromEntries(wanted.map((i) => [String(i.sku), Math.max(1, parseInt(i.qty, 10) || 1)]));
 
   const sb = adminClient();
-  const { data: products, error } = await sb
-    .from('products')
-    .select('sku,name,mode,active,price,currency,taxable,stripe_price_id')
-    .in('sku', skus);
+  const { data: variants, error } = await sb
+    .from('product_variants')
+    .select('vsku,label,price,currency,stripe_price_id,active,products(name,mode,active,taxable)')
+    .in('vsku', skus);
   if (error) return json(500, { error: error.message });
 
-  // Validate every requested SKU is sellable and priced.
+  // Validate: variant active + priced, and its parent product active + mode 'buy'.
+  // `sellable` rows are shaped like the old product rows (sku=vsku, name="Product — label")
+  // so the Stripe / order / metadata code below is unchanged.
   const sellable = [];
   const rejected = [];
-  for (const sku of skus) {
-    const p = products?.find((x) => x.sku === sku);
-    if (!p || !p.active || p.mode !== 'buy' || p.price == null) rejected.push(sku);
-    else sellable.push(p);
+  for (const vsku of skus) {
+    const v = variants?.find((x) => x.vsku === vsku);
+    const prod = v?.products;
+    if (!v || v.active === false || v.price == null || !prod || prod.active === false || prod.mode !== 'buy') {
+      rejected.push(vsku);
+    } else {
+      sellable.push({
+        sku: v.vsku,
+        name: `${prod.name} — ${v.label}`,
+        price: v.price,
+        currency: v.currency || 'usd',
+        taxable: prod.taxable,
+        stripe_price_id: v.stripe_price_id,
+      });
+    }
   }
   if (rejected.length) {
     return json(409, { error: 'not_purchasable', skus: rejected,
-      message: 'These SKUs are quote-only or not yet priced. Use the quote form.' });
+      message: 'These items are quote-only or not yet priced. Use the quote form.' });
   }
 
   // --- NET terms path (approved B2B only) ---
@@ -107,7 +121,7 @@ export default async (req) => {
     metadata: {
       company_id: companyId || '',
       buyer_email: body.email || user?.email || '',
-      cart: JSON.stringify(sellable.map((p) => ({ sku: p.sku, qty: qtyBySku[p.sku], unit_price: Number(p.price) }))),
+      cart: JSON.stringify(sellable.map((p) => ({ sku: p.sku, name: p.name, qty: qtyBySku[p.sku], unit_price: Number(p.price) }))),
     },
   });
 

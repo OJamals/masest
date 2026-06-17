@@ -120,12 +120,10 @@ export default async (req) => {
       ship_address: s.shipping_details || s.customer_details || null,
     }).select('id').single();
 
-    // resolve proper product names (metadata cart is kept compact)
+    // Cart keys are variant SKUs; names come from checkout metadata ("Product — 55 gal drum").
     let lines = [];
     if (cart.length) {
-      const { data: prods } = await sb.from('products').select('sku,name').in('sku', cart.map((c) => c.sku));
-      const nameBySku = Object.fromEntries((prods || []).map((p) => [p.sku, p.name]));
-      lines = cart.map((c) => ({ sku: c.sku, name: nameBySku[c.sku] || c.sku, qty: c.qty, unit_price: c.unit_price }));
+      lines = cart.map((c) => ({ sku: c.sku, name: c.name || c.sku, qty: c.qty, unit_price: c.unit_price }));
       if (order) {
         await sb.from('order_items').insert(lines.map((l) => ({
           order_id: order.id, sku: l.sku, name: l.name, qty: l.qty,

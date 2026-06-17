@@ -21,8 +21,8 @@ test("checkout connector carries buyer email and cart metadata into Stripe", () 
   expect(params.metadata.company_id).toBe("company_123");
   expect(params.metadata.buyer_email).toBe("buyer@example.com");
   expect(JSON.parse(params.metadata.cart)).toEqual([
-    { sku: "crhd", qty: 4, unit_price: 12.5 },
-    { sku: "hcr", qty: 2, unit_price: 10 },
+    { sku: "crhd", name: "VertKleen CR-HD", qty: 4, unit_price: 12.5 },
+    { sku: "hcr", name: "VertKleen HCR", qty: 2, unit_price: 10 },
   ]);
   expect(params.line_items).toEqual([
     {
