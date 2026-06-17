@@ -153,6 +153,14 @@ export async function onRequestPost({ request, env }) {
     await sendOrderConfirmation({ env, session: s, order, lines, subtotal, tax, total });
     // Decrement inventory for stock-tracked SKUs (best-effort; never fails the webhook).
     if (order && lines.length) await decrementStock(sb, lines);
+    // Notify the buyer's company that the order was received (feeds the dashboard + nav badge).
+    if (order && s.metadata?.company_id) {
+      await sb.from('notifications').insert({
+        company_id: s.metadata.company_id, type: 'order', title: 'Order received',
+        body: `We received your order (${(s.currency || 'usd').toUpperCase()} ${total.toFixed(2)}) and are processing it.`,
+        link: '/dashboard.html#orders',
+      }).then(() => {}, () => {});
+    }
     // TODO Phase 3: QBO sales receipt.
   }
 

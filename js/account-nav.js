@@ -37,7 +37,9 @@ function injectStyle() {
   .acct-dd > summary::-webkit-details-marker { display:none; }
   .acct-dd > summary:hover { border-color:var(--ink,#15171c); }
   .nav.over-dark .acct-dd > summary { color:#fff; border-color:rgba(255,255,255,.35); }
-  .acct-avatar { width:26px; height:26px; border-radius:50%; background:var(--accent,#0e7c86); color:#fff; display:grid; place-items:center; font-size:.8rem; font-weight:800; }
+  .acct-avatar { position:relative; width:26px; height:26px; border-radius:50%; background:var(--accent,#0e7c86); color:#fff; display:grid; place-items:center; font-size:.8rem; font-weight:800; }
+  .acct-notif-dot { position:absolute; top:-4px; right:-4px; min-width:15px; height:15px; padding:0 3px; border-radius:999px; background:#b42318; color:#fff; font-size:.58rem; font-weight:800; display:grid; place-items:center; line-height:1; box-shadow:0 0 0 2px var(--surface,#fff); }
+  .nav.over-dark .acct-notif-dot { box-shadow:0 0 0 2px #0b0d12; }
   .acct-name { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .acct-dd-menu { position:absolute; right:0; top:calc(100% + 10px); min-width:210px; background:var(--surface,#fff);
     border:1px solid var(--line,#e4e6e9); border-radius:var(--r-card,16px); box-shadow:0 18px 40px -16px rgba(0,0,0,.28); padding:8px; z-index:120; }
@@ -67,9 +69,9 @@ export async function initAccountNav({ nav, root = '' } = {}) {
   injectStyle();
 
   // Only load the Supabase SDK + call me() when a session exists; otherwise render Sign in instantly.
-  let logout, data = null;
+  let logout, api, data = null;
   if (hasSession()) {
-    try { const m = await import('./auth.js'); logout = m.logout; data = await m.me(); } catch { data = null; }
+    try { const m = await import('./auth.js'); logout = m.logout; api = m.api; data = await m.me(); } catch { data = null; }
   }
 
   const mount = document.createElement('div');
@@ -91,6 +93,19 @@ export async function initAccountNav({ nav, root = '' } = {}) {
 
   const burger = actions.querySelector('.nav-burger');
   actions.insertBefore(mount, burger || null);
+
+  // Unread notification badge on the avatar (non-blocking; signed-in full accounts only).
+  if (api && data && !data.needs_profile) {
+    api('/api/account/notifications').then(({ unread }) => {
+      const av = mount.querySelector('.acct-avatar');
+      if (av && unread > 0) {
+        const dot = document.createElement('span');
+        dot.className = 'acct-notif-dot';
+        dot.textContent = unread > 9 ? '9+' : String(unread);
+        av.appendChild(dot);
+      }
+    }).catch(() => {});
+  }
 
   const out = mount.querySelector('.acct-signout');
   if (out) out.addEventListener('click', async () => { try { await logout(); } catch {} location.href = `${root}account.html`; });
