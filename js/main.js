@@ -1118,6 +1118,16 @@ function initQuoteForm() {
     if (msg && !msg.value) msg.value = "Please send the " + doc + (pre ? " for " + pre : "") + ".";
     if (type) type.value = "technical";
   }
+  const messageParam = params.get("message");
+  if (messageParam) {
+    const msg = form.querySelector('[name="message"]');
+    if (msg && !msg.value) msg.value = messageParam;
+  }
+  const emailParam = params.get("email");
+  if (emailParam) {
+    const email = form.querySelector('#fEmail[name="email"]');
+    if (email && !email.value) email.value = emailParam;
+  }
   const indParam = params.get("industry");
   if (indParam) {
     const isel = form.querySelector('[name="industry"]');

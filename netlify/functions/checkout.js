@@ -106,6 +106,7 @@ export default async (req) => {
     cancel_url: `${appUrl}/cart.html`,
     metadata: {
       company_id: companyId || '',
+      buyer_email: body.email || user?.email || '',
       cart: JSON.stringify(sellable.map((p) => ({ sku: p.sku, qty: qtyBySku[p.sku], unit_price: Number(p.price) }))),
     },
   });

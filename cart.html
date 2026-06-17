@@ -53,6 +53,7 @@
           <h2>Your cart</h2>
         </div>
         <div id="cartLines" class="cart-lines" aria-live="polite"></div>
+        <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
       </div>
 
       <aside class="cart-summary" aria-label="Cart checkout">
@@ -64,7 +65,7 @@
         <div class="cart-actions">
           <button class="btn btn-primary" id="checkoutPay" type="button">Card / ACH Checkout</button>
           <button class="btn btn-secondary" id="checkoutNet" type="button">Use NET Terms</button>
-          <a class="btn btn-ghost" href="contact.html?type=quote">Send Quote Request</a>
+          <a class="btn btn-ghost" id="checkoutQuote" href="contact.html?type=quote">Send Quote Request</a>
         </div>
       </aside>
     </div>
@@ -90,6 +91,7 @@
   const email = document.getElementById("checkoutEmail");
   const checkoutPay = document.getElementById("checkoutPay");
   const checkoutNet = document.getElementById("checkoutNet");
+  const checkoutQuote = document.getElementById("checkoutQuote");
 
   // NET terms require an approved business account. Pull the Supabase session token
   // (persisted in localStorage from a prior account.html login). Returns null if the
@@ -131,9 +133,25 @@
     return catalogCopy[String(sku).toLowerCase()] || sku;
   }
 
+  function quoteUrl(cartItems) {
+    const params = new URLSearchParams({ type: "quote" });
+    const receiptEmail = email?.value?.trim();
+    if (receiptEmail) params.set("email", receiptEmail);
+    if (cartItems.length) {
+      params.set("cart", cartItems.map((item) => `${item.sku}:${item.qty}`).join(","));
+      params.set("message", `Cart quote request: ${cartItems.map((item) => `${productName(item.sku)} x ${item.qty}`).join("; ")}.`);
+    }
+    return `contact.html?${params.toString()}`;
+  }
+
+  function syncQuoteHref() {
+    if (checkoutQuote) checkoutQuote.href = quoteUrl(items());
+  }
+
   function render() {
     const cartItems = items();
     setCheckoutDisabled(cartItems.length === 0);
+    syncQuoteHref();
     if (!cartItems.length) {
       lines.innerHTML = `<div class="cart-empty"><h3>No products in the cart.</h3><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
       return;
@@ -159,6 +177,12 @@
     if (!sku) return;
     setQty(sku, event.target.value);
     render();
+  });
+  lines.addEventListener("input", event => {
+    const sku = event.target?.dataset?.qty;
+    if (!sku) return;
+    setQty(sku, event.target.value);
+    syncQuoteHref();
   });
   lines.addEventListener("click", event => {
     const sku = event.target?.dataset?.remove;
@@ -204,7 +228,113 @@
 
   checkoutPay.addEventListener("click", () => runCheckout("pay"));
   checkoutNet.addEventListener("click", () => runCheckout("net"));
+  email?.addEventListener("input", syncQuoteHref);
   render();
+</script>
+<script type="module">
+  const estimate = document.getElementById("cartEstimate");
+  const lines = document.getElementById("cartLines");
+  const status = document.getElementById("cartStatus");
+  const checkoutPay = document.getElementById("checkoutPay");
+  const checkoutNet = document.getElementById("checkoutNet");
+  const fallbackMoney = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+  let fullCatalog = new Map();
+  let pricedCatalog = new Map();
+
+  function isPurchasable(product) {
+    return product?.active !== false && product?.mode === "buy" && product.price != null;
+  }
+
+  function unitLabel(product) {
+    const currency = String(product.currency || "usd").toUpperCase();
+    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(product.price));
+  }
+
+  function setCatalogBlock(blocked) {
+    if (!checkoutPay || !checkoutNet || !status) return;
+    if (blocked) {
+      checkoutPay.disabled = true;
+      checkoutNet.disabled = true;
+      status.dataset.catalogBlocked = "true";
+      status.dataset.state = "err";
+      status.textContent = "Remove quote-only items before checkout, or send a quote request.";
+      return;
+    }
+    if (status.dataset.catalogBlocked === "true") {
+      delete status.dataset.catalogBlocked;
+      status.dataset.state = "";
+      status.textContent = "Cart totals are confirmed at checkout by the server.";
+      const hasLines = Boolean(lines?.querySelector(".cart-line"));
+      checkoutPay.disabled = !hasLines;
+      checkoutNet.disabled = !hasLines;
+    }
+  }
+
+  function enhanceCartPricing() {
+    if (!estimate || !lines || !fullCatalog.size) return;
+
+    let subtotal = 0;
+    let hasPrice = false;
+    let hasBlockedLine = false;
+    for (const line of lines.querySelectorAll(".cart-line")) {
+      const input = line.querySelector("input[data-qty]");
+      const sku = input?.dataset.qty;
+      const catalogProduct = fullCatalog.get(sku);
+      const product = pricedCatalog.get(sku);
+      const body = line.querySelector("div");
+      body?.querySelector("[data-cart-price]")?.remove();
+      if (!body) continue;
+      if (!isPurchasable(catalogProduct)) {
+        hasBlockedLine = true;
+        const note = document.createElement("span");
+        note.className = "cart-line-price cart-line-price-muted";
+        note.dataset.cartPrice = "";
+        note.textContent = "Quote required";
+        body.appendChild(note);
+        continue;
+      }
+      if (!product) continue;
+
+      const qty = Math.max(1, Number.parseInt(input.value, 10) || 1);
+      subtotal += Number(product.price) * qty;
+      hasPrice = true;
+
+      const note = document.createElement("span");
+      note.className = "cart-line-price";
+      note.dataset.cartPrice = "";
+      note.textContent = `${unitLabel(product)} each`;
+      body.appendChild(note);
+    }
+
+    estimate.hidden = !hasPrice;
+    if (hasPrice) {
+      estimate.innerHTML = `
+        <div><span>Estimated product subtotal</span><strong>${fallbackMoney.format(subtotal)}</strong></div>
+        <p>Taxes, shipping, freight, and final availability are confirmed by the server at checkout.</p>
+      `;
+    }
+    setCatalogBlock(hasBlockedLine);
+  }
+
+  async function loadPricing() {
+    try {
+      const response = await fetch("/api/products", { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      fullCatalog = new Map((payload.products || [])
+        .map((product) => [String(product.sku).toLowerCase(), product]));
+      pricedCatalog = new Map((payload.products || [])
+        .filter((product) => product.mode === "buy" && product.price != null)
+        .map((product) => [String(product.sku).toLowerCase(), product]));
+      enhanceCartPricing();
+    } catch {
+      if (estimate) estimate.hidden = true;
+    }
+  }
+
+  lines?.addEventListener("input", enhanceCartPricing);
+  if (lines) new MutationObserver(enhanceCartPricing).observe(lines, { childList: true });
+  loadPricing();
 </script>
 </body>
 </html>

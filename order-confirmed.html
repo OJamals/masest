@@ -69,7 +69,12 @@
   const session = new URLSearchParams(location.search).get("session_id");
   const summary = document.getElementById("sessionSummary");
   if (session) {
-    summary.textContent = "Checkout session " + session.slice(0, 18) + " is recorded for follow-up.";
+    localStorage.removeItem("masest_cart");
+    document.querySelectorAll("[data-cart-count]").forEach((count) => {
+      count.textContent = "0";
+      count.hidden = true;
+    });
+    summary.textContent = "Checkout session ending " + session.slice(-16) + " is recorded for follow-up.";
   }
 </script>
 </body>

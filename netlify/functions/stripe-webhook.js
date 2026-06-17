@@ -3,6 +3,7 @@
 // event checkout.session.completed. Put the signing secret in STRIPE_WEBHOOK_SECRET.
 import Stripe from 'stripe';
 import { adminClient, json } from '../lib/supabase.js';
+import { buyerEmailFromStripeSession } from '../lib/checkout-session.js';
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) =>
@@ -14,7 +15,7 @@ function escapeHtml(value) {
 // the session has no buyer email. RESEND_FROM must be a Resend-verified sender.
 async function sendOrderConfirmation({ session, order, lines, subtotal, tax, total }) {
   const apiKey = process.env.RESEND_API_KEY;
-  const to = session.customer_details?.email || session.customer_email;
+  const to = buyerEmailFromStripeSession(session);
   if (!apiKey || !to) return;
 
   const from = process.env.RESEND_FROM || 'MASEST Orders <orders@masest.co>';

@@ -43,6 +43,7 @@
         <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
         <a class="btn btn-ghost" href="contact.html?type=distributor">Become a Distributor</a>
       </div>
+      <p class="cart-feedback" id="pCartFeedback" role="status" aria-live="polite" hidden></p>
     </div>
     <div class="hmis-panel">
       <img id="pImage" class="product-shot" src="img/products/hvac-hcr.webp" alt="" hidden>
@@ -149,6 +150,7 @@
     document.getElementById("pQuoteBtn").href = quoteHref;
     document.getElementById("pQuoteBtn2").href = quoteHref;
     const buyBtn = document.getElementById("pBuyBtn");
+    const cartFeedback = document.getElementById("pCartFeedback");
     fetch("/api/products", { headers: { Accept: "application/json" }, cache: "no-store" })
       .then(async response => {
         if (!response.ok) throw new Error("catalog_unavailable");
@@ -167,10 +169,13 @@
           const original = buyBtn.textContent;
           buyBtn.disabled = true;
           buyBtn.textContent = "Adding...";
+          cartFeedback.hidden = true;
           try {
             const cart = await import("./js/cart.js");
             cart.add(id, 1);
             buyBtn.textContent = "Added";
+            cartFeedback.hidden = false;
+            cartFeedback.innerHTML = `Added to cart. <a href="cart.html">Review cart</a>`;
             setTimeout(() => {
               buyBtn.textContent = original;
               buyBtn.disabled = false;

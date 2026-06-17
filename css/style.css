@@ -238,7 +238,7 @@ one accent) ---------- */
 .btn:active { transform: scale(.97); }
 .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(10,91,98,.25), 0 8px 20px -8px rgba(14,124,134,.55); }
 .btn-primary:hover { background: var(--accent-ink); box-shadow: 0 2px 4px rgba(10,91,98,.28), 0 14px 28px -10px rgba(14,124,134,.62); transform: translateY(-1px); }
-.btn:disabled { cursor: progress; opacity: .68; transform: none; box-shadow: none; }
+.btn:disabled { cursor: not-allowed; opacity: .55; transform: none; box-shadow: none; filter: grayscale(.25); }
 .btn[hidden] { display: none !important; } /* .btn sets display:inline-flex, which otherwise overrides the hidden attr (e.g. self-gated #pBuyBtn) */
 .btn-ink {
   background: var(--surface);
@@ -310,6 +310,17 @@ scoped to the hero */
 .hero-copy .subhead { margin: 22px 0 34px; max-width: 30ch; }
 .contact-hero .subhead { margin-top: clamp(32px, 4vw, 48px); }
 .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+.cart-feedback {
+  margin-top: 14px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.cart-feedback[hidden] { display: none !important; }
+.cart-feedback a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 /* Signature Triple-Zero lockup: the brand argument as the hero's hero. */
 .zero-card {
@@ -3225,6 +3236,52 @@ fully clickable cards) ---- */
   padding: 24px;
 }
 .cart-lines { display: grid; gap: 14px; }
+
+.cart-line-price {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: .86rem;
+  font-weight: 700;
+}
+
+.cart-estimate {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.cart-estimate[hidden] { display: none !important; }
+
+.cart-estimate div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: var(--ink);
+}
+
+.cart-estimate span {
+  color: var(--muted);
+  font-size: .86rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.cart-estimate strong {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.cart-estimate p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.45;
+}
 .cart-line {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 84px auto;
@@ -3278,6 +3335,18 @@ fully clickable cards) ---- */
 }
 .cart-empty h3 { color: var(--ink); margin-bottom: 8px; }
 .confirmation-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.confirmation-grid .route-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 118px;
+}
+.confirmation-grid .route-card i {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.confirmation-grid .route-card span,
+.confirmation-grid .route-card b {
+  grid-column: 1;
+}
 
 @media (max-width: 860px) {
   .cart-shell,
