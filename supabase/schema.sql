@@ -175,3 +175,17 @@ create policy order_items_company on public.order_items
 -- NOTE: inserts/updates to companies/profiles/orders are done by the service-role key in
 -- serverless functions (bypasses RLS). No insert policies for anon/auth = default deny,
 -- which prevents client-side tampering with approval status, prices, or order totals.
+
+-- ---------- GRANTS ----------
+-- Required: Supabase's default-privilege auto-grant did not fire for these tables, so the
+-- roles (incl. service_role) start with no table access. service_role bypasses RLS but still
+-- needs table GRANTs. Without this block every query returns "permission denied".
+grant usage on schema public to service_role;
+grant all privileges on all tables in schema public to service_role;
+grant all privileges on all sequences in schema public to service_role;
+
+grant usage on schema public to anon, authenticated;
+grant select on public.products to anon, authenticated;
+grant select on public.companies, public.profiles, public.addresses,
+                public.orders, public.order_items to authenticated;
+grant insert, update on public.addresses to authenticated;
