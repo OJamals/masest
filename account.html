@@ -104,6 +104,19 @@
         </form>
       </div>
 
+      <!-- Email confirmed but company/profile not yet created: finish setup -->
+      <div class="form-card" id="completeCard" hidden>
+        <h2 class="acct-title">Finish setting up</h2>
+        <p class="acct-sub">Your email is confirmed. Add your company to complete your business account.</p>
+        <div class="field"><label for="cCompany">Company *</label><input id="cCompany" type="text" placeholder="Gulf Coast Mechanical" required></div>
+        <div class="field" style="margin-top:12px"><label for="cName">Full name</label><input id="cName" type="text" placeholder="Marisol Vega"></div>
+        <div class="field" style="margin-top:12px"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="(727) 348-6519"></div>
+        <label class="checkbox-row"><input type="checkbox" id="cExempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
+        <button type="button" class="btn btn-primary" id="cBtn" style="margin-top:18px;width:100%">Finish setup</button>
+        <p class="acct-status" id="cStatus" role="status" aria-live="polite"></p>
+        <button type="button" class="btn btn-ghost btn-sm" id="cLogout" style="margin-top:10px">Sign out</button>
+      </div>
+
       <!-- Signed-in summary -->
       <div class="form-card" id="acctSummary" hidden>
         <h2 class="headline" style="font-size:1.5rem;margin-bottom:4px">Account</h2>
@@ -210,7 +223,13 @@
 
   function setStatus(el, msg, state) { el.textContent = msg; el.dataset.state = state || ""; }
 
+  const completeCard = $("completeCard");
+  function showComplete() {
+    authBox.hidden = true; summary.hidden = true; completeCard.hidden = false;
+    $("cCompany").focus();
+  }
   function showSummary(data) {
+    completeCard.hidden = true;
     if (!data) { authBox.hidden = false; summary.hidden = true; return; }
     authBox.hidden = true; summary.hidden = false;
     $("smEmail").textContent = data.email || "—";
@@ -252,9 +271,30 @@
     await completePendingRegistration();
     let data = null;
     try { data = await me(); } catch (e) {}
+    if (data && data.needs_profile) { showComplete(); return; }
     showSummary(data);
     if (data) renderOrders();
   }
+
+  // Finish setup for a confirmed user that has no company/profile yet.
+  $("cBtn").addEventListener("click", async () => {
+    const status = $("cStatus");
+    const name = $("cCompany").value.trim();
+    if (!name) { setStatus(status, "Enter your company name.", "err"); return; }
+    setStatus(status, "Finishing…", "");
+    try {
+      await completeRegistration({
+        company: { name, tax_exempt: $("cExempt").checked },
+        profile: { full_name: $("cName").value.trim() || null, phone: $("cPhone").value.trim() || null },
+      });
+      setStatus(status, "Account created.", "ok");
+      await refresh();
+    } catch (e) {
+      setStatus(status, e.message === "already_registered" ? "Already set up — reloading…" : "Could not finish: " + (e.message || "try again"), "err");
+      if (e.message === "already_registered") await refresh();
+    }
+  });
+  $("cLogout").addEventListener("click", async () => { await logout(); showSummary(null); });
 
   $("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -316,7 +356,11 @@
     if (hash.length < 2) return;
     const params = new URLSearchParams(hash.slice(1));
     const err = params.get("error_code") || params.get("error");
-    if (!err) return; // success (#access_token) is auto-consumed by supabase-js; refresh() picks it up
+    if (!err) {
+      // Success: email confirmed / signed in. supabase-js consumes the token; show a confirmation.
+      if (params.get("access_token")) { history.replaceState(null, "", location.pathname); showBanner("Email confirmed — you’re signed in."); }
+      return;
+    }
     history.replaceState(null, "", location.pathname); // clear hash so reload doesn't repeat
     const desc = (params.get("error_description") || "").replace(/\+/g, " ");
     const expired = /expired|invalid|otp/i.test(err + " " + desc);
@@ -324,6 +368,14 @@
       expired ? "That confirmation link expired or was already used. Enter your email and resend below."
               : (desc || "Sign-in link error."), "err");
     showResend();
+  }
+  function showBanner(msg) {
+    const wrap = document.querySelector(".acct-wrap");
+    if (!wrap || $("acctBanner")) return;
+    const el = document.createElement("div");
+    el.id = "acctBanner"; el.textContent = msg;
+    el.style.cssText = "background:var(--accent-soft);color:var(--accent-ink);border-radius:var(--r-card);padding:14px 18px;margin-bottom:18px;font-weight:600;font-size:.95rem;max-width:440px;";
+    wrap.insertBefore(el, wrap.firstChild);
   }
   function showResend() {
     if ($("resendWrap")) return;

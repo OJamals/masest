@@ -81,7 +81,12 @@ export async function me() {
   const token = data.session?.access_token;
   if (!token) return null;
   const r = await fetch('/api/account/me', { headers: { Authorization: `Bearer ${token}` } });
-  return r.ok ? r.json() : null;
+  if (r.ok) return r.json();
+  // Authenticated but no company/profile yet (email confirmed before the company step ran):
+  // surface it so the page can offer a "finish setup" form instead of looking logged-out.
+  const body = await r.json().catch(() => null);
+  if (r.status === 404 && body?.error === 'no_profile') return { needs_profile: true, email: body.email };
+  return null;
 }
 
 /* Recent orders for the signed-in account (company orders + line items), or [] if logged out. */
