@@ -12,7 +12,12 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/story.css">
 <style>
-  .acct-wrap { max-width: 560px; margin: 0 auto; }
+  .acct-wrap { max-width: 440px; margin: 0 auto; }
+  /* Focused single-column auth: side-by-side email/password reads as an awkward wide sheet. */
+  #acctAuth .field-grid { grid-template-columns: 1fr; gap: 14px; }
+  #acctAuth .form-card { padding: 26px 24px; }
+  /* Cloudflare Turnstile renders a flexible-width iframe; keep it inside the card and tidy. */
+  .acct-pane .cf-turnstile { max-width: 100%; overflow: hidden; border-radius: var(--r-input); }
   .acct-pane[hidden] { display: none; }
   .acct-status { margin-top: 14px; font-size: .9rem; font-weight: 600; min-height: 1em; }
   .acct-status[data-state=ok] { color: var(--accent-ink); }
@@ -26,6 +31,11 @@
   .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; font-size: .9rem; }
   .checkbox-row input { width: auto; margin-top: 3px; accent-color: var(--accent); }
   .acct-foot-note { margin-top: 16px; font-size: .82rem; color: var(--ink-soft); }
+  .acct-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .acct-sub { font-size: .9rem; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.45; }
+  .acct-switch { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); font-size: .9rem; color: var(--ink-soft); text-align: center; }
+  .acct-switch button { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--accent-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .acct-switch button:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -52,25 +62,26 @@
   <section class="section section-slim">
     <div class="wrap acct-wrap">
 
-      <!-- Signed-out: tabbed sign in / register -->
+      <!-- Signed-out: sign in (primary) with a link to register -->
       <div id="acctAuth">
-        <div class="cta-chooser" role="group" aria-label="Account">
-          <button type="button" class="cta-choice active" data-pane="login" aria-pressed="true"><i class="ph ph-sign-in" aria-hidden="true"></i> Sign in</button>
-          <button type="button" class="cta-choice" data-pane="register" aria-pressed="false"><i class="ph ph-user-plus" aria-hidden="true"></i> Create account</button>
-        </div>
 
         <!-- Sign in -->
         <form class="form-card acct-pane" id="loginForm" data-pane="login" novalidate>
+          <h2 class="acct-title">Sign in</h2>
+          <p class="acct-sub">Access your orders, NET terms, and account dashboard.</p>
           <div class="field-grid">
             <div class="field"><label for="liEmail">Work email *</label><input id="liEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
             <div class="field"><label for="liPass">Password *</label><input id="liPass" name="password" type="password" autocomplete="current-password" required></div>
           </div>
-          <button type="submit" class="btn btn-primary" id="liBtn" style="margin-top:18px">Sign in</button>
+          <button type="submit" class="btn btn-primary" id="liBtn" style="margin-top:18px;width:100%">Sign in</button>
           <p class="acct-status" id="liStatus" role="status" aria-live="polite"></p>
+          <p class="acct-switch">New to MASEST? <button type="button" data-pane="register">Create a business account</button></p>
         </form>
 
         <!-- Register -->
         <form class="form-card acct-pane" id="registerForm" data-pane="register" hidden novalidate>
+          <h2 class="acct-title">Create a business account</h2>
+          <p class="acct-sub">New accounts are reviewed before ordering or NET terms are enabled. Your details go only to the MASEST sales team.</p>
           <div class="field-grid">
             <div class="field"><label for="rCompany">Company *</label><input id="rCompany" name="company" type="text" placeholder="Gulf Coast Mechanical" required></div>
             <div class="field"><label for="rName">Full name</label><input id="rName" name="full_name" type="text" placeholder="Marisol Vega"></div>
@@ -80,9 +91,9 @@
             <div class="field"><label for="rCert">Resale / tax-exempt cert URL</label><input id="rCert" name="resale_cert_url" type="url" placeholder="Link to certificate (optional)"></div>
           </div>
           <label class="checkbox-row"><input type="checkbox" id="rExempt" name="tax_exempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
-          <button type="submit" class="btn btn-primary" id="rBtn" style="margin-top:18px">Create account</button>
+          <button type="submit" class="btn btn-primary" id="rBtn" style="margin-top:18px;width:100%">Create account</button>
           <p class="acct-status" id="rStatus" role="status" aria-live="polite"></p>
-          <p class="acct-foot-note">Your information goes only to the MASEST sales team. New accounts are reviewed before ordering or NET terms are enabled.</p>
+          <p class="acct-switch">Already have an account? <button type="button" data-pane="login">Sign in</button></p>
         </form>
       </div>
 
@@ -110,13 +121,14 @@
 <!-- Tab toggle: classic script so it works without modules / before auth loads -->
 <script>
   (function () {
-    var choices = document.querySelectorAll(".cta-chooser .cta-choice");
+    var switches = document.querySelectorAll(".acct-switch [data-pane]");
     var panes = document.querySelectorAll(".acct-pane");
-    choices.forEach(function (btn) {
+    switches.forEach(function (btn) {
       btn.addEventListener("click", function () {
         var target = btn.dataset.pane;
-        choices.forEach(function (b) { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
         panes.forEach(function (p) { p.hidden = p.dataset.pane !== target; });
+        var firstInput = document.querySelector('.acct-pane[data-pane="' + target + '"] input');
+        if (firstInput) firstInput.focus();
       });
     });
   })();
@@ -232,7 +244,8 @@
       setStatus(status, "", "");
       await refresh();
     } catch (err) {
-      setStatus(status, "Sign in failed. Check your email and password.", "err");
+      const raw = String(err.message || "");
+      setStatus(status, /captcha/i.test(raw) ? "Verification failed — reload and complete the challenge." : "Sign in failed. Check your email and password.", "err");
     } finally { resetCaptcha(); btn.disabled = false; }
   });
 
@@ -257,7 +270,15 @@
       }
     } catch (err) {
       const map = { already_registered: "This account already exists. Sign in instead.", company_name_required: "Enter your company name." };
-      setStatus(status, map[err.message] || "Could not create account. Try again later.", "err");
+      let msg = map[err.message];
+      if (!msg) {
+        const raw = String(err.message || "");
+        if (/captcha/i.test(raw)) msg = "Verification failed — reload the page, complete the challenge, then try again.";
+        else if (/password/i.test(raw)) msg = "Password too weak — use at least 8 characters.";
+        else if (/already.*registered|user.*exists/i.test(raw)) msg = "This email already has an account. Sign in instead.";
+        else msg = "Could not create account: " + (raw || "try again later") + ".";
+      }
+      setStatus(status, msg, "err");
     } finally { resetCaptcha(); btn.disabled = false; }
   });
 
