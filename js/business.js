@@ -44,17 +44,40 @@ function renderTiers() {
 async function requestProgram(tier, btn) {
   const status = $('programStatus');
   btn.disabled = true;
-  status.textContent = `Sending ${tier} enrollment request…`; status.dataset.state = '';
+  status.textContent = `Starting ${tier}…`; status.dataset.state = '';
   try {
-    await api('/api/account/messages', { method: 'POST', body: {
-      body: `Program enrollment request — ${tier} tier. Please scope a plan and pricing for our operation.`,
-    } });
-    status.textContent = `${tier} request sent — your account team will follow up in your dashboard messages.`;
-    status.dataset.state = 'ok';
+    const r = await api('/api/programs/subscribe', { method: 'POST', body: { tier } });
+    if (r.url) { location.href = r.url; return; } // Stripe subscription checkout
   } catch (e) {
-    status.textContent = e.status === 401 ? 'Please sign in again.' : 'Could not send the request. Try again.';
-    status.dataset.state = 'err';
+    if (e.status === 409 && e.data?.fallback) {
+      // No online price configured yet → fall back to a request-enrollment message.
+      try {
+        await api('/api/account/messages', { method: 'POST', body: {
+          body: `Program enrollment request — ${tier} tier. Please scope a plan and pricing for our operation.`,
+        } });
+        status.textContent = `${tier} request sent — your account team will follow up in your dashboard messages.`;
+        status.dataset.state = 'ok';
+      } catch { status.textContent = 'Could not send the request. Try again.'; status.dataset.state = 'err'; }
+    } else if (e.status === 403 && e.data?.error === 'not_approved') {
+      status.textContent = 'Your account must be approved before starting a program.'; status.dataset.state = 'err';
+    } else if (e.status === 401) {
+      status.textContent = 'Please sign in again.'; status.dataset.state = 'err';
+    } else {
+      status.textContent = 'Could not start the program. Try again.'; status.dataset.state = 'err';
+    }
   } finally { btn.disabled = false; }
+}
+
+async function renderProgramStatus() {
+  try {
+    const { subscriptions } = await api('/api/programs/subscribe');
+    const active = (subscriptions || []).find((s) => s.status === 'active' || s.status === 'trialing');
+    if (active) { $('programStatus').textContent = `Active program: ${active.tier}.`; $('programStatus').dataset.state = 'ok'; }
+  } catch { /* none */ }
+  if (new URLSearchParams(location.search).get('program') === 'success') {
+    $('programStatus').textContent = 'Program started — thank you. It will show as active here shortly.';
+    $('programStatus').dataset.state = 'ok';
+  }
 }
 
 function wireBulk() {
@@ -128,6 +151,7 @@ async function boot() {
   $('bizApp').hidden = false;
   renderProfile(data);
   renderTiers();
+  renderProgramStatus();
   wireBulk();
   if (data.profile?.role === 'admin') initTeam();
 }

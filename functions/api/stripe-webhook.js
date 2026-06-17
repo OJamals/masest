@@ -131,6 +131,27 @@ export async function onRequestPost({ request, env }) {
     const s = event.data.object;
     const sb = adminClient(env);
 
+    // Program subscription checkout (mode=subscription): record enrollment, skip the order path.
+    if (s.mode === 'subscription') {
+      try {
+        await sb.from('program_subscriptions').upsert({
+          company_id: s.metadata?.company_id || null,
+          tier: s.metadata?.tier || null,
+          stripe_subscription_id: s.subscription || null,
+          stripe_customer_id: s.customer || null,
+          status: 'active',
+        }, { onConflict: 'stripe_subscription_id' });
+        if (s.metadata?.company_id) {
+          await sb.from('notifications').insert({
+            company_id: s.metadata.company_id, type: 'account',
+            title: `${s.metadata?.tier || 'Program'} program active`,
+            body: 'Your VertKleen service program is now active.', link: '/business.html',
+          }).then(() => {}, () => {});
+        }
+      } catch (e) { console.error('program_sub_record_failed', e?.message || e); }
+      return json(200, { received: true, subscription: true });
+    }
+
     // Idempotency: skip if this session already recorded.
     const { data: dupe } = await sb.from('orders').select('id').eq('stripe_payment_intent', s.payment_intent).maybeSingle();
     if (dupe) return json(200, { received: true, duplicate: true });
@@ -177,6 +198,17 @@ export async function onRequestPost({ request, env }) {
       }).then(() => {}, () => {});
     }
     // TODO Phase 3: QBO sales receipt.
+  }
+
+  // Subscription lifecycle → keep program_subscriptions status in sync.
+  if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object;
+    const status = event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status;
+    try {
+      await adminClient(env).from('program_subscriptions')
+        .update({ status }).eq('stripe_subscription_id', sub.id);
+    } catch (e) { console.error('sub_status_update_failed', e?.message || e); }
+    return json(200, { received: true });
   }
 
   return json(200, { received: true });
