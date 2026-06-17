@@ -3,6 +3,16 @@
  */
 const KEY = "masest_cart";
 
+export class CheckoutError extends Error {
+  constructor(status, payload = {}) {
+    super(payload.message || payload.error || "checkout_failed");
+    this.name = "CheckoutError";
+    this.status = status;
+    this.code = payload.error || "checkout_failed";
+    Object.assign(this, payload);
+  }
+}
+
 function normalizeQty(qty) {
   const number = Number(qty);
   if (!Number.isFinite(number)) return 0;
@@ -78,7 +88,7 @@ export async function checkout({ mode = "pay", email, token } = {}) {
     body: JSON.stringify({ mode, email, items: line }),
   });
   const out = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(out.error || "checkout_failed");
+  if (!response.ok) throw new CheckoutError(response.status, out);
 
   if (out.url) {
     window.location.href = out.url;

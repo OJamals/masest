@@ -18,6 +18,16 @@ test("global navigation stays focused on buyer decisions", () => {
   assert.doesNotMatch(navBlock[0], /contact\.html/);
 });
 
+test("global navigation groups proof and industries as use cases", () => {
+  const main = read("js/main.js");
+
+  assert.match(main, /useCases/);
+  assert.match(main, /Use Cases/);
+  assert.match(main, /Field Results/);
+  assert.match(main, /Resources/);
+  assert.doesNotMatch(main.match(/const links = \[[\s\S]*?\];/)?.[0] || "", /Proof/);
+});
+
 test("product cards use details as the only repeated card action", () => {
   const main = read("js/main.js");
   const cardBlock = main.match(/function productCard[\s\S]*?function initBeforeAfter/);
@@ -62,7 +72,9 @@ test("products page wires the checker and grid from product data", () => {
   assert.match(main, /function initShop/);
   assert.match(main, /initShop\(\);/);
   // whole-card link + single repeated action
-  assert.match(main, /class="shop-card" href="product\.html\?id=/);
+  assert.match(main, /<article class="shop-card"/);
+  assert.match(main, /class="shop-card-link" href="product\.html\?id=/);
+  assert.doesNotMatch(main, /<a class="shop-card"[\s\S]*?<button class="shop-card-add"/);
 });
 
 test("product details include source-backed media galleries", () => {
@@ -90,7 +102,7 @@ test("products page keeps the field proof strip between catalog and CTA", () => 
   const products = read("products.html");
   const catalogIndex = products.indexOf('id="shopGrid"');
   const proofIndex = products.indexOf('class="conversion-proof');
-  const ctaIndex = products.indexOf('class="block-dark');
+  const ctaIndex = products.search(/<section[^>]+class="[^"]*\bblock-dark\b[^"]*"/);
 
   assert.ok(proofIndex > -1, "expected compact proof strip");
   assert.ok(ctaIndex > -1, "expected closing CTA");
@@ -191,13 +203,29 @@ test("no-js fallback nav stays focused on primary categories", () => {
     assert.ok(nav, `${page} should keep no-js nav`);
     assert.match(nav, /Products/);
     assert.match(nav, /Programs/);
-    assert.match(nav, /Proof/);
+    assert.match(nav, /Use Cases/);
     assert.match(nav, /Industries/);
+    assert.match(nav, /Field Results/);
+    assert.match(nav, /Resources/);
     assert.match(nav, /Request a Quote/);
     assert.doesNotMatch(nav, />Home</);
     assert.doesNotMatch(nav, />Why VertKleen</);
     assert.doesNotMatch(nav, />About/);
     assert.doesNotMatch(nav, />Contact</);
+  }
+});
+
+test("no-js fallback groups industries and field results under use cases", () => {
+  const pages = ["index.html", "proof.html", "industries.html", "resources.html"];
+
+  for (const page of pages) {
+    const html = read(page);
+    const nav = html.match(/<nav class="nojs-nav"[\s\S]*?<\/nav>/)?.[0] || "";
+    assert.match(nav, /Use Cases/);
+    assert.match(nav, />Field Results</);
+    assert.match(nav, />Industries</);
+    assert.match(nav, />Resources</);
+    assert.doesNotMatch(nav, />Proof</);
   }
 });
 
@@ -278,4 +306,25 @@ test("simplified routes avoid black cards and cramped section seams", () => {
   assert.doesNotMatch(css, new RegExp("\\.btn-ink[\\s\\S]{0,120}background: var\\(--ink\\)"));
   assert.match(css, /\.section-slim \+ \.resource-disclosure/);
   assert.match(css, /\.resource-disclosure \+ section/);
+});
+test("commerce setup exposes a complete buyer cart path", () => {
+  const main = read("js/main.js");
+  const products = read("products.html");
+  const cart = read("cart.html");
+  const confirmation = read("order-confirmed.html");
+  const cartJs = read("js/cart.js");
+
+  assert.match(main, /cart\.html/);
+  assert.match(main, /cart-count/);
+  assert.match(main, /data-cart-add/);
+  assert.match(main, /initCartButtons/);
+  assert.match(products, /id="shopGrid"/);
+  assert.match(cart, /id="cartLines"/);
+  assert.match(cart, /id="checkoutPay"/);
+  assert.match(cart, /id="checkoutNet"/);
+  assert.match(cart, /contact\.html\?type=quote/);
+  assert.match(confirmation, /session_id/);
+  assert.match(confirmation, /contact\.html\?type=quote/);
+  assert.match(cartJs, /cart:updated/);
+  assert.match(cartJs, /safeReadCart/);
 });

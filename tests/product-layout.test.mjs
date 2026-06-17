@@ -46,13 +46,18 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
         return {
           total: cards.length,
           perRow: cards.filter((c) => c.offsetTop === top).length,
-          allLink: cards.every((c) => c.tagName === "A" && /product\.html\?id=/.test(c.getAttribute("href")))
+        allLink: cards.every((c) => {
+          const link = c.querySelector(".shop-card-link");
+          return link && /product\.html\?id=/.test(link.getAttribute("href"));
+        }),
+        nestedInteractive: cards.some((c) => c.querySelector("a button, button a"))
         };
       });
 
       assert.equal(layout.total, 13, "expected all 13 products in the grid");
       assert.ok(layout.perRow >= 4 && layout.perRow <= 5, `expected 4-5 cards/row, got ${layout.perRow}`);
       assert.ok(layout.allLink, "every card should be a clickable product link");
+      assert.equal(layout.nestedInteractive, false, "cart buttons should not be nested inside links");
     } finally {
       await browser.close();
     }

@@ -1,170 +1,185 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cart | MASEST VertKleen</title>
-<meta name="description" content="Your VertKleen cart.">
-<meta name="theme-color" content="#0b0d12">
-<link rel="icon" type="image/png" href="img/favicon-enhanced.png">
-<meta name="robots" content="noindex">
-<link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/story.css">
-<link rel="stylesheet" href="css/commerce.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cart | MASEST</title>
+  <meta name="description" content="Review VertKleen purchase-ready SKUs, start checkout, or route quote-only products to MASEST.">
+  <link rel="stylesheet" href="vendor/satoshi/satoshi.css">
+  <link rel="stylesheet" href="vendor/phosphor/style.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js" defer></script>
+  <script src="js/main.js" defer></script>
 </head>
 <body>
-
 <noscript>
-<nav class="nojs-nav" aria-label="Site">
-  <a href="index.html"><b>MASEST</b></a>
-  <a href="products.html">Products</a>
-  <a href="contact.html">Contact</a>
-</nav>
+  <nav class="nojs-nav" aria-label="Site">
+    <a href="index.html"><b>MASEST</b></a>
+    <a href="products.html">Products</a>
+    <a href="programs.html">Programs</a>
+    <span>Use Cases</span>
+    <a href="industries.html">Industries</a>
+    <a href="proof.html">Field Results</a>
+    <a href="resources.html">Resources</a>
+    <a href="contact.html?type=quote">Request a Quote</a>
+  </nav>
 </noscript>
-
 <main id="main">
-  <section class="hero-split">
-    <div class="wrap">
-      <h1 class="display">Your cart.</h1>
-      <p class="subhead">Review your items. Tax and shipping are calculated at checkout. Quote-only products are requested through the quote form.</p>
+  <section class="page-hero compact">
+    <div class="container split-hero">
+      <div>
+        <h1>Review purchase-ready VertKleen SKUs.</h1>
+        <p class="subhead">Checkout is available only for active priced products. Quote-only items still route through the MASEST quote desk for volume, freight, and documentation.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="products.html">Continue Browsing</a>
+          <a class="btn btn-secondary" href="contact.html?type=quote">Request a Quote</a>
+        </div>
+      </div>
+      <div class="hmis-panel">
+        <span>Cart rules</span>
+        <div class="hmis-grid">
+          <b>DB</b><b>$</b><b>Q</b>
+        </div>
+        <p>Server-priced checkout. Quote route preserved. NET terms require account approval.</p>
+      </div>
     </div>
   </section>
 
-  <section class="section section-slim">
-    <div class="wrap cart-wrap">
-
-      <div id="cartEmpty" class="cart-empty" hidden>
-        <h2 class="headline" style="font-size:1.4rem">Your cart is empty.</h2>
-        <p>Browse the catalog to add products.</p>
-        <a class="btn btn-primary" href="products.html">View products</a>
-      </div>
-
-      <div id="cartContent" hidden>
-        <div class="cart-list" id="cartList"></div>
-        <div class="form-card cart-summary">
-          <div class="cart-sub"><span>Subtotal</span><span id="cartSubtotal">&mdash;</span></div>
-          <p class="cart-note" id="cartNote"></p>
-          <div class="cart-actions">
-            <button type="button" class="btn btn-primary btn-block" id="payBtn">Checkout &mdash; card or ACH</button>
-            <button type="button" class="btn btn-ghost btn-block" id="netBtn">Place on account (NET terms)</button>
-            <p class="cart-status" id="cartStatus" role="status" aria-live="polite"></p>
-          </div>
+  <section class="section">
+    <div class="container cart-shell">
+      <div class="cart-panel">
+        <div class="section-head">
+          <p class="eyebrow">Order lines</p>
+          <h2>Your cart</h2>
         </div>
+        <div id="cartLines" class="cart-lines" aria-live="polite"></div>
       </div>
 
+      <aside class="cart-summary" aria-label="Cart checkout">
+        <p class="eyebrow">Next step</p>
+        <h2>Checkout or quote.</h2>
+        <p id="cartStatus" class="cart-status" role="status" aria-live="polite">Cart totals are confirmed at checkout by the server.</p>
+        <label class="field-label" for="checkoutEmail">Email for receipt</label>
+        <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" placeholder="buyer@company.com">
+        <div class="cart-actions">
+          <button class="btn btn-primary" id="checkoutPay" type="button">Card / ACH Checkout</button>
+          <button class="btn btn-secondary" id="checkoutNet" type="button">Use NET Terms</button>
+          <a class="btn btn-ghost" href="contact.html?type=quote">Send Quote Request</a>
+        </div>
+      </aside>
     </div>
   </section>
 </main>
-
-<script src="js/config.js"></script>
-<script src="js/main.js"></script>
-
 <script type="module">
-  import * as cart from "./js/cart.js";
-  // auth.js (loads Supabase from CDN) is imported lazily only when NET checkout is used,
-  // so the cart always renders even if the CDN is slow/unavailable.
+  import { checkout, clear, items, remove, setQty } from "./js/cart.js";
 
-  const $ = (id) => document.getElementById(id);
-  const money = (n, c = "usd") => new Intl.NumberFormat("en-US", { style: "currency", currency: c }).format(n);
+  const catalogCopy = {
+    hcr: "VertKleen HCR",
+    cr: "VertKleen CR",
+    crhd: "VertKleen CR-HD",
+    descaler: "VertKleen Descaler",
+    multiwash: "VertKleen MultiWash",
+    purgo: "VertKleen PURGO",
+    dbnpa: "DBNPA Tablet",
+    lam3: "VertKleen LAM3",
+    alumibrite: "VertKleen AlumiBrite",
+    torque: "VertKleen Torque"
+  };
+  const lines = document.getElementById("cartLines");
+  const status = document.getElementById("cartStatus");
+  const email = document.getElementById("checkoutEmail");
+  const checkoutPay = document.getElementById("checkoutPay");
+  const checkoutNet = document.getElementById("checkoutNet");
 
-  // Catalog (names + live prices + mode). Server is still source of truth at checkout.
-  let bySku = {};
-  try {
-    const data = await fetch("/api/products").then((r) => r.json());
-    bySku = Object.fromEntries((data.products || []).map((p) => [p.sku, p]));
-  } catch (e) { /* render with sku fallbacks */ }
+  function setCheckoutDisabled(disabled) {
+    checkoutPay.disabled = disabled;
+    checkoutNet.disabled = disabled;
+  }
 
-  function setStatus(msg, state) { const s = $("cartStatus"); s.textContent = msg || ""; s.dataset.state = state || ""; }
+  function checkoutErrorMessage(err) {
+    if (err?.code === "not_purchasable") {
+      return err.message || "Some SKUs are quote-only or not yet priced. Send a quote request and MASEST will confirm availability.";
+    }
+    if (err?.code === "auth_required_for_net") {
+      return "NET terms require an approved business account. Send a quote request and MASEST will confirm account terms.";
+    }
+    if (err?.code === "net_terms_unavailable") {
+      return "NET terms are not available for this account yet. Send a quote request for approval and terms review.";
+    }
+    if (err?.code === "stripe_not_configured") {
+      return "Online checkout is not configured yet. Send a quote request and MASEST will complete the order path.";
+    }
+    if (err?.message === "cart_empty") return "Add at least one product before checkout.";
+    return "Checkout is not available for this cart. Send a quote request and MASEST will confirm the order path.";
+  }
+
+  function productName(sku) {
+    return catalogCopy[String(sku).toLowerCase()] || sku;
+  }
 
   function render() {
-    const items = cart.items();
-    $("cartEmpty").hidden = items.length > 0;
-    $("cartContent").hidden = items.length === 0;
-    if (!items.length) return;
-
-    let subtotal = 0, anyPriced = false, anyUnpriced = false;
-    $("cartList").innerHTML = items.map(({ sku, qty }) => {
-      const p = bySku[sku] || { name: sku, price: null, currency: "usd" };
-      const priced = p.price != null;
-      if (priced) { subtotal += Number(p.price) * qty; anyPriced = true; } else { anyUnpriced = true; }
-      const priceCell = priced
-        ? `<div class="cart-row-price">${money(Number(p.price) * qty, p.currency)}<span class="unit">${money(Number(p.price), p.currency)} each</span></div>`
-        : `<div class="cart-row-quote">Price on request</div>`;
-      return `
-        <div class="cart-row" data-sku="${sku}">
-          <div class="cart-row-main">
-            <div class="cart-row-name">${p.name}</div>
-            <div class="cart-row-meta">${sku.toUpperCase()}</div>
-          </div>
-          <div class="cart-qty">
-            <button type="button" data-act="dec" aria-label="Decrease quantity">&minus;</button>
-            <input type="number" min="1" value="${qty}" aria-label="Quantity" data-act="qty">
-            <button type="button" data-act="inc" aria-label="Increase quantity">+</button>
-          </div>
-          ${priceCell}
-          <button type="button" class="cart-row-remove" data-act="remove" aria-label="Remove ${p.name}"><i class="ph ph-trash" aria-hidden="true"></i></button>
-        </div>`;
-    }).join("");
-
-    $("cartSubtotal").textContent = anyPriced ? money(subtotal) : "Quote only";
-    $("cartNote").textContent = anyUnpriced
-      ? "Some items are quote-only (or not yet priced for online order) — checkout covers priced items; request the rest via the quote form."
-      : "Tax and shipping calculated at checkout.";
-    $("payBtn").disabled = !anyPriced;
+    const cartItems = items();
+    setCheckoutDisabled(cartItems.length === 0);
+    if (!cartItems.length) {
+      lines.innerHTML = `<div class="cart-empty"><h3>No products in the cart.</h3><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
+      return;
+    }
+    lines.innerHTML = cartItems.map(item => `
+      <article class="cart-line">
+        <div>
+          <span class="eyebrow">${item.sku}</span>
+          <h3>${productName(item.sku)}</h3>
+          <p>Final price, freight, and tax are confirmed by the checkout API.</p>
+        </div>
+        <label>
+          <span>Qty</span>
+          <input type="number" min="1" step="1" value="${item.qty}" data-qty="${item.sku}">
+        </label>
+        <button type="button" class="btn btn-ghost" data-remove="${item.sku}">Remove</button>
+      </article>
+    `).join("");
   }
 
-  // Row controls (event delegation)
-  $("cartList").addEventListener("click", (e) => {
-    const btn = e.target.closest("button"); if (!btn) return;
-    const row = e.target.closest(".cart-row"); const sku = row?.dataset.sku; if (!sku) return;
-    const cur = cart.items().find((i) => i.sku === sku)?.qty || 1;
-    if (btn.dataset.act === "inc") cart.setQty(sku, cur + 1);
-    else if (btn.dataset.act === "dec") cart.setQty(sku, cur - 1);
-    else if (btn.dataset.act === "remove") cart.remove(sku);
+  lines.addEventListener("change", event => {
+    const sku = event.target?.dataset?.qty;
+    if (!sku) return;
+    setQty(sku, event.target.value);
+    render();
   });
-  $("cartList").addEventListener("change", (e) => {
-    if (e.target.dataset.act !== "qty") return;
-    const sku = e.target.closest(".cart-row")?.dataset.sku;
-    if (sku) cart.setQty(sku, parseInt(e.target.value, 10) || 0);
+  lines.addEventListener("click", event => {
+    const sku = event.target?.dataset?.remove;
+    if (!sku) return;
+    remove(sku);
+    render();
   });
 
-  document.addEventListener("cart:updated", render);
-
-  function mapError(code) {
-    return ({
-      not_purchasable: "Some items aren't available for online purchase yet — please use the quote form.",
-      cart_empty: "Your cart is empty.",
-      stripe_not_configured: "Checkout is temporarily unavailable.",
-      auth_required_for_net: "Sign in to a business account to order on NET terms.",
-      net_terms_unavailable: "NET terms aren't enabled on your account yet.",
-    })[code] || "Checkout failed. Please try again.";
+  async function runCheckout(mode) {
+    if (!items().length) {
+      status.dataset.state = "err";
+      status.textContent = "Add at least one product before checkout.";
+      setCheckoutDisabled(true);
+      return;
+    }
+    setCheckoutDisabled(true);
+    status.dataset.state = "";
+    status.textContent = mode === "net" ? "Checking account terms..." : "Starting checkout...";
+    try {
+      const result = await checkout({ mode, email: email.value.trim() });
+      if (result.net) {
+        status.dataset.state = "ok";
+        status.textContent = result.message || "Order placed on account.";
+        clear();
+        render();
+      }
+    } catch (err) {
+      status.dataset.state = "err";
+      status.textContent = checkoutErrorMessage(err);
+      setCheckoutDisabled(items().length === 0);
+    }
   }
 
-  $("payBtn").addEventListener("click", async () => {
-    $("payBtn").disabled = true; setStatus("Redirecting to secure checkout…", "");
-    try { await cart.checkout({ mode: "pay" }); }
-    catch (err) { setStatus(mapError(err.message), "err"); $("payBtn").disabled = false; }
-  });
-
-  $("netBtn").addEventListener("click", async () => {
-    setStatus("", "");
-    let token = null;
-    try {
-      const { supabase } = await import("./js/auth.js");
-      const { data } = await supabase.auth.getSession();
-      token = data?.session?.access_token;
-    } catch (e) { /* CDN/auth unavailable */ }
-    if (!token) { setStatus("Sign in to a business account to use NET terms.", "err"); return; }
-    $("netBtn").disabled = true;
-    try {
-      const out = await cart.checkout({ mode: "net", token });
-      setStatus(out.message || "Order placed on account.", "ok");
-      render();
-    } catch (err) { setStatus(mapError(err.message), "err"); }
-    finally { $("netBtn").disabled = false; }
-  });
-
+  checkoutPay.addEventListener("click", () => runCheckout("pay"));
+  checkoutNet.addEventListener("click", () => runCheckout("net"));
   render();
 </script>
 </body>
