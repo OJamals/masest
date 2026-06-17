@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Products | MASEST VertKleen</title>
-<meta name="description" content="Shop the VertKleen product catalog by job: descaling, degreasing, water treatment, exterior cleaning, and specialty care.">
+<meta name="description" content="Shop the VertKleen product catalog. Find the safe replacement for muriatic acid, caustic soda, Simple Green, bleach, and more, then sort and open any product for proof and documents.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png">
 <meta property="og:title" content="Products | MASEST VertKleen">
-<meta property="og:description" content="Browse VertKleen by the job you need done, then open product details, proof, stats, and quote paths.">
+<meta property="og:description" content="Find your VertKleen swap, browse the full line as a catalog, and open any product for pictures, field proof, stats, and quote paths.">
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
@@ -25,15 +25,15 @@
   </div>
 </nav>
 
-<main>
+<main id="main">
   <section class="hero product-catalog-hero">
     <div class="wrap hero-grid">
       <div class="hero-copy reveal">
         <h1 class="display">Find the right VertKleen product for the job.</h1>
-        <p class="subhead">Start with what you need cleaned, protected, or restored. Open a product for pictures, field proof, handling stats, and the documents a buyer or facility team needs before switching.</p>
+        <p class="subhead">Already buying muriatic acid, caustic soda, or a name-brand degreaser? Find the safe VertKleen swap, then browse the full line like any catalog.</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="#catalog">Browse Products</a>
-          <a class="btn btn-secondary" href="contact.html?type=audit">Get Product Help</a>
+          <a class="btn btn-primary" href="#swap">Find your swap</a>
+          <a class="btn btn-secondary" href="#catalog">Browse all products</a>
         </div>
       </div>
       <div class="catalog-hero-media reveal" aria-label="Featured VertKleen field results">
@@ -53,131 +53,43 @@
     </div>
   </section>
 
-  <section class="product-job-router section-slim" aria-label="Shop by job">
-    <div class="buyer-router wrap">
+  <section class="section-slim swap-finder-sec" id="swap">
+    <div class="wrap">
       <div class="section-head reveal">
-        <span class="catalog-label">Shop by job</span>
-        <h2 class="headline">Pick the problem you need solved.</h2>
-        <p class="subhead">Choose a familiar problem first. Technical replacement details stay available for buyers who need the chemistry and compliance trail.</p>
+        <span class="catalog-label">Replacement checker</span>
+        <h2 class="headline">Find your VertKleen swap.</h2>
+        <p class="subhead">Pick the chemical you use today or the job you need done. We show the VertKleen equivalent and filter the catalog to it.</p>
       </div>
-      <div class="route-grid reveal">
-        <a class="route-card" href="#descale"><i class="ph ph-drop-half" aria-hidden="true"></i><span>Rust and scale</span><b>HCR, Descaler, CRS</b></a>
-        <a class="route-card" href="#degrease"><i class="ph ph-spray-bottle" aria-hidden="true"></i><span>Grease and grime</span><b>CR, CRHD, Neutral, MultiWash</b></a>
-        <a class="route-card" href="#water"><i class="ph ph-waves" aria-hidden="true"></i><span>Water systems</span><b>WaterSafe60, Purgo, DBNPA</b></a>
-        <a class="route-card" href="#exterior"><i class="ph ph-house-line" aria-hidden="true"></i><span>Exterior and vehicles</span><b>LAM3, Torque, AlumiBrite</b></a>
-        <a class="route-card" href="contact.html?type=audit"><i class="ph ph-compass" aria-hidden="true"></i><span>Not sure?</span><b>Get a product match</b></a>
+      <div class="swap-finder reveal">
+        <div class="swap-result" id="swapResult" hidden aria-live="polite"></div>
+        <div class="swap-matrix" id="swapMatrix" role="group" aria-label="Replacement options"></div>
+        <p class="swap-note">DBNPA is the one mild-hazard exception; every other VertKleen product is HMIS 0-0-0. Need help matching? <a href="contact.html?type=audit">Get a product match</a>.</p>
       </div>
     </div>
   </section>
 
-  <section class="product-catalog section" id="catalog">
+  <section class="section shop-sec" id="catalog">
     <div class="wrap">
       <div class="section-head reveal">
         <span class="catalog-label">Product catalog</span>
-        <h2 class="headline">Browse the line like a catalog.</h2>
-        <p class="subhead">Each card explains the job, the common use cases, and what proof is waiting on the product page.</p>
+        <h2 class="headline">Browse the full line.</h2>
+        <p class="subhead">Filter by category, sort the shelf, and open any product for pictures, stats, studies, and quote routing.</p>
       </div>
 
-      <nav class="catalog-jumpbar reveal" aria-label="Product families">
-        <a href="#descale">Rust &amp; scale</a>
-        <a href="#degrease">Grease &amp; grime</a>
-        <a href="#water">Water systems</a>
-        <a href="#exterior">Exterior</a>
-      </nav>
-
-      <div class="catalog-shelf-wrap reveal" aria-label="Scrollable product shelf">
-        <div class="catalog-shelf-head">
-          <span>Full line</span>
-          <b>Scroll the shelf, then open any product for pictures, stats, studies, and quote routing.</b>
-          <div class="rail-controls" aria-label="Scroll full product line">
-            <button type="button" data-rail-prev="productShelf" aria-label="Scroll products left"><i class="ph ph-arrow-left" aria-hidden="true"></i></button>
-            <button type="button" data-rail-next="productShelf" aria-label="Scroll products right"><i class="ph ph-arrow-right" aria-hidden="true"></i></button>
-          </div>
+      <div class="shop-toolbar reveal">
+        <div class="shop-chips" id="shopChips" role="group" aria-label="Filter by category"></div>
+        <div class="shop-sort">
+          <label for="shopSort">Sort</label>
+          <select id="shopSort" class="shop-select">
+            <option value="featured">Featured</option>
+            <option value="az">Name A–Z</option>
+          </select>
+          <span class="shop-count" id="shopCount" aria-live="polite"></span>
         </div>
-        <div class="catalog-shelf" id="productShelf" tabindex="0"></div>
       </div>
 
-      <div class="featured-products reveal" aria-label="Featured product pages">
-        <article class="featured-product">
-          <img class="bottle-shot" src="img/products/hvac-hcr-studio.webp" alt="VertKleen HCR product container">
-          <div>
-            <span>Most requested</span>
-            <h3>VertKleen HCR</h3>
-            <p>For rust, scale, passivation, and tough descaling jobs where harsh acid handling is the barrier.</p>
-            <a href="product.html?id=hcr">View details</a>
-          </div>
-        </article>
-        <article class="featured-product">
-          <img class="bottle-shot" src="img/products/crhd-studio.webp" alt="VertKleen CRHD product container">
-          <div>
-            <span>Heavy-duty cleaning</span>
-            <h3>VertKleen CRHD</h3>
-            <p>For grease, equipment, floors, drains, and high-soil maintenance without solvent or butyl odor.</p>
-            <a href="product.html?id=crhd">View details</a>
-          </div>
-        </article>
-        <article class="featured-product">
-          <img class="bottle-shot" src="img/products/descaler-studio.webp" alt="VertKleen Descaler product container">
-          <div>
-            <span>HVAC and coils</span>
-            <h3>VertKleen Descaler</h3>
-            <p>For coils, refrigeration loops, and heat-transfer equipment that need safer scale removal.</p>
-            <a href="product.html?id=descaler">View details</a>
-          </div>
-        </article>
-      </div>
-
-      <section class="catalog-group reveal" id="descale">
-        <div class="catalog-group-head">
-          <span class="catalog-label">Rust, scale, and mineral buildup</span>
-          <h3>Clear hard deposits while keeping handling simple.</h3>
-          <p>For HVAC, metal restoration, passivation, coils, concrete, and equipment cleaning.</p>
-          <div class="rail-controls" aria-label="Scroll rust and scale products">
-            <button type="button" data-rail-prev="descaleProducts" aria-label="Scroll rust and scale left"><i class="ph ph-arrow-left" aria-hidden="true"></i></button>
-            <button type="button" data-rail-next="descaleProducts" aria-label="Scroll rust and scale right"><i class="ph ph-arrow-right" aria-hidden="true"></i></button>
-          </div>
-        </div>
-        <div class="product-grid catalog-grid" id="descaleProducts" tabindex="0"></div>
-      </section>
-
-      <section class="catalog-group reveal" id="degrease">
-        <div class="catalog-group-head">
-          <span class="catalog-label">Grease, grime, and general cleaning</span>
-          <h3>Choose by soil level and surface sensitivity.</h3>
-          <p>For floors, equipment, kitchens, drains, marine use, general washing, and sensitive surfaces.</p>
-          <div class="rail-controls" aria-label="Scroll grease and grime products">
-            <button type="button" data-rail-prev="degreaseProducts" aria-label="Scroll grease and grime left"><i class="ph ph-arrow-left" aria-hidden="true"></i></button>
-            <button type="button" data-rail-next="degreaseProducts" aria-label="Scroll grease and grime right"><i class="ph ph-arrow-right" aria-hidden="true"></i></button>
-          </div>
-        </div>
-        <div class="product-grid catalog-grid" id="degreaseProducts" tabindex="0"></div>
-      </section>
-
-      <section class="catalog-group reveal" id="water">
-        <div class="catalog-group-head">
-          <span class="catalog-label">Water treatment</span>
-          <h3>Program products for safer water-system maintenance.</h3>
-          <p>For cooling towers, closed-loop systems, Legionella-risk management, and seasonal freeze protection.</p>
-          <div class="rail-controls" aria-label="Scroll water treatment products">
-            <button type="button" data-rail-prev="waterProducts" aria-label="Scroll water treatment left"><i class="ph ph-arrow-left" aria-hidden="true"></i></button>
-            <button type="button" data-rail-next="waterProducts" aria-label="Scroll water treatment right"><i class="ph ph-arrow-right" aria-hidden="true"></i></button>
-          </div>
-        </div>
-        <div class="product-grid catalog-grid" id="waterProducts" tabindex="0"></div>
-      </section>
-
-      <section class="catalog-group reveal" id="exterior">
-        <div class="catalog-group-head">
-          <span class="catalog-label">Exterior, vehicles, and specialty care</span>
-          <h3>Cleaning and restoration products for surfaces people see.</h3>
-          <p>For roofs, pavers, siding, vehicle care, marine finishes, aluminum, and brightwork.</p>
-          <div class="rail-controls" aria-label="Scroll exterior products">
-            <button type="button" data-rail-prev="exteriorProducts" aria-label="Scroll exterior products left"><i class="ph ph-arrow-left" aria-hidden="true"></i></button>
-            <button type="button" data-rail-next="exteriorProducts" aria-label="Scroll exterior products right"><i class="ph ph-arrow-right" aria-hidden="true"></i></button>
-          </div>
-        </div>
-        <div class="product-grid catalog-grid" id="exteriorProducts" tabindex="0"></div>
-      </section>
+      <div class="shop-grid" id="shopGrid"></div>
+      <p class="shop-empty" id="shopEmpty" hidden>No products match that filter. <button type="button">Reset filters</button></p>
     </div>
   </section>
 
@@ -196,47 +108,6 @@
     </div>
   </section>
 
-  <section class="section-slim">
-    <div class="wrap">
-      <details class="resource-disclosure matrix-disclosure reveal">
-        <summary>
-          <span>
-            <span class="catalog-label">Technical replacement matrix</span>
-            <b>The function-by-function case.</b>
-          </span>
-          <strong>Open matrix</strong>
-        </summary>
-        <div class="resource-disclosure-body">
-          <div class="table-scroll reveal">
-            <table class="cmp-table">
-              <thead>
-                <tr>
-                  <th>Function</th>
-                  <th>Traditional / legacy</th>
-                  <th>Legacy HMIS</th>
-                  <th>VertKleen equivalent</th>
-                  <th>VertKleen HMIS</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>Rust, scale, passivation</td><td>Hydrochloric / inhibited acids</td><td>3-0-1</td><td><a href="product.html?id=hcr">VertKleen HCR</a>, biodegradable acid replacement</td><td>0-0-0</td></tr>
-                <tr><td>pH adjustment / caustic cleaning</td><td>Caustic soda / sodium hydroxide</td><td>3-0-1</td><td><a href="product.html?id=cr">VertKleen CR</a>, NSF/ANSI 60 caustic replacement</td><td>0-0-0</td></tr>
-                <tr><td>General degreasing</td><td>Caustic / solvent degreasers</td><td>2-1-0</td><td><a href="product.html?id=neutral">VertKleen Neutral</a>, neutral-pH degreasing for sensitive surfaces</td><td>0-0-0</td></tr>
-                <tr><td>Scale and corrosion inhibitor</td><td>Phosphate / zinc / molybdate blends</td><td>2-0-0</td><td><a href="product.html?id=watersafe60">WaterSafe60</a>, NSF/ANSI 60, no heavy metals</td><td>0-0-0</td></tr>
-                <tr><td>Oxidizing biocide</td><td>Stabilized bromine / sodium hypochlorite</td><td>3-0-1</td><td><a href="product.html?id=purgo">Purgo</a>, FIFRA 25(b) minimum-risk</td><td>0-0-0</td></tr>
-                <tr><td>Non-oxidizing biocide</td><td>Glutaraldehyde 50%</td><td>3-2-0</td><td><a href="product.html?id=dbnpa">DBNPA Tablet</a>, controlled release</td><td>Low</td></tr>
-                <tr><td>Heavy-duty degreasing</td><td>Simple Green, Zep, solvent / butyl degreasers</td><td>2-1-0</td><td><a href="product.html?id=crhd">VertKleen CRHD</a>, about 50% active, low-foam</td><td>0-0-0</td></tr>
-                <tr><td>Coils and heat-transfer equipment</td><td>Muriatic acid, CLR, Calci-Solve</td><td>3-0-1</td><td><a href="product.html?id=descaler">VertKleen Descaler</a>, acid-free, fin-safe</td><td>0-0-0</td></tr>
-                <tr><td>Exterior biogrowth removal</td><td>Bleach roof cleaners, Wet & Forget</td><td>2-0-0</td><td><a href="product.html?id=lam3">VertKleen LAM3</a>, neutral, spray and walk away</td><td>0-0-0</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="product-data-note">DBNPA is the one mild-hazard exception. Purgo is listed as FIFRA 25(b) minimum-risk until owner-confirmed EPA registration documentation is available.</p>
-        </div>
-      </details>
-    </div>
-  </section>
-
   <section class="block-dark on-dark" style="text-align:center">
     <div class="wrap reveal">
       <h2 class="headline">Need the right product, not a chemistry lesson?</h2>
@@ -247,16 +118,5 @@
 </main>
 
 <script src="js/main.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const render = ids => ids.map(id => productCard(id, ids.length === 1)).join("");
-  document.getElementById("productShelf").innerHTML = CATALOG_ORDER.map(productShelfCard).join("");
-  document.getElementById("descaleProducts").innerHTML = render(["hcr", "descaler", "crs"]);
-  document.getElementById("degreaseProducts").innerHTML = render(["cr", "crhd", "neutral", "multiwash"]);
-  document.getElementById("waterProducts").innerHTML = render(["watersafe60", "purgo", "dbnpa"]);
-  document.getElementById("exteriorProducts").innerHTML = render(["lam3", "alumibrite", "torque"]);
-  initReveal();
-});
-</script>
 </body>
 </html>

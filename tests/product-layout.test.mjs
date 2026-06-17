@@ -34,48 +34,51 @@ async function withServer(fn) {
   }
 }
 
-test("product catalog rails keep cards readable at desktop width", async () => {
+test("product grid lays out 4-5 clickable cards per row at desktop width", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
-      const narrowCards = await page.evaluate(() =>
-        ["descaleProducts", "degreaseProducts", "waterProducts", "exteriorProducts"]
-          .flatMap((id) =>
-            [...document.getElementById(id).querySelectorAll(".prod-card")].map((card) => ({
-              id,
-              title: card.querySelector("h3")?.textContent?.trim(),
-              width: Math.round(card.getBoundingClientRect().width)
-            }))
-          )
-          .filter((card) => card.width < 270)
-      );
+      const layout = await page.evaluate(() => {
+        const cards = [...document.querySelectorAll(".shop-card")];
+        const top = cards[0]?.offsetTop;
+        return {
+          total: cards.length,
+          perRow: cards.filter((c) => c.offsetTop === top).length,
+          allLink: cards.every((c) => c.tagName === "A" && /product\.html\?id=/.test(c.getAttribute("href")))
+        };
+      });
 
-      assert.deepEqual(narrowCards, []);
+      assert.equal(layout.total, 13, "expected all 13 products in the grid");
+      assert.ok(layout.perRow >= 4 && layout.perRow <= 5, `expected 4-5 cards/row, got ${layout.perRow}`);
+      assert.ok(layout.allLink, "every card should be a clickable product link");
     } finally {
       await browser.close();
     }
   });
 });
 
-test("product family jump links land the target near the top", async () => {
+test("replacement checker shows the swap and filters the catalog", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
-    const page = await browser.newPage({ viewport: { width: 390, height: 900 } });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
-      await page.click('a[href="#catalog"]');
-      await page.click('.catalog-jumpbar a[href="#water"]');
-      await page.waitForFunction(() => {
-        const top = Math.round(document.getElementById("water").getBoundingClientRect().top);
-        return top >= 70 && top <= 160;
-      });
 
-      const top = await page.$eval("#water", (section) =>
-        Math.round(section.getBoundingClientRect().top)
-      );
-      assert.ok(top >= 70 && top <= 160, `expected #water near top, got ${top}px`);
+      await page.click('.swap-row[data-row="0"]');
+      await page.waitForSelector("#swapResult:not([hidden])");
+      const filtered = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
+      assert.deepEqual(filtered, ["hcr", "descaler", "crs"], "checker should filter to the matching swaps");
+
+      await page.click("#swapClear");
+      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 13);
+      const restored = await page.$$eval(".shop-card", (els) => els.length);
+      assert.equal(restored, 13, "clearing should restore the full line");
+
+      await page.click('.shop-chip[data-group="water"]');
+      const water = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
+      assert.deepEqual(water, ["watersafe60", "purgo", "dbnpa"], "category chip should filter the grid");
     } finally {
       await browser.close();
     }

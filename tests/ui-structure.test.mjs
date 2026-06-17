@@ -28,42 +28,41 @@ test("product cards use details as the only repeated card action", () => {
   assert.doesNotMatch(cardBlock[0], /Request a Quote/);
 });
 
-test("products page starts with a buyer router before the dense matrix", () => {
+test("products page leads with a replacement checker before the catalog", () => {
   const products = read("products.html");
-  const routerIndex = products.indexOf('class="buyer-router');
-  const matrixIndex = products.indexOf("The function-by-function case");
-
-  assert.ok(routerIndex > -1, "expected buyer router on products page");
-  assert.ok(matrixIndex > -1, "expected comparison matrix to remain");
-  assert.ok(routerIndex < matrixIndex, "router should appear before dense matrix");
-});
-
-test("products page leads with a shopper-friendly product catalog", () => {
-  const products = read("products.html");
-  const catalogIndex = products.indexOf('class="product-catalog');
+  const checkerIndex = products.indexOf('id="swapMatrix"');
+  const catalogIndex = products.indexOf('id="shopGrid"');
   const proofIndex = products.indexOf('class="conversion-proof');
-  const matrixIndex = products.indexOf("The function-by-function case");
 
-  assert.ok(catalogIndex > -1, "expected catalog section on products page");
+  assert.ok(checkerIndex > -1, "expected replacement checker on products page");
+  assert.ok(catalogIndex > -1, "expected product grid on products page");
+  assert.ok(checkerIndex < catalogIndex, "checker should lead the catalog grid");
   assert.ok(catalogIndex < proofIndex, "catalog should come before proof details");
-  assert.ok(proofIndex < matrixIndex, "dense matrix should stay after proof");
-  assert.match(products, /Shop by job/);
-  assert.match(products, /View details/);
-  assert.match(products, /product\.html\?id=hcr/);
+  assert.match(products, /Replacement checker/);
+  assert.match(products, /Find your VertKleen swap/);
 });
 
-test("products page includes a scrollable product shelf", () => {
+test("products grid offers category chips, sorting, and clickable cards", () => {
   const products = read("products.html");
+
+  assert.match(products, /id="shopChips"/);
+  assert.match(products, /id="shopSort"/);
+  assert.match(products, /value="featured"/);
+  assert.match(products, /value="az"/);
+  assert.match(products, /id="shopCount"/);
+});
+
+test("products page wires the checker and grid from product data", () => {
   const main = read("js/main.js");
 
-  assert.match(products, /id="productShelf"/);
-  assert.match(products, /class="catalog-jumpbar/);
-  assert.match(products, /data-rail-next="productShelf"/);
-  assert.match(products, /data-rail-next="degreaseProducts"/);
-  assert.match(products, /CATALOG_ORDER\.map\(productShelfCard\)/);
   assert.match(main, /const CATALOG_ORDER/);
-  assert.match(main, /function productShelfCard/);
-  assert.match(main, /function initRailControls/);
+  assert.match(main, /const CATALOG_GROUPS/);
+  assert.match(main, /const REPLACEMENT_MAP/);
+  assert.match(main, /function catalogCard/);
+  assert.match(main, /function initShop/);
+  assert.match(main, /initShop\(\);/);
+  // whole-card link + single repeated action
+  assert.match(main, /class="shop-card" href="product\.html\?id=/);
 });
 
 test("product details include source-backed media galleries", () => {
@@ -87,28 +86,16 @@ test("programs page moves glycol pricing into an optional disclosure", () => {
   assert.ok(disclosureIndex < pricingIndex, "disclosure should wrap the price list");
 });
 
-test("dense product matrix is optional after buyer routing", () => {
+test("products page keeps the field proof strip between catalog and CTA", () => {
   const products = read("products.html");
-  const routerIndex = products.indexOf('class="buyer-router');
-  const matrixIndex = products.indexOf("The function-by-function case");
-  const matrixDisclosureIndex = products.indexOf('class="resource-disclosure matrix-disclosure');
-
-  assert.ok(routerIndex > -1, "expected buyer router");
-  assert.ok(matrixIndex > -1, "expected matrix content to remain");
-  assert.ok(matrixDisclosureIndex > -1, "expected matrix disclosure");
-  assert.ok(routerIndex < matrixDisclosureIndex, "router should lead the matrix");
-  assert.ok(matrixDisclosureIndex < matrixIndex, "matrix should be wrapped by disclosure");
-});
-
-test("products page shows proof before dense details", () => {
-  const products = read("products.html");
-  const routerIndex = products.indexOf('class="buyer-router');
+  const catalogIndex = products.indexOf('id="shopGrid"');
   const proofIndex = products.indexOf('class="conversion-proof');
-  const matrixDisclosureIndex = products.indexOf('class="resource-disclosure matrix-disclosure');
+  const ctaIndex = products.indexOf('class="block-dark');
 
   assert.ok(proofIndex > -1, "expected compact proof strip");
-  assert.ok(routerIndex < proofIndex, "proof should follow buyer routing");
-  assert.ok(proofIndex < matrixDisclosureIndex, "proof should precede dense matrix");
+  assert.ok(ctaIndex > -1, "expected closing CTA");
+  assert.ok(catalogIndex < proofIndex, "proof should follow the catalog");
+  assert.ok(proofIndex < ctaIndex, "proof should precede the CTA");
   assert.match(products, /30 min/);
   assert.match(products, /Brewery CIP/);
   assert.match(products, /Occupied sites/);

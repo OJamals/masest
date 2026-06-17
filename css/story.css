@@ -17,6 +17,10 @@
   --s-safe-text: #cffff8;
   --s-safe-soft: rgba(16, 179, 163, .18);
   --s-line: rgba(255, 255, 255, .12);
+  /* HMIS axis colors — taught in Act 3, reused on Act 4 lockups + Act 5 zeros */
+  --hmis-h: #3b82f6;   /* Health */
+  --hmis-f: #ef4444;   /* Flammability */
+  --hmis-r: #f5b301;   /* Reactivity */
   --s-ease: cubic-bezier(.16, 1, .3, 1);
 
   position: relative;
@@ -30,11 +34,11 @@
 }
 
 /* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
-.story .act { position: relative; height: 220vh; padding: 0; }
-.story .act[data-act="1"] { height: 180vh; }   /* photo reel needs less sequencing */
-.story .act[data-act="3"] { height: 240vh; }   /* HMIS factor-by-factor */
-.story .act[data-act="4"] { height: 310vh; }   /* chemicals one by one */
-.story .act-savior { height: 220vh; }
+.story .act { position: relative; height: 205vh; padding: 0; }
+.story .act[data-act="1"] { height: 168vh; }   /* photo reel needs less sequencing */
+.story .act[data-act="3"] { height: 212vh; }   /* HMIS factor-by-factor */
+.story .act[data-act="4"] { height: 260vh; }   /* chemicals one by one */
+.story .act-savior { height: 228vh; }
 .story .stage {
   position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 620px;
   width: 100vw;
@@ -98,8 +102,15 @@
 .story .act-copy { position: relative; z-index: 5; width: min(680px, 86vw); padding: 0 28px; }
 .story .act-copy.bl { justify-self: start; align-self: end; padding-bottom: 12vh; padding-left: clamp(56px, 8vw, 110px); }
 .story .act-copy.top { position: absolute; top: clamp(64px, 9vh, 130px); left: 0; right: 0; margin: 0 auto; text-align: center; z-index: 5; }
-.story .act-copy.onscrim { padding-top: 18px; padding-bottom: 22px; border-radius: 20px;
-  background: radial-gradient(120% 150% at 50% 0%, rgba(8, 10, 14, .8) 0%, rgba(8, 10, 14, .45) 55%, transparent 80%); }
+.story .act-copy.onscrim { padding-top: 18px; padding-bottom: 22px; }
+/* Full-bleed, edge-feathered scrim — melts into the page instead of a boxed band. */
+.story .act-copy.onscrim::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  left: 50%; transform: translateX(-50%);
+  top: -28px; width: 100vw; height: calc(100% + 64px);
+  background: radial-gradient(58% 78% at 50% 42%,
+    rgba(8, 10, 14, .82) 0%, rgba(8, 10, 14, .44) 44%, transparent 72%);
+}
 
 .story .kicker {
   display: inline-flex; align-items: center; gap: 9px;
@@ -210,21 +221,52 @@
    ACT 2 — THE BUILDUP (debris canvas + anchored caption chips)
    ============================================================ */
 .pipe-chips { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+/* --burn (0..1) is driven by scroll in story.js: each chip ignites as its debris
+   type accumulates in the pipe, so the label conveys the physics, not just a fade. */
 .pipe-chips .chip {
+  --burn: 0; --c: var(--s-line);
   position: absolute; display: inline-flex; align-items: center; gap: 9px;
   padding: 9px 15px; border-radius: 999px;
-  border: 1px solid var(--s-line); background: rgba(11, 13, 18, .78);
+  border: 1px solid color-mix(in oklab, var(--s-line), var(--c) calc(var(--burn) * 55%));
+  background:
+    linear-gradient(0deg, color-mix(in oklab, transparent, var(--c) calc(var(--burn) * 12%)) 0 100%),
+    rgba(11, 13, 18, .78);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   font-size: .84rem; font-weight: 700; letter-spacing: .02em; color: var(--s-ink);
   white-space: nowrap;
 }
-.pipe-chips .chip i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-/* Anchored just outside the vertical zig-zag pipe, aligned to each enemy's
-   home stretch (PIPE_N in story.js: verticals at x 0.56/0.88/0.54/0.80). */
-.chip.c-scale  { left: 69%; top: 20%; } .chip.c-scale i  { background: #c9d4d0; }
-.chip.c-rust   { left: 80%; top: 44%; } .chip.c-rust i   { background: #c2553a; }
-.chip.c-grease { left: 35%; top: 57%; } .chip.c-grease i { background: #c2a04e; }
-.chip.c-bio    { left: 58%; top: 90%; } .chip.c-bio i    { background: #6fa863; }
+.pipe-chips .chip i {
+  position: relative; width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: var(--c);
+  box-shadow: 0 0 calc(3px + var(--burn) * 16px) calc(var(--burn) * 1px)
+    color-mix(in oklab, var(--c), transparent 35%);
+  transform: scale(calc(1 + var(--burn) * 0.4));
+}
+/* Leader drawing from the chip toward its clog zone on the pipe (down-right). */
+.pipe-chips .chip::after {
+  content: ""; position: absolute; left: 17px; top: calc(100% - 3px);
+  width: 1.5px; height: 24px; border-radius: 2px;
+  background: linear-gradient(var(--c), transparent);
+  transform-origin: top center; transform: rotate(40deg) scaleY(var(--burn));
+  opacity: calc(var(--burn) * .9);
+}
+/* Active accumulation: a ring pulses out of the dot (reuses the page's pulse motif). */
+.pipe-chips .chip.is-burning i::after {
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  border: 1.5px solid var(--c);
+  animation: chipPulse 2.2s var(--s-ease) infinite;
+}
+@keyframes chipPulse {
+  0%   { transform: scale(.55); opacity: .6; }
+  70%, 100% { transform: scale(2.4); opacity: 0; }
+}
+/* Anchored just above each vertical run's mouth, staggered down-right with the
+   pipe (PIPE_N in story.js: run mouths at x 0.25/0.44/0.63/0.84). Sit below the
+   centered copy so chips never collide with the headline or paragraph. */
+.chip.c-scale  { left: clamp(236px, 20vw, 306px); top: 43%; --c: #c9d4d0; }
+.chip.c-rust   { left: 35%; top: 53%; --c: #c2553a; }
+.chip.c-grease { left: 56%; top: 63%; --c: #c2a04e; }
+.chip.c-bio    { left: 74%; top: 78%; --c: #6fa863; }
 
 /* ============================================================
    ACT 3 — THE SCORE (HMIS explained, factor by factor)
@@ -240,9 +282,9 @@
   -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
 }
 .factor .bar { height: 5px; border-radius: 3px; margin-bottom: 18px; }
-.f-health .bar { background: #3b82f6; }
-.f-flam .bar  { background: #ef4444; }
-.f-react .bar { background: #f5b301; }
+.f-health .bar { background: var(--hmis-h); }
+.f-flam .bar  { background: var(--hmis-f); }
+.f-react .bar { background: var(--hmis-r); }
 .factor .fico { display: block; font-size: clamp(2rem, 4.4vw, 2.9rem); line-height: 1; color: var(--s-ink); }
 .factor .flabel { display: block; margin-top: 12px; font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--s-ink); }
 .factor .fmeaning { display: block; margin-top: 8px; font-size: .86rem; line-height: 1.5; color: var(--s-mut); }
@@ -295,16 +337,14 @@
 .story .chem-scale .cdot span { text-shadow: 0 1px 3px rgba(8, 10, 14, .75); white-space: nowrap; }
 .chem-scale.safe .cdot,
 .chem-scale.safe .cdot span { color: #f4f6f8; }
-.chem-card .lockup em { color: #2a0b05; }
-.story .chem-card .lockup em,
-.story .chem-scale .cdot {
-  color: #f4f6f8;
+/* One framed HMIS spec panel split into quadrants — not four repeated cards. */
+.chem-list {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
-
-.chem-list { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .chem-card {
-  border-radius: 16px; padding: 18px 20px;
-  border: 1px solid var(--s-line); background: rgba(255, 255, 255, .03);
+  padding: 17px 20px;
+  border: 1px solid var(--s-line); border-radius: 14px;
+  background: rgba(255, 255, 255, .03);
   -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
 }
 .chem-card .chead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -314,11 +354,18 @@
   color: var(--s-mut); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--s-line);
 }
 .chem-card .lockup { margin-left: auto; display: inline-flex; gap: 4px; font-variant-numeric: tabular-nums; }
+/* Real HMIS lockup: each digit wears its axis color (Health / Flammability / Reactivity). */
 .chem-card .lockup em {
+  --ax: var(--s-mut);
   font-style: normal; width: 26px; height: 30px; border-radius: 7px;
   display: grid; place-items: center; font-size: .95rem; font-weight: 900;
-  background: var(--s-danger-soft); color: var(--s-danger-ink); border: 1px solid rgba(169, 52, 32, .3);
+  background: color-mix(in oklab, transparent, var(--ax) 16%);
+  border: 1px solid color-mix(in oklab, transparent, var(--ax) 48%);
+  color: color-mix(in oklab, var(--ax), #fff 50%);
 }
+.chem-card .lockup em:nth-child(1) { --ax: var(--hmis-h); }
+.chem-card .lockup em:nth-child(2) { --ax: var(--hmis-f); }
+.chem-card .lockup em:nth-child(3) { --ax: var(--hmis-r); }
 .chem-card p { margin: 10px 0 0; font-size: .9rem; line-height: 1.55; color: var(--s-mut); }
 .chem-out, .chem-final { margin: 4px auto 0; text-align: center; max-width: 62ch; font-size: 1rem; line-height: 1.6; color: var(--s-mut); }
 .chem-out b { color: var(--s-danger-ink); font-weight: 800; }
@@ -335,6 +382,7 @@
 .ecue.c-rust   { background: #c2553a; }
 .ecue.c-grease { background: #c2a04e; }
 .ecue.c-bio    { background: #6fa863; }
+.ecue.c-solvent { background: #a78bdb; }
 /* Dot label morphs enemy -> chemical; both spans stack, JS crossfades opacity */
 .cdot .enemy, .cdot .chem { transition: opacity .25s linear; }
 .cdot .chem { opacity: 0; }
@@ -374,6 +422,7 @@
 .savior-wrap .lede { margin: clamp(12px, 2vh, 22px) auto 0; max-width: 50ch; font-size: clamp(1rem, 1.4vw, 1.18rem); color: var(--s-mut); line-height: 1.5; }
 .savior-zero { display: inline-flex; gap: 14px; margin: clamp(16px, 3vh, 34px) 0 6px; font-variant-numeric: tabular-nums; }
 .savior-zero .z {
+  position: relative; overflow: hidden;
   width: clamp(62px, 10vw, 98px); aspect-ratio: 5 / 6; border-radius: 18px;
   display: grid; place-items: center; font-size: clamp(2.9rem, 6.5vw, 4.7rem); font-weight: 900;
   letter-spacing: -.05em; color: var(--s-safe-text);
@@ -381,6 +430,14 @@
   border: 1px solid rgba(8, 121, 111, .42);
   box-shadow: 0 30px 60px -34px rgba(8, 121, 111, .46);
 }
+/* Each zero caps one HMIS axis — the three colored factors from Act 3, resolved. */
+.savior-zero .z::before {
+  content: ""; position: absolute; top: 0; left: 22%; right: 22%; height: 3px;
+  border-radius: 0 0 3px 3px; background: var(--ax, var(--s-safe-text)); opacity: .8;
+}
+.savior-zero .z:nth-child(1) { --ax: var(--hmis-h); }
+.savior-zero .z:nth-child(2) { --ax: var(--hmis-f); }
+.savior-zero .z:nth-child(3) { --ax: var(--hmis-r); }
 .savior-cap { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: var(--s-mut); margin-bottom: clamp(12px, 2.2vh, 24px); }
 .savior-proof { display: flex; gap: 14px; justify-content: center; }
 .savior-proof-before { gap: 10px; margin-bottom: 8px; }
@@ -470,29 +527,43 @@
 .story:not(.story-ready) .pipe-chips .chip { position: static; }
 .story:not(.story-ready) .hmis-rig, .story:not(.story-ready) .chem-rig { margin-top: 30px; }
 @media (prefers-reduced-motion: reduce) {
-  .story .scroll-cue i, .story .chem-tag .pulse { animation: none; }
+  .story .scroll-cue i, .story .chem-tag .pulse,
+  .pipe-chips .chip.is-burning i::after { animation: none; }
 }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 760px) {
-  .story .act { height: 215vh; }
-  .story .act[data-act="1"] { height: 180vh; }
-  .story .act[data-act="3"] { height: 235vh; }
-  .story .act[data-act="4"] { height: 255vh; }
-  .story .act-savior { height: 215vh; }
+  .story .act { height: 198vh; }
+  .story .act[data-act="1"] { height: 170vh; }
+  .story .act[data-act="3"] { height: 212vh; }
+  .story .act[data-act="4"] { height: 226vh; }
+  .story .act-savior { height: 235vh; }
   .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
   .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
   .chip.c-scale  { left: 6%; top: 51%; }
-  .chip.c-rust   { left: 10%; top: 90.5%; }
-  .chip.c-grease { left: 54%; top: 51%; }
+  .chip.c-rust   { left: 28%; top: 58%; }
+  .chip.c-grease { left: 52%; top: 67%; }
   .pipe-chips .chip { max-width: min(44vw, 172px); white-space: normal; line-height: 1.15; }
-  .chip.c-bio    { left: auto; right: 6%; top: 90.5%; }
+  .chip.c-bio    { left: auto; right: 6%; top: 78%; }
   .hmis-factors { gap: 10px; }
   .factor { padding: 18px 10px; border-radius: 14px; }
   .factor .fmeaning { font-size: .78rem; }
   .hmis-rig { margin-top: 24vh; }
-  .chem-list { grid-template-columns: 1fr; gap: 10px; }
-  .chem-card { padding: 14px 16px; }
+  /* Stacked single column: drop the desktop quadrant frame and give each row
+     its own bordered card (the quadrant panel only reads as one in 2 columns). */
+  .chem-list {
+    grid-template-columns: 1fr; gap: 10px;
+    border: 0; border-radius: 0; background: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .chem-card {
+    padding: 14px 16px;
+    border: 1px solid var(--s-line); border-radius: 14px;
+    background: rgba(255, 255, 255, .03);
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  }
+  .chem-card:nth-child(2n) { border-right: 1px solid var(--s-line); }
+  .chem-card:nth-child(n+3) { border-bottom: 1px solid var(--s-line); }
   .chem-card p { font-size: .84rem; }
   .chem-rig { margin-top: 14vh; gap: 10px; }
   .chem-scale { order: -1; padding-top: 18px; }
@@ -550,6 +621,8 @@
 @media (min-width: 901px) {
   .story .act[data-act="1"] .act-copy.bl {
     padding-bottom: clamp(260px, 32vh, 420px);
+    /* Clear the chapter rail + active "THE ENEMY" label so they never overlap the headline. */
+    padding-left: clamp(190px, 15vw, 240px);
   }
 }
 
@@ -594,5 +667,162 @@
 .story .savior-cap {
   letter-spacing: .045em !important;
   text-transform: none !important;
+}
+
+@media (max-width: 760px) {
+  .story .act[data-act="1"] .stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(28px, 5vh, 46px);
+    padding-top: 68px;
+  }
+
+  .story .act[data-act="1"] .act-copy.bl {
+    order: 1;
+    align-self: stretch;
+    text-align: left;
+    padding-bottom: 0;
+  }
+
+  .story .act[data-act="1"] .reel {
+    order: 2;
+    width: min(78vw, 328px);
+    margin-bottom: 0;
+  }
+
+  .act-chems .stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 72px;
+  }
+
+  .act-chems .act-copy.top {
+    position: relative;
+    top: auto;
+    width: min(360px, 90vw);
+    margin: 0 auto 18px;
+    padding: 0 20px;
+  }
+
+  .act-chems .act-h {
+    font-size: clamp(2rem, 11vw, 2.9rem);
+  }
+
+  .act-chems .chem-rig {
+    width: min(350px, 90vw);
+    margin-top: 0;
+    gap: 12px;
+  }
+
+  .act-chems .chem-scale {
+    order: 0;
+    padding-top: 4px;
+  }
+
+  .act-chems .scale-ticks {
+    font-size: .6rem;
+  }
+
+  .act-chems .cdot {
+    width: 18px;
+    height: 18px;
+  }
+
+  .act-chems .cdot span {
+    font-size: .64rem;
+  }
+
+  .act-savior .savior-proof {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(310px, 82vw);
+    margin: 10px auto 0;
+    gap: 10px;
+  }
+
+  .act-savior .proof-pair:nth-child(3) {
+    display: none;
+  }
+
+  .act-savior .savior-proof figure {
+    width: 100%;
+  }
+
+  .act-savior .savior-proof figcaption {
+    display: flex;
+    justify-content: center;
+    gap: .35em;
+  }
+}
+
+.story .savior-proof figcaption {
+  display: flex;
+  justify-content: center;
+  gap: .35em;
+}
+
+.story .cdot[data-dot="0"] span { transform: translateX(-92%); }
+.story .cdot[data-dot="1"] span { transform: translateX(-8%); }
+.story .cdot[data-dot="2"] span { transform: translateX(8%); top: -300%; }
+.story .cdot[data-dot="3"] span { transform: translateX(-92%); bottom: -300%; }
+
+.story .cdot span {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .act-chems .cdot span {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .act-savior .stage {
+    padding-top: calc(78px + env(safe-area-inset-top, 0px));
+    align-items: start;
+  }
+
+  .act-savior .savior-wrap {
+    align-self: stretch;
+  }
+
+  .act-savior .savior-ctas {
+    margin-bottom: 72px;
+  }
+
+  .act-chems .stage {
+    justify-content: flex-start;
+    padding-top: calc(92px + env(safe-area-inset-top, 0px));
+    gap: 8px;
+  }
+
+  .act-chems .act-copy.top {
+    margin-bottom: 8px;
+  }
+
+  .act-chems .act-h {
+    font-size: clamp(1.65rem, 9vw, 2.28rem);
+    line-height: .98;
+  }
+
+  .act-chems .chem-rig {
+    gap: 8px;
+  }
+
+  .act-chems .chem-list {
+    gap: 8px;
+  }
+
+  .act-chems .chem-card {
+    padding: 12px 14px;
+  }
+
+  .act-chems .chem-card p {
+    margin-top: 8px;
+    font-size: .8rem;
+    line-height: 1.45;
+  }
 }
 }

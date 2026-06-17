@@ -307,6 +307,33 @@ const CATALOG_ORDER = [
   "watersafe60", "purgo", "dbnpa", "lam3", "alumibrite", "torque"
 ];
 
+// Catalog UI groupings (curated, not the raw `cat` field) — drive the category
+// filter chips and grouping on the products page.
+const CATALOG_GROUPS = [
+  { key: "descale", label: "Rust & Scale", ids: ["hcr", "descaler", "crs"] },
+  { key: "degrease", label: "Grease & Grime", ids: ["cr", "crhd", "neutral", "multiwash"] },
+  { key: "water", label: "Water Treatment", ids: ["watersafe60", "purgo", "dbnpa"] },
+  { key: "exterior", label: "Exterior & Specialty", ids: ["lam3", "alumibrite", "torque"] }
+];
+
+// Automated replacement checker: the legacy chemical a buyer uses today, the job
+// it does, and the VertKleen product ids that replace it. Single source of truth
+// for the compact top-of-page matrix and the live catalog filter.
+const REPLACEMENT_MAP = [
+  { legacy: "Muriatic / hydrochloric acid", job: "Rust, scale & passivation", ids: ["hcr", "descaler", "crs"] },
+  { legacy: "Caustic soda / sodium hydroxide", job: "pH adjustment & caustic cleaning", ids: ["cr"] },
+  { legacy: "Simple Green / Zep / butyl degreasers", job: "Heavy-duty degreasing", ids: ["crhd"] },
+  { legacy: "Caustic & solvent degreasers", job: "Degreasing sensitive surfaces", ids: ["neutral"] },
+  { legacy: "CLR / Calci-Solve", job: "Coil & heat-transfer descaling", ids: ["descaler"] },
+  { legacy: "General-purpose caustic cleaners", job: "Everyday facility washing", ids: ["multiwash"] },
+  { legacy: "Phosphate / zinc / molybdate blends", job: "Scale & corrosion control", ids: ["watersafe60"] },
+  { legacy: "Stabilized bromine / bleach", job: "Oxidizing biocide", ids: ["purgo"] },
+  { legacy: "Glutaraldehyde 50%", job: "Non-oxidizing biocide", ids: ["dbnpa"] },
+  { legacy: "Wet & Forget / bleach roof cleaners", job: "Exterior moss, algae & mold", ids: ["lam3"] },
+  { legacy: "Hydrofluoric / HCl brighteners", job: "Aluminum brightening", ids: ["alumibrite"] },
+  { legacy: "Separate wash, wax & bug removers", job: "Vehicle wash & wax", ids: ["torque"] }
+];
+
 const PRODUCT_CATALOG_COPY = {
   hcr: {
     job: "Rust, scale, and heavy deposits",
@@ -517,10 +544,10 @@ function renderChrome() {
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Product Categories</div>
-          <a href="${root}products.html#descale">Rust &amp; Scale</a>
-          <a href="${root}products.html#degrease">Grease &amp; Grime</a>
-          <a href="${root}products.html#water">Water Treatment</a>
-          <a href="${root}products.html#exterior">Exterior &amp; Specialty</a>
+          <a href="${root}products.html#cat-descale">Rust &amp; Scale</a>
+          <a href="${root}products.html#cat-degrease">Grease &amp; Grime</a>
+          <a href="${root}products.html#cat-water">Water Treatment</a>
+          <a href="${root}products.html#cat-exterior">Exterior &amp; Specialty</a>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Resources + SDS</div>
@@ -632,26 +659,157 @@ function productCard(id, heroCard = false) {
       ${fitList ? `<ul class="product-fit-list">${fitList}</ul>` : ""}
       <span class="product-proof-line">${catalog.proof || "Stats, studies, and documents on the detail page"}</span>
       <div class="prod-actions">
-        <a class="btn btn-ink btn-sm" href="product.html?id=${id}">Pictures, Stats, Proof</a>
+        <a class="btn btn-ink btn-sm" href="product.html?id=${id}">View Details</a>
       </div>
   </div>`;
 }
 
-function productShelfCard(id) {
+/* ---------- Products shop: e-commerce grid + replacement checker ---------- */
+// Whole-card link, e-commerce style. Used by the unified products grid.
+function catalogCard(id) {
   const p = PRODUCTS[id];
-  const catalog = PRODUCT_CATALOG_COPY[id] || {};
   if (!p) return "";
+  const copy = PRODUCT_CATALOG_COPY[id] || {};
+  const badge = p.hmis === "0-0-0"
+    ? '<span class="hmis-badge">HMIS 0-0-0</span>'
+    : '<span class="hmis-badge note">LOW HAZARD</span>';
   const media = p.image
     ? `<img src="${p.image}" alt="${p.name} product photo" loading="lazy">`
     : `<i class="ph ${p.icon}" aria-hidden="true"></i>`;
   return `
-    <a class="catalog-shelf-card" href="product.html?id=${id}">
-      <span class="catalog-shelf-media">${media}</span>
-      <span class="catalog-shelf-copy">
-        <b>${p.name}</b>
-        <em>${catalog.job || p.replaces}</em>
+    <a class="shop-card" href="product.html?id=${id}" data-id="${id}">
+      <span class="shop-card-media">${media}${badge}</span>
+      <span class="shop-card-body">
+        <span class="shop-card-type">${copy.job || "VertKleen product"}</span>
+        <b class="shop-card-name">${p.name}</b>
+        <span class="shop-card-replaces">${p.replaces}</span>
+        <span class="shop-card-cta">View details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
       </span>
     </a>`;
+}
+
+function swapRow(row, i) {
+  const names = row.ids.map((id) => PRODUCTS[id]?.name).filter(Boolean).join(", ");
+  return `
+    <button type="button" class="swap-row" data-row="${i}" aria-label="Show VertKleen swap for ${row.legacy}">
+      <span class="swap-legacy"><em>Replace</em>${row.legacy}</span>
+      <span class="swap-job"><em>For</em>${row.job}</span>
+      <span class="swap-arrow" aria-hidden="true"><i class="ph ph-arrow-right"></i></span>
+      <span class="swap-vk"><em>Use</em>${names}</span>
+    </button>`;
+}
+
+function initShop() {
+  const grid = document.getElementById("shopGrid");
+  if (!grid) return;
+  const matrix = document.getElementById("swapMatrix");
+  const result = document.getElementById("swapResult");
+  const chipsBox = document.getElementById("shopChips");
+  const sortSel = document.getElementById("shopSort");
+  const countEl = document.getElementById("shopCount");
+  const emptyEl = document.getElementById("shopEmpty");
+
+  const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
+  const state = { group: "all", match: null, sort: "featured" };
+
+  const chips = [{ key: "all", label: "All products" }, ...CATALOG_GROUPS.map((g) => ({ key: g.key, label: g.label }))];
+  chipsBox.innerHTML = chips
+    .map((c) => `<button type="button" class="shop-chip${c.key === "all" ? " active" : ""}" data-group="${c.key}" aria-pressed="${c.key === "all"}">${c.label}</button>`)
+    .join("");
+
+  if (matrix) {
+    matrix.innerHTML =
+      `<div class="swap-head" aria-hidden="true"><span>Replace this</span><span>For this job</span><span></span><span>Use this VertKleen</span></div>` +
+      REPLACEMENT_MAP.map(swapRow).join("");
+  }
+
+  const syncChips = () => {
+    chipsBox.querySelectorAll(".shop-chip").forEach((b) => {
+      const on = b.dataset.group === state.group;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  };
+
+  const visibleIds = () => {
+    let ids = state.sort === "az"
+      ? [...CATALOG_ORDER].sort((a, b) => PRODUCTS[a].name.localeCompare(PRODUCTS[b].name))
+      : [...CATALOG_ORDER];
+    if (state.group !== "all") ids = ids.filter((id) => groupOf(id) === state.group);
+    if (state.match) ids = ids.filter((id) => state.match.includes(id));
+    return ids;
+  };
+
+  const apply = () => {
+    const ids = visibleIds();
+    grid.innerHTML = ids.map(catalogCard).join("");
+    if (countEl) countEl.textContent = `Showing ${ids.length} of ${CATALOG_ORDER.length}`;
+    if (emptyEl) emptyEl.hidden = ids.length > 0;
+  };
+
+  const reset = () => {
+    state.group = "all";
+    state.match = null;
+    state.sort = "featured";
+    if (sortSel) sortSel.value = "featured";
+    if (result) result.hidden = true;
+    matrix?.querySelectorAll(".swap-row.active").forEach((r) => r.classList.remove("active"));
+    syncChips();
+    apply();
+  };
+
+  chipsBox.addEventListener("click", (e) => {
+    const btn = e.target.closest(".shop-chip");
+    if (!btn) return;
+    state.group = btn.dataset.group;
+    syncChips();
+    apply();
+  });
+
+  sortSel?.addEventListener("change", () => {
+    state.sort = sortSel.value;
+    apply();
+  });
+
+  if (matrix && result) {
+    matrix.addEventListener("click", (e) => {
+      const row = e.target.closest(".swap-row");
+      if (!row) return;
+      const data = REPLACEMENT_MAP[+row.dataset.row];
+      state.match = data.ids;
+      state.group = "all";
+      matrix.querySelectorAll(".swap-row").forEach((r) => r.classList.toggle("active", r === row));
+      syncChips();
+      const links = data.ids.map((id) => `<a href="product.html?id=${id}">${PRODUCTS[id].name}</a>`).join(" · ");
+      result.innerHTML =
+        `<span class="swap-result-q"><em>Replace</em>${data.legacy}</span>` +
+        `<i class="ph ph-arrow-right" aria-hidden="true"></i>` +
+        `<span class="swap-result-a"><em>Switch to</em>${links}</span>` +
+        `<button type="button" class="swap-clear" id="swapClear">Clear</button>`;
+      result.hidden = false;
+      apply();
+      document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
+    });
+  }
+
+  result?.addEventListener("click", (e) => {
+    if (e.target.closest("#swapClear")) reset();
+  });
+
+  emptyEl?.addEventListener("click", (e) => {
+    if (e.target.tagName === "BUTTON") reset();
+  });
+
+  // Deep link: products.html#cat-water preselects a category (footer + home cards).
+  const catHash = (location.hash.match(/^#cat-(.+)$/) || [])[1];
+  if (catHash && CATALOG_GROUPS.some((g) => g.key === catHash)) {
+    state.group = catHash;
+    syncChips();
+  }
+
+  apply();
+
+  if (catHash) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
 }
 
 /* ---------- Before/after slider (drag, keyboard, reduced-motion safe) ----------
@@ -925,53 +1083,6 @@ function initLightbox() {
   dlg.addEventListener("close", () => { lbImg.removeAttribute("src"); });
 }
 
-function initRailControls() {
-  document.querySelectorAll("[data-rail-prev], [data-rail-next]").forEach((button) => {
-    const targetId = button.dataset.railPrev || button.dataset.railNext;
-    const rail = document.getElementById(targetId);
-    if (!rail) return;
-    const dir = button.dataset.railNext ? 1 : -1;
-    button.addEventListener("click", () => {
-      const first = rail.firstElementChild;
-      const step = first ? first.getBoundingClientRect().width + 16 : rail.clientWidth * 0.8;
-      rail.scrollBy({ left: dir * step, behavior: smoothPref() });
-      rail.focus({ preventScroll: true });
-    });
-  });
-}
-
-function initCatalogJumps() {
-  const offset = () => {
-    const nav = document.querySelector(".site-header");
-    return (nav?.getBoundingClientRect().height || 64) + 24;
-  };
-
-  document.querySelectorAll(".catalog-jumpbar a[href^='#']").forEach((link) => {
-    link.addEventListener("click", (event) => {
-      const target = document.querySelector(link.getAttribute("href"));
-      if (!target) return;
-      event.preventDefault();
-      window.scrollTo({
-        top: target.getBoundingClientRect().top + window.scrollY - offset(),
-        behavior: smoothPref()
-      });
-      history.replaceState(null, "", link.getAttribute("href"));
-    });
-  });
-}
-
-function initProductDisclosures() {
-  document.querySelectorAll(".matrix-disclosure").forEach((details) => {
-    const action = details.querySelector("summary strong");
-    if (!action) return;
-    const sync = () => {
-      action.textContent = details.open ? "Close matrix" : "Open matrix";
-    };
-    details.addEventListener("toggle", sync);
-    sync();
-  });
-}
-
 function initImageFallbacks() {
   const frameSelector = ".catalog-shelf-media, .product-media-card, .proof-card figure, .case-card figure, .ind-gallery figure, figure.photo, .proof-thumb, .row-thumb";
   const labelFor = (img) => {
@@ -1004,7 +1115,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initResponsiveTables();
   initReveal();
   initLightbox();
-  initRailControls();
-  initCatalogJumps();
-  initProductDisclosures();
+  initShop();
 });

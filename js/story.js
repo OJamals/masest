@@ -3,7 +3,7 @@
    NATIVE browser scroll. One GSAP timeline per act, driven by
    ScrollTrigger scrub (the single smoothing layer — no Lenis,
    no wheel multipliers, no custom damping). Wheel feel is the
-   browser's own; animations catch up over ~0.5s.
+   browser's own; animations catch up over ~0.3s.
    Act 1: curated field-photo reel. Act 2: debris accumulation
    inside a pipe (sticking physics). Act 3: HMIS factor by
    factor. Act 4: chemicals dropped onto the hazard scale, then
@@ -31,32 +31,33 @@
      A 1.2-unit hold keeps the finished composition on stage
      until the act unpins and slides away naturally.
      ============================================================ */
-  var BEAT_IN = 0.65, BEAT_OUT = 0.25, HOLD = 1.65;
+var BEAT_IN = 0.58, BEAT_OUT = 0.22, HOLD = 1.25;
   var acts = gsap.utils.toArray(story.querySelectorAll(".act"));
   var firstAct = acts[0];
 
   var states = acts.map(function (act, i) {
     var maxAt = 0;
     var els = Array.prototype.slice.call(act.querySelectorAll("[data-at]"));
+    var focusables = Array.prototype.slice.call(act.querySelectorAll("a[href], button, input, select, textarea, [tabindex]"));
     els.forEach(function (el) {
-      el._at = parseInt(el.getAttribute("data-at"), 10) || 0;
-      el._out = el.hasAttribute("data-out") ? parseInt(el.getAttribute("data-out"), 10) : -1;
+      el._at = parseFloat(el.getAttribute("data-at")) || 0;
+      el._out = el.hasAttribute("data-out") ? parseFloat(el.getAttribute("data-out")) : -1;
       if (el._at > maxAt) maxAt = el._at;
       if (el._out > maxAt) maxAt = el._out;
     });
-    return { act: act, stage: act.querySelector(".stage"), i: i, p: 0, active: false, fx: null, maxAt: maxAt, els: els, T: maxAt + BEAT_IN + HOLD };
+    focusables.forEach(function (el) {
+      el.dataset.storyTabindex = el.getAttribute("tabindex") || "";
+    });
+    return { act: act, stage: act.querySelector(".stage"), i: i, p: 0, active: false, fx: null, maxAt: maxAt, els: els, focusables: focusables, focusVisible: null, T: maxAt + BEAT_IN + HOLD };
   });
 
   function syncStoryFocus() {
     states.forEach(function (st) {
       var visible = st.active || st.act === firstAct && window.scrollY < st.act.offsetHeight;
-      var focusables = st.act.querySelectorAll("a[href], button, input, select, textarea, [tabindex]");
+      if (visible === st.focusVisible) return;
+      st.focusVisible = visible;
       st.act.setAttribute("aria-hidden", visible ? "false" : "true");
-      focusables.forEach(function (el) {
-        if (!el.dataset.storyTabindexSet) {
-          el.dataset.storyTabindexSet = "1";
-          el.dataset.storyTabindex = el.getAttribute("tabindex") || "";
-        }
+      st.focusables.forEach(function (el) {
         if (visible) {
           if (el.dataset.storyTabindex) el.setAttribute("tabindex", el.dataset.storyTabindex);
           else el.removeAttribute("tabindex");
@@ -73,9 +74,9 @@ states.forEach(function (st) {
     defaults: { ease: "power2.out" },
     scrollTrigger: {
       trigger: st.act,
-        start: startsPinned ? "top 67px" : "top 85%",
+        start: startsPinned ? "top 67px" : "top 82%",
         end: "bottom bottom",
-        scrub: 0.5,
+        scrub: 0.30,
         onEnter: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
         onEnterBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
         onLeave: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 0 }); },
@@ -124,7 +125,25 @@ states.forEach(function (st) {
       updateReel(st);
       if (cue) cue.style.opacity = Math.max(0, 1 - st.p * 8);
     }
+    if (st.act === pipeAct) updateChips2(st);
     if (st.act === chemAct) updateChems(st);
+  }
+
+  /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
+  var pipeAct = story.querySelector('.act[data-act="2"]');
+  var pipeChips = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".chip")) : [];
+  pipeChips.forEach(function (c) { c._beat = parseInt(c.getAttribute("data-at"), 10) || 1; c._burning = false; });
+
+  function updateChips2(st) {
+    if (!pipeChips.length) return;
+    var win = INW(st) * 1.6;                              /* ramp the ignite over ~1.6 beats */
+    for (var k = 0; k < pipeChips.length; k++) {
+      var c = pipeChips[k];
+      var b = smooth((st.p - beatFrac(st, c._beat)) / win);
+      c.style.setProperty("--burn", b.toFixed(3));
+      var on = b > 0.5;
+      if (on !== c._burning) { c._burning = on; c.classList.toggle("is-burning", on); }
+    }
   }
 
   /* ---- ACT 1: field-photo reel crossfade ---- */
@@ -163,10 +182,10 @@ states.forEach(function (st) {
 
   function updateChems(st) {
     if (!cdots.length) return;
-    var z = smooth((st.p - beatFrac(st, 6)) / INW(st));
+    var z = smooth((st.p - beatFrac(st, 2.95)) / INW(st));
     /* morph each dot's label from the enemy (known from Act 2) to the
        hazardous chemical it forces, as the "score" beat reads */
-    var m = smooth((st.p - beatFrac(st, 5)) / INW(st));
+    var m = smooth((st.p - beatFrac(st, 2.45)) / INW(st));
     for (var k = 0; k < cdots.length; k++) {
       var inT = smooth((st.p - beatFrac(st, k + 1)) / INW(st));
       cdots[k].style.opacity = inT;
@@ -198,7 +217,7 @@ states.forEach(function (st) {
     var ctx = cv.getContext("2d");
     var lastW = 0, lastH = 0;
     function resize() {
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var dpr = Math.min(window.devicePixelRatio || 1, window.innerWidth < 760 ? 1.25 : 1.5);
       var r = cv.getBoundingClientRect();
       var w = Math.max(1, Math.round(r.width * dpr));
       var h = Math.max(1, Math.round(r.height * dpr));
@@ -213,6 +232,14 @@ states.forEach(function (st) {
     return { ctx: ctx, resize: resize, w: function () { return cv.clientWidth; }, h: function () { return cv.clientHeight; } };
   }
   function rnd(a, b) { return a + Math.random() * (b - a); }
+  function seededRng(seed) {
+    var s = seed >>> 0;
+    return function () {
+      s = Math.imul(1664525, s) + 1013904223 >>> 0;
+      return s / 4294967296;
+    };
+  }
+  function rndWith(rng, a, b) { return a + rng() * (b - a); }
   function flowAngle(x, y, t) {
     return Math.sin(x * 0.0028 + t * 0.45) + Math.cos(y * 0.0035 - t * 0.3) + Math.sin((x + y) * 0.0012 + t * 0.2);
   }
@@ -250,22 +277,29 @@ states.forEach(function (st) {
      a home stretch of the run, matching the four chips. The bore visibly
      narrows and flow speeds through the chokes (continuity preserved). */
   var DEB_TYPES = [
-    { c: "201,212,208", hs: 0.26 },  /* scale   — top horizontal run */
-    { c: "194,85,58",   hs: 0.48 },  /* rust    — right vertical     */
-    { c: "194,160,78",  hs: 0.68 },  /* grease  — middle bend        */
-    { c: "111,168,99",  hs: 0.88 }   /* biofilm — lower run / exit   */
+    { c: "201,212,208", hs: 0.08 },  /* scale   — top horizontal run */
+    { c: "194,85,58",   hs: 0.34 },  /* rust    — right vertical     */
+    { c: "194,160,78",  hs: 0.58 },  /* grease  — middle bend        */
+    { c: "111,168,99",  hs: 0.84 }   /* biofilm — lower run / exit   */
   ];
   /* normalized centerline (fractions of the stage). The chip CSS
      positions in story.css are hand-aligned to these points. */
+  /* Routed below the centered headline + paragraph, but kept fully in-frame.
+     The previous path ran to 1.08h, which clipped the lower pipe on ordinary
+     desktop viewports and made the scene read like a broken staircase. */
   var PIPE_N = [
-    [0.56, -0.06], [0.56, 0.26], [0.88, 0.26], [0.88, 0.60],
-    [0.54, 0.60], [0.54, 0.92], [0.80, 0.92], [0.80, 1.06]
+    [0.10, 0.45], [0.25, 0.45], [0.25, 0.55], [0.44, 0.55],
+    [0.44, 0.65], [0.63, 0.65], [0.63, 0.75], [0.84, 0.75], [0.84, 0.90]
   ];
   var BUCKET_N = 64;
 
   function buildPipe(w, h) {
-    var bore = clamp(38, 82, h * 0.108);
-    var pts = PIPE_N.map(function (p) { return { x: p[0] * w, y: p[1] * h }; });
+    var compact = w < 760;
+    var bore = clamp(compact ? 34 : 38, compact ? 62 : 82, h * (compact ? 0.085 : 0.108));
+    var pts = PIPE_N.map(function (p) {
+      var x = compact ? (0.05 + p[0] * 0.9) : p[0];
+      return { x: x * w, y: p[1] * h };
+    });
     var segs = [], cum = [0], L = 0;
     for (var i = 0; i < pts.length - 1; i++) {
       var a = pts[i], b = pts[i + 1];
@@ -295,8 +329,18 @@ states.forEach(function (st) {
     ctx.stroke();
   }
   function spawnPart(D, s) {
-    var t = DEB_TYPES[(Math.random() * 4) | 0];
-    D.parts.push({ t: t, s: s, o: rnd(-D.half * 0.4, D.half * 0.4), v: rnd(0.9, 1.8), r: rnd(2.2, 4.4) });
+    var rng = D.rng || Math.random;
+    var t = DEB_TYPES[(rng() * (D.unlocked || 1)) | 0];
+    if (s == null && D.P) s = clamp(0, D.P.L * 0.96, t.hs * D.P.L + rndWith(rng, -D.P.bore * 2.4, D.P.bore * 0.8));
+    D.parts.push({ t: t, s: s, o: rndWith(rng, -D.half * 0.4, D.half * 0.4), v: rndWith(rng, 0.9, 1.8), r: rndWith(rng, 2.2, 4.4) });
+  }
+
+  function unlockedDebrisTypes(st) {
+    var n = 1;
+    if (st.p >= beatFrac(st, 2) - INW(st) * 0.2) n = 2;
+    if (st.p >= beatFrac(st, 3) - INW(st) * 0.2) n = 3;
+    if (st.p >= beatFrac(st, 4) - INW(st) * 0.2) n = 4;
+    return n;
   }
   function depositDebris(D, s, side, t, r) {
     var b = Math.max(0, Math.min(BUCKET_N, (s / D.bs) | 0));
@@ -318,20 +362,23 @@ states.forEach(function (st) {
         w: w, h: h, P: P, half: half, maxCrust: maxCrust, bs: bs,
         crust: [new Float32Array(BUCKET_N + 1), new Float32Array(BUCKET_N + 1)], /* thickness, side 0:+normal 1:-normal */
         ccol: [new Array(BUCKET_N + 1), new Array(BUCKET_N + 1)],                 /* dominant enemy color per bucket */
-        parts: [], flow: []
+        parts: [], flow: [],
+        rng: seededRng((w * 73856093 ^ h * 19349663 ^ 0x2d2a2d) >>> 0)
       };
-      for (var fi = 0; fi < 22; fi++) st.deb.flow.push({ s: rnd(0, P.L), o: rnd(-half * 0.5, half * 0.5), len: rnd(20, 46) });
+      st.deb.unlocked = unlockedDebrisTypes(st);
+      for (var fi = 0; fi < 22; fi++) st.deb.flow.push({ s: rndWith(st.deb.rng, 0, P.L), o: rndWith(st.deb.rng, -half * 0.5, half * 0.5), len: rndWith(st.deb.rng, 20, 46) });
       /* pre-seed crust to scroll progress, so a mid-act jump still shows
          the buildup story so far (heaviest near each enemy's home) */
-      var seed = Math.floor(smooth(st.p) * 420);
+      var seed = Math.floor(smooth(st.p) * 160);
       for (var sd = 0; sd < seed; sd++) {
-        var ty0 = DEB_TYPES[(Math.random() * 4) | 0];
-        var ss = clamp(0, P.L, (ty0.hs + rnd(-0.13, 0.13)) * P.L);
-        depositDebris(st.deb, ss, Math.random() < 0.5 ? 0 : 1, ty0, rnd(2.2, 4.4));
+        var ty0 = DEB_TYPES[(st.deb.rng() * st.deb.unlocked) | 0];
+        var ss = clamp(0, P.L, (ty0.hs + rndWith(st.deb.rng, -0.08, 0.08)) * P.L);
+        depositDebris(st.deb, ss, st.deb.rng() < 0.5 ? 0 : 1, ty0, rndWith(st.deb.rng, 2.2, 4.4));
       }
-      for (var ip = 0; ip < 30; ip++) spawnPart(st.deb, rnd(0, P.L * 0.9));
+      for (var ip = 0; ip < 26; ip++) spawnPart(st.deb, null);
     }
     var D = st.deb, P = D.P, half = D.half;
+    D.unlocked = unlockedDebrisTypes(st);
     function bkt(s) { return Math.max(0, Math.min(BUCKET_N, (s / D.bs) | 0)); }
     function crustAt(side, s) { return D.crust[side][bkt(s)]; }
     function openAt(s) { return Math.max(12, (half - crustAt(0, s)) + (half - crustAt(1, s))); }
@@ -374,7 +421,7 @@ states.forEach(function (st) {
     ctx.closePath(); ctx.clip();
 
     /* crust band (under the flow + moving debris) */
-    drawCrust(ctx, D);
+    drawCrustPatches(ctx, D);
 
     /* flow streaks: faster where the bore is choked */
     ctx.strokeStyle = "rgba(244,246,248,0.12)"; ctx.lineWidth = 1.2;
@@ -391,7 +438,7 @@ states.forEach(function (st) {
 
     /* spawn + advect debris down the run */
     var stickBase = 0.02 + st.p * 0.10;
-    while (D.parts.length < 40) spawnPart(D, rnd(-30, 10));
+    while (D.parts.length < 30) spawnPart(D, null);
     ctx.globalAlpha = 0.9;
     for (var k = D.parts.length - 1; k >= 0; k--) {
       var d = D.parts[k];
@@ -405,7 +452,7 @@ states.forEach(function (st) {
       var openSide = half - crustAt(side, d.s);
       if (d.o > openSide) d.o = openSide; if (d.o < -(half - crustAt(1, d.s))) d.o = -(half - crustAt(1, d.s));
       var homeNear = 1 - Math.min(1, Math.abs(d.s / P.L - d.t.hs) * 2.2);
-      var stickP = stickBase * (0.5 + elbowBoost(d.s) * 1.8) * (0.7 + homeNear * 0.9);
+      var stickP = homeNear < 0.18 ? 0 : stickBase * (0.5 + elbowBoost(d.s) * 1.8) * (homeNear * homeNear);
       if (Math.abs(d.o) > (half - crustAt(side, d.s)) - 3 && Math.random() < stickP) {
         depositDebris(D, d.s, side, d.t, d.r);
         D.parts.splice(k, 1); continue;
@@ -418,7 +465,42 @@ states.forEach(function (st) {
     ctx.restore();
   }
 
-  /* crust as a filled thickness band hugging each wall — the bore visibly
+  function drawCrustPatches(ctx, D) {
+    var P = D.P, half = D.half, bs = D.bs;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (var side = 0; side < 2; side++) {
+      var sign = side === 0 ? 1 : -1, arr = D.crust[side], col = D.ccol[side];
+      for (var b = 0; b < BUCKET_N; b += 2) {
+        var t = (arr[b] + arr[b + 1]) * 0.5;
+        if (t < 0.6) continue;
+        var s0 = b * bs, s1 = Math.min(P.L, (b + 1.35) * bs);
+        var a0 = atS(P, s0), a1 = atS(P, s1);
+        var width = clamp(2.5, half * 0.34, t * 0.62);
+        var inset = half - width * 0.72;
+        ctx.globalAlpha = clamp(0.28, 0.82, 0.28 + t / D.maxCrust * 0.54);
+        ctx.strokeStyle = "rgb(" + (col[b] || col[b + 1] || "201,212,208") + ")";
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(a0.x + a0.nx * sign * inset, a0.y + a0.ny * sign * inset);
+        ctx.lineTo(a1.x + a1.nx * sign * inset, a1.y + a1.ny * sign * inset);
+        ctx.stroke();
+        if (b % 6 === 0) {
+          var m = atS(P, (s0 + s1) * 0.5);
+          ctx.beginPath();
+          ctx.arc(m.x + m.nx * sign * (inset - width * 0.15), m.y + m.ny * sign * (inset - width * 0.15), Math.max(1.6, width * 0.42), 0, 6.2832);
+          ctx.fillStyle = ctx.strokeStyle;
+          ctx.fill();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /* Legacy filled-band renderer. The live scene uses drawCrustPatches above:
+     wall deposits read as buildup, while this filled band made triangular sheets.
      closes toward the chokes. One quad per bucket, colored by the enemy
      that built it. */
   function drawCrust(ctx, D) {
@@ -506,7 +588,9 @@ states.forEach(function (st) {
       var target = acts[i];
       if (!target) return;
       var top = target.getBoundingClientRect().top + window.scrollY;
-      var y = top + (target.offsetHeight - window.innerHeight) * 0.5;
+      var landings = [0.24, 0.42, 0.42, 0.54, 0.32];
+      var travel = Math.max(0, target.offsetHeight - window.innerHeight);
+      var y = top + travel * (landings[i] || 0.5);
       window.scrollTo({ top: y, behavior: "smooth" });
     });
   });
