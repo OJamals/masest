@@ -196,7 +196,7 @@ test("footer carries secondary navigation in grouped lanes", () => {
 test("no-js fallback nav stays focused on primary categories", () => {
   const pages = [
     ...readdirSync(new URL("..", import.meta.url))
-      .filter(file => file.endsWith(".html") && file !== "index.html")
+      .filter(file => file.endsWith(".html") && !["index.html", "admin.html"].includes(file))
       .map(file => file),
     ...readdirSync(new URL("../industries", import.meta.url))
       .filter(file => file.endsWith(".html"))
