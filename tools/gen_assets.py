@@ -15,6 +15,7 @@ HOME = os.path.expanduser("~")
 SRC = os.path.join(HOME, "Desktop/masest/website_assets")
 CUR = os.path.join(SRC, "02_curated_photos")
 CASE = os.path.join(SRC, "03_case_study_photos")
+TOP = os.path.join(HOME, "Desktop/masest/images")
 OUT = os.path.join(os.path.dirname(__file__), "..", "img")
 
 WIDE, THUMB, Q = 1200, 560, 80
@@ -78,6 +79,52 @@ CASES = {
 PIN = {
     "proof/cases/fire-pump": "p02_7.jpeg",  # largest is a bench/pH-strip shot; this is the descaled flange
 }
+
+PAIR_PINS = {
+    "proof/walmart-dc-proof-enhanced": (
+        os.path.join(CASE, "VertKleen_CRHD_being_used_as_a_replacement_to_Si"),
+        "p02_4.jpeg",
+    ),
+    "proof/cases/drone-before": (TOP, "vertdrone before.JPG"),
+    "proof/cases/drone-after": (TOP, "vertdrone after.jpeg"),
+    "proof/cases/airboat-before": (
+        os.path.join(CASE, "VertKleen_Alumni_Brite_Torque_and_N_clean_commer"),
+        "p05_23.jpeg",
+    ),
+    "proof/cases/airboat-after": (
+        os.path.join(CASE, "VertKleen_Alumni_Brite_Torque_and_N_clean_commer"),
+        "p05_25.jpeg",
+    ),
+    "proof/cases/farm-rust-before": (
+        os.path.join(CASE, "VertKleen_HCR_Brevard_County_HVAC_farm_rust_remo"),
+        "p02_5.jpeg",
+    ),
+    "proof/cases/farm-rust-after": (
+        os.path.join(CASE, "VertKleen_HCR_Brevard_County_HVAC_farm_rust_remo"),
+        "p02_4.jpeg",
+    ),
+    "proof/cases/grout-before": (
+        os.path.join(CASE, "VertKleen_CR_applications_grout_moss_grime_algae"),
+        "p04_17.jpeg",
+    ),
+    "proof/cases/grout-after": (
+        os.path.join(CASE, "VertKleen_CR_applications_grout_moss_grime_algae"),
+        "p04_16.jpeg",
+    ),
+    "proof/cases/kitchen-before": (
+        os.path.join(CASE, "VertKleen_CRHD_Commercial_kitchen_cleaning"),
+        "p01_70.jpeg",
+    ),
+    "proof/cases/kitchen-after": (
+        os.path.join(CASE, "VertKleen_CRHD_Commercial_kitchen_cleaning"),
+        "p02_4.jpeg",
+    ),
+}
+
+print("PROOF PAIRS:")
+for name, (folder, fn) in PAIR_PINS.items():
+    emit(os.path.join(folder, fn), name)
+
 print("CASES:")
 for name, folder in CASES.items():
     if name in PIN:
