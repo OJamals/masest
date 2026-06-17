@@ -1,0 +1,17 @@
+{
+  "name": "masest-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "qa:remediation": "playwright test tools/qa-remediation.spec.mjs tools/mobile-contact.spec.mjs --reporter=line",
+    "seed": "node tools/seed-products.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "stripe": "^17.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0",
+    "impeccable": "^2.3.2"
+  }
+}

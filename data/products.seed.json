@@ -1,0 +1,15 @@
+[
+  { "sku": "hcr",         "name": "VertKleen HCR",        "group_key": "descale",  "hmis": "0-0-0", "mode": "buy",   "hazmat": false, "taxable": true, "price": null, "sort": 1 },
+  { "sku": "descaler",    "name": "VertKleen Descaler",   "group_key": "descale",  "hmis": "0-0-0", "mode": "quote", "hazmat": true,  "taxable": true, "price": null, "sort": 2 },
+  { "sku": "crs",         "name": "VertKleen CRS",        "group_key": "descale",  "hmis": "0-0-0", "mode": "quote", "hazmat": true,  "taxable": true, "price": null, "sort": 3 },
+  { "sku": "cr",          "name": "VertKleen CR",         "group_key": "degrease", "hmis": "0-0-0", "mode": "quote", "hazmat": true,  "taxable": true, "price": null, "sort": 4 },
+  { "sku": "crhd",        "name": "VertKleen CRHD",       "group_key": "degrease", "hmis": "0-0-0", "mode": "buy",   "hazmat": false, "taxable": true, "price": null, "sort": 5 },
+  { "sku": "neutral",     "name": "VertKleen Neutral",    "group_key": "degrease", "hmis": "0-0-0", "mode": "buy",   "hazmat": false, "taxable": true, "price": null, "sort": 6 },
+  { "sku": "multiwash",   "name": "VertKleen MultiWash",  "group_key": "degrease", "hmis": "0-0-0", "mode": "buy",   "hazmat": false, "taxable": true, "price": null, "sort": 7 },
+  { "sku": "watersafe60", "name": "WaterSafe60",          "group_key": "water",    "hmis": "0-0-0", "mode": "buy",   "hazmat": false, "taxable": true, "price": null, "sort": 8 },
+  { "sku": "purgo",       "name": "Purgo",                "group_key": "water",    "hmis": "0-0-0", "mode": "quote", "hazmat": false, "taxable": true, "price": null, "sort": 9 },
+  { "sku": "dbnpa",       "name": "DBNPA Tablet",         "group_key": "water",    "hmis": "low",   "mode": "quote", "hazmat": false, "taxable": true, "price": null, "sort": 10 },
+  { "sku": "lam3",        "name": "VertKleen LAM3",       "group_key": "exterior", "hmis": "0-0-0", "mode": "quote", "hazmat": false, "taxable": true, "price": null, "sort": 11 },
+  { "sku": "alumibrite",  "name": "VertKleen AlumiBrite", "group_key": "exterior", "hmis": "0-0-0", "mode": "quote", "hazmat": true,  "taxable": true, "price": null, "sort": 12 },
+  { "sku": "torque",      "name": "VertKleen Torque",     "group_key": "exterior", "hmis": "0-0-0", "mode": "buy",   "hazmat": false, "taxable": true, "price": null, "sort": 13 }
+]
