@@ -32,3 +32,22 @@ export function json(status, body, extraHeaders = {}) {
 export async function readBody(req) {
   try { return await req.json(); } catch { return {}; }
 }
+
+// Resolve the caller's company_id (or null) for a given auth user id, using the service-role client.
+export async function companyForUser(sb, userId) {
+  if (!userId) return null;
+  const { data } = await sb.from('profiles').select('company_id').eq('id', userId).maybeSingle();
+  return data?.company_id || null;
+}
+
+// Platform-staff gate for /api/admin/*. AUTHORITATIVE source is the ADMIN_EMAILS env var
+// (comma-separated, case-insensitive). The profiles.is_staff column only mirrors it for reads.
+// Returns { user, staff }: staff=true only for an authenticated user whose email is allow-listed.
+export async function requireStaff(req) {
+  const { user } = await userFromRequest(req);
+  if (!user) return { user: null, staff: false };
+  const allow = (process.env.ADMIN_EMAILS || '')
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const staff = allow.includes(String(user.email || '').toLowerCase());
+  return { user, staff };
+}

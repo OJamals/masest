@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /account.html
+Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /cart.html
+Disallow: /order-confirmed.html
+Disallow: /api/
+
+Sitemap: https://masest.co/sitemap.xml
