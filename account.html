@@ -159,7 +159,7 @@
 
 <!-- Auth wiring: module imports the Supabase helper -->
 <script type="module">
-  import { register, login, logout, me, completeRegistration, orders as fetchOrders } from "./js/auth.js";
+  import { register, login, logout, me, completeRegistration, resendConfirmation, orders as fetchOrders } from "./js/auth.js";
   import { add as cartAdd, clear as cartClear } from "./js/cart.js";
 
   const $ = (id) => document.getElementById(id);
@@ -310,6 +310,37 @@
 
   $("logoutBtn").addEventListener("click", async () => { await logout(); showSummary(null); });
 
+  // Handle the Supabase email-confirmation redirect landing on this page.
+  function handleAuthRedirect() {
+    const hash = location.hash || "";
+    if (hash.length < 2) return;
+    const params = new URLSearchParams(hash.slice(1));
+    const err = params.get("error_code") || params.get("error");
+    if (!err) return; // success (#access_token) is auto-consumed by supabase-js; refresh() picks it up
+    history.replaceState(null, "", location.pathname); // clear hash so reload doesn't repeat
+    const desc = (params.get("error_description") || "").replace(/\+/g, " ");
+    const expired = /expired|invalid|otp/i.test(err + " " + desc);
+    setStatus($("liStatus"),
+      expired ? "That confirmation link expired or was already used. Enter your email and resend below."
+              : (desc || "Sign-in link error."), "err");
+    showResend();
+  }
+  function showResend() {
+    if ($("resendWrap")) return;
+    const wrap = document.createElement("p");
+    wrap.id = "resendWrap"; wrap.className = "acct-switch"; wrap.style.borderTop = "0"; wrap.style.marginTop = "10px";
+    wrap.innerHTML = 'Didn’t get it? <button type="button" id="resendBtn">Resend confirmation email</button>';
+    $("loginForm").appendChild(wrap);
+    $("resendBtn").addEventListener("click", async () => {
+      const email = $("liEmail").value.trim();
+      if (!email) { setStatus($("liStatus"), "Enter your email above first.", "err"); $("liEmail").focus(); return; }
+      setStatus($("liStatus"), "Resending…", "");
+      try { await resendConfirmation(email); setStatus($("liStatus"), "Sent. Open the newest link promptly (check spam).", "ok"); }
+      catch (e) { setStatus($("liStatus"), "Could not resend: " + (e.message || "try later"), "err"); }
+    });
+  }
+
+  handleAuthRedirect();
   initTurnstile();
   refresh();
 </script>
