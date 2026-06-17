@@ -20,12 +20,12 @@ assert.match(
 assert.match(story, /syncStoryFocus/, "story timeline updates keyboard reachability");
 assert.match(
   story,
-  /var BEAT_IN = 0\.65, BEAT_OUT = 0\.25, HOLD = 1\.65;/,
+  /var BEAT_IN = 0\.58, BEAT_OUT = 0\.22, HOLD = 1\.25;/,
   "story timings keep deliberate holds between acts",
 );
 assert.match(
   story,
-  /startsPinned[\s\S]*start:\s*startsPinned \? "top 67px" : "top bottom"/,
+  /startsPinned[\s\S]*start:\s*startsPinned \? "top 67px" : "top 85%"/,
   "pinned scrollybook acts start at the visible top below the nav",
 );
 assert.match(css, /body\.nav-open/, "mobile menu has scroll-lock CSS");

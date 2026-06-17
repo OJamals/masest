@@ -300,6 +300,15 @@ test("scrolly proof images are not lazy-gated", () => {
   assert.match(home, /<link rel="preload" as="image" href="img\/field\/filters-after-enhanced\.webp"/);
 });
 
+test("scrolly chemical pills stay compact", () => {
+  const index = read("index.html");
+  const actFour = index.match(/<section class="act act-chems"[\s\S]*?<\/section>/)?.[0];
+
+  assert.ok(actFour, "expected act four scrolly section");
+  assert.match(actFour, /Glutaral\. 50%/);
+  assert.doesNotMatch(actFour, /<span class="vs">Glutaraldehyde 50%<\/span>/);
+});
+
 test("simplified routes avoid black cards and cramped section seams", () => {
   const css = read("css/style.css");
 
