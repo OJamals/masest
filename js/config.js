@@ -7,4 +7,4 @@ window.MASEST_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz
 window.MASEST_STRIPE_PK = 'pk_test_51TjBFdHfKF76gAoJLvVOMtE9BLgIyAaFvvyuRl4sAxXpfljwdJQqq4PBlE09kxQAYQUgfkdDlHsXY7MAxZN1FkmM00oTFFf6V6';            // Stripe publishable key pk_live_... (public)
 window.MASEST_CRISP_ID = 'bc6be1cf-f005-40b6-ad3e-24fe68ee9b2a';             // Crisp Website ID (public)
 window.MASEST_KLAVIYO_COMPANY = 'Ww6Ryz';      // Klaviyo public company/site ID (public)
-window.MASEST_TURNSTILE_SITEKEY = '0x4AAAAAADmaD_pRgYim8QF5';   // Cloudflare Turnstile site key (public). Pairs with the secret set in Supabase Auth CAPTCHA.
+window.MASEST_TURNSTILE_SITEKEY = '';   // CAPTCHA temporarily OFF for launch (the configured Turnstile token was rejected by Supabase Auth). The client now sends no token, so you MUST also turn OFF "Enable CAPTCHA protection" in Supabase Auth settings for signup/sign-in to pass. To re-enable later: restore the sitekey below AND set its matching secret in Supabase Auth CAPTCHA, with masest.co + masest-commerce.pages.dev in the widget's allowed domains. Prev sitekey: 0x4AAAAAADmaD_pRgYim8QF5
