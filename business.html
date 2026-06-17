@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business hub | MASEST VertKleen</title>
+<meta name="description" content="Set up your business account, enroll in VertKleen service programs, request bulk pricing, and reach your MASEST account team.">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/story.css">
+<style>
+  .biz-wrap { max-width: 980px; margin: 0 auto; }
+  .biz-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px; margin-bottom: 18px; }
+  .biz-card h2 { font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; margin-bottom: 4px; }
+  .biz-card .lead { color: var(--ink-soft); font-size: .93rem; margin-bottom: 18px; line-height: 1.5; }
+  .biz-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid rgba(0,0,0,.08); font-size: .95rem; }
+  .biz-row:last-child { border-bottom: 0; }
+  .biz-row b { color: var(--ink); }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .badge[data-s=pending] { background: #fef3c7; color: #92400e; }
+  .badge[data-s=approved] { background: var(--accent-soft); color: var(--accent-ink); }
+  .badge[data-s=rejected], .badge[data-s=suspended] { background: #fee2e2; color: #b42318; }
+  .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .tier { border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px; display: flex; flex-direction: column; }
+  .tier h3 { font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; }
+  .tier .tier-tag { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-ink); margin-bottom: 8px; }
+  .tier p { font-size: .85rem; color: var(--ink-soft); line-height: 1.45; flex: 1; margin: 6px 0 14px; }
+  .biz-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; }
+  .biz-status[data-state=ok] { color: var(--accent-ink); } .biz-status[data-state=err] { color: #b42318; }
+  .muted { color: var(--ink-soft); font-size: .9rem; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<noscript>
+<nav class="nojs-nav" aria-label="Site">
+  <a href="index.html"><b>MASEST</b></a>
+  <a href="products.html">Products</a>
+  <span>Use Cases</span>
+  <a href="industries.html">Industries</a>
+  <a href="proof.html">Field Results</a>
+  <a href="resources.html">Resources</a>
+</nav>
+</noscript>
+
+<main id="main">
+  <section class="hero-split">
+    <div class="wrap">
+      <h1 class="display">Business hub.</h1>
+      <p class="subhead">Set up your account, enroll in VertKleen service programs, request bulk pricing, and talk to your MASEST account team — all in one place.</p>
+    </div>
+  </section>
+
+  <section class="section section-slim">
+    <div class="wrap biz-wrap">
+
+      <!-- Signed-out -->
+      <div class="biz-card" id="bizGuest" hidden>
+        <h2>Sign in to your business account</h2>
+        <p class="muted" style="margin:8px 0 18px">Business tools — programs, bulk orders, and your account team — are for signed-in B2B accounts.</p>
+        <a class="btn btn-primary" href="account.html?return=business.html">Sign in or create an account</a>
+      </div>
+
+      <div id="bizApp" hidden>
+        <!-- Your business -->
+        <div class="biz-card" id="bizProfile"></div>
+
+        <!-- Team (company admins only) -->
+        <div class="biz-card" id="bizTeam" hidden>
+          <h2>Team members</h2>
+          <p class="lead">Invite teammates to your company account — invited emails join automatically when they register and sign in.</p>
+          <div id="teamMembers"><p class="muted">Loading…</p></div>
+          <form id="inviteForm" class="form-card" style="padding:0;border:0;box-shadow:none;margin-top:16px">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+              <div class="field" style="flex:1;min-width:220px"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
+              <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
+              <button class="btn btn-primary btn-sm" type="submit">Send invite</button>
+            </div>
+            <span class="biz-status" id="inviteStatus" role="status" aria-live="polite"></span>
+          </form>
+          <div id="teamInvites" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Programs -->
+        <div class="biz-card">
+          <h2>VertKleen service programs</h2>
+          <p class="lead">Recurring treatment + maintenance programs tuned to your equipment and run hours. Request enrollment and your account team will scope a plan and pricing.</p>
+          <div class="tier-grid" id="tierGrid"></div>
+          <div class="actions"><a class="btn btn-ghost btn-sm" href="programs.html">View program details</a></div>
+          <p class="biz-status" id="programStatus" role="status" aria-live="polite"></p>
+        </div>
+
+        <!-- Bulk orders -->
+        <div class="biz-card">
+          <h2>Bulk &amp; standing orders</h2>
+          <p class="lead">Need volume pricing, drums/totes, or a recurring standing order? List what you need and we'll send a bulk quote.</p>
+          <form id="bulkForm" class="form-card" style="padding:0;border:0;box-shadow:none">
+            <div class="field"><label for="bulkItems">What do you need? *</label>
+              <textarea id="bulkItems" rows="3" placeholder="e.g. 4× 55-gal HCR, 2× 275-gal tote Neutral, monthly" required></textarea></div>
+            <div class="field" style="margin-top:12px"><label for="bulkNotes">Delivery / timing notes</label>
+              <input id="bulkNotes" type="text" placeholder="Ship-to, cadence, target date (optional)"></div>
+            <button class="btn btn-primary btn-sm" type="submit" style="margin-top:14px">Request bulk quote</button>
+            <span class="biz-status" id="bulkStatus" role="status" aria-live="polite"></span>
+          </form>
+        </div>
+
+        <!-- B2B messaging -->
+        <div class="biz-card">
+          <h2>Your account team</h2>
+          <p class="lead">A direct B2B message line to MASEST — pricing, compliance docs (SDS, NSF/ANSI 60), NET terms, and order questions. We reply in your dashboard.</p>
+          <div class="actions">
+            <a class="btn btn-primary btn-sm" href="dashboard.html#messages">Open message board</a>
+            <a class="btn btn-ghost btn-sm" href="dashboard.html">Go to dashboard</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
+<script src="js/track.js" defer></script>
+<script type="module" src="js/business.js"></script>
+</body>
+</html>

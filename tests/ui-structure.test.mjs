@@ -321,7 +321,7 @@ test("scrolly chemical pills stay compact", () => {
   const actFour = index.match(/<section class="act act-chems"[\s\S]*?<\/section>/)?.[0];
 
   assert.ok(actFour, "expected act four scrolly section");
-  assert.match(actFour, /Glutrdhde 50%/);
+  assert.match(actFour, /<span class="vs vs-long">Glutaraldehyde 50%<\/span>/);
   assert.doesNotMatch(actFour, /<span class="vs">Glutaraldehyde 50%<\/span>/);
 });
 

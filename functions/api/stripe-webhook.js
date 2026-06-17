@@ -19,7 +19,7 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
   const to = buyerEmailFromStripeSession(session);
   if (!apiKey || !to) return;
 
-  const from = env.RESEND_FROM || 'MASEST Orders <orders@masest.co>';
+  const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
   const currency = (session.currency || 'usd').toUpperCase();
   const fmt = (n) => `${currency} ${Number(n || 0).toFixed(2)}`;
   const ref = order?.id ? ` #${order.id}` : '';
@@ -37,25 +37,40 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
     ? `<p style="margin:18px 0 0;color:#445"><b>Ship to</b><br>${[addr.line1, addr.line2, [addr.city, addr.state, addr.postal_code].filter(Boolean).join(', '), addr.country].filter(Boolean).map(escapeHtml).join('<br>')}</p>`
     : '';
 
+  const appUrl = env.APP_URL || 'https://masest.co';
   const html = `
-  <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#223">
-    <h2 style="margin:0 0 4px">Order confirmed${escapeHtml(ref)}</h2>
-    <p style="margin:0 0 18px;color:#556">Thank you. MASEST will reconcile freight and documentation before fulfillment. A separate card receipt is sent by our payment processor.</p>
-    <table style="width:100%;border-collapse:collapse;font-size:14px">
-      <thead><tr>
-        <th style="text-align:left;padding:6px 0;border-bottom:2px solid #ccd">Product</th>
-        <th style="text-align:center;padding:6px 0;border-bottom:2px solid #ccd">Qty</th>
-        <th style="text-align:right;padding:6px 0;border-bottom:2px solid #ccd">Amount</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
-      <tr><td style="padding:3px 0;color:#556">Subtotal</td><td style="padding:3px 0;text-align:right">${fmt(subtotal)}</td></tr>
-      <tr><td style="padding:3px 0;color:#556">Tax</td><td style="padding:3px 0;text-align:right">${fmt(tax)}</td></tr>
-      <tr><td style="padding:6px 0;font-weight:bold;border-top:1px solid #ccd">Total</td><td style="padding:6px 0;text-align:right;font-weight:bold;border-top:1px solid #ccd">${fmt(total)}</td></tr>
-    </table>
-    ${shipBlock}
-    <p style="margin:22px 0 0;font-size:13px;color:#789">Questions? Reply to this email or contact MASEST through masest.co.</p>
+  <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
+    <div style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
+      <div style="background:#0e7c86;padding:20px 28px">
+        <span style="color:#fff;font-size:20px;font-weight:800;letter-spacing:.04em">MASEST</span>
+        <span style="color:#bfe4e7;font-size:11px;letter-spacing:.16em;margin-left:8px">VERTKLEEN</span>
+      </div>
+      <div style="padding:28px;color:#223">
+        <h2 style="margin:0 0 4px;color:#15171c">Order confirmed${escapeHtml(ref)}</h2>
+        <p style="margin:0 0 20px;color:#556;font-size:14px;line-height:1.5">Thank you. MASEST will reconcile freight and documentation before fulfillment. Your payment processor sends a separate card receipt.</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 0;border-bottom:2px solid #d7e3e3">Product</th>
+            <th style="text-align:center;padding:6px 0;border-bottom:2px solid #d7e3e3">Qty</th>
+            <th style="text-align:right;padding:6px 0;border-bottom:2px solid #d7e3e3">Amount</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
+          <tr><td style="padding:3px 0;color:#556">Subtotal</td><td style="padding:3px 0;text-align:right">${fmt(subtotal)}</td></tr>
+          <tr><td style="padding:3px 0;color:#556">Tax</td><td style="padding:3px 0;text-align:right">${fmt(tax)}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;border-top:1px solid #ccd">Total</td><td style="padding:6px 0;text-align:right;font-weight:bold;border-top:1px solid #ccd">${fmt(total)}</td></tr>
+        </table>
+        ${shipBlock}
+        <div style="margin:24px 0 0">
+          <a href="${appUrl}/dashboard.html#orders" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">View your order</a>
+        </div>
+      </div>
+      <div style="background:#0b0d12;padding:18px 28px;color:#8a93a0;font-size:11px;line-height:1.7">
+        MASEST Consulting LLC &middot; Florida's Space Coast &middot; CAGE 0B2Q3 &middot; NAICS 424690<br>
+        HMIS 0-0-0 industrial cleaning chemistry. Questions? Reply to this email.
+      </div>
+    </div>
   </div>`;
 
   try {
@@ -116,6 +131,27 @@ export async function onRequestPost({ request, env }) {
     const s = event.data.object;
     const sb = adminClient(env);
 
+    // Program subscription checkout (mode=subscription): record enrollment, skip the order path.
+    if (s.mode === 'subscription') {
+      try {
+        await sb.from('program_subscriptions').upsert({
+          company_id: s.metadata?.company_id || null,
+          tier: s.metadata?.tier || null,
+          stripe_subscription_id: s.subscription || null,
+          stripe_customer_id: s.customer || null,
+          status: 'active',
+        }, { onConflict: 'stripe_subscription_id' });
+        if (s.metadata?.company_id) {
+          await sb.from('notifications').insert({
+            company_id: s.metadata.company_id, type: 'account',
+            title: `${s.metadata?.tier || 'Program'} program active`,
+            body: 'Your VertKleen service program is now active.', link: '/business.html',
+          }).then(() => {}, () => {});
+        }
+      } catch (e) { console.error('program_sub_record_failed', e?.message || e); }
+      return json(200, { received: true, subscription: true });
+    }
+
     // Idempotency: skip if this session already recorded.
     const { data: dupe } = await sb.from('orders').select('id').eq('stripe_payment_intent', s.payment_intent).maybeSingle();
     if (dupe) return json(200, { received: true, duplicate: true });
@@ -153,7 +189,26 @@ export async function onRequestPost({ request, env }) {
     await sendOrderConfirmation({ env, session: s, order, lines, subtotal, tax, total });
     // Decrement inventory for stock-tracked SKUs (best-effort; never fails the webhook).
     if (order && lines.length) await decrementStock(sb, lines);
+    // Notify the buyer's company that the order was received (feeds the dashboard + nav badge).
+    if (order && s.metadata?.company_id) {
+      await sb.from('notifications').insert({
+        company_id: s.metadata.company_id, type: 'order', title: 'Order received',
+        body: `We received your order (${(s.currency || 'usd').toUpperCase()} ${total.toFixed(2)}) and are processing it.`,
+        link: '/dashboard.html#orders',
+      }).then(() => {}, () => {});
+    }
     // TODO Phase 3: QBO sales receipt.
+  }
+
+  // Subscription lifecycle → keep program_subscriptions status in sync.
+  if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object;
+    const status = event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status;
+    try {
+      await adminClient(env).from('program_subscriptions')
+        .update({ status }).eq('stripe_subscription_id', sub.id);
+    } catch (e) { console.error('sub_status_update_failed', e?.message || e); }
+    return json(200, { received: true });
   }
 
   return json(200, { received: true });

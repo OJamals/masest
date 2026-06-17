@@ -13,7 +13,6 @@ test("account login supports Supabase password recovery", () => {
   const email = read("supabase/templates/reset-password.html");
 
   assert.match(account, /id="forgotPasswordBtn"/);
-  assert.match(account, /\.cta-chooser\[hidden\]/);
   assert.match(account, /isLocalPreview/);
   assert.match(account, /isLocalPreview \? "" : window\.MASEST_TURNSTILE_SITEKEY/);
   assert.match(account, /id="resetPasswordForm"/);

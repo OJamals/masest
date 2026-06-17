@@ -1,6 +1,6 @@
 // /api/admin/orders — staff order management.
 //   GET ?status=&limit= → orders across all companies · POST { id, status } → update + notify company
-import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail } from '../../_lib/supabase.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
 
@@ -32,12 +32,17 @@ export async function onRequest({ request, env }) {
       .eq('id', body.id).select('id,company_id,status,total,currency').single();
     if (error) return json(500, { error: error.message });
     if (order?.company_id) {
+      const label = body.status.replace('_', ' ');
       await sb.from('notifications').insert({
         company_id: order.company_id, type: 'order',
-        title: `Order ${body.status.replace('_', ' ')}`,
-        body: `Your order is now "${body.status.replace('_', ' ')}".`,
+        title: `Order ${label}`,
+        body: `Your order is now "${label}".`,
         link: '/dashboard.html#orders',
       }).then(() => {}, () => {});
+      const appUrl = env.APP_URL || new URL(request.url).origin;
+      const emails = await companyEmails(sb, order.company_id);
+      await sendEmail(env, { to: emails, subject: `Order ${label}`,
+        html: `<p>Your MASEST order status is now <b>${label}</b>.</p><p><a href="${appUrl}/dashboard.html#orders">View your order</a></p>` });
     }
     return json(200, { ok: true, order });
   }

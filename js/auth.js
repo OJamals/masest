@@ -32,10 +32,9 @@ async function postRegister(token, { company, profile }) {
  * confirms + logs in. captchaToken is required when Supabase Auth CAPTCHA (Turnstile) is enabled. */
 export async function register({ email, password, company, profile, captchaToken }) {
   const sb = requireClient();
-  const { data: signUp, error } = await sb.auth.signUp({
-    email, password,
-    options: captchaToken ? { captchaToken } : undefined,
-  });
+  const options = { emailRedirectTo: `${window.location.origin}/account.html` };
+  if (captchaToken) options.captchaToken = captchaToken;
+  const { data: signUp, error } = await sb.auth.signUp({ email, password, options });
   if (error) throw error;
   const token = signUp.session?.access_token;
   if (!token) return { pending_email_confirmation: true };
@@ -50,6 +49,15 @@ export async function completeRegistration({ company, profile }) {
   const token = data.session?.access_token;
   if (!token) throw new Error('not_authenticated');
   return postRegister(token, { company, profile });
+}
+
+/* Resend the signup confirmation email (when the prior link expired or was consumed). */
+export async function resendConfirmation(email) {
+  return requireClient().auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: `${window.location.origin}/account.html` },
+  });
 }
 
 export async function login({ email, password, captchaToken }) {
@@ -94,7 +102,12 @@ export async function me() {
   const token = data.session?.access_token;
   if (!token) return null;
   const r = await fetch('/api/account/me', { headers: { Authorization: `Bearer ${token}` } });
-  return r.ok ? r.json() : null;
+  if (r.ok) return r.json();
+  // Authenticated but no company/profile yet (email confirmed before the company step ran):
+  // surface it so the page can offer a "finish setup" form instead of looking logged-out.
+  const body = await r.json().catch(() => null);
+  if (r.status === 404 && body?.error === 'no_profile') return { needs_profile: true, email: body.email, is_staff: body.is_staff };
+  return null;
 }
 
 /* Recent orders for the signed-in account (company orders + line items), or [] if logged out. */

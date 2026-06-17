@@ -469,6 +469,13 @@
   font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
   color: var(--s-mut); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--s-line);
 }
+.chem-card .vs-long {
+  max-width: none;
+  white-space: nowrap;
+  font-size: .56rem;
+  letter-spacing: .035em;
+  line-height: 1;
+}
 .chem-card .lockup { margin-left: auto; display: inline-flex; gap: 4px; font-variant-numeric: tabular-nums; }
 /* Real HMIS lockup: each digit wears its axis color (Health / Flammability / Reactivity). */
 .chem-card .lockup em {
@@ -941,4 +948,239 @@
     line-height: 1.45;
   }
 }
+}
+/* Scrollybook motion polish: chapter depth, rail feedback, and cinematic material. */
+.story {
+  --story-page-edge: rgba(255, 255, 255, .052);
+  --story-page-fold: rgba(255, 255, 255, .024);
+  --story-page-well: rgba(0, 0, 0, .62);
+  --story-rail-hot: #f5f8fb;
+  --story-rail-safe: #d7fff7;
+  counter-reset: story-act;
+}
+
+.story .act {
+  counter-increment: story-act;
+  perspective: 1200px;
+}
+
+.story .stage {
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.story .stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg,
+      rgba(255, 255, 255, .045),
+      transparent 10%,
+      transparent 47%,
+      var(--story-page-fold) 49.7%,
+      var(--story-page-edge) 50%,
+      var(--story-page-fold) 50.3%,
+      transparent 54%,
+      transparent 90%,
+      rgba(255, 255, 255, .035)),
+    radial-gradient(70% 95% at 50% 50%, transparent 42%, rgba(0, 0, 0, .26) 100%),
+    linear-gradient(180deg, transparent 0 72%, var(--story-page-well));
+  opacity: .72;
+  mix-blend-mode: screen;
+}
+
+.story .act-copy {
+  transform-origin: 50% 58%;
+}
+
+.story.story-ready [data-at] {
+  filter: drop-shadow(0 20px 44px rgba(0, 0, 0, .28));
+}
+
+.story .reel {
+  transform-style: preserve-3d;
+  box-shadow:
+    0 30px 80px -42px rgba(0, 0, 0, .9),
+    0 0 0 1px rgba(255, 255, 255, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+.story .reel-slide {
+  transform-origin: center;
+}
+
+.story .reel-slide img {
+  transform: scale(1.035);
+}
+
+.story .pipe-diagram,
+.story .hmis-rig,
+.story .chem-rig,
+.story .savior-wrap {
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, .28));
+}
+
+.story .rail-btn {
+  position: relative;
+  transition:
+    color .22s var(--s-ease),
+    transform .22s var(--s-ease),
+    opacity .22s var(--s-ease);
+}
+
+.story .rail-btn::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background: radial-gradient(circle, rgba(255, 255, 255, .13), transparent 68%);
+  opacity: 0;
+  transform: translate(-18%, -50%) scale(.7);
+  transition:
+    opacity .22s var(--s-ease),
+    transform .22s var(--s-ease);
+}
+
+.story .rail-btn.is-on {
+  color: var(--story-rail-hot);
+  transform: translateX(4px);
+}
+
+.story .rail-btn.is-on.safe {
+  color: var(--story-rail-safe);
+}
+
+.story .rail-btn.is-on::after {
+  opacity: 1;
+  transform: translate(-18%, -50%) scale(1);
+}
+
+.story .rail-btn b,
+.story .rail-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+.story .pipe-flow {
+  filter: drop-shadow(0 0 10px rgba(85, 211, 196, .22));
+}
+
+.story .pipe-buildup {
+  filter: drop-shadow(0 0 8px rgba(255, 138, 108, .16));
+}
+
+.story .chem-card,
+.story .savior-zero .z,
+.story .pipe-callout .chip {
+  transition:
+    border-color .22s var(--s-ease),
+    box-shadow .22s var(--s-ease),
+    transform .22s var(--s-ease);
+}
+
+@media (hover: hover) {
+  .story .rail-btn:hover {
+    color: var(--story-rail-hot);
+    transform: translateX(3px);
+  }
+}
+
+@media (max-width: 760px) {
+  .story .stage::before {
+    background:
+      radial-gradient(78% 90% at 50% 42%, transparent 42%, rgba(0, 0, 0, .26) 100%),
+      linear-gradient(180deg, transparent 0 70%, rgba(0, 0, 0, .58));
+    opacity: .58;
+  }
+
+  .story .rail-btn.is-on,
+  .story .rail-btn:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story .rail-btn,
+  .story .rail-btn::after,
+  .story .chem-card,
+  .story .savior-zero .z,
+  .story .pipe-callout .chip {
+    transition: none !important;
+  }
+
+  .story .reel-slide img {
+    transform: none;
+  }
+}
+/* Persistent chapter watermark for scrub gaps between narrated beats. */
+.story .act::before {
+  position: sticky;
+  top: calc(50vh - 1.1rem);
+  z-index: 1;
+  display: block;
+  width: max-content;
+  height: 0;
+  margin-left: clamp(130px, 13vw, 210px);
+  pointer-events: none;
+  color: rgba(245, 248, 251, .12);
+  font-size: clamp(1.8rem, 6vw, 5.4rem);
+  font-weight: 900;
+  line-height: .9;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  text-wrap: balance;
+  text-shadow: 0 28px 90px rgba(0, 0, 0, .48);
+}
+
+.story .act[data-act="1"]::before {
+  content: "The enemy";
+}
+
+.story .act[data-act="2"]::before {
+  content: "The buildup";
+}
+
+.story .act[data-act="3"]::before {
+  content: "The score";
+}
+
+.story .act[data-act="4"]::before {
+  content: "The chemicals";
+}
+
+.story .act[data-act="5"]::before {
+  content: "Zero";
+  color: rgba(215, 255, 247, .16);
+}
+
+@media (max-width: 760px) {
+  .story .act::before {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story .act::before {
+    display: none;
+  }
+}
+
+.story .act::before {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity .28s var(--s-ease),
+    transform .28s var(--s-ease);
+}
+
+.story .act.is-story-current::before {
+  opacity: 1;
+  transform: translateY(0);
 }
