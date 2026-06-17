@@ -58,7 +58,7 @@ export async function onRequest({ request, env }) {
     if (body.send_email && env.RESEND_API_KEY) {
       const emails = await memberEmails(sb, companyIds);
       if (emails.length) {
-        const from = env.RESEND_FROM || 'MASEST <onboarding@resend.dev>';
+        const from = env.RESEND_FROM || 'MASEST <noreply@send.masest.co>';
         const html = `<h2>${title}</h2><p>${String(body.body || '')}</p>` +
           (body.cta_url ? `<p><a href="${body.cta_url}">View</a></p>` : '');
         try {

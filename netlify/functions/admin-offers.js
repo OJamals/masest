@@ -68,7 +68,7 @@ export default async (req) => {
     if (body.send_email && process.env.RESEND_API_KEY) {
       const emails = await memberEmails(sb, companyIds);
       if (emails.length) {
-        const from = process.env.RESEND_FROM || 'MASEST <onboarding@resend.dev>';
+        const from = process.env.RESEND_FROM || 'MASEST <noreply@send.masest.co>';
         const html = `<h2>${title}</h2><p>${String(body.body || '')}</p>` +
           (body.cta_url ? `<p><a href="${body.cta_url}">View</a></p>` : '');
         try {
