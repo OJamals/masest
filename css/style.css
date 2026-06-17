@@ -93,6 +93,7 @@ visible keyboard focus across the system */
 :focus:not(:focus-visible) { outline: none; }
 
 .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+.container { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; } /* alias of .wrap; commerce pages (cart, order-confirmed) use .container */
 
 /* ---------- Typography ---------- */
 h1,
