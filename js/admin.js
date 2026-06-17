@@ -84,7 +84,7 @@ async function renderCompanies() {
     cos.map((c) => {
       const contact = (c.profiles || [])[0];
       return `<tr data-co="${esc(c.id)}">
-        <td><b>${esc(c.name)}</b>${contact ? `<br><span class="muted">${esc(contact.full_name || '')} ${esc(contact.phone || '')}</span>` : ''}${c.tax_exempt ? '<br><span class="muted">tax-exempt</span>' : ''}</td>
+        <td><button type="button" class="link-name" data-open="${esc(c.id)}">${esc(c.name)}</button>${contact ? `<br><span class="muted">${esc(contact.full_name || '')} ${esc(contact.phone || '')}</span>` : ''}${c.tax_exempt ? '<br><span class="muted">tax-exempt</span>' : ''}</td>
         <td>${statusBadge(c.status)}</td>
         <td><input type="number" min="0" value="${c.net_terms_days || 0}" data-net></td>
         <td><input type="number" min="0" step="100" value="${c.credit_limit || 0}" data-credit></td>
@@ -101,7 +101,32 @@ async function renderCompanies() {
     try { await api('/api/admin/companies', { method: 'POST', body }); $('coStatus').textContent = 'Updated.'; $('coStatus').dataset.state = 'ok'; renderCompanies(); refreshStats(); }
     catch { $('coStatus').textContent = 'Failed.'; $('coStatus').dataset.state = 'err'; b.disabled = false; }
   }));
+  box.querySelectorAll('button[data-open]').forEach((b) => b.addEventListener('click', () => openCompany(b.dataset.open)));
   loaded.companies = true;
+}
+
+// Company detail view (replaces the accounts list; back button returns to it).
+async function openCompany(id) {
+  const box = $('admCompanies'); box.innerHTML = '<p class="muted">Loading…</p>';
+  let d;
+  try { d = await api('/api/admin/company?id=' + encodeURIComponent(id)); }
+  catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load company.</p>'; return; }
+  const c = d.company;
+  const members = (d.members || []).map((m) =>
+    `<tr><td><b>${esc(m.full_name || '—')}</b></td><td>${esc(m.email || '—')}</td><td>${esc(m.phone || '')}</td><td>${esc(m.role)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No members.</td></tr>';
+  const orders = (d.orders || []).map((o) =>
+    `<tr><td>${fmtDate(o.created_at)}</td><td>${statusBadge(o.status)}</td><td>${esc(o.payment_method || '—')}</td><td>${money(o.total, o.currency)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No orders.</td></tr>';
+  const invites = (d.invites || []).length ? `<p class="muted" style="margin-top:8px">Pending invites: ${d.invites.map((i) => esc(i.email)).join(', ')}</p>` : '';
+  box.innerHTML = `
+    <button class="btn btn-ghost btn-sm" id="coBack">← Back to accounts</button>
+    <h3 style="font-size:1.2rem;margin:14px 0 4px">${esc(c.name)} ${statusBadge(c.status)}</h3>
+    <p class="muted">NET-${c.net_terms_days || 0} · credit ${money(c.credit_limit || 0, 'usd')} · ${c.tax_exempt ? 'tax-exempt' : 'taxable'} · ${d.message_count} message(s)${c.resale_cert_url ? ` · <a href="${esc(c.resale_cert_url)}" target="_blank" rel="noopener">resale cert</a>` : ''}</p>
+    <h4 style="margin:18px 0 6px;font-size:.95rem">Members</h4>
+    <table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th></tr></thead><tbody>${members}</tbody></table>
+    ${invites}
+    <h4 style="margin:18px 0 6px;font-size:.95rem">Orders (${(d.orders || []).length})</h4>
+    <table class="adm"><thead><tr><th>Date</th><th>Status</th><th>Pay</th><th>Total</th></tr></thead><tbody>${orders}</tbody></table>`;
+  $('coBack').addEventListener('click', () => { loaded.companies = false; renderCompanies(); });
 }
 
 /* ---------- products & stock ---------- */
