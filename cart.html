@@ -39,6 +39,16 @@
         <p class="eyebrow">Next step</p>
         <h2>Checkout or quote.</h2>
         <p id="cartStatus" class="cart-status" role="status" aria-live="polite">Cart totals are confirmed at checkout by the server.</p>
+        <div class="ship-est" id="shipEst" hidden>
+          <label class="field-label" for="shipZone">Estimated freight</label>
+          <select id="shipZone" class="cart-input">
+            <option value="east">US East</option>
+            <option value="central">US Central</option>
+            <option value="west">US West</option>
+          </select>
+          <p class="ship-est-out" id="shipEstOut"></p>
+          <p class="ship-est-note">Estimate only — final freight confirmed on your invoice.</p>
+        </div>
         <label class="field-label" for="checkoutEmail">Email for receipt</label>
         <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" placeholder="buyer@company.com">
         <div class="cart-actions">
@@ -53,18 +63,27 @@
 <script type="module">
   import { checkout, clear, items, remove, setQty } from "./js/cart.js";
 
-  const catalogCopy = {
-    hcr: "VertKleen HCR",
-    cr: "VertKleen CR",
-    crhd: "VertKleen CR-HD",
-    descaler: "VertKleen Descaler",
-    multiwash: "VertKleen MultiWash",
-    purgo: "VertKleen PURGO",
-    dbnpa: "DBNPA Tablet",
-    lam3: "VertKleen LAM3",
-    alumibrite: "VertKleen AlumiBrite",
-    torque: "VertKleen Torque"
-  };
+  const money = (n) => new Intl.NumberFormat("en-US", {
+    style: "currency", currency: "USD", maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
+  }).format(Number(n));
+
+  // vsku -> { name, gallons, price, currency }, flattened from /api/products variants.
+  const vmap = new Map();
+  async function loadCatalog() {
+    try {
+      const r = await fetch("/api/products");
+      if (!r.ok) return;
+      const data = await r.json();
+      (data.products || []).forEach(p => (p.product_variants || []).forEach(v => {
+        if (v && v.vsku) vmap.set(v.vsku, { name: `${p.name} — ${v.label}`, gallons: Number(v.gallons) || 0, price: Number(v.price), currency: v.currency });
+      }));
+    } catch (err) { /* offline: fall back to raw SKUs, no shipping estimate */ }
+  }
+
+  // Example freight rates: per-gallon by US zone, with a handling floor. Owner tunes these.
+  const ZONE_RATE = { east: 3.50, central: 4.25, west: 5.00 };
+  const SHIP_MIN = 35;
+
   const lines = document.getElementById("cartLines");
   const status = document.getElementById("cartStatus");
   const email = document.getElementById("checkoutEmail");
@@ -108,7 +127,7 @@
   }
 
   function productName(sku) {
-    return catalogCopy[String(sku).toLowerCase()] || sku;
+    return vmap.get(sku)?.name || sku;
   }
 
   function render() {
@@ -116,6 +135,7 @@
     setCheckoutDisabled(cartItems.length === 0);
     if (!cartItems.length) {
       lines.innerHTML = `<div class="cart-empty"><h3>No products in the cart.</h3><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
+      updateShipping();
       return;
     }
     lines.innerHTML = cartItems.map(item => `
@@ -123,7 +143,7 @@
         <div>
           <span class="eyebrow">${item.sku}</span>
           <h3>${productName(item.sku)}</h3>
-          <p>Final price, freight, and tax are confirmed by the checkout API.</p>
+          <p>${vmap.get(item.sku) ? money(vmap.get(item.sku).price) + " each · " : ""}freight + tax confirmed at checkout.</p>
         </div>
         <label>
           <span>Qty</span>
@@ -132,6 +152,20 @@
         <button type="button" class="btn btn-ghost" data-remove="${item.sku}">Remove</button>
       </article>
     `).join("");
+    updateShipping();
+  }
+
+  // Shipping estimate: total gallons (from variants) × per-gallon zone rate, with a handling floor.
+  function updateShipping() {
+    const box = document.getElementById("shipEst");
+    const out = document.getElementById("shipEstOut");
+    if (!box || !out) return;
+    const gallons = items().reduce((s, it) => s + (vmap.get(it.sku)?.gallons || 0) * it.qty, 0);
+    if (!gallons) { box.hidden = true; return; }
+    box.hidden = false;
+    const zone = document.getElementById("shipZone")?.value || "east";
+    const est = Math.max(SHIP_MIN, gallons * (ZONE_RATE[zone] || ZONE_RATE.east));
+    out.textContent = `${gallons} gal → est. ${money(est)}`;
   }
 
   lines.addEventListener("change", event => {
@@ -184,7 +218,9 @@
 
   checkoutPay.addEventListener("click", () => runCheckout("pay"));
   checkoutNet.addEventListener("click", () => runCheckout("net"));
-  render();
+  document.getElementById("shipZone")?.addEventListener("change", updateShipping);
+  render(); // fast first paint with raw SKUs
+  loadCatalog().then(render); // re-render with variant names + shipping once catalog loads
 </script>
 </body>
 </html>

@@ -766,16 +766,32 @@ function quoteHref(id) {
   return `contact.html?type=quote&product=${encodeURIComponent(p?.name || id)}`;
 }
 
+function fmtMoney(n, currency = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: String(currency || "USD").toUpperCase(),
+    maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
+  }).format(Number(n));
+}
+
 function normalizeCommerceRow(row) {
   const sku = String(row?.sku || "").trim().toLowerCase();
-  const price = Number(row?.price);
+  const variants = (Array.isArray(row?.product_variants) ? row.product_variants : [])
+    .filter(v => v && v.active !== false && v.price != null && Number(v.price) > 0)
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map(v => ({
+      vsku: v.vsku,
+      label: v.label,
+      gallons: Number(v.gallons) || 0,
+      price: Number(v.price),
+      currency: String(v.currency || row?.currency || "usd").toUpperCase()
+    }));
   return {
     sku,
     active: row?.active !== false,
     mode: row?.mode,
-    price,
-    currency: String(row?.currency || "usd").toUpperCase(),
-    purchasable: sku && row?.active !== false && row?.mode === "buy" && Number.isFinite(price) && price > 0
+    variants,
+    purchasable: !!(sku && row?.active !== false && row?.mode === "buy" && variants.length)
   };
 }
 
@@ -811,14 +827,36 @@ function commerceActionHTML(id, variant = "chip") {
   const p = PRODUCTS[id];
   const quoteClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-quote";
   const quote = `<a class="${quoteClass}" href="${quoteHref(id)}">Request quote</a>`;
-  if (!row?.purchasable) return quote;
-  const priceLabel = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: row.currency || "USD",
-    maximumFractionDigits: row.price % 1 === 0 ? 0 : 2
-  }).format(row.price);
-  const className = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-add";
-  return `<button class="${className}" type="button" data-cart-add="${id}" aria-label="Add ${p?.name || id} to cart">Add to cart · ${priceLabel}</button>`;
+  if (!row?.purchasable || !row.variants.length) return quote;
+  const opts = row.variants
+    .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${v.label} · ${fmtMoney(v.price, v.currency)}</option>`)
+    .join("");
+  const btnClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-add";
+  const first = row.variants[0].vsku;
+  return `<span class="commerce-buy" data-commerce-buy="${id}">`
+    + `<select class="commerce-vol" aria-label="Volume for ${p?.name || id}">${opts}</select>`
+    + `<button class="${btnClass}" type="button" data-cart-add="${first}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
+    + `</span>`;
+}
+
+// Add the selected volume variant (or the button's default vsku) to the cart, with transient feedback.
+async function addToCartFromButton(button) {
+  const wrap = button.closest("[data-commerce-buy]");
+  const select = wrap && wrap.querySelector(".commerce-vol");
+  const vsku = (select && select.value) || button.dataset.cartAdd;
+  if (!vsku) return;
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = "Adding...";
+  try {
+    const cart = await import("./cart.js");
+    cart.add(vsku, 1);
+    button.textContent = "Added";
+    setTimeout(() => { button.textContent = label; button.disabled = false; }, 900);
+  } catch (err) {
+    button.textContent = "Try again";
+    setTimeout(() => { button.textContent = label; button.disabled = false; }, 1200);
+  }
 }
 
 function refreshCommerceActions(root = document) {
@@ -854,28 +892,11 @@ function catalogCard(id) {
 }
 
 function initCartButtons() {
-  document.addEventListener("click", async e => {
+  document.addEventListener("click", e => {
     const button = e.target.closest("[data-cart-add]");
     if (!button || button.closest("#shopGrid")) return;
     e.preventDefault();
-    const label = button.textContent;
-    button.disabled = true;
-    button.textContent = "Adding...";
-    try {
-      const cart = await import("./cart.js");
-      cart.add(button.dataset.cartAdd, 1);
-      button.textContent = "Added";
-      setTimeout(() => {
-        button.textContent = label;
-        button.disabled = false;
-      }, 900);
-    } catch (err) {
-      button.textContent = "Try again";
-      setTimeout(() => {
-        button.textContent = label;
-        button.disabled = false;
-      }, 1200);
-    }
+    addToCartFromButton(button);
   });
 }
 
@@ -900,29 +921,12 @@ function initShop() {
   const countEl = document.getElementById("shopCount");
   const emptyEl = document.getElementById("shopEmpty");
 
-  grid.addEventListener("click", async e => {
+  grid.addEventListener("click", e => {
     const button = e.target.closest("[data-cart-add]");
     if (!button) return;
     e.preventDefault();
     e.stopPropagation();
-    const label = button.textContent;
-    button.disabled = true;
-    button.textContent = "Adding...";
-    try {
-      const cart = await import("./cart.js");
-      cart.add(button.dataset.cartAdd, 1);
-      button.textContent = "Added";
-      setTimeout(() => {
-        button.textContent = label;
-        button.disabled = false;
-      }, 900);
-    } catch (err) {
-      button.textContent = "Try again";
-      setTimeout(() => {
-        button.textContent = label;
-        button.disabled = false;
-      }, 1200);
-    }
+    addToCartFromButton(button);
   });
 
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";

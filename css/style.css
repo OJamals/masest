@@ -3185,6 +3185,20 @@ fully clickable cards) ---- */
   color: var(--accent-ink);
   outline: none;
 }
+/* Volume-variant buy control (select + add button), sits inside the z-indexed commerce slot. */
+.commerce-buy { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.commerce-vol {
+  min-height: 34px;
+  max-width: 170px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: .8rem;
+  font-weight: 700;
+}
+.commerce-vol:focus { outline: none; border-color: var(--accent); }
 .shop-card-cta i { transition: transform .18s var(--ease-out); }
 .shop-card:hover .shop-card-cta i { transform: translateX(3px); }
 
@@ -3271,6 +3285,9 @@ fully clickable cards) ---- */
 .cart-actions { display: grid; gap: 10px; margin-top: 18px; }
 .cart-actions .btn { width: 100%; justify-content: center; }
 .cart-actions .btn:disabled { cursor: not-allowed; }
+.ship-est { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.ship-est-out { margin: 8px 0 4px; font-size: 1.05rem; font-weight: 800; color: var(--ink); }
+.ship-est-note { margin: 0; font-size: .76rem; color: var(--muted); }
 .cart-empty {
   padding: clamp(26px, 5vw, 46px);
   border: 1px dashed var(--line);

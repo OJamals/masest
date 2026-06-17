@@ -189,3 +189,29 @@ grant select on public.products to anon, authenticated;
 grant select on public.companies, public.profiles, public.addresses,
                 public.orders, public.order_items to authenticated;
 grant insert, update on public.addresses to authenticated;
+
+-- ---------- PRODUCT VARIANTS (volume tiers, e.g. 5 / 15 / 55 gal) ----------
+-- Each row is a purchasable volume of a parent product. Cart, checkout, and Stripe key on `vsku`.
+-- Buyable = parent product mode='buy' + active, AND variant active + non-null price.
+-- (Service-role auto-grant does not fire for new tables — explicit grants below are required.)
+create table if not exists public.product_variants (
+  id              uuid primary key default gen_random_uuid(),
+  vsku            text unique not null,
+  product_sku     text not null references public.products(sku) on delete cascade,
+  label           text not null,
+  gallons         numeric(8,2) not null,
+  price           numeric(12,2),
+  currency        text not null default 'usd',
+  stripe_price_id text,
+  active          boolean not null default true,
+  sort            int not null default 0,
+  created_at      timestamptz not null default now()
+);
+create index if not exists product_variants_sku_idx on public.product_variants(product_sku);
+
+alter table public.product_variants enable row level security;
+drop policy if exists product_variants_public_read on public.product_variants;
+create policy product_variants_public_read on public.product_variants for select using (active = true);
+
+grant select on public.product_variants to anon, authenticated;
+grant select, insert, update, delete on public.product_variants to service_role;
