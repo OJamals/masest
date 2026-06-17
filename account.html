@@ -37,6 +37,11 @@
   .acct-switch { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); font-size: .9rem; color: var(--ink-soft); text-align: center; }
   .acct-switch button { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--accent-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
   .acct-switch button:hover { color: var(--accent); }
+  .pw-wrap { position: relative; }
+  .pw-wrap input { padding-right: 44px; }
+  .pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: 0; cursor: pointer; color: var(--ink-soft); padding: 8px; display: grid; place-items: center; border-radius: 8px; }
+  .pw-toggle:hover { color: var(--accent); }
+  .pw-toggle i { font-size: 1.15rem; }
 </style>
 </head>
 <body>
@@ -71,8 +76,8 @@
           <h2 class="acct-title">Sign in</h2>
           <p class="acct-sub">Access your orders, NET terms, and account dashboard.</p>
           <div class="field-grid">
-            <div class="field"><label for="liEmail">Work email *</label><input id="liEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
-            <div class="field"><label for="liPass">Password *</label><input id="liPass" name="password" type="password" autocomplete="current-password" required></div>
+            <div class="field"><label for="liEmail">Email *</label><input id="liEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
+            <div class="field"><label for="liPass">Password *</label><div class="pw-wrap"><input id="liPass" name="password" type="password" autocomplete="current-password" required><button type="button" class="pw-toggle" data-target="liPass" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
           </div>
           <button type="submit" class="btn btn-primary" id="liBtn" style="margin-top:18px;width:100%">Sign in</button>
           <p class="acct-status" id="liStatus" role="status" aria-live="polite"></p>
@@ -86,9 +91,10 @@
           <div class="field-grid">
             <div class="field"><label for="rCompany">Company *</label><input id="rCompany" name="company" type="text" placeholder="Gulf Coast Mechanical" required></div>
             <div class="field"><label for="rName">Full name</label><input id="rName" name="full_name" type="text" placeholder="Marisol Vega"></div>
-            <div class="field"><label for="rEmail">Work email *</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
+            <div class="field"><label for="rEmail">Email *</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
             <div class="field"><label for="rPhone">Phone</label><input id="rPhone" name="phone" type="tel" placeholder="(727) 348-6519"></div>
-            <div class="field"><label for="rPass">Password *</label><input id="rPass" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required></div>
+            <div class="field"><label for="rPass">Password *</label><div class="pw-wrap"><input id="rPass" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required><button type="button" class="pw-toggle" data-target="rPass" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
+            <div class="field"><label for="rPass2">Confirm password *</label><div class="pw-wrap"><input id="rPass2" name="password_confirm" type="password" autocomplete="new-password" placeholder="Re-enter password" minlength="8" required><button type="button" class="pw-toggle" data-target="rPass2" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
             <div class="field"><label for="rCert">Resale / tax-exempt cert URL</label><input id="rCert" name="resale_cert_url" type="url" placeholder="Link to certificate (optional)"></div>
           </div>
           <label class="checkbox-row"><input type="checkbox" id="rExempt" name="tax_exempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
@@ -130,6 +136,22 @@
         panes.forEach(function (p) { p.hidden = p.dataset.pane !== target; });
         var firstInput = document.querySelector('.acct-pane[data-pane="' + target + '"] input');
         if (firstInput) firstInput.focus();
+      });
+    });
+  })();
+
+  // Show / hide password toggles
+  (function () {
+    document.querySelectorAll(".pw-toggle").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var input = document.getElementById(btn.dataset.target);
+        if (!input) return;
+        var show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.setAttribute("aria-pressed", show ? "true" : "false");
+        btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+        var icon = btn.querySelector("i");
+        if (icon) icon.className = show ? "ph ph-eye-slash" : "ph ph-eye";
       });
     });
   })();
@@ -254,6 +276,7 @@
     e.preventDefault();
     const btn = $("rBtn"); const status = $("rStatus");
     if ($("rPass").value.length < 8) { setStatus(status, "Password must be at least 8 characters.", "err"); return; }
+    if ($("rPass").value !== $("rPass2").value) { setStatus(status, "Passwords do not match.", "err"); return; }
     const cap = captchaToken("registerForm");
     if (TS_SITEKEY && !cap) { setStatus(status, "Complete the verification challenge.", "err"); return; }
     btn.disabled = true; setStatus(status, "Creating account…", "");
