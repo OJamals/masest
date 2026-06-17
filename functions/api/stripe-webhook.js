@@ -79,6 +79,22 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
   }
 }
 
+// Best-effort stock decrement for paid lines. Product-level (matches the admin stock UI). Never throws:
+// inventory drift must not fail the webhook (Stripe would retry the whole event).
+async function decrementStock(sb, lines) {
+  for (const l of lines || []) {
+    const key = l.product_sku || l.sku;
+    if (!key) continue;
+    try {
+      const { data: p } = await sb.from('products').select('sku,track_stock,stock').eq('sku', key).maybeSingle();
+      if (p && p.track_stock && p.stock != null) {
+        const next = Math.max(0, Number(p.stock) - Number(l.qty || 0));
+        await sb.from('products').update({ stock: next }).eq('sku', key);
+      }
+    } catch (e) { console.error('stock_decrement_failed', key, e?.message || e); }
+  }
+}
+
 export async function onRequestPost({ request, env }) {
   const secret = env.STRIPE_SECRET_KEY;
   const whSecret = env.STRIPE_WEBHOOK_SECRET;
@@ -135,6 +151,8 @@ export async function onRequestPost({ request, env }) {
 
     // Branded order-confirmation email (Stripe also sends its own card receipt).
     await sendOrderConfirmation({ env, session: s, order, lines, subtotal, tax, total });
+    // Decrement inventory for stock-tracked SKUs (best-effort; never fails the webhook).
+    if (order && lines.length) await decrementStock(sb, lines);
     // TODO Phase 3: QBO sales receipt.
   }
 
