@@ -123,12 +123,13 @@ export async function onRequestPost({ request, env }) {
     // Cart keys are variant SKUs; names come from checkout metadata ("Product — 55 gal drum").
     let lines = [];
     if (cart.length) {
-      lines = cart.map((c) => ({ sku: c.sku, name: c.name || c.sku, qty: c.qty, unit_price: c.unit_price }));
+      lines = cart.map((c) => ({ sku: c.sku, product_sku: c.product_sku || null, name: c.name || c.sku, qty: c.qty, unit_price: c.unit_price }));
       if (order) {
-        await sb.from('order_items').insert(lines.map((l) => ({
-          order_id: order.id, sku: l.sku, name: l.name, qty: l.qty,
+        const { error: itemsErr } = await sb.from('order_items').insert(lines.map((l) => ({
+          order_id: order.id, sku: l.sku, product_sku: l.product_sku, name: l.name, qty: l.qty,
           unit_price: l.unit_price, line_total: l.unit_price * l.qty,
         })));
+        if (itemsErr) console.error('order_items_insert_failed', itemsErr.message);
       }
     }
 

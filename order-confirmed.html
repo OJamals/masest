@@ -37,10 +37,9 @@
       </div>
       <div class="hmis-panel">
         <span>Confirmation</span>
-        <div class="hmis-grid">
-          <b>0</b><b>0</b><b>0</b>
-        </div>
         <p id="sessionSummary">Your checkout session is being verified.</p>
+        <ul id="orderLines" style="list-style:none;margin:14px 0 0;padding:0;font-size:.92rem" hidden></ul>
+        <p id="orderTotals" style="margin:10px 0 0;font-weight:700" hidden></p>
       </div>
     </div>
   </section>
@@ -66,16 +65,38 @@
   </section>
 </main>
 <script>
-  const session = new URLSearchParams(location.search).get("session_id");
-  const summary = document.getElementById("sessionSummary");
-  if (session) {
+  (function () {
+    const session = new URLSearchParams(location.search).get("session_id");
+    const summary = document.getElementById("sessionSummary");
+    const linesEl = document.getElementById("orderLines");
+    const totalsEl = document.getElementById("orderTotals");
+    if (!session) return;
+
+    // Confirmed return — clear the cart + badge.
     localStorage.removeItem("masest_cart");
-    document.querySelectorAll("[data-cart-count]").forEach((count) => {
-      count.textContent = "0";
-      count.hidden = true;
-    });
-    summary.textContent = "Checkout session ending " + session.slice(-16) + " is recorded for follow-up.";
-  }
+    document.querySelectorAll("[data-cart-count]").forEach((c) => { c.textContent = "0"; c.hidden = true; });
+
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (ch) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+    fetch("/api/order?session_id=" + encodeURIComponent(session))
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((o) => {
+        const money = (n) => o.currency + " " + Number(n || 0).toFixed(2);
+        summary.textContent = o.email ? ("A confirmation was sent to " + o.email + ".") : "Your order is recorded.";
+        if (Array.isArray(o.lines) && o.lines.length) {
+          linesEl.innerHTML = o.lines.map((l) =>
+            '<li style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.14)">'
+            + "<span>" + l.qty + "× " + esc(l.name || "Item") + "</span><b>" + money(l.amount_total) + "</b></li>").join("");
+          linesEl.hidden = false;
+        }
+        totalsEl.textContent = "Total " + money(o.amount_total);
+        totalsEl.hidden = false;
+      })
+      .catch(() => {
+        summary.textContent = "Checkout session ending " + session.slice(-16) + " is recorded for follow-up.";
+      });
+  })();
 </script>
 </body>
 </html>

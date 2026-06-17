@@ -23,7 +23,7 @@ export async function onRequestPost({ request, env }) {
   const sb = adminClient(env);
   const { data: variants, error } = await sb
     .from('product_variants')
-    .select('vsku,label,price,currency,stripe_price_id,active,products(name,mode,active,taxable)')
+    .select('vsku,product_sku,label,price,currency,stripe_price_id,active,products(name,mode,active,taxable)')
     .in('vsku', skus);
   if (error) return json(500, { error: error.message });
 
@@ -38,6 +38,7 @@ export async function onRequestPost({ request, env }) {
     } else {
       sellable.push({
         sku: v.vsku,
+        product_sku: v.product_sku,
         name: `${prod.name} — ${v.label}`,
         price: v.price,
         currency: v.currency || 'usd',
@@ -72,10 +73,11 @@ export async function onRequestPost({ request, env }) {
       subtotal, total: subtotal, currency: sellable[0].currency || 'usd',
     }).select('id').single();
     if (order) {
-      await sb.from('order_items').insert(sellable.map((p) => ({
-        order_id: order.id, sku: p.sku, name: p.name, qty: qtyBySku[p.sku],
+      const { error: itemsErr } = await sb.from('order_items').insert(sellable.map((p) => ({
+        order_id: order.id, sku: p.sku, product_sku: p.product_sku, name: p.name, qty: qtyBySku[p.sku],
         unit_price: p.price, line_total: Number(p.price) * qtyBySku[p.sku],
       })));
+      if (itemsErr) console.error('order_items_insert_failed', itemsErr.message);
     }
     return json(201, {
       net: true, order_id: order?.id,
@@ -127,7 +129,7 @@ export async function onRequestPost({ request, env }) {
       metadata: {
         company_id: companyId || '',
         buyer_email: body.email || user?.email || '',
-        cart: JSON.stringify(sellable.map((p) => ({ sku: p.sku, name: p.name, qty: qtyBySku[p.sku], unit_price: Number(p.price) }))),
+        cart: JSON.stringify(sellable.map((p) => ({ sku: p.sku, product_sku: p.product_sku, name: p.name, qty: qtyBySku[p.sku], unit_price: Number(p.price) }))),
       },
     });
   } catch (err) {
