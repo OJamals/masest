@@ -177,13 +177,29 @@
           maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
         }).format(Number(n));
         // Volume selector + Add-to-cart for the chosen variant SKU.
+        const perGallonText = (v) => Number(v.gallons) > 0
+          ? ` · ${money(Number(v.price) / Number(v.gallons), v.currency)}/gal`
+          : "";
+        const selectedIndex = Math.max(0, variants.findIndex(v => Number(v.gallons) === 55));
         const sel = document.createElement("select");
         sel.id = "pVol";
         sel.className = "commerce-vol";
         sel.setAttribute("aria-label", "Volume for " + p.name);
         sel.innerHTML = variants.map((v, i) =>
-          `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${v.label} · ${money(v.price, v.currency)}</option>`).join("");
+          `<option value="${v.vsku}"${i === selectedIndex ? " selected" : ""}>${v.label} · ${money(v.price, v.currency)}${perGallonText(v)}</option>`).join("");
         buyBtn.parentNode.insertBefore(sel, buyBtn);
+        const unit = document.createElement("span");
+        unit.id = "pUnitPrice";
+        unit.className = "commerce-unit-price";
+        const updateUnit = () => {
+          const chosen = variants.find(v => v.vsku === sel.value);
+          unit.textContent = chosen && Number(chosen.gallons) > 0
+            ? `${money(Number(chosen.price) / Number(chosen.gallons), chosen.currency)}/gal`
+            : "";
+        };
+        sel.parentNode.insertBefore(unit, buyBtn);
+        updateUnit();
+        sel.addEventListener("change", updateUnit);
         buyBtn.hidden = false;
         buyBtn.classList.remove("btn-secondary");
         buyBtn.classList.add("btn-primary");

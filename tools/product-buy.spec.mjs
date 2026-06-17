@@ -47,3 +47,33 @@ test("product add-to-cart gives confirmation and cart route", async ({ page }) =
   await expect(page.getByRole("link", { name: "Review cart" })).toHaveAttribute("href", "cart.html");
   await expect(page.locator("[data-cart-count]")).toHaveText("1");
 });
+
+test("product buy selector defaults to the 55 gallon bulk price", async ({ page }) => {
+  await page.route("**/api/products", async route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [
+        {
+          sku: "crhd",
+          name: "VertKleen CRHD",
+          mode: "buy",
+          active: true,
+          product_variants: [
+            { vsku: "crhd-5", label: "5 gal pail", gallons: 5, price: 125, currency: "usd", active: true, sort: 1 },
+            { vsku: "crhd-55", label: "55 gal drum", gallons: 55, price: 899.25, currency: "usd", active: true, sort: 2 },
+          ],
+        },
+      ],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/product.html?id=crhd`, { waitUntil: "networkidle" });
+
+  await expect(page.locator("#pVol")).toHaveValue("crhd-55");
+  await expect(page.locator("#pVol")).toContainText("55 gal drum · $899.25 · $16.35/gal");
+  await expect(page.locator("#pUnitPrice")).toHaveText("$16.35/gal");
+
+  await page.locator("#pVol").selectOption("crhd-5");
+  await expect(page.locator("#pUnitPrice")).toHaveText("$25/gal");
+});

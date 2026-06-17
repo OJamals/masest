@@ -82,7 +82,8 @@ test("product catalog shows programs, distributor CTA, and 55-gallon price per g
       assert.equal(await page.locator(".shop-card-quote").count(), 0);
       await page.getByRole("link", { name: /Compare programs/i }).waitFor();
       await page.getByRole("link", { name: /Become a distributor/i }).waitFor();
-      await page.getByText("$25/gal at 55 gal").waitFor();
+      await page.getByText("$25/gal").waitFor();
+      assert.equal(await page.getByText("at 55 gal").count(), 0);
     } finally {
       await browser.close();
     }

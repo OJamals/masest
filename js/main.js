@@ -862,7 +862,7 @@ function bulkPriceHTML(id) {
   const variant = row?.variants?.find(v => Number(v.gallons) === 55);
   if (!variant || !Number.isFinite(Number(variant.price))) return "";
   const perGallon = Number(variant.price) / 55;
-  return `<span class="shop-card-bulk">${fmtMoney(perGallon, variant.currency)}/gal at 55 gal</span>`;
+  return `<span class="shop-card-bulk">${fmtMoney(perGallon, variant.currency)}/gal</span>`;
 }
 
 // Add the selected volume variant (or the button's default vsku) to the cart, with transient feedback.
