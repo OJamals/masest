@@ -132,7 +132,10 @@ states.forEach(function (st) {
   /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
   var pipeAct = story.querySelector('.act[data-act="2"]');
   var pipeChips = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".chip")) : [];
+  var pipeFlowPaths = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".pipe-flow")) : [];
+  var pipeBuildupPaths = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".pipe-buildup")) : [];
   pipeChips.forEach(function (c) { c._beat = parseInt(c.getAttribute("data-at"), 10) || 1; c._burning = false; });
+  pipeBuildupPaths.forEach(function (p) { p._beat = parseInt(p.getAttribute("data-at"), 10) || 1; });
 
   function updateChips2(st) {
     if (!pipeChips.length) return;
@@ -143,6 +146,21 @@ states.forEach(function (st) {
       c.style.setProperty("--burn", b.toFixed(3));
       var on = b > 0.5;
       if (on !== c._burning) { c._burning = on; c.classList.toggle("is-burning", on); }
+    }
+    updatePipeDiagram(st, win);
+  }
+
+  function updatePipeDiagram(st, win) {
+    if (!pipeAct) return;
+    var travel = -240 - st.p * 420;
+    for (var f = 0; f < pipeFlowPaths.length; f++) {
+      pipeFlowPaths[f].style.strokeDashoffset = (travel - f * 62).toFixed(1);
+    }
+    for (var i = 0; i < pipeBuildupPaths.length; i++) {
+      var path = pipeBuildupPaths[i];
+      var b = smooth((st.p - beatFrac(st, path._beat)) / win);
+      path.style.setProperty("--build", b.toFixed(3));
+      path.style.strokeDashoffset = (1 - b).toFixed(3);
     }
   }
 

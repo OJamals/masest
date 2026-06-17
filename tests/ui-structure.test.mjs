@@ -18,6 +18,13 @@ test("global navigation stays focused on buyer decisions", () => {
   assert.doesNotMatch(navBlock[0], /contact\.html/);
 });
 
+test("global navigation exposes account sign-in and registration", () => {
+  const main = read("js/main.js");
+
+  assert.match(main, /href="\$\{root\}account\.html"/);
+  assert.match(main, /Sign in/);
+});
+
 test("global navigation groups proof and industries as use cases", () => {
   const main = read("js/main.js");
 
@@ -349,7 +356,36 @@ test("commerce setup exposes a complete buyer cart path", () => {
   assert.match(cart, /id="checkoutNet"/);
   assert.match(cart, /contact\.html\?type=quote/);
   assert.match(confirmation, /session_id/);
-  assert.match(confirmation, /contact\.html\?type=quote/);
-  assert.match(cartJs, /cart:updated/);
-  assert.match(cartJs, /safeReadCart/);
+assert.match(confirmation, /contact\.html\?type=quote/);
+assert.match(cartJs, /cart:updated/);
+assert.match(cartJs, /safeReadCart/);
+});
+
+test("scrolly Scene 2 uses a polished SVG pipe flow system", () => {
+  const home = read("index.html");
+  const storyJs = read("js/story.js");
+  const storyCss = read("css/story.css");
+
+  const actTwo = home.match(/<section class="act" data-act="2"[\s\S]*?<\/section>/)?.[0] || "";
+
+  assert.match(actTwo, /class="pipe-diagram"/);
+  assert.match(actTwo, /class="pipe-callouts"/);
+  assert.match(actTwo, /class="[^"]*\bpipe-flow\b/);
+  assert.match(actTwo, /class="[^"]*\bpipe-buildup\b/);
+  assert.doesNotMatch(actTwo, /<canvas class="fx-canvas"/);
+  assert.doesNotMatch(actTwo, /class="pipe-chips"/);
+  assert.doesNotMatch(actTwo, /class="[^"]*\bpipe-pressure\b/);
+
+  assert.match(storyJs, /pipeFlowPaths/);
+  assert.match(storyJs, /strokeDashoffset/);
+  assert.match(storyJs, /updatePipeDiagram/);
+  assert.match(storyCss, /\.pipe-diagram/);
+});
+
+test("scrolly Scene 3 HMIS intro remains readable", () => {
+  const home = read("index.html");
+  const intro = home.match(/<p class="act-p" data-at="1" data-out="([^"]+)">Crews fight buildup[\s\S]*?<\/p>/);
+
+  assert.ok(intro, "expected Scene 3 HMIS intro copy");
+  assert.ok(Number.parseFloat(intro[1]) >= 4, "HMIS intro should not exit before the user can read it");
 });

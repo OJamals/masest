@@ -149,6 +149,17 @@ one line) ---------- */
 .nav.over-dark .nav-links a.active { color: #fff; }
 .nav.over-dark .nav-cta { background: #fff; color: var(--ink); }
 .nav-actions { display: flex; align-items: center; gap: 12px; }
+.nav-account {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: .88rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.nav-account:hover { color: var(--accent); }
 .nav-cart {
   position: relative;
   display: inline-flex;
@@ -178,6 +189,7 @@ one line) ---------- */
 }
 .cart-count[hidden] { display: none; }
 .nav.over-dark:not(.scrolled) .nav-cart { border-color: rgba(255,255,255,.42); background: rgba(255,255,255,.12); color: #fff; }
+.nav.over-dark:not(.scrolled) .nav-account { color: rgba(255,255,255,.78); }
 .nav.over-dark .nav-cta:hover { background: #e8eaed; }
 .nav.over-dark .nav-burger span { background: #f4f6f8; }
 .nav-inner {
