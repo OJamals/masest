@@ -116,7 +116,9 @@ export async function onRequestPost({ request, env }) {
       mode: 'payment',
       line_items,
       payment_method_types: ['card', 'us_bank_account'],
-      automatic_tax: { enabled: true },
+      // Tax reconciled on the B2B invoice (Stripe Tax not yet configured). Re-enable
+      // by flipping to { enabled: true } after setting a head-office address in Stripe.
+      automatic_tax: { enabled: false },
       customer_email: body.email || user?.email || undefined,
       shipping_address_collection: { allowed_countries: ['US'] },
       billing_address_collection: 'required',
