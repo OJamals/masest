@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cart | MASEST</title>
+  <meta name="description" content="Review VertKleen purchase-ready SKUs, start checkout, or route quote-only products to MASEST.">
+  <link rel="stylesheet" href="vendor/satoshi/satoshi.css">
+  <link rel="stylesheet" href="vendor/phosphor/style.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js" defer></script>
+  <script src="js/main.js" defer></script>
+</head>
+<body>
+<noscript>
+  <nav class="nojs-nav" aria-label="Site">
+    <a href="index.html"><b>MASEST</b></a>
+    <a href="products.html">Products</a>
+    <a href="programs.html">Programs</a>
+    <span>Use Cases</span>
+    <a href="industries.html">Industries</a>
+    <a href="proof.html">Field Results</a>
+    <a href="resources.html">Resources</a>
+    <a href="contact.html?type=quote">Request a Quote</a>
+  </nav>
+</noscript>
+<main id="main">
+  <section class="page-hero compact">
+    <div class="container split-hero">
+      <div>
+        <h1>Review purchase-ready VertKleen SKUs.</h1>
+        <p class="subhead">Checkout is available only for active priced products. Quote-only items still route through the MASEST quote desk for volume, freight, and documentation.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="products.html">Continue Browsing</a>
+          <a class="btn btn-secondary" href="contact.html?type=quote">Request a Quote</a>
+        </div>
+      </div>
+      <div class="hmis-panel">
+        <span>Cart rules</span>
+        <div class="hmis-grid">
+          <b>DB</b><b>$</b><b>Q</b>
+        </div>
+        <p>Server-priced checkout. Quote route preserved. NET terms require account approval.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container cart-shell">
+      <div class="cart-panel">
+        <div class="section-head">
+          <p class="eyebrow">Order lines</p>
+          <h2>Your cart</h2>
+        </div>
+        <div id="cartLines" class="cart-lines" aria-live="polite"></div>
+      </div>
+
+      <aside class="cart-summary" aria-label="Cart checkout">
+        <p class="eyebrow">Next step</p>
+        <h2>Checkout or quote.</h2>
+        <p id="cartStatus" class="cart-status" role="status" aria-live="polite">Cart totals are confirmed at checkout by the server.</p>
+        <label class="field-label" for="checkoutEmail">Email for receipt</label>
+        <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" placeholder="buyer@company.com">
+        <div class="cart-actions">
+          <button class="btn btn-primary" id="checkoutPay" type="button">Card / ACH Checkout</button>
+          <button class="btn btn-secondary" id="checkoutNet" type="button">Use NET Terms</button>
+          <a class="btn btn-ghost" href="contact.html?type=quote">Send Quote Request</a>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+<script type="module">
+  import { checkout, clear, items, remove, setQty } from "./js/cart.js";
+
+  const catalogCopy = {
+    hcr: "VertKleen HCR",
+    cr: "VertKleen CR",
+    crhd: "VertKleen CR-HD",
+    descaler: "VertKleen Descaler",
+    multiwash: "VertKleen MultiWash",
+    purgo: "VertKleen PURGO",
+    dbnpa: "DBNPA Tablet",
+    lam3: "VertKleen LAM3",
+    alumibrite: "VertKleen AlumiBrite",
+    torque: "VertKleen Torque"
+  };
+  const lines = document.getElementById("cartLines");
+  const status = document.getElementById("cartStatus");
+  const email = document.getElementById("checkoutEmail");
+  const checkoutPay = document.getElementById("checkoutPay");
+  const checkoutNet = document.getElementById("checkoutNet");
+
+  function setCheckoutDisabled(disabled) {
+    checkoutPay.disabled = disabled;
+    checkoutNet.disabled = disabled;
+  }
+
+  function checkoutErrorMessage(err) {
+    if (err?.code === "not_purchasable") {
+      return err.message || "Some SKUs are quote-only or not yet priced. Send a quote request and MASEST will confirm availability.";
+    }
+    if (err?.code === "auth_required_for_net") {
+      return "NET terms require an approved business account. Send a quote request and MASEST will confirm account terms.";
+    }
+    if (err?.code === "net_terms_unavailable") {
+      return "NET terms are not available for this account yet. Send a quote request for approval and terms review.";
+    }
+    if (err?.code === "stripe_not_configured") {
+      return "Online checkout is not configured yet. Send a quote request and MASEST will complete the order path.";
+    }
+    if (err?.message === "cart_empty") return "Add at least one product before checkout.";
+    return "Checkout is not available for this cart. Send a quote request and MASEST will confirm the order path.";
+  }
+
+  function productName(sku) {
+    return catalogCopy[String(sku).toLowerCase()] || sku;
+  }
+
+  function render() {
+    const cartItems = items();
+    setCheckoutDisabled(cartItems.length === 0);
+    if (!cartItems.length) {
+      lines.innerHTML = `<div class="cart-empty"><h3>No products in the cart.</h3><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
+      return;
+    }
+    lines.innerHTML = cartItems.map(item => `
+      <article class="cart-line">
+        <div>
+          <span class="eyebrow">${item.sku}</span>
+          <h3>${productName(item.sku)}</h3>
+          <p>Final price, freight, and tax are confirmed by the checkout API.</p>
+        </div>
+        <label>
+          <span>Qty</span>
+          <input type="number" min="1" step="1" value="${item.qty}" data-qty="${item.sku}">
+        </label>
+        <button type="button" class="btn btn-ghost" data-remove="${item.sku}">Remove</button>
+      </article>
+    `).join("");
+  }
+
+  lines.addEventListener("change", event => {
+    const sku = event.target?.dataset?.qty;
+    if (!sku) return;
+    setQty(sku, event.target.value);
+    render();
+  });
+  lines.addEventListener("click", event => {
+    const sku = event.target?.dataset?.remove;
+    if (!sku) return;
+    remove(sku);
+    render();
+  });
+
+  async function runCheckout(mode) {
+    if (!items().length) {
+      status.dataset.state = "err";
+      status.textContent = "Add at least one product before checkout.";
+      setCheckoutDisabled(true);
+      return;
+    }
+    setCheckoutDisabled(true);
+    status.dataset.state = "";
+    status.textContent = mode === "net" ? "Checking account terms..." : "Starting checkout...";
+    try {
+      const result = await checkout({ mode, email: email.value.trim() });
+      if (result.net) {
+        status.dataset.state = "ok";
+        status.textContent = result.message || "Order placed on account.";
+        clear();
+        render();
+      }
+    } catch (err) {
+      status.dataset.state = "err";
+      status.textContent = checkoutErrorMessage(err);
+      setCheckoutDisabled(items().length === 0);
+    }
+  }
+
+  checkoutPay.addEventListener("click", () => runCheckout("pay"));
+  checkoutNet.addEventListener("click", () => runCheckout("net"));
+  render();
+</script>
+</body>
+</html>

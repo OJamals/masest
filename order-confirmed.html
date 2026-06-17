@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order Confirmed | MASEST</title>
+  <meta name="description" content="VertKleen order confirmation and procurement follow-up.">
+  <link rel="stylesheet" href="vendor/satoshi/satoshi.css">
+  <link rel="stylesheet" href="vendor/phosphor/style.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js" defer></script>
+  <script src="js/main.js" defer></script>
+</head>
+<body>
+<noscript>
+  <nav class="nojs-nav" aria-label="Site">
+    <a href="index.html"><b>MASEST</b></a>
+    <a href="products.html">Products</a>
+    <a href="programs.html">Programs</a>
+    <span>Use Cases</span>
+    <a href="industries.html">Industries</a>
+    <a href="proof.html">Field Results</a>
+    <a href="resources.html">Resources</a>
+    <a href="contact.html?type=quote">Request a Quote</a>
+  </nav>
+</noscript>
+<main id="main">
+  <section class="page-hero compact">
+    <div class="container split-hero">
+      <div>
+        <h1>Your VertKleen order is in motion.</h1>
+        <p class="subhead">MASEST will reconcile payment, product availability, documentation, and freight details before fulfillment.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="products.html">Back to Products</a>
+          <a class="btn btn-secondary" href="contact.html?type=quote">Need a Quote?</a>
+        </div>
+      </div>
+      <div class="hmis-panel">
+        <span>Confirmation</span>
+        <div class="hmis-grid">
+          <b>0</b><b>0</b><b>0</b>
+        </div>
+        <p id="sessionSummary">Your checkout session is being verified.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container route-grid confirmation-grid">
+      <a class="route-card" href="resources.html">
+        <i class="ph ph-file-text" aria-hidden="true"></i>
+        <span>Need SDS, HMIS, or price-list references?</span>
+        <b>Open resources</b>
+      </a>
+      <a class="route-card" href="contact.html?type=quote">
+        <i class="ph ph-handshake" aria-hidden="true"></i>
+        <span>Need volume pricing or quote-only SKUs?</span>
+        <b>Route a quote</b>
+      </a>
+      <a class="route-card" href="proof.html">
+        <i class="ph ph-images" aria-hidden="true"></i>
+        <span>Need field results for buyer approval?</span>
+        <b>Review proof</b>
+      </a>
+    </div>
+  </section>
+</main>
+<script>
+  const session = new URLSearchParams(location.search).get("session_id");
+  const summary = document.getElementById("sessionSummary");
+  if (session) {
+    summary.textContent = "Checkout session " + session.slice(0, 18) + " is recorded for follow-up.";
+  }
+</script>
+</body>
+</html>

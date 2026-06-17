@@ -18,11 +18,13 @@
 
 <noscript>
 <nav class="nojs-nav" aria-label="Site">
-  <a class="nojs-logo" href="index.html"><img src="img/masest-logo.png" alt="MASEST"></a>
+  <a href="index.html"><b>MASEST</b></a>
   <a href="products.html">Products</a>
   <a href="programs.html">Programs</a>
-  <a href="proof.html">Proof</a>
+  <span>Use Cases</span>
   <a href="industries.html">Industries</a>
+  <a href="proof.html">Field Results</a>
+  <a href="resources.html">Resources</a>
   <a href="contact.html?type=quote">Request a Quote</a>
 </nav>
 <div class="wrap" style="padding:28px 28px 0"><p class="cmp-note">Product details need JavaScript. Browse the full line on the <a href="products.html" style="font-weight:700;text-decoration:underline">products page</a> or <a href="contact.html" style="font-weight:700;text-decoration:underline">contact us</a> directly.</p></div>
@@ -38,6 +40,7 @@
       <p class="subhead" id="pDesc"></p>
       <div class="hero-ctas" style="margin-top:30px">
         <a class="btn btn-primary" id="pQuoteBtn" href="contact.html">Request a Quote</a>
+        <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
         <a class="btn btn-ghost" href="contact.html?type=distributor">Become a Distributor</a>
       </div>
     </div>
@@ -145,6 +148,43 @@
     const quoteHref = "contact.html?product=" + encodeURIComponent(p.name);
     document.getElementById("pQuoteBtn").href = quoteHref;
     document.getElementById("pQuoteBtn2").href = quoteHref;
+    const buyBtn = document.getElementById("pBuyBtn");
+    fetch("/api/products", { headers: { Accept: "application/json" }, cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("catalog_unavailable");
+        const payload = await response.json();
+        const row = (payload.products || []).find(item => String(item.sku).toLowerCase() === id);
+        const price = Number(row?.price);
+        if (!row || row.active === false || row.mode !== "buy" || !Number.isFinite(price) || price <= 0) return;
+        const priceLabel = new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: String(row.currency || "usd").toUpperCase(),
+          maximumFractionDigits: price % 1 === 0 ? 0 : 2
+        }).format(price);
+        buyBtn.hidden = false;
+        buyBtn.textContent = `Add to cart · ${priceLabel}`;
+        buyBtn.addEventListener("click", async () => {
+          const original = buyBtn.textContent;
+          buyBtn.disabled = true;
+          buyBtn.textContent = "Adding...";
+          try {
+            const cart = await import("./js/cart.js");
+            cart.add(id, 1);
+            buyBtn.textContent = "Added";
+            setTimeout(() => {
+              buyBtn.textContent = original;
+              buyBtn.disabled = false;
+            }, 900);
+          } catch (err) {
+            buyBtn.textContent = "Try again";
+            setTimeout(() => {
+              buyBtn.textContent = original;
+              buyBtn.disabled = false;
+            }, 1200);
+          }
+        });
+      })
+      .catch(() => {});
 
     // HMIS panel (real product data)
     const rows = document.getElementById("panelRows");

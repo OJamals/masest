@@ -74,7 +74,7 @@ states.forEach(function (st) {
     defaults: { ease: "power2.out" },
     scrollTrigger: {
       trigger: st.act,
-        start: startsPinned ? "top 67px" : "top 82%",
+        start: startsPinned ? "top 67px" : "top 85%",
         end: "bottom bottom",
         scrub: 0.30,
         onEnter: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },

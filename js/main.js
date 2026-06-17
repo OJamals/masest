@@ -462,16 +462,36 @@ function renderChrome() {
   // right root so the shared nav/footer resolve from any directory depth.
   const root = /\/industries\//.test(location.pathname) ? "../" : "";
   const links = [
-    ["products.html", "Products"],
-    ["programs.html", "Programs"],
-    ["proof.html", "Proof"],
-    ["industries.html", "Industries"]
+    { href: "products.html", label: "Products" },
+    { href: "programs.html", label: "Programs" },
+    {
+      key: "useCases",
+      label: "Use Cases",
+      children: [
+        { href: "industries.html", label: "Industries" },
+        { href: "proof.html", label: "Field Results" }
+      ]
+    },
+    { href: "resources.html", label: "Resources" }
   ];
   const isActive = (href) => {
     if (page === href) return true;
     if (href === "products.html" && page === "product.html") return true;
     if (href === "industries.html" && /\/industries\//.test(location.pathname)) return true;
     return false;
+  };
+  const navItem = item => {
+    if (!item.children) {
+      return `<a href="${root}${item.href}"${isActive(item.href) ? ' class="active" aria-current="page"' : ""}>${item.label}</a>`;
+    }
+    const active = item.children.some(child => isActive(child.href));
+    return `<details class="nav-group${active ? " active" : ""}">
+      <summary${active ? ' class="active" aria-current="page"' : ""}>${item.label}</summary>
+      <div class="nav-menu">
+        ${item.children.map(child =>
+          `<a href="${root}${child.href}"${isActive(child.href) ? ' class="active" aria-current="page"' : ""}>${child.label}</a>`).join("")}
+      </div>
+    </details>`;
   };
   const skip = document.createElement("a");
   skip.className = "skip-link";
@@ -486,10 +506,10 @@ function renderChrome() {
     <div class="nav-inner">
       <a class="nav-logo" href="${root}index.html"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true"></a>
       <nav class="nav-links" id="navLinks">
-        ${links.map(([href, label]) =>
-          `<a href="${root}${href}"${isActive(href) ? ' class="active" aria-current="page"' : ""}>${label}</a>`).join("")}
+        ${links.map(navItem).join("")}
       </nav>
-      <div style="display:flex;align-items:center;gap:12px">
+      <div class="nav-actions">
+        <a class="nav-cart" href="${root}cart.html" aria-label="Open cart"><span>Cart</span><b class="cart-count" data-cart-count hidden>0</b></a>
         <a class="nav-cta" href="${root}contact.html">Request a Quote</a>
         <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
       </div>
@@ -499,6 +519,22 @@ function renderChrome() {
   const burger = document.getElementById("navBurger");
   const navLinks = document.getElementById("navLinks");
   const navCta = nav.querySelector(".nav-cta");
+  const cartCount = nav.querySelector("[data-cart-count]");
+  const updateCartCount = () => {
+    let total = 0;
+    try {
+      const cart = JSON.parse(localStorage.getItem("masest_cart") || "{}");
+      total = Object.values(cart).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+    } catch (err) {
+      total = 0;
+    }
+    cartCount.textContent = String(total);
+    cartCount.hidden = total === 0;
+  };
+  updateCartCount();
+  window.addEventListener("storage", updateCartCount);
+  document.addEventListener("cart:updated", updateCartCount);
+  document.addEventListener("masest:cart", updateCartCount);
   const syncNavCtaLabel = () => {
     navCta.textContent = window.matchMedia("(max-width: 360px)").matches ? "Quote" : "Request a Quote";
   };
@@ -568,12 +604,64 @@ function renderChrome() {
           <p style="margin-top:10px;font-size:.8rem;line-height:1.7">CAGE 0B2Q3<br>NAICS 424690<br>SAM.gov registered<br>Minority-owned (self-certified)</p>
         </div>
       </div>
+      <div class="foot-news">
+        <div class="foot-news-copy">
+          <div class="foot-title">VertKleen Briefing</div>
+          <p>Field results, new SDS-backed SKUs, and program offers. No spam &mdash; unsubscribe anytime.</p>
+        </div>
+        <form class="foot-news-form" id="footNews" novalidate>
+          <input type="email" name="email" id="footNewsEmail" placeholder="you@company.com" aria-label="Email address" autocomplete="email" required>
+          <input type="text" name="company" class="foot-news-gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button type="submit" class="btn btn-primary" id="footNewsBtn">Subscribe</button>
+          <p class="foot-news-status" id="footNewsStatus" role="status" aria-live="polite"></p>
+        </form>
+      </div>
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
         <span>VertKleen, SynTec and SynClean are trademarks of MASEST Consulting LLC.</span>
       </div>
     </div>`;
   document.body.append(foot);
+
+  // Newsletter signup → Klaviyo (via window.MASEST.subscribeNewsletter from integrations.js).
+  const news = foot.querySelector("#footNews");
+  if (news) {
+    news.addEventListener("submit", async e => {
+      e.preventDefault();
+      const email = foot.querySelector("#footNewsEmail").value.trim();
+      const honey = foot.querySelector(".foot-news-gotcha").value;
+      const btn = foot.querySelector("#footNewsBtn");
+      const status = foot.querySelector("#footNewsStatus");
+      if (honey) return; // bot trap
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        status.dataset.state = "err"; status.textContent = "Enter a valid email."; return;
+      }
+      btn.disabled = true; status.dataset.state = ""; status.textContent = "Subscribing…";
+      try {
+        if (!window.MASEST?.subscribeNewsletter) throw new Error("unavailable");
+        await window.MASEST.subscribeNewsletter(email);
+        status.dataset.state = "ok"; status.textContent = "Check your inbox to confirm."; news.reset();
+      } catch (err) {
+        status.dataset.state = "err"; status.textContent = "Could not subscribe. Try again later.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // Load public config + integrations (Crisp chat, newsletter helper) once per page.
+  if (!window.__masestIntegrations) {
+    window.__masestIntegrations = true;
+    const cfg = document.createElement("script");
+    cfg.src = `${root}js/config.js`;
+    cfg.onload = () => {
+      const mod = document.createElement("script");
+      mod.type = "module";
+      mod.src = `${root}js/integrations.js`;
+      document.head.appendChild(mod);
+    };
+    document.head.appendChild(cfg);
+  }
 }
 
 /* ---------- Scroll reveal (IntersectionObserver, reduced-motion safe) ---------- */
@@ -660,12 +748,86 @@ function productCard(id, heroCard = false) {
       <span class="product-proof-line">${catalog.proof || "Stats, studies, and documents on the detail page"}</span>
       <div class="prod-actions">
         <a class="btn btn-ink btn-sm" href="product.html?id=${id}">View Details</a>
+        <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button"></span>
       </div>
   </div>`;
 }
 
 /* ---------- Products shop: e-commerce grid + replacement checker ---------- */
 // Whole-card link, e-commerce style. Used by the unified products grid.
+const commerceState = {
+  loaded: false,
+  products: new Map(),
+  promise: null
+};
+
+function quoteHref(id) {
+  const p = PRODUCTS[id];
+  return `contact.html?type=quote&product=${encodeURIComponent(p?.name || id)}`;
+}
+
+function normalizeCommerceRow(row) {
+  const sku = String(row?.sku || "").trim().toLowerCase();
+  const price = Number(row?.price);
+  return {
+    sku,
+    active: row?.active !== false,
+    mode: row?.mode,
+    price,
+    currency: String(row?.currency || "usd").toUpperCase(),
+    purchasable: sku && row?.active !== false && row?.mode === "buy" && Number.isFinite(price) && price > 0
+  };
+}
+
+async function loadCommerceCatalog() {
+  if (commerceState.promise) return commerceState.promise;
+  commerceState.promise = fetch("/api/products", {
+    headers: { Accept: "application/json" },
+    cache: "no-store"
+  })
+    .then(async response => {
+      if (!response.ok) throw new Error("catalog_unavailable");
+      const payload = await response.json();
+      const rows = Array.isArray(payload?.products) ? payload.products : [];
+      commerceState.products = new Map(
+        rows
+          .map(normalizeCommerceRow)
+          .filter(row => row.sku)
+          .map(row => [row.sku, row])
+      );
+      commerceState.loaded = true;
+      return commerceState.products;
+    })
+    .catch(() => {
+      commerceState.loaded = true;
+      commerceState.products = new Map();
+      return commerceState.products;
+    });
+  return commerceState.promise;
+}
+
+function commerceActionHTML(id, variant = "chip") {
+  const row = commerceState.products.get(String(id).toLowerCase());
+  const p = PRODUCTS[id];
+  const quoteClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-quote";
+  const quote = `<a class="${quoteClass}" href="${quoteHref(id)}">Request quote</a>`;
+  if (!row?.purchasable) return quote;
+  const priceLabel = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: row.currency || "USD",
+    maximumFractionDigits: row.price % 1 === 0 ? 0 : 2
+  }).format(row.price);
+  const className = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-add";
+  return `<button class="${className}" type="button" data-cart-add="${id}" aria-label="Add ${p?.name || id} to cart">Add to cart · ${priceLabel}</button>`;
+}
+
+function refreshCommerceActions(root = document) {
+  root.querySelectorAll("[data-commerce-action]").forEach(slot => {
+    const id = slot.dataset.commerceAction;
+    slot.innerHTML = commerceActionHTML(id, slot.dataset.commerceSize || "chip");
+  });
+}
+
 function catalogCard(id) {
   const p = PRODUCTS[id];
   if (!p) return "";
@@ -674,18 +836,47 @@ function catalogCard(id) {
     ? '<span class="hmis-badge">HMIS 0-0-0</span>'
     : '<span class="hmis-badge note">LOW HAZARD</span>';
   const media = p.image
-    ? `<img src="${p.image}" alt="${p.name} product photo" loading="lazy">`
+    ? `<img src="${p.image}" alt="${p.name} product image" loading="lazy">`
     : `<i class="ph ${p.icon}" aria-hidden="true"></i>`;
   return `
-    <a class="shop-card" href="product.html?id=${id}" data-id="${id}">
-      <span class="shop-card-media">${media}${badge}</span>
-      <span class="shop-card-body">
-        <span class="shop-card-type">${copy.job || "VertKleen product"}</span>
-        <b class="shop-card-name">${p.name}</b>
-        <span class="shop-card-replaces">${p.replaces}</span>
-        <span class="shop-card-cta">View details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
-      </span>
-    </a>`;
+    <article class="shop-card" data-id="${id}">
+      <a class="shop-card-link" href="product.html?id=${id}" aria-label="View details for ${p.name}">
+        <span class="shop-card-media">${media}${badge}</span>
+        <span class="shop-card-body">
+          <span class="shop-card-type">${copy.job || "Industrial chemistry"}</span>
+          <b class="shop-card-name">${p.name}</b>
+          <span class="shop-card-replaces">${p.replaces}</span>
+          <span class="shop-card-cta">View details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
+        </span>
+      </a>
+      <span class="shop-card-commerce" data-commerce-action="${id}"></span>
+    </article>`;
+}
+
+function initCartButtons() {
+  document.addEventListener("click", async e => {
+    const button = e.target.closest("[data-cart-add]");
+    if (!button || button.closest("#shopGrid")) return;
+    e.preventDefault();
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = "Adding...";
+    try {
+      const cart = await import("./cart.js");
+      cart.add(button.dataset.cartAdd, 1);
+      button.textContent = "Added";
+      setTimeout(() => {
+        button.textContent = label;
+        button.disabled = false;
+      }, 900);
+    } catch (err) {
+      button.textContent = "Try again";
+      setTimeout(() => {
+        button.textContent = label;
+        button.disabled = false;
+      }, 1200);
+    }
+  });
 }
 
 function swapRow(row, i) {
@@ -708,6 +899,31 @@ function initShop() {
   const sortSel = document.getElementById("shopSort");
   const countEl = document.getElementById("shopCount");
   const emptyEl = document.getElementById("shopEmpty");
+
+  grid.addEventListener("click", async e => {
+    const button = e.target.closest("[data-cart-add]");
+    if (!button) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = "Adding...";
+    try {
+      const cart = await import("./cart.js");
+      cart.add(button.dataset.cartAdd, 1);
+      button.textContent = "Added";
+      setTimeout(() => {
+        button.textContent = label;
+        button.disabled = false;
+      }, 900);
+    } catch (err) {
+      button.textContent = "Try again";
+      setTimeout(() => {
+        button.textContent = label;
+        button.disabled = false;
+      }, 1200);
+    }
+  });
 
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
   const state = { group: "all", match: null, sort: "featured" };
@@ -743,6 +959,7 @@ function initShop() {
   const apply = () => {
     const ids = visibleIds();
     grid.innerHTML = ids.map(catalogCard).join("");
+    refreshCommerceActions(grid);
     if (countEl) countEl.textContent = `Showing ${ids.length} of ${CATALOG_ORDER.length}`;
     if (emptyEl) emptyEl.hidden = ids.length > 0;
   };
@@ -808,6 +1025,7 @@ function initShop() {
   }
 
   apply();
+  loadCommerceCatalog().then(() => refreshCommerceActions(grid));
 
   if (catHash) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
 }
@@ -1115,5 +1333,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initResponsiveTables();
   initReveal();
   initLightbox();
+  initCartButtons();
+  loadCommerceCatalog().then(() => refreshCommerceActions(document));
   initShop();
 });
