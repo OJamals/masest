@@ -19,9 +19,15 @@ TOP = os.path.join(HOME, "Desktop/masest/images")
 OUT = os.path.join(os.path.dirname(__file__), "..", "img")
 
 WIDE, THUMB, Q = 1200, 560, 80
+ROTATE = {
+    "proof/cases/kitchen-before": -90,
+}
 
 def save(im, dest_rel, width):
     im = ImageOps.exif_transpose(im).convert("RGB")
+    stem = dest_rel.removesuffix(".webp")
+    if stem in ROTATE:
+        im = im.rotate(ROTATE[stem], expand=True)
     if im.width > width:
         h = round(im.height * width / im.width)
         im = im.resize((width, h), Image.LANCZOS)
