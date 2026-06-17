@@ -1,649 +1,299 @@
-/* ============================================================
-   MASEST / VertKleen — Scrollytelling engine v5
-   NATIVE browser scroll. One GSAP timeline per act, driven by
-   ScrollTrigger scrub (the single smoothing layer — no Lenis,
-   no wheel multipliers, no custom damping). Wheel feel is the
-   browser's own; animations catch up over ~0.3s.
-   Act 1: curated field-photo reel. Act 2: debris accumulation
-   inside a pipe (sticking physics). Act 3: HMIS factor by
-   factor. Act 4: chemicals dropped onto the hazard scale, then
-   zeroed. Degrades to a stacked, fully-visible layout without
-   JS, when CDN libs fail, or under prefers-reduced-motion.
-   ============================================================ */
+/*
+  MASEST / VertKleen scrollybook showpiece
+  One pinned GSAP master timeline. Native browser scroll only.
+*/
 (function () {
-  "use strict";
   var story = document.getElementById("story");
-  if (!story) return;
+  if (!story || !window.gsap || !window.ScrollTrigger) return;
 
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce || !window.gsap || !window.ScrollTrigger) return; /* CSS fallback shows everything */
+  if (reduce) return;
 
+  var gsap = window.gsap;
+  var ScrollTrigger = window.ScrollTrigger;
   gsap.registerPlugin(ScrollTrigger);
+  ScrollTrigger.config({ limitCallbacks: true, ignoreMobileResize: true });
+  ScrollTrigger.saveStyles(".story-copy, .story-layer, .field-card, .chem-card, .zero-mark b, .story-canvas");
+
+  var motionBudget = story.getAttribute("data-motion-budget") || "balanced";
+  var pin = story.querySelector(".story-pin");
+  var scroll = story.querySelector(".story-scroll");
+  var canvas = story.querySelector(".story-canvas");
+  var ctx = canvas ? canvas.getContext("2d") : null;
+  var cue = story.querySelector(".scroll-cue");
+  var railBtns = gsap.utils.toArray(story.querySelectorAll(".rail-btn"));
+  var copies = gsap.utils.toArray(story.querySelectorAll(".story-copy"));
+  var layers = gsap.utils.toArray(story.querySelectorAll(".story-layer"));
+  var cards = gsap.utils.toArray(story.querySelectorAll(".field-card"));
+  var chemCards = gsap.utils.toArray(story.querySelectorAll(".chem-card"));
+  var labels = ["field", "buildup", "hmis", "legacy", "zero"];
+  var activeLabel = "field";
+  var canvasState = { label: "field", progress: 0, safe: 0 };
+  var clamp01 = gsap.utils.clamp(0, 1);
+  var mapProgress = gsap.utils.mapRange(0, 1, 0, 100);
+  var snapProgress = gsap.utils.snap(0.001);
+  var mm = gsap.matchMedia();
+
+  if (!pin || !scroll) return;
+
   story.classList.add("story-ready");
 
-  var clamp = gsap.utils.clamp;
-  var smooth = function (t) { t = clamp(0, 1, t); return t * t * (3 - 2 * t); };
-
-  /* ============================================================
-     ACTS: each gets one timeline, scrubbed by its own scroll
-     road. Beats are timeline positions (1 beat = 1 time unit):
-     data-at="n" enters at beat n; data-out="m" exits at beat m.
-     A 1.2-unit hold keeps the finished composition on stage
-     until the act unpins and slides away naturally.
-     ============================================================ */
-var BEAT_IN = 0.58, BEAT_OUT = 0.22, HOLD = 1.25;
-  var acts = gsap.utils.toArray(story.querySelectorAll(".act"));
-  var firstAct = acts[0];
-
-  var states = acts.map(function (act, i) {
-    var maxAt = 0;
-    var els = Array.prototype.slice.call(act.querySelectorAll("[data-at]"));
-    var focusables = Array.prototype.slice.call(act.querySelectorAll("a[href], button, input, select, textarea, [tabindex]"));
-    els.forEach(function (el) {
-      el._at = parseFloat(el.getAttribute("data-at")) || 0;
-      el._out = el.hasAttribute("data-out") ? parseFloat(el.getAttribute("data-out")) : -1;
-      if (el._at > maxAt) maxAt = el._at;
-      if (el._out > maxAt) maxAt = el._out;
-    });
-    focusables.forEach(function (el) {
-      el.dataset.storyTabindex = el.getAttribute("tabindex") || "";
-    });
-    return { act: act, stage: act.querySelector(".stage"), i: i, p: 0, active: false, fx: null, maxAt: maxAt, els: els, focusables: focusables, focusVisible: null, T: maxAt + BEAT_IN + HOLD };
+  var railFill = railBtns.map(function (btn) {
+    return gsap.quickSetter(btn, "scale", "number");
   });
+  var setCueOpacity = cue ? gsap.quickSetter(cue, "opacity") : function () {};
 
-  function syncStoryFocus() {
-    states.forEach(function (st) {
-      var visible = st.active || st.act === firstAct && window.scrollY < st.act.offsetHeight;
-      if (visible === st.focusVisible) return;
-      st.focusVisible = visible;
-      st.act.setAttribute("aria-hidden", visible ? "false" : "true");
-      st.focusables.forEach(function (el) {
-        if (visible) {
-          if (el.dataset.storyTabindex) el.setAttribute("tabindex", el.dataset.storyTabindex);
-          else el.removeAttribute("tabindex");
-        } else {
-          el.setAttribute("tabindex", "-1");
-        }
-      });
+  function layer(name) {
+    return story.querySelector('[data-scene="' + name + '"].story-layer');
+  }
+
+  function copy(name) {
+    return story.querySelector('[data-scene="' + name + '"].story-copy');
+  }
+
+  function setActiveLabel(label) {
+    if (label === activeLabel) return;
+    activeLabel = label;
+    canvasState.label = label;
+    railBtns.forEach(function (btn) {
+      var on = btn.getAttribute("data-story-label") === label;
+      btn.classList.toggle("is-on", on);
+      btn.setAttribute("aria-current", on ? "step" : "false");
     });
   }
 
-states.forEach(function (st) {
-  var startsPinned = st.act === firstAct || st.act.classList.contains("act-chems");
-  var tl = gsap.timeline({
-    defaults: { ease: "power2.out" },
-    scrollTrigger: {
-      trigger: st.act,
-        start: startsPinned ? "top 67px" : "top 85%",
-        end: "bottom bottom",
-        scrub: 0.30,
-        onEnter: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
-        onEnterBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
-        onLeave: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 0 }); },
-        onLeaveBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
-        onToggle: function (self) {
-          st.active = self.isActive;
-          if (self.isActive) resizeFx(st);
-          updateRail();
-          syncStoryFocus();
-        }
+  function nearestLabel(tl) {
+    var time = tl.time();
+    var best = labels[0];
+    var dist = Infinity;
+    labels.forEach(function (name) {
+      var d = Math.abs(time - tl.labels[name]);
+      if (d < dist) {
+        dist = d;
+        best = name;
+      }
+    });
+    return best;
+  }
+
+  function buildMasterTimeline(opts) {
+    var isMobile = opts.isMobile;
+    var scrub = opts.scrub;
+    var tl = gsap.timeline({
+      defaults: { duration: 0.72, ease: "power3.out" }
+    });
+
+    gsap.set(copies.concat(layers), { autoAlpha: 0, y: 26 });
+    gsap.set(cards, { autoAlpha: 0, y: 28, scale: 0.94, rotation: 0 });
+    gsap.set(chemCards, { autoAlpha: 0, y: 34, scale: 0.96 });
+    gsap.set(".zero-mark b", { y: 34, autoAlpha: 0, scale: 0.82 });
+    gsap.set([copy("field"), layer("field")], { autoAlpha: 1, y: 0 });
+    gsap.set(cards[0], { autoAlpha: 1, y: 0, scale: 1, rotation: isMobile ? 0 : -3 });
+
+    sceneField(tl, isMobile);
+    sceneBuildup(tl, isMobile);
+    sceneHmis(tl, isMobile);
+    sceneLegacy(tl, isMobile);
+    sceneZero(tl, isMobile);
+    var majorStops = labels.map(function (name) { return tl.labels[name] / tl.duration(); });
+    story.dataset.snapStops = majorStops.map(function (stop) { return stop.toFixed(3); }).join(",");
+    ScrollTrigger.create({
+      id: "story-master",
+      trigger: scroll,
+      animation: tl,
+      pin: pin,
+      start: "top top",
+      end: function () { return "+=" + Math.round(window.innerHeight * (isMobile ? 5.6 : 6.4)); },
+      scrub: scrub,
+      anticipatePin: 1,
+      invalidateOnRefresh: true,
+      onUpdate: function (self) {
+        canvasState.progress = snapProgress(self.progress);
+        setCueOpacity(Math.max(0, 1 - self.progress * 12));
+        setActiveLabel(nearestLabel(tl));
+        updateRail(tl);
       },
-      onUpdate: function () {
-        st.p = tl.totalProgress();
-        onActScrub(st);
+      onScrubComplete: function () {
+        setActiveLabel(nearestLabel(tl));
+        updateRail(tl);
       }
     });
-    st.tl = tl;
 
-    st.els.forEach(function (el) {
-      if (st.act === firstAct && el._at === 0) {        /* opening line: visible on load */
-        gsap.set(el, { autoAlpha: 1, y: 0, scale: 1 });
-      } else {
-        tl.fromTo(el,
-          { autoAlpha: 0, y: 30, scale: 0.985 },
-          { autoAlpha: 1, y: 0, scale: 1, duration: BEAT_IN },
-          el._at);
-      }
-      if (el._out >= 0) {
-        tl.to(el, { autoAlpha: 0, y: -16, duration: BEAT_OUT, ease: "power2.in" }, Math.max(0, el._out - BEAT_OUT));
-      }
+    return tl;
+  }
+
+  function showCopy(tl, name, at) {
+    tl.to(copy(name), { autoAlpha: 1, y: 0, duration: 0.56 }, at);
+  }
+
+  function hideCopy(tl, name, at) {
+    tl.to(copy(name), { autoAlpha: 0, y: -22, duration: 0.38, ease: "power2.in" }, at);
+  }
+
+  function sceneField(tl, isMobile) {
+    tl.addLabel("field", 0);
+    tl.set([copy("field"), layer("field")], { autoAlpha: 1, y: 0 }, "field");
+    tl.to(cards, {
+      autoAlpha: 1,
+      y: 0,
+      scale: 1,
+      rotation: function (i) { return isMobile ? 0 : [-3, 2, -1, 3][i]; },
+      stagger: 0.1,
+      duration: 0.72
+    }, "field+=0.12");
+    tl.to(cards, {
+      xPercent: function (i) { return isMobile ? 0 : [-10, 4, -4, 9][i]; },
+      yPercent: function (i) { return isMobile ? i * 4 : [-8, 5, 11, -2][i]; },
+      scale: function (i) { return i === 0 ? 1 : 0.92; },
+      autoAlpha: function (i) { return i === 0 ? 1 : 0.7; },
+      stagger: 0.04,
+      duration: 0.9
+    }, "field+=0.72");
+    tl.to({}, { duration: 0.36, onStart: function () { canvasState.safe = 0; } }, "field+=0.2");
+  }
+
+  function sceneBuildup(tl, isMobile) {
+    tl.addLabel("buildupIntro", 1.45);
+    hideCopy(tl, "field", "buildupIntro-=0.34");
+    tl.to(layer("field"), { autoAlpha: 0, scale: 0.92, x: isMobile ? 0 : -80, duration: 0.5 }, "buildupIntro-=0.28");
+    showCopy(tl, "buildup", "buildupIntro");
+    tl.to(layer("buildup"), { autoAlpha: 1, y: 0, duration: 0.62 }, "buildupIntro+=0.06");
+    tl.fromTo(".pipe-run", { scale: 0.86, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.62 }, "buildupIntro+=0.1");
+    tl.fromTo(".clog", { autoAlpha: 0, y: 18, scale: 0.86 }, { autoAlpha: 1, y: 0, scale: 1, stagger: 0.1, duration: 0.48 }, "buildupIntro+=0.42");
+    tl.addLabel("buildup", "buildupIntro+=0.88");
+  }
+
+  function sceneHmis(tl, isMobile) {
+    tl.addLabel("hmisIntro", 2.85);
+    hideCopy(tl, "buildup", "hmisIntro-=0.34");
+    tl.to(layer("buildup"), { autoAlpha: 0, scale: 0.92, x: isMobile ? 0 : 70, duration: 0.5 }, "hmisIntro-=0.28");
+    showCopy(tl, "hmis", "hmisIntro");
+    tl.to(layer("hmis"), { autoAlpha: 1, y: 0, duration: 0.62 }, "hmisIntro+=0.05");
+    tl.fromTo(".hmis-needle", { rotation: -118 }, { rotation: 54, duration: 0.86, ease: "power3.inOut" }, "hmisIntro+=0.18");
+    tl.fromTo(".hmis-bars i", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, stagger: 0.11, duration: 0.52 }, "hmisIntro+=0.28");
+    tl.addLabel("hmis", "hmisIntro+=0.9");
+  }
+
+  function sceneLegacy(tl, isMobile) {
+    tl.addLabel("legacyIntro", 4.2);
+    hideCopy(tl, "hmis", "legacyIntro-=0.34");
+    tl.to(layer("hmis"), { autoAlpha: 0, scale: 0.94, x: isMobile ? 0 : -70, duration: 0.5 }, "legacyIntro-=0.28");
+    showCopy(tl, "legacy", "legacyIntro");
+    tl.to(layer("legacy"), { autoAlpha: 1, y: 0, duration: 0.58 }, "legacyIntro+=0.05");
+    tl.to(chemCards, { autoAlpha: 1, y: 0, scale: 1, stagger: 0.1, duration: 0.48 }, "legacyIntro+=0.22");
+    tl.to(".chem-card", { boxShadow: "0 30px 80px -50px rgba(255,118,95,.85)", stagger: 0.06, duration: 0.38 }, "legacyIntro+=0.64");
+    tl.addLabel("legacy", "legacyIntro+=0.92");
+  }
+
+  function sceneZero(tl, isMobile) {
+    tl.addLabel("zeroIntro", 5.72);
+    hideCopy(tl, "legacy", "zeroIntro-=0.36");
+    tl.to(layer("legacy"), { autoAlpha: 0, y: 28, scale: 0.9, duration: 0.46 }, "zeroIntro-=0.3");
+    showCopy(tl, "zero", "zeroIntro");
+    tl.to(layer("zero"), { autoAlpha: 1, y: 0, duration: 0.54 }, "zeroIntro+=0.05");
+    tl.to(".zero-mark b", { autoAlpha: 1, y: 0, scale: 1, stagger: 0.08, duration: 0.48, ease: "power4.out" }, "zeroIntro+=0.12");
+    tl.fromTo(".proof-strip figure", { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, stagger: 0.08, duration: 0.42 }, "zeroIntro+=0.38");
+    tl.fromTo(".savior-procurement, .savior-ctas", { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, stagger: 0.08, duration: 0.42 }, "zeroIntro+=0.62");
+    tl.to(canvasState, { safe: 1, duration: 0.75, ease: "power2.out" }, "zeroIntro+=0.05");
+    tl.addLabel("zero", "zeroIntro+=1.08");
+  }
+
+  function updateRail(tl) {
+    var duration = tl.duration() || 1;
+    var percent = mapProgress(tl.time() / duration);
+    labels.forEach(function (label, i) {
+      var next = labels[i + 1] ? tl.labels[labels[i + 1]] : duration;
+      var current = tl.labels[label];
+      var local = clamp01((tl.time() - current) / Math.max(0.001, next - current));
+      railFill[i](1 + local * 0.08);
     });
-    tl.set({}, {}, st.T);                               /* endcap: hold before unpin */
-  });
-
-  /* Beat n as a fraction of the act's scrubbed progress */
-  function beatFrac(st, n) { return n / st.T; }
-  var INW = function (st) { return BEAT_IN / st.T; };
-
-  /* ============================================================
-     SCRUB-DRIVEN EXTRAS (run inside each act's timeline update)
-     ============================================================ */
-  var cue = story.querySelector(".scroll-cue");
-
-  function onActScrub(st) {
-    if (st.i === 0) {
-      updateReel(st);
-      if (cue) cue.style.opacity = Math.max(0, 1 - st.p * 8);
-    }
-    if (st.act === pipeAct) updateChips2(st);
-    if (st.act === chemAct) updateChems(st);
+    story.style.setProperty("--story-progress", percent.toFixed(2));
   }
 
-  /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
-  var pipeAct = story.querySelector('.act[data-act="2"]');
-  var pipeChips = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".chip")) : [];
-  pipeChips.forEach(function (c) { c._beat = parseInt(c.getAttribute("data-at"), 10) || 1; c._burning = false; });
-
-  function updateChips2(st) {
-    if (!pipeChips.length) return;
-    var win = INW(st) * 1.6;                              /* ramp the ignite over ~1.6 beats */
-    for (var k = 0; k < pipeChips.length; k++) {
-      var c = pipeChips[k];
-      var b = smooth((st.p - beatFrac(st, c._beat)) / win);
-      c.style.setProperty("--burn", b.toFixed(3));
-      var on = b > 0.5;
-      if (on !== c._burning) { c._burning = on; c.classList.toggle("is-burning", on); }
-    }
-  }
-
-  /* ---- ACT 1: field-photo reel crossfade ---- */
-  var reel = story.querySelector(".reel");
-  var reelSlides = reel ? gsap.utils.toArray(reel.querySelectorAll(".reel-slide")) : [];
-  var reelIdx = reel ? reel.querySelector(".reel-idx") : null;
-  var reelCur = -1;
-  var REEL_A = 0.10, REEL_B = 0.94;
-
-  function updateReel(st) {
-    if (!reelSlides.length) return;
-    var n = reelSlides.length;
-    var seg = (REEL_B - REEL_A) / n;
-    var fade = seg * 0.24;
-    var current = 0, best = -1;
-    for (var i = 0; i < n; i++) {
-      var s0 = REEL_A + i * seg, s1 = s0 + seg;
-      var inT = (i === 0) ? 1 : smooth((st.p - s0) / fade);
-      var outT = (i === n - 1) ? 0 : smooth((st.p - (s1 - fade * 0.4)) / fade);
-      var o = inT * (1 - outT);
-      var el = reelSlides[i];
-      el.style.opacity = o;
-      el.style.transform = "translateY(" + ((1 - inT) * 26 - outT * 20) + "px) scale(" + (0.965 + inT * 0.035) + ")";
-      el.style.zIndex = Math.round(o * 10);
-      if (o > best) { best = o; current = i; }          /* most-visible slide wins */
-    }
-    if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = (current + 1) + " / " + n; }
-  }
-
-  /* ---- ACT 4: chemical dots land with their cards, then zero ---- */
-  var chemAct = story.querySelector(".act-chems");
-  var chemScale = chemAct ? chemAct.querySelector(".chem-scale") : null;
-  var cdots = chemAct ? gsap.utils.toArray(chemAct.querySelectorAll(".cdot")) : [];
-  var cEnemy = cdots.map(function (d) { return d.querySelector(".enemy"); });
-  var cChem = cdots.map(function (d) { return d.querySelector(".chem"); });
-
-  function updateChems(st) {
-    if (!cdots.length) return;
-    var z = smooth((st.p - beatFrac(st, 2.95)) / INW(st));
-    /* morph each dot's label from the enemy (known from Act 2) to the
-       hazardous chemical it forces, as the "score" beat reads */
-    var m = smooth((st.p - beatFrac(st, 2.45)) / INW(st));
-    for (var k = 0; k < cdots.length; k++) {
-      var inT = smooth((st.p - beatFrac(st, k + 1)) / INW(st));
-      cdots[k].style.opacity = inT;
-      cdots[k].style.setProperty("--v", 3 * (1 - z));
-      if (cEnemy[k]) cEnemy[k].style.opacity = 1 - m;
-      if (cChem[k]) cChem[k].style.opacity = m;
-    }
-    if (chemScale) chemScale.classList.toggle("safe", z > 0.12);
-  }
-
-  /* ============================================================
-     CANVAS SYSTEMS (ambient physics on gsap.ticker; scroll only
-     sets intensity via st.p — never blocks or smooths input)
-     ============================================================ */
-  function makeSprite(r, rgb) {
-    var cv = document.createElement("canvas");
-    cv.width = cv.height = r * 2;
-    var x = cv.getContext("2d");
-    var g = x.createRadialGradient(r, r, 0, r, r, r);
-    g.addColorStop(0, "rgba(" + rgb + ",1)");
-    g.addColorStop(1, "rgba(" + rgb + ",0)");
-    x.fillStyle = g; x.fillRect(0, 0, r * 2, r * 2);
-    return cv;
-  }
-  var SPR_FUME = makeSprite(48, "255,106,69");
-  var SPR_MOTE = makeSprite(8, "52,224,200");
-
-  function setupCanvas(cv) {
-    var ctx = cv.getContext("2d");
-    var lastW = 0, lastH = 0;
+  function setupCanvas() {
+    if (!canvas || !ctx) return function () {};
+    var dpr = 1;
     function resize() {
-      var dpr = Math.min(window.devicePixelRatio || 1, window.innerWidth < 760 ? 1.25 : 1.5);
-      var r = cv.getBoundingClientRect();
-      var w = Math.max(1, Math.round(r.width * dpr));
-      var h = Math.max(1, Math.round(r.height * dpr));
-      if (w === lastW && h === lastH) return false;
-      lastW = w; lastH = h;
-      cv.width = w;
-      cv.height = h;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return true;
+      var nextDpr = Math.min(window.devicePixelRatio || 1, window.innerWidth < 760 ? 1.2 : 1.45);
+      var rect = canvas.getBoundingClientRect();
+      var w = Math.max(1, Math.round(rect.width * nextDpr));
+      var h = Math.max(1, Math.round(rect.height * nextDpr));
+      if (canvas.width !== w || canvas.height !== h || dpr !== nextDpr) {
+        dpr = nextDpr;
+        canvas.width = w;
+        canvas.height = h;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
     }
     resize();
-    return { ctx: ctx, resize: resize, w: function () { return cv.clientWidth; }, h: function () { return cv.clientHeight; } };
-  }
-  function rnd(a, b) { return a + Math.random() * (b - a); }
-  function seededRng(seed) {
-    var s = seed >>> 0;
-    return function () {
-      s = Math.imul(1664525, s) + 1013904223 >>> 0;
-      return s / 4294967296;
-    };
-  }
-  function rndWith(rng, a, b) { return a + rng() * (b - a); }
-  function flowAngle(x, y, t) {
-    return Math.sin(x * 0.0028 + t * 0.45) + Math.cos(y * 0.0035 - t * 0.3) + Math.sin((x + y) * 0.0012 + t * 0.2);
+    return resize;
   }
 
-  /* --- ACT 1: faint fumes drifting behind the reel --- */
-  function fxFumes(st, c, dt, time) {
-    var ctx = c.ctx, w = c.w(), h = c.h();
+  function drawCanvas(time) {
+    if (!ctx || !canvasState.label) return;
+    var w = canvas.clientWidth;
+    var h = canvas.clientHeight;
     ctx.clearRect(0, 0, w, h);
-    if (!st.parts) {
-      st.parts = [];
-      for (var i = 0; i < 30; i++) st.parts.push({
-        x: rnd(0, w), y: rnd(h * 0.3, h * 1.1),
-        vx: 0, vy: rnd(-0.35, -0.08), r: rnd(24, 60), a: rnd(0.03, 0.08), spin: rnd(0, 6.28)
+    var safe = canvasState.safe;
+    var redAlpha = 0.16 * (1 - safe);
+    var safeAlpha = 0.2 + safe * 0.26;
+    drawCurrent(w, h, time, "rgba(255,118,95," + redAlpha.toFixed(3) + ")", -1);
+    drawCurrent(w, h, time * 0.82, "rgba(9,166,149," + safeAlpha.toFixed(3) + ")", 1);
+  }
+
+  function drawCurrent(w, h, time, stroke, dir) {
+    ctx.save();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = stroke;
+    for (var i = 0; i < 18; i++) {
+      var y = (h * (i + 1)) / 19;
+      var drift = Math.sin(time * 0.45 + i * 0.7) * 24 * dir;
+      ctx.beginPath();
+      ctx.moveTo(-60, y + drift);
+      for (var x = -60; x <= w + 80; x += 90) {
+        var wave = Math.sin(x * 0.009 + time + i) * 18;
+        ctx.lineTo(x, y + wave + drift);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function bindRail(tl) {
+    railBtns.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var label = btn.getAttribute("data-story-label");
+        var st = tl.scrollTrigger;
+        if (!st || !(label in tl.labels)) return;
+        var ratio = tl.labels[label] / tl.duration();
+        var top = st.start + (st.end - st.start) * ratio;
+        window.scrollTo({ top: top });
       });
-    }
-    for (var j = 0; j < st.parts.length; j++) {
-      var p = st.parts[j];
-      var ang = flowAngle(p.x, p.y, time) * 1.7 + p.spin;
-      p.vx += Math.cos(ang) * 0.01;
-      p.vy += Math.sin(ang) * 0.007 - 0.012;
-      p.vx *= 0.985; p.vy *= 0.985;
-      p.x += p.vx * dt * 60; p.y += p.vy * dt * 60;
-      if (p.y < -p.r || p.x < -p.r || p.x > w + p.r) { p.x = rnd(0, w); p.y = h + p.r; p.vx = 0; p.vy = rnd(-0.35, -0.08); }
-      ctx.globalAlpha = Math.max(0, p.a * (1.2 - p.y / h * 0.6));
-      ctx.drawImage(SPR_FUME, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  /* --- ACT 2: DEBRIS — falls into a vertical zig-zag pipe ---
-     The pipe is a polyline that descends through elbows. Debris is
-     advected along the pipe's arc length (gravity biases it toward the
-     down-wall), and crust accumulates per arc-length bucket — heaviest
-     at the elbows, where real systems clog first. Each enemy type favors
-     a home stretch of the run, matching the four chips. The bore visibly
-     narrows and flow speeds through the chokes (continuity preserved). */
-  var DEB_TYPES = [
-    { c: "201,212,208", hs: 0.08 },  /* scale   — top horizontal run */
-    { c: "194,85,58",   hs: 0.34 },  /* rust    — right vertical     */
-    { c: "194,160,78",  hs: 0.58 },  /* grease  — middle bend        */
-    { c: "111,168,99",  hs: 0.84 }   /* biofilm — lower run / exit   */
-  ];
-  /* normalized centerline (fractions of the stage). The chip CSS
-     positions in story.css are hand-aligned to these points. */
-  /* Routed below the centered headline + paragraph, but kept fully in-frame.
-     The previous path ran to 1.08h, which clipped the lower pipe on ordinary
-     desktop viewports and made the scene read like a broken staircase. */
-  var PIPE_N = [
-    [0.10, 0.45], [0.25, 0.45], [0.25, 0.55], [0.44, 0.55],
-    [0.44, 0.65], [0.63, 0.65], [0.63, 0.75], [0.84, 0.75], [0.84, 0.90]
-  ];
-  var BUCKET_N = 64;
-
-  function buildPipe(w, h) {
-    var compact = w < 760;
-    var bore = clamp(compact ? 34 : 38, compact ? 62 : 82, h * (compact ? 0.085 : 0.108));
-    var pts = PIPE_N.map(function (p) {
-      var x = compact ? (0.05 + p[0] * 0.9) : p[0];
-      return { x: x * w, y: p[1] * h };
     });
-    var segs = [], cum = [0], L = 0;
-    for (var i = 0; i < pts.length - 1; i++) {
-      var a = pts[i], b = pts[i + 1];
-      var dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
-      var tx = dx / len, ty = dy / len;
-      segs.push({ a: a, b: b, len: len, tx: tx, ty: ty, nx: -ty, ny: tx });
-      L += len; cum.push(L);
-    }
-    return { pts: pts, segs: segs, cum: cum, L: L, bore: bore };
   }
-  /* arc position s -> world point + tangent + normal of its segment
-     (gp = normal·gravity, i.e. how much "down" pushes along +normal) */
-  function atS(P, s) {
-    s = clamp(0, P.L, s);
-    var i = P.segs.length - 1;
-    for (var k = 0; k < P.segs.length; k++) { if (s <= P.cum[k + 1]) { i = k; break; } }
-    var sg = P.segs[i], t = (s - P.cum[i]) / sg.len;
-    return {
-      x: sg.a.x + (sg.b.x - sg.a.x) * t, y: sg.a.y + (sg.b.y - sg.a.y) * t,
-      nx: sg.nx, ny: sg.ny, gp: sg.ny
+
+  var resizeCanvas = setupCanvas();
+
+  mm.add({
+    isDesktop: "(min-width: 901px)",
+    isMobile: "(max-width: 900px)",
+    reduceMotion: "(prefers-reduced-motion: reduce)"
+  }, function (context) {
+    if (context.conditions.reduceMotion) return;
+    story.dataset.motionActive = motionBudget;
+    var tl = buildMasterTimeline({
+      isMobile: context.conditions.isMobile,
+      scrub: motionBudget === "lean" ? 0.34 : 0.64
+    });
+    bindRail(tl);
+    return function () {
+      tl.kill();
     };
-  }
-  function strokePipe(ctx, P) {
-    ctx.beginPath();
-    ctx.moveTo(P.pts[0].x, P.pts[0].y);
-    for (var i = 1; i < P.pts.length; i++) ctx.lineTo(P.pts[i].x, P.pts[i].y);
-    ctx.stroke();
-  }
-  function spawnPart(D, s) {
-    var rng = D.rng || Math.random;
-    var t = DEB_TYPES[(rng() * (D.unlocked || 1)) | 0];
-    if (s == null && D.P) s = clamp(0, D.P.L * 0.96, t.hs * D.P.L + rndWith(rng, -D.P.bore * 2.4, D.P.bore * 0.8));
-    D.parts.push({ t: t, s: s, o: rndWith(rng, -D.half * 0.4, D.half * 0.4), v: rndWith(rng, 0.9, 1.8), r: rndWith(rng, 2.2, 4.4) });
-  }
-
-  function unlockedDebrisTypes(st) {
-    var n = 1;
-    if (st.p >= beatFrac(st, 2) - INW(st) * 0.2) n = 2;
-    if (st.p >= beatFrac(st, 3) - INW(st) * 0.2) n = 3;
-    if (st.p >= beatFrac(st, 4) - INW(st) * 0.2) n = 4;
-    return n;
-  }
-  function depositDebris(D, s, side, t, r) {
-    var b = Math.max(0, Math.min(BUCKET_N, (s / D.bs) | 0));
-    var arr = D.crust[side], col = D.ccol[side];
-    arr[b] = Math.min(D.maxCrust, arr[b] + r * 1.5);
-    col[b] = t.c;
-    if (b > 0) { arr[b - 1] = Math.min(D.maxCrust, arr[b - 1] + r * 0.6); if (!col[b - 1]) col[b - 1] = t.c; }
-    if (b < BUCKET_N) { arr[b + 1] = Math.min(D.maxCrust, arr[b + 1] + r * 0.6); if (!col[b + 1]) col[b + 1] = t.c; }
-  }
-
-  function fxDebris(st, c, dt, time) {
-    var ctx = c.ctx, w = c.w(), h = c.h();
-    ctx.clearRect(0, 0, w, h);
-
-    if (!st.deb || st.deb.w !== w || st.deb.h !== h) {
-      var P = buildPipe(w, h);
-      var half = P.bore / 2, maxCrust = half * 0.9, bs = P.L / BUCKET_N;
-      st.deb = {
-        w: w, h: h, P: P, half: half, maxCrust: maxCrust, bs: bs,
-        crust: [new Float32Array(BUCKET_N + 1), new Float32Array(BUCKET_N + 1)], /* thickness, side 0:+normal 1:-normal */
-        ccol: [new Array(BUCKET_N + 1), new Array(BUCKET_N + 1)],                 /* dominant enemy color per bucket */
-        parts: [], flow: [],
-        rng: seededRng((w * 73856093 ^ h * 19349663 ^ 0x2d2a2d) >>> 0)
-      };
-      st.deb.unlocked = unlockedDebrisTypes(st);
-      for (var fi = 0; fi < 22; fi++) st.deb.flow.push({ s: rndWith(st.deb.rng, 0, P.L), o: rndWith(st.deb.rng, -half * 0.5, half * 0.5), len: rndWith(st.deb.rng, 20, 46) });
-      /* pre-seed crust to scroll progress, so a mid-act jump still shows
-         the buildup story so far (heaviest near each enemy's home) */
-      var seed = Math.floor(smooth(st.p) * 160);
-      for (var sd = 0; sd < seed; sd++) {
-        var ty0 = DEB_TYPES[(st.deb.rng() * st.deb.unlocked) | 0];
-        var ss = clamp(0, P.L, (ty0.hs + rndWith(st.deb.rng, -0.08, 0.08)) * P.L);
-        depositDebris(st.deb, ss, st.deb.rng() < 0.5 ? 0 : 1, ty0, rndWith(st.deb.rng, 2.2, 4.4));
-      }
-      for (var ip = 0; ip < 26; ip++) spawnPart(st.deb, null);
-    }
-    var D = st.deb, P = D.P, half = D.half;
-    D.unlocked = unlockedDebrisTypes(st);
-    function bkt(s) { return Math.max(0, Math.min(BUCKET_N, (s / D.bs) | 0)); }
-    function crustAt(side, s) { return D.crust[side][bkt(s)]; }
-    function openAt(s) { return Math.max(12, (half - crustAt(0, s)) + (half - crustAt(1, s))); }
-    function flowSpeed(s) { return clamp(1, 3.2, P.bore / openAt(s)); }
-    /* elbow proximity 0..1 (higher = nearer a bend) boosts deposition —
-       real systems clog at the bends first */
-    function elbowBoost(s) {
-      var best = 0;
-      for (var e = 1; e < P.cum.length - 1; e++) {
-        var f = 1 - Math.abs(s - P.cum[e]) / (P.bore * 1.7);
-        if (f > best) best = f;
-      }
-      return best < 0 ? 0 : best;
-    }
-
-    /* ---- casing: outer wall, dark bore, flanged elbows (not clipped) ---- */
-    ctx.lineJoin = "round"; ctx.lineCap = "round";
-    ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = P.bore + 10; strokePipe(ctx, P);
-    ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = P.bore + 2;  strokePipe(ctx, P);
-    ctx.strokeStyle = "rgba(8,10,14,0.55)";     ctx.lineWidth = P.bore;      strokePipe(ctx, P);
-    ctx.fillStyle = "rgba(255,255,255,0.14)";
-    for (var jt = 1; jt < P.pts.length - 1; jt++) {
-      var pj = P.pts[jt];
-      ctx.fillRect(pj.x - (half + 7), pj.y - 5, P.bore + 14, 10);
-      ctx.fillRect(pj.x - 5, pj.y - (half + 7), 10, P.bore + 14);
-    }
-
-    /* ---- clip moving parts to the pipe interior (offset polygon) ---- */
-    ctx.save();
-    ctx.beginPath();
-    for (var lp = 0; lp < P.pts.length; lp++) {
-      var sgl = P.segs[Math.min(lp, P.segs.length - 1)];
-      var lx = P.pts[lp].x + sgl.nx * half, ly = P.pts[lp].y + sgl.ny * half;
-      lp === 0 ? ctx.moveTo(lx, ly) : ctx.lineTo(lx, ly);
-    }
-    for (var rp = P.pts.length - 1; rp >= 0; rp--) {
-      var sgr = P.segs[Math.min(rp, P.segs.length - 1)];
-      ctx.lineTo(P.pts[rp].x - sgr.nx * half, P.pts[rp].y - sgr.ny * half);
-    }
-    ctx.closePath(); ctx.clip();
-
-    /* crust band (under the flow + moving debris) */
-    drawCrustPatches(ctx, D);
-
-    /* flow streaks: faster where the bore is choked */
-    ctx.strokeStyle = "rgba(244,246,248,0.12)"; ctx.lineWidth = 1.2;
-    for (var f = 0; f < D.flow.length; f++) {
-      var fl = D.flow[f];
-      fl.s += (0.9 + flowSpeed(fl.s)) * dt * 60;
-      if (fl.s > P.L) { fl.s = rnd(0, 30); fl.o = rnd(-half * 0.5, half * 0.5); }
-      var a0 = atS(P, fl.s - fl.len), a1 = atS(P, fl.s);
-      ctx.beginPath();
-      ctx.moveTo(a0.x + a0.nx * fl.o, a0.y + a0.ny * fl.o);
-      ctx.lineTo(a1.x + a1.nx * fl.o, a1.y + a1.ny * fl.o);
-      ctx.stroke();
-    }
-
-    /* spawn + advect debris down the run */
-    var stickBase = 0.02 + st.p * 0.10;
-    while (D.parts.length < 30) spawnPart(D, null);
-    ctx.globalAlpha = 0.9;
-    for (var k = D.parts.length - 1; k >= 0; k--) {
-      var d = D.parts[k];
-      var here = atS(P, d.s);
-      d.s += d.v * flowSpeed(d.s) * dt * 60;
-      if (d.s > P.L) { D.parts.splice(k, 1); continue; }
-      /* gravity (projected onto the segment normal) pulls toward the
-         down-wall; add a little jitter */
-      d.o += here.gp * 0.5 + Math.sin(time * 1.2 + d.s * 0.05) * 0.18;
-      var side = d.o >= 0 ? 0 : 1;
-      var openSide = half - crustAt(side, d.s);
-      if (d.o > openSide) d.o = openSide; if (d.o < -(half - crustAt(1, d.s))) d.o = -(half - crustAt(1, d.s));
-      var homeNear = 1 - Math.min(1, Math.abs(d.s / P.L - d.t.hs) * 2.2);
-      var stickP = homeNear < 0.18 ? 0 : stickBase * (0.5 + elbowBoost(d.s) * 1.8) * (homeNear * homeNear);
-      if (Math.abs(d.o) > (half - crustAt(side, d.s)) - 3 && Math.random() < stickP) {
-        depositDebris(D, d.s, side, d.t, d.r);
-        D.parts.splice(k, 1); continue;
-      }
-      ctx.fillStyle = "rgb(" + d.t.c + ")";
-      ctx.beginPath(); ctx.arc(here.x + here.nx * d.o, here.y + here.ny * d.o, d.r, 0, 6.2832); ctx.fill();
-    }
-
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  function drawCrustPatches(ctx, D) {
-    var P = D.P, half = D.half, bs = D.bs;
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    for (var side = 0; side < 2; side++) {
-      var sign = side === 0 ? 1 : -1, arr = D.crust[side], col = D.ccol[side];
-      for (var b = 0; b < BUCKET_N; b += 2) {
-        var t = (arr[b] + arr[b + 1]) * 0.5;
-        if (t < 0.6) continue;
-        var s0 = b * bs, s1 = Math.min(P.L, (b + 1.35) * bs);
-        var a0 = atS(P, s0), a1 = atS(P, s1);
-        var width = clamp(2.5, half * 0.34, t * 0.62);
-        var inset = half - width * 0.72;
-        ctx.globalAlpha = clamp(0.28, 0.82, 0.28 + t / D.maxCrust * 0.54);
-        ctx.strokeStyle = "rgb(" + (col[b] || col[b + 1] || "201,212,208") + ")";
-        ctx.lineWidth = width;
-        ctx.beginPath();
-        ctx.moveTo(a0.x + a0.nx * sign * inset, a0.y + a0.ny * sign * inset);
-        ctx.lineTo(a1.x + a1.nx * sign * inset, a1.y + a1.ny * sign * inset);
-        ctx.stroke();
-        if (b % 6 === 0) {
-          var m = atS(P, (s0 + s1) * 0.5);
-          ctx.beginPath();
-          ctx.arc(m.x + m.nx * sign * (inset - width * 0.15), m.y + m.ny * sign * (inset - width * 0.15), Math.max(1.6, width * 0.42), 0, 6.2832);
-          ctx.fillStyle = ctx.strokeStyle;
-          ctx.fill();
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  /* Legacy filled-band renderer. The live scene uses drawCrustPatches above:
-     wall deposits read as buildup, while this filled band made triangular sheets.
-     closes toward the chokes. One quad per bucket, colored by the enemy
-     that built it. */
-  function drawCrust(ctx, D) {
-    var P = D.P, half = D.half, bs = D.bs;
-    for (var side = 0; side < 2; side++) {
-      var sign = side === 0 ? 1 : -1, arr = D.crust[side], col = D.ccol[side];
-      for (var b = 0; b < BUCKET_N; b++) {
-        var t0 = arr[b], t1 = arr[b + 1];
-        if (t0 < 0.6 && t1 < 0.6) continue;
-        var a0 = atS(P, b * bs), a1 = atS(P, (b + 1) * bs);
-        ctx.fillStyle = "rgb(" + (col[b] || "201,212,208") + ")";
-        ctx.beginPath();
-        ctx.moveTo(a0.x + a0.nx * sign * half, a0.y + a0.ny * sign * half);
-        ctx.lineTo(a0.x + a0.nx * sign * (half - t0), a0.y + a0.ny * sign * (half - t0));
-        ctx.lineTo(a1.x + a1.nx * sign * (half - t1), a1.y + a1.ny * sign * (half - t1));
-        ctx.lineTo(a1.x + a1.nx * sign * half, a1.y + a1.ny * sign * half);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-    /* darken the inner lip for depth */
-    ctx.strokeStyle = "rgba(8,10,14,0.5)"; ctx.lineWidth = 1.5;
-    for (var sd = 0; sd < 2; sd++) {
-      var sg = sd === 0 ? 1 : -1, a = D.crust[sd];
-      ctx.beginPath();
-      var started = false;
-      for (var bb = 0; bb <= BUCKET_N; bb++) {
-        if (a[bb] < 0.6) { started = false; continue; }
-        var pp = atS(P, bb * bs);
-        var ix = pp.x + pp.nx * sg * (half - a[bb]), iy = pp.y + pp.ny * sg * (half - a[bb]);
-        started ? ctx.lineTo(ix, iy) : ctx.moveTo(ix, iy);
-        started = true;
-      }
-      ctx.stroke();
-    }
-  }
-
-  /* --- ACT 5: clean teal motes drifting up --- */
-  function fxMotes(st, c, dt, time) {
-    var ctx = c.ctx, w = c.w(), h = c.h();
-    ctx.clearRect(0, 0, w, h);
-    if (!st.motes) {
-      st.motes = [];
-      for (var i = 0; i < 36; i++) st.motes.push({ x: rnd(0, w), y: rnd(0, h), v: rnd(0.12, 0.4), r: rnd(2, 6), ph: rnd(0, 6.28) });
-    }
-    for (var j = 0; j < st.motes.length; j++) {
-      var m = st.motes[j];
-      m.y -= m.v * dt * 60;
-      m.x += Math.sin(time * 0.7 + m.ph) * 0.18;
-      if (m.y < -10) { m.y = h + 10; m.x = rnd(0, w); }
-      ctx.globalAlpha = Math.max(0, (0.25 + 0.2 * Math.sin(time + m.ph)) * smooth(st.p * 3));
-      ctx.drawImage(SPR_MOTE, m.x - m.r, m.y - m.r, m.r * 2, m.r * 2);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  var FX = { fumes: fxFumes, debris: fxDebris, motes: fxMotes };
-  states.forEach(function (st) {
-    var type = st.act.getAttribute("data-fx");
-    var cv = st.act.querySelector(".fx-canvas");
-    if (type && cv && FX[type]) st.fx = { draw: FX[type], c: setupCanvas(cv) };
-  });
-  function resizeFx(st) {
-    if (!st.fx) return;
-    if (st.fx.c.resize()) {                            /* geometry changed */
-      st.parts = null; st.motes = null; st.deb = null; /* rebuild for new geometry */
-    }
-  }
-
-  /* Ambient canvas loop: draws only the act on stage */
-  gsap.ticker.add(function (time, deltaMS) {
-    var dt = Math.min(deltaMS / 1000, 0.05);
-    for (var i = 0; i < states.length; i++) {
-      var st = states[i];
-      if (st.fx && st.active) st.fx.draw(st, st.fx.c, dt, time);
-    }
   });
 
-  /* ============================================================
-     CHAPTER RAIL
-     ============================================================ */
-  var railBtns = Array.prototype.slice.call(story.querySelectorAll(".rail-btn"));
-  railBtns.forEach(function (btn, i) {
-    btn.addEventListener("click", function () {
-      var target = acts[i];
-      if (!target) return;
-      var top = target.getBoundingClientRect().top + window.scrollY;
-      var landings = [0.24, 0.42, 0.42, 0.54, 0.32];
-      var travel = Math.max(0, target.offsetHeight - window.innerHeight);
-      var y = top + travel * (landings[i] || 0.5);
-      window.scrollTo({ top: y, behavior: "smooth" });
-    });
-  });
-  var railCurrent = -1;
-  var railTicking = false;
-  function nearestRailIndex() {
-    var y = window.scrollY + window.innerHeight * 0.5;
-    var current = 0;
-    var best = Infinity;
-    for (var i = 0; i < states.length; i++) {
-      var top = states[i].act.getBoundingClientRect().top + window.scrollY;
-      var mid = top + states[i].act.offsetHeight * 0.5;
-      var dist = Math.abs(y - mid);
-      if (dist < best) {
-        best = dist;
-        current = i;
-      }
-    }
-    return current;
-  }
-  function updateRail() {
-    if (!railBtns.length) return;
-    var current = -1;
-    for (var i = 0; i < states.length; i++) if (states[i].active) { current = i; }
-    if (current < 0) current = nearestRailIndex();
-    if (current === railCurrent) return;
-    railCurrent = current;
-    for (var j = 0; j < railBtns.length; j++) {
-      railBtns[j].classList.toggle("is-on", j === current);
-      railBtns[j].classList.toggle("safe", current === states.length - 1);
-    }
-  }
-  function scheduleRailUpdate() {
-    if (railTicking) return;
-    railTicking = true;
-    requestAnimationFrame(function () {
-      railTicking = false;
-      updateRail();
-      syncStoryFocus();
-    });
-  }
-  window.addEventListener("scroll", scheduleRailUpdate, { passive: true });
-  updateRail();
-  syncStoryFocus();
-
-  /* Paint the opening act at rest so the first field photo and the
-     parallax backdrop are visible on load, before any scroll — without
-     this the reel sits at its CSS opacity:0 until the first scroll. */
-  if (states[0]) { states[0].p = 0; onActScrub(states[0]); }
-
-  var resizeTimer = null;
+  gsap.ticker.add(drawCanvas);
   window.addEventListener("resize", function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () { states.forEach(resizeFx); }, 150);
-  });
+    resizeCanvas();
+    ScrollTrigger.refresh();
+  }, { passive: true });
 })();

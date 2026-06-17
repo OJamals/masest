@@ -3,6 +3,7 @@
  * silently no-ops if the /api/track function isn't deployed. */
 (function () {
   try {
+    if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname)) return;
     var KEY = 'masest_vid';
     var vid = sessionStorage.getItem(KEY);
     if (!vid) {
