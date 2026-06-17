@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account | MASEST VertKleen</title>
+<meta name="description" content="Sign in or create a MASEST VertKleen business account. Approved accounts unlock online ordering and NET terms.">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/story.css">
+<style>
+  .acct-wrap { max-width: 560px; margin: 0 auto; }
+  .acct-pane[hidden] { display: none; }
+  .acct-status { margin-top: 14px; font-size: .9rem; font-weight: 600; min-height: 1em; }
+  .acct-status[data-state=ok] { color: var(--accent-ink); }
+  .acct-status[data-state=err] { color: #b42318; }
+  .acct-badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .acct-badge[data-s=pending] { background: #fef3c7; color: #92400e; }
+  .acct-badge[data-s=approved] { background: var(--accent-soft); color: var(--accent-ink); }
+  .acct-badge[data-s=rejected], .acct-badge[data-s=suspended] { background: #fee2e2; color: #b42318; }
+  .acct-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid rgba(0,0,0,.08); font-size: .95rem; }
+  .acct-row b { color: var(--ink); }
+  .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; font-size: .9rem; }
+  .checkbox-row input { width: auto; margin-top: 3px; accent-color: var(--accent); }
+  .acct-foot-note { margin-top: 16px; font-size: .82rem; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<noscript>
+<nav class="nojs-nav" aria-label="Site">
+  <a href="index.html"><b>MASEST</b></a>
+  <a href="products.html">Products</a>
+  <a href="programs.html">Programs</a>
+  <a href="proof.html">Proof</a>
+  <a href="industries.html">Industries</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+</nav>
+</noscript>
+
+<main id="main">
+  <section class="hero-split">
+    <div class="wrap">
+      <h1 class="display">Your VertKleen account.</h1>
+      <p class="subhead">Sign in to track orders and reorder. New here? Create a business account &mdash; once approved, you unlock online ordering and, where eligible, NET terms.</p>
+    </div>
+  </section>
+
+  <section class="section section-slim">
+    <div class="wrap acct-wrap">
+
+      <!-- Signed-out: tabbed sign in / register -->
+      <div id="acctAuth">
+        <div class="cta-chooser" role="group" aria-label="Account">
+          <button type="button" class="cta-choice active" data-pane="login" aria-pressed="true"><i class="ph ph-sign-in" aria-hidden="true"></i> Sign in</button>
+          <button type="button" class="cta-choice" data-pane="register" aria-pressed="false"><i class="ph ph-user-plus" aria-hidden="true"></i> Create account</button>
+        </div>
+
+        <!-- Sign in -->
+        <form class="form-card acct-pane" id="loginForm" data-pane="login" novalidate>
+          <div class="field-grid">
+            <div class="field"><label for="liEmail">Work email *</label><input id="liEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
+            <div class="field"><label for="liPass">Password *</label><input id="liPass" name="password" type="password" autocomplete="current-password" required></div>
+          </div>
+          <button type="submit" class="btn btn-primary" id="liBtn" style="margin-top:18px">Sign in</button>
+          <p class="acct-status" id="liStatus" role="status" aria-live="polite"></p>
+        </form>
+
+        <!-- Register -->
+        <form class="form-card acct-pane" id="registerForm" data-pane="register" hidden novalidate>
+          <div class="field-grid">
+            <div class="field"><label for="rCompany">Company *</label><input id="rCompany" name="company" type="text" placeholder="Gulf Coast Mechanical" required></div>
+            <div class="field"><label for="rName">Full name</label><input id="rName" name="full_name" type="text" placeholder="Marisol Vega"></div>
+            <div class="field"><label for="rEmail">Work email *</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
+            <div class="field"><label for="rPhone">Phone</label><input id="rPhone" name="phone" type="tel" placeholder="(727) 348-6519"></div>
+            <div class="field"><label for="rPass">Password *</label><input id="rPass" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required></div>
+            <div class="field"><label for="rCert">Resale / tax-exempt cert URL</label><input id="rCert" name="resale_cert_url" type="url" placeholder="Link to certificate (optional)"></div>
+          </div>
+          <label class="checkbox-row"><input type="checkbox" id="rExempt" name="tax_exempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
+          <button type="submit" class="btn btn-primary" id="rBtn" style="margin-top:18px">Create account</button>
+          <p class="acct-status" id="rStatus" role="status" aria-live="polite"></p>
+          <p class="acct-foot-note">Your information goes only to the MASEST sales team. New accounts are reviewed before ordering or NET terms are enabled.</p>
+        </form>
+      </div>
+
+      <!-- Signed-in summary -->
+      <div class="form-card" id="acctSummary" hidden>
+        <h2 class="headline" style="font-size:1.5rem;margin-bottom:4px">Account</h2>
+        <div class="acct-row"><span>Signed in as</span><b id="smEmail">&mdash;</b></div>
+        <div class="acct-row"><span>Company</span><b id="smCompany">&mdash;</b></div>
+        <div class="acct-row"><span>Status</span><span class="acct-badge" id="smStatus" data-s="pending">pending</span></div>
+        <div class="acct-row"><span>Online ordering</span><b id="smCheckout">&mdash;</b></div>
+        <div class="acct-row"><span>NET terms</span><b id="smNet">&mdash;</b></div>
+        <p class="acct-status" id="smNote" data-state="" style="min-height:0"></p>
+        <button type="button" class="btn btn-ghost" id="logoutBtn" style="margin-top:18px">Sign out</button>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
+
+<!-- Tab toggle: classic script so it works without modules / before auth loads -->
+<script>
+  (function () {
+    var choices = document.querySelectorAll(".cta-chooser .cta-choice");
+    var panes = document.querySelectorAll(".acct-pane");
+    choices.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var target = btn.dataset.pane;
+        choices.forEach(function (b) { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+        panes.forEach(function (p) { p.hidden = p.dataset.pane !== target; });
+      });
+    });
+  })();
+</script>
+
+<!-- Auth wiring: module imports the Supabase helper -->
+<script type="module">
+  import { register, login, logout, me } from "./js/auth.js";
+
+  const $ = (id) => document.getElementById(id);
+  const authBox = $("acctAuth");
+  const summary = $("acctSummary");
+
+  function setStatus(el, msg, state) { el.textContent = msg; el.dataset.state = state || ""; }
+
+  function showSummary(data) {
+    if (!data) { authBox.hidden = false; summary.hidden = true; return; }
+    authBox.hidden = true; summary.hidden = false;
+    $("smEmail").textContent = data.email || "—";
+    $("smCompany").textContent = data.company?.name || "—";
+    const st = data.company?.status || "pending";
+    const badge = $("smStatus"); badge.textContent = st; badge.dataset.s = st;
+    $("smCheckout").textContent = data.can_checkout ? "Enabled" : "Pending approval";
+    $("smNet").textContent = data.can_use_net_terms ? `NET-${data.company?.net_terms_days}` : "Not enabled";
+    $("smNote").textContent = st === "approved" ? "" : "Your account is under review. We will email you when ordering is enabled.";
+    $("smNote").dataset.state = st === "approved" ? "ok" : "";
+  }
+
+  async function refresh() {
+    try { showSummary(await me()); } catch { showSummary(null); }
+  }
+
+  $("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("liBtn"); const status = $("liStatus");
+    btn.disabled = true; setStatus(status, "Signing in…", "");
+    try {
+      await login({ email: $("liEmail").value.trim(), password: $("liPass").value });
+      setStatus(status, "", "");
+      await refresh();
+    } catch (err) {
+      setStatus(status, "Sign in failed. Check your email and password.", "err");
+    } finally { btn.disabled = false; }
+  });
+
+  $("registerForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("rBtn"); const status = $("rStatus");
+    if ($("rPass").value.length < 8) { setStatus(status, "Password must be at least 8 characters.", "err"); return; }
+    btn.disabled = true; setStatus(status, "Creating account…", "");
+    try {
+      const out = await register({
+        email: $("rEmail").value.trim(),
+        password: $("rPass").value,
+        company: { name: $("rCompany").value.trim(), tax_exempt: $("rExempt").checked, resale_cert_url: $("rCert").value.trim() || null },
+        profile: { full_name: $("rName").value.trim() || null, phone: $("rPhone").value.trim() || null },
+      });
+      if (out?.pending_email_confirmation) {
+        setStatus(status, "Account created. Check your email to confirm, then sign in.", "ok");
+      } else {
+        setStatus(status, "Account created and pending approval.", "ok");
+        await refresh();
+      }
+    } catch (err) {
+      const map = { already_registered: "This account already exists. Sign in instead.", company_name_required: "Enter your company name." };
+      setStatus(status, map[err.message] || "Could not create account. Try again later.", "err");
+    } finally { btn.disabled = false; }
+  });
+
+  $("logoutBtn").addEventListener("click", async () => { await logout(); showSummary(null); });
+
+  refresh();
+</script>
+</body>
+</html>
