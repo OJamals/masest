@@ -107,7 +107,10 @@ create index if not exists orders_company_idx on public.orders(company_id);
 create table if not exists public.order_items (
   id          uuid primary key default gen_random_uuid(),
   order_id    uuid not null references public.orders(id) on delete cascade,
-  sku         text not null references public.products(sku),
+  -- Line-items are historical snapshots. sku holds the variant sku (vsku) sold; no FK to the
+  -- mutable catalog (a deleted variant must not erase order history). name/unit_price are copied.
+  sku         text not null,
+  product_sku text,                              -- base product sku, for reporting (no FK)
   name        text not null,
   qty         int not null check (qty > 0),
   unit_price  numeric(12,2) not null,

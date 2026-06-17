@@ -97,6 +97,7 @@
         <div class="acct-row"><span>Online ordering</span><b id="smCheckout">&mdash;</b></div>
         <div class="acct-row"><span>NET terms</span><b id="smNet">&mdash;</b></div>
         <p class="acct-status" id="smNote" data-state="" style="min-height:0"></p>
+        <div id="smOrders"></div>
         <button type="button" class="btn btn-ghost" id="logoutBtn" style="margin-top:18px">Sign out</button>
       </div>
 
@@ -124,7 +125,8 @@
 
 <!-- Auth wiring: module imports the Supabase helper -->
 <script type="module">
-  import { register, login, logout, me, completeRegistration } from "./js/auth.js";
+  import { register, login, logout, me, completeRegistration, orders as fetchOrders } from "./js/auth.js";
+  import { add as cartAdd, clear as cartClear } from "./js/cart.js";
 
   const $ = (id) => document.getElementById(id);
   const authBox = $("acctAuth");
@@ -187,9 +189,37 @@
     $("smNote").dataset.state = st === "approved" ? "ok" : "";
   }
 
+  async function renderOrders() {
+    const box = $("smOrders");
+    if (!box) return;
+    let list = [];
+    try { list = await fetchOrders(); } catch { list = []; }
+    if (!list.length) { box.innerHTML = '<p class="acct-status" style="min-height:0">No orders yet.</p>'; return; }
+    const money = (n, c) => (c || "USD").toUpperCase() + " " + Number(n || 0).toFixed(2);
+    const fmtDate = (s) => { try { return new Date(s).toLocaleDateString(); } catch { return ""; } };
+    box.innerHTML = '<h3 style="font-size:1rem;margin:18px 0 6px">Recent orders</h3>'
+      + list.map((o, i) => {
+          const items = o.order_items || [];
+          const n = items.reduce((s, it) => s + (it.qty || 0), 0);
+          return '<div class="acct-row"><span>' + fmtDate(o.created_at) + " · " + o.status + " · " + n + " item" + (n === 1 ? "" : "s")
+            + '</span><span><b>' + money(o.total, o.currency) + "</b> "
+            + (items.length ? '<button type="button" class="btn btn-ghost btn-sm" data-reorder="' + i + '" style="margin-left:10px">Reorder</button>' : "")
+            + "</span></div>";
+        }).join("");
+    box.querySelectorAll("[data-reorder]").forEach((b) => b.addEventListener("click", () => {
+      const o = list[Number(b.dataset.reorder)];
+      cartClear();
+      (o.order_items || []).forEach((it) => cartAdd(it.sku, it.qty));
+      location.href = "cart.html";
+    }));
+  }
+
   async function refresh() {
     await completePendingRegistration();
-    try { showSummary(await me()); } catch { showSummary(null); }
+    let data = null;
+    try { data = await me(); } catch (e) {}
+    showSummary(data);
+    if (data) renderOrders();
   }
 
   $("loginForm").addEventListener("submit", async (e) => {

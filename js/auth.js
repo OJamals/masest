@@ -76,6 +76,16 @@ export async function me() {
   return r.ok ? r.json() : null;
 }
 
+/* Recent orders for the signed-in account (company orders + line items), or [] if logged out. */
+export async function orders() {
+  const sb = requireClient();
+  const { data } = await sb.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return [];
+  const r = await fetch('/api/account/orders', { headers: { Authorization: `Bearer ${token}` } });
+  return r.ok ? (await r.json()).orders : [];
+}
+
 /* Public catalog with mode flags (no auth needed). */
 export async function catalog() {
   const r = await fetch('/api/products');
