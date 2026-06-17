@@ -124,11 +124,53 @@
 
 <!-- Auth wiring: module imports the Supabase helper -->
 <script type="module">
-  import { register, login, logout, me } from "./js/auth.js";
+  import { register, login, logout, me, completeRegistration } from "./js/auth.js";
 
   const $ = (id) => document.getElementById(id);
   const authBox = $("acctAuth");
   const summary = $("acctSummary");
+
+  const PENDING_KEY = "masest_pending_registration";
+  const TS_SITEKEY = window.MASEST_TURNSTILE_SITEKEY || "";
+
+  // --- Cloudflare Turnstile: render a widget in each form only when a site key is set ---
+  function initTurnstile() {
+    if (!TS_SITEKEY) return;
+    [["loginForm", "liBtn"], ["registerForm", "rBtn"]].forEach(([formId, btnId]) => {
+      const form = $(formId), btn = $(btnId);
+      if (!form || !btn || form.querySelector(".cf-turnstile")) return;
+      const w = document.createElement("div");
+      w.className = "cf-turnstile";
+      w.dataset.sitekey = TS_SITEKEY;
+      w.style.margin = "16px 0 0";
+      form.insertBefore(w, btn);
+    });
+    const s = document.createElement("script");
+    s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  }
+  // Turnstile injects a hidden <input name="cf-turnstile-response"> into the form on solve.
+  function captchaToken(formId) {
+    if (!TS_SITEKEY) return undefined;
+    return $(formId)?.querySelector('[name="cf-turnstile-response"]')?.value || "";
+  }
+  function resetCaptcha() { try { window.turnstile?.reset(); } catch (e) {} }
+
+  // --- Confirm-email ON: finish company/profile creation once a session exists ---
+  async function completePendingRegistration() {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return;
+    let payload;
+    try { payload = JSON.parse(raw); } catch { localStorage.removeItem(PENDING_KEY); return; }
+    try {
+      await completeRegistration(payload);
+      localStorage.removeItem(PENDING_KEY);
+    } catch (err) {
+      // already_registered = done previously; clear. not_authenticated/transient = keep + retry later.
+      if (err.message === "already_registered") localStorage.removeItem(PENDING_KEY);
+    }
+  }
 
   function setStatus(el, msg, state) { el.textContent = msg; el.dataset.state = state || ""; }
 
@@ -146,35 +188,39 @@
   }
 
   async function refresh() {
+    await completePendingRegistration();
     try { showSummary(await me()); } catch { showSummary(null); }
   }
 
   $("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = $("liBtn"); const status = $("liStatus");
+    const cap = captchaToken("loginForm");
+    if (TS_SITEKEY && !cap) { setStatus(status, "Complete the verification challenge.", "err"); return; }
     btn.disabled = true; setStatus(status, "Signing in…", "");
     try {
-      await login({ email: $("liEmail").value.trim(), password: $("liPass").value });
+      await login({ email: $("liEmail").value.trim(), password: $("liPass").value, captchaToken: cap });
       setStatus(status, "", "");
       await refresh();
     } catch (err) {
       setStatus(status, "Sign in failed. Check your email and password.", "err");
-    } finally { btn.disabled = false; }
+    } finally { resetCaptcha(); btn.disabled = false; }
   });
 
   $("registerForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = $("rBtn"); const status = $("rStatus");
     if ($("rPass").value.length < 8) { setStatus(status, "Password must be at least 8 characters.", "err"); return; }
+    const cap = captchaToken("registerForm");
+    if (TS_SITEKEY && !cap) { setStatus(status, "Complete the verification challenge.", "err"); return; }
     btn.disabled = true; setStatus(status, "Creating account…", "");
+    const company = { name: $("rCompany").value.trim(), tax_exempt: $("rExempt").checked, resale_cert_url: $("rCert").value.trim() || null };
+    const profile = { full_name: $("rName").value.trim() || null, phone: $("rPhone").value.trim() || null };
     try {
-      const out = await register({
-        email: $("rEmail").value.trim(),
-        password: $("rPass").value,
-        company: { name: $("rCompany").value.trim(), tax_exempt: $("rExempt").checked, resale_cert_url: $("rCert").value.trim() || null },
-        profile: { full_name: $("rName").value.trim() || null, phone: $("rPhone").value.trim() || null },
-      });
+      const out = await register({ email: $("rEmail").value.trim(), password: $("rPass").value, company, profile, captchaToken: cap });
       if (out?.pending_email_confirmation) {
+        // Confirm-email ON: stash so we can finish company/profile creation after confirm + login.
+        localStorage.setItem(PENDING_KEY, JSON.stringify({ company, profile }));
         setStatus(status, "Account created. Check your email to confirm, then sign in.", "ok");
       } else {
         setStatus(status, "Account created and pending approval.", "ok");
@@ -183,11 +229,12 @@
     } catch (err) {
       const map = { already_registered: "This account already exists. Sign in instead.", company_name_required: "Enter your company name." };
       setStatus(status, map[err.message] || "Could not create account. Try again later.", "err");
-    } finally { btn.disabled = false; }
+    } finally { resetCaptcha(); btn.disabled = false; }
   });
 
   $("logoutBtn").addEventListener("click", async () => { await logout(); showSummary(null); });
 
+  initTurnstile();
   refresh();
 </script>
 </body>

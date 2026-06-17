@@ -4,6 +4,79 @@
 import Stripe from 'stripe';
 import { adminClient, json } from '../lib/supabase.js';
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Branded order-confirmation email via Resend. Never throws: email failure must not
+// fail the webhook (Stripe would retry the whole event). No-op if unconfigured or
+// the session has no buyer email. RESEND_FROM must be a Resend-verified sender.
+async function sendOrderConfirmation({ session, order, lines, subtotal, tax, total }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = session.customer_details?.email || session.customer_email;
+  if (!apiKey || !to) return;
+
+  const from = process.env.RESEND_FROM || 'MASEST Orders <orders@masest.co>';
+  const currency = (session.currency || 'usd').toUpperCase();
+  const fmt = (n) => `${currency} ${Number(n || 0).toFixed(2)}`;
+  const ref = order?.id ? ` #${order.id}` : '';
+
+  const rows = (lines || []).map((l) =>
+    `<tr>`
+    + `<td style="padding:8px 0;border-bottom:1px solid #eef">${escapeHtml(l.name)} `
+    + `<span style="color:#789">(${escapeHtml(l.sku)})</span></td>`
+    + `<td style="padding:8px 0;border-bottom:1px solid #eef;text-align:center">${l.qty}</td>`
+    + `<td style="padding:8px 0;border-bottom:1px solid #eef;text-align:right">${fmt(l.unit_price * l.qty)}</td>`
+    + `</tr>`).join('');
+
+  const addr = session.shipping_details?.address || session.customer_details?.address || null;
+  const shipBlock = addr
+    ? `<p style="margin:18px 0 0;color:#445"><b>Ship to</b><br>${[addr.line1, addr.line2, [addr.city, addr.state, addr.postal_code].filter(Boolean).join(', '), addr.country].filter(Boolean).map(escapeHtml).join('<br>')}</p>`
+    : '';
+
+  const html = `
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#223">
+    <h2 style="margin:0 0 4px">Order confirmed${escapeHtml(ref)}</h2>
+    <p style="margin:0 0 18px;color:#556">Thank you. MASEST will reconcile freight and documentation before fulfillment. A separate card receipt is sent by our payment processor.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead><tr>
+        <th style="text-align:left;padding:6px 0;border-bottom:2px solid #ccd">Product</th>
+        <th style="text-align:center;padding:6px 0;border-bottom:2px solid #ccd">Qty</th>
+        <th style="text-align:right;padding:6px 0;border-bottom:2px solid #ccd">Amount</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
+      <tr><td style="padding:3px 0;color:#556">Subtotal</td><td style="padding:3px 0;text-align:right">${fmt(subtotal)}</td></tr>
+      <tr><td style="padding:3px 0;color:#556">Tax</td><td style="padding:3px 0;text-align:right">${fmt(tax)}</td></tr>
+      <tr><td style="padding:6px 0;font-weight:bold;border-top:1px solid #ccd">Total</td><td style="padding:6px 0;text-align:right;font-weight:bold;border-top:1px solid #ccd">${fmt(total)}</td></tr>
+    </table>
+    ${shipBlock}
+    <p style="margin:22px 0 0;font-size:13px;color:#789">Questions? Reply to this email or contact MASEST through masest.co.</p>
+  </div>`;
+
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from,
+        to,
+        bcc: process.env.ORDER_NOTIFY_EMAIL || undefined,
+        subject: `Your MASEST order${ref} is confirmed`,
+        html,
+      }),
+    });
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => '');
+      console.error('resend_failed', resp.status, detail.slice(0, 300));
+    }
+  } catch (err) {
+    console.error('resend_error', err?.message || err);
+  }
+}
+
 export default async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
 
@@ -46,16 +119,23 @@ export default async (req) => {
       ship_address: s.shipping_details || s.customer_details || null,
     }).select('id').single();
 
-    if (order && cart.length) {
-      // resolve proper product names (metadata cart is kept compact)
+    // resolve proper product names (metadata cart is kept compact)
+    let lines = [];
+    if (cart.length) {
       const { data: prods } = await sb.from('products').select('sku,name').in('sku', cart.map((c) => c.sku));
       const nameBySku = Object.fromEntries((prods || []).map((p) => [p.sku, p.name]));
-      await sb.from('order_items').insert(cart.map((c) => ({
-        order_id: order.id, sku: c.sku, name: nameBySku[c.sku] || c.sku, qty: c.qty,
-        unit_price: c.unit_price, line_total: c.unit_price * c.qty,
-      })));
+      lines = cart.map((c) => ({ sku: c.sku, name: nameBySku[c.sku] || c.sku, qty: c.qty, unit_price: c.unit_price }));
+      if (order) {
+        await sb.from('order_items').insert(lines.map((l) => ({
+          order_id: order.id, sku: l.sku, name: l.name, qty: l.qty,
+          unit_price: l.unit_price, line_total: l.unit_price * l.qty,
+        })));
+      }
     }
-    // TODO Phase 2: Resend order-confirmation email. Phase 3: QBO sales receipt.
+
+    // Branded order-confirmation email (Stripe also sends its own card receipt).
+    await sendOrderConfirmation({ session: s, order, lines, subtotal, tax, total });
+    // TODO Phase 3: QBO sales receipt.
   }
 
   return json(200, { received: true });

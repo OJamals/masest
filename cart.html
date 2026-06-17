@@ -91,6 +91,20 @@
   const checkoutPay = document.getElementById("checkoutPay");
   const checkoutNet = document.getElementById("checkoutNet");
 
+  // NET terms require an approved business account. Pull the Supabase session token
+  // (persisted in localStorage from a prior account.html login). Returns null if the
+  // user is logged out or the auth client/CDN is unavailable.
+  async function getAuthToken() {
+    try {
+      const { supabase } = await import("./js/auth.js");
+      if (!supabase) return null;
+      const { data } = await supabase.auth.getSession();
+      return data?.session?.access_token || null;
+    } catch (err) {
+      return null;
+    }
+  }
+
   function setCheckoutDisabled(disabled) {
     checkoutPay.disabled = disabled;
     checkoutNet.disabled = disabled;
@@ -163,8 +177,18 @@
     setCheckoutDisabled(true);
     status.dataset.state = "";
     status.textContent = mode === "net" ? "Checking account terms..." : "Starting checkout...";
+    let token;
+    if (mode === "net") {
+      token = await getAuthToken();
+      if (!token) {
+        status.dataset.state = "err";
+        status.textContent = "Sign in to your approved business account to use NET terms, or send a quote request.";
+        setCheckoutDisabled(items().length === 0);
+        return;
+      }
+    }
     try {
-      const result = await checkout({ mode, email: email.value.trim() });
+      const result = await checkout({ mode, email: email.value.trim(), token });
       if (result.net) {
         status.dataset.state = "ok";
         status.textContent = result.message || "Order placed on account.";
