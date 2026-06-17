@@ -110,22 +110,28 @@ export async function onRequestPost({ request, env }) {
     companyId = profile?.company_id || null;
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    line_items,
-    payment_method_types: ['card', 'us_bank_account'],
-    automatic_tax: { enabled: true },
-    customer_email: body.email || user?.email || undefined,
-    shipping_address_collection: { allowed_countries: ['US'] },
-    billing_address_collection: 'required',
-    success_url: `${appUrl}/order-confirmed.html?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/cart.html`,
-    metadata: {
-      company_id: companyId || '',
-      buyer_email: body.email || user?.email || '',
-      cart: JSON.stringify(sellable.map((p) => ({ sku: p.sku, name: p.name, qty: qtyBySku[p.sku], unit_price: Number(p.price) }))),
-    },
-  });
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items,
+      payment_method_types: ['card', 'us_bank_account'],
+      automatic_tax: { enabled: true },
+      customer_email: body.email || user?.email || undefined,
+      shipping_address_collection: { allowed_countries: ['US'] },
+      billing_address_collection: 'required',
+      success_url: `${appUrl}/order-confirmed.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/cart.html`,
+      metadata: {
+        company_id: companyId || '',
+        buyer_email: body.email || user?.email || '',
+        cart: JSON.stringify(sellable.map((p) => ({ sku: p.sku, name: p.name, qty: qtyBySku[p.sku], unit_price: Number(p.price) }))),
+      },
+    });
+  } catch (err) {
+    // Surface Stripe API errors as JSON instead of a 1101 Worker crash.
+    return json(502, { error: 'stripe_error', code: err?.code || null, detail: err?.message || String(err) });
+  }
 
   return json(200, { url: session.url });
 }
