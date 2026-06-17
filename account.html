@@ -273,11 +273,13 @@
       const map = { already_registered: "This account already exists. Sign in instead.", company_name_required: "Enter your company name." };
       let msg = map[err.message];
       if (!msg) {
-        const raw = String(err.message || "");
-        if (/captcha/i.test(raw)) msg = "Verification failed — reload the page, complete the challenge, then try again.";
-        else if (/password/i.test(raw)) msg = "Password too weak — use at least 8 characters.";
-        else if (/already.*registered|user.*exists/i.test(raw)) msg = "This email already has an account. Sign in instead.";
-        else msg = "Could not create account: " + (raw || "try again later") + ".";
+        const detail = [err.message, err.code, err.status, err.name].filter(Boolean).join(" ").trim();
+        if (/captcha/i.test(detail)) msg = "Verification failed — reload the page, complete the challenge, then try again.";
+        else if (/rate.?limit|over_email|too many/i.test(detail)) msg = "Too many attempts — wait a few minutes, then try again.";
+        else if (/sending.*email|confirmation email|smtp|500/i.test(detail)) msg = "We couldn't send the confirmation email. Contact us at sales@masest.co to finish setup.";
+        else if (/password/i.test(detail)) msg = "Password too weak — use at least 8 characters.";
+        else if (/already.*registered|user.*exists|email.*exists/i.test(detail)) msg = "This email already has an account. Sign in instead.";
+        else msg = "Could not create account (" + (detail || "unknown error") + "). Try again shortly.";
       }
       setStatus(status, msg, "err");
     } finally { resetCaptcha(); btn.disabled = false; }
