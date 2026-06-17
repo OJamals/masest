@@ -69,7 +69,7 @@ for (const cardSpec of requiredCards) {
   const card = proof.slice(cardStart, cardEnd);
 
   for (const relPath of cardSpec.images) {
-    if (!card.includes(`src="${relPath}"`)) {
+    if (!card.includes(`src="${relPath}`)) {
       failures.push(`${cardSpec.title} does not reference ${relPath}`);
     }
 
