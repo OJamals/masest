@@ -1,6 +1,6 @@
 // /api/admin/messages — staff side of company support threads.
 //   GET → thread list · GET ?company_id= → full thread (marks read) · POST { company_id, body } → reply
-import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, htmlEscape } from '../../_lib/supabase.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
@@ -50,6 +50,11 @@ export async function onRequest({ request, env }) {
       company_id: companyId, type: 'message', title: 'New message from MASEST',
       body: text.slice(0, 140), link: '/dashboard.html#messages',
     }).then(() => {}, () => {});
+    // Email the company (best-effort) so buyers see the reply without checking the dashboard.
+    const appUrl = env.APP_URL || new URL(request.url).origin;
+    const emails = await companyEmails(sb, companyId);
+    await sendEmail(env, { to: emails, subject: 'New message from MASEST',
+      html: `<p>You have a new message from the MASEST team:</p><blockquote style="border-left:3px solid #0e7c86;padding-left:12px;color:#334">${htmlEscape(text)}</blockquote><p><a href="${appUrl}/dashboard.html#messages">Reply in your dashboard</a></p>` });
     return json(201, { id: data.id, created_at: data.created_at });
   }
 

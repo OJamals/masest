@@ -60,3 +60,36 @@ export async function requireStaff(request, env) {
   }
   return { user, staff };
 }
+
+// Member email addresses for a company (via the auth admin API). Best-effort, deduped.
+export async function companyEmails(sb, companyId) {
+  if (!companyId) return [];
+  const { data: profiles } = await sb.from('profiles').select('id').eq('company_id', companyId);
+  const ids = new Set((profiles || []).map((p) => p.id));
+  if (!ids.size) return [];
+  const emails = [];
+  try {
+    const { data } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    for (const u of data?.users || []) if (ids.has(u.id) && u.email) emails.push(u.email);
+  } catch { /* auth admin unavailable */ }
+  return [...new Set(emails)];
+}
+
+// Fire-and-forget transactional email via Resend. No-op unless RESEND_API_KEY + recipients exist.
+export async function sendEmail(env, { to, subject, html }) {
+  if (!env.RESEND_API_KEY || !Array.isArray(to) || !to.length) return false;
+  const from = env.RESEND_FROM || 'MASEST <noreply@send.masest.co>';
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ from, to: to.slice(0, 50), subject, html }),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+// Minimal HTML escape for interpolating user/staff text into email bodies.
+export function htmlEscape(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
