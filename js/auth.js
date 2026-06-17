@@ -92,3 +92,23 @@ export async function catalog() {
   if (!r.ok) throw new Error('catalog_failed');
   return (await r.json()).products;
 }
+
+/* Current session access token, or null if logged out. */
+export async function getToken() {
+  const sb = requireClient();
+  const { data } = await sb.auth.getSession();
+  return data.session?.access_token || null;
+}
+
+/* Authenticated JSON fetch helper for /api/* endpoints. Attaches the Bearer token,
+ * JSON-encodes the body, and throws an Error (with .status and .data) on non-2xx. */
+export async function api(path, { method = 'GET', body } = {}) {
+  const token = await getToken();
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const r = await fetch(path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(out.error || 'request_failed'), { status: r.status, data: out });
+  return out;
+}

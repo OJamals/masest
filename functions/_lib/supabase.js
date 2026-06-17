@@ -34,3 +34,21 @@ export function json(status, body, extraHeaders = {}) {
 export async function readBody(request) {
   try { return await request.json(); } catch { return {}; }
 }
+
+// Resolve the caller's company_id (or null) for a given auth user id, via the service-role client.
+export async function companyForUser(sb, userId) {
+  if (!userId) return null;
+  const { data } = await sb.from('profiles').select('company_id').eq('id', userId).maybeSingle();
+  return data?.company_id || null;
+}
+
+// Platform-staff gate for /api/admin/*. AUTHORITATIVE source is the ADMIN_EMAILS env var
+// (comma-separated, case-insensitive). Returns { user, staff }.
+export async function requireStaff(request, env) {
+  const { user } = await userFromRequest(request, env);
+  if (!user) return { user: null, staff: false };
+  const allow = (env.ADMIN_EMAILS || '')
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const staff = allow.includes(String(user.email || '').toLowerCase());
+  return { user, staff };
+}
