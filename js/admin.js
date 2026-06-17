@@ -23,6 +23,19 @@ function wireTabs() {
 function badge(id, n) { const el = $(id); if (!el) return; if (n > 0) { el.textContent = n; el.hidden = false; } else el.hidden = true; }
 function statusBadge(s) { return `<span class="badge" data-s="${esc(s)}">${esc(s).replace('_', ' ')}</span>`; }
 
+// Live client-side filter: hide table rows whose text doesn't match the query. Re-queries the
+// live table each keystroke, so it keeps working after a list re-renders.
+function wireSearch(inputId, boxId) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.addEventListener('input', () => {
+    const q = inp.value.trim().toLowerCase();
+    document.querySelectorAll(`#${boxId} table.adm tbody tr`).forEach((tr) => {
+      tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
+
 /* ---------- overview ---------- */
 function renderStats(s) {
   badge('aBadgePending', s.companies?.pending || 0);
@@ -238,6 +251,7 @@ function showGate(title, msg, denied) {
 async function enterApp(stats) {
   $('admGate').hidden = true; $('admApp').hidden = false;
   wireTabs(); wireProductForm(); wireOfferForm();
+  wireSearch('ordSearch', 'admOrders'); wireSearch('coSearch', 'admCompanies'); wireSearch('prodSearch', 'admProducts');
   renderStats(stats);
   const start = ['orders', 'companies', 'products', 'messages', 'offers', 'traffic'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
   selectTab(start);

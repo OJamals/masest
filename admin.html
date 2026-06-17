@@ -43,6 +43,15 @@
   .msg { max-width: 80%; padding: 9px 13px; border-radius: 13px; font-size: .9rem; }
   .msg.staff { align-self: flex-end; background: var(--ink); color: #fff; } .msg.buyer { align-self: flex-start; background: var(--accent-soft); }
   .seo-ok { color: var(--accent-ink); font-weight: 700; } .seo-warn { color: #b45309; font-weight: 700; } .seo-bad { color: #b42318; font-weight: 700; }
+  .adm-search { padding: 7px 10px; font-size: .85rem; max-width: 260px; border: 1px solid var(--line); border-radius: var(--r-input); }
+  /* Responsive: wide tables scroll instead of breaking; message grid stacks. */
+  .adm-card { overflow-x: auto; }
+  @media (max-width: 760px) {
+    #msgGrid { grid-template-columns: 1fr !important; }
+    table.adm { min-width: 560px; }
+    .adm-tabs { gap: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .adm-tab { transition: none; } }
 </style>
 </head>
 <body>
@@ -86,16 +95,16 @@
           <div class="adm-card"><div class="stat-grid" id="admStats"></div></div>
         </div>
         <div class="adm-panel" data-panel="orders" role="tabpanel" hidden>
-          <div class="adm-card"><div style="margin-bottom:10px"><label>Filter <select id="ordFilter">
+          <div class="adm-card"><div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label>Filter <select id="ordFilter">
             <option value="">All</option><option value="pending_payment">Pending payment</option><option value="paid">Paid</option>
             <option value="net_open">NET open</option><option value="net_paid">NET paid</option><option value="fulfilled">Fulfilled</option><option value="cancelled">Cancelled</option>
-          </select></label></div><div id="admOrders"><p class="muted">Loading…</p></div></div>
+          </select></label><input id="ordSearch" type="search" class="adm-search" placeholder="Search orders…"></div><div id="admOrders"><p class="muted">Loading…</p></div></div>
         </div>
         <div class="adm-panel" data-panel="companies" role="tabpanel" hidden>
-          <div class="adm-card"><div id="admCompanies"><p class="muted">Loading…</p></div></div>
+          <div class="adm-card"><input id="coSearch" type="search" class="adm-search" placeholder="Search accounts…" style="margin-bottom:10px"><div id="admCompanies"><p class="muted">Loading…</p></div></div>
         </div>
         <div class="adm-panel" data-panel="products" role="tabpanel" hidden>
-          <div class="adm-card"><div id="admProducts"><p class="muted">Loading…</p></div></div>
+          <div class="adm-card"><input id="prodSearch" type="search" class="adm-search" placeholder="Search products…" style="margin-bottom:10px"><div id="admProducts"><p class="muted">Loading…</p></div></div>
           <div class="adm-card"><h3 style="font-size:1.05rem;margin-bottom:10px">Add / overwrite a product</h3>
             <form id="prodForm" class="inline-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
               <div class="field"><label>SKU</label><input id="npSku" required></div>
