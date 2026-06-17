@@ -758,6 +758,18 @@ const commerceState = {
   promise: null
 };
 
+function isLocalStaticHomepage() {
+  const localHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
+  const homePath = /(^|\/)(index\.html)?$/.test(location.pathname);
+  return localHost && homePath && !window.MASEST_ENABLE_LOCAL_API;
+}
+
+function isLocalStaticCommerceSuppressed() {
+  const localHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
+  const accountPath = /(^|\/)account\.html$/.test(location.pathname);
+  return isLocalStaticHomepage() || (localHost && accountPath && !window.MASEST_ENABLE_LOCAL_API);
+}
+
 function fmtMoney(n, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -1058,7 +1070,7 @@ function initShop() {
   }
 
   apply();
-  loadCommerceCatalog().then(apply);
+  if (!isLocalStaticCommerceSuppressed()) loadCommerceCatalog().then(apply);
 
   if (catHash) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
 }
@@ -1377,6 +1389,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initReveal();
   initLightbox();
   initCartButtons();
-  loadCommerceCatalog().then(() => refreshCommerceActions(document));
+  if (!isLocalStaticCommerceSuppressed()) loadCommerceCatalog().then(() => refreshCommerceActions(document));
   initShop();
 });

@@ -1,828 +1,931 @@
-/* ============================================================
-   MASEST / VertKleen — Scrollytelling story v5 (homepage opener)
-   GSAP ScrollTrigger engine, native browser scroll (js/story.js).
-   Dark, cinematic, art-directed; hands off to the light factual
-   sections below. Reduced-motion + no-JS = static stacked layout.
-   ============================================================ */
+/* MASEST / VertKleen scrollybook showpiece.
+   One pinned GSAP master timeline in js/story.js. */
 
 .story {
-  --s-bg: #0b0d12;
-  --s-bg-2: #10141c;
-  --s-ink: #f4f6f8;
-  --s-mut: rgba(244, 246, 248, .62);
-  --s-danger: #a93420;
-  --s-danger-ink: #ff8a6c;
-  --s-danger-soft: rgba(169, 52, 32, .14);
-  --s-safe: #08796f;
-  --s-safe-text: #cffff8;
-  --s-safe-soft: rgba(16, 179, 163, .18);
-  --s-line: rgba(255, 255, 255, .12);
-  /* HMIS axis colors — taught in Act 3, reused on Act 4 lockups + Act 5 zeros */
-  --hmis-h: #3b82f6;   /* Health */
-  --hmis-f: #ef4444;   /* Flammability */
-  --hmis-r: #f5b301;   /* Reactivity */
-  --s-ease: cubic-bezier(.16, 1, .3, 1);
-
+  --story-bg: #070a0d;
+  --story-bg-2: #0c1417;
+  --story-ink: #f6f8f9;
+  --story-muted: rgba(246, 248, 249, .68);
+  --story-line: rgba(255, 255, 255, .14);
+  --story-line-strong: rgba(255, 255, 255, .24);
+  --story-red: #ff765f;
+  --story-red-deep: #a93420;
+  --story-safe: #09a695;
+  --story-safe-soft: rgba(9, 166, 149, .18);
+  --story-safe-ink: #cffff8;
+  --story-blue: #3b82f6;
+  --story-yellow: #f5b301;
   position: relative;
-  background: var(--s-bg);
-  color: var(--s-ink);
-  isolation: isolate;
   left: 50%;
+  width: 100vw;
   margin-left: -50vw;
-  overflow-x: clip;
-  width: 100vw;
-}
-
-/* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
-.story .act { position: relative; height: 212vh; padding: 0; }
-.story .act[data-act="1"] { height: 168vh; }   /* photo reel needs less sequencing */
-.story .act[data-act="3"] { height: 212vh; }   /* HMIS factor-by-factor */
-.story .act[data-act="4"] { height: 260vh; }   /* chemicals one by one */
-.story .act-savior { height: 228vh; }
-.story .stage {
-  position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 620px;
-  width: 100vw;
-  overflow: hidden; display: grid; place-items: center;
-  background: radial-gradient(120% 90% at 50% 0%, var(--s-bg-2) 0%, var(--s-bg) 60%);
-}
-
-/* Layers */
-.story .bd {
-  position: absolute; inset: -4%; width: 108%; height: 108%;
-  object-fit: cover; z-index: 0; will-change: transform; pointer-events: none;
-}
-.story .fx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; pointer-events: none; }
-
-/* Cinematic finish: vignette + static film grain on every stage */
-.story .stage::before {
-  content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  overflow: clip;
   background:
-    radial-gradient(130% 100% at 50% 50%, transparent 55%, rgba(5, 6, 9, .55) 100%),
-    linear-gradient(180deg, rgba(5, 6, 9, .35) 0%, transparent 14%, transparent 86%, rgba(5, 6, 9, .4) 100%);
-}
-.story .stage::after {
-  content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: .05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    radial-gradient(110% 70% at 50% 0%, rgba(17, 58, 62, .45), transparent 58%),
+    linear-gradient(180deg, #090c10 0%, #061013 52%, #080b0f 100%);
+  color: var(--story-ink);
+  isolation: isolate;
 }
 
-/* ---------- Chapter rail ---------- */
-.story-rail {
-  position: sticky; top: 50vh; height: 0; z-index: 30;
+.story-scroll {
+  position: relative;
+  min-height: 620vh;
+}
+
+.story-pin {
+  position: relative;
+  height: 100vh;
+  min-height: 640px;
+  overflow: hidden;
+  contain: layout paint style;
+  background:
+    linear-gradient(90deg, rgba(255, 118, 95, .08), transparent 27%, transparent 72%, rgba(9, 166, 149, .12)),
+    radial-gradient(80% 70% at 50% 56%, rgba(9, 166, 149, .12), transparent 62%),
+    var(--story-bg);
+  transform: translateZ(0);
+}
+
+.story-canvas,
+.story-grid,
+.story-vignette {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
-.rail-inner {
-  position: absolute; left: clamp(14px, 2.4vw, 34px); transform: translateY(-50%);
-  display: flex; flex-direction: column; gap: 18px; pointer-events: auto;
-}
-.rail-btn {
-  display: inline-flex; align-items: center; gap: 10px;
-  background: none; border: 0; padding: 4px; cursor: pointer;
-  color: var(--s-mut); font: inherit; text-align: left;
-}
-.rail-btn b {
-  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
-  font-family: var(--body-font);
-  font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-variant-numeric: tabular-nums;
-  border: 1px solid var(--s-line); background: rgba(11, 13, 18, .55);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  transition: border-color .4s var(--s-ease), color .4s var(--s-ease), background .4s var(--s-ease);
-}
-.rail-btn span {
-  font-family: var(--body-font);
-  font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
-  opacity: 0; transform: translateX(-6px); transition: opacity .4s var(--s-ease), transform .4s var(--s-ease);
-  white-space: nowrap;
-}
-.rail-btn:hover span, .rail-btn.is-on span { opacity: 1; transform: none; }
-.rail-btn.is-on b { border-color: var(--s-danger-ink); color: var(--s-danger-ink); background: rgba(169, 52, 32, .1); }
-.rail-btn.is-on.safe b { border-color: var(--s-safe-text); color: var(--s-safe-text); background: rgba(16, 179, 163, .18); }
-@media (max-width: 900px) { .story-rail { display: none; } }
 
-/* ---------- Copy blocks ---------- */
-.story .act-copy { position: relative; z-index: 5; width: min(680px, 86vw); padding: 0 28px; }
-.story .act-copy.bl { justify-self: start; align-self: end; padding-bottom: 12vh; padding-left: clamp(56px, 8vw, 110px); }
-.story .act-copy.top { position: absolute; top: clamp(64px, 9vh, 130px); left: 0; right: 0; margin: 0 auto; text-align: center; z-index: 5; }
-.story .act-copy.onscrim { padding-top: 18px; padding-bottom: 22px; }
-/* Full-bleed, edge-feathered scrim — melts into the page instead of a boxed band. */
-.story .act-copy.onscrim::before {
-  content: ""; position: absolute; z-index: -1; pointer-events: none;
-  left: 50%; transform: translateX(-50%);
-  top: -28px; width: 100vw; height: calc(100% + 64px);
-  background: radial-gradient(58% 78% at 50% 42%,
-    rgba(8, 10, 14, .82) 0%, rgba(8, 10, 14, .44) 44%, transparent 72%);
+.story-canvas {
+  z-index: 1;
+  width: 100%;
+  height: 100%;
 }
 
-.story .kicker {
-  display: inline-flex; align-items: center; gap: 9px;
-  font-family: var(--body-font);
-  font-size: .74rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--s-mut); margin-bottom: 18px;
-}
-.story .kicker::before { content: ""; width: 22px; height: 1.5px; background: currentColor; opacity: .7; }
-.story .kicker.danger { color: var(--s-danger-ink); }
-.story .kicker.safe { color: var(--s-safe-text); }
-
-.story .act-h {
-  font-size: clamp(2rem, 4.6vw, 3.5rem); font-weight: 900; line-height: 1.04;
-  letter-spacing: -.035em; text-wrap: balance; margin: 0;
-  text-shadow: 0 2px 32px rgba(7, 9, 13, .65);
-}
-.story .act-p {
-  margin-top: 20px; font-size: clamp(1.02rem, 1.5vw, 1.2rem); line-height: 1.6;
-  color: var(--s-mut); max-width: 54ch; text-wrap: pretty;
-  text-shadow: 0 2px 24px rgba(7, 9, 13, .6);
-}
-.story .act-copy.top .act-p { margin-left: auto; margin-right: auto; }
-
-/* Chemical id tag */
-.story .chem-tag {
-  display: inline-flex; align-items: center; gap: 12px; margin-top: 28px;
-  padding: 11px 18px; border-radius: 999px; border: 1px solid var(--s-line);
-  background: rgba(255, 255, 255, .04); font-size: .92rem; font-weight: 600;
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-}
-.story .chem-tag b { font-variant-numeric: tabular-nums; color: var(--s-danger-ink); font-weight: 800; letter-spacing: .02em; }
-.story .chem-tag .pulse {
-  width: 9px; height: 9px; border-radius: 50%; background: var(--s-danger);
-  box-shadow: 0 0 0 0 rgba(169, 52, 32, .6); animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(169, 52, 32, .55); }
-  70% { box-shadow: 0 0 0 12px rgba(169, 52, 32, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(169, 52, 32, 0); }
+.story-grid {
+  z-index: 2;
+  opacity: .22;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(65% 65% at 50% 48%, #000 0%, transparent 72%);
 }
 
-/* Reveal driver: JS sets opacity/transform every frame */
-.story.story-ready [data-at] { opacity: 0; transform: translateY(28px); will-change: opacity, transform; }
-
-/* ---------- Scroll cue ---------- */
-.story .scroll-cue {
-  position: absolute; z-index: 6; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--s-mut);
-}
-.story .scroll-cue i { font-size: 1.1rem; animation: bob 1.8s var(--s-ease) infinite; }
-@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
-
-/* ============================================================
-   ACT 1 — THE ENEMY (curated field-photo reel)
-   ============================================================ */
-.reel {
-  position: absolute; z-index: 3; margin: 0;
-  right: clamp(20px, 7vw, 110px); top: clamp(88px, 11vh, 112px); transform: none;
-  width: min(430px, 64vw); aspect-ratio: 9 / 10;
-}
-.reel-slide {
-  position: absolute; inset: 0; margin: 0; opacity: 0; will-change: opacity, transform;
-  border-radius: 18px; overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, .14);
-  background: #14171e;
-  box-shadow: 0 40px 80px -36px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .07);
-}
-/* First photo shows immediately on load; the scrub takes over on first scroll. */
-.reel-slide[data-slide="0"] { opacity: 1; }
-.reel-slide img {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  filter: saturate(.92) contrast(1.04);
-}
-.reel-slide::after {  /* legibility scrim under the caption */
-  content: ""; position: absolute; inset: auto 0 0 0; height: 46%;
-  background: linear-gradient(180deg, transparent, rgba(7, 9, 13, .88));
-}
-.reel-slide figcaption {
-  position: absolute; z-index: 1; left: 22px; right: 22px; bottom: 18px;
-}
-.reel-slide figcaption b {
-  display: block; font-size: clamp(1.5rem, 2.6vw, 2.1rem); font-weight: 900;
-  letter-spacing: -.02em; line-height: 1.1; color: var(--s-ink);
-}
-.reel-slide figcaption span {
-  display: block; margin-top: 6px; font-size: .92rem; line-height: 1.45; color: var(--s-mut);
-}
-.reel-tag {
-  position: absolute; z-index: 20; top: -14px; left: 18px;
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 14px; border-radius: 999px;
-  border: 1px solid var(--s-line); background: rgba(11, 13, 18, .85);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--s-mut);
-}
-.reel-tag i { color: var(--s-danger-ink); font-size: .9rem; }
-.reel-idx {
-  position: absolute; z-index: 20; top: -12px; right: 18px;
-  padding: 7px 14px; border-radius: 999px;
-  border: 1px solid var(--s-line); background: rgba(11, 13, 18, .85);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  font-size: .78rem; font-weight: 700; letter-spacing: .08em; color: var(--s-mut);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ============================================================
-   ACT 2 — THE BUILDUP (debris canvas + anchored caption chips)
-   ============================================================ */
-.pipe-chips { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-/* --burn (0..1) is driven by scroll in story.js: each chip ignites as its debris
-   type accumulates in the pipe, so the label conveys the physics, not just a fade. */
-.pipe-chips .chip {
-  --burn: 0; --c: var(--s-line);
-  position: absolute; display: inline-flex; align-items: center; gap: 9px;
-  padding: 9px 15px; border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--s-line), var(--c) calc(var(--burn) * 55%));
+.story-vignette {
+  z-index: 8;
   background:
-    linear-gradient(0deg, color-mix(in oklab, transparent, var(--c) calc(var(--burn) * 12%)) 0 100%),
-    rgba(11, 13, 18, .78);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  font-size: .84rem; font-weight: 700; letter-spacing: .02em; color: var(--s-ink);
-  white-space: nowrap;
-}
-.pipe-chips .chip i {
-  position: relative; width: 9px; height: 9px; border-radius: 50%; flex: none;
-  background: var(--c);
-  box-shadow: 0 0 calc(3px + var(--burn) * 16px) calc(var(--burn) * 1px)
-    color-mix(in oklab, var(--c), transparent 35%);
-  transform: scale(calc(1 + var(--burn) * 0.4));
-}
-/* Leader drawing from the chip toward its clog zone on the pipe (down-right). */
-.pipe-chips .chip::after {
-  content: ""; position: absolute; left: 17px; top: calc(100% - 3px);
-  width: 1.5px; height: 24px; border-radius: 2px;
-  background: linear-gradient(var(--c), transparent);
-  transform-origin: top center; transform: rotate(40deg) scaleY(var(--burn));
-  opacity: calc(var(--burn) * .9);
-}
-/* Active accumulation: a ring pulses out of the dot (reuses the page's pulse motif). */
-.pipe-chips .chip.is-burning i::after {
-  content: ""; position: absolute; inset: -3px; border-radius: 50%;
-  border: 1.5px solid var(--c);
-  animation: chipPulse 2.2s var(--s-ease) infinite;
-}
-@keyframes chipPulse {
-  0%   { transform: scale(.55); opacity: .6; }
-  70%, 100% { transform: scale(2.4); opacity: 0; }
-}
-/* Anchored just above each vertical run's mouth, staggered down-right with the
-   pipe (PIPE_N in story.js: run mouths at x 0.25/0.44/0.63/0.84). Sit below the
-   centered copy so chips never collide with the headline or paragraph. */
-.chip.c-scale  { left: clamp(236px, 20vw, 306px); top: 43%; --c: #c9d4d0; }
-.chip.c-rust   { left: 35%; top: 53%; --c: #c2553a; }
-.chip.c-grease { left: 56%; top: 63%; --c: #c2a04e; }
-.chip.c-bio    { left: 74%; top: 78%; --c: #6fa863; }
-
-/* ============================================================
-   ACT 3 — THE SCORE (HMIS explained, factor by factor)
-   ============================================================ */
-.hmis-rig {
-  position: relative; z-index: 5; width: min(880px, 90vw); margin: 18vh auto 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 30px;
-}
-.hmis-factors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.factor {
-  position: relative; border-radius: 18px; padding: 26px 22px; text-align: center;
-  border: 1px solid var(--s-line); background: rgba(255, 255, 255, .03);
-  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-}
-.factor .bar { height: 5px; border-radius: 3px; margin-bottom: 18px; }
-.f-health .bar { background: var(--hmis-h); }
-.f-flam .bar  { background: var(--hmis-f); }
-.f-react .bar { background: var(--hmis-r); }
-.factor .fico { display: block; font-size: clamp(2rem, 4.4vw, 2.9rem); line-height: 1; color: var(--s-ink); }
-.factor .flabel { display: block; margin-top: 12px; font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--s-ink); }
-.factor .fmeaning { display: block; margin-top: 8px; font-size: .86rem; line-height: 1.5; color: var(--s-mut); }
-
-.scale-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
-.scale-track {
-  position: relative; height: 14px; border-radius: 999px;
-  background: linear-gradient(90deg, #1d2a2f 0%, #6b3a2e 55%, var(--s-danger) 100%);
-}
-.scale-ticks { display: flex; justify-content: space-between; margin-top: 8px; font-size: .72rem; color: var(--s-mut); font-variant-numeric: tabular-nums; }
-
-/* ============================================================
-   ACT 4 — THE CHEMICALS (dots drop onto the shared scale)
-   ============================================================ */
-.chem-rig {
-  position: relative; z-index: 5; width: min(880px, 90vw); margin: 24vh auto 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 18px;
-}
-.chem-scale { position: relative; padding-top: 26px; padding-bottom: 4px; }
-.chem-scale .scale-track { overflow: visible; }
-/* Dots cluster tightly around their score: small horizontal jitter,
-   shallow vertical offsets, labels alternating above/below */
-.cdot {
-  position: absolute; top: 50%;
-  left: clamp(0%, calc((var(--v, 3) + var(--vj, 0)) / 4 * 100%), 100%);
-  transform: translate(-50%, -50%) translateY(var(--lift, 0px));
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--s-danger); border: 2.5px solid var(--s-bg);
-  box-shadow: 0 0 0 1.5px var(--s-danger), 0 6px 14px rgba(169, 52, 32, .45);
-  opacity: 0; will-change: opacity, left;
-}
-.cdot[data-dot="0"] { --vj: -0.10; --lift: -12px; }
-.cdot[data-dot="1"] { --vj: -0.03; --lift: 12px; }
-.cdot[data-dot="2"] { --vj: 0.04;  --lift: -12px; }
-.cdot[data-dot="3"] { --vj: 0.11;  --lift: 12px; }
-.cdot span {
-  position: absolute; left: 50%; top: -130%; transform: translateX(-50%);
-  font-size: .62rem; font-weight: 800; letter-spacing: .06em; color: var(--s-danger-ink);
-}
-.cdot[data-dot="1"] span, .cdot[data-dot="3"] span { top: auto; bottom: -130%; }
-.chem-scale.safe .cdot { background: var(--s-safe); box-shadow: 0 0 0 1.5px var(--s-safe), 0 6px 14px rgba(8, 121, 111, .36); }
-.story .chem-scale .cdot { color: #f4f6f8; }
-/* Four distinct label levels so labels stay legible when all four dots
-   converge on the same value (at 3, then at 0). Shadow lifts them off
-   the track. */
-.cdot[data-dot="0"] span { top: -205%; bottom: auto; }
-.cdot[data-dot="2"] span { top: -110%; bottom: auto; }
-.cdot[data-dot="1"] span { top: auto; bottom: -110%; }
-.cdot[data-dot="3"] span { top: auto; bottom: -205%; }
-.story .chem-scale .cdot span { text-shadow: 0 1px 3px rgba(8, 10, 14, .75); white-space: nowrap; }
-.chem-scale.safe .cdot,
-.chem-scale.safe .cdot span { color: #f4f6f8; }
-/* One framed HMIS spec panel split into quadrants — not four repeated cards. */
-.chem-list {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-}
-.chem-card {
-  padding: 17px 20px;
-  border: 1px solid var(--s-line); border-radius: 14px;
-  background: rgba(255, 255, 255, .03);
-  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-}
-.chem-card .chead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.chem-card .chead b { font-size: 1.02rem; font-weight: 800; letter-spacing: -.01em; }
-.chem-card .vs {
-  font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--s-mut); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--s-line);
-}
-.chem-card .lockup { margin-left: auto; display: inline-flex; gap: 4px; font-variant-numeric: tabular-nums; }
-/* Real HMIS lockup: each digit wears its axis color (Health / Flammability / Reactivity). */
-.chem-card .lockup em {
-  --ax: var(--s-mut);
-  font-style: normal; width: 26px; height: 30px; border-radius: 7px;
-  display: grid; place-items: center; font-size: .95rem; font-weight: 900;
-  background: color-mix(in oklab, transparent, var(--ax) 16%);
-  border: 1px solid color-mix(in oklab, transparent, var(--ax) 48%);
-  color: color-mix(in oklab, var(--ax), #fff 50%);
-}
-.chem-card .lockup em:nth-child(1) { --ax: var(--hmis-h); }
-.chem-card .lockup em:nth-child(2) { --ax: var(--hmis-f); }
-.chem-card .lockup em:nth-child(3) { --ax: var(--hmis-r); }
-.chem-card p { margin: 10px 0 0; font-size: .9rem; line-height: 1.55; color: var(--s-mut); }
-.chem-out, .chem-final { margin: 4px auto 0; text-align: center; max-width: 62ch; font-size: 1rem; line-height: 1.6; color: var(--s-mut); }
-.chem-out b { color: var(--s-danger-ink); font-weight: 800; }
-.chem-final { font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 800; color: var(--s-ink); }
-.chem-final b { color: var(--s-safe-text); font-weight: 900; }
-
-/* Enemy-first cards: a small cast-color cue before the enemy name (matches
-   the Act 2 chips), and the chemical it forces rendered as a tagged tool. */
-.chem-card .chead .ecue {
-  width: 8px; height: 8px; border-radius: 50%; flex: none;
-  display: inline-block; margin-right: 7px; vertical-align: middle;
-}
-.ecue.c-scale  { background: #c9d4d0; }
-.ecue.c-rust   { background: #c2553a; }
-.ecue.c-grease { background: #c2a04e; }
-.ecue.c-bio    { background: #6fa863; }
-.ecue.c-solvent { background: #a78bdb; }
-/* Dot label morphs enemy -> chemical; both spans stack, JS crossfades opacity */
-.cdot .enemy, .cdot .chem { transition: opacity .25s linear; }
-.cdot .chem { opacity: 0; }
-
-/* Act 4 layout: the headline (.act-copy.top, absolutely floated at the stage top)
-   and the tall 2x2 .chem-rig were positioned independently — on laptop heights the
-   centered rig rose under the headline and clipped its second line. On desktop/laptop,
-   lay the whole act out as one vertically-centered flex column so headline and rig
-   stack as a single group and can never overlap. Mobile (<=760px) keeps its own
-   single-column flow defined above. */
-@media (min-width: 761px) {
-  .act-chems .stage { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .act-chems .act-copy.top { position: static; top: auto; margin: 0 0 clamp(10px, 1.8vh, 28px); }
-  /* Tighten the rig so headline + full rig clear short laptop heights (~720px)
-     without the trailing punchline clipping past the fold. */
-  .act-chems .chem-rig { margin: 0; gap: 12px; }
-  .act-chems .chem-scale { padding-top: 14px; }
-  .act-chems .chem-card { padding-top: 14px; padding-bottom: 14px; }
+    radial-gradient(120% 90% at 50% 46%, transparent 54%, rgba(0, 0, 0, .62) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, .45), transparent 14%, transparent 84%, rgba(0, 0, 0, .5));
 }
 
-/* ============================================================
-   ACT 5 — SAVIOR (VertKleen)
-   ============================================================ */
-.act-savior .stage { background: linear-gradient(180deg, var(--s-bg) 0%, #0f1a1e 55%, #0c1417 100%); }
-.savior-wrap { position: relative; z-index: 5; width: min(900px, 90vw); text-align: center; padding: 0 24px; }
-.savior-badge {
-  display: inline-flex; align-items: center; gap: 9px; margin-bottom: clamp(12px, 2vh, 22px);
-  padding: 8px 16px; border-radius: 999px; border: 1px solid var(--s-safe-soft);
-  background: var(--s-safe-soft); color: var(--s-safe-text);
-  font-size: .76rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
-}
-.savior-wrap h2 {
-  font-size: clamp(2.2rem, 5vw, 3.7rem); font-weight: 900; letter-spacing: -.045em; line-height: 1.02;
-  margin: 0; text-wrap: balance;
-}
-.savior-wrap h2 .accent { color: var(--s-safe-text); }
-.savior-wrap .lede { margin: clamp(12px, 2vh, 22px) auto 0; max-width: 50ch; font-size: clamp(1rem, 1.4vw, 1.18rem); color: var(--s-mut); line-height: 1.5; }
-.savior-zero { display: inline-flex; gap: 14px; margin: clamp(16px, 3vh, 34px) 0 6px; font-variant-numeric: tabular-nums; }
-.savior-zero .z {
-  position: relative; overflow: hidden;
-  width: clamp(62px, 10vw, 98px); aspect-ratio: 5 / 6; border-radius: 18px;
-  display: grid; place-items: center; font-size: clamp(2.9rem, 6.5vw, 4.7rem); font-weight: 900;
-  letter-spacing: -.05em; color: var(--s-safe-text);
-  background: linear-gradient(180deg, rgba(8, 121, 111, .18), rgba(8, 121, 111, .06));
-  border: 1px solid rgba(8, 121, 111, .42);
-  box-shadow: 0 30px 60px -34px rgba(8, 121, 111, .46);
-}
-/* Each zero caps one HMIS axis — the three colored factors from Act 3, resolved. */
-.savior-zero .z::before {
-  content: ""; position: absolute; top: 0; left: 22%; right: 22%; height: 3px;
-  border-radius: 0 0 3px 3px; background: var(--ax, var(--s-safe-text)); opacity: .8;
-}
-.savior-zero .z:nth-child(1) { --ax: var(--hmis-h); }
-.savior-zero .z:nth-child(2) { --ax: var(--hmis-f); }
-.savior-zero .z:nth-child(3) { --ax: var(--hmis-r); }
-.savior-cap { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: var(--s-mut); margin-bottom: clamp(12px, 2.2vh, 24px); }
-.savior-proof { display: flex; gap: 14px; justify-content: center; }
-.savior-proof-before { gap: 10px; margin-bottom: 8px; }
-.savior-proof-before figure { opacity: .72; transform: scale(.82); transform-origin: center bottom; }
-.savior-proof figure { margin: 0; width: clamp(96px, 12vw, 132px); }
-.savior-proof img {
-  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px;
-  border: 1px solid rgba(8, 121, 111, .38); display: block;
-  filter: saturate(.95);
-}
-.savior-proof figcaption { margin-top: 8px; font-size: .76rem; font-weight: 700; letter-spacing: .04em; color: var(--s-mut); }
-.savior-proof-cap { margin: clamp(10px, 1.6vh, 14px) 0 clamp(16px, 2.6vh, 28px); font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
-.savior-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.savior-ctas .btn-primary { background: var(--s-safe); color: #f4f6f8; box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(8, 121, 111, .62); }
-.savior-ctas .btn-primary:hover { background: #5fe9d6; }
-.savior-ctas .btn-ghost { background: rgba(255, 255, 255, .04); color: #fff; border: 1.5px solid rgba(255, 255, 255, .28); }
-.savior-ctas .btn-ghost:hover { border-color: #fff; background: rgba(255, 255, 255, .1); }
-
-/* ============================================================
-   SHORT-VIEWPORT FIT — Acts 4 & 5
-   The stage is a pinned 100vh box with vertically-centered content.
-   On laptop heights the savior stack (~829px) and the chem rig + slider
-   exceed the fold, clipping the badge (top) and the proof row / HMIS
-   scale (bottom). Tighten the vertical rhythm so both fit < 100vh.
-   ============================================================ */
-@media (min-width: 761px) and (max-height: 960px) {
-  /* Act 4 — chemicals + shared scale */
-  .act-chems .act-copy.top { margin-bottom: clamp(6px, 1.2vh, 16px); }
-  .act-chems .act-h { font-size: clamp(1.7rem, 3.4vw, 2.5rem); }
-  .act-chems .chem-rig { gap: 10px; }
-  .act-chems .chem-card { padding: 12px 16px; }
-  .act-chems .chem-card p { margin-top: 7px; font-size: .86rem; line-height: 1.45; }
-  .act-chems .chem-scale { padding-top: 10px; }
-  .act-chems .chem-out { font-size: .92rem; line-height: 1.45; }
-  .act-chems .chem-final { font-size: clamp(1.05rem, 1.7vw, 1.3rem); }
-
-  /* Act 5 — savior stack */
-  .act-savior .savior-badge { margin-bottom: 8px; }
-  .act-savior .savior-wrap h2 { font-size: clamp(2rem, 4.2vw, 3rem); }
-  .act-savior .savior-wrap .lede { margin-top: 8px; font-size: 1rem; max-width: 54ch; }
-  .act-savior .savior-zero { margin: 10px 0 4px; gap: 12px; }
-  .act-savior .savior-zero .z { width: clamp(50px, 7.2vw, 74px); border-radius: 14px; font-size: clamp(2.4rem, 5vw, 3.6rem); }
-  .act-savior .savior-cap { margin-bottom: 10px; }
-  .act-savior .savior-proof { gap: 12px; }
-  .act-savior .savior-proof figure { width: clamp(88px, 9.5vw, 112px); }
-  .act-savior .savior-proof figcaption { margin-top: 5px; font-size: .7rem; }
+.story-scene {
+  position: relative;
+  z-index: 5;
+  height: 100%;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: clamp(84px, 11vh, 124px) clamp(22px, 4vw, 56px) clamp(42px, 7vh, 76px);
 }
 
-/* Clear the fixed nav so the "Enter VertKleen" badge never tucks under it,
-   then scale the savior stack to fit the height that's left. .savior-wrap is
-   NOT GSAP-transformed, so a CSS scale is safe and stays centered via the
-   stage's place-items:center. Steps cascade — shortest matching rule wins. */
-@media (min-width: 761px) {
-  .act-savior .stage { padding-top: 64px; box-sizing: border-box; }
-  .act-savior .savior-wrap { transform-origin: center center; }
-}
-@media (min-width: 761px) and (max-height: 800px) { .act-savior .savior-wrap { transform: scale(.94); } }
-@media (min-width: 761px) and (max-height: 730px) { .act-savior .savior-wrap { transform: scale(.88); } }
-@media (min-width: 761px) and (max-height: 670px) { .act-savior .savior-wrap { transform: scale(.81); } }
-@media (min-width: 761px) and (max-height: 610px) { .act-savior .savior-wrap { transform: scale(.74); } }
-@media (min-width: 761px) and (max-height: 560px) { .act-savior .savior-wrap { transform: scale(.68); } }
-
-/* ============================================================
-   REDUCED MOTION + NO-JS FALLBACK: stacked, fully visible.
-   story.js never adds .story-ready in either case.
-   ============================================================ */
-.story:not(.story-ready) .act { height: auto; }
-.story:not(.story-ready) .stage { position: relative; height: auto; min-height: 0; padding: 80px 0; }
-.story:not(.story-ready) [data-at] { opacity: 1; transform: none; }
-.story:not(.story-ready) .fx-canvas,
-.story:not(.story-ready) .story-rail,
-.story:not(.story-ready) .cdot,
-.story:not(.story-ready) .scroll-cue { display: none; }
-.story:not(.story-ready) .bd { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .5; }
-.story:not(.story-ready) .act-copy.top { position: static; margin: 0 auto; }
-.story:not(.story-ready) .act-copy.bl { padding-left: 28px; align-self: center; }
-.story:not(.story-ready) .reel {
-  position: relative; right: auto; top: auto; transform: none;
-  width: min(640px, 90vw); aspect-ratio: auto; margin: 30px auto 0;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
-}
-.story:not(.story-ready) .reel-slide { position: relative; opacity: 1; aspect-ratio: 9 / 10; }
-.story:not(.story-ready) .reel-tag, .story:not(.story-ready) .reel-idx { display: none; }
-.story:not(.story-ready) .pipe-chips {
-  position: static; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 26px;
-}
-.story:not(.story-ready) .pipe-chips .chip { position: static; }
-.story:not(.story-ready) .hmis-rig, .story:not(.story-ready) .chem-rig { margin-top: 30px; }
-@media (prefers-reduced-motion: reduce) {
-  .story .scroll-cue i, .story .chem-tag .pulse,
-  .pipe-chips .chip.is-burning i::after { animation: none; }
+.story-copy,
+.story-layer {
+  position: absolute;
+  opacity: 0;
+  visibility: hidden;
+  will-change: transform, opacity;
 }
 
-/* ---------- Responsive ---------- */
-@media (max-width: 760px) {
-  .story .act { height: 198vh; }
-  .story .act[data-act="1"] { height: 170vh; }
-  .story .act[data-act="3"] { height: 212vh; }
-  .story .act[data-act="4"] { height: 226vh; }
-  .story .act-savior { height: 235vh; }
-  .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
-  .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
-  .chip.c-scale  { left: 6%; top: 51%; }
-  .chip.c-rust   { left: 28%; top: 58%; }
-  .chip.c-grease { left: 52%; top: 67%; }
-  .pipe-chips .chip { max-width: min(44vw, 172px); white-space: normal; line-height: 1.15; }
-  .chip.c-bio    { left: auto; right: 6%; top: 78%; }
-  .hmis-factors { gap: 10px; }
-  .factor { padding: 18px 10px; border-radius: 14px; }
-  .factor .fmeaning { font-size: .78rem; }
-  .hmis-rig { margin-top: 24vh; }
-  /* Stacked single column: drop the desktop quadrant frame and give each row
-     its own bordered card (the quadrant panel only reads as one in 2 columns). */
-  .chem-list {
-    grid-template-columns: 1fr; gap: 10px;
-    border: 0; border-radius: 0; background: none;
-    -webkit-backdrop-filter: none; backdrop-filter: none;
-  }
-  .chem-card {
-    padding: 14px 16px;
-    border: 1px solid var(--s-line); border-radius: 14px;
-    background: rgba(255, 255, 255, .03);
-    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-  }
-  .chem-card:nth-child(2n) { border-right: 1px solid var(--s-line); }
-  .chem-card:nth-child(n+3) { border-bottom: 1px solid var(--s-line); }
-  .chem-card p { font-size: .84rem; }
-  .chem-rig { margin-top: 14vh; gap: 10px; }
-  .chem-scale { order: -1; padding-top: 18px; }
-  .chem-list { gap: 8px; }
-  .chem-card { padding: 12px 14px; }
-  .chem-card .chead { gap: 8px; }
-  .chem-card p { font-size: .78rem; line-height: 1.38; }
-  .chem-card .vs { font-size: .62rem; }
- .savior-zero { margin: 10px 0 8px; gap: 8px; }
- .savior-zero .z { width: clamp(54px, 18vw, 68px); border-radius: 14px; }
- .savior-proof { gap: 8px; }
- .savior-proof-before { margin-bottom: 2px; }
- .savior-proof figure { width: 22vw; }
- .savior-proof figcaption { margin-top: 4px; font-size: .68rem; }
- .savior-proof-cap { margin: 6px 0 12px; font-size: .72rem; line-height: 1.35; }
+.story-copy {
+  left: clamp(72px, 9vw, 138px);
+  top: clamp(118px, 19vh, 184px);
+  width: min(620px, 48vw);
+  z-index: 6;
 }
 
-/* Image polish layer: keeps the real field evidence, but frames it with more
-   deliberate industrial contrast and stronger small-screen legibility. */
-.story .bd {
-  filter: saturate(1.06) contrast(1.08) brightness(.82);
+.story-copy h1,
+.story-copy h2 {
+  margin: 0;
+  max-width: 11ch;
+  font-size: clamp(2.85rem, 6vw, 5.85rem);
+  line-height: .94;
+  letter-spacing: -.04em;
+  text-wrap: balance;
 }
 
-.reel-slide {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, .04), transparent 28%),
-    #101319;
-  border-color: rgba(255, 255, 255, .2);
-  box-shadow:
-    0 42px 92px -40px rgba(0, 0, 0, .92),
-    0 0 0 1px rgba(255, 255, 255, .03),
-    inset 0 1px 0 rgba(255, 255, 255, .08);
+.story-copy h2 {
+  max-width: 13ch;
 }
 
-.reel-slide img {
-  transform: scale(1.012);
-  filter: saturate(1.02) contrast(1.08) brightness(.96);
+.story-copy p {
+  max-width: 56ch;
+  margin: clamp(16px, 2.4vh, 24px) 0 0;
+  color: var(--story-muted);
+  font-size: clamp(1rem, 1.35vw, 1.18rem);
+  line-height: 1.55;
 }
 
-.reel-slide figcaption {
-  text-shadow: 0 2px 18px rgba(0, 0, 0, .8);
+.story-copy[data-scene="field"],
+.story-copy[data-scene="buildup"] {
+  width: min(520px, 38vw);
 }
 
-.savior-proof figure {
-  width: clamp(112px, 13vw, 148px);
+.story-copy[data-scene="field"] h1,
+.story-copy[data-scene="buildup"] h2 {
+  max-width: 10.5ch;
+  font-size: clamp(2.7rem, 5.2vw, 4.9rem);
 }
 
-.savior-proof img {
-  filter: saturate(1.04) contrast(1.08) brightness(1.02);
-  box-shadow:
-    0 18px 42px -28px rgba(8, 121, 111, .48),
-    inset 0 1px 0 rgba(255, 255, 255, .1);
+.story-copy[data-scene="field"] p,
+.story-copy[data-scene="buildup"] p {
+  max-width: 40ch;
 }
 
-@media (min-width: 901px) {
-  .story .act[data-act="1"] .act-copy.bl {
-    padding-bottom: clamp(260px, 32vh, 420px);
-    /* Clear the chapter rail + active "THE ENEMY" label so they never overlap the headline. */
-    padding-left: clamp(190px, 15vw, 240px);
-  }
+.story-copy-zero {
+  top: clamp(92px, 11vh, 118px);
+  left: 50%;
+  width: min(820px, 88vw);
+  transform: translateX(-50%);
+  text-align: center;
 }
 
-@media (max-width: 760px) {
-  .savior-proof {
-    gap: 10px;
-  }
-
-.savior-proof figure {
-  width: min(28vw, 120px);
-}
+.story-copy-zero h2 {
+  max-width: none;
+  font-size: clamp(2.55rem, 5.4vw, 4.7rem);
+  line-height: .96;
 }
 
-/* Keep the story openers procedural: the motion comes from canvas fumes/motes,
-   not blurred photo collages behind the content. */
-.story .act[data-act="1"] .stage {
-  background:
-    radial-gradient(45% 38% at 70% 25%, rgba(169, 52, 32, .12), transparent 64%),
-    radial-gradient(55% 46% at 28% 64%, rgba(8, 121, 111, .12), transparent 68%),
-    radial-gradient(110% 90% at 50% 0%, #151924 0%, #090c12 64%);
+.story-copy-zero h2 span {
+  color: var(--story-safe-ink);
 }
 
-.story .act-savior .stage {
-  background:
-    radial-gradient(45% 44% at 50% 38%, rgba(8, 121, 111, .22), transparent 68%),
-    radial-gradient(70% 58% at 78% 12%, rgba(8, 121, 111, .14), transparent 70%),
-    radial-gradient(110% 90% at 50% 0%, #101821 0%, #070a10 64%);
-}
-
-.story .kicker {
-  font-size: .82rem;
-  letter-spacing: .045em !important;
-  text-transform: none !important;
-}
-
-.story .chem-tag,
-.story .scale-head,
-.story .scale-ticks {
-  text-transform: none !important;
-}
-
-.story .savior-cap {
-  letter-spacing: .045em !important;
-  text-transform: none !important;
-}
-
-@media (max-width: 760px) {
-  .story .act[data-act="1"] .stage {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: clamp(28px, 5vh, 46px);
-    padding-top: 68px;
-  }
-
-  .story .act[data-act="1"] .act-copy.bl {
-    order: 1;
-    align-self: stretch;
-    text-align: left;
-    padding-bottom: 0;
-  }
-
-  .story .act[data-act="1"] .reel {
-    order: 2;
-    width: min(78vw, 328px);
-    margin-bottom: 0;
-  }
-
-  .act-chems .stage {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding-top: 72px;
-  }
-
-  .act-chems .act-copy.top {
-    position: relative;
-    top: auto;
-    width: min(360px, 90vw);
-    margin: 0 auto 18px;
-    padding: 0 20px;
-  }
-
-  .act-chems .act-h {
-    font-size: clamp(2rem, 11vw, 2.9rem);
-  }
-
-  .act-chems .chem-rig {
-    width: min(350px, 90vw);
-    margin-top: 0;
-    gap: 12px;
-  }
-
-  .act-chems .chem-scale {
-    order: 0;
-    padding-top: 4px;
-  }
-
-  .act-chems .scale-ticks {
-    font-size: .6rem;
-  }
-
-  .act-chems .cdot {
-    width: 18px;
-    height: 18px;
-  }
-
-  .act-chems .cdot span {
-    font-size: .64rem;
-  }
-
-  .act-savior .savior-proof {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: min(310px, 82vw);
-    margin: 10px auto 0;
-    gap: 10px;
-  }
-
-  .act-savior .proof-pair:nth-child(3) {
-    display: none;
-  }
-
-  .act-savior .savior-proof figure {
-    width: 100%;
-  }
-
-  .act-savior .savior-proof figcaption {
-    display: flex;
-    justify-content: center;
-    gap: .35em;
-  }
-}
-
-.story .savior-proof figcaption {
-  display: flex;
-  justify-content: center;
-  gap: .35em;
-}
-
-.story .cdot[data-dot="0"] span { transform: translateX(-92%); }
-.story .cdot[data-dot="1"] span { transform: translateX(-8%); }
-.story .cdot[data-dot="2"] span { transform: translateX(8%); top: -300%; }
-.story .cdot[data-dot="3"] span { transform: translateX(-92%); bottom: -300%; }
-
-.story .cdot span {
+.story-copy-zero p {
   display: none;
 }
 
-@media (max-width: 760px) {
-  .act-chems .cdot span {
+.story-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  color: var(--story-muted);
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.story-kicker::before {
+  content: "";
+  width: 30px;
+  height: 1px;
+  background: currentColor;
+}
+
+.story-kicker.danger {
+  color: var(--story-red);
+}
+
+.story-kicker.safe {
+  color: var(--story-safe-ink);
+}
+
+.story-layer {
+  z-index: 4;
+  content-visibility: auto;
+  contain-intrinsic-size: 100vh 160vh;
+}
+
+.story-field {
+  right: clamp(42px, 5vw, 86px);
+  top: 50%;
+  width: min(420px, 31vw);
+  aspect-ratio: 8 / 9;
+  transform: translateY(-50%);
+}
+
+.field-card {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--story-line-strong);
+  border-radius: 26px;
+  background: #14171e;
+  box-shadow: 0 44px 90px -44px rgba(0, 0, 0, .95);
+}
+
+.field-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(.95) contrast(1.06);
+}
+
+.field-card::after {
+  content: "";
+  position: absolute;
+  inset: 42% 0 0;
+  background: linear-gradient(180deg, transparent, rgba(5, 7, 10, .88));
+}
+
+.field-card figcaption {
+  position: absolute;
+  z-index: 2;
+  left: 24px;
+  right: 24px;
+  bottom: 22px;
+}
+
+.field-card b {
+  display: block;
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: .95;
+  letter-spacing: -.035em;
+}
+
+.field-card span {
+  display: block;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, .72);
+}
+
+.story-buildup {
+  right: clamp(20px, 3vw, 48px);
+  top: 50%;
+  width: min(500px, 35vw);
+  height: min(430px, 52vh);
+  transform: translateY(-50%);
+}
+
+.story-field,
+.story-buildup {
+  max-width: calc(100vw - 760px);
+}
+
+.flow-meter {
+  position: relative;
+  height: 100%;
+  border: 1px solid var(--story-line);
+  border-radius: 32px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .08), transparent 34%),
+    rgba(255, 255, 255, .035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 42px 100px -60px #000;
+}
+
+.pipe-run {
+  position: absolute;
+  inset: 18% 12%;
+  border: 18px solid rgba(230, 238, 238, .2);
+  border-left-width: 28px;
+  border-right-width: 28px;
+  border-radius: 90px;
+}
+
+.pipe-run i {
+  position: absolute;
+  inset: 15% 12%;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, .18);
+}
+
+.pipe-run i:nth-child(2) {
+  inset: 29% 25%;
+}
+
+.pipe-run i:nth-child(3) {
+  inset: 43% 38%;
+}
+
+.clog {
+  position: absolute;
+  padding: 10px 14px;
+  border: 1px solid var(--story-line);
+  border-radius: 999px;
+  background: rgba(9, 11, 15, .82);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.c-scale { left: 8%; top: 19%; }
+.c-rust { right: 10%; top: 30%; }
+.c-grease { left: 20%; bottom: 24%; }
+.c-bio { right: 16%; bottom: 13%; }
+
+.story-hmis {
+  right: clamp(38px, 8vw, 130px);
+  top: 50%;
+  width: min(560px, 42vw);
+  transform: translateY(-50%);
+}
+
+.story-copy[data-scene="hmis"],
+.story-copy[data-scene="legacy"] {
+  width: min(400px, 30vw);
+}
+
+.story-copy[data-scene="hmis"] h2,
+.story-copy[data-scene="legacy"] h2 {
+  max-width: 9ch;
+  font-size: clamp(2.35rem, 4vw, 3.85rem);
+}
+
+.story-copy[data-scene="hmis"] p,
+.story-copy[data-scene="legacy"] p {
+  max-width: 34ch;
+}
+
+.hmis-panel {
+  display: grid;
+  grid-template-columns: .82fr 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.hmis-face,
+.hmis-bars {
+  border: 1px solid var(--story-line);
+  border-radius: 28px;
+  background: rgba(7, 10, 13, .78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07);
+}
+
+.hmis-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 330px;
+  text-align: center;
+}
+
+.hmis-face::before {
+  content: "";
+  position: absolute;
+  width: 78%;
+  aspect-ratio: 1;
+  border: 18px solid rgba(255, 255, 255, .08);
+  border-top-color: var(--story-red);
+  border-radius: 50%;
+}
+
+.hmis-face strong {
+  position: relative;
+  font-size: clamp(5.8rem, 9vw, 8.2rem);
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.hmis-face em {
+  position: absolute;
+  bottom: 46px;
+  color: var(--story-red);
+  font-style: normal;
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.hmis-needle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 38%;
+  transform-origin: bottom;
+  background: var(--story-red);
+  box-shadow: 0 0 24px rgba(255, 118, 95, .55);
+}
+
+.hmis-bars {
+  display: grid;
+  gap: 16px;
+  padding: 28px;
+}
+
+.hmis-bars div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-content: center;
+}
+
+.hmis-bars b,
+.hmis-bars em {
+  font-size: .8rem;
+  font-style: normal;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.hmis-bars em {
+  color: var(--story-muted);
+}
+
+.hmis-bars span {
+  grid-column: 1 / -1;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .1);
+}
+
+.hmis-bars i {
+  display: block;
+  width: 76%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ax);
+}
+
+.story-legacy {
+  inset: auto clamp(32px, 6vw, 92px) clamp(84px, 12vh, 132px) auto;
+  width: min(670px, 48vw);
+}
+
+.chemical-stack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.chem-card {
+  display: grid;
+  gap: 8px;
+  min-height: 142px;
+  padding: 20px;
+  border: 1px solid rgba(255, 118, 95, .28);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(169, 52, 32, .22), transparent 62%),
+    rgba(12, 13, 17, .86);
+}
+
+.chem-card span {
+  color: var(--story-red);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.chem-card b {
+  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+  line-height: 1.08;
+}
+
+.chem-card em {
+  align-self: end;
+  color: #fff;
+  font-style: normal;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.hazard-scale {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 18px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 118, 95, .25);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(9, 166, 149, .28), rgba(245, 179, 1, .3), rgba(255, 118, 95, .34));
+  color: rgba(255, 255, 255, .82);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.story-zero {
+  left: 50%;
+  bottom: clamp(24px, 3.6vh, 42px);
+  width: min(900px, 90vw);
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.zero-mark {
+  display: inline-grid;
+  grid-template-columns: repeat(3, clamp(56px, 6.2vw, 78px));
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.zero-mark b {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 5 / 6;
+  border: 1px solid rgba(9, 166, 149, .42);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(9, 166, 149, .28), rgba(9, 166, 149, .08));
+  color: var(--story-safe-ink);
+  font-size: clamp(2.7rem, 5.4vw, 4.2rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 70px -38px var(--story-safe);
+}
+
+.zero-mark span {
+  grid-column: 1 / -1;
+  color: var(--story-muted);
+  font-size: .82rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.proof-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 auto;
+  width: min(460px, 82vw);
+}
+
+.proof-strip figure {
+  margin: 0;
+}
+
+.proof-strip figure > :first-child {
+  border-radius: 16px 0 0 16px;
+}
+
+.proof-strip figure > :nth-child(2) {
+  border-radius: 0 16px 16px 0;
+}
+
+.proof-strip img {
+  width: 50%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, .16);
+}
+
+.proof-strip figcaption {
+  margin-top: 7px;
+  color: var(--story-muted);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.savior-procurement {
+  margin: clamp(10px, 1.6vh, 16px) auto clamp(12px, 1.8vh, 18px);
+  max-width: 58ch;
+  color: rgba(244, 248, 247, .82);
+  font-size: clamp(.9rem, 1.08vw, 1rem);
+  line-height: 1.48;
+  text-wrap: balance;
+}
+
+.savior-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.story .btn {
+  min-width: 184px;
+}
+
+.story .btn-primary {
+  background: var(--story-safe);
+  box-shadow: 0 18px 46px -28px var(--story-safe);
+}
+
+.story .btn-ghost {
+  border-color: rgba(255, 255, 255, .28);
+  color: #fff;
+  background: rgba(255, 255, 255, .05);
+}
+
+.story-rail {
+  position: absolute;
+  z-index: 20;
+  left: clamp(16px, 3vw, 44px);
+  top: 50%;
+  display: grid;
+  gap: 18px;
+  transform: translateY(-50%);
+}
+
+.rail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  padding: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, .5);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rail-btn b {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 50%;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.rail-btn span {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  color: rgba(255, 255, 255, .86);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  transition: max-width .22s ease, opacity .22s ease;
+}
+
+.rail-btn.is-on {
+  color: var(--story-red);
+}
+
+.rail-btn.safe.is-on {
+  color: var(--story-safe-ink);
+}
+
+.rail-btn.is-on span,
+.rail-btn:hover span,
+.rail-btn:focus-visible span {
+  max-width: 180px;
+  opacity: 1;
+}
+
+.scroll-cue {
+  position: absolute;
+  z-index: 16;
+  left: 50%;
+  bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, .55);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.scroll-cue i {
+  font-size: 1rem;
+}
+
+.story-fallback {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 84px 28px;
+  text-align: center;
+}
+
+.story.story-ready .story-copy,
+.story.story-ready .story-layer {
+  visibility: visible;
+}
+
+.story:not(.story-ready) .story-scroll {
+  min-height: auto;
+  content-visibility: visible;
+}
+
+.story:not(.story-ready) .story-pin {
+  height: auto;
+  min-height: 0;
+  padding: 80px 24px;
+}
+
+.story:not(.story-ready) .story-scene {
+  display: grid;
+  gap: 34px;
+  height: auto;
+  padding: 0;
+}
+
+.story:not(.story-ready) .story-copy,
+.story:not(.story-ready) .story-layer {
+  position: relative;
+  inset: auto;
+  width: min(760px, 100%);
+  margin: 0 auto;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+.story:not(.story-ready) .story-rail,
+.story:not(.story-ready) .story-canvas,
+.story:not(.story-ready) .scroll-cue,
+.story:not(.story-ready) .story-grid {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .story-pin {
+    min-height: 720px;
+  }
+
+  .story-scene {
+    padding: 82px 22px 40px;
+  }
+
+  .story-copy,
+  .story-copy-zero {
+    left: 28px;
+    right: 28px;
+    top: 104px;
+    width: auto;
+    text-align: left;
+    transform: none;
+  }
+
+  .story-copy[data-scene="field"],
+  .story-copy[data-scene="buildup"],
+  .story-copy[data-scene="hmis"],
+  .story-copy[data-scene="legacy"] {
+    width: auto;
+  }
+
+  .story-copy h1,
+  .story-copy h2,
+  .story-copy-zero h2 {
+    max-width: 12ch;
+    font-size: clamp(2.55rem, 12vw, 4.1rem);
+  }
+
+  .story-field,
+  .story-buildup,
+  .story-hmis,
+  .story-legacy,
+  .story-zero {
+    left: 28px;
+    right: 28px;
+    top: auto;
+    bottom: 54px;
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+
+  .story-field {
+    bottom: 74px;
+    height: min(264px, 31vh);
+    aspect-ratio: auto;
+  }
+
+  .story-buildup {
+    bottom: 74px;
+    height: min(264px, 31vh);
+  }
+
+  .story-hmis {
+    bottom: 46px;
+  }
+
+  .hmis-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .hmis-face {
+    min-height: 210px;
+  }
+
+  .hmis-bars {
+    display: none;
+  }
+
+  .story-legacy {
+    bottom: 44px;
+  }
+
+  .chemical-stack {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .chem-card {
+    min-height: 112px;
+    padding: 14px;
+  }
+
+  .chem-card p {
+    display: none;
+  }
+
+  .hazard-scale {
+    font-size: .62rem;
+  }
+
+  .story-zero {
+    text-align: center;
+  }
+
+  .zero-mark {
+    grid-template-columns: repeat(3, 62px);
+  }
+
+  .proof-strip {
+    width: min(420px, 100%);
+    gap: 8px;
+  }
+
+  .savior-procurement {
+    max-width: 35ch;
+    font-size: .92rem;
+  }
+
+  .story-rail {
+    top: auto;
+    left: 50%;
+    bottom: 14px;
+    grid-auto-flow: column;
+    gap: 8px;
+    transform: translateX(-50%);
+  }
+
+  .rail-btn span {
+    display: none;
+  }
+
+  .rail-btn b {
+    width: 28px;
+    height: 28px;
+  }
+
+  .scroll-cue {
     display: none;
   }
 }
 
-@media (max-width: 760px) {
-  .act-savior .stage {
-    padding-top: calc(78px + env(safe-area-inset-top, 0px));
-    align-items: start;
+@media (max-width: 520px) {
+  .story-pin {
+    min-height: 760px;
   }
 
-  .act-savior .savior-wrap {
-    align-self: stretch;
+  .story-copy,
+  .story-copy-zero {
+    top: 96px;
   }
 
-  .act-savior .savior-ctas {
-    margin-bottom: 72px;
+  .story-copy p {
+    font-size: .96rem;
   }
 
-  .act-chems .stage {
-    justify-content: flex-start;
-    padding-top: calc(92px + env(safe-area-inset-top, 0px));
-    gap: 8px;
+  .chemical-stack {
+    grid-template-columns: 1fr;
   }
 
-  .act-chems .act-copy.top {
-    margin-bottom: 8px;
+  .chem-card:nth-child(n+3) {
+    display: none;
   }
 
-  .act-chems .act-h {
-    font-size: clamp(1.65rem, 9vw, 2.28rem);
-    line-height: .98;
+  .proof-strip {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 
-  .act-chems .chem-rig {
-    gap: 8px;
+  .proof-strip figcaption {
+    display: none;
   }
 
-  .act-chems .chem-list {
-    gap: 8px;
-  }
-
-  .act-chems .chem-card {
-    padding: 12px 14px;
-  }
-
-  .act-chems .chem-card p {
-    margin-top: 8px;
-    font-size: .8rem;
-    line-height: 1.45;
+  .savior-ctas .btn {
+    width: 100%;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .story-scroll {
+    min-height: auto;
+    content-visibility: visible;
+    contain-intrinsic-size: auto;
+  }
+
+  .story-pin {
+    height: auto;
+    min-height: 0;
+  }
+
+  .story-copy,
+  .story-layer,
+  .field-card,
+  .chem-card,
+  .story-canvas {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
 }

@@ -37,6 +37,12 @@
   .acct-switch { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); font-size: .9rem; color: var(--ink-soft); text-align: center; }
   .acct-switch button { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--accent-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
   .acct-switch button:hover { color: var(--accent); }
+  .acct-reset-row { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .password-reset-link { border: 0; padding: 0; background: transparent; color: var(--accent-ink); font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+  .password-reset-link:hover,
+  .password-reset-link:focus-visible { color: var(--accent); outline: none; }
+  .acct-reset-copy { margin: 0 0 18px; color: var(--muted); font-size: .96rem; line-height: 1.55; }
+  .acct-secondary-action { margin-top: 14px; text-align: center; }
   .pw-wrap { position: relative; }
   .pw-wrap input { padding-right: 44px; }
   .pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: 0; cursor: pointer; color: var(--ink-soft); padding: 8px; display: grid; place-items: center; border-radius: 8px; }
@@ -79,9 +85,24 @@
             <div class="field"><label for="liEmail">Email *</label><input id="liEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
             <div class="field"><label for="liPass">Password *</label><div class="pw-wrap"><input id="liPass" name="password" type="password" autocomplete="current-password" required><button type="button" class="pw-toggle" data-target="liPass" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
           </div>
+          <div class="acct-reset-row">
+            <button type="button" class="password-reset-link" id="forgotPasswordBtn">Forgot password?</button>
+          </div>
           <button type="submit" class="btn btn-primary" id="liBtn" style="margin-top:18px;width:100%">Sign in</button>
           <p class="acct-status" id="liStatus" role="status" aria-live="polite"></p>
           <p class="acct-switch">New to MASEST? <button type="button" data-pane="register">Create a business account</button></p>
+        </form>
+
+        <form class="form-card acct-pane" id="resetPasswordForm" data-pane="reset-password" hidden novalidate>
+          <h2 class="acct-title">Choose a new password</h2>
+          <p class="acct-reset-copy">Enter a new password for your VertKleen account. Use at least 8 characters.</p>
+          <div class="field-grid">
+            <div class="field"><label for="newPassword">New password *</label><div class="pw-wrap"><input id="newPassword" name="new-password" type="password" autocomplete="new-password" required minlength="8"><button type="button" class="pw-toggle" data-target="newPassword" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
+            <div class="field"><label for="confirmPassword">Confirm password *</label><div class="pw-wrap"><input id="confirmPassword" name="confirm-password" type="password" autocomplete="new-password" required minlength="8"><button type="button" class="pw-toggle" data-target="confirmPassword" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
+          </div>
+          <button type="submit" class="btn btn-primary" id="resetPasswordBtn" style="margin-top:18px;width:100%">Save new password</button>
+          <p class="acct-secondary-action"><button type="button" class="password-reset-link" id="backToLoginBtn">Back to sign in</button></p>
+          <p class="acct-status" id="resetStatus" role="status" aria-live="polite"></p>
         </form>
 
         <!-- Register -->
@@ -172,7 +193,7 @@
 
 <!-- Auth wiring: module imports the Supabase helper -->
 <script type="module">
-  import { register, login, logout, me, completeRegistration, resendConfirmation, orders as fetchOrders } from "./js/auth.js";
+  import { register, login, logout, me, completeRegistration, resendConfirmation, resetPasswordForEmail, updatePassword, onPasswordRecovery, orders as fetchOrders } from "./js/auth.js";
   import { add as cartAdd, clear as cartClear } from "./js/cart.js";
 
   const $ = (id) => document.getElementById(id);
@@ -180,7 +201,8 @@
   const summary = $("acctSummary");
 
   const PENDING_KEY = "masest_pending_registration";
-  const TS_SITEKEY = window.MASEST_TURNSTILE_SITEKEY || "";
+  const isLocalPreview = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
+  const TS_SITEKEY = isLocalPreview ? "" : window.MASEST_TURNSTILE_SITEKEY || "";
 
   // --- Cloudflare Turnstile: render a widget in each form only when a site key is set ---
   function initTurnstile() {
@@ -224,6 +246,20 @@
   function setStatus(el, msg, state) { el.textContent = msg; el.dataset.state = state || ""; }
 
   const completeCard = $("completeCard");
+  function setRecoveryMode(on) {
+    completeCard.hidden = true;
+    authBox.hidden = false;
+    summary.hidden = true;
+    document.querySelectorAll(".acct-pane").forEach((pane) => {
+      pane.hidden = pane.dataset.pane !== (on ? "reset-password" : "login");
+    });
+  }
+
+  function isRecoveryUrl() {
+    const params = new URLSearchParams(location.search);
+    return params.get("mode") === "reset-password" || location.hash.includes("type=recovery");
+  }
+
   function showComplete() {
     authBox.hidden = true; summary.hidden = true; completeCard.hidden = false;
     $("cCompany").focus();
@@ -271,6 +307,7 @@
     await completePendingRegistration();
     let data = null;
     try { data = await me(); } catch (e) {}
+    if (isRecoveryUrl()) { setRecoveryMode(true); return; }
     if (data && data.needs_profile) { showComplete(); return; }
     showSummary(data);
     // If we arrived from checkout (account.html?return=cart.html), go back once signed in.
@@ -315,6 +352,43 @@
       const raw = String(err.message || "");
       setStatus(status, /captcha/i.test(raw) ? "Verification failed — reload and complete the challenge." : "Sign in failed. Check your email and password.", "err");
     } finally { resetCaptcha(); btn.disabled = false; }
+  });
+
+  $("forgotPasswordBtn").addEventListener("click", async () => {
+    const btn = $("forgotPasswordBtn"); const status = $("liStatus");
+    const email = $("liEmail").value.trim();
+    if (!email) { setStatus(status, "Enter your email above first.", "err"); $("liEmail").focus(); return; }
+    btn.disabled = true; setStatus(status, "Sending password reset link…", "");
+    try {
+      await resetPasswordForEmail(email);
+      setStatus(status, "If that account exists, a reset link has been sent.", "ok");
+    } catch (err) {
+      setStatus(status, "Could not send a reset link. Try again later.", "err");
+    } finally { btn.disabled = false; }
+  });
+
+  $("resetPasswordForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("resetPasswordBtn"); const status = $("resetStatus");
+    const password = $("newPassword").value;
+    const confirm = $("confirmPassword").value;
+    if (password.length < 8) { setStatus(status, "Password must be at least 8 characters.", "err"); return; }
+    if (password !== confirm) { setStatus(status, "Passwords do not match.", "err"); return; }
+    btn.disabled = true; setStatus(status, "Updating password…", "");
+    try {
+      await updatePassword(password);
+      setStatus(status, "Password updated.", "ok");
+      history.replaceState(null, "", "account.html");
+      await refresh();
+    } catch (err) {
+      setStatus(status, "Could not update password. Open the latest reset link and try again.", "err");
+    } finally { btn.disabled = false; }
+  });
+
+  $("backToLoginBtn").addEventListener("click", () => {
+    history.replaceState(null, "", "account.html");
+    setRecoveryMode(false);
+    setStatus($("resetStatus"), "", "");
   });
 
   $("registerForm").addEventListener("submit", async (e) => {
@@ -396,6 +470,11 @@
       catch (e) { setStatus($("liStatus"), "Could not resend: " + (e.message || "try later"), "err"); }
     });
   }
+
+  if (isRecoveryUrl()) setRecoveryMode(true);
+  try {
+    onPasswordRecovery(() => setRecoveryMode(true));
+  } catch (err) {}
 
   handleAuthRedirect();
   initTurnstile();

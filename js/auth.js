@@ -70,6 +70,27 @@ export async function login({ email, password, captchaToken }) {
   return data;
 }
 
+export async function resetPasswordForEmail(email) {
+  const sb = requireClient();
+  const redirectTo = new URL('account.html?mode=reset-password', window.location.href).href;
+  const { data, error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePassword(password) {
+  const sb = requireClient();
+  const { data, error } = await sb.auth.updateUser({ password });
+  if (error) throw error;
+  return data;
+}
+
+export function onPasswordRecovery(callback) {
+  return requireClient().auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') callback(session);
+  });
+}
+
 export async function logout() {
   await requireClient().auth.signOut();
 }
