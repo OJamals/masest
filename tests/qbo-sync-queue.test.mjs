@@ -15,6 +15,18 @@ test("QBO schema defines token/cache tables and order sync columns", () => {
     assert.match(sql, new RegExp(`add column if not exists ${column}`), `${column} must be added to orders`);
   }
   assert.match(sql, /orders_qbo_pending_idx/);
+  assert.match(sql, /create or replace function public\.claim_qbo_orders\(batch int\)/,
+    "schema must provide an atomic claim RPC for the sync worker");
+  assert.match(sql, /for update skip locked/,
+    "claim RPC must prevent concurrent workers from claiming the same order");
+  assert.match(sql, /grant execute on function public\.claim_qbo_orders\(int\) to service_role/,
+    "service role must be allowed to execute the claim RPC");
+});
+
+test("QBO env example documents the sync endpoint secret", () => {
+  const env = read(".env.example");
+  assert.match(env, /QBO_SYNC_SECRET=/,
+    "QBO cron endpoint must be protected by a shared secret");
 });
 
 test("new NET and Stripe orders enter the QBO sync queue", () => {

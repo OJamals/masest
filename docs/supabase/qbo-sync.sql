@@ -41,6 +41,30 @@ create index if not exists orders_qbo_pending_idx
   on public.orders (qbo_next_attempt_at)
   where qbo_sync_status in ('pending','error');
 
+create or replace function public.claim_qbo_orders(batch int)
+returns setof public.orders
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return query
+  update public.orders o
+  set qbo_sync_status = 'processing'
+  where o.id in (
+    select id
+    from public.orders
+    where qbo_sync_status = 'pending'
+      and (qbo_next_attempt_at is null or qbo_next_attempt_at <= now())
+    order by created_at
+    limit batch
+    for update skip locked
+  )
+  returning o.*;
+end
+$$;
+
 grant select, insert, update on public.qbo_tokens to service_role;
 grant select, insert, update on public.qbo_items to service_role;
 grant select, insert, update on public.qbo_customers to service_role;
+grant execute on function public.claim_qbo_orders(int) to service_role;
