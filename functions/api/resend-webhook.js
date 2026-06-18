@@ -3,8 +3,8 @@
 // subscribe to delivered / bounced / complained. Set RESEND_WEBHOOK_SECRET in CF env.
 // Returns 200 for accepted/duplicate/unknown events (avoid Resend retry storms),
 // 400 only on signature failure. No-op (200) if the secret is unset.
-import { json, recordSuppression, updateEmailStatus } from '../../_lib/supabase.js';
-import { verifySvixSignature, mapResendEvent, isSuppressingEvent } from '../../_lib/email.js';
+import { json, recordSuppression, updateEmailStatus } from '../_lib/supabase.js';
+import { verifySvixSignature, mapResendEvent, isSuppressingEvent } from '../_lib/email.js';
 
 export async function onRequestPost({ request, env }) {
   const secret = env.RESEND_WEBHOOK_SECRET;
