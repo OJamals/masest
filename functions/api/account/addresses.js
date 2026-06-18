@@ -19,7 +19,7 @@ export async function onRequest({ request, env }) {
       .eq('company_id', companyId)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
-    if (error) return json(500, { error: error.message });
+    if (error) return json(500, { error: 'server_error' });
     return json(200, { addresses: data || [] });
   }
 
@@ -35,7 +35,7 @@ export async function onRequest({ request, env }) {
       await sb.from('addresses').update({ is_default: false }).eq('company_id', companyId).eq('type', row.type);
     }
     const { data, error } = await sb.from('addresses').insert(row).select('id').single();
-    if (error) return json(500, { error: error.message });
+    if (error) return json(500, { error: 'server_error' });
     return json(201, { id: data.id });
   }
 
@@ -44,7 +44,7 @@ export async function onRequest({ request, env }) {
     const id = body.id || new URL(request.url).searchParams.get('id');
     if (!id) return json(400, { error: 'id_required' });
     const { error } = await sb.from('addresses').delete().eq('id', id).eq('company_id', companyId);
-    if (error) return json(500, { error: error.message });
+    if (error) return json(500, { error: 'server_error' });
     return json(200, { ok: true });
   }
 

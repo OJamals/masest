@@ -2,9 +2,9 @@
  * Program-enrollment and bulk-order requests are posted through the company support thread
  * (/api/account/messages), so staff see them in the admin Messages tab — no extra tables. */
 import { me, api } from './auth.js';
+import { esc } from './util.js';
 
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const TIERS = [
   { key: 'Bronze', tag: 'Entry', desc: 'Quarterly treatment + SDS/compliance pack. Good for a single system or seasonal use.' },

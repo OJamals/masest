@@ -18,6 +18,6 @@ export async function onRequestGet({ request, env }) {
   q = profile?.company_id ? q.eq('company_id', profile.company_id) : q.eq('user_id', user.id);
 
   const { data, error } = await q;
-  if (error) return json(500, { error: error.message });
+  if (error) return json(500, { error: 'server_error' });
   return json(200, { orders: data || [] }, { 'cache-control': 'no-store' });
 }

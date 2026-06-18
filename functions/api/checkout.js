@@ -56,7 +56,7 @@ export async function onRequestPost({ request, env }) {
     .from('product_variants')
     .select('vsku,product_sku,label,price,currency,stripe_price_id,active,stock,track_stock,products(name,mode,active,taxable)')
     .in('vsku', skus);
-  if (error) return json(500, { error: error.message });
+  if (error) return json(500, { error: 'server_error' });
 
   const sellable = [];
   const rejected = [];

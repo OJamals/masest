@@ -1,0 +1,37 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+
+const PUBLIC = ["index.html", "about.html", "contact.html", "products.html", "programs.html", "proof.html", "resources.html", "industries.html", "industries/oil-gas.html"];
+const PRIVATE = ["account.html", "admin.html", "dashboard.html", "cart.html", "order-confirmed.html"];
+
+test("public pages carry canonical + og:url + og:image", () => {
+  for (const p of PUBLIC) {
+    const h = read(p);
+    assert.match(h, /rel="canonical"/, `${p} missing canonical`);
+    assert.match(h, /property="og:url"/, `${p} missing og:url`);
+    assert.match(h, /property="og:image"/, `${p} missing og:image`);
+  }
+});
+
+test("home page exposes Organization/WebSite JSON-LD", () => {
+  const h = read("index.html");
+  assert.match(h, /application\/ld\+json/, "index missing JSON-LD");
+  const block = h.match(/ld\+json">([\s\S]*?)<\/script>/)[1];
+  assert.doesNotThrow(() => JSON.parse(block), "index JSON-LD must be valid JSON");
+});
+
+test("private/transactional pages are noindex", () => {
+  for (const p of PRIVATE) {
+    assert.match(read(p), /name="robots"\s+content="noindex/, `${p} should be noindex`);
+  }
+});
+
+test("sitemap lists industry subpages and stays valid", () => {
+  const xml = read("sitemap.xml");
+  assert.match(xml, /industries\/oil-gas\.html/, "sitemap missing industry pages");
+  const locs = [...xml.matchAll(/<loc>([^<]+)/g)].map((m) => m[1]);
+  assert.equal(locs.length, new Set(locs).size, "sitemap has duplicate <loc> entries");
+});

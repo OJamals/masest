@@ -13,6 +13,6 @@ export async function onRequestPost({ request, env }) {
 
   const sb = adminClient(env);
   const { error } = await sb.from('profiles').update(patch).eq('id', user.id);
-  if (error) return json(500, { error: error.message });
+  if (error) return json(500, { error: 'server_error' });
   return json(200, { ok: true });
 }

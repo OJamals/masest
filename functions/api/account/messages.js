@@ -17,7 +17,7 @@ export async function onRequest({ request, env }) {
       .eq('company_id', companyId)
       .order('created_at', { ascending: true })
       .limit(200);
-    if (error) return json(500, { error: error.message });
+    if (error) return json(500, { error: 'server_error' });
     await sb.from('messages').update({ read_by_user: true })
       .eq('company_id', companyId).eq('sender_role', 'staff').eq('read_by_user', false);
     return json(200, { messages: data || [] });
@@ -32,7 +32,7 @@ export async function onRequest({ request, env }) {
       company_id: companyId, user_id: user.id, sender_role: 'buyer', body: text,
       order_id: body.order_id || null, read_by_user: true, read_by_staff: false,
     }).select('id,created_at').single();
-    if (error) return json(500, { error: error.message });
+    if (error) return json(500, { error: 'server_error' });
     return json(201, { id: data.id, created_at: data.created_at });
   }
 

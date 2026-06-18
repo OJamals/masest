@@ -173,29 +173,6 @@
 .pagination button:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ----------------------------------------------------------------------------
-   Data table — consistent, responsive table (consolidates ad-hoc .cmp-table)
----------------------------------------------------------------------------- */
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .92rem;
-}
-.data-table th, .data-table td {
-  text-align: left;
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--line-soft, #eef0f2);
-}
-.data-table th {
-  font-size: .74rem;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--muted, #5f656d);
-  font-weight: 700;
-}
-.data-table tbody tr:hover { background: var(--accent-tint, #f1f8f8); }
-.data-table td.num { font-variant-numeric: tabular-nums; text-align: right; }
-
-/* ----------------------------------------------------------------------------
    Modal / dialog — overlay with focus-trap (JS adds .open; Esc + backdrop close)
 ---------------------------------------------------------------------------- */
 .modal-backdrop {

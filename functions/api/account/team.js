@@ -58,7 +58,7 @@ export async function onRequest({ request, env }) {
     });
     if (error) {
       if (/duplicate|unique/i.test(error.message)) return json(409, { error: 'already_invited' });
-      return json(500, { error: error.message });
+      return json(500, { error: 'server_error' });
     }
 
     // Best-effort invite email.
@@ -87,7 +87,7 @@ export async function onRequest({ request, env }) {
     if (!id) return json(400, { error: 'id_required' });
     const { error } = await sb.from('company_invites').update({ status: 'revoked' })
       .eq('id', id).eq('company_id', company_id);
-    if (error) return json(500, { error: error.message });
+    if (error) return json(500, { error: 'server_error' });
     return json(200, { ok: true });
   }
 

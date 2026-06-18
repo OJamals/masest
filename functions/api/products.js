@@ -23,7 +23,7 @@ export async function onRequestGet({ request, env }) {
     if (!error) data = (data || []).map((product) => ({ ...product, image_url: null, photo_alt: null, gallery: [] }));
   }
 
-  if (error) return json(500, { error: error.message });
+  if (error) return json(500, { error: 'server_error' });
 
   const hasAuth = (request.headers.get('authorization') || '').startsWith('Bearer ');
   const tier = hasAuth ? (await tierForRequest(request, env)).tier : 'retail';

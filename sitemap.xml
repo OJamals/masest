@@ -8,4 +8,14 @@
   <url><loc>https://masest.co/resources.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/about.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://masest.co/contact.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/oil-gas.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/marine.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/manufacturing.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/food-beverage.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/healthcare.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/construction.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/military-government.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/education.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/hvac-water.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/plumbing.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
 </urlset>

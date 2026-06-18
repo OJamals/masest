@@ -17,7 +17,7 @@ export async function onRequest({ request, env }) {
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
       .limit(50);
-    if (error) return json(500, { error: error.message });
+    if (error) return json(500, { error: 'server_error' });
     const unread = (data || []).filter((n) => !n.read).length;
     return json(200, { notifications: data || [], unread });
   }
@@ -29,7 +29,7 @@ export async function onRequest({ request, env }) {
     else if (body.id) q = q.eq('id', body.id);
     else return json(400, { error: 'id_or_all_required' });
     const { error } = await q;
-    if (error) return json(500, { error: error.message });
+    if (error) return json(500, { error: 'server_error' });
     return json(200, { ok: true });
   }
 

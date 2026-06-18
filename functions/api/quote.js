@@ -44,7 +44,7 @@ export async function onRequestPost({ request, env }) {
       });
       const out = await r.json();
       if (!out.success) return json(400, { error: 'captcha_failed' });
-    } catch { /* verify endpoint unreachable → don't strand the lead */ }
+    } catch (e) { console.warn('captcha_verify_failed', e?.message || e); /* unreachable verify → don't strand the lead */ }
   }
 
   const type = String(fields.type || 'quote').slice(0, 40);

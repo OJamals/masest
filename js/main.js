@@ -602,6 +602,7 @@ function renderChrome() {
   const navLinks = document.getElementById("navLinks");
   const cartCount = nav.querySelector("[data-cart-count]");
   const updateCartCount = () => {
+    if (!cartCount) return;
     let total = 0;
     try {
       const cart = JSON.parse(localStorage.getItem("masest_cart") || "{}");
@@ -618,10 +619,6 @@ function renderChrome() {
   document.addEventListener("masest:cart", updateCartCount);
   // Account control: login button when logged out, account dropdown when signed in.
   import("/js/account-nav.js").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
-  const syncNavCtaLabel = () => {
-  };
-  syncNavCtaLabel();
-  window.addEventListener("resize", syncNavCtaLabel);
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);
@@ -641,11 +638,14 @@ function renderChrome() {
 
   // Elevate the nav once the page scrolls away from the top.
   const useDarkNav = document.body.dataset.nav === "dark";
-  const onScroll = () => {
+  let scrollRAF = 0;
+  const applyScroll = () => {
+    scrollRAF = 0;
     nav.classList.toggle("scrolled", window.scrollY > 8);
     nav.classList.toggle("over-dark", useDarkNav || (story && story.getBoundingClientRect().bottom > 66));
   };
-  onScroll();
+  const onScroll = () => { if (!scrollRAF) scrollRAF = requestAnimationFrame(applyScroll); };
+  applyScroll();
   window.addEventListener("scroll", onScroll, { passive: true });
 
   const foot = document.createElement("footer");

@@ -2,13 +2,9 @@
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
+import { esc, money, fmtDate, fmtDT } from './util.js';
 
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const money = (n, c) => (c || 'USD').toUpperCase() + ' ' + Number(n || 0).toFixed(2);
-const fmtDate = (s) => { try { return new Date(s).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return ''; } };
-const fmtDT = (s) => { try { return new Date(s).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 
 let ACCOUNT = null;            // /api/account/me snapshot
 const loaded = {};             // which tabs have been populated

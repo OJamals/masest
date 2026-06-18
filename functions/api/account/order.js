@@ -18,7 +18,7 @@ export async function onRequestGet({ request, env }) {
     .eq('id', id)
     .eq('company_id', companyId)
     .maybeSingle();
-  if (error) return json(500, { error: error.message });
+  if (error) return json(500, { error: 'server_error' });
   if (!data) return json(404, { error: 'not_found' });
   return json(200, { order: data });
 }

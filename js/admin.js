@@ -1,12 +1,8 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
+import { esc, money, dateTime as date } from './util.js';
 
 const $ = (id) => document.getElementById(id);
-const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-}[ch]));
-const money = (value, currency = 'usd') => `${String(currency).toUpperCase()} ${Number(value || 0).toFixed(2)}`;
-const date = (value) => value ? new Date(value).toLocaleString() : '';
 
 const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
 const QUOTE_STATUSES = ['new', 'contacted', 'closed', 'spam'];
