@@ -1,7 +1,7 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
 import { esc, money, dateTime as date } from './util.js';
-import { connectQbo, renderQboStatus } from './admin/qbo.js';
+import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -757,6 +757,7 @@ function wire() {
   $('qSearch').addEventListener('input', renderQuotes);
   $('custSearch').addEventListener('input', renderCustomers);
   $('qboConnect')?.addEventListener('click', connectQbo);
+  $('qboSyncNow')?.addEventListener('click', runQboSync);
   $('ordExport').addEventListener('click', async () => {
     message('ordStatus', 'Preparing export...');
     try {

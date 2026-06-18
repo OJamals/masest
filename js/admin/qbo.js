@@ -46,3 +46,28 @@ export async function connectQbo() {
     if (button) button.disabled = false;
   }
 }
+
+export async function runQboSync() {
+  const status = $("qboSyncStatus");
+  const button = $("qboSyncNow");
+  if (button) button.disabled = true;
+  if (status) {
+    status.textContent = "Running QuickBooks sync...";
+    status.dataset.state = "";
+  }
+  try {
+    const out = await api("/api/admin/qbo/sync", "POST");
+    if (status) {
+      status.textContent = `Claimed ${out.claimed || 0}; synced ${out.synced || 0}; failed ${out.failed || 0}.`;
+      status.dataset.state = out.failed ? "err" : "ok";
+    }
+    await renderQboStatus();
+  } catch (err) {
+    if (status) {
+      status.textContent = err.data?.error || "QuickBooks sync failed.";
+      status.dataset.state = "err";
+    }
+  } finally {
+    if (button) button.disabled = false;
+  }
+}

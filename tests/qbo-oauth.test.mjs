@@ -43,3 +43,23 @@ test("admin UI exposes QuickBooks connect status and action", () => {
   assert.match(qbo, /\/api\/admin\/qbo\/status/);
   assert.match(qbo, /\/api\/admin\/qbo\/connect\?format=json/);
 });
+test("admin QuickBooks panel exposes a staff-triggered manual sync", () => {
+  const html = read("admin.html");
+  const qbo = read("js/admin/qbo.js");
+  assert.match(html, /qboSyncNow/, "admin overview should include a manual QBO sync button");
+  assert.match(html, /qboSyncStatus/, "admin overview should include sync result status text");
+  assert.match(qbo, /export async function runQboSync\(/,
+    "admin QBO module should export the manual sync handler");
+  assert.match(qbo, /\/api\/admin\/qbo\/sync/,
+    "manual sync should call the staff-gated admin sync endpoint");
+});
+
+test("admin QBO sync endpoint is staff-gated and delegates to the worker", () => {
+  const src = read("functions/api/admin/qbo/sync.js");
+  assert.match(src, /requireStaff\(/, "manual QBO sync endpoint must require staff");
+  assert.match(src, /runQboSync\(/, "manual endpoint must reuse the QBO worker");
+  assert.match(src, /json\(401,\s*\{\s*error:\s*'unauthenticated'/,
+    "manual endpoint must reject unauthenticated callers");
+  assert.match(src, /json\(403,\s*\{\s*error:\s*'forbidden'/,
+    "manual endpoint must reject non-staff callers");
+});

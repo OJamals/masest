@@ -41,3 +41,9 @@ test("qbo-sync endpoint posts claimed orders and records terminal sync state", (
   assert.doesNotMatch(SRC, /qbo_document_sync_not_implemented|json\(501,/,
     "worker must not leave successfully claimed orders at the placeholder implementation boundary");
 });
+test("qbo-sync exposes a reusable worker for staff-triggered manual runs", () => {
+  assert.match(SRC, /export async function runQboSync\(/,
+    "admin-triggered sync should call the same worker used by cron");
+  assert.match(SRC, /onRequestPost[\s\S]*runQboSync\(/,
+    "public cron endpoint should delegate to the reusable worker after secret auth");
+});

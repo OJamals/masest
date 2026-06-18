@@ -71,14 +71,8 @@ async function requeueOne(sb, order, err) {
   return message;
 }
 
-export async function onRequestPost({ request, env }) {
-  if (!env.QBO_SYNC_SECRET) return json(500, { error: 'qbo_sync_secret_not_configured' });
-  if (!timingSafeEqual(request.headers.get('x-qbo-sync-secret'), env.QBO_SYNC_SECRET)) {
-    return json(401, { error: 'unauthorized' });
-  }
-
+export async function runQboSync({ env, batch = 10 }) {
   const sb = adminClient(env);
-  const batch = boundedBatch(request);
   const { data: claimed, error } = await sb.rpc('claim_qbo_orders', { batch });
   if (error) return json(500, { error: error.message || 'qbo_claim_failed' });
 
@@ -112,4 +106,12 @@ export async function onRequestPost({ request, env }) {
   }
 
   return json(200, { ok: failed === 0, claimed: orders.length, synced, failed, results });
+}
+
+export async function onRequestPost({ request, env }) {
+  if (!env.QBO_SYNC_SECRET) return json(500, { error: 'qbo_sync_secret_not_configured' });
+  if (!timingSafeEqual(request.headers.get('x-qbo-sync-secret'), env.QBO_SYNC_SECRET)) {
+    return json(401, { error: 'unauthorized' });
+  }
+  return runQboSync({ env, batch: boundedBatch(request) });
 }
