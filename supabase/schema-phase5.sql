@@ -7,6 +7,8 @@
 -- Stock tracking (admin sets; checkout/webhook may decrement when track_stock = true).
 alter table public.products         add column if not exists stock        int;
 alter table public.products         add column if not exists track_stock  boolean not null default false;
+alter table public.products         add column if not exists image_url    text;
+alter table public.products         add column if not exists photo_alt    text;
 alter table public.product_variants add column if not exists stock        int;
 alter table public.product_variants add column if not exists track_stock  boolean not null default false;
 
@@ -106,3 +108,37 @@ create policy notifications_company on public.notifications
 grant select on public.messages, public.notifications to authenticated;
 grant all privileges on public.messages, public.notifications, public.offers, public.page_views to service_role;
 grant usage, select on all sequences in schema public to service_role;
+
+-- Atomic tracked-stock decrement for checkout/webhook flows.
+create or replace function public.decrement_variant_stock(p_vsku text, p_qty integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_vsku is null or p_qty is null or p_qty <= 0 then
+    return false;
+  end if;
+
+  update public.product_variants
+     set stock = stock - p_qty
+   where vsku = p_vsku
+     and track_stock is true
+     and stock is not null
+     and stock >= p_qty;
+
+  if found then
+    return true;
+  end if;
+
+  return exists (
+    select 1
+      from public.product_variants
+     where vsku = p_vsku
+       and (track_stock is not true or stock is null)
+  );
+end;
+$$;
+
+grant execute on function public.decrement_variant_stock(text, integer) to service_role;

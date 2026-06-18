@@ -898,6 +898,8 @@ function normalizeCommerceRow(row) {
     sku,
     active: parent?.active !== false && row?.active !== false,
     mode: parent?.mode || row?.mode,
+    image_url: parent?.image_url || row?.image_url || "",
+    photo_alt: parent?.photo_alt || row?.photo_alt || "",
     variants,
     purchasable: !!(sku && parent?.active !== false && row?.active !== false && (parent?.mode || row?.mode) === "buy" && variants.length)
   };
@@ -923,10 +925,12 @@ async function loadCommerceCatalog() {
             return map;
           }
           existing.active = existing.active && row.active;
-          existing.mode = existing.mode || row.mode;
-          existing.variants = existing.variants.concat(row.variants)
-            .sort((a, b) => (a.gallons || 0) - (b.gallons || 0));
-          existing.purchasable = existing.purchasable || row.purchasable;
+      existing.mode = existing.mode || row.mode;
+      existing.variants = existing.variants.concat(row.variants)
+        .sort((a, b) => (a.gallons || 0) - (b.gallons || 0));
+      if (!existing.image_url && row.image_url) existing.image_url = row.image_url;
+      if (!existing.photo_alt && row.photo_alt) existing.photo_alt = row.photo_alt;
+      existing.purchasable = existing.purchasable || row.purchasable;
           return map;
         }, new Map());
       commerceState.loaded = true;
@@ -963,6 +967,33 @@ function bulkPriceHTML(id) {
   return `<span class="shop-card-bulk">${fmtMoney(perGallon, variant.currency)}/gal</span>`;
 }
 
+function commerceMediaFor(id) {
+  const row = commerceState.products.get(String(id).toLowerCase());
+  const p = PRODUCTS[id];
+  return {
+    src: row?.image_url || p?.image || "",
+    alt: row?.photo_alt || (p ? `${p.name} product image` : "")
+  };
+}
+
+function refreshCommerceMedia(root = document) {
+  root.querySelectorAll(".shop-card[data-id]").forEach(card => {
+    const media = commerceMediaFor(card.dataset.id);
+    if (!media.src) return;
+    const slot = card.querySelector(".shop-card-media");
+    if (!slot) return;
+    let img = slot.querySelector("img");
+    if (!img) {
+      slot.querySelector("i")?.remove();
+      img = document.createElement("img");
+      img.loading = "lazy";
+      slot.insertBefore(img, slot.firstChild);
+    }
+    img.src = media.src;
+    img.alt = media.alt;
+  });
+}
+
 // Add the selected volume variant (or the button's default vsku) to the cart, with transient feedback.
 async function addToCartFromButton(button) {
   const wrap = button.closest("[data-commerce-buy]");
@@ -984,6 +1015,7 @@ async function addToCartFromButton(button) {
 }
 
 function refreshCommerceActions(root = document) {
+  refreshCommerceMedia(root);
   root.querySelectorAll("[data-commerce-action]").forEach(slot => {
     const id = slot.dataset.commerceAction;
     slot.innerHTML = commerceActionHTML(id, slot.dataset.commerceSize || "chip");
@@ -997,8 +1029,9 @@ function catalogCard(id) {
   const badge = p.hmis === "0-0-0"
     ? '<span class="hmis-badge">HMIS 0-0-0</span>'
     : '<span class="hmis-badge note">LOW HAZARD</span>';
-  const media = p.image
-    ? `<img src="${p.image}" alt="${p.name} product image" loading="lazy">`
+  const mediaInfo = commerceMediaFor(id);
+  const media = mediaInfo.src
+    ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="lazy">`
     : `<i class="ph ${p.icon}" aria-hidden="true"></i>`;
   return `
     <article class="shop-card" data-id="${id}">
@@ -1172,6 +1205,108 @@ function initShop() {
   if (!isLocalStaticCommerceSuppressed()) loadCommerceCatalog().then(apply);
 
   if (catHash) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
+}
+
+const SERVICE_CATEGORY_COPY = {
+  "Lab Testing — Water Analysis": {
+    icon: "ph-drop",
+    note: "Water chemistry, tower, closed-loop, pretreatment, and wastewater analysis."
+  },
+  "Lab Testing — Biological": {
+    icon: "ph-test-tube",
+    note: "Biological counts, Legionella PCR, and mold/air-quality lab work."
+  },
+  "Lab Testing — Materials": {
+    icon: "ph-magnifying-glass",
+    note: "Deposit, corrosion, particle, resin, and material identification."
+  },
+  "Bid Support": {
+    icon: "ph-file-text",
+    note: "Specification creation, review, and buyer-side bid interview support."
+  },
+  "Consulting Services": {
+    icon: "ph-compass-tool",
+    note: "General consulting, EHSS, investigation, training, and program support."
+  },
+  "Field Services": {
+    icon: "ph-hard-hat",
+    note: "On-site sample collection and billable field service time."
+  },
+  "Water Management Plan": {
+    icon: "ph-clipboard-text",
+    note: "ASHRAE 188 risk assessment, plan writing, audits, and recertification."
+  },
+  "Service Packages": {
+    icon: "ph-package",
+    note: "Bundled sampling, water-management setup, quarterly audit, and recertification packages."
+  }
+};
+
+function htmlEscape(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[ch]));
+}
+
+function initServiceCatalog() {
+  const root = document.querySelector("[data-service-catalog]");
+  if (!root) return;
+
+  fetch("data/catalog.seed.json", { cache: "no-store" })
+    .then((response) => {
+      if (!response.ok) throw new Error("catalog_seed_unavailable");
+      return response.json();
+    })
+    .then((catalog) => {
+      const rows = [
+        ...(Array.isArray(catalog?.services) ? catalog.services : []),
+        ...(Array.isArray(catalog?.service_packages) ? catalog.service_packages : [])
+      ].filter((item) => item?.active !== false);
+
+      const groups = rows.reduce((map, item) => {
+        const key = item.category || "Services";
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(item);
+        return map;
+      }, new Map());
+
+      root.innerHTML = [...groups.entries()].map(([category, items]) => {
+        const copy = SERVICE_CATEGORY_COPY[category] || { icon: "ph-briefcase", note: "Quote-confirmed technical service." };
+        const sorted = items.slice().sort((a, b) => Number(a.public_price || 0) - Number(b.public_price || 0));
+        const minimum = sorted.find((item) => Number.isFinite(Number(item.public_price)));
+        const priceText = minimum ? `From ${fmtMoney(Number(minimum.public_price), "USD")}` : "Quoted";
+        const preview = sorted.slice(0, 4).map((item) => `
+          <li>
+            <span>${htmlEscape(item.name)}</span>
+            <b>${Number.isFinite(Number(item.public_price)) ? fmtMoney(Number(item.public_price), "USD") : "Quote"}</b>
+          </li>
+        `).join("");
+
+        return `
+          <article class="service-category">
+            <div class="service-category-head">
+              <i class="ph ${copy.icon}" aria-hidden="true"></i>
+              <div>
+                <h3>${htmlEscape(category)}</h3>
+                <p>${htmlEscape(copy.note)}</p>
+              </div>
+            </div>
+            <div class="service-category-meta">
+              <span>${items.length} line ${items.length === 1 ? "item" : "items"}</span>
+              <strong>${priceText}</strong>
+            </div>
+            <ul>${preview}</ul>
+          </article>
+        `;
+      }).join("");
+    })
+    .catch(() => {
+      root.innerHTML = '<p class="muted">Service pricing is available by quote. Contact MASEST for the latest workbook-backed scope.</p>';
+    });
 }
 
 /* ---------- Before/after slider (drag, keyboard, reduced-motion safe) ----------
@@ -1490,4 +1625,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initCartButtons();
   if (!isLocalStaticCommerceSuppressed()) loadCommerceCatalog().then(() => refreshCommerceActions(document));
   initShop();
+  initServiceCatalog();
 });

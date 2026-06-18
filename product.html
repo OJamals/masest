@@ -155,11 +155,14 @@
     document.getElementById("pReplaces").textContent = p.replaces;
     document.getElementById("pName").textContent = p.name;
     document.getElementById("pDesc").textContent = p.desc;
-    if (p.image) {
+    function setProductImage(src, alt) {
       const img = document.getElementById("pImage");
-      img.src = p.image;
-      img.alt = p.name + " product container";
+      img.src = src;
+      img.alt = alt;
       img.hidden = false;
+    }
+    if (p.image) {
+      setProductImage(p.image, p.name + " product container");
     }
     document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";
     const quoteHref = "contact.html?product=" + encodeURIComponent(p.name);
@@ -200,6 +203,8 @@
           String(item.sku).toLowerCase() === commerceId || String(item.products?.sku || "").toLowerCase() === commerceId
         );
         const parent = row?.products && typeof row.products === "object" ? row.products : row;
+        const imageUrl = parent?.image_url || row?.image_url;
+        if (imageUrl) setProductImage(imageUrl, parent?.photo_alt || row?.photo_alt || `${p.name} product photo`);
         if (!row || row.active === false || parent.active === false || (parent.mode || row.mode) !== "buy") return;
         const variants = (row.vsku ? [{
           vsku: row.vsku,
