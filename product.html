@@ -46,7 +46,7 @@
   <div class="section-head">
     <span class="eyebrow">Product line</span>
     <h2 class="headline">Procurement-ready VertKleen replacements.</h2>
-    <p class="subhead">Use these static product snapshots when comparing common hazardous chemicals against the VertKleen line. Live product pages add galleries, quote routing, and controlled document requests.</p>
+    <p class="subhead">Use these static product snapshots when comparing common hazardous chemicals against the VertKleen line. Each product page adds galleries, quote routing, and controlled document requests.</p>
   </div>
   <div class="static-product-grid">
     <article class="static-product-card">
@@ -136,7 +136,7 @@
   <div class="wrap">
     <div class="section-head reveal">
       <h2 class="headline">Proof, on paper.</h2>
-      <p class="subhead">Safety data, technical sheets, certifications, and case documents are delivered through controlled request routing, typically within one business day.</p>
+      <p class="subhead">Safety data, technical sheets, certifications, and case documents are delivered through controlled document request routing, typically within one business day.</p>
     </div>
     <div class="reveal" id="pDocs"></div>
   </div>
@@ -169,6 +169,34 @@
     const COMMERCE_ALIAS = {};
     const commerceId = COMMERCE_ALIAS[id] || id;
     const p = PRODUCTS[id];
+    function setProductJsonLd(product) {
+      const canonicalUrl = `https://masest.co/product.html?id=${encodeURIComponent(id)}`;
+      const canonical = document.querySelector('link[rel="canonical"]');
+      if (canonical) canonical.href = canonicalUrl;
+      const graph = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": product.name,
+        "brand": { "@type": "Brand", "name": "VertKleen" },
+        "manufacturer": { "@type": "Organization", "name": "MASEST Consulting LLC" },
+        "category": product.category || "Industrial cleaning chemistry",
+        "description": product.desc,
+        "url": canonicalUrl,
+        "image": product.image ? new URL(product.image, "https://masest.co/").href : undefined,
+        "additionalProperty": [
+          { "@type": "PropertyValue", "name": "HMIS rating", "value": product.hmis || "0-0-0" },
+          { "@type": "PropertyValue", "name": "Replaces", "value": product.replaces || "Legacy hazardous chemistry" }
+        ].filter(Boolean)
+      };
+      let script = document.getElementById("productDetailJsonLd");
+      if (!script) {
+        script = document.createElement("script");
+        script.type = "application/ld+json";
+        script.id = "productDetailJsonLd";
+        document.head.appendChild(script);
+      }
+      script.textContent = JSON.stringify(graph);
+    }
     if (!p) {
       document.title = "Product not found | MASEST VertKleen";
       document.getElementById("main").innerHTML = `
@@ -195,6 +223,7 @@
     document.title = p.name + " | MASEST VertKleen";
     document.getElementById("staticProductFallback")?.setAttribute("hidden", "");
     document.getElementById("bcName").textContent = p.name;
+    setProductJsonLd(p);
     document.getElementById("pReplaces").textContent = p.replaces;
     document.getElementById("pName").textContent = p.name;
     document.getElementById("pDesc").textContent = p.desc;
@@ -431,7 +460,7 @@
   }
 
  document.getElementById("pDocs").innerHTML = p.docs.map(d =>
-      `<div class="doc-row"><div><b>${d}</b><span>Controlled PDF delivery</span></div>
+      `<div class="doc-row"><div><b>${d}</b><span>Controlled document request</span></div>
        <a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(p.name)}&doc=${encodeURIComponent(d)}" aria-label="Request ${d} for ${p.name}">Request</a></div>`).join("");
 
     initReveal();
