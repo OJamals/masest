@@ -25,3 +25,16 @@ test("quote.js fires industry nurture subscribe after its emails, before returni
   assert.ok(callIdx > -1 && returnIdx > -1 && lastEmailIdx > -1, "anchors present");
   assert.ok(lastEmailIdx < callIdx && callIdx < returnIdx, "subscribe runs after emails and before the response");
 });
+
+test("newsletter.html is a real signup page wired to subscribeNewsletter", () => {
+  const html = read("newsletter.html");
+  assert.match(html, /<input[^>]*type="email"/, "must have an email input");
+  assert.match(html, /subscribeNewsletter\(/, "must call window.MASEST.subscribeNewsletter");
+  assert.match(html, /js\/main\.js/, "must boot the shared chrome bundle");
+  assert.match(html, /name="company"/, "must include the honeypot field the function checks");
+  assert.match(html, /canonical[^>]*newsletter\.html/, "must set its canonical URL");
+});
+
+test("sitemap lists the newsletter page", () => {
+  assert.match(read("sitemap.xml"), /newsletter\.html/);
+});

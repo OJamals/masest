@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newsletter | MASEST VertKleen</title>
+<meta name="description" content="Get VertKleen field results, safety chemistry guidance, and industry-specific cleaning insights from MASEST — straight to your inbox.">
+<meta name="theme-color" content="#fafbfc">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="canonical" href="https://masest.co/newsletter.html">
+<meta property="og:title" content="Newsletter | MASEST VertKleen">
+<meta property="og:description" content="VertKleen field results and safety chemistry guidance in your inbox.">
+<meta property="og:url" content="https://masest.co/newsletter.html">
+<meta property="og:image" content="https://masest.co/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<noscript>
+  <nav class="nojs-nav" aria-label="Site">
+  <a href="index.html"><b>MASEST</b></a>
+  <a href="products.html">Products</a>
+  <a href="industries.html">Industries</a>
+  <a href="proof.html">Field Results</a>
+  <a href="resources.html">Resources</a>
+</nav>
+</noscript>
+
+<main id="main">
+  <section class="hero-split">
+    <div class="wrap">
+      <h1 class="display">Cleaner intel, in your inbox.</h1>
+      <p class="subhead">VertKleen field results, HMIS 0-0-0 safety guidance, and industry-specific cleaning insights. No spam — unsubscribe anytime.</p>
+      <form id="newsletterForm" class="newsletter-form" novalidate>
+        <label for="nlEmail" class="visually-hidden">Email address</label>
+        <input id="nlEmail" name="email" type="email" required placeholder="you@company.com" autocomplete="email">
+        <input type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px" hidden>
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+        <p id="nlMsg" class="form-msg" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="js/main.js"></script>
+<script src="js/track.js" defer></script>
+<script type="module">
+  const form = document.getElementById('newsletterForm');
+  const msg = document.getElementById('nlMsg');
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (form.company.value) return; // honeypot
+    const email = form.email.value.trim();
+    msg.textContent = 'Subscribing…';
+    try {
+      if (!window.MASEST?.subscribeNewsletter) throw new Error('unavailable');
+      await window.MASEST.subscribeNewsletter(email);
+      msg.textContent = 'You’re in. Check your inbox to confirm.';
+      form.reset();
+    } catch (err) {
+      msg.textContent = err?.message === 'invalid_email'
+        ? 'Enter a valid email address.'
+        : 'Could not subscribe right now. Try again shortly.';
+    }
+  });
+</script>
+</body>
+</html>
