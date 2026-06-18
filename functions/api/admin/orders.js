@@ -91,6 +91,28 @@ export async function onRequest({ request, env }) {
       return json(200, { ok: true, refunded: true, order: updated });
     }
 
+    if (body.action === 'record_qbo_invoice') {
+      const invoiceId = String(body.qbo_invoice_id || '').trim();
+      if (!invoiceId) return json(400, { error: 'qbo_invoice_id_required' });
+
+      const { data: ord, error: e1 } = await sb.from('orders')
+        .select('id,company_id,status,payment_method').eq('id', body.id).single();
+      if (e1) return json(500, { error: e1.message });
+      if (!ord) return json(404, { error: 'not_found' });
+      if (ord.payment_method !== 'net') {
+        return json(400, { error: 'qbo_invoice_not_net', message: 'Only NET orders can be linked to QuickBooks invoices.' });
+      }
+
+      const { data: order, error } = await sb.from('orders')
+        .update({ qbo_invoice_id: invoiceId })
+        .eq('id', body.id)
+        .select('id,company_id,status,qbo_invoice_id')
+        .single();
+      if (error) return json(500, { error: error.message });
+      await notifyCompany(sb, env, request, order?.company_id, 'invoice ready', `QuickBooks invoice ${invoiceId} is linked to your order.`);
+      return json(200, { ok: true, order });
+    }
+
     if (!ORDER_STATUSES.includes(body.status)) return json(400, { error: 'invalid_status' });
     const { data: order, error } = await sb.from('orders').update({ status: body.status })
       .eq('id', body.id).select('id,company_id,status,total,currency').single();

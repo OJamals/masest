@@ -123,7 +123,7 @@ async function renderOrders() {
       <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
       <td>${esc(order.payment_method || '')}</td>
       <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-      <td><button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'stripe' && order.status !== 'cancelled' ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
+      <td><button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? `Invoice ${esc(order.qbo_invoice_id)}` : 'Add invoice'}</button>` : ''}${order.payment_method === 'stripe' && order.status !== 'cancelled' ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
     </tr>`;
   }).join('')}</tbody></table>`;
 
@@ -152,6 +152,22 @@ async function renderOrders() {
         await renderOrders();
       } catch (err) {
         message('ordStatus', err.data?.error || 'Refund failed.', 'err');
+        button.disabled = false;
+      }
+    });
+  });
+  box.querySelectorAll('[data-qbo-order]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.qboOrder;
+      const invoiceId = prompt('QuickBooks invoice ID');
+      if (!invoiceId) return;
+      button.disabled = true;
+      try {
+        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_invoice', qbo_invoice_id: invoiceId.trim() } });
+        message('ordStatus', 'Invoice recorded.', 'ok');
+        await renderOrders();
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Invoice update failed.', 'err');
         button.disabled = false;
       }
     });
