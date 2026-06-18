@@ -16,6 +16,22 @@ test("public pages carry canonical + og:url + og:image", () => {
   }
 });
 
+test("og:image is the dedicated social card, not the logo placeholder", () => {
+  for (const p of PUBLIC) {
+    const h = read(p);
+    const m = h.match(/property="og:image"\s+content="([^"]+)"/);
+    assert.ok(m, `${p} missing og:image content`);
+    assert.match(m[1], /\/img\/og-card\.png$/, `${p} og:image should be /img/og-card.png`);
+    assert.doesNotMatch(m[1], /masest-logo/, `${p} og:image still points at the logo placeholder`);
+  }
+});
+
+test("public pages declare twitter:card summary_large_image", () => {
+  for (const p of PUBLIC) {
+    assert.match(read(p), /name="twitter:card"\s+content="summary_large_image"/, `${p} missing twitter:card`);
+  }
+});
+
 test("home page exposes Organization/WebSite JSON-LD", () => {
   const h = read("index.html");
   assert.match(h, /application\/ld\+json/, "index missing JSON-LD");

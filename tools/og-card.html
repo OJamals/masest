@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!--
+  og-card.html — source for the 1200x630 social share card.
+  Rendered to img/og-card.png by tools/render-og.mjs (do not hand-edit the PNG).
+  Paths are relative to repo root; render script serves the repo root.
+-->
+<link rel="stylesheet" href="../vendor/satoshi/satoshi.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    font-family: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #f4f6f8;
+    background: #0a0c12;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  .card {
+    position: relative;
+    width: 1200px;
+    height: 630px;
+    padding: 78px 84px 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background:
+      radial-gradient(115% 130% at 100% 0%, rgba(34,193,224,.20) 0%, transparent 52%),
+      radial-gradient(120% 120% at 0% 100%, rgba(108,47,214,.20) 0%, transparent 50%),
+      #0a0c12;
+  }
+  /* brand-gradient hairline along the top edge */
+  .card::before {
+    content: "";
+    position: absolute; top: 0; left: 0; right: 0; height: 6px;
+    background: linear-gradient(90deg, #6c2fd6 0%, #3b6bf0 45%, #22c1e0 100%);
+  }
+  .row { display: flex; align-items: center; gap: 64px; flex: 1; }
+  .brand { flex: 0 0 246px; display: flex; align-items: center; justify-content: center; }
+  .mark { width: 246px; height: auto; filter: drop-shadow(0 8px 28px rgba(0,0,0,.45)); }
+  .content { flex: 1; min-width: 0; }
+  .eyebrow {
+    font-size: 17px; font-weight: 700; letter-spacing: .26em; text-transform: uppercase;
+    color: #8b94a4; margin-bottom: 22px;
+  }
+  h1 {
+    font-size: 67px; font-weight: 900; line-height: 1.03; letter-spacing: -.022em;
+    margin-bottom: 38px;
+  }
+  h1 .grad {
+    background: linear-gradient(115deg, #8a52f5 0%, #3f86ee 48%, #22c8e6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hmis { display: flex; align-items: center; gap: 18px; }
+  .chip {
+    width: 96px; height: 96px; border-radius: 18px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 10px 26px -10px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  .chip b { font-size: 40px; font-weight: 900; line-height: 1; }
+  .chip span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: 7px; opacity: .92; }
+  .chip.h { background: #1559a8; color: #fff; }                 /* HMIS Health = blue */
+  .chip.f { background: #c0392b; color: #fff; }                 /* Flammability = red */
+  .chip.r { background: #e7b008; color: #1a1205; }              /* Reactivity = yellow */
+  .hmis-tag {
+    margin-left: 8px; padding: 11px 20px; border-radius: 999px;
+    border: 1.5px solid rgba(255,255,255,.22); background: rgba(255,255,255,.05);
+    font-size: 20px; font-weight: 800; letter-spacing: .02em; color: #eaf6f7;
+    font-variant-numeric: tabular-nums;
+  }
+  .foot {
+    display: flex; align-items: center; gap: 16px;
+    font-size: 19px; font-weight: 600; letter-spacing: .03em; color: #7c8696;
+  }
+  .foot .lead { color: #cfe9ec; font-weight: 800; letter-spacing: .04em; }
+  .foot .dot { color: #3a4150; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <div class="brand"><img class="mark" src="../img/masest-logo.png" alt="MASEST"></div>
+      <div class="content">
+        <div class="eyebrow">VertKleen &middot; Industrial Cleaning Chemistry</div>
+        <h1>The Power of Acid.<br><span class="grad">The Safety of Water.</span></h1>
+        <div class="hmis">
+          <div class="chip h"><b>0</b><span>Health</span></div>
+          <div class="chip f"><b>0</b><span>Flammability</span></div>
+          <div class="chip r"><b>0</b><span>Reactivity</span></div>
+          <div class="hmis-tag">HMIS 0-0-0</div>
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <span class="lead">masest.co</span>
+      <span class="dot">&bull;</span>
+      <span>HMIS 0-0-0 industrial cleaning chemistry &mdash; used in 50+ countries</span>
+    </div>
+  </div>
+</body>
+</html>

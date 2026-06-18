@@ -11,7 +11,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { readdirSync } from 'node:fs';
 
 const BASE = 'https://masest.co';
-const OG_IMAGE = `${BASE}/img/masest-logo.png`; // TODO: replace with a 1200x630 social card
+const OG_IMAGE = `${BASE}/img/og-card.png`; // 1200x630 social card, source: tools/og-card.html (regen: node tools/render-og.mjs)
 const START = '<!-- seo:auto -->';
 const END = '<!-- /seo:auto -->';
 
