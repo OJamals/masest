@@ -43,6 +43,7 @@ async function boot() {
     $('admApp').hidden = false;
     $('admGreeting').textContent = 'Signed in as staff.';
     renderStats(stats);
+    renderQboStatus();
     setTab(location.hash.slice(1) || 'overview');
   } catch (err) {
     $('admGate').hidden = false;
@@ -96,6 +97,48 @@ function renderStats(stats = {}) {
   $('admStats').innerHTML = items.map(([icon, value, label]) => `
     <div class="adm-card adm-stat"><i class="ph ${icon}"></i><b>${esc(value)}</b><span class="muted">${esc(label)}</span></div>
   `).join('');
+}
+
+async function renderQboStatus() {
+  const status = $('qboStatus');
+  const button = $('qboConnect');
+  if (!status || !button) return;
+  status.textContent = 'Checking QuickBooks...';
+  status.dataset.state = '';
+  button.disabled = true;
+  try {
+    const info = await api('/api/admin/qbo/status');
+    status.textContent = info.connected
+      ? `Connected${info.realm_id ? ` to realm ${info.realm_id}` : ''}.`
+      : 'Not connected.';
+    status.dataset.state = info.connected ? 'ok' : 'err';
+    button.innerHTML = `<i class="ph ph-plugs-connected"></i> ${info.connected ? 'Reconnect QuickBooks' : 'Connect QuickBooks'}`;
+  } catch (err) {
+    status.textContent = err.data?.error || 'QuickBooks status unavailable.';
+    status.dataset.state = 'err';
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function connectQbo() {
+  const status = $('qboStatus');
+  const button = $('qboConnect');
+  if (button) button.disabled = true;
+  if (status) {
+    status.textContent = 'Opening QuickBooks...';
+    status.dataset.state = '';
+  }
+  try {
+    const out = await api('/api/admin/qbo/connect?format=json');
+    window.location.assign(out.url);
+  } catch (err) {
+    if (status) {
+      status.textContent = err.data?.error || 'QuickBooks connect failed.';
+      status.dataset.state = 'err';
+    }
+    if (button) button.disabled = false;
+  }
 }
 
 async function renderOrders() {
@@ -754,6 +797,7 @@ function wire() {
   $('qFilter').addEventListener('change', renderQuotes);
   $('qSearch').addEventListener('input', renderQuotes);
   $('custSearch').addEventListener('input', renderCustomers);
+  $('qboConnect')?.addEventListener('click', connectQbo);
   $('ordExport').addEventListener('click', async () => {
     message('ordStatus', 'Preparing export...');
     try {

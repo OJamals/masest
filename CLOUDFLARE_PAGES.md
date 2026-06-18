@@ -51,3 +51,17 @@ curl -I https://masest.co/
 curl -s https://masest.co/api/health | python3 -m json.tool
 curl -s "https://masest.co/api/products?cb=$(date +%s)"
 ```
+
+## QuickBooks Online
+
+Apply `docs/supabase/qbo-sync.sql`, then set these Cloudflare Pages secrets before enabling the worker:
+
+- `QBO_CLIENT_ID`
+- `QBO_CLIENT_SECRET`
+- `QBO_REDIRECT_URI=https://masest.co/api/admin/qbo/callback`
+- `QBO_OAUTH_STATE_SECRET`
+- `QBO_SYNC_SECRET`
+- `QBO_INCOME_ACCOUNT_ID`
+- `QBO_ENVIRONMENT=sandbox` or `production`
+
+Connect QuickBooks from `admin.html`. Trigger the queue worker with `POST /api/qbo-sync` and header `x-qbo-sync-secret: $QBO_SYNC_SECRET`.

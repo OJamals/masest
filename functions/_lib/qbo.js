@@ -76,6 +76,60 @@ export function buildInvoicePayload(input) {
   };
 }
 
+const GENERIC_CUSTOMER_NAME = 'Online Sales (MASEST)';
+
+export function documentPlanFor(order, companyNames = {}) {
+  const companyId = order?.company_id || null;
+  if (order?.payment_method === 'net') {
+    return {
+      docType: 'invoice',
+      entity: 'Invoice',
+      customer: companyId
+        ? { key: `company:${companyId}`, displayName: companyNames[companyId] || `Company ${companyId}` }
+        : { key: 'generic', displayName: GENERIC_CUSTOMER_NAME },
+    };
+  }
+
+  if (companyId) {
+    return {
+      docType: 'sales_receipt',
+      entity: 'SalesReceipt',
+      customer: { key: `company:${companyId}`, displayName: companyNames[companyId] || `Company ${companyId}` },
+    };
+  }
+
+  return {
+    docType: 'sales_receipt',
+    entity: 'SalesReceipt',
+    customer: { key: 'generic', displayName: GENERIC_CUSTOMER_NAME },
+  };
+}
+
+export async function syncOrder(sb, env, accessToken, realmId, order, items = [], companyNames = {}, options = {}) {
+  const fetchImpl = options.fetchImpl || fetch;
+  const plan = documentPlanFor(order, companyNames);
+  const customerRef = await findOrCreateCustomer(sb, env, accessToken, realmId, plan.customer, { fetchImpl });
+  const itemRefs = {};
+
+  for (const item of items || []) {
+    if (!itemRefs[item.sku]) {
+      itemRefs[item.sku] = await findOrCreateItem(sb, env, accessToken, realmId, {
+        sku: item.sku,
+        name: item.name || item.sku,
+      }, { fetchImpl });
+    }
+  }
+
+  const payloadInput = { order, items, customerRef, itemRefs };
+  const payload = plan.docType === 'invoice'
+    ? buildInvoicePayload(payloadInput)
+    : buildSalesReceiptPayload(payloadInput);
+  const created = await qboCreate(env, accessToken, realmId, plan.entity, payload, fetchImpl);
+  const docId = created?.[plan.entity]?.Id;
+  if (!docId) throw new Error(`qbo_${plan.entity.toLowerCase()}_id_missing`);
+  return { docId, docType: plan.docType };
+}
+
 function qboHeaders(accessToken) {
   return {
     authorization: `Bearer ${accessToken}`,

@@ -28,3 +28,16 @@ test("qbo-sync endpoint requeues claimed orders when token setup fails", () => {
   assert.match(SRC, /qbo_error:\s*message/,
     "endpoint must record the failure reason");
 });
+
+test("qbo-sync endpoint posts claimed orders and records terminal sync state", () => {
+  assert.match(SRC, /syncOrder\(/,
+    "endpoint must hand claimed orders to the QBO order synchronizer");
+  assert.match(SRC, /qbo_sync_status:\s*'synced'/,
+    "successful QBO posts must mark orders synced");
+  assert.match(SRC, /qbo_doc_id:\s*result\.docId/,
+    "successful QBO posts must record the QBO document id");
+  assert.match(SRC, /qbo_invoice_id(?:\s*:|\s*=)\s*result\.docId/,
+    "invoice syncs must preserve the legacy qbo_invoice_id column");
+  assert.doesNotMatch(SRC, /qbo_document_sync_not_implemented|json\(501,/,
+    "worker must not leave successfully claimed orders at the placeholder implementation boundary");
+});

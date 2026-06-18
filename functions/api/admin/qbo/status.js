@@ -1,0 +1,21 @@
+// GET /api/admin/qbo/status — staff-only QBO connection status.
+import { adminClient, json, requireStaff } from '../../../_lib/supabase.js';
+
+export async function onRequestGet({ request, env }) {
+  const { user, staff } = await requireStaff(request, env);
+  if (!user) return json(401, { error: 'unauthenticated' });
+  if (!staff) return json(403, { error: 'forbidden' });
+
+  const { data, error } = await adminClient(env).from('qbo_tokens')
+    .select('realm_id,refresh_token,access_token,access_expires_at,updated_at')
+    .eq('id', 1)
+    .maybeSingle();
+  if (error) return json(500, { error: error.message || 'qbo_status_failed' });
+
+  return json(200, {
+    connected: Boolean(data?.refresh_token || data?.access_token),
+    realm_id: data?.realm_id || null,
+    access_expires_at: data?.access_expires_at || null,
+    updated_at: data?.updated_at || null,
+  });
+}

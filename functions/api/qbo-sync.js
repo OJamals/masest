@@ -1,6 +1,6 @@
 // POST /api/qbo-sync — cron/manual QBO sync worker entrypoint.
 import { adminClient, json } from '../_lib/supabase.js';
-import { getAccessToken, nextSyncState } from '../_lib/qbo.js';
+import { getAccessToken, nextSyncState, syncOrder } from '../_lib/qbo.js';
 
 function boundedBatch(request) {
   const requested = Number(new URL(request.url).searchParams.get('batch') || 10);
@@ -18,6 +18,48 @@ async function requeueClaimed(sb, orders, err) {
   return message;
 }
 
+async function orderItems(sb, orderId) {
+  const { data, error } = await sb.from('order_items')
+    .select('sku,name,qty,unit_price,line_total')
+    .eq('order_id', orderId);
+  if (error) throw new Error(error.message || 'qbo_order_items_read_failed');
+  return data || [];
+}
+
+async function companyNamesFor(sb, order) {
+  if (!order.company_id) return {};
+  const { data, error } = await sb.from('companies')
+    .select('name')
+    .eq('id', order.company_id)
+    .maybeSingle();
+  if (error) throw new Error(error.message || 'qbo_company_read_failed');
+  return data?.name ? { [order.company_id]: data.name } : {};
+}
+
+async function markSynced(sb, order, result) {
+  const patch = {
+    qbo_sync_status: 'synced',
+    qbo_doc_id: result.docId,
+    qbo_doc_type: result.docType,
+    qbo_synced_at: new Date().toISOString(),
+    qbo_error: null,
+    qbo_next_attempt_at: null,
+  };
+  if (result.docType === 'invoice') patch.qbo_invoice_id = result.docId;
+  const { error } = await sb.from('orders').update(patch).eq('id', order.id);
+  if (error) throw new Error(error.message || 'qbo_order_update_failed');
+}
+
+async function requeueOne(sb, order, err) {
+  const next = nextSyncState(order.qbo_attempts || 0);
+  const message = err?.message || String(err);
+  const { error } = await sb.from('orders')
+    .update({ ...next, qbo_error: message })
+    .eq('id', order.id);
+  if (error) throw new Error(error.message || 'qbo_order_requeue_failed');
+  return message;
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.QBO_SYNC_SECRET) return json(500, { error: 'qbo_sync_secret_not_configured' });
   if (request.headers.get('x-qbo-sync-secret') !== env.QBO_SYNC_SECRET) {
@@ -32,13 +74,31 @@ export async function onRequestPost({ request, env }) {
   const orders = claimed || [];
   if (!orders.length) return json(200, { ok: true, claimed: 0, synced: 0, failed: 0 });
 
+  let credentials;
   try {
-    await getAccessToken(sb, env);
+    credentials = await getAccessToken(sb, env);
   } catch (err) {
     const message = await requeueClaimed(sb, orders, err);
     return json(503, { error: 'qbo_unavailable', detail: message, claimed: orders.length, failed: orders.length });
   }
 
-  const message = await requeueClaimed(sb, orders, new Error('qbo_document_sync_not_implemented'));
-  return json(501, { error: 'qbo_document_sync_not_implemented', detail: message, claimed: orders.length, failed: orders.length });
+  const results = [];
+  let synced = 0;
+  let failed = 0;
+  for (const order of orders) {
+    try {
+      const items = await orderItems(sb, order.id);
+      const companyNames = await companyNamesFor(sb, order);
+      const result = await syncOrder(sb, env, credentials.accessToken, credentials.realmId, order, items, companyNames);
+      await markSynced(sb, order, result);
+      synced += 1;
+      results.push({ id: order.id, ok: true, doc_id: result.docId, doc_type: result.docType });
+    } catch (err) {
+      const detail = await requeueOne(sb, order, err);
+      failed += 1;
+      results.push({ id: order.id, ok: false, error: detail });
+    }
+  }
+
+  return json(200, { ok: failed === 0, claimed: orders.length, synced, failed, results });
 }
