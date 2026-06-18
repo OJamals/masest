@@ -176,6 +176,11 @@
     if (err?.code === "stripe_not_configured") {
       return "Online checkout is not configured yet. Send a quote request and MASEST will complete the order path.";
     }
+    if (err?.code === "credit_limit_exceeded") {
+      const avail = Number(err.available || 0).toFixed(2);
+      const total = Number(err.order_total || 0).toFixed(2);
+      return `This $${total} order exceeds your available credit ($${avail}). Pay now with a card, or send a quote request and MASEST will review your account terms.`;
+    }
     if (err?.message === "cart_empty") return "Add at least one product before checkout.";
     return "Checkout is not available for this cart. Send a quote request and MASEST will confirm the order path.";
   }

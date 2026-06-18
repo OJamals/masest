@@ -39,3 +39,9 @@ test("dashboard renders balance owed + credit available from ACCOUNT.credit", ()
   assert.match(js, /Balance owed/, "dashboard must label the outstanding balance");
   assert.match(js, /Credit available/, "dashboard must label available credit");
 });
+
+test("cart surfaces a credit_limit_exceeded buyer message", () => {
+  const html = read("cart.html");
+  assert.match(html, /credit_limit_exceeded/, "cart must handle the credit_limit_exceeded code");
+  assert.match(html, /available credit/i, "cart message must mention available credit");
+});
