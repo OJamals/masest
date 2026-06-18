@@ -19,11 +19,17 @@ export async function onRequestPost({ request, env }) {
     const family = uaFamily(request.headers.get('user-agent') || '');
     if (family === 'bot') return new Response(null, { status: 204 });
     const sb = adminClient(env);
+    const utm = body.utm || {};
+    const u = (v) => (v ? String(v).slice(0, 120) : null);
     await sb.from('page_views').insert({
       path,
       referrer: String(body.referrer || '').slice(0, 300) || null,
       ua_family: family,
       visitor: String(body.visitor || '').slice(0, 64) || null,
+      event: String(body.event || 'pageview').slice(0, 40),
+      utm_source: u(utm.utm_source),
+      utm_medium: u(utm.utm_medium),
+      utm_campaign: u(utm.utm_campaign),
     });
   } catch { /* fail open */ }
   return new Response(null, { status: 204 });
