@@ -54,7 +54,9 @@ curl -s "https://masest.co/api/products?cb=$(date +%s)"
 
 ## QuickBooks Online
 
-Apply `supabase/schema-qbo.sql`, then set these Cloudflare Pages secrets before enabling the worker:
+Apply `supabase/schema-qbo.sql`, then apply `supabase/qbo-cron.example.sql` after replacing `<QBO_SYNC_SECRET>`. The cron template requires Supabase `pg_cron` and `pg_net`.
+
+Set these Cloudflare Pages secrets before enabling the worker:
 
 - `QBO_CLIENT_ID`
 - `QBO_CLIENT_SECRET`
@@ -64,4 +66,4 @@ Apply `supabase/schema-qbo.sql`, then set these Cloudflare Pages secrets before 
 - `QBO_INCOME_ACCOUNT_ID`
 - `QBO_ENVIRONMENT=sandbox` or `production`
 
-Connect QuickBooks from `admin.html`. Trigger the queue worker with `POST /api/qbo-sync` and header `x-qbo-sync-secret: $QBO_SYNC_SECRET`.
+Connect QuickBooks from `admin.html`. The schedule triggers `POST /api/qbo-sync`; manual runs can use the same endpoint with header `x-qbo-sync-secret: $QBO_SYNC_SECRET`.
