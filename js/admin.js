@@ -29,6 +29,14 @@ function statusBadge(value) {
   return `<span class="badge" data-s="${esc(value)}">${esc(String(value || 'unknown').replaceAll('_', ' '))}</span>`;
 }
 
+function setupProgress(company) {
+  const setup = company.setup;
+  if (!setup?.steps?.length) return '<span class="muted">—</span>';
+  const open = setup.steps.filter((step) => !step.done);
+  const firstOpen = open[0]?.label || 'Complete';
+  return `<span data-setup-state="${open.length ? 'open' : 'done'}"><b>${setup.percent || 0}%</b> <small class="muted">${esc(firstOpen)}</small></span>`;
+}
+
 function message(id, text, kind = '') {
   const el = $(id);
   if (!el) return;
@@ -214,11 +222,12 @@ async function renderCompanies() {
     box.innerHTML = '<p class="muted" style="padding:14px">No accounts.</p>';
     return;
   }
-  box.innerHTML = `<div class="adm-tools" style="margin-bottom:10px"><button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button></div><table class="adm"><thead><tr><th><input type="checkbox" id="coAll" aria-label="Select all"></th><th>Company</th><th>Status</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
+  box.innerHTML = `<div class="adm-tools" style="margin-bottom:10px"><button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button></div><table class="adm"><thead><tr><th><input type="checkbox" id="coAll" aria-label="Select all"></th><th>Company</th><th>Status</th><th>Setup</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
     <tr>
       <td><input type="checkbox" class="co-check" value="${esc(company.id)}"></td>
       <td><button class="link-name" data-open-company="${esc(company.id)}" type="button">${esc(company.name)}</button></td>
       <td>${statusBadge(company.status)}</td>
+      <td>${setupProgress(company)}</td>
       <td><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${esc(company.id)}"></td>
       <td><input class="adm-input" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${esc(company.id)}"></td>
       <td><select class="adm-select" data-tier="${esc(company.id)}">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></td>

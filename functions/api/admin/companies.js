@@ -3,6 +3,28 @@
 //   POST { id | ids:[...], action } → approve|reject|suspend|set_terms (single or bulk)
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 
+function setupStep(key, label, done, detail) {
+  return { key, label, done: Boolean(done), detail };
+}
+
+function buildCompanySetup(company) {
+  const profiles = company?.profiles || [];
+  const approved = company?.status === 'approved';
+  const hasProfile = profiles.some((profile) => profile.full_name && profile.phone);
+  const hasTaxFile = Boolean(company?.tax_exempt || company?.resale_cert_url);
+  const hasPayment = Boolean(company?.stripe_customer_id);
+  const hasNetTerms = approved && (company?.net_terms_days || 0) > 0;
+  const steps = [
+    { key: 'profile', label: 'Profile', done: hasProfile, detail: hasProfile ? 'buyer contact ready' : 'missing contact phone/name' },
+    { key: 'approval', label: 'Approval', done: approved, detail: approved ? 'approved' : `status ${company?.status || 'pending'}` },
+    { key: 'tax', label: 'Tax file', done: hasTaxFile, detail: hasTaxFile ? 'tax file ready' : 'no tax/resale file' },
+    { key: 'payment', label: 'Payment', done: hasPayment, detail: hasPayment ? 'Stripe customer ready' : 'no Stripe customer' },
+    { key: 'net_terms', label: 'NET terms', done: hasNetTerms, detail: hasNetTerms ? `NET-${company.net_terms_days}` : 'terms not enabled' },
+  ];
+  const done = steps.filter((step) => step.done).length;
+  return { done, total: steps.length, percent: Math.round((done / steps.length) * 100), steps };
+}
+
 export async function onRequest({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
@@ -18,7 +40,7 @@ export async function onRequest({ request, env }) {
     if (status) q = q.eq('status', status);
     const { data, error } = await q;
     if (error) return json(500, { error: error.message });
-    return json(200, { companies: data || [] });
+    return json(200, { companies: (data || []).map((company) => ({ ...company, setup: buildCompanySetup(company) })) });
   }
 
   if (request.method === 'POST') {
