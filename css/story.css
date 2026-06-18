@@ -1340,31 +1340,48 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   width: min(760px, 86vw);
-  margin: clamp(12px, 2vh, 20px) auto 8px;
+  margin: clamp(24px, 5vh, 52px) auto;
 }
 
+/* Each zero card carries its Act 3 axis accent — the colors from the removed small blocks. */
+.story .savior-zero-scale .zero-axis:nth-child(1) { --ax: var(--hmis-h); }
+.story .savior-zero-scale .zero-axis:nth-child(2) { --ax: var(--hmis-f); }
+.story .savior-zero-scale .zero-axis:nth-child(3) { --ax: var(--hmis-r); }
+
 .story .zero-axis {
+  position: relative;
+  overflow: hidden;
   min-height: 100px;
   padding: 15px 14px;
-  border: 1px solid rgba(126, 224, 255, .34);
+  border: 1px solid color-mix(in srgb, var(--ax, var(--s-safe-text)) 40%, transparent);
   border-radius: 18px;
   background:
-    radial-gradient(90% 140% at 50% 0%, rgba(65, 190, 255, .2), transparent 68%),
-    linear-gradient(180deg, rgba(12, 54, 67, .74), rgba(8, 18, 23, .72));
+    radial-gradient(90% 140% at 50% 0%, color-mix(in srgb, var(--ax, #41beff) 22%, transparent), transparent 68%),
+    linear-gradient(180deg, rgba(8, 121, 111, .2), rgba(8, 18, 23, .72));
   color: #d7fbff;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, .1),
-    0 24px 72px -60px rgba(72, 211, 255, .9);
+    0 24px 72px -60px color-mix(in srgb, var(--ax, #48d3ff) 78%, transparent);
   text-align: center;
+}
+
+.story .zero-axis::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 22%; right: 22%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--ax, var(--s-safe-text));
+  opacity: .85;
 }
 
 .story .zero-axis strong {
   display: block;
-  margin: 2px 0 4px;
+  margin: 6px 0 4px;
   color: #f3ffff;
   font-size: clamp(2rem, 4vw, 3.4rem);
   line-height: .95;
-  text-shadow: 0 0 22px rgba(72, 211, 255, .62);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--ax, #48d3ff) 62%, transparent);
 }
 
 .story .zero-axis small {

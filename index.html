@@ -186,32 +186,6 @@
             <span class="fmeaning">Will it react violently? 0 is stable. 4 can detonate.</span>
           </div>
         </div>
-        <div class="hmis-scale hmis-scale-hot" data-at="4">
-          <div class="scale-head">
-            <span>HMIS hazard rises on three axes</span>
-            <span>3 serious &middot; 2 moderate &middot; 1 slight</span>
-          </div>
-          <div class="hmis-axis-grid" aria-label="HMIS hazard scale across health, flammability, and reactivity">
-            <div class="hmis-axis axis-health">
-              <span>Health</span>
-              <strong>3</strong>
-              <small>Brief exposure can mean serious injury.</small>
-            </div>
-            <div class="hmis-axis axis-flam">
-              <span>Flammability</span>
-              <strong>2</strong>
-              <small>Heat and vapor turn handling into risk.</small>
-            </div>
-            <div class="hmis-axis axis-react">
-              <span>Reactivity</span>
-              <strong>1</strong>
-              <small>Pressure, metal, or mixing can destabilize.</small>
-            </div>
-          </div>
-          <div class="heat-strip" aria-hidden="true">
-            <span>4 extreme</span><span>3 serious</span><span>2 moderate</span><span>1 slight</span>
-          </div>
-        </div>
       </div>
     </div>
   </section>
@@ -254,18 +228,6 @@
             <p>Chlorinated solvents strip oil and carbon fast, then linger as toxic vapor that's hard to ventilate.</p>
           </div>
         </div>
-        <div class="chem-scale" data-at="1.55">
-          <div class="hazard-field" aria-hidden="true">
-            <i></i><i></i><i></i><i></i>
-          </div>
-          <div class="scale-track">
-            <div class="cdot" data-dot="0" style="--v:3"><span class="enemy">Rust</span><span class="chem">Muriatic</span></div>
-            <div class="cdot" data-dot="1" style="--v:3"><span class="enemy">Grease</span><span class="chem">Lye</span></div>
-            <div class="cdot" data-dot="2" style="--v:3"><span class="enemy">Biofilm</span><span class="chem">Glut</span></div>
-            <div class="cdot" data-dot="3" style="--v:3"><span class="enemy">Oil</span><span class="chem">Solvent</span></div>
-          </div>
-          <div class="scale-ticks"><span>0 none</span><span>1</span><span>2</span><span>3 serious</span><span>4 severe</span></div>
-        </div>
         <p class="chem-out" data-at="2.35">Most legacy answers land at <b>3 for health</b>: serious injury is possible after brief exposure.</p>
         <p class="chem-final" data-at="3">Then make every number fall to <b>zero</b>.</p>
       </div>
@@ -280,9 +242,6 @@
         <span class="savior-badge" data-at="0"><i class="ph ph-shield-check" aria-hidden="true"></i> Enter VertKleen</span>
         <h2 data-at="0">The same job. <span class="accent">Zero</span> hazard.</h2>
         <p class="lede" data-at="1">VertKleen replaces the hazardous step with HMIS 0-0-0 chemistry across the core line: no fumes, no evacuation, and simpler handling for occupied sites.</p>
-        <div class="savior-zero" data-at="2">
-          <div class="z">0</div><div class="z">0</div><div class="z">0</div>
-        </div>
         <div class="savior-zero-scale" data-at="2" aria-label="HMIS zero hazard across health, flammability, and reactivity">
           <div class="zero-axis"><span>Health</span><strong>0</strong><small>No expected injury</small></div>
           <div class="zero-axis"><span>Flammability</span><strong>0</strong><small>Will not burn</small></div>
@@ -645,7 +604,7 @@
       function(){out.a1={h:op('.act[data-act="1"] .act-h'),reel:document.querySelector('.reel-idx').textContent,slideVis:op('.reel-slide[data-slide="1"]'),fx:cvPix(1)};},
       function(){out.a2={h:op('.act[data-act="2"] .act-h'),chip:op('.chip.c-rust'),fx:cvPix(2)};},
       function(){out.a3={h:op('.act[data-act="3"] .act-h'),f:op('.factor.f-react'),scale:op('.hmis-scale')};},
-function(){out.a4={h:op('.act-chems .act-h'),card:op('.chem-card[data-at=".85"]'),dot:op('.cdot[data-dot="2"]'),safe:document.querySelector('.chem-scale').classList.contains('safe')?1:0};},
+function(){out.a4={h:op('.act-chems .act-h'),card:op('.chem-card[data-at=".85"]'),dot:op('.cdot[data-dot="2"]'),safe:(function(e){return e&&e.classList.contains('safe')?1:0;})(document.querySelector('.chem-scale'))};},
       function(){out.a5={h:op('.act-savior h2'),z:op('.savior-zero'),fx:cvPix(5),rail:document.querySelectorAll('.rail-btn.is-on').length};}
     ];
     scrolling=true;
