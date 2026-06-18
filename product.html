@@ -13,6 +13,14 @@
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
+<style>
+  .drum-ref{margin-top:22px;max-width:320px;padding:14px 16px;border:1px solid var(--line,#e3e6ea);border-radius:12px;background:var(--surface,#fff)}
+  .drum-ref-head{font-weight:700;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#6b7280);margin-bottom:8px}
+  .drum-ref-row{display:flex;justify-content:space-between;gap:16px;padding:4px 0;font-size:.95rem}
+  .drum-ref-row span:last-child{font-variant-numeric:tabular-nums;font-weight:600}
+  .drum-ref .btn{margin-top:12px}
+  .drum-ref-note{margin:10px 0 0;font-size:.78rem;line-height:1.4;color:var(--muted,#6b7280)}
+</style>
 </head>
 <body>
 
@@ -40,6 +48,7 @@
         <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
       </div>
       <p class="cart-feedback" id="pCartFeedback" role="status" aria-live="polite" hidden></p>
+      <div class="drum-ref" id="pDrums" hidden></div>
     </div>
     <div class="hmis-panel">
       <img id="pImage" class="product-shot" src="img/products/hvac-hcr.webp" alt="" hidden>
@@ -106,6 +115,10 @@
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const id = new URLSearchParams(location.search).get("id") || "hcr";
+    // Editorial keeps the legacy slug (e.g. `crhd`); the commerce catalog uses the
+    // canonical slug (`cr-hd`). Map id -> commerce sku so the buy button still resolves.
+    const COMMERCE_ALIAS = { crhd: "cr-hd" };
+    const commerceId = COMMERCE_ALIAS[id] || id;
     const p = PRODUCTS[id];
     if (!p) {
       document.title = "Product not found | MASEST VertKleen";
@@ -150,7 +163,7 @@
         if (!response.ok) throw new Error("catalog_unavailable");
         const payload = await response.json();
         const row = (payload.products || []).find(item =>
-          String(item.sku).toLowerCase() === id || String(item.products?.sku || "").toLowerCase() === id
+          String(item.sku).toLowerCase() === commerceId || String(item.products?.sku || "").toLowerCase() === commerceId
         );
         const parent = row?.products && typeof row.products === "object" ? row.products : row;
         if (!row || row.active === false || parent.active === false || (parent.mode || row.mode) !== "buy") return;
@@ -180,7 +193,9 @@
         const perGallonText = (v) => Number(v.gallons) > 0
           ? ` · ${money(Number(v.price) / Number(v.gallons), v.currency)}/gal`
           : "";
-        const selectedIndex = Math.max(0, variants.findIndex(v => Number(v.gallons) === 55));
+        // Default to the 5 gal pail (the common buyable pack); never default onto a
+        // quote-only drum/tote size. Falls back to the first buyable variant.
+        const selectedIndex = Math.max(0, variants.findIndex(v => Number(v.gallons) === 5));
         const sel = document.createElement("select");
         sel.id = "pVol";
         sel.className = "commerce-vol";
@@ -221,6 +236,27 @@
             setTimeout(() => { buyBtn.textContent = original; buyBtn.disabled = false; }, 1200);
           }
         });
+      })
+      .catch(() => {});
+
+    // Drums & totes (55 / 275 gal): list price for reference + freight-quote CTA.
+    // Display only — these sizes are quote-only (freight quoted after order), never cart.
+    fetch("data/drum-pricing.json", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : {}))
+      .then(map => {
+        const drums = map[commerceId];
+        const el = document.getElementById("pDrums");
+        if (!el || !Array.isArray(drums) || !drums.length) return;
+        const drumMoney = (n, c) => new Intl.NumberFormat("en-US", {
+          style: "currency", currency: String(c || "usd").toUpperCase(), maximumFractionDigits: 0
+        }).format(Number(n));
+        const name = p ? p.name : commerceId;
+        el.innerHTML =
+          `<div class="drum-ref-head">Drums &amp; totes</div>` +
+          drums.map(d => `<div class="drum-ref-row"><span>${d.label}</span><span>${drumMoney(d.price, d.currency)}</span></div>`).join("") +
+          `<a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(name)}&size=drum">Request a freight quote</a>` +
+          `<p class="drum-ref-note">List price shown. 55 &amp; 275 gal ship LTL; final freight is quoted after order.</p>`;
+        el.hidden = false;
       })
       .catch(() => {});
 

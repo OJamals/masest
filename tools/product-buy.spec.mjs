@@ -27,14 +27,16 @@ test.afterAll(async () => {
   await once(server, "exit").catch(() => {});
 });
 
-test("product add-to-cart gives confirmation and cart route", async ({ page }) => {
+test("product add-to-cart resolves the crhd->cr-hd commerce alias", async ({ page }) => {
+  // Editorial id is `crhd`; the commerce catalog sku is `cr-hd`. The buy button must
+  // still resolve via the alias map in product.html.
   await page.route("**/api/products", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         products: [
-          { sku: "crhd", name: "VertKleen CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+          { sku: "cr-hd", name: "VertKleen CR HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
         ],
       }),
     });
@@ -48,20 +50,22 @@ test("product add-to-cart gives confirmation and cart route", async ({ page }) =
   await expect(page.locator("[data-cart-count]")).toHaveText("1");
 });
 
-test("product buy selector defaults to the 55 gallon bulk price", async ({ page }) => {
+test("buy selector defaults to the 5 gallon pail and hides quote-only drums", async ({ page }) => {
   await page.route("**/api/products", async route => route.fulfill({
     status: 200,
     contentType: "application/json",
     body: JSON.stringify({
       products: [
         {
-          sku: "crhd",
-          name: "VertKleen CRHD",
+          sku: "cr-hd",
+          name: "VertKleen CR HD",
           mode: "buy",
           active: true,
           product_variants: [
-            { vsku: "crhd-5", label: "5 gal pail", gallons: 5, price: 125, currency: "usd", active: true, sort: 1 },
-            { vsku: "crhd-55", label: "55 gal drum", gallons: 55, price: 899.25, currency: "usd", active: true, sort: 2 },
+            { vsku: "VK-CRHD-1", label: "1 gal", gallons: 1, price: 8.48, currency: "usd", active: true, sort: 1 },
+            { vsku: "VK-CRHD-5", label: "5 gal", gallons: 5, price: 42.42, currency: "usd", active: true, sort: 3 },
+            // 55 gal is quote-only (active:false) — must be filtered out of the buy selector.
+            { vsku: "VK-CRHD-55", label: "55 gal drum", gallons: 55, price: 281.82, currency: "usd", active: false, sort: 4 },
           ],
         },
       ],
@@ -70,10 +74,20 @@ test("product buy selector defaults to the 55 gallon bulk price", async ({ page 
 
   await page.goto(`${BASE_URL}/product.html?id=crhd`, { waitUntil: "networkidle" });
 
-  await expect(page.locator("#pVol")).toHaveValue("crhd-55");
-  await expect(page.locator("#pVol")).toContainText("55 gal drum · $899.25 · $16.35/gal");
-  await expect(page.locator("#pUnitPrice")).toHaveText("$16.35/gal");
+  await expect(page.locator("#pVol")).toHaveValue("VK-CRHD-5");
+  await expect(page.locator("#pVol")).not.toContainText("55 gal drum");
+  await expect(page.locator("#pUnitPrice")).toHaveText("$8.48/gal");
+});
 
-  await page.locator("#pVol").selectOption("crhd-5");
-  await expect(page.locator("#pUnitPrice")).toHaveText("$25/gal");
+test("drum & tote reference block shows freight-quote CTA from static pricing", async ({ page }) => {
+  await page.route("**/api/products", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ products: [] }),
+  }));
+
+  await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "networkidle" });
+
+  const drums = page.locator("#pDrums");
+  await expect(drums).toBeVisible();
+  await expect(drums).toContainText("55 gal drum");
+  await expect(drums.getByRole("link", { name: /Request a freight quote/ })).toBeVisible();
 });

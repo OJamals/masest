@@ -5,3 +5,4 @@ package-lock.json
 dist/
 .dev.vars
 .wrangler/
+test-results/
