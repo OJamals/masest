@@ -2,7 +2,7 @@
 // Stores the lead in Supabase (best-effort) and emails sales + an autoreply via Resend.
 // Spam defense: honeypot (_gotcha) + SOFT Turnstile — a token is verified only when one is
 // present AND a secret is set, so a misconfigured/absent CAPTCHA never blocks a real lead.
-import { adminClient, json, sendEmail, htmlEscape } from '../_lib/supabase.js';
+import { adminClient, json, sendEmail, htmlEscape, emailLayout } from '../_lib/supabase.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const LABELS = {
@@ -79,12 +79,15 @@ export async function onRequestPost({ request, env }) {
   await sendEmail(env, {
     to: salesTo,
     subject: `New ${reqLabel} request — ${company || name}`,
-    html: `<h2 style="font-family:system-ui,sans-serif;color:#0e7c86">New ${htmlEscape(reqLabel)} request</h2><table style="font-family:system-ui,sans-serif;font-size:14px;border-collapse:collapse">${rows}</table>`,
+    html: emailLayout({ heading: `New ${htmlEscape(reqLabel)} request`, bodyHtml: `<table style="font-size:14px;border-collapse:collapse">${rows}</table>` }),
   });
   await sendEmail(env, {
     to: [email],
     subject: 'We received your MASEST request',
-    html: `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#1a1d22"><p>Hi ${htmlEscape(name)},</p><p>Thanks for reaching out to MASEST. We received your ${htmlEscape(type)} request — a sales or technical contact will follow up directly.</p><p style="color:#667">If it's urgent, email <a href="mailto:matthew@masest.co">matthew@masest.co</a> or call (813) 406-3852.</p><p>— MASEST · VertKleen</p></div>`,
+    html: emailLayout({
+      heading: `Thanks for reaching out, ${htmlEscape(name)}`,
+      bodyHtml: `<p>We received your ${htmlEscape(type)} request — a sales or technical contact will follow up directly.</p><p style="color:#667">If it's urgent, email <a href="mailto:matthew@masest.co">matthew@masest.co</a> or call (813) 406-3852.</p>`,
+    }),
   });
 
   return json(200, { ok: true, saved });

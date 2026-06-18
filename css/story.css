@@ -36,7 +36,7 @@
 /* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
 .story .act { position: relative; height: 212vh; padding: 0; }
 .story .act[data-act="1"] { height: 168vh; }   /* photo reel needs less sequencing */
-.story .act[data-act="3"] { height: 212vh; }   /* HMIS factor-by-factor */
+.story .act[data-act="3"] { height: 150vh; }   /* HMIS factor-by-factor */
 .story .act[data-act="4"] { height: 260vh; }   /* chemicals one by one */
 .story .act-savior { height: 228vh; }
 .story .stage {
@@ -543,25 +543,6 @@
 }
 .savior-wrap h2 .accent { color: var(--s-safe-text); }
 .savior-wrap .lede { margin: clamp(12px, 2vh, 22px) auto 0; max-width: 50ch; font-size: clamp(1rem, 1.4vw, 1.18rem); color: var(--s-mut); line-height: 1.5; }
-.savior-zero { display: inline-flex; gap: 14px; margin: clamp(16px, 3vh, 34px) 0 6px; font-variant-numeric: tabular-nums; }
-.savior-zero .z {
-  position: relative; overflow: hidden;
-  width: clamp(62px, 10vw, 98px); aspect-ratio: 5 / 6; border-radius: 18px;
-  display: grid; place-items: center; font-size: clamp(2.9rem, 6.5vw, 4.7rem); font-weight: 900;
-  letter-spacing: -.05em; color: var(--s-safe-text);
-  background: linear-gradient(180deg, rgba(8, 121, 111, .18), rgba(8, 121, 111, .06));
-  border: 1px solid rgba(8, 121, 111, .42);
-  box-shadow: 0 30px 60px -34px rgba(8, 121, 111, .46);
-}
-/* Each zero caps one HMIS axis — the three colored factors from Act 3, resolved. */
-.savior-zero .z::before {
-  content: ""; position: absolute; top: 0; left: 22%; right: 22%; height: 3px;
-  border-radius: 0 0 3px 3px; background: var(--ax, var(--s-safe-text)); opacity: .8;
-}
-.savior-zero .z:nth-child(1) { --ax: var(--hmis-h); }
-.savior-zero .z:nth-child(2) { --ax: var(--hmis-f); }
-.savior-zero .z:nth-child(3) { --ax: var(--hmis-r); }
-.savior-cap { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: var(--s-mut); margin-bottom: clamp(12px, 2.2vh, 24px); }
 .savior-proof { display: flex; gap: 14px; justify-content: center; }
 .savior-proof-before { gap: 10px; margin-bottom: 8px; }
 .savior-proof-before figure { opacity: .72; transform: scale(.82); transform-origin: center bottom; }
@@ -601,9 +582,6 @@
   .act-savior .savior-badge { margin-bottom: 8px; }
   .act-savior .savior-wrap h2 { font-size: clamp(2rem, 4.2vw, 3rem); }
   .act-savior .savior-wrap .lede { margin-top: 8px; font-size: 1rem; max-width: 54ch; }
-  .act-savior .savior-zero { margin: 10px 0 4px; gap: 12px; }
-  .act-savior .savior-zero .z { width: clamp(50px, 7.2vw, 74px); border-radius: 14px; font-size: clamp(2.4rem, 5vw, 3.6rem); }
-  .act-savior .savior-cap { margin-bottom: 10px; }
   .act-savior .savior-proof { gap: 12px; }
   .act-savior .savior-proof figure { width: clamp(88px, 9.5vw, 112px); }
   .act-savior .savior-proof figcaption { margin-top: 5px; font-size: .7rem; }
@@ -658,7 +636,7 @@
 @media (max-width: 760px) {
   .story .act { height: 198vh; }
   .story .act[data-act="1"] { height: 170vh; }
-  .story .act[data-act="3"] { height: 212vh; }
+  .story .act[data-act="3"] { height: 150vh; }
   .story .act[data-act="4"] { height: 226vh; }
   .story .act-savior { height: 235vh; }
   .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
@@ -695,8 +673,6 @@
   .chem-card .chead { gap: 8px; }
   .chem-card p { font-size: .78rem; line-height: 1.38; }
   .chem-card .vs { font-size: .62rem; }
- .savior-zero { margin: 10px 0 8px; gap: 8px; }
- .savior-zero .z { width: clamp(54px, 18vw, 68px); border-radius: 14px; }
  .savior-proof { gap: 8px; }
  .savior-proof-before { margin-bottom: 2px; }
  .savior-proof figure { width: 22vw; }
@@ -784,11 +760,6 @@
 .story .chem-tag,
 .story .scale-head,
 .story .scale-ticks {
-  text-transform: none !important;
-}
-
-.story .savior-cap {
-  letter-spacing: .045em !important;
   text-transform: none !important;
 }
 
@@ -1034,7 +1005,7 @@
 .story .rail-btn::after {
   content: "";
   position: absolute;
-  left: 4px;
+  left: 19px;
   top: 50%;
   width: 34px;
   height: 34px;
@@ -1042,7 +1013,7 @@
   border: 1px solid rgba(255, 255, 255, .12);
   background: radial-gradient(circle, rgba(255, 255, 255, .13), transparent 68%);
   opacity: 0;
-  transform: translate(-18%, -50%) scale(.7);
+  transform: translate(-50%, -50%) scale(.7);
   transition:
     opacity .22s var(--s-ease),
     transform .22s var(--s-ease);
@@ -1059,7 +1030,7 @@
 
 .story .rail-btn.is-on::after {
   opacity: 1;
-  transform: translate(-18%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .story .rail-btn b,
@@ -1077,7 +1048,7 @@
 }
 
 .story .chem-card,
-.story .savior-zero .z,
+.story .zero-axis,
 .story .pipe-callout .chip {
   transition:
     border-color .22s var(--s-ease),
@@ -1110,7 +1081,7 @@
   .story .rail-btn,
   .story .rail-btn::after,
   .story .chem-card,
-  .story .savior-zero .z,
+  .story .zero-axis,
   .story .pipe-callout .chip {
     transition: none !important;
   }
@@ -1193,12 +1164,27 @@
   opacity: 0 !important;
 }
 
+/* Act 3 is a centered column: the explainer text stays put at the top, the three
+   factor cards sit below it. No absolute overlap; text stays readable throughout. */
+.story .act-hmis .stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(36px, 7vh, 82px);                /* more breathing room between the text and the cards */
+  padding-top: clamp(64px, 11vh, 150px);      /* clear the nav and drop the whole scene lower / more centered */
+  box-sizing: border-box;
+}
+
 .story .act[data-act="3"] .act-copy.top {
-  top: clamp(54px, 7vh, 82px);
+  position: static;
+  top: auto;
+  left: auto;
+  right: auto;
 }
 
 .story .act[data-act="3"] .hmis-rig {
-  margin-top: clamp(320px, 38vh, 405px);
+  margin-top: 0;
   width: min(1040px, 92vw);
   gap: clamp(18px, 2.4vh, 28px);
 }
@@ -1218,121 +1204,13 @@
     0 24px 70px -56px rgba(255, 77, 45, .68);
 }
 
-.story .hmis-scale-hot {
-  position: relative;
-  width: min(960px, 92vw);
-  padding: clamp(14px, 1.6vw, 20px);
-  border: 1px solid rgba(255, 112, 68, .36);
-  border-radius: 22px;
-  overflow: hidden;
-  background:
-    radial-gradient(36% 120% at 15% 0%, rgba(255, 45, 45, .34), transparent 68%),
-    radial-gradient(44% 130% at 88% 10%, rgba(255, 179, 0, .24), transparent 70%),
-    linear-gradient(180deg, rgba(58, 18, 16, .62), rgba(14, 17, 23, .9));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .08),
-    0 28px 90px -60px rgba(255, 74, 45, .82);
-}
-
-.story .hmis-scale-hot::before {
-  content: "";
-  position: absolute;
-  inset: -30% -12%;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(98deg, transparent 0 19px, rgba(255, 104, 64, .13) 20px 22px),
-    radial-gradient(circle at 50% 50%, rgba(255, 210, 92, .16), transparent 46%);
-  opacity: .42;
-  transform: skewY(-5deg);
-}
-
-.story .hmis-scale-hot .scale-head,
-.story .hmis-axis-grid,
-.story .heat-strip {
-  position: relative;
-  z-index: 1;
-}
-
-.story .hmis-scale-hot .scale-head {
-  margin-bottom: 12px;
-}
-
-.story .hmis-axis-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.story .hmis-axis {
-  min-height: 96px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, .13);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .025)),
-    radial-gradient(100% 130% at 50% 0%, rgba(255, 88, 45, .24), transparent 66%);
-  text-align: center;
-}
-
-.story .hmis-axis span,
 .story .zero-axis span {
   display: block;
   font-size: .72rem;
   font-weight: 900;
   letter-spacing: .13em;
   text-transform: uppercase;
-}
-
-.story .hmis-axis strong {
-  display: block;
-  margin: 2px 0 4px;
-  color: #fff2df;
-  font-size: clamp(2.2rem, 3.8vw, 3.35rem);
-  line-height: .9;
-  text-shadow:
-    0 0 26px rgba(255, 72, 45, .62),
-    0 10px 34px rgba(0, 0, 0, .42);
-}
-
-.story .hmis-axis small {
-  display: block;
-  max-width: 22ch;
-  margin: 0 auto;
-  color: rgba(255, 236, 220, .76);
-  font-size: .72rem;
-  line-height: 1.22;
-}
-
-.story .axis-health { --axis-hot: var(--hmis-h); }
-.story .axis-flam { --axis-hot: var(--hmis-f); }
-.story .axis-react { --axis-hot: var(--hmis-r); }
-
-.story .hmis-axis::before {
-  content: "";
-  display: block;
-  width: 100%;
-  height: 4px;
-  margin-bottom: 7px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, .22), var(--axis-hot));
-  box-shadow: 0 0 22px color-mix(in srgb, var(--axis-hot) 60%, transparent);
-}
-
-.story .heat-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 8px;
-  color: rgba(255, 228, 205, .68);
-  font-size: .62rem;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
-.story .heat-strip span {
-  border-top: 2px solid rgba(255, 118, 62, .5);
-  padding-top: 5px;
+  color: color-mix(in srgb, var(--ax, #d7fbff) 60%, #eafdff);
 }
 
 .story .savior-zero-scale {
@@ -1340,23 +1218,38 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   width: min(760px, 86vw);
-  margin: clamp(12px, 2vh, 20px) auto 8px;
+  margin: clamp(26px, 5.5vh, 56px) auto;   /* centered between the lede text and the proof images */
 }
 
 .story .zero-axis {
+  --ax: var(--s-safe-text);
+  position: relative;
+  overflow: hidden;
   min-height: 100px;
-  padding: 15px 14px;
-  border: 1px solid rgba(126, 224, 255, .34);
+  padding: 16px 14px;
+  border: 1px solid color-mix(in srgb, var(--ax) 42%, rgba(126, 224, 255, .3));
   border-radius: 18px;
   background:
-    radial-gradient(90% 140% at 50% 0%, rgba(65, 190, 255, .2), transparent 68%),
+    radial-gradient(92% 140% at 50% 0%, color-mix(in srgb, var(--ax) 26%, transparent), transparent 70%),
     linear-gradient(180deg, rgba(12, 54, 67, .74), rgba(8, 18, 23, .72));
   color: #d7fbff;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, .1),
-    0 24px 72px -60px rgba(72, 211, 255, .9);
+    0 24px 72px -60px color-mix(in srgb, var(--ax) 55%, rgba(72, 211, 255, .9));
   text-align: center;
 }
+
+/* Each card carries its HMIS axis accent — the colors the small tiles used. */
+.story .zero-axis::before {
+  content: "";
+  position: absolute; top: 0; left: 16%; right: 16%; height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--ax);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--ax) 75%, transparent);
+}
+.story .savior-zero-scale .zero-axis:nth-child(1) { --ax: var(--hmis-h); }
+.story .savior-zero-scale .zero-axis:nth-child(2) { --ax: var(--hmis-f); }
+.story .savior-zero-scale .zero-axis:nth-child(3) { --ax: var(--hmis-r); }
 
 .story .zero-axis strong {
   display: block;
@@ -1364,7 +1257,7 @@
   color: #f3ffff;
   font-size: clamp(2rem, 4vw, 3.4rem);
   line-height: .95;
-  text-shadow: 0 0 22px rgba(72, 211, 255, .62);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--ax) 45%, rgba(72, 211, 255, .6));
 }
 
 .story .zero-axis small {
@@ -1374,22 +1267,12 @@
 }
 
 @media (max-width: 760px) {
-  .story .act[data-act="3"] .hmis-rig {
-    margin-top: 360px;
-  }
-
-  .story .hmis-axis-grid,
   .story .savior-zero-scale {
     grid-template-columns: 1fr;
   }
 
-  .story .hmis-axis,
   .story .zero-axis {
     min-height: auto;
-  }
-
-  .story .heat-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

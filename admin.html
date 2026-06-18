@@ -55,6 +55,8 @@
   .msg[data-role="staff"] { justify-self: end; background: var(--accent-soft); border-color: #c6e1e4; }
   .quote-item { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px; }
   .product-photo { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
+  .gbtn { border: 0; background: none; cursor: pointer; font-size: .72rem; padding: 0 2px; line-height: 1.2; color: var(--ink-soft); }
+  .gbtn:hover { color: var(--accent); }
   .variant-stack { display: grid; gap: 8px; min-width: 520px; }
   .variant-row { display: grid; grid-template-columns: 1.25fr .75fr .85fr .75fr auto auto auto; gap: 6px; align-items: center; }
   .variant-row .adm-input { padding: 7px 8px; font-size: .82rem; }
@@ -64,6 +66,7 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header">
   <nav class="nav wrap" aria-label="Main">
     <a class="brand" href="index.html" aria-label="MASEST home"><span>MASEST</span></a>
@@ -106,6 +109,7 @@
         <button class="adm-tab" data-tab="overview" type="button">Overview</button>
         <button class="adm-tab" data-tab="orders" type="button">Orders</button>
         <button class="adm-tab" data-tab="companies" type="button">Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
+        <button class="adm-tab" data-tab="customers" type="button">Customers</button>
         <button class="adm-tab" data-tab="products" type="button">Products</button>
         <button class="adm-tab" data-tab="pricing" type="button">Pricing</button>
         <button class="adm-tab" data-tab="messages" type="button">Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
@@ -120,8 +124,15 @@
         <div class="adm-tools">
           <select id="ordFilter" class="adm-select" style="max-width:220px"><option value="">All statuses</option></select>
           <input id="ordSearch" class="adm-search" type="search" placeholder="Search orders">
+          <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple"></i> Export CSV</button>
         </div>
         <div id="admOrders" class="adm-table-wrap">Loading...</div>
+        <p id="ordStatus" class="adm-status" role="status"></p>
+      </section>
+
+      <section class="adm-panel" data-panel="customers">
+        <input id="custSearch" class="adm-search" type="search" placeholder="Search customers">
+        <div id="admCustomers" class="adm-table-wrap">Loading...</div>
       </section>
 
       <section class="adm-panel" data-panel="companies">
@@ -181,6 +192,7 @@
           <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes">
         </div>
         <div id="admQuotes" class="adm-panel-list">Loading...</div>
+        <p id="qStatus" class="adm-status" role="status"></p>
       </section>
 
       <section class="adm-panel" data-panel="offers">

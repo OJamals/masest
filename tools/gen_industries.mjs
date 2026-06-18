@@ -220,8 +220,10 @@ function page(ind) {
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 <noscript>
   <nav class="nojs-nav" aria-label="Site">
 ${nav}

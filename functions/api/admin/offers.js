@@ -1,6 +1,6 @@
 // /api/admin/offers — staff broadcasts. GET → past sends · POST → in-app notification fan-out
 // (+ optional Resend email when send_email and RESEND_API_KEY are set).
-import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, emailLayout } from '../../_lib/supabase.js';
 
 const AUDIENCES = ['all', 'approved', 'pending', 'company'];
 
@@ -59,8 +59,12 @@ export async function onRequest({ request, env }) {
       const emails = await memberEmails(sb, companyIds);
       if (emails.length) {
         const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
-        const html = `<h2>${title}</h2><p>${String(body.body || '')}</p>` +
-          (body.cta_url ? `<p><a href="${body.cta_url}">View</a></p>` : '');
+        const html = emailLayout({
+          heading: title,
+          bodyHtml: `<p>${String(body.body || '')}</p>`,
+          ctaText: body.cta_url ? 'View' : undefined,
+          ctaUrl: body.cta_url || undefined,
+        });
         try {
           const r = await fetch('https://api.resend.com/emails', {
             method: 'POST',

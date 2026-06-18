@@ -1,5 +1,5 @@
 /* MASEST staff admin console. */
-import { login, logout, api } from './auth.js';
+import { login, logout, api, getToken } from './auth.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -72,6 +72,7 @@ function setTab(tab) {
     overview: () => { renderStats(state.stats); runSeoAudit(); },
     orders: renderOrders,
     companies: renderCompanies,
+    customers: renderCustomers,
     products: renderProducts,
     pricing: renderPricing,
     messages: renderThreads,
@@ -126,7 +127,7 @@ async function renderOrders() {
       <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
       <td>${esc(order.payment_method || '')}</td>
       <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-      <td><button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button></td>
+      <td><button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'stripe' && order.status !== 'cancelled' ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
     </tr>`;
   }).join('')}</tbody></table>`;
 
@@ -143,6 +144,45 @@ async function renderOrders() {
       }
     });
   });
+  box.querySelectorAll('[data-refund-order]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.refundOrder;
+      if (!confirm('Refund this order via Stripe and mark it cancelled?')) return;
+      button.disabled = true;
+      message('ordStatus', 'Refunding...');
+      try {
+        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'refund' } });
+        message('ordStatus', 'Refunded.', 'ok');
+        await renderOrders();
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Refund failed.', 'err');
+        button.disabled = false;
+      }
+    });
+  });
+}
+
+async function renderCustomers() {
+  const box = $('admCustomers');
+  box.textContent = 'Loading...';
+  try {
+    state.customers = (await api('/api/admin/customers')).customers || [];
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load customers.</p>';
+    return;
+  }
+  const q = $('custSearch').value.trim().toLowerCase();
+  const rows = state.customers.filter((c) => JSON.stringify(c).toLowerCase().includes(q));
+  if (!rows.length) { box.innerHTML = '<p class="muted" style="padding:14px">No customers.</p>'; return; }
+  box.innerHTML = `<table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Tier</th><th>Role</th></tr></thead><tbody>${rows.map((c) => `
+    <tr>
+      <td>${esc(c.full_name || '—')}${c.phone ? `<br><span class="muted">${esc(c.phone)}</span>` : ''}</td>
+      <td>${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '<span class="muted">—</span>'}</td>
+      <td>${esc(c.company_name || '—')}</td>
+      <td>${statusBadge(c.company_status || '—')}</td>
+      <td>${esc(c.price_tier || 'retail')}</td>
+      <td>${esc(c.role || '')}</td>
+    </tr>`).join('')}</tbody></table>`;
 }
 
 async function renderCompanies() {
@@ -160,8 +200,9 @@ async function renderCompanies() {
     box.innerHTML = '<p class="muted" style="padding:14px">No accounts.</p>';
     return;
   }
-  box.innerHTML = `<table class="adm"><thead><tr><th>Company</th><th>Status</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
+  box.innerHTML = `<div class="adm-tools" style="margin-bottom:10px"><button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button></div><table class="adm"><thead><tr><th><input type="checkbox" id="coAll" aria-label="Select all"></th><th>Company</th><th>Status</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
     <tr>
+      <td><input type="checkbox" class="co-check" value="${esc(company.id)}"></td>
       <td><button class="link-name" data-open-company="${esc(company.id)}" type="button">${esc(company.name)}</button></td>
       <td>${statusBadge(company.status)}</td>
       <td><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${esc(company.id)}"></td>
@@ -187,6 +228,19 @@ async function renderCompanies() {
       renderCompanies();
     });
   });
+  const coAll = $('coAll');
+  if (coAll) coAll.addEventListener('change', () => box.querySelectorAll('.co-check').forEach((c) => { c.checked = coAll.checked; }));
+  const bulk = $('bulkApprove');
+  if (bulk) bulk.addEventListener('click', async () => {
+    const ids = [...box.querySelectorAll('.co-check:checked')].map((c) => c.value);
+    if (!ids.length) return;
+    if (!confirm(`Approve ${ids.length} account(s)?`)) return;
+    bulk.disabled = true;
+    try {
+      await api('/api/admin/companies', { method: 'POST', body: { ids, action: 'approve' } });
+      await renderCompanies();
+    } finally { bulk.disabled = false; }
+  });
 }
 
 async function renderProducts() {
@@ -210,7 +264,7 @@ async function renderProducts() {
   }
   box.innerHTML = `<table class="adm"><thead><tr><th>Photo</th><th>SKU</th><th>Name</th><th>Mode</th><th>Price</th><th>Stock</th><th>Photo URL</th><th>Alt</th><th>Variants</th><th>Active</th><th></th></tr></thead><tbody>${products.map((p) => `
     <tr data-product="${esc(p.sku)}">
-      <td>${p.image_url ? `<img class="product-photo" src="${esc(p.image_url)}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}</td>
+      <td>${p.image_url ? `<img class="product-photo" src="${esc(p.image_url)}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}${Array.isArray(p.gallery) && p.gallery.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${p.gallery.map((u, i) => `<span style="display:inline-flex;flex-direction:column;align-items:center"><img src="${esc(u)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"><span><button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(u)}" title="Make primary">★</button><button type="button" class="gbtn" data-gact="up" data-gidx="${i}" title="Move up">↑</button><button type="button" class="gbtn" data-gact="down" data-gidx="${i}" title="Move down">↓</button><button type="button" class="gbtn" data-gact="del" data-gurl="${esc(u)}" title="Remove">×</button></span></span>`).join('')}</div>` : ''}<br><label class="muted" style="font-size:.7rem;display:block;margin-top:4px">Upload<input type="file" accept="image/*" data-imgfile style="display:block;max-width:120px;font-size:.7rem"></label><label class="muted" style="font-size:.7rem;display:block">+ gallery<input type="file" accept="image/*" data-galfile style="display:block;max-width:120px;font-size:.7rem"></label></td>
       <td><b>${esc(p.sku)}</b></td>
       <td><input class="adm-input" value="${esc(p.name)}" data-field="name"></td>
       <td><select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></td>
@@ -239,6 +293,50 @@ async function renderProducts() {
   box.querySelectorAll('[data-remove-variant]').forEach((button) => {
     button.addEventListener('click', () => removeVariant(button.dataset.removeVariant));
   });
+  box.querySelectorAll('[data-imgfile]').forEach((inp) => inp.addEventListener('change', () => {
+    if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'primary');
+  }));
+  box.querySelectorAll('[data-galfile]').forEach((inp) => inp.addEventListener('change', () => {
+    if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'gallery');
+  }));
+  box.querySelectorAll('[data-gact]').forEach((btn) => btn.addEventListener('click', async () => {
+    const sku = btn.closest('[data-product]')?.dataset.product;
+    if (!sku) return;
+    const prod = (state.products || []).find((x) => x.sku === sku);
+    const gallery = Array.isArray(prod?.gallery) ? [...prod.gallery] : [];
+    const act = btn.dataset.gact;
+    btn.disabled = true;
+    try {
+      if (act === 'del') {
+        await api('/api/admin/product-image', { method: 'DELETE', body: { sku, url: btn.dataset.gurl } });
+      } else if (act === 'primary') {
+        await api('/api/admin/product-image', { method: 'PATCH', body: { sku, action: 'set_primary', url: btn.dataset.gurl } });
+      } else if (act === 'up' || act === 'down') {
+        const i = Number(btn.dataset.gidx); const j = act === 'up' ? i - 1 : i + 1;
+        if (j < 0 || j >= gallery.length) { btn.disabled = false; return; }
+        [gallery[i], gallery[j]] = [gallery[j], gallery[i]];
+        await api('/api/admin/product-image', { method: 'PATCH', body: { sku, action: 'reorder', gallery } });
+      }
+      message('prodStatus', 'Gallery updated.', 'ok');
+      await renderProducts();
+    } catch (err) { message('prodStatus', err.data?.error || 'Gallery update failed.', 'err'); btn.disabled = false; }
+  }));
+}
+
+async function uploadProductImage(sku, file, slot) {
+  message('prodStatus', 'Uploading image...');
+  try {
+    const fd = new FormData();
+    fd.append('sku', sku); fd.append('slot', slot); fd.append('file', file);
+    const token = await getToken();
+    const r = await fetch('/api/admin/product-image', { method: 'POST', headers: token ? { Authorization: 'Bearer ' + token } : {}, body: fd });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'upload_failed');
+    message('prodStatus', `${sku} image uploaded.`, 'ok');
+    await renderProducts();
+  } catch (err) {
+    message('prodStatus', err.message || 'Upload failed.', 'err');
+  }
 }
 
 function variantRows(product) {
@@ -491,6 +589,8 @@ async function renderQuotes() {
     box.innerHTML = '<p class="muted">No quote database yet. Apply site/supabase/schema-quotes.sql to store and triage leads here.</p>';
     return;
   }
+  if (!state.companies?.length) { try { state.companies = (await api('/api/admin/companies')).companies || []; } catch { state.companies = []; } }
+  const coOpts = (state.companies || []).map((c) => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.status || '')})</option>`).join('');
   const q = $('qSearch').value.trim().toLowerCase();
   const filter = $('qFilter').value;
   const quotes = state.quotes.filter((quote) => {
@@ -511,6 +611,14 @@ async function renderQuotes() {
         <button class="btn btn-ghost btn-sm" data-save-quote="${esc(quote.id)}" type="button">Save</button>
         <a class="btn btn-primary btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('Re: your MASEST request')}">Email</a>
       </div>
+      <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
+        <select class="adm-select" data-conv-co="${esc(quote.id)}" style="max-width:200px"><option value="">Convert to order for…</option>${coOpts}</select>
+        <input class="adm-input" data-conv-sku="${esc(quote.id)}" placeholder="SKU" style="max-width:120px">
+        <input class="adm-input" data-conv-name="${esc(quote.id)}" placeholder="Item name" style="max-width:150px">
+        <input class="adm-input" type="number" min="1" value="1" data-conv-qty="${esc(quote.id)}" style="max-width:64px" aria-label="Qty">
+        <input class="adm-input" type="number" min="0" step="0.01" data-conv-price="${esc(quote.id)}" placeholder="Unit $" style="max-width:90px">
+        <button class="btn btn-ghost btn-sm" data-convert="${esc(quote.id)}" type="button">Convert → order</button>
+      </div>
     </details>
   `).join('');
   box.querySelectorAll('[data-save-quote]').forEach((button) => {
@@ -519,6 +627,29 @@ async function renderQuotes() {
       const status = box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value;
       await api('/api/admin/quotes', { method: 'POST', body: { id, status } });
       renderQuotes();
+    });
+  });
+  box.querySelectorAll('[data-convert]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.convert;
+      const pick = (k) => box.querySelector(`[data-conv-${k}="${CSS.escape(id)}"]`);
+      const company_id = pick('co').value;
+      const sku = pick('sku').value.trim();
+      const name = pick('name').value.trim();
+      const qty = pick('qty').value;
+      const unit_price = pick('price').value;
+      if (!company_id) { message('qStatus', 'Pick a company to convert into.', 'err'); return; }
+      if (!sku || unit_price === '') { message('qStatus', 'SKU and unit price are required.', 'err'); return; }
+      button.disabled = true;
+      message('qStatus', 'Creating order...');
+      try {
+        const res = await api('/api/admin/quotes', { method: 'POST', body: { id, action: 'convert', company_id, items: [{ sku, name, qty, unit_price }] } });
+        message('qStatus', `Order ${res.order_id} created.`, 'ok');
+        await renderQuotes();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Convert failed.', 'err');
+        button.disabled = false;
+      }
     });
   });
 }
@@ -610,6 +741,24 @@ function wire() {
   $('priceSearch').addEventListener('input', renderPricing);
   $('qFilter').addEventListener('change', renderQuotes);
   $('qSearch').addEventListener('input', renderQuotes);
+  $('custSearch').addEventListener('input', renderCustomers);
+  $('ordExport').addEventListener('click', async () => {
+    message('ordStatus', 'Preparing export...');
+    try {
+      const token = await getToken();
+      const status = $('ordFilter').value;
+      const url = '/api/admin/orders?export=csv' + (status ? `&status=${encodeURIComponent(status)}` : '');
+      const r = await fetch(url, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+      if (!r.ok) throw new Error('export_failed');
+      const blob = await r.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'masest-orders.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(a.href);
+      message('ordStatus', 'Exported.', 'ok');
+    } catch { message('ordStatus', 'Export failed.', 'err'); }
+  });
   $('admLogout').addEventListener('click', async () => { await logout(); location.reload(); });
   $('gateForm').addEventListener('submit', async (event) => {
     event.preventDefault();

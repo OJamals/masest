@@ -17,7 +17,7 @@ const BASE_COLUMNS = [
   'active',
   'sort',
 ];
-const MEDIA_COLUMNS = ['image_url', 'photo_alt'];
+const MEDIA_COLUMNS = ['image_url', 'photo_alt', 'gallery'];
 const VARIANT_SELECT = 'product_variants(id,vsku,product_sku,label,gallons,price,currency,stripe_price_id,stock,track_stock,active,sort)';
 const PRODUCT_WRITABLE = [
   'name',
@@ -63,7 +63,7 @@ async function selectProducts(sb) {
     ({ data, error } = await query(base));
     if (!error) {
       return {
-        products: (data || []).map((product) => ({ ...product, image_url: null, photo_alt: null })),
+        products: (data || []).map((product) => ({ ...product, image_url: null, photo_alt: null, gallery: [] })),
         mediaReady: false,
       };
     }

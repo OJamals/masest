@@ -3,7 +3,7 @@
 import { adminClient, json, tierForRequest, tierPriceMap } from '../_lib/supabase.js';
 
 const BASE_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,sort)';
-const MEDIA_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,image_url,photo_alt,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,sort)';
+const MEDIA_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,image_url,photo_alt,gallery,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,sort)';
 
 function missingMediaColumn(error) {
   return /image_url|photo_alt|schema cache|column/i.test(error?.message || '');
@@ -20,7 +20,7 @@ export async function onRequestGet({ request, env }) {
   let { data, error } = await query(MEDIA_SELECT);
   if (error && missingMediaColumn(error)) {
     ({ data, error } = await query(BASE_SELECT));
-    if (!error) data = (data || []).map((product) => ({ ...product, image_url: null, photo_alt: null }));
+    if (!error) data = (data || []).map((product) => ({ ...product, image_url: null, photo_alt: null, gallery: [] }));
   }
 
   if (error) return json(500, { error: error.message });

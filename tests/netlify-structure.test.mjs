@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const readRepo = path => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+const readRepo = path => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("Netlify Supabase helper imports the v2 named createClient export", () => {
   const helper = readRepo("netlify/lib/supabase.js");
