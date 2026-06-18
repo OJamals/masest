@@ -53,10 +53,44 @@ async function openCompanyDetail(id) {
       <div class="dash-row"><span>Members</span><b>${(detail.members || []).length}</b></div>
       <div class="dash-row"><span>Orders</span><b>${(detail.orders || []).length}</b></div>
       <div class="dash-row"><span>Messages</span><b>${detail.message_count || 0}</b></div>
+      <div class="company-detail-actions" data-company-id="${esc(company.id || id)}">
+        <button class="btn btn-primary btn-sm" type="button" data-company-detail-action="approve">Approve</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="suspend">Suspend</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="messages">Messages</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
+      </div>
       <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;
+    wireCompanyDetailActions(company);
   } catch (err) {
     box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load company.')}</p>`;
   }
+}
+
+function wireCompanyDetailActions(company) {
+  const box = $('companyDetail');
+  if (!box || !company?.id) return;
+  box.querySelectorAll('[data-company-detail-action]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const action = button.dataset.companyDetailAction;
+      button.disabled = true;
+      try {
+        await api('/api/admin/companies', { method: 'POST', body: { id: company.id, action } });
+        await renderCompanies();
+        await openCompanyDetail(company.id);
+      } catch (err) {
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Action failed.')}</p>`);
+        button.disabled = false;
+      }
+    });
+  });
+  box.querySelectorAll('[data-company-detail-tab]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const tab = button.dataset.companyDetailTab;
+      const search = tab === 'orders' ? $('ordSearch') : null;
+      if (search) search.value = company.id;
+      setTab(tab);
+    });
+  });
 }
 
 function message(id, text, kind = '') {

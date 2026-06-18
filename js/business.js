@@ -94,9 +94,10 @@ function renderPaymentSetup(data) {
   const box = $('bizPaymentSetup');
   if (!box) return;
   const hasPayment = Boolean(data.company?.stripe_customer_id);
+  const paymentState = hasPayment ? 'ready' : 'needs_setup';
   box.innerHTML = `
     <h2 id="payment">Payment setup</h2>
-    <p class="lead">${hasPayment ? 'Saved payment access is ready for this account.' : 'Open the secure Stripe portal to add or update saved payment methods.'}</p>
+    <p class="lead" data-payment-state="${paymentState}">${hasPayment ? 'Saved payment access is ready for this account.' : 'Open the secure Stripe portal to add or update saved payment methods.'}</p>
     <button id="paymentSetupPortal" class="btn btn-primary btn-sm" type="button">Open payment portal</button>
     <p id="paymentSetupStatus" class="status" aria-live="polite"></p>`;
 }
@@ -107,15 +108,25 @@ function wirePaymentSetup() {
   button.addEventListener('click', async () => {
     const status = $('paymentSetupStatus');
     button.disabled = true;
-    if (status) { status.textContent = 'Opening payment portal...'; status.dataset.state = ''; }
+    const originalText = button.textContent;
+    button.textContent = 'Opening Stripe...';
+    if (status) {
+      status.textContent = 'Opening Stripe payment portal...';
+      status.dataset.state = 'busy';
+    }
     try {
       const out = await api('/api/account/billing-portal', 'POST');
+      if (status) {
+        status.textContent = 'Payment portal opened in this tab.';
+        status.dataset.state = 'ok';
+      }
       window.location.assign(out.url);
     } catch (err) {
       if (status) {
-        status.textContent = err.data?.error === 'stripe_not_configured' ? 'Payment portal is not configured yet.' : 'Could not open the payment portal.';
+        status.textContent = err.data?.error === 'stripe_not_configured' ? 'Stripe is not configured for this workspace yet.' : 'Could not open the payment portal. Try again.';
         status.dataset.state = 'err';
       }
+      button.textContent = originalText;
       button.disabled = false;
     }
   });
