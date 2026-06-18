@@ -1,5 +1,6 @@
 // /api/admin/companies — staff account management / approval gate.
-//   GET ?status= → companies (+ members) · POST { id, action } → approve|reject|suspend|set_terms
+//   GET ?status= → companies (+ members)
+//   POST { id | ids:[...], action } → approve|reject|suspend|set_terms (single or bulk)
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 
 export async function onRequest({ request, env }) {
@@ -22,7 +23,8 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'POST') {
     const body = await readBody(request);
-    if (!body.id) return json(400, { error: 'company_id_required' });
+    const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : (body.id ? [body.id] : []);
+    if (!ids.length) return json(400, { error: 'company_id_required' });
 
     const patch = {};
     if (body.action === 'approve') {
@@ -43,20 +45,22 @@ export async function onRequest({ request, env }) {
       patch.price_tier = body.price_tier;
     }
 
-    const { data, error } = await sb.from('companies').update(patch).eq('id', body.id)
-      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier').single();
+    const { data, error } = await sb.from('companies').update(patch).in('id', ids)
+      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier');
     if (error) return json(500, { error: error.message });
 
     if (body.action === 'approve') {
-      await sb.from('notifications').insert({
-        company_id: body.id, type: 'account', title: 'Account approved',
-        body: data.net_terms_days > 0
-          ? `You're approved for online ordering and NET-${data.net_terms_days} terms.`
-          : 'Your account is approved for online ordering.',
-        link: '/dashboard.html',
-      }).then(() => {}, () => {});
+      for (const company of data || []) {
+        await sb.from('notifications').insert({
+          company_id: company.id, type: 'account', title: 'Account approved',
+          body: company.net_terms_days > 0
+            ? `You're approved for online ordering and NET-${company.net_terms_days} terms.`
+            : 'Your account is approved for online ordering.',
+          link: '/dashboard.html',
+        }).then(() => {}, () => {});
+      }
     }
-    return json(200, { ok: true, company: data });
+    return json(200, { ok: true, companies: data || [], company: (data || [])[0] || null, count: (data || []).length });
   }
 
   return json(405, { error: 'method_not_allowed' });

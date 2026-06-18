@@ -106,6 +106,7 @@
         <button class="adm-tab" data-tab="overview" type="button">Overview</button>
         <button class="adm-tab" data-tab="orders" type="button">Orders</button>
         <button class="adm-tab" data-tab="companies" type="button">Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
+        <button class="adm-tab" data-tab="customers" type="button">Customers</button>
         <button class="adm-tab" data-tab="products" type="button">Products</button>
         <button class="adm-tab" data-tab="pricing" type="button">Pricing</button>
         <button class="adm-tab" data-tab="messages" type="button">Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
@@ -120,8 +121,15 @@
         <div class="adm-tools">
           <select id="ordFilter" class="adm-select" style="max-width:220px"><option value="">All statuses</option></select>
           <input id="ordSearch" class="adm-search" type="search" placeholder="Search orders">
+          <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple"></i> Export CSV</button>
         </div>
         <div id="admOrders" class="adm-table-wrap">Loading...</div>
+        <p id="ordStatus" class="adm-status" role="status"></p>
+      </section>
+
+      <section class="adm-panel" data-panel="customers">
+        <input id="custSearch" class="adm-search" type="search" placeholder="Search customers">
+        <div id="admCustomers" class="adm-table-wrap">Loading...</div>
       </section>
 
       <section class="adm-panel" data-panel="companies">
@@ -181,6 +189,7 @@
           <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes">
         </div>
         <div id="admQuotes" class="adm-panel-list">Loading...</div>
+        <p id="qStatus" class="adm-status" role="status"></p>
       </section>
 
       <section class="adm-panel" data-panel="offers">
