@@ -24,3 +24,11 @@ test("checkout net branch enforces credit before inserting the order", () => {
   assert.ok(checkIdx > -1 && insertIdx > -1 && checkIdx < insertIdx,
     "credit check must precede the order insert");
 });
+
+test("account/me imports credit helper at the correct depth and returns a credit block", () => {
+  const src = read("functions/api/account/me.js");
+  assert.match(src, /from\s+['"]\.\.\/\.\.\/_lib\/credit\.js['"]/, "me.js must import ../../_lib/credit.js");
+  assert.match(src, /companyCreditState\(/, "me.js must compute credit state");
+  assert.match(src, /net_outstanding/, "me.js must expose net_outstanding");
+  assert.match(src, /credit_available/, "me.js must expose credit_available");
+});
