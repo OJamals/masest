@@ -3816,3 +3816,27 @@ main:has(#pMediaSection) .section-head {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- a11y: per-component keyboard focus rings ----
+   The global :focus-visible rule (top of file) draws an outline on most controls,
+   but these commerce/shop pill controls suppress it (outline:none) and previously
+   left keyboard focus indistinguishable from hover. Add a focus-visible ring that
+   follows the rounded shape via box-shadow. Additive: these append after the base
+   component rules so the ring wins on the keyboard-focus path; mouse :focus is
+   unaffected. */
+.shop-card-add:focus-visible,
+.shop-card-quote:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(14, 124, 134, .38);
+}
+.commerce-vol:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(14, 124, 134, .38);
+}
+/* The card link suppresses its own ring; the parent card already shows
+   :focus-within. Keep the ring reachable for direct keyboard focus too. */
+.shop-card-link:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
