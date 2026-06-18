@@ -3,6 +3,7 @@
 // Spam defense: honeypot (_gotcha) + SOFT Turnstile — a token is verified only when one is
 // present AND a secret is set, so a misconfigured/absent CAPTCHA never blocks a real lead.
 import { adminClient, json, sendEmail, htmlEscape, emailLayout } from '../_lib/supabase.js';
+import { rateLimit, clientIp } from '../_lib/ratelimit.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const LABELS = {
@@ -27,6 +28,10 @@ export async function onRequestPost({ request, env }) {
 
   // Honeypot: real users leave _gotcha empty. Pretend success so bots don't retry.
   if (String(fields._gotcha || '').trim()) return json(200, { ok: true });
+
+  // Per-IP throttle (no-op until a RATE_KV namespace is bound — see _lib/ratelimit.js).
+  const rl = await rateLimit(env, 'quote', clientIp(request), { limit: 8, windowSec: 60 });
+  if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
 
   const name = String(fields.name || '').trim();
   const email = String(fields.email || '').trim();
