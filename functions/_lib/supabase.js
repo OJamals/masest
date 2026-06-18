@@ -3,6 +3,7 @@
 // Cloudflare has no `process.env`; env vars arrive via the per-request `env` binding,
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
+import { filterSuppressed } from './email.js';
 
 // Service-role client — bypasses RLS. SERVER ONLY. Never return its key or use client-side.
 export function adminClient(env) {
@@ -102,17 +103,72 @@ export async function companyEmails(sb, companyId) {
 }
 
 // Fire-and-forget transactional email via Resend. No-op unless RESEND_API_KEY + recipients exist.
-export async function sendEmail(env, { to, subject, html }) {
+// Load the subset of `emails` that are suppressed. Fails open (empty Set on error).
+export async function loadSuppressed(env, emails) {
+  try {
+    const sb = adminClient(env);
+    const lowered = emails.map((e) => String(e).toLowerCase());
+    const { data } = await sb.from('email_suppressions').select('email').in('email', lowered);
+    return new Set((data || []).map((r) => r.email.toLowerCase()));
+  } catch {
+    return new Set();
+  }
+}
+
+// Best-effort insert of an email_events row. Never throws.
+export async function logEmailEvent(env, { resend_id, to_email, category, subject, status, error }) {
+  try {
+    await adminClient(env).from('email_events').insert({
+      resend_id: resend_id || null, to_email, category: category || null,
+      subject: subject || null, status, error: error || null,
+    });
+  } catch { /* logging is advisory; never block the send */ }
+}
+
+// Update email_events status by Resend id (best-effort, idempotent).
+export async function updateEmailStatus(env, resendId, status) {
+  if (!resendId || !status) return;
+  try {
+    await adminClient(env).from('email_events')
+      .update({ status, updated_at: new Date().toISOString() }).eq('resend_id', resendId);
+  } catch { /* advisory */ }
+}
+
+// Upsert a suppression (best-effort).
+export async function recordSuppression(env, email, reason) {
+  if (!email) return;
+  try {
+    await adminClient(env).from('email_suppressions')
+      .upsert({ email: String(email).toLowerCase(), reason }, { onConflict: 'email' });
+  } catch { /* advisory */ }
+}
+
+export async function sendEmail(env, { to, subject, html, category = null }) {
   if (!env.RESEND_API_KEY || !Array.isArray(to) || !to.length) return false;
   const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
+  const suppressed = await loadSuppressed(env, to);
+  const recipients = filterSuppressed(to, suppressed).slice(0, 50);
+  if (!recipients.length) {
+    await logEmailEvent(env, { to_email: to.join(', '), category, subject, status: 'failed', error: 'all_recipients_suppressed' });
+    return false;
+  }
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from, to: to.slice(0, 50), subject, html }),
+      body: JSON.stringify({ from, to: recipients, subject, html }),
+    });
+    let resendId = null;
+    try { resendId = (await r.clone().json())?.id || null; } catch { /* non-json body */ }
+    await logEmailEvent(env, {
+      resend_id: resendId, to_email: recipients.join(', '), category, subject,
+      status: r.ok ? 'sent' : 'failed', error: r.ok ? null : `resend_${r.status}`,
     });
     return r.ok;
-  } catch { return false; }
+  } catch (err) {
+    await logEmailEvent(env, { to_email: recipients.join(', '), category, subject, status: 'failed', error: String(err).slice(0, 200) });
+    return false;
+  }
 }
 
 // Shared branded email shell. Callers pass already-escaped/safe heading + bodyHtml
