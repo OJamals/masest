@@ -54,13 +54,13 @@ test("HMIS story has separated copy, hot hazard axes, and cool zero axes", async
   });
   await page.waitForTimeout(700);
 
-  await expect(page.locator(".hmis-scale-hot .hmis-axis")).toHaveCount(3);
+  await expect(page.locator(".hmis-meter .mcol")).toHaveCount(3);
   await expect(page.locator(".savior-zero-scale .zero-axis")).toHaveCount(3);
 
   const layout = await page.evaluate(() => {
     const copy = document.querySelector('.story .act[data-act="3"] .act-copy.top');
     const rig = document.querySelector('.story .act[data-act="3"] .hmis-rig');
-    const scale = document.querySelector(".hmis-scale-hot");
+    const scale = document.querySelector(".hmis-meter");
     const copyBox = copy.getBoundingClientRect();
     const rigBox = rig.getBoundingClientRect();
     const scaleBox = scale.getBoundingClientRect();
