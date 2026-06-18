@@ -161,6 +161,77 @@ const GALLERY = {
 
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
 
+const INDUSTRY_DETAILS = {
+  "oil-gas": ["Chemicals replaced", "Muriatic acid, solvent degreasers, and harsh rust removers used on rigs, terminals, pipeline parts, and tank-farm equipment.", "Bundle: HCR for rust and passivation, Descaler for mineral scale, CRHD for oily soils, Neutral for sensitive surfaces."],
+  marine: ["Buyer objection", "Confined air, aluminum brightwork, glass, and dockside access make acid brighteners and solvent washes hard to manage.", "Bundle: Torque for wash-and-wax, AlumiBrite for aluminum, MultiWash for exterior cleaning, CRHD for machinery spaces."],
+  manufacturing: ["Common replacements", "Acid descalers, caustic CIP cleaners, and solvent degreasers used across lines, floors, parts, and maintenance bays.", "Bundle: HCR for scale and rust, CR for alkaline cleaning, CRHD for heavy grease, Descaler for mineral deposits."],
+  "food-beverage": ["Sector proof", "Brewery and distillery work centers on CR and HCR sequences for tanks, heat exchangers, protein soil, beer stone, and hood or drain cleaning.", "Bundle: CR for alkaline wash, HCR for acid wash, CRHD for grease, Neutral where sensitive surfaces or seals matter."],
+  healthcare: ["Buyer objection", "Occupied facilities cannot trade maintenance needs for fume events, shutdowns, or uncontrolled chemical exposure.", "Bundle: WaterSafe60 and Purgo for water programs, HCR for passivation, CR for pH and alkaline cleaning."],
+  construction: ["Common replacements", "Muriatic acid, bleach, and caustic degreasers used for concrete cleanup, equipment, pavers, and exterior biological growth.", "Bundle: Descaler for concrete and calcium, HCR for rust, CRHD for equipment grease, LAM3 for exterior growth."],
+  "military-government": ["Procurement signal", "Public buyers need CAGE, NAICS, SDS, certifications, and controlled documents before switching a chemistry standard.", "Bundle: HCR, Descaler, CRHD, and AlumiBrite cover rust, scale, grease, and aluminum restoration with documented routing."],
+  education: ["Sector proof", "Campus buyers need cleaning and water-treatment options that work while students, faculty, and staff remain on site.", "Bundle: CR and HCR for facility cleaning, WaterSafe60 for water systems, LAM3 for exterior biological growth."],
+  "hvac-water": ["Recommended replacement map", "Cooling tower programs replace inhibitor, oxidizing biocide, non-oxidizing biocide, acid clean, pH adjustment, and degreasing functions.", "Bundle: WaterSafe60, Purgo, DBNPA, HCR, CR, and Neutral for the complete tower chemistry rotation."],
+  plumbing: ["Buyer objection", "Water lines, fixtures, heaters, and drains need scale removal without muriatic acid handling inside occupied buildings.", "Bundle: Descaler for calcium and scale, HCR for heavier rust and passivation, Neutral for sensitive equipment cleaning."]
+};
+
+function industryDetailBlock(ind) {
+  const detail = INDUSTRY_DETAILS[ind.slug];
+  if (!detail) return "";
+  const [label, body, bundle] = detail;
+  return `<section class="section section-slim">
+    <div class="wrap ind-specific">
+      <div class="section-head">
+        <span class="eyebrow">${label}</span>
+        <h2 class="headline">What ${ind.name} buyers replace first.</h2>
+      </div>
+      <div class="proof-callout">
+        <p>${body}</p>
+        <p>${bundle}</p>
+      </div>
+    </div>
+  </section>`;
+}
+
+function industrySchema(ind, plain) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "MASEST Consulting LLC",
+        url: "https://masest.co/",
+        logo: "https://masest.co/img/masest-logo.png",
+        brand: "VertKleen",
+        description: "HMIS 0-0-0 industrial cleaning chemistry — the power of acid with the safety of water.",
+        areaServed: "Worldwide",
+        contactPoint: { "@type": "ContactPoint", contactType: "sales", url: "https://masest.co/contact.html" }
+      },
+      {
+        "@type": "WebPage",
+        name: `${ind.name} VertKleen replacements`,
+        url: `https://masest.co/industries/${ind.slug}.html`,
+        description: ind.sub.replace(/&amp;/g, "&")
+      },
+      {
+        "@type": "Service",
+        name: `${ind.name} VertKleen replacement program`,
+        provider: { "@type": "Organization", name: "MASEST Consulting LLC", url: "https://masest.co/" },
+        serviceType: `Industrial cleaning chemistry replacement for ${plain}`,
+        url: `https://masest.co/industries/${ind.slug}.html`,
+        areaServed: "Worldwide"
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://masest.co/" },
+          { "@type": "ListItem", position: 2, name: "Industries", item: "https://masest.co/industries.html" },
+          { "@type": "ListItem", position: 3, name: ind.name, item: `https://masest.co/industries/${ind.slug}.html` }
+        ]
+      }
+    ]
+  };
+}
+
 function ctaBlock(ind) {
   const q = (type) => `../contact.html?industry=${enc(ind.name)}&type=${type}`;
   return `
@@ -217,10 +288,12 @@ function page(ind) {
 <title>${ind.name} | MASEST VertKleen</title>
 <meta name="description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta name="theme-color" content="#fafbfc">
+<link rel="canonical" href="https://masest.co/industries/${ind.slug}.html">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css">
 <link rel="stylesheet" href="../css/components.css">
+<script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -251,11 +324,13 @@ ${nav}
         <img src="../img/proof/cases/${ind.proof.img}.webp" alt="${ind.proof.caption.replace(/"/g, "&quot;")}" loading="lazy">
         <figcaption>${ind.proof.caption}</figcaption>
       </figure>
-    </div>
-  </section>
+</div>
+</section>
 
-  <section class="section section-slim">
-    <div class="wrap">
+${industryDetailBlock(ind)}
+
+<section class="section section-slim">
+<div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Recommended</span>
         <h2 class="headline">VertKleen products for ${ind.name}.</h2>

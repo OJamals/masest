@@ -27,6 +27,7 @@
 <meta property="og:url" content="https://masest.co/product.html">
 <meta property="og:image" content="https://masest.co/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://masest.co/"},{"@type":"ListItem","position":2,"name":"Products","item":"https://masest.co/products.html"},{"@type":"ListItem","position":3,"name":"Product detail","item":"https://masest.co/product.html"}]},{"@type":"Product","name":"VertKleen HCR","brand":{"@type":"Brand","name":"VertKleen"},"manufacturer":{"@type":"Organization","name":"MASEST Consulting LLC"},"category":"Industrial descaler and rust remover","description":"Biodegradable acid replacement for descaling, rust removal, passivation, and acid cleaning with an HMIS 0-0-0 rating.","url":"https://masest.co/product.html?id=hcr","image":"https://masest.co/img/products/hvac-hcr-studio.webp","additionalProperty":[{"@type":"PropertyValue","name":"HMIS rating","value":"0-0-0"},{"@type":"PropertyValue","name":"Replaces","value":"Hydrochloric acid"}]},{"@type":"Product","name":"VertKleen CR","brand":{"@type":"Brand","name":"VertKleen"},"manufacturer":{"@type":"Organization","name":"MASEST Consulting LLC"},"category":"Industrial alkaline cleaner and pH adjuster","description":"NSF/ANSI 60 caustic replacement and pH adjuster for high-pH cleaning needs with an HMIS 0-0-0 rating.","url":"https://masest.co/product.html?id=cr","image":"https://masest.co/img/products/hvac-cr-studio.webp","additionalProperty":[{"@type":"PropertyValue","name":"HMIS rating","value":"0-0-0"},{"@type":"PropertyValue","name":"Replaces","value":"Caustic soda and sodium hydroxide"}]},{"@type":"Product","name":"VertKleen CRHD","brand":{"@type":"Brand","name":"VertKleen"},"manufacturer":{"@type":"Organization","name":"MASEST Consulting LLC"},"category":"Industrial heavy-duty degreaser","description":"Heavy-duty degreaser for oils, grease, hoods, machinery, and floors with an HMIS 0-0-0 rating.","url":"https://masest.co/product.html?id=crhd","image":"https://masest.co/img/products/crhd-studio.webp","additionalProperty":[{"@type":"PropertyValue","name":"HMIS rating","value":"0-0-0"},{"@type":"PropertyValue","name":"Replaces","value":"Caustic and solvent degreasers"}]},{"@type":"Product","name":"WaterSafe60","brand":{"@type":"Brand","name":"VertKleen"},"manufacturer":{"@type":"Organization","name":"MASEST Consulting LLC"},"category":"Cooling tower scale and corrosion inhibitor","description":"NSF/ANSI 60 scale and corrosion inhibitor for cooling towers and water systems with an HMIS 0-0-0 rating.","url":"https://masest.co/product.html?id=watersafe60","additionalProperty":[{"@type":"PropertyValue","name":"HMIS rating","value":"0-0-0"},{"@type":"PropertyValue","name":"Program use","value":"Cooling tower scale and corrosion control"}]}]}</script>
 <!-- /seo:auto -->
 </head>
 <body>
@@ -41,7 +42,39 @@
   <a href="proof.html">Field Results</a>
   <a href="resources.html">Resources</a>
 </nav>
-<div class="wrap" style="padding:28px 28px 0"><p class="cmp-note">Product details need JavaScript. Browse the full line on the <a href="products.html" style="font-weight:700;text-decoration:underline">products page</a> or <a href="contact.html" style="font-weight:700;text-decoration:underline">contact us</a> directly.</p></div>
+<section class="wrap static-product-fallback" id="staticProductFallback" aria-label="VertKleen product snapshots">
+  <div class="section-head">
+    <span class="eyebrow">Product line</span>
+    <h2 class="headline">Procurement-ready VertKleen replacements.</h2>
+    <p class="subhead">Use these static product snapshots when comparing common hazardous chemicals against the VertKleen line. Live product pages add galleries, quote routing, and controlled document requests.</p>
+  </div>
+  <div class="static-product-grid">
+    <article class="static-product-card">
+      <b>VertKleen HCR</b>
+      <span>Replaces hydrochloric acid</span>
+      <p>Descaling, rust removal, passivation, and acid cleaning. HMIS 0-0-0.</p>
+      <a href="product.html?id=hcr">Open HCR</a>
+    </article>
+    <article class="static-product-card">
+      <b>VertKleen CR</b>
+      <span>Replaces caustic soda</span>
+      <p>NSF/ANSI 60 caustic replacement and pH adjustment for water treatment and alkaline cleaning. HMIS 0-0-0.</p>
+      <a href="product.html?id=cr">Open CR</a>
+    </article>
+    <article class="static-product-card">
+      <b>VertKleen CRHD</b>
+      <span>Replaces caustic and solvent degreasers</span>
+      <p>Heavy-duty degreasing for oils, hoods, machinery, and industrial floors. HMIS 0-0-0.</p>
+      <a href="product.html?id=crhd">Open CRHD</a>
+    </article>
+    <article class="static-product-card">
+      <b>WaterSafe60</b>
+      <span>Replaces phosphate, zinc, and molybdate blends</span>
+      <p>NSF/ANSI 60 scale and corrosion inhibitor for tower and loop programs. HMIS 0-0-0.</p>
+      <a href="product.html?id=watersafe60">Open WaterSafe60</a>
+    </article>
+  </div>
+</section>
 </noscript>
 
 <main id="main">
@@ -103,7 +136,7 @@
   <div class="wrap">
     <div class="section-head reveal">
       <h2 class="headline">Proof, on paper.</h2>
-      <p class="subhead">Documentation is sent on request, typically within one business day, while the verified asset library is finalized.</p>
+      <p class="subhead">Safety data, technical sheets, certifications, and case documents are delivered through controlled request routing, typically within one business day.</p>
     </div>
     <div class="reveal" id="pDocs"></div>
   </div>
@@ -158,6 +191,7 @@
       return;
     }
     document.title = p.name + " | MASEST VertKleen";
+    document.getElementById("staticProductFallback")?.setAttribute("hidden", "");
     document.getElementById("bcName").textContent = p.name;
     document.getElementById("pReplaces").textContent = p.replaces;
     document.getElementById("pName").textContent = p.name;
@@ -188,11 +222,13 @@
       if (!ids.length) return;
       relGrid.innerHTML = ids.map(rid => catalogCard(rid)).join("");
       relWrap.hidden = false;
-      if (typeof loadCommerceCatalog === "function" && typeof refreshCommerceActions === "function") {
+      if (typeof loadCommerceCatalog === "function" && typeof refreshCommerceActions === "function" && !(typeof isLocalStaticCommerceSuppressed === "function" && isLocalStaticCommerceSuppressed())) {
         loadCommerceCatalog().then(() => refreshCommerceActions(relGrid)).catch(() => {});
       }
     })();
 
+    const localStaticCommerce = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname) && !window.MASEST_ENABLE_LOCAL_API;
+    if (!localStaticCommerce) {
     const buySkel = document.createElement("span");
     buySkel.className = "skeleton skeleton-text w-60";
     buySkel.style.cssText = "min-width:160px;height:1.5em;display:inline-block";
@@ -333,6 +369,7 @@
         });
       })
       .catch(() => { buySkel.remove(); });
+    }
 
     // Drums & totes (55 / 275 gal): list price for reference + freight-quote CTA.
     // Display only — these sizes are quote-only (freight quoted after order), never cart.
@@ -395,7 +432,7 @@
   }
 
  document.getElementById("pDocs").innerHTML = p.docs.map(d =>
-      `<div class="doc-row"><div><b>${d}</b><span>PDF, available on request</span></div>
+      `<div class="doc-row"><div><b>${d}</b><span>Controlled PDF delivery</span></div>
        <a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(p.name)}&doc=${encodeURIComponent(d)}" aria-label="Request ${d} for ${p.name}">Request</a></div>`).join("");
 
     initReveal();

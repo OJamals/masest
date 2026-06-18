@@ -3688,3 +3688,131 @@ main:has(#pMediaSection) .section-head {
     min-height: 0;
   }
 }
+/* Audit polish: mobile first-fold actions and no-JS product confidence. */
+.home-quick-actions {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 70;
+  display: none;
+  width: min(calc(100vw - 24px), 420px);
+  transform: translateX(-50%);
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 999px;
+  background: rgba(16,21,20,.88);
+  box-shadow: 0 18px 48px rgba(0,0,0,.28);
+  backdrop-filter: blur(18px);
+}
+
+.home-quick-actions a {
+  flex: 1;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.home-quick-actions a:first-child {
+  background: #dce8dd;
+  color: #101514;
+}
+
+.home-quick-actions a:last-child {
+  color: #f2f5ef;
+}
+
+.static-product-fallback {
+  padding-top: clamp(28px, 5vw, 60px);
+  padding-bottom: 0;
+}
+
+.static-product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.static-product-card {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.static-product-card b {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.static-product-card span {
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.static-product-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.static-product-card a {
+  margin-top: auto;
+  color: var(--ink);
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+.ind-specific {
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1fr);
+  gap: clamp(22px, 4vw, 56px);
+  align-items: start;
+}
+
+.ind-specific .proof-callout {
+  display: grid;
+  gap: 12px;
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ind-specific .proof-callout p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.ind-specific .proof-callout p:first-child {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .home-quick-actions {
+    display: flex;
+  }
+
+  .static-product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ind-specific {
+    grid-template-columns: 1fr;
+  }
+}
