@@ -79,6 +79,9 @@ export async function checkout({ mode = "pay", email, token } = {}) {
   const line = items();
   if (!line.length) throw new Error("cart_empty");
 
+  // Funnel event: checkout initiated (best-effort; no-op if track.js absent).
+  try { if (typeof window !== "undefined" && typeof window.mtrack === "function") window.mtrack("checkout_start"); } catch (e) { /* best-effort */ }
+
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
 

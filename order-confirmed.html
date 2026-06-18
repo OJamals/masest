@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
   <script src="js/config.js" defer></script>
+  <script src="js/track.js" defer></script>
   <script type="module" src="js/main.js"></script>
 </head>
 <body>
@@ -85,6 +86,7 @@
       .then((o) => {
         const money = (n) => o.currency + " " + Number(n || 0).toFixed(2);
         summary.textContent = o.email ? ("A confirmation was sent to " + o.email + ".") : "Your order is recorded.";
+        try { if (typeof window.mtrack === "function") window.mtrack("order_complete"); } catch (e) { /* funnel event best-effort */ }
         if (Array.isArray(o.lines) && o.lines.length) {
           linesEl.innerHTML = o.lines.map((l) =>
             '<li style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.14)">'

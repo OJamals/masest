@@ -29,6 +29,13 @@ function smoothPref() {
 async function submitRequest(form, data) {
   const endpoint = form.dataset.endpoint;
   if (!endpoint) return { fallbackOnly: true };
+  // Attach first-touch UTM attribution to the submission (best-effort; stored in quotes.payload).
+  try {
+    if (typeof window.masestUtm === "function" && data instanceof FormData) {
+      const utm = window.masestUtm() || {};
+      Object.keys(utm).forEach((k) => { if (utm[k]) data.append(k, utm[k]); });
+    }
+  } catch (e) { /* attribution is best-effort */ }
   // Abort a hung endpoint so the user is never stranded on a disabled button.
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 12000);
@@ -40,6 +47,7 @@ async function submitRequest(form, data) {
       signal: ctrl.signal
     });
     if (!res.ok) throw new Error("Request failed");
+    try { if (typeof window.mtrack === "function") window.mtrack("quote_submit"); } catch (e) { /* funnel event best-effort */ }
     return { fallbackOnly: false };
   } finally {
     clearTimeout(timer);
