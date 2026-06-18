@@ -14,7 +14,7 @@ function buildSetup(profile, company) {
   const steps = [
     { key: 'profile', label: 'Profile', done: hasProfile, detail: hasProfile ? 'Name and phone are on file.' : 'Add a contact name and phone.', action: 'dashboard.html#profile' },
     { key: 'approval', label: 'Approval', done: approved, detail: approved ? 'Account approved for online ordering.' : `Account status: ${company?.status || 'pending'}.`, action: 'business.html' },
-    { key: 'tax', label: 'Tax file', done: hasTaxFile, detail: hasTaxFile ? 'Tax or resale certificate is on file.' : 'Add resale or tax-exempt documentation when applicable.', action: 'account.html' },
+    { key: 'tax', label: 'Tax file', done: hasTaxFile, detail: hasTaxFile ? 'Tax or resale certificate is on file.' : 'Add resale or tax-exempt documentation when applicable.', action: 'business.html' },
     { key: 'payment', label: 'Payment', done: hasPayment, detail: hasPayment ? 'Stripe customer record is ready.' : 'Open the secure payment portal after approval.', action: 'dashboard.html#payment' },
     { key: 'net_terms', label: 'NET terms', done: hasNetTerms, detail: hasNetTerms ? `NET-${company.net_terms_days} terms enabled.` : 'Staff will enable terms after approval.', action: 'business.html' },
   ];

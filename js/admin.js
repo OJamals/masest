@@ -111,6 +111,16 @@ function setTab(tab) {
   render?.();
 }
 
+function renderSetupFollowups(stats = {}) {
+  const rows = stats.setup_followups?.open_steps || [];
+  if (!rows.length) {
+    return '<div class="adm-card" data-setup-followups><h2>Setup gaps</h2><p class="muted">No setup gaps.</p></div>';
+  }
+  return `<div class="adm-card" data-setup-followups><h2>Setup gaps</h2>${rows.map((row) => `
+    <div class="dash-row"><span>${esc(row.label || row.key)}</span><b>${esc(row.count || 0)}</b></div>
+  `).join('')}</div>`;
+}
+
 function renderStats(stats = {}) {
   badge('aBadgePending', stats.companies?.pending || 0);
   badge('aBadgeMsg', stats.messages?.unread || 0);
@@ -128,7 +138,7 @@ function renderStats(stats = {}) {
   ];
   $('admStats').innerHTML = items.map(([icon, value, label]) => `
     <div class="adm-card adm-stat"><i class="ph ${icon}"></i><b>${esc(value)}</b><span class="muted">${esc(label)}</span></div>
-  `).join('');
+  `).join('') + renderSetupFollowups(stats);
 }
 
 async function renderOrders() {

@@ -3,6 +3,20 @@ import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
 
 const since = (days) => new Date(Date.now() - days * 86400e3).toISOString();
 
+const SETUP_STEP_LABELS = {
+  profile: 'Profile',
+  approval: 'Approval',
+  tax: 'Tax documents',
+  payment: 'Card on file',
+  net_terms: 'NET terms',
+};
+
+function setupStepBreakdown(counts = {}) {
+  return Object.entries(counts)
+    .map(([key, count]) => ({ key, label: SETUP_STEP_LABELS[key] || key, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
 function buildCompanySetup(company) {
   const profiles = company?.profiles || [];
   const approved = company?.status === 'approved';
@@ -48,7 +62,7 @@ export async function onRequestGet({ request, env }) {
     lowStock = (data || []).filter((p) => Number(p.stock ?? 0) <= 10).length;
   } catch { lowStock = 0; }
 
-  let setup_followups = { companies: 0, open_steps: {} };
+  let setup_followups = { companies: 0, open_steps: [] };
   try {
     const { data } = await sb.from('companies')
       .select('id,status,net_terms_days,tax_exempt,resale_cert_url,stripe_customer_id,profiles(full_name,phone)')
@@ -59,9 +73,9 @@ export async function onRequestGet({ request, env }) {
     for (const row of open) {
       for (const step of row.setup.open_steps) open_steps[step] = (open_steps[step] || 0) + 1;
     }
-    setup_followups = { companies: open.length, open_steps };
+    setup_followups = { companies: open.length, open_steps: setupStepBreakdown(open_steps) };
   } catch {
-    setup_followups = { companies: 0, open_steps: {} };
+    setup_followups = { companies: 0, open_steps: [] };
   }
 
   const [pendingCompanies, approvedCompanies, unreadMessages, views7d, buyCount, quoteCount] = await Promise.all([

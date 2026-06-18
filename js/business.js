@@ -47,6 +47,49 @@ function renderSetupChecklist(data) {
     </div>`;
 }
 
+function renderCompanySetupForm(data) {
+  const box = $('bizCompanySetup');
+  const c = data.company || {};
+  if (!box) return;
+  box.innerHTML = `
+    <h2>Tax setup</h2>
+    <form id="companySetupForm" class="biz-form">
+      <label><span>Tax-exempt</span><input id="taxExempt" type="checkbox" ${c.tax_exempt ? 'checked' : ''}></label>
+      <label><span>Resale certificate URL</span><input id="resaleCertUrl" type="url" value="${esc(c.resale_cert_url || '')}" placeholder="https://"></label>
+      <button class="btn btn-primary btn-sm" type="submit">Save setup</button>
+      <p id="companySetupStatus" class="status" aria-live="polite"></p>
+    </form>`;
+}
+
+function wireCompanySetup() {
+  const form = $('companySetupForm');
+  if (!form) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const status = $('companySetupStatus');
+    const button = form.querySelector('button');
+    if (status) { status.textContent = 'Saving setup...'; status.dataset.state = ''; }
+    if (button) button.disabled = true;
+    try {
+      await api('/api/account/company', 'POST', {
+        tax_exempt: $('taxExempt').checked,
+        resale_cert_url: $('resaleCertUrl').value.trim(),
+      });
+      const fresh = await me();
+      renderProfile(fresh);
+      renderSetupChecklist(fresh);
+      renderCompanySetupForm(fresh);
+      wireCompanySetup();
+      const freshStatus = $('companySetupStatus');
+      if (freshStatus) { freshStatus.textContent = 'Setup saved.'; freshStatus.dataset.state = 'ok'; }
+    } catch (err) {
+      if (status) { status.textContent = err.status === 401 ? 'Please sign in again.' : 'Could not save setup.'; status.dataset.state = 'err'; }
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
+}
+
 function renderTiers() {
   $('tierGrid').innerHTML = TIERS.map((t) => `
     <div class="tier">
@@ -168,8 +211,10 @@ async function boot() {
   $('bizApp').hidden = false;
   renderProfile(data);
   renderSetupChecklist(data);
+  renderCompanySetupForm(data);
   renderTiers();
   renderProgramStatus();
+  wireCompanySetup();
   wireBulk();
   if (data.profile?.role === 'admin') initTeam();
 }

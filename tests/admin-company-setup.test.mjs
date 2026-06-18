@@ -56,3 +56,19 @@ test("admin overview reports account setup follow-ups", () => {
   assert.match(js, /Setup follow-ups/,
     "overview card should label setup follow-ups clearly");
 });
+
+test("admin overview renders labeled setup-step follow-up breakdown", () => {
+  const stats = read("functions/api/admin/stats.js");
+  const js = read("js/admin.js");
+
+  assert.match(stats, /SETUP_STEP_LABELS/,
+    "stats should keep a label map for setup steps");
+  assert.match(stats, /setupStepBreakdown\(/,
+    "stats should convert raw open-step counts into labeled rows");
+  assert.match(js, /function renderSetupFollowups\(/,
+    "overview should have a dedicated setup follow-up renderer");
+  assert.match(js, /data-setup-followups/,
+    "overview should render a stable setup follow-up breakdown container");
+  assert.match(js, /No setup gaps/,
+    "overview should render an empty state for clean account setup");
+});
