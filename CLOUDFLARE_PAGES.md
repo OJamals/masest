@@ -54,7 +54,7 @@ curl -s "https://masest.co/api/products?cb=$(date +%s)"
 
 ## QuickBooks Online
 
-Apply `docs/supabase/qbo-sync.sql`, then set these Cloudflare Pages secrets before enabling the worker:
+Apply `supabase/schema-qbo.sql`, then set these Cloudflare Pages secrets before enabling the worker:
 
 - `QBO_CLIENT_ID`
 - `QBO_CLIENT_SECRET`

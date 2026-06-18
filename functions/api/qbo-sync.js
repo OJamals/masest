@@ -7,6 +7,17 @@ function boundedBatch(request) {
   return Math.min(25, Math.max(1, Math.floor(requested) || 10));
 }
 
+// Constant-time string comparison — avoids leaking the secret length/prefix via
+// response-timing on the unauthenticated /api/qbo-sync endpoint.
+function timingSafeEqual(a, b) {
+  const sa = String(a || '');
+  const sb = String(b || '');
+  if (sa.length !== sb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < sa.length; i++) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
+  return diff === 0;
+}
+
 async function requeueClaimed(sb, orders, err) {
   const message = err?.message || String(err);
   await Promise.all((orders || []).map((order) => {
@@ -62,7 +73,7 @@ async function requeueOne(sb, order, err) {
 
 export async function onRequestPost({ request, env }) {
   if (!env.QBO_SYNC_SECRET) return json(500, { error: 'qbo_sync_secret_not_configured' });
-  if (request.headers.get('x-qbo-sync-secret') !== env.QBO_SYNC_SECRET) {
+  if (!timingSafeEqual(request.headers.get('x-qbo-sync-secret'), env.QBO_SYNC_SECRET)) {
     return json(401, { error: 'unauthorized' });
   }
 

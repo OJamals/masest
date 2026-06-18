@@ -199,7 +199,8 @@ export async function onRequestPost({ request, env }) {
         link: '/dashboard.html#orders',
       }).then(() => {}, () => {});
     }
-    // TODO Phase 3: QBO sales receipt.
+    // QBO sales receipt is created asynchronously by /api/qbo-sync
+    // (order tagged qbo_sync_status='pending' on insert above).
   }
 
   // Subscription lifecycle → keep program_subscriptions status in sync.

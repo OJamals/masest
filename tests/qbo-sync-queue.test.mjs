@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("QBO schema defines token/cache tables and order sync columns", () => {
-  const sql = read("docs/supabase/qbo-sync.sql");
+  const sql = read("supabase/schema-qbo.sql");
   for (const table of ["qbo_tokens", "qbo_items", "qbo_customers"]) {
     assert.match(sql, new RegExp(`create table if not exists public\\.${table}`), `${table} must be provisioned`);
     assert.match(sql, new RegExp(`grant select, insert, update on public\\.${table} to service_role`), `${table} must be service-role writable`);
