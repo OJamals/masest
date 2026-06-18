@@ -59,6 +59,17 @@ test("products page leads with a replacement checker before the catalog", () => 
   assert.match(products, /Find your VertKleen swap/);
 });
 
+test("about page exposes latest quote-service catalog from seed data", () => {
+  const about = read("about.html");
+  const main = read("js/main.js");
+
+  assert.match(about, /id="serviceCatalog"/);
+  assert.match(about, /35 quote services/);
+  assert.match(about, /4 service packages/);
+  assert.match(main, /function initServiceCatalog/);
+  assert.match(main, /data\/catalog\.seed\.json/);
+});
+
 test("products grid offers category chips, sorting, and clickable cards", () => {
   const products = read("products.html");
 
