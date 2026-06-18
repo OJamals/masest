@@ -5,6 +5,7 @@ const $ = (id) => document.getElementById(id);
 export async function renderQboStatus() {
   const status = $("qboStatus");
   const button = $("qboConnect");
+  const summary = $("qboSyncSummary");
   if (!status || !button) return;
 
   status.textContent = "Checking QuickBooks...";
@@ -18,9 +19,14 @@ export async function renderQboStatus() {
       : "Not connected.";
     status.dataset.state = info.connected ? "ok" : "err";
     button.innerHTML = `<i class="ph ph-plugs-connected"></i> ${info.connected ? "Reconnect QuickBooks" : "Connect QuickBooks"}`;
+    if (summary) {
+      const sync_counts = info.sync_counts || {};
+      summary.textContent = `Queue: ${sync_counts.pending || 0} pending, ${sync_counts.error || 0} error, ${sync_counts.synced || 0} synced.`;
+    }
   } catch (err) {
     status.textContent = err.data?.error || "QuickBooks status unavailable.";
     status.dataset.state = "err";
+    if (summary) summary.textContent = "";
   } finally {
     button.disabled = false;
   }

@@ -12,10 +12,21 @@ export async function onRequestGet({ request, env }) {
     .maybeSingle();
   if (error) return json(500, { error: error.message || 'qbo_status_failed' });
 
+  const { data: syncRows, error: syncError } = await adminClient(env).from('orders')
+    .select('qbo_sync_status');
+  if (syncError) return json(500, { error: syncError.message || 'qbo_sync_status_failed' });
+
+  const sync_counts = (syncRows || []).reduce((counts, row) => {
+    const status = row.qbo_sync_status || 'none';
+    counts[status] = (counts[status] || 0) + 1;
+    return counts;
+  }, {});
+
   return json(200, {
     connected: Boolean(data?.refresh_token || data?.access_token),
     realm_id: data?.realm_id || null,
     access_expires_at: data?.access_expires_at || null,
     updated_at: data?.updated_at || null,
+    sync_counts,
   });
 }

@@ -31,6 +31,8 @@ test("QBO status endpoint is staff-gated and reports connected state", () => {
   assert.match(src, /requireStaff/);
   assert.match(src, /qbo_tokens/);
   assert.match(src, /connected/);
+  assert.match(src, /qbo_sync_status/);
+  assert.match(src, /sync_counts/);
 });
 
 test("admin UI exposes QuickBooks connect status and action", () => {
@@ -42,6 +44,8 @@ test("admin UI exposes QuickBooks connect status and action", () => {
   assert.match(js, /renderQboStatus/);
   assert.match(qbo, /\/api\/admin\/qbo\/status/);
   assert.match(qbo, /\/api\/admin\/qbo\/connect\?format=json/);
+  assert.match(qbo, /sync_counts/);
+  assert.match(qbo, /qboSyncSummary/);
 });
 test("admin QuickBooks panel exposes a staff-triggered manual sync", () => {
   const html = read("admin.html");
