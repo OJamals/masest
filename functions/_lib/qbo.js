@@ -76,6 +76,87 @@ export function buildInvoicePayload(input) {
   };
 }
 
+function qboHeaders(accessToken) {
+  return {
+    authorization: `Bearer ${accessToken}`,
+    accept: 'application/json',
+    'content-type': 'application/json',
+  };
+}
+
+function qboString(value) {
+  return String(value || '').replaceAll("'", "\\'");
+}
+
+async function qboQuery(env, accessToken, realmId, query, fetchImpl = fetch) {
+  const url = `${qboBaseUrl(env)}/v3/company/${realmId}/query?query=${encodeURIComponent(query)}&minorversion=70`;
+  const response = await fetchImpl(url, { headers: qboHeaders(accessToken) });
+  if (!response.ok) throw new Error(`qbo_query_failed:${response.status}`);
+  return response.json();
+}
+
+async function qboCreate(env, accessToken, realmId, entity, body, fetchImpl = fetch) {
+  const url = `${qboBaseUrl(env)}/v3/company/${realmId}/${entity.toLowerCase()}?minorversion=70`;
+  const response = await fetchImpl(url, {
+    method: 'POST',
+    headers: qboHeaders(accessToken),
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(`qbo_create_${entity.toLowerCase()}_failed:${response.status}`);
+  return response.json();
+}
+
+export async function findOrCreateCustomer(sb, env, accessToken, realmId, { key, displayName }, options = {}) {
+  const { data: cached, error } = await sb
+    .from('qbo_customers')
+    .select('key,qbo_customer_id')
+    .eq('key', key)
+    .maybeSingle();
+  if (error) throw new Error(error.message || 'qbo_customer_cache_read_failed');
+  if (cached?.qbo_customer_id) return cached.qbo_customer_id;
+
+  const fetchImpl = options.fetchImpl || fetch;
+  const safeName = qboString(displayName || key || 'MASEST Customer');
+  const found = await qboQuery(env, accessToken, realmId, `select Id from Customer where DisplayName = '${safeName}' maxresults 1`, fetchImpl);
+  let customerId = found.QueryResponse?.Customer?.[0]?.Id;
+  if (!customerId) {
+    const created = await qboCreate(env, accessToken, realmId, 'Customer', { DisplayName: safeName }, fetchImpl);
+    customerId = created.Customer?.Id;
+  }
+  if (!customerId) throw new Error('qbo_customer_id_missing');
+  await sb.from('qbo_customers').insert({ key, qbo_customer_id: customerId });
+  return customerId;
+}
+
+export async function findOrCreateItem(sb, env, accessToken, realmId, { sku, name }, options = {}) {
+  const { data: cached, error } = await sb
+    .from('qbo_items')
+    .select('sku,qbo_item_id')
+    .eq('sku', sku)
+    .maybeSingle();
+  if (error) throw new Error(error.message || 'qbo_item_cache_read_failed');
+  if (cached?.qbo_item_id) return cached.qbo_item_id;
+
+  const fetchImpl = options.fetchImpl || fetch;
+  const safeSku = qboString(sku);
+  const found = await qboQuery(env, accessToken, realmId, `select Id from Item where Sku = '${safeSku}' maxresults 1`, fetchImpl);
+  let itemId = found.QueryResponse?.Item?.[0]?.Id;
+  if (!itemId) {
+    const incomeAccountId = env.QBO_INCOME_ACCOUNT_ID;
+    if (!incomeAccountId) throw new Error('qbo_income_account_not_configured');
+    const created = await qboCreate(env, accessToken, realmId, 'Item', {
+      Name: name || sku,
+      Sku: sku,
+      Type: 'Service',
+      IncomeAccountRef: { value: incomeAccountId },
+    }, fetchImpl);
+    itemId = created.Item?.Id;
+  }
+  if (!itemId) throw new Error(`qbo_item_id_missing:${sku}`);
+  await sb.from('qbo_items').insert({ sku, qbo_item_id: itemId });
+  return itemId;
+}
+
 export async function getAccessToken(sb, env = {}, options = {}) {
   const now = options.now || new Date();
   const fetchImpl = options.fetchImpl || fetch;
