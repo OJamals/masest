@@ -1,0 +1,45 @@
+// functions/_lib/email.js — pure, dependency-free email helpers (unit-tested by execution).
+
+const RESEND_STATUS = {
+  "email.sent": "sent",
+  "email.delivered": "delivered",
+  "email.bounced": "bounced",
+  "email.complained": "complained",
+};
+
+// Returns recipients not present in the suppression set (case-insensitive on email).
+export function filterSuppressed(recipients, suppressedSet) {
+  if (!Array.isArray(recipients)) return [];
+  return recipients.filter((addr) => !suppressedSet.has(String(addr).toLowerCase()));
+}
+
+// Maps a Resend webhook event type to an internal email_events.status, or null if the
+// event should not change status (delivery_delayed, unknown).
+export function mapResendEvent(type) {
+  return RESEND_STATUS[type] || null;
+}
+
+// Event types that mean the address should be suppressed.
+export function isSuppressingEvent(type) {
+  return type === "email.bounced" || type === "email.complained";
+}
+
+// Verifies a Svix (Resend) webhook signature. secret is "whsec_<base64>"; headers carry
+// svix-id, svix-timestamp, and a space-separated svix-signature of "v1,<base64sig>" items.
+// Signed content is `${id}.${timestamp}.${body}`. Returns a boolean. Async (SubtleCrypto).
+export async function verifySvixSignature(secret, { id, timestamp, signature }, body) {
+  if (!secret || !id || !timestamp || !signature) return false;
+  try {
+    const rawSecret = secret.startsWith("whsec_") ? secret.slice(6) : secret;
+    const keyBytes = Uint8Array.from(atob(rawSecret), (c) => c.charCodeAt(0));
+    const key = await crypto.subtle.importKey(
+      "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const data = new TextEncoder().encode(`${id}.${timestamp}.${body}`);
+    const mac = await crypto.subtle.sign("HMAC", key, data);
+    const expected = btoa(String.fromCharCode(...new Uint8Array(mac)));
+    const provided = signature.split(" ").map((p) => p.split(",")[1]).filter(Boolean);
+    return provided.some((sig) => sig === expected);
+  } catch {
+    return false;
+  }
+}
