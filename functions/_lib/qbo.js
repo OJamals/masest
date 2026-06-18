@@ -40,6 +40,42 @@ export function docNumber(orderId) {
   return String(orderId || '').replaceAll('-', '').slice(0, 21);
 }
 
+function lineFor(item, itemRefs) {
+  const itemRef = itemRefs?.[item.sku];
+  if (!itemRef) throw new Error(`qbo_item_ref_missing:${item.sku}`);
+  return {
+    DetailType: 'SalesItemLineDetail',
+    Amount: Number(item.line_total || 0),
+    Description: item.name || item.sku,
+    SalesItemLineDetail: {
+      ItemRef: { value: itemRef },
+      Qty: Number(item.qty || 0),
+      UnitPrice: Number(item.unit_price || 0),
+    },
+  };
+}
+
+function baseDocumentPayload({ order, items, customerRef, itemRefs }) {
+  return {
+    CustomerRef: { value: customerRef },
+    DocNumber: docNumber(order.id),
+    PrivateNote: `MASEST order ${order.id}`,
+    Line: (items || []).map((item) => lineFor(item, itemRefs)),
+    TxnTaxDetail: { TotalTax: Number(order.tax || 0) },
+  };
+}
+
+export function buildSalesReceiptPayload(input) {
+  return baseDocumentPayload(input);
+}
+
+export function buildInvoicePayload(input) {
+  return {
+    ...baseDocumentPayload(input),
+    Balance: Number(input.order?.total || 0),
+  };
+}
+
 export async function getAccessToken(sb, env = {}, options = {}) {
   const now = options.now || new Date();
   const fetchImpl = options.fetchImpl || fetch;
