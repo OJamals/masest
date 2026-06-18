@@ -48,7 +48,9 @@ async function renderOverview() {
     <div class="dash-row"><span>Company</span><b>${esc(c?.name || '—')}</b></div>
     <div class="dash-row"><span>Status</span>${statusBadge(c?.status || 'pending')}</div>
     <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : 'Pending approval'}</b></div>
-    <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + c?.net_terms_days : 'Not enabled'}</b></div>`;
+    <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + c?.net_terms_days : 'Not enabled'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
+    <div class="dash-row"><span>Balance owed</span><b>${money(ACCOUNT.credit.net_outstanding, 'usd')}</b></div>
+    <div class="dash-row"><span>Credit available</span><b>${money(ACCOUNT.credit.credit_available, 'usd')}</b></div>` : ''}`;
 
   // Quick stats — pull counts in the background.
   const stats = $('ovStats');

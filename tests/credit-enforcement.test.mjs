@@ -32,3 +32,10 @@ test("account/me imports credit helper at the correct depth and returns a credit
   assert.match(src, /net_outstanding/, "me.js must expose net_outstanding");
   assert.match(src, /credit_available/, "me.js must expose credit_available");
 });
+
+test("dashboard renders balance owed + credit available from ACCOUNT.credit", () => {
+  const js = read("js/dashboard.js");
+  assert.match(js, /ACCOUNT\??\.credit/, "dashboard must read ACCOUNT.credit");
+  assert.match(js, /Balance owed/, "dashboard must label the outstanding balance");
+  assert.match(js, /Credit available/, "dashboard must label available credit");
+});
