@@ -36,7 +36,7 @@
 /* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
 .story .act { position: relative; height: 212vh; padding: 0; }
 .story .act[data-act="1"] { height: 168vh; }   /* photo reel needs less sequencing */
-.story .act[data-act="3"] { height: 150vh; }   /* HMIS factor-by-factor */
+.story .act[data-act="3"] { height: 220vh; }   /* HMIS factor-by-factor */
 .story .act[data-act="4"] { height: 260vh; }   /* chemicals one by one */
 .story .act-savior { height: 228vh; }
 .story .stage {
@@ -636,7 +636,7 @@
 @media (max-width: 760px) {
   .story .act { height: 198vh; }
   .story .act[data-act="1"] { height: 170vh; }
-  .story .act[data-act="3"] { height: 150vh; }
+  .story .act[data-act="3"] { height: 220vh; }
   .story .act[data-act="4"] { height: 226vh; }
   .story .act-savior { height: 235vh; }
   .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }

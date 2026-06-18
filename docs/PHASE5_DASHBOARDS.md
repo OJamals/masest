@@ -1,6 +1,6 @@
 # Phase 5 — User + Admin dashboards
 
-Built on the existing Netlify + Supabase commerce backend. **Marketing pages untouched.** New endpoints
+Built on the existing Cloudflare Pages + Supabase commerce backend. **Marketing pages untouched.** New endpoints
 degrade gracefully (return empty/401) until the migration + env vars below are applied, so deploying this
 does not break the live site.
 
@@ -23,8 +23,6 @@ pageview analytics + live SEO audit of the marketing pages + sitemap/robots link
   `account/notifications`, `account/profile`, `account/billing-portal`; `admin/stats`, `admin/orders`,
   `admin/companies`, `admin/products`, `admin/messages`, `admin/offers`, `admin/traffic`; `track`.
   (`account/orders` already existed.) Shared gate `requireStaff()` added to `functions/_lib/supabase.js`.
-- **Netlify (legacy mirror — `netlify/functions/*.js`)**: same endpoints in Netlify v2 format, kept in sync
-  in case Netlify is ever revived. Netlify is currently credit-blocked, so these are not live.
 
 Beacon `js/track.js` wired into all 8 public pages.
 
@@ -44,7 +42,7 @@ New tables `messages`, `notifications`, `offers`, `page_views`; new columns
 3. **Stripe Customer Portal**: activate it once in the Stripe Dashboard (Settings → Billing → Customer portal),
    else `account/billing-portal` errors. `STRIPE_SECRET_KEY` must be set (already used by checkout).
 4. **(optional) `RESEND_API_KEY` + `RESEND_FROM`** to let admin offers also email recipients.
-5. Redeploy: push to `netlify-commerce` (Cloudflare Pages auto-builds it via `node tools/cf-build.mjs`).
+5. Redeploy: push to `main` (Cloudflare Pages auto-builds it via `node tools/cf-build.mjs`).
    Verify env presence at `/api/health`.
 
 ## Security notes

@@ -1,4 +1,4 @@
-// Pure helpers shared by checkout + webhook (no env, no I/O). Verbatim port from netlify/lib.
+// Pure helpers shared by checkout + webhook (no env, no I/O).
 export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sellable, qtyBySku }) {
   const cleanEmail = String(email || "").trim();
   const cart = sellable.map((product) => ({

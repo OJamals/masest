@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { buildStripeCheckoutSessionParams, buyerEmailFromStripeSession } from "../netlify/lib/checkout-session.js";
+import { buildStripeCheckoutSessionParams, buyerEmailFromStripeSession } from "../functions/_lib/checkout-session.js";
 
 test("checkout connector carries buyer email and cart metadata into Stripe", () => {
   const params = buildStripeCheckoutSessionParams({

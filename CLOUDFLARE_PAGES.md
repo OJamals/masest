@@ -6,7 +6,7 @@ Custom domain: `https://masest.co/`
 Cloudflare Pages project:
 
 - Project name: `masest-commerce`
-- Production branch: `netlify-commerce`
+- Production branch: `main`
 - Static publish root: repository root as deployed by the Pages project
 - Pages Functions: `functions/` routes `/api/*`
 

@@ -1,7 +1,7 @@
 /* MASEST commerce — PUBLIC client config. Fill these in.
  * Only public/publishable values belong here — they ship to the browser.
  * NEVER put secret keys here (Stripe secret, Klaviyo private, Supabase service-role).
- * Those live only in Netlify environment variables, read server-side by functions. */
+ * Those live only in server environment variables, read server-side by functions. */
 window.MASEST_SUPABASE_URL = 'https://mvfxzvkzcqmnwcoblvfc.supabase.co';
 window.MASEST_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12Znh6dmt6Y3Ftbndjb2JsdmZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTk5NDMsImV4cCI6MjA5NzIzNTk0M30.JJOxgY8uZPpwKHGc6bMvWKazLDqxUoihFGNNf_2HlBc';        // Supabase anon key (RLS-protected, public-safe)
 window.MASEST_STRIPE_PK = 'pk_test_51TjBFdHfKF76gAoJLvVOMtE9BLgIyAaFvvyuRl4sAxXpfljwdJQqq4PBlE09kxQAYQUgfkdDlHsXY7MAxZN1FkmM00oTFFf6V6';            // Stripe publishable key pk_live_... (public)

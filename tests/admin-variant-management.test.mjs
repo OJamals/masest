@@ -22,7 +22,7 @@ test("admin UI can add, edit, and remove purchasable volume variants", () => {
 test("admin product API supports variant read/write/delete contracts", () => {
   for (const path of [
     "site/functions/api/admin/products.js",
-    "site/netlify/functions/admin-products.js",
+    "site/functions/api/admin/products.js",
   ]) {
     const source = readRoot(path);
     assert.match(source, /product_variants\(/, `${path} should select nested variants`);

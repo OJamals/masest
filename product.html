@@ -53,7 +53,7 @@
       <div class="drum-ref" id="pDrums" hidden></div>
     </div>
     <div class="hmis-panel">
-      <img id="pImage" class="product-shot" src="img/products/hvac-hcr.webp" alt="" hidden>
+      <img id="pImage" class="product-shot" src="img/products/hvac-hcr-studio.webp" alt="" hidden>
       <div class="panel-title" id="panelTitle">HMIS Hazard Rating</div>
       <div class="hmis-rows" id="panelRows"></div>
       <div class="panel-foot" id="panelFoot"></div>
@@ -211,9 +211,23 @@
         if (allImgs.length > 1) {
           const heroEl = document.getElementById("pImage");
           const strip = document.createElement("div");
-          strip.style.cssText = "display:flex;gap:8px;margin-top:12px;flex-wrap:wrap";
-          strip.innerHTML = allImgs.map(u => `<button type="button" data-src="${u}" style="width:56px;height:56px;border:1px solid var(--line,#e4e6e9);border-radius:8px;overflow:hidden;padding:0;background:#fff;cursor:pointer"><img src="${u}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover"></button>`).join("");
-          strip.querySelectorAll("button").forEach(b => b.addEventListener("click", () => setProductImage(b.dataset.src, p.name + " photo")));
+          strip.className = "product-gallery-strip";
+          strip.style.cssText = "display:flex;gap:8px;margin-top:14px;flex-wrap:wrap";
+          allImgs.forEach(u => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.dataset.src = u;
+            button.setAttribute("aria-label", "View product photo");
+            button.style.cssText = "width:56px;height:56px;border:1px solid var(--line,#e4e6e9);border-radius:8px;overflow:hidden;padding:0;background:#fff;cursor:pointer";
+            const img = document.createElement("img");
+            img.src = u;
+            img.alt = "";
+            img.loading = "lazy";
+            img.style.cssText = "width:100%;height:100%;object-fit:cover";
+            button.appendChild(img);
+            button.addEventListener("click", () => setProductImage(button.dataset.src, p.name + " photo"));
+            strip.appendChild(button);
+          });
           heroEl.insertAdjacentElement("afterend", strip);
         }
         if (!row || row.active === false || parent.active === false || (parent.mode || row.mode) !== "buy") return;

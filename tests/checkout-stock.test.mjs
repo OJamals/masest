@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("checkout validates stock-tracked variants before creating payment or NET orders", () => {
-  for (const path of ["functions/api/checkout.js", "netlify/functions/checkout.js"]) {
+  for (const path of ["functions/api/checkout.js"]) {
     const source = read(path);
     assert.match(source, /stock,track_stock/, `${path} must select variant stock fields`);
     assert.match(source, /outOfStock/, `${path} must separate inventory failures`);
@@ -16,7 +16,7 @@ test("checkout validates stock-tracked variants before creating payment or NET o
 });
 
 test("stripe webhook decrements variant stock after paid checkout", () => {
-  for (const path of ["functions/api/stripe-webhook.js", "netlify/functions/stripe-webhook.js"]) {
+  for (const path of ["functions/api/stripe-webhook.js"]) {
     const source = read(path);
     assert.match(source, /decrementVariantStock/, `${path} must decrement variant inventory`);
     assert.match(source, /decrement_variant_stock/, `${path} must use the atomic stock RPC`);

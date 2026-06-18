@@ -16,7 +16,7 @@ alter table public.product_variants add column if not exists track_stock  boolea
 alter table public.companies add column if not exists stripe_customer_id text;
 
 -- Platform-staff flag. NOTE: the AUTHORITATIVE admin gate is the ADMIN_EMAILS env var checked in
--- netlify/lib/supabase.js requireStaff(). This column only mirrors it for convenient reads/RLS.
+-- functions/_lib/supabase.js requireStaff(). This column only mirrors it for convenient reads/RLS.
 alter table public.profiles add column if not exists is_staff boolean not null default false;
 
 -- ---------- enums ----------

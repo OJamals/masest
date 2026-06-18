@@ -10,9 +10,9 @@ const OUT = 'dist';
 
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
-  /^functions\//, /^netlify\//, /^supabase\//, /^tools\//, /^tests\//, /^node_modules\//,
+  /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^node_modules\//,
   /^dist\//, /^\.github\//, /^\.vscode\//,
-  /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^netlify\.toml$/, /^\.gitignore$/,
+  /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
   // Internal seed sources — not client assets (only data/drum-pricing.json is fetched).
   /^data\/(catalog|products)\.seed\.json$/,
@@ -30,7 +30,7 @@ for (const f of files) {
   n++;
 }
 
-// Static security headers (mirror the old netlify.toml [[headers]] block).
+// Static security headers.
 writeFileSync(join(OUT, '_headers'),
 `/*
   X-Content-Type-Options: nosniff

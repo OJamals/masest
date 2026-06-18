@@ -10,13 +10,12 @@ conversion engine — split into **Scheduled** (committed/near-term) and **Poten
 ## 0. Stack, conventions & gotchas (read first)
 
 **Hosting / runtime**
-- **Cloudflare Pages**, project `masest-commerce`, branch `netlify-commerce`. This is the LIVE host.
+- **Cloudflare Pages**, project `masest-commerce`, branch `main`. This is the LIVE host.
 - Backend = **Cloudflare Pages Functions** (Workers runtime, Web `Request`/`Response`).
   - File-path routing under `functions/api/...`. Handlers: `export async function onRequest({ request, env })`
     or `onRequestGet` / `onRequestPost`. **No `process.env`** — env arrives via the per-request `env` binding.
   - Clean URLs: `/foo.html` 308-redirects to `/foo`.
   - `Date`/`fetch`/`crypto` are available in the Workers runtime (unlike the workflow sandbox).
-- **Netlify is no longer used** — ignore `netlify/` if present; do not maintain a second port.
 
 **Data / services**
 - **Supabase** (ref `mvfxzvkzcqmnwcoblvfc`, us-west-2): Postgres + Auth + RLS + Storage available.
@@ -35,7 +34,7 @@ conversion engine — split into **Scheduled** (committed/near-term) and **Poten
 
 **Deploy / git**
 - Canonical clone: `/tmp/masest-deploy` (HTTPS origin, push works). Commit explicit files →
-  `git fetch origin -q && git rebase origin/netlify-commerce` → `git push origin HEAD:netlify-commerce`.
+  `git fetch origin -q && git rebase origin/main` → `git push origin HEAD:main`.
   Push triggers a Cloudflare Pages build. **Never touch `main`.**
 - Concurrent Codex agents may edit the same tree — re-Read / re-grep anchors before editing, and rebase before push.
 
@@ -225,6 +224,6 @@ Turn traffic and leads into orders and repeat revenue.
 4. **Optimize:** §5 on-site conversion, A/B, personalization.
 5. **Scale:** §6 as the business demands.
 
-Each task: implement on `netlify-commerce`, follow the CF Functions + `_lib` conventions, add the table
+Each task: implement on `main`, follow the CF Functions + `_lib` conventions, add the table
 grant when creating tables, verify with `node --check` + a smoke call (expect 401 on gated endpoints), and
 confirm email paths via the Resend API. Keep changes small and committed per-feature.

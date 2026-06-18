@@ -21,7 +21,7 @@ test("admin catalog can manage product photos and remove products", () => {
 test("admin product APIs expose safe product media fields", () => {
   for (const path of [
     "site/functions/api/admin/products.js",
-    "site/netlify/functions/admin-products.js",
+    "site/functions/api/admin/products.js",
   ]) {
     const source = readRoot(path);
     assert.match(source, /image_url/, `${path} should read/write image_url`);
