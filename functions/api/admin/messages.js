@@ -1,6 +1,6 @@
 // /api/admin/messages — staff side of company support threads.
 //   GET → thread list · GET ?company_id= → full thread (marks read) · POST { company_id, body } → reply
-import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, htmlEscape } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, htmlEscape, emailLayout } from '../../_lib/supabase.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
@@ -54,7 +54,11 @@ export async function onRequest({ request, env }) {
     const appUrl = env.APP_URL || new URL(request.url).origin;
     const emails = await companyEmails(sb, companyId);
     await sendEmail(env, { to: emails, subject: 'New message from MASEST',
-      html: `<p>You have a new message from the MASEST team:</p><blockquote style="border-left:3px solid #0e7c86;padding-left:12px;color:#334">${htmlEscape(text)}</blockquote><p><a href="${appUrl}/dashboard.html#messages">Reply in your dashboard</a></p>` });
+      html: emailLayout({
+        heading: 'New message from MASEST',
+        bodyHtml: `<p>You have a new message from the MASEST team:</p><blockquote style="border-left:3px solid #0e7c86;padding-left:12px;color:#334;margin:12px 0">${htmlEscape(text)}</blockquote>`,
+        ctaText: 'Reply in your dashboard', ctaUrl: `${appUrl}/dashboard.html#messages`,
+      }) });
     return json(201, { id: data.id, created_at: data.created_at });
   }
 

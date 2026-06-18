@@ -4,7 +4,7 @@
 //   POST { id, status }         → update status + notify company
 //   POST { id, action:'refund' }→ Stripe refund + cancel + notify
 import Stripe from 'stripe';
-import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout } from '../../_lib/supabase.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
 
@@ -22,7 +22,11 @@ async function notifyCompany(sb, env, request, companyId, label, extra) {
   const emails = await companyEmails(sb, companyId);
   await sendEmail(env, {
     to: emails, subject: `Order ${label}`,
-    html: `<p>${extra || `Your MASEST order status is now <b>${label}</b>.`}</p><p><a href="${appUrl}/dashboard.html#orders">View your order</a></p>`,
+    html: emailLayout({
+      heading: `Order ${label}`,
+      bodyHtml: `<p>${extra || `Your MASEST order status is now <b>${label}</b>.`}</p>`,
+      ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders`,
+    }),
   });
 }
 

@@ -2,7 +2,7 @@
 //   GET                     → { members: [...], invites: [...], is_company_admin }
 //   POST { email, role? }   → invite a teammate (role 'buyer'|'admin')
 //   DELETE { id }           → revoke a pending invite
-import { adminClient, userFromRequest, json, readBody } from '../../_lib/supabase.js';
+import { adminClient, userFromRequest, json, readBody, emailLayout } from '../../_lib/supabase.js';
 
 async function callerContext(sb, userId) {
   const { data } = await sb.from('profiles').select('company_id,role').eq('id', userId).maybeSingle();
@@ -70,9 +70,11 @@ export async function onRequest({ request, env }) {
           method: 'POST',
           headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
           body: JSON.stringify({ from, to: [email], subject: 'You’re invited to a MASEST business account',
-            html: `<p>You’ve been invited to join a MASEST VertKleen business account.</p>
-                   <p>Create your account with <b>this email address</b> to join automatically:</p>
-                   <p><a href="${appUrl}/account.html">${appUrl}/account.html</a></p>` }),
+            html: emailLayout({
+              heading: 'You’re invited',
+              bodyHtml: `<p>You’ve been invited to join a MASEST VertKleen business account.</p><p>Create your account with <b>this email address</b> to join automatically.</p>`,
+              ctaText: 'Open your account', ctaUrl: `${appUrl}/account.html`,
+            }) }),
         });
       } catch { /* ignore */ }
     }
