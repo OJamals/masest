@@ -19,12 +19,14 @@ one family.
 :root {
   --ink: #15171c;
   --ink-soft: #393d44;
+  --ink-inverse: #f4f6f8;
   --muted: #5f656d;          /* darkened from #6b7077 for AA body contrast */
   --line: #e4e6e9;
   --line-soft: #eef0f2;
   --bg: #fafbfc;
   --surface: #ffffff;
   --panel: #f1f3f4;
+  --panel-cool: #eef5f5;
   --accent: #0e7c86;
   --accent-ink: #0a5b62;
   --accent-soft: #e3f0f1;
@@ -143,8 +145,8 @@ one line) ---------- */
   border-bottom-color: rgba(255,255,255,.12);
   box-shadow: none;
 }
-.nav.over-dark .nav-logo { color: #f4f6f8; }
-.nav.over-dark .nav-links { color: #f4f6f8; }
+.nav.over-dark .nav-logo { color: var(--ink-inverse); }
+.nav.over-dark .nav-links { color: var(--ink-inverse); }
 .nav.over-dark .nav-links a:hover,
 .nav.over-dark .nav-links a.active { color: #fff; }
 .nav.over-dark .nav-cta { background: #fff; color: var(--ink); }
@@ -191,7 +193,7 @@ one line) ---------- */
 .nav.over-dark:not(.scrolled) .nav-cart { border-color: rgba(255,255,255,.42); background: rgba(255,255,255,.12); color: #fff; }
 .nav.over-dark:not(.scrolled) .nav-account { color: rgba(255,255,255,.78); }
 .nav.over-dark .nav-cta:hover { background: #e8eaed; }
-.nav.over-dark .nav-burger span { background: #f4f6f8; }
+.nav.over-dark .nav-burger span { background: var(--ink-inverse); }
 .nav-inner {
   max-width: var(--maxw); margin: 0 auto; padding: 0 28px;
   display: flex; align-items: center; justify-content: space-between; height: 56px;
@@ -553,7 +555,7 @@ no dots) ---------- */
   background: var(--surface);
 }
 .buyer-router .route-card i {
-  background: #eef5f5;
+  background: var(--panel-cool);
   box-shadow: inset 0 0 0 1px rgba(14, 124, 134, .12);
 }
 .buyer-router .route-card-strong {
@@ -940,7 +942,7 @@ figure.photo figcaption {
 footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 38px; font-size: .9rem; }
 .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.4fr; gap: 40px; margin-bottom: 48px; }
 .foot-title { color: #fff; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 16px; }
-.foot-grid a { display: block; padding: 4px 0; color: #f4f6f8; transition: color .2s; }
+.foot-grid a { display: block; padding: 4px 0; color: var(--ink-inverse); transition: color .2s; }
 .foot-grid a:hover { color: #fff; }
 .foot-kicker { margin-top: 22px; color: rgba(255, 255, 255, .58); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .foot-quote { display: inline-flex !important; margin-top: 10px; padding: 10px 18px !important; color: var(--ink) !important; }
@@ -1253,7 +1255,7 @@ so no-JS / hidden-tab renders stay visible */
 .proof-card figure {
   margin: 0;
   border-bottom: 1px solid var(--line);
-  background: #f1f3f4;
+  background: var(--panel);
 }
 .proof-card img {
   display: block;
@@ -2103,7 +2105,7 @@ dark block) ───────────────── */
 .sample-hint.err { color: var(--danger); font-weight: 700; }
 
 /* ── Document/report previews: clipped thumbnail (uniform card rows); badge + click open the PDF ── */
-.doc-link { display: block; position: relative; background: #f1f3f4; line-height: 0; cursor: pointer; overflow: hidden; height: 100%; }
+.doc-link { display: block; position: relative; background: var(--panel); line-height: 0; cursor: pointer; overflow: hidden; height: 100%; }
 .doc-link img {
   width: 100%; height: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block;
 }
@@ -2498,7 +2500,7 @@ line-height: 1.35;
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: #eef5f5;
+  background: var(--panel-cool);
   color: var(--accent-ink);
   font-size: 1.5rem;
 }
@@ -2796,7 +2798,7 @@ body.reveal-ready .matrix-disclosure.reveal {
 .nav-menu a:hover,
 .nav-menu a.active { background: var(--accent-tint); }
 /* Dropdown panel is always a light/white surface — keep its link text dark in every nav
-   state. In over-dark, links inherit the light .nav-links color (#f4f6f8) → invisible on
+   state. In over-dark, links inherit the light .nav-links color (var(--ink-inverse)) → invisible on
    white, and the over-dark hover rule paints #fff; override both, scoped to the panel. */
 .nav-menu a { color: var(--ink-soft); }
 .nav-menu a:hover,
@@ -2804,7 +2806,7 @@ body.reveal-ready .matrix-disclosure.reveal {
 .nav.over-dark .nav-menu a { color: var(--ink-soft); }
 .nav.over-dark .nav-menu a:hover,
 .nav.over-dark .nav-menu a.active { color: var(--ink); }
-.nav.over-dark .nav-group summary { color: #f4f6f8; }
+.nav.over-dark .nav-group summary { color: var(--ink-inverse); }
 .nav.over-dark .nav-group summary:hover,
 .nav.over-dark .nav-group summary.active { color: #fff; }
 /* over-dark bg stays dark even when scrolled, so summary stays light (matches the <a> links).

@@ -442,7 +442,7 @@
 }
 .cdot[data-dot="1"] span, .cdot[data-dot="3"] span { top: auto; bottom: -130%; }
 .chem-scale.safe .cdot { background: var(--s-safe); box-shadow: 0 0 0 1.5px var(--s-safe), 0 6px 14px rgba(8, 121, 111, .36); }
-.story .chem-scale .cdot { color: #f4f6f8; }
+.story .chem-scale .cdot { color: var(--s-ink); }
 /* Four distinct label levels so labels stay legible when all four dots
    converge on the same value (at 3, then at 0). Shadow lifts them off
    the track. */
@@ -452,7 +452,7 @@
 .cdot[data-dot="3"] span { top: auto; bottom: -205%; }
 .story .chem-scale .cdot span { text-shadow: 0 1px 3px rgba(8, 10, 14, .75); white-space: nowrap; }
 .chem-scale.safe .cdot,
-.chem-scale.safe .cdot span { color: #f4f6f8; }
+.chem-scale.safe .cdot span { color: var(--s-ink); }
 /* One framed HMIS spec panel split into quadrants — not four repeated cards. */
 .chem-list {
   display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
@@ -555,7 +555,7 @@
 .savior-proof figcaption { margin-top: 8px; font-size: .76rem; font-weight: 700; letter-spacing: .04em; color: var(--s-mut); }
 .savior-proof-cap { margin: clamp(10px, 1.6vh, 14px) 0 clamp(16px, 2.6vh, 28px); font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
 .savior-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.savior-ctas .btn-primary { background: var(--s-safe); color: #f4f6f8; box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(8, 121, 111, .62); }
+.savior-ctas .btn-primary { background: var(--s-safe); color: var(--s-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(8, 121, 111, .62); }
 .savior-ctas .btn-primary:hover { background: #5fe9d6; }
 .savior-ctas .btn-ghost { background: rgba(255, 255, 255, .04); color: #fff; border: 1.5px solid rgba(255, 255, 255, .28); }
 .savior-ctas .btn-ghost:hover { border-color: #fff; background: rgba(255, 255, 255, .1); }
