@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const SRC = readFileSync(new URL("../functions/api/qbo-sync.js", import.meta.url), "utf8");
+
+test("qbo-sync endpoint is protected by QBO_SYNC_SECRET", () => {
+  assert.match(SRC, /QBO_SYNC_SECRET/, "endpoint must require configured sync secret");
+  assert.match(SRC, /x-qbo-sync-secret/i, "endpoint must read X-QBO-Sync-Secret header");
+  assert.match(SRC, /json\(401,\s*\{\s*error:\s*'unauthorized'/,
+    "bad or missing sync secret must return 401");
+});
+
+test("qbo-sync endpoint claims pending orders atomically", () => {
+  assert.match(SRC, /rpc\(\s*'claim_qbo_orders'\s*,\s*\{\s*batch\s*\}/,
+    "endpoint must use the claim_qbo_orders RPC");
+  assert.match(SRC, /Math\.min\(25,\s*Math\.max\(1,/,
+    "batch size must be bounded");
+});
+
+test("qbo-sync endpoint requeues claimed orders when token setup fails", () => {
+  assert.match(SRC, /getAccessToken\(sb,\s*env\)/,
+    "endpoint must verify QBO token access before processing claimed orders");
+  assert.match(SRC, /nextSyncState\(order\.qbo_attempts/,
+    "endpoint must compute retry state from the current attempt count");
+  assert.match(SRC, /\.update\(\{\s*\.\.\.next/,
+    "endpoint must persist retry state on claimed orders");
+  assert.match(SRC, /qbo_error:\s*message/,
+    "endpoint must record the failure reason");
+});

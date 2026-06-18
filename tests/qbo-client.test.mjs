@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getAccessToken, qboBaseUrl } from "../functions/_lib/qbo.js";
+import { backoffMs, docNumber, getAccessToken, needsRefresh, nextSyncState, qboBaseUrl } from "../functions/_lib/qbo.js";
 
 function fakeQboTokenStore(row) {
   const calls = { updated: null };
@@ -29,6 +29,36 @@ test("qboBaseUrl selects sandbox unless production is explicit", () => {
   assert.equal(qboBaseUrl({ QBO_ENVIRONMENT: "sandbox" }), "https://sandbox-quickbooks.api.intuit.com");
   assert.equal(qboBaseUrl({ QBO_ENVIRONMENT: "production" }), "https://quickbooks.api.intuit.com");
   assert.equal(qboBaseUrl({}), "https://sandbox-quickbooks.api.intuit.com");
+});
+
+test("needsRefresh treats missing, bad, and near-expiry tokens as refreshable", () => {
+  const now = Date.parse("2026-06-18T12:00:00.000Z");
+  assert.equal(needsRefresh(null, now), true);
+  assert.equal(needsRefresh({ access_token: "x" }, now), true);
+  assert.equal(needsRefresh({ access_token: "x", access_expires_at: "bad-date" }, now), true);
+  assert.equal(needsRefresh({ access_token: "x", access_expires_at: "2026-06-18T12:04:00.000Z" }, now), true);
+  assert.equal(needsRefresh({ access_token: "x", access_expires_at: "2026-06-18T12:30:00.000Z" }, now), false);
+});
+
+test("backoff and nextSyncState requeue before terminal error", () => {
+  const now = Date.parse("2026-06-18T12:00:00.000Z");
+  assert.equal(backoffMs(0), 60_000);
+  assert.equal(backoffMs(3), 480_000);
+  assert.equal(backoffMs(99), 6 * 60 * 60_000);
+  assert.deepEqual(nextSyncState(0, now), {
+    qbo_sync_status: "pending",
+    qbo_attempts: 1,
+    qbo_next_attempt_at: "2026-06-18T12:02:00.000Z",
+  });
+  assert.deepEqual(nextSyncState(4, now), {
+    qbo_sync_status: "error",
+    qbo_attempts: 5,
+    qbo_next_attempt_at: null,
+  });
+});
+
+test("docNumber fits QBO's 21-character limit deterministically", () => {
+  assert.equal(docNumber("a1b2c3d4-e5f6-7890-abcd-ef1234567890"), "a1b2c3d4e5f67890abcde");
 });
 
 test("getAccessToken reuses an unexpired stored access token", async () => {

@@ -1,5 +1,7 @@
 const OAUTH_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
+const BACKOFF_CAP_MS = 6 * 60 * 60 * 1000;
+const MAX_ATTEMPTS = 5;
 
 export function qboBaseUrl(env = {}) {
   return String(env.QBO_ENVIRONMENT || 'sandbox').toLowerCase() === 'production'
@@ -9,6 +11,33 @@ export function qboBaseUrl(env = {}) {
 
 function basicAuth(clientId, clientSecret) {
   return `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
+}
+
+export function needsRefresh(tokenRow, nowMs = Date.now()) {
+  if (!tokenRow?.access_token || !tokenRow?.access_expires_at) return true;
+  const expiresAt = Date.parse(tokenRow.access_expires_at);
+  if (Number.isNaN(expiresAt)) return true;
+  return expiresAt - nowMs <= TOKEN_REFRESH_SKEW_MS;
+}
+
+export function backoffMs(attempts) {
+  return Math.min((2 ** Math.max(0, Number(attempts) || 0)) * 60_000, BACKOFF_CAP_MS);
+}
+
+export function nextSyncState(attempts, nowMs = Date.now()) {
+  const next = (Number(attempts) || 0) + 1;
+  if (next >= MAX_ATTEMPTS) {
+    return { qbo_sync_status: 'error', qbo_attempts: next, qbo_next_attempt_at: null };
+  }
+  return {
+    qbo_sync_status: 'pending',
+    qbo_attempts: next,
+    qbo_next_attempt_at: new Date(nowMs + backoffMs(next)).toISOString(),
+  };
+}
+
+export function docNumber(orderId) {
+  return String(orderId || '').replaceAll('-', '').slice(0, 21);
 }
 
 export async function getAccessToken(sb, env = {}, options = {}) {
@@ -23,8 +52,7 @@ export async function getAccessToken(sb, env = {}, options = {}) {
   if (error) throw new Error(error.message || 'qbo_token_read_failed');
   if (!tokenRow?.refresh_token && !tokenRow?.access_token) throw new Error('qbo_not_connected');
 
-  const expiresAt = tokenRow.access_expires_at ? new Date(tokenRow.access_expires_at).getTime() : 0;
-  if (tokenRow.access_token && expiresAt - now.getTime() > TOKEN_REFRESH_SKEW_MS) {
+  if (!needsRefresh(tokenRow, now.getTime())) {
     return { accessToken: tokenRow.access_token, realmId: tokenRow.realm_id || env.QBO_REALM_ID || '' };
   }
 
