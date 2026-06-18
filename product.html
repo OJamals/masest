@@ -162,9 +162,11 @@
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const id = new URLSearchParams(location.search).get("id") || "hcr";
-    // Editorial keeps the legacy slug (e.g. `crhd`); the commerce catalog uses the
-    // canonical slug (`cr-hd`). Map id -> commerce sku so the buy button still resolves.
-    const COMMERCE_ALIAS = { crhd: "cr-hd" };
+    // Editorial id and commerce catalog sku currently share the same slug (e.g. `crhd`),
+    // so no remap is needed. Only add an entry if a catalog sku ever diverges from the
+    // editorial id — a stale mapping silently breaks the buy button (the lookup at the
+    // /api/products `find` below returns no row, so the "Add to cart" control never renders).
+    const COMMERCE_ALIAS = {};
     const commerceId = COMMERCE_ALIAS[id] || id;
     const p = PRODUCTS[id];
     if (!p) {
