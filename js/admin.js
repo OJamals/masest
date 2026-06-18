@@ -264,7 +264,7 @@ async function renderProducts() {
   }
   box.innerHTML = `<table class="adm"><thead><tr><th>Photo</th><th>SKU</th><th>Name</th><th>Mode</th><th>Price</th><th>Stock</th><th>Photo URL</th><th>Alt</th><th>Variants</th><th>Active</th><th></th></tr></thead><tbody>${products.map((p) => `
     <tr data-product="${esc(p.sku)}">
-      <td>${p.image_url ? `<img class="product-photo" src="${esc(p.image_url)}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}${Array.isArray(p.gallery) && p.gallery.length ? `<br><span class="muted" style="font-size:.7rem">+${p.gallery.length} gallery</span>` : ''}<br><label class="muted" style="font-size:.7rem;display:block;margin-top:4px">Upload<input type="file" accept="image/*" data-imgfile style="display:block;max-width:120px;font-size:.7rem"></label><label class="muted" style="font-size:.7rem;display:block">+ gallery<input type="file" accept="image/*" data-galfile style="display:block;max-width:120px;font-size:.7rem"></label></td>
+      <td>${p.image_url ? `<img class="product-photo" src="${esc(p.image_url)}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}${Array.isArray(p.gallery) && p.gallery.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${p.gallery.map((u, i) => `<span style="display:inline-flex;flex-direction:column;align-items:center"><img src="${esc(u)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"><span><button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(u)}" title="Make primary">★</button><button type="button" class="gbtn" data-gact="up" data-gidx="${i}" title="Move up">↑</button><button type="button" class="gbtn" data-gact="down" data-gidx="${i}" title="Move down">↓</button><button type="button" class="gbtn" data-gact="del" data-gurl="${esc(u)}" title="Remove">×</button></span></span>`).join('')}</div>` : ''}<br><label class="muted" style="font-size:.7rem;display:block;margin-top:4px">Upload<input type="file" accept="image/*" data-imgfile style="display:block;max-width:120px;font-size:.7rem"></label><label class="muted" style="font-size:.7rem;display:block">+ gallery<input type="file" accept="image/*" data-galfile style="display:block;max-width:120px;font-size:.7rem"></label></td>
       <td><b>${esc(p.sku)}</b></td>
       <td><input class="adm-input" value="${esc(p.name)}" data-field="name"></td>
       <td><select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></td>
@@ -298,6 +298,28 @@ async function renderProducts() {
   }));
   box.querySelectorAll('[data-galfile]').forEach((inp) => inp.addEventListener('change', () => {
     if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'gallery');
+  }));
+  box.querySelectorAll('[data-gact]').forEach((btn) => btn.addEventListener('click', async () => {
+    const sku = btn.closest('[data-product]')?.dataset.product;
+    if (!sku) return;
+    const prod = (state.products || []).find((x) => x.sku === sku);
+    const gallery = Array.isArray(prod?.gallery) ? [...prod.gallery] : [];
+    const act = btn.dataset.gact;
+    btn.disabled = true;
+    try {
+      if (act === 'del') {
+        await api('/api/admin/product-image', { method: 'DELETE', body: { sku, url: btn.dataset.gurl } });
+      } else if (act === 'primary') {
+        await api('/api/admin/product-image', { method: 'PATCH', body: { sku, action: 'set_primary', url: btn.dataset.gurl } });
+      } else if (act === 'up' || act === 'down') {
+        const i = Number(btn.dataset.gidx); const j = act === 'up' ? i - 1 : i + 1;
+        if (j < 0 || j >= gallery.length) { btn.disabled = false; return; }
+        [gallery[i], gallery[j]] = [gallery[j], gallery[i]];
+        await api('/api/admin/product-image', { method: 'PATCH', body: { sku, action: 'reorder', gallery } });
+      }
+      message('prodStatus', 'Gallery updated.', 'ok');
+      await renderProducts();
+    } catch (err) { message('prodStatus', err.data?.error || 'Gallery update failed.', 'err'); btn.disabled = false; }
   }));
 }
 
