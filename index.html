@@ -184,10 +184,31 @@
             <span class="fmeaning">Will it react violently? 0 is stable. 4 can detonate.</span>
           </div>
         </div>
-        <div class="hmis-scale" data-at="4">
-          <div class="scale-head"><span>Every chemical gets all three scores on this scale</span><span>0 = none &nbsp;&rarr;&nbsp; 4 = severe</span></div>
-          <div class="scale-track"></div>
-          <div class="scale-ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
+        <div class="hmis-scale hmis-scale-hot" data-at="4">
+          <div class="scale-head">
+            <span>HMIS hazard rises on three axes</span>
+            <span>3 serious &middot; 2 moderate &middot; 1 slight</span>
+          </div>
+          <div class="hmis-axis-grid" aria-label="HMIS hazard scale across health, flammability, and reactivity">
+            <div class="hmis-axis axis-health">
+              <span>Health</span>
+              <strong>3</strong>
+              <small>Brief exposure can mean serious injury.</small>
+            </div>
+            <div class="hmis-axis axis-flam">
+              <span>Flammability</span>
+              <strong>2</strong>
+              <small>Heat and vapor turn handling into risk.</small>
+            </div>
+            <div class="hmis-axis axis-react">
+              <span>Reactivity</span>
+              <strong>1</strong>
+              <small>Pressure, metal, or mixing can destabilize.</small>
+            </div>
+          </div>
+          <div class="heat-strip" aria-hidden="true">
+            <span>4 extreme</span><span>3 serious</span><span>2 moderate</span><span>1 slight</span>
+          </div>
         </div>
       </div>
     </div>
@@ -232,6 +253,9 @@
           </div>
         </div>
         <div class="chem-scale" data-at="1.55">
+          <div class="hazard-field" aria-hidden="true">
+            <i></i><i></i><i></i><i></i>
+          </div>
           <div class="scale-track">
             <div class="cdot" data-dot="0" style="--v:3"><span class="enemy">Rust</span><span class="chem">Muriatic</span></div>
             <div class="cdot" data-dot="1" style="--v:3"><span class="enemy">Grease</span><span class="chem">Lye</span></div>
@@ -256,6 +280,11 @@
         <p class="lede" data-at="1">VertKleen replaces the hazardous step with HMIS 0-0-0 chemistry across the core line: no fumes, no evacuation, and simpler handling for occupied sites.</p>
         <div class="savior-zero" data-at="2">
           <div class="z">0</div><div class="z">0</div><div class="z">0</div>
+        </div>
+        <div class="savior-zero-scale" data-at="2" aria-label="HMIS zero hazard across health, flammability, and reactivity">
+          <div class="zero-axis"><span>Health</span><strong>0</strong><small>No expected injury</small></div>
+          <div class="zero-axis"><span>Flammability</span><strong>0</strong><small>Will not burn</small></div>
+          <div class="zero-axis"><span>Reactivity</span><strong>0</strong><small>Stable in use</small></div>
         </div>
         <div class="savior-cap" data-at="2">Health &middot; Flammability &middot; Reactivity</div>
         <div class="savior-proof" data-at="3" aria-label="Before and after photos from the same jobs">

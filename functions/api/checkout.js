@@ -6,7 +6,7 @@
 // active, priced, and whose parent product is active + mode='buy'. Client prices are
 // ignored entirely. Self-gate: unpriced/unknown vsku → 409 not_purchasable.
 import Stripe from 'stripe';
-import { adminClient, userFromRequest, json, readBody } from '../_lib/supabase.js';
+import { adminClient, userFromRequest, json, readBody, tierForRequest, tierPriceMap } from '../_lib/supabase.js';
 
 export async function onRequestPost({ request, env }) {
   const body = await readBody(request);
@@ -54,6 +54,17 @@ export async function onRequestPost({ request, env }) {
       skus: rejected,
       message: 'These items are quote-only or not yet priced. Use the quote form.',
     });
+  }
+
+  // Apply the caller's tier price (price_tiers[tier] ?? base). When an override
+  // exists, force dynamic price_data by clearing stripe_price_id so the tier
+  // amount is actually charged. Drives both the Stripe and NET subtotals below.
+  const { tier } = await tierForRequest(request, env);
+  if (tier !== 'retail') {
+    const overrides = await tierPriceMap(sb, tier);
+    for (const p of sellable) {
+      if (overrides.has(p.sku)) { p.price = overrides.get(p.sku); p.stripe_price_id = null; }
+    }
   }
 
   // NET terms path (approved B2B only).

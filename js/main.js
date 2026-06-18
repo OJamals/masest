@@ -300,19 +300,84 @@ const PRODUCTS = {
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "HCR & Descaler Userguide"]
   },
+  "cr-hd-low-foam": {
+    name: "VertKleen CR HD Low Foam",
+    cat: "alkaline",
+    replaces: "Replaces solvent and butyl degreasers",
+    hmis: "0-0-0",
+    icon: "ph-drop-half",
+    image: "img/products/crhd-studio.webp",
+    tag: "Low-foam CR HD for automatic scrubbers, parts washers, and recirculating wash systems.",
+    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters, with the same zero-hazard handling as CR HD.",
+    uses: [
+      "Automatic floor scrubbers and machine wash",
+      "Parts washers and recirculating wash systems",
+      "Industrial degreasing where foam must stay low",
+      "Heavy soil and grease on equipment and floors"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-drop", "Low-foam formula", "Built for machine wash and recirculating systems"],
+      ["ph-atom", "SynTec powered", "Heavy-duty degreasing without solvent odor"],
+      ["ph-truck", "Non-hazmat shipping", "No DOT hazmat freight, lower shipping cost"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  cr2: {
+    name: "VertKleen CR2",
+    cat: "alkaline",
+    replaces: "Higher-concentration CR formulation",
+    hmis: "0-0-0",
+    icon: "ph-drop-half",
+    image: "img/products/hvac-cr-studio.webp",
+    tag: "Higher-concentration CR for demanding alkaline cleaning and water-treatment programs. Priced by quote.",
+    desc: "A higher-concentration version of VertKleen CR for demanding alkaline cleaning and water-treatment work. Pricing and pack sizes are confirmed by quote.",
+    uses: [
+      "Concentrated alkaline cleaning programs",
+      "Water-treatment dosing where strength matters",
+      "High-pH cleaning at a zero hazard rating"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-drop-half", "Higher concentration", "More active cleaning per gallon than standard CR"],
+      ["ph-atom", "SynTec powered", "Caustic-level performance without the hazard"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  sar: {
+    name: "VertKleen SAR",
+    cat: "acid",
+    replaces: "Specialty acid replacement",
+    hmis: "0-0-0",
+    icon: "ph-wrench",
+    image: "img/products/crs-studio.webp",
+    tag: "Specialty acid replacement for targeted descaling and water-side work. Priced by quote.",
+    desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. Pricing and pack sizes are confirmed by quote.",
+    uses: [
+      "Specialty descaling and acid-cleaning jobs",
+      "Water-side scale and mineral removal",
+      "Applications needing a tuned acid-replacement profile"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-drop-half", "Acid replacement", "Targeted descaling without muriatic-acid handling"],
+      ["ph-waves", "Water-side scale", "Calcium, rust, and mineral buildup"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
 };
 
 const CATALOG_ORDER = [
-  "hcr", "descaler", "crs", "cr", "crhd", "neutral", "multiwash",
-  "watersafe60", "purgo", "dbnpa", "lam3", "alumibrite", "torque"
+  "hcr", "descaler", "crs", "cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash",
+  "watersafe60", "cr2", "sar", "purgo", "dbnpa", "lam3", "alumibrite", "torque"
 ];
 
 // Catalog UI groupings (curated, not the raw `cat` field) — drive the category
 // filter chips and grouping on the products page.
 const CATALOG_GROUPS = [
   { key: "descale", label: "Rust & Scale", ids: ["hcr", "descaler", "crs"] },
-  { key: "degrease", label: "Grease & Grime", ids: ["cr", "crhd", "neutral", "multiwash"] },
-  { key: "water", label: "Water Treatment", ids: ["watersafe60", "purgo", "dbnpa"] },
+  { key: "degrease", label: "Grease & Grime", ids: ["cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash"] },
+  { key: "water", label: "Water Treatment", ids: ["watersafe60", "cr2", "sar", "purgo", "dbnpa"] },
   { key: "exterior", label: "Exterior & Specialty", ids: ["lam3", "alumibrite", "torque"] }
 ];
 
@@ -412,6 +477,24 @@ const PRODUCT_CATALOG_COPY = {
     summary: "Clean and protect finishes in one wash-and-wax step for vehicles, fleets, RVs, and boats.",
     fits: ["vehicles", "fleets", "RVs", "boats"],
     proof: "Finish-care notes and field proof"
+  },
+  "cr-hd-low-foam": {
+    job: "Machine wash and low-foam degreasing",
+    summary: "The low-foam CR HD for automatic scrubbers, parts washers, and recirculating systems where foam control matters.",
+    fits: ["floor scrubbers", "parts washers", "recirculating wash", "heavy soil"],
+    proof: "Application notes on request"
+  },
+  cr2: {
+    job: "Concentrated alkaline cleaning",
+    summary: "A higher-concentration CR for demanding alkaline cleaning and water-treatment programs. Priced by quote.",
+    fits: ["alkaline cleaning", "water treatment", "high-pH", "dosing"],
+    proof: "Application notes on request"
+  },
+  sar: {
+    job: "Specialty acid replacement",
+    summary: "A tuned acid-replacement formulation for targeted descaling and water-side work. Priced by quote.",
+    fits: ["descaling", "water-side scale", "specialty acid", "maintenance"],
+    proof: "Application notes on request"
   }
 };
 
@@ -962,6 +1045,7 @@ function initShop() {
   const sortSel = document.getElementById("shopSort");
   const countEl = document.getElementById("shopCount");
   const emptyEl = document.getElementById("shopEmpty");
+  const searchEl = document.getElementById("shopSearch");
 
   grid.addEventListener("click", e => {
     const button = e.target.closest("[data-cart-add]");
@@ -972,7 +1056,7 @@ function initShop() {
   });
 
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
-  const state = { group: "all", match: null, sort: "featured" };
+  const state = { group: "all", match: null, sort: "featured", search: "" };
 
   const chips = [{ key: "all", label: "All products" }, ...CATALOG_GROUPS.map((g) => ({ key: g.key, label: g.label }))];
   chipsBox.innerHTML = chips
@@ -999,6 +1083,13 @@ function initShop() {
       : [...CATALOG_ORDER];
     if (state.group !== "all") ids = ids.filter((id) => groupOf(id) === state.group);
     if (state.match) ids = ids.filter((id) => state.match.includes(id));
+    if (state.search) {
+      const q = state.search;
+      ids = ids.filter((id) => {
+        const p = PRODUCTS[id];
+        return [p.name, p.desc, p.tag, p.replaces, id].filter(Boolean).join(" ").toLowerCase().includes(q);
+      });
+    }
     return ids;
   };
 
@@ -1013,6 +1104,8 @@ function initShop() {
   const reset = () => {
     state.group = "all";
     state.match = null;
+    state.search = "";
+    if (searchEl) searchEl.value = "";
     state.sort = "featured";
     if (sortSel) sortSel.value = "featured";
     if (result) result.hidden = true;
@@ -1031,6 +1124,11 @@ function initShop() {
 
   sortSel?.addEventListener("change", () => {
     state.sort = sortSel.value;
+    apply();
+  });
+
+  searchEl?.addEventListener("input", () => {
+    state.search = searchEl.value.trim().toLowerCase();
     apply();
   });
 

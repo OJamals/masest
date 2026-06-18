@@ -1,0 +1,246 @@
+{
+  "hcr": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 740.36,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 2754.67,
+      "currency": "usd"
+    }
+  ],
+  "cr": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 528.41,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 2234.93,
+      "currency": "usd"
+    }
+  ],
+  "descaler": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 426.2,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 1888.42,
+      "currency": "usd"
+    }
+  ],
+  "cr-hd": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 281.82,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 1241.62,
+      "currency": "usd"
+    }
+  ],
+  "cr-hd-low-foam": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 281.82,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 1241.62,
+      "currency": "usd"
+    }
+  ],
+  "neutral": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 713.79,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 3381.26,
+      "currency": "usd"
+    }
+  ],
+  "multiwash": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 381.15,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 1764.26,
+      "currency": "usd"
+    }
+  ],
+  "torque": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 303.76,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 1325.36,
+      "currency": "usd"
+    }
+  ],
+  "alumibrite": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 358.63,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 1619.89,
+      "currency": "usd"
+    }
+  ],
+  "purgo": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 1042.39,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 4729.72,
+      "currency": "usd"
+    }
+  ],
+  "lam3": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 907.83,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 4729.72,
+      "currency": "usd"
+    }
+  ],
+  "watersafe60": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 619.08,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 2774.89,
+      "currency": "usd"
+    }
+  ],
+  "cr2": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 669.32,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 2434.19,
+      "currency": "usd"
+    }
+  ],
+  "sar": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 554.92,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 2182.95,
+      "currency": "usd"
+    }
+  ],
+  "pg100": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 1383,
+      "currency": "usd"
+    }
+  ],
+  "pg50": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 1192,
+      "currency": "usd"
+    }
+  ],
+  "eg100": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 1375,
+      "currency": "usd"
+    }
+  ],
+  "eg50": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 995,
+      "currency": "usd"
+    }
+  ],
+  "egu96": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 865,
+      "currency": "usd"
+    }
+  ],
+  "eg5050": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 445,
+      "currency": "usd"
+    }
+  ]
+}

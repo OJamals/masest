@@ -14,6 +14,8 @@ const DENY = [
   /^dist\//, /^\.github\//, /^\.vscode\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^netlify\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
+  // Internal seed sources — not client assets (only data/drum-pricing.json is fetched).
+  /^data\/(catalog|products)\.seed\.json$/,
 ];
 
 rmSync(OUT, { recursive: true, force: true });

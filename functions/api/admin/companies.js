@@ -12,7 +12,7 @@ export async function onRequest({ request, env }) {
   if (request.method === 'GET') {
     const status = new URL(request.url).searchParams.get('status');
     let q = sb.from('companies')
-      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,resale_cert_url,stripe_customer_id,created_at,profiles(id,full_name,phone,role)')
+      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,resale_cert_url,stripe_customer_id,created_at,profiles(id,full_name,phone,role)')
       .order('created_at', { ascending: false }).limit(500);
     if (status) q = q.eq('status', status);
     const { data, error } = await q;
@@ -37,8 +37,14 @@ export async function onRequest({ request, env }) {
       if (body.tax_exempt != null) patch.tax_exempt = Boolean(body.tax_exempt);
     } else { return json(400, { error: 'invalid_action' }); }
 
+    // Pricing tier is assignable on any mutating action.
+    if (body.price_tier != null) {
+      if (!['retail', 'hvac', 'wholesale'].includes(body.price_tier)) return json(400, { error: 'invalid_tier' });
+      patch.price_tier = body.price_tier;
+    }
+
     const { data, error } = await sb.from('companies').update(patch).eq('id', body.id)
-      .select('id,name,status,net_terms_days,credit_limit,tax_exempt').single();
+      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier').single();
     if (error) return json(500, { error: error.message });
 
     if (body.action === 'approve') {

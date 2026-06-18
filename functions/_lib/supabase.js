@@ -42,6 +42,32 @@ export async function companyForUser(sb, userId) {
   return data?.company_id || null;
 }
 
+// Resolve the caller's pricing tier. Guests, anonymous requests, and non-approved
+// accounts always get 'retail'. Approved B2B companies get companies.price_tier.
+export async function tierForRequest(request, env) {
+  const { user } = await userFromRequest(request, env);
+  if (!user) return { tier: 'retail', user: null, companyId: null };
+  const sb = adminClient(env);
+  const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
+  const companyId = profile?.company_id || null;
+  if (!companyId) return { tier: 'retail', user, companyId: null };
+  const { data: company } = await sb.from('companies').select('status,price_tier').eq('id', companyId).maybeSingle();
+  const tier = (company?.status === 'approved' && company?.price_tier) ? company.price_tier : 'retail';
+  return { tier, user, companyId };
+}
+
+// vsku -> explicit price for a given tier. Missing entries fall back to the
+// variant base price (handled by the caller). Empty map if pre-migration.
+export async function tierPriceMap(sb, tier) {
+  const map = new Map();
+  if (!tier) return map;
+  try {
+    const { data } = await sb.from('price_tiers').select('vsku,price').eq('tier', tier);
+    for (const r of data || []) map.set(r.vsku, Number(r.price));
+  } catch { /* price_tiers may not exist pre-migration → empty map = base price */ }
+  return map;
+}
+
 // Platform-staff gate for /api/admin/*. AUTHORITATIVE source is the ADMIN_EMAILS env var
 // (comma-separated, case-insensitive). Returns { user, staff }.
 export async function requireStaff(request, env) {

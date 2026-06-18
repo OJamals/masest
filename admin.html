@@ -10,6 +10,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/story.css">
 <style>
   .adm-wrap { max-width: 1080px; margin: 0 auto; }
@@ -88,6 +89,7 @@
           <button class="adm-tab" role="tab" data-tab="orders" aria-selected="false"><i class="ph ph-package"></i> Orders</button>
           <button class="adm-tab" role="tab" data-tab="companies" aria-selected="false"><i class="ph ph-buildings"></i> Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
           <button class="adm-tab" role="tab" data-tab="products" aria-selected="false"><i class="ph ph-flask"></i> Products &amp; stock</button>
+          <button class="adm-tab" role="tab" data-tab="pricing" aria-selected="false"><i class="ph ph-tag"></i> Pricing</button>
           <button class="adm-tab" role="tab" data-tab="messages" aria-selected="false"><i class="ph ph-chats"></i> Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
           <button class="adm-tab" role="tab" data-tab="quotes" aria-selected="false"><i class="ph ph-clipboard-text"></i> Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
           <button class="adm-tab" role="tab" data-tab="offers" aria-selected="false"><i class="ph ph-megaphone"></i> Offers</button>
@@ -118,6 +120,9 @@
               <button class="btn btn-primary btn-sm" type="submit">Save</button>
             </form><span class="adm-status" id="prodStatus" role="status" aria-live="polite"></span>
           </div>
+        </div>
+        <div class="adm-panel" data-panel="pricing" role="tabpanel" hidden>
+          <div class="adm-card"><input id="priceSearch" type="search" class="adm-search" placeholder="Search variants…" style="margin-bottom:10px"><div id="admPricing"><p class="muted">Loading…</p></div></div>
         </div>
         <div class="adm-panel" data-panel="messages" role="tabpanel" hidden>
           <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px" id="msgGrid">

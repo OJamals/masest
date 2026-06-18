@@ -20,7 +20,7 @@ export async function onRequestGet({ request, env }) {
 
   const { data: company } = await sb
     .from('companies')
-    .select('id,name,status,net_terms_days,credit_limit,tax_exempt')
+    .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier')
     .eq('id', profile.company_id)
     .maybeSingle();
 

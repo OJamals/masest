@@ -1,5 +1,4 @@
-// Seed/refresh the products table from data/products.seed.json.
-// Modes are PROVISIONAL (from SKU_COMMERCE_WORKSHEET.md) until SDS §14 confirmed.
+// Seed/refresh the MASEST catalog from data/catalog.seed.json.
 // Usage: SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run seed
 import { readFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
@@ -11,18 +10,59 @@ if (!url || !key) {
   process.exit(1);
 }
 
-const COLS = ['sku', 'name', 'group_key', 'hmis', 'mode', 'hazmat', 'taxable', 'price', 'sort'];
-const rows = JSON.parse(await readFile(new URL('../data/products.seed.json', import.meta.url)));
-const clean = rows.map((r) => Object.fromEntries(COLS.map((c) => [c, r[c] ?? null])));
+const catalog = JSON.parse(await readFile(new URL('../data/catalog.seed.json', import.meta.url), 'utf8'));
+const now = new Date().toISOString();
+
+const products = catalog.products.map((p) => ({
+  sku: p.slug,
+  name: p.name,
+  group_key: p.group_key,
+  hmis: p.hmis,
+  mode: p.mode,
+  hazmat: p.hazmat,
+  taxable: p.taxable,
+  price: null,
+  currency: 'usd',
+  active: p.active,
+  sort: p.sort,
+  updated_at: now,
+}));
+
+const variants = catalog.product_variants.map((v) => ({
+  vsku: v.sku,
+  product_sku: v.product_slug,
+  label: v.label,
+  gallons: v.size_gal,
+  price: v.retail_price,
+  currency: v.currency,
+  active: v.active,
+  sort: v.sort,
+}));
+
+const services = [...catalog.services, ...catalog.service_packages].map((s) => ({
+  sku: s.sku,
+  name: s.name,
+  category: s.category,
+  unit: s.unit,
+  public_price: s.public_price,
+  mode: s.mode,
+  active: s.active,
+  updated_at: now,
+}));
 
 const sb = createClient(url, key, { auth: { persistSession: false } });
-const { error } = await sb
-  .from('products')
-  .upsert(clean.map((r) => ({ ...r, updated_at: new Date().toISOString() })), { onConflict: 'sku' });
 
-if (error) {
-  console.error('Seed failed:', error.message);
-  process.exit(1);
+for (const [table, rows, onConflict] of [
+  ['products', products, 'sku'],
+  ['product_variants', variants, 'vsku'],
+  ['services', services, 'sku'],
+]) {
+  const { error } = await sb.from(table).upsert(rows, { onConflict });
+  if (error) {
+    console.error(`Seed failed for ${table}:`, error.message);
+    process.exit(1);
+  }
 }
-const buy = clean.filter((r) => r.mode === 'buy').length;
-console.log(`Seeded ${clean.length} products (${buy} buy, ${clean.length - buy} quote). Prices null — owner supplies.`);
+
+const buyable = variants.filter((v) => v.active && v.price != null).length;
+console.log(`Seeded ${products.length} products, ${variants.length} variants (${buyable} buyable), and ${services.length} services/packages.`);
