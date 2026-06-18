@@ -4,6 +4,7 @@
 import Stripe from 'stripe';
 import { adminClient, userFromRequest, json, readBody, tierForRequest, tierPriceMap } from '../_lib/supabase.js';
 import { buildStripeCheckoutSessionParams } from '../_lib/checkout-session.js';
+import { companyCreditState, exceedsCredit } from '../_lib/credit.js';
 
 function normalizeCart(cart) {
   const qtyBySku = {};
@@ -101,12 +102,30 @@ export async function onRequestPost({ request, env }) {
     const { user } = await userFromRequest(request, env);
     if (!user) return json(401, { error: 'auth_required_for_net' });
     const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
-    const { data: company } = await sb.from('companies').select('id,status,net_terms_days').eq('id', profile?.company_id).maybeSingle();
+    const { data: company } = await sb.from('companies').select('id,status,net_terms_days,credit_limit').eq('id', profile?.company_id).maybeSingle();
     if (!company || company.status !== 'approved' || (company.net_terms_days || 0) <= 0) {
       return json(403, { error: 'net_terms_unavailable' });
     }
 
     const subtotal = sellable.reduce((s, p) => s + Number(p.price) * qtyBySku[p.sku], 0);
+
+    // Credit enforcement: hard-block NET orders that would exceed the company's credit limit.
+    let creditState;
+    try {
+      creditState = await companyCreditState(sb, company.id, company.credit_limit);
+    } catch (err) {
+      return json(503, { error: 'credit_check_unavailable' });
+    }
+    if (exceedsCredit(creditState, subtotal)) {
+      return json(403, {
+        error: 'credit_limit_exceeded',
+        credit_limit: creditState.credit_limit,
+        outstanding: creditState.outstanding,
+        available: creditState.available,
+        order_total: subtotal,
+      });
+    }
+
     const { data: order, error: orderErr } = await sb.from('orders').insert({
       company_id: company.id,
       user_id: user.id,
