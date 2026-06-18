@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-const readRoot = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+const readRoot = (path) => readFileSync(new URL(`../${path.replace(/^site\//, "")}`, import.meta.url), "utf8");
 
 test("admin catalog can manage product photos and remove products", () => {
   const html = read("admin.html");
