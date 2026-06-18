@@ -2,8 +2,7 @@
 // Private key is server-side only. Double opt-in is governed by the list's Klaviyo settings.
 import { json, readBody } from '../_lib/supabase.js';
 import { rateLimit, clientIp } from '../_lib/ratelimit.js';
-
-const REVISION = '2024-10-15';
+import { klaviyoSubscribe } from '../_lib/klaviyo.js';
 
 export async function onRequestPost({ request, env }) {
   const body = await readBody(request);
@@ -15,42 +14,8 @@ export async function onRequestPost({ request, env }) {
   const rl = await rateLimit(env, 'newsletter', clientIp(request), { limit: 5, windowSec: 60 });
   if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
 
-  const key = env.KLAVIYO_PRIVATE_KEY;
-  const listId = env.KLAVIYO_LIST_ID;
-  if (!key || !listId) return json(500, { error: 'newsletter_not_configured' });
-
-  const payload = {
-    data: {
-      type: 'profile-subscription-bulk-create-job',
-      attributes: {
-        profiles: {
-          data: [{
-            type: 'profile',
-            attributes: {
-              email,
-              subscriptions: { email: { marketing: { consent: 'SUBSCRIBED' } } },
-            },
-          }],
-        },
-      },
-      relationships: { list: { data: { type: 'list', id: listId } } },
-    },
-  };
-
-  const resp = await fetch('https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/', {
-    method: 'POST',
-    headers: {
-      Authorization: `Klaviyo-API-Key ${key}`,
-      revision: REVISION,
-      'content-type': 'application/json',
-      accept: 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (resp.status !== 202) {
-    const detail = await resp.text().catch(() => '');
-    return json(502, { error: 'klaviyo_error', status: resp.status, detail: detail.slice(0, 300) });
-  }
+  const r = await klaviyoSubscribe(env, email, env.KLAVIYO_LIST_ID);
+  if (r.skipped) return json(500, { error: 'newsletter_not_configured' });
+  if (!r.ok) return json(502, { error: 'klaviyo_error', status: r.status });
   return json(200, { ok: true });
 }
