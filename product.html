@@ -227,8 +227,6 @@
       }
     })();
 
-    const localStaticCommerce = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname) && !window.MASEST_ENABLE_LOCAL_API;
-    if (!localStaticCommerce) {
     const buySkel = document.createElement("span");
     buySkel.className = "skeleton skeleton-text w-60";
     buySkel.style.cssText = "min-width:160px;height:1.5em;display:inline-block";
@@ -369,7 +367,6 @@
         });
       })
       .catch(() => { buySkel.remove(); });
-    }
 
     // Drums & totes (55 / 275 gal): list price for reference + freight-quote CTA.
     // Display only — these sizes are quote-only (freight quoted after order), never cart.
