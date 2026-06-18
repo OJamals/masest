@@ -4,6 +4,7 @@
 // present AND a secret is set, so a misconfigured/absent CAPTCHA never blocks a real lead.
 import { adminClient, json, sendEmail, htmlEscape, emailLayout } from '../_lib/supabase.js';
 import { rateLimit, clientIp } from '../_lib/ratelimit.js';
+import { subscribeLeadByIndustry } from '../_lib/klaviyo.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const LABELS = {
@@ -94,6 +95,9 @@ export async function onRequestPost({ request, env }) {
       bodyHtml: `<p>We received your ${htmlEscape(type)} request — a sales or technical contact will follow up directly.</p><p style="color:#667">If it's urgent, email <a href="mailto:matthew@masest.co">matthew@masest.co</a> or call (813) 406-3852.</p>`,
     }),
   });
+
+  // Lead nurture (best-effort): subscribe to the industry's Klaviyo list. Never blocks the quote.
+  try { await subscribeLeadByIndustry(env, { email, industry: fields.industry }); } catch { /* nurture is best-effort */ }
 
   return json(200, { ok: true, saved });
 }
