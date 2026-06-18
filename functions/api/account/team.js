@@ -2,7 +2,7 @@
 //   GET                     → { members: [...], invites: [...], is_company_admin }
 //   POST { email, role? }   → invite a teammate (role 'buyer'|'admin')
 //   DELETE { id }           → revoke a pending invite
-import { adminClient, userFromRequest, json, readBody, emailLayout } from '../../_lib/supabase.js';
+import { adminClient, userFromRequest, json, readBody, emailLayout, sendEmail } from '../../_lib/supabase.js';
 
 async function callerContext(sb, userId) {
   const { data } = await sb.from('profiles').select('company_id,role').eq('id', userId).maybeSingle();
@@ -61,22 +61,19 @@ export async function onRequest({ request, env }) {
       return json(500, { error: 'server_error' });
     }
 
-    // Best-effort invite email.
+    // Best-effort invite email — logged + suppression-checked via sendEmail (category 'team').
     if (env.RESEND_API_KEY) {
-      const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
       const appUrl = env.APP_URL || new URL(request.url).origin;
-      try {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-          body: JSON.stringify({ from, to: [email], subject: 'You’re invited to a MASEST business account',
-            html: emailLayout({
-              heading: 'You’re invited',
-              bodyHtml: `<p>You’ve been invited to join a MASEST VertKleen business account.</p><p>Create your account with <b>this email address</b> to join automatically.</p>`,
-              ctaText: 'Open your account', ctaUrl: `${appUrl}/account.html`,
-            }) }),
-        });
-      } catch { /* ignore */ }
+      await sendEmail(env, {
+        to: [email],
+        subject: 'You’re invited to a MASEST business account',
+        html: emailLayout({
+          heading: 'You’re invited',
+          bodyHtml: `<p>You’ve been invited to join a MASEST VertKleen business account.</p><p>Create your account with <b>this email address</b> to join automatically.</p>`,
+          ctaText: 'Open your account', ctaUrl: `${appUrl}/account.html`,
+        }),
+        category: 'team',
+      });
     }
     return json(201, { ok: true, email, role: inviteRole });
   }

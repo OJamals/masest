@@ -3,7 +3,7 @@
 // event checkout.session.completed. Put that endpoint's signing secret in STRIPE_WEBHOOK_SECRET.
 // On the Workers runtime signature verification must use the SubtleCrypto provider.
 import Stripe from 'stripe';
-import { adminClient, json } from '../_lib/supabase.js';
+import { adminClient, json, sendEmail } from '../_lib/supabase.js';
 import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
 
 export function escapeHtml(value) {
@@ -73,25 +73,14 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
     </div>
   </div>`;
 
-  try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        from,
-        to,
-        bcc: env.ORDER_NOTIFY_EMAIL || undefined,
-        subject: `Your MASEST order${ref} is confirmed`,
-        html,
-      }),
-    });
-    if (!resp.ok) {
-      const detail = await resp.text().catch(() => '');
-      console.error('resend_failed', resp.status, detail.slice(0, 300));
-    }
-  } catch (err) {
-    console.error('resend_error', err?.message || err);
-  }
+  // Logged + suppression-checked via the sendEmail chokepoint (category 'order').
+  await sendEmail(env, {
+    to: [to],
+    bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
+    subject: `Your MASEST order${ref} is confirmed`,
+    html,
+    category: 'order',
+  });
 }
 
 // Best-effort stock decrement for paid lines. Product-level (matches the admin stock UI). Never throws:
