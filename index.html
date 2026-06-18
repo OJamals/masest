@@ -164,36 +164,50 @@
         <p class="act-p" data-at="1" data-out="4.1">Crews fight buildup with acids, caustics, and biocides. Industry rates the danger of each one with HMIS, the Hazardous Materials Identification System: three numbers, each from 0 to 4.</p>
       </div>
       <div class="hmis-rig">
-        <div class="hmis-effects" aria-hidden="true">
-          <div class="hmis-effect hmis-effect-health">
-            <i class="ph ph-skull"></i><i class="ph ph-skull"></i><i class="ph ph-skull"></i>
-            <i class="ph ph-skull"></i><i class="ph ph-skull"></i><i class="ph ph-skull"></i>
-          </div>
-          <div class="hmis-effect hmis-effect-flam">
-            <span></span><span></span><span></span><span></span><span></span>
-          </div>
-          <div class="hmis-effect hmis-effect-react">
-            <i></i><i></i><i></i><i></i><i></i><i></i>
-          </div>
-        </div>
         <div class="hmis-factors">
-          <div class="factor f-health" data-at="1.25">
+          <div class="factor f-health" data-at="1">
             <div class="bar"></div>
             <span class="fico"><i class="ph ph-heartbeat" aria-hidden="true"></i></span>
             <span class="flabel">Health</span>
             <span class="fmeaning">Can it hurt people? 0 means no expected injury. 4 can be life-threatening.</span>
           </div>
-          <div class="factor f-flam" data-at="2.55">
+          <div class="factor f-flam" data-at="2">
             <div class="bar"></div>
             <span class="fico"><i class="ph ph-flame" aria-hidden="true"></i></span>
             <span class="flabel">Flammability</span>
             <span class="fmeaning">Will it burn? 0 means it will not burn. 4 ignites at room temperature.</span>
           </div>
-          <div class="factor f-react" data-at="3.85">
+          <div class="factor f-react" data-at="3">
             <div class="bar"></div>
             <span class="fico"><i class="ph ph-atom" aria-hidden="true"></i></span>
             <span class="flabel">Reactivity</span>
             <span class="fmeaning">Will it react violently? 0 is stable. 4 can detonate.</span>
+          </div>
+        </div>
+        <div class="hmis-scale hmis-scale-hot" data-at="4">
+          <div class="scale-head">
+            <span>HMIS hazard rises on three axes</span>
+            <span>3 serious &middot; 2 moderate &middot; 1 slight</span>
+          </div>
+          <div class="hmis-axis-grid" aria-label="HMIS hazard scale across health, flammability, and reactivity">
+            <div class="hmis-axis axis-health">
+              <span>Health</span>
+              <strong>3</strong>
+              <small>Brief exposure can mean serious injury.</small>
+            </div>
+            <div class="hmis-axis axis-flam">
+              <span>Flammability</span>
+              <strong>2</strong>
+              <small>Heat and vapor turn handling into risk.</small>
+            </div>
+            <div class="hmis-axis axis-react">
+              <span>Reactivity</span>
+              <strong>1</strong>
+              <small>Pressure, metal, or mixing can destabilize.</small>
+            </div>
+          </div>
+          <div class="heat-strip" aria-hidden="true">
+            <span>4 extreme</span><span>3 serious</span><span>2 moderate</span><span>1 slight</span>
           </div>
         </div>
       </div>
@@ -267,11 +281,6 @@
         <div class="savior-zero" data-at="2">
           <div class="z">0</div><div class="z">0</div><div class="z">0</div>
         </div>
-        <div class="cleaning-lift" data-at="2.35" aria-label="Water-like cleaning action lifts soil while HMIS stays zero">
-          <div class="cleaning-rinse" aria-hidden="true"></div>
-          <span class="soil-mote"></span><span class="soil-mote"></span><span class="soil-mote"></span><span class="soil-mote"></span><span class="soil-mote"></span>
-          <span class="soil-mote"></span><span class="soil-mote"></span><span class="soil-mote"></span><span class="soil-mote"></span><span class="soil-mote"></span>
-        </div>
         <div class="savior-zero-scale" data-at="2" aria-label="HMIS zero hazard across health, flammability, and reactivity">
           <div class="zero-axis"><span>Health</span><strong>0</strong><small>No expected injury</small></div>
           <div class="zero-axis"><span>Flammability</span><strong>0</strong><small>Will not burn</small></div>
@@ -284,7 +293,6 @@
               <img src="img/field/fill-before-enhanced.webp" alt="Cooling tower fill media before cleaning" decoding="async">
               <span class="proof-arrow" aria-hidden="true"></span>
               <img src="img/field/fill-after-enhanced.webp" alt="The same cooling tower fill media, clean" decoding="async">
-              <span class="proof-wipe" aria-hidden="true"></span>
             </div>
             <figcaption><span>Before</span><b>After</b></figcaption>
           </figure>
@@ -293,7 +301,6 @@
               <img src="img/field/plate-before-enhanced.webp" alt="Diamond-plate floor before rust removal" decoding="async">
               <span class="proof-arrow" aria-hidden="true"></span>
               <img src="img/field/plate-after-enhanced.webp" alt="The same diamond-plate floor, restored" decoding="async">
-              <span class="proof-wipe" aria-hidden="true"></span>
             </div>
             <figcaption><span>Before</span><b>After</b></figcaption>
           </figure>
@@ -302,7 +309,6 @@
               <img src="img/field/filters-before-enhanced.webp" alt="Hood filters before grease removal" decoding="async">
               <span class="proof-arrow" aria-hidden="true"></span>
               <img src="img/field/filters-after-enhanced.webp" alt="The same hood filters, grease free" decoding="async">
-              <span class="proof-wipe" aria-hidden="true"></span>
             </div>
             <figcaption><span>Before</span><b>After</b></figcaption>
           </figure>
@@ -636,7 +642,7 @@
     var checks=[
       function(){out.a1={h:op('.act[data-act="1"] .act-h'),reel:document.querySelector('.reel-idx').textContent,slideVis:op('.reel-slide[data-slide="1"]'),fx:cvPix(1)};},
       function(){out.a2={h:op('.act[data-act="2"] .act-h'),chip:op('.chip.c-rust'),fx:cvPix(2)};},
-      function(){out.a3={h:op('.act[data-act="3"] .act-h'),f:op('.factor.f-react'),fx:op('.hmis-effects')};},
+      function(){out.a3={h:op('.act[data-act="3"] .act-h'),f:op('.factor.f-react'),scale:op('.hmis-scale')};},
 function(){out.a4={h:op('.act-chems .act-h'),card:op('.chem-card[data-at=".85"]'),dot:op('.cdot[data-dot="2"]'),safe:document.querySelector('.chem-scale').classList.contains('safe')?1:0};},
       function(){out.a5={h:op('.act-savior h2'),z:op('.savior-zero'),fx:cvPix(5),rail:document.querySelectorAll('.rail-btn.is-on').length};}
     ];

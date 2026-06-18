@@ -118,16 +118,7 @@ states.forEach(function (st) {
   /* ============================================================
      SCRUB-DRIVEN EXTRAS (run inside each act's timeline update)
      ============================================================ */
- var cue = story.querySelector(".scroll-cue");
- var hmisAct = story.querySelector('.act[data-act="3"]');
- var hmisFactors = hmisAct ? [
- hmisAct.querySelector(".f-health"),
- hmisAct.querySelector(".f-flam"),
- hmisAct.querySelector(".f-react")
- ] : [];
- var hmisBeats = hmisFactors.map(function (factor, idx) {
- return factor ? parseFloat(factor.getAttribute("data-at")) || (idx + 1) : idx + 1;
- });
+  var cue = story.querySelector(".scroll-cue");
 
   function onActScrub(st) {
     if (st.i === 0) {
@@ -135,34 +126,11 @@ states.forEach(function (st) {
       if (cue) cue.style.opacity = Math.max(0, 1 - st.p * 8);
     }
     if (st.act === pipeAct) updateChips2(st);
- if (st.act === hmisAct) updateHmisFocus(st);
- if (st.act === chemAct) updateChems(st);
+    if (st.act === chemAct) updateChems(st);
   }
 
-  /* ---- ACT 3: HMIS factors — each axis owns a scrub-linked --hot (0..1),
-     so attention shifts continuously and reverses cleanly on scroll-back
-     (same inT*(1-outT) idiom as the Act 1 reel / Act 4 morph). The dominant
-     axis also drives the ambient background-effects layer. ---- */
-function updateHmisFocus(st) {
-  if (!hmisAct || !hmisFactors.length) return;
-  var inw = INW(st);
-  var best = -1, bestHot = 0;
-  for (var i = 0; i < hmisFactors.length; i++) {
-    var factor = hmisFactors[i];
-    if (!factor) continue;
-    var enter = smooth((st.p - beatFrac(st, hmisBeats[i])) / inw);
-    var exit = (i < hmisFactors.length - 1) ? smooth((st.p - beatFrac(st, hmisBeats[i + 1])) / inw) : 0;
-    var hot = enter * (1 - exit);
-    factor.style.setProperty("--hot", hot.toFixed(3));
-    if (hot > bestHot) { bestHot = hot; best = i; }
-  }
-  var current = bestHot > 0.15 ? best : -1;
-  ["is-hmis-health", "is-hmis-flam", "is-hmis-react"].forEach(function (name, idx) {
-    hmisAct.classList.toggle(name, current === idx);
-  });
-}
-
-var pipeAct = story.querySelector('.act[data-act="2"]');
+  /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
+  var pipeAct = story.querySelector('.act[data-act="2"]');
   var pipeChips = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".chip")) : [];
   var pipeFlowPaths = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".pipe-flow")) : [];
   var pipeBuildupPaths = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".pipe-buildup")) : [];
