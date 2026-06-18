@@ -44,7 +44,7 @@ test("story scene watermarks are removed from the visual layer", async ({ page }
   expect(watermark.opacity).toBe(0);
 });
 
-test("HMIS story has separated copy, hot hazard axes, and cool zero axes", async ({ page }) => {
+test("HMIS story has separated copy, hot factor effects, and cool zero axes", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
@@ -54,26 +54,26 @@ test("HMIS story has separated copy, hot hazard axes, and cool zero axes", async
   });
   await page.waitForTimeout(700);
 
-  await expect(page.locator(".hmis-scale-hot .hmis-axis")).toHaveCount(3);
+  await expect(page.locator('.story .act[data-act="3"] .hmis-factors .factor')).toHaveCount(3);
   await expect(page.locator(".savior-zero-scale .zero-axis")).toHaveCount(3);
 
   const layout = await page.evaluate(() => {
     const copy = document.querySelector('.story .act[data-act="3"] .act-copy.top');
     const rig = document.querySelector('.story .act[data-act="3"] .hmis-rig');
-    const scale = document.querySelector(".hmis-scale-hot");
+    const effects = document.querySelector('.story .act[data-act="3"] .hmis-effects');
     const copyBox = copy.getBoundingClientRect();
     const rigBox = rig.getBoundingClientRect();
-    const scaleBox = scale.getBoundingClientRect();
+    const effectsBox = effects.getBoundingClientRect();
     return {
       copyBottom: copyBox.bottom,
       rigTop: rigBox.top,
-      scaleTop: scaleBox.top,
+      effectsTop: effectsBox.top,
       viewportHeight: window.innerHeight,
     };
   });
 
   expect(layout.rigTop - layout.copyBottom).toBeGreaterThanOrEqual(28);
-  expect(layout.scaleTop).toBeLessThan(layout.viewportHeight - 90);
+  expect(layout.effectsTop).toBeLessThan(layout.viewportHeight - 90);
 });
 
 test("conventional cleaner scene has a hazard field that cools in the safe state", async ({ page }) => {
