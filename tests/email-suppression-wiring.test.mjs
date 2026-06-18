@@ -23,3 +23,15 @@ test("lib exposes recordSuppression + updateEmailStatus", () => {
   assert.match(SRC, /export async function recordSuppression\(/);
   assert.match(SRC, /export async function updateEmailStatus\(/);
 });
+
+test("sendEmail supports bcc (offer broadcast privacy)", () => {
+  assert.match(SRC, /bcc/, "sendEmail must accept bcc");
+});
+
+const OFFERS = readFileSync(new URL("../functions/api/admin/offers.js", import.meta.url), "utf8");
+
+test("offers broadcast routes through sendEmail (logged + suppressed)", () => {
+  assert.match(OFFERS, /sendEmail\(/, "offers must call sendEmail");
+  assert.match(OFFERS, /category:\s*'offer'/, "offers must tag category 'offer'");
+  assert.doesNotMatch(OFFERS, /api\.resend\.com/, "offers must not call Resend directly anymore");
+});

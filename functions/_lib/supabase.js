@@ -143,30 +143,37 @@ export async function recordSuppression(env, email, reason) {
   } catch { /* advisory */ }
 }
 
-export async function sendEmail(env, { to, subject, html, category = null }) {
-  if (!env.RESEND_API_KEY || !Array.isArray(to) || !to.length) return false;
+export async function sendEmail(env, { to, bcc = [], subject, html, category = null }) {
+  const allTo = Array.isArray(to) ? to : [];
+  const allBcc = Array.isArray(bcc) ? bcc : [];
+  if (!env.RESEND_API_KEY || (!allTo.length && !allBcc.length)) return false;
   const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
-  const suppressed = await loadSuppressed(env, to);
-  const recipients = filterSuppressed(to, suppressed).slice(0, 50);
-  if (!recipients.length) {
-    await logEmailEvent(env, { to_email: to.join(', '), category, subject, status: 'failed', error: 'all_recipients_suppressed' });
+  const suppressed = await loadSuppressed(env, [...allTo, ...allBcc]);
+  const toR = filterSuppressed(allTo, suppressed).slice(0, 50);
+  const bccR = filterSuppressed(allBcc, suppressed).slice(0, 50);
+  const logTo = [...allTo, ...allBcc].join(', ');
+  if (!toR.length && !bccR.length) {
+    await logEmailEvent(env, { to_email: logTo, category, subject, status: 'failed', error: 'all_recipients_suppressed' });
     return false;
   }
+  // Resend requires a `to`; if only bcc recipients survive, use `from` as the visible to.
+  const payloadTo = toR.length ? toR : [from];
+  const sentTo = [...toR, ...bccR].join(', ');
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from, to: recipients, subject, html }),
+      body: JSON.stringify({ from, to: payloadTo, ...(bccR.length ? { bcc: bccR } : {}), subject, html }),
     });
     let resendId = null;
     try { resendId = (await r.clone().json())?.id || null; } catch { /* non-json body */ }
     await logEmailEvent(env, {
-      resend_id: resendId, to_email: recipients.join(', '), category, subject,
+      resend_id: resendId, to_email: sentTo, category, subject,
       status: r.ok ? 'sent' : 'failed', error: r.ok ? null : `resend_${r.status}`,
     });
     return r.ok;
   } catch (err) {
-    await logEmailEvent(env, { to_email: recipients.join(', '), category, subject, status: 'failed', error: String(err).slice(0, 200) });
+    await logEmailEvent(env, { to_email: sentTo, category, subject, status: 'failed', error: String(err).slice(0, 200) });
     return false;
   }
 }
