@@ -112,6 +112,7 @@ export async function onRequestPost({ request, env }) {
       user_id: user.id,
       status: 'net_open',
       payment_method: 'net',
+      qbo_sync_status: 'pending',
       subtotal,
       total: subtotal,
       currency: sellable[0].currency || 'usd',

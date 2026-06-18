@@ -167,6 +167,7 @@ export async function onRequestPost({ request, env }) {
       company_id: s.metadata?.company_id || null,
       status: 'paid',
       payment_method: 'stripe',
+      qbo_sync_status: 'pending',
       subtotal, tax, total,
       currency: s.currency || 'usd',
       stripe_payment_intent: s.payment_intent,

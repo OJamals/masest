@@ -15,6 +15,10 @@ test("admin orders can record a QuickBooks invoice id for NET orders", () => {
     "orders API must reject a missing QBO invoice id");
   assert.match(source, /update\(\{\s*qbo_invoice_id:/,
     "orders API must persist the QBO invoice id on the order");
+  assert.match(source, /qbo_sync_status:\s*['"]synced['"]/,
+    "manual invoice recording should mark QBO sync complete");
+  assert.match(source, /qbo_doc_type:\s*['"]invoice['"]/,
+    "manual invoice recording should mark the linked QBO document as an invoice");
 });
 
 test("admin orders UI exposes the QuickBooks invoice action", () => {

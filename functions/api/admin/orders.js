@@ -104,9 +104,16 @@ export async function onRequest({ request, env }) {
       }
 
       const { data: order, error } = await sb.from('orders')
-        .update({ qbo_invoice_id: invoiceId })
+        .update({
+          qbo_invoice_id: invoiceId,
+          qbo_sync_status: 'synced',
+          qbo_doc_id: invoiceId,
+          qbo_doc_type: 'invoice',
+          qbo_synced_at: new Date().toISOString(),
+          qbo_error: null,
+        })
         .eq('id', body.id)
-        .select('id,company_id,status,qbo_invoice_id')
+        .select('id,company_id,status,qbo_invoice_id,qbo_sync_status,qbo_doc_id,qbo_doc_type')
         .single();
       if (error) return json(500, { error: error.message });
       await notifyCompany(sb, env, request, order?.company_id, 'invoice ready', `QuickBooks invoice ${invoiceId} is linked to your order.`);
