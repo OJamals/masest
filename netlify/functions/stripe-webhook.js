@@ -78,6 +78,21 @@ async function sendOrderConfirmation({ session, order, lines, subtotal, tax, tot
   }
 }
 
+async function decrementVariantStock(sb, lines) {
+  for (const l of lines || []) {
+    if (!l.sku) continue;
+    try {
+      const { error } = await sb.rpc('decrement_variant_stock', {
+        p_vsku: l.sku,
+        p_qty: Number(l.qty || 0),
+      });
+      if (error) console.error('stock_decrement_failed', l.sku, error.message);
+    } catch (e) {
+      console.error('stock_decrement_failed', l.sku, e?.message || e);
+    }
+  }
+}
+
 export default async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
 
@@ -133,7 +148,8 @@ export default async (req) => {
     }
 
     // Branded order-confirmation email (Stripe also sends its own card receipt).
-    await sendOrderConfirmation({ session: s, order, lines, subtotal, tax, total });
+  await sendOrderConfirmation({ session: s, order, lines, subtotal, tax, total });
+  if (order && lines.length) await decrementVariantStock(sb, lines);
     // TODO Phase 3: QBO sales receipt.
   }
 

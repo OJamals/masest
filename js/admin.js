@@ -1,405 +1,631 @@
-/* MASEST — staff admin console. Loaded as a module by admin.html.
- * All authority is server-side (requireStaff via ADMIN_EMAILS). The client just reflects 401/403/200. */
+/* MASEST staff admin console. */
 import { login, logout, api } from './auth.js';
 
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const money = (n, c) => (c || 'USD').toUpperCase() + ' ' + Number(n || 0).toFixed(2);
-const fmtDate = (s) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
-const fmtDT = (s) => { try { return new Date(s).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[ch]));
+const money = (value, currency = 'usd') => `${String(currency).toUpperCase()} ${Number(value || 0).toFixed(2)}`;
+const date = (value) => value ? new Date(value).toLocaleString() : '';
+
 const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
-const loaded = {};
+const QUOTE_STATUSES = ['new', 'contacted', 'closed', 'spam'];
+const state = {
+  tab: 'overview',
+  stats: null,
+  orders: [],
+  companies: [],
+  products: [],
+  quotes: [],
+  threads: [],
+  loaded: new Set(),
+};
 
-/* ---------- tabs ---------- */
-function selectTab(name) {
-  document.querySelectorAll('.adm-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
-  document.querySelectorAll('.adm-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
-  history.replaceState(null, '', '#' + name);
-  ({ orders: renderOrders, companies: renderCompanies, products: renderProducts, pricing: renderPricing, messages: renderThreads, quotes: renderQuotes, offers: renderOffers, traffic: renderTraffic }[name])?.(false);
+function badge(id, count) {
+  const el = $(id);
+  if (!el) return;
+  el.textContent = String(count || 0);
+  el.hidden = !count;
 }
-function wireTabs() {
-  document.querySelectorAll('.adm-tab').forEach((b) => b.addEventListener('click', () => selectTab(b.dataset.tab)));
-}
-function badge(id, n) { const el = $(id); if (!el) return; if (n > 0) { el.textContent = n; el.hidden = false; } else el.hidden = true; }
-function statusBadge(s) { return `<span class="badge" data-s="${esc(s)}">${esc(s).replace('_', ' ')}</span>`; }
 
-// Live client-side filter: hide table rows whose text doesn't match the query. Re-queries the
-// live table each keystroke, so it keeps working after a list re-renders.
-function wireSearch(inputId, boxId) {
-  const inp = document.getElementById(inputId);
-  if (!inp) return;
-  inp.addEventListener('input', () => {
-    const q = inp.value.trim().toLowerCase();
-    document.querySelectorAll(`#${boxId} table.adm tbody tr`).forEach((tr) => {
-      tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+function statusBadge(value) {
+  return `<span class="badge" data-s="${esc(value)}">${esc(String(value || 'unknown').replaceAll('_', ' '))}</span>`;
+}
+
+function message(id, text, kind = '') {
+  const el = $(id);
+  if (!el) return;
+  el.textContent = text;
+  el.dataset.state = kind;
+}
+
+async function boot() {
+  try {
+    const stats = await api('/api/admin/stats');
+    state.stats = stats;
+    $('admGate').hidden = true;
+    $('admApp').hidden = false;
+    $('admGreeting').textContent = 'Signed in as staff.';
+    renderStats(stats);
+    setTab(location.hash.slice(1) || 'overview');
+  } catch (err) {
+    $('admGate').hidden = false;
+    $('admApp').hidden = true;
+    if (err.status === 403) {
+      $('gateTitle').textContent = 'Staff access required';
+      $('gateMsg').textContent = 'This account is not marked as staff.';
+    }
+  }
+}
+
+function setTab(tab) {
+  state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
+  location.hash = state.tab;
+  document.querySelectorAll('[data-panel]').forEach((panel) => {
+    panel.dataset.active = String(panel.dataset.panel === state.tab);
+  });
+  document.querySelectorAll('[data-tab]').forEach((button) => {
+    button.setAttribute('aria-selected', String(button.dataset.tab === state.tab));
+  });
+
+  const render = {
+    overview: () => { renderStats(state.stats); runSeoAudit(); },
+    orders: renderOrders,
+    companies: renderCompanies,
+    products: renderProducts,
+    pricing: renderPricing,
+    messages: renderThreads,
+    quotes: renderQuotes,
+    offers: renderOffers,
+    traffic: renderTraffic,
+  }[state.tab];
+  render?.();
+}
+
+function renderStats(stats = {}) {
+  badge('aBadgePending', stats.companies?.pending || 0);
+  badge('aBadgeMsg', stats.messages?.unread || 0);
+  badge('aBadgeQuotes', stats.quotes?.new || stats.quotes?.new_count || 0);
+  const items = [
+    ['ph-currency-dollar', money(stats.revenue, 'usd'), 'Revenue'],
+    ['ph-package', stats.orders?.total || 0, 'Orders'],
+    ['ph-buildings', stats.companies?.pending || 0, 'Pending accounts'],
+    ['ph-check-circle', stats.companies?.approved || 0, 'Approved accounts'],
+    ['ph-chats', stats.messages?.unread || 0, 'Unread messages'],
+    ['ph-warning', stats.inventory?.low_stock || 0, 'Low stock'],
+    ['ph-flask', stats.catalog?.buy || 0, 'Buy SKUs'],
+    ['ph-eye', stats.traffic?.views_7d || 0, 'Views (7d)'],
+  ];
+  $('admStats').innerHTML = items.map(([icon, value, label]) => `
+    <div class="adm-card adm-stat"><i class="ph ${icon}"></i><b>${esc(value)}</b><span class="muted">${esc(label)}</span></div>
+  `).join('');
+}
+
+async function renderOrders() {
+  const box = $('admOrders');
+  box.textContent = 'Loading...';
+  const status = $('ordFilter').value;
+  try {
+    state.orders = (await api('/api/admin/orders' + (status ? `?status=${encodeURIComponent(status)}` : ''))).orders || [];
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load orders.</p>';
+    return;
+  }
+  const q = $('ordSearch').value.trim().toLowerCase();
+  const orders = state.orders.filter((order) => JSON.stringify(order).toLowerCase().includes(q));
+  if (!orders.length) {
+    box.innerHTML = '<p class="muted" style="padding:14px">No orders.</p>';
+    return;
+  }
+  box.innerHTML = `<table class="adm"><thead><tr><th>Date</th><th>Company</th><th>Items</th><th>Total</th><th>Pay</th><th>Status</th><th></th></tr></thead><tbody>${orders.map((order) => {
+    const items = (order.order_items || []).map((item) => `${esc(item.qty)} x ${esc(item.name || item.sku)}`).join('<br>');
+    return `<tr>
+      <td>${esc(date(order.created_at))}</td>
+      <td>${esc(order.companies?.name || order.company_name || order.company_id || 'Guest')}</td>
+      <td>${items || '<span class="muted">No items</span>'}</td>
+      <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
+      <td>${esc(order.payment_method || '')}</td>
+      <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
+      <td><button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button></td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+
+  box.querySelectorAll('[data-save-order]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.saveOrder;
+      const status = box.querySelector(`[data-order-status="${CSS.escape(id)}"]`).value;
+      button.disabled = true;
+      try {
+        await api('/api/admin/orders', { method: 'POST', body: { id, status } });
+        await renderOrders();
+      } finally {
+        button.disabled = false;
+      }
     });
   });
 }
 
-/* ---------- overview ---------- */
-function renderStats(s) {
-  badge('aBadgePending', s.companies?.pending || 0);
-  badge('aBadgeMsg', s.messages?.unread || 0);
-  $('admStats').innerHTML = [
-    ['ph-currency-dollar', money(s.revenue, 'usd'), 'Revenue (captured)'],
-    ['ph-package', s.orders?.total || 0, 'Orders'],
-    ['ph-buildings', s.companies?.pending || 0, 'Pending accounts'],
-    ['ph-check-circle', s.companies?.approved || 0, 'Approved accounts'],
-    ['ph-chats', s.messages?.unread || 0, 'Unread messages'],
-    ['ph-warning', s.inventory?.low_stock || 0, 'Low stock'],
-    ['ph-flask', s.catalog?.buy || 0, 'Buy SKUs'],
-    ['ph-eye', s.traffic?.views_7d || 0, 'Views (7d)'],
-  ].map(([i, n, l]) => `<div class="stat"><div class="big-fig">${typeof n === 'string' ? esc(n) : n}</div><div class="lbl"><i class="ph ${i}"></i> ${l}</div></div>`).join('');
-}
-
-/* ---------- orders ---------- */
-async function renderOrders() {
-  const box = $('admOrders'); const f = $('ordFilter').value;
-  box.innerHTML = '<p class="muted">Loading…</p>';
-  let orders = [];
-  try { orders = (await api('/api/admin/orders' + (f ? '?status=' + f : ''))).orders; } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load.</p>'; return; }
-  if (!orders.length) { box.innerHTML = '<p class="muted">No orders.</p>'; return; }
-  box.innerHTML = `<table class="adm"><thead><tr><th>Date</th><th>Company</th><th>Items</th><th>Total</th><th>Pay</th><th>Status</th></tr></thead><tbody>${
-    orders.map((o) => {
-      const items = (o.order_items || []).map((it) => `${esc(it.name)}×${it.qty}`).join(', ');
-      return `<tr><td>${fmtDate(o.created_at)}</td><td>${esc(o.companies?.name || '—')}</td>
-        <td class="muted">${items}</td><td><b>${money(o.total, o.currency)}</b></td><td>${esc(o.payment_method || '—')}</td>
-        <td><select data-order="${esc(o.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}"${s === o.status ? ' selected' : ''}>${s.replace('_', ' ')}</option>`).join('')}</select></td></tr>`;
-    }).join('')}</tbody></table>`;
-  box.querySelectorAll('select[data-order]').forEach((sel) => sel.addEventListener('change', async () => {
-    sel.disabled = true;
-    try { await api('/api/admin/orders', { method: 'POST', body: { id: sel.dataset.order, status: sel.value } }); } catch {}
-    sel.disabled = false;
-  }));
-  loaded.orders = true;
-}
-
-/* ---------- companies ---------- */
 async function renderCompanies() {
-  const box = $('admCompanies'); box.innerHTML = '<p class="muted">Loading…</p>';
-  let cos = [];
-  try { cos = (await api('/api/admin/companies')).companies; } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load.</p>'; return; }
-  if (!cos.length) { box.innerHTML = '<p class="muted">No accounts yet.</p>'; return; }
-  box.innerHTML = `<table class="adm"><thead><tr><th>Company</th><th>Status</th><th>NET days</th><th>Credit</th><th>Tier</th><th>Actions</th></tr></thead><tbody>${
-    cos.map((c) => {
-      const contact = (c.profiles || [])[0];
-      return `<tr data-co="${esc(c.id)}">
-        <td><button type="button" class="link-name" data-open="${esc(c.id)}">${esc(c.name)}</button>${contact ? `<br><span class="muted">${esc(contact.full_name || '')} ${esc(contact.phone || '')}</span>` : ''}${c.tax_exempt ? '<br><span class="muted">tax-exempt</span>' : ''}</td>
-        <td>${statusBadge(c.status)}</td>
-        <td><input type="number" min="0" value="${c.net_terms_days || 0}" data-net></td>
-        <td><input type="number" min="0" step="100" value="${c.credit_limit || 0}" data-credit></td>
-        <td><select data-tier>${['retail', 'hvac', 'wholesale'].map((t) => `<option value="${t}"${(c.price_tier || 'retail') === t ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
-        <td>
-          <button class="btn btn-primary btn-sm" data-act="approve">Approve</button>
-          <button class="btn btn-ghost btn-sm" data-act="set_terms">Save terms</button>
-          <button class="btn btn-ghost btn-sm" data-act="suspend">Suspend</button>
-        </td></tr>`;
-    }).join('')}</tbody></table><span class="adm-status" id="coStatus" role="status" aria-live="polite"></span>`;
-  box.querySelectorAll('button[data-act]').forEach((b) => b.addEventListener('click', async () => {
-    const tr = b.closest('tr'); const id = tr.dataset.co;
-    const body = { id, action: b.dataset.act, net_terms_days: Number(tr.querySelector('[data-net]').value), credit_limit: Number(tr.querySelector('[data-credit]').value), price_tier: tr.querySelector('[data-tier]').value };
-    b.disabled = true;
-    try { await api('/api/admin/companies', { method: 'POST', body }); $('coStatus').textContent = 'Updated.'; $('coStatus').dataset.state = 'ok'; renderCompanies(); refreshStats(); }
-    catch { $('coStatus').textContent = 'Failed.'; $('coStatus').dataset.state = 'err'; b.disabled = false; }
-  }));
-  box.querySelectorAll('button[data-open]').forEach((b) => b.addEventListener('click', () => openCompany(b.dataset.open)));
-  loaded.companies = true;
-}
-
-// Company detail view (replaces the accounts list; back button returns to it).
-async function openCompany(id) {
-  const box = $('admCompanies'); box.innerHTML = '<p class="muted">Loading…</p>';
-  let d;
-  try { d = await api('/api/admin/company?id=' + encodeURIComponent(id)); }
-  catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load company.</p>'; return; }
-  const c = d.company;
-  const members = (d.members || []).map((m) =>
-    `<tr><td><b>${esc(m.full_name || '—')}</b></td><td>${esc(m.email || '—')}</td><td>${esc(m.phone || '')}</td><td>${esc(m.role)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No members.</td></tr>';
-  const orders = (d.orders || []).map((o) =>
-    `<tr><td>${fmtDate(o.created_at)}</td><td>${statusBadge(o.status)}</td><td>${esc(o.payment_method || '—')}</td><td>${money(o.total, o.currency)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No orders.</td></tr>';
-  const invites = (d.invites || []).length ? `<p class="muted" style="margin-top:8px">Pending invites: ${d.invites.map((i) => esc(i.email)).join(', ')}</p>` : '';
-  box.innerHTML = `
-    <button class="btn btn-ghost btn-sm" id="coBack">← Back to accounts</button>
-    <h3 style="font-size:1.2rem;margin:14px 0 4px">${esc(c.name)} ${statusBadge(c.status)}</h3>
-    <p class="muted">NET-${c.net_terms_days || 0} · credit ${money(c.credit_limit || 0, 'usd')} · ${c.tax_exempt ? 'tax-exempt' : 'taxable'} · ${d.message_count} message(s)${c.resale_cert_url ? ` · <a href="${esc(c.resale_cert_url)}" target="_blank" rel="noopener">resale cert</a>` : ''}</p>
-    <h4 style="margin:18px 0 6px;font-size:.95rem">Members</h4>
-    <table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th></tr></thead><tbody>${members}</tbody></table>
-    ${invites}
-    <h4 style="margin:18px 0 6px;font-size:.95rem">Orders (${(d.orders || []).length})</h4>
-    <table class="adm"><thead><tr><th>Date</th><th>Status</th><th>Pay</th><th>Total</th></tr></thead><tbody>${orders}</tbody></table>`;
-  $('coBack').addEventListener('click', () => { loaded.companies = false; renderCompanies(); });
-}
-
-/* ---------- products & stock ---------- */
-async function renderProducts() {
-  const box = $('admProducts'); box.innerHTML = '<p class="muted">Loading…</p>';
-  let products = [];
-  try { products = (await api('/api/admin/products')).products; } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load.</p>'; return; }
-  box.innerHTML = `<table class="adm"><thead><tr><th>SKU</th><th>Name</th><th>Mode</th><th>Price</th><th>Stock</th><th>Active</th><th></th></tr></thead><tbody>${
-    products.map((p) => `<tr data-sku="${esc(p.sku)}">
-      <td><b>${esc(p.sku)}</b></td><td>${esc(p.name || '')}</td>
-      <td><select data-f="mode"><option value="quote"${p.mode === 'quote' ? ' selected' : ''}>quote</option><option value="buy"${p.mode === 'buy' ? ' selected' : ''}>buy</option></select></td>
-      <td><input data-f="price" type="number" step="0.01" min="0" value="${p.price ?? ''}" placeholder="—"></td>
-      <td><input data-f="stock" type="number" min="0" value="${p.stock ?? ''}" placeholder="∞"></td>
-      <td style="text-align:center"><input data-f="active" type="checkbox"${p.active !== false ? ' checked' : ''}></td>
-      <td><button class="btn btn-primary btn-sm" data-save>Save</button></td></tr>`).join('')}</tbody></table>
-    <span class="adm-status" id="prodRowStatus" role="status" aria-live="polite"></span>`;
-  box.querySelectorAll('button[data-save]').forEach((b) => b.addEventListener('click', async () => {
-    const tr = b.closest('tr');
-    const g = (f) => tr.querySelector(`[data-f="${f}"]`);
-    const product = { sku: tr.dataset.sku, mode: g('mode').value, price: g('price').value, active: g('active').checked,
-      track_stock: g('stock').value !== '', stock: g('stock').value === '' ? null : Number(g('stock').value) };
-    b.disabled = true;
-    try { await api('/api/admin/products', { method: 'POST', body: { product } }); $('prodRowStatus').textContent = tr.dataset.sku + ' saved.'; $('prodRowStatus').dataset.state = 'ok'; }
-    catch (e) { $('prodRowStatus').textContent = (e.data?.error || 'failed'); $('prodRowStatus').dataset.state = 'err'; }
-    finally { b.disabled = false; }
-  }));
-  loaded.products = true;
-}
-function wireProductForm() {
-  $('prodForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const product = { sku: $('npSku').value.trim(), name: $('npName').value.trim() || undefined, mode: $('npMode').value,
-      price: $('npPrice').value || undefined, stock: $('npStock').value === '' ? undefined : Number($('npStock').value),
-      track_stock: $('npStock').value !== '' };
-    const st = $('prodStatus'); st.textContent = 'Saving…'; st.dataset.state = '';
-    try { await api('/api/admin/products', { method: 'POST', body: { product } }); st.textContent = 'Saved.'; st.dataset.state = 'ok'; e.target.reset(); renderProducts(); }
-    catch (err) { st.textContent = err.data?.error || 'Failed.'; st.dataset.state = 'err'; }
-  });
-}
-
-/* ---------- pricing (tier matrix) ---------- */
-async function renderPricing() {
-  const box = $('admPricing'); box.innerHTML = '<p class="muted">Loading…</p>';
-  let data;
-  try { data = await api('/api/admin/variant-pricing'); } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load.</p>'; return; }
-  const tiers = data.tiers || ['retail', 'hvac', 'wholesale'];
-  const fmt = (n) => n == null ? '' : Number(n).toFixed(2);
-  box.innerHTML = `<table class="adm"><thead><tr><th>Variant</th><th>VSKU</th><th>Base</th>${tiers.map((t) => `<th>${esc(t)}</th>`).join('')}</tr></thead><tbody>${
-    (data.rows || []).map((r) => `<tr data-vsku="${esc(r.vsku)}">
-      <td>${esc(r.product_name)} — ${esc(r.label)}${r.mode === 'quote' ? ' <span class="badge" data-s="quote">quote</span>' : ''}</td>
-      <td><code>${esc(r.vsku)}</code></td>
-      <td class="muted">${r.base_price == null ? '—' : fmt(r.base_price)}</td>
-      ${tiers.map((t) => `<td><input data-tier="${t}" type="number" step="0.01" min="0" value="${r.tiers[t] ?? ''}" placeholder="${r.base_price == null ? '—' : fmt(r.base_price)}" style="width:88px"></td>`).join('')}
-    </tr>`).join('')}</tbody></table>
-    <span class="adm-status" id="priceRowStatus" role="status" aria-live="polite"></span>
-    <p class="muted" style="margin-top:8px;font-size:.85rem">Empty cell falls back to the base price. Saves on change. hvac/wholesale apply only to approved accounts on that tier.</p>`;
-  box.querySelectorAll('input[data-tier]').forEach((inp) => inp.addEventListener('change', async () => {
-    const tr = inp.closest('tr');
-    inp.disabled = true;
-    try {
-      await api('/api/admin/variant-pricing', { method: 'POST', body: { vsku: tr.dataset.vsku, tier: inp.dataset.tier, price: inp.value } });
-      $('priceRowStatus').textContent = `${tr.dataset.vsku} · ${inp.dataset.tier} saved.`; $('priceRowStatus').dataset.state = 'ok';
-    } catch (e) { $('priceRowStatus').textContent = (e.data?.error || 'failed'); $('priceRowStatus').dataset.state = 'err'; }
-    finally { inp.disabled = false; }
-  }));
-  loaded.pricing = true;
-}
-
-/* ---------- messages ---------- */
-async function renderThreads() {
-  const box = $('admThreads'); box.innerHTML = '<p class="muted">Loading…</p>';
-  let threads = [];
-  try { threads = (await api('/api/admin/messages')).threads; } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>'; return; }
-  if (!threads.length) { box.innerHTML = '<p class="muted">No conversations.</p>'; return; }
-  box.innerHTML = threads.map((t) => `<button data-co="${esc(t.company_id)}">
-    <b>${esc(t.company_name)}</b> ${t.unread ? `<span class="pill" style="background:#b42318;color:#fff;border-radius:999px;padding:0 6px;font-size:.68rem">${t.unread}</span>` : ''}
-    <br><span class="muted">${esc((t.last_body || '').slice(0, 60))}</span></button>`).join('');
-  box.querySelectorAll('button[data-co]').forEach((b) => b.addEventListener('click', () => openThread(b.dataset.co)));
-  loaded.messages = true;
-}
-async function openThread(companyId) {
-  const view = $('admThreadView'); view.innerHTML = '<p class="muted">Loading…</p>';
-  let msgs = [];
-  try { msgs = (await api('/api/admin/messages?company_id=' + encodeURIComponent(companyId))).messages; } catch { view.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>'; return; }
-  view.innerHTML = `<div class="msg-thread">${msgs.map((m) => `<div class="msg ${m.sender_role}">${esc(m.body)}<time style="display:block;font-size:.68rem;opacity:.7;margin-top:3px">${fmtDT(m.created_at)}</time></div>`).join('') || '<p class="muted">No messages.</p>'}</div>
-    <form id="replyForm" style="margin-top:12px"><div class="field"><textarea id="replyBody" rows="2" placeholder="Reply…" required></textarea></div>
-    <button class="btn btn-primary btn-sm" type="submit" style="margin-top:8px">Reply</button><span class="adm-status" id="replyStatus"></span></form>`;
-  view.querySelector('.msg-thread').scrollTop = 1e9;
-  $('replyForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const body = $('replyBody').value.trim(); if (!body) return;
-    try { await api('/api/admin/messages', { method: 'POST', body: { company_id: companyId, body } }); openThread(companyId); renderThreads(); refreshStats(); }
-    catch { $('replyStatus').textContent = 'Failed.'; $('replyStatus').dataset.state = 'err'; }
-  });
-}
-
-/* ---------- quotes (inbound leads from /api/quote) ---------- */
-const QSTATUS = ['new', 'contacted', 'closed', 'spam'];
-async function loadQuoteBadge() { try { badge('aBadgeQuotes', (await api('/api/admin/quotes')).new_count || 0); } catch {} }
-
-async function renderQuotes() {
-  const box = $('admQuotes'); box.innerHTML = '<p class="muted">Loading…</p>';
-  let data;
-  try { data = await api('/api/admin/quotes'); } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load.</p>'; return; }
-  badge('aBadgeQuotes', data.new_count || 0);
-  if (data.needs_migration) {
-    box.innerHTML = '<p class="muted">No quotes captured in the database yet. Emails already send on every submission — run <code>supabase/schema-quotes.sql</code> to also store and triage leads here.</p>';
+  const box = $('admCompanies');
+  box.textContent = 'Loading...';
+  try {
+    state.companies = (await api('/api/admin/companies')).companies || [];
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load accounts.</p>';
     return;
   }
-  const quotes = data.quotes || [];
-  if (!quotes.length) { box.innerHTML = '<p class="muted">No quote requests yet.</p>'; return; }
-  box.innerHTML = quotes.map(quoteItem).join('');
-  box.querySelectorAll('[data-qsave]').forEach((b) => b.addEventListener('click', () => saveQuote(b.dataset.qsave, b)));
-  box.querySelectorAll('select[data-qstatus]').forEach((s) => s.addEventListener('change', () => saveQuote(s.dataset.qstatus, s)));
-  filterQuotes();
-}
-
-function quoteItem(q) {
-  const skip = new Set(['name', 'company', 'email', 'phone', 'message', 'type']);
-  const extra = Object.entries(q.payload || {})
-    .filter(([k, v]) => !skip.has(k) && String(Array.isArray(v) ? v.join('') : (v ?? '')).trim())
-    .map(([k, v]) => `<div class="dash-row" style="padding:3px 0"><span class="muted">${esc(k)}</span><span>${esc(Array.isArray(v) ? v.join(', ') : v)}</span></div>`).join('');
-  const haystack = [q.name, q.company, q.email, q.product, q.industry, q.location, q.message, JSON.stringify(q.payload || {})].join(' ').toLowerCase();
-  const subj = encodeURIComponent('Re: your MASEST ' + (q.type || 'quote') + ' request');
-  return `<details class="quote-item" data-status="${esc(q.status)}" data-text="${esc(haystack)}" style="border-bottom:1px solid rgba(0,0,0,.08);padding:10px 0">
-    <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;list-style:none">
-      <span><b>${esc(q.company || q.name || '—')}</b> <span class="muted">· ${esc(q.type)}${q.product ? ' · ' + esc(q.product) : (q.industry ? ' · ' + esc(q.industry) : '')}</span><br>
-        <span class="muted" style="font-size:.8rem">${fmtDT(q.created_at)} · ${esc(q.email || '')}</span></span>
-      ${statusBadge(q.status)}</summary>
-    <div style="padding:10px 0 4px">
-      <div class="dash-row" style="padding:3px 0"><span class="muted">Name</span><span>${esc(q.name || '—')}</span></div>
-      <div class="dash-row" style="padding:3px 0"><span class="muted">Email</span><span><a href="mailto:${esc(q.email || '')}">${esc(q.email || '—')}</a></span></div>
-      ${q.phone ? `<div class="dash-row" style="padding:3px 0"><span class="muted">Phone</span><span>${esc(q.phone)}</span></div>` : ''}
-      ${extra}
-      ${q.message ? `<p style="margin:8px 0;white-space:pre-wrap">${esc(q.message)}</p>` : ''}
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px">
-        <label style="font-size:.82rem">Status <select data-qstatus="${esc(q.id)}">${QSTATUS.map((s) => `<option value="${s}"${s === q.status ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
-        <a class="btn btn-ghost btn-sm" href="mailto:${esc(q.email || '')}?subject=${subj}">Reply by email</a>
-      </div>
-      <div class="field" style="margin-top:8px"><label style="font-size:.82rem">Internal notes</label><textarea data-qnotes rows="2">${esc(q.notes || '')}</textarea></div>
-      <button class="btn btn-primary btn-sm" data-qsave="${esc(q.id)}" style="margin-top:6px">Save</button>
-      <span class="adm-status" data-qstat role="status" aria-live="polite"></span>
-    </div></details>`;
-}
-
-async function saveQuote(id, el) {
-  const root = el.closest('.quote-item'); if (!root) return;
-  const status = root.querySelector('select[data-qstatus]')?.value;
-  const notes = root.querySelector('textarea[data-qnotes]')?.value ?? '';
-  const stat = root.querySelector('[data-qstat]');
-  if (stat) { stat.textContent = 'Saving…'; stat.dataset.state = ''; }
-  try {
-    await api('/api/admin/quotes', { method: 'POST', body: { id, status, notes } });
-    if (stat) { stat.textContent = 'Saved.'; stat.dataset.state = 'ok'; }
-    root.dataset.status = status;
-    const b = root.querySelector('summary .badge'); if (b) { b.textContent = String(status).replace('_', ' '); b.dataset.s = status; }
-    refreshQuoteBadge();
-    filterQuotes();
-  } catch { if (stat) { stat.textContent = 'Failed.'; stat.dataset.state = 'err'; } }
-}
-
-function refreshQuoteBadge() {
-  badge('aBadgeQuotes', [...document.querySelectorAll('#admQuotes .quote-item')].filter((it) => it.dataset.status === 'new').length);
-}
-function filterQuotes() {
-  const q = ($('qSearch')?.value || '').trim().toLowerCase();
-  const f = $('qFilter')?.value || '';
-  document.querySelectorAll('#admQuotes .quote-item').forEach((it) => {
-    const ok = (!q || (it.dataset.text || '').includes(q)) && (!f || it.dataset.status === f);
-    it.style.display = ok ? '' : 'none';
+  const q = $('coSearch').value.trim().toLowerCase();
+  const companies = state.companies.filter((company) => JSON.stringify(company).toLowerCase().includes(q));
+  if (!companies.length) {
+    box.innerHTML = '<p class="muted" style="padding:14px">No accounts.</p>';
+    return;
+  }
+  box.innerHTML = `<table class="adm"><thead><tr><th>Company</th><th>Status</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
+    <tr>
+      <td><button class="link-name" data-open-company="${esc(company.id)}" type="button">${esc(company.name)}</button></td>
+      <td>${statusBadge(company.status)}</td>
+      <td><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${esc(company.id)}"></td>
+      <td><input class="adm-input" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${esc(company.id)}"></td>
+      <td><select class="adm-select" data-tier="${esc(company.id)}">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></td>
+      <td>${esc((company.profiles || []).map((p) => p.full_name || p.role).join(', '))}</td>
+      <td><button class="btn btn-ghost btn-sm" data-approve="${esc(company.id)}" type="button">Approve</button></td>
+    </tr>
+  `).join('')}</tbody></table>`;
+  box.querySelectorAll('[data-approve]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.approve;
+      await api('/api/admin/companies', {
+        method: 'POST',
+        body: {
+          id,
+          action: 'approve',
+          net_terms_days: Number(box.querySelector(`[data-net="${CSS.escape(id)}"]`).value || 0),
+          credit_limit: Number(box.querySelector(`[data-credit="${CSS.escape(id)}"]`).value || 0),
+          price_tier: box.querySelector(`[data-tier="${CSS.escape(id)}"]`).value,
+        },
+      });
+      renderCompanies();
+    });
   });
 }
 
-/* ---------- offers ---------- */
-function wireOfferForm() {
-  $('offerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const st = $('offerStatus'); st.textContent = 'Sending…'; st.dataset.state = '';
-    const body = { title: $('ofTitle').value.trim(), body: $('ofBody').value.trim(), cta_url: $('ofCta').value.trim() || null, audience: $('ofAud').value, send_email: $('ofEmail').checked };
-    try { const r = await api('/api/admin/offers', { method: 'POST', body }); st.textContent = `Sent to ${r.recipients} account(s)${r.emailed ? ' + email' : ''}.`; st.dataset.state = 'ok'; e.target.reset(); renderOffers(true); }
-    catch (err) { st.textContent = err.data?.error || 'Failed.'; st.dataset.state = 'err'; }
-  });
-}
-async function renderOffers(force) {
-  if (loaded.offers && !force) return;
-  const box = $('admOffers');
-  let offers = [];
-  try { offers = (await api('/api/admin/offers')).offers; } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>'; return; }
-  box.innerHTML = offers.length
-    ? `<table class="adm"><thead><tr><th>Date</th><th>Title</th><th>Audience</th><th>Recipients</th><th>Email</th></tr></thead><tbody>${
-      offers.map((o) => `<tr><td>${fmtDate(o.created_at)}</td><td>${esc(o.title)}</td><td>${esc(o.audience)}</td><td>${o.recipients}</td><td>${o.emailed ? '✓' : '—'}</td></tr>`).join('')}</tbody></table>`
-    : '<p class="muted">No offers sent yet.</p>';
-  loaded.offers = true;
-}
-
-/* ---------- traffic & SEO ---------- */
-async function renderTraffic() {
-  if (loaded.traffic) return;
-  const box = $('admTraffic');
+async function renderProducts() {
+  const box = $('admProducts');
+  box.textContent = 'Loading...';
   try {
-    const t = await api('/api/admin/traffic?days=14');
-    if (!t.available) { box.innerHTML = `<p class="muted">${esc(t.note || 'No traffic data yet.')}</p>`; }
-    else {
-      const max = Math.max(1, ...t.byDay.map((d) => d.count));
-      box.innerHTML = `<p><b>${t.total}</b> views · <b>${t.unique}</b> unique visitors (last ${t.days}d)</p>
-        <div style="margin:12px 0">${t.byDay.map((d) => `<div style="display:flex;align-items:center;gap:8px;margin:3px 0"><span class="muted" style="width:70px;font-size:.78rem">${esc(d.day.slice(5))}</span><div class="bar" style="width:${Math.round(d.count / max * 100)}%"></div><span class="muted" style="font-size:.78rem">${d.count}</span></div>`).join('')}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px">
-          <div><b>Top pages</b>${t.topPaths.map((p) => `<div class="muted" style="display:flex;justify-content:space-between"><span>${esc(p.key)}</span><b>${p.count}</b></div>`).join('')}</div>
-          <div><b>Referrers</b>${t.topReferrers.map((p) => `<div class="muted" style="display:flex;justify-content:space-between"><span>${esc(p.key)}</span><b>${p.count}</b></div>`).join('')}</div>
-        </div>`;
+    const response = await api('/api/admin/products');
+    state.products = response.products || [];
+    if (response.media_ready === false) {
+      message('prodStatus', 'Apply site/supabase/schema-phase5.sql to enable product photos.', 'err');
     }
-  } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load traffic.</p>'; }
-  runSeoAudit();
-  loaded.traffic = true;
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load products.</p>';
+    return;
+  }
+  const q = $('prodSearch').value.trim().toLowerCase();
+  const products = state.products.filter((product) => JSON.stringify(product).toLowerCase().includes(q));
+  if (!products.length) {
+    box.innerHTML = '<p class="muted" style="padding:14px">No products.</p>';
+    return;
+  }
+  box.innerHTML = `<table class="adm"><thead><tr><th>Photo</th><th>SKU</th><th>Name</th><th>Mode</th><th>Price</th><th>Stock</th><th>Photo URL</th><th>Alt</th><th>Variants</th><th>Active</th><th></th></tr></thead><tbody>${products.map((p) => `
+    <tr data-product="${esc(p.sku)}">
+      <td>${p.image_url ? `<img class="product-photo" src="${esc(p.image_url)}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}</td>
+      <td><b>${esc(p.sku)}</b></td>
+      <td><input class="adm-input" value="${esc(p.name)}" data-field="name"></td>
+      <td><select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></td>
+      <td><input class="adm-input" type="number" min="0" step="0.01" value="${esc(p.price ?? '')}" data-field="price"></td>
+      <td><input class="adm-input" type="number" min="0" step="1" value="${esc(p.stock ?? '')}" data-field="stock"></td>
+      <td><input class="adm-input" value="${esc(p.image_url || '')}" data-field="image_url"></td>
+      <td><input class="adm-input" value="${esc(p.photo_alt || '')}" data-field="photo_alt"></td>
+      <td>${variantRows(p)}</td>
+      <td><input type="checkbox" ${p.active !== false ? 'checked' : ''} data-field="active"></td>
+      <td>
+        <button class="btn btn-primary btn-sm" data-save-product="${esc(p.sku)}" type="button">Save</button>
+        <button class="btn btn-ghost btn-sm" data-remove-product="${esc(p.sku)}" type="button">Remove</button>
+      </td>
+    </tr>
+  `).join('')}</tbody></table>`;
+
+  box.querySelectorAll('[data-save-product]').forEach((button) => {
+    button.addEventListener('click', () => saveProductRow(button.dataset.saveProduct));
+  });
+  box.querySelectorAll('[data-remove-product]').forEach((button) => {
+    button.addEventListener('click', () => removeProduct(button.dataset.removeProduct));
+  });
+  box.querySelectorAll('[data-save-variant]').forEach((button) => {
+    button.addEventListener('click', () => saveVariantRow(button.dataset.saveVariant));
+  });
+  box.querySelectorAll('[data-remove-variant]').forEach((button) => {
+    button.addEventListener('click', () => removeVariant(button.dataset.removeVariant));
+  });
 }
 
-const SEO_PAGES = ['index.html', 'products.html', 'programs.html', 'industries.html', 'proof.html', 'resources.html', 'about.html', 'contact.html'];
+function variantRows(product) {
+  const variants = (product.product_variants || []).slice().sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+  if (!variants.length) return '<span class="muted">No variants</span>';
+  return `<div class="variant-stack">${variants.map((v) => `
+    <div class="variant-row" data-variant="${esc(v.vsku)}">
+      <input class="adm-input" value="${esc(v.label || '')}" data-vfield="label" aria-label="Variant label">
+      <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.gallons ?? '')}" data-vfield="gallons" aria-label="Gallons">
+      <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.price ?? '')}" data-vfield="price" aria-label="Variant price">
+      <input class="adm-input" type="number" min="0" step="1" value="${esc(v.stock ?? '')}" data-vfield="stock" aria-label="Variant stock">
+      <label class="muted"><input type="checkbox" ${v.active !== false ? 'checked' : ''} data-vfield="active"> active</label>
+      <button class="btn btn-primary btn-sm" data-save-variant="${esc(v.vsku)}" type="button">Save</button>
+      <button class="btn btn-ghost btn-sm" data-remove-variant="${esc(v.vsku)}" type="button">Remove</button>
+      <input type="hidden" value="${esc(v.product_sku || product.sku)}" data-vfield="product_sku">
+      <input type="hidden" value="${esc(v.vsku)}" data-vfield="vsku">
+    </div>
+  `).join('')}</div>`;
+}
+
+function rowProduct(sku) {
+  const row = document.querySelector(`[data-product="${CSS.escape(sku)}"]`);
+  const product = { sku };
+  row.querySelectorAll('[data-field]').forEach((field) => {
+    const key = field.dataset.field;
+    product[key] = field.type === 'checkbox' ? field.checked : field.value;
+  });
+  product.track_stock = product.stock !== '';
+  return product;
+}
+
+async function saveProductRow(sku) {
+  message('prodStatus', 'Saving...');
+  try {
+    const response = await api('/api/admin/products', { method: 'POST', body: { product: rowProduct(sku) } });
+    message('prodStatus', response.warning || 'Saved.', response.warning ? 'err' : 'ok');
+    await renderProducts();
+  } catch (err) {
+    message('prodStatus', err.data?.error || 'Failed.', 'err');
+  }
+}
+
+async function removeProduct(sku) {
+  if (!confirm(`Deactivate ${sku}? Existing order history stays intact.`)) return;
+  try {
+    await api('/api/admin/products', { method: 'DELETE', body: { sku } });
+    message('prodStatus', 'Product deactivated.', 'ok');
+    await renderProducts();
+  } catch (err) {
+    message('prodStatus', err.data?.hint || err.data?.error || 'Remove failed.', 'err');
+  }
+}
+
+function rowVariant(vsku) {
+  const row = document.querySelector(`[data-variant="${CSS.escape(vsku)}"]`);
+  const variant = { vsku };
+  row.querySelectorAll('[data-vfield]').forEach((field) => {
+    const key = field.dataset.vfield;
+    variant[key] = field.type === 'checkbox' ? field.checked : field.value;
+  });
+  variant.track_stock = variant.stock !== '';
+  return variant;
+}
+
+async function saveVariantRow(vsku) {
+  message('variantStatus', 'Saving...');
+  try {
+    await api('/api/admin/products', { method: 'POST', body: { variant: rowVariant(vsku) } });
+    message('variantStatus', 'Variant saved.', 'ok');
+    await renderProducts();
+  } catch (err) {
+    message('variantStatus', err.data?.error || 'Failed.', 'err');
+  }
+}
+
+async function removeVariant(vsku) {
+  if (!confirm(`Deactivate ${vsku}? Existing order history stays intact.`)) return;
+  try {
+    await api('/api/admin/products', { method: 'DELETE', body: { vsku } });
+    message('variantStatus', 'Variant deactivated.', 'ok');
+    await renderProducts();
+  } catch (err) {
+    message('variantStatus', err.data?.error || 'Remove failed.', 'err');
+  }
+}
+
+function wireProductForm() {
+  $('prodForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const product = {
+      sku: $('npSku').value.trim(),
+      name: $('npName').value.trim() || undefined,
+      mode: $('npMode').value,
+      price: $('npPrice').value,
+      stock: $('npStock').value,
+      track_stock: $('npStock').value !== '',
+      image_url: $('npImageUrl').value.trim(),
+      photo_alt: $('npPhotoAlt').value.trim(),
+      active: true,
+    };
+    message('prodStatus', 'Saving...');
+    try {
+      const response = await api('/api/admin/products', { method: 'POST', body: { product } });
+      message('prodStatus', response.warning || 'Saved.', response.warning ? 'err' : 'ok');
+      event.target.reset();
+      await renderProducts();
+    } catch (err) {
+      message('prodStatus', err.data?.error || 'Failed.', 'err');
+    }
+  });
+}
+
+function wireVariantForm() {
+  $('variantForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const variant = {
+      product_sku: $('nvProductSku').value.trim(),
+      vsku: $('nvSku').value.trim(),
+      label: $('nvLabel').value.trim(),
+      gallons: $('nvGallons').value,
+      price: $('nvPrice').value,
+      stock: $('nvStock').value,
+      track_stock: $('nvStock').value !== '',
+      active: true,
+    };
+    message('variantStatus', 'Saving...');
+    try {
+      await api('/api/admin/products', { method: 'POST', body: { variant } });
+      message('variantStatus', 'Variant saved.', 'ok');
+      event.target.reset();
+      await renderProducts();
+    } catch (err) {
+      message('variantStatus', err.data?.error || 'Failed.', 'err');
+    }
+  });
+}
+
+async function renderPricing() {
+  const box = $('admPricing');
+  box.textContent = 'Loading...';
+  let data;
+  try {
+    data = await api('/api/admin/variant-pricing');
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load pricing.</p>';
+    return;
+  }
+  const q = $('priceSearch').value.trim().toLowerCase();
+  const tiers = data.tiers || ['retail', 'hvac', 'wholesale'];
+  const rows = (data.rows || []).filter((row) => JSON.stringify(row).toLowerCase().includes(q));
+  const fmt = (value) => value == null ? '' : Number(value).toFixed(2);
+  if (!rows.length) {
+    box.innerHTML = '<p class="muted" style="padding:14px">No variants.</p>';
+    return;
+  }
+  box.innerHTML = `<table class="adm"><thead><tr><th>Variant</th><th>VSKU</th><th>Base</th>${tiers.map((tier) => `<th>${esc(tier)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `
+    <tr data-vsku="${esc(row.vsku)}">
+      <td>${esc(row.product_name)} - ${esc(row.label)}${row.mode === 'quote' ? ' <span class="badge" data-s="quote">quote</span>' : ''}</td>
+      <td><code>${esc(row.vsku)}</code></td>
+      <td class="muted">${row.base_price == null ? '-' : fmt(row.base_price)}</td>
+      ${tiers.map((tier) => `<td><input class="adm-input" data-price-tier="${esc(tier)}" type="number" step="0.01" min="0" value="${esc(row.tiers?.[tier] ?? '')}" placeholder="${row.base_price == null ? '-' : fmt(row.base_price)}"></td>`).join('')}
+    </tr>
+  `).join('')}</tbody></table><p id="priceRowStatus" class="adm-status" role="status"></p>`;
+  box.querySelectorAll('[data-price-tier]').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const row = input.closest('[data-vsku]');
+      input.disabled = true;
+      try {
+        await api('/api/admin/variant-pricing', {
+          method: 'POST',
+          body: { vsku: row.dataset.vsku, tier: input.dataset.priceTier, price: input.value },
+        });
+        message('priceRowStatus', `${row.dataset.vsku} ${input.dataset.priceTier} saved.`, 'ok');
+      } catch (err) {
+        message('priceRowStatus', err.data?.error || 'Failed.', 'err');
+      } finally {
+        input.disabled = false;
+      }
+    });
+  });
+}
+
+async function renderThreads() {
+  const box = $('admThreads');
+  box.textContent = 'Loading...';
+  try {
+    state.threads = (await api('/api/admin/messages')).threads || [];
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load messages.</p>';
+    return;
+  }
+  if (!state.threads.length) {
+    box.innerHTML = '<p class="muted">No conversations.</p>';
+    return;
+  }
+  box.innerHTML = state.threads.map((thread) => `
+    <button type="button" data-company-thread="${esc(thread.company_id)}">
+      <b>${esc(thread.company_name || thread.company_id)}</b>
+      ${thread.unread ? `<span class="pill">${esc(thread.unread)}</span>` : ''}
+      <br><span class="muted">${esc((thread.last_body || '').slice(0, 80))}</span>
+    </button>
+  `).join('');
+  box.querySelectorAll('[data-company-thread]').forEach((button) => {
+    button.addEventListener('click', () => openThread(button.dataset.companyThread));
+  });
+}
+
+async function openThread(companyId) {
+  const view = $('admThreadView');
+  view.textContent = 'Loading...';
+  try {
+    const messages = (await api(`/api/admin/messages?company_id=${encodeURIComponent(companyId)}`)).messages || [];
+    view.innerHTML = `<div class="msg-thread">${messages.map((m) => `
+      <div class="msg" data-role="${esc(m.sender_role)}"><p>${esc(m.body)}</p><span class="muted">${esc(date(m.created_at))}</span></div>
+    `).join('')}</div>
+    <form id="replyForm" class="adm-form-grid" style="margin-top:12px">
+      <label class="full">Reply <textarea id="replyBody" class="adm-textarea" required></textarea></label>
+      <button class="btn btn-primary" type="submit">Send reply</button>
+      <p id="replyStatus" class="adm-status"></p>
+    </form>`;
+    $('replyForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      message('replyStatus', 'Sending...');
+      try {
+        await api('/api/admin/messages', { method: 'POST', body: { company_id: companyId, body: $('replyBody').value } });
+        await openThread(companyId);
+        await renderThreads();
+      } catch (err) {
+        message('replyStatus', err.data?.error || 'Failed.', 'err');
+      }
+    });
+  } catch {
+    view.innerHTML = '<p class="adm-status" data-state="err">Failed to load thread.</p>';
+  }
+}
+
+async function renderQuotes() {
+  const box = $('admQuotes');
+  box.textContent = 'Loading...';
+  let data;
+  try {
+    data = await api('/api/admin/quotes');
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load quotes.</p>';
+    return;
+  }
+  state.quotes = data.quotes || [];
+  badge('aBadgeQuotes', data.new_count || 0);
+  if (data.needs_migration) {
+    box.innerHTML = '<p class="muted">No quote database yet. Apply site/supabase/schema-quotes.sql to store and triage leads here.</p>';
+    return;
+  }
+  const q = $('qSearch').value.trim().toLowerCase();
+  const filter = $('qFilter').value;
+  const quotes = state.quotes.filter((quote) => {
+    const text = JSON.stringify(quote).toLowerCase();
+    return (!q || text.includes(q)) && (!filter || quote.status === filter);
+  });
+  if (!quotes.length) {
+    box.innerHTML = '<p class="muted">No quotes.</p>';
+    return;
+  }
+  box.innerHTML = quotes.map((quote) => `
+    <details class="quote-item">
+      <summary><b>${esc(quote.company || quote.name || quote.email)}</b> ${statusBadge(quote.status || 'new')}</summary>
+      <p>${esc(quote.message || '')}</p>
+      <p class="muted">${esc([quote.email, quote.phone, quote.product, quote.industry, quote.location].filter(Boolean).join(' | '))}</p>
+      <div class="adm-tools">
+        <select class="adm-select" data-quote-status="${esc(quote.id)}">${QUOTE_STATUSES.map((s) => `<option value="${s}" ${s === quote.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
+        <button class="btn btn-ghost btn-sm" data-save-quote="${esc(quote.id)}" type="button">Save</button>
+        <a class="btn btn-primary btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('Re: your MASEST request')}">Email</a>
+      </div>
+    </details>
+  `).join('');
+  box.querySelectorAll('[data-save-quote]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.saveQuote;
+      const status = box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value;
+      await api('/api/admin/quotes', { method: 'POST', body: { id, status } });
+      renderQuotes();
+    });
+  });
+}
+
+function wireOfferForm() {
+  $('offerForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    message('offerStatus', 'Sending...');
+    try {
+      const response = await api('/api/admin/offers', {
+        method: 'POST',
+        body: {
+          title: $('ofTitle').value.trim(),
+          body: $('ofBody').value.trim(),
+          cta_url: $('ofCta').value.trim() || '/products.html',
+          audience: $('ofAud').value,
+          send_email: $('ofEmail').checked,
+        },
+      });
+      message('offerStatus', `Sent to ${response.recipients || 0} account(s)${response.emailed ? ' + email' : ''}.`, 'ok');
+      renderOffers(true);
+    } catch (err) {
+      message('offerStatus', err.data?.error || 'Failed.', 'err');
+    }
+  });
+}
+
+async function renderOffers(force = false) {
+  if (state.loaded.has('offers') && !force) return;
+  const box = $('admOffers');
+  box.textContent = 'Loading...';
+  try {
+    const offers = (await api('/api/admin/offers')).offers || [];
+    box.innerHTML = offers.length ? offers.map((offer) => `
+      <div class="quote-item"><b>${esc(offer.title)}</b><p class="muted">${esc(offer.audience)} | ${esc(offer.recipients || 0)} recipients | ${esc(date(offer.created_at))}</p></div>
+    `).join('') : '<p class="muted">No sends yet.</p>';
+    state.loaded.add('offers');
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>';
+  }
+}
+
+async function renderTraffic() {
+  const box = $('admTraffic');
+  box.textContent = 'Loading...';
+  try {
+    const data = await api('/api/admin/traffic?days=14');
+    if (!data.available) {
+      box.innerHTML = `<p class="muted">${esc(data.note || 'Traffic table not migrated yet.')}</p>`;
+      return;
+    }
+    box.innerHTML = `<h2>Traffic (14d)</h2><p><b>${esc(data.total)}</b> views, <b>${esc(data.unique)}</b> unique visitors</p>
+      <h3>Top paths</h3>${(data.topPaths || []).map((row) => `<p>${esc(row.key)} <span class="muted">${esc(row.count)}</span></p>`).join('')}`;
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>';
+  }
+}
+
 async function runSeoAudit() {
   const box = $('admSeo');
-  const rows = await Promise.all(SEO_PAGES.map(async (page) => {
+  const pages = ['index.html', 'products.html', 'programs.html', 'industries.html', 'about.html', 'contact.html'];
+  const rows = await Promise.all(pages.map(async (page) => {
     try {
       const html = await (await fetch('/' + page, { cache: 'no-store' })).text();
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const title = (doc.querySelector('title')?.textContent || '').trim();
       const desc = (doc.querySelector('meta[name="description"]')?.content || '').trim();
-      const og = !!doc.querySelector('meta[property="og:title"]') || !!doc.querySelector('meta[property="og:image"]');
-      const canonical = !!doc.querySelector('link[rel="canonical"]');
-      const noindex = /noindex/i.test(doc.querySelector('meta[name="robots"]')?.content || '');
-      return { page, title, titleLen: title.length, desc, descLen: desc.length, og, canonical, noindex };
-    } catch { return { page, error: true }; }
+      return { page, title: title.length, desc: desc.length, ok: title && desc };
+    } catch {
+      return { page, ok: false };
+    }
   }));
-  const mark = (ok, warn) => ok ? '<span class="seo-ok">✓</span>' : (warn ? '<span class="seo-warn">!</span>' : '<span class="seo-bad">✗</span>');
-  box.innerHTML = `<table class="adm"><thead><tr><th>Page</th><th>Title (len)</th><th>Description (len)</th><th>OG</th><th>Canonical</th><th>Indexable</th></tr></thead><tbody>${
-    rows.map((r) => r.error ? `<tr><td>${esc(r.page)}</td><td colspan="5" class="seo-bad">not reachable</td></tr>`
-      : `<tr><td><b>${esc(r.page)}</b></td>
-        <td>${mark(r.titleLen >= 15 && r.titleLen <= 65, r.titleLen > 0)} ${r.titleLen}</td>
-        <td>${mark(r.descLen >= 50 && r.descLen <= 165, r.descLen > 0)} ${r.descLen}</td>
-        <td>${mark(r.og)}</td><td>${mark(r.canonical)}</td>
-        <td>${r.noindex ? '<span class="seo-warn">noindex</span>' : '<span class="seo-ok">yes</span>'}</td></tr>`).join('')}</tbody></table>
-    <p class="muted" style="margin-top:8px">Targets: title 15–65 chars, description 50–165, OpenGraph + canonical present. <a href="/sitemap.xml" target="_blank">sitemap.xml</a> · <a href="/robots.txt" target="_blank">robots.txt</a></p>`;
+  box.innerHTML = `<h2>SEO audit</h2><table class="adm"><tbody>${rows.map((row) => `
+    <tr><td>${esc(row.page)}</td><td class="${row.ok ? 'seo-ok' : 'seo-bad'}">${row.ok ? 'OK' : 'Check'}</td><td class="muted">title ${esc(row.title || 0)} / desc ${esc(row.desc || 0)}</td></tr>
+  `).join('')}</tbody></table>`;
 }
 
-/* ---------- stats refresh ---------- */
-async function refreshStats() { try { renderStats(await api('/api/admin/stats')); } catch {} }
+function wire() {
+  ORDER_STATUSES.forEach((status) => {
+    $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${status}">${status.replaceAll('_', ' ')}</option>`);
+  });
+  document.querySelectorAll('[data-tab]').forEach((button) => {
+    button.addEventListener('click', () => setTab(button.dataset.tab));
+  });
+  $('ordFilter').addEventListener('change', renderOrders);
+  $('ordSearch').addEventListener('input', renderOrders);
+  $('coSearch').addEventListener('input', renderCompanies);
+  $('prodSearch').addEventListener('input', renderProducts);
+  $('priceSearch').addEventListener('input', renderPricing);
+  $('qFilter').addEventListener('change', renderQuotes);
+  $('qSearch').addEventListener('input', renderQuotes);
+  $('admLogout').addEventListener('click', async () => { await logout(); location.reload(); });
+  $('gateForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    message('gateStatus', 'Signing in...');
+    try {
+      await login({ email: $('gEmail').value.trim(), password: $('gPass').value });
+      message('gateStatus', '');
+      boot();
+    } catch {
+      message('gateStatus', 'Sign in failed.', 'err');
+    }
+  });
+  wireProductForm();
+  wireVariantForm();
+  wireOfferForm();
+}
 
-/* ---------- gate / boot ---------- */
-function showGate(title, msg, denied) {
-  $('admApp').hidden = true; $('admGate').hidden = false;
-  $('gateTitle').textContent = title; $('gateMsg').textContent = msg;
-  $('gateForm').style.display = denied ? 'none' : '';
-}
-async function enterApp(stats) {
-  $('admGate').hidden = true; $('admApp').hidden = false;
-  wireTabs(); wireProductForm(); wireOfferForm();
-  wireSearch('ordSearch', 'admOrders'); wireSearch('coSearch', 'admCompanies'); wireSearch('prodSearch', 'admProducts'); wireSearch('priceSearch', 'admPricing');
-  $('qSearch')?.addEventListener('input', filterQuotes); $('qFilter')?.addEventListener('change', filterQuotes);
-  renderStats(stats);
-  loadQuoteBadge();
-  const start = ['orders', 'companies', 'products', 'messages', 'quotes', 'offers', 'traffic'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
-  selectTab(start);
-}
-async function boot() {
-  try { await enterApp(await api('/api/admin/stats')); }
-  catch (err) {
-    if (err.status === 403) showGate('Not authorized', 'This account is signed in but is not a MASEST staff account. Ask an admin to add your email to ADMIN_EMAILS.', true);
-    else showGate('Staff sign in', 'Sign in with a MASEST staff account.', false);
-  }
-}
-$('gateForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const st = $('gateStatus'); st.textContent = 'Signing in…'; st.dataset.state = '';
-  try { await login({ email: $('gEmail').value.trim(), password: $('gPass').value }); st.textContent = ''; boot(); }
-  catch { st.textContent = 'Sign in failed.'; st.dataset.state = 'err'; }
-});
+wire();
 boot();

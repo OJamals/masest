@@ -96,17 +96,18 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
 
 // Best-effort stock decrement for paid lines. Product-level (matches the admin stock UI). Never throws:
 // inventory drift must not fail the webhook (Stripe would retry the whole event).
-async function decrementStock(sb, lines) {
+async function decrementVariantStock(sb, lines) {
   for (const l of lines || []) {
-    const key = l.product_sku || l.sku;
-    if (!key) continue;
+    if (!l.sku) continue;
     try {
-      const { data: p } = await sb.from('products').select('sku,track_stock,stock').eq('sku', key).maybeSingle();
-      if (p && p.track_stock && p.stock != null) {
-        const next = Math.max(0, Number(p.stock) - Number(l.qty || 0));
-        await sb.from('products').update({ stock: next }).eq('sku', key);
-      }
-    } catch (e) { console.error('stock_decrement_failed', key, e?.message || e); }
+      const { error } = await sb.rpc('decrement_variant_stock', {
+        p_vsku: l.sku,
+        p_qty: Number(l.qty || 0),
+      });
+      if (error) console.error('stock_decrement_failed', l.sku, error.message);
+    } catch (e) {
+      console.error('stock_decrement_failed', l.sku, e?.message || e);
+    }
   }
 }
 
@@ -188,7 +189,7 @@ export async function onRequestPost({ request, env }) {
     // Branded order-confirmation email (Stripe also sends its own card receipt).
     await sendOrderConfirmation({ env, session: s, order, lines, subtotal, tax, total });
     // Decrement inventory for stock-tracked SKUs (best-effort; never fails the webhook).
-    if (order && lines.length) await decrementStock(sb, lines);
+      if (order && lines.length) await decrementVariantStock(sb, lines);
     // Notify the buyer's company that the order was received (feeds the dashboard + nav badge).
     if (order && s.metadata?.company_id) {
       await sb.from('notifications').insert({
