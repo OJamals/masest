@@ -160,6 +160,14 @@ async function qboCreate(env, accessToken, realmId, entity, body, fetchImpl = fe
   return response.json();
 }
 
+async function resolveIncomeAccountRef(env, accessToken, realmId, fetchImpl = fetch) {
+  if (env.QBO_INCOME_ACCOUNT_ID) return env.QBO_INCOME_ACCOUNT_ID;
+  const found = await qboQuery(env, accessToken, realmId, "select Id from Account where AccountType = 'Income' maxresults 1", fetchImpl);
+  const accountId = found.QueryResponse?.Account?.[0]?.Id;
+  if (!accountId) throw new Error('qbo_income_account_not_configured');
+  return accountId;
+}
+
 export async function findOrCreateCustomer(sb, env, accessToken, realmId, { key, displayName }, options = {}) {
   const { data: cached, error } = await sb
     .from('qbo_customers')
@@ -196,8 +204,7 @@ export async function findOrCreateItem(sb, env, accessToken, realmId, { sku, nam
   const found = await qboQuery(env, accessToken, realmId, `select Id from Item where Sku = '${safeSku}' maxresults 1`, fetchImpl);
   let itemId = found.QueryResponse?.Item?.[0]?.Id;
   if (!itemId) {
-    const incomeAccountId = env.QBO_INCOME_ACCOUNT_ID;
-    if (!incomeAccountId) throw new Error('qbo_income_account_not_configured');
+    const incomeAccountId = await resolveIncomeAccountRef(env, accessToken, realmId, fetchImpl);
     const created = await qboCreate(env, accessToken, realmId, 'Item', {
       Name: name || sku,
       Sku: sku,

@@ -91,3 +91,29 @@ test("findOrCreateItem creates a service item and caches it when QBO has no matc
   assert.equal(body.Type, "Service");
   assert.equal(body.IncomeAccountRef.value, "79");
 });
+
+test("findOrCreateItem auto-detects an income account when env id is absent", async () => {
+  const sb = fakeSb();
+  const requests = [];
+  const itemId = await findOrCreateItem(sb, { QBO_ENVIRONMENT: "sandbox" }, "tok", "realm", {
+    sku: "crhd-1",
+    name: "CR-HD - 1 gal",
+  }, {
+    fetchImpl: async (url, init = {}) => {
+      requests.push({ url, init });
+      if (url.includes("/query?") && decodeURIComponent(url).includes("from Item")) {
+        return { ok: true, async json() { return { QueryResponse: {} }; } };
+      }
+      if (url.includes("/query?") && decodeURIComponent(url).includes("from Account")) {
+        return { ok: true, async json() { return { QueryResponse: { Account: [{ Id: "401" }] } }; } };
+      }
+      return { ok: true, async json() { return { Item: { Id: "202" } }; } };
+    },
+  });
+
+  assert.equal(itemId, "202");
+  const create = requests.find((request) => request.url.includes("/item?"));
+  assert.ok(create, "expected an Item create request");
+  const body = JSON.parse(create.init.body);
+  assert.equal(body.IncomeAccountRef.value, "401");
+});

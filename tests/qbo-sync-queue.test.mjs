@@ -38,3 +38,20 @@ test("new NET and Stripe orders enter the QBO sync queue", () => {
   assert.match(webhook, /payment_method:\s*'stripe'[\s\S]*qbo_sync_status:\s*'pending'/,
     "Stripe checkout orders should start pending QBO sales receipt sync");
 });
+
+test("admin QBO status exposes failed orders for staff triage", () => {
+  const src = readFileSync(new URL("../functions/api/admin/qbo/status.js", import.meta.url), "utf8");
+  assert.match(src, /qbo_failed_orders/);
+  assert.match(src, /qbo_sync_status'\s*,\s*'error'/);
+  assert.match(src, /qbo_error/);
+  assert.match(src, /qbo_attempts/);
+  assert.match(src, /qbo_next_attempt_at/);
+});
+
+test("admin QBO retry endpoint requeues a failed order", () => {
+  const src = readFileSync(new URL("../functions/api/admin/qbo/retry.js", import.meta.url), "utf8");
+  assert.match(src, /requireStaff/);
+  assert.match(src, /qbo_sync_status:\s*'pending'/);
+  assert.match(src, /qbo_attempts:\s*0/);
+  assert.match(src, /qbo_next_attempt_at:\s*null/);
+});

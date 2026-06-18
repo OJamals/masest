@@ -6,15 +6,23 @@ export async function onRequestGet({ request, env }) {
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
 
-  const { data, error } = await adminClient(env).from('qbo_tokens')
+  const sb = adminClient(env);
+  const { data, error } = await sb.from('qbo_tokens')
     .select('realm_id,refresh_token,access_token,access_expires_at,updated_at')
     .eq('id', 1)
     .maybeSingle();
   if (error) return json(500, { error: error.message || 'qbo_status_failed' });
 
-  const { data: syncRows, error: syncError } = await adminClient(env).from('orders')
+  const { data: syncRows, error: syncError } = await sb.from('orders')
     .select('qbo_sync_status');
   if (syncError) return json(500, { error: syncError.message || 'qbo_sync_status_failed' });
+
+  const { data: qbo_failed_orders, error: failedError } = await sb.from('orders')
+    .select('id,created_at,total,currency,payment_method,qbo_error,qbo_attempts,qbo_next_attempt_at,companies(name)')
+    .eq('qbo_sync_status', 'error')
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (failedError) return json(500, { error: failedError.message || 'qbo_failed_orders_failed' });
 
   const sync_counts = (syncRows || []).reduce((counts, row) => {
     const status = row.qbo_sync_status || 'none';
@@ -28,5 +36,6 @@ export async function onRequestGet({ request, env }) {
     access_expires_at: data?.access_expires_at || null,
     updated_at: data?.updated_at || null,
     sync_counts,
+    qbo_failed_orders: qbo_failed_orders || [],
   });
 }

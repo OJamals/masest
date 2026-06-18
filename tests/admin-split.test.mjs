@@ -17,3 +17,12 @@ test("admin entrypoint imports QuickBooks controls from a split module", () => {
   assert.match(qbo, /\/api\/admin\/qbo\/status/);
   assert.match(qbo, /\/api\/admin\/qbo\/connect\?format=json/);
 });
+
+test("admin QuickBooks panel renders failed sync retry controls", () => {
+  const html = read("admin.html");
+  const qbo = read("js/admin/qbo.js");
+  assert.match(html, /qboFailedOrders/);
+  assert.match(qbo, /qbo_failed_orders/);
+  assert.match(qbo, /data-qbo-retry/);
+  assert.match(qbo, /\/api\/admin\/qbo\/retry/);
+});
