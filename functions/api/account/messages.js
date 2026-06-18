@@ -1,6 +1,6 @@
 // /api/account/messages — support thread between the caller's company and MASEST staff.
 //   GET → thread (marks staff msgs read by user) · POST { body } → buyer posts (+ staff notification)
-import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
+import { adminClient, userFromRequest, companyForUser, json, readBody, sendEmail, emailLayout } from '../../_lib/supabase.js';
 
 export async function onRequest({ request, env }) {
   const { user } = await userFromRequest(request, env);
@@ -33,6 +33,29 @@ export async function onRequest({ request, env }) {
       order_id: body.order_id || null, read_by_user: true, read_by_staff: false,
     }).select('id,created_at').single();
     if (error) return json(500, { error: 'server_error' });
+
+    // Best-effort staff email alert (low B2B volume; throttle is a future enhancement).
+    const staffTo = (env.ADMIN_EMAILS || env.ADMIN_EMAIL || '')
+      .split(',').map((s) => s.trim()).filter(Boolean);
+    if (staffTo.length) {
+      let companyName = companyId;
+      try {
+        const { data: co } = await sb.from('companies').select('name').eq('id', companyId).maybeSingle();
+        if (co?.name) companyName = co.name;
+      } catch { /* fall back to id */ }
+      await sendEmail(env, {
+        to: staffTo,
+        subject: `New message from ${companyName}`,
+        html: emailLayout({
+          heading: 'New customer message',
+          bodyHtml: `<p>Company: ${companyName}</p><p>${text.slice(0, 500)}</p>`,
+          ctaText: 'Open admin messages',
+          ctaUrl: 'https://masest.co/admin.html#messages',
+        }),
+        category: 'staff_alert',
+      });
+    }
+
     return json(201, { id: data.id, created_at: data.created_at });
   }
 
