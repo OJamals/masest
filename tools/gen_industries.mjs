@@ -289,6 +289,13 @@ function page(ind) {
 <meta name="description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta name="theme-color" content="#fafbfc">
 <link rel="canonical" href="https://masest.co/industries/${ind.slug}.html">
+<meta property="og:title" content="${ind.name} | MASEST VertKleen">
+<meta property="og:description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MASEST VertKleen">
+<meta property="og:url" content="https://masest.co/industries/${ind.slug}.html">
+<meta property="og:image" content="https://masest.co/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css">
