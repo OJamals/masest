@@ -12,7 +12,7 @@ catalog, in the audit's **controlled-launch** mode.
 - New catalog cards for CR-HD Low Foam, CR2, SAR. Editorial slug `crhd` aliases to commerce
   `cr-hd` in `product.html`. Product pages default to the 5 gal pail and show a read-only
   **drums & totes** reference block (`data/drum-pricing.json`) with a freight-quote CTA.
-- **Services** (35 + 4 packages) loaded to a new `public.services` table, quote-only — no UI yet.
+- **Services** (35 + 4 packages) loaded to a new `public.services` table, quote-only, and surfaced on `about.html#services-pricing` from `data/catalog.seed.json`.
 
 ## Safety model
 The live commerce table only ever sells fulfillable SKUs: quote-only variants are `active=false`,
@@ -40,4 +40,4 @@ To change what is buyable, edit `QUOTE_ONLY_SLUGS` in the generator.
 
 ## Still pending (owner decisions, not blockers)
 Small-pack prices for WaterSafe60 / CR2 / SAR; glycol 1 / 2.5 / 275 gal prices; account-tier
-price books; freight rules + per-variant weights; approved SDS/TDS/cert PDFs; services catalog UI.
+price books; freight rules + per-variant weights; approved SDS/TDS/cert PDFs; service intake and scheduling workflow.

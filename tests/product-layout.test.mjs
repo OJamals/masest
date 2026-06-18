@@ -54,7 +54,7 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
         };
       });
 
-      assert.equal(layout.total, 13, "expected all 13 products in the grid");
+      assert.equal(layout.total, 16, "expected all 16 product cards in the grid");
       assert.ok(layout.perRow >= 4 && layout.perRow <= 5, `expected 4-5 cards/row, got ${layout.perRow}`);
       assert.ok(layout.allLink, "every card should be a clickable product link");
       assert.equal(layout.nestedInteractive, false, "cart buttons should not be nested inside links");
@@ -77,13 +77,13 @@ test("replacement checker shows the swap and filters the catalog", async () => {
       assert.deepEqual(filtered, ["hcr", "descaler", "crs"], "checker should filter to the matching swaps");
 
       await page.click("#swapClear");
-      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 13);
+      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 16);
       const restored = await page.$$eval(".shop-card", (els) => els.length);
-      assert.equal(restored, 13, "clearing should restore the full line");
+      assert.equal(restored, 16, "clearing should restore the full line");
 
       await page.click('.shop-chip[data-group="water"]');
       const water = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
-      assert.deepEqual(water, ["watersafe60", "purgo", "dbnpa"], "category chip should filter the grid");
+      assert.deepEqual(water, ["watersafe60", "cr2", "sar", "purgo", "dbnpa"], "category chip should filter the grid");
     } finally {
       await browser.close();
     }

@@ -14,18 +14,19 @@ test("NET checkout does not acknowledge orders before persistence succeeds", () 
   const checkout = readRepo("netlify/functions/checkout.js");
   assert.match(checkout, /data:\s*order,\s*error:\s*orderErr/);
   assert.match(checkout, /if\s*\(orderErr\s*\)\s*return\s+json\(500,\s*\{\s*error:\s*orderErr\.message/);
-  assert.match(checkout, /error:\s*itemErr/);
-  assert.match(checkout, /if\s*\(itemErr\s*\)\s*return\s+json\(500,\s*\{\s*error:\s*itemErr\.message/);
+  assert.match(checkout, /error:\s*itemsErr/);
+  assert.match(checkout, /if\s*\(itemsErr\s*\)\s*return\s+json\(500,\s*\{\s*error:\s*itemsErr\.message/);
   assert.ok(
-    checkout.indexOf("if (itemErr)") < checkout.indexOf("return json(201"),
+    checkout.indexOf("if (itemsErr)") < checkout.indexOf("return json(201"),
     "item insert errors must be handled before returning 201"
   );
 });
 
 test("checkout only sells active buy-mode products with positive numeric server prices", () => {
   const checkout = readRepo("netlify/functions/checkout.js");
-  assert.match(checkout, /Number\.isFinite\(Number\(p\.price\)\)/);
-  assert.match(checkout, /Number\(p\.price\)\s*<=\s*0/);
-  assert.match(checkout, /p\.mode\s*!==\s*'buy'/);
-  assert.match(checkout, /!p\.active/);
+  assert.match(checkout, /Number\.isFinite\(Number\(v\.price\)\)/);
+  assert.match(checkout, /v\.price\s*==\s*null/);
+  assert.match(checkout, /prod\.mode\s*!==\s*'buy'/);
+  assert.match(checkout, /v\.active\s*===\s*false/);
+  assert.match(checkout, /prod\.active\s*===\s*false/);
 });
