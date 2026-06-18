@@ -126,25 +126,7 @@ states.forEach(function (st) {
       if (cue) cue.style.opacity = Math.max(0, 1 - st.p * 8);
     }
     if (st.act === pipeAct) updateChips2(st);
-    if (st.act === hmisAct) updateHmis(st);
     if (st.act === chemAct) updateChems(st);
-  }
-
-  /* ---- ACT 3: HMIS climbing meter. One scrub-linked --climb (0..1) raises all
-     three bars together; Health overtakes the others and locks onto the level-3
-     "serious" line, where --hot ignites the danger line and ambient haze.
-     Reverses cleanly on scroll-back; CSS defaults (--climb/--hot = 1) keep the
-     no-JS / reduced-motion fallback fully composed. ---- */
-  var hmisAct = story.querySelector('.act[data-act="3"]');
-  var hmisMeter = hmisAct ? hmisAct.querySelector(".hmis-meter") : null;
-
-  function updateHmis(st) {
-    if (!hmisMeter) return;
-    var win = INW(st) * 3.2;                               /* climb spans ~3.2 beats */
-    var climb = smooth((st.p - beatFrac(st, 1.7)) / win);
-    var hot = smooth((climb - 0.62) / 0.38);              /* ignites as Health nears 3 */
-    hmisMeter.style.setProperty("--climb", climb.toFixed(3));
-    hmisMeter.style.setProperty("--hot", hot.toFixed(3));
   }
 
   /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */

@@ -166,36 +166,52 @@
         <p class="act-p" data-at="1" data-out="4.1">Crews fight buildup with acids, caustics, and biocides. Industry rates the danger of each one with HMIS, the Hazardous Materials Identification System: three numbers, each from 0 to 4.</p>
       </div>
       <div class="hmis-rig">
-        <div class="hmis-meter" data-at="1.5">
-          <p class="meter-cap">Each axis is scored 0 to 4. Here is where a typical industrial cleaner lands.</p>
-          <div class="meter-body">
-            <ol class="meter-axis" aria-hidden="true">
-              <li><b>4</b><i>Severe</i></li>
-              <li><b>3</b><i>Serious</i></li>
-              <li><b>2</b><i>Moderate</i></li>
-              <li><b>1</b><i>Slight</i></li>
-              <li><b>0</b><i>Minimal</i></li>
-            </ol>
-            <div class="meter-plot">
-              <div class="meter-rules" aria-hidden="true">
-                <i style="--lvl:4"></i><i class="is-danger" style="--lvl:3"><em>Serious</em></i><i style="--lvl:2"></i><i style="--lvl:1"></i>
-              </div>
-              <div class="mcol axis-health" style="--score:3">
-                <div class="mtrack"><div class="mfill"><b class="mval">3</b></div></div>
-                <div class="mfoot"><i class="ph ph-heartbeat" aria-hidden="true"></i><span class="mlabel">Health</span><small>Brief contact can mean serious injury.</small></div>
-              </div>
-              <div class="mcol axis-flam" style="--score:2">
-                <div class="mtrack"><div class="mfill"><b class="mval">2</b></div></div>
-                <div class="mfoot"><i class="ph ph-flame" aria-hidden="true"></i><span class="mlabel">Flammability</span><small>Up to 2 &mdash; heat and vapor add risk.</small></div>
-              </div>
-              <div class="mcol axis-react" style="--score:1">
-                <div class="mtrack"><div class="mfill"><b class="mval">1</b></div></div>
-                <div class="mfoot"><i class="ph ph-atom" aria-hidden="true"></i><span class="mlabel">Reactivity</span><small>Up to 1 &mdash; mostly stable.</small></div>
-              </div>
-            </div>
+        <div class="hmis-factors">
+          <div class="factor f-health" data-at="1">
+            <div class="bar"></div>
+            <span class="fico"><i class="ph ph-heartbeat" aria-hidden="true"></i></span>
+            <span class="flabel">Health</span>
+            <span class="fmeaning">Can it hurt people? 0 means no expected injury. 4 can be life-threatening.</span>
+          </div>
+          <div class="factor f-flam" data-at="2">
+            <div class="bar"></div>
+            <span class="fico"><i class="ph ph-flame" aria-hidden="true"></i></span>
+            <span class="flabel">Flammability</span>
+            <span class="fmeaning">Will it burn? 0 means it will not burn. 4 ignites at room temperature.</span>
+          </div>
+          <div class="factor f-react" data-at="3">
+            <div class="bar"></div>
+            <span class="fico"><i class="ph ph-atom" aria-hidden="true"></i></span>
+            <span class="flabel">Reactivity</span>
+            <span class="fmeaning">Will it react violently? 0 is stable. 4 can detonate.</span>
           </div>
         </div>
-        <p class="hmis-take" data-at="4">Whatever the enemy, the cleaner that fights it rates <b>Health&nbsp;3&nbsp;&mdash;&nbsp;Serious</b>. Flammability and reactivity vary, but stay low. The health hit is the constant.</p>
+        <div class="hmis-scale hmis-scale-hot" data-at="4">
+          <div class="scale-head">
+            <span>HMIS hazard rises on three axes</span>
+            <span>3 serious &middot; 2 moderate &middot; 1 slight</span>
+          </div>
+          <div class="hmis-axis-grid" aria-label="HMIS hazard scale across health, flammability, and reactivity">
+            <div class="hmis-axis axis-health">
+              <span>Health</span>
+              <strong>3</strong>
+              <small>Brief exposure can mean serious injury.</small>
+            </div>
+            <div class="hmis-axis axis-flam">
+              <span>Flammability</span>
+              <strong>2</strong>
+              <small>Heat and vapor turn handling into risk.</small>
+            </div>
+            <div class="hmis-axis axis-react">
+              <span>Reactivity</span>
+              <strong>1</strong>
+              <small>Pressure, metal, or mixing can destabilize.</small>
+            </div>
+          </div>
+          <div class="heat-strip" aria-hidden="true">
+            <span>4 extreme</span><span>3 serious</span><span>2 moderate</span><span>1 slight</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -628,7 +644,7 @@
     var checks=[
       function(){out.a1={h:op('.act[data-act="1"] .act-h'),reel:document.querySelector('.reel-idx').textContent,slideVis:op('.reel-slide[data-slide="1"]'),fx:cvPix(1)};},
       function(){out.a2={h:op('.act[data-act="2"] .act-h'),chip:op('.chip.c-rust'),fx:cvPix(2)};},
-      function(){out.a3={h:op('.act[data-act="3"] .act-h'),f:op('.mcol.axis-health .mval'),scale:op('.hmis-meter')};},
+      function(){out.a3={h:op('.act[data-act="3"] .act-h'),f:op('.factor.f-react'),scale:op('.hmis-scale')};},
 function(){out.a4={h:op('.act-chems .act-h'),card:op('.chem-card[data-at=".85"]'),dot:op('.cdot[data-dot="2"]'),safe:document.querySelector('.chem-scale').classList.contains('safe')?1:0};},
       function(){out.a5={h:op('.act-savior h2'),z:op('.savior-zero'),fx:cvPix(5),rail:document.querySelectorAll('.rail-btn.is-on').length};}
     ];
