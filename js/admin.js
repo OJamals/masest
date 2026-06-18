@@ -15,7 +15,7 @@ function selectTab(name) {
   document.querySelectorAll('.adm-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   document.querySelectorAll('.adm-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   history.replaceState(null, '', '#' + name);
-  ({ orders: renderOrders, companies: renderCompanies, products: renderProducts, messages: renderThreads, quotes: renderQuotes, offers: renderOffers, traffic: renderTraffic }[name])?.(false);
+  ({ orders: renderOrders, companies: renderCompanies, products: renderProducts, pricing: renderPricing, messages: renderThreads, quotes: renderQuotes, offers: renderOffers, traffic: renderTraffic }[name])?.(false);
 }
 function wireTabs() {
   document.querySelectorAll('.adm-tab').forEach((b) => b.addEventListener('click', () => selectTab(b.dataset.tab)));
@@ -80,7 +80,7 @@ async function renderCompanies() {
   let cos = [];
   try { cos = (await api('/api/admin/companies')).companies; } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load.</p>'; return; }
   if (!cos.length) { box.innerHTML = '<p class="muted">No accounts yet.</p>'; return; }
-  box.innerHTML = `<table class="adm"><thead><tr><th>Company</th><th>Status</th><th>NET days</th><th>Credit</th><th>Actions</th></tr></thead><tbody>${
+  box.innerHTML = `<table class="adm"><thead><tr><th>Company</th><th>Status</th><th>NET days</th><th>Credit</th><th>Tier</th><th>Actions</th></tr></thead><tbody>${
     cos.map((c) => {
       const contact = (c.profiles || [])[0];
       return `<tr data-co="${esc(c.id)}">
@@ -88,6 +88,7 @@ async function renderCompanies() {
         <td>${statusBadge(c.status)}</td>
         <td><input type="number" min="0" value="${c.net_terms_days || 0}" data-net></td>
         <td><input type="number" min="0" step="100" value="${c.credit_limit || 0}" data-credit></td>
+        <td><select data-tier>${['retail', 'hvac', 'wholesale'].map((t) => `<option value="${t}"${(c.price_tier || 'retail') === t ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
         <td>
           <button class="btn btn-primary btn-sm" data-act="approve">Approve</button>
           <button class="btn btn-ghost btn-sm" data-act="set_terms">Save terms</button>
@@ -96,7 +97,7 @@ async function renderCompanies() {
     }).join('')}</tbody></table><span class="adm-status" id="coStatus" role="status" aria-live="polite"></span>`;
   box.querySelectorAll('button[data-act]').forEach((b) => b.addEventListener('click', async () => {
     const tr = b.closest('tr'); const id = tr.dataset.co;
-    const body = { id, action: b.dataset.act, net_terms_days: Number(tr.querySelector('[data-net]').value), credit_limit: Number(tr.querySelector('[data-credit]').value) };
+    const body = { id, action: b.dataset.act, net_terms_days: Number(tr.querySelector('[data-net]').value), credit_limit: Number(tr.querySelector('[data-credit]').value), price_tier: tr.querySelector('[data-tier]').value };
     b.disabled = true;
     try { await api('/api/admin/companies', { method: 'POST', body }); $('coStatus').textContent = 'Updated.'; $('coStatus').dataset.state = 'ok'; renderCompanies(); refreshStats(); }
     catch { $('coStatus').textContent = 'Failed.'; $('coStatus').dataset.state = 'err'; b.disabled = false; }
@@ -165,6 +166,34 @@ function wireProductForm() {
     try { await api('/api/admin/products', { method: 'POST', body: { product } }); st.textContent = 'Saved.'; st.dataset.state = 'ok'; e.target.reset(); renderProducts(); }
     catch (err) { st.textContent = err.data?.error || 'Failed.'; st.dataset.state = 'err'; }
   });
+}
+
+/* ---------- pricing (tier matrix) ---------- */
+async function renderPricing() {
+  const box = $('admPricing'); box.innerHTML = '<p class="muted">Loading…</p>';
+  let data;
+  try { data = await api('/api/admin/variant-pricing'); } catch { box.innerHTML = '<p class="adm-status" data-state="err">Failed to load.</p>'; return; }
+  const tiers = data.tiers || ['retail', 'hvac', 'wholesale'];
+  const fmt = (n) => n == null ? '' : Number(n).toFixed(2);
+  box.innerHTML = `<table class="adm"><thead><tr><th>Variant</th><th>VSKU</th><th>Base</th>${tiers.map((t) => `<th>${esc(t)}</th>`).join('')}</tr></thead><tbody>${
+    (data.rows || []).map((r) => `<tr data-vsku="${esc(r.vsku)}">
+      <td>${esc(r.product_name)} — ${esc(r.label)}${r.mode === 'quote' ? ' <span class="badge" data-s="quote">quote</span>' : ''}</td>
+      <td><code>${esc(r.vsku)}</code></td>
+      <td class="muted">${r.base_price == null ? '—' : fmt(r.base_price)}</td>
+      ${tiers.map((t) => `<td><input data-tier="${t}" type="number" step="0.01" min="0" value="${r.tiers[t] ?? ''}" placeholder="${r.base_price == null ? '—' : fmt(r.base_price)}" style="width:88px"></td>`).join('')}
+    </tr>`).join('')}</tbody></table>
+    <span class="adm-status" id="priceRowStatus" role="status" aria-live="polite"></span>
+    <p class="muted" style="margin-top:8px;font-size:.85rem">Empty cell falls back to the base price. Saves on change. hvac/wholesale apply only to approved accounts on that tier.</p>`;
+  box.querySelectorAll('input[data-tier]').forEach((inp) => inp.addEventListener('change', async () => {
+    const tr = inp.closest('tr');
+    inp.disabled = true;
+    try {
+      await api('/api/admin/variant-pricing', { method: 'POST', body: { vsku: tr.dataset.vsku, tier: inp.dataset.tier, price: inp.value } });
+      $('priceRowStatus').textContent = `${tr.dataset.vsku} · ${inp.dataset.tier} saved.`; $('priceRowStatus').dataset.state = 'ok';
+    } catch (e) { $('priceRowStatus').textContent = (e.data?.error || 'failed'); $('priceRowStatus').dataset.state = 'err'; }
+    finally { inp.disabled = false; }
+  }));
+  loaded.pricing = true;
 }
 
 /* ---------- messages ---------- */
@@ -353,7 +382,7 @@ function showGate(title, msg, denied) {
 async function enterApp(stats) {
   $('admGate').hidden = true; $('admApp').hidden = false;
   wireTabs(); wireProductForm(); wireOfferForm();
-  wireSearch('ordSearch', 'admOrders'); wireSearch('coSearch', 'admCompanies'); wireSearch('prodSearch', 'admProducts');
+  wireSearch('ordSearch', 'admOrders'); wireSearch('coSearch', 'admCompanies'); wireSearch('prodSearch', 'admProducts'); wireSearch('priceSearch', 'admPricing');
   $('qSearch')?.addEventListener('input', filterQuotes); $('qFilter')?.addEventListener('change', filterQuotes);
   renderStats(stats);
   loadQuoteBadge();

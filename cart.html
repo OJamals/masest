@@ -68,7 +68,7 @@
 </main>
 <script type="module">
   import { checkout, clear, items, remove, setQty } from "./js/cart.js";
-  import { me } from "./js/auth.js";
+  import { me, getToken } from "./js/auth.js";
 
   const money = (n) => new Intl.NumberFormat("en-US", {
     style: "currency", currency: "USD", maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
@@ -85,7 +85,8 @@
   };
   async function loadCatalog() {
     try {
-      const r = await fetch("/api/products");
+      const token = await getToken().catch(() => null);
+      const r = await fetch("/api/products", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       if (!r.ok) return;
       const data = await r.json();
       (data.products || []).forEach(p => {
