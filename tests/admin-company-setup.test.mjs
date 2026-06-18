@@ -7,13 +7,14 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 
 test("admin companies API returns setup progress for every company", () => {
   const src = read("functions/api/admin/companies.js");
-  assert.match(src, /function buildCompanySetup\(/, "setup progress should be computed by a helper");
+  const helper = read("functions/_lib/setup.js");
+  assert.match(src, /import .*buildCompanySetup.*_lib\/setup\.js/, "setup progress should come from the shared helper");
   assert.match(src, /\.map\(\(company\) => \(\{ \.\.\.company, setup: buildCompanySetup\(company\) \}\)\)/,
     "GET response should attach setup to each company");
   for (const key of ["profile", "approval", "tax", "payment", "net_terms"]) {
-    assert.match(src, new RegExp(`key:\\s*'${key}'`), `missing setup step ${key}`);
+    assert.match(helper, new RegExp(`'${key}'`), `missing setup step ${key}`);
   }
-  assert.match(src, /percent/, "admin setup should include percent complete");
+  assert.match(helper, /percent/, "admin setup should include percent complete");
 });
 
 test("admin companies table exposes setup progress and open gaps", () => {
@@ -59,11 +60,12 @@ test("admin overview reports account setup follow-ups", () => {
 
 test("admin overview renders labeled setup-step follow-up breakdown", () => {
   const stats = read("functions/api/admin/stats.js");
+  const helper = read("functions/_lib/setup.js");
   const js = read("js/admin.js");
 
-  assert.match(stats, /SETUP_STEP_LABELS/,
+  assert.match(helper, /SETUP_STEP_LABELS/,
     "stats should keep a label map for setup steps");
-  assert.match(stats, /setupStepBreakdown\(/,
+  assert.match(helper, /setupStepBreakdown\(/,
     "stats should convert raw open-step counts into labeled rows");
   assert.match(js, /function renderSetupFollowups\(/,
     "overview should have a dedicated setup follow-up renderer");

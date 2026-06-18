@@ -1,27 +1,7 @@
 // GET /api/admin/company?id=<uuid> — full detail for one company. Staff-only.
 // Returns the company, its members (+ emails), recent orders, message count, pending invites.
 import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
-
-function setupStep(key, label, done, detail) {
-  return { key, label, done: Boolean(done), detail };
-}
-
-function buildCompanySetup(company, profiles = []) {
-  const approved = company?.status === 'approved';
-  const hasProfile = profiles.some((profile) => profile.full_name && profile.phone);
-  const hasTaxFile = Boolean(company?.tax_exempt || company?.resale_cert_url);
-  const hasPayment = Boolean(company?.stripe_customer_id);
-  const hasNetTerms = approved && (company?.net_terms_days || 0) > 0;
-  const steps = [
-    setupStep('profile', 'Profile', hasProfile, hasProfile ? 'buyer contact ready' : 'missing contact phone/name'),
-    setupStep('approval', 'Approval', approved, approved ? 'approved' : `status ${company?.status || 'pending'}`),
-    setupStep('tax', 'Tax file', hasTaxFile, hasTaxFile ? 'tax file ready' : 'no tax/resale file'),
-    setupStep('payment', 'Payment', hasPayment, hasPayment ? 'Stripe customer ready' : 'no Stripe customer'),
-    setupStep('net_terms', 'NET terms', hasNetTerms, hasNetTerms ? `NET-${company.net_terms_days}` : 'terms not enabled'),
-  ];
-  const done = steps.filter((step) => step.done).length;
-  return { done, total: steps.length, percent: Math.round((done / steps.length) * 100), steps };
-}
+import { buildCompanySetup } from '../../_lib/setup.js';
 
 export async function onRequestGet({ request, env }) {
   const { user, staff } = await requireStaff(request, env);

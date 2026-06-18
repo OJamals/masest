@@ -1,35 +1,8 @@
 // GET /api/admin/stats — dashboard overview metrics. Staff-only. Degrades gracefully pre-migration.
 import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
+import { buildCompanySetup, setupStepBreakdown } from '../../_lib/setup.js';
 
 const since = (days) => new Date(Date.now() - days * 86400e3).toISOString();
-
-const SETUP_STEP_LABELS = {
-  profile: 'Profile',
-  approval: 'Approval',
-  tax: 'Tax documents',
-  payment: 'Card on file',
-  net_terms: 'NET terms',
-};
-
-function setupStepBreakdown(counts = {}) {
-  return Object.entries(counts)
-    .map(([key, count]) => ({ key, label: SETUP_STEP_LABELS[key] || key, count }))
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-}
-
-function buildCompanySetup(company) {
-  const profiles = company?.profiles || [];
-  const approved = company?.status === 'approved';
-  const steps = [
-    { key: 'profile', done: profiles.some((profile) => profile.full_name && profile.phone) },
-    { key: 'approval', done: approved },
-    { key: 'tax', done: Boolean(company?.tax_exempt || company?.resale_cert_url) },
-    { key: 'payment', done: Boolean(company?.stripe_customer_id) },
-    { key: 'net_terms', done: approved && (company?.net_terms_days || 0) > 0 },
-  ];
-  const done = steps.filter((step) => step.done).length;
-  return { done, total: steps.length, open_steps: steps.filter((step) => !step.done).map((step) => step.key) };
-}
 
 export async function onRequestGet({ request, env }) {
   const { user, staff } = await requireStaff(request, env);

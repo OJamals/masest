@@ -90,6 +90,37 @@ function wireCompanySetup() {
   });
 }
 
+function renderPaymentSetup(data) {
+  const box = $('bizPaymentSetup');
+  if (!box) return;
+  const hasPayment = Boolean(data.company?.stripe_customer_id);
+  box.innerHTML = `
+    <h2 id="payment">Payment setup</h2>
+    <p class="lead">${hasPayment ? 'Saved payment access is ready for this account.' : 'Open the secure Stripe portal to add or update saved payment methods.'}</p>
+    <button id="paymentSetupPortal" class="btn btn-primary btn-sm" type="button">Open payment portal</button>
+    <p id="paymentSetupStatus" class="status" aria-live="polite"></p>`;
+}
+
+function wirePaymentSetup() {
+  const button = $('paymentSetupPortal');
+  if (!button) return;
+  button.addEventListener('click', async () => {
+    const status = $('paymentSetupStatus');
+    button.disabled = true;
+    if (status) { status.textContent = 'Opening payment portal...'; status.dataset.state = ''; }
+    try {
+      const out = await api('/api/account/billing-portal', 'POST');
+      window.location.assign(out.url);
+    } catch (err) {
+      if (status) {
+        status.textContent = err.data?.error === 'stripe_not_configured' ? 'Payment portal is not configured yet.' : 'Could not open the payment portal.';
+        status.dataset.state = 'err';
+      }
+      button.disabled = false;
+    }
+  });
+}
+
 function renderTiers() {
   $('tierGrid').innerHTML = TIERS.map((t) => `
     <div class="tier">
@@ -212,9 +243,11 @@ async function boot() {
   renderProfile(data);
   renderSetupChecklist(data);
   renderCompanySetupForm(data);
+  renderPaymentSetup(data);
   renderTiers();
   renderProgramStatus();
   wireCompanySetup();
+  wirePaymentSetup();
   wireBulk();
   if (data.profile?.role === 'admin') initTeam();
 }
