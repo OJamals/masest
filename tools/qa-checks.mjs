@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const html = readFileSync(new URL("../contact.html", import.meta.url), "utf8");
 const main = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+const chrome = readFileSync(new URL("../js/main/chrome.js", import.meta.url), "utf8");
 const story = readFileSync(new URL("../js/story.js", import.meta.url), "utf8");
 const css = readFileSync(new URL("../css/style.css", import.meta.url), "utf8");
 
@@ -13,7 +14,7 @@ assert.match(
 );
 assert.match(main, /fetch\(\s*endpoint/, "quote form submit uses configured form action");
 assert.match(
-  main,
+  chrome,
   /document\.body\.classList\.toggle\("nav-open"/,
   "mobile menu locks page scroll while open",
 );

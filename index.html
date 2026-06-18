@@ -559,15 +559,16 @@
 </section>
 </main>
 
-<script src="js/main.js"></script>
+<script type="module" src="js/main.js"></script>
 <script src="js/track.js" defer></script>
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
 <script src="vendor/gsap/gsap.min.js"></script>
 <script src="vendor/gsap/ScrollTrigger.min.js"></script>
 <script src="js/story.js"></script>
 <script src="js/story-polish.js"></script>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
+<script type="module">
+const { initReveal, productCard } = window.MASESTMain;
+document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("featuredProducts").innerHTML =
       productCard("hcr", true) +
       '<div class="feat-side">' + productCard("cr") + productCard("neutral") + "</div>";

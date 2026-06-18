@@ -1,10 +1,13 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, readdir, rm } from "node:fs/promises";
+import { createServer } from "node:http";
+import { mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const ROOT = new URL("..", import.meta.url);
+const ROOT_PATH = fileURLToPath(ROOT);
 const BASE_URL = "http://127.0.0.1:4179";
 const OUT_ROOT = path.resolve(new URL("../test-results/css-visual", import.meta.url).pathname);
 const MODES = {
@@ -29,33 +32,57 @@ async function pages() {
   return [...rootPages, ...industryPages].sort();
 }
 
-async function waitForServer(server) {
-  const deadline = Date.now() + 5000;
-  while (Date.now() < deadline) {
-    if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-    try {
-      const response = await fetch(`${BASE_URL}/index.html`);
-      if (response.ok) return;
-    } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 100));
+const MIME = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+};
+
+function staticPath(requestUrl) {
+  const url = new URL(requestUrl, BASE_URL);
+  const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+  const resolved = path.resolve(ROOT_PATH, `.${pathname}`);
+  return resolved.startsWith(ROOT_PATH) ? resolved : null;
+}
+
+async function serveStatic(request, response) {
+  const filePath = staticPath(request.url || "/");
+  if (!filePath) {
+    response.writeHead(403).end("forbidden");
+    return;
   }
-  throw new Error("static server did not start");
+  try {
+    const info = await stat(filePath);
+    const resolved = info.isDirectory() ? path.join(filePath, "index.html") : filePath;
+    const body = await readFile(resolved);
+    response.writeHead(200, { "content-type": MIME[path.extname(resolved)] || "application/octet-stream" });
+    response.end(body);
+  } catch {
+    response.writeHead(404).end("not found");
+  }
 }
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", "4179"], {
-    cwd: ROOT,
-    stdio: ["ignore", "pipe", "pipe"],
+  const server = createServer((request, response) => {
+    serveStatic(request, response).catch(() => {
+      response.writeHead(500).end("server error");
+    });
   });
+  await new Promise((resolve) => server.listen(4179, "127.0.0.1", resolve));
   try {
-    await waitForServer(server);
     return await fn();
   } finally {
-    server.kill("SIGTERM");
-    await once(server, "exit").catch(() => {});
+    server.close();
+    await Promise.race([
+      once(server, "close"),
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]).catch(() => {});
   }
 }
-
 async function preparePage(page) {
   await page.evaluate(() => {
     document.querySelectorAll("img").forEach((image) => {

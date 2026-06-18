@@ -3,10 +3,12 @@ import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const mainCatalogData = read("js/main/catalog-data.js");
+const chrome = read("js/main/chrome.js");
+const serviceCatalog = read("js/main/service-catalog.js");
 
 test("global navigation stays focused on buyer decisions", () => {
-  const main = read("js/main.js");
-  const navBlock = main.match(/const links = \[[\s\S]*?\];/);
+  const navBlock = chrome.match(/const links = \[[\s\S]*?\];/);
 
   assert.ok(navBlock, "expected renderChrome nav links block");
   assert.match(navBlock[0], /products\.html/);
@@ -19,20 +21,16 @@ test("global navigation stays focused on buyer decisions", () => {
 });
 
 test("global navigation exposes account sign-in and registration", () => {
-  const main = read("js/main.js");
-
-  assert.match(main, /href="\$\{root\}account\.html"/);
-  assert.match(main, /Sign in/);
+  assert.match(chrome, /href="\$\{root\}account\.html"/);
+  assert.match(chrome, /Sign in/);
 });
 
 test("global navigation groups proof and industries as use cases", () => {
-  const main = read("js/main.js");
-
-  assert.match(main, /useCases/);
-  assert.match(main, /Use Cases/);
-  assert.match(main, /Field Results/);
-  assert.match(main, /Resources/);
-  assert.doesNotMatch(main.match(/const links = \[[\s\S]*?\];/)?.[0] || "", /Proof/);
+  assert.match(chrome, /useCases/);
+  assert.match(chrome, /Use Cases/);
+  assert.match(chrome, /Field Results/);
+  assert.match(chrome, /Resources/);
+  assert.doesNotMatch(chrome.match(/const links = \[[\s\S]*?\];/)?.[0] || "", /Proof/);
 });
 
 test("product cards use details as the only repeated card action", () => {
@@ -61,13 +59,12 @@ test("products page leads with a replacement checker before the catalog", () => 
 
 test("about page exposes latest quote-service catalog from seed data", () => {
   const about = read("about.html");
-  const main = read("js/main.js");
 
   assert.match(about, /id="serviceCatalog"/);
   assert.match(about, /35 quote services/);
   assert.match(about, /4 service packages/);
-  assert.match(main, /function initServiceCatalog/);
-  assert.match(main, /data\/catalog\.seed\.json/);
+  assert.match(serviceCatalog, /function initServiceCatalog/);
+  assert.match(serviceCatalog, /data\/catalog\.seed\.json/);
 });
 
 test("products grid offers category chips, sorting, and clickable cards", () => {
@@ -83,9 +80,9 @@ test("products grid offers category chips, sorting, and clickable cards", () => 
 test("products page wires the checker and grid from product data", () => {
   const main = read("js/main.js");
 
-  assert.match(main, /const CATALOG_ORDER/);
-  assert.match(main, /const CATALOG_GROUPS/);
-  assert.match(main, /const REPLACEMENT_MAP/);
+  assert.match(mainCatalogData, /export const CATALOG_ORDER/);
+  assert.match(mainCatalogData, /export const CATALOG_GROUPS/);
+  assert.match(mainCatalogData, /export const REPLACEMENT_MAP/);
   assert.match(main, /function catalogCard/);
   assert.match(main, /function initShop/);
   assert.match(main, /initShop\(\);/);
@@ -109,8 +106,8 @@ test("product details include source-backed media galleries", () => {
   assert.doesNotMatch(product, /Request a Quote/);
   assert.doesNotMatch(product, /type=distributor/);
   assert.match(product, /PRODUCT_GALLERY\[id\]/);
-  assert.match(main, /img\/proof\/cases\/ddc-rust\.webp/);
-  assert.match(main, /img\/proof\/cases\/marine\.webp/);
+  assert.match(mainCatalogData, /img\/proof\/cases\/ddc-rust\.webp/);
+  assert.match(mainCatalogData, /img\/proof\/cases\/marine\.webp/);
 });
 
 test("programs page moves glycol pricing into an optional disclosure", () => {
@@ -201,14 +198,12 @@ test("contact page makes quote and free audit intent obvious", () => {
 });
 
 test("footer carries secondary navigation in grouped lanes", () => {
-  const main = read("js/main.js");
-
-  assert.match(main, /foot-kicker/);
-  assert.match(main, /foot-secondary/);
-  assert.match(main, /Resources \+ SDS/);
-  assert.match(main, /Product Categories/);
-  assert.match(main, /Company/);
-  assert.match(main, /Quote/);
+  assert.match(chrome, /foot-kicker/);
+  assert.match(chrome, /foot-secondary/);
+  assert.match(chrome, /Resources \+ SDS/);
+  assert.match(chrome, /Product Categories/);
+  assert.match(chrome, /Company/);
+  assert.match(chrome, /Contact/);
 });
 
 test("no-js fallback nav stays focused on primary categories", () => {
@@ -357,8 +352,8 @@ test("commerce setup exposes a complete buyer cart path", () => {
   const confirmation = read("order-confirmed.html");
   const cartJs = read("js/cart.js");
 
-  assert.match(main, /cart\.html/);
-  assert.match(main, /cart-count/);
+  assert.match(chrome, /cart\.html/);
+  assert.match(chrome, /cart-count/);
   assert.match(main, /data-cart-add/);
   assert.match(main, /initCartButtons/);
   assert.match(products, /id="shopGrid"/);
