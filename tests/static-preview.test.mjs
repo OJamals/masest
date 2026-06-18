@@ -50,7 +50,7 @@ test("homepage static preview does not call unavailable api functions", async ()
       }
     });
 
-    await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(500);
     await browser.close();
 

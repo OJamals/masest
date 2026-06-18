@@ -33,3 +33,20 @@ test("admin company detail exposes member role and invite actions", () => {
   assert.match(src, /wireCompanyUserActions\(/, "member/invite actions should be wired after render");
   assert.match(src, /\/api\/admin\/users/, "UI actions should call admin users endpoint");
 });
+test("admin invite resend only targets pending invites", () => {
+  const src = read("functions/api/admin/users.js");
+  const resendBlock = src.slice(
+    src.indexOf("action === 'resend_invite'"),
+    src.indexOf("action === 'revoke_invite'"),
+  );
+
+  assert.match(resendBlock, /status\s*!==\s*['"]pending['"]/, "resend should reject non-pending invites");
+  assert.match(resendBlock, /pending_invite_not_found/, "resend should use pending-invite error copy");
+});
+
+test("admin detail action groups have wrapped spacing", () => {
+  const html = read("admin.html");
+  assert.match(html, /\.company-detail-actions[^{}]*\{[^}]*display:\s*flex/s, "detail actions should use a flex row");
+  assert.match(html, /\.company-detail-actions[^{}]*\{[^}]*flex-wrap:\s*wrap/s, "detail actions should wrap on narrow screens");
+  assert.match(html, /\.company-user-actions[^{}]*\{[^}]*display:\s*flex/s, "member invite actions should align");
+});

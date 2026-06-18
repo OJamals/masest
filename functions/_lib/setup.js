@@ -31,7 +31,7 @@ export function buildAccountSetup(profile, company) {
     setupStep('profile', 'Profile', hasProfile, hasProfile ? 'Name and phone are on file.' : 'Add a contact name and phone.', 'dashboard.html#profile'),
     setupStep('approval', 'Approval', approved, approved ? 'Account approved for online ordering.' : `Account status: ${company?.status || 'pending'}.`, 'business.html'),
     setupStep('tax', 'Tax file', hasTaxFile, hasTaxFile ? 'Tax or resale certificate is on file.' : 'Add resale or tax-exempt documentation when applicable.', 'business.html'),
-    setupStep('payment', 'Payment', hasPayment, hasPayment ? 'Stripe customer record is ready.' : 'Open the secure payment portal after approval.', 'business.html#payment'),
+    setupStep('payment', 'Payment', hasPayment, hasPayment ? 'Stripe customer record is ready.' : 'Open the secure Stripe portal after approval.', 'business.html#payment'),
     setupStep('net_terms', 'NET terms', hasNetTerms, hasNetTerms ? `NET-${company.net_terms_days} terms enabled.` : 'Staff will enable terms after approval.', 'business.html'),
   ]);
 }
@@ -46,7 +46,7 @@ export function buildCompanySetup(company, profiles = company?.profiles || []) {
     setupStep('profile', 'Profile', hasProfile, hasProfile ? 'Company contact is complete.' : 'Missing contact name or phone.'),
     setupStep('approval', 'Approval', approved, approved ? 'Account approved.' : 'Approval is still open.'),
     setupStep('tax', 'Tax file', hasTaxFile, hasTaxFile ? 'Tax or resale certificate on file.' : 'Missing tax/resale documentation.'),
-    setupStep('payment', 'Payment', hasPayment, hasPayment ? 'Stripe customer exists.' : 'No saved payment portal customer.'),
+    setupStep('payment', 'Payment', hasPayment, hasPayment ? 'Stripe customer exists.' : 'No saved Stripe portal customer.'),
     setupStep('net_terms', 'NET terms', hasNetTerms, hasNetTerms ? `NET-${company.net_terms_days} enabled.` : 'NET terms not enabled.'),
   ]);
 }

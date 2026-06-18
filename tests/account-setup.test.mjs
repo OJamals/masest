@@ -84,3 +84,8 @@ test("business hub exposes Stripe payment setup portal", () => {
   assert.match(js, /window\.location\.assign/, "business hub should redirect to Stripe portal URL");
   assert.match(js, /stripe_not_configured/, "business hub should show Stripe setup errors clearly");
 });
+test("setup helper uses Stripe-specific payment setup copy", () => {
+  const helper = read("functions/_lib/setup.js");
+  assert.match(helper, /Open the secure Stripe portal after approval/, "buyer setup should name Stripe portal");
+  assert.match(helper, /No saved Stripe portal customer/, "admin setup should name Stripe portal");
+});

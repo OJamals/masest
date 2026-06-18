@@ -221,9 +221,23 @@ async function renderPayment() {
     <span class="dash-status" id="payStatus" role="status" aria-live="polite"></span>`;
   const btn = $('portalBtn');
   if (btn) btn.addEventListener('click', async () => {
-    const status = $('payStatus'); btn.disabled = true; status.textContent = 'Opening secure portal…';
-    try { const { url } = await api('/api/account/billing-portal', { method: 'POST' }); location.href = url; }
-    catch (err) { status.textContent = err.data?.error === 'stripe_not_configured' ? 'Payment portal not configured yet.' : 'Could not open the portal.'; status.dataset.state = 'err'; btn.disabled = false; }
+    const status = $('payStatus');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Opening Stripe...';
+    status.textContent = 'Opening Stripe payment portal...';
+    status.dataset.state = 'busy';
+    try {
+      const { url } = await api('/api/account/billing-portal', { method: 'POST' });
+      status.textContent = 'Payment portal opened in this tab.';
+      status.dataset.state = 'ok';
+      location.href = url;
+    } catch (err) {
+      status.textContent = err.data?.error === 'stripe_not_configured' ? 'Stripe is not configured for this workspace yet.' : 'Could not open the payment portal. Try again.';
+      status.dataset.state = 'err';
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
   });
 }
 
