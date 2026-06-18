@@ -57,7 +57,7 @@ test("checkout sends normalized line items and clears NET orders", async () => {
   assert.equal(calls[0].options.headers.Authorization, "Bearer abc");
   assert.deepEqual(JSON.parse(calls[0].options.body), {
     mode: "net",
-    items: [{ sku: "hcr", qty: 2 }]
+    cart: [{ sku: "hcr", qty: 2 }]
   });
   assert.equal(store.get("masest_cart"), "{}");
   assert.equal(events.at(-1).count, 0);

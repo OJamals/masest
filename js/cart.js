@@ -85,7 +85,7 @@ export async function checkout({ mode = "pay", email, token } = {}) {
   const response = await fetch("/api/checkout", {
     method: "POST",
     headers,
-    body: JSON.stringify({ mode, email, items: line }),
+    body: JSON.stringify({ mode, email, cart: line }),
   });
   const out = await response.json().catch(() => ({}));
   if (!response.ok) throw new CheckoutError(response.status, out);

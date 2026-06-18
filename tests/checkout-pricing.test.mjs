@@ -7,6 +7,28 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const SRC = readFileSync(new URL("../functions/api/checkout.js", import.meta.url), "utf8");
+const CART_JS = readFileSync(new URL("../js/cart.js", import.meta.url), "utf8");
+
+// Regression: the browser cart client and the checkout API must agree on the request
+// payload key. A prior refactor renamed the server read to `body.cart` while js/cart.js
+// still posted `items`, so every live checkout returned 400 cart_empty. The server now
+// accepts both, and the client posts the canonical `cart`.
+// Regression: userFromRequest returns an object { user, token }. checkout.js must
+// destructure it; assigning the raw wrapper to `user` makes `user.id` undefined, which
+// silently broke NET checkout (company lookup) and dropped company_id from Stripe orders.
+test("checkout destructures userFromRequest (never uses the raw wrapper as the user)", () => {
+  assert.doesNotMatch(SRC, /\bconst\s+user\s*=\s*await\s+userFromRequest\b/,
+    "checkout.js must not assign the userFromRequest wrapper directly to `user`");
+  assert.match(SRC, /const\s*\{\s*user\s*\}\s*=\s*await\s+userFromRequest\(/,
+    "checkout.js must destructure { user } from userFromRequest");
+});
+
+test("client cart payload key matches what the checkout API reads", () => {
+  assert.match(CART_JS, /fetch\(\s*["']\/api\/checkout["']/, "cart.js must POST to /api/checkout");
+  assert.match(CART_JS, /cart:\s*line/, "cart.js must send the line items under the canonical `cart` key");
+  assert.match(SRC, /normalizeCart\(\s*body\.cart\s*\?\?\s*body\.items\s*\)/,
+    "checkout.js must read body.cart (with body.items as a back-compat fallback)");
+});
 
 test("the client cart is normalized to {sku, qty} only — no client price is read", () => {
   // normalizeCart only ever extracts sku + qty from each cart item.

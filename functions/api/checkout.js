@@ -47,7 +47,9 @@ function lineItemsForStripe(sellable, qtyBySku) {
 export async function onRequestPost({ request, env }) {
   const body = await readBody(request);
   const mode = body.mode === 'net' ? 'net' : 'pay';
-  const qtyBySku = normalizeCart(body.cart);
+  // Cart line items. Canonical key is `cart`; `items` is accepted as a fallback so an
+  // in-flight/cached client build (js/cart.js historically posted `items`) still checks out.
+  const qtyBySku = normalizeCart(body.cart ?? body.items);
   const skus = Object.keys(qtyBySku);
   if (!skus.length) return json(400, { error: 'cart_empty' });
 
@@ -111,7 +113,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (mode === 'net') {
-    const user = await userFromRequest(request, env);
+    const { user } = await userFromRequest(request, env);
     if (!user) return json(401, { error: 'auth_required_for_net' });
     const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
     const { data: company } = await sb.from('companies').select('id,status,net_terms_days').eq('id', profile?.company_id).maybeSingle();
@@ -164,7 +166,7 @@ export async function onRequestPost({ request, env }) {
   const appUrl = env.APP_URL || `https://${request.headers.get('host')}`;
 
   let companyId = null;
-  const user = await userFromRequest(request, env);
+  const { user } = await userFromRequest(request, env);
   if (user) {
     const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
     companyId = profile?.company_id || null;
