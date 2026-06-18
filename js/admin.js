@@ -37,6 +37,28 @@ function setupProgress(company) {
   return `<span data-setup-state="${open.length ? 'open' : 'done'}"><b>${setup.percent || 0}%</b> <small class="muted">${esc(firstOpen)}</small></span>`;
 }
 
+async function openCompanyDetail(id) {
+  const box = $('companyDetail');
+  if (!box) return;
+  box.hidden = false;
+  box.textContent = 'Loading company...';
+  try {
+    const detail = await api(`/api/admin/company?id=${encodeURIComponent(id)}`);
+    const company = detail.company || {};
+    const openSteps = company.setup?.steps?.filter((step) => !step.done) || [];
+    box.innerHTML = `
+      <h2>${esc(company.name || 'Company')}</h2>
+      <div class="dash-row"><span>Status</span>${statusBadge(company.status)}</div>
+      <div class="dash-row"><span>Setup</span>${setupProgress(detail.company)}</div>
+      <div class="dash-row"><span>Members</span><b>${(detail.members || []).length}</b></div>
+      <div class="dash-row"><span>Orders</span><b>${(detail.orders || []).length}</b></div>
+      <div class="dash-row"><span>Messages</span><b>${detail.message_count || 0}</b></div>
+      <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;
+  } catch (err) {
+    box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load company.')}</p>`;
+  }
+}
+
 function message(id, text, kind = '') {
   const el = $(id);
   if (!el) return;
@@ -98,6 +120,7 @@ function renderStats(stats = {}) {
     ['ph-package', stats.orders?.total || 0, 'Orders'],
     ['ph-buildings', stats.companies?.pending || 0, 'Pending accounts'],
     ['ph-check-circle', stats.companies?.approved || 0, 'Approved accounts'],
+    ['ph-clipboard-text', stats.setup_followups?.companies || 0, 'Setup follow-ups'],
     ['ph-chats', stats.messages?.unread || 0, 'Unread messages'],
     ['ph-warning', stats.inventory?.low_stock || 0, 'Low stock'],
     ['ph-flask', stats.catalog?.buy || 0, 'Buy SKUs'],
@@ -235,6 +258,9 @@ async function renderCompanies() {
       <td><button class="btn btn-ghost btn-sm" data-approve="${esc(company.id)}" type="button">Approve</button></td>
     </tr>
   `).join('')}</tbody></table>`;
+  box.querySelectorAll('[data-open-company]').forEach((button) => {
+    button.addEventListener('click', () => openCompanyDetail(button.dataset.openCompany));
+  });
   box.querySelectorAll('[data-approve]').forEach((button) => {
     button.addEventListener('click', async () => {
       const id = button.dataset.approve;

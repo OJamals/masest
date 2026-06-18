@@ -3,6 +3,20 @@ import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
 
 const since = (days) => new Date(Date.now() - days * 86400e3).toISOString();
 
+function buildCompanySetup(company) {
+  const profiles = company?.profiles || [];
+  const approved = company?.status === 'approved';
+  const steps = [
+    { key: 'profile', done: profiles.some((profile) => profile.full_name && profile.phone) },
+    { key: 'approval', done: approved },
+    { key: 'tax', done: Boolean(company?.tax_exempt || company?.resale_cert_url) },
+    { key: 'payment', done: Boolean(company?.stripe_customer_id) },
+    { key: 'net_terms', done: approved && (company?.net_terms_days || 0) > 0 },
+  ];
+  const done = steps.filter((step) => step.done).length;
+  return { done, total: steps.length, open_steps: steps.filter((step) => !step.done).map((step) => step.key) };
+}
+
 export async function onRequestGet({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
@@ -34,6 +48,22 @@ export async function onRequestGet({ request, env }) {
     lowStock = (data || []).filter((p) => Number(p.stock ?? 0) <= 10).length;
   } catch { lowStock = 0; }
 
+  let setup_followups = { companies: 0, open_steps: {} };
+  try {
+    const { data } = await sb.from('companies')
+      .select('id,status,net_terms_days,tax_exempt,resale_cert_url,stripe_customer_id,profiles(full_name,phone)')
+      .limit(500);
+    const open = (data || []).map((company) => ({ company, setup: buildCompanySetup(company) }))
+      .filter((row) => row.setup.done < row.setup.total);
+    const open_steps = {};
+    for (const row of open) {
+      for (const step of row.setup.open_steps) open_steps[step] = (open_steps[step] || 0) + 1;
+    }
+    setup_followups = { companies: open.length, open_steps };
+  } catch {
+    setup_followups = { companies: 0, open_steps: {} };
+  }
+
   const [pendingCompanies, approvedCompanies, unreadMessages, views7d, buyCount, quoteCount] = await Promise.all([
     count('companies', (q) => q.eq('status', 'pending')),
     count('companies', (q) => q.eq('status', 'approved')),
@@ -49,6 +79,7 @@ export async function onRequestGet({ request, env }) {
     orders: { total: recentOrders.length, byStatus },
     companies: { pending: pendingCompanies, approved: approvedCompanies },
     messages: { unread: unreadMessages },
+    setup_followups,
     catalog: { buy: buyCount, quote: quoteCount },
     inventory: { low_stock: lowStock },
     traffic: { views_7d: views7d },

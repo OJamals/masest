@@ -23,3 +23,36 @@ test("admin companies table exposes setup progress and open gaps", () => {
   assert.match(src, /data-setup-state/, "open setup gaps should have non-color-only state");
   assert.match(src, /company\.setup/, "admin company rows should use API setup data");
 });
+
+test("admin company detail exposes setup and has a working detail panel", () => {
+  const endpoint = read("functions/api/admin/company.js");
+  const html = read("admin.html");
+  const js = read("js/admin.js");
+  assert.match(endpoint, /setup:\s*buildCompanySetup\(/,
+    "single-company endpoint should return setup progress");
+  assert.match(html, /id="companyDetail"/,
+    "admin companies section should include a detail mount");
+  assert.match(js, /async function openCompanyDetail\(/,
+    "admin UI should fetch and render company details");
+  assert.match(js, /\/api\/admin\/company\?id=/,
+    "detail renderer should call the single-company endpoint");
+  assert.match(js, /\[data-open-company\]/,
+    "company name buttons should be wired to open details");
+  assert.match(js, /setupProgress\(detail\.company\)/,
+    "detail panel should reuse setup progress");
+});
+
+test("admin overview reports account setup follow-ups", () => {
+  const stats = read("functions/api/admin/stats.js");
+  const js = read("js/admin.js");
+  assert.match(stats, /setup_followups/,
+    "admin stats should include account setup follow-up summary");
+  assert.match(stats, /buildCompanySetup\(/,
+    "stats should use the same setup rules as account lists");
+  assert.match(stats, /open_steps/,
+    "stats should expose open setup step counts");
+  assert.match(js, /stats\.setup_followups/,
+    "overview should render setup follow-ups");
+  assert.match(js, /Setup follow-ups/,
+    "overview card should label setup follow-ups clearly");
+});
