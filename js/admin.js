@@ -1,5 +1,5 @@
 /* MASEST staff admin console. */
-import { login, logout, api } from './auth.js';
+import { login, logout, api, getToken } from './auth.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -210,7 +210,7 @@ async function renderProducts() {
   }
   box.innerHTML = `<table class="adm"><thead><tr><th>Photo</th><th>SKU</th><th>Name</th><th>Mode</th><th>Price</th><th>Stock</th><th>Photo URL</th><th>Alt</th><th>Variants</th><th>Active</th><th></th></tr></thead><tbody>${products.map((p) => `
     <tr data-product="${esc(p.sku)}">
-      <td>${p.image_url ? `<img class="product-photo" src="${esc(p.image_url)}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}</td>
+      <td>${p.image_url ? `<img class="product-photo" src="${esc(p.image_url)}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}${Array.isArray(p.gallery) && p.gallery.length ? `<br><span class="muted" style="font-size:.7rem">+${p.gallery.length} gallery</span>` : ''}<br><label class="muted" style="font-size:.7rem;display:block;margin-top:4px">Upload<input type="file" accept="image/*" data-imgfile style="display:block;max-width:120px;font-size:.7rem"></label><label class="muted" style="font-size:.7rem;display:block">+ gallery<input type="file" accept="image/*" data-galfile style="display:block;max-width:120px;font-size:.7rem"></label></td>
       <td><b>${esc(p.sku)}</b></td>
       <td><input class="adm-input" value="${esc(p.name)}" data-field="name"></td>
       <td><select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></td>
@@ -239,6 +239,28 @@ async function renderProducts() {
   box.querySelectorAll('[data-remove-variant]').forEach((button) => {
     button.addEventListener('click', () => removeVariant(button.dataset.removeVariant));
   });
+  box.querySelectorAll('[data-imgfile]').forEach((inp) => inp.addEventListener('change', () => {
+    if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'primary');
+  }));
+  box.querySelectorAll('[data-galfile]').forEach((inp) => inp.addEventListener('change', () => {
+    if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'gallery');
+  }));
+}
+
+async function uploadProductImage(sku, file, slot) {
+  message('prodStatus', 'Uploading image...');
+  try {
+    const fd = new FormData();
+    fd.append('sku', sku); fd.append('slot', slot); fd.append('file', file);
+    const token = await getToken();
+    const r = await fetch('/api/admin/product-image', { method: 'POST', headers: token ? { Authorization: 'Bearer ' + token } : {}, body: fd });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'upload_failed');
+    message('prodStatus', `${sku} image uploaded.`, 'ok');
+    await renderProducts();
+  } catch (err) {
+    message('prodStatus', err.message || 'Upload failed.', 'err');
+  }
 }
 
 function variantRows(product) {

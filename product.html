@@ -205,6 +205,16 @@
         const parent = row?.products && typeof row.products === "object" ? row.products : row;
         const imageUrl = parent?.image_url || row?.image_url;
         if (imageUrl) setProductImage(imageUrl, parent?.photo_alt || row?.photo_alt || `${p.name} product photo`);
+        const gallery = Array.isArray(row?.gallery) ? row.gallery.filter(Boolean) : [];
+        const allImgs = [imageUrl, ...gallery].filter(Boolean);
+        if (allImgs.length > 1) {
+          const heroEl = document.getElementById("pImage");
+          const strip = document.createElement("div");
+          strip.style.cssText = "display:flex;gap:8px;margin-top:12px;flex-wrap:wrap";
+          strip.innerHTML = allImgs.map(u => `<button type="button" data-src="${u}" style="width:56px;height:56px;border:1px solid var(--line,#e4e6e9);border-radius:8px;overflow:hidden;padding:0;background:#fff;cursor:pointer"><img src="${u}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover"></button>`).join("");
+          strip.querySelectorAll("button").forEach(b => b.addEventListener("click", () => setProductImage(b.dataset.src, p.name + " photo")));
+          heroEl.insertAdjacentElement("afterend", strip);
+        }
         if (!row || row.active === false || parent.active === false || (parent.mode || row.mode) !== "buy") return;
         const variants = (row.vsku ? [{
           vsku: row.vsku,
