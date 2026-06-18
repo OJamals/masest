@@ -79,7 +79,10 @@ async function preparePage(page) {
     await Promise.all(
       Array.from(document.images, (image) => {
         if (image.complete) return Promise.resolve();
-        return image.decode().catch(() => {});
+        return Promise.race([
+          image.decode().catch(() => {}),
+          new Promise((resolve) => setTimeout(resolve, 1000)),
+        ]);
       }),
     );
   });
