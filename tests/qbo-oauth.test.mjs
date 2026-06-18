@@ -36,9 +36,10 @@ test("QBO status endpoint is staff-gated and reports connected state", () => {
 test("admin UI exposes QuickBooks connect status and action", () => {
   const html = read("admin.html");
   const js = read("js/admin.js");
+  const qbo = read("js/admin/qbo.js");
   assert.match(html, /qboStatus/);
   assert.match(html, /qboConnect/);
   assert.match(js, /renderQboStatus/);
-  assert.match(js, /\/api\/admin\/qbo\/status/);
-  assert.match(js, /\/api\/admin\/qbo\/connect\?format=json/);
+  assert.match(qbo, /\/api\/admin\/qbo\/status/);
+  assert.match(qbo, /\/api\/admin\/qbo\/connect\?format=json/);
 });
