@@ -10,7 +10,7 @@ export async function onRequestGet({ request, env }) {
   const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
 
   let q = sb.from('orders')
-    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,order_items(sku,product_sku,name,qty,unit_price,line_total)')
+    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,order_items(sku,product_sku,name,qty,unit_price,line_total)')
     .order('created_at', { ascending: false })
     .limit(25);
   // Company members see all company orders (Stripe orders carry company_id; NET orders carry both).

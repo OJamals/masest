@@ -28,8 +28,16 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!server) return;
+  if (server.exitCode !== null || server.signalCode !== null) return;
+  let exited = false;
+  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
   server.kill();
-  await once(server, "exit").catch(() => {});
+  await Promise.race([
+    exitedOnce,
+    new Promise((resolve) => setTimeout(resolve, 2000)),
+  ]);
+  if (!exited) server.kill("SIGKILL");
+  await exitedOnce;
 });
 
 // Construct the Supabase client (so auth.js getToken() resolves) without real network, and stub

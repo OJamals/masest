@@ -14,7 +14,7 @@ export async function onRequestGet({ request, env }) {
 
   const { data, error } = await sb
     .from('orders')
-    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,ship_address,order_items(sku,name,qty,unit_price,line_total)')
+    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,ship_address,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,order_items(sku,name,qty,unit_price,line_total)')
     .eq('id', id)
     .eq('company_id', companyId)
     .maybeSingle();

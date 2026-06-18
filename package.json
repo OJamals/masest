@@ -3,7 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "qa:remediation": "playwright test tools/qa-remediation.spec.mjs tools/mobile-contact.spec.mjs --reporter=line",
+    "check": "node tools/check-js.mjs",
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "build": "node tools/cf-build.mjs",
+    "verify": "npm run check && npm test && npm run build",
+    "serve": "python3 -m http.server 4195",
+    "smoke:admin": "playwright test tools/admin-auth-gate.spec.mjs tools/admin-quote-message-flows.spec.mjs --reporter=line",
+    "qa:remediation": "playwright test tools/*.spec.mjs --reporter=line",
     "seed": "node tools/seed-products.mjs"
   },
   "dependencies": {

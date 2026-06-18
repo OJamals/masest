@@ -104,6 +104,16 @@ create table if not exists public.orders (
 );
 create index if not exists orders_company_idx on public.orders(company_id);
 
+alter table public.orders add column if not exists tracking_status text default 'processing';
+alter table public.orders add column if not exists carrier text;
+alter table public.orders add column if not exists tracking_number text;
+alter table public.orders add column if not exists tracking_url text;
+alter table public.orders add column if not exists estimated_delivery_at timestamptz;
+alter table public.orders add column if not exists shipped_at timestamptz;
+
+create index if not exists orders_tracking_status_idx
+  on public.orders (tracking_status, estimated_delivery_at, created_at desc);
+
 create table if not exists public.order_items (
   id          uuid primary key default gen_random_uuid(),
   order_id    uuid not null references public.orders(id) on delete cascade,

@@ -7,6 +7,7 @@ import Stripe from 'stripe';
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout } from '../../_lib/supabase.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
+const TRACKING_STATUSES = ['processing', 'packing', 'shipped', 'delivered', 'blocked'];
 
 function toCsv(rows) {
   return rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
@@ -43,17 +44,18 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const limit = isCsv ? 5000 : Math.min(200, parseInt(params.get('limit') || '100', 10) || 100);
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,company_id,companies(name),order_items(sku,name,qty,unit_price,line_total)')
+      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,company_id,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)')
       .neq('status', 'cart').order('created_at', { ascending: false }).limit(limit);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
     const { data, error } = await q;
     if (error) return json(500, { error: error.message });
 
     if (isCsv) {
-      const rows = [['Order', 'Date', 'Company', 'Status', 'Payment', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
+      const rows = [['Order', 'Date', 'Company', 'Status', 'Payment', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
       for (const o of data || []) {
         const items = (o.order_items || []).map((i) => `${i.qty}x ${i.name || i.sku}`).join('; ');
         rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.status, o.payment_method || '',
+          o.tracking_status || '', o.carrier || '', o.tracking_number || '', o.estimated_delivery_at || '',
           o.subtotal ?? '', o.tax ?? '', o.total ?? '', o.currency || '', items]);
       }
       return new Response(toCsv(rows), {
@@ -117,6 +119,36 @@ export async function onRequest({ request, env }) {
         .single();
       if (error) return json(500, { error: error.message });
       await notifyCompany(sb, env, request, order?.company_id, 'invoice ready', `QuickBooks invoice ${invoiceId} is linked to your order.`);
+      return json(200, { ok: true, order });
+    }
+
+    if (body.action === 'update_tracking') {
+      const trackingStatus = String(body.tracking_status || 'processing').trim();
+      if (!TRACKING_STATUSES.includes(trackingStatus)) return json(400, { error: 'invalid_tracking_status' });
+      const carrier = String(body.carrier || '').trim().slice(0, 80) || null;
+      const trackingNumber = String(body.tracking_number || '').trim().slice(0, 120) || null;
+      const trackingUrl = String(body.tracking_url || '').trim().slice(0, 500) || null;
+      if (trackingUrl && !/^https?:\/\//i.test(trackingUrl)) return json(400, { error: 'invalid_tracking_url' });
+      const estimatedDeliveryAt = body.estimated_delivery_at ? new Date(body.estimated_delivery_at) : null;
+      if (estimatedDeliveryAt && Number.isNaN(estimatedDeliveryAt.getTime())) return json(400, { error: 'invalid_estimated_delivery_at' });
+      const shippedAt = trackingStatus === 'shipped' || trackingStatus === 'delivered'
+        ? (body.shipped_at ? new Date(body.shipped_at) : new Date())
+        : (body.shipped_at ? new Date(body.shipped_at) : null);
+      if (shippedAt && Number.isNaN(shippedAt.getTime())) return json(400, { error: 'invalid_shipped_at' });
+
+      const { data: order, error } = await sb.from('orders').update({
+        tracking_status: trackingStatus,
+        carrier,
+        tracking_number: trackingNumber,
+        tracking_url: trackingUrl,
+        estimated_delivery_at: estimatedDeliveryAt ? estimatedDeliveryAt.toISOString() : null,
+        shipped_at: shippedAt ? shippedAt.toISOString() : null,
+      })
+        .eq('id', body.id)
+        .select('id,company_id,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
+        .single();
+      if (error) return json(500, { error: error.message });
+      await notifyCompany(sb, env, request, order?.company_id, 'tracking updated', `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim());
       return json(200, { ok: true, order });
     }
 

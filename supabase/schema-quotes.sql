@@ -28,6 +28,16 @@ create table if not exists public.quotes (
 create index if not exists quotes_status_idx  on public.quotes (status, created_at desc);
 create index if not exists quotes_created_idx on public.quotes (created_at desc);
 
+alter table public.quotes add column if not exists priority text default 'normal';
+alter table public.quotes add column if not exists next_step text;
+alter table public.quotes add column if not exists due_at timestamptz;
+alter table public.quotes add column if not exists lead_score integer default 0;
+alter table public.quotes add column if not exists assigned_to text;
+alter table public.quotes add column if not exists assigned_at timestamptz;
+
+create index if not exists quotes_status_priority_due_idx
+  on public.quotes (status, priority, due_at, created_at desc);
+
 -- Reads/writes go through the service-role key (bypasses RLS). Enable RLS with NO policies
 -- so anon/auth roles can never touch leads directly.
 alter table public.quotes enable row level security;

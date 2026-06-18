@@ -51,13 +51,15 @@ export async function onRequestGet({ request, env }) {
     setup_followups = { companies: 0, open_steps: [] };
   }
 
-  const [pendingCompanies, approvedCompanies, unreadMessages, views7d, buyCount, quoteCount] = await Promise.all([
+  const nowIso = new Date().toISOString();
+  const [pendingCompanies, approvedCompanies, unreadMessages, views7d, buyCount, quoteCount, overdueQuoteFollowups] = await Promise.all([
     count('companies', (q) => q.eq('status', 'pending')),
     count('companies', (q) => q.eq('status', 'approved')),
     count('messages', (q) => q.eq('sender_role', 'buyer').eq('read_by_staff', false)),
     count('page_views', (q) => q.gte('created_at', since(7))),
     count('products', (q) => q.eq('mode', 'buy').eq('active', true)),
     count('products', (q) => q.eq('mode', 'quote').eq('active', true)),
+    count('quotes', (q) => q.lte('due_at', nowIso).neq('status', 'closed').neq('status', 'spam')),
   ]);
 
   const byStatus = recentOrders.reduce((m, o) => { m[o.status] = (m[o.status] || 0) + 1; return m; }, {});
@@ -67,6 +69,7 @@ export async function onRequestGet({ request, env }) {
     companies: { pending: pendingCompanies, approved: approvedCompanies },
     messages: { unread: unreadMessages },
     setup_followups,
+    quotes_due: { overdue: overdueQuoteFollowups },
     catalog: { buy: buyCount, quote: quoteCount },
     inventory: { low_stock: lowStock },
     traffic: { views_7d: views7d },

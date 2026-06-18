@@ -34,6 +34,26 @@ function loadTab(name) {
 
 /* ---------- overview ---------- */
 function statusBadge(s) { return `<span class="badge" data-s="${esc(s)}">${esc(s)}</span>`; }
+function trackingSteps(order) {
+  const status = order.tracking_status || 'processing';
+  const steps = [
+    ['processing', 'Order received'],
+    ['packing', 'Preparing shipment'],
+    ['shipped', 'In transit'],
+    ['delivered', 'Delivered'],
+  ];
+  const activeIndex = Math.max(0, steps.findIndex(([key]) => key === status));
+  const meta = [
+    order.carrier && `Carrier: ${esc(order.carrier)}`,
+    order.tracking_number && `Tracking: ${esc(order.tracking_number)}`,
+    order.estimated_delivery_at && `ETA: ${esc(fmtDT(order.estimated_delivery_at))}`,
+  ].filter(Boolean).join(' · ');
+  return `<div class="trackline" aria-label="Order tracking timeline">
+    ${steps.map(([key, label], index) => `<span class="${index <= activeIndex ? 'done' : ''}" data-track-step="${key}">${esc(label)}</span>`).join('')}
+    ${meta ? `<p class="muted">${meta}</p>` : ''}
+    ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(order.tracking_url)}" target="_blank" rel="noopener">Track shipment</a>` : ''}
+  </div>`;
+}
 
 async function renderOverview() {
   const c = ACCOUNT?.company;
@@ -107,6 +127,7 @@ async function renderOrders() {
         <span>${fmtDate(o.created_at)} · ${statusBadge(o.status)} · ${n} item${n === 1 ? '' : 's'}</span>
         <b>${money(o.total, o.currency)}</b></summary>
       <div style="padding:8px 0 4px">${lines}
+        ${trackingSteps(o)}
         ${o.qbo_invoice_id ? `<p class="muted">Invoice: ${esc(o.qbo_invoice_id)}</p>` : ''}
         ${items.length ? `<button class="btn btn-ghost btn-sm" data-reorder="${i}" style="margin-top:8px">Reorder</button>` : ''}
       </div></details>`;

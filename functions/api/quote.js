@@ -1,36 +1,89 @@
-// /api/quote — public contact/quote intake. Replaces the Formspree endpoint.
-// Stores the lead in Supabase (best-effort) and emails sales + an autoreply via Resend.
-// Spam defense: honeypot (_gotcha) + SOFT Turnstile — a token is verified only when one is
-// present AND a secret is set, so a misconfigured/absent CAPTCHA never blocks a real lead.
-import { adminClient, json, sendEmail, htmlEscape, emailLayout } from '../_lib/supabase.js';
-import { rateLimit, clientIp } from '../_lib/ratelimit.js';
+// /api/quote - public contact/quote intake. Stores the lead in Supabase
+// best-effort, emails sales and the buyer, and subscribes quote leads to the
+// matching Klaviyo industry nurture list when configured.
+import { adminClient, emailLayout, htmlEscape, json, sendEmail } from '../_lib/supabase.js';
+import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { subscribeLeadByIndustry } from '../_lib/klaviyo.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
 const LABELS = {
-  name: 'Name', company: 'Company', email: 'Email', phone: 'Phone', type: 'Request type',
-  product: 'Product', industry: 'Industry', volume: 'Volume', location: 'Location',
-  timeline: 'Timeline', system: 'System / asset', audit_timeframe: 'Preferred timeframe',
-  samples: 'Sample products', ship_to: 'Ship-to address', company_type: 'Company type',
-  territory: 'Territory / region', message: 'Notes',
+  name: 'Name',
+  company: 'Company',
+  email: 'Email',
+  phone: 'Phone',
+  type: 'Request type',
+  product: 'Product',
+  industry: 'Industry',
+  volume: 'Volume',
+  location: 'Location',
+  timeline: 'Timeline',
+  system: 'System / asset',
+  audit_timeframe: 'Preferred timeframe',
+  ship_to: 'Ship-to address',
+  territory: 'Territory / region',
+  message: 'Notes',
 };
 
+function scoreLead(fields) {
+  const text = Object.values(fields).join(' ').toLowerCase();
+  let score = 20;
+  if (fields.company) score += 10;
+  if (fields.phone) score += 8;
+  if (fields.product) score += 8;
+  if (fields.industry) score += 6;
+  if (fields.location || fields.ship_to) score += 6;
+  if (fields.volume) score += /pallet|case|bulk|truck|monthly|weekly|\d{3,}/i.test(String(fields.volume)) ? 18 : 8;
+  if (/urgent|asap|this week|immediate|rush|today|tomorrow/.test(text)) score += 18;
+  if (/distributor|dealer|reseller|net terms|standing order|program/.test(text)) score += 14;
+  if (String(fields.type || '').toLowerCase().includes('audit')) score += 8;
+  return Math.min(100, score);
+}
+
+function priorityForScore(leadScore) {
+  if (leadScore >= 75) return 'urgent';
+  if (leadScore >= 55) return 'high';
+  if (leadScore >= 35) return 'normal';
+  return 'low';
+}
+
+function salesRecipients(env) {
+  return String(env.SALES_EMAIL || env.ORDER_NOTIFY_EMAIL || env.CONTACT_EMAIL || env.ADMIN_EMAILS || env.ADMIN_EMAIL || 'matthew@masest.co')
+    .split(',')
+    .map((email) => email.trim())
+    .filter(Boolean);
+}
+
+function displayRows(payload) {
+  return Object.entries(payload)
+    .filter(([, value]) => String(Array.isArray(value) ? value.join(', ') : value || '').trim())
+    .map(([key, value]) => {
+      const label = LABELS[key] || key;
+      const display = Array.isArray(value) ? value.join(', ') : value;
+      return `<tr><td style="padding:6px 10px;color:#667">${htmlEscape(label)}</td><td style="padding:6px 10px">${htmlEscape(display)}</td></tr>`;
+    })
+    .join('');
+}
+
 export async function onRequestPost({ request, env }) {
-  // Accept multipart/form-data (the site form posts FormData) or JSON.
   const fields = {};
   const ct = request.headers.get('content-type') || '';
-  try {
-    if (ct.includes('application/json')) Object.assign(fields, await request.json());
-    else {
-      const fd = await request.formData();
-      for (const [k, v] of fd.entries()) fields[k] = (k in fields) ? [].concat(fields[k], v) : v;
-    }
-  } catch { return json(400, { error: 'bad_request' }); }
 
-  // Honeypot: real users leave _gotcha empty. Pretend success so bots don't retry.
+  try {
+    if (ct.includes('application/json')) {
+      Object.assign(fields, await request.json());
+    } else {
+      const fd = await request.formData();
+      for (const [key, value] of fd.entries()) {
+        fields[key] = key in fields ? [].concat(fields[key], value) : value;
+      }
+    }
+  } catch {
+    return json(400, { error: 'bad_request' });
+  }
+
   if (String(fields._gotcha || '').trim()) return json(200, { ok: true });
 
-  // Per-IP throttle (no-op until a RATE_KV namespace is bound — see _lib/ratelimit.js).
   const rl = await rateLimit(env, 'quote', clientIp(request), { limit: 8, windowSec: 60 });
   if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
 
@@ -39,18 +92,24 @@ export async function onRequestPost({ request, env }) {
   const company = String(fields.company || '').trim();
   if (!name || !EMAIL_RE.test(email)) return json(400, { error: 'invalid_input' });
 
-  // Soft Turnstile — verify only when a token is present and a secret is configured.
   const token = fields['cf-turnstile-response'];
   const secret = env.TURNSTILE_SECRET || env.MASEST_TURNSTILE_SECRET;
   if (token && secret) {
     try {
-      const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-        method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ secret, response: String(token), remoteip: request.headers.get('cf-connecting-ip') || '' }),
+      const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          secret,
+          response: String(token),
+          remoteip: request.headers.get('cf-connecting-ip') || '',
+        }),
       });
-      const out = await r.json();
+      const out = await response.json();
       if (!out.success) return json(400, { error: 'captcha_failed' });
-    } catch (e) { console.warn('captcha_verify_failed', e?.message || e); /* unreachable verify → don't strand the lead */ }
+    } catch (error) {
+      console.warn('captcha_verify_failed', error);
+    }
   }
 
   const type = String(fields.type || 'quote').slice(0, 40);
@@ -58,46 +117,67 @@ export async function onRequestPost({ request, env }) {
   delete payload._gotcha;
   delete payload['cf-turnstile-response'];
 
-  // Persist (best-effort). Pre-migration the table is absent → insert fails, email still sends.
+  const leadScore = scoreLead(fields);
+  const priority = priorityForScore(leadScore);
   let saved = false;
+
   try {
     const sb = adminClient(env);
     const { error } = await sb.from('quotes').insert({
-      type, name, email, company: company || null,
-      phone: String(fields.phone || '') || null,
-      product: String(fields.product || '') || null,
-      industry: String(fields.industry || '') || null,
-      location: String(fields.location || '') || null,
-      message: String(fields.message || '') || null,
-      payload, source: 'contact', status: 'new',
+      type,
+      name,
+      email,
+      company,
+      phone: fields.phone || null,
+      product: fields.product || null,
+      industry: fields.industry || null,
+      location: fields.location || fields.ship_to || null,
+      message: fields.message || null,
+      payload,
+      source: 'contact',
+      status: 'new',
+      lead_score: leadScore,
+      priority: priorityForScore(leadScore),
     });
     saved = !error;
-  } catch { /* email is the guaranteed path */ }
+  } catch {
+    saved = false;
+  }
 
-  // Notify sales + autoreply (best-effort; sendEmail is a no-op without RESEND_API_KEY).
-  const rows = Object.entries(payload)
-    .filter(([, v]) => String(Array.isArray(v) ? v.join('') : (v ?? '')).trim())
-    .map(([k, v]) => `<tr><td style="padding:3px 12px 3px 0;color:#667;vertical-align:top"><b>${htmlEscape(LABELS[k] || k)}</b></td><td>${htmlEscape(Array.isArray(v) ? v.join(', ') : v)}</td></tr>`)
-    .join('');
-  const salesTo = String(env.SALES_EMAIL || env.ORDER_NOTIFY_EMAIL || 'matthew@masest.co')
-    .split(',').map((s) => s.trim()).filter(Boolean);
   const reqLabel = type.charAt(0).toUpperCase() + type.slice(1);
+  const rows = displayRows(payload);
+
   await sendEmail(env, {
-    to: salesTo,
-    subject: `New ${reqLabel} request — ${company || name}`,
-    html: emailLayout({ heading: `New ${htmlEscape(reqLabel)} request`, bodyHtml: `<table style="font-size:14px;border-collapse:collapse">${rows}</table>` }),
-  });
-  await sendEmail(env, {
-    to: [email],
-    subject: 'We received your MASEST request',
+    to: salesRecipients(env),
+    subject: `New ${priority} ${reqLabel} request - ${company || name}`,
+    category: 'lead_internal',
     html: emailLayout({
-      heading: `Thanks for reaching out, ${htmlEscape(name)}`,
-      bodyHtml: `<p>We received your ${htmlEscape(type)} request — a sales or technical contact will follow up directly.</p><p style="color:#667">If it's urgent, email <a href="mailto:matthew@masest.co">matthew@masest.co</a> or call (813) 406-3852.</p>`,
+      heading: `New ${htmlEscape(reqLabel)} request`,
+      bodyHtml: `
+        <p><b>Lead score:</b> ${leadScore} (${htmlEscape(priority)})</p>
+        <table style="border-collapse:collapse">${rows}</table>
+        ${saved ? '' : '<p style="color:#b42318">Lead email sent, but database save did not complete.</p>'}
+      `,
     }),
   });
 
-  // Lead nurture (best-effort): subscribe to the industry's Klaviyo list. Never blocks the quote.
-  try { await subscribeLeadByIndustry(env, { email, industry: fields.industry }); } catch { /* nurture is best-effort */ }
+  await sendEmail(env, {
+    to: [email],
+    subject: 'We received your MASEST request',
+    category: 'lead_autoreply',
+    html: emailLayout({
+      heading: `Thanks for reaching out, ${htmlEscape(name)}`,
+      bodyHtml: '<p>We received your request. A MASEST team member will review it and follow up with next steps.</p>',
+      ctaText: 'Visit MASEST',
+      ctaUrl: env.SITE_URL || 'https://masest.co',
+    }),
+  });
 
-  return json(200, { ok: true, saved });
+  try {
+    await subscribeLeadByIndustry(env, { email, industry: fields.industry });
+  } catch (error) {
+    console.warn('klaviyo_quote_subscribe_failed', error);
+  }
+
+  return json(200, { ok: true, saved, lead_score: leadScore });
 }

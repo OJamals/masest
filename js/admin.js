@@ -29,6 +29,27 @@ function statusBadge(value) {
   return `<span class="badge" data-s="${esc(value)}">${esc(String(value || 'unknown').replaceAll('_', ' '))}</span>`;
 }
 
+function trackingControls(order) {
+  const id = esc(order.id);
+  const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
+  return `<details class="adm-track"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
+    <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
+      <select class="adm-select" data-track-status="${id}" style="max-width:150px">
+        ${['processing', 'packing', 'shipped', 'delivered', 'blocked'].map((status) => `<option value="${status}" ${status === (order.tracking_status || 'processing') ? 'selected' : ''}>${status.replaceAll('_', ' ')}</option>`).join('')}
+      </select>
+      <input class="adm-input" data-track-carrier="${id}" value="${esc(order.carrier || '')}" placeholder="Carrier" style="max-width:130px">
+      <input class="adm-input" data-track-number="${id}" value="${esc(order.tracking_number || '')}" placeholder="Tracking #" style="max-width:150px">
+      <input class="adm-input" data-track-url="${id}" value="${esc(order.tracking_url || '')}" placeholder="Tracking URL" style="max-width:230px">
+      <input class="adm-input" data-track-eta="${id}" value="${esc(eta)}" type="datetime-local" aria-label="Estimated delivery" style="max-width:190px">
+      <button class="btn btn-ghost btn-sm" data-save-tracking="${id}" type="button">Save tracking</button>
+    </div>
+  </details>`;
+}
+
+function quoteDueInDays(days) {
+  return new Date(Date.now() + days * 86400e3).toISOString();
+}
+
 function setupProgress(company) {
   const setup = company.setup;
   if (!setup?.steps?.length) return '<span class="muted">—</span>';
@@ -201,7 +222,7 @@ function setTab(tab) {
     products: renderProducts,
     pricing: renderPricing,
     messages: renderThreads,
-    quotes: renderQuotes,
+    quotes: renderQuotePipeline,
     offers: renderOffers,
     traffic: renderTraffic,
   }[state.tab];
@@ -229,6 +250,7 @@ function renderStats(stats = {}) {
     ['ph-check-circle', stats.companies?.approved || 0, 'Approved accounts'],
     ['ph-clipboard-text', stats.setup_followups?.companies || 0, 'Setup follow-ups'],
     ['ph-chats', stats.messages?.unread || 0, 'Unread messages'],
+    ['ph-calendar-check', stats.quotes_due?.overdue || 0, 'Quote follow-ups'],
     ['ph-warning', stats.inventory?.low_stock || 0, 'Low stock'],
     ['ph-flask', stats.catalog?.buy || 0, 'Buy SKUs'],
     ['ph-eye', stats.traffic?.views_7d || 0, 'Views (7d)'],
@@ -263,7 +285,7 @@ async function renderOrders() {
       <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
       <td>${esc(order.payment_method || '')}</td>
       <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-      <td><button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? `Invoice ${esc(order.qbo_invoice_id)}` : 'Add invoice'}</button>` : ''}${order.payment_method === 'stripe' && order.status !== 'cancelled' ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
+      <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? `Invoice ${esc(order.qbo_invoice_id)}` : 'Add invoice'}</button>` : ''}${order.payment_method === 'stripe' && order.status !== 'cancelled' ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
     </tr>`;
   }).join('')}</tbody></table>`;
 
@@ -276,6 +298,32 @@ async function renderOrders() {
         await api('/api/admin/orders', { method: 'POST', body: { id, status } });
         await renderOrders();
       } finally {
+        button.disabled = false;
+      }
+    });
+  });
+  box.querySelectorAll('[data-save-tracking]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.saveTracking;
+      const pick = (name) => box.querySelector(`[data-track-${name}="${CSS.escape(id)}"]`);
+      button.disabled = true;
+      try {
+        await api('/api/admin/orders', {
+          method: 'POST',
+          body: {
+            id,
+            action: 'update_tracking',
+            tracking_status: pick('status').value,
+            carrier: pick('carrier').value.trim(),
+            tracking_number: pick('number').value.trim(),
+            tracking_url: pick('url').value.trim(),
+            estimated_delivery_at: pick('eta').value,
+          },
+        });
+        message('ordStatus', 'Tracking saved.', 'ok');
+        await renderOrders();
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Tracking update failed.', 'err');
         button.disabled = false;
       }
     });
@@ -749,9 +797,12 @@ async function renderQuotes() {
   const coOpts = (state.companies || []).map((c) => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.status || '')})</option>`).join('');
   const q = $('qSearch').value.trim().toLowerCase();
   const filter = $('qFilter').value;
+  const priorityFilter = $('qPriority').value;
+  const ownerFilter = $('qOwner')?.value.trim().toLowerCase() || '';
   const quotes = state.quotes.filter((quote) => {
     const text = JSON.stringify(quote).toLowerCase();
-    return (!q || text.includes(q)) && (!filter || quote.status === filter);
+    const ownerMatch = !ownerFilter || String(quote.assigned_to || '').toLowerCase().includes(ownerFilter);
+    return (!q || text.includes(q)) && (!filter || quote.status === filter) && (!priorityFilter || quote.priority === priorityFilter) && ownerMatch;
   });
   if (!quotes.length) {
     box.innerHTML = '<p class="muted">No quotes.</p>';
@@ -762,6 +813,15 @@ async function renderQuotes() {
       <summary><b>${esc(quote.company || quote.name || quote.email)}</b> ${statusBadge(quote.status || 'new')}</summary>
       <p>${esc(quote.message || '')}</p>
       <p class="muted">${esc([quote.email, quote.phone, quote.product, quote.industry, quote.location].filter(Boolean).join(' | '))}</p>
+      <div class="adm-tools">
+        <select class="adm-select" data-quote-priority="${esc(quote.id)}">
+          ${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}" ${p === (quote.priority || 'normal') ? 'selected' : ''}>${p}</option>`).join('')}
+        </select>
+        <input class="adm-input" data-quote-next-step="${esc(quote.id)}" value="${esc(quote.next_step || '')}" placeholder="Next step">
+        <input class="adm-input" data-quote-owner="${esc(quote.id)}" value="${esc(quote.assigned_to || '')}" placeholder="Owner">
+        <input class="adm-input" data-quote-due-at="${esc(quote.id)}" value="${esc(quote.due_at ? String(quote.due_at).slice(0, 10) : '')}" type="date">
+        <span class="muted">${Number.isFinite(Number(quote.lead_score)) ? `Score ${Number(quote.lead_score)}` : ''}</span>
+      </div>
       <div class="adm-tools">
         <select class="adm-select" data-quote-status="${esc(quote.id)}">${QUOTE_STATUSES.map((s) => `<option value="${s}" ${s === quote.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
         <button class="btn btn-ghost btn-sm" data-save-quote="${esc(quote.id)}" type="button">Save</button>
@@ -781,7 +841,11 @@ async function renderQuotes() {
     button.addEventListener('click', async () => {
       const id = button.dataset.saveQuote;
       const status = box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value;
-      await api('/api/admin/quotes', { method: 'POST', body: { id, status } });
+      const priority = box.querySelector(`[data-quote-priority="${CSS.escape(id)}"]`).value;
+      const next_step = box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value.trim();
+      const assigned_to = box.querySelector(`[data-quote-owner="${CSS.escape(id)}"]`).value.trim();
+      const due_at = box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value;
+      await api('/api/admin/quotes', { method: 'POST', body: { id, status, priority, next_step, assigned_to, due_at } });
       renderQuotes();
     });
   });
@@ -804,6 +868,195 @@ async function renderQuotes() {
         await renderQuotes();
       } catch (err) {
         message('qStatus', err.data?.error || 'Convert failed.', 'err');
+        button.disabled = false;
+      }
+    });
+  });
+}
+
+async function renderQuotePipeline() {
+  const box = $('admQuotes');
+  box.textContent = 'Loading...';
+  let data;
+  try {
+    data = await api('/api/admin/quotes');
+  } catch {
+    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load quotes.</p>';
+    return;
+  }
+
+  state.quotes = data.quotes || [];
+  badge('aBadgeQuotes', data.urgent_count || data.new_count || 0);
+  if (data.needs_migration) {
+    box.innerHTML = '<p class="muted">No quote database yet. Apply supabase/schema-quotes.sql to store and triage leads here.</p>';
+    return;
+  }
+  if (!state.companies?.length) {
+    try { state.companies = (await api('/api/admin/companies')).companies || []; } catch { state.companies = []; }
+  }
+
+  const coOpts = (state.companies || [])
+    .map((company) => `<option value="${esc(company.id)}">${esc(company.name)} (${esc(company.status || '')})</option>`)
+    .join('');
+  const q = $('qSearch').value.trim().toLowerCase();
+  const filter = $('qFilter').value;
+  const priority = $('qPriority')?.value || '';
+  const ownerFilter = $('qOwner')?.value.trim().toLowerCase() || '';
+  const dueFilter = $('qDue')?.value || '';
+  const now = Date.now();
+  const quotes = state.quotes.filter((quote) => {
+    const text = JSON.stringify(quote).toLowerCase();
+    const ownerMatch = !ownerFilter || String(quote.assigned_to || '').toLowerCase().includes(ownerFilter);
+    const dueAt = quote.due_at ? new Date(quote.due_at).getTime() : null;
+    const active = !['closed', 'spam'].includes(quote.status);
+    const dueMatch = !dueFilter
+      || (dueFilter === 'overdue' && active && dueAt && dueAt <= now)
+      || (dueFilter === 'upcoming' && active && dueAt && dueAt > now)
+      || (dueFilter === 'unscheduled' && active && !dueAt);
+    return (!q || text.includes(q))
+      && (!filter || quote.status === filter)
+      && (!priority || quote.priority === priority)
+      && ownerMatch
+      && dueMatch;
+  });
+
+  if (!quotes.length) {
+    box.innerHTML = '<p class="muted">No quotes.</p>';
+    return;
+  }
+
+  box.innerHTML = quotes.map((quote) => {
+    const id = esc(quote.id);
+    const dueValue = quote.due_at ? new Date(quote.due_at).toISOString().slice(0, 16) : '';
+    const score = Number.isFinite(Number(quote.lead_score)) ? Number(quote.lead_score) : 0;
+    return `
+      <details class="quote-item">
+        <summary>
+          <b>${esc(quote.company || quote.name || quote.email)}</b>
+          ${statusBadge(quote.status || 'new')}
+          ${statusBadge(quote.priority || 'normal')}
+          <span class="muted">Score ${esc(score)}</span>
+        </summary>
+        <p>${esc(quote.message || '')}</p>
+        <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
+          <select class="adm-select" data-quote-status="${id}">
+            ${QUOTE_STATUSES.map((status) => `<option value="${status}" ${status === quote.status ? 'selected' : ''}>${status}</option>`).join('')}
+          </select>
+          <select class="adm-select" data-quote-priority="${id}">
+            ${['urgent', 'high', 'normal', 'low'].map((value) => `<option value="${value}" ${value === (quote.priority || 'normal') ? 'selected' : ''}>${value}</option>`).join('')}
+          </select>
+          <input class="adm-input" data-quote-next-step="${id}" value="${esc(quote.next_step || '')}" placeholder="Next step" style="max-width:220px">
+          <input class="adm-input" data-quote-owner="${id}" value="${esc(quote.assigned_to || '')}" placeholder="Owner" style="max-width:160px">
+          <input class="adm-input" data-quote-due-at="${id}" type="datetime-local" value="${esc(dueValue)}" aria-label="Follow-up due" style="max-width:190px">
+          <button class="btn btn-ghost btn-sm" data-save-quote="${id}" type="button">Save</button>
+          <button class="btn btn-ghost btn-sm" data-snooze-quote="${id}" type="button">Snooze 2d</button>
+          <button class="btn btn-ghost btn-sm" data-followup="${id}" type="button">Send follow-up</button>
+          <a class="btn btn-ghost btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>
+        </div>
+        <textarea class="adm-textarea" data-quote-notes="${id}" placeholder="Internal notes">${esc(quote.notes || '')}</textarea>
+        <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
+          <select class="adm-select" data-conv-co="${id}" style="max-width:200px"><option value="">Convert to order for...</option>${coOpts}</select>
+          <input class="adm-input" data-conv-sku="${id}" placeholder="SKU" style="max-width:120px">
+          <input class="adm-input" data-conv-name="${id}" placeholder="Item name" style="max-width:150px">
+          <input class="adm-input" type="number" min="1" value="1" data-conv-qty="${id}" style="max-width:64px" aria-label="Qty">
+          <input class="adm-input" type="number" min="0" step="0.01" data-conv-price="${id}" placeholder="Unit $" style="max-width:90px">
+          <button class="btn btn-ghost btn-sm" data-convert="${id}" type="button">Convert to order</button>
+        </div>
+      </details>
+    `;
+  }).join('');
+
+  box.querySelectorAll('[data-save-quote]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.saveQuote;
+      button.disabled = true;
+      try {
+        await api('/api/admin/quotes', {
+          method: 'POST',
+          body: {
+        id,
+        status: box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value,
+        priority: box.querySelector(`[data-quote-priority="${CSS.escape(id)}"]`).value,
+        assigned_to: box.querySelector(`[data-quote-owner="${CSS.escape(id)}"]`).value,
+        next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
+            due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
+            notes: box.querySelector(`[data-quote-notes="${CSS.escape(id)}"]`).value,
+          },
+        });
+        message('qStatus', 'Lead saved.', 'ok');
+        await renderQuotePipeline();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Save failed.', 'err');
+        button.disabled = false;
+      }
+    });
+  });
+
+  box.querySelectorAll('[data-convert]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.convert;
+      const pick = (key) => box.querySelector(`[data-conv-${key}="${CSS.escape(id)}"]`);
+      const company_id = pick('co').value;
+      const sku = pick('sku').value.trim();
+      const name = pick('name').value.trim();
+      const qty = pick('qty').value;
+      const unit_price = pick('price').value;
+      if (!company_id) { message('qStatus', 'Pick a company to convert into.', 'err'); return; }
+      if (!sku || unit_price === '') { message('qStatus', 'SKU and unit price are required.', 'err'); return; }
+      button.disabled = true;
+      message('qStatus', 'Creating order...');
+      try {
+        const res = await api('/api/admin/quotes', { method: 'POST', body: { id, action: 'convert', company_id, items: [{ sku, name, qty, unit_price }] } });
+        message('qStatus', `Order ${res.order_id} created.`, 'ok');
+        await renderQuotePipeline();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Convert failed.', 'err');
+        button.disabled = false;
+      }
+    });
+  });
+
+  box.querySelectorAll('[data-snooze-quote]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.snoozeQuote;
+      button.disabled = true;
+      try {
+        await api('/api/admin/quotes', {
+          method: 'POST',
+          body: {
+            id,
+            status: 'contacted',
+            next_step: 'Snoozed for two days',
+            due_at: quoteDueInDays(2),
+          },
+        });
+        message('qStatus', 'Follow-up snoozed.', 'ok');
+        await renderQuotePipeline();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Snooze failed.', 'err');
+        button.disabled = false;
+      }
+    });
+  });
+
+  box.querySelectorAll('[data-followup]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.dataset.followup;
+      button.disabled = true;
+      try {
+        await api('/api/admin/quotes', {
+          method: 'POST',
+          body: {
+            id,
+            action: 'followup',
+            next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
+            due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
+          },
+        });
+        message('qStatus', 'Follow-up sent.', 'ok');
+        await renderQuotePipeline();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Follow-up failed.', 'err');
         button.disabled = false;
       }
     });
@@ -895,8 +1148,10 @@ function wire() {
   $('coSearch').addEventListener('input', renderCompanies);
   $('prodSearch').addEventListener('input', renderProducts);
   $('priceSearch').addEventListener('input', renderPricing);
-  $('qFilter').addEventListener('change', renderQuotes);
-  $('qSearch').addEventListener('input', renderQuotes);
+  $('qFilter').addEventListener('change', renderQuotePipeline);
+  $('qPriority')?.addEventListener('change', renderQuotePipeline);
+  $('qDue')?.addEventListener('change', renderQuotePipeline);
+  $('qSearch').addEventListener('input', renderQuotePipeline);
   $('custSearch').addEventListener('input', renderCustomers);
   $('qboConnect')?.addEventListener('click', connectQbo);
   $('qboSyncNow')?.addEventListener('click', runQboSync);

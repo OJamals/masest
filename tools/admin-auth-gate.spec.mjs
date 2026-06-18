@@ -25,8 +25,15 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!server) return;
+  let exited = false;
+  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
   server.kill();
-  await once(server, "exit").catch(() => {});
+  await Promise.race([
+    exitedOnce,
+    new Promise((resolve) => setTimeout(resolve, 2000)),
+  ]);
+  if (!exited) server.kill("SIGKILL");
+  await exitedOnce;
 });
 
 test("anonymous visitor is blocked behind the staff sign-in gate", async ({ page }) => {

@@ -192,6 +192,9 @@
       <section class="adm-panel" data-panel="quotes">
         <div class="adm-tools">
           <select id="qFilter" class="adm-select" style="max-width:220px"><option value="">All quotes</option><option>new</option><option>contacted</option><option>closed</option><option>spam</option></select>
+          <select id="qPriority" class="adm-select" style="max-width:180px"><option value="">All priorities</option><option>urgent</option><option>high</option><option>normal</option><option>low</option></select>
+          <input id="qOwner" class="adm-search" type="search" placeholder="Owner">
+          <select id="qDue" class="adm-select" style="max-width:190px"><option value="">All follow-ups</option><option value="overdue">Overdue</option><option value="upcoming">Upcoming</option><option value="unscheduled">Unscheduled</option></select>
           <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes">
         </div>
         <div id="admQuotes" class="adm-panel-list">Loading...</div>

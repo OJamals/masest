@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
 // session, and account.html must NOT treat the user as logged in — it shows a "confirm your
 // email" message and defers company/profile creation. The real Supabase auth endpoint is
 // stubbed (no live project); the supabase-js client is loaded from its CDN as in production.
-const PORT = 4189;
+const PORT = 4196;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let server;
 
@@ -25,8 +25,16 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!server) return;
+  if (server.exitCode !== null || server.signalCode !== null) return;
+  let exited = false;
+  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
   server.kill();
-  await once(server, "exit").catch(() => {});
+  await Promise.race([
+    exitedOnce,
+    new Promise((resolve) => setTimeout(resolve, 2000)),
+  ]);
+  if (!exited) server.kill("SIGKILL");
+  await exitedOnce;
 });
 
 test("signup with email confirmation ON gates the user instead of logging in", async ({ page }) => {

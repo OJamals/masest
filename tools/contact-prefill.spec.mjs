@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { expect, test } from "@playwright/test";
 
-const PORT = 4188;
+const PORT = 4195;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 let server;
@@ -24,8 +24,16 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!server) return;
+  if (server.exitCode !== null || server.signalCode !== null) return;
+  let exited = false;
+  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
   server.kill();
-  await once(server, "exit").catch(() => {});
+  await Promise.race([
+    exitedOnce,
+    new Promise((resolve) => setTimeout(resolve, 2000)),
+  ]);
+  if (!exited) server.kill("SIGKILL");
+  await exitedOnce;
 });
 
 test("contact form pre-fills quote message from cart handoff", async ({ page }) => {
