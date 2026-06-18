@@ -30,6 +30,23 @@ function renderProfile(data) {
     ${c.status !== 'approved' ? '<p class="muted" style="margin-top:12px">Online ordering and NET terms unlock once MASEST approves your account.</p>' : ''}`;
 }
 
+function renderSetupChecklist(data) {
+  const box = $('bizSetup');
+  const setup = data.setup;
+  if (!box || !setup?.steps?.length) return;
+  box.innerHTML = `
+    <h2>Business setup</h2>
+    <p class="lead">${setup.done || 0} of ${setup.total || setup.steps.length} account steps complete. Finish these before relying on automated checkout, programs, or NET terms.</p>
+    <div class="setup-list">
+      ${setup.steps.map((step) => `
+        <a class="setup-step" data-setup-state="${step.done ? 'done' : 'open'}" href="${esc(step.action || 'dashboard.html')}">
+          <i class="ph ${step.done ? 'ph-check-circle' : 'ph-circle'}" aria-hidden="true"></i>
+          <span><b>${esc(step.label)}</b><small>${esc(step.detail)}</small></span>
+          <small>${step.done ? 'Done' : 'Open'}</small>
+        </a>`).join('')}
+    </div>`;
+}
+
 function renderTiers() {
   $('tierGrid').innerHTML = TIERS.map((t) => `
     <div class="tier">
@@ -150,6 +167,7 @@ async function boot() {
   }
   $('bizApp').hidden = false;
   renderProfile(data);
+  renderSetupChecklist(data);
   renderTiers();
   renderProgramStatus();
   wireBulk();

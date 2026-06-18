@@ -64,6 +64,24 @@ async function renderOverview() {
     ['ph-truck', openOrders, 'In progress'],
     ['ph-bell', notif.unread, 'Unread alerts'],
   ].map(([i, n, l]) => `<div class="stat"><div class="big-fig">${n}</div><div class="lbl"><i class="ph ${i}" aria-hidden="true"></i> ${l}</div></div>`).join('');
+  renderSetupProgress();
+}
+
+function renderSetupProgress() {
+  const box = $('setupBody');
+  const setup = ACCOUNT?.setup;
+  if (!box || !setup?.steps?.length) return;
+  box.innerHTML = `
+    <h2 class="headline" style="font-size:1.3rem;margin-bottom:6px">Business setup</h2>
+    <p class="muted">${setup.done || 0} of ${setup.total || setup.steps.length} steps complete (${setup.percent || 0}%).</p>
+    <div class="setup-list">
+      ${setup.steps.map((step) => `
+        <a class="setup-step" data-setup-state="${step.done ? 'done' : 'open'}" href="${esc(step.action || 'business.html')}">
+          <i class="ph ${step.done ? 'ph-check-circle' : 'ph-circle'}" aria-hidden="true"></i>
+          <span><b>${esc(step.label)}</b><small>${esc(step.detail)}</small></span>
+          <small>${step.done ? 'Done' : 'Open'}</small>
+        </a>`).join('')}
+    </div>`;
 }
 
 function setBadge(id, n) {

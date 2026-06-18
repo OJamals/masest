@@ -31,6 +31,12 @@
   .tier p { font-size: .85rem; color: var(--ink-soft); line-height: 1.45; flex: 1; margin: 6px 0 14px; }
   .biz-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; }
   .biz-status[data-state=ok] { color: var(--accent-ink); } .biz-status[data-state=err] { color: #b42318; }
+  .setup-list { display: grid; gap: 10px; margin-top: 14px; }
+  .setup-step { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; }
+  .setup-step i { font-size: 1.1rem; color: var(--accent-ink); margin-top: 2px; }
+  .setup-step[data-setup-state="open"] i { color: #92400e; }
+  .setup-step b { display: block; font-size: .95rem; }
+  .setup-step small { display: block; color: var(--muted); line-height: 1.35; margin-top: 2px; }
   .muted { color: var(--ink-soft); font-size: .9rem; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 </style>
@@ -70,6 +76,7 @@
       <div id="bizApp" hidden>
         <!-- Your business -->
         <div class="biz-card" id="bizProfile"></div>
+        <div class="biz-card" id="bizSetup"></div>
 
         <!-- Team (company admins only) -->
         <div class="biz-card" id="bizTeam" hidden>

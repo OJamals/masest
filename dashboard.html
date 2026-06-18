@@ -28,6 +28,12 @@
   .dash-row { display: flex; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid rgba(0,0,0,.08); font-size: .95rem; }
   .dash-row:last-child { border-bottom: 0; }
   .dash-row b { color: var(--ink); }
+  .setup-list { display: grid; gap: 10px; margin-top: 14px; }
+  .setup-step { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; }
+  .setup-step i { font-size: 1.1rem; color: var(--accent-ink); margin-top: 2px; }
+  .setup-step[data-setup-state="open"] i { color: #92400e; }
+  .setup-step b { display: block; font-size: .95rem; }
+  .setup-step small { display: block; color: var(--muted); line-height: 1.35; margin-top: 2px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
   .stat { background: linear-gradient(180deg, var(--accent-tint), var(--surface)); border: 1px solid var(--line);
     border-radius: var(--r-card); padding: 18px; }
@@ -106,6 +112,8 @@
           <div id="approvalBanner"></div>
           <div class="dash-card"><div class="stat-grid" id="ovStats"></div></div>
           <div class="dash-card" id="ovAccount"></div>
+          <div class="dash-card" id="setupBody"></div>
+          <div class="dash-card" id="setupBody"></div>
         </div>
 
         <div class="dash-panel" data-panel="orders" role="tabpanel" hidden>
