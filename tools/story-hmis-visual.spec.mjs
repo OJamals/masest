@@ -18,6 +18,7 @@ test.beforeAll(async () => {
     if (response?.ok) return;
     await new Promise((resolve) => setTimeout(resolve, 125));
   }
+
   throw new Error("static server did not start");
 });
 
@@ -39,66 +40,97 @@ test("story scene watermarks are removed from the visual layer", async ({ page }
     };
   });
 
-  expect(watermark.display).toBe("none");
   expect(watermark.content).toBe("none");
+  expect(watermark.display).toBe("none");
   expect(watermark.opacity).toBe(0);
 });
 
-test("HMIS story has separated copy, hot hazard axes, and cool zero axes", async ({ page }) => {
+test("HMIS story keeps copy separated from factor cards on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+
+  await expect(page.locator('.story .act[data-act="3"] .factor')).toHaveCount(3);
+  await expect(page.locator(".savior-zero-scale .zero-axis")).toHaveCount(3);
 
   await page.evaluate(() => {
     const act = document.querySelector('.story .act[data-act="3"]');
     window.scrollTo(0, act.offsetTop + window.innerHeight * 0.42);
   });
-  await page.waitForTimeout(700);
-
-  await expect(page.locator(".hmis-scale-hot .hmis-axis")).toHaveCount(3);
-  await expect(page.locator(".savior-zero-scale .zero-axis")).toHaveCount(3);
+  await page.waitForTimeout(300);
 
   const layout = await page.evaluate(() => {
     const copy = document.querySelector('.story .act[data-act="3"] .act-copy.top');
     const rig = document.querySelector('.story .act[data-act="3"] .hmis-rig');
-    const scale = document.querySelector(".hmis-scale-hot");
     const copyBox = copy.getBoundingClientRect();
     const rigBox = rig.getBoundingClientRect();
-    const scaleBox = scale.getBoundingClientRect();
     return {
       copyBottom: copyBox.bottom,
       rigTop: rigBox.top,
-      scaleTop: scaleBox.top,
+      rigBottom: rigBox.bottom,
       viewportHeight: window.innerHeight,
     };
   });
 
   expect(layout.rigTop - layout.copyBottom).toBeGreaterThanOrEqual(28);
-  expect(layout.scaleTop).toBeLessThan(layout.viewportHeight - 90);
+  expect(layout.rigBottom).toBeLessThan(layout.viewportHeight + 120);
 });
 
-test("conventional cleaner scene has a hazard field that cools in the safe state", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+test("HMIS factor cards stack without clipping on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
-  await expect(page.locator(".chem-scale .hazard-field")).toHaveCount(1);
-  await expect(page.locator(".chem-scale .hazard-field i")).toHaveCount(4);
-
-  const states = await page.locator(".chem-scale").evaluate((scale) => {
-    const field = scale.querySelector(".hazard-field");
-    const beforeHot = window.getComputedStyle(field, "::before").backgroundImage;
-    scale.classList.add("safe");
-    const safeBackground = window.getComputedStyle(field).backgroundImage;
-    const beforeSafe = window.getComputedStyle(field, "::before").backgroundImage;
+  const layout = await page.evaluate(() => {
+    const act = document.querySelector('.story .act[data-act="3"]');
+    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.52);
+    const factors = [...document.querySelectorAll('.story .act[data-act="3"] .factor')]
+      .map((card) => {
+        const box = card.getBoundingClientRect();
+        return {
+          left: box.left,
+          right: box.right,
+          width: box.width,
+        };
+      });
     return {
-      safeClass: scale.classList.contains("safe"),
-      beforeHot,
-      safeBackground,
-      beforeSafe,
+      viewportWidth: window.innerWidth,
+      overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      factors,
     };
   });
 
-  expect(states.safeClass).toBe(true);
-  expect(states.beforeHot).toContain("255");
-  expect(states.safeBackground).toContain("211");
-  expect(states.beforeSafe).toContain("255");
+  expect(layout.overflowX).toBe(0);
+  expect(layout.factors).toHaveLength(3);
+  for (const factor of layout.factors) {
+    expect(factor.left).toBeGreaterThanOrEqual(0);
+    expect(factor.right).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(factor.width).toBeGreaterThan(250);
+  }
+});
+
+test("conventional cleaner scene shows four hazard cards and final zero transition", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+
+  await expect(page.locator(".act-chems .chem-rig")).toHaveCount(1);
+  await expect(page.locator(".act-chems .chem-card")).toHaveCount(4);
+  await expect(page.locator(".act-chems .chem-out")).toHaveText(/3 for health/);
+  await expect(page.locator(".act-chems .chem-final")).toHaveText(/zero/);
+
+  const cards = await page.locator(".act-chems .chem-card").evaluateAll((items) => (
+    items.map((card) => {
+      const box = card.getBoundingClientRect();
+      return {
+        width: box.width,
+        height: box.height,
+        visible: window.getComputedStyle(card).display !== "none",
+      };
+    })
+  ));
+
+  for (const card of cards) {
+    expect(card.visible).toBe(true);
+    expect(card.width).toBeGreaterThan(300);
+    expect(card.height).toBeGreaterThan(80);
+  }
 });

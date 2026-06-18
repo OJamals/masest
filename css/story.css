@@ -1373,6 +1373,34 @@
   box-shadow: 0 0 16px rgba(72, 211, 255, .34);
 }
 
+@media (max-width: 760px) {
+  .story .act-hmis .stage {
+    justify-content: flex-start;
+    gap: clamp(22px, 4.8vh, 34px);
+    padding-top: clamp(108px, 15vh, 132px);
+  }
+
+  .story .act[data-act="3"] .hmis-rig {
+    width: min(560px, calc(100vw - 32px));
+  }
+
+  .story .act[data-act="3"] .hmis-factors {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .story .act[data-act="3"] .factor {
+    min-height: auto;
+    padding: 16px 18px;
+  }
+
+  .story .act[data-act="3"] .factor .fmeaning {
+    max-width: 32ch;
+    margin-inline: auto;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .story .hazard-field::before {
     animation: hazardFlow 7s linear infinite;
