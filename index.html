@@ -12,9 +12,9 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260618c">
-<link rel="stylesheet" href="css/components.css?v=20260618c">
-<link rel="stylesheet" href="css/story.css?v=20260618c">
+<link rel="stylesheet" href="css/style.css?v=20260618d">
+<link rel="stylesheet" href="css/components.css?v=20260618d">
+<link rel="stylesheet" href="css/story.css?v=20260618d">
 <link rel="preload" as="image" href="img/field/fill-before-enhanced.webp">
 <link rel="preload" as="image" href="img/field/fill-after-enhanced.webp">
 <link rel="preload" as="image" href="img/field/plate-before-enhanced.webp">
@@ -227,18 +227,6 @@
             </div>
             <p>Chlorinated solvents strip oil and carbon fast, then linger as toxic vapor that's hard to ventilate.</p>
           </div>
-        </div>
-        <div class="chem-scale" data-at="1.55">
-          <div class="hazard-field" aria-hidden="true">
-            <i></i><i></i><i></i><i></i>
-          </div>
-          <div class="scale-track">
-            <div class="cdot" data-dot="0" style="--v:3"><span class="enemy">Rust</span><span class="chem">Muriatic</span></div>
-            <div class="cdot" data-dot="1" style="--v:3"><span class="enemy">Grease</span><span class="chem">Lye</span></div>
-            <div class="cdot" data-dot="2" style="--v:3"><span class="enemy">Biofilm</span><span class="chem">Glut</span></div>
-            <div class="cdot" data-dot="3" style="--v:3"><span class="enemy">Oil</span><span class="chem">Solvent</span></div>
-          </div>
-          <div class="scale-ticks"><span>0 none</span><span>1</span><span>2</span><span>3 serious</span><span>4 severe</span></div>
         </div>
         <p class="chem-out" data-at="2.35">Most legacy answers land at <b>3 for health</b>: serious injury is possible after brief exposure.</p>
         <p class="chem-final" data-at="3">Then make every number fall to <b>zero</b>.</p>
@@ -615,7 +603,7 @@
       function(){out.a1={h:op('.act[data-act="1"] .act-h'),reel:document.querySelector('.reel-idx').textContent,slideVis:op('.reel-slide[data-slide="1"]'),fx:cvPix(1)};},
       function(){out.a2={h:op('.act[data-act="2"] .act-h'),chip:op('.chip.c-rust'),fx:cvPix(2)};},
       function(){out.a3={h:op('.act[data-act="3"] .act-h'),f:op('.factor.f-react'),cards:op('.hmis-factors')};},
-function(){out.a4={h:op('.act-chems .act-h'),card:op('.chem-card[data-at=".85"]'),dot:op('.cdot[data-dot="2"]'),safe:document.querySelector('.chem-scale').classList.contains('safe')?1:0};},
+function(){out.a4={h:op('.act-chems .act-h'),card:op('.chem-card[data-at=".85"]'),dot:op('.cdot[data-dot="2"]'),safe:(function(e){return e&&e.classList.contains('safe')?1:0;})(document.querySelector('.chem-scale'))};},
       function(){out.a5={h:op('.act-savior h2'),z:op('.savior-zero-scale'),fx:cvPix(5),rail:document.querySelectorAll('.rail-btn.is-on').length};}
     ];
     scrolling=true;

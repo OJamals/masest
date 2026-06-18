@@ -1005,7 +1005,7 @@
 .story .rail-btn::after {
   content: "";
   position: absolute;
-  left: 4px;
+  left: 19px;
   top: 50%;
   width: 34px;
   height: 34px;
@@ -1013,7 +1013,7 @@
   border: 1px solid rgba(255, 255, 255, .12);
   background: radial-gradient(circle, rgba(255, 255, 255, .13), transparent 68%);
   opacity: 0;
-  transform: translate(-18%, -50%) scale(.7);
+  transform: translate(-50%, -50%) scale(.7);
   transition:
     opacity .22s var(--s-ease),
     transform .22s var(--s-ease);
@@ -1030,7 +1030,7 @@
 
 .story .rail-btn.is-on::after {
   opacity: 1;
-  transform: translate(-18%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .story .rail-btn b,
