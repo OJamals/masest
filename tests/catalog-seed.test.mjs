@@ -78,7 +78,7 @@ test("Supabase seed SQL imports latest priced variants and omits active unpriced
 });
 
 test("seed script imports products, variants, and services from canonical catalog", () => {
-  const script = readFileSync(new URL("../../tools/seed-products.mjs", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../tools/seed-products.mjs", import.meta.url), "utf8");
   assert.match(script, /catalog\.seed\.json/);
   assert.match(script, /\['products', products, 'sku'\]/);
   assert.match(script, /\['product_variants', variants, 'vsku'\]/);
