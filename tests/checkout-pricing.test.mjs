@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const SRC = readFileSync(new URL("../functions/api/checkout.js", import.meta.url), "utf8");
+const CHECKOUT_SESSION = readFileSync(new URL("../functions/_lib/checkout-session.js", import.meta.url), "utf8");
 const CART_JS = readFileSync(new URL("../js/cart.js", import.meta.url), "utf8");
 
 // Regression: the browser cart client and the checkout API must agree on the request
@@ -54,10 +55,12 @@ test("tier discounts are applied from server-side price_tiers, not the client", 
 });
 
 test("Stripe line amounts are computed from the server price", () => {
-  assert.match(SRC, /unit_amount:\s*Math\.round\(\s*Number\(\s*p\.price\s*\)\s*\*\s*100\s*\)/,
-    "Stripe unit_amount must be derived from the server price p.price");
-  // Reuse a pre-created Stripe Price id when present, else price_data from p.price — both server-sourced.
-  assert.match(SRC, /p\.stripe_price_id/);
+  assert.match(SRC, /buildStripeCheckoutSessionParams\(\{/,
+    "checkout API must create Stripe sessions through the shared checkout-session builder");
+  assert.match(CHECKOUT_SESSION, /unit_amount:\s*Math\.round\(\s*Number\(\s*product\.price\s*\)\s*\*\s*100\s*\)/,
+    "Stripe unit_amount must be derived from the server price product.price");
+  // Reuse a pre-created Stripe Price id when present, else price_data from product.price — both server-sourced.
+  assert.match(CHECKOUT_SESSION, /product\.stripe_price_id/);
 });
 
 test("NET account orders persist the server price and matching line totals", () => {

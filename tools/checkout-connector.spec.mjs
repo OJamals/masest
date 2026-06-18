@@ -7,10 +7,10 @@ test("checkout connector carries buyer email and cart metadata into Stripe", () 
     email: "buyer@example.com",
     companyId: "company_123",
     sellable: [
-      { sku: "crhd", name: "VertKleen CR-HD", price: 12.5, currency: "usd", stripe_price_id: null },
-      { sku: "hcr", name: "VertKleen HCR", price: 10, currency: "usd", stripe_price_id: "price_hcr" },
+      { sku: "crhd-5", product_sku: "crhd", name: "VertKleen CR-HD", price: 12.5, currency: "usd", stripe_price_id: null },
+      { sku: "hcr-1", product_sku: "hcr", name: "VertKleen HCR", price: 10, currency: "usd", stripe_price_id: "price_hcr" },
     ],
-    qtyBySku: { crhd: 4, hcr: 2 },
+    qtyBySku: { "crhd-5": 4, "hcr-1": 2 },
   });
 
   expect(params.mode).toBe("payment");
@@ -21,8 +21,8 @@ test("checkout connector carries buyer email and cart metadata into Stripe", () 
   expect(params.metadata.company_id).toBe("company_123");
   expect(params.metadata.buyer_email).toBe("buyer@example.com");
   expect(JSON.parse(params.metadata.cart)).toEqual([
-    { sku: "crhd", name: "VertKleen CR-HD", qty: 4, unit_price: 12.5 },
-    { sku: "hcr", name: "VertKleen HCR", qty: 2, unit_price: 10 },
+    { sku: "crhd-5", product_sku: "crhd", name: "VertKleen CR-HD", qty: 4, unit_price: 12.5 },
+    { sku: "hcr-1", product_sku: "hcr", name: "VertKleen HCR", qty: 2, unit_price: 10 },
   ]);
   expect(params.line_items).toEqual([
     {
@@ -30,7 +30,7 @@ test("checkout connector carries buyer email and cart metadata into Stripe", () 
       price_data: {
         currency: "usd",
         unit_amount: 1250,
-        product_data: { name: "VertKleen CR-HD", metadata: { sku: "crhd" } },
+        product_data: { name: "VertKleen CR-HD", metadata: { sku: "crhd-5" } },
         tax_behavior: "exclusive",
       },
     },

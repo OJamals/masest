@@ -3,6 +3,7 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
   const cleanEmail = String(email || "").trim();
   const cart = sellable.map((product) => ({
     sku: product.sku,
+    product_sku: product.product_sku,
     name: product.name,
     qty: qtyBySku[product.sku],
     unit_price: Number(product.price),

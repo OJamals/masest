@@ -3,6 +3,7 @@
 // mode 'net' -> approved B2B account order.
 import Stripe from 'stripe';
 import { adminClient, userFromRequest, json, readBody, tierForRequest, tierPriceMap } from '../_lib/supabase.js';
+import { buildStripeCheckoutSessionParams } from '../_lib/checkout-session.js';
 
 function normalizeCart(cart) {
   const qtyBySku = {};
@@ -26,22 +27,6 @@ async function decrementVariantStock(sb, sellable, qtyBySku) {
     if (error || data !== true) return false;
   }
   return true;
-}
-
-function lineItemsForStripe(sellable, qtyBySku) {
-  return sellable.map((p) => (
-    p.stripe_price_id
-      ? { price: p.stripe_price_id, quantity: qtyBySku[p.sku] }
-      : {
-        quantity: qtyBySku[p.sku],
-        price_data: {
-          currency: p.currency || 'usd',
-          unit_amount: Math.round(Number(p.price) * 100),
-          product_data: { name: p.name, metadata: { sku: p.sku } },
-          tax_behavior: 'exclusive',
-        },
-      }
-  ));
 }
 
 export async function onRequestPost({ request, env }) {
@@ -173,28 +158,13 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: lineItemsForStripe(sellable, qtyBySku),
-      payment_method_types: ['card', 'us_bank_account'],
-      automatic_tax: { enabled: false },
-      customer_email: body.email || user?.email || undefined,
-      shipping_address_collection: { allowed_countries: ['US'] },
-      billing_address_collection: 'required',
-      success_url: `${appUrl}/order-confirmed.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/cart.html`,
-      metadata: {
-        company_id: companyId || '',
-        buyer_email: body.email || user?.email || '',
-        cart: JSON.stringify(sellable.map((p) => ({
-          sku: p.sku,
-          product_sku: p.product_sku,
-          name: p.name,
-          qty: qtyBySku[p.sku],
-          unit_price: Number(p.price),
-        }))),
-      },
-    });
+    const session = await stripe.checkout.sessions.create(buildStripeCheckoutSessionParams({
+      appUrl,
+      email: body.email || user?.email || '',
+      companyId,
+      sellable,
+      qtyBySku,
+    }));
     return json(200, { url: session.url });
   } catch (err) {
     return json(502, { error: 'stripe_error', code: err?.code || null, detail: err?.message || String(err) });
