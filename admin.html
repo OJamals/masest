@@ -1,164 +1,201 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin | MASEST VertKleen</title>
 <meta name="description" content="MASEST VertKleen staff admin.">
-<meta name="theme-color" content="#0b0d12">
-<link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/story.css">
 <style>
-  .adm-wrap { max-width: 1080px; margin: 0 auto; }
-  .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 26px; }
-  .adm-tab { display: inline-flex; align-items: center; gap: 7px; padding: 9px 15px; border-radius: var(--r-pill);
-    border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-soft); font-weight: 700; font-size: .88rem; cursor: pointer; }
-  .adm-tab:hover { border-color: var(--ink); color: var(--ink); }
-  .adm-tab[aria-selected=true] { background: var(--ink); color: #fff; border-color: transparent; }
-  .adm-tab .pill { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #b42318; color: #fff; font-size: .68rem; display: inline-grid; place-items: center; }
-  .adm-panel[hidden] { display: none; }
-  .adm-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 20px; margin-bottom: 16px; }
-  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
-  .stat { background: linear-gradient(180deg, var(--accent-tint), var(--surface)); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px; }
-  .stat .big-fig { font-size: 1.9rem; font-weight: 900; letter-spacing: -.04em; color: var(--accent-ink); line-height: 1; }
-  .stat .lbl { font-size: .8rem; color: var(--ink-soft); font-weight: 700; margin-top: 6px; }
-  table.adm { width: 100%; border-collapse: collapse; font-size: .88rem; }
-  table.adm th, table.adm td { text-align: left; padding: 9px 8px; border-bottom: 1px solid rgba(0,0,0,.08); vertical-align: middle; }
-  table.adm th { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
-  table.adm input, table.adm select { padding: 6px 8px; font-size: .85rem; width: 100%; max-width: 130px; }
-  .badge { display: inline-block; padding: 3px 9px; border-radius: var(--r-pill); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-  .badge[data-s=pending], .badge[data-s=net_open], .badge[data-s=pending_payment] { background: #fef3c7; color: #92400e; }
-  .badge[data-s=approved], .badge[data-s=paid], .badge[data-s=fulfilled], .badge[data-s=net_paid] { background: var(--accent-soft); color: var(--accent-ink); }
-  .badge[data-s=rejected], .badge[data-s=suspended], .badge[data-s=cancelled] { background: #fee2e2; color: #b42318; }
-  .adm-status { font-size: .85rem; font-weight: 600; min-height: 1em; }
-  .adm-status[data-state=ok] { color: var(--accent-ink); } .adm-status[data-state=err] { color: #b42318; }
-  .muted { color: var(--ink-soft); font-size: .88rem; }
-  .bar { height: 10px; background: var(--accent); border-radius: 6px; }
-  .thread-list button { display: block; width: 100%; text-align: left; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); margin-bottom: 8px; cursor: pointer; }
-  .thread-list button:hover { border-color: var(--accent); }
-  .msg-thread { display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; }
-  .msg { max-width: 80%; padding: 9px 13px; border-radius: 13px; font-size: .9rem; }
-  .msg.staff { align-self: flex-end; background: var(--ink); color: #fff; } .msg.buyer { align-self: flex-start; background: var(--accent-soft); }
-  .seo-ok { color: var(--accent-ink); font-weight: 700; } .seo-warn { color: #b45309; font-weight: 700; } .seo-bad { color: #b42318; font-weight: 700; }
-  .adm-search { padding: 7px 10px; font-size: .85rem; max-width: 260px; border: 1px solid var(--line); border-radius: var(--r-input); }
-  .link-name { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--accent-ink); cursor: pointer; text-align: left; }
-  .link-name:hover { text-decoration: underline; }
-  /* Responsive: wide tables scroll instead of breaking; message grid stacks. */
-  .adm-card { overflow-x: auto; }
-  @media (max-width: 760px) {
-    #msgGrid { grid-template-columns: 1fr !important; }
-    table.adm { min-width: 560px; }
-    .adm-tabs { gap: 6px; }
-  }
-  @media (prefers-reduced-motion: reduce) { .adm-tab { transition: none; } }
+  .adm-wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  .adm-shell { display: grid; gap: 18px; padding: 28px 0 72px; }
+  .adm-top { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+  .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .adm-tab { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 12px; font: inherit; cursor: pointer; }
+  .adm-tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+  .pill { display: inline-grid; min-width: 20px; min-height: 20px; place-items: center; border-radius: 999px; background: var(--ink); color: white; font-size: .72rem; padding: 0 6px; }
+  .adm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .adm-card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px; }
+  .adm-card h2, .adm-card h3 { margin: 0 0 12px; font-size: 1rem; }
+  .adm-stat { display: grid; gap: 4px; min-height: 92px; }
+  .adm-stat b { font-size: 1.25rem; }
+  .adm-panel { display: none; }
+  .adm-panel[data-active="true"] { display: grid; gap: 16px; }
+  .adm-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .adm-search, .adm-input, .adm-select, .adm-textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); font: inherit; padding: 10px 12px; }
+  .adm-search { max-width: 320px; }
+  .adm-textarea { min-height: 120px; resize: vertical; }
+  .adm-form-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; }
+  .adm-form-grid label { display: grid; gap: 5px; font-size: .82rem; color: var(--muted); }
+  .adm-form-grid .wide { grid-column: span 2; }
+  .adm-form-grid .full { grid-column: 1 / -1; }
+  .adm-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table.adm { width: 100%; min-width: 860px; border-collapse: collapse; }
+  table.adm th, table.adm td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: .9rem; }
+  table.adm th { color: var(--muted); font-size: .76rem; letter-spacing: .08em; text-transform: uppercase; }
+  table.adm tr:last-child td { border-bottom: 0; }
+  .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px; background: var(--panel); color: var(--ink-soft); font-size: .75rem; }
+  .badge[data-s="paid"], .badge[data-s="fulfilled"], .badge[data-s="net_paid"], .badge[data-s="approved"] { background: #e7f5ed; color: #17623b; }
+  .badge[data-s="rejected"], .badge[data-s="suspended"], .badge[data-s="cancelled"], .badge[data-s="spam"] { background: #fae8e6; color: #8a2d24; }
+  .badge[data-s="pending"], .badge[data-s="pending_payment"], .badge[data-s="net_open"], .badge[data-s="new"] { background: #fff2ce; color: #7a4f00; }
+  .adm-status { min-height: 22px; color: var(--muted); }
+  .adm-status[data-state="ok"] { color: #17623b; }
+  .adm-status[data-state="err"] { color: #a63a2e; }
+  .muted { color: var(--muted); }
+  .thread-layout { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 14px; }
+  .thread-list { display: grid; align-content: start; gap: 8px; }
+  .thread-list button { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-align: left; padding: 10px; cursor: pointer; }
+  .msg-thread { display: grid; gap: 8px; max-height: 420px; overflow: auto; padding: 4px; }
+  .msg { max-width: 76%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; background: var(--surface); }
+  .msg[data-role="staff"] { justify-self: end; background: var(--accent-soft); border-color: #c6e1e4; }
+  .quote-item { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px; }
+  .product-photo { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
+  .variant-stack { display: grid; gap: 8px; min-width: 520px; }
+  .variant-row { display: grid; grid-template-columns: 1.25fr .75fr .85fr .75fr auto auto auto; gap: 6px; align-items: center; }
+  .variant-row .adm-input { padding: 7px 8px; font-size: .82rem; }
+  .seo-ok { color: #17623b; } .seo-warn { color: #7a4f00; } .seo-bad { color: #a63a2e; }
+  @media (max-width: 920px) { .adm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thread-layout { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) { .adm-wrap { padding: 0 18px; } .adm-grid, .adm-form-grid { grid-template-columns: 1fr; } .adm-form-grid .wide { grid-column: auto; } }
 </style>
 </head>
 <body>
-
-<noscript><p style="padding:40px;text-align:center">The admin console requires JavaScript.</p></noscript>
+<header class="site-header">
+  <nav class="nav wrap" aria-label="Main">
+    <a class="brand" href="index.html" aria-label="MASEST home"><span>MASEST</span></a>
+    <div class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="products.html">Products</a>
+      <a href="contact.html">Contact</a>
+    </div>
+  </nav>
+</header>
 
 <main id="main">
-  <section class="hero-split">
-    <div class="wrap"><h1 class="display">Admin console.</h1>
-      <p class="subhead" id="admGreeting">Orders, accounts, catalog, messaging, offers and traffic.</p></div>
+  <section class="page-hero">
+    <div class="adm-wrap">
+      <p class="eyebrow">Owner console</p>
+      <h1>Admin</h1>
+      <p class="subhead">Orders, accounts, catalog, product photos, buyer messages, emails, quotes, and traffic.</p>
+    </div>
   </section>
 
-  <section class="section section-slim">
-    <div class="wrap adm-wrap">
+  <section class="adm-wrap adm-shell">
+    <div id="admGate" class="adm-card">
+      <h2 id="gateTitle">Staff sign in</h2>
+      <p id="gateMsg" class="muted">Sign in with a MASEST staff account.</p>
+      <form id="gateForm" class="adm-form-grid">
+        <label class="wide">Email <input id="gEmail" class="adm-input" type="email" autocomplete="email" required></label>
+        <label class="wide">Password <input id="gPass" class="adm-input" type="password" autocomplete="current-password" required></label>
+        <button class="btn btn-primary" type="submit">Sign in</button>
+      </form>
+      <p id="gateStatus" class="adm-status" role="status"></p>
+    </div>
 
-      <!-- Gate: sign-in / denied -->
-      <div class="adm-card" id="admGate" hidden>
-        <h2 class="headline" style="font-size:1.3rem" id="gateTitle">Staff sign in</h2>
-        <p class="muted" id="gateMsg" style="margin:8px 0 16px">Sign in with a MASEST staff account.</p>
-        <form id="gateForm" class="form-card" style="padding:0;border:0;box-shadow:none;max-width:380px">
-          <div class="field"><label for="gEmail">Email</label><input id="gEmail" type="email" autocomplete="email" required></div>
-          <div class="field" style="margin-top:10px"><label for="gPass">Password</label><input id="gPass" type="password" autocomplete="current-password" required></div>
-          <button class="btn btn-primary btn-sm" type="submit" style="margin-top:14px">Sign in</button>
-          <span class="adm-status" id="gateStatus" role="status" aria-live="polite"></span>
-        </form>
+    <div id="admApp" hidden>
+      <div class="adm-top">
+        <p id="admGreeting" class="muted">Signed in.</p>
+        <button id="admLogout" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-sign-out"></i> Sign out</button>
       </div>
 
-      <!-- App -->
-      <div id="admApp" hidden>
-        <div class="adm-tabs" role="tablist" aria-label="Admin sections">
-          <button class="adm-tab" role="tab" data-tab="overview" aria-selected="true"><i class="ph ph-gauge"></i> Overview</button>
-          <button class="adm-tab" role="tab" data-tab="orders" aria-selected="false"><i class="ph ph-package"></i> Orders</button>
-          <button class="adm-tab" role="tab" data-tab="companies" aria-selected="false"><i class="ph ph-buildings"></i> Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
-          <button class="adm-tab" role="tab" data-tab="products" aria-selected="false"><i class="ph ph-flask"></i> Products &amp; stock</button>
-          <button class="adm-tab" role="tab" data-tab="messages" aria-selected="false"><i class="ph ph-chats"></i> Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
-          <button class="adm-tab" role="tab" data-tab="quotes" aria-selected="false"><i class="ph ph-clipboard-text"></i> Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
-          <button class="adm-tab" role="tab" data-tab="offers" aria-selected="false"><i class="ph ph-megaphone"></i> Offers</button>
-          <button class="adm-tab" role="tab" data-tab="traffic" aria-selected="false"><i class="ph ph-chart-line"></i> Traffic &amp; SEO</button>
-        </div>
-
-        <div class="adm-panel" data-panel="overview" role="tabpanel">
-          <div class="adm-card"><div class="stat-grid" id="admStats"></div></div>
-        </div>
-        <div class="adm-panel" data-panel="orders" role="tabpanel" hidden>
-          <div class="adm-card"><div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label>Filter <select id="ordFilter">
-            <option value="">All</option><option value="pending_payment">Pending payment</option><option value="paid">Paid</option>
-            <option value="net_open">NET open</option><option value="net_paid">NET paid</option><option value="fulfilled">Fulfilled</option><option value="cancelled">Cancelled</option>
-          </select></label><input id="ordSearch" type="search" class="adm-search" placeholder="Search orders…"></div><div id="admOrders"><p class="muted">Loading…</p></div></div>
-        </div>
-        <div class="adm-panel" data-panel="companies" role="tabpanel" hidden>
-          <div class="adm-card"><input id="coSearch" type="search" class="adm-search" placeholder="Search accounts…" style="margin-bottom:10px"><div id="admCompanies"><p class="muted">Loading…</p></div></div>
-        </div>
-        <div class="adm-panel" data-panel="products" role="tabpanel" hidden>
-          <div class="adm-card"><input id="prodSearch" type="search" class="adm-search" placeholder="Search products…" style="margin-bottom:10px"><div id="admProducts"><p class="muted">Loading…</p></div></div>
-          <div class="adm-card"><h3 style="font-size:1.05rem;margin-bottom:10px">Add / overwrite a product</h3>
-            <form id="prodForm" class="inline-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-              <div class="field"><label>SKU</label><input id="npSku" required></div>
-              <div class="field"><label>Name</label><input id="npName"></div>
-              <div class="field"><label>Mode</label><select id="npMode"><option value="quote">quote</option><option value="buy">buy</option></select></div>
-              <div class="field"><label>Price</label><input id="npPrice" type="number" step="0.01" min="0"></div>
-              <div class="field"><label>Stock</label><input id="npStock" type="number" min="0"></div>
-              <button class="btn btn-primary btn-sm" type="submit">Save</button>
-            </form><span class="adm-status" id="prodStatus" role="status" aria-live="polite"></span>
-          </div>
-        </div>
-        <div class="adm-panel" data-panel="messages" role="tabpanel" hidden>
-          <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px" id="msgGrid">
-            <div class="adm-card thread-list" id="admThreads"><p class="muted">Loading…</p></div>
-            <div class="adm-card" id="admThreadView"><p class="muted">Select a conversation.</p></div>
-          </div>
-        </div>
-        <div class="adm-panel" data-panel="quotes" role="tabpanel" hidden>
-          <div class="adm-card"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-            <label>Filter <select id="qFilter"><option value="">All</option><option value="new">New</option><option value="contacted">Contacted</option><option value="closed">Closed</option><option value="spam">Spam</option></select></label>
-            <input id="qSearch" type="search" class="adm-search" placeholder="Search quotes…">
-          </div><div id="admQuotes"><p class="muted">Loading…</p></div></div>
-        </div>
-        <div class="adm-panel" data-panel="offers" role="tabpanel" hidden>
-          <div class="adm-card"><h3 style="font-size:1.05rem;margin-bottom:10px">Send an offer / announcement</h3>
-            <form id="offerForm" class="form-card" style="padding:0;border:0;box-shadow:none">
-              <div class="field"><label for="ofTitle">Title *</label><input id="ofTitle" required></div>
-              <div class="field" style="margin-top:10px"><label for="ofBody">Message</label><textarea id="ofBody" rows="3"></textarea></div>
-              <div class="field-grid" style="margin-top:10px">
-                <div class="field"><label for="ofCta">CTA link</label><input id="ofCta" placeholder="/products.html"></div>
-                <div class="field"><label for="ofAud">Audience</label><select id="ofAud"><option value="approved">Approved accounts</option><option value="all">All accounts</option><option value="pending">Pending accounts</option></select></div>
-              </div>
-              <label class="checkbox-row" style="display:flex;gap:8px;margin-top:10px;font-size:.9rem"><input type="checkbox" id="ofEmail"> Also email recipients (requires Resend configured)</label>
-              <button class="btn btn-primary btn-sm" type="submit" style="margin-top:12px">Send</button>
-              <span class="adm-status" id="offerStatus" role="status" aria-live="polite"></span>
-            </form>
-          </div>
-          <div class="adm-card"><h3 style="font-size:1.05rem;margin-bottom:10px">Recent sends</h3><div id="admOffers"><p class="muted">Loading…</p></div></div>
-        </div>
-        <div class="adm-panel" data-panel="traffic" role="tabpanel" hidden>
-          <div class="adm-card"><h3 style="font-size:1.05rem;margin-bottom:10px">Traffic (first-party)</h3><div id="admTraffic"><p class="muted">Loading…</p></div></div>
-          <div class="adm-card"><h3 style="font-size:1.05rem;margin-bottom:10px">SEO audit</h3><div id="admSeo"><p class="muted">Scanning pages…</p></div></div>
-        </div>
+      <div class="adm-tabs" role="tablist" aria-label="Admin sections">
+        <button class="adm-tab" data-tab="overview" type="button">Overview</button>
+        <button class="adm-tab" data-tab="orders" type="button">Orders</button>
+        <button class="adm-tab" data-tab="companies" type="button">Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
+        <button class="adm-tab" data-tab="products" type="button">Products</button>
+        <button class="adm-tab" data-tab="messages" type="button">Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
+        <button class="adm-tab" data-tab="quotes" type="button">Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
+        <button class="adm-tab" data-tab="offers" type="button">Emails</button>
+        <button class="adm-tab" data-tab="traffic" type="button">Traffic</button>
       </div>
 
+      <section class="adm-panel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
+
+      <section class="adm-panel" data-panel="orders">
+        <div class="adm-tools">
+          <select id="ordFilter" class="adm-select" style="max-width:220px"><option value="">All statuses</option></select>
+          <input id="ordSearch" class="adm-search" type="search" placeholder="Search orders">
+        </div>
+        <div id="admOrders" class="adm-table-wrap">Loading...</div>
+      </section>
+
+      <section class="adm-panel" data-panel="companies">
+        <input id="coSearch" class="adm-search" type="search" placeholder="Search accounts">
+        <div id="admCompanies" class="adm-table-wrap">Loading...</div>
+      </section>
+
+      <section class="adm-panel" data-panel="products">
+        <div class="adm-card">
+          <h2>Add / overwrite a product</h2>
+          <form id="prodForm" class="adm-form-grid">
+            <label>SKU <input id="npSku" class="adm-input" required></label>
+            <label class="wide">Name <input id="npName" class="adm-input"></label>
+            <label>Mode <select id="npMode" class="adm-select"><option value="buy">Buy</option><option value="quote">Quote</option></select></label>
+            <label>Price <input id="npPrice" class="adm-input" type="number" min="0" step="0.01"></label>
+            <label>Stock <input id="npStock" class="adm-input" type="number" min="0" step="1"></label>
+            <label class="wide">Photo URL <input id="npImageUrl" class="adm-input" type="url" placeholder="img/products/example.webp"></label>
+            <label class="wide">Photo alt <input id="npPhotoAlt" class="adm-input" placeholder="VertKleen HCR bottle"></label>
+            <button class="btn btn-primary" type="submit">Save product</button>
+          </form>
+          <p id="prodStatus" class="adm-status" role="status"></p>
+        </div>
+        <div class="adm-card">
+          <h2>Add / overwrite a volume variant</h2>
+          <form id="variantForm" class="adm-form-grid">
+            <label>Product SKU <input id="nvProductSku" class="adm-input" required></label>
+            <label>Variant SKU <input id="nvSku" class="adm-input" required></label>
+            <label>Label <input id="nvLabel" class="adm-input" placeholder="5 gal pail" required></label>
+            <label>Gallons <input id="nvGallons" class="adm-input" type="number" min="0" step="0.01"></label>
+            <label>Price <input id="nvPrice" class="adm-input" type="number" min="0" step="0.01"></label>
+            <label>Stock <input id="nvStock" class="adm-input" type="number" min="0" step="1"></label>
+            <button class="btn btn-primary" type="submit">Save variant</button>
+          </form>
+          <p id="variantStatus" class="adm-status" role="status"></p>
+        </div>
+        <input id="prodSearch" class="adm-search" type="search" placeholder="Search products">
+        <div id="admProducts" class="adm-table-wrap">Loading...</div>
+      </section>
+
+      <section class="adm-panel" data-panel="messages">
+        <div id="msgGrid" class="thread-layout">
+          <div id="admThreads" class="thread-list">Loading...</div>
+          <div id="admThreadView" class="adm-card">Select a conversation.</div>
+        </div>
+      </section>
+
+      <section class="adm-panel" data-panel="quotes">
+        <div class="adm-tools">
+          <select id="qFilter" class="adm-select" style="max-width:220px"><option value="">All quotes</option><option>new</option><option>contacted</option><option>closed</option><option>spam</option></select>
+          <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes">
+        </div>
+        <div id="admQuotes" class="adm-panel-list">Loading...</div>
+      </section>
+
+      <section class="adm-panel" data-panel="offers">
+        <div class="adm-card">
+          <h2>Send an offer / announcement</h2>
+          <form id="offerForm" class="adm-form-grid">
+            <label class="wide">Title <input id="ofTitle" class="adm-input" required></label>
+            <label class="wide">CTA URL <input id="ofCta" class="adm-input" value="/products.html"></label>
+            <label>Audience <select id="ofAud" class="adm-select"><option value="approved">Approved</option><option value="pending">Pending</option><option value="all">All</option></select></label>
+            <label>Email <input id="ofEmail" type="checkbox"> send via Resend</label>
+            <label class="full">Body <textarea id="ofBody" class="adm-textarea"></textarea></label>
+            <button class="btn btn-primary" type="submit">Send</button>
+          </form>
+          <p id="offerStatus" class="adm-status" role="status"></p>
+        </div>
+        <div class="adm-card"><h2>Recent sends</h2><div id="admOffers">Loading...</div></div>
+      </section>
+
+      <section class="adm-panel" data-panel="traffic">
+        <div id="admTraffic" class="adm-card">Loading...</div>
+      </section>
     </div>
   </section>
 </main>
 
-<script src="js/config.js"></script>
-<script src="js/main.js"></script>
 <script type="module" src="js/admin.js"></script>
 </body>
 </html>
