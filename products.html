@@ -12,6 +12,7 @@
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/components.css">
 </head>
 <body>
 <nav class="nojs-nav" aria-label="Site">
@@ -75,6 +76,10 @@
       </div>
 
       <div class="shop-toolbar reveal">
+        <label class="search-field" for="shopSearch">
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <input type="search" id="shopSearch" placeholder="Search products…" aria-label="Search products" autocomplete="off">
+        </label>
         <div class="shop-chips" id="shopChips" role="group" aria-label="Filter by category"></div>
         <div class="shop-sort">
           <label for="shopSort">Sort</label>
@@ -87,7 +92,12 @@
       </div>
 
       <div class="shop-grid" id="shopGrid"></div>
-      <p class="shop-empty" id="shopEmpty" hidden>No products match that filter. <button type="button">Reset filters</button></p>
+      <div class="empty-state shop-empty" id="shopEmpty" hidden>
+        <i class="ph ph-package empty-icon" aria-hidden="true"></i>
+        <p class="empty-title">No products match</p>
+        <p class="empty-body">Try a different search term or category, or clear your filters to see the full line.</p>
+        <button type="button" class="btn btn-ghost btn-sm">Reset filters</button>
+      </div>
     </div>
   </section>
 

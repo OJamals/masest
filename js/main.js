@@ -1045,6 +1045,7 @@ function initShop() {
   const sortSel = document.getElementById("shopSort");
   const countEl = document.getElementById("shopCount");
   const emptyEl = document.getElementById("shopEmpty");
+  const searchEl = document.getElementById("shopSearch");
 
   grid.addEventListener("click", e => {
     const button = e.target.closest("[data-cart-add]");
@@ -1055,7 +1056,7 @@ function initShop() {
   });
 
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
-  const state = { group: "all", match: null, sort: "featured" };
+  const state = { group: "all", match: null, sort: "featured", search: "" };
 
   const chips = [{ key: "all", label: "All products" }, ...CATALOG_GROUPS.map((g) => ({ key: g.key, label: g.label }))];
   chipsBox.innerHTML = chips
@@ -1082,6 +1083,13 @@ function initShop() {
       : [...CATALOG_ORDER];
     if (state.group !== "all") ids = ids.filter((id) => groupOf(id) === state.group);
     if (state.match) ids = ids.filter((id) => state.match.includes(id));
+    if (state.search) {
+      const q = state.search;
+      ids = ids.filter((id) => {
+        const p = PRODUCTS[id];
+        return [p.name, p.desc, p.tag, p.replaces, id].filter(Boolean).join(" ").toLowerCase().includes(q);
+      });
+    }
     return ids;
   };
 
@@ -1096,6 +1104,8 @@ function initShop() {
   const reset = () => {
     state.group = "all";
     state.match = null;
+    state.search = "";
+    if (searchEl) searchEl.value = "";
     state.sort = "featured";
     if (sortSel) sortSel.value = "featured";
     if (result) result.hidden = true;
@@ -1114,6 +1124,11 @@ function initShop() {
 
   sortSel?.addEventListener("change", () => {
     state.sort = sortSel.value;
+    apply();
+  });
+
+  searchEl?.addEventListener("input", () => {
+    state.search = searchEl.value.trim().toLowerCase();
     apply();
   });
 

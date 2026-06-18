@@ -1,0 +1,257 @@
+/* MASEST component library — reusable UI primitives built on the css/style.css
+   token system (:root --ink/--accent/--line/--surface/--shadow-*/--r-*/--space-*).
+   Load AFTER style.css. Components are additive; nothing here overrides existing
+   page styles. See DESIGN.md for usage. Every motion respects prefers-reduced-motion. */
+
+/* ----------------------------------------------------------------------------
+   Skeleton loader — placeholder shimmer while async data (catalog, orders) loads
+---------------------------------------------------------------------------- */
+.skeleton {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: var(--panel, #f1f3f4);
+  border-radius: var(--r-input, 10px);
+  min-height: 1em;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 100%);
+  animation: skeleton-sweep 1.25s var(--ease-out-soft, ease) infinite;
+}
+.skeleton-text { height: .72em; margin: .35em 0; border-radius: 6px; }
+.skeleton-text.w-40 { width: 40%; }
+.skeleton-text.w-60 { width: 60%; }
+.skeleton-text.w-80 { width: 80%; }
+.skeleton-line { height: 1.05em; }
+.skeleton-block { height: 120px; border-radius: var(--r-card, 16px); }
+@keyframes skeleton-sweep { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+}
+
+/* ----------------------------------------------------------------------------
+   Badge — compact status / metadata label
+---------------------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font-size: .74rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  line-height: 1.4;
+  border-radius: var(--r-pill, 999px);
+  background: var(--panel, #f1f3f4);
+  color: var(--ink-soft, #393d44);
+  white-space: nowrap;
+}
+.badge-accent  { background: var(--accent-soft, #e3f0f1); color: var(--accent-ink, #0a5b62); }
+.badge-success { background: #e4f4ea; color: #1c6b3d; }
+.badge-warning { background: #fdf1d8; color: #8a5a09; }
+.badge-danger  { background: #f8e3df; color: var(--danger, #a63a2e); }
+.badge-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ----------------------------------------------------------------------------
+   Tabs — canonical tab strip (adopt incrementally; dashboard/admin keep theirs
+   until refactored). role="tablist" on the container, role="tab" on buttons.
+---------------------------------------------------------------------------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line, #e4e6e9);
+  margin-bottom: 20px;
+}
+.tab {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  font-size: .92rem;
+  color: var(--muted, #5f656d);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .18s var(--ease-out, ease), border-color .18s var(--ease-out, ease);
+}
+.tab:hover { color: var(--ink, #15171c); }
+.tab[aria-selected="true"], .tab.active {
+  color: var(--accent-ink, #0a5b62);
+  border-bottom-color: var(--accent, #0e7c86);
+}
+.tab:focus-visible { outline: 2px solid var(--accent, #0e7c86); outline-offset: 2px; border-radius: 6px; }
+
+/* ----------------------------------------------------------------------------
+   Empty state — no-results / zero-data placeholder
+---------------------------------------------------------------------------- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 44px 24px;
+  border: 1px dashed var(--line, #e4e6e9);
+  border-radius: var(--r-card, 16px);
+  background: var(--surface, #fff);
+  color: var(--muted, #5f656d);
+}
+.empty-state .empty-icon { font-size: 1.9rem; color: var(--accent, #0e7c86); line-height: 1; }
+.empty-state .empty-title { font-weight: 700; color: var(--ink, #15171c); font-size: 1.02rem; }
+.empty-state .empty-body { max-width: 38ch; font-size: .92rem; line-height: 1.5; }
+.empty-state[hidden] { display: none; }
+
+/* ----------------------------------------------------------------------------
+   Pagination
+---------------------------------------------------------------------------- */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 24px;
+}
+.pagination button {
+  appearance: none;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line, #e4e6e9);
+  border-radius: var(--r-input, 10px);
+  background: var(--surface, #fff);
+  color: var(--ink-soft, #393d44);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .16s var(--ease-out, ease), background .16s var(--ease-out, ease);
+}
+.pagination button:hover:not(:disabled) { border-color: var(--accent, #0e7c86); }
+.pagination button[aria-current="page"] {
+  background: var(--accent, #0e7c86);
+  border-color: var(--accent, #0e7c86);
+  color: #fff;
+}
+.pagination button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ----------------------------------------------------------------------------
+   Data table — consistent, responsive table (consolidates ad-hoc .cmp-table)
+---------------------------------------------------------------------------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .92rem;
+}
+.data-table th, .data-table td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line-soft, #eef0f2);
+}
+.data-table th {
+  font-size: .74rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted, #5f656d);
+  font-weight: 700;
+}
+.data-table tbody tr:hover { background: var(--accent-tint, #f1f8f8); }
+.data-table td.num { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* ----------------------------------------------------------------------------
+   Modal / dialog — overlay with focus-trap (JS adds .open; Esc + backdrop close)
+---------------------------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(20, 24, 32, .46);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .2s var(--ease-out, ease), visibility .2s var(--ease-out, ease);
+  z-index: 1000;
+}
+.modal-backdrop.open { opacity: 1; visibility: visible; }
+.modal {
+  width: min(520px, 100%);
+  max-height: 88vh;
+  overflow: auto;
+  background: var(--surface, #fff);
+  border-radius: var(--r-lg, 22px);
+  box-shadow: var(--shadow-lg, 0 28px 64px -16px rgba(20, 24, 32, .16));
+  padding: 26px;
+  transform: translateY(8px) scale(.99);
+  transition: transform .2s var(--ease-out, ease);
+}
+.modal-backdrop.open .modal { transform: none; }
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.modal-title { font-size: 1.15rem; font-weight: 700; color: var(--ink, #15171c); }
+.modal-close {
+  appearance: none;
+  border: 0;
+  background: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--muted, #5f656d);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+.modal-close:focus-visible { outline: 2px solid var(--accent, #0e7c86); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop, .modal { transition: none; }
+  .modal { transform: none; }
+}
+
+/* ----------------------------------------------------------------------------
+   Search field — labelled input with leading icon (Phosphor)
+---------------------------------------------------------------------------- */
+.search-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  max-width: 320px;
+}
+.search-field .ph {
+  position: absolute;
+  left: 12px;
+  color: var(--muted, #5f656d);
+  pointer-events: none;
+  font-size: 1.05rem;
+}
+.search-field input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border: 1px solid var(--line, #e4e6e9);
+  border-radius: var(--r-pill, 999px);
+  background: var(--surface, #fff);
+  font: inherit;
+  font-size: .92rem;
+  color: var(--ink, #15171c);
+  transition: border-color .16s var(--ease-out, ease), box-shadow .16s var(--ease-out, ease);
+}
+.search-field input::placeholder { color: var(--muted, #5f656d); }
+.search-field input:focus-visible {
+  outline: none;
+  border-color: var(--accent, #0e7c86);
+  box-shadow: 0 0 0 3px var(--accent-soft, #e3f0f1);
+}

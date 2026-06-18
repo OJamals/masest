@@ -6,7 +6,7 @@ export async function onRequestGet({ env }) {
   const sb = adminClient(env);
   const { data, error } = await sb
     .from('products')
-    .select('sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,sort,product_variants(vsku,label,gallons,price,currency,active,sort)')
+    .select('sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,sort)')
     .eq('active', true)
     .order('sort', { ascending: true });
   if (error) return json(500, { error: error.message });

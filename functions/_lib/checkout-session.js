@@ -24,7 +24,10 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
           }
     )),
     payment_method_types: ["card", "us_bank_account"],
-    automatic_tax: { enabled: true },
+    // Stripe Tax stays OFF until a head-office address is set in Stripe — kept in
+    // sync with the live inline session in functions/api/checkout.js so the two
+    // can't diverge. Flip both together when re-enabling.
+    automatic_tax: { enabled: false },
     shipping_address_collection: { allowed_countries: ["US"] },
     billing_address_collection: "required",
     success_url: `${appUrl}/order-confirmed.html?session_id={CHECKOUT_SESSION_ID}`,
