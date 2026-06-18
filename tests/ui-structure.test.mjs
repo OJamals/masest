@@ -5,6 +5,7 @@ import test from "node:test";
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const mainCatalogData = read("js/main/catalog-data.js");
 const chrome = read("js/main/chrome.js");
+const commerceUi = read("js/main/commerce-ui.js");
 const serviceCatalog = read("js/main/service-catalog.js");
 
 test("global navigation stays focused on buyer decisions", () => {
@@ -34,8 +35,7 @@ test("global navigation groups proof and industries as use cases", () => {
 });
 
 test("product cards use details as the only repeated card action", () => {
-  const main = read("js/main.js");
-  const cardBlock = main.match(/function productCard[\s\S]*?function initBeforeAfter/);
+  const cardBlock = commerceUi.match(/function productCard[\s\S]*?const commerceState/);
 
   assert.ok(cardBlock, "expected productCard block");
   assert.match(cardBlock[0], /View Details/);
@@ -78,20 +78,18 @@ test("products grid offers category chips, sorting, and clickable cards", () => 
 });
 
 test("products page wires the checker and grid from product data", () => {
-  const main = read("js/main.js");
-
   assert.match(mainCatalogData, /export const CATALOG_ORDER/);
   assert.match(mainCatalogData, /export const CATALOG_GROUPS/);
   assert.match(mainCatalogData, /export const REPLACEMENT_MAP/);
-  assert.match(main, /function catalogCard/);
-  assert.match(main, /function initShop/);
-  assert.match(main, /initShop\(\);/);
+  assert.match(commerceUi, /function catalogCard/);
+  assert.match(commerceUi, /function initShop/);
+  assert.match(read("js/main.js"), /initShop\(\);/);
   // whole-card link + single repeated action
-  assert.match(main, /<article class="shop-card"/);
-  assert.match(main, /class="shop-card-link" href="product\.html\?id=/);
-  assert.doesNotMatch(main, /<a class="shop-card"[\s\S]*?<button class="shop-card-add"/);
-  assert.doesNotMatch(main, /shop-card-quote/);
-  assert.match(main, /shop-card-bulk/);
+  assert.match(commerceUi, /<article class="shop-card"/);
+  assert.match(commerceUi, /class="shop-card-link" href="product\.html\?id=/);
+  assert.doesNotMatch(commerceUi, /<a class="shop-card"[\s\S]*?<button class="shop-card-add"/);
+  assert.doesNotMatch(commerceUi, /shop-card-quote/);
+  assert.match(commerceUi, /shop-card-bulk/);
   assert.match(read("products.html"), /programs\.html/);
   assert.match(read("products.html"), /contact\.html\?type=distributor/);
   assert.doesNotMatch(read("products.html"), /Request a Quote/);
@@ -354,8 +352,8 @@ test("commerce setup exposes a complete buyer cart path", () => {
 
   assert.match(chrome, /cart\.html/);
   assert.match(chrome, /cart-count/);
-  assert.match(main, /data-cart-add/);
-  assert.match(main, /initCartButtons/);
+  assert.match(commerceUi, /data-cart-add/);
+  assert.match(commerceUi, /initCartButtons/);
   assert.match(products, /id="shopGrid"/);
   assert.match(cart, /id="cartLines"/);
   assert.match(cart, /id="checkoutPay"/);

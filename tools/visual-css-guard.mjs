@@ -40,6 +40,7 @@ const MIME = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".webp": "image/webp",
+  ".woff2": "font/woff2",
 };
 
 function staticPath(requestUrl) {
@@ -72,7 +73,10 @@ async function withServer(fn) {
       response.writeHead(500).end("server error");
     });
   });
-  await new Promise((resolve) => server.listen(4179, "127.0.0.1", resolve));
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(4179, "127.0.0.1", resolve);
+  });
   try {
     return await fn();
   } finally {
@@ -83,6 +87,7 @@ async function withServer(fn) {
     ]).catch(() => {});
   }
 }
+
 async function preparePage(page) {
   await page.evaluate(() => {
     document.querySelectorAll("img").forEach((image) => {
@@ -93,26 +98,47 @@ async function preparePage(page) {
       media.pause();
       media.currentTime = 0;
     });
-  });
-  await page.evaluate(async () => {
-    const step = Math.max(400, window.innerHeight - 120);
-    for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
-      window.scrollTo(0, y);
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
     window.scrollTo(0, 0);
-    await new Promise((resolve) => setTimeout(resolve, 100));
     document.querySelector(".nav")?.classList.remove("scrolled");
-    await Promise.all(
-      Array.from(document.images, (image) => {
-        if (image.complete) return Promise.resolve();
-        return Promise.race([
-          image.decode().catch(() => {}),
-          new Promise((resolve) => setTimeout(resolve, 1000)),
-        ]);
-      }),
-    );
   });
+  await page.waitForTimeout(250);
+}
+
+async function addStableInitScript(context) {
+  await context.addInitScript(() => {
+    const fixedTime = new Date("2026-06-18T12:00:00Z").getTime();
+    Date.now = () => fixedTime;
+    Math.random = () => 0.5;
+    window.requestAnimationFrame = (callback) => window.setTimeout(() => callback(fixedTime), 16);
+    window.cancelAnimationFrame = (id) => window.clearTimeout(id);
+    window.setInterval = () => 0;
+  });
+}
+
+async function capturePage(context, outputDir, mode, pagePath) {
+  let lastError;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    let page;
+    try {
+      page = await context.newPage();
+      await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("load", { timeout: 5000 }).catch(() => {});
+      await preparePage(page);
+      const fileName = `${mode}-${pagePath.replaceAll("/", "__")}.png`;
+      await page.screenshot({
+        path: path.join(outputDir, fileName),
+        fullPage: true,
+        animations: "disabled",
+        caret: "hide",
+      });
+      return;
+    } catch (err) {
+      lastError = err;
+    } finally {
+      await page?.close().catch(() => {});
+    }
+  }
+  throw lastError;
 }
 
 async function capture(label) {
@@ -122,38 +148,23 @@ async function capture(label) {
 
   const pageList = await pages();
   await withServer(async () => {
-    const browser = await chromium.launch();
-    try {
-      for (const [mode, viewport] of Object.entries(MODES)) {
-        const context = await browser.newContext({
-          viewport,
-          deviceScaleFactor: 1,
-          reducedMotion: "reduce",
-        });
-        await context.addInitScript(() => {
-          const fixedTime = new Date("2026-06-18T12:00:00Z").getTime();
-          Date.now = () => fixedTime;
-          Math.random = () => 0.5;
-          window.requestAnimationFrame = (callback) => window.setTimeout(() => callback(fixedTime), 16);
-          window.cancelAnimationFrame = (id) => window.clearTimeout(id);
-          window.setInterval = () => 0;
-        });
-        const page = await context.newPage();
+    for (const [mode, viewport] of Object.entries(MODES)) {
+      const browser = await chromium.launch();
+      let context;
+      try {
+        context = await browser.newContext({ viewport, deviceScaleFactor: 1, reducedMotion: "reduce" });
+        await addStableInitScript(context);
         for (const pagePath of pageList) {
-          await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "networkidle" });
-          await preparePage(page);
-          const fileName = `${mode}-${pagePath.replaceAll("/", "__")}.png`;
-          await page.screenshot({
-            path: path.join(outputDir, fileName),
-            fullPage: true,
-            animations: "disabled",
-            caret: "hide",
-          });
+          try {
+            await capturePage(context, outputDir, mode, pagePath);
+          } catch (err) {
+            throw new Error(`visual capture failed for ${mode}/${pagePath}: ${err?.message || err}`);
+          }
         }
-        await context.close();
+      } finally {
+        await context?.close().catch(() => {});
+        await browser.close().catch(() => {});
       }
-    } finally {
-      await browser.close();
     }
   });
 
@@ -171,7 +182,8 @@ async function capture(label) {
     console.error(missing.join("\n"));
     throw new Error(`captured ${files.length} screenshots, expected ${expected}`);
   }
-  console.log(`Captured ${expected} screenshots in ${outputDir}`);
+
+  console.log(`Captured ${files.length} screenshots in ${outputDir}`);
 }
 
 async function diff(label) {

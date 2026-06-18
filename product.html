@@ -160,7 +160,7 @@
 
 <script type="module" src="js/main.js"></script>
 <script type="module">
-const { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard } = window.MASESTMain;
+  const { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {
     const id = new URLSearchParams(location.search).get("id") || "hcr";
     // Editorial id and commerce catalog sku currently share the same slug (e.g. `crhd`),

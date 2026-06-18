@@ -66,6 +66,51 @@ test("main entrypoint imports service catalog rendering from a split module", ()
   assert.match(services, /catalog\.seed\.json/);
 });
 
+test("main entrypoint imports product commerce UI from a split module", () => {
+  const main = read("js/main.js");
+  assert.match(main, /from\s+["']\.\/main\/commerce-ui\.js["']/);
+  assert.doesNotMatch(main, /function productCard\s*\(/);
+  assert.doesNotMatch(main, /const commerceState\s*=/);
+  assert.doesNotMatch(main, /function initShop\s*\(/);
+
+  const commerce = read("js/main/commerce-ui.js");
+  for (const name of ["productCard", "catalogCard", "initCartButtons", "initShop", "loadCommerceCatalog", "refreshCommerceActions", "isLocalStaticCommerceSuppressed"]) {
+    assert.match(commerce, new RegExp(`export (?:async )?function ${name}\\b`), `${name} must be exported`);
+  }
+  assert.match(commerce, /commerceState/);
+  assert.match(commerce, /data-cart-add/);
+});
+
+test("main entrypoint imports engagement interactions from a split module", () => {
+  const main = read("js/main.js");
+  assert.match(main, /from\s+["']\.\/main\/engagement\.js["']/);
+  assert.doesNotMatch(main, /function initQuoteForm\s*\(/);
+  assert.doesNotMatch(main, /function initProofFilters\s*\(/);
+  assert.doesNotMatch(main, /function initBeforeAfter\s*\(/);
+
+  const engagement = read("js/main/engagement.js");
+  for (const name of ["initBeforeAfter", "initProofFilters", "initQuoteForm"]) {
+    assert.match(engagement, new RegExp(`export function ${name}\\b`), `${name} must be exported`);
+  }
+  assert.match(engagement, /matthew@masest\.co/);
+  assert.match(engagement, /data-proof-filter/);
+});
+
+test("main entrypoint imports media helpers from a split module", () => {
+  const main = read("js/main.js");
+  assert.match(main, /from\s+["']\.\/main\/media\.js["']/);
+  assert.doesNotMatch(main, /function initIndustryProducts\s*\(/);
+  assert.doesNotMatch(main, /function initLightbox\s*\(/);
+  assert.doesNotMatch(main, /function initImageFallbacks\s*\(/);
+
+  const media = read("js/main/media.js");
+  for (const name of ["initIndustryProducts", "initLightbox", "initImageFallbacks"]) {
+    assert.match(media, new RegExp(`export function ${name}\\b`), `${name} must be exported`);
+  }
+  assert.match(media, /data-ind-products/);
+  assert.match(media, /lightbox/);
+});
+
 test("all pages load shared main as a module", () => {
   const offenders = [];
   for (const page of htmlPages()) {
@@ -83,5 +128,5 @@ test("legacy inline pages use the module compatibility surface", () => {
   assert.match(main, /productCard/);
   assert.match(main, /initReveal/);
   assert.match(read("index.html"), /const \{ initReveal, productCard \} = window\.MASESTMain/);
-  assert.match(read("product.html"), /const \{ CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard \} = window\.MASESTMain/);
+  assert.match(read("product.html"), /const \{ CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal \} = window\.MASESTMain/);
 });

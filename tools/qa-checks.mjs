@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const html = readFileSync(new URL("../contact.html", import.meta.url), "utf8");
 const main = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
 const chrome = readFileSync(new URL("../js/main/chrome.js", import.meta.url), "utf8");
+const engagement = readFileSync(new URL("../js/main/engagement.js", import.meta.url), "utf8");
 const story = readFileSync(new URL("../js/story.js", import.meta.url), "utf8");
 const css = readFileSync(new URL("../css/style.css", import.meta.url), "utf8");
 
@@ -12,7 +13,7 @@ assert.match(
   /<form\b[^>]*\bdata-endpoint="\/api\/quote"/,
   "quote form uses the site quote intake endpoint",
 );
-assert.match(main, /fetch\(\s*endpoint/, "quote form submit uses configured form action");
+assert.match(engagement, /fetch\(\s*endpoint/, "quote form submit uses configured form action");
 assert.match(
   chrome,
   /document\.body\.classList\.toggle\("nav-open"/,
