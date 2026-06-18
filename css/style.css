@@ -392,7 +392,10 @@ scoped to the hero */
 
 /* ---------- Trust strip (hairlines,
 no dots) ---------- */
-.trust-strip { background: var(--surface); }
+.trust-strip {
+  background: var(--surface);
+  padding: clamp(18px, 3vw, 28px) 0;
+}
 .trust-cols {
   max-width: var(--maxw); margin: 0 auto; padding: 0 28px;
   display: grid; grid-template-columns: repeat(4, 1fr);
@@ -1370,10 +1373,6 @@ so no-JS / hidden-tab renders stay visible */
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
-.trust-strip {
-  padding: clamp(28px, 4vw, 52px) 0;
-}
-
 .trust-cols > div {
   padding-block: 10px;
 }
@@ -2230,10 +2229,6 @@ never inline text. */
   padding: 24px !important;
 }
 
-.trust-strip {
-  padding-block: clamp(36px, 5vw, 58px);
-}
-
 .block-dark .btn-primary,
 .on-dark .btn-primary {
   background: #fff;
@@ -2874,35 +2869,15 @@ body.reveal-ready .matrix-disclosure.reveal {
   padding-left: clamp(28px, 4vw, 44px);
 }
 
-.trust-strip {
-  padding-block: clamp(18px, 3vw, 28px);
-}
-
 .trust-cols > div {
   padding-inline: clamp(18px, 3vw, 30px);
 }
 
-.page-hero .eyebrow {
-  text-transform: none !important;
-  letter-spacing: .045em !important;
-}
-
-.catalog-type {
-  text-transform: none !important;
-  letter-spacing: .045em !important;
-}
-
-body .page-hero span.eyebrow {
-  text-transform: none !important;
-  letter-spacing: .045em !important;
-}
-
+.page-hero .eyebrow,
+.catalog-type,
+body .page-hero span.eyebrow,
 .ind-hero .eyebrow,
-.industry-hero .eyebrow {
-  text-transform: none !important;
-  letter-spacing: .045em !important;
-}
-
+.industry-hero .eyebrow,
 .wrap > .eyebrow {
   text-transform: none !important;
   letter-spacing: .045em !important;
