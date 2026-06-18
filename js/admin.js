@@ -37,6 +37,33 @@ function setupProgress(company) {
   return `<span data-setup-state="${open.length ? 'open' : 'done'}"><b>${setup.percent || 0}%</b> <small class="muted">${esc(firstOpen)}</small></span>`;
 }
 
+function renderCompanyMembers(company, members = []) {
+  if (!members.length) return '<div class="company-members"><h3>Members</h3><p class="muted">No members.</p></div>';
+  return `<div class="company-members"><h3>Members</h3>${members.map((member) => `
+    <div class="dash-row">
+      <span>${esc(member.email || member.full_name || member.id)} <small class="muted">${esc(member.full_name || '')}</small></span>
+      <span>
+        <select class="adm-select" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}">
+          <option value="buyer" ${member.role === 'buyer' ? 'selected' : ''}>Buyer</option>
+          <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}">Save</button>
+      </span>
+    </div>`).join('')}</div>`;
+}
+
+function renderCompanyInvites(company, invites = []) {
+  if (!invites.length) return '<div class="company-invites"><h3>Pending invites</h3><p class="muted">No pending invites.</p></div>';
+  return `<div class="company-invites"><h3>Pending invites</h3>${invites.map((invite) => `
+    <div class="dash-row">
+      <span>${esc(invite.email)} <small class="muted">${esc(invite.role || 'buyer')}</small></span>
+      <span>
+        <button class="btn btn-ghost btn-sm" type="button" data-invite-resend="${esc(invite.id)}" data-company-id="${esc(company.id)}">Resend</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-invite-revoke="${esc(invite.id)}" data-company-id="${esc(company.id)}">Revoke</button>
+      </span>
+    </div>`).join('')}</div>`;
+}
+
 async function openCompanyDetail(id) {
   const box = $('companyDetail');
   if (!box) return;
@@ -59,8 +86,11 @@ async function openCompanyDetail(id) {
         <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="messages">Messages</button>
         <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
       </div>
+      ${renderCompanyMembers(company, detail.members || [])}
+      ${renderCompanyInvites(company, detail.invites || [])}
       <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;
     wireCompanyDetailActions(company);
+    wireCompanyUserActions(company);
   } catch (err) {
     box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load company.')}</p>`;
   }
@@ -89,6 +119,39 @@ function wireCompanyDetailActions(company) {
       const search = tab === 'orders' ? $('ordSearch') : null;
       if (search) search.value = company.id;
       setTab(tab);
+    });
+  });
+}
+
+function wireCompanyUserActions(company) {
+  const box = $('companyDetail');
+  if (!box || !company?.id) return;
+  box.querySelectorAll('[data-member-save]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const profileId = button.dataset.memberSave;
+      const role = box.querySelector(`[data-member-role="${CSS.escape(profileId)}"]`)?.value;
+      button.disabled = true;
+      try {
+        await api('/api/admin/users', { method: 'POST', body: { action: 'set_role', company_id: company.id, profile_id: profileId, role } });
+        await openCompanyDetail(company.id);
+      } catch (err) {
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Role update failed.')}</p>`);
+        button.disabled = false;
+      }
+    });
+  });
+  box.querySelectorAll('[data-invite-resend],[data-invite-revoke]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const inviteId = button.dataset.inviteResend || button.dataset.inviteRevoke;
+      const action = button.dataset.inviteResend ? 'resend_invite' : 'revoke_invite';
+      button.disabled = true;
+      try {
+        await api('/api/admin/users', { method: 'POST', body: { action, company_id: company.id, invite_id: inviteId } });
+        await openCompanyDetail(company.id);
+      } catch (err) {
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Invite update failed.')}</p>`);
+        button.disabled = false;
+      }
     });
   });
 }
