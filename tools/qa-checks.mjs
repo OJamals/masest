@@ -8,8 +8,8 @@ const css = readFileSync(new URL("../css/style.css", import.meta.url), "utf8");
 
 assert.match(
   html,
-  /<form\b[^>]*\bdata-endpoint="https:\/\/formspree\.io\/f\/xzzgvqaq"/,
-  "quote form has a real submission endpoint",
+  /<form\b[^>]*\bdata-endpoint="\/api\/quote"/,
+  "quote form uses the site quote intake endpoint",
 );
 assert.match(main, /fetch\(\s*endpoint/, "quote form submit uses configured form action");
 assert.match(
