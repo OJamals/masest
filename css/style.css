@@ -2896,14 +2896,14 @@ body .page-hero span.eyebrow,
 filter,
 or quote flow structure. */
 .nav-links a {
-  min-width: 44px !important;
-  justify-content: center !important;
+  min-width: 44px;
+  justify-content: center;
 }
 
 .proof-filter,
 .contact-card a,
 .eyebrow a {
-  min-height: 44px !important;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
 }
