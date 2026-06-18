@@ -1194,11 +1194,11 @@
 }
 
 .story .act[data-act="3"] .act-copy.top {
-  top: clamp(54px, 7vh, 82px);
+  top: clamp(72px, 11vh, 132px);
 }
 
 .story .act[data-act="3"] .hmis-rig {
-  margin-top: clamp(320px, 38vh, 405px);
+  margin-top: clamp(150px, 18vh, 220px);
   width: min(1040px, 92vw);
   gap: clamp(18px, 2.4vh, 28px);
 }
