@@ -27,16 +27,18 @@ test.afterAll(async () => {
   await once(server, "exit").catch(() => {});
 });
 
-test("product add-to-cart resolves the crhd->cr-hd commerce alias", async ({ page }) => {
-  // Editorial id is `crhd`; the commerce catalog sku is `cr-hd`. The buy button must
-  // still resolve via the alias map in product.html.
+test("product add-to-cart resolves the crhd commerce sku", async ({ page }) => {
+  // Editorial id and the live catalog sku are both `crhd` (COMMERCE_ALIAS is empty in
+  // product.html), so the buy button resolves the /api/products row directly — no remap.
+  // NOTE: data/catalog.seed.json still describes a future `cr-hd` catalog redesign that is
+  // NOT imported to the live DB; if that migration ever lands, the alias must be restored.
   await page.route("**/api/products", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         products: [
-          { sku: "cr-hd", name: "VertKleen CR HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+          { sku: "crhd", name: "VertKleen CR HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
         ],
       }),
     });
@@ -57,7 +59,7 @@ test("buy selector defaults to the 5 gallon pail and hides quote-only drums", as
     body: JSON.stringify({
       products: [
         {
-          sku: "cr-hd",
+          sku: "crhd",
           name: "VertKleen CR HD",
           mode: "buy",
           active: true,
