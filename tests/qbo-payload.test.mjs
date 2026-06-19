@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildInvoicePayload, buildSalesReceiptPayload } from "../functions/_lib/qbo.js";
+import { buildInvoicePayload, buildInvoicePaymentPayload, buildSalesReceiptPayload } from "../functions/_lib/qbo.js";
 
 const order = {
   id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -39,6 +39,29 @@ test("invoice payload shares document structure and carries balance due", () => 
   assert.equal(payload.Line[1].SalesItemLineDetail.ItemRef.value, "102");
   assert.equal(payload.TxnTaxDetail.TotalTax, 7.5);
   assert.equal(payload.Balance, 107.5);
+});
+
+test("invoice payload enables QuickBooks online card and ACH payments", () => {
+  const payload = buildInvoicePayload({ order, items, customerRef: "55", itemRefs });
+
+  assert.equal(payload.AllowOnlinePayment, true);
+  assert.equal(payload.AllowOnlineCreditCardPayment, true);
+  assert.equal(payload.AllowOnlineACHPayment, true);
+});
+
+test("invoice payment payload links Stripe payment to the QuickBooks invoice", () => {
+  const payload = buildInvoicePaymentPayload({
+    order: { ...order, stripe_payment_intent: "pi_123" },
+    customerRef: "55",
+    invoiceId: "inv-900",
+  });
+
+  assert.equal(payload.CustomerRef.value, "55");
+  assert.equal(payload.TotalAmt, 107.5);
+  assert.equal(payload.PaymentRefNum, "pi_123");
+  assert.equal(payload.Line[0].Amount, 107.5);
+  assert.equal(payload.Line[0].LinkedTxn[0].TxnId, "inv-900");
+  assert.equal(payload.Line[0].LinkedTxn[0].TxnType, "Invoice");
 });
 
 test("payload builder fails clearly when an item ref is missing", () => {

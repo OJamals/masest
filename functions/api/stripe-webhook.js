@@ -188,7 +188,7 @@ export async function onRequestPost({ request, env }) {
         link: '/dashboard.html#orders',
       }).then(() => {}, () => {});
     }
-    // QBO sales receipt is created asynchronously by /api/qbo-sync
+    // QBO invoice + linked payment are created asynchronously by /api/qbo-sync
     // (order tagged qbo_sync_status='pending' on insert above).
   }
 

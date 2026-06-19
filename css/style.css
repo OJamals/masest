@@ -321,6 +321,8 @@ one accent) ---------- */
 /* ---------- Sections ---------- */
 section { padding: var(--space-section) 0; }
 .section-slim { padding-top: 0; padding-bottom: clamp(44px, 6vw, 70px); }
+.swap-finder-sec { padding-bottom: 0; }
+.swap-finder-sec .section-head { margin-bottom: clamp(28px, 3vw, 32px); }
 .section-head { max-width: 720px; margin-bottom: clamp(40px, 5vw, 60px); }
 .section-head.center { text-align: center; margin-left: auto; margin-right: auto; }
 .section-head .subhead { margin-top: 14px; }

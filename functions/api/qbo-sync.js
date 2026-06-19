@@ -56,9 +56,21 @@ async function markSynced(sb, order, result) {
     qbo_error: null,
     qbo_next_attempt_at: null,
   };
-  if (result.docType === 'invoice') patch.qbo_invoice_id = result.docId;
+  if (result.paymentId) patch.qbo_payment_id = result.paymentId;
+  if (result.docType === 'invoice' || result.docType === 'invoice_payment') patch.qbo_invoice_id = result.docId;
   const { error } = await sb.from('orders').update(patch).eq('id', order.id);
   if (error) throw new Error(error.message || 'qbo_order_update_failed');
+}
+
+async function notifyInvoiceReady(sb, order, result) {
+  if (result.docType !== 'invoice' || !order.company_id) return;
+  await sb.from('notifications').insert({
+    company_id: order.company_id,
+    type: 'order',
+    title: 'Order invoice ready',
+    body: `QuickBooks invoice ${result.docId} is linked to your order.`,
+    href: '/dashboard.html#orders',
+  });
 }
 
 async function requeueOne(sb, order, err) {
@@ -96,6 +108,7 @@ export async function runQboSync({ env, batch = 10 }) {
       const companyNames = await companyNamesFor(sb, order);
       const result = await syncOrder(sb, env, credentials.accessToken, credentials.realmId, order, items, companyNames);
       await markSynced(sb, order, result);
+      await notifyInvoiceReady(sb, order, result);
       synced += 1;
       results.push({ id: order.id, ok: true, doc_id: result.docId, doc_type: result.docType });
     } catch (err) {

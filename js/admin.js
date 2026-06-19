@@ -33,10 +33,18 @@ function sourceLabel(message) {
   return '';
 }
 
+function qboReconciliation(order) {
+  const parts = [];
+  if (order.qbo_doc_id) parts.push(`${order.qbo_doc_type || 'qbo'} ${order.qbo_doc_id}`);
+  if (order.qbo_payment_id) parts.push(`payment ${order.qbo_payment_id}`);
+  if (!parts.length) return '';
+  return `<div class="muted" style="margin:6px 0 0;font-size:.78rem">QBO: ${parts.map(esc).join(' / ')}</div>`;
+}
+
 function trackingControls(order) {
   const id = esc(order.id);
   const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
-  return `<details class="adm-track"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
+  return `${qboReconciliation(order)}<details class="adm-track"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
     <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
       <select class="adm-select" data-track-status="${id}" style="max-width:150px">
         ${['processing', 'packing', 'shipped', 'delivered', 'blocked'].map((status) => `<option value="${status}" ${status === (order.tracking_status || 'processing') ? 'selected' : ''}>${status.replaceAll('_', ' ')}</option>`).join('')}

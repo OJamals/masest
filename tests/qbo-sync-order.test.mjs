@@ -41,6 +41,7 @@ const paidOrder = {
   company_id: "c9",
   tax: 7.5,
   total: 107.5,
+  stripe_payment_intent: "pi_123",
 };
 
 const netOrder = {
@@ -56,14 +57,14 @@ const items = [
 
 test("documentPlanFor maps paid and NET orders to the right QBO document/customer", () => {
   assert.deepEqual(documentPlanFor(paidOrder, { c9: "Acme Co" }), {
-    docType: "sales_receipt",
-    entity: "SalesReceipt",
+    docType: "invoice_payment",
+    entity: "Invoice",
     customer: { key: "company:c9", displayName: "Acme Co" },
   });
 
   assert.deepEqual(documentPlanFor({ ...paidOrder, company_id: null }, {}), {
-    docType: "sales_receipt",
-    entity: "SalesReceipt",
+    docType: "invoice_payment",
+    entity: "Invoice",
     customer: { key: "generic", displayName: "Online Sales (MASEST)" },
   });
 
@@ -74,7 +75,7 @@ test("documentPlanFor maps paid and NET orders to the right QBO document/custome
   });
 });
 
-test("syncOrder resolves mappings, posts a sales receipt, and returns document ids", async () => {
+test("syncOrder posts Stripe-paid orders as invoices with linked payments", async () => {
   const sb = fakeSb({
     qbo_customers: { "company:c9": { key: "company:c9", qbo_customer_id: "55" } },
     qbo_items: {
@@ -87,17 +88,54 @@ test("syncOrder resolves mappings, posts a sales receipt, and returns document i
   const result = await syncOrder(sb, {}, "tok", "realm", paidOrder, items, { c9: "Acme Co" }, {
     fetchImpl: async (url, init = {}) => {
       requests.push({ url, init });
-      return { ok: true, async json() { return { SalesReceipt: { Id: "sr-900" } }; } };
+      if (url.includes("/invoice?")) return { ok: true, async json() { return { Invoice: { Id: "inv-900" } }; } };
+      if (url.includes("/payment?")) return { ok: true, async json() { return { Payment: { Id: "pay-900" } }; } };
+      return { ok: true, async json() { return {}; } };
     },
   });
 
-  assert.deepEqual(result, { docId: "sr-900", docType: "sales_receipt" });
-  const post = requests.find((request) => request.url.includes("/salesreceipt?"));
-  assert.ok(post, "expected a SalesReceipt create request");
-  const body = JSON.parse(post.init.body);
-  assert.equal(body.CustomerRef.value, "55");
-  assert.equal(body.Line.length, 2);
-  assert.equal(body.Line[0].SalesItemLineDetail.ItemRef.value, "101");
+  assert.deepEqual(result, { docId: "inv-900", docType: "invoice_payment", paymentId: "pay-900" });
+  const invoicePost = requests.find((request) => request.url.includes("/invoice?"));
+  assert.ok(invoicePost, "expected an Invoice create request");
+  const invoice = JSON.parse(invoicePost.init.body);
+  assert.equal(invoice.CustomerRef.value, "55");
+  assert.equal(invoice.Line.length, 2);
+  assert.equal(invoice.Line[0].SalesItemLineDetail.ItemRef.value, "101");
+
+  const paymentPost = requests.find((request) => request.url.includes("/payment?"));
+  assert.ok(paymentPost, "expected a Payment create request");
+  const payment = JSON.parse(paymentPost.init.body);
+  assert.equal(payment.CustomerRef.value, "55");
+  assert.equal(payment.PaymentRefNum, paidOrder.stripe_payment_intent);
+  assert.equal(payment.TotalAmt, 107.5);
+  assert.equal(payment.Line[0].Amount, 107.5);
+  assert.equal(payment.Line[0].LinkedTxn[0].TxnId, "inv-900");
+  assert.equal(payment.Line[0].LinkedTxn[0].TxnType, "Invoice");
+});
+
+test("syncOrder reuses existing Stripe invoice/payment records on retry", async () => {
+  const sb = fakeSb({
+    qbo_customers: { "company:c9": { key: "company:c9", qbo_customer_id: "55" } },
+    qbo_items: {
+      "crhd-5": { sku: "crhd-5", qbo_item_id: "101" },
+      "sar-5": { sku: "sar-5", qbo_item_id: "102" },
+    },
+  });
+  const requests = [];
+
+  const result = await syncOrder(sb, {}, "tok", "realm", paidOrder, items, { c9: "Acme Co" }, {
+    fetchImpl: async (url, init = {}) => {
+      requests.push({ url, init });
+      const decoded = decodeURIComponent(String(url));
+      if (decoded.includes("from Invoice")) return { ok: true, async json() { return { QueryResponse: { Invoice: [{ Id: "inv-existing" }] } }; } };
+      if (decoded.includes("from Payment")) return { ok: true, async json() { return { QueryResponse: { Payment: [{ Id: "pay-existing" }] } }; } };
+      throw new Error(`unexpected QBO write: ${url}`);
+    },
+  });
+
+  assert.deepEqual(result, { docId: "inv-existing", docType: "invoice_payment", paymentId: "pay-existing" });
+  assert.equal(requests.some((request) => request.url.includes("/invoice?")), false);
+  assert.equal(requests.some((request) => request.url.includes("/payment?")), false);
 });
 
 test("syncOrder posts NET orders as invoices", async () => {
@@ -111,6 +149,7 @@ test("syncOrder posts NET orders as invoices", async () => {
 
   const result = await syncOrder(sb, {}, "tok", "realm", netOrder, items, { c1: "Beta LLC" }, {
     fetchImpl: async (url, init = {}) => {
+      if (url.includes("/query?")) return { ok: true, async json() { return { QueryResponse: {} }; } };
       assert.match(url, /\/invoice\?/);
       const body = JSON.parse(init.body);
       assert.equal(body.Balance, 107.5);

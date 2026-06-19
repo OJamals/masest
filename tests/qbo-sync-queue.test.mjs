@@ -11,7 +11,7 @@ test("QBO schema defines token/cache tables and order sync columns", () => {
     assert.match(sql, new RegExp(`grant select, insert, update on public\\.${table} to service_role`), `${table} must be service-role writable`);
   }
   assert.match(sql, /create type qbo_sync_status as enum \('pending','processing','synced','error','skipped'\)/);
-  for (const column of ["qbo_sync_status", "qbo_doc_id", "qbo_doc_type", "qbo_synced_at", "qbo_error", "qbo_attempts", "qbo_next_attempt_at"]) {
+  for (const column of ["qbo_sync_status", "qbo_doc_id", "qbo_doc_type", "qbo_payment_id", "qbo_synced_at", "qbo_error", "qbo_attempts", "qbo_next_attempt_at"]) {
     assert.match(sql, new RegExp(`add column if not exists ${column}`), `${column} must be added to orders`);
   }
   assert.match(sql, /orders_qbo_pending_idx/);
@@ -29,6 +29,15 @@ test("QBO env example documents the sync endpoint secret", () => {
     "QBO cron endpoint must be protected by a shared secret");
 });
 
+test("QuickBooks setup docs call out online invoice payment requirements", () => {
+  const env = read(".env.example");
+  const cf = read("CLOUDFLARE_PAGES.md");
+
+  assert.match(env, /QuickBooks Payments/i);
+  assert.match(cf, /QuickBooks Payments/i);
+  assert.match(cf, /online card and ACH/i);
+});
+
 test("new NET and Stripe orders enter the QBO sync queue", () => {
   const checkout = read("functions/api/checkout.js");
   const webhook = read("functions/api/stripe-webhook.js");
@@ -36,7 +45,25 @@ test("new NET and Stripe orders enter the QBO sync queue", () => {
   assert.match(checkout, /payment_method:\s*'net'[\s\S]*qbo_sync_status:\s*'pending'/,
     "NET checkout orders should start pending QBO invoice sync");
   assert.match(webhook, /payment_method:\s*'stripe'[\s\S]*qbo_sync_status:\s*'pending'/,
-    "Stripe checkout orders should start pending QBO sales receipt sync");
+    "Stripe checkout orders should start pending QBO invoice/payment sync");
+});
+
+test("QBO invoice auto-sync notifies the buyer company when the invoice is ready", () => {
+  const src = read("functions/api/qbo-sync.js");
+
+  assert.match(src, /notifyInvoiceReady\(/, "QBO sync should notify buyers when an invoice is created");
+  assert.match(src, /from\('notifications'\)\.insert/, "QBO sync should write an in-app buyer notification");
+  assert.match(src, /QuickBooks invoice \$\{result\.docId\}/,
+    "buyer notification should include the QuickBooks invoice id");
+});
+
+test("QBO sync records invoice and Stripe-linked payment ids", () => {
+  const src = read("functions/api/qbo-sync.js");
+
+  assert.match(src, /result\.docType === 'invoice' \|\| result\.docType === 'invoice_payment'/,
+    "invoice id should be recorded for NET invoices and Stripe-paid invoice records");
+  assert.match(src, /patch\.qbo_payment_id = result\.paymentId/,
+    "Stripe-linked QBO payment id should be stored on the order");
 });
 
 test("admin QBO status exposes failed orders for staff triage", () => {
