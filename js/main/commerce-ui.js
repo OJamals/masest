@@ -2,6 +2,16 @@
 
 import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, REPLACEMENT_MAP } from "./catalog-data.js";
 
+const IMAGE_DIMS = {
+  "img/products/dbnpa-studio.webp": [900, 822],
+  "img/products/crs-studio.webp": [899, 1200],
+};
+
+function imageDimsAttr(src) {
+  const [width, height] = IMAGE_DIMS[src] || [900, 1200];
+  return `width="${width}" height="${height}"`;
+}
+
 export function productCard(id, heroCard = false) {
   const p = PRODUCTS[id];
   const catalog = PRODUCT_CATALOG_COPY[id] || {};
@@ -9,7 +19,7 @@ export function productCard(id, heroCard = false) {
  ? '<span class="hmis-badge">HMIS 0-0-0</span>'
  : '<span class="hmis-badge note">LOW HAZARD</span>';
   const media = p.image
-    ? `<a class="prod-media" href="product.html?id=${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="lazy"></a>`
+    ? `<a class="prod-media" href="product.html?id=${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="lazy" ${imageDimsAttr(p.image)}></a>`
     : "";
   const fitList = (catalog.fits || []).map((fit) => `<li>${fit}</li>`).join("");
   return `
@@ -289,7 +299,7 @@ export function catalogCard(id) {
     : '<span class="hmis-badge note">LOW HAZARD</span>';
   const mediaInfo = commerceMediaFor(id);
   const media = mediaInfo.src
-    ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="lazy">`
+    ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="lazy" ${imageDimsAttr(mediaInfo.src)}>`
     : `<i class="ph ${p.icon}" aria-hidden="true"></i>`;
   return `
     <article class="shop-card" data-id="${id}">

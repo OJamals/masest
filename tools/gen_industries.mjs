@@ -159,6 +159,15 @@ const GALLERY = {
   ]
 };
 
+const PROOF_IMAGE_DIMS = {
+  "ac-coil": [839, 471],
+  brewery: [1200, 900],
+  "ddc-rust": [1200, 579],
+  "farm-rust": [740, 967],
+  "grout-moss": [919, 690],
+  marine: [1175, 1125],
+};
+
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
 
 const INDUSTRY_DETAILS = {
@@ -273,6 +282,11 @@ function galleryBlock(ind) {
   </section>`;
 }
 
+function proofImageDimsAttr(img) {
+  const [width, height] = PROOF_IMAGE_DIMS[img] || [1200, 900];
+  return `width="${width}" height="${height}"`;
+}
+
 function page(ind) {
   const nav = NAV.map(([href, label]) => {
     if (!href) return `    <span>${label}</span>`;
@@ -329,7 +343,7 @@ ${nav}
         <a class="btn btn-ink" href="../proof.html">See the proof</a>
       </div>
       <figure class="ind-intro-photo">
-        <img src="../img/proof/cases/${ind.proof.img}.webp" alt="${ind.proof.caption.replace(/"/g, "&quot;")}" loading="lazy">
+        <img src="../img/proof/cases/${ind.proof.img}.webp" alt="${ind.proof.caption.replace(/"/g, "&quot;")}" loading="lazy" ${proofImageDimsAttr(ind.proof.img)}>
         <figcaption>${ind.proof.caption}</figcaption>
       </figure>
 </div>

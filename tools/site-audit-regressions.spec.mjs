@@ -166,3 +166,35 @@ test("mobile home hamburger drawer keeps all top-level rows readable", async ({ 
   );
   expect(topLevelColors).not.toContain("rgb(255, 255, 255)");
 });
+
+test("visible content images reserve dimensions on key buyer pages", async ({ page }) => {
+  const pages = [
+    "products.html",
+    "industries.html",
+    "proof.html",
+    "services.html",
+    "industries/plumbing.html",
+  ];
+
+  for (const pagePath of pages) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+
+    const missing = await page.locator("img").evaluateAll((images) =>
+      images
+        .filter((img) => {
+          const rect = img.getBoundingClientRect();
+          const style = getComputedStyle(img);
+          return rect.width > 80 && rect.height > 80 && style.display !== "none" && style.visibility !== "hidden";
+        })
+        .filter((img) => !img.getAttribute("width") || !img.getAttribute("height"))
+        .map((img) => ({
+          src: img.getAttribute("src"),
+          alt: img.getAttribute("alt"),
+        }))
+    );
+
+    expect(missing, `${pagePath} visible images missing width/height`).toEqual([]);
+  }
+});
