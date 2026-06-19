@@ -149,6 +149,34 @@ export async function onRequest({ request, env }) {
       return json(200, { ok: true, order });
     }
 
+    if (body.action === 'record_qbo_payment') {
+      const paymentId = String(body.qbo_payment_id || '').trim();
+      if (!paymentId) return json(400, { error: 'qbo_payment_id_required' });
+
+      const { data: ord, error: e1 } = await sb.from('orders')
+        .select('id,company_id,customer_email,status,payment_method').eq('id', body.id).single();
+      if (e1) return json(500, { error: e1.message });
+      if (!ord) return json(404, { error: 'not_found' });
+      if (ord.payment_method !== 'net') {
+        return json(400, { error: 'qbo_payment_not_net', message: 'Only NET orders can record QuickBooks Payments settlement ids.' });
+      }
+
+      const { data: order, error } = await sb.from('orders')
+        .update({
+          status: 'net_paid',
+          qbo_payment_id: paymentId,
+          qbo_error: null,
+        })
+        .eq('id', body.id)
+        .select('id,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
+        .single();
+      if (error) return json(500, { error: error.message });
+      const notifyBody = `QuickBooks payment ${paymentId} is recorded for your order.`;
+      const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, 'payment received', notifyBody);
+      await notifyBuyerTracking(env, request, order, 'payment received', notifyBody, companyRecipients);
+      return json(200, { ok: true, order });
+    }
+
     if (body.action === 'update_tracking') {
       const trackingStatus = String(body.tracking_status || 'processing').trim();
       if (!TRACKING_STATUSES.includes(trackingStatus)) return json(400, { error: 'invalid_tracking_status' });
