@@ -70,3 +70,15 @@ test("payload builder fails clearly when an item ref is missing", () => {
     /qbo_item_ref_missing:sar/,
   );
 });
+
+test("QBO document payloads carry buyer email when present", () => {
+  const emailedOrder = { ...order, customer_email: "buyer@example.test" };
+  assert.deepEqual(
+    buildInvoicePayload({ order: emailedOrder, items, customerRef: "55", itemRefs }).BillEmail,
+    { Address: "buyer@example.test" },
+  );
+  assert.deepEqual(
+    buildSalesReceiptPayload({ order: emailedOrder, items, customerRef: "55", itemRefs }).BillEmail,
+    { Address: "buyer@example.test" },
+  );
+});

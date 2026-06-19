@@ -55,13 +55,20 @@ function lineFor(item, itemRefs) {
   };
 }
 
+function billEmailFor(order) {
+  const email = String(order?.customer_email || '').trim();
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? { Address: email } : null;
+}
+
 function baseDocumentPayload({ order, items, customerRef, itemRefs }) {
+  const billEmail = billEmailFor(order);
   return {
     CustomerRef: { value: customerRef },
     DocNumber: docNumber(order.id),
     PrivateNote: `MASEST order ${order.id}`,
     Line: (items || []).map((item) => lineFor(item, itemRefs)),
     TxnTaxDetail: { TotalTax: Number(order.tax || 0) },
+    ...(billEmail ? { BillEmail: billEmail } : {}),
   };
 }
 
