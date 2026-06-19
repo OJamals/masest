@@ -123,7 +123,7 @@ create policy notifications_company on public.notifications
 
 -- ---------- GRANTS (service-role auto-grant does not fire for new tables) ----------
 grant select on public.messages, public.notifications to authenticated;
-grant all privileges on public.messages, public.notifications, public.offers, public.page_views to service_role;
+grant all privileges on public.messages, public.notifications, public.crisp_sessions, public.offers, public.page_views to service_role;
 grant usage, select on all sequences in schema public to service_role;
 
 -- Atomic tracked-stock decrement for checkout/webhook flows.

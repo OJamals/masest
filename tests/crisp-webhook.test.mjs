@@ -43,6 +43,7 @@ test("Crisp webhook maps sessions and messages into app records", () => {
 
 test("schema and admin message UI carry Crisp source metadata", () => {
   assert.match(SCHEMA, /create table if not exists public\.crisp_sessions/);
+  assert.match(SCHEMA, /grant all privileges on public\.messages, public\.notifications, public\.crisp_sessions/);
   assert.match(SCHEMA, /alter table public\.messages add column if not exists source text/);
   assert.match(SCHEMA, /external_thread_id/);
   assert.match(SCHEMA, /external_message_id/);
