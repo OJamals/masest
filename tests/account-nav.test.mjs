@@ -18,7 +18,9 @@ test("shared chrome uses a replaceable auth placeholder", () => {
 test("account nav replaces the placeholder and exposes business plus account sections", () => {
   const nav = read("js/account-nav.js");
 
-  assert.match(nav, /actions\.querySelector\(['"]\.nav-account['"]\)/, "account nav should find the existing account control / static auth placeholder");
+  // Must match BOTH the SSR placeholder (.nav-auth-placeholder) and a prior-rendered control
+  // (.nav-account); matching only one leaves the other behind → "Sign in" + account control both show.
+  assert.match(nav, /querySelector\(['"]\.nav-account,\s*\.nav-auth-placeholder['"]\)/, "account nav must find the placeholder or the existing control");
   assert.match(nav, /replaceWith\(mount\)/, "account nav should replace the placeholder instead of adding a second control");
   assert.match(nav, /Dashboard/, "signed-in nav should link to dashboard");
   assert.match(nav, /Business/, "signed-in nav should link to business tools");

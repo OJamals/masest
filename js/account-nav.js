@@ -86,9 +86,11 @@ export async function initAccountNav({ nav, root = '' } = {}) {
 }
 
 async function renderAccountNav(actions, root = '') {
-  // Replace whatever account control is present: the SSR placeholder on first render,
-  // or a previously-rendered control on a later auth-change re-render.
-  const prev = actions.querySelector('.nav-account');
+  // Replace whatever account control is present: the SSR placeholder (.nav-auth-placeholder,
+  // rendered by chrome.js) on first render, or a previously-rendered control (.nav-account)
+  // on a later auth-change re-render. Matching only one of these would leave the other behind,
+  // showing both a "Sign in" button and the account control at once.
+  const prev = actions.querySelector('.nav-account, .nav-auth-placeholder');
 
   // Only load the Supabase SDK + call me() when a session exists; otherwise render Sign in instantly.
   let logout, api, data = null;
