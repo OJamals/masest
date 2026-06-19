@@ -15,6 +15,11 @@ function metaDescription(markup) {
   return tag.match(/\bcontent=(["'])(.*?)\1/i)?.[2] || "";
 }
 
+function hasMeta(markup, attr, value) {
+  const quoted = `["']${value}["']`;
+  return new RegExp(`<meta\\s+[^>]*${attr}=${quoted}`, "i").test(markup);
+}
+
 test("public sitemap pages keep concise unique meta descriptions", () => {
   const descriptions = new Map();
   for (const page of pages) {
@@ -23,6 +28,17 @@ test("public sitemap pages keep concise unique meta descriptions", () => {
     assert.ok(description.length <= 170, `${page} description too long: ${description.length}`);
     assert.ok(!descriptions.has(description), `${page} duplicates ${descriptions.get(description)}`);
     descriptions.set(description, page);
+  }
+});
+
+test("public sitemap pages expose social preview metadata", () => {
+  for (const page of pages) {
+    const markup = html(page);
+
+    assert.ok(hasMeta(markup, "property", "og:title"), `${page} missing og:title`);
+    assert.ok(hasMeta(markup, "property", "og:description"), `${page} missing og:description`);
+    assert.ok(hasMeta(markup, "property", "og:image"), `${page} missing og:image`);
+    assert.ok(hasMeta(markup, "name", "twitter:card"), `${page} missing twitter:card`);
   }
 });
 
