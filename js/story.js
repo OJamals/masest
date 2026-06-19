@@ -72,12 +72,15 @@ var BEAT_IN = 0.58, BEAT_OUT = 0.22, HOLD = 1.25;
   }
 
 states.forEach(function (st) {
-  var startsPinned = st.act === firstAct || st.act.classList.contains("act-chems");
   var tl = gsap.timeline({
     defaults: { ease: "power2.out" },
     scrollTrigger: {
       trigger: st.act,
-        start: startsPinned ? "top 67px" : "top 85%",
+        /* One entry model for every act: the scrub begins as the stage pins
+           just under the nav, so each act's [data-at] beats reveal while it's
+           held on screen — not during the slide-up, where they're missed.
+           (The opener is already at the page top on load; same start applies.) */
+        start: "top 67px",
         end: "bottom bottom",
         scrub: 0.30,
         invalidateOnRefresh: true,        /* re-record tween endpoints at the new size */
