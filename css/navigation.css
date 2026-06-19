@@ -23,6 +23,16 @@
   min-width: 0;
 }
 
+@media (min-width: 721px) {
+  .nav-group > .nav-menu {
+    min-width: 184px;
+  }
+
+  .nav-group > .nav-menu a {
+    width: 100%;
+  }
+}
+
 .nav-burger,
 .nav-cart,
 .nav-signin {

@@ -119,6 +119,35 @@ test("mobile hamburger menu centers use-case trigger and exposes child links", a
   expect(labelDelta).toBeLessThan(2);
 });
 
+test("desktop use-case dropdown fits both labels inside the panel", async ({ page }) => {
+  await page.setViewportSize({ width: 1140, height: 408 });
+  await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
+  await page.locator(".nav-group summary").click();
+
+  const fit = await page.locator(".nav-group .nav-menu").evaluate((menu) => {
+    const menuBox = menu.getBoundingClientRect();
+    const links = [...menu.querySelectorAll("a")].map((link) => {
+      const linkBox = link.getBoundingClientRect();
+      return {
+        text: link.textContent.trim(),
+        visibleWidth: linkBox.width,
+        scrollWidth: link.scrollWidth,
+      };
+    });
+
+    return {
+      menuWidth: menuBox.width,
+      menuScrollWidth: menu.scrollWidth,
+      links,
+    };
+  });
+
+  expect(fit.menuWidth, "dropdown panel should not clip child links").toBeGreaterThanOrEqual(fit.menuScrollWidth);
+  for (const link of fit.links) {
+    expect(link.visibleWidth, `${link.text} label should fit its link`).toBeGreaterThanOrEqual(link.scrollWidth);
+  }
+});
+
 test("mobile home uses original conversion controls without the quick-action switcher", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
