@@ -4968,17 +4968,18 @@ main:has(#pMediaSection) .section-head {
 }
 
 .nav {
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  width: min(1120px, calc(100% - 32px));
-  transform: translateX(-50%);
-  border: 1px solid rgba(12, 28, 33, .1);
-  border-radius: 999px;
-  background: rgba(250, 251, 252, .82);
-  box-shadow: 0 18px 54px rgba(11, 26, 31, .1);
-  backdrop-filter: blur(22px) saturate(1.16);
-  transition: background-color .7s var(--premium-ease), border-color .7s var(--premium-ease), box-shadow .7s var(--premium-ease), transform .7s var(--premium-ease);
+ position: sticky;
+ top: 0;
+ left: auto;
+ width: 100%;
+ transform: none;
+ border-width: 0 0 1px;
+ border-color: rgba(12, 28, 33, .08);
+ border-radius: 0;
+ background: rgba(250, 251, 252, .86);
+ box-shadow: 0 1px 0 rgba(20, 24, 32, .02);
+ backdrop-filter: blur(18px) saturate(1.12);
+ transition: background-color .7s var(--premium-ease), border-color .7s var(--premium-ease), box-shadow .7s var(--premium-ease);
 }
 
 .nav.over-dark,
@@ -5159,4 +5160,44 @@ main:has(#pMediaSection) .section-head {
   .shop-card-core {
     border-radius: 15px;
   }
+}
+
+/* Resources: keep the protocol disclosure aligned with adjacent content cards. */
+.resource-disclosure {
+  width: min(1124px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+@media (max-width: 700px) {
+  .resource-disclosure {
+    width: calc(100% - 32px);
+  }
+}
+
+/* Products: this proof band sits on a light surface, so text must stay dark. */
+body.products-page .conversion-proof {
+  color: var(--ink);
+}
+
+body.products-page .conversion-proof .headline {
+  color: var(--ink);
+}
+
+body.products-page .conversion-proof .subhead {
+  color: var(--muted);
+}
+
+body.products-page .conversion-proof .proof-pill {
+  color: var(--ink);
+  border-color: rgba(13, 48, 53, .1);
+  background: rgba(255, 255, 255, .84);
+}
+
+body.products-page .conversion-proof .proof-pill span,
+body.products-page .conversion-proof .proof-pill b {
+  color: var(--ink);
+}
+
+body.products-page .conversion-proof .proof-pill em {
+  color: var(--muted);
 }
