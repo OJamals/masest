@@ -19,6 +19,9 @@
   if (reduce || !window.gsap || !window.ScrollTrigger) return; /* CSS fallback shows everything */
 
   gsap.registerPlugin(ScrollTrigger);
+  /* Mobile URL-bar show/hide resizes the viewport vertically on scroll; without
+     this, every such resize refreshes ScrollTrigger and the triggers jump. */
+  ScrollTrigger.config({ ignoreMobileResize: true });
   story.classList.add("story-ready");
 
   var clamp = gsap.utils.clamp;
@@ -77,6 +80,7 @@ states.forEach(function (st) {
         start: startsPinned ? "top 67px" : "top 85%",
         end: "bottom bottom",
         scrub: 0.30,
+        invalidateOnRefresh: true,        /* re-record tween endpoints at the new size */
         onEnter: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
         onEnterBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
         onLeave: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 0 }); },
@@ -641,6 +645,40 @@ states.forEach(function (st) {
       railBtns[j].classList.toggle("safe", current === states.length - 1);
     }
   }
+  /* ============================================================
+     AUTHORITATIVE VISIBILITY — derived from scroll geometry, not
+     from directional-callback history. Exactly one act's sticky
+     stage owns the viewport; it shows, the rest hide. Because this
+     is a pure function of position, a resize / window-move / the
+     browser's scrollY-clamp on a now-shorter page cannot strand a
+     stage at visibility:hidden — the next frame (or refresh) snaps
+     it back to the truth. The onEnter/onLeave alpha sets above are
+     now just hints; this is the source of truth.
+     ============================================================ */
+  function currentActIdx() {
+    var idx = -1;
+    for (var i = 0; i < states.length; i++) if (states[i].active) idx = i;
+    return idx < 0 ? nearestRailIndex() : idx;   /* gap / HOLD endcap → nearest stage */
+  }
+  /* autoAlpha = opacity + visibility, both compositor-only (no reflow), so an
+     unconditional per-frame write on ~5 stages is cheap. No cached shown-state:
+     the onEnter/onLeave hints write autoAlpha out-of-band, so any cache would go
+     stale and re-strand exactly the case this is meant to heal. */
+  function reassertAlpha() {
+    var idx = currentActIdx();
+    for (var k = 0; k < states.length; k++) {
+      if (states[k].stage) gsap.set(states[k].stage, { autoAlpha: k === idx ? 1 : 0 });
+    }
+    return idx;
+  }
+  /* Full re-assert after a geometry change: fix alpha, then repaint the on-stage
+     act's canvas + scrub-driven extras at the new size. */
+  function reassertVisibility() {
+    var on = states[reassertAlpha()];
+    if (on) { resizeFx(on); onActScrub(on); }
+  }
+  ScrollTrigger.addEventListener("refresh", reassertVisibility);
+
   function scheduleRailUpdate() {
     if (railTicking) return;
     railTicking = true;
@@ -648,6 +686,7 @@ states.forEach(function (st) {
       railTicking = false;
       updateRail();
       syncStoryFocus();
+      reassertAlpha();
     });
   }
   window.addEventListener("scroll", scheduleRailUpdate, { passive: true });
@@ -658,10 +697,32 @@ states.forEach(function (st) {
      parallax backdrop are visible on load, before any scroll — without
      this the reel sits at its CSS opacity:0 until the first scroll. */
   if (states[0]) { states[0].p = 0; onActScrub(states[0]); }
+  reassertVisibility();
 
+  /* Let GSAP own refresh timing: debounce resize into a single refresh (which
+     invalidates tween endpoints AND fires reassertVisibility) instead of racing
+     a separate canvas-only timer against GSAP's own un-debounced auto-refresh. */
   var resizeTimer = null;
   window.addEventListener("resize", function () {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () { states.forEach(resizeFx); }, 150);
+    resizeTimer = setTimeout(function () { ScrollTrigger.refresh(); }, 150);
   });
+
+  /* Window dragged between displays of different pixel density: refresh so the
+     canvas re-rasterizes at the new DPR (its backing size folds devicePixelRatio)
+     and visibility re-asserts. Re-arms after each change — the query is DPR-specific. */
+  function watchDpr() {
+    var mq = window.matchMedia("(resolution: " + (window.devicePixelRatio || 1) + "dppx)");
+    var onChange = function () { mq.removeEventListener("change", onChange); ScrollTrigger.refresh(); watchDpr(); };
+    mq.addEventListener("change", onChange);
+  }
+  watchDpr();
+
+  /* Late layout shifts move the document under the story: #featuredProducts
+     injects on DOMContentLoaded, web fonts swap after first paint. Refresh so
+     each trigger's start/end track the final geometry. */
+  window.addEventListener("load", function () { ScrollTrigger.refresh(); });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { ScrollTrigger.refresh(); });
+  }
 })();
