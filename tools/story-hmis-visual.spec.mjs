@@ -45,12 +45,13 @@ test("story scene watermarks are removed from the visual layer", async ({ page }
   expect(watermark.opacity).toBe(0);
 });
 
-test("HMIS story keeps copy separated from factor cards on desktop", async ({ page }) => {
+test("HMIS story keeps copy separated from the hazard card on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
 
-  await expect(page.locator('.story .act[data-act="3"] .factor')).toHaveCount(3);
+  await expect(page.locator('.story .act[data-act="3"] .hmis-card')).toHaveCount(1);
+  await expect(page.locator('.story .act[data-act="3"] .hmis-diamond')).toHaveCount(1);
   await expect(page.locator(".savior-zero-scale .zero-axis")).toHaveCount(3);
 
   await page.evaluate(() => {
@@ -76,14 +77,14 @@ test("HMIS story keeps copy separated from factor cards on desktop", async ({ pa
   expect(layout.rigBottom).toBeLessThan(layout.viewportHeight + 120);
 });
 
-test("HMIS factor cards stack without clipping on mobile", async ({ page }) => {
+test("HMIS hazard card stacks without clipping on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
   const layout = await page.evaluate(() => {
     const act = document.querySelector('.story .act[data-act="3"]');
     window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.52);
-    const factors = [...document.querySelectorAll('.story .act[data-act="3"] .factor')]
+    const cards = [...document.querySelectorAll('.story .act[data-act="3"] .hmis-card, .story .act[data-act="3"] .hmis-diamond')]
       .map((card) => {
         const box = card.getBoundingClientRect();
         return {
@@ -95,16 +96,16 @@ test("HMIS factor cards stack without clipping on mobile", async ({ page }) => {
     return {
       viewportWidth: window.innerWidth,
       overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      factors,
+      cards,
     };
   });
 
   expect(layout.overflowX).toBe(0);
-  expect(layout.factors).toHaveLength(3);
-  for (const factor of layout.factors) {
-    expect(factor.left).toBeGreaterThanOrEqual(0);
-    expect(factor.right).toBeLessThanOrEqual(layout.viewportWidth);
-    expect(factor.width).toBeGreaterThan(250);
+  expect(layout.cards).toHaveLength(2);
+  for (const card of layout.cards) {
+    expect(card.left).toBeGreaterThanOrEqual(0);
+    expect(card.right).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(card.width).toBeGreaterThan(180);
   }
 });
 
