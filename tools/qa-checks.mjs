@@ -27,8 +27,8 @@ assert.match(
 );
 assert.match(
   story,
-  /startsPinned[\s\S]*start:\s*startsPinned \? "top 67px" : "top 85%"/,
-  "pinned scrollybook acts start at the visible top below the nav",
+  /start:\s*"top 67px"/,
+  "pinned scrollybook acts start at the visible top below the nav for every act",
 );
 assert.match(css, /body\.nav-open/, "mobile menu has scroll-lock CSS");
 assert.match(

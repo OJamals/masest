@@ -43,12 +43,12 @@ test("product detail shows next decision without an oversized hero", async ({ pa
     contentType: "application/json",
     body: JSON.stringify({
       products: [{
-        sku: "crhd",
+        sku: "cr-hd",
         name: "VertKleen CRHD",
         mode: "buy",
         active: true,
         product_variants: [
-          { vsku: "crhd-5", label: "5 gal pail", price: 125, currency: "usd", active: true, sort: 1 },
+          { vsku: "cr-hd-5", label: "5 gal pail", price: 125, currency: "usd", active: true, sort: 1 },
         ],
       }],
     }),

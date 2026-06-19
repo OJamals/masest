@@ -1,0 +1,149 @@
+/* Shared navigation contract.
+   This file owns the final header geometry so page-level CSS cannot push the
+   logo or commerce actions outside narrow mobile viewports. */
+
+.nav {
+  left: 0;
+  right: 0;
+  width: 100%;
+  transform: none;
+}
+
+.nav-inner {
+  width: min(100%, var(--maxw));
+  min-width: 0;
+}
+
+.nav-logo,
+.nav-actions,
+.nav-menu,
+.nav-account,
+.nav-cart,
+.nav-burger {
+  min-width: 0;
+}
+
+.nav-burger,
+.nav-cart,
+.nav-signin {
+  flex: 0 0 auto;
+}
+
+.lead-action-bar {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  body:has(.lead-action-bar) {
+    padding-bottom: 78px;
+  }
+
+  .nav {
+    top: 0;
+    border-radius: 0;
+    transform: none;
+  }
+
+  .nav-inner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    max-width: none;
+    padding-inline: 12px;
+  }
+
+  .nav-logo {
+    width: 44px;
+    overflow: hidden;
+  }
+
+  .nav-logo .logo-image {
+    height: 44px;
+  }
+
+  .nav-menu {
+    min-width: 0;
+  }
+
+  .nav-actions {
+    justify-self: end;
+    gap: 8px;
+  }
+
+  .nav-signin {
+    padding-inline: 12px;
+  }
+
+  .nav-cart,
+  .nav-burger {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nav-links {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    transform: none;
+  }
+
+  .lead-action-bar {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 48;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid rgba(15, 23, 42, .12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 18px 44px rgba(10, 20, 32, .18);
+    backdrop-filter: blur(16px) saturate(1.1);
+  }
+
+  .lead-action-bar a {
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 999px;
+    color: var(--ink);
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .lead-action-bar a:last-child {
+    background: var(--accent);
+    color: #fff;
+  }
+}
+
+@media (max-width: 720px) {
+  .nav.over-dark .nav-links.open > a,
+  .nav.over-dark .nav-links.open .nav-group summary,
+  .nav.over-dark .nav-links.open .nav-menu a {
+    color: var(--ink);
+  }
+
+  .nav-links.open .nav-group summary {
+    display: grid;
+    grid-template-columns: minmax(32px, 1fr) auto minmax(32px, 1fr);
+    align-items: center;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .nav-links.open .nav-group summary::after {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .nav-links.open .nav-group-label {
+    grid-column: 2;
+  }
+}

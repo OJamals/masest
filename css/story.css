@@ -391,19 +391,65 @@
   position: relative; z-index: 5; width: min(880px, 90vw); margin: 18vh auto 0;
   display: flex; flex-direction: column; justify-content: center; gap: 30px;
 }
-.hmis-factors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.factor {
-  position: relative; border-radius: 18px; padding: 26px 22px; text-align: center;
-  border: 1px solid var(--s-line); background: rgba(255, 255, 255, .03);
-  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+/* HMIS hazard diamond — cycles the four legacy chemicals (scrub-driven in story.js) */
+.hmis-stack {
+  display: flex; align-items: center; justify-content: center;
+  gap: clamp(26px, 4.5vw, 58px); flex-wrap: wrap; will-change: opacity;
 }
-.factor .bar { height: 5px; border-radius: 3px; margin-bottom: 18px; }
-.f-health .bar { background: var(--hmis-h); }
-.f-flam .bar  { background: var(--hmis-f); }
-.f-react .bar { background: var(--hmis-r); }
-.factor .fico { display: block; font-size: clamp(2rem, 4.4vw, 2.9rem); line-height: 1; color: var(--s-ink); }
-.factor .flabel { display: block; margin-top: 12px; font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--s-ink); }
-.factor .fmeaning { display: block; margin-top: 8px; font-size: .86rem; line-height: 1.5; color: var(--s-mut); }
+.hmis-diamond {
+  width: clamp(216px, 33vw, 330px); height: auto; overflow: visible;
+  filter: drop-shadow(0 20px 52px rgba(0, 0, 0, .5));
+}
+.dm-q { stroke: #0b0d12; stroke-width: 3; stroke-linejoin: round; }
+.dm-flam { fill: var(--hmis-f); }
+.dm-react { fill: var(--hmis-r); }
+.dm-health { fill: var(--hmis-h); }
+.dm-special { fill: #f4f6f8; }
+.dm-border { fill: none; stroke: #0b0d12; stroke-width: 4; stroke-linejoin: round; }
+.dm-num {
+  font-family: var(--s-font, 'Inter', system-ui, sans-serif);
+  font-weight: 800; font-size: 44px; fill: #0b0d12; text-anchor: middle;
+}
+
+.hmis-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 11px;
+  text-align: left; min-width: 232px; will-change: opacity;
+}
+.hc-danger {
+  color: #ff5a3c; font-weight: 900; font-size: 1.45rem; letter-spacing: .07em;
+  text-transform: uppercase; border: 2.5px solid #ff5a3c; border-radius: 9px; padding: 4px 28px;
+}
+.hc-type { font-weight: 800; font-size: clamp(1.3rem, 2.4vw, 1.7rem); color: var(--s-ink); line-height: 1.05; }
+.hc-name { font-size: clamp(1.05rem, 1.9vw, 1.3rem); color: rgba(244, 246, 248, .82); }
+.hc-desc { font-size: .9rem; color: var(--s-mut); }
+.hc-dots { display: flex; gap: 7px; margin-top: 6px; }
+.hc-dots i {
+  width: 18px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .22);
+  transition: width .3s var(--s-ease, ease), background .3s;
+}
+.hc-dots i.is-on { width: 30px; background: #ff8a6c; }
+
+.hmis-legend {
+  margin: 4px 0 0; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+  font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; color: var(--s-mut);
+}
+.hmis-legend b { font-weight: 800; }
+.lg-bh { color: var(--hmis-h); } .lg-bf { color: var(--hmis-f); } .lg-br { color: var(--hmis-r); }
+.lg-sep { opacity: .35; }
+
+/* Static fallback (no JS / reduced motion): show the four-chemical list, hide the live diamond */
+.hmis-legacy { display: none; }
+.story:not(.story-ready) .hmis-stack, .story:not(.story-ready) .hmis-legend { display: none; }
+.story:not(.story-ready) .hmis-legacy {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
+  width: min(680px, 92vw); margin: 0 auto; padding: 0; list-style: none;
+}
+.hmis-legacy li {
+  display: flex; flex-direction: column; gap: 4px; padding: 16px 18px;
+  border: 1px solid var(--s-line); border-radius: 14px; background: rgba(255, 255, 255, .03);
+}
+.hmis-legacy li b { color: var(--s-ink); font-size: 1.05rem; }
+.hmis-legacy li span { color: var(--s-mut); font-size: .85rem; letter-spacing: .02em; }
 
 .scale-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
 .scale-track {

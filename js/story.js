@@ -134,6 +134,7 @@ states.forEach(function (st) {
     }
     if (st.act === pipeAct) updateChips2(st);
     if (st.act === chemAct) updateChems(st);
+    if (st.act === hmisAct) updateHmis(st);
   }
 
   /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
@@ -196,6 +197,60 @@ states.forEach(function (st) {
       if (o > best) { best = o; current = i; }          /* most-visible slide wins */
     }
     if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = (current + 1) + " / " + n; }
+  }
+
+  /* ---- ACT 3: HMIS hazard diamond — cycle the four legacy chemicals ----
+     The diamond + label are driven entirely here (no [data-at] on the rig);
+     numbers count up on the first chemical, then the rig dips at each boundary
+     so the swap to the next chemical reads as a crossfade. Data + the no-JS
+     fallback both live in the .hmis-legacy list. */
+  var hmisAct = story.querySelector(".act-hmis");
+  var hmisStack = hmisAct ? hmisAct.querySelector(".hmis-stack") : null;
+  var hmisDiamond = hmisAct ? hmisAct.querySelector(".hmis-diamond") : null;
+  var dmH = hmisAct ? hmisAct.querySelector(".dm-hnum") : null;
+  var dmF = hmisAct ? hmisAct.querySelector(".dm-fnum") : null;
+  var dmR = hmisAct ? hmisAct.querySelector(".dm-rnum") : null;
+  var dmPicto = hmisAct ? hmisAct.querySelector(".dm-picto") : null;
+  var hcType = hmisAct ? hmisAct.querySelector(".hc-type") : null;
+  var hcName = hmisAct ? hmisAct.querySelector(".hc-name") : null;
+  var hcDesc = hmisAct ? hmisAct.querySelector(".hc-desc") : null;
+  var hmisDots = hmisAct ? Array.prototype.slice.call(hmisAct.querySelectorAll(".hc-dots i")) : [];
+  var lgH = hmisAct ? hmisAct.querySelector(".lg-h") : null;
+  var lgF = hmisAct ? hmisAct.querySelector(".lg-f") : null;
+  var lgR = hmisAct ? hmisAct.querySelector(".lg-r") : null;
+  var chems = hmisAct ? Array.prototype.slice.call(hmisAct.querySelectorAll(".hmis-legacy li")).map(function (li) {
+    var d = li.dataset;
+    return { h: +d.h, f: +d.f, r: +d.r, type: d.type, picto: d.picto, name: d.name, desc: d.desc };
+  }) : [];
+  var hmisCur = -1;
+  var HM_A = 0.12, HM_B = 0.9;                          /* fraction of the act's scrub spent cycling */
+  function setTxt(el, v) { if (el && el.textContent !== v) el.textContent = v; }
+
+  function updateHmis(st) {
+    if (!chems.length) return;
+    var n = chems.length;
+    var enter = smooth(clamp(0, 1, st.p / 0.07));        /* whole rig fades in as the act takes the stage */
+    var pos = clamp(0, n - 0.0001, (st.p - HM_A) / (HM_B - HM_A) * n);
+    var idx = pos | 0;
+    var local = pos - idx;                               /* 0..1 within the current chemical */
+    var c = chems[idx];
+    var ramp = idx === 0 ? smooth(clamp(0, 1, local / 0.4)) : 1;   /* first chemical counts 0->value */
+    setTxt(dmH, "" + Math.round(c.h * ramp));
+    setTxt(dmF, "" + Math.round(c.f * ramp));
+    setTxt(dmR, "" + Math.round(c.r * ramp));
+    if (idx !== hmisCur) {
+      hmisCur = idx;
+      setTxt(hcType, c.type); setTxt(hcName, c.name); setTxt(hcDesc, c.desc);
+      setTxt(lgH, "" + c.h); setTxt(lgF, "" + c.f); setTxt(lgR, "" + c.r);
+      if (dmPicto) { dmPicto.setAttribute("href", "#ico-" + c.picto); dmPicto.setAttribute("xlink:href", "#ico-" + c.picto); }
+      for (var d = 0; d < hmisDots.length; d++) hmisDots[d].classList.toggle("is-on", d === idx);
+      if (hmisDiamond) hmisDiamond.setAttribute("aria-label",
+        "Hazard diamond for " + c.name + ": health " + c.h + ", flammability " + c.f + ", reactivity " + c.r + ", " + c.type.toLowerCase());
+    }
+    /* dip at internal boundaries only — full at the first chemical's start and the last one's hold */
+    var edgeIn = idx === 0 ? 1 : smooth(clamp(0, 1, local / 0.12));
+    var edgeOut = idx === n - 1 ? 1 : smooth(clamp(0, 1, (1 - local) / 0.12));
+    if (hmisStack) hmisStack.style.opacity = (enter * Math.min(edgeIn, edgeOut)).toFixed(3);
   }
 
   /* ---- ACT 4: chemical dots land with their cards, then zero ---- */

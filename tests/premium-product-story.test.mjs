@@ -10,7 +10,8 @@ test("home page opens directly into the original scrolly story", () => {
 
   assert.doesNotMatch(html, /premium-story-hero/, "home should not include the rejected premium intro scene");
   assert.doesNotMatch(html, /replacement-console/, "home should not include the rejected replacement console scene");
-  assert.match(html, /<nav class="home-quick-actions"[\s\S]*<div class="story" id="story"/, "quick actions should hand off directly to the original scrolly");
+  assert.doesNotMatch(html, /home-quick-actions/, "home should not show the removed quick-action switcher");
+  assert.match(html, /<div class="story" id="story"/, "home should open directly into the original scrolly story");
   assert.doesNotMatch(css, /\.premium-story-hero\b/, "removed intro scene should not leave active styling behind");
   assert.doesNotMatch(css, /\.replacement-console\b/, "removed replacement console should not leave active styling behind");
 });

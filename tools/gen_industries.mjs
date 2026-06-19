@@ -26,7 +26,7 @@ const INDUSTRIES = [
   {
     slug: "marine", name: "Marine", icon: "ph-anchor",
     h1: "HMIS 0-0-0 chemistry for confined shipboard spaces.",
-    sub: "Cruise, commercial vessels, docks, and offshore maintenance where fumes and corrosion spread quickly in tight spaces.",
+    sub: "Cruise, commercial vessels, docks, and offshore maintenance where acid fumes and corrosion spread quickly in tight spaces.",
     intro: "Hull, aluminum, glass, and deck maintenance traditionally lean on hydrofluoric and hydrochloric acid brighteners and solvent washes, a serious problem in confined shipboard air. VertKleen Torque and AlumiBrite support those restoration jobs without those acids, and MultiWash supports drone and pressure-wash cleaning on occupied vessels.",
     products: ["torque", "alumibrite", "multiwash", "crhd"],
     proof: { img: "marine", caption: "Yellowfin vessel trim, caulking, and glass cleared with VertKleen." }
@@ -139,7 +139,7 @@ const GALLERY = {
   ],
   "military-government": [
     ["Two-decade rust and scale on equipment before treatment", "Equipment rust, pre-treatment"],
-    ["Component cleared of rust with HCR, no fume event", "Cleared with HCR, no fumes"],
+    ["Component cleared of rust with HCR and reduced acid-fume handling", "Cleared with HCR, reduced acid-fume handling"],
     ["Diamond-plate steel restored without hydrochloric acid handling", "Diamond plate, no HCl handling"]
   ],
   "education": [
@@ -154,7 +154,7 @@ const GALLERY = {
   ],
   "plumbing": [
     ["Glass and track heavy with calcium scale before Descaler", "Calcium scale, pre-Descaler"],
-    ["Fixture track cleared of calcium, acid-free", "Track cleared, acid-free"],
+    ["Fixture track cleared of calcium without hydrochloric acid handling", "Track cleared, no HCl handling"],
     ["Floor drain cleared of scale and buildup", "Floor drain cleared"]
   ]
 };
@@ -202,7 +202,7 @@ function industrySchema(ind, plain) {
         url: "https://masest.co/",
         logo: "https://masest.co/img/masest-logo.png",
         brand: "VertKleen",
-        description: "HMIS 0-0-0 industrial cleaning chemistry — the power of acid with the safety of water.",
+        description: "HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.",
         areaServed: "Worldwide",
         contactPoint: { "@type": "ContactPoint", contactType: "sales", url: "https://masest.co/contact.html" }
       },
@@ -299,6 +299,7 @@ function page(ind) {
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260619a">
+<link rel="stylesheet" href="../css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 </head>

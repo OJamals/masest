@@ -110,6 +110,34 @@ export function initQuoteForm() {
   }
 
   // ── Adaptive request type: the chooser swaps which field set is required/shown ──
+  const leadMessage = form.querySelector('[name="message"]');
+  if (leadMessage) leadMessage.required = true;
+  const advancedIds = ["fPhone", "fIndustry", "fLocation", "fProduct", "fVolume", "fTimeline", "fSystem", "fAuditWhen", "fShipTo", "fCompanyType", "fTerritory"];
+  const advancedFields = advancedIds.map(id => document.getElementById(id)?.closest(".field")).filter(Boolean);
+  const progressiveSampleGroup = form.querySelector('[data-intent-group="sample"]');
+  if (progressiveSampleGroup) advancedFields.push(progressiveSampleGroup);
+  const advancedButton = document.createElement("button");
+  advancedButton.type = "button";
+  advancedButton.className = "btn btn-secondary quote-advanced-toggle";
+  advancedButton.setAttribute("aria-expanded", "false");
+  advancedButton.textContent = "Add procurement details";
+  advancedFields[0]?.before(advancedButton);
+  const setAdvancedOpen = open => {
+    advancedButton.setAttribute("aria-expanded", open ? "true" : "false");
+    advancedButton.textContent = open ? "Hide procurement details" : "Add procurement details";
+    advancedFields.forEach(field => { field.hidden = !open; });
+    advancedIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.required = false;
+      el.removeAttribute("data-req");
+    });
+  };
+  if (advancedFields.length) {
+    setAdvancedOpen(false);
+    advancedButton.addEventListener("click", () => setAdvancedOpen(advancedButton.getAttribute("aria-expanded") !== "true"));
+  }
+
   const typeInput = form.querySelector('[name="type"]');
   const groups = [...form.querySelectorAll("[data-intent-group]")];
   const choices = [...form.querySelectorAll(".cta-choice")];

@@ -53,7 +53,7 @@ export const PRODUCTS = {
  icon: "ph-drop",
  image: "img/products/neutral-studio.webp",
     tag: "Neutral pH-7 degreaser with solvent-grade cutting power for sensitive surfaces and seals.",
-    desc: "A neutral pH-7 degreaser with the cutting power expected from high-pH and solvent degreasers, without flammability, harsh fumes, or surface damage.",
+    desc: "A neutral pH-7 degreaser with the cutting power expected from high-pH and solvent degreasers, with lower flammability and fume burden.",
     uses: [
       "Heavy equipment and machinery degreasing",
       "Marine, oil and gas, and aviation surfaces",
@@ -167,7 +167,7 @@ export const PRODUCTS = {
     icon: "ph-spray-bottle",
  image: "img/products/crhd-studio.webp",
     tag: "High-detergency alkaline degreaser, about 50% active and low-foam, for floors, equipment, drains, and engine bays.",
-    desc: "A high-detergency, low-foam alkaline degreaser at roughly 50% active strength, built to replace solvent and butyl degreasers on the heaviest grease without flammability or harsh fumes.",
+    desc: "A high-detergency, low-foam alkaline degreaser at roughly 50% active strength, built to replace solvent and butyl degreasers on the heaviest grease with lower handling burden.",
     uses: [
       "Warehouse and plant floors, forklifts, and engine bays",
       "Grease traps, drains, and commercial kitchen hoods",
@@ -190,7 +190,7 @@ export const PRODUCTS = {
     icon: "ph-snowflake",
  image: "img/products/descaler-studio.webp",
     tag: "Acid-free descaler for coils, towers, and plumbing. Fin-safe on aluminum and copper, with a fraction of the corrosion of conventional acids.",
-    desc: "An acid-free descaler (marketed as CRS in the dealership channel) that clears calcium, rust, and scale from coils, cooling towers, plumbing, and fire pumps. Fin-safe on aluminum and copper, chloride-free, and built for routine municipal-drain discharge.",
+    desc: "A hydrochloric-acid-free descaler (marketed as CRS in the dealership channel) that clears calcium, rust, and scale from coils, cooling towers, plumbing, and fire pumps. Fin-safe on aluminum and copper, chloride-free, and built for routine municipal-drain discharge.",
     uses: [
       "Aluminum and copper coil descaling, fin-safe",
       "Cooling towers, plumbing, and ammonia coils",
@@ -267,7 +267,7 @@ export const PRODUCTS = {
       "Field-proven clearing mildew from a painted column over two weeks"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Neutral pH, no bleach, no fumes"],
+      ["ph-shield-check", "HMIS 0-0-0", "Neutral pH, no bleach, lower fume burden"],
       ["ph-plant", "Plant and pet compatible", "Use according to label around landscaping and animals"],
       ["ph-timer", "Spray and walk away", "Keeps working up to a month; reapply about every six months"],
       ["ph-leaf", "100% biodegradable", "Non-skin-irritant in OECD 404 testing"]

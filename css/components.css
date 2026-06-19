@@ -135,8 +135,8 @@
   color: var(--muted, #5f656d);
 }
 .empty-state .empty-icon { font-size: 1.9rem; color: var(--accent, #0e7c86); line-height: 1; }
-.empty-state .empty-title { font-weight: 700; color: var(--ink, #15171c); font-size: 1.02rem; }
-.empty-state .empty-body { max-width: 38ch; font-size: .92rem; line-height: 1.5; }
+.empty-state .empty-title { font-weight: 700; color: var(--ink, #15171c); font-size: 1.25rem; }
+.empty-state .empty-body { max-width: 38ch; font-size: 1rem; line-height: 1.5; }
 .empty-state[hidden] { display: none; }
 
 /* ----------------------------------------------------------------------------
@@ -278,6 +278,8 @@
 ---------------------------------------------------------------------------- */
 body .page-hero,
 body .hero-split { padding-top: 116px; }
+
+body:has(#pMediaSection) .page-hero { padding-top: 72px; }
 @media (max-width: 680px) {
   body .page-hero,
   body .hero-split { padding-top: 88px; }

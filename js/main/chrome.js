@@ -34,7 +34,7 @@ export function renderChrome() {
     }
     const active = item.children.some(child => isActive(child.href));
     return `<details class="nav-group${active ? " active" : ""}">
-      <summary${active ? ' class="active" aria-current="page"' : ""}>${item.label}</summary>
+      <summary${active ? ' class="active" aria-current="page"' : ""}><span class="nav-group-label">${item.label}</span></summary>
       <div class="nav-menu">
         ${item.children.map(child =>
           `<a href="${root}${child.href}"${isActive(child.href) ? ' class="active" aria-current="page"' : ""}>${child.label}</a>`).join("")}
@@ -64,6 +64,29 @@ export function renderChrome() {
     </div>`;
   document.body.prepend(nav);
   document.body.prepend(skip);
+  const leadBarPages = new Set([
+    "products.html",
+    "product.html",
+    "services.html",
+    "programs.html",
+    "proof.html",
+    "resources.html",
+    "industries.html",
+    "about.html",
+    "",
+  ]);
+  const isIndustryDetail = /\/industries\/[^/]+\.html$/.test(location.pathname);
+  if (leadBarPages.has(page) || isIndustryDetail) {
+    const leadBar = document.createElement("div");
+    leadBar.className = "lead-action-bar";
+    leadBar.setAttribute("aria-label", "Primary request actions");
+    leadBar.innerHTML = `
+      <a href="${root}contact.html?type=audit"><i class="ph ph-map-trifold" aria-hidden="true"></i><span>Map chemical</span></a>
+      <a href="${root}contact.html?type=quote"><i class="ph ph-tag" aria-hidden="true"></i><span>Get quote</span></a>
+    `;
+    document.body.append(leadBar);
+  }
+
   const burger = document.getElementById("navBurger");
   const navLinks = document.getElementById("navLinks");
   const cartCount = nav.querySelector("[data-cart-count]");
@@ -122,7 +145,7 @@ export function renderChrome() {
         <div>
           <a class="foot-logo-link" href="${root}index.html" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST"></a>
           <div class="foot-brand">MASEST VertKleen&trade;</div>
-          <p>Safe, powerful, environmentally friendly alternatives to hazardous chemicals. Family-owned on Florida's Space Coast, trusted in 50+ countries.</p>
+          <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support. Family-owned on Florida's Space Coast, trusted in 50+ countries.</p>
           <div class="foot-kicker">Primary path</div>
         </div>
         <div class="foot-secondary">

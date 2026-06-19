@@ -1,0 +1,38 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const sitemap = readFileSync(new URL("../sitemap.xml", import.meta.url), "utf8");
+const pages = [...sitemap.matchAll(/<loc>https:\/\/masest\.co\/([^<]*)<\/loc>/g)]
+  .map((match) => match[1] || "index.html");
+
+function html(page) {
+  return readFileSync(new URL(`../${page}`, import.meta.url), "utf8");
+}
+
+function metaDescription(markup) {
+  const tag = markup.match(/<meta\s+[^>]*name=["']description["'][^>]*>/i)?.[0] || "";
+  return tag.match(/\bcontent=(["'])(.*?)\1/i)?.[2] || "";
+}
+
+test("public sitemap pages keep concise unique meta descriptions", () => {
+  const descriptions = new Map();
+  for (const page of pages) {
+    const description = metaDescription(html(page));
+    assert.ok(description.length >= 50, `${page} description too short`);
+    assert.ok(description.length <= 170, `${page} description too long: ${description.length}`);
+    assert.ok(!descriptions.has(description), `${page} duplicates ${descriptions.get(description)}`);
+    descriptions.set(description, page);
+  }
+});
+
+test("public copy avoids absolute safety claims", () => {
+  const banned = /\b(?:non[-\s]?toxic|harmless|zero[-\s]?risk|risk[-\s]?free|no[-\s]?fumes|fume[-\s]?free|chemical[-\s]?free|safe for all)\b/i;
+  for (const page of pages) {
+    const text = html(page)
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ");
+    assert.equal(text.match(banned)?.[0], undefined, `${page} uses absolute safety claim`);
+  }
+});
