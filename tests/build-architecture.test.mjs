@@ -17,6 +17,16 @@ test("package exposes one-command build and verification scripts", () => {
   assert.match(scripts["smoke:admin"] || "", /playwright test tools\/admin-auth-gate\.spec\.mjs/);
 });
 
+test("Cloudflare build emits baseline security headers", () => {
+  const build = read("tools/cf-build.mjs");
+
+  assert.match(build, /X-Content-Type-Options:\s*nosniff/);
+  assert.match(build, /Referrer-Policy:\s*strict-origin-when-cross-origin/);
+  assert.match(build, /X-Frame-Options:\s*SAMEORIGIN/);
+  assert.match(build, /Strict-Transport-Security:/);
+  assert.match(build, /Permissions-Policy:/);
+});
+
 test("architecture doc captures current app boundaries and target structure", () => {
   assert.equal(existsSync(new URL("docs/ARCHITECTURE.md", root)), true);
   const doc = read("docs/ARCHITECTURE.md");

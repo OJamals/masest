@@ -36,6 +36,8 @@ writeFileSync(join(OUT, '_headers'),
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()
 `);
 
 console.log(`cf-build: copied ${n} static files to ${OUT}/`);
