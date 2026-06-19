@@ -18,6 +18,46 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
+const textEncoder = new TextEncoder();
+
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(String(value || '')));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function normalizeSecretHash(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  const hash = raw.startsWith('sha256:') ? raw.slice(7) : raw;
+  return /^[a-f0-9]{64}$/.test(hash) ? hash : '';
+}
+
+async function verifySyncSecret(request, env) {
+  const provided = request.headers.get('x-qbo-sync-secret') || '';
+
+  if (env.QBO_SYNC_SECRET) {
+    return {
+      configured: true,
+      authorized: timingSafeEqual(provided, env.QBO_SYNC_SECRET)
+    };
+  }
+
+  const sb = adminClient(env);
+  const { data, error } = await sb.from('qbo_sync_settings')
+    .select('secret_sha256')
+    .eq('id', 1)
+    .maybeSingle();
+  if (error) throw error;
+
+  const storedHash = normalizeSecretHash(data?.secret_sha256);
+  if (!storedHash) return { configured: false, authorized: false };
+
+  const providedHash = await sha256Hex(provided);
+  return {
+    configured: true,
+    authorized: timingSafeEqual(providedHash, storedHash)
+  };
+}
+
 async function requeueClaimed(sb, orders, err) {
   const message = err?.message || String(err);
   await Promise.all((orders || []).map((order) => {
@@ -122,8 +162,14 @@ export async function runQboSync({ env, batch = 10 }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!env.QBO_SYNC_SECRET) return json(500, { error: 'qbo_sync_secret_not_configured' });
-  if (!timingSafeEqual(request.headers.get('x-qbo-sync-secret'), env.QBO_SYNC_SECRET)) {
+  let secretCheck;
+  try {
+    secretCheck = await verifySyncSecret(request, env);
+  } catch (err) {
+    return json(500, { error: 'qbo_sync_secret_lookup_failed', detail: err?.message || String(err) });
+  }
+  if (!secretCheck.configured) return json(500, { error: 'qbo_sync_secret_not_configured' });
+  if (!secretCheck.authorized) {
     return json(401, { error: 'unauthorized' });
   }
   return runQboSync({ env, batch: boundedBatch(request) });

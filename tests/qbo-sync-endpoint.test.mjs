@@ -7,6 +7,8 @@ const SRC = readFileSync(new URL("../functions/api/qbo-sync.js", import.meta.url
 test("qbo-sync endpoint is protected by QBO_SYNC_SECRET", () => {
   assert.match(SRC, /QBO_SYNC_SECRET/, "endpoint must require configured sync secret");
   assert.match(SRC, /x-qbo-sync-secret/i, "endpoint must read X-QBO-Sync-Secret header");
+  assert.match(SRC, /qbo_sync_settings/, "endpoint must support Supabase-backed sync secret fallback");
+  assert.match(SRC, /secret_sha256/, "fallback secret must use a hash instead of plaintext");
   assert.match(SRC, /json\(401,\s*\{\s*error:\s*'unauthorized'/,
     "bad or missing sync secret must return 401");
 });

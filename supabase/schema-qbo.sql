@@ -10,6 +10,15 @@ create table if not exists public.qbo_tokens (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.qbo_sync_settings (
+  id smallint primary key default 1 check (id = 1),
+  secret_sha256 text check (
+    secret_sha256 is null
+    or secret_sha256 ~* '^(sha256:)?[a-f0-9]{64}$'
+  ),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.qbo_items (
   sku text primary key,
   qbo_item_id text not null,
@@ -66,6 +75,7 @@ end
 $$;
 
 grant select, insert, update on public.qbo_tokens to service_role;
+grant select, insert, update on public.qbo_sync_settings to service_role;
 grant select, insert, update on public.qbo_items to service_role;
 grant select, insert, update on public.qbo_customers to service_role;
 grant execute on function public.claim_qbo_orders(int) to service_role;

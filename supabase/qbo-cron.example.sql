@@ -4,6 +4,13 @@
 
 create extension if not exists pg_cron with schema extensions;
 create extension if not exists pg_net with schema extensions;
+create extension if not exists pgcrypto with schema extensions;
+
+insert into public.qbo_sync_settings (id, secret_sha256, updated_at)
+values (1, encode(extensions.digest('<QBO_SYNC_SECRET>', 'sha256'), 'hex'), now())
+on conflict (id) do update
+set secret_sha256 = excluded.secret_sha256,
+    updated_at = excluded.updated_at;
 
 select cron.unschedule('qbo-sync')
 where exists (
