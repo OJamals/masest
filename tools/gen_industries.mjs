@@ -82,7 +82,7 @@ const INDUSTRIES = [
   {
     slug: "hvac-water", name: "HVAC / Water Treatment", icon: "ph-wind",
     h1: "Cooling tower programs with lower-hazard chemistry.",
-    sub: "Inhibitor, biocide, passivation, and pH control with ASHRAE 188 documentation.",
+    sub: "Inhibitor, biocide, passivation, pH control, and ASHRAE 188 support for cooling tower programs.",
     intro: "Cooling tower programs combine inhibitor, biocide, descaling acid, and pH control. VertKleen runs the full program with WaterSafe60 inhibitor, Purgo and DBNPA biocides, HCR passivation, and CR pH control, all with HMIS 0-0-0 documentation and ASHRAE 188 support.",
     products: ["watersafe60", "purgo", "hcr", "cr", "dbnpa"],
     proof: { img: "ac-coil", caption: "HVAC coils and water systems cleaned and treated, fin-safe." }

@@ -19,7 +19,7 @@ test("public sitemap pages keep concise unique meta descriptions", () => {
   const descriptions = new Map();
   for (const page of pages) {
     const description = metaDescription(html(page));
-    assert.ok(description.length >= 50, `${page} description too short`);
+    assert.ok(description.length >= 80, `${page} description too short`);
     assert.ok(description.length <= 170, `${page} description too long: ${description.length}`);
     assert.ok(!descriptions.has(description), `${page} duplicates ${descriptions.get(description)}`);
     descriptions.set(description, page);
