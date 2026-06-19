@@ -14,6 +14,12 @@ function requireClient() {
   return supabase;
 }
 
+// Notify the rest of the page (e.g. the nav account control) that auth state changed,
+// so controls rendered once at load can re-render without a full reload.
+function emitAuth() {
+  try { document.dispatchEvent(new CustomEvent('masest:auth')); } catch {}
+}
+
 // POST the company/profile to the registration function using a valid session token.
 async function postRegister(token, { company, profile }) {
   const r = await fetch('/api/account/register', {
@@ -23,6 +29,7 @@ async function postRegister(token, { company, profile }) {
   });
   const out = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(out.error || 'register_failed');
+  emitAuth();
   return out;
 }
 
@@ -67,6 +74,7 @@ export async function login({ email, password, captchaToken }) {
     options: captchaToken ? { captchaToken } : undefined,
   });
   if (error) throw error;
+  emitAuth();
   return data;
 }
 
@@ -93,6 +101,7 @@ export function onPasswordRecovery(callback) {
 
 export async function logout() {
   await requireClient().auth.signOut();
+  emitAuth();
 }
 
 /* Current account snapshot (profile + company + approval status), or null if logged out. */

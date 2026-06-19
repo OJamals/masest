@@ -18,7 +18,7 @@ test("shared chrome uses a replaceable auth placeholder", () => {
 test("account nav replaces the placeholder and exposes business plus account sections", () => {
   const nav = read("js/account-nav.js");
 
-  assert.match(nav, /placeholder\s*=\s*actions\.querySelector/, "account nav should find the static auth placeholder");
+  assert.match(nav, /actions\.querySelector\(['"]\.nav-account['"]\)/, "account nav should find the existing account control / static auth placeholder");
   assert.match(nav, /replaceWith\(mount\)/, "account nav should replace the placeholder instead of adding a second control");
   assert.match(nav, /Dashboard/, "signed-in nav should link to dashboard");
   assert.match(nav, /Business/, "signed-in nav should link to business tools");
@@ -26,6 +26,20 @@ test("account nav replaces the placeholder and exposes business plus account sec
   assert.match(nav, /Security/, "account section should include security");
   assert.match(nav, /Addresses/, "account section should include addresses");
   assert.match(nav, /Payment methods/, "account section should include payment methods");
+});
+
+test("account nav re-renders on auth change so the header swaps Sign in after login", () => {
+  const nav = read("js/account-nav.js");
+  const auth = read("js/auth.js");
+
+  // The control is built once at load; without an auth-change listener an in-page login
+  // (no reload) leaves a stale "Sign in" button in the header.
+  assert.match(nav, /addEventListener\(['"]masest:auth['"]/, "account nav must re-render on the masest:auth event");
+  assert.match(auth, /function emitAuth/, "auth helper should broadcast auth-state changes");
+  assert.match(auth, /new CustomEvent\(['"]masest:auth['"]\)/, "auth helper should dispatch the masest:auth event");
+  // login + logout must broadcast so both directions refresh the header.
+  assert.match(auth, /emitAuth\(\);\s*\n\s*return data;/, "login should emit an auth change");
+  assert.match(auth, /signOut\(\);\s*\n\s*emitAuth\(\);/, "logout should emit an auth change");
 });
 
 test("dashboard organizes signed-in tools with a sidebar and account group", () => {

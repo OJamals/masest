@@ -75,10 +75,20 @@ function injectStyle() {
 export async function initAccountNav({ nav, root = '' } = {}) {
   const actions = (nav || document).querySelector('.nav-actions');
   if (!actions) return;
-  const existing = actions.querySelector('.nav-account:not(.nav-auth-placeholder)');
-  if (existing) return;
-  const placeholder = actions.querySelector('.nav-auth-placeholder');
   injectStyle();
+  await renderAccountNav(actions, root);
+  // Re-render when auth state changes in-page (login / logout / finish setup) so the
+  // header swaps "Sign in" for the account dropdown without a full page reload.
+  if (!actions.dataset.authBound) {
+    actions.dataset.authBound = '1';
+    document.addEventListener('masest:auth', () => { renderAccountNav(actions, root).catch(() => {}); });
+  }
+}
+
+async function renderAccountNav(actions, root = '') {
+  // Replace whatever account control is present: the SSR placeholder on first render,
+  // or a previously-rendered control on a later auth-change re-render.
+  const prev = actions.querySelector('.nav-account');
 
   // Only load the Supabase SDK + call me() when a session exists; otherwise render Sign in instantly.
   let logout, api, data = null;
@@ -109,7 +119,7 @@ export async function initAccountNav({ nav, root = '' } = {}) {
   }
 
   const burger = actions.querySelector('.nav-burger');
-  if (placeholder) placeholder.replaceWith(mount);
+  if (prev) prev.replaceWith(mount);
   else actions.insertBefore(mount, burger || null);
 
   // Unread notification badge on the avatar (non-blocking; signed-in full accounts only).
