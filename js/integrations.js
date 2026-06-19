@@ -34,7 +34,7 @@ function hasAuthSessionMarker() {
 
 function crispQueue() {
   if (!hasWindow() || crispDisabled()) return null;
-  if (!Array.isArray(window.$crisp)) window.$crisp = [];
+  if (!window.$crisp) window.$crisp = [];
   return window.$crisp;
 }
 

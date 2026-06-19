@@ -12,6 +12,7 @@ test("Crisp integration exposes a complete public bridge", () => {
   assert.match(INTEGRATIONS, /export function identifyCrispLead/);
   assert.match(INTEGRATIONS, /export function openCrispChat/);
   assert.match(INTEGRATIONS, /export function trackCrispEvent/);
+  assert.doesNotMatch(INTEGRATIONS, /!Array\.isArray\(window\.\$crisp\)/);
   assert.match(INTEGRATIONS, /user:email/);
   assert.match(INTEGRATIONS, /user:nickname/);
   assert.match(INTEGRATIONS, /user:company/);
