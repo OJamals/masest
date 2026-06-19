@@ -302,7 +302,7 @@ function page(ind) {
 <link rel="stylesheet" href="../css/components.css">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 </head>
-<body>
+<body class="site-soft-bg">
 <a class="skip-link" href="#main">Skip to content</a>
 <noscript>
   <nav class="nojs-nav" aria-label="Site">

@@ -64,14 +64,50 @@ html { -webkit-text-size-adjust: 100%; }
   html { scroll-behavior: smooth; }
 }
 body {
-  font-family: var(--body-font);
-  color: var(--ink);
+font-family: var(--body-font);
+color: var(--ink);
+background: var(--bg);
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale;
+text-rendering: optimizeLegibility;
+font-feature-settings: "ss01", "cv01";
+line-height: 1.55;
+}
+
+body.site-soft-bg {
+  background:
+    linear-gradient(135deg, rgba(14, 124, 134, .08), rgba(250, 251, 252, 0) 46%) 0 0 / 100% 760px no-repeat,
+    var(--bg);
+}
+
+body.site-soft-bg main {
+  background: transparent;
+}
+
+body.site-soft-bg main > section:first-child:not(.block-dark) {
+  background:
+    linear-gradient(135deg, rgba(14, 124, 134, .08), rgba(250, 251, 252, 0) 46%),
+    var(--surface);
+}
+
+body.site-soft-bg main > section:not(:first-child):not(.block-dark) {
   background: var(--bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  font-feature-settings: "ss01", "cv01";
-  line-height: 1.55;
+}
+
+.proof-doc-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.brand,
+.adm-input {
+  min-height: 44px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
 }
 
 body.nav-open {
@@ -4504,6 +4540,84 @@ main:has(#pMediaSection) .section-head {
   line-height: 1.55;
 }
 
+.service-catalog-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.service-catalog-page .services-hero {
+  order: 0;
+  padding-top: clamp(82px, 9vw, 142px);
+  padding-bottom: clamp(30px, 5vw, 56px);
+}
+
+.service-catalog-page .service-catalog-band {
+  order: 1;
+  padding-top: clamp(24px, 4vw, 44px);
+  background: var(--bg);
+}
+
+.service-catalog-page .service-positioning {
+  order: 2;
+}
+
+.service-catalog-page .services-recommendation {
+  order: 3;
+}
+
+.service-catalog-page .services-proof {
+  order: 4;
+}
+
+.service-catalog-page .services-final-cta {
+  order: 5;
+}
+
+.service-catalog-page .services-hero-grid,
+.service-catalog-page .service-catalog-band > .container,
+.service-catalog-page .service-positioning-grid {
+  max-width: var(--maxw);
+}
+
+.service-catalog-page .services-hero-grid {
+  align-items: center;
+}
+
+.service-catalog-page .services-hero-copy .subhead,
+.service-catalog-page .service-catalog-intro p,
+.service-catalog-page .service-positioning-copy p {
+  max-width: 64ch;
+}
+
+.service-catalog-page .services-hero-media {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 720px) {
+  .service-catalog-page .services-hero {
+    padding-top: 38px;
+    padding-bottom: 32px;
+  }
+
+  .service-catalog-page .services-hero-media {
+    display: none;
+  }
+
+  .service-catalog-page .services-hero .hero-actions .btn-secondary {
+    display: none !important;
+  }
+
+  .service-catalog-page .service-catalog-band {
+    padding-top: 28px;
+  }
+
+  .service-catalog-page .service-catalog-intro .eyebrow {
+    display: none;
+  }
+}
+
 .service-catalog-intro {
   margin-bottom: clamp(24px, 4vw, 40px);
 }
@@ -4839,7 +4953,7 @@ main:has(#pMediaSection) .section-head {
     text-align: left;
   }
 
-  .service-card .btn {
-    width: 100%;
-  }
+.service-card .btn {
+  width: 100%;
+}
 }
