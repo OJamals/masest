@@ -115,7 +115,7 @@ test("all pages load shared main as a module", () => {
   const offenders = [];
   for (const page of htmlPages()) {
     const html = read(page);
-    if (/js\/main\.js/.test(html) && !/<script\s+type="module"\s+src="(?:\.\.\/)?js\/main\.js"><\/script>/.test(html)) {
+    if (/js\/main\.js/.test(html) && !/<script\s+type="module"\s+src="(?:\.\.\/)?js\/main\.js(?:\?[^"]*)?"><\/script>/.test(html)) {
       offenders.push(page);
     }
   }

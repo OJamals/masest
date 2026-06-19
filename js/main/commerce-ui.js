@@ -293,6 +293,7 @@ export function catalogCard(id) {
     : `<i class="ph ${p.icon}" aria-hidden="true"></i>`;
   return `
     <article class="shop-card" data-id="${id}">
+      <div class="shop-card-core">
       <a class="shop-card-link" href="product.html?id=${id}" aria-label="View details for ${p.name}">
         <span class="shop-card-media">${media}${badge}</span>
         <span class="shop-card-body">
@@ -305,6 +306,7 @@ export function catalogCard(id) {
       <div class="shop-card-buybar">
         ${bulkPriceHTML(id)}
         <span class="shop-card-commerce" data-commerce-action="${id}"></span>
+      </div>
       </div>
     </article>`;
 }
