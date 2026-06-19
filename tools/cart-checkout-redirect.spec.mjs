@@ -74,3 +74,72 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
   expect(checkoutBody.cart).toEqual([{ sku: "crhd", qty: 2 }]);
   expect(checkoutBody.items).toBeUndefined();
 });
+
+test("approved business NET checkout posts the cart payload with auth and clears the cart", async ({ page }) => {
+  let checkoutBody = null;
+  let checkoutAuth = null;
+
+  await page.addInitScript(() => {
+    window.MASEST_SUPABASE_URL = "https://example.supabase.co";
+    window.MASEST_SUPABASE_ANON = "anon";
+  });
+  await page.route("https://esm.sh/@supabase/supabase-js@2", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/javascript",
+    body: `
+      export function createClient() {
+        return {
+          auth: {
+            getSession: async () => ({ data: { session: { access_token: "business-token" } } })
+          }
+        };
+      }
+    `,
+  }));
+  await page.route("**/api/account/me", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      email: "buyer@example.com",
+      needs_profile: false,
+      company: { status: "approved", net_terms_days: 30 },
+    }),
+  }));
+  await page.route("**/api/products", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [
+        { sku: "crhd", name: "VertKleen CR-HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+      ],
+    }),
+  }));
+  await page.route("**/api/checkout", (route) => {
+    checkoutAuth = route.request().headers().authorization;
+    checkoutBody = route.request().postDataJSON();
+    return route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        net: true,
+        order_id: "ord_net_1",
+        message: "Order placed on account. A QuickBooks invoice will follow (NET terms).",
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ crhd: 2 })));
+  await page.reload({ waitUntil: "domcontentloaded" });
+
+  const netBtn = page.getByRole("button", { name: "Use NET Terms" });
+  await expect(netBtn).toBeEnabled();
+  await netBtn.click();
+
+  await expect(page.locator("#cartStatus")).toContainText("Order placed on account");
+  expect(checkoutAuth).toBe("Bearer business-token");
+  expect(checkoutBody.mode).toBe("net");
+  expect(checkoutBody.email).toBe("buyer@example.com");
+  expect(checkoutBody.cart).toEqual([{ sku: "crhd", qty: 2 }]);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("masest_cart"))).toBe("{}");
+});

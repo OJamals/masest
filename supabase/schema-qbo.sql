@@ -32,6 +32,7 @@ alter table public.orders
   add column if not exists qbo_sync_status qbo_sync_status,
   add column if not exists qbo_doc_id text,
   add column if not exists qbo_doc_type text,
+  add column if not exists qbo_payment_id text,
   add column if not exists qbo_synced_at timestamptz,
   add column if not exists qbo_error text,
   add column if not exists qbo_attempts int not null default 0,

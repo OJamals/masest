@@ -73,6 +73,30 @@ export function buildInvoicePayload(input) {
   return {
     ...baseDocumentPayload(input),
     Balance: Number(input.order?.total || 0),
+    AllowOnlinePayment: true,
+    AllowOnlineCreditCardPayment: true,
+    AllowOnlineACHPayment: true,
+  };
+}
+
+export function buildInvoicePaymentPayload({ order, customerRef, invoiceId }) {
+  const total = Number(order?.total || 0);
+  return {
+    CustomerRef: { value: customerRef },
+    TotalAmt: total,
+    PaymentRefNum: order?.stripe_payment_intent || docNumber(order?.id),
+    PrivateNote: `Stripe payment for MASEST order ${order?.id}`,
+    Line: [
+      {
+        Amount: total,
+        LinkedTxn: [
+          {
+            TxnId: invoiceId,
+            TxnType: 'Invoice',
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -92,15 +116,15 @@ export function documentPlanFor(order, companyNames = {}) {
 
   if (companyId) {
     return {
-      docType: 'sales_receipt',
-      entity: 'SalesReceipt',
+      docType: 'invoice_payment',
+      entity: 'Invoice',
       customer: { key: `company:${companyId}`, displayName: companyNames[companyId] || `Company ${companyId}` },
     };
   }
 
   return {
-    docType: 'sales_receipt',
-    entity: 'SalesReceipt',
+    docType: 'invoice_payment',
+    entity: 'Invoice',
     customer: { key: 'generic', displayName: GENERIC_CUSTOMER_NAME },
   };
 }
@@ -121,12 +145,30 @@ export async function syncOrder(sb, env, accessToken, realmId, order, items = []
   }
 
   const payloadInput = { order, items, customerRef, itemRefs };
-  const payload = plan.docType === 'invoice'
+  const payload = plan.docType === 'invoice' || plan.docType === 'invoice_payment'
     ? buildInvoicePayload(payloadInput)
     : buildSalesReceiptPayload(payloadInput);
-  const created = await qboCreate(env, accessToken, realmId, plan.entity, payload, fetchImpl);
-  const docId = created?.[plan.entity]?.Id;
+  let docId = null;
+  if (plan.entity === 'Invoice') {
+    docId = await findTransactionByField(env, accessToken, realmId, 'Invoice', 'DocNumber', payload.DocNumber, fetchImpl);
+  }
+  if (!docId) {
+    const created = await qboCreate(env, accessToken, realmId, plan.entity, payload, fetchImpl);
+    docId = created?.[plan.entity]?.Id;
+  }
   if (!docId) throw new Error(`qbo_${plan.entity.toLowerCase()}_id_missing`);
+
+  if (plan.docType === 'invoice_payment') {
+    const paymentPayload = buildInvoicePaymentPayload({ order, customerRef, invoiceId: docId });
+    let paymentId = await findTransactionByField(env, accessToken, realmId, 'Payment', 'PaymentRefNum', paymentPayload.PaymentRefNum, fetchImpl);
+    if (!paymentId) {
+      const payment = await qboCreate(env, accessToken, realmId, 'Payment', paymentPayload, fetchImpl);
+      paymentId = payment?.Payment?.Id;
+    }
+    if (!paymentId) throw new Error('qbo_payment_id_missing');
+    return { docId, docType: plan.docType, paymentId };
+  }
+
   return { docId, docType: plan.docType };
 }
 
@@ -147,6 +189,13 @@ async function qboQuery(env, accessToken, realmId, query, fetchImpl = fetch) {
   const response = await fetchImpl(url, { headers: qboHeaders(accessToken) });
   if (!response.ok) throw new Error(`qbo_query_failed:${response.status}`);
   return response.json();
+}
+
+async function findTransactionByField(env, accessToken, realmId, entity, field, value, fetchImpl = fetch) {
+  if (!value) return null;
+  const safeValue = qboString(value);
+  const found = await qboQuery(env, accessToken, realmId, `select Id from ${entity} where ${field} = '${safeValue}' maxresults 1`, fetchImpl);
+  return found.QueryResponse?.[entity]?.[0]?.Id || null;
 }
 
 async function qboCreate(env, accessToken, realmId, entity, body, fetchImpl = fetch) {

@@ -280,9 +280,11 @@ body .page-hero,
 body .hero-split { padding-top: 116px; }
 
 body:has(#pMediaSection) .page-hero { padding-top: 72px; }
+body .product-detail-hero { padding-bottom: 42px; }
 @media (max-width: 680px) {
   body .page-hero,
   body .hero-split { padding-top: 88px; }
+  body:has(#pMediaSection) .page-hero { padding-top: 82px; }
 }
 
 /* Programs pricing: the cadence label sits on its own line so the widest tier

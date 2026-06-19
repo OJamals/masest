@@ -79,7 +79,7 @@
 </noscript>
 
 <main id="main">
-<section class="page-hero">
+<section class="page-hero product-detail-hero">
   <div class="wrap hero-grid">
     <div>
       <div class="breadcrumb"><a href="products.html">Products</a> / <span id="bcName">&hellip;</span></div>
@@ -279,8 +279,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!response.ok) throw new Error("catalog_unavailable");
         const payload = await response.json();
         buySkel.remove();
+        const acceptedSkus = [commerceId, id].map(s => String(s || "").toLowerCase()).filter(Boolean);
         const row = (payload.products || []).find(item =>
-          String(item.sku).toLowerCase() === commerceId || String(item.products?.sku || "").toLowerCase() === commerceId
+          acceptedSkus.includes(String(item.sku).toLowerCase()) || acceptedSkus.includes(String(item.products?.sku || "").toLowerCase())
         );
         const parent = row?.products && typeof row.products === "object" ? row.products : row;
         const imageUrl = parent?.image_url || row?.image_url;

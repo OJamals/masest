@@ -42,7 +42,17 @@ test("staff orders API can update tracking metadata and notify buyers", () => {
   assert.match(ADMIN_ORDERS, /tracking_number/);
   assert.match(ADMIN_ORDERS, /tracking_url/);
   assert.match(ADMIN_ORDERS, /estimated_delivery_at/);
-  assert.match(ADMIN_ORDERS, /notifyCompany\(sb,\s*env,\s*request,\s*order\?\.company_id,\s*['"]tracking updated['"]/);
+  assert.match(ADMIN_ORDERS, /const notifyLabel\s*=\s*fulfilled\s*\?\s*['"]fulfilled['"]\s*:\s*['"]tracking updated['"]/);
+  assert.match(ADMIN_ORDERS, /notifyCompany\(sb,\s*env,\s*request,\s*order\?\.company_id,\s*notifyLabel/);
+});
+
+test("staff shipment tracking with a carrier tracking number marks orders fulfilled", () => {
+  assert.match(ADMIN_ORDERS, /const update\s*=\s*\{\s*tracking_status:\s*trackingStatus/);
+  assert.match(ADMIN_ORDERS, /const fulfilled\s*=\s*\['shipped',\s*'delivered'\]\.includes\(trackingStatus\)\s*&&\s*trackingNumber/);
+  assert.match(
+    ADMIN_ORDERS,
+    /if\s*\(fulfilled\)\s*\{\s*update\.status\s*=\s*'fulfilled';\s*\}/
+  );
 });
 
 test("staff console surfaces tracking controls on each order", () => {

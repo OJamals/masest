@@ -44,17 +44,17 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const limit = isCsv ? 5000 : Math.min(200, parseInt(params.get('limit') || '100', 10) || 100);
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,company_id,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)')
+      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)')
       .neq('status', 'cart').order('created_at', { ascending: false }).limit(limit);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
     const { data, error } = await q;
     if (error) return json(500, { error: error.message });
 
     if (isCsv) {
-      const rows = [['Order', 'Date', 'Company', 'Status', 'Payment', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
+      const rows = [['Order', 'Date', 'Company', 'Status', 'Payment', 'QBO doc', 'QBO payment', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
       for (const o of data || []) {
         const items = (o.order_items || []).map((i) => `${i.qty}x ${i.name || i.sku}`).join('; ');
-        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.status, o.payment_method || '',
+        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.status, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '',
           o.tracking_status || '', o.carrier || '', o.tracking_number || '', o.estimated_delivery_at || '',
           o.subtotal ?? '', o.tax ?? '', o.total ?? '', o.currency || '', items]);
       }
@@ -136,19 +136,29 @@ export async function onRequest({ request, env }) {
         : (body.shipped_at ? new Date(body.shipped_at) : null);
       if (shippedAt && Number.isNaN(shippedAt.getTime())) return json(400, { error: 'invalid_shipped_at' });
 
-      const { data: order, error } = await sb.from('orders').update({
+      const fulfilled = ['shipped', 'delivered'].includes(trackingStatus) && trackingNumber;
+      const update = {
         tracking_status: trackingStatus,
         carrier,
         tracking_number: trackingNumber,
         tracking_url: trackingUrl,
         estimated_delivery_at: estimatedDeliveryAt ? estimatedDeliveryAt.toISOString() : null,
         shipped_at: shippedAt ? shippedAt.toISOString() : null,
-      })
+      };
+      if (fulfilled) {
+        update.status = 'fulfilled';
+      }
+
+      const { data: order, error } = await sb.from('orders').update(update)
         .eq('id', body.id)
         .select('id,company_id,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
         .single();
       if (error) return json(500, { error: error.message });
-      await notifyCompany(sb, env, request, order?.company_id, 'tracking updated', `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim());
+      const notifyLabel = fulfilled ? 'fulfilled' : 'tracking updated';
+      const notifyBody = fulfilled
+        ? `Your order has shipped. ${carrier || 'Carrier'} ${trackingNumber}`.trim()
+        : `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim();
+      await notifyCompany(sb, env, request, order?.company_id, notifyLabel, notifyBody);
       return json(200, { ok: true, order });
     }
 

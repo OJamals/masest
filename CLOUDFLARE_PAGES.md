@@ -67,3 +67,5 @@ Set these Cloudflare Pages secrets before enabling the worker:
 - `QBO_ENVIRONMENT=sandbox` or `production`
 
 Connect QuickBooks from `admin.html`. The schedule triggers `POST /api/qbo-sync`; manual runs can use the same endpoint with header `x-qbo-sync-secret: $QBO_SYNC_SECRET`.
+Generated NET invoices are created with online card and ACH payment options enabled; the connected QuickBooks Online company must have QuickBooks Payments enabled for those options to appear to buyers.
+Stripe-paid checkout orders sync to QuickBooks as an invoice plus a linked QBO payment. The QBO payment reference is the Stripe PaymentIntent id, so Stripe remains the processor while QuickBooks remains the invoice/accounting source of truth.
