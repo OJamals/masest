@@ -133,3 +133,28 @@ test("handleCrispEvent writes operator replies as staff messages and buyer notif
   });
   assert.equal(writes.find((w) => w.table === "notifications")?.row.title, "New Crisp chat response");
 });
+
+test("handleCrispEvent reports Crisp session write failures", async () => {
+  const { handleCrispEvent } = await import("../functions/api/crisp/webhook.js");
+  const sb = {
+    from: () => ({
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }),
+      upsert: () => {
+        throw new Error("schema cache missing");
+      },
+    }),
+  };
+
+  const result = await handleCrispEvent(sb, {}, {
+    website_id: "site",
+    event: "session:set_email",
+    data: {
+      website_id: "site",
+      session_id: "session_1",
+      email: "buyer@example.com",
+    },
+  });
+
+  assert.equal(result.routed, false);
+  assert.equal(result.error, "crisp_session_upsert_failed");
+});

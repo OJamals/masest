@@ -92,8 +92,8 @@ async function upsertCrispSession(sb, event) {
   try {
     const { data: saved } = await sb.from('crisp_sessions').upsert(row, { onConflict: 'session_id' }).select('*').maybeSingle();
     return saved || row;
-  } catch {
-    return row;
+  } catch (err) {
+    return { ...row, __error: clean(err?.message || err, 240) || 'session_upsert_failed' };
   }
 }
 
@@ -164,11 +164,13 @@ async function routeCrispMessage(sb, env, event) {
 export async function handleCrispEvent(sb, env, event) {
   if (!event?.event || !event?.data) return { routed: false, reason: 'unsupported_payload' };
   if (SESSION_EVENTS.has(event.event)) {
-    await upsertCrispSession(sb, event);
+    const session = await upsertCrispSession(sb, event);
+    if (session?.__error) return { routed: false, error: 'crisp_session_upsert_failed', detail: session.__error };
     return { routed: true, session: true };
   }
   if (MESSAGE_EVENTS.has(event.event)) {
-    await upsertCrispSession(sb, event);
+    const session = await upsertCrispSession(sb, event);
+    if (session?.__error) return { routed: false, error: 'crisp_session_upsert_failed', detail: session.__error };
     return routeCrispMessage(sb, env, event);
   }
   return { routed: false, ignored: true };
