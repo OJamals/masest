@@ -51,3 +51,11 @@ test("sitemap lists industry subpages and stays valid", () => {
   const locs = [...xml.matchAll(/<loc>([^<]+)/g)].map((m) => m[1]);
   assert.equal(locs.length, new Set(locs).size, "sitemap has duplicate <loc> entries");
 });
+test("product no-script fallback starts with an h1", () => {
+  const html = read("product.html");
+  const fallback = html.match(/<noscript>[\s\S]*?<\/noscript>/i)?.[0] || "";
+  const firstHeading = fallback.match(/<h([1-6])\b/i)?.[1];
+
+  assert.equal(firstHeading, "1");
+  assert.match(fallback, /Procurement-ready VertKleen replacements\./);
+});
