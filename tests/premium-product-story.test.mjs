@@ -4,16 +4,15 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("home page leads with a premium replacement story instead of a buried headline", () => {
+test("home page opens directly into the original scrolly story", () => {
   const html = read("index.html");
   const css = read("css/style.css");
 
-  assert.match(html, /class="[^"]*\bpremium-story-hero\b[^"]*"/, "home needs a first-viewport premium story hero");
-  assert.match(html, /class="[^"]*\breplacement-console\b[^"]*"/, "home needs a replacement console before the scrollytelling acts");
-  assert.match(html, /HMIS 3-0-1[\s\S]*HMIS 0-0-0/, "home should show the hazard-to-zero replacement arc");
-  assert.match(css, /\.premium-story-hero\b/, "premium story hero needs dedicated styling");
-  assert.match(css, /\.replacement-console\b/, "replacement console needs dedicated styling");
-  assert.match(css, /\.island-arrow\b/, "CTAs should use nested button-in-button arrow treatment");
+  assert.doesNotMatch(html, /premium-story-hero/, "home should not include the rejected premium intro scene");
+  assert.doesNotMatch(html, /replacement-console/, "home should not include the rejected replacement console scene");
+  assert.match(html, /<nav class="home-quick-actions"[\s\S]*<div class="story" id="story"/, "quick actions should hand off directly to the original scrolly");
+  assert.doesNotMatch(css, /\.premium-story-hero\b/, "removed intro scene should not leave active styling behind");
+  assert.doesNotMatch(css, /\.replacement-console\b/, "removed replacement console should not leave active styling behind");
 });
 
 test("product listing exposes proof-led premium commerce cards", () => {
