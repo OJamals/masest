@@ -90,7 +90,8 @@ async function upsertCrispSession(sb, event) {
   };
 
   try {
-    const { data: saved } = await sb.from('crisp_sessions').upsert(row, { onConflict: 'session_id' }).select('*').maybeSingle();
+    const { data: saved, error } = await sb.from('crisp_sessions').upsert(row, { onConflict: 'session_id' }).select('*').maybeSingle();
+    if (error) return { ...row, __error: clean(error.message || error, 240) || 'session_upsert_failed' };
     return saved || row;
   } catch (err) {
     return { ...row, __error: clean(err?.message || err, 240) || 'session_upsert_failed' };

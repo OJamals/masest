@@ -158,3 +158,30 @@ test("handleCrispEvent reports Crisp session write failures", async () => {
   assert.equal(result.routed, false);
   assert.equal(result.error, "crisp_session_upsert_failed");
 });
+
+test("handleCrispEvent reports Supabase returned session write errors", async () => {
+  const { handleCrispEvent } = await import("../functions/api/crisp/webhook.js");
+  const sb = {
+    from: () => ({
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }),
+      upsert: () => ({
+        select: () => ({
+          maybeSingle: async () => ({ data: null, error: { message: "Could not find table crisp_sessions" } }),
+        }),
+      }),
+    }),
+  };
+
+  const result = await handleCrispEvent(sb, {}, {
+    website_id: "site",
+    event: "session:set_email",
+    data: {
+      website_id: "site",
+      session_id: "session_1",
+      email: "buyer@example.com",
+    },
+  });
+
+  assert.equal(result.routed, false);
+  assert.equal(result.error, "crisp_session_upsert_failed");
+});
