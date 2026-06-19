@@ -173,8 +173,34 @@ document.addEventListener("DOMContentLoaded", () => {
     const COMMERCE_ALIAS = { crhd: "cr-hd", crs: "descaler" };
     const commerceId = COMMERCE_ALIAS[id] || id;
     const p = PRODUCTS[id];
+    function productCanonicalUrl() {
+      return `https://masest.co/product.html?id=${encodeURIComponent(id)}`;
+    }
+    function setMetaContent(selector, value) {
+      const el = document.querySelector(selector);
+      if (el && value) el.setAttribute("content", value);
+    }
+    function setProductMeta(product) {
+      const canonicalUrl = productCanonicalUrl();
+      const title = `${product.name} | MASEST VertKleen`;
+      const replacementLine = product.replaces
+        ? (/^replaces\b/i.test(product.replaces) ? product.replaces : `Replaces ${product.replaces}`)
+        : "";
+      const description = [
+        product.desc,
+        replacementLine ? `${replacementLine}.` : "",
+        product.hmis ? `HMIS ${product.hmis}.` : "",
+      ].filter(Boolean).join(" ");
+      const canonical = document.querySelector('link[rel="canonical"]');
+      if (canonical) canonical.href = canonicalUrl;
+      document.title = title;
+      setMetaContent('meta[name="description"]', description);
+      setMetaContent('meta[property="og:title"]', title);
+      setMetaContent('meta[property="og:description"]', description);
+      setMetaContent('meta[property="og:url"]', canonicalUrl);
+    }
     function setProductJsonLd(product) {
-      const canonicalUrl = `https://masest.co/product.html?id=${encodeURIComponent(id)}`;
+      const canonicalUrl = productCanonicalUrl();
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) canonical.href = canonicalUrl;
       const graph = {
@@ -224,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </section>`;
       return;
     }
-    document.title = p.name + " | MASEST VertKleen";
+    setProductMeta(p);
     document.getElementById("staticProductFallback")?.setAttribute("hidden", "");
     document.getElementById("bcName").textContent = p.name;
     setProductJsonLd(p);

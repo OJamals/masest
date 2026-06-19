@@ -68,6 +68,36 @@ test("storefront grid uses owner-updated product photos from the commerce API", 
   });
 });
 
+test("product detail publishes product-specific SEO metadata", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await routeProducts(page);
+      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "networkidle" });
+
+      const meta = await page.evaluate(() => ({
+        title: document.title,
+        description: document.querySelector('meta[name="description"]')?.content || "",
+        ogTitle: document.querySelector('meta[property="og:title"]')?.content || "",
+        ogDescription: document.querySelector('meta[property="og:description"]')?.content || "",
+        ogUrl: document.querySelector('meta[property="og:url"]')?.content || "",
+        canonical: document.querySelector('link[rel="canonical"]')?.href || "",
+      }));
+
+      assert.equal(meta.title, "VertKleen HCR | MASEST VertKleen");
+      assert.match(meta.description, /descaling, rust removal, passivation/);
+      assert.equal(meta.ogTitle, "VertKleen HCR | MASEST VertKleen");
+      assert.match(meta.ogDescription, /descaling, rust removal, passivation/);
+      assert.doesNotMatch(meta.description, /Replaces Replaces/);
+      assert.equal(meta.ogUrl, "https://masest.co/product.html?id=hcr");
+      assert.equal(meta.canonical, "https://masest.co/product.html?id=hcr");
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("product detail uses owner-updated product photos from the commerce API", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
