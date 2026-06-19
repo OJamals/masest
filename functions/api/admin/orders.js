@@ -4,7 +4,7 @@
 //   POST { id, status }         → update status + notify company
 //   POST { id, action:'refund' }→ Stripe refund + cancel + notify
 import Stripe from 'stripe';
-import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
 const TRACKING_STATUSES = ['processing', 'packing', 'shipped', 'delivered', 'blocked'];
@@ -14,7 +14,7 @@ function toCsv(rows) {
 }
 
 async function notifyCompany(sb, env, request, companyId, label, extra) {
-  if (!companyId) return;
+  if (!companyId) return [];
   await sb.from('notifications').insert({
     company_id: companyId, type: 'order', title: `Order ${label}`,
     body: extra || `Your order is now "${label}".`, link: '/dashboard.html#orders',
@@ -28,6 +28,33 @@ async function notifyCompany(sb, env, request, companyId, label, extra) {
       bodyHtml: `<p>${extra || `Your MASEST order status is now <b>${label}</b>.`}</p>`,
       ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders`,
     }),
+  });
+  return emails;
+}
+
+async function notifyBuyerTracking(env, request, order, label, extra, exclude = []) {
+  const email = String(order?.customer_email || '').trim();
+  if (!email) return false;
+  const normalized = email.toLowerCase();
+  if ((exclude || []).some((item) => String(item || '').trim().toLowerCase() === normalized)) return false;
+
+  const appUrl = env.APP_URL || new URL(request.url).origin;
+  const details = [
+    order?.carrier ? `<li><strong>Carrier:</strong> ${htmlEscape(order.carrier)}</li>` : '',
+    order?.tracking_number ? `<li><strong>Tracking #:</strong> ${htmlEscape(order.tracking_number)}</li>` : '',
+    order?.estimated_delivery_at ? `<li><strong>Estimated delivery:</strong> ${htmlEscape(order.estimated_delivery_at)}</li>` : '',
+  ].filter(Boolean).join('');
+
+  return sendEmail(env, {
+    to: [email],
+    subject: `Order ${label}`,
+    html: emailLayout({
+      heading: `Order ${label}`,
+      bodyHtml: `<p>${htmlEscape(extra || `Your order is now "${label}".`)}</p>${details ? `<ul>${details}</ul>` : ''}`,
+      ctaText: order?.tracking_url ? 'Track shipment' : 'Visit MASEST',
+      ctaUrl: order?.tracking_url || appUrl,
+    }),
+    category: 'order',
   });
 }
 
@@ -44,17 +71,17 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const limit = isCsv ? 5000 : Math.min(200, parseInt(params.get('limit') || '100', 10) || 100);
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)')
+      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)')
       .neq('status', 'cart').order('created_at', { ascending: false }).limit(limit);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
     const { data, error } = await q;
     if (error) return json(500, { error: error.message });
 
     if (isCsv) {
-      const rows = [['Order', 'Date', 'Company', 'Status', 'Payment', 'QBO doc', 'QBO payment', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
+      const rows = [['Order', 'Date', 'Company', 'Customer email', 'Status', 'Payment', 'QBO doc', 'QBO payment', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
       for (const o of data || []) {
         const items = (o.order_items || []).map((i) => `${i.qty}x ${i.name || i.sku}`).join('; ');
-        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.status, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '',
+        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.status, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '',
           o.tracking_status || '', o.carrier || '', o.tracking_number || '', o.estimated_delivery_at || '',
           o.subtotal ?? '', o.tax ?? '', o.total ?? '', o.currency || '', items]);
       }
@@ -151,14 +178,15 @@ export async function onRequest({ request, env }) {
 
       const { data: order, error } = await sb.from('orders').update(update)
         .eq('id', body.id)
-        .select('id,company_id,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
+        .select('id,company_id,customer_email,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
         .single();
       if (error) return json(500, { error: error.message });
       const notifyLabel = fulfilled ? 'fulfilled' : 'tracking updated';
       const notifyBody = fulfilled
         ? `Your order has shipped. ${carrier || 'Carrier'} ${trackingNumber}`.trim()
         : `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim();
-      await notifyCompany(sb, env, request, order?.company_id, notifyLabel, notifyBody);
+      const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, notifyLabel, notifyBody);
+      await notifyBuyerTracking(env, request, order, notifyLabel, notifyBody, companyRecipients);
       return json(200, { ok: true, order });
     }
 

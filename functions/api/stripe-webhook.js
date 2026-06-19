@@ -160,6 +160,7 @@ export async function onRequestPost({ request, env }) {
       subtotal, tax, total,
       currency: s.currency || 'usd',
       stripe_payment_intent: s.payment_intent,
+      customer_email: buyerEmailFromStripeSession(s),
       ship_address: s.shipping_details || s.customer_details || null,
     }).select('id').single();
 

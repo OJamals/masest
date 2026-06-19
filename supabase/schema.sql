@@ -91,6 +91,7 @@ create table if not exists public.orders (
   id                    uuid primary key default gen_random_uuid(),
   company_id            uuid references public.companies(id),   -- null = guest checkout (no B2B account)
   user_id               uuid references public.profiles(id),
+  customer_email        text,
   status                order_status not null default 'cart',
   payment_method        payment_method,
   subtotal              numeric(12,2) not null default 0,
@@ -105,6 +106,7 @@ create table if not exists public.orders (
 create index if not exists orders_company_idx on public.orders(company_id);
 
 alter table public.orders add column if not exists tracking_status text default 'processing';
+alter table public.orders add column if not exists customer_email text;
 alter table public.orders add column if not exists carrier text;
 alter table public.orders add column if not exists tracking_number text;
 alter table public.orders add column if not exists tracking_url text;

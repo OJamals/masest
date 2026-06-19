@@ -129,6 +129,7 @@ export async function onRequestPost({ request, env }) {
     const { data: order, error: orderErr } = await sb.from('orders').insert({
       company_id: company.id,
       user_id: user.id,
+      customer_email: user.email || null,
       status: 'net_open',
       payment_method: 'net',
       qbo_sync_status: 'pending',
