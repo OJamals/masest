@@ -350,7 +350,7 @@ async function loadCatalog() {
       const email = document.getElementById("checkoutEmail");
       if (email && !email.value) email.value = data.email || "";
     } else {
-      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Checking out as a guest. <a href="account.html?return=cart.html">Sign in or create an account</a> for NET terms and saved details — your cart stays with you.`;
+      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Checking out as a guest. <a class="btn-sm" href="account.html?return=cart.html">Sign in or create an account</a> for NET terms and saved details — your cart stays with you.`;
     }
     box.hidden = false;
   }

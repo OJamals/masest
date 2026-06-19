@@ -431,7 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (p.hmis === "0-0-0") {
       rows.innerHTML = ["Health", "Flammability", "Reactivity"].map(l =>
         `<div class="hmis-row"><span class="lbl">${l}</span><span class="val">0</span></div>`).join("");
-      document.getElementById("panelFoot").textContent = "Safe on skin and eyes, non-fuming, non-corrosive to equipment and seals.";
+      document.getElementById("panelFoot").textContent = "HMIS 0-0-0 profile for the core line, with non-fuming handling and broad material compatibility documented by product SDS and application notes.";
     } else {
       rows.innerHTML = `<div class="hmis-row"><span class="lbl">Classification</span><span class="val" style="width:auto;padding:0 14px;font-size:.9rem">Low</span></div>`;
       document.getElementById("panelFoot").textContent = "EPA-registered, general-use. The program's one mild-hazard product; every other VertKleen product is HMIS 0-0-0.";

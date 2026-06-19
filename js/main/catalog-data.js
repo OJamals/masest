@@ -6,8 +6,8 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-flask",
  image: "img/products/hvac-hcr-studio.webp",
-    tag: "Biodegradable acid replacement for descaling, rust removal, and passivation. No fumes, no burns, no hazmat handling.",
-    desc: "A biodegradable, SynTec-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. No fumes, no burns, no hazmat handling.",
+    tag: "Biodegradable acid replacement for descaling, rust removal, and passivation. Designed to reduce fuming, burn, and hazmat handling risk versus legacy acids.",
+    desc: "A biodegradable, SynTec-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. Designed to reduce fuming, burn, and hazmat handling risk versus legacy acids.",
     uses: [
       "Cooling tower fill and heat-exchanger descaling",
       "Rust removal: restored diamond-plated stainless steel stained for years",
@@ -29,8 +29,8 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-drop-half",
  image: "img/products/hvac-cr-studio.webp",
-    tag: "NSF/ANSI 60 caustic replacement and pH adjuster. High-pH cleaning power at a zero hazard rating.",
-    desc: "An NSF/ANSI 60 caustic replacement and pH adjuster covering high-pH alkaline needs: degreasing, hood filters, floors, and pH control, all at a zero hazard rating.",
+    tag: "NSF/ANSI 60 caustic replacement and pH adjuster. High-pH cleaning power with an HMIS 0-0-0 profile.",
+    desc: "An NSF/ANSI 60 caustic replacement and pH adjuster covering high-pH alkaline needs: degreasing, hood filters, floors, and pH control, with an HMIS 0-0-0 profile.",
     uses: [
       "pH adjustment in water treatment programs",
       "Hood filters and floors at busy commercial kitchens",
@@ -38,7 +38,7 @@ export const PRODUCTS = {
       "Caustic replacement across industrial CIP"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Safe on skin and eyes, non-fuming, non-corrosive"],
+      ["ph-shield-check", "HMIS 0-0-0", "Non-fuming handling profile with broad material compatibility"],
       ["ph-seal-check", "NSF/ANSI 60", "Certified for drinking-water system chemicals"],
       ["ph-atom", "SynTec powered", "Replaces sodium and potassium hydroxide"],
       ["ph-leaf", "Eco-friendly discharge", "Effortless wastewater discharge profile"]
@@ -61,7 +61,7 @@ export const PRODUCTS = {
       "Facility and fleet maintenance"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero hazard, replaces flammable solvent degreasers"],
+      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling profile replacing flammable solvent degreasers"],
       ["ph-scales", "True pH 7", "Neutral chemistry, safe on any equipment and seals"],
       ["ph-atom", "SynClean powered", "Patented degreasing technology"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, easy discharge"]
@@ -99,7 +99,7 @@ export const PRODUCTS = {
  icon: "ph-waves",
  image: "img/products/watersafe60-studio.webp",
     tag: "NSF/ANSI 60 scale and corrosion inhibitor with no heavy metals.",
-    desc: "An NSF/ANSI 60 scale and corrosion inhibitor with no heavy metals: no zinc, no molybdate, no chromate. Equivalent asset protection at a zero hazard rating.",
+    desc: "An NSF/ANSI 60 scale and corrosion inhibitor with no heavy metals: no zinc, no molybdate, no chromate. Equivalent asset protection with an HMIS 0-0-0 profile.",
     uses: [
       "Cooling tower scale and corrosion control",
       "Closed-loop and chilled-water systems",
@@ -198,7 +198,7 @@ export const PRODUCTS = {
       "Refrigeration systems: chloride-free, safe on the ammonia charge"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero hazard rating, no NFPA pictograms"],
+      ["ph-shield-check", "HMIS 0-0-0", "HMIS 0-0-0 profile with no NFPA pictograms"],
       ["ph-trend-down", "Far less corrosion", "0.59 mpy versus hydrochloric at 609 mpy in VertKleen testing"],
       ["ph-snowflake", "Fin-safe and chloride-free", "Protects aluminum, copper, steel, and stainless"],
       ["ph-drop", "Municipal-drain safe", "No acid neutralization or special disposal"]
@@ -332,7 +332,7 @@ export const PRODUCTS = {
     uses: [
       "Concentrated alkaline cleaning programs",
       "Water-treatment dosing where strength matters",
-      "High-pH cleaning at a zero hazard rating"
+      "High-pH cleaning with an HMIS 0-0-0 profile"
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],

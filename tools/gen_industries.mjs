@@ -83,7 +83,7 @@ const INDUSTRIES = [
     slug: "hvac-water", name: "HVAC / Water Treatment", icon: "ph-wind",
     h1: "Cooling tower programs without the hazard.",
     sub: "Inhibitor, biocide, passivation, and pH control with ASHRAE 188 documentation.",
-    intro: "Cooling tower programs combine inhibitor, biocide, descaling acid, and pH control. VertKleen runs the full program with WaterSafe60 inhibitor, Purgo and DBNPA biocides, HCR passivation, and CR pH control, all at a zero hazard rating and with ASHRAE 188 documentation.",
+    intro: "Cooling tower programs combine inhibitor, biocide, descaling acid, and pH control. VertKleen runs the full program with WaterSafe60 inhibitor, Purgo and DBNPA biocides, HCR passivation, and CR pH control, all with HMIS 0-0-0 documentation and ASHRAE 188 support.",
     products: ["watersafe60", "purgo", "hcr", "cr", "dbnpa"],
     proof: { img: "ac-coil", caption: "HVAC coils and water systems cleaned and treated, fin-safe." }
   },
@@ -239,7 +239,7 @@ function ctaBlock(ind) {
     <div class="wrap">
       <div class="section-head center">
         <span class="eyebrow">Get started</span>
-        <h2 class="headline">Take ${ind.name} to zero hazard.</h2>
+        <h2 class="headline">Move ${ind.name} toward safer chemical handling.</h2>
         <p class="subhead">Pick the path that fits. Every request routes to the MASEST team by vertical, product, and volume.</p>
       </div>
       <div class="cta-grid">
@@ -350,7 +350,7 @@ ${galleryBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script src="../js/main.js"></script>
+<script type="module" src="../js/main.js"></script>
 </body>
 </html>
 `;

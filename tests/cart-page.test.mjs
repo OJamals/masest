@@ -1,11 +1,26 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { get } from "node:http";
 import test from "node:test";
 import { chromium } from "playwright";
 
 const PORT = 4191;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+
+function serverReady() {
+  return new Promise(resolve => {
+    const req = get(`${BASE_URL}/cart.html`, response => {
+      response.resume();
+      resolve(response.statusCode >= 200 && response.statusCode < 500);
+    });
+    req.on("error", () => resolve(false));
+    req.setTimeout(1000, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
 
 async function withServer(fn) {
   const server = spawn("python3", ["-m", "http.server", String(PORT)], {
@@ -17,8 +32,7 @@ async function withServer(fn) {
     const deadline = Date.now() + 5000;
     while (Date.now() < deadline) {
       if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      const response = await fetch(`${BASE_URL}/cart.html`).catch(() => null);
-      if (response?.ok) break;
+      if (await serverReady()) break;
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     if (Date.now() >= deadline) throw new Error("server did not start");
