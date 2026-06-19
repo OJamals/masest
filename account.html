@@ -28,7 +28,7 @@
   .acct-badge[data-s=pending] { background: #fef3c7; color: #92400e; }
   .acct-badge[data-s=approved] { background: var(--accent-soft); color: var(--accent-ink); }
   .acct-badge[data-s=rejected], .acct-badge[data-s=suspended] { background: #fee2e2; color: #b42318; }
-  .acct-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid rgba(0,0,0,.08); font-size: .95rem; }
+  .acct-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: .95rem; }
   .acct-row b { color: var(--ink); }
   .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; font-size: .9rem; }
   .checkbox-row input { width: auto; margin-top: 3px; accent-color: var(--accent); }
@@ -285,8 +285,9 @@
     const box = $("smOrders");
     if (!box) return;
     let list = [];
+    box.innerHTML = `<div class="skeleton skeleton-block" style="height:48px;margin-bottom:8px"></div>`.repeat(2);
     try { list = await fetchOrders(); } catch { list = []; }
-    if (!list.length) { box.innerHTML = '<p class="acct-status" style="min-height:0">No orders yet.</p>'; return; }
+    if (!list.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>`; return; }
     const money = (n, c) => (c || "USD").toUpperCase() + " " + Number(n || 0).toFixed(2);
     const fmtDate = (s) => { try { return new Date(s).toLocaleDateString(); } catch { return ""; } };
     box.innerHTML = '<h3 style="font-size:1rem;margin:18px 0 6px">Recent orders</h3>'

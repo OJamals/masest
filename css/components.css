@@ -254,3 +254,10 @@
   border-color: var(--accent, #0e7c86);
   box-shadow: 0 0 0 3px var(--accent-soft, #e3f0f1);
 }
+
+/* ----------------------------------------------------------------------------
+   Recommended-products grid (industry pages) — auto-fit so a 4-product set
+   fills one clean row instead of a 3+1 orphan. Scoped: never touches the
+   catalog .prod-grid. Responsive on its own via minmax (no media query).
+---------------------------------------------------------------------------- */
+.prod-grid.prod-grid-rec { grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); }

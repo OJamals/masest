@@ -209,9 +209,10 @@ function wireBulk() {
 /* ---------- team (company admins) ---------- */
 async function loadTeam() {
   let t;
+  $('teamMembers').innerHTML = `<div class="skeleton skeleton-block" style="height:40px;margin-bottom:8px"></div>`.repeat(2);
   try { t = await api('/api/account/team'); } catch { $('teamMembers').innerHTML = '<p class="biz-status" data-state="err">Could not load team.</p>'; return; }
   $('teamMembers').innerHTML = (t.members || []).map((m) =>
-    `<div class="biz-row"><span>${esc(m.full_name || m.email || 'Member')}${m.email && m.full_name ? ` <span class="muted">· ${esc(m.email)}</span>` : ''}</span><b>${esc(m.role)}</b></div>`).join('') || '<p class="muted">No members yet.</p>';
+    `<div class="biz-row"><span>${esc(m.full_name || m.email || 'Member')}${m.email && m.full_name ? ` <span class="muted">· ${esc(m.email)}</span>` : ''}</span><b>${esc(m.role)}</b></div>`).join('') || `<div class="empty-state"><i class="ph ph-users empty-icon" aria-hidden="true"></i><div class="empty-title">No team members yet</div><div class="empty-body">Invite colleagues to manage orders and quotes together.</div></div>`;
   $('teamInvites').innerHTML = (t.invites || []).map((iv) =>
     `<div class="biz-row"><span>${esc(iv.email)} <span class="badge" data-s="pending">invited</span></span><button class="btn btn-ghost btn-sm" data-revoke="${esc(iv.id)}">Revoke</button></div>`).join('');
   $('teamInvites').querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', async () => {

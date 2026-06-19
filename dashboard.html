@@ -25,9 +25,13 @@
   .dash-tab[aria-selected=true] .pill { background: #fff; color: var(--accent-ink); }
   .dash-panel[hidden] { display: none; }
   .dash-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 22px; margin-bottom: 16px; }
-  .dash-row { display: flex; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid rgba(0,0,0,.08); font-size: .95rem; }
+  .dash-row { display: flex; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: .95rem; }
   .dash-row:last-child { border-bottom: 0; }
   .dash-row b { color: var(--ink); }
+  .dash-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; color: var(--muted); }
+  .dash-status[data-state=ok] { color: var(--accent-ink); }
+  .dash-status[data-state=err] { color: #b42318; }
+  .dash-status[data-state=busy] { color: var(--muted); }
   .setup-list { display: grid; gap: 10px; margin-top: 14px; }
   .setup-step { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; }
   .setup-step[data-setup-state="done"] { background: rgba(14,124,134,.05); border-color: rgba(14,124,134,.18); }
@@ -57,7 +61,7 @@
   .msg.buyer { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
   .msg.staff { align-self: flex-start; background: var(--accent-soft); color: var(--ink); border-bottom-left-radius: 4px; }
   .msg time { display: block; font-size: .68rem; opacity: .7; margin-top: 4px; }
-  .notif { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(0,0,0,.08); }
+  .notif { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .notif.unread { background: var(--accent-tint); margin: 0 -22px; padding: 14px 22px; }
   .notif i { color: var(--accent); font-size: 1.3rem; }
   .dash-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; }
@@ -91,7 +95,7 @@
   .dash-card-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
   .dash-action-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
   .security-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
-  .dash-order-card { border-bottom: 1px solid rgba(0,0,0,.08); padding: 8px 0; }
+  .dash-order-card { border-bottom: 1px solid var(--line); padding: 8px 0; }
   .dash-order-summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; list-style: none; }
   .dash-order-summary::-webkit-details-marker { display: none; }
   .dash-order-lines { padding: 8px 0 4px; }

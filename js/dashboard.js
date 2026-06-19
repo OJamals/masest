@@ -74,7 +74,7 @@ async function renderOverview() {
 
   // Quick stats — pull counts in the background.
   const stats = $('ovStats');
-  stats.innerHTML = '<p class="muted">Loading…</p>';
+  stats.innerHTML = [0, 1, 2].map(() => `<div class="stat"><div class="skeleton skeleton-text w-40" style="height:1.8em;margin:.15em 0 .55em"></div><div class="skeleton skeleton-text w-80"></div></div>`).join('');
   const [ord, notif] = await Promise.all([
     fetchOrders().catch(() => []),
     api('/api/account/notifications').catch(() => ({ notifications: [], unread: 0 })),
@@ -125,8 +125,9 @@ async function renderOrders() {
   loaded.orders = true;
   const box = $('ordersBody');
   let list = [];
+  box.innerHTML = `<div class="skeleton skeleton-block" style="height:60px;margin-bottom:10px"></div>`.repeat(3);
   try { list = await fetchOrders(); } catch { box.innerHTML = '<p class="dash-status" data-state="err">Could not load orders.</p>'; return; }
-  if (!list.length) { box.innerHTML = '<p class="muted">No orders yet. Browse the <a href="products.html">catalog</a> to place your first order.</p>'; return; }
+  if (!list.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>`; return; }
   box.innerHTML = list.map((o, i) => {
     const items = o.order_items || [];
     const n = items.reduce((s, it) => s + (it.qty || 0), 0);
@@ -157,7 +158,7 @@ async function renderMessages() {
   try { msgs = (await api('/api/account/messages')).messages; } catch { thread.innerHTML = '<p class="dash-status" data-state="err">Could not load messages.</p>'; return; }
   lastMsgCount = msgs.length;
   setBadge('badgeMessages', 0); // opening the tab marks staff msgs read server-side
-  if (!msgs.length) { thread.innerHTML = '<p class="muted">No messages yet. Send us a question — orders, pricing, NET terms, anything.</p>'; }
+  if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question — orders, pricing, NET terms, anything.</div></div>`; }
   else {
     thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${esc(m.body)}<time>${fmtDT(m.created_at)}</time></div>`).join('');
     thread.scrollTop = thread.scrollHeight;
@@ -184,7 +185,7 @@ async function renderNotifications() {
   let data;
   try { data = await api('/api/account/notifications'); } catch { box.innerHTML = '<p class="dash-status" data-state="err">Could not load notifications.</p>'; return; }
   setBadge('badgeNotifs', data.unread);
-  if (!data.notifications.length) { box.innerHTML = '<p class="muted">No notifications.</p>'; return; }
+  if (!data.notifications.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No notifications</div><div class="empty-body">Order updates, messages, and offers show up here.</div></div>`; return; }
   const icon = { order: 'ph-package', message: 'ph-chat-circle', offer: 'ph-tag', account: 'ph-user-check', system: 'ph-info' };
   box.innerHTML = data.notifications.map((n) => `
     <div class="notif ${n.read ? '' : 'unread'}">
@@ -208,7 +209,7 @@ async function renderAddresses() {
   const box = $('addrList');
   let list = [];
   try { list = (await api('/api/account/addresses')).addresses; } catch { box.innerHTML = '<p class="dash-status" data-state="err">Could not load addresses.</p>'; return; }
-  if (!list.length) { box.innerHTML = '<p class="muted">No saved addresses yet.</p>'; return; }
+  if (!list.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-map-pin empty-icon" aria-hidden="true"></i><div class="empty-title">No saved addresses</div><div class="empty-body">Add a billing or shipping address to speed up checkout.</div></div>`; return; }
   box.innerHTML = list.map((a) => `
     <div class="dash-row">
       <span><b>${a.type === 'bill' ? 'Billing' : 'Shipping'}</b>${a.is_default ? ' · <span class="badge" data-s="approved">default</span>' : ''}<br>

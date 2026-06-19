@@ -299,7 +299,7 @@ function page(ind) {
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260619a">
-<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/components.css?v=20260619a">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 </head>
 <body class="site-soft-bg">
@@ -343,7 +343,7 @@ ${industryDetailBlock(ind)}
         <h2 class="headline">VertKleen products for ${ind.name}.</h2>
         <p class="subhead">Drop-in replacements for the hazardous chemistry this work usually relies on.</p>
       </div>
-      <div class="prod-grid" data-ind-products="${ind.products.join(" ")}"></div>
+      <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>
   </section>
 ${galleryBlock(ind)}
