@@ -46,6 +46,23 @@ create table if not exists public.messages (
   created_at    timestamptz not null default now()
 );
 create index if not exists messages_company_idx on public.messages(company_id, created_at);
+alter table public.messages add column if not exists source text not null default 'dashboard';
+alter table public.messages add column if not exists external_thread_id text;
+alter table public.messages add column if not exists external_message_id text;
+create index if not exists messages_external_idx on public.messages(source, external_message_id) where external_message_id is not null;
+
+create table if not exists public.crisp_sessions (
+  session_id text primary key,
+  website_id text,
+  email text,
+  nickname text,
+  phone text,
+  company_id uuid references public.companies(id) on delete set null,
+  company_name text,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+create index if not exists crisp_sessions_company_idx on public.crisp_sessions(company_id);
 
 -- ---------- notifications: per company (optionally targeted to a user) ----------
 create table if not exists public.notifications (

@@ -23,6 +23,15 @@ function crispDisabled() {
   return hasWindow() && (window.MASEST_DISABLE_CRISP === true || window.MASEST_DISABLE_CRISP === "true");
 }
 
+function hasAuthSessionMarker() {
+  if (!hasWindow()) return false;
+  try {
+    return Object.keys(window.localStorage || {}).some((key) => key.startsWith("sb-") && key.includes("-auth-token"));
+  } catch {
+    return false;
+  }
+}
+
 function crispQueue() {
   if (!hasWindow() || crispDisabled()) return null;
   if (!Array.isArray(window.$crisp)) window.$crisp = [];
@@ -71,6 +80,24 @@ function currentPageContext() {
   };
 }
 
+function cartSummary() {
+  if (!hasWindow()) return { cart_count: 0, cart_skus: "" };
+  try {
+    const cart = JSON.parse(window.localStorage?.getItem("masest_cart") || "{}");
+    const entries = Object.entries(cart)
+      .map(([sku, qty]) => [cleanString(sku, 80), Math.max(0, Math.floor(Number(qty) || 0))])
+      .filter(([sku, qty]) => sku && qty > 0);
+    const count = entries.reduce((sum, [, qty]) => sum + qty, 0);
+    return {
+      cart_count: count,
+      cart_skus: entries.map(([sku]) => sku).slice(0, 20).join(","),
+      cart_has_items: count > 0,
+    };
+  } catch {
+    return { cart_count: 0, cart_skus: "", cart_has_items: false };
+  }
+}
+
 export function setCrispSessionData(data) {
   const entries = scalarEntries(data);
   if (!entries.length) return false;
@@ -96,6 +123,54 @@ export function syncCrispPageContext() {
   if (context.page_type) segments.push(`page_${context.page_type.replace(/[^a-z0-9_-]/gi, "_").toLowerCase()}`);
   if (context.product) segments.push("product_interest");
   return setCrispSegments(segments);
+}
+
+export function syncCrispCartContext() {
+  const summary = cartSummary();
+  const pushed = setCrispSessionData(summary);
+  if (summary.cart_count > 0) return setCrispSegments(["cart_active"]) || pushed;
+  return pushed;
+}
+
+export async function syncCrispAccountContext() {
+  if (!hasWindow() || !hasAuthSessionMarker()) return false;
+  try {
+    const auth = await import("./auth.js");
+    const account = await auth.me();
+    if (!account) return false;
+
+    const profile = account.profile || {};
+    const company = account.company || {};
+    const email = cleanString(account.email).toLowerCase();
+    const name = cleanString(profile.full_name);
+    const phone = cleanString(profile.phone);
+    const companyName = cleanString(company.name);
+
+    let pushed = false;
+    if (EMAIL_RE.test(email)) pushed = pushCrisp(["set", "user:email", [email]]) || pushed;
+    if (name) pushed = pushCrisp(["set", "user:nickname", [name]]) || pushed;
+    if (phone) pushed = pushCrisp(["set", "user:phone", [phone]]) || pushed;
+    if (companyName) pushed = pushCrisp(["set", "user:company", [companyName]]) || pushed;
+
+    pushed = setCrispSessionData({
+      account_email: email,
+      account_profile_id: profile.id,
+      account_company: companyName,
+      account_company_id: company.id,
+      account_status: company.status,
+      account_staff: Boolean(account.is_staff),
+      account_can_checkout: Boolean(account.can_checkout),
+    }) || pushed;
+
+    pushed = setCrispSegments([
+      account.needs_profile ? "account_needs_profile" : "account_authenticated",
+      account.is_staff ? "account_staff" : "",
+      company.status ? `company_${company.status}` : "",
+    ]) || pushed;
+    return pushed;
+  } catch {
+    return false;
+  }
 }
 
 export function identifyCrispLead(lead) {
@@ -157,6 +232,8 @@ export function loadCrisp() {
   }
 
   syncCrispPageContext();
+  syncCrispCartContext();
+  syncCrispAccountContext();
   return true;
 }
 
@@ -190,6 +267,35 @@ function wireQuoteFormContext() {
   }, true);
 }
 
+function wireCrispOpeners() {
+  if (!hasDocument() || document.__masestCrispOpenBridge) return;
+  document.__masestCrispOpenBridge = true;
+  document.addEventListener("click", (event) => {
+    const opener = event.target?.closest?.("[data-crisp-open]");
+    if (!opener) return;
+    event.preventDefault();
+    const message = opener.getAttribute("data-crisp-message") || "Hi, I need help with VertKleen.";
+    openCrispChat(message);
+    trackCrispEvent("chat_cta_clicked", {
+      label: opener.textContent,
+      page_path: window.location?.pathname,
+    });
+  });
+}
+
+function wireCrispContextSync() {
+  if (!hasWindow() || !hasDocument() || document.__masestCrispContextBridge) return;
+  document.__masestCrispContextBridge = true;
+  window.addEventListener("storage", (event) => {
+    if (!event.key || event.key === "masest_cart" || event.key.includes("-auth-token")) {
+      syncCrispCartContext();
+      syncCrispAccountContext();
+    }
+  });
+  document.addEventListener("cart:updated", syncCrispCartContext);
+  document.addEventListener("masest:cart", syncCrispCartContext);
+}
+
 if (hasWindow()) {
   window.MASEST = Object.assign(window.MASEST || {}, {
     identifyCrispLead,
@@ -198,6 +304,8 @@ if (hasWindow()) {
     setCrispSegments,
     setCrispSessionData,
     subscribeNewsletter,
+    syncCrispAccountContext,
+    syncCrispCartContext,
     syncCrispPageContext,
     trackCrispEvent,
   });
@@ -205,6 +313,8 @@ if (hasWindow()) {
 
 if (hasDocument()) {
   wireQuoteFormContext();
+  wireCrispOpeners();
+  wireCrispContextSync();
   if (document.readyState !== "loading") loadCrisp();
   else document.addEventListener("DOMContentLoaded", loadCrisp);
 }

@@ -163,7 +163,7 @@ lightweight, Supabase-backed CMS so non-developers can manage content.
 - [ ] **ROI / cost-savings calculator** — interactive tool (chemical/water/energy savings vs incumbent) that
       captures inputs + email; strong B2B lead magnet and sales talking point.
 - [ ] **Newsletter capture** — footer signup, exit-intent and scroll popups, post-purchase opt-in (Klaviyo lists).
-- [ ] **Live chat / chatbot** — Crisp/Intercom embed or an own widget with lead capture + handoff to the
+- [x] **Live chat / chatbot** — Crisp embed with lead capture + handoff to the
       admin Messages thread; optionally an AI assistant answering product/SDS questions.
 - [ ] **Mini-CRM in admin** — promote Quotes into a Leads pipeline: lifecycle stages (new→contacted→qualified
       →quoted→won/lost), owner assignment + routing rules, activity log, follow-up reminders, CSV export.

@@ -13,7 +13,7 @@ export async function onRequest({ request, env }) {
     const companyId = new URL(request.url).searchParams.get('company_id');
     if (companyId) {
       const { data, error } = await sb.from('messages')
-        .select('id,sender_role,body,order_id,created_at,read_by_staff')
+        .select('id,sender_role,body,order_id,created_at,read_by_staff,source,external_thread_id,external_message_id')
         .eq('company_id', companyId).order('created_at', { ascending: true }).limit(300);
       if (error) return json(500, { error: error.message });
       await sb.from('messages').update({ read_by_staff: true })
@@ -21,7 +21,7 @@ export async function onRequest({ request, env }) {
       return json(200, { messages: data || [] });
     }
     const { data, error } = await sb.from('messages')
-      .select('company_id,sender_role,body,read_by_staff,created_at,companies(name)')
+      .select('company_id,sender_role,body,read_by_staff,created_at,source,external_thread_id,external_message_id,companies(name)')
       .order('created_at', { ascending: false }).limit(1000);
     if (error) return json(500, { error: error.message });
     const threads = {};

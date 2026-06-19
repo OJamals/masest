@@ -147,6 +147,7 @@ export function renderChrome() {
           <div class="foot-title">Contact</div>
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
           <a href="tel:+18134063852">(813) 406-3852</a>
+          <a href="${root}contact.html" data-crisp-open data-crisp-message="Hi, I need help matching VertKleen to an application.">Live chat</a>
           <p style="margin-top:10px;font-size:.8rem;line-height:1.7">CAGE 0B2Q3<br>NAICS 424690<br>SAM.gov registered<br>Minority-owned (self-certified)</p>
         </div>
       </div>

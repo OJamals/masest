@@ -28,6 +28,10 @@ function badge(id, count) {
 function statusBadge(value) {
   return `<span class="badge" data-s="${esc(value)}">${esc(String(value || 'unknown').replaceAll('_', ' '))}</span>`;
 }
+function sourceLabel(message) {
+  if (message?.source === 'crisp') return '<span class="pill">Crisp chat</span>';
+  return '';
+}
 
 function trackingControls(order) {
   const id = esc(order.id);
@@ -754,7 +758,7 @@ async function openThread(companyId) {
   try {
     const messages = (await api(`/api/admin/messages?company_id=${encodeURIComponent(companyId)}`)).messages || [];
     view.innerHTML = `<div class="msg-thread">${messages.map((m) => `
-      <div class="msg" data-role="${esc(m.sender_role)}"><p>${esc(m.body)}</p><span class="muted">${esc(date(m.created_at))}</span></div>
+      <div class="msg" data-role="${esc(m.sender_role)}"><p>${esc(m.body)}</p><span class="muted">${sourceLabel(m)} ${esc(date(m.created_at))}</span></div>
     `).join('')}</div>
     <form id="replyForm" class="adm-form-grid" style="margin-top:12px">
       <label class="full">Reply <textarea id="replyBody" class="adm-textarea" required></textarea></label>
