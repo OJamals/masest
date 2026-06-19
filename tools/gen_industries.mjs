@@ -298,7 +298,7 @@ function page(ind) {
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/style.css?v=20260619a">
 <link rel="stylesheet" href="../css/components.css">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 </head>
