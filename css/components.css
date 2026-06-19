@@ -261,3 +261,9 @@
    catalog .prod-grid. Responsive on its own via minmax (no media query).
 ---------------------------------------------------------------------------- */
 .prod-grid.prod-grid-rec { grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); }
+/* A 5-product set reads cleaner as 3+2 than the auto-fit 4+1 orphan. Tablet+
+   only; below that the auto-fit minmax above keeps stacking. :has matches the
+   sole 5-product grid; 3- and 4-product grids fall through to auto-fit. */
+@media (min-width: 760px) {
+  .prod-grid.prod-grid-rec:has(> :nth-child(5)) { grid-template-columns: repeat(3, 1fr); }
+}
