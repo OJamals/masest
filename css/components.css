@@ -267,3 +267,22 @@
 @media (min-width: 760px) {
   .prod-grid.prod-grid-rec:has(> :nth-child(5)) { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ----------------------------------------------------------------------------
+   Interior hero clearance + rhythm. The site header is a fixed ~76px bar.
+   Base style.css gave .page-hero only ~58px top (title tucked under the nav)
+   and .hero-split ~92px (tight) — so interior heroes were inconsistent. Unify
+   both to one rhythm that clears the nav with steady breathing room. Loaded
+   after style.css, so these win at equal specificity. The h1 is already a
+   consistent 80px (.display) and left-aligned, so only top spacing needs it.
+---------------------------------------------------------------------------- */
+body .page-hero,
+body .hero-split { padding-top: 116px; }
+@media (max-width: 680px) {
+  body .page-hero,
+  body .hero-split { padding-top: 88px; }
+}
+
+/* Programs pricing: the cadence label sits on its own line so the widest tier
+   ($5,000-15,000+) never wraps "/ mo" awkwardly while narrower tiers stay inline. */
+.tier-price small { display: block; margin-top: 2px; }
