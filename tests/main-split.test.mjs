@@ -63,7 +63,7 @@ test("main entrypoint imports service catalog rendering from a split module", ()
   const services = read("js/main/service-catalog.js");
   assert.match(services, /export function initServiceCatalog\s*\(/);
   assert.match(services, /data-service-catalog/);
-  assert.match(services, /catalog\.seed\.json/);
+  assert.match(services, /services\.json/);
 });
 
 test("main entrypoint imports product commerce UI from a split module", () => {

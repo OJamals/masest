@@ -2,7 +2,7 @@ export const PRODUCTS = {
   hcr: {
     name: "VertKleen HCR",
     cat: "acid",
-    replaces: "Replaces hydrochloric acid",
+    replaces: "Replaces hydrochloric acid (muriatic acid)",
     hmis: "0-0-0",
     icon: "ph-flask",
  image: "img/products/hvac-hcr-studio.webp",
@@ -15,7 +15,7 @@ export const PRODUCTS = {
       "Concrete, equipment, and pipeline scale removal"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-atom", "SynTec powered", "Patented technology matching legacy acid performance"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates and phosphates"],
       ["ph-truck", "Non-hazmat shipping", "No DOT hazmat freight, lower shipping cost"]
@@ -41,7 +41,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "Non-fuming handling profile with broad material compatibility"],
       ["ph-seal-check", "NSF/ANSI 60", "Certified for drinking-water system chemicals"],
       ["ph-atom", "SynTec powered", "Replaces sodium and potassium hydroxide"],
-      ["ph-leaf", "Eco-friendly discharge", "Effortless wastewater discharge profile"]
+      ["ph-leaf", "Lower-impact discharge", "Simpler wastewater discharge profile"]
     ],
     docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Certification", "Technical Application Sheet"]
   },
@@ -62,7 +62,7 @@ export const PRODUCTS = {
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling profile replacing flammable solvent degreasers"],
-      ["ph-scales", "True pH 7", "Neutral chemistry, safe on any equipment and seals"],
+      ["ph-scales", "True pH 7", "Neutral chemistry for sensitive equipment and seals"],
       ["ph-atom", "SynClean powered", "Patented degreasing technology"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, easy discharge"]
     ],
@@ -84,7 +84,7 @@ export const PRODUCTS = {
       "Educational and healthcare environments"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-atom", "SynClean powered", "Patented cleaning technology"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates and phosphates"],
       ["ph-truck", "Non-hazmat shipping", "Lower freight cost worldwide"]
@@ -132,7 +132,7 @@ export const PRODUCTS = {
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Replaces bromine and bleach rated 3-0-1"],
       ["ph-seal-check", "FIFRA 25(b)", "Minimum-risk classification"],
-      ["ph-buildings", "Occupied-site safe", "No evacuations, no fume exposure"],
+      ["ph-buildings", "Occupied-site fit", "Built for routine water-treatment programs"],
       ["ph-certificate", "No license barrier", "General-use in Florida, no FDACS license needed"]
     ],
     docs: ["Safety Data Sheet (SDS)", "FIFRA 25(b) Documentation", "Cooling Tower Program Brochure"]
@@ -175,7 +175,7 @@ export const PRODUCTS = {
       "Field-proven replacing Simple Green at Walmart distribution centers"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-gauge", "About 50% active", "Higher active strength than common 15% degreasers"],
       ["ph-seal-check", "OEM cleared", "Approved by Crown Forklift and Plug Power; meets Boeing and Airbus cleaning specs"],
       ["ph-truck", "Non-hazmat shipping", "No DOT hazmat freight, lower shipping cost"]
@@ -185,12 +185,12 @@ export const PRODUCTS = {
   descaler: {
     name: "VertKleen Descaler",
     cat: "acid",
-    replaces: "Replaces muriatic acid, CLR, and Calci-Solve",
+    replaces: "Replaces hydrochloric acid (muriatic acid) products, CLR, and Calci-Solve",
     hmis: "0-0-0",
     icon: "ph-snowflake",
  image: "img/products/descaler-studio.webp",
     tag: "Acid-free descaler for coils, towers, and plumbing. Fin-safe on aluminum and copper, with a fraction of the corrosion of conventional acids.",
-    desc: "An acid-free descaler (marketed as CRS in the dealership channel) that clears calcium, rust, and scale from coils, cooling towers, plumbing, and fire pumps. Fin-safe on aluminum and copper, chloride-free, and safe to municipal drains.",
+    desc: "An acid-free descaler (marketed as CRS in the dealership channel) that clears calcium, rust, and scale from coils, cooling towers, plumbing, and fire pumps. Fin-safe on aluminum and copper, chloride-free, and built for routine municipal-drain discharge.",
     uses: [
       "Aluminum and copper coil descaling, fin-safe",
       "Cooling towers, plumbing, and ammonia coils",
@@ -201,7 +201,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "HMIS 0-0-0 profile with no NFPA pictograms"],
       ["ph-trend-down", "Far less corrosion", "0.59 mpy versus hydrochloric at 609 mpy in VertKleen testing"],
       ["ph-snowflake", "Fin-safe and chloride-free", "Protects aluminum, copper, steel, and stainless"],
-      ["ph-drop", "Municipal-drain safe", "No acid neutralization or special disposal"]
+      ["ph-drop", "Municipal-drain discharge", "No acid neutralization or special disposal"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Descaler vs Acids Corrosion Data", "Case Study: Walmart Refrigeration Systems"]
   },
@@ -244,7 +244,7 @@ export const PRODUCTS = {
       "Field-proven on a 43-foot Yellowfin vessel"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-sparkle", "Wash and wax in one", "Cleans and protects in a single pass"],
       ["ph-seal-check", "OEM warranty-safe", "Formulated to meet finish-care requirements"],
       ["ph-leaf", "Biodegradable", "Low VOC, easy discharge"]
@@ -268,7 +268,7 @@ export const PRODUCTS = {
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Neutral pH, no bleach, no fumes"],
-      ["ph-plant", "Plant and pet safe", "No harm to flora or fauna around the work area"],
+      ["ph-plant", "Plant and pet compatible", "Use according to label around landscaping and animals"],
       ["ph-timer", "Spray and walk away", "Keeps working up to a month; reapply about every six months"],
       ["ph-leaf", "100% biodegradable", "Non-skin-irritant in OECD 404 testing"]
     ],
@@ -277,7 +277,7 @@ export const PRODUCTS = {
   crs: {
     name: "VertKleen CRS",
     cat: "acid",
-    replaces: "Replaces muriatic acid for rust, scale, and calcium",
+    replaces: "Replaces hydrochloric acid (muriatic acid) for rust, scale, and calcium",
     hmis: "0-0-0",
  icon: "ph-wrench",
  image: "img/products/crs-studio.webp",
@@ -290,7 +290,7 @@ export const PRODUCTS = {
       "Dealership and facility maintenance programs"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop-half", "HCl replacement", "Built for acid-cleaning jobs without muriatic-acid handling"],
       ["ph-waves", "Water-side scale", "Targets calcium, rust, and mineral buildup"],
       ["ph-leaf", "Lower-impact discharge", "Use ratios align with the VertKleen dilution guide"]
@@ -305,7 +305,7 @@ export const PRODUCTS = {
     icon: "ph-drop-half",
     image: "img/products/crhd-studio.webp",
     tag: "Low-foam CR HD for automatic scrubbers, parts washers, and recirculating wash systems.",
-    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters, with the same zero-hazard handling as CR HD.",
+    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters, with the same HMIS 0-0-0 handling as CR HD.",
     uses: [
       "Automatic floor scrubbers and machine wash",
       "Parts washers and recirculating wash systems",
@@ -313,7 +313,7 @@ export const PRODUCTS = {
       "Heavy soil and grease on equipment and floors"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop", "Low-foam formula", "Built for machine wash and recirculating systems"],
       ["ph-atom", "SynTec powered", "Heavy-duty degreasing without solvent odor"],
       ["ph-truck", "Non-hazmat shipping", "No DOT hazmat freight, lower shipping cost"]
@@ -335,9 +335,9 @@ export const PRODUCTS = {
       "High-pH cleaning with an HMIS 0-0-0 profile"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop-half", "Higher concentration", "More active cleaning per gallon than standard CR"],
-      ["ph-atom", "SynTec powered", "Caustic-level performance without the hazard"]
+      ["ph-atom", "SynTec powered", "Caustic-level performance with HMIS 0-0-0 handling"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -356,7 +356,7 @@ export const PRODUCTS = {
       "Applications needing a tuned acid-replacement profile"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Zero health, flammability, and reactivity hazard rating"],
+      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop-half", "Acid replacement", "Targeted descaling without muriatic-acid handling"],
       ["ph-waves", "Water-side scale", "Calcium, rust, and mineral buildup"]
     ],
@@ -514,7 +514,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   cr: {
     job: "High-pH cleaning and water-treatment support",
-    summary: "For teams that need caustic-level cleaning or pH adjustment with a zero-hazard handling profile.",
+    summary: "For teams that need caustic-level cleaning or pH adjustment with a HMIS 0-0-0 handling profile.",
     fits: ["hoods", "floors", "CIP", "water treatment"],
     proof: "NSF/ANSI 60 documentation and trial notes"
   },

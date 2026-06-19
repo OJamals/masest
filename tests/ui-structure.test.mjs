@@ -64,7 +64,7 @@ test("about page exposes latest quote-service catalog from seed data", () => {
   assert.match(about, /35 quote services/);
   assert.match(about, /4 service packages/);
   assert.match(serviceCatalog, /function initServiceCatalog/);
-  assert.match(serviceCatalog, /data\/catalog\.seed\.json/);
+  assert.match(serviceCatalog, /data\/services\.json/);
 });
 
 test("products grid offers category chips, sorting, and clickable cards", () => {
@@ -136,7 +136,7 @@ test("products page keeps the field proof strip between catalog and CTA", () => 
 
 test("program function map is optional below the tiers", () => {
   const programs = read("programs.html");
-  const tiersIndex = programs.indexOf("Four tiers, one safe standard");
+  const tiersIndex = programs.indexOf("Four tiers, one documented standard");
   const mapIndex = programs.indexOf("Every function, replaced with 0-0-0");
   const mapDisclosureIndex = programs.indexOf('class="resource-disclosure program-map-disclosure');
 
@@ -149,7 +149,7 @@ test("program function map is optional below the tiers", () => {
 
 test("proof page leads with conversion proof, not internal notes", () => {
   const proof = read("proof.html");
-  const heroIndex = proof.indexOf("The same job, on real sites.");
+  const heroIndex = proof.indexOf("Real jobs, documented results.");
   const libraryIndex = proof.indexOf('class="proof-library');
 
   assert.ok(heroIndex > -1, "expected proof hero");
@@ -157,7 +157,7 @@ test("proof page leads with conversion proof, not internal notes", () => {
   assert.ok(heroIndex < libraryIndex, "hero should lead proof library");
   assert.doesNotMatch(proof, /proof-decision-strip/);
   assert.doesNotMatch(proof, /class="proof-decision"/);
-  assert.match(proof, /Book a Free Chemical Audit/);
+  assert.match(proof, /Request a Chemical Audit/);
   assert.match(proof, /30 min/);
   assert.match(proof, /Brewery CIP/);
   assert.doesNotMatch(proof, /broader company file/i);
@@ -173,7 +173,7 @@ test("industries page routes buyers before the long industry list", () => {
   assert.ok(gridIndex > -1, "expected industry grid to remain");
   assert.ok(routerIndex < gridIndex, "router should precede dense industry list");
   assert.match(industries, /Start with a quote/);
-  assert.match(industries, /Match proof to your vertical/);
+  assert.match(industries, /Match proof to your industry/);
 });
 
 test("industry router stacks route cards on mobile", () => {
@@ -183,7 +183,7 @@ test("industry router stacks route cards on mobile", () => {
   assert.match(css, /\.industry-router \.route-grid[\s\S]*grid-template-columns: 1fr/);
 });
 
-test("contact page makes quote and free audit intent obvious", () => {
+test("contact page makes quote and audit intent obvious", () => {
   const contact = read("contact.html");
   const chooserIndex = contact.indexOf('class="cta-chooser contact-intent');
   const firstFieldIndex = contact.indexOf('name="name"');
