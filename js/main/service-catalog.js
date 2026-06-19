@@ -206,12 +206,15 @@ function updateSummary(catalog, items) {
   const serviceCount = Array.isArray(catalog?.services) ? catalog.services.length : 0;
   const packageCount = Array.isArray(catalog?.service_packages) ? catalog.service_packages.length : 0;
   const categoryCount = new Set(items.map((item) => normalizeText(item.category))).size;
-  const serviceTarget = document.querySelector("[data-service-count]");
-  const packageTarget = document.querySelector("[data-package-count]");
-  const categoryTarget = document.querySelector("[data-category-count]");
-  if (serviceTarget) serviceTarget.textContent = String(serviceCount);
-  if (packageTarget) packageTarget.textContent = String(packageCount);
-  if (categoryTarget) categoryTarget.textContent = String(categoryCount);
+  document.querySelectorAll("[data-service-count]").forEach((target) => {
+    target.textContent = String(serviceCount);
+  });
+  document.querySelectorAll("[data-package-count]").forEach((target) => {
+    target.textContent = String(packageCount);
+  });
+  document.querySelectorAll("[data-category-count]").forEach((target) => {
+    target.textContent = String(categoryCount);
+  });
 }
 
 function bindTabs(root) {
@@ -266,9 +269,9 @@ export function initServiceCatalog() {
   const roots = Array.from(document.querySelectorAll("[data-service-catalog]"));
   if (!roots.length) return;
 
-  fetch("data/catalog.seed.json", { cache: "no-store" })
+  fetch("data/services.json", { cache: "no-store" })
     .then((response) => {
-      if (!response.ok) throw new Error("catalog_seed_unavailable");
+      if (!response.ok) throw new Error("services_catalog_unavailable");
       return response.json();
     })
     .then((catalog) => {

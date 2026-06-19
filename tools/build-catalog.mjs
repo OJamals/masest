@@ -90,8 +90,9 @@ await writeFile(here('supabase/variants_seed.sql'), variantsSql(catalog.product_
 await writeFile(here('supabase/seed.sql'), productsSql(catalog.products));
 await writeFile(here('data/products.seed.json'), productsJson(catalog.products));
 await writeFile(here('data/drum-pricing.json'), drumPricingJson(catalog.product_variants));
+await writeFile(here('data/services.json'), servicesJson(catalog));
 
-console.log(`catalog: ${catalog.products.length} products, ${catalog.product_variants.length} variants, ${activeVariants.length} active small-pack variants`);
+console.log(`catalog: ${catalog.products.length} products, ${catalog.product_variants.length} variants, ${activeVariants.length} active small-pack variants, ${(catalog.services || []).length + (catalog.service_packages || []).length} services`);
 
 function findDupes(items) {
   const seen = new Set();
@@ -182,6 +183,24 @@ function drumPricingJson(variants) {
   }
   for (const slug of Object.keys(out)) out[slug].sort((a, b) => a.gallons - b.gallons);
   return JSON.stringify(out, null, 2) + '\n';
+}
+
+// Public services catalog fetched by js/main/service-catalog.js (services.html + about.html).
+// Only client-safe fields — internal `source` / `payment_capture` notes are dropped.
+function servicesJson(catalog) {
+  const pub = (item) => ({
+    sku: item.sku,
+    name: item.name,
+    category: item.category,
+    unit: item.unit,
+    public_price: item.public_price != null ? Number(item.public_price) : null,
+    currency: item.currency || 'usd',
+    active: item.active !== false,
+  });
+  return JSON.stringify({
+    services: (catalog.services || []).map(pub),
+    service_packages: (catalog.service_packages || []).map(pub),
+  }, null, 2) + '\n';
 }
 
 function sqlStr(value) {

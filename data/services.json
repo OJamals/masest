@@ -1,0 +1,357 @@
+{
+  "services": [
+    {
+      "sku": "MS-LAB-WTR-RAW-WATER-STANDARD-ANALYSIS",
+      "name": "Raw Water — Standard Analysis",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 278.57,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-WTR-TOWER-WATER-STANDARD-BIO-COUNTS",
+      "name": "Tower Water — Standard + Bio Counts",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 607.14,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-WTR-CHILL-WATER-STANDARD-BIO-COUNTS",
+      "name": "Chill Water — Standard + Bio Counts",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 464.29,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-WTR-CLOSED-LOOP-WATER-STANDARD-BIO-COUNTS",
+      "name": "Closed Loop Water — Standard + Bio Counts",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 464.29,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-WTR-STEAM-BOILER-WATER-STANDARD",
+      "name": "Steam Boiler Water — Standard",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 307.14,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-WTR-PRETREATMENT-WATER-SOFT-DEGAS",
+      "name": "Pretreatment Water (Soft/Degas)",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 307.14,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-WTR-BOILER-FEED-WATER-STANDARD",
+      "name": "Boiler Feed Water — Standard",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 307.14,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-WTR-POLISHER-WATER-STANDARD",
+      "name": "Polisher Water — Standard",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 307.14,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-WTR-STEAM-CONDENSATE-STANDARD",
+      "name": "Steam Condensate — Standard",
+      "category": "Lab Testing — Water Analysis",
+      "unit": "per sample",
+      "public_price": 428.57,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-BIO-BIOLOGICAL-COUNTS-HPC-DIP-SLIDE",
+      "name": "Biological Counts (HPC/dip-slide)",
+      "category": "Lab Testing — Biological",
+      "unit": "per sample",
+      "public_price": 92.86,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-BIO-LEGIONELLA-FULL-CULTURE-SPECIE-ID",
+      "name": "Legionella — Full Culture + Specie ID",
+      "category": "Lab Testing — Biological",
+      "unit": "per sample",
+      "public_price": 421.43,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-BIO-LEGIONELLA-PCR-POS-NEG",
+      "name": "Legionella — PCR Pos/Neg",
+      "category": "Lab Testing — Biological",
+      "unit": "per sample",
+      "public_price": 285.71,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-BIO-BIOLOGICAL-IDENTIFICATIONS",
+      "name": "Biological Identifications",
+      "category": "Lab Testing — Biological",
+      "unit": "per sample",
+      "public_price": 292.86,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-MAT-CORROSION-COUPON-ANALYSIS-INCL-PHOTO",
+      "name": "Corrosion Coupon Analysis (incl. photo)",
+      "category": "Lab Testing — Materials",
+      "unit": "per coupon",
+      "public_price": 108.57,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-MAT-PIPE-ANALYSIS-DEPOSIT-MEASUREMENTS-PHOTOS",
+      "name": "Pipe Analysis (Deposit + Measurements + Photos)",
+      "category": "Lab Testing — Materials",
+      "unit": "per pipe",
+      "public_price": 2500,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-MAT-DEPOSIT-ANALYSIS-STANDARD",
+      "name": "Deposit Analysis — Standard",
+      "category": "Lab Testing — Materials",
+      "unit": "per sample",
+      "public_price": 464.29,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-MAT-SINGLE-ELEMENT-ANALYSIS-ICP-OR-IC",
+      "name": "Single Element Analysis (ICP or IC)",
+      "category": "Lab Testing — Materials",
+      "unit": "per sample",
+      "public_price": 92.86,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-LAB-MAT-ABBREVIATED-ANALYSIS-ICP-OR-IC",
+      "name": "Abbreviated Analysis (ICP or IC)",
+      "category": "Lab Testing — Materials",
+      "unit": "per sample",
+      "public_price": 250,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-BID-SPEC-CREATION",
+      "name": "Water Treatment Bid Specification Creation",
+      "category": "Bid Support",
+      "unit": "each",
+      "public_price": 2714.29,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-BID-SPEC-REVIEW",
+      "name": "Water Treatment Bid Review",
+      "category": "Bid Support",
+      "unit": "each",
+      "public_price": 1357.14,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-BID-BID-INTERVIEW",
+      "name": "Water Treatment Bid Interview",
+      "category": "Bid Support",
+      "unit": "each",
+      "public_price": 1357.14,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-CONS-CONSULTING-SERVICES-GENERAL",
+      "name": "Consulting Services (general)",
+      "category": "Consulting Services",
+      "unit": "per hour, 2hr min",
+      "public_price": 421.43,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-CONS-EQUIPMENT-INSPECTIONS",
+      "name": "Equipment Inspections",
+      "category": "Consulting Services",
+      "unit": "per hour, 2hr min",
+      "public_price": 421.43,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-CONS-ULTRASONIC-BORESCOPE-TESTING",
+      "name": "Ultrasonic / Borescope Testing",
+      "category": "Consulting Services",
+      "unit": "per hour, 2hr min",
+      "public_price": 500,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-CONS-SCANNING-ELECTRON-MICROSCOPE-TESTING",
+      "name": "Scanning Electron Microscope Testing",
+      "category": "Consulting Services",
+      "unit": "per hour, 2hr min",
+      "public_price": 1785.71,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-CONS-SPRINKLER-SYSTEM-TESTING",
+      "name": "Sprinkler System Testing",
+      "category": "Consulting Services",
+      "unit": "per hour, 2hr min",
+      "public_price": 1785.71,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-CONS-PARTICLE-SIZE",
+      "name": "Particle Size Analysis",
+      "category": "Consulting Services",
+      "unit": "per sample",
+      "public_price": 292.86,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-CONS-PARTICLE-ID",
+      "name": "Particle Size Analysis + Particle ID",
+      "category": "Consulting Services",
+      "unit": "per sample",
+      "public_price": 564.29,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-FLD-ON-SITE-SAMPLE-COLLECTION-TRAVEL-QUOTED",
+      "name": "On-Site Sample Collection (travel quoted)",
+      "category": "Field Services",
+      "unit": "per visit",
+      "public_price": 1142.86,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-FLD-ON-SITE-SAMPLING-FEE-STANDARD-VISIT",
+      "name": "On-Site Sampling Fee (standard visit)",
+      "category": "Field Services",
+      "unit": "per visit",
+      "public_price": 714.29,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-WMP-RISK-ASSESSMENT-ASHRAE-188",
+      "name": "Risk Assessment (ASHRAE 188)",
+      "category": "Water Management Plan",
+      "unit": "each",
+      "public_price": 842.86,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-WMP-WMP-DEVELOPMENT-ASHRAE-188",
+      "name": "WMP Development (ASHRAE 188)",
+      "category": "Water Management Plan",
+      "unit": "each",
+      "public_price": 2528.57,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-WMP-PLAN-CERTIFICATION",
+      "name": "Plan Certification",
+      "category": "Water Management Plan",
+      "unit": "each",
+      "public_price": 842.86,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-WMP-PLAN-RENEWAL-ANNUAL",
+      "name": "Plan Renewal (annual)",
+      "category": "Water Management Plan",
+      "unit": "each",
+      "public_price": 1685.71,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-WMP-MONTHLY-DASHBOARD-ACCESS",
+      "name": "Monthly Dashboard Access",
+      "category": "Water Management Plan",
+      "unit": "per month",
+      "public_price": 71.43,
+      "currency": "usd",
+      "active": true
+    }
+  ],
+  "service_packages": [
+    {
+      "sku": "MS-PKG-INITIAL-SAMPLING-VISIT-PACKAGE",
+      "name": "Initial Sampling Visit Package",
+      "category": "Service Packages",
+      "unit": "package",
+      "public_price": 1835.71,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-PKG-WATER-MANAGEMENT-PLAN-SETUP-ANNUAL",
+      "name": "Water Management Plan Setup (annual)",
+      "category": "Service Packages",
+      "unit": "package",
+      "public_price": 4942.86,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-PKG-QUARTERLY-AUDIT",
+      "name": "Quarterly Audit",
+      "category": "Service Packages",
+      "unit": "per quarter",
+      "public_price": 3374.29,
+      "currency": "usd",
+      "active": true
+    },
+    {
+      "sku": "MS-PKG-YEARLY-RECERTIFICATION",
+      "name": "Yearly Recertification",
+      "category": "Service Packages",
+      "unit": "per year",
+      "public_price": 4085.71,
+      "currency": "usd",
+      "active": true
+    }
+  ]
+}

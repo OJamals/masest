@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Product | MASEST VertKleen</title>
-<meta name="description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation for zero-hazard industrial chemistry.">
+<meta name="description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation for lower-hazard industrial chemistry.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta property="og:title" content="Product | MASEST VertKleen">
@@ -165,11 +165,12 @@
   const { isLocalStaticCommerceSuppressed, loadCommerceCatalog, refreshCommerceActions } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {
     const id = new URLSearchParams(location.search).get("id") || "hcr";
-    // Editorial id and commerce catalog sku currently share the same slug (e.g. `crhd`),
-    // so no remap is needed. Only add an entry if a catalog sku ever diverges from the
-    // editorial id — a stale mapping silently breaks the buy button (the lookup at the
-    // /api/products `find` below returns no row, so the "Add to cart" control never renders).
-    const COMMERCE_ALIAS = {};
+    // Editorial id -> commerce catalog sku. The live DB catalog (reseeded 2026-06-19 from
+    // data/catalog.seed.json) uses `cr-hd` and `descaler`, but the editorial ids are `crhd`
+    // and `crs`. Without this remap the /api/products `find` below returns no row and both
+    // the "Add to cart" control and the drums/totes price block silently fail to render.
+    // Keep in sync with COMMERCE_SKU_ALIASES in js/main/commerce-ui.js and the drum-pricing.json keys.
+    const COMMERCE_ALIAS = { crhd: "cr-hd", crs: "descaler" };
     const commerceId = COMMERCE_ALIAS[id] || id;
     const p = PRODUCTS[id];
     function setProductJsonLd(product) {
@@ -188,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "image": product.image ? new URL(product.image, "https://masest.co/").href : undefined,
         "additionalProperty": [
           { "@type": "PropertyValue", "name": "HMIS rating", "value": product.hmis || "0-0-0" },
-          { "@type": "PropertyValue", "name": "Replaces", "value": product.replaces || "Legacy hazardous chemistry" }
+          { "@type": "PropertyValue", "name": "Replaces", "value": product.replaces || "Legacy chemistry" }
         ].filter(Boolean)
       };
       let script = document.getElementById("productDetailJsonLd");
