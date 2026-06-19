@@ -5,7 +5,7 @@ import test from "node:test";
 const readSite = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const catalog = () => JSON.parse(readSite("data/catalog.seed.json"));
 
-test("canonical catalog carries latest chemical products and safe variant states", () => {
+test("canonical catalog carries all chemical products and variants", () => {
   const data = catalog();
   assert.equal(data.products.length, 20);
   assert.equal(data.product_variants.length, 100);
@@ -17,9 +17,9 @@ test("canonical catalog carries latest chemical products and safe variant states
   assert.equal(hcrTrial.requires_quote, false);
 
   const watersafeTrial = data.product_variants.find((v) => v.sku === "VK-WS60-1");
-  assert.equal(watersafeTrial.retail_price, null);
-  assert.equal(watersafeTrial.active, false);
-  assert.equal(watersafeTrial.requires_quote, true);
+  assert.equal(watersafeTrial.retail_price, "11.26");
+  assert.equal(watersafeTrial.active, true);
+  assert.equal(watersafeTrial.requires_quote, false);
 
   const hcrTote = data.product_variants.find((v) => v.sku === "VK-HCR-275");
   assert.equal(hcrTote.retail_price, "2754.67");
@@ -27,31 +27,24 @@ test("canonical catalog carries latest chemical products and safe variant states
   assert.equal(hcrTote.requires_quote, true);
 });
 
-test("controlled-launch policy: only priced small packs are buyable", () => {
+test("product catalog policy: small packs are priced and bulk quantities are quote-routed", () => {
   const data = catalog();
-  const QUOTE_ONLY = new Set([
-    "pg100", "pg50", "eg100", "eg50", "egu96", "eg5050", "watersafe60", "cr2", "sar",
-  ]);
 
-  // Quote-only products carry mode=quote; every other product is buy.
-  for (const p of data.products) {
-    assert.equal(p.mode, QUOTE_ONLY.has(p.slug) ? "quote" : "buy", `mode for ${p.slug}`);
+  for (const product of data.products) {
+    assert.equal(product.mode, "buy", `${product.slug} should be buyable in small packs`);
+    const small = data.product_variants.filter((v) => (
+      v.product_slug === product.slug && [1, 2.5, 5].includes(Number(v.size_gal))
+    ));
+    assert.ok(small.length > 0, `${product.slug} should have small-pack variants`);
+    assert.ok(small.every((v) => v.active === true), `${product.slug} small packs should be active`);
+    assert.ok(small.every((v) => Number(v.retail_price) > 0), `${product.slug} small packs should be priced`);
+    assert.ok(small.every((v) => v.requires_quote === false), `${product.slug} small packs should not require quote`);
   }
 
-  // Nothing unfulfillable is buyable: every active+priced variant is a <55 gal small pack,
-  // and no quote-only family ever has an active variant. This is the launch guardrail.
-  const buyable = data.product_variants.filter((v) => v.active && v.retail_price != null);
-  assert.equal(buyable.length, 33);
-  for (const v of buyable) {
-    assert.ok(Number(v.retail_price) > 0, `priced ${v.sku}`);
-    assert.ok(Number(v.size_gal) < 55, `small pack ${v.sku}`);
-    assert.ok(!QUOTE_ONLY.has(v.product_slug), `not quote-only ${v.sku}`);
-  }
-
-  // Glycol 5 gal is quote-only at launch (not buyable), per owner decision.
-  const pg100_5 = data.product_variants.find((v) => v.sku === "VK-PG100-5");
-  assert.equal(pg100_5.active, false);
-  assert.equal(pg100_5.requires_quote, true);
+  const bulk = data.product_variants.filter((v) => Number(v.size_gal) >= 55);
+  assert.ok(bulk.length > 0, "bulk variants should remain in catalog");
+  assert.ok(bulk.every((v) => v.active === false), "bulk variants should not be checkout-active");
+  assert.ok(bulk.every((v) => v.requires_quote === true), "bulk variants should require quote");
 });
 
 test("canonical catalog carries quote-confirmed services and unique SKUs", () => {
@@ -60,7 +53,7 @@ test("canonical catalog carries quote-confirmed services and unique SKUs", () =>
   assert.equal(data.service_packages.length, 4);
 
   const allServiceSkus = [...data.services, ...data.service_packages].map((s) => s.sku);
-  assert.equal(new Set(allServiceSkus).size, allServiceSkus.length);
+  assert.equal(allServiceSkus.length, new Set(allServiceSkus).size);
   assert.ok(allServiceSkus.includes("MS-BID-SPEC-CREATION"));
   assert.ok(allServiceSkus.includes("MS-CONS-PARTICLE-ID"));
 
@@ -69,11 +62,11 @@ test("canonical catalog carries quote-confirmed services and unique SKUs", () =>
   assert.equal(legionella.mode, "quote_service");
 });
 
-test("Supabase seed SQL imports latest priced variants and omits active unpriced checkout", () => {
+test("Supabase seed SQL imports small-pack prices and bulk quote variants", () => {
   const seed = readSite("supabase/variants_seed.sql");
-  assert.match(seed, /'VK-HCR-1','hcr','1 gal',1,17\.30,true,1/);
-  assert.match(seed, /'VK-PG100-5','pg100','5 gal',5,141,false,3/);
-  assert.match(seed, /'VK-WS60-1','watersafe60','1 gal',1,null,false,1/);
+  assert.match(seed, /'VK-HCR-1','hcr','1 gal',1,17\.3,true,1/);
+  assert.match(seed, /'VK-WS60-1','watersafe60','1 gal',1,11\.26,true,1/);
+  assert.match(seed, /'VK-PG100-5','pg100','5 gal',5,141,true,3/);
   assert.match(seed, /'VK-HCR-275','hcr','275 gal tote',275,2754\.67,false,5/);
 });
 

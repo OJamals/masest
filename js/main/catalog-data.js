@@ -327,8 +327,8 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/hvac-cr-studio.webp",
-    tag: "Higher-concentration CR for demanding alkaline cleaning and water-treatment programs. Priced by quote.",
-    desc: "A higher-concentration version of VertKleen CR for demanding alkaline cleaning and water-treatment work. Pricing and pack sizes are confirmed by quote.",
+    tag: "Higher-concentration CR for demanding alkaline cleaning and water-treatment programs with published list pricing.",
+    desc: "A higher-concentration version of VertKleen CR for demanding alkaline cleaning and water-treatment work. Small packs are priced online; drums route through freight review.",
     uses: [
       "Concentrated alkaline cleaning programs",
       "Water-treatment dosing where strength matters",
@@ -348,8 +348,8 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-wrench",
     image: "img/products/crs-studio.webp",
-    tag: "Specialty acid replacement for targeted descaling and water-side work. Priced by quote.",
-    desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. Pricing and pack sizes are confirmed by quote.",
+    tag: "Specialty acid replacement for targeted descaling and water-side work with published list pricing.",
+    desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. Small packs are priced online; drums route through freight review.",
     uses: [
       "Specialty descaling and acid-cleaning jobs",
       "Water-side scale and mineral removal",
@@ -362,20 +362,118 @@ export const PRODUCTS = {
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
+pg100: {
+    name: "VertKleen PG100",
+    cat: "glycol",
+    replaces: "Propylene glycol concentrate",
+    hmis: "0-0-0",
+    icon: "ph-thermometer-cold",
+    tag: "Propylene glycol concentrate for closed-loop heat-transfer and freeze-protection programs.",
+    desc: "A propylene glycol concentrate for commercial HVAC, hydronic, and process-loop freeze protection.",
+    uses: ["Closed-loop HVAC systems", "Hydronic freeze protection", "Process heat-transfer loops"],
+    specs: [
+      ["ph-drop", "Propylene glycol", "Concentrated inhibited glycol"],
+      ["ph-thermometer-cold", "Freeze protection", "For loop fill and maintenance programs"],
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  pg50: {
+    name: "VertKleen PG50",
+    cat: "glycol",
+    replaces: "50% propylene glycol blend",
+    hmis: "0-0-0",
+    icon: "ph-thermometer-cold",
+    tag: "Premixed 50% propylene glycol blend for closed-loop freeze-protection maintenance.",
+    desc: "A ready-to-use 50% propylene glycol blend for HVAC and hydronic loop service.",
+    uses: ["Closed-loop HVAC systems", "Hydronic loop top-offs", "Facility freeze-protection maintenance"],
+    specs: [
+      ["ph-drop", "PG 50 blend", "Premixed propylene glycol solution"],
+      ["ph-thermometer-cold", "Freeze protection", "For routine loop service"],
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  eg100: {
+    name: "VertKleen EG100",
+    cat: "glycol",
+    replaces: "Ethylene glycol concentrate",
+    hmis: "0-0-0",
+    icon: "ph-thermometer-cold",
+    tag: "Ethylene glycol concentrate for industrial heat-transfer and freeze-protection loops.",
+    desc: "An ethylene glycol concentrate for industrial loop fill, freeze protection, and heat-transfer programs.",
+    uses: ["Industrial heat-transfer loops", "Closed-loop freeze protection", "Process-loop maintenance"],
+    specs: [
+      ["ph-drop", "Ethylene glycol", "Concentrated inhibited glycol"],
+      ["ph-thermometer-cold", "Freeze protection", "For loop fill and maintenance programs"],
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  eg50: {
+    name: "VertKleen EG50",
+    cat: "glycol",
+    replaces: "50% ethylene glycol blend",
+    hmis: "0-0-0",
+    icon: "ph-thermometer-cold",
+    tag: "Premixed 50% ethylene glycol blend for industrial loop maintenance.",
+    desc: "A ready-to-use 50% ethylene glycol blend for industrial heat-transfer and freeze-protection loops.",
+    uses: ["Industrial loop top-offs", "Closed-loop freeze protection", "Heat-transfer maintenance"],
+    specs: [
+      ["ph-drop", "EG 50 blend", "Premixed ethylene glycol solution"],
+      ["ph-thermometer-cold", "Freeze protection", "For routine loop service"],
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  egu96: {
+    name: "VertKleen EGU96",
+    cat: "glycol",
+    replaces: "Ethylene glycol utility concentrate",
+    hmis: "0-0-0",
+    icon: "ph-thermometer-cold",
+    tag: "Utility-grade ethylene glycol concentrate for heat-transfer and freeze-protection programs.",
+    desc: "A utility-grade ethylene glycol concentrate for industrial heat-transfer loop programs.",
+    uses: ["Utility loop service", "Industrial freeze protection", "Process heat-transfer maintenance"],
+    specs: [
+      ["ph-drop", "EG utility", "Concentrated glycol for utility loops"],
+      ["ph-thermometer-cold", "Freeze protection", "For loop fill and maintenance programs"],
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  },
+  eg5050: {
+    name: "VertKleen EG50/50",
+    cat: "glycol",
+    replaces: "Economy 50% ethylene glycol blend",
+    hmis: "0-0-0",
+    icon: "ph-thermometer-cold",
+    tag: "Economy 50/50 ethylene glycol blend for routine loop top-offs and maintenance.",
+    desc: "A 50/50 ethylene glycol blend for routine closed-loop maintenance and top-off work.",
+    uses: ["Loop top-offs", "Routine freeze-protection maintenance", "Industrial heat-transfer service"],
+    specs: [
+      ["ph-drop", "EG 50/50", "Premixed ethylene glycol solution"],
+      ["ph-thermometer-cold", "Freeze protection", "For routine loop service"],
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+    ],
+    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+  }
 };
 
 export const CATALOG_ORDER = [
-  "hcr", "descaler", "crs", "cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash",
-  "watersafe60", "cr2", "sar", "purgo", "dbnpa", "lam3", "alumibrite", "torque"
+  "hcr", "descaler", "cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash",
+  "watersafe60", "cr2", "sar", "purgo", "lam3", "alumibrite", "torque",
+  "pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"
 ];
 
 // Catalog UI groupings (curated, not the raw `cat` field) — drive the category
 // filter chips and grouping on the products page.
 export const CATALOG_GROUPS = [
-  { key: "descale", label: "Rust & Scale", ids: ["hcr", "descaler", "crs"] },
+  { key: "descale", label: "Rust & Scale", ids: ["hcr", "descaler"] },
   { key: "degrease", label: "Grease & Grime", ids: ["cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash"] },
-  { key: "water", label: "Water Treatment", ids: ["watersafe60", "cr2", "sar", "purgo", "dbnpa"] },
-  { key: "exterior", label: "Exterior & Specialty", ids: ["lam3", "alumibrite", "torque"] }
+  { key: "water", label: "Water Treatment", ids: ["watersafe60", "cr2", "sar", "purgo"] },
+  { key: "exterior", label: "Exterior & Specialty", ids: ["lam3", "alumibrite", "torque"] },
+  { key: "glycol", label: "Glycols", ids: ["pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"] }
 ];
 
 // Automated replacement checker: the legacy chemical a buyer uses today, the job
@@ -390,7 +488,6 @@ export const REPLACEMENT_MAP = [
   { legacy: "General-purpose caustic cleaners", job: "Everyday facility washing", ids: ["multiwash"] },
   { legacy: "Phosphate / zinc / molybdate blends", job: "Scale & corrosion control", ids: ["watersafe60"] },
   { legacy: "Stabilized bromine / bleach", job: "Oxidizing biocide", ids: ["purgo"] },
-  { legacy: "Glutaraldehyde 50%", job: "Non-oxidizing biocide", ids: ["dbnpa"] },
   { legacy: "Wet & Forget / bleach roof cleaners", job: "Exterior moss, algae & mold", ids: ["lam3"] },
   { legacy: "Hydrofluoric / HCl brighteners", job: "Aluminum brightening", ids: ["alumibrite"] },
   { legacy: "Separate wash, wax & bug removers", job: "Vehicle wash & wax", ids: ["torque"] }
@@ -483,15 +580,52 @@ export const PRODUCT_CATALOG_COPY = {
   },
   cr2: {
     job: "Concentrated alkaline cleaning",
-    summary: "A higher-concentration CR for demanding alkaline cleaning and water-treatment programs. Priced by quote.",
+    summary: "A higher-concentration CR for demanding alkaline cleaning and water-treatment programs with published list pricing.",
     fits: ["alkaline cleaning", "water treatment", "high-pH", "dosing"],
     proof: "Application notes on request"
   },
   sar: {
     job: "Specialty acid replacement",
-    summary: "A tuned acid-replacement formulation for targeted descaling and water-side work. Priced by quote.",
+    summary: "A tuned acid-replacement formulation for targeted descaling and water-side work with published list pricing.",
     fits: ["descaling", "water-side scale", "specialty acid", "maintenance"],
     proof: "Application notes on request"
+  }
+  ,
+  pg100: {
+    job: "Propylene glycol concentrate",
+    summary: "Concentrated PG for closed-loop heat-transfer and freeze-protection programs.",
+    fits: ["HVAC loops", "hydronic systems", "freeze protection"],
+    proof: "Pricing launch spec"
+  },
+  pg50: {
+    job: "Premixed PG loop service",
+    summary: "50% propylene glycol blend for routine top-offs and closed-loop maintenance.",
+    fits: ["HVAC loops", "hydronic systems", "maintenance top-offs"],
+    proof: "Pricing launch spec"
+  },
+  eg100: {
+    job: "Ethylene glycol concentrate",
+    summary: "Concentrated EG for industrial heat-transfer and freeze-protection loops.",
+    fits: ["industrial loops", "process systems", "freeze protection"],
+    proof: "Pricing launch spec"
+  },
+  eg50: {
+    job: "Premixed EG loop service",
+    summary: "50% ethylene glycol blend for routine industrial loop maintenance.",
+    fits: ["industrial loops", "heat transfer", "maintenance top-offs"],
+    proof: "Pricing launch spec"
+  },
+  egu96: {
+    job: "Utility glycol concentrate",
+    summary: "Utility-grade ethylene glycol concentrate for heat-transfer loop programs.",
+    fits: ["utility loops", "industrial freeze protection", "process systems"],
+    proof: "Pricing launch spec"
+  },
+  eg5050: {
+    job: "Economy EG 50/50 blend",
+    summary: "Premixed 50/50 ethylene glycol blend for routine top-offs and maintenance.",
+    fits: ["loop top-offs", "routine maintenance", "freeze protection"],
+    proof: "Pricing launch spec"
   }
 };
 
@@ -532,4 +666,3 @@ export const PRODUCT_GALLERY = {
 };
 
 /* ---------- Nav / footer injection ---------- */
-

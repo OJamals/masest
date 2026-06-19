@@ -1,137 +1,189 @@
-// Build the MASEST commerce catalog artifacts from data/catalog.seed.json (source of truth).
+// Build MASEST commerce catalog artifacts from data/catalog.seed.json.
 //
-// Applies the CONTROLLED-LAUNCH policy, then re-emits every dependent file in sync:
-//   - data/catalog.seed.json   (normalized in place; read by tools/seed-products.mjs)
-//   - supabase/variants_seed.sql  (SQL-editor paste path; checkout reads product_variants)
-//   - supabase/seed.sql           (product parents)
-//   - data/products.seed.json     (legacy mirror, kept consistent)
+// Catalog policy, owner-approved 2026-06-18:
+// - All product families are buyable in small packs: 1, 2.5, and 5 gal.
+// - Bulk 55/275 gal drums and totes stay quote-routed because freight/final
+//   scope changes at that size.
+// - Missing small-pack prices are derived from the product's 5 gal list price
+//   when present, otherwise from the 55 gal list price per gallon.
 //
-// Controlled-launch policy (owner-approved 2026-06-17):
-//   Buyable  = small packs (1 / 2.5 / 5 gal) of the 11 priced cleaning/degreasing products.
-//   Quote-only = glycols + WaterSafe60 + CR2 + SAR (unconfirmed small-pack price / freight),
-//               and ALL 55 / 275 gal drums & totes (freight quoted post-order).
-// Quote-only variants are active=false so /api/products + checkout never sell them.
-//
-// Idempotent: re-running produces the same output. Run: node tools/build-catalog.mjs
+// Idempotent: re-running produces the same output.
+// Run: node tools/build-catalog.mjs
+
 import { readFile, writeFile } from 'node:fs/promises';
 
 const here = (p) => new URL(`../${p}`, import.meta.url);
-
-// Products that are NOT buyable at launch (mode=quote, all variants forced inactive).
-// Everything else with a priced small pack stays buyable.
-const QUOTE_ONLY_SLUGS = new Set([
-  'pg100', 'pg50', 'eg100', 'eg50', 'egu96', 'eg5050', // glycols — price list lives on programs.html
-  'watersafe60', 'cr2', 'sar',                          // small-pack price / freight unconfirmed
-]);
+const SMALL_PACKS = new Set([1, 2.5, 5]);
 
 const catalog = JSON.parse(await readFile(here('data/catalog.seed.json'), 'utf8'));
 
-// 1) Apply policy ----------------------------------------------------------
-for (const p of catalog.products) {
-  if (QUOTE_ONLY_SLUGS.has(p.slug)) p.mode = 'quote';
+function fixedMoney(value) {
+  return Number(value).toFixed(2);
 }
-for (const v of catalog.product_variants) {
-  if (QUOTE_ONLY_SLUGS.has(v.product_slug)) {
-    v.active = false;
-    v.requires_quote = true;
+
+function pricedByProduct(variants) {
+  return variants.reduce((map, variant) => {
+    if (Number(variant.retail_price) > 0) {
+      if (!map.has(variant.product_slug)) map.set(variant.product_slug, []);
+      map.get(variant.product_slug).push(variant);
+    }
+    return map;
+  }, new Map());
+}
+
+function deriveSmallPackPrice(variant, pricedMap) {
+  if (Number(variant.retail_price) > 0) return fixedMoney(variant.retail_price);
+  const priced = pricedMap.get(variant.product_slug) || [];
+  const fiveGal = priced.find((row) => Number(row.size_gal) === 5);
+  const drum = priced.find((row) => Number(row.size_gal) === 55);
+  const basis = fiveGal || drum;
+  if (!basis) return null;
+  const unitPrice = Number(basis.retail_price) / Number(basis.size_gal);
+  return fixedMoney(unitPrice * Number(variant.size_gal));
+}
+
+// 1) Apply product and variant policy.
+for (const product of catalog.products) product.mode = 'buy';
+
+const pricedMap = pricedByProduct(catalog.product_variants);
+for (const variant of catalog.product_variants) {
+  const gallons = Number(variant.size_gal);
+  if (SMALL_PACKS.has(gallons)) {
+    variant.retail_price = deriveSmallPackPrice(variant, pricedMap);
+    variant.active = variant.retail_price != null;
+    variant.requires_quote = !variant.active;
+    continue;
+  }
+  if (gallons >= 55) {
+    variant.active = false;
+    variant.requires_quote = true;
   }
 }
 
-// 2) Guardrail — nothing unfulfillable may be buyable -----------------------
-const buyable = catalog.product_variants.filter((v) => v.active && v.retail_price != null);
-const badPriced = buyable.filter((v) => !(Number(v.retail_price) > 0));
-const bigBuyable = buyable.filter((v) => Number(v.size_gal) >= 55);
+// 2) Guardrails.
+const activeVariants = catalog.product_variants.filter((v) => v.active);
+const badPriced = activeVariants.filter((v) => !(Number(v.retail_price) > 0));
+const bigBuyable = activeVariants.filter((v) => Number(v.size_gal) >= 55);
+const missingSmallPack = catalog.products.flatMap((product) => {
+  const small = catalog.product_variants.filter((v) => (
+    v.product_slug === product.slug && SMALL_PACKS.has(Number(v.size_gal))
+  ));
+  return small.length && small.every((v) => v.active && Number(v.retail_price) > 0) ? [] : [product.slug];
+});
 const dupV = findDupes(catalog.product_variants.map((v) => v.sku));
 const dupP = findDupes(catalog.products.map((p) => p.slug));
-const errors = [];
-if (badPriced.length) errors.push(`buyable variants with no price: ${badPriced.map((v) => v.sku).join(', ')}`);
-if (bigBuyable.length) errors.push(`55/275 gal variants left buyable: ${bigBuyable.map((v) => v.sku).join(', ')}`);
-if (dupV.length) errors.push(`duplicate vsku: ${dupV.join(', ')}`);
-if (dupP.length) errors.push(`duplicate slug: ${dupP.join(', ')}`);
+const errors = [
+  ...badPriced.map((v) => `active variant has invalid price: ${v.sku}`),
+  ...bigBuyable.map((v) => `bulk variant must be quote-routed: ${v.sku}`),
+  ...missingSmallPack.map((slug) => `product missing priced small packs: ${slug}`),
+  ...dupV.map((sku) => `duplicate variant sku: ${sku}`),
+  ...dupP.map((slug) => `duplicate product slug: ${slug}`),
+];
 if (errors.length) {
-  console.error('build-catalog guardrail FAILED:\n  - ' + errors.join('\n  - '));
+  console.error('build-catalog failed:\n' + errors.join('\n'));
   process.exit(1);
 }
 
-// 3) Emit files ------------------------------------------------------------
+// 3) Emit artifacts.
 await writeFile(here('data/catalog.seed.json'), JSON.stringify(catalog, null, 2) + '\n');
-
 await writeFile(here('supabase/variants_seed.sql'), variantsSql(catalog.product_variants));
 await writeFile(here('supabase/seed.sql'), productsSql(catalog.products));
 await writeFile(here('data/products.seed.json'), productsJson(catalog.products));
 await writeFile(here('data/drum-pricing.json'), drumPricingJson(catalog.product_variants));
 
-const buyProducts = catalog.products.filter((p) => p.mode === 'buy').length;
-console.log(
-  `build-catalog OK — ${catalog.products.length} products (${buyProducts} buy / ${catalog.products.length - buyProducts} quote), ` +
-  `${catalog.product_variants.length} variants (${buyable.length} buyable), ${catalog.services.length + catalog.service_packages.length} services/packages.`
-);
+console.log(`catalog: ${catalog.products.length} products, ${catalog.product_variants.length} variants, ${activeVariants.length} active small-pack variants`);
 
-// --- helpers --------------------------------------------------------------
-function findDupes(arr) {
-  const seen = new Set(), dupes = new Set();
-  for (const x of arr) (seen.has(x) ? dupes : seen).add(x);
+function findDupes(items) {
+  const seen = new Set();
+  const dupes = new Set();
+  for (const item of items) {
+    if (seen.has(item)) dupes.add(item);
+    seen.add(item);
+  }
   return [...dupes];
-}
-
-function sqlNum(v) {
-  return v == null ? 'null' : String(Number(v) % 1 === 0 ? Number(v) : v);
-}
-
-function variantsSql(variants) {
-  const head =
-    '-- MASEST product variants — generated by tools/build-catalog.mjs from data/catalog.seed.json. DO NOT edit by hand.\n' +
-    '-- active=true  → public checkout may sell the variant (priced small packs only).\n' +
-    '-- active=false → quote-only: unpriced, or a 55/275 gal drum/tote with freight quoted post-order.\n' +
-    'insert into public.product_variants (vsku, product_sku, label, gallons, price, active, sort) values\n';
-  const rows = variants.map((v) =>
-    `  ('${v.sku}','${v.product_slug}','${v.label}',${sqlNum(v.size_gal)},${sqlNum(v.retail_price)},${v.active},${v.sort})`
-  );
-  const tail =
-    '\non conflict (vsku) do update set\n' +
-    '  product_sku = excluded.product_sku,\n  label = excluded.label,\n  gallons = excluded.gallons,\n' +
-    '  price = excluded.price,\n  active = excluded.active,\n  sort = excluded.sort;\n';
-  return head + rows.join(',\n') + tail;
-}
-
-function productsSql(products) {
-  const head =
-    '-- MASEST product parents — generated by tools/build-catalog.mjs from data/catalog.seed.json. DO NOT edit by hand.\n' +
-    '-- Run AFTER schema.sql, then variants_seed.sql. Prices are null on parents (variant-priced).\n' +
-    '-- mode=buy → cart/checkout UI; mode=quote → quote form only.\n' +
-    'insert into public.products (sku, name, group_key, hmis, mode, hazmat, taxable, price, sort) values\n';
-  const rows = products.map((p) =>
-    `  ('${p.slug}', ${sqlStr(p.name)}, '${p.group_key}', '${p.hmis}', '${p.mode}', ${p.hazmat}, ${p.taxable}, null, ${p.sort})`
-  );
-  const tail =
-    '\non conflict (sku) do update set\n' +
-    '  name = excluded.name,\n  group_key = excluded.group_key,\n  hmis = excluded.hmis,\n' +
-    '  mode = excluded.mode,\n  hazmat = excluded.hazmat,\n  taxable = excluded.taxable,\n  sort = excluded.sort,\n' +
-    '  updated_at = now();\n  -- price intentionally NOT updated, so owner-set prices survive a re-run.\n';
-  return head + rows.join(',\n') + tail;
 }
 
 function productsJson(products) {
   const rows = products.map((p) => ({
-    sku: p.slug, name: p.name, group_key: p.group_key, hmis: p.hmis,
-    mode: p.mode, hazmat: p.hazmat, taxable: p.taxable, price: null, sort: p.sort,
+    sku: p.slug,
+    name: p.name,
+    group_key: p.group_key,
+    hmis: p.hmis,
+    mode: p.mode,
+    hazmat: p.hazmat,
+    taxable: p.taxable,
+    price: null,
+    sort: p.sort,
   }));
   return JSON.stringify(rows, null, 2) + '\n';
 }
 
-function sqlStr(s) { return `'${String(s).replace(/'/g, "''")}'`; }
+function productsSql(products) {
+  const rows = products.map((p) => `(${[
+    sqlStr(p.slug),
+    sqlStr(p.name),
+    sqlStr(p.group_key),
+    sqlStr(p.hmis),
+    sqlStr(p.mode),
+    Boolean(p.hazmat),
+    Boolean(p.taxable),
+    'null',
+    Number(p.sort || 0),
+  ].join(',')})`);
+  return `-- MASEST products - generated by tools/build-catalog.mjs from data/catalog.seed.json. DO NOT edit by hand.\n`
+    + `insert into public.products (sku, name, group_key, hmis, mode, hazmat, taxable, price, sort)\nvalues\n`
+    + rows.join(',\n')
+    + `\non conflict (sku) do update set\n`
+    + `  name = excluded.name,\n`
+    + `  group_key = excluded.group_key,\n`
+    + `  hmis = excluded.hmis,\n`
+    + `  mode = excluded.mode,\n`
+    + `  hazmat = excluded.hazmat,\n`
+    + `  taxable = excluded.taxable,\n`
+    + `  price = excluded.price,\n`
+    + `  sort = excluded.sort;\n`;
+}
 
-// Slim per-product list of priced 55/275 gal drums & totes for the product-page
-// "request a quote" reference block. Display only — never feeds cart/checkout.
+function variantsSql(variants) {
+  const rows = variants.map((v) => `(${[
+    sqlStr(v.sku),
+    sqlStr(v.product_slug),
+    sqlStr(v.label),
+    Number(v.size_gal),
+    v.retail_price == null ? 'null' : Number(v.retail_price),
+    Boolean(v.active),
+    Number(v.sort || 0),
+  ].join(',')})`);
+  return `-- MASEST product variants - generated by tools/build-catalog.mjs from data/catalog.seed.json. DO NOT edit by hand.\n`
+    + `-- active=true -> public checkout may sell the variant (priced small packs only).\n`
+    + `-- active=false -> bulk quote route or unavailable checkout variant.\n`
+    + `insert into public.product_variants (vsku, product_sku, label, gallons, price, active, sort)\nvalues\n`
+    + rows.join(',\n')
+    + `\non conflict (vsku) do update set\n`
+    + `  product_sku = excluded.product_sku,\n`
+    + `  label = excluded.label,\n`
+    + `  gallons = excluded.gallons,\n`
+    + `  price = excluded.price,\n`
+    + `  active = excluded.active,\n`
+    + `  sort = excluded.sort;\n`;
+}
+
 function drumPricingJson(variants) {
   const out = {};
   for (const v of variants) {
     if (Number(v.size_gal) >= 55 && v.retail_price != null) {
       (out[v.product_slug] ||= []).push({
-        label: v.label, gallons: Number(v.size_gal), price: Number(v.retail_price), currency: v.currency || 'usd',
+        label: v.label,
+        gallons: Number(v.size_gal),
+        price: Number(v.retail_price),
+        currency: v.currency || 'usd',
       });
     }
   }
   for (const slug of Object.keys(out)) out[slug].sort((a, b) => a.gallons - b.gallons);
   return JSON.stringify(out, null, 2) + '\n';
+}
+
+function sqlStr(value) {
+  return `'${String(value ?? '').replace(/'/g, "''")}'`;
 }

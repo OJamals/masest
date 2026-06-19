@@ -11,6 +11,7 @@ export function renderChrome() {
   const root = /\/industries\//.test(location.pathname) ? "../" : "";
   const links = [
     { href: "products.html", label: "Products" },
+    { href: "services.html", label: "Services" },
     {
       key: "useCases",
       label: "Use Cases",
@@ -56,7 +57,7 @@ export function renderChrome() {
         ${links.map(navItem).join("")}
       </nav>
         <div class="nav-actions">
-          <a class="nav-account" href="${root}account.html"><span>Sign in</span></a>
+          <a class="nav-auth-placeholder nav-signin" href="${root}account.html"><span>Sign in</span></a>
           <a class="nav-cart" href="${root}cart.html" aria-label="Open cart"><i class="ph ph-shopping-cart-simple" aria-hidden="true"></i><b class="cart-count" data-cart-count hidden>0</b></a>
           <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
         </div>

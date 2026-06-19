@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
   <title>Cart | MASEST</title>
-  <meta name="description" content="Review VertKleen purchase-ready SKUs, start checkout, or route quote-only products to MASEST.">
+  <meta name="description" content="Review VertKleen purchase-ready SKUs, start checkout, or route bulk freight requests to MASEST.">
   <link rel="stylesheet" href="vendor/satoshi/satoshi.css">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
   <link rel="stylesheet" href="css/style.css">
@@ -86,10 +86,11 @@
     crhd: "VertKleen CR-HD",
     hcr: "VertKleen HCR",
   };
-  async function loadCatalog() {
-    try {
-      const token = await getToken().catch(() => null);
-      const r = await fetch("/api/products", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+async function loadCatalog() {
+  try {
+    if (window.MASESTMain?.isLocalStaticCommerceSuppressed?.()) return;
+    const token = await getToken().catch(() => null);
+    const r = await fetch("/api/products", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       if (!r.ok) return;
       const data = await r.json();
       (data.products || []).forEach(p => {
@@ -165,7 +166,7 @@
 
   function checkoutErrorMessage(err) {
     if (err?.code === "not_purchasable") {
-      return err.message || "Some SKUs are quote-only or not yet priced. Send a quote request and MASEST will confirm availability.";
+      return err.message || "Some SKUs need bulk freight review. Send a quote request and MASEST will confirm availability.";
     }
     if (err?.code === "auth_required_for_net") {
       return "NET terms require an approved business account. Send a quote request and MASEST will confirm account terms.";
@@ -216,7 +217,7 @@
     setCheckoutDisabled(cartItems.length === 0 || hasBlockedLine);
     if (hasBlockedLine) {
       status.dataset.state = "err";
-      status.textContent = "Remove quote-only items before checkout, or send a quote request.";
+      status.textContent = "Remove bulk freight items before checkout, or send a quote request.";
     } else if (status.dataset.state === "err" && cartItems.length) {
       status.dataset.state = "";
       status.textContent = "Cart totals are confirmed at checkout by the server.";

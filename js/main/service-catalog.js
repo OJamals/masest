@@ -35,6 +35,14 @@ const SERVICE_CATEGORY_COPY = {
   }
 };
 
+function fmtMoney(n, currency = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: String(currency || "USD").toUpperCase(),
+    maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
+  }).format(Number(n));
+}
+
 function htmlEscape(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
     "&": "&amp;",
@@ -46,8 +54,8 @@ function htmlEscape(value) {
 }
 
 export function initServiceCatalog() {
-  const root = document.querySelector("[data-service-catalog]");
-  if (!root) return;
+  const roots = Array.from(document.querySelectorAll("[data-service-catalog]"));
+  if (!roots.length) return;
 
   fetch("data/catalog.seed.json", { cache: "no-store" })
     .then((response) => {
@@ -67,7 +75,7 @@ export function initServiceCatalog() {
         return map;
       }, new Map());
 
-      root.innerHTML = [...groups.entries()].map(([category, items]) => {
+      const markup = [...groups.entries()].map(([category, items]) => {
         const copy = SERVICE_CATEGORY_COPY[category] || { icon: "ph-briefcase", note: "Quote-confirmed technical service." };
         const sorted = items.slice().sort((a, b) => Number(a.public_price || 0) - Number(b.public_price || 0));
         const minimum = sorted.find((item) => Number.isFinite(Number(item.public_price)));
@@ -96,9 +104,12 @@ export function initServiceCatalog() {
           </article>
         `;
       }).join("");
+      roots.forEach((root) => { root.innerHTML = markup; });
     })
     .catch(() => {
-      root.innerHTML = '<p class="muted">Service pricing is available by quote. Contact MASEST for the latest workbook-backed scope.</p>';
+      roots.forEach((root) => {
+        root.innerHTML = '<p class="muted">Service pricing is available by quote. Contact MASEST for the latest workbook-backed scope.</p>';
+      });
     });
 }
 

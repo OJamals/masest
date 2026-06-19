@@ -33,7 +33,9 @@ function renderProfile(data) {
 function renderSetupChecklist(data) {
   const box = $('bizSetup');
   const setup = data.setup;
-  if (!box || !setup?.steps?.length) return;
+  if (!box) return;
+  if (!setup?.steps?.length) { $('bizSetup').hidden = true; return; }
+  $('bizSetup').hidden = false;
   box.innerHTML = `
     <h2>Business setup</h2>
     <p class="lead">${setup.done || 0} of ${setup.total || setup.steps.length} account steps complete. Finish these before relying on automated checkout, programs, or NET terms.</p>
@@ -54,7 +56,7 @@ function renderCompanySetupForm(data) {
   box.innerHTML = `
     <h2>Tax setup</h2>
     <form id="companySetupForm" class="biz-form">
-      <label><span>Tax-exempt</span><input id="taxExempt" type="checkbox" ${c.tax_exempt ? 'checked' : ''}></label>
+      <label class="biz-check-label"><input id="taxExempt" type="checkbox" ${c.tax_exempt ? 'checked' : ''}> <span>Tax-exempt</span></label>
       <label><span>Resale certificate URL</span><input id="resaleCertUrl" type="url" value="${esc(c.resale_cert_url || '')}" placeholder="https://"></label>
       <button class="btn btn-primary btn-sm" type="submit">Save setup</button>
       <p id="companySetupStatus" class="status" aria-live="polite"></p>

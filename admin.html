@@ -65,6 +65,18 @@
   .company-user-actions { margin-top: 0; justify-content: flex-end; }
   @media (max-width: 920px) { .adm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thread-layout { grid-template-columns: 1fr; } }
   @media (max-width: 640px) { .adm-wrap { padding: 0 18px; } .adm-grid, .adm-form-grid { grid-template-columns: 1fr; } .adm-form-grid .wide { grid-column: auto; } }
+  .adm-tabs-wrap { overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; }
+  .adm-tabs-wrap .adm-tabs { min-width: max-content; margin-bottom: 0; }
+  .adm-panel-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .adm-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .adm-select-sm { max-width: 220px; }
+  .adm-select-xs { max-width: 180px; }
+  .adm-select-md { max-width: 190px; }
+  @media (max-width: 720px) {
+    .adm-wrap { padding: 0 18px; }
+    .adm-tools { align-items: stretch; }
+    .adm-tools > * { width: 100%; max-width: none; }
+  }
 </style>
 </head>
 <body>
@@ -107,6 +119,7 @@
         <button id="admLogout" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-sign-out"></i> Sign out</button>
       </div>
 
+      <div class="adm-tabs-wrap">
       <div class="adm-tabs" role="tablist" aria-label="Admin sections">
         <button class="adm-tab" data-tab="overview" type="button">Overview</button>
         <button class="adm-tab" data-tab="orders" type="button">Orders</button>
@@ -119,12 +132,13 @@
         <button class="adm-tab" data-tab="offers" type="button">Emails</button>
         <button class="adm-tab" data-tab="traffic" type="button">Traffic</button>
       </div>
+      </div>
 
-      <section class="adm-panel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admQbo" class="adm-card"><h2>QuickBooks</h2><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboSyncSummary" class="muted"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-arrows-clockwise"></i> Run sync</button></div><p id="qboSyncStatus" class="adm-status" role="status"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
+      <section class="adm-panel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admQbo" class="adm-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboSyncSummary" class="muted"></p><div class="adm-inline-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-arrows-clockwise"></i> Run sync</button></div><p id="qboSyncStatus" class="adm-status" role="status"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
 
       <section class="adm-panel" data-panel="orders">
         <div class="adm-tools">
-          <select id="ordFilter" class="adm-select" style="max-width:220px"><option value="">All statuses</option></select>
+          <select id="ordFilter" class="adm-select adm-select-sm"><option value="">All statuses</option></select>
           <input id="ordSearch" class="adm-search" type="search" placeholder="Search orders">
           <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple"></i> Export CSV</button>
         </div>
@@ -191,10 +205,10 @@
 
       <section class="adm-panel" data-panel="quotes">
         <div class="adm-tools">
-          <select id="qFilter" class="adm-select" style="max-width:220px"><option value="">All quotes</option><option>new</option><option>contacted</option><option>closed</option><option>spam</option></select>
-          <select id="qPriority" class="adm-select" style="max-width:180px"><option value="">All priorities</option><option>urgent</option><option>high</option><option>normal</option><option>low</option></select>
+          <select id="qFilter" class="adm-select adm-select-sm"><option value="">All quotes</option><option>new</option><option>contacted</option><option>closed</option><option>spam</option></select>
+          <select id="qPriority" class="adm-select adm-select-xs"><option value="">All priorities</option><option>urgent</option><option>high</option><option>normal</option><option>low</option></select>
           <input id="qOwner" class="adm-search" type="search" placeholder="Owner">
-          <select id="qDue" class="adm-select" style="max-width:190px"><option value="">All follow-ups</option><option value="overdue">Overdue</option><option value="upcoming">Upcoming</option><option value="unscheduled">Unscheduled</option></select>
+          <select id="qDue" class="adm-select adm-select-md"><option value="">All follow-ups</option><option value="overdue">Overdue</option><option value="upcoming">Upcoming</option><option value="unscheduled">Unscheduled</option></select>
           <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes">
         </div>
         <div id="admQuotes" class="adm-panel-list">Loading...</div>

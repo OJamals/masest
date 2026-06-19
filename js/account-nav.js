@@ -18,7 +18,13 @@ const MENU = [
   ['ph-package', 'Orders', 'dashboard.html#orders'],
   ['ph-chat-circle', 'Messages', 'dashboard.html#messages'],
   ['ph-bell', 'Notifications', 'dashboard.html#notifications'],
-  ['ph-gear', 'Settings', 'dashboard.html#profile'],
+];
+
+const ACCOUNT_MENU = [
+  ['ph-user', 'Profile', 'dashboard.html#profile'],
+  ['ph-fingerprint', 'Security', 'dashboard.html#security'],
+  ['ph-map-pin', 'Addresses', 'dashboard.html#addresses'],
+  ['ph-credit-card', 'Payment methods', 'dashboard.html#payment'],
 ];
 
 function injectStyle() {
@@ -41,8 +47,11 @@ function injectStyle() {
   .acct-notif-dot { position:absolute; top:-4px; right:-4px; min-width:15px; height:15px; padding:0 3px; border-radius:999px; background:#b42318; color:#fff; font-size:.58rem; font-weight:800; display:grid; place-items:center; line-height:1; box-shadow:0 0 0 2px var(--surface,#fff); }
   .nav.over-dark .acct-notif-dot { box-shadow:0 0 0 2px #0b0d12; }
   .acct-name { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .acct-dd-menu { position:absolute; right:0; top:calc(100% + 10px); min-width:210px; background:var(--surface,#fff);
+  .acct-dd-menu { position:absolute; right:0; top:calc(100% + 10px); min-width:236px; background:var(--surface,#fff);
     border:1px solid var(--line,#e4e6e9); border-radius:var(--r-card,16px); box-shadow:0 18px 40px -16px rgba(0,0,0,.28); padding:8px; z-index:120; }
+  .acct-menu-section { padding:4px 0; }
+  .acct-menu-section + .acct-menu-section { border-top:1px solid var(--line,#e4e6e9); margin-top:4px; padding-top:8px; }
+  .acct-menu-label { display:block; padding:3px 10px 6px; color:var(--ink-soft,#393d44); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
   .acct-dd-menu a, .acct-dd-menu button { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:10px 12px;
     border:0; background:none; border-radius:10px; font:inherit; font-size:.9rem; font-weight:600; color:var(--ink,#15171c); text-decoration:none; cursor:pointer; }
   .acct-dd-menu a:hover, .acct-dd-menu button:hover { background:var(--accent-tint,#f1f8f8); color:var(--accent-ink,#0a5b62); }
@@ -65,7 +74,10 @@ function injectStyle() {
 
 export async function initAccountNav({ nav, root = '' } = {}) {
   const actions = (nav || document).querySelector('.nav-actions');
-  if (!actions || actions.querySelector('.nav-account')) return;
+  if (!actions) return;
+  const existing = actions.querySelector('.nav-account:not(.nav-auth-placeholder)');
+  if (existing) return;
+  const placeholder = actions.querySelector('.nav-auth-placeholder');
   injectStyle();
 
   // Only load the Supabase SDK + call me() when a session exists; otherwise render Sign in instantly.
@@ -84,15 +96,21 @@ export async function initAccountNav({ nav, root = '' } = {}) {
   } else {
     const label = data.profile?.full_name || data.company?.name || data.email || 'Account';
     const items = MENU.map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');
+    const accountItems = ACCOUNT_MENU.map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');
     const admin = data.is_staff ? `<a class="acct-admin" href="${root}admin.html"><i class="ph ph-shield-check" aria-hidden="true"></i>Admin console</a>` : '';
     mount.innerHTML = `<details class="acct-dd">
       <summary aria-haspopup="true"><span class="acct-avatar">${esc((label[0] || 'A').toUpperCase())}</span><span class="acct-name">${esc(firstName(label))}</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
-      <div class="acct-dd-menu" role="menu">${items}${admin}<button type="button" class="acct-signout"><i class="ph ph-sign-out" aria-hidden="true"></i>Sign out</button></div>
+      <div class="acct-dd-menu" role="menu">
+        <div class="acct-menu-section"><span class="acct-menu-label">Workspace</span>${items}</div>
+        <div class="acct-menu-section"><span class="acct-menu-label">Account</span>${accountItems}</div>
+        <div class="acct-menu-section">${admin}<button type="button" class="acct-signout"><i class="ph ph-sign-out" aria-hidden="true"></i>Sign out</button></div>
+      </div>
     </details>`;
   }
 
   const burger = actions.querySelector('.nav-burger');
-  actions.insertBefore(mount, burger || null);
+  if (placeholder) placeholder.replaceWith(mount);
+  else actions.insertBefore(mount, burger || null);
 
   // Unread notification badge on the avatar (non-blocking; signed-in full accounts only).
   if (api && data && !data.needs_profile) {

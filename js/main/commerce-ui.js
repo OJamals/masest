@@ -36,16 +36,26 @@ const commerceState = {
   promise: null
 };
 
-function isLocalStaticHomepage() {
+const COMMERCE_SKU_ALIASES = {
+  crs: "descaler",
+  crhd: "cr-hd",
+};
+
+function commerceRowFor(id) {
+  const key = String(id || "").toLowerCase();
+  return commerceState.products.get(key) || commerceState.products.get(COMMERCE_SKU_ALIASES[key]);
+}
+
+function isLocalStaticPreview() {
   const localHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
-  const homePath = /(^|\/)(index\.html)?$/.test(location.pathname);
-  return localHost && homePath && !window.MASEST_ENABLE_LOCAL_API;
+  const staticPreviewPort = /^(4173|4194|4195)$/.test(location.port);
+  return localHost && staticPreviewPort && !window.MASEST_ENABLE_LOCAL_API;
 }
 
 export function isLocalStaticCommerceSuppressed() {
   const localHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
   const accountPath = /(^|\/)account\.html$/.test(location.pathname);
-  return isLocalStaticHomepage() || (localHost && accountPath && !window.MASEST_ENABLE_LOCAL_API);
+  return isLocalStaticPreview() || (localHost && accountPath && !window.MASEST_ENABLE_LOCAL_API);
 }
 
 function fmtMoney(n, currency = "USD") {
@@ -112,11 +122,11 @@ export async function loadCommerceCatalog() {
       commerceState.products = rows
         .map(normalizeCommerceRow)
         .filter(row => row.sku)
-        .reduce((map, row) => {
-          const existing = map.get(row.sku);
-          if (!existing) {
-            map.set(row.sku, row);
-            return map;
+      .reduce((map, row) => {
+        const existing = map.get(row.sku);
+        if (!existing) {
+          map.set(row.sku, row);
+          return map;
           }
           existing.active = existing.active && row.active;
       existing.mode = existing.mode || row.mode;
@@ -124,9 +134,13 @@ export async function loadCommerceCatalog() {
         .sort((a, b) => (a.gallons || 0) - (b.gallons || 0));
       if (!existing.image_url && row.image_url) existing.image_url = row.image_url;
       if (!existing.photo_alt && row.photo_alt) existing.photo_alt = row.photo_alt;
-      existing.purchasable = existing.purchasable || row.purchasable;
-          return map;
-        }, new Map());
+        existing.purchasable = existing.purchasable || row.purchasable;
+        return map;
+      }, new Map());
+      for (const [alias, sku] of Object.entries(COMMERCE_SKU_ALIASES)) {
+        const row = commerceState.products.get(sku);
+        if (row && !commerceState.products.has(alias)) commerceState.products.set(alias, row);
+      }
       commerceState.loaded = true;
       return commerceState.products;
     })
@@ -139,30 +153,75 @@ export async function loadCommerceCatalog() {
 }
 
 function commerceActionHTML(id, variant = "chip") {
-  const row = commerceState.products.get(String(id).toLowerCase());
+  const row = commerceRowFor(id);
   const p = PRODUCTS[id];
   if (!row?.purchasable || !row.variants.length) return "";
+  const accountPath = `account.html?return=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
   const opts = row.variants
-    .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${v.label} · ${fmtMoney(v.price, v.currency)}</option>`)
+    .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${String(v.label || "Pack").replace(/\s+(bottle|pail|drum|tote)$/i, "")}</option>`)
     .join("");
   const btnClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-add";
   const first = row.variants[0].vsku;
   return `<span class="commerce-buy" data-commerce-buy="${id}">`
     + `<select class="commerce-vol" aria-label="Volume for ${p?.name || id}">${opts}</select>`
-    + `<button class="${btnClass}" type="button" data-cart-add="${first}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
+    + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
     + `</span>`;
 }
 
-function bulkPriceHTML(id) {
-  const row = commerceState.products.get(String(id).toLowerCase());
+function bulkPriceText(id) {
+  const row = commerceRowFor(id);
+  const variants = Array.isArray(row?.variants)
+    ? row.variants.filter(v => Number.isFinite(Number(v.price)) && Number(v.price) > 0)
+    : [];
+  if (!variants.length) return "";
+  const first = variants
+    .slice()
+    .sort((a, b) => (Number(a.gallons) || 0) - (Number(b.gallons) || 0))[0];
+  return fmtMoney(first.price, first.currency);
+}
+
+function bulkPriceNote(id) {
+  const row = commerceRowFor(id);
+  const variants = Array.isArray(row?.variants)
+    ? row.variants.filter(v => Number.isFinite(Number(v.price)) && Number(v.price) > 0)
+    : [];
+  if (!variants.length) return "";
+  const first = variants
+    .slice()
+    .sort((a, b) => (Number(a.gallons) || 0) - (Number(b.gallons) || 0))[0];
+  return first.label || "Selected pack";
+}
+
+function selectedVariantFor(id, vsku) {
+  const row = commerceRowFor(id);
+  return row?.variants?.find(v => String(v.vsku) === String(vsku));
+}
+
+function bulkPerGallonText(id) {
+  const row = commerceRowFor(id);
   const variant = row?.variants?.find(v => Number(v.gallons) === 55);
   if (!variant || !Number.isFinite(Number(variant.price))) return "";
-  const perGallon = Number(variant.price) / 55;
-  return `<span class="shop-card-bulk">${fmtMoney(perGallon, variant.currency)}/gal</span>`;
+  return `${fmtMoney(Number(variant.price) / 55, variant.currency)}/gal`;
+}
+
+function bulkPriceMarkup(id) {
+  const text = bulkPriceText(id);
+  const note = bulkPriceNote(id);
+  const perGallon = bulkPerGallonText(id);
+  return `<strong class="price-main">${text}</strong>`
+    + `<span class="price-note">${note}</span>`
+    + (perGallon ? `<span class="shop-card-bulk">${perGallon}</span>` : "");
+}
+
+function bulkPriceHTML(id) {
+  const text = bulkPriceText(id);
+  return `<span class="shop-card-price" data-commerce-price="${id}"${text ? "" : " hidden"}>`
+    + bulkPriceMarkup(id)
+    + `</span>`;
 }
 
 function commerceMediaFor(id) {
-  const row = commerceState.products.get(String(id).toLowerCase());
+  const row = commerceRowFor(id);
   const p = PRODUCTS[id];
   return {
     src: row?.image_url || p?.image || "",
@@ -210,6 +269,11 @@ async function addToCartFromButton(button) {
 
 export function refreshCommerceActions(root = document) {
   refreshCommerceMedia(root);
+  root.querySelectorAll("[data-commerce-price]").forEach(slot => {
+    const text = bulkPriceText(slot.dataset.commercePrice);
+    slot.innerHTML = bulkPriceMarkup(slot.dataset.commercePrice);
+    slot.hidden = !text;
+  });
   root.querySelectorAll("[data-commerce-action]").forEach(slot => {
     const id = slot.dataset.commerceAction;
     slot.innerHTML = commerceActionHTML(id, slot.dataset.commerceSize || "chip");
@@ -238,8 +302,10 @@ export function catalogCard(id) {
           <span class="shop-card-cta">View details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
         </span>
       </a>
+      <div class="shop-card-buybar">
         ${bulkPriceHTML(id)}
         <span class="shop-card-commerce" data-commerce-action="${id}"></span>
+      </div>
     </article>`;
 }
 
@@ -249,6 +315,24 @@ export function initCartButtons() {
     if (!button || button.closest("#shopGrid")) return;
     e.preventDefault();
     addToCartFromButton(button);
+  });
+
+  document.addEventListener("change", e => {
+    const select = e.target.closest(".commerce-vol");
+    if (!select) return;
+    const wrap = select.closest("[data-commerce-buy]");
+    const buybar = select.closest(".shop-card-buybar");
+    const button = wrap?.querySelector("[data-cart-add]");
+    const selected = select.selectedOptions?.[0];
+    const variant = selectedVariantFor(wrap?.dataset.commerceBuy, select.value);
+    const label = variant?.label || selected?.textContent || "";
+    const price = variant ? fmtMoney(variant.price, variant.currency) : "";
+    if (button) button.dataset.cartAdd = select.value;
+    if (!buybar || !price) return;
+    const main = buybar.querySelector(".price-main");
+    const note = buybar.querySelector(".price-note");
+    if (main) main.textContent = price.trim();
+    if (note) note.textContent = label.trim();
   });
 }
 

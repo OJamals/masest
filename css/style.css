@@ -3817,3 +3817,259 @@ main:has(#pMediaSection) .section-head {
   outline: none;
   box-shadow: inset 0 0 0 2px var(--accent);
 }
+
+/* Review remediation: keep task controls reachable and tappable. */
+.nav-account,
+.nav-cart,
+.shop-chip,
+.swap-clear,
+.btn-sm {
+  min-height: 44px;
+}
+
+.nav-cart {
+  min-width: 44px;
+  justify-content: center;
+}
+
+.shop-chip {
+  display: inline-flex;
+  align-items: center;
+}
+
+.catalog-price-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 0;
+}
+
+.catalog-price-note span {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.catalog-price-note i {
+  color: var(--accent-ink);
+  font-size: 1rem;
+}
+
+.shop-card {
+  min-height: 100%;
+}
+
+.shop-card-link {
+  flex: 1 1 auto;
+}
+
+.shop-card-buybar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin: auto 16px 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.shop-card-price {
+  display: grid;
+  gap: 2px;
+}
+
+.shop-card-price[hidden] {
+  display: none;
+}
+
+.price-main {
+  color: var(--ink);
+  font-size: 1.22rem;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.price-note {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.shop-card-commerce {
+  margin: 0;
+  width: 100%;
+}
+
+.commerce-buy {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.commerce-vol {
+  width: 100%;
+  min-height: 42px;
+  max-width: none;
+  padding: 0 34px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  background-color: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+.shop-card-add {
+  min-height: 42px;
+  margin: 0;
+  padding: 0 14px;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.shop-card-add:hover,
+.shop-card-add:focus-visible {
+  border-color: var(--accent-ink);
+  background: var(--accent-ink);
+  color: #fff;
+}
+
+.service-page-hero .hero-grid {
+  align-items: center;
+}
+
+.service-quote-panel {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.service-quote-panel div {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.service-quote-panel div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.service-quote-panel span {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.service-quote-panel strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+@media (max-width: 720px) {
+  .product-catalog-hero {
+    padding-top: 38px;
+    padding-bottom: 16px;
+  }
+
+  .product-catalog-hero .hero-grid {
+    gap: 24px;
+  }
+
+  .product-catalog-hero .display {
+    font-size: clamp(2.35rem, 11vw, 3.25rem);
+    line-height: 1.03;
+  }
+
+  .product-catalog-hero .subhead {
+    margin-top: 12px;
+    font-size: 1rem;
+  }
+
+  .product-catalog-hero .hero-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    margin-top: 22px;
+  }
+
+  .product-catalog-hero .hero-actions .btn-secondary {
+    display: none !important;
+  }
+
+  .product-catalog-hero .catalog-hero-media {
+    display: none;
+  }
+
+  #swap {
+    padding-top: 12px;
+  }
+
+  #swap .section-head {
+    margin-bottom: 12px;
+  }
+
+  #swap .section-head .eyebrow {
+    display: none;
+  }
+
+  #swap .section-head h2 {
+    font-size: clamp(1.85rem, 8vw, 2.35rem);
+    line-height: 1.08;
+  }
+
+  #swap .section-head .subhead {
+    margin-top: 8px;
+    font-size: .96rem;
+  }
+
+  .swap-finder {
+    padding: 12px;
+  }
+
+  body .swap-matrix {
+    max-height: 380px;
+  }
+
+  body .swap-row {
+    min-height: 84px;
+  }
+
+  .commerce-buy {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-card-add {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  body .shop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-card {
+    max-width: none;
+  }
+}

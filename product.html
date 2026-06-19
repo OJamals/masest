@@ -161,6 +161,7 @@
 <script type="module" src="js/main.js"></script>
 <script type="module">
   const { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal } = window.MASESTMain;
+  const { isLocalStaticCommerceSuppressed, loadCommerceCatalog, refreshCommerceActions } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {
     const id = new URLSearchParams(location.search).get("id") || "hcr";
     // Editorial id and commerce catalog sku currently share the same slug (e.g. `crhd`),
@@ -260,10 +261,14 @@ document.addEventListener("DOMContentLoaded", () => {
     })();
 
     const buySkel = document.createElement("span");
-    buySkel.className = "skeleton skeleton-text w-60";
-    buySkel.style.cssText = "min-width:160px;height:1.5em;display:inline-block";
-    buyBtn.parentNode.insertBefore(buySkel, buyBtn);
-    import("./js/auth.js").then(a => a.getToken()).catch(() => null).then(token => {
+  buySkel.className = "skeleton skeleton-text w-60";
+  buySkel.style.cssText = "min-width:160px;height:1.5em;display:inline-block";
+  buyBtn.parentNode.insertBefore(buySkel, buyBtn);
+  if (typeof isLocalStaticCommerceSuppressed === "function" && isLocalStaticCommerceSuppressed()) {
+    buySkel.remove();
+    return;
+  }
+  import("./js/auth.js").then(a => a.getToken()).catch(() => null).then(token => {
       const headers = { Accept: "application/json" };
       if (token) headers.Authorization = "Bearer " + token;
       return fetch("/api/products", { headers, cache: "no-store" });
@@ -330,7 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ? ` · ${money(Number(v.price) / Number(v.gallons), v.currency)}/gal`
           : "";
         // Default to the 5 gal pail (the common buyable pack); never default onto a
-        // quote-only drum/tote size. Falls back to the first buyable variant.
+        // bulk freight drum/tote size. Falls back to the first buyable variant.
         const selectedIndex = Math.max(0, variants.findIndex(v => Number(v.gallons) === 5));
         const sel = document.createElement("select");
         sel.id = "pVol";
@@ -401,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .catch(() => { buySkel.remove(); });
 
     // Drums & totes (55 / 275 gal): list price for reference + freight-quote CTA.
-    // Display only — these sizes are quote-only (freight quoted after order), never cart.
+    // Display only - these bulk sizes require freight review after order, never cart.
     fetch("data/drum-pricing.json", { cache: "no-store" })
       .then(r => (r.ok ? r.json() : {}))
       .then(map => {

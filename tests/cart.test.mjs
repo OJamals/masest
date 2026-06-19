@@ -63,11 +63,11 @@ test("checkout sends normalized line items and clears NET orders", async () => {
   assert.equal(events.at(-1).count, 0);
 });
 
-test("checkout exposes server rejection details for quote fallback messaging", async () => {
+test("checkout exposes server rejection details for bulk freight messaging", async () => {
   installBrowserGlobals();
   globalThis.fetch = async () => new Response(JSON.stringify({
     error: "not_purchasable",
-    message: "These SKUs are quote-only or not yet priced.",
+    message: "These SKUs need bulk freight review.",
     skus: ["hcr"]
   }), { status: 409 });
 
@@ -81,7 +81,7 @@ test("checkout exposes server rejection details for quote fallback messaging", a
       assert.equal(err.code, "not_purchasable");
       assert.equal(err.status, 409);
       assert.deepEqual(err.skus, ["hcr"]);
-      assert.match(err.message, /quote-only/);
+      assert.match(err.message, /bulk freight/);
       return true;
     }
   );

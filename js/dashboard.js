@@ -1,6 +1,6 @@
 /* MASEST — user dashboard controller. Loaded as a module by dashboard.html.
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
-import { me, logout, orders as fetchOrders, api } from './auth.js';
+import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
 import { esc, money, fmtDate, fmtDT } from './util.js';
 
@@ -63,7 +63,7 @@ async function renderOverview() {
   } else { banner.innerHTML = ''; }
 
   $('ovAccount').innerHTML = `
-    <h2 class="headline" style="font-size:1.3rem;margin-bottom:10px">Account</h2>
+    <h2 class="headline dash-section-title dash-section-title-sm">Account</h2>
     <div class="dash-row"><span>Signed in as</span><b>${esc(ACCOUNT?.email || '—')}</b></div>
     <div class="dash-row"><span>Company</span><b>${esc(c?.name || '—')}</b></div>
     <div class="dash-row"><span>Status</span>${statusBadge(c?.status || 'pending')}</div>
@@ -92,17 +92,26 @@ async function renderOverview() {
 function renderSetupProgress() {
   const box = $('setupBody');
   const setup = ACCOUNT?.setup;
-  if (!box || !setup?.steps?.length) return;
+  if (!box) return;
+  if (!setup?.steps?.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const doneCount = setup.done ?? setup.steps.filter((step) => step.done || step.state === 'done').length;
+  const totalCount = setup.total || setup.steps.length;
+  const percent = setup.percent ?? Math.round((doneCount / Math.max(totalCount, 1)) * 100);
   box.innerHTML = `
-    <h2 class="headline" style="font-size:1.3rem;margin-bottom:6px">Business setup</h2>
-    <p class="muted">${setup.done || 0} of ${setup.total || setup.steps.length} steps complete (${setup.percent || 0}%).</p>
+    <h2 class="headline dash-section-title dash-section-title-xs">Business setup</h2>
+    <p class="muted">${doneCount} of ${totalCount} steps complete (${percent}%).</p>
     <div class="setup-list">
-      ${setup.steps.map((step) => `
-        <a class="setup-step" data-setup-state="${step.done ? 'done' : 'open'}" href="${esc(step.action || 'business.html')}">
-          <i class="ph ${step.done ? 'ph-check-circle' : 'ph-circle'}" aria-hidden="true"></i>
-          <span><b>${esc(step.label)}</b><small>${esc(step.detail)}</small></span>
-          <small>${step.done ? 'Done' : 'Open'}</small>
-        </a>`).join('')}
+      ${setup.steps.map((step) => {
+        const done = step.done || step.state === 'done';
+        const detail = step.detail || step.description || '';
+        return `
+        <a class="setup-step" data-setup-state="${done ? 'done' : 'open'}" href="${esc(step.action || 'business.html')}">
+          <i class="ph ${done ? 'ph-check-circle' : 'ph-circle'}" aria-hidden="true"></i>
+          <span><b>${esc(step.label)}</b><small>${esc(detail)}</small></span>
+          <small>${done ? 'Done' : 'Open'}</small>
+        </a>`;
+      }).join('')}
     </div>`;
 }
 
@@ -121,15 +130,15 @@ async function renderOrders() {
   box.innerHTML = list.map((o, i) => {
     const items = o.order_items || [];
     const n = items.reduce((s, it) => s + (it.qty || 0), 0);
-    const lines = items.map((it) => `<div class="dash-row" style="padding:7px 0"><span>${esc(it.name)} × ${it.qty}</span><span>${money(it.line_total, o.currency)}</span></div>`).join('');
-    return `<details style="border-bottom:1px solid rgba(0,0,0,.08);padding:8px 0">
-      <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:12px;list-style:none">
+    const lines = items.map((it) => `<div class="dash-row dash-order-line"><span>${esc(it.name)} × ${it.qty}</span><span>${money(it.line_total, o.currency)}</span></div>`).join('');
+    return `<details class="dash-order-card">
+      <summary class="dash-order-summary">
         <span>${fmtDate(o.created_at)} · ${statusBadge(o.status)} · ${n} item${n === 1 ? '' : 's'}</span>
         <b>${money(o.total, o.currency)}</b></summary>
-      <div style="padding:8px 0 4px">${lines}
+      <div class="dash-order-lines">${lines}
         ${trackingSteps(o)}
         ${o.qbo_invoice_id ? `<p class="muted">Invoice: ${esc(o.qbo_invoice_id)}</p>` : ''}
-        ${items.length ? `<button class="btn btn-ghost btn-sm" data-reorder="${i}" style="margin-top:8px">Reorder</button>` : ''}
+        ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
       </div></details>`;
   }).join('');
   box.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', () => {
@@ -180,10 +189,10 @@ async function renderNotifications() {
   box.innerHTML = data.notifications.map((n) => `
     <div class="notif ${n.read ? '' : 'unread'}">
       <i class="ph ${icon[n.type] || 'ph-info'}" aria-hidden="true"></i>
-      <div style="flex:1">
-        <div><b>${esc(n.title)}</b> <span class="muted" style="font-size:.78rem">· ${fmtDT(n.created_at)}</span></div>
+        <div class="notif-body">
+          <div><b>${esc(n.title)}</b> <span class="muted notif-time">· ${fmtDT(n.created_at)}</span></div>
         ${n.body ? `<div class="muted">${esc(n.body)}</div>` : ''}
-        ${n.link ? `<a href="${esc(n.link)}" class="muted" style="font-weight:700">View →</a>` : ''}
+          ${n.link ? `<a href="${esc(n.link)}" class="muted notif-link">View →</a>` : ''}
       </div></div>`).join('');
 }
 function wireNotifications() {
@@ -236,8 +245,8 @@ async function renderPayment() {
   const box = $('payBody');
   const approved = ACCOUNT?.can_checkout;
   box.innerHTML = `
-    <h2 class="headline" style="font-size:1.3rem;margin-bottom:10px">Payment methods</h2>
-    <p class="muted" style="margin-bottom:16px">Saved cards and bank accounts are managed securely by Stripe. We never store card details on our servers.</p>
+    <h2 class="headline dash-section-title dash-section-title-sm">Payment methods</h2>
+    <p class="muted pay-copy">Saved cards and bank accounts are managed securely by Stripe. We never store card details on our servers.</p>
     ${approved
       ? '<button class="btn btn-primary" id="portalBtn">Manage payment methods</button>'
       : '<p class="muted">Available once your account is approved for online ordering.</p>'}
@@ -287,6 +296,28 @@ function wireProfileForm() {
 /* ---------- live refresh ----------
  * While the dashboard is open and visible, poll for new notifications/messages so staff
  * replies surface without a manual reload. Cheap: one GET per cycle, paused when hidden. */
+function wireSecurityForm() {
+  $('secEmail').textContent = ACCOUNT?.email || '—';
+  $('secLogout').addEventListener('click', async () => { try { await logout(); } catch {} location.href = 'account.html'; });
+  $('secReset').addEventListener('click', async () => {
+    const status = $('secStatus');
+    const btn = $('secReset');
+    status.textContent = 'Sending…';
+    status.dataset.state = '';
+    btn.disabled = true;
+    try {
+      await resetPasswordForEmail(ACCOUNT?.email || '');
+      status.textContent = 'Sent. Check your email.';
+      status.dataset.state = 'ok';
+    } catch {
+      status.textContent = 'Could not send reset email.';
+      status.dataset.state = 'err';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 function syncNavDot(unread) {
   // Keep the nav-avatar badge (rendered by account-nav.js) in step with the live count.
   const av = document.querySelector('.acct-avatar'); if (!av) return;
@@ -327,9 +358,9 @@ async function boot() {
   if (!ACCOUNT) { $('dashGuest').hidden = false; return; }
   $('dashApp').hidden = false;
   $('dashGreeting').textContent = `Welcome back${ACCOUNT.profile?.full_name ? ', ' + ACCOUNT.profile.full_name : ''}.`;
-  wireTabs(); wireMessageForm(); wireNotifications(); wireAddressForm(); wireProfileForm();
+    wireTabs(); wireMessageForm(); wireNotifications(); wireAddressForm(); wireProfileForm(); wireSecurityForm();
   await renderOverview();
-  const start = ['orders', 'messages', 'notifications', 'addresses', 'payment', 'profile'].includes(location.hash.slice(1))
+    const start = ['orders', 'messages', 'notifications', 'addresses', 'payment', 'profile', 'security'].includes(location.hash.slice(1))
     ? location.hash.slice(1) : 'overview';
   selectTab(start);
   startPolling();

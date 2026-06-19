@@ -25,7 +25,10 @@ window.MASESTMain = {
   REPLACEMENT_MAP,
   catalogCard,
   initReveal,
+  isLocalStaticCommerceSuppressed,
+  loadCommerceCatalog,
   productCard,
+  refreshCommerceActions,
 };
 
 document.addEventListener("DOMContentLoaded", () => {

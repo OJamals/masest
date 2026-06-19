@@ -54,7 +54,7 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
         };
       });
 
-      assert.equal(layout.total, 16, "expected all 16 product cards in the grid");
+      assert.equal(layout.total, 20, "expected all 20 launch product cards in the grid");
       assert.ok(layout.perRow >= 4 && layout.perRow <= 5, `expected 4-5 cards/row, got ${layout.perRow}`);
       assert.ok(layout.allLink, "every card should be a clickable product link");
       assert.equal(layout.nestedInteractive, false, "cart buttons should not be nested inside links");
@@ -74,16 +74,20 @@ test("replacement checker shows the swap and filters the catalog", async () => {
       await page.click('.swap-row[data-row="0"]');
       await page.waitForSelector("#swapResult:not([hidden])");
       const filtered = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
-      assert.deepEqual(filtered, ["hcr", "descaler", "crs"], "checker should filter to the matching swaps");
+      assert.deepEqual(filtered, ["hcr", "descaler"], "checker should filter to the matching swaps");
 
       await page.click("#swapClear");
-      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 16);
+      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 20);
       const restored = await page.$$eval(".shop-card", (els) => els.length);
-      assert.equal(restored, 16, "clearing should restore the full line");
+      assert.equal(restored, 20, "clearing should restore the full launch line");
 
       await page.click('.shop-chip[data-group="water"]');
       const water = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
-      assert.deepEqual(water, ["watersafe60", "cr2", "sar", "purgo", "dbnpa"], "category chip should filter the grid");
+      assert.deepEqual(water, ["watersafe60", "cr2", "sar", "purgo"], "category chip should filter the grid");
+
+      await page.click('.shop-chip[data-group="glycol"]');
+      const glycol = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
+      assert.deepEqual(glycol, ["pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"], "glycol category chip should filter the grid");
     } finally {
       await browser.close();
     }

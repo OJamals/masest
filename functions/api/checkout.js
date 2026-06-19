@@ -76,7 +76,7 @@ export async function onRequestPost({ request, env }) {
     return json(409, {
       error: 'not_purchasable',
       skus: rejected,
-      message: 'These items are quote-only or not yet priced. Use the quote form.',
+      message: 'These items need bulk freight review before checkout. Use the quote form.',
     });
   }
   if (outOfStock.length) {

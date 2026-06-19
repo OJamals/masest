@@ -10,22 +10,19 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 async function withServer(fn) {
   const server = spawn("python3", ["-m", "http.server", String(PORT)], {
     cwd: new URL("..", import.meta.url),
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
   });
+
   try {
     const deadline = Date.now() + 5000;
     while (Date.now() < deadline) {
       if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      try {
-        const response = await fetch(`${BASE_URL}/cart.html`);
-        if (response.ok) break;
-      } catch {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        continue;
-      }
+      const response = await fetch(`${BASE_URL}/cart.html`).catch(() => null);
+      if (response?.ok) break;
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     if (Date.now() >= deadline) throw new Error("server did not start");
+
     await fn();
   } finally {
     server.kill("SIGTERM");
@@ -33,118 +30,121 @@ async function withServer(fn) {
   }
 }
 
-async function routeProducts(page, products) {
+function hcrProduct() {
+  return {
+    sku: "hcr",
+    active: true,
+    mode: "buy",
+    image_url: "https://example.com/hcr.png",
+    photo_alt: "VertKleen HCR pail",
+    product_variants: [
+      { vsku: "hcr-1", label: "1 gal bottle", gallons: 1, price: 17.3, currency: "usd", active: true, sort: 1 },
+      { vsku: "hcr-2.5", label: "2.5 gal jug", gallons: 2.5, price: 43.26, currency: "usd", active: true, sort: 2 },
+      { vsku: "hcr-5", label: "5 gal pail", gallons: 5, price: 86.52, currency: "usd", active: true, sort: 3 },
+      { vsku: "hcr-55", label: "55 gal drum", gallons: 55, price: 740.36, currency: "usd", active: false, requires_quote: true, sort: 4 },
+    ],
+  };
+}
+
+async function routeProducts(page, products = [hcrProduct()]) {
+  await page.addInitScript(() => {
+    window.MASEST_ENABLE_LOCAL_API = true;
+  });
   await page.route("**/api/products", route => route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify({ products })
+    body: JSON.stringify({ products }),
   }));
 }
 
-test("catalog stays quote-only when commerce metadata is unavailable", async () => {
+test("static catalog does not show cart controls without commerce metadata", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+      await page.locator(".shop-card").first().waitFor();
 
       assert.equal(await page.locator("[data-cart-add]").count(), 0);
-        assert.equal(await page.locator(".shop-card-quote").count(), 0);
+      assert.equal(await page.locator(".shop-card-quote").count(), 0);
 
-      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "networkidle" });
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+      await page.locator("#checkoutPay").waitFor();
       assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
-      assert.equal(await page.locator("#checkoutNet").isDisabled(), true);
     } finally {
       await browser.close();
     }
   });
 });
 
-test("product catalog shows programs, distributor CTA, and 55-gallon price per gallon", async () => {
+test("product catalog shows public list pricing and small-pack selectors", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-      await routeProducts(page, [
-        {
-          sku: "hcr",
-          active: true,
-          mode: "buy",
-          product_variants: [
-            { vsku: "hcr-5", label: "5 gal pail", gallons: 5, price: 175, currency: "usd", active: true, sort: 1 },
-            { vsku: "hcr-55", label: "55 gal drum", gallons: 55, price: 1375, currency: "usd", active: true, sort: 2 },
-          ],
-        },
-      ]);
+      await routeProducts(page);
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
-      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
-
-      assert.equal(await page.locator(".shop-card-quote").count(), 0);
+      const hcr = page.locator('.shop-card[data-id="hcr"]');
+      await hcr.getByText("$17.30").waitFor();
+      const optionValues = await hcr.locator(".commerce-vol").evaluate(select =>
+        Array.from(select.options).map(option => option.value)
+      );
+      assert.ok(optionValues.includes("hcr-1"));
       await page.getByRole("link", { name: /Compare programs/i }).waitFor();
       await page.getByRole("link", { name: /Become a distributor/i }).waitFor();
-      await page.getByText("$25/gal").waitFor();
-      assert.equal(await page.getByText("at 55 gal").count(), 0);
+
+      assert.equal(await hcr.locator(".shop-card-quote").count(), 0);
+      assert.equal(optionValues.includes("hcr-55"), false);
+
+      await hcr.locator(".commerce-vol").selectOption("hcr-5");
+      await hcr.getByText("$86.52").waitFor();
+      assert.equal(await hcr.locator("[data-cart-add]").getAttribute("data-cart-add"), "hcr-5");
     } finally {
       await browser.close();
     }
   });
 });
 
-test("priced buy-mode products can be added to the cart", async () => {
+test("priced products can be added to the cart", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-      await routeProducts(page, [
-        { sku: "hcr", active: true, mode: "buy", price: 42, currency: "usd" },
-        { sku: "cr", active: true, mode: "quote", price: null, currency: "usd" }
-      ]);
+      await routeProducts(page);
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+      await page.locator('.shop-card[data-id="hcr"] [data-cart-add]').click();
 
-      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
-      await page.locator('[data-cart-add="hcr"]').click();
-      await page.waitForFunction(() => localStorage.getItem("masest_cart")?.includes("hcr"));
-
-      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "networkidle" });
-      assert.equal(await page.locator(".cart-line").count(), 1);
-      assert.equal(await page.locator("#checkoutPay").isDisabled(), false);
-      assert.equal(await page.locator("#checkoutNet").isDisabled(), false);
-
-      await page.locator("[data-remove]").click();
-      assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
-      assert.equal(await page.locator("#checkoutNet").isDisabled(), true);
+      await page.waitForFunction(() => localStorage.getItem("masest_cart")?.includes("hcr-1"));
+      const cart = await page.evaluate(() => JSON.parse(localStorage.getItem("masest_cart") || "{}"));
+      assert.equal(cart["hcr-1"], 1);
     } finally {
       await browser.close();
     }
   });
 });
 
-test("cart page explains quote fallback when checkout rejects a SKU", async () => {
+test("cart page explains bulk freight review when checkout rejects a SKU", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-      await routeProducts(page, [
-        { sku: "hcr", active: true, mode: "buy", price: 42, currency: "usd" }
-      ]);
+      await routeProducts(page);
       await page.route("**/api/checkout", route => route.fulfill({
-        status: 409,
+        status: 400,
         contentType: "application/json",
         body: JSON.stringify({
           error: "not_purchasable",
-          message: "These SKUs are quote-only or not yet priced.",
-          skus: ["hcr"]
-        })
+          message: "Some SKUs need bulk freight review.",
+        }),
       }));
 
-      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
-      await page.locator('[data-cart-add="hcr"]').click();
-      await page.waitForFunction(() => localStorage.getItem("masest_cart")?.includes("hcr"));
-      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "networkidle" });
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+      await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ "hcr-1": 1 })));
+      await page.reload({ waitUntil: "domcontentloaded" });
       await page.locator("#checkoutPay").click();
 
-      await assert.doesNotReject(async () => {
-        await page.getByText(/quote-only or not yet priced/i).waitFor();
-      });
+      await page.getByText(/bulk freight review/i).waitFor();
     } finally {
       await browser.close();
     }

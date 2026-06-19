@@ -39,6 +39,25 @@
   .setup-step small { display: block; color: var(--muted); line-height: 1.35; margin-top: 2px; }
   .muted { color: var(--ink-soft); font-size: .9rem; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .biz-card[hidden] { display: none; }
+  .tier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .biz-form { display: grid; grid-template-columns: minmax(140px, .7fr) minmax(260px, 1.3fr) auto; gap: 12px; align-items: end; }
+  .biz-form label { display: grid; gap: 6px; font-weight: 700; font-size: .86rem; color: var(--ink-soft); }
+  .biz-check-label { display: flex !important; flex-direction: row; align-items: center; gap: 8px; padding-bottom: 11px; }
+  .biz-form input[type="url"] { width: 100%; }
+  .biz-guest-copy { margin: 8px 0 18px; }
+  .biz-clean-form { padding: 0; border: 0; box-shadow: none; }
+  .biz-clean-form-spaced { margin-top: 16px; }
+  .biz-inline-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .biz-inline-grow { flex: 1 1 220px; }
+  .biz-field-gap { margin-top: 12px; }
+  .biz-button-gap { margin-top: 14px; }
+  .biz-invites { margin-top: 10px; }
+  @media (max-width: 720px) {
+    .tier-grid { grid-template-columns: 1fr; }
+    .biz-form { grid-template-columns: 1fr; }
+    .biz-check-label { padding-bottom: 0; }
+  }
 </style>
 </head>
 <body>
@@ -69,7 +88,7 @@
       <!-- Signed-out -->
       <div class="biz-card" id="bizGuest" hidden>
         <h2>Sign in to your business account</h2>
-        <p class="muted" style="margin:8px 0 18px">Business tools — programs, bulk orders, and your account team — are for signed-in B2B accounts.</p>
+        <p class="muted biz-guest-copy">Business tools — programs, bulk orders, and your account team — are for signed-in B2B accounts.</p>
         <a class="btn btn-primary" href="account.html?return=business.html">Sign in or create an account</a>
       </div>
 
@@ -85,15 +104,15 @@
           <h2>Team members</h2>
           <p class="lead">Invite teammates to your company account — invited emails join automatically when they register and sign in.</p>
           <div id="teamMembers"><p class="muted">Loading…</p></div>
-          <form id="inviteForm" class="form-card" style="padding:0;border:0;box-shadow:none;margin-top:16px">
-            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-              <div class="field" style="flex:1;min-width:220px"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
+          <form id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
+            <div class="biz-inline-form">
+              <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
               <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
               <button class="btn btn-primary btn-sm" type="submit">Send invite</button>
             </div>
             <span class="biz-status" id="inviteStatus" role="status" aria-live="polite"></span>
           </form>
-          <div id="teamInvites" style="margin-top:10px"></div>
+          <div id="teamInvites" class="biz-invites"></div>
         </div>
 
         <!-- Programs -->
@@ -109,12 +128,12 @@
         <div class="biz-card">
           <h2>Bulk &amp; standing orders</h2>
           <p class="lead">Need volume pricing, drums/totes, or a recurring standing order? List what you need and we'll send a bulk quote.</p>
-          <form id="bulkForm" class="form-card" style="padding:0;border:0;box-shadow:none">
+          <form id="bulkForm" class="form-card biz-clean-form">
             <div class="field"><label for="bulkItems">What do you need? *</label>
               <textarea id="bulkItems" rows="3" placeholder="e.g. 4× 55-gal HCR, 2× 275-gal tote Neutral, monthly" required></textarea></div>
-            <div class="field" style="margin-top:12px"><label for="bulkNotes">Delivery / timing notes</label>
+            <div class="field biz-field-gap"><label for="bulkNotes">Delivery / timing notes</label>
               <input id="bulkNotes" type="text" placeholder="Ship-to, cadence, target date (optional)"></div>
-            <button class="btn btn-primary btn-sm" type="submit" style="margin-top:14px">Request bulk quote</button>
+            <button class="btn btn-primary btn-sm biz-button-gap" type="submit">Request bulk quote</button>
             <span class="biz-status" id="bulkStatus" role="status" aria-live="polite"></span>
           </form>
         </div>

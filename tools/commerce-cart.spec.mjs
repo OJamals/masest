@@ -90,7 +90,7 @@ test("cart accepts flattened connector variant rows", async ({ page }) => {
   await expect(page.locator("#shipEstOut")).toContainText("10 gal");
 });
 
-test("cart disables direct checkout when quote-only items are present", async ({ page }) => {
+test("cart disables direct checkout when bulk freight items are present", async ({ page }) => {
   await page.route("**/api/products", async (route) => {
     await route.fulfill({
       status: 200,
@@ -113,7 +113,7 @@ test("cart disables direct checkout when quote-only items are present", async ({
   await expect(page.getByText("Quote required")).toBeVisible();
   await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Use NET Terms" })).toBeDisabled();
-  await expect(page.locator("#cartStatus")).toContainText("Remove quote-only items");
+  await expect(page.locator("#cartStatus")).toContainText("Remove bulk freight items");
 
   const quoteHref = await page.getByRole("link", { name: "Send Quote Request" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
@@ -152,7 +152,7 @@ test("cart quote link reflects edited quantities before blur", async ({ page }) 
   expect(quoteUrl.searchParams.get("message")).toContain("VertKleen CR-HD x 4");
 });
 
-test("cart re-enables checkout after removing quote-only items", async ({ page }) => {
+test("cart re-enables checkout after removing bulk freight items", async ({ page }) => {
   await page.route("**/api/products", async (route) => {
     await route.fulfill({
       status: 200,

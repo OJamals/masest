@@ -52,7 +52,7 @@ test("product add-to-cart resolves the crhd commerce sku", async ({ page }) => {
   await expect(page.locator("[data-cart-count]")).toHaveText("1");
 });
 
-test("buy selector defaults to the 5 gallon pail and hides quote-only drums", async ({ page }) => {
+test("buy selector defaults to the 5 gallon pail and hides bulk freight drums", async ({ page }) => {
   await page.route("**/api/products", async route => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -66,7 +66,7 @@ test("buy selector defaults to the 5 gallon pail and hides quote-only drums", as
           product_variants: [
             { vsku: "VK-CRHD-1", label: "1 gal", gallons: 1, price: 8.48, currency: "usd", active: true, sort: 1 },
             { vsku: "VK-CRHD-5", label: "5 gal", gallons: 5, price: 42.42, currency: "usd", active: true, sort: 3 },
-            // 55 gal is quote-only (active:false) — must be filtered out of the buy selector.
+            // 55 gal needs freight review (active:false) and must be filtered out of the buy selector.
             { vsku: "VK-CRHD-55", label: "55 gal drum", gallons: 55, price: 281.82, currency: "usd", active: false, sort: 4 },
           ],
         },
