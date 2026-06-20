@@ -26,6 +26,12 @@
 
   var clamp = gsap.utils.clamp;
   var smooth = function (t) { t = clamp(0, 1, t); return t * t * (3 - 2 * t); };
+  function stickyOffset() {
+    var nav = document.querySelector(".nav");
+    var h = nav ? nav.getBoundingClientRect().height : 0;
+    return Math.round(h || 67);
+  }
+  function storyStart() { return "top " + stickyOffset() + "px"; }
 
   /* ============================================================
      ACTS: each gets one timeline, scrubbed by its own scroll
@@ -70,9 +76,10 @@ var BEAT_IN = 0.58, BEAT_OUT = 0.22, HOLD = 1.25;
     });
   }
 
-  function syncStoryFocus() {
+  function syncStoryFocus(currentIdx) {
+    var visibleIdx = typeof currentIdx === "number" ? currentIdx : currentActIdx();
     states.forEach(function (st) {
-      var visible = st.active || st.act === firstAct && window.scrollY < st.act.offsetHeight;
+      var visible = st.i === visibleIdx;
       if (visible === st.focusVisible) return;
       st.focusVisible = visible;
       st.act.setAttribute("aria-hidden", visible ? "false" : "true");
@@ -96,20 +103,17 @@ states.forEach(function (st) {
            just under the nav, so each act's [data-at] beats reveal while it's
            held on screen - not during the slide-up, where they're missed.
            (The opener is already at the page top on load; same start applies.) */
-        start: "top 67px",
+        start: storyStart,
         end: "bottom bottom",
         scrub: 0.30,
         invalidateOnRefresh: true,        /* re-record tween endpoints at the new size */
-        onEnter: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
-        onEnterBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
-        onLeave: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 0 }); },
-        onLeaveBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
         onToggle: function (self) {
           st.active = self.isActive;
           if (self.isActive && st.i >= 3) prewarmSaviorProofImages();
           if (self.isActive) resizeFx(st);
-          updateRail();
-          syncStoryFocus();
+          var idx = reassertAlpha(true);
+          updateRail(idx);
+          syncStoryFocus(idx);
         }
       },
       onUpdate: function () {
@@ -276,8 +280,58 @@ states.forEach(function (st) {
   var cdots = chemAct ? gsap.utils.toArray(chemAct.querySelectorAll(".cdot")) : [];
   var cEnemy = cdots.map(function (d) { return d.querySelector(".enemy"); });
   var cChem = cdots.map(function (d) { return d.querySelector(".chem"); });
+  var legacyTasks = chemAct ? gsap.utils.toArray(chemAct.querySelectorAll(".legacy-task")) : [];
+  var burdenCards = chemAct ? gsap.utils.toArray(chemAct.querySelectorAll(".burden-card")) : [];
+  var chemPhaseCur = "";
+  var chemMobileSeq = false;
+  var chemPhases = [
+    ["loadout", 0],
+    ["burden", 0.38],
+    ["question", 0.62],
+    ["relief", 0.74]
+  ];
+  function updateChemPhase(st) {
+    if (!chemAct) return;
+    var phase = chemPhases[0][0];
+    for (var i = 0; i < chemPhases.length; i++) {
+      if (st.p >= chemPhases[i][1]) phase = chemPhases[i][0];
+    }
+    if (phase === chemPhaseCur) return;
+    chemPhaseCur = phase;
+    chemAct.dataset.phase = phase;
+    chemPhases.forEach(function (item) {
+      chemAct.classList.toggle("phase-" + item[0], item[0] === phase);
+    });
+  }
+  function showOne(items, idx, active) {
+    for (var i = 0; i < items.length; i++) {
+      var on = active && i === idx;
+      items[i].style.opacity = on ? "1" : "0";
+      items[i].style.visibility = on ? "visible" : "hidden";
+    }
+  }
+  function updateChemMobileSequence(st) {
+    var mobile = window.innerWidth <= 760;
+    if (!mobile) {
+      if (chemMobileSeq) {
+        legacyTasks.concat(burdenCards).forEach(function (el) {
+          el.style.opacity = "";
+          el.style.visibility = "";
+        });
+        chemMobileSeq = false;
+      }
+      return;
+    }
+    chemMobileSeq = true;
+    var taskIdx = Math.min(legacyTasks.length - 1, Math.max(0, Math.floor(clamp(0, 0.999, (st.p - 0.06) / 0.32) * legacyTasks.length)));
+    var burdenIdx = Math.min(burdenCards.length - 1, Math.max(0, Math.floor(clamp(0, 0.999, (st.p - 0.38) / 0.26) * burdenCards.length)));
+    showOne(legacyTasks, taskIdx, st.p < 0.42);
+    showOne(burdenCards, burdenIdx, st.p >= 0.36 && st.p < 0.64);
+  }
 
   function updateChems(st) {
+    updateChemPhase(st);
+    updateChemMobileSequence(st);
     if (!cdots.length) return;
     var z = smooth((st.p - beatFrac(st, 2.95)) / INW(st));
     /* morph each dot's label from the enemy (known from Act 2) to the
@@ -666,13 +720,15 @@ states.forEach(function (st) {
       st.parts = null; st.motes = null; st.deb = null; /* rebuild for new geometry */
     }
   }
+  var visibleActIndex = 0;
+  var alphaIdx = -1;
 
   /* Ambient canvas loop: draws only the act on stage */
   gsap.ticker.add(function (time, deltaMS) {
     var dt = Math.min(deltaMS / 1000, 0.05);
     for (var i = 0; i < states.length; i++) {
       var st = states[i];
-      if (st.fx && st.active) st.fx.draw(st, st.fx.c, dt, time);
+      if (st.fx && (st.active || st.i === visibleActIndex)) st.fx.draw(st, st.fx.c, dt, time);
     }
   });
 
@@ -708,11 +764,19 @@ states.forEach(function (st) {
     }
     return current;
   }
-  function updateRail() {
+  function updateRailProgress(current) {
+    for (var j = 0; j < railBtns.length; j++) {
+      var progress = j < current ? 1 : j === current ? states[j].p : 0;
+      var next = progress.toFixed(3);
+      if (railBtns[j]._storyProgress === next) continue;
+      railBtns[j]._storyProgress = next;
+      railBtns[j].style.setProperty("--p", next);
+    }
+  }
+  function updateRail(current) {
     if (!railBtns.length) return;
-    var current = -1;
-    for (var i = 0; i < states.length; i++) if (states[i].active) { current = i; }
-    if (current < 0) current = nearestRailIndex();
+    if (typeof current !== "number") current = currentActIdx();
+    updateRailProgress(current);
     if (current === railCurrent) return;
     railCurrent = current;
     for (var j = 0; j < railBtns.length; j++) {
@@ -731,16 +795,16 @@ states.forEach(function (st) {
      now just hints; this is the source of truth.
      ============================================================ */
   function currentActIdx() {
-    var idx = -1;
-    for (var i = 0; i < states.length; i++) if (states[i].active) idx = i;
-    return idx < 0 ? nearestRailIndex() : idx;   /* gap / HOLD endcap → nearest stage */
+    return nearestRailIndex();
   }
-  /* autoAlpha = opacity + visibility, both compositor-only (no reflow), so an
-     unconditional per-frame write on ~5 stages is cheap. No cached shown-state:
-     the onEnter/onLeave hints write autoAlpha out-of-band, so any cache would go
-     stale and re-strand exactly the case this is meant to heal. */
-  function reassertAlpha() {
+  /* autoAlpha = opacity + visibility, both compositor-only (no reflow). Cache
+     the visible index during ordinary scroll, force a full reassert after
+     trigger toggles/refreshes. */
+  function reassertAlpha(force) {
     var idx = currentActIdx();
+    visibleActIndex = idx;
+    if (!force && idx === alphaIdx) return idx;
+    alphaIdx = idx;
     for (var k = 0; k < states.length; k++) {
       if (states[k].stage) gsap.set(states[k].stage, { autoAlpha: k === idx ? 1 : 0 });
     }
@@ -749,7 +813,7 @@ states.forEach(function (st) {
   /* Full re-assert after a geometry change: fix alpha, then repaint the on-stage
      act's canvas + scrub-driven extras at the new size. */
   function reassertVisibility() {
-    var on = states[reassertAlpha()];
+    var on = states[reassertAlpha(true)];
     if (on) { resizeFx(on); onActScrub(on); }
   }
   ScrollTrigger.addEventListener("refresh", reassertVisibility);
@@ -759,9 +823,9 @@ states.forEach(function (st) {
     railTicking = true;
     requestAnimationFrame(function () {
       railTicking = false;
-      updateRail();
-      syncStoryFocus();
-      reassertAlpha();
+      var idx = reassertAlpha();
+      updateRail(idx);
+      syncStoryFocus(idx);
     });
   }
   window.addEventListener("scroll", scheduleRailUpdate, { passive: true });
@@ -796,6 +860,14 @@ states.forEach(function (st) {
   /* Late layout shifts move the document under the story: #featuredProducts
      injects on DOMContentLoaded, web fonts swap after first paint. Refresh so
      each trigger's start/end track the final geometry. */
+  function refreshAfterLayout() {
+    requestAnimationFrame(function () { ScrollTrigger.refresh(); });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", refreshAfterLayout, { once: true });
+  } else {
+    refreshAfterLayout();
+  }
   window.addEventListener("load", function () { ScrollTrigger.refresh(); });
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(function () { ScrollTrigger.refresh(); });

@@ -36,8 +36,8 @@
 /* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
 .story .act { position: relative; height: 212vh; padding: 0; }
 .story .act[data-act="1"] { height: 168vh; }   /* photo reel needs less sequencing */
-.story .act[data-act="3"] { height: 220vh; }   /* HMIS factor-by-factor */
-.story .act[data-act="4"] { height: 260vh; }   /* chemicals one by one */
+.story .act[data-act="3"] { height: 305vh; }   /* HMIS categories + chemical warnings */
+.story .act[data-act="4"] { height: 430vh; }   /* consequences + VertKleen relief */
 .story .act-savior { height: 228vh; }
 .story .stage {
   position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 620px;
@@ -83,11 +83,28 @@
 }
 .rail-btn b {
   width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  position: relative;
   font-family: var(--body-font);
   font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-variant-numeric: tabular-nums;
   border: 1px solid var(--s-line); background: rgba(11, 13, 18, .55);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   transition: border-color .4s var(--s-ease), color .4s var(--s-ease), background .4s var(--s-ease);
+}
+.rail-btn b::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  background: conic-gradient(var(--s-danger-ink) calc(var(--p, 0) * 1turn), rgba(255, 255, 255, .08) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  opacity: .46;
+  transform: rotate(-90deg);
+  transition: opacity .35s var(--s-ease), background .35s var(--s-ease);
+}
+.rail-btn.is-on b::before { opacity: .9; }
+.rail-btn.is-on.safe b::before {
+  background: conic-gradient(var(--s-safe-text) calc(var(--p, 0) * 1turn), rgba(255, 255, 255, .08) 0);
 }
 .rail-btn span {
   font-family: var(--body-font);
@@ -469,6 +486,166 @@
 }
 .hmis-legacy li b { color: var(--s-ink); font-size: 1.05rem; }
 .hmis-legacy li span { color: var(--s-mut); font-size: .85rem; letter-spacing: .02em; }
+.story.story-ready .hmis-stack,
+.story.story-ready .hmis-legend { display: none; }
+
+.hmis-story {
+  width: min(980px, 90vw);
+  margin: -2vh auto 0;
+  display: grid;
+  gap: clamp(18px, 3vh, 30px);
+}
+.hmis-categories {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.hmis-category {
+  --ax: var(--s-line);
+  min-height: 132px;
+  padding: 20px 22px;
+  border: 1px solid color-mix(in oklab, var(--ax) 54%, transparent);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--ax) 11%, transparent), transparent 62%),
+    rgba(255, 255, 255, .035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 20px 48px -38px color-mix(in oklab, var(--ax) 55%, #000);
+}
+.hmis-category span,
+.hmis-chemical strong {
+  display: block;
+  color: var(--s-ink);
+  font-weight: 900;
+  letter-spacing: -.01em;
+}
+.hmis-category b {
+  display: block;
+  margin: 8px 0 6px;
+  color: color-mix(in oklab, var(--ax) 62%, #fff);
+  font-size: clamp(1.7rem, 3.5vw, 2.5rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.hmis-category small,
+.hmis-chemical p {
+  color: var(--s-mut);
+  font-size: .9rem;
+  line-height: 1.45;
+}
+.hcat-health { --ax: var(--hmis-h); }
+.hcat-flame { --ax: var(--hmis-f); }
+.hcat-react { --ax: var(--hmis-r); }
+
+.hmis-chemical-deck {
+  position: relative;
+  min-height: 184px;
+}
+.hmis-chemical {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(18px, 3vw, 30px);
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid rgba(255, 138, 108, .34);
+  border-radius: 22px;
+  background:
+    radial-gradient(80% 140% at 0% 20%, rgba(255, 103, 64, .14), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .025));
+  box-shadow: 0 34px 80px -48px rgba(255, 80, 52, .38), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+.ghs-diamond {
+  width: 74px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  transform: rotate(45deg);
+  border: 4px solid #f04a3b;
+  background: #f4f6f8;
+  box-shadow: 0 18px 40px -28px rgba(255, 88, 48, .78);
+}
+.ghs-diamond i {
+  transform: rotate(-45deg);
+  color: #0b0d12;
+  font-size: 2.1rem;
+}
+.hmis-chemical strong { font-size: clamp(1.25rem, 2.3vw, 1.8rem); }
+.hmis-chemical p { max-width: 56ch; margin: 8px 0 0; font-size: clamp(.95rem, 1.2vw, 1.05rem); }
+.hmis-score {
+  display: inline-flex;
+  gap: 6px;
+  align-self: center;
+}
+.hmis-score em {
+  --ax: var(--s-mut);
+  width: clamp(34px, 4vw, 46px);
+  height: clamp(38px, 4.4vw, 50px);
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--ax) 58%, transparent);
+  background: color-mix(in oklab, var(--ax) 18%, rgba(255, 255, 255, .04));
+  color: color-mix(in oklab, var(--ax) 58%, #fff);
+  font-style: normal;
+  font-weight: 900;
+  font-size: clamp(1.05rem, 1.7vw, 1.35rem);
+  font-variant-numeric: tabular-nums;
+}
+.hmis-score em:nth-child(1) { --ax: var(--hmis-h); }
+.hmis-score em:nth-child(2) { --ax: var(--hmis-f); }
+.hmis-score em:nth-child(3) { --ax: var(--hmis-r); }
+
+/* Scene 3 overhaul: each chemical name lands first, then its warning/HMIS panel. */
+.hmis-chemical-deck {
+  min-height: 260px;
+}
+.hmis-chemical {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  align-items: stretch;
+  gap: 16px;
+}
+.hmis-chemical-name span {
+  display: block;
+  color: var(--s-danger-ink);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.hmis-chemical-name strong {
+  margin-top: 8px;
+  font-size: clamp(1.55rem, 3vw, 2.5rem);
+  line-height: .98;
+}
+.hmis-chemical-name p {
+  margin: 10px 0 0;
+  max-width: 58ch;
+}
+.hmis-warning {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(14px, 2.5vw, 24px);
+  padding: 16px;
+  border: 1px solid rgba(255, 138, 108, .24);
+  border-radius: 18px;
+  background: rgba(8, 10, 14, .32);
+}
+.hmis-warning b {
+  display: block;
+  color: var(--s-ink);
+  font-size: 1rem;
+  line-height: 1.15;
+}
+.hmis-warning small {
+  display: block;
+  margin-top: 6px;
+  color: var(--s-mut);
+  font-size: .84rem;
+  line-height: 1.45;
+}
 
 .scale-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
 .scale-track {
@@ -482,7 +659,11 @@
    ============================================================ */
 .chem-rig {
   position: relative; z-index: 5; width: min(880px, 90vw); margin: 24vh auto 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, auto);
+  justify-content: center;
+  gap: 18px;
 }
 .chem-scale { position: relative; padding-top: 26px; padding-bottom: 4px; }
 .chem-scale .scale-track { overflow: visible; }
@@ -559,6 +740,412 @@
 .chem-out b { color: var(--s-danger-ink); font-weight: 800; }
 .chem-final { font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 800; color: var(--s-ink); }
 .chem-final b { color: var(--s-safe-text); font-weight: 900; }
+.story .act-chems .chem-list,
+.story .act-chems .chem-out,
+.story .act-chems .chem-final { display: none; }
+
+.phase-strip {
+  width: min(760px, 86vw);
+  margin: 0 auto 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 999px;
+  background: rgba(8, 10, 14, .48);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.phase-strip span {
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: rgba(238, 242, 244, .54);
+  font-size: clamp(.62rem, .85vw, .76rem);
+  font-weight: 900;
+  letter-spacing: .12em;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  transition: color .28s var(--s-ease, ease), background .28s var(--s-ease, ease), transform .28s var(--s-ease, ease);
+}
+.act-chems:not([data-phase]) .phase-strip span:first-child,
+.act-chems[data-phase="loadout"] .phase-strip [data-phase="loadout"],
+.act-chems[data-phase="burden"] .phase-strip [data-phase="burden"],
+.act-chems[data-phase="question"] .phase-strip [data-phase="question"],
+.act-chems[data-phase="relief"] .phase-strip [data-phase="relief"] {
+  color: #fff;
+  background: rgba(255, 138, 108, .18);
+  transform: translateY(-1px);
+}
+.act-chems[data-phase="relief"] .phase-strip [data-phase="relief"] {
+  color: var(--s-safe-text);
+  background: rgba(16, 179, 163, .18);
+}
+.act-chems.phase-burden .legacy-task,
+.act-chems.phase-question .legacy-task { filter: saturate(.86) brightness(.82); }
+.act-chems.phase-relief .legacy-task,
+.act-chems.phase-relief .burden-card { filter: grayscale(.42) brightness(.76); }
+
+.legacy-loadout,
+.relief-wrap {
+  width: min(1040px, 90vw);
+  margin: 0 auto;
+}
+.phase-strip { grid-row: 1; grid-column: 1; }
+.legacy-loadout,
+.consequence-question,
+.relief-wrap {
+  grid-row: 2;
+  grid-column: 1;
+  align-self: center;
+  justify-self: center;
+}
+.legacy-loadout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.legacy-task-grid,
+.burden-grid {
+  grid-row: 1;
+  grid-column: 1;
+}
+.legacy-task-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.legacy-task,
+.burden-card,
+.relief-card,
+.consequence-question,
+.relief-zero {
+  border: 1px solid var(--s-line);
+  background: rgba(255, 255, 255, .035);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07);
+}
+.legacy-task {
+  min-height: 132px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 42% minmax(0, 1fr);
+  align-items: stretch;
+}
+.legacy-task img {
+  width: 100%;
+  height: 100%;
+  min-height: 132px;
+  object-fit: cover;
+  filter: saturate(.92) contrast(1.06) brightness(.72);
+}
+.legacy-task b,
+.legacy-task span {
+  grid-column: 2;
+  padding-inline: 16px;
+}
+.legacy-task b {
+  align-self: end;
+  color: var(--s-ink);
+  font-size: 1rem;
+  line-height: 1.15;
+}
+.legacy-task span {
+  align-self: start;
+  margin-top: 6px;
+  color: var(--s-danger-ink);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.burden-grid,
+.relief-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.burden-card,
+.relief-card {
+  position: relative;
+  min-height: 154px;
+  padding: 20px 18px;
+  border-radius: 16px;
+}
+.burden-card {
+  border-color: rgba(255, 138, 108, .28);
+  background:
+    radial-gradient(90% 120% at 20% 0%, rgba(255, 99, 62, .13), transparent 66%),
+    rgba(255, 255, 255, .03);
+}
+.burden-card i,
+.relief-card i {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  font-size: 1.35rem;
+}
+.burden-card i {
+  color: var(--s-danger-ink);
+  background: rgba(169, 52, 32, .16);
+}
+.burden-card b,
+.relief-card b {
+  display: block;
+  color: var(--s-ink);
+  font-size: .98rem;
+  line-height: 1.2;
+}
+.burden-card span,
+.relief-card span {
+  display: block;
+  margin-top: 8px;
+  color: var(--s-mut);
+  font-size: .84rem;
+  line-height: 1.45;
+}
+.consequence-question {
+  width: min(780px, 86vw);
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 48px);
+  border-radius: 24px;
+  text-align: center;
+  border-color: rgba(255, 138, 108, .22);
+  background:
+    radial-gradient(70% 130% at 50% 0%, rgba(255, 88, 48, .18), transparent 64%),
+    rgba(8, 10, 14, .62);
+}
+.consequence-question span {
+  display: block;
+  color: var(--s-danger-ink);
+  font-size: .76rem;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.consequence-question b {
+  display: block;
+  margin-top: 12px;
+  color: var(--s-ink);
+  font-size: clamp(2rem, 4.6vw, 4rem);
+  line-height: .98;
+  letter-spacing: -.035em;
+}
+.relief-wrap {
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+.relief-zero {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  padding: 22px;
+  border-radius: 20px;
+  border-color: rgba(207, 255, 248, .34);
+  background:
+    radial-gradient(80% 110% at 50% 0%, rgba(16, 179, 163, .22), transparent 68%),
+    rgba(255, 255, 255, .035);
+  text-align: center;
+}
+.relief-zero span {
+  color: var(--s-safe-text);
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.relief-zero b {
+  margin: 6px 0;
+  color: var(--s-safe-text);
+  font-size: clamp(2.5rem, 5vw, 4.2rem);
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+.relief-zero small {
+  color: rgba(207, 255, 248, .72);
+  font-size: .84rem;
+}
+.relief-grid { margin-top: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.relief-card {
+  overflow: hidden;
+  border-color: rgba(207, 255, 248, .2);
+  background:
+    linear-gradient(135deg, rgba(16, 179, 163, .10), transparent 58%),
+    rgba(255, 255, 255, .03);
+}
+.relief-card::before,
+.relief-card::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 50%;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 67, 54, .88);
+  box-shadow: 0 0 18px rgba(255, 67, 54, .34);
+  transform: rotate(16deg);
+}
+.relief-card::after { transform: rotate(-16deg); }
+.relief-card i {
+  color: var(--s-safe-text);
+  background: rgba(16, 179, 163, .16);
+}
+
+/* Scene 4 overhaul: task HMIS chips, photo-led consequences, relief cross-outs. */
+.legacy-loadout,
+.relief-wrap {
+  width: min(1060px, 90vw);
+}
+.legacy-task {
+  min-height: 136px;
+}
+.legacy-task img {
+  min-height: 136px;
+}
+.legacy-task div {
+  min-width: 0;
+  padding: 16px;
+  display: grid;
+  align-content: center;
+}
+.legacy-task b,
+.legacy-task span {
+  grid-column: auto;
+  padding-inline: 0;
+}
+.legacy-task b {
+  align-self: auto;
+  line-height: 1.12;
+}
+.legacy-task span {
+  align-self: auto;
+  line-height: 1.2;
+}
+.legacy-task small {
+  width: fit-content;
+  margin-top: 12px;
+  padding: 5px 7px;
+  border: 1px solid rgba(255, 138, 108, .28);
+  border-radius: 8px;
+  color: rgba(244, 246, 248, .68);
+  font-size: .65rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.legacy-task small strong {
+  color: var(--s-danger-ink);
+  font-weight: 900;
+}
+.burden-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.burden-card,
+.relief-card {
+  overflow: hidden;
+}
+.burden-card {
+  min-height: 136px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 42% minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-items: center;
+}
+.burden-card img {
+  width: 100%;
+  height: 100%;
+  min-height: 136px;
+  grid-row: 1 / 4;
+  display: block;
+  object-fit: cover;
+  filter: saturate(.78) contrast(1.1) brightness(.58);
+}
+.burden-card i,
+.relief-card i {
+  margin: 0 16px 8px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 12px 22px -14px rgba(0, 0, 0, .8);
+}
+.burden-card i {
+  background: rgba(47, 15, 12, .92);
+}
+.burden-card b,
+.burden-card span,
+.relief-card b,
+.relief-card span {
+  padding-inline: 16px;
+}
+.burden-card i,
+.burden-card b,
+.burden-card span { grid-column: 2; }
+.burden-card b {
+  font-size: .92rem;
+  line-height: 1.15;
+}
+.burden-card span {
+  margin-top: 7px;
+  font-size: .78rem;
+  line-height: 1.42;
+}
+.consequence-question {
+  width: min(820px, 86vw);
+  background:
+    radial-gradient(70% 130% at 50% 0%, rgba(255, 88, 48, .18), transparent 64%),
+    rgba(8, 10, 14, .72);
+}
+.consequence-question b {
+  letter-spacing: 0;
+}
+.relief-card {
+  min-height: 164px;
+  padding: 20px 0;
+}
+.relief-card i {
+  margin-top: 0;
+}
+.relief-card::before,
+.relief-card::after {
+  z-index: 3;
+}
+.legacy-task-grid,
+.burden-grid {
+  transition: opacity .28s var(--s-ease, ease), filter .28s var(--s-ease, ease);
+}
+.burden-grid {
+  position: relative;
+  z-index: 2;
+}
+.act-chems.phase-burden .legacy-task-grid {
+  opacity: .18;
+}
+.act-chems.phase-question .legacy-loadout,
+.act-chems.phase-relief .legacy-loadout {
+  opacity: 0 !important;
+}
+.story.story-ready .act-chems:not(.phase-question) .consequence-question,
+.story.story-ready .act-chems:not(.phase-relief) .relief-wrap,
+.story.story-ready .act-chems.phase-question .legacy-loadout,
+.story.story-ready .act-chems.phase-relief .legacy-loadout {
+  display: none !important;
+}
+.act-chems.phase-burden .burden-card {
+  background:
+    linear-gradient(180deg, rgba(8, 10, 14, .18), rgba(8, 10, 14, .86) 38%),
+    rgba(255, 255, 255, .04);
+}
 
 /* Enemy-first cards: a small cast-color cue before the enemy name (matches
    the Act 2 chips), and the chemical it forces rendered as a tagged tool. */
@@ -700,8 +1287,8 @@
 @media (max-width: 760px) {
   .story .act { height: 198vh; }
   .story .act[data-act="1"] { height: 170vh; }
-  .story .act[data-act="3"] { height: 220vh; }
-  .story .act[data-act="4"] { height: 226vh; }
+  .story .act[data-act="3"] { height: 330vh; }
+  .story .act[data-act="4"] { height: 470vh; }
   .story .act-savior { height: 235vh; }
   .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
   .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
@@ -714,6 +1301,35 @@
   .factor { padding: 18px 10px; border-radius: 14px; }
   .factor .fmeaning { font-size: .78rem; }
   .hmis-rig { margin-top: 24vh; }
+  .hmis-story {
+    width: min(350px, 90vw);
+    min-height: 300px;
+    margin-top: 2vh;
+    display: grid;
+    align-items: center;
+  }
+  .hmis-categories,
+  .hmis-chemical-deck {
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .hmis-categories { grid-template-columns: 1fr; gap: 10px; }
+  .hmis-category { min-height: auto; padding: 12px 15px; }
+  .hmis-category b { margin: 5px 0 4px; font-size: 1.35rem; }
+  .hmis-category small { font-size: .82rem; line-height: 1.34; }
+  .hmis-chemical-deck { min-height: 280px; }
+  .hmis-chemical {
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 14px;
+    align-content: center;
+    min-height: 280px;
+    padding: 14px;
+  }
+  .ghs-diamond { width: 54px; border-width: 3px; }
+  .ghs-diamond i { font-size: 1.55rem; }
+  .hmis-chemical p { font-size: .84rem; line-height: 1.34; }
+  .hmis-score { grid-column: 1 / -1; justify-self: start; }
+  .hmis-score em { width: 31px; height: 35px; font-size: .95rem; }
   /* Stacked single column: drop the desktop quadrant frame and give each row
      its own bordered card (the quadrant panel only reads as one in 2 columns). */
   .chem-list {
@@ -731,6 +1347,46 @@
   .chem-card:nth-child(n+3) { border-bottom: 1px solid var(--s-line); }
   .chem-card p { font-size: .84rem; }
   .chem-rig { margin-top: 14vh; gap: 10px; }
+  .phase-strip {
+    width: min(350px, 90vw);
+    gap: 4px;
+    padding: 4px;
+  }
+  .phase-strip span {
+    padding: 7px 5px;
+    font-size: .58rem;
+    letter-spacing: .08em;
+  }
+  .legacy-loadout,
+  .relief-wrap { width: min(350px, 90vw); }
+  .legacy-task-grid,
+  .burden-grid {
+    position: relative;
+    display: block;
+    min-height: 150px;
+  }
+  .legacy-task,
+  .burden-card {
+    position: absolute;
+    inset: 0;
+  }
+.burden-grid,
+.relief-wrap { grid-template-columns: 1fr; }
+.relief-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .legacy-task { min-height: 118px; grid-template-columns: 38% minmax(0, 1fr); }
+  .legacy-task img { min-height: 118px; }
+.burden-card { min-height: 150px; padding: 0; grid-template-columns: 38% minmax(0, 1fr); }
+.burden-card img { min-height: 150px; }
+.relief-card { min-height: auto; padding: 15px 16px; }
+  .burden-card i,
+  .relief-card i { width: 32px; height: 32px; margin-bottom: 9px; }
+.consequence-question { padding: 20px 18px; }
+.consequence-question b { font-size: clamp(1.7rem, 8.5vw, 2.4rem); }
+.relief-zero { min-height: 135px; }
+.relief-card { padding: 11px 10px; }
+.relief-card i { width: 27px; height: 27px; margin-bottom: 7px; }
+.relief-card b { font-size: .8rem; line-height: 1.12; }
+.relief-card span { font-size: .68rem; line-height: 1.28; }
   .chem-scale { order: -1; padding-top: 18px; }
   .chem-list { gap: 8px; }
   .chem-card { padding: 12px 14px; }
@@ -1532,4 +2188,48 @@
 @keyframes hazardDrift {
   from { transform: translate3d(-8px, 5px, 0) scale(.82); opacity: .46; }
   to { transform: translate3d(9px, -7px, 0) scale(1.08); opacity: .92; }
+}
+
+@media (max-width: 760px) {
+  .hmis-chemical-deck { min-height: 360px; }
+  .hmis-chemical {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+  .hmis-chemical-name strong {
+    font-size: clamp(1.35rem, 8vw, 2rem);
+  }
+  .hmis-warning {
+    grid-template-columns: 54px minmax(0, 1fr);
+    padding: 14px;
+  }
+  .hmis-warning .hmis-score {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .legacy-task-grid,
+  .burden-grid,
+  .relief-wrap {
+    grid-template-columns: 1fr;
+  }
+  .legacy-task {
+    min-height: 118px;
+  }
+  .legacy-task div {
+    padding: 14px;
+  }
+  .burden-card {
+    min-height: auto;
+    padding-bottom: 15px;
+  }
+  .burden-card img {
+    height: 86px;
+  }
+  .burden-card i {
+    margin-bottom: 9px;
+  }
+  .relief-card {
+    min-height: auto;
+  }
 }

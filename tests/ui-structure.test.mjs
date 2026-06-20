@@ -326,13 +326,41 @@ test("scrolly proof images lazy-load until act four prewarms them", () => {
   assert.match(story, /self\.isActive && st\.i >= 3/);
 });
 
-test("scrolly chemical pills stay compact", () => {
+test("scrolly legacy burden sequence replaces repeated chemical cards", () => {
   const index = read("index.html");
   const actFour = index.match(/<section class="act act-chems"[\s\S]*?<\/section>/)?.[0];
 
-  assert.ok(actFour, "expected act four scrolly section");
-  assert.match(actFour, /<span class="vs vs-long">Glutaraldehyde 50%<\/span>/);
-  assert.doesNotMatch(actFour, /<span class="vs">Glutaraldehyde 50%<\/span>/);
+assert.ok(actFour, "expected act four scrolly section");
+assert.match(actFour, /class="legacy-loadout"/);
+assert.match(actFour, /class="phase-strip"/);
+  assert.match(actFour, /class="burden-grid"/);
+  assert.match(actFour, /class="consequence-question"/);
+  assert.match(actFour, /class="relief-wrap"/);
+  assert.match(actFour, /HMIS <strong>3-0-1<\/strong>/);
+  assert.match(actFour, /Heavy PPE stack/);
+  assert.match(actFour, /Hazmat storage/);
+  assert.match(actFour, /Disposal stream/);
+  assert.match(actFour, /What if (the )?cleaning chemistry stopped becoming (the )?job\?/);
+  assert.match(actFour, /HMIS<\/span><b>0-0-0<\/b>/);
+  assert.doesNotMatch(actFour, /<span class="vs vs-long">Glutaraldehyde 50%<\/span>/);
+});
+
+test("scrolly HMIS scene teaches categories before chemical warnings", () => {
+  const index = read("index.html");
+  const actThree = index.match(/<section class="act act-hmis"[\s\S]*?<\/section>/)?.[0];
+
+  assert.ok(actThree, "expected act three scrolly section");
+  assert.match(actThree, /class="hmis-categories"/);
+  assert.match(actThree, />Health<\/span><b>0-4<\/b>/);
+  assert.match(actThree, />Flammability<\/span><b>0-4<\/b>/);
+  assert.match(actThree, />Reactivity<\/span><b>0-4<\/b>/);
+  assert.match(actThree, /class="hmis-chemical-name"/);
+  assert.match(actThree, /class="hmis-warning"/);
+  assert.match(actThree, /Toxic vapor warning/);
+  assert.match(actThree, /HCl \/ muriatic acid/);
+  assert.match(actThree, /Caustic soda \/ lye/);
+  assert.match(actThree, /Glutaraldehyde/);
+  assert.match(actThree, /Chlorinated solvent/);
 });
 
 test("scrolly hazard overlays avoid stripe-gradient decoration", () => {

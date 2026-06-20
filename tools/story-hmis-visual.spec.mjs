@@ -84,13 +84,15 @@ test("desktop story rail label does not overlap the Act 1 headline", async ({ pa
   expect(collision.overlaps, JSON.stringify(collision)).toBe(false);
 });
 
-test("HMIS story keeps copy separated from the hazard card on desktop", async ({ page }) => {
+test("HMIS story keeps copy separated from category deck on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
 
-  await expect(page.locator('.story .act[data-act="3"] .hmis-card')).toHaveCount(1);
-  await expect(page.locator('.story .act[data-act="3"] .hmis-diamond')).toHaveCount(1);
+  await expect(page.locator('.story.story-ready .act[data-act="3"] .hmis-stack')).toBeHidden();
+  await expect(page.locator('.story .act[data-act="3"] .hmis-category')).toHaveCount(3);
+  await expect(page.locator('.story .act[data-act="3"] .hmis-chemical')).toHaveCount(4);
+  await expect(page.locator('.story .act[data-act="3"] .hmis-warning')).toHaveCount(4);
   await expect(page.locator(".savior-zero-scale .zero-axis")).toHaveCount(3);
 
   await page.evaluate(() => {
@@ -116,14 +118,14 @@ test("HMIS story keeps copy separated from the hazard card on desktop", async ({
   expect(layout.rigBottom).toBeLessThan(layout.viewportHeight + 120);
 });
 
-test("HMIS hazard card stacks without clipping on mobile", async ({ page }) => {
+test("HMIS category and warning cards stay inside viewport on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
   const layout = await page.evaluate(() => {
     const act = document.querySelector('.story .act[data-act="3"]');
     window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.52);
-    const cards = [...document.querySelectorAll('.story .act[data-act="3"] .hmis-card, .story .act[data-act="3"] .hmis-diamond')]
+    const cards = [...document.querySelectorAll('.story .act[data-act="3"] .hmis-category, .story .act[data-act="3"] .hmis-chemical')]
       .map((card) => {
         const box = card.getBoundingClientRect();
         return {
@@ -140,7 +142,7 @@ test("HMIS hazard card stacks without clipping on mobile", async ({ page }) => {
   });
 
   expect(layout.overflowX).toBe(0);
-  expect(layout.cards).toHaveLength(2);
+  expect(layout.cards).toHaveLength(7);
   for (const card of layout.cards) {
     expect(card.left).toBeGreaterThanOrEqual(0);
     expect(card.right).toBeLessThanOrEqual(layout.viewportWidth);
@@ -148,16 +150,19 @@ test("HMIS hazard card stacks without clipping on mobile", async ({ page }) => {
   }
 });
 
-test("conventional cleaner scene shows four hazard cards and final zero transition", async ({ page }) => {
+test("conventional cleaner scene shows legacy loadout, consequences, and zero relief", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
   await expect(page.locator(".act-chems .chem-rig")).toHaveCount(1);
-  await expect(page.locator(".act-chems .chem-card")).toHaveCount(4);
-  await expect(page.locator(".act-chems .chem-out")).toHaveText(/3 for health/);
-  await expect(page.locator(".act-chems .chem-final")).toHaveText(/zero/);
+  await expect(page.locator(".act-chems .phase-strip span")).toHaveCount(4);
+  await expect(page.locator(".act-chems .legacy-task")).toHaveCount(6);
+  await expect(page.locator(".act-chems .burden-card")).toHaveCount(6);
+  await expect(page.locator(".act-chems .consequence-question")).toHaveText(/cleaning chemistry stopped/);
+  await expect(page.locator(".act-chems .relief-zero")).toHaveText(/0-0-0/);
+  await expect(page.locator(".act-chems .relief-card")).toHaveCount(4);
 
-  const cards = await page.locator(".act-chems .chem-card").evaluateAll((items) => (
+  const cards = await page.locator(".act-chems .legacy-task").evaluateAll((items) => (
     items.map((card) => {
       const box = card.getBoundingClientRect();
       return {

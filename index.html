@@ -168,7 +168,7 @@
       <div class="act-copy top">
         <span class="kicker" data-at="0">The conventional answer</span>
         <h2 class="act-h" data-at="0">HMIS gives the danger a number.</h2>
-        <p class="act-p" data-at="1" data-out="4">Crews fight buildup with acids, caustics, and biocides. Every one carries a hazard label. Three numbers, 0 to 4. Watch how high they run.</p>
+          <p class="act-p" data-at="1" data-out="4">Crews fight buildup with acids, caustics, and biocides. Each carries a hazard label: Health, Flammability, Reactivity, scored 0 to 4. Watch how high the legacy set runs.</p>
       </div>
       <div class="hmis-rig">
         <div class="hmis-stack">
@@ -204,6 +204,63 @@
           <li data-h="3" data-f="1" data-r="0" data-type="Toxic" data-picto="skull" data-name="Glutaraldehyde" data-desc="Disinfectant solution"><b>Glutaraldehyde</b><span>Toxic &middot; 3&middot;1&middot;0</span></li>
           <li data-h="2" data-f="0" data-r="0" data-type="Toxic" data-picto="skull" data-name="Chlorinated solvent" data-desc="Methylene chloride"><b>Chlorinated solvent</b><span>Toxic &middot; 2&middot;0&middot;0</span></li>
         </ul>
+        <div class="hmis-story" aria-label="HMIS categories and legacy chemical warnings">
+          <div class="hmis-categories" data-at="1.25" data-out="2.25">
+            <article class="hmis-category hcat-health" data-at="1.35"><span>Health</span><b>0-4</b><small>Skin, eye, lung, ingestion risk.</small></article>
+            <article class="hmis-category hcat-flame" data-at="1.65"><span>Flammability</span><b>0-4</b><small>Flash point and burn profile.</small></article>
+            <article class="hmis-category hcat-react" data-at="1.95"><span>Reactivity</span><b>0-4</b><small>Instability and mixing risk.</small></article>
+          </div>
+          <div class="hmis-chemical-deck">
+            <article class="hmis-chemical hchem-acid" data-at="2.35" data-out="3.25">
+              <div class="hmis-chemical-name">
+                <span>Legacy chemical</span>
+                <strong>HCl / muriatic acid</strong>
+                <p>Common rust removal and mineral-scale shortcut.</p>
+              </div>
+              <div class="hmis-warning" data-at="2.68">
+                <span class="ghs-diamond"><i class="ph ph-warning-diamond" aria-hidden="true"></i></span>
+                <div><b>Corrosive warning</b><small>Skin and eye burns. Acid fumes can irritate lungs and push respirator or ventilation controls.</small></div>
+                <span class="hmis-score"><em>3</em><em>0</em><em>1</em></span>
+              </div>
+            </article>
+            <article class="hmis-chemical hchem-lye" data-at="3.25" data-out="4.15">
+              <div class="hmis-chemical-name">
+                <span>Legacy chemical</span>
+                <strong>Caustic soda / lye</strong>
+                <p>Used where grease, oils, and fats need aggressive saponification.</p>
+              </div>
+              <div class="hmis-warning" data-at="3.58">
+                <span class="ghs-diamond"><i class="ph ph-drop-half" aria-hidden="true"></i></span>
+                <div><b>Corrosive warning</b><small>Severe burns and eye damage drive face shield, gloves, apron, and eyewash planning.</small></div>
+                <span class="hmis-score"><em>3</em><em>0</em><em>1</em></span>
+              </div>
+            </article>
+            <article class="hmis-chemical hchem-glut" data-at="4.15" data-out="5.05">
+              <div class="hmis-chemical-name">
+                <span>Legacy chemical</span>
+                <strong>Glutaraldehyde</strong>
+                <p>Biocide used against biofilm and water-system contamination.</p>
+              </div>
+              <div class="hmis-warning" data-at="4.48">
+                <span class="ghs-diamond"><i class="ph ph-skull" aria-hidden="true"></i></span>
+                <div><b>Toxic exposure warning</b><small>Skin, eye, and respiratory irritation require strict exposure controls and trained handling.</small></div>
+                <span class="hmis-score"><em>3</em><em>1</em><em>0</em></span>
+              </div>
+            </article>
+            <article class="hmis-chemical hchem-solvent" data-at="5.05">
+              <div class="hmis-chemical-name">
+                <span>Legacy chemical</span>
+                <strong>Chlorinated solvents</strong>
+                <p>Oil, carbon, and adhesive stripping when vapor risk becomes part of the job.</p>
+              </div>
+              <div class="hmis-warning" data-at="5.38">
+                <span class="ghs-diamond"><i class="ph ph-wind" aria-hidden="true"></i></span>
+                <div><b>Toxic vapor warning</b><small>High-concern inhalation and ingestion hazards add ventilation, waste, and access-control work.</small></div>
+                <span class="hmis-score"><em>2</em><em>0</em><em>0</em></span>
+              </div>
+            </article>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -213,41 +270,46 @@
     <div class="stage">
       <div class="act-copy top">
         <span class="kicker danger" data-at="0" data-out="3">Read the labels</span>
-        <h2 class="act-h" data-at="0" data-out="3">Every job has legacy chemistry behind it.</h2>
+          <h2 class="act-h" data-at="0" data-out="3">Every legacy job brings controls behind it.</h2>
       </div>
       <div class="chem-rig">
-        <div class="chem-list" data-at=".15">
-          <div class="chem-card" data-at=".25">
-            <div class="chead">
-              <b><i class="ecue c-scale"></i>Scale &amp; rust</b><span class="vs">Hydrochloric acid</span>
-              <span class="lockup"><em>3</em><em>0</em><em>1</em></span>
-            </div>
-            <p>The legacy move is hydrochloric acid: fast on mineral scale, harsh on skin, metal, and wiring.</p>
+        <div class="phase-strip" data-at=".05" aria-hidden="true">
+          <span data-phase="loadout">Jobs</span>
+          <span data-phase="burden">Controls</span>
+          <span data-phase="question">Reset</span>
+          <span data-phase="relief">0-0-0</span>
+        </div>
+        <div class="legacy-loadout" data-at=".2" data-out="4.45" aria-label="Industrial jobs and legacy chemical burden">
+          <div class="legacy-task-grid">
+            <article class="legacy-task" data-at=".35"><img src="img/proof/cases/farm-rust-before.webp" alt="Heavy rust before cleaning"><div><b>Rust removal</b><span>HCl / muriatic acid</span><small>HMIS <strong>3-0-1</strong></small></div></article>
+            <article class="legacy-task" data-at=".7"><img src="img/proof/cases/ac-coil.webp" alt="Industrial coil cleaning"><div><b>Coil descaling</b><span>Acid descaler</span><small>HMIS <strong>3-0-1</strong></small></div></article>
+            <article class="legacy-task" data-at="1.05"><img src="img/proof/cases/hood-before.webp" alt="Greasy hood filter before cleaning"><div><b>Grease breakup</b><span>Caustic soda / lye</span><small>HMIS <strong>3-0-1</strong></small></div></article>
+            <article class="legacy-task" data-at="1.4"><img src="img/field/fill-before-enhanced.webp" alt="Cooling tower fill before cleaning"><div><b>Biofilm control</b><span>Glutaraldehyde</span><small>HMIS <strong>3-1-0</strong></small></div></article>
+            <article class="legacy-task" data-at="1.75"><img src="img/proof/cases/fire-pump.webp" alt="Industrial pump room equipment"><div><b>Oil and carbon strip</b><span>Chlorinated solvent</span><small>HMIS <strong>2-0-0</strong></small></div></article>
+            <article class="legacy-task" data-at="2.1"><img src="img/proof/cases/grout-before.webp" alt="Stained floor surface before cleaning"><div><b>Floor restoration</b><span>Acid / solvent sequence</span><small>HMIS <strong>3-0-1</strong></small></div></article>
           </div>
-          <div class="chem-card" data-at=".55">
-            <div class="chead">
-              <b><i class="ecue c-grease"></i>Grease</b><span class="vs">Caustic soda</span>
-              <span class="lockup"><em>3</em><em>0</em><em>1</em></span>
-            </div>
-            <p>Caustic soda cuts fat by turning it into soap. On skin, it keeps reacting until fully rinsed.</p>
-          </div>
-          <div class="chem-card" data-at=".85">
-            <div class="chead">
-              <b><i class="ecue c-bio"></i>Bacteria &amp; biofilm</b><span class="vs vs-long">Glutaraldehyde 50%</span>
-              <span class="lockup"><em>3</em><em>2</em><em>0</em></span>
-            </div>
-            <p>Biocides like glutaraldehyde knock back biofilm and the Legionella inside it, with inhalation and handling risk.</p>
-          </div>
-          <div class="chem-card" data-at="1.15">
-            <div class="chead">
-              <b><i class="ecue c-solvent"></i>Oil &amp; carbon</b><span class="vs">Chlorinated solvent</span>
-              <span class="lockup"><em>3</em><em>1</em><em>1</em></span>
-            </div>
-            <p>Chlorinated solvents strip oil and carbon fast, then linger as toxic vapor that's hard to ventilate.</p>
+          <div class="burden-grid" data-at="2.45">
+            <article class="burden-card" data-at="2.55"><img src="img/proof/cases/fire-pump.webp" alt="Industrial equipment room requiring controlled access"><i class="ph ph-hard-hat" aria-hidden="true"></i><b>Heavy PPE stack</b><span>Chemical gloves, face shield, apron, eyewash plan, and respirator fit by hazard.</span></article>
+            <article class="burden-card" data-at="2.88"><img src="img/proof/cases/hood-before.webp" alt="Work area requiring grease and vapor control"><i class="ph ph-wind" aria-hidden="true"></i><b>Vacate and ventilate</b><span>Acid fumes and solvent vapor can turn cleaning into access control.</span></article>
+            <article class="burden-card" data-at="3.21"><img src="img/field/fill-before-enhanced.webp" alt="Cooling tower fill before biofilm removal"><i class="ph ph-warning-octagon" aria-hidden="true"></i><b>Skin, eye, lung irritant</b><span>Irritation risk means tighter handling, wash stations, and incident response.</span></article>
+            <article class="burden-card" data-at="3.54"><img src="img/proof/cases/farm-rust-before.webp" alt="Rusted equipment before acid cleaning"><i class="ph ph-skull" aria-hidden="true"></i><b>Ingestion hazard</b><span>High-toxicity labels mean serious harm if swallowed or transferred by poor handling.</span></article>
+            <article class="burden-card" data-at="3.87"><img src="img/proof/cases/ac-coil.webp" alt="Industrial coil service area"><i class="ph ph-barrel" aria-hidden="true"></i><b>Hazmat storage</b><span>Segregation, secondary containment, labels, and spill response stay in scope.</span></article>
+            <article class="burden-card" data-at="4.2"><img src="img/proof/cases/grout-before.webp" alt="Stained floor before restoration"><i class="ph ph-trash" aria-hidden="true"></i><b>Disposal stream</b><span>Spent chemistry and rinse water can require capture, neutralization, and documentation.</span></article>
           </div>
         </div>
-        <p class="chem-out" data-at="2.35">Most legacy answers land at <b>3 for health</b>: serious injury is possible after brief exposure.</p>
-        <p class="chem-final" data-at="3">Then move the core line to <b>zero</b>, with exceptions clearly footnoted.</p>
+        <div class="consequence-question" data-at="4.65" data-out="5.55">
+          <span>Better question</span>
+          <b>What if the cleaning chemistry stopped becoming the job?</b>
+        </div>
+        <div class="relief-wrap" data-at="5.45" aria-label="VertKleen 0-0-0 consequences removed">
+          <div class="relief-zero"><span>HMIS</span><b>0-0-0</b><small>Core VertKleen line</small></div>
+          <div class="relief-grid">
+            <article class="relief-card" data-at="5.8"><i class="ph ph-hard-hat" aria-hidden="true"></i><b>Heavy PPE burden</b><span>HMIS 0 health profile removes corrosive skin and eye hazard from the core line.</span></article>
+            <article class="relief-card" data-at="6.1"><i class="ph ph-wind" aria-hidden="true"></i><b>Vacate and ventilate</b><span>No acid-fume or solvent-vapor cleaning step to clear occupied areas.</span></article>
+            <article class="relief-card" data-at="6.4"><i class="ph ph-warning-octagon" aria-hidden="true"></i><b>Exposure escalation</b><span>Lower-irritation handling means no serious-injury headline driving the work plan.</span></article>
+            <article class="relief-card" data-at="6.7"><i class="ph ph-trash" aria-hidden="true"></i><b>Hazmat and disposal drag</b><span>Non-DOT handling profile; biodegrades in under 10 days.</span></article>
+          </div>
+        </div>
       </div>
     </div>
   </section>
