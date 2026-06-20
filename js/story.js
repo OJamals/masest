@@ -106,14 +106,17 @@ states.forEach(function (st) {
     st.tl = tl;
 
     st.els.forEach(function (el) {
-      if (st.act === firstAct && el._at === 0) {        /* opening line: visible on load */
-        gsap.set(el, { autoAlpha: 1, y: 0, scale: 1 });
-      } else {
-        tl.fromTo(el,
-          { autoAlpha: 0, y: 30, scale: 0.985 },
-          { autoAlpha: 1, y: 0, scale: 1, duration: BEAT_IN },
-          el._at);
-      }
+    if (st.act === firstAct && el._at === 0) {        /* opening line: visible on load */
+      gsap.set(el, { autoAlpha: 1, y: 0, scale: 1 });
+    } else {
+      var isHmisChemical = el.classList && el.classList.contains("hmis-chemical");
+      var enterAt = isHmisChemical ? Math.max(0, el._at - BEAT_OUT) : el._at;
+      var enterDuration = isHmisChemical ? Math.max(0.36, BEAT_IN - 0.1) : BEAT_IN;
+      tl.fromTo(el,
+        { autoAlpha: 0, y: 30, scale: 0.985 },
+        { autoAlpha: 1, y: 0, scale: 1, duration: enterDuration },
+        enterAt);
+    }
       if (el._out >= 0) {
         tl.to(el, { autoAlpha: 0, y: -16, duration: BEAT_OUT, ease: "power2.in" }, Math.max(0, el._out - BEAT_OUT));
       }
