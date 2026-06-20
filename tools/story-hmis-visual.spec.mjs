@@ -224,12 +224,101 @@ test("HMIS category and warning cards stay inside viewport on mobile", async ({ 
   }
 });
 
-test("conventional cleaner scene is no longer rendered", async ({ page }) => {
+test("story renders five acts with the cost bridge and savior last", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
   await expect(page.locator(".act-chems")).toHaveCount(0);
-  await expect(page.locator(".story .act")).toHaveCount(4);
-  await expect(page.locator(".story .rail-btn")).toHaveCount(4);
-  await expect(page.locator('.story .act[data-act="4"].act-savior')).toHaveCount(1);
+  await expect(page.locator(".story .act")).toHaveCount(5);
+  await expect(page.locator(".story .rail-btn")).toHaveCount(5);
+  await expect(page.locator('.story .act[data-act="4"].act-cost')).toHaveCount(1);
+  await expect(page.locator('.story .act[data-act="5"].act-savior')).toHaveCount(1);
+});
+
+test("cost act has four legacy lines, a sourced incident total, and a VertKleen column", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+
+  await expect(page.locator('.act-cost .cost-line')).toHaveCount(4);
+  await expect(page.locator('.act-cost .cost-incident')).toHaveCount(1);
+  await expect(page.locator('.act-cost .cost-vert')).toHaveCount(1);
+  await expect(page.locator('.act-cost .cost-sources')).toHaveCount(1);
+  await expect(page.locator('.act-cost .cost-num')).toHaveAttribute("data-target", "115000");
+});
+
+test("cost columns sit side by side on desktop and stack on mobile", async ({ page }) => {
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const desktop = await page.evaluate(() => {
+    const l = document.querySelector('.act-cost .cost-legacy').getBoundingClientRect();
+    const v = document.querySelector('.act-cost .cost-vert').getBoundingClientRect();
+    return { sameRow: Math.abs(l.top - v.top) < 24, legacyLeftOfVert: l.right <= v.left + 1 };
+  });
+  expect(desktop.sameRow).toBe(true);
+  expect(desktop.legacyLeftOfVert).toBe(true);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobile = await page.evaluate(() => {
+    const l = document.querySelector('.act-cost .cost-legacy').getBoundingClientRect();
+    const v = document.querySelector('.act-cost .cost-vert').getBoundingClientRect();
+    return { stacked: v.top >= l.bottom - 1, overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+  });
+  expect(mobile.stacked).toBe(true);
+  expect(mobile.overflowX).toBe(0);
+});
+
+test("cost headline does not overlap the columns", async ({ page }) => {
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+  for (const vp of [{ width: 1440, height: 900 }, { width: 1280, height: 768 }]) {
+    await page.setViewportSize(vp);
+    const r = await page.evaluate(async () => {
+      const act = document.querySelector('.story .act[data-act="4"]');
+      window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.5);
+      await new Promise((z) => setTimeout(z, 500));
+      const h = act.querySelector('.act-h').getBoundingClientRect();
+      const rig = act.querySelector('.cost-rig').getBoundingClientRect();
+      return { headlineBottom: h.bottom, rigTop: rig.top };
+    });
+    expect(r.rigTop, JSON.stringify({ vp, r })).toBeGreaterThanOrEqual(r.headlineBottom - 1);
+  }
+});
+
+test("cost scene fits a short laptop with the rig in frame", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 768 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+  await page.waitForTimeout(300);
+
+  const frame = await page.evaluate(async () => {
+    const act = document.querySelector('.story .act[data-act="4"]');
+    // measure during the pinned phase (all beats revealed, stage held in frame)
+    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.5);
+    await new Promise((r) => setTimeout(r, 700));
+    const rig = act.querySelector('.cost-rig').getBoundingClientRect();
+    return { rigTop: rig.top, rigBottom: rig.bottom, vh: window.innerHeight };
+  });
+  expect(frame.rigTop).toBeGreaterThanOrEqual(0);
+  expect(frame.rigBottom).toBeLessThanOrEqual(frame.vh);
+});
+
+test("legacy cost meter counts up to the incident figure by the final beat", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+  await page.waitForTimeout(300);
+
+  const read = async (frac) => page.evaluate(async (f) => {
+    const act = document.querySelector('.story .act[data-act="4"]');
+    window.scrollTo(0, act.offsetTop + act.offsetHeight * f);
+    await new Promise((r) => setTimeout(r, 800));
+    return Number(document.querySelector('.cost-num').textContent.replace(/[,\s]/g, ""));
+  }, frac);
+
+  const early = await read(0.3);   // before the incident beat — meter still low
+  const end = await read(0.9);      // held at the incident figure
+  expect(early).toBeLessThan(115000);
+  expect(end).toBe(115000);
 });

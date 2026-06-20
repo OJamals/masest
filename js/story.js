@@ -137,6 +137,7 @@ states.forEach(function (st) {
     }
     if (st.act === pipeAct) updateChips2(st);
     if (st.act === hmisAct) updateHmis(st);
+    if (st.act === costAct) updateCost(st);
   }
 
   /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
@@ -253,6 +254,21 @@ states.forEach(function (st) {
     var edgeIn = idx === 0 ? 1 : smooth(clamp(0, 1, local / 0.12));
     var edgeOut = idx === n - 1 ? 1 : smooth(clamp(0, 1, (1 - local) / 0.12));
     if (hmisStack) hmisStack.style.opacity = (enter * Math.min(edgeIn, edgeOut)).toFixed(3);
+  }
+
+  /* ---- ACT 4: legacy cost meter counts up; VertKleen stays at zero ---- */
+  var costAct = story.querySelector(".act-cost");
+  var costNum = costAct ? costAct.querySelector(".cost-num") : null;
+  var costVert = costAct ? costAct.querySelector(".cost-vert") : null;
+  var COST_TARGET = costNum ? (parseInt(costNum.getAttribute("data-target"), 10) || 0) : 0;
+  function fmtCost(n) { return Math.round(n).toLocaleString("en-US"); }
+  function updateCost(st) {
+    if (!costNum) return;
+    /* ramp the count-up across the incident reveal (beat 4.4 -> 5.0) */
+    var a = beatFrac(st, 4.4), b = beatFrac(st, 5.0);
+    var ramp = smooth(clamp(0, 1, (st.p - a) / (b - a)));
+    setTxt(costNum, fmtCost(COST_TARGET * ramp));
+    if (costVert) costVert.classList.toggle("is-on", ramp > 0.6);
   }
 
   /* ============================================================
@@ -649,7 +665,7 @@ states.forEach(function (st) {
       var target = acts[i];
       if (!target) return;
       var top = target.getBoundingClientRect().top + window.scrollY;
-      var landings = [0.24, 0.42, 0.42, 0.54, 0.32];
+      var landings = [0.24, 0.42, 0.42, 0.50, 0.32]; /* enemy, buildup, score, cost, zero */
       var travel = Math.max(0, target.offsetHeight - window.innerHeight);
       var y = top + travel * (landings[i] || 0.5);
       window.scrollTo({ top: y, behavior: "smooth" });

@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="css/style.css?v=20260620a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css?v=20260618d">
-<link rel="stylesheet" href="css/story.css?v=20260620a">
+<link rel="stylesheet" href="css/story.css?v=20260620b">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/">
 <meta property="og:url" content="https://masest.co/">
@@ -53,7 +53,8 @@
       <button class="rail-btn" type="button" tabindex="-1"><b>1</b><span>The enemy</span></button>
       <button class="rail-btn" type="button" tabindex="-1"><b>2</b><span>The buildup</span></button>
       <button class="rail-btn" type="button" tabindex="-1"><b>3</b><span>The score</span></button>
-      <button class="rail-btn" type="button" tabindex="-1"><b>4</b><span>The zero</span></button>
+      <button class="rail-btn" type="button" tabindex="-1"><b>4</b><span>The cost</span></button>
+      <button class="rail-btn" type="button" tabindex="-1"><b>5</b><span>The zero</span></button>
     </div>
   </div>
 
@@ -263,8 +264,48 @@
     </div>
   </section>
 
-  <!-- ACT 4: THE SAVIOR -->
-  <section class="act act-savior" data-act="4" data-fx="motes">
+  <!-- ACT 4: THE COST (the price the label hides) -->
+  <section class="act act-cost" data-act="4">
+    <div class="stage">
+      <div class="act-copy top">
+        <span class="kicker danger" data-at="0">Read the invoice, not the label</span>
+        <h2 class="act-h" data-at="0">The drum is the cheapest part.</h2>
+        <p class="act-p" data-at="0">HMIS scored the hazard. The hazard scores you back &mdash; in gear, downtime, disposal, and one bad day.</p>
+      </div>
+      <div class="cost-rig">
+        <div class="cost-legacy" aria-label="The hidden cost of legacy chemistry">
+          <h3 class="cost-col-h" data-at="0">Legacy chemistry</h3>
+          <ul class="cost-lines">
+            <li class="cost-line" data-at="1"><i class="ph ph-hard-hat" aria-hidden="true"></i><span class="cost-label">PPE &amp; training</span><span class="cost-fig">$1,000s / yr<sup class="cost-foot">1</sup></span></li>
+            <li class="cost-line" data-at="2"><i class="ph ph-wind" aria-hidden="true"></i><span class="cost-label">Vacate &amp; ventilate</span><span class="cost-fig">downtime / job<sup class="cost-foot">2</sup></span></li>
+            <li class="cost-line" data-at="3"><i class="ph ph-barrel" aria-hidden="true"></i><span class="cost-label">Hazmat ship, store, dispose</span><span class="cost-fig">$135&ndash;$395 / drum<sup class="cost-foot">3</sup></span></li>
+            <li class="cost-line" data-at="4"><i class="ph ph-warning-octagon" aria-hidden="true"></i><span class="cost-label">OSHA exposure</span><span class="cost-fig">up to $16,550 / violation<sup class="cost-foot">4</sup></span></li>
+          </ul>
+          <div class="cost-incident" data-at="5">
+            <span class="cost-incident-label">+ one workplace injury</span>
+            <b class="cost-total"><span class="cost-cur">$</span><span class="cost-num" data-target="115000">115,000</span></b>
+            <small>average total cost, direct + indirect<sup class="cost-foot">5</sup></small>
+          </div>
+        </div>
+        <div class="cost-vert" aria-label="VertKleen removes the cost">
+          <h3 class="cost-col-h">VertKleen</h3>
+          <div class="cost-zero"><span>HMIS</span><b>0-0-0</b></div>
+          <ul class="cost-drops">
+            <li><i class="ph ph-check" aria-hidden="true"></i>PPE burden</li>
+            <li><i class="ph ph-check" aria-hidden="true"></i>Vapor &amp; vacate step</li>
+            <li><i class="ph ph-check" aria-hidden="true"></i>DOT handling profile</li>
+            <li><i class="ph ph-check" aria-hidden="true"></i>Hazmat disposal drag</li>
+          </ul>
+          <p class="cost-proof">Documented switch: operating cost <b>$19,600 &rarr; $2,100</b> in year one.<sup class="cost-foot">6</sup></p>
+          <p class="cost-payoff">The drum is the cheapest line on the legacy invoice &mdash; and the only line on ours.</p>
+        </div>
+      </div>
+      <p class="cost-sources" data-at="5">1 OSHA / NoCry &middot; 2 MCF Environmental &middot; 3 MCF Environmental, hazardouswastedisposal.com &middot; 4 OSHA 2026 schedule &middot; 5 OSHA $afety Pays; Liberty Mutual 2025 Index &middot; 6 CG Chemicals case</p>
+    </div>
+  </section>
+
+  <!-- ACT 5: THE SAVIOR -->
+  <section class="act act-savior" data-act="5" data-fx="motes">
     <div class="stage">
       <canvas class="fx-canvas" aria-hidden="true"></canvas>
       <div class="savior-wrap">
@@ -605,7 +646,8 @@ document.addEventListener("DOMContentLoaded", () => {
       function(){out.a1={h:op('.act[data-act="1"] .act-h'),reel:document.querySelector('.reel-idx').textContent,slideVis:op('.reel-slide[data-slide="1"]'),fx:cvPix(1)};},
       function(){out.a2={h:op('.act[data-act="2"] .act-h'),chip:op('.chip.c-rust'),fx:cvPix(2)};},
       function(){out.a3={h:op('.act[data-act="3"] .act-h'),f:op('.factor.f-react'),cards:op('.hmis-factors')};},
-      function(){out.a4={h:op('.act-savior h2'),z:op('.savior-zero-scale'),fx:cvPix(4),rail:document.querySelectorAll('.rail-btn.is-on').length};}
+      function(){out.a4={h:op('.act[data-act="4"] .act-h'),total:(document.querySelector('.cost-num')||{}).textContent||'',lines:document.querySelectorAll('.act-cost .cost-line').length};},
+      function(){out.a5={h:op('.act-savior h2'),z:op('.savior-zero-scale'),fx:cvPix(5),rail:document.querySelectorAll('.rail-btn.is-on').length};}
     ];
     scrolling=true;
     setTimeout(function nxt(){
