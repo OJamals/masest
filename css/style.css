@@ -5428,3 +5428,18 @@ body.products-page .conversion-proof .proof-pill em {
 
 /* Classification chip variant inside HMIS rows (text, not the 0–4 box). */
 .hmis-row .val--text { width: auto; padding: 0 14px; font-size: .9rem; }
+
+/* Vertical stack grids (was inline display:grid;gap). */
+.u-stack-14 { display: grid; gap: 14px; }
+.u-stack-18 { display: grid; gap: 18px; }
+.u-align-start { align-content: start; }
+
+/* Section padding-bottom flush (pairs with .u-flush-top). */
+.u-flush-bottom { padding-bottom: 0; }
+
+/* Wider content measures. */
+.u-measure-820 { max-width: 820px; }
+.u-measure-860 { max-width: 860px; }
+
+/* Spacing lifted from inline (marketing pages). */
+.u-mt-16 { margin-top: 16px; }
