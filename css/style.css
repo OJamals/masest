@@ -5443,3 +5443,19 @@ body.products-page .conversion-proof .proof-pill em {
 
 /* Spacing lifted from inline (marketing pages). */
 .u-mt-16 { margin-top: 16px; }
+
+/* Spacing + form utilities (account / contact / order-confirmed). */
+.u-mt-10 { margin-top: 10px; }
+.u-mt-12 { margin-top: 12px; }
+.u-mt-14 { margin-top: 14px; }
+.u-mt-18 { margin-top: 18px; }
+.u-ml-8  { margin-left: 8px; }
+.u-minh-0 { min-height: 0; }
+.u-block-cta { margin-top: 18px; width: 100%; }   /* full-width form submit */
+.u-cta-wide  { min-width: 220px; justify-content: center; }
+.headline--xs { font-size: 1.5rem; margin-bottom: 4px; }
+.form-success .headline { font-size: 1.7rem; }
+
+/* Order-confirmed receipt lines. */
+.order-lines  { margin: 14px 0 0; padding: 0; font-size: .92rem; }
+.order-totals { margin: 10px 0 0; font-weight: 700; }

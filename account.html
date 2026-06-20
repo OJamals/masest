@@ -92,7 +92,7 @@
           <div class="acct-reset-row">
             <button type="button" class="password-reset-link" id="forgotPasswordBtn">Forgot password?</button>
           </div>
-          <button type="submit" class="btn btn-primary" id="liBtn" style="margin-top:18px;width:100%">Sign in</button>
+          <button type="submit" class="btn btn-primary u-block-cta" id="liBtn">Sign in</button>
           <p class="acct-status" id="liStatus" role="status" aria-live="polite"></p>
           <p class="acct-switch">New to MASEST? <button type="button" data-pane="register">Create a business account</button></p>
         </form>
@@ -104,7 +104,7 @@
             <div class="field"><label for="newPassword">New password *</label><div class="pw-wrap"><input id="newPassword" name="new-password" type="password" autocomplete="new-password" required minlength="8"><button type="button" class="pw-toggle" data-target="newPassword" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
             <div class="field"><label for="confirmPassword">Confirm password *</label><div class="pw-wrap"><input id="confirmPassword" name="confirm-password" type="password" autocomplete="new-password" required minlength="8"><button type="button" class="pw-toggle" data-target="confirmPassword" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
           </div>
-          <button type="submit" class="btn btn-primary" id="resetPasswordBtn" style="margin-top:18px;width:100%">Save new password</button>
+          <button type="submit" class="btn btn-primary u-block-cta" id="resetPasswordBtn">Save new password</button>
           <p class="acct-secondary-action"><button type="button" class="password-reset-link" id="backToLoginBtn">Back to sign in</button></p>
           <p class="acct-status" id="resetStatus" role="status" aria-live="polite"></p>
         </form>
@@ -123,7 +123,7 @@
             <div class="field"><label for="rCert">Resale / tax-exempt cert URL</label><input id="rCert" name="resale_cert_url" type="url" placeholder="Link to certificate (optional)"></div>
           </div>
           <label class="checkbox-row"><input type="checkbox" id="rExempt" name="tax_exempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
-          <button type="submit" class="btn btn-primary" id="rBtn" style="margin-top:18px;width:100%">Create account</button>
+          <button type="submit" class="btn btn-primary u-block-cta" id="rBtn">Create account</button>
           <p class="acct-status" id="rStatus" role="status" aria-live="polite"></p>
           <p class="acct-switch">Already have an account? <button type="button" data-pane="login">Sign in</button></p>
         </form>
@@ -134,26 +134,26 @@
         <h2 class="acct-title">Finish setting up</h2>
         <p class="acct-sub">Your email is confirmed. Add your company to complete your business account.</p>
         <div class="field"><label for="cCompany">Company *</label><input id="cCompany" type="text" placeholder="Gulf Coast Mechanical" required></div>
-        <div class="field" style="margin-top:12px"><label for="cName">Full name</label><input id="cName" type="text" placeholder="Marisol Vega"></div>
-        <div class="field" style="margin-top:12px"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="(727) 348-6519"></div>
+        <div class="field u-mt-12"><label for="cName">Full name</label><input id="cName" type="text" placeholder="Marisol Vega"></div>
+        <div class="field u-mt-12"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="(727) 348-6519"></div>
         <label class="checkbox-row"><input type="checkbox" id="cExempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
-        <button type="button" class="btn btn-primary" id="cBtn" style="margin-top:18px;width:100%">Finish setup</button>
+        <button type="button" class="btn btn-primary u-block-cta" id="cBtn">Finish setup</button>
         <p class="acct-status" id="cStatus" role="status" aria-live="polite"></p>
-        <button type="button" class="btn btn-ghost btn-sm" id="cLogout" style="margin-top:10px">Sign out</button>
+        <button type="button" class="btn btn-ghost btn-sm u-mt-10" id="cLogout">Sign out</button>
       </div>
 
       <!-- Signed-in summary -->
       <div class="form-card" id="acctSummary" hidden>
-        <h2 class="headline" style="font-size:1.5rem;margin-bottom:4px">Account</h2>
+        <h2 class="headline headline--xs">Account</h2>
         <div class="acct-row"><span>Signed in as</span><b id="smEmail">Not set</b></div>
         <div class="acct-row"><span>Company</span><b id="smCompany">Not set</b></div>
         <div class="acct-row"><span>Status</span><span class="acct-badge" id="smStatus" data-s="pending">pending</span></div>
         <div class="acct-row"><span>Online ordering</span><b id="smCheckout">Not set</b></div>
         <div class="acct-row"><span>NET terms</span><b id="smNet">Not set</b></div>
-        <p class="acct-status" id="smNote" data-state="" style="min-height:0"></p>
+        <p class="acct-status u-minh-0" id="smNote" data-state=""></p>
         <div id="smOrders"></div>
-        <a class="btn btn-primary" href="dashboard.html" style="margin-top:18px">Open dashboard</a>
-        <button type="button" class="btn btn-ghost" id="logoutBtn" style="margin-top:18px;margin-left:8px">Sign out</button>
+        <a class="btn btn-primary u-mt-18" href="dashboard.html">Open dashboard</a>
+        <button type="button" class="btn btn-ghost u-mt-18 u-ml-8" id="logoutBtn">Sign out</button>
       </div>
 
     </div>

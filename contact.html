@@ -69,7 +69,7 @@
     <div class="wrap contact-layout">
       <form class="form-card" id="quoteForm" data-endpoint="/api/quote">
         <input type="hidden" name="type" id="fType" value="quote">
-        <div aria-hidden="true" style="position:absolute;inset:0 auto auto 0;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap">
+        <div aria-hidden="true" class="sr-only">
           <label for="fGotcha">Leave this field empty</label>
           <input id="fGotcha" name="_gotcha" type="text" tabindex="-1" autocomplete="off">
         </div>
@@ -193,7 +193,7 @@
             </div>
             <p class="sample-hint" id="sampleHint">Select 3 to 5 products.</p>
           </div>
-          <div class="field" style="margin-top:14px"><label for="fShipTo">Ship-to address *</label><textarea id="fShipTo" name="ship_to" rows="3" placeholder="Facility name, street, city, state, ZIP" data-req></textarea></div>
+          <div class="field u-mt-14"><label for="fShipTo">Ship-to address *</label><textarea id="fShipTo" name="ship_to" rows="3" placeholder="Facility name, street, city, state, ZIP" data-req></textarea></div>
         </div>
 
         <div class="field-grid" data-intent-group="distributor" hidden>
@@ -210,17 +210,17 @@
           <div class="field"><label for="fTerritory">Territory / region *</label><input id="fTerritory" name="territory" type="text" placeholder="Southeast US, Caribbean, ..." data-req></div>
         </div>
 
-        <div class="field" style="margin-top:18px">
+        <div class="field u-mt-18">
           <label for="fMessage">Current chemical / site notes</label>
           <textarea id="fMessage" name="message" rows="5" placeholder="e.g., We currently descale cooling tower fill with hydrochloric acid (muriatic acid) twice a year"></textarea>
         </div>
 
-        <button class="btn btn-primary" type="submit" style="min-width:220px;justify-content:center">Send Request</button>
+        <button class="btn btn-primary u-cta-wide" type="submit">Send Request</button>
         <p class="form-note">* Required. Your information goes only to the MASEST sales team, never sold or shared.</p>
       </form>
 
       <div class="form-card form-success" id="formSuccess" style="display:none" role="status" aria-live="polite">
-        <h2 class="headline" id="formSuccessTitle" tabindex="-1" style="font-size:1.7rem">Request received.</h2>
+        <h2 class="headline" id="formSuccessTitle" tabindex="-1">Request received.</h2>
         <p id="formSuccessCopy">MASEST has your request. A sales or technical contact will review the application, documentation needs, and route, then follow up directly.</p>
         <div class="form-success-actions">
           <a class="btn btn-ghost" id="mailtoFallback" href="mailto:matthew@masest.co">Open Email Draft</a>
