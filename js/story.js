@@ -59,23 +59,6 @@ var BEAT_IN = 0.58, BEAT_OUT = 0.22, HOLD = 1.25;
     });
     return { act: act, stage: act.querySelector(".stage"), i: i, p: 0, active: false, fx: null, maxAt: maxAt, els: els, focusables: focusables, focusVisible: null, T: maxAt + BEAT_IN + HOLD };
   });
-  var saviorImagesWarmed = false;
-
-  function prewarmSaviorProofImages() {
-    if (saviorImagesWarmed) return;
-    saviorImagesWarmed = true;
-    Array.prototype.slice.call(story.querySelectorAll(".act-savior .savior-proof img")).forEach(function (img) {
-      var source = img.getAttribute("data-story-src");
-      if (source) {
-        img.src = source;
-        img.removeAttribute("data-story-src");
-      }
-      img.loading = "eager";
-      img.fetchPriority = "high";
-      if (img.decode) img.decode().catch(function () {});
-    });
-  }
-
   function syncStoryFocus(currentIdx) {
     var visibleIdx = typeof currentIdx === "number" ? currentIdx : currentActIdx();
     states.forEach(function (st) {
@@ -109,7 +92,6 @@ states.forEach(function (st) {
         invalidateOnRefresh: true,        /* re-record tween endpoints at the new size */
         onToggle: function (self) {
           st.active = self.isActive;
-          if (self.isActive && st.i >= 3) prewarmSaviorProofImages();
           if (self.isActive) resizeFx(st);
           var idx = reassertAlpha(true);
           updateRail(idx);
@@ -154,7 +136,6 @@ states.forEach(function (st) {
       if (cue) cue.style.opacity = Math.max(0, 1 - st.p * 8);
     }
     if (st.act === pipeAct) updateChips2(st);
-    if (st.act === chemAct) updateChems(st);
     if (st.act === hmisAct) updateHmis(st);
   }
 
@@ -272,79 +253,6 @@ states.forEach(function (st) {
     var edgeIn = idx === 0 ? 1 : smooth(clamp(0, 1, local / 0.12));
     var edgeOut = idx === n - 1 ? 1 : smooth(clamp(0, 1, (1 - local) / 0.12));
     if (hmisStack) hmisStack.style.opacity = (enter * Math.min(edgeIn, edgeOut)).toFixed(3);
-  }
-
-  /* ---- ACT 4: chemical dots land with their cards, then zero ---- */
-  var chemAct = story.querySelector(".act-chems");
-  var chemScale = chemAct ? chemAct.querySelector(".chem-scale") : null;
-  var cdots = chemAct ? gsap.utils.toArray(chemAct.querySelectorAll(".cdot")) : [];
-  var cEnemy = cdots.map(function (d) { return d.querySelector(".enemy"); });
-  var cChem = cdots.map(function (d) { return d.querySelector(".chem"); });
-  var legacyTasks = chemAct ? gsap.utils.toArray(chemAct.querySelectorAll(".legacy-task")) : [];
-  var burdenCards = chemAct ? gsap.utils.toArray(chemAct.querySelectorAll(".burden-card")) : [];
-  var chemPhaseCur = "";
-  var chemMobileSeq = false;
-  var chemPhases = [
-    ["loadout", 0],
-    ["burden", 0.38],
-    ["question", 0.62],
-    ["relief", 0.74]
-  ];
-  function updateChemPhase(st) {
-    if (!chemAct) return;
-    var phase = chemPhases[0][0];
-    for (var i = 0; i < chemPhases.length; i++) {
-      if (st.p >= chemPhases[i][1]) phase = chemPhases[i][0];
-    }
-    if (phase === chemPhaseCur) return;
-    chemPhaseCur = phase;
-    chemAct.dataset.phase = phase;
-    chemPhases.forEach(function (item) {
-      chemAct.classList.toggle("phase-" + item[0], item[0] === phase);
-    });
-  }
-  function showOne(items, idx, active) {
-    for (var i = 0; i < items.length; i++) {
-      var on = active && i === idx;
-      items[i].style.opacity = on ? "1" : "0";
-      items[i].style.visibility = on ? "visible" : "hidden";
-    }
-  }
-  function updateChemMobileSequence(st) {
-    var mobile = window.innerWidth <= 760;
-    if (!mobile) {
-      if (chemMobileSeq) {
-        legacyTasks.concat(burdenCards).forEach(function (el) {
-          el.style.opacity = "";
-          el.style.visibility = "";
-        });
-        chemMobileSeq = false;
-      }
-      return;
-    }
-    chemMobileSeq = true;
-    var taskIdx = Math.min(legacyTasks.length - 1, Math.max(0, Math.floor(clamp(0, 0.999, (st.p - 0.06) / 0.32) * legacyTasks.length)));
-    var burdenIdx = Math.min(burdenCards.length - 1, Math.max(0, Math.floor(clamp(0, 0.999, (st.p - 0.38) / 0.26) * burdenCards.length)));
-    showOne(legacyTasks, taskIdx, st.p < 0.42);
-    showOne(burdenCards, burdenIdx, st.p >= 0.36 && st.p < 0.64);
-  }
-
-  function updateChems(st) {
-    updateChemPhase(st);
-    updateChemMobileSequence(st);
-    if (!cdots.length) return;
-    var z = smooth((st.p - beatFrac(st, 2.95)) / INW(st));
-    /* morph each dot's label from the enemy (known from Act 2) to the
-       hazardous chemical it forces, as the "score" beat reads */
-    var m = smooth((st.p - beatFrac(st, 2.45)) / INW(st));
-    for (var k = 0; k < cdots.length; k++) {
-      var inT = smooth((st.p - beatFrac(st, k + 1)) / INW(st));
-      cdots[k].style.opacity = inT;
-      cdots[k].style.setProperty("--v", 3 * (1 - z));
-      if (cEnemy[k]) cEnemy[k].style.opacity = 1 - m;
-      if (cChem[k]) cChem[k].style.opacity = m;
-    }
-    if (chemScale) chemScale.classList.toggle("safe", z > 0.12);
   }
 
   /* ============================================================
@@ -689,7 +597,7 @@ states.forEach(function (st) {
     }
   }
 
-  /* --- ACT 5: clean teal motes drifting up --- */
+  /* --- ACT 4: clean teal motes drifting up --- */
   function fxMotes(st, c, dt, time) {
     var ctx = c.ctx, w = c.w(), h = c.h();
     ctx.clearRect(0, 0, w, h);

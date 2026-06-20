@@ -17,7 +17,7 @@
   --s-safe-text: #cffff8;
   --s-safe-soft: rgba(16, 179, 163, .18);
   --s-line: rgba(255, 255, 255, .12);
-  /* HMIS axis colors — taught in Act 3, reused on Act 4 lockups + Act 5 zeros */
+  /* HMIS axis colors — taught in Act 3, reused on Act 4 zeros */
   --hmis-h: #3b82f6;   /* Health */
   --hmis-f: #ef4444;   /* Flammability */
   --hmis-r: #f5b301;   /* Reactivity */
@@ -37,7 +37,6 @@
 .story .act { position: relative; height: 212vh; padding: 0; }
 .story .act[data-act="1"] { height: 168vh; }   /* photo reel needs less sequencing */
 .story .act[data-act="3"] { height: 305vh; }   /* HMIS categories + chemical warnings */
-.story .act[data-act="4"] { height: 430vh; }   /* consequences + VertKleen relief */
 .story .act-savior { height: 228vh; }
 .story .stage {
   position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 620px;
@@ -423,8 +422,8 @@
    ACT 3 — THE SCORE (HMIS explained, factor by factor)
    ============================================================ */
 .hmis-rig {
-  position: relative; z-index: 5; width: min(880px, 90vw); margin: 18vh auto 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 30px;
+  position: relative; z-index: 5; width: min(880px, 90vw); margin: clamp(56px, 8vh, 96px) auto 0;
+  display: flex; flex-direction: column; justify-content: center; gap: clamp(18px, 2.4vh, 30px);
 }
 /* HMIS hazard diamond — cycles the four legacy chemicals (scrub-driven in story.js) */
 .hmis-stack {
@@ -647,542 +646,11 @@
   line-height: 1.45;
 }
 
-.scale-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
-.scale-track {
-  position: relative; height: 14px; border-radius: 999px;
-  background: linear-gradient(90deg, #1d2a2f 0%, #6b3a2e 55%, var(--s-danger) 100%);
-}
-.scale-ticks { display: flex; justify-content: space-between; margin-top: 8px; font-size: .72rem; color: var(--s-mut); font-variant-numeric: tabular-nums; }
-
 /* ============================================================
-   ACT 4 — THE CHEMICALS (dots drop onto the shared scale)
-   ============================================================ */
-.chem-rig {
-  position: relative; z-index: 5; width: min(880px, 90vw); margin: 24vh auto 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, auto);
-  justify-content: center;
-  gap: 18px;
-}
-.chem-scale { position: relative; padding-top: 26px; padding-bottom: 4px; }
-.chem-scale .scale-track { overflow: visible; }
-/* Dots cluster tightly around their score: small horizontal jitter,
-   shallow vertical offsets, labels alternating above/below */
-.cdot {
-  position: absolute; top: 50%;
-  left: clamp(0%, calc((var(--v, 3) + var(--vj, 0)) / 4 * 100%), 100%);
-  transform: translate(-50%, -50%) translateY(var(--lift, 0px));
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--s-danger); border: 2.5px solid var(--s-bg);
-  box-shadow: 0 0 0 1.5px var(--s-danger), 0 6px 14px rgba(169, 52, 32, .45);
-  opacity: 0; will-change: opacity, left;
-}
-.cdot[data-dot="0"] { --vj: -0.10; --lift: -12px; }
-.cdot[data-dot="1"] { --vj: -0.03; --lift: 12px; }
-.cdot[data-dot="2"] { --vj: 0.04;  --lift: -12px; }
-.cdot[data-dot="3"] { --vj: 0.11;  --lift: 12px; }
-.cdot span {
-  position: absolute; left: 50%; top: -130%; transform: translateX(-50%);
-  font-size: .62rem; font-weight: 800; letter-spacing: .06em; color: var(--s-danger-ink);
-}
-.cdot[data-dot="1"] span, .cdot[data-dot="3"] span { top: auto; bottom: -130%; }
-.chem-scale.safe .cdot { background: var(--s-safe); box-shadow: 0 0 0 1.5px var(--s-safe), 0 6px 14px rgba(8, 121, 111, .36); }
-.story .chem-scale .cdot { color: var(--s-ink); }
-/* Four distinct label levels so labels stay legible when all four dots
-   converge on the same value (at 3, then at 0). Shadow lifts them off
-   the track. */
-.cdot[data-dot="0"] span { top: -205%; bottom: auto; }
-.cdot[data-dot="2"] span { top: -110%; bottom: auto; }
-.cdot[data-dot="1"] span { top: auto; bottom: -110%; }
-.cdot[data-dot="3"] span { top: auto; bottom: -205%; }
-.story .chem-scale .cdot span { text-shadow: 0 1px 3px rgba(8, 10, 14, .75); white-space: nowrap; }
-.chem-scale.safe .cdot,
-.chem-scale.safe .cdot span { color: var(--s-ink); }
-/* One framed HMIS spec panel split into quadrants — not four repeated cards. */
-.chem-list {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-}
-.chem-card {
-  padding: 17px 20px;
-  border: 1px solid var(--s-line); border-radius: 14px;
-  background: rgba(255, 255, 255, .03);
-  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-}
-.chem-card .chead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.chem-card .chead b { font-size: 1.02rem; font-weight: 800; letter-spacing: -.01em; }
-.chem-card .vs {
-  font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--s-mut); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--s-line);
-}
-.chem-card .vs-long {
-  max-width: none;
-  white-space: nowrap;
-  font-size: .56rem;
-  letter-spacing: .035em;
-  line-height: 1;
-}
-.chem-card .lockup { margin-left: auto; display: inline-flex; gap: 4px; font-variant-numeric: tabular-nums; }
-/* Real HMIS lockup: each digit wears its axis color (Health / Flammability / Reactivity). */
-.chem-card .lockup em {
-  --ax: var(--s-mut);
-  font-style: normal; width: 26px; height: 30px; border-radius: 7px;
-  display: grid; place-items: center; font-size: .95rem; font-weight: 900;
-  background: color-mix(in oklab, transparent, var(--ax) 16%);
-  border: 1px solid color-mix(in oklab, transparent, var(--ax) 48%);
-  color: color-mix(in oklab, var(--ax), #fff 50%);
-}
-.chem-card .lockup em:nth-child(1) { --ax: var(--hmis-h); }
-.chem-card .lockup em:nth-child(2) { --ax: var(--hmis-f); }
-.chem-card .lockup em:nth-child(3) { --ax: var(--hmis-r); }
-.chem-card p { margin: 10px 0 0; font-size: .9rem; line-height: 1.55; color: var(--s-mut); }
-.chem-out, .chem-final { margin: 4px auto 0; text-align: center; max-width: 62ch; font-size: 1rem; line-height: 1.6; color: var(--s-mut); }
-.chem-out b { color: var(--s-danger-ink); font-weight: 800; }
-.chem-final { font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 800; color: var(--s-ink); }
-.chem-final b { color: var(--s-safe-text); font-weight: 900; }
-.story .act-chems .chem-list,
-.story .act-chems .chem-out,
-.story .act-chems .chem-final { display: none; }
-
-.phase-strip {
-  width: min(760px, 86vw);
-  margin: 0 auto 14px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  padding: 5px;
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 999px;
-  background: rgba(8, 10, 14, .48);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-.phase-strip span {
-  min-width: 0;
-  padding: 8px 10px;
-  border-radius: 999px;
-  color: rgba(238, 242, 244, .54);
-  font-size: clamp(.62rem, .85vw, .76rem);
-  font-weight: 900;
-  letter-spacing: .12em;
-  line-height: 1;
-  text-align: center;
-  text-transform: uppercase;
-  transition: color .28s var(--s-ease, ease), background .28s var(--s-ease, ease), transform .28s var(--s-ease, ease);
-}
-.act-chems:not([data-phase]) .phase-strip span:first-child,
-.act-chems[data-phase="loadout"] .phase-strip [data-phase="loadout"],
-.act-chems[data-phase="burden"] .phase-strip [data-phase="burden"],
-.act-chems[data-phase="question"] .phase-strip [data-phase="question"],
-.act-chems[data-phase="relief"] .phase-strip [data-phase="relief"] {
-  color: #fff;
-  background: rgba(255, 138, 108, .18);
-  transform: translateY(-1px);
-}
-.act-chems[data-phase="relief"] .phase-strip [data-phase="relief"] {
-  color: var(--s-safe-text);
-  background: rgba(16, 179, 163, .18);
-}
-.act-chems.phase-burden .legacy-task,
-.act-chems.phase-question .legacy-task { filter: saturate(.86) brightness(.82); }
-.act-chems.phase-relief .legacy-task,
-.act-chems.phase-relief .burden-card { filter: grayscale(.42) brightness(.76); }
-
-.legacy-loadout,
-.relief-wrap {
-  width: min(1040px, 90vw);
-  margin: 0 auto;
-}
-.phase-strip { grid-row: 1; grid-column: 1; }
-.legacy-loadout,
-.consequence-question,
-.relief-wrap {
-  grid-row: 2;
-  grid-column: 1;
-  align-self: center;
-  justify-self: center;
-}
-.legacy-loadout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-}
-.legacy-task-grid,
-.burden-grid {
-  grid-row: 1;
-  grid-column: 1;
-}
-.legacy-task-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.legacy-task,
-.burden-card,
-.relief-card,
-.consequence-question,
-.relief-zero {
-  border: 1px solid var(--s-line);
-  background: rgba(255, 255, 255, .035);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07);
-}
-.legacy-task {
-  min-height: 132px;
-  border-radius: 16px;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 42% minmax(0, 1fr);
-  align-items: stretch;
-}
-.legacy-task img {
-  width: 100%;
-  height: 100%;
-  min-height: 132px;
-  object-fit: cover;
-  filter: saturate(.92) contrast(1.06) brightness(.72);
-}
-.legacy-task b,
-.legacy-task span {
-  grid-column: 2;
-  padding-inline: 16px;
-}
-.legacy-task b {
-  align-self: end;
-  color: var(--s-ink);
-  font-size: 1rem;
-  line-height: 1.15;
-}
-.legacy-task span {
-  align-self: start;
-  margin-top: 6px;
-  color: var(--s-danger-ink);
-  font-size: .68rem;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.burden-grid,
-.relief-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-}
-.burden-card,
-.relief-card {
-  position: relative;
-  min-height: 154px;
-  padding: 20px 18px;
-  border-radius: 16px;
-}
-.burden-card {
-  border-color: rgba(255, 138, 108, .28);
-  background:
-    radial-gradient(90% 120% at 20% 0%, rgba(255, 99, 62, .13), transparent 66%),
-    rgba(255, 255, 255, .03);
-}
-.burden-card i,
-.relief-card i {
-  display: inline-grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  margin-bottom: 14px;
-  font-size: 1.35rem;
-}
-.burden-card i {
-  color: var(--s-danger-ink);
-  background: rgba(169, 52, 32, .16);
-}
-.burden-card b,
-.relief-card b {
-  display: block;
-  color: var(--s-ink);
-  font-size: .98rem;
-  line-height: 1.2;
-}
-.burden-card span,
-.relief-card span {
-  display: block;
-  margin-top: 8px;
-  color: var(--s-mut);
-  font-size: .84rem;
-  line-height: 1.45;
-}
-.consequence-question {
-  width: min(780px, 86vw);
-  margin: 0 auto;
-  padding: clamp(28px, 5vw, 48px);
-  border-radius: 24px;
-  text-align: center;
-  border-color: rgba(255, 138, 108, .22);
-  background:
-    radial-gradient(70% 130% at 50% 0%, rgba(255, 88, 48, .18), transparent 64%),
-    rgba(8, 10, 14, .62);
-}
-.consequence-question span {
-  display: block;
-  color: var(--s-danger-ink);
-  font-size: .76rem;
-  font-weight: 900;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-}
-.consequence-question b {
-  display: block;
-  margin-top: 12px;
-  color: var(--s-ink);
-  font-size: clamp(2rem, 4.6vw, 4rem);
-  line-height: .98;
-  letter-spacing: -.035em;
-}
-.relief-wrap {
-  display: grid;
-  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
-  gap: 18px;
-  align-items: stretch;
-}
-.relief-zero {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  padding: 22px;
-  border-radius: 20px;
-  border-color: rgba(207, 255, 248, .34);
-  background:
-    radial-gradient(80% 110% at 50% 0%, rgba(16, 179, 163, .22), transparent 68%),
-    rgba(255, 255, 255, .035);
-  text-align: center;
-}
-.relief-zero span {
-  color: var(--s-safe-text);
-  font-size: .78rem;
-  font-weight: 900;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-}
-.relief-zero b {
-  margin: 6px 0;
-  color: var(--s-safe-text);
-  font-size: clamp(2.5rem, 5vw, 4.2rem);
-  line-height: 1;
-  letter-spacing: -.04em;
-}
-.relief-zero small {
-  color: rgba(207, 255, 248, .72);
-  font-size: .84rem;
-}
-.relief-grid { margin-top: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.relief-card {
-  overflow: hidden;
-  border-color: rgba(207, 255, 248, .2);
-  background:
-    linear-gradient(135deg, rgba(16, 179, 163, .10), transparent 58%),
-    rgba(255, 255, 255, .03);
-}
-.relief-card::before,
-.relief-card::after {
-  content: "";
-  position: absolute;
-  left: 12%;
-  right: 12%;
-  top: 50%;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 67, 54, .88);
-  box-shadow: 0 0 18px rgba(255, 67, 54, .34);
-  transform: rotate(16deg);
-}
-.relief-card::after { transform: rotate(-16deg); }
-.relief-card i {
-  color: var(--s-safe-text);
-  background: rgba(16, 179, 163, .16);
-}
-
-/* Scene 4 overhaul: task HMIS chips, photo-led consequences, relief cross-outs. */
-.legacy-loadout,
-.relief-wrap {
-  width: min(1060px, 90vw);
-}
-.legacy-task {
-  min-height: 136px;
-}
-.legacy-task img {
-  min-height: 136px;
-}
-.legacy-task div {
-  min-width: 0;
-  padding: 16px;
-  display: grid;
-  align-content: center;
-}
-.legacy-task b,
-.legacy-task span {
-  grid-column: auto;
-  padding-inline: 0;
-}
-.legacy-task b {
-  align-self: auto;
-  line-height: 1.12;
-}
-.legacy-task span {
-  align-self: auto;
-  line-height: 1.2;
-}
-.legacy-task small {
-  width: fit-content;
-  margin-top: 12px;
-  padding: 5px 7px;
-  border: 1px solid rgba(255, 138, 108, .28);
-  border-radius: 8px;
-  color: rgba(244, 246, 248, .68);
-  font-size: .65rem;
-  font-weight: 900;
-  letter-spacing: .08em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-.legacy-task small strong {
-  color: var(--s-danger-ink);
-  font-weight: 900;
-}
-.burden-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.burden-card,
-.relief-card {
-  overflow: hidden;
-}
-.burden-card {
-  min-height: 136px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: 42% minmax(0, 1fr);
-  grid-template-rows: auto auto auto;
-  align-items: center;
-}
-.burden-card img {
-  width: 100%;
-  height: 100%;
-  min-height: 136px;
-  grid-row: 1 / 4;
-  display: block;
-  object-fit: cover;
-  filter: saturate(.78) contrast(1.1) brightness(.58);
-}
-.burden-card i,
-.relief-card i {
-  margin: 0 16px 8px;
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 12px 22px -14px rgba(0, 0, 0, .8);
-}
-.burden-card i {
-  background: rgba(47, 15, 12, .92);
-}
-.burden-card b,
-.burden-card span,
-.relief-card b,
-.relief-card span {
-  padding-inline: 16px;
-}
-.burden-card i,
-.burden-card b,
-.burden-card span { grid-column: 2; }
-.burden-card b {
-  font-size: .92rem;
-  line-height: 1.15;
-}
-.burden-card span {
-  margin-top: 7px;
-  font-size: .78rem;
-  line-height: 1.42;
-}
-.consequence-question {
-  width: min(820px, 86vw);
-  background:
-    radial-gradient(70% 130% at 50% 0%, rgba(255, 88, 48, .18), transparent 64%),
-    rgba(8, 10, 14, .72);
-}
-.consequence-question b {
-  letter-spacing: 0;
-}
-.relief-card {
-  min-height: 164px;
-  padding: 20px 0;
-}
-.relief-card i {
-  margin-top: 0;
-}
-.relief-card::before,
-.relief-card::after {
-  z-index: 3;
-}
-.legacy-task-grid,
-.burden-grid {
-  transition: opacity .28s var(--s-ease, ease), filter .28s var(--s-ease, ease);
-}
-.burden-grid {
-  position: relative;
-  z-index: 2;
-}
-.act-chems.phase-burden .legacy-task-grid {
-  opacity: .18;
-}
-.act-chems.phase-question .legacy-loadout,
-.act-chems.phase-relief .legacy-loadout {
-  opacity: 0 !important;
-}
-.story.story-ready .act-chems:not(.phase-question) .consequence-question,
-.story.story-ready .act-chems:not(.phase-relief) .relief-wrap,
-.story.story-ready .act-chems.phase-question .legacy-loadout,
-.story.story-ready .act-chems.phase-relief .legacy-loadout {
-  display: none !important;
-}
-.act-chems.phase-burden .burden-card {
-  background:
-    linear-gradient(180deg, rgba(8, 10, 14, .18), rgba(8, 10, 14, .86) 38%),
-    rgba(255, 255, 255, .04);
-}
-
-/* Enemy-first cards: a small cast-color cue before the enemy name (matches
-   the Act 2 chips), and the chemical it forces rendered as a tagged tool. */
-.chem-card .chead .ecue {
-  width: 8px; height: 8px; border-radius: 50%; flex: none;
-  display: inline-block; margin-right: 7px; vertical-align: middle;
-}
-.ecue.c-scale  { background: #c9d4d0; }
-.ecue.c-rust   { background: #c2553a; }
-.ecue.c-grease { background: #c2a04e; }
-.ecue.c-bio    { background: #6fa863; }
-.ecue.c-solvent { background: #a78bdb; }
-/* Dot label morphs enemy -> chemical; both spans stack, JS crossfades opacity */
-.cdot .enemy, .cdot .chem { transition: opacity .25s linear; }
-.cdot .chem { opacity: 0; }
-
-/* Act 4 layout: the headline (.act-copy.top, absolutely floated at the stage top)
-   and the tall 2x2 .chem-rig were positioned independently — on laptop heights the
-   centered rig rose under the headline and clipped its second line. On desktop/laptop,
-   lay the whole act out as one vertically-centered flex column so headline and rig
-   stack as a single group and can never overlap. Mobile (<=760px) keeps its own
-   single-column flow defined above. */
-@media (min-width: 761px) {
-  .act-chems .stage { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .act-chems .act-copy.top { position: static; top: auto; margin: 0 0 clamp(10px, 1.8vh, 28px); }
-  /* Tighten the rig so headline + full rig clear short laptop heights (~720px)
-     without the trailing punchline clipping past the fold. */
-  .act-chems .chem-rig { margin: 0; gap: 12px; }
-  .act-chems .chem-scale { padding-top: 14px; }
-  .act-chems .chem-card { padding-top: 14px; padding-bottom: 14px; }
-}
-
-/* ============================================================
-   ACT 5 — SAVIOR (VertKleen)
+   ACT 4 — SAVIOR (VertKleen)
    ============================================================ */
 .act-savior .stage { background: linear-gradient(180deg, var(--s-bg) 0%, #0f1a1e 55%, #0c1417 100%); }
-.savior-wrap { position: relative; z-index: 5; width: min(900px, 90vw); text-align: center; padding: 0 24px; }
+.savior-wrap { position: relative; z-index: 5; box-sizing: border-box; width: min(900px, 90vw); text-align: center; padding: 0 24px; }
 .savior-badge {
   display: inline-flex; align-items: center; gap: 9px; margin-bottom: clamp(12px, 2vh, 22px);
   padding: 8px 16px; border-radius: 999px; border: 1px solid var(--s-safe-soft);
@@ -1195,17 +663,6 @@
 }
 .savior-wrap h2 .accent { color: var(--s-safe-text); }
 .savior-wrap .lede { margin: clamp(12px, 2vh, 22px) auto 0; max-width: 50ch; font-size: clamp(1rem, 1.4vw, 1.18rem); color: var(--s-mut); line-height: 1.5; }
-.savior-proof { display: flex; gap: 14px; justify-content: center; }
-.savior-proof-before { gap: 10px; margin-bottom: 8px; }
-.savior-proof-before figure { opacity: .72; transform: scale(.82); transform-origin: center bottom; }
-.savior-proof figure { margin: 0; width: clamp(96px, 12vw, 132px); }
-.savior-proof img {
-  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px;
-  border: 1px solid rgba(8, 121, 111, .38); display: block;
-  filter: saturate(.95);
-}
-.savior-proof figcaption { margin-top: 8px; font-size: .76rem; font-weight: 700; letter-spacing: .04em; color: var(--s-mut); }
-.savior-proof-cap { margin: clamp(10px, 1.6vh, 14px) 0 clamp(16px, 2.6vh, 28px); font-size: .8rem; color: var(--s-mut); letter-spacing: .04em; }
 .savior-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 .savior-ctas .btn-primary { background: var(--s-safe); color: var(--s-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(8, 121, 111, .62); }
 .savior-ctas .btn-primary:hover { background: #5fe9d6; }
@@ -1221,22 +678,11 @@
    ============================================================ */
 @media (min-width: 761px) and (max-height: 960px) {
   /* Act 4 — chemicals + shared scale */
-  .act-chems .act-copy.top { margin-bottom: clamp(6px, 1.2vh, 16px); }
-  .act-chems .act-h { font-size: clamp(1.7rem, 3.4vw, 2.5rem); }
-  .act-chems .chem-rig { gap: 10px; }
-  .act-chems .chem-card { padding: 12px 16px; }
-  .act-chems .chem-card p { margin-top: 7px; font-size: .86rem; line-height: 1.45; }
-  .act-chems .chem-scale { padding-top: 10px; }
-  .act-chems .chem-out { font-size: .92rem; line-height: 1.45; }
-  .act-chems .chem-final { font-size: clamp(1.05rem, 1.7vw, 1.3rem); }
 
-  /* Act 5 — savior stack */
+ /* Act 4 — savior stack */
   .act-savior .savior-badge { margin-bottom: 8px; }
   .act-savior .savior-wrap h2 { font-size: clamp(2rem, 4.2vw, 3rem); }
   .act-savior .savior-wrap .lede { margin-top: 8px; font-size: 1rem; max-width: 54ch; }
-  .act-savior .savior-proof { gap: 12px; }
-  .act-savior .savior-proof figure { width: clamp(88px, 9.5vw, 112px); }
-  .act-savior .savior-proof figcaption { margin-top: 5px; font-size: .7rem; }
 }
 
 /* Clear the fixed nav so the "Enter VertKleen" badge never tucks under it,
@@ -1262,7 +708,6 @@
 .story:not(.story-ready) [data-at] { opacity: 1; transform: none; }
 .story:not(.story-ready) .fx-canvas,
 .story:not(.story-ready) .story-rail,
-.story:not(.story-ready) .cdot,
 .story:not(.story-ready) .bd { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .5; }
 .story:not(.story-ready) .act-copy.top { position: static; margin: 0 auto; }
 .story:not(.story-ready) .act-copy.bl { padding-left: 28px; align-self: center; }
@@ -1277,7 +722,7 @@
   position: static; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 26px;
 }
 .story:not(.story-ready) .pipe-chips .chip { position: static; }
-.story:not(.story-ready) .hmis-rig, .story:not(.story-ready) .chem-rig { margin-top: 30px; }
+.story:not(.story-ready) .hmis-rig { margin-top: 30px; }
 @media (prefers-reduced-motion: reduce) {
   .story .chem-tag .pulse,
   .pipe-chips .chip.is-burning i::after { animation: none; }
@@ -1288,8 +733,7 @@
   .story .act { height: 198vh; }
   .story .act[data-act="1"] { height: 170vh; }
   .story .act[data-act="3"] { height: 330vh; }
-  .story .act[data-act="4"] { height: 470vh; }
-  .story .act-savior { height: 235vh; }
+ .story .act-savior { height: 235vh; }
   .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
   .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
   .chip.c-scale  { left: 6%; top: 53%; }
@@ -1330,74 +774,6 @@
   .hmis-chemical p { font-size: .84rem; line-height: 1.34; }
   .hmis-score { grid-column: 1 / -1; justify-self: start; }
   .hmis-score em { width: 31px; height: 35px; font-size: .95rem; }
-  /* Stacked single column: drop the desktop quadrant frame and give each row
-     its own bordered card (the quadrant panel only reads as one in 2 columns). */
-  .chem-list {
-    grid-template-columns: 1fr; gap: 10px;
-    border: 0; border-radius: 0; background: none;
-    -webkit-backdrop-filter: none; backdrop-filter: none;
-  }
-  .chem-card {
-    padding: 14px 16px;
-    border: 1px solid var(--s-line); border-radius: 14px;
-    background: rgba(255, 255, 255, .03);
-    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-  }
-  .chem-card:nth-child(2n) { border-right: 1px solid var(--s-line); }
-  .chem-card:nth-child(n+3) { border-bottom: 1px solid var(--s-line); }
-  .chem-card p { font-size: .84rem; }
-  .chem-rig { margin-top: 14vh; gap: 10px; }
-  .phase-strip {
-    width: min(350px, 90vw);
-    gap: 4px;
-    padding: 4px;
-  }
-  .phase-strip span {
-    padding: 7px 5px;
-    font-size: .58rem;
-    letter-spacing: .08em;
-  }
-  .legacy-loadout,
-  .relief-wrap { width: min(350px, 90vw); }
-  .legacy-task-grid,
-  .burden-grid {
-    position: relative;
-    display: block;
-    min-height: 150px;
-  }
-  .legacy-task,
-  .burden-card {
-    position: absolute;
-    inset: 0;
-  }
-.burden-grid,
-.relief-wrap { grid-template-columns: 1fr; }
-.relief-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .legacy-task { min-height: 118px; grid-template-columns: 38% minmax(0, 1fr); }
-  .legacy-task img { min-height: 118px; }
-.burden-card { min-height: 150px; padding: 0; grid-template-columns: 38% minmax(0, 1fr); }
-.burden-card img { min-height: 150px; }
-.relief-card { min-height: auto; padding: 15px 16px; }
-  .burden-card i,
-  .relief-card i { width: 32px; height: 32px; margin-bottom: 9px; }
-.consequence-question { padding: 20px 18px; }
-.consequence-question b { font-size: clamp(1.7rem, 8.5vw, 2.4rem); }
-.relief-zero { min-height: 135px; }
-.relief-card { padding: 11px 10px; }
-.relief-card i { width: 27px; height: 27px; margin-bottom: 7px; }
-.relief-card b { font-size: .8rem; line-height: 1.12; }
-.relief-card span { font-size: .68rem; line-height: 1.28; }
-  .chem-scale { order: -1; padding-top: 18px; }
-  .chem-list { gap: 8px; }
-  .chem-card { padding: 12px 14px; }
-  .chem-card .chead { gap: 8px; }
-  .chem-card p { font-size: .78rem; line-height: 1.38; }
-  .chem-card .vs { font-size: .62rem; }
- .savior-proof { gap: 8px; }
- .savior-proof-before { margin-bottom: 2px; }
- .savior-proof figure { width: 22vw; }
- .savior-proof figcaption { margin-top: 4px; font-size: .68rem; }
- .savior-proof-cap { margin: 6px 0 12px; font-size: .72rem; line-height: 1.35; }
 }
 
 /* Image polish layer: keeps the real field evidence, but frames it with more
@@ -1426,33 +802,12 @@
   text-shadow: 0 2px 18px rgba(0, 0, 0, .8);
 }
 
-.savior-proof figure {
-  width: clamp(112px, 13vw, 148px);
-}
-
-.savior-proof img {
-  filter: saturate(1.04) contrast(1.08) brightness(1.02);
-  box-shadow:
-    0 18px 42px -28px rgba(8, 121, 111, .48),
-    inset 0 1px 0 rgba(255, 255, 255, .1);
-}
-
 @media (min-width: 901px) {
   .story .act[data-act="1"] .act-copy.bl {
     padding-bottom: 0;
     /* Clear the chapter rail + active "THE ENEMY" label so they never overlap the headline. */
     padding-left: clamp(56px, 8vw, 110px);
   }
-}
-
-@media (max-width: 760px) {
-  .savior-proof {
-    gap: 10px;
-  }
-
-.savior-proof figure {
-  width: min(28vw, 120px);
-}
 }
 
 /* Keep the story openers procedural: the motion comes from canvas fumes/motes,
@@ -1484,112 +839,85 @@
 }
 
 @media (max-width: 760px) {
-  .story .act[data-act="1"] .stage {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: clamp(28px, 5vh, 46px);
-    padding-top: 68px;
-  }
-
-  .story .act[data-act="1"] .act-copy.bl {
-    order: 1;
-    align-self: stretch;
-    text-align: left;
-    padding-bottom: 0;
-  }
-
-  .story .act[data-act="1"] .reel {
-    order: 2;
-    width: min(78vw, 328px);
-    margin-bottom: 0;
-  }
-
-  .act-chems .stage {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding-top: 72px;
-  }
-
-  .act-chems .act-copy.top {
-    position: relative;
-    top: auto;
-    width: min(360px, 90vw);
-    margin: 0 auto 18px;
-    padding: 0 20px;
-  }
-
-  .act-chems .act-h {
-    font-size: clamp(2rem, 11vw, 2.9rem);
-  }
-
-  .act-chems .chem-rig {
-    width: min(350px, 90vw);
-    margin-top: 0;
-    gap: 12px;
-  }
-
-  .act-chems .chem-scale {
-    order: 0;
-    padding-top: 4px;
-  }
-
-  .act-chems .scale-ticks {
-    font-size: .6rem;
-  }
-
-  .act-chems .cdot {
-    width: 18px;
-    height: 18px;
-  }
-
-  .act-chems .cdot span {
-    font-size: .64rem;
-  }
-
-  .act-savior .savior-proof {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: min(310px, 82vw);
-    margin: 10px auto 0;
-    gap: 10px;
-  }
-
-  .act-savior .proof-pair:nth-child(3) {
-    display: none;
-  }
-
-  .act-savior .savior-proof figure {
-    width: 100%;
-  }
-
-  .act-savior .savior-proof figcaption {
-    display: flex;
-    justify-content: center;
-    gap: .35em;
-  }
+.story .act[data-act="1"] .stage {
+display: flex;
+flex-direction: column;
+justify-content: flex-start;
+gap: clamp(16px, 2.4vh, 22px);
+padding-top: calc(64px + env(safe-area-inset-top, 0px));
 }
 
-.story .savior-proof figcaption {
-  display: flex;
-  justify-content: center;
-  gap: .35em;
+.story .act[data-act="1"] .act-copy.bl {
+order: 1;
+align-self: center;
+width: min(100%, 360px);
+text-align: left;
+padding-bottom: 0;
+padding-right: 28px;
 }
 
-.story .cdot[data-dot="0"] span { transform: translateX(-92%); }
-.story .cdot[data-dot="1"] span { transform: translateX(-8%); }
-.story .cdot[data-dot="2"] span { transform: translateX(8%); top: -300%; }
-.story .cdot[data-dot="3"] span { transform: translateX(-92%); bottom: -300%; }
-
-.story .cdot span {
-  display: none;
+.story .act[data-act="1"] .act-p {
+margin-top: 16px;
+font-size: .92rem;
+line-height: 1.42;
 }
+
+.story .act[data-act="1"] .story-ctas {
+margin-top: 16px;
+}
+
+.story .act[data-act="1"] .story-ctas .btn-ghost {
+display: none !important;
+visibility: hidden;
+}
+
+.story .act[data-act="1"] .reel {
+order: 2;
+width: min(70vw, 300px);
+margin-bottom: 0;
+}
+
+
+
+
+
+
+
+
+
+}
+
+
+@media (max-width: 760px) and (max-height: 740px) {
+.story .act[data-act="1"] .act-p,
+.story .act[data-act="1"] .story-ctas {
+display: none !important;
+visibility: hidden;
+}
+
+.story .act[data-act="1"] .reel {
+width: min(66vw, 260px);
+}
+}
+
+@media (max-width: 420px) {
+.story .reel-tag {
+left: 8px;
+gap: 5px;
+padding: 6px 9px;
+font-size: .58rem;
+letter-spacing: .1em;
+}
+
+.story .reel-idx {
+right: 8px;
+padding: 6px 9px;
+font-size: .68rem;
+}
+}
+
 
 @media (max-width: 760px) {
-  .act-chems .cdot span {
-    display: none;
-  }
 }
 
 @media (max-width: 760px) {
@@ -1606,38 +934,12 @@
     margin-bottom: 72px;
   }
 
-  .act-chems .stage {
-    justify-content: flex-start;
-    padding-top: calc(92px + env(safe-area-inset-top, 0px));
-    gap: 8px;
-  }
 
-  .act-chems .act-copy.top {
-    margin-bottom: 8px;
-  }
 
-  .act-chems .act-h {
-    font-size: clamp(1.65rem, 9vw, 2.28rem);
-    line-height: .98;
-  }
 
-  .act-chems .chem-rig {
-    gap: 8px;
-  }
 
-  .act-chems .chem-list {
-    gap: 8px;
-  }
 
-  .act-chems .chem-card {
-    padding: 12px 14px;
-  }
 
-  .act-chems .chem-card p {
-    margin-top: 8px;
-    font-size: .8rem;
-    line-height: 1.45;
-  }
 }
 }
 /* Scrollybook motion polish: chapter depth, rail feedback, and cinematic material. */
@@ -1736,7 +1038,6 @@
 
 .story .pipe-diagram,
 .story .hmis-rig,
-.story .chem-rig,
 .story .savior-wrap {
   filter: drop-shadow(0 24px 48px rgba(0, 0, 0, .28));
 }
@@ -1794,7 +1095,6 @@
   filter: drop-shadow(0 0 8px rgba(255, 138, 108, .16));
 }
 
-.story .chem-card,
 .story .zero-axis,
 .story .pipe-callout .chip {
   transition:
@@ -1825,10 +1125,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .story .rail-btn,
-  .story .rail-btn::after,
-  .story .chem-card,
-  .story .zero-axis,
+.story .rail-btn,
+.story .rail-btn::after,
+.story .zero-axis,
   .story .pipe-callout .chip {
     transition: none !important;
   }
@@ -1870,10 +1169,6 @@
 }
 
 .story .act[data-act="4"]::before {
-  content: "The chemicals";
-}
-
-.story .act[data-act="5"]::before {
   content: "Zero";
   color: rgba(215, 255, 247, .16);
 }
@@ -1917,9 +1212,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: clamp(36px, 7vh, 82px);                /* more breathing room between the text and the cards */
-  padding-top: clamp(64px, 11vh, 150px);      /* clear the nav and drop the whole scene lower / more centered */
+  justify-content: flex-start;
+  gap: clamp(28px, 3.2vh, 42px);
+  padding-top: clamp(68px, 9vh, 120px);
   box-sizing: border-box;
 }
 
@@ -1934,6 +1229,27 @@
   margin-top: 0;
   width: min(1040px, 92vw);
   gap: clamp(18px, 2.4vh, 28px);
+}
+
+/* The category teaching cards (fade out at beat 2.25) and the legacy chemical
+   deck (first card enters beat 2.35) are never on screen together, yet stacked
+   they reserved two bands of column height — pushing the final chemical card
+   past the stage bottom (clipped by overflow:hidden) on short laptops, with a
+   dead gap above it. Overlay them in one cell so the deck claims the freed band
+   and the card stays fully framed. Story-ready only; the no-JS fallback keeps
+   its stacked layout. */
+.story.story-ready .act[data-act="3"] .hmis-story {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+.story.story-ready .act[data-act="3"] .hmis-categories,
+.story.story-ready .act[data-act="3"] .hmis-chemical-deck {
+  grid-row: 1;
+  grid-column: 1;
+}
+.story.story-ready .act[data-act="3"] .hmis-categories {
+  align-self: start;
 }
 
 .story .act[data-act="3"] .hmis-factors {
@@ -2014,115 +1330,36 @@
 }
 
 @media (max-width: 760px) {
-  .story .savior-zero-scale {
-    grid-template-columns: 1fr;
-  }
+.act-savior .stage { padding-top: 72px; box-sizing: border-box; }
+.act-savior .savior-wrap { width: min(350px, 90vw); padding: 0 8px; }
+.act-savior .savior-badge { margin-bottom: 8px; padding: 7px 12px; font-size: .66rem; }
+.act-savior .savior-wrap h2 { font-size: clamp(1.75rem, 8.4vw, 2.45rem); line-height: 1; }
+.act-savior .savior-wrap .lede { margin-top: 9px; font-size: .9rem; line-height: 1.36; }
 
-  .story .zero-axis {
-    min-height: auto;
-  }
+.story .savior-zero-scale {
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px auto 18px;
 }
 
-.story .chem-scale {
-  position: relative;
-  overflow: visible;
+.story .zero-axis {
+  min-height: auto;
+  padding: 10px 7px;
+  border-radius: 14px;
 }
 
-.story .chem-scale .scale-track {
-  position: relative;
-  z-index: 1;
+.story .zero-axis span { font-size: .58rem; letter-spacing: .09em; }
+.story .zero-axis strong { font-size: clamp(1.65rem, 8vw, 2.1rem); }
+.story .zero-axis small { font-size: .62rem; line-height: 1.2; }
+.savior-ctas { gap: 8px; }
+.savior-ctas .btn { min-height: 46px; padding-inline: 14px; }
 }
-
-.story .hazard-field {
-  position: absolute;
-  inset: -34px -18px -28px;
-  z-index: 0;
-  border-radius: 28px;
-  pointer-events: none;
-  overflow: hidden;
-  opacity: .92;
-  background:
-    radial-gradient(34% 130% at 18% 50%, rgba(255, 63, 45, .28), transparent 68%),
-    radial-gradient(32% 120% at 52% 50%, rgba(255, 159, 42, .2), transparent 70%),
-    radial-gradient(34% 130% at 86% 50%, rgba(169, 52, 32, .26), transparent 70%);
-  filter: saturate(1.08);
-  transition:
-    opacity .35s var(--s-ease),
-    background .45s var(--s-ease),
-    filter .45s var(--s-ease);
-}
-
-.story .hazard-field::before,
-.story .hazard-field::after,
-.story .hazard-field i {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-}
-
-.story .hazard-field::before {
-  inset: 18% 4%;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, .04), rgba(255, 83, 48, .28), rgba(255, 191, 80, .22), rgba(255, 255, 255, .05));
-  filter: blur(18px);
-  transform: skewX(-9deg);
-}
-
-.story .hazard-field::after {
-  inset: 10% 2%;
-  background:
-    linear-gradient(102deg, transparent 0 12%, rgba(255, 116, 72, .16) 28%, transparent 44%, rgba(255, 191, 80, .12) 66%, transparent 86%),
-    linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent);
-  opacity: .72;
-  mix-blend-mode: screen;
-}
-
-.story .hazard-field i {
-  width: 9px;
-  height: 9px;
-  border: 1px solid rgba(255, 205, 144, .42);
-  border-radius: 999px;
-  background: rgba(255, 96, 48, .5);
-  box-shadow: 0 0 18px rgba(255, 88, 48, .48);
-}
-
-.story .hazard-field i:nth-child(1) { left: 9%; top: 32%; }
-.story .hazard-field i:nth-child(2) { left: 36%; top: 66%; }
-.story .hazard-field i:nth-child(3) { left: 64%; top: 28%; }
-.story .hazard-field i:nth-child(4) { left: 88%; top: 58%; }
-
-.story .chem-scale.safe .hazard-field {
-  opacity: .76;
-  background:
-    radial-gradient(34% 130% at 18% 50%, rgba(70, 211, 255, .18), transparent 70%),
-    radial-gradient(38% 130% at 54% 50%, rgba(16, 179, 163, .18), transparent 72%),
-    radial-gradient(34% 130% at 86% 50%, rgba(148, 236, 255, .14), transparent 70%);
-  filter: saturate(.92);
-}
-
-.story .chem-scale.safe .hazard-field::before {
-  background:
-    linear-gradient(90deg, rgba(207, 255, 248, .05), rgba(72, 211, 255, .24), rgba(16, 179, 163, .22), rgba(207, 255, 248, .05));
-  filter: blur(14px);
-}
-
-.story .chem-scale.safe .hazard-field::after {
-  background:
-    linear-gradient(90deg, transparent 0 14%, rgba(126, 224, 255, .13) 34%, transparent 54%, rgba(207, 255, 248, .1) 76%, transparent 92%),
-    linear-gradient(90deg, transparent, rgba(207, 255, 248, .08), transparent);
-  opacity: .54;
-}
-
-.story .chem-scale.safe .hazard-field i {
-  border-color: rgba(207, 255, 248, .44);
-  background: rgba(72, 211, 255, .38);
-  box-shadow: 0 0 16px rgba(72, 211, 255, .34);
 }
 
 @media (max-width: 760px) {
-  .story .act-hmis .stage {
-    justify-content: flex-start;
+.story .act-hmis .stage {
+justify-content: flex-start;
     gap: clamp(22px, 4.8vh, 34px);
     padding-top: clamp(108px, 15vh, 132px);
   }
@@ -2149,46 +1386,15 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .story .hazard-field::before {
-    animation: hazardFlow 7s linear infinite;
-  }
 
-  .story .hazard-field::after {
-    animation: hazardLines 9s linear infinite;
-  }
 
-  .story .hazard-field i {
-    animation: hazardDrift 5.8s var(--s-ease) infinite alternate;
-  }
 
-  .story .hazard-field i:nth-child(2) { animation-duration: 6.8s; animation-delay: -.9s; }
-  .story .hazard-field i:nth-child(3) { animation-duration: 5.2s; animation-delay: -1.6s; }
-  .story .hazard-field i:nth-child(4) { animation-duration: 7.4s; animation-delay: -2.2s; }
 
-  .story .chem-scale.safe .hazard-field::before {
-    animation-duration: 10s;
-  }
 
-  .story .chem-scale.safe .hazard-field::after {
-    animation-duration: 13s;
-  }
 }
 
-@keyframes hazardFlow {
-  0% { transform: translateX(-3%) skewX(-9deg); }
-  50% { transform: translateX(3%) skewX(-5deg); }
-  100% { transform: translateX(-3%) skewX(-9deg); }
-}
 
-@keyframes hazardLines {
-  from { transform: translateX(-4%); }
-  to { transform: translateX(4%); }
-}
 
-@keyframes hazardDrift {
-  from { transform: translate3d(-8px, 5px, 0) scale(.82); opacity: .46; }
-  to { transform: translate3d(9px, -7px, 0) scale(1.08); opacity: .92; }
-}
 
 @media (max-width: 760px) {
   .hmis-chemical-deck { min-height: 360px; }
@@ -2207,29 +1413,5 @@
   .hmis-warning .hmis-score {
     grid-column: 1 / -1;
     justify-self: start;
-  }
-  .legacy-task-grid,
-  .burden-grid,
-  .relief-wrap {
-    grid-template-columns: 1fr;
-  }
-  .legacy-task {
-    min-height: 118px;
-  }
-  .legacy-task div {
-    padding: 14px;
-  }
-  .burden-card {
-    min-height: auto;
-    padding-bottom: 15px;
-  }
-  .burden-card img {
-    height: 86px;
-  }
-  .burden-card i {
-    margin-bottom: 9px;
-  }
-  .relief-card {
-    min-height: auto;
   }
 }
