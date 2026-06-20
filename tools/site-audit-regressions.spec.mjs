@@ -203,6 +203,54 @@ test("mobile home hamburger drawer keeps all top-level rows readable", async ({ 
   expect(topLevelColors).not.toContain("rgb(255, 255, 255)");
 });
 
+test("proof image sets use uniform media slots", async ({ page }) => {
+  const sets = [
+    {
+      pagePath: "index.html",
+      viewport: { width: 1440, height: 900 },
+      selector: ".proof-grid .proof-card > figure",
+      expectedCount: 3,
+      label: "home proof cards",
+    },
+    {
+      pagePath: "proof.html",
+      viewport: { width: 1440, height: 900 },
+      selector: ".case-grid .case-card > :is(.case-media, .doc-link, .case-ba, img)",
+      expectedCount: 12,
+      label: "proof case cards",
+    },
+  ];
+
+  for (const set of sets) {
+    await page.setViewportSize(set.viewport);
+    await page.goto(`${BASE_URL}/${set.pagePath}`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+
+    const result = await page.locator(set.selector).evaluateAll((nodes) => {
+      const boxes = nodes
+        .map((node) => {
+          const rect = node.getBoundingClientRect();
+          const img = node.matches("img") ? node : node.querySelector("img");
+          return {
+            height: Math.round(rect.height),
+            width: Math.round(rect.width),
+            src: img?.getAttribute("src") || "",
+          };
+        })
+        .filter((box) => box.width > 80 && box.height > 80);
+      const heights = boxes.map((box) => box.height);
+      return {
+        boxes,
+        min: Math.min(...heights),
+        max: Math.max(...heights),
+      };
+    });
+
+    expect(result.boxes, `${set.label} media count`).toHaveLength(set.expectedCount);
+    expect(result.max - result.min, `${set.label} media heights: ${JSON.stringify(result.boxes)}`).toBeLessThanOrEqual(3);
+  }
+});
+
 test("visible content images reserve dimensions on key buyer pages", async ({ page }) => {
   const pages = [
     "products.html",

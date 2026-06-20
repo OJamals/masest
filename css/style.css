@@ -1316,13 +1316,15 @@ so no-JS / hidden-tab renders stay visible */
 }
 .proof-card figure {
   margin: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
 }
 .proof-card img {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 100%;
   object-fit: cover;
 }
 .proof-card div { padding: 22px; }
@@ -1660,10 +1662,21 @@ scroll-snap gallery
   overflow: hidden;
 }
 .case-card img {
+  display: block;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: 100%;
   object-fit: cover;
   background: var(--panel);
+}
+.case-media,
+.case-card > .doc-link,
+.case-card > .case-ba {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--panel);
+}
+.case-media {
+  margin: 0;
 }
 .case-card .case-body {
   padding: 20px;
@@ -1711,7 +1724,6 @@ scroll-snap gallery
   display: block;
   width: 100%;
   height: 100%;
-  aspect-ratio: 4 / 5;
   object-fit: cover;
   background: var(--panel);
 }
@@ -1836,8 +1848,9 @@ scroll-snap gallery
   display: none;
 }
 .proof-card img {
+  display: block;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: 100%;
   object-fit: cover;
   background: #eef1f3;
 }
@@ -2886,7 +2899,7 @@ body.reveal-ready .matrix-disclosure.reveal {
    Only the mobile open menu is a light panel, so darken summary there. */
 .nav.over-dark .nav-links.open .nav-group summary { color: var(--ink); }
 
-@media (max-width: 980px) {
+@media (max-width: 720px) {
   .nav-links.open {
     align-items: stretch;
   }

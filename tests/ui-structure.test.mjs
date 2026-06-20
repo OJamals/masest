@@ -308,41 +308,31 @@ test("about page routes buyers before service breadth", () => {
   assert.match(css, /\.about-services-disclosure summary b[\s\S]*white-space: normal/);
 });
 
-test("scrolly proof images lazy-load until act four prewarms them", () => {
+test("scrolly savior scene does not stretch proof images under zero score", () => {
   const home = read("index.html");
   const story = read("js/story.js");
-  const actFive = home.match(/<section class="act act-savior"[\s\S]*?<\/section>/)?.[0] || "";
+  const saviorAct = home.match(/<section class="act act-savior"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.ok(actFive, "expected act five scrolly section");
-  assert.match(actFive, /img\/field\/fill-before-enhanced\.webp/);
-  assert.match(actFive, /img\/field\/filters-after-enhanced\.webp/);
-  assert.match(actFive, /data-story-src="img\/field\/fill-before-enhanced\.webp"[^>]*loading="lazy"[^>]*fetchpriority="low"/);
-  assert.match(actFive, /data-story-src="img\/field\/filters-after-enhanced\.webp"[^>]*loading="lazy"[^>]*fetchpriority="low"/);
-  assert.match(home, /<noscript><style>\.story-deferred-img\{display:none!important\}<\/style><\/noscript>/);
-  assert.match(actFive, /<noscript><img src="img\/field\/fill-before-enhanced\.webp"/);
+  assert.ok(saviorAct, "expected savior scrolly section");
+  assert.doesNotMatch(saviorAct, /class="savior-proof"/);
+  assert.doesNotMatch(saviorAct, /class="proof-pair"/);
+  assert.doesNotMatch(saviorAct, /story-deferred-img/);
+  assert.doesNotMatch(saviorAct, /data-story-src/);
   assert.doesNotMatch(home, /<link rel="preload" as="image" href="img\/field\//);
-  assert.match(story, /function prewarmSaviorProofImages\(\)/);
-  assert.match(story, /data-story-src/);
-  assert.match(story, /self\.isActive && st\.i >= 3/);
+  assert.doesNotMatch(story, /prewarmSaviorProofImages/);
+  assert.doesNotMatch(story, /data-story-src/);
 });
 
-test("scrolly legacy burden sequence replaces repeated chemical cards", () => {
+test("scrolly legacy burden scene is removed", () => {
   const index = read("index.html");
-  const actFour = index.match(/<section class="act act-chems"[\s\S]*?<\/section>/)?.[0];
 
-assert.ok(actFour, "expected act four scrolly section");
-assert.match(actFour, /class="legacy-loadout"/);
-assert.match(actFour, /class="phase-strip"/);
-  assert.match(actFour, /class="burden-grid"/);
-  assert.match(actFour, /class="consequence-question"/);
-  assert.match(actFour, /class="relief-wrap"/);
-  assert.match(actFour, /HMIS <strong>3-0-1<\/strong>/);
-  assert.match(actFour, /Heavy PPE stack/);
-  assert.match(actFour, /Hazmat storage/);
-  assert.match(actFour, /Disposal stream/);
-  assert.match(actFour, /What if (the )?cleaning chemistry stopped becoming (the )?job\?/);
-  assert.match(actFour, /HMIS<\/span><b>0-0-0<\/b>/);
-  assert.doesNotMatch(actFour, /<span class="vs vs-long">Glutaraldehyde 50%<\/span>/);
+  assert.doesNotMatch(index, /<section class="act act-chems"[\s\S]*?<\/section>/);
+  assert.doesNotMatch(index, /The chemicals/);
+  assert.doesNotMatch(index, /legacy-loadout/);
+  // scene 4 "The Cost" was inserted before the savior, so savior is now act 5
+  assert.match(index, /<section class="act act-cost" data-act="4">/);
+  assert.match(index, /<section class="act act-savior" data-act="5" data-fx="motes">/);
+  assert.equal((index.match(/class="rail-btn"/g) || []).length, 5);
 });
 
 test("scrolly HMIS scene teaches categories before chemical warnings", () => {
