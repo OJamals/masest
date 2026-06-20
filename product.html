@@ -86,7 +86,7 @@
       <span class="eyebrow" id="pReplaces"></span>
       <h1 class="display" id="pName"></h1>
  <p class="subhead" id="pDesc"></p>
- <div class="hero-ctas" style="margin-top:30px">
+ <div class="hero-ctas u-mt-30">
  <a class="btn btn-primary" id="pQuoteBtn" href="contact.html">Request quote</a>
  <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
  </div>
@@ -113,13 +113,13 @@
 </section>
 
 <!-- USE CASES -->
-<section style="padding-top:0">
+<section class="u-flush-top">
   <div class="wrap">
     <div class="section-head reveal">
       <h2 class="headline">Where teams put it to work.</h2>
       <p class="subhead">Use cases are tied to field work where available: cooling tower fills, restaurant hoods, coils, pipelines, floors, vessels, and occupied campuses.</p>
     </div>
-    <div class="reveal" id="pUses" style="display:grid;gap:12px;max-width:760px"></div>
+    <div class="reveal uses-grid" id="pUses"></div>
   </div>
 </section>
 
@@ -134,7 +134,7 @@
 </section>
 
 <!-- TECH DOCS -->
-<section style="padding-top:0">
+<section class="u-flush-top">
   <div class="wrap">
     <div class="section-head reveal">
       <h2 class="headline">Proof for the buyer file.</h2>
@@ -147,14 +147,14 @@
 <!-- CTA: single dark block at page end -->
 <section class="section-slim" id="relatedWrap" hidden>
   <div class="wrap">
-    <h2 class="headline" style="font-size:1.6rem;margin-bottom:18px">Related products</h2>
+    <h2 class="headline headline--sm">Related products</h2>
     <div class="shop-grid" id="relatedGrid"></div>
   </div>
 </section>
-<section class="block-dark on-dark" style="text-align:center">
+<section class="block-dark on-dark cta-band">
   <div class="wrap reveal">
     <h2 class="headline" id="ctaHead">Ready to retire the current drum?</h2>
-    <p class="subhead" style="max-width:540px;margin:18px auto 36px">Quotes route by industry, volume, and location, so the first reply starts with the right product path.</p>
+    <p class="subhead">Quotes route by industry, volume, and location, so the first reply starts with the right product path.</p>
     <a class="btn btn-primary" href="cart.html">Open cart</a>
   </div>
 </section>
@@ -248,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="hmis-panel">
               <p class="eyebrow">Current line</p>
-              <h2 class="headline" style="font-size:1.85rem">HMIS 0-0-0 replacements for acid, alkaline, and water-treatment programs.</h2>
+              <h2 class="headline headline--md">HMIS 0-0-0 replacements for acid, alkaline, and water-treatment programs.</h2>
               <p class="cmp-note">Documentation and product matching are available through the quote form.</p>
             </div>
           </div>
@@ -473,7 +473,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `<div class="hmis-row"><span class="lbl">${l}</span><span class="val">0</span></div>`).join("");
       document.getElementById("panelFoot").textContent = "HMIS 0-0-0 profile for the core line, with lower-fume handling and broad material compatibility routed through controlled SDS, label, and application-note requests.";
     } else {
-      rows.innerHTML = `<div class="hmis-row"><span class="lbl">Classification</span><span class="val" style="width:auto;padding:0 14px;font-size:.9rem">Low</span></div>`;
+      rows.innerHTML = `<div class="hmis-row"><span class="lbl">Classification</span><span class="val val--text">Low</span></div>`;
       document.getElementById("panelFoot").textContent = "Document-gated program component; formal label, SDS, and registration proof route through MASEST before any public claim. Every cataloged VertKleen product in the program is HMIS 0-0-0.";
     }
 

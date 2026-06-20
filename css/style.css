@@ -5402,3 +5402,29 @@ body.products-page .conversion-proof .proof-pill em {
     display: none;
   }
 }
+
+/* ============================================================
+   Utilities — replace one-off inline styles (DESIGN.md §Rules).
+   Appended last so they win by source order at equal specificity.
+   ============================================================ */
+.u-flush-top { padding-top: 0; }
+.u-measure   { max-width: 760px; }
+.u-mt-24 { margin-top: 24px; }
+.u-mt-30 { margin-top: 30px; }
+.u-mt-36 { margin-top: 36px; }
+.u-mb-22 { margin-bottom: 22px; }
+
+/* Product "uses" list grid (was inline grid/gap/measure). */
+.uses-grid { display: grid; gap: 12px; max-width: 760px; }
+
+/* Compact headline sizes for sub-sections (override base .headline clamp). */
+.headline--md { font-size: 1.85rem; }
+.headline--sm { font-size: 1.6rem; margin-bottom: 18px; }
+
+/* Centered dark call-to-action band (text-align/measure/cta-justify). */
+.cta-band { text-align: center; }
+.cta-band .subhead { max-width: 560px; margin: 18px auto 36px; }
+.cta-band .hero-ctas { justify-content: center; }
+
+/* Classification chip variant inside HMIS rows (text, not the 0–4 box). */
+.hmis-row .val--text { width: auto; padding: 0 14px; font-size: .9rem; }
