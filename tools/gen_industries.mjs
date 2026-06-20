@@ -17,7 +17,7 @@ const OUT = resolve(HERE, "..", "industries");
 const INDUSTRIES = [
   {
     slug: "oil-gas", name: "Oil & Gas", icon: "ph-gas-can",
-    h1: "Oil &amp; gas cleaning with lower-hazard chemistry.",
+    h1: "Oil &amp; gas cleaning without making the chemical the main hazard.",
     sub: "Descale, derust, and degrease rigs, terminals, and pipeline assets while reducing acid-fume, solvent-storage, and hazmat-freight friction.",
     intro: "Drilling rigs, terminals, and pipeline maintenance run on acids and solvent degreasers that carry fume, burn, and freight risk. VertKleen supports descaling, rust removal, and degreasing jobs with HMIS 0-0-0 product options, so storage, handling, and shipping stay simpler.",
     products: ["hcr", "descaler", "crhd", "neutral"],
@@ -25,7 +25,7 @@ const INDUSTRIES = [
   },
   {
     slug: "marine", name: "Marine", icon: "ph-anchor",
-    h1: "Marine cleaning for confined, corrosion-prone spaces.",
+    h1: "Marine cleaning where fumes have nowhere to go.",
     sub: "Cruise, commercial vessels, docks, and offshore maintenance where confined air, soft metal, salt, and corrosion make chemistry selection critical.",
     intro: "Hull, aluminum, glass, and deck maintenance traditionally lean on hydrofluoric and hydrochloric acid brighteners and solvent washes, a serious issue in confined shipboard air. VertKleen Torque and AlumiBrite support those restoration jobs without those acids, and MultiWash supports drone and pressure-wash cleaning on occupied vessels.",
     products: ["torque", "alumibrite", "multiwash", "crhd"],
@@ -33,7 +33,7 @@ const INDUSTRIES = [
   },
   {
     slug: "manufacturing", name: "Manufacturing", icon: "ph-factory",
-    h1: "Production cleaning with lower HazCom overhead.",
+    h1: "Get production back, not another HazCom meeting.",
     sub: "Extrusion, processing, warehousing, and plant maintenance with strong cleaning power and buyer-ready documentation.",
     intro: "Plant maintenance needs acid descaling, caustic CIP, and solvent degreasing, each one a HazCom and exposure burden. VertKleen maps those jobs to HMIS 0-0-0 chemistry options that reduce handling load and give maintenance a clearer file for technical review.",
     products: ["hcr", "cr", "crhd", "descaler"],
@@ -41,7 +41,7 @@ const INDUSTRIES = [
   },
   {
     slug: "food-beverage", name: "Food & Beverage", icon: "ph-beer-bottle",
-    h1: "Food and beverage cleaning with process proof.",
+    h1: "CIP proof beats a food-safe slogan.",
     sub: "Breweries, distilleries, wineries, processing floors, hood filters, and drains cleaned around staff and active food spaces.",
     intro: "Tanks, heat exchangers, and CIP/SIP lines usually need caustic and acid sequences that are hard on staff and effluent. Brewlando company trial notes say CR and HCR worked better than traditional caustic soda and acid blends at the same concentration and CIP time; the Carib lab table adds effluent data buyers can review.",
     products: ["cr", "hcr", "crhd", "neutral"],
@@ -49,7 +49,7 @@ const INDUSTRIES = [
   },
   {
     slug: "healthcare", name: "Healthcare", icon: "ph-hospital",
-    h1: "Lower-hazard chemistry for occupied healthcare.",
+    h1: "Healthcare maintenance cannot become the event.",
     sub: "Clean, passivate, and maintain water systems with the building occupied while reducing shutdown and fume-event risk.",
     intro: "Hospitals and occupied campuses cannot plan around fume events or extended shutdowns. VertKleen cleans, passivates, and supports scoped water-system programs with HMIS 0-0-0 product options, so maintenance can be planned around patients, staff, and visitors in the building.",
     products: ["watersafe60", "purgo", "hcr", "cr"],
@@ -57,7 +57,7 @@ const INDUSTRIES = [
   },
   {
     slug: "construction", name: "Construction", icon: "ph-crane",
-    h1: "Site cleaning with simpler handling.",
+    h1: "Active jobs need chemistry that behaves.",
     sub: "Concrete cleaning, equipment maintenance, rust removal, and site cleanup on active jobs.",
     intro: "Concrete, equipment, and exterior cleanup on active sites often puts acids and bleach near working crews. VertKleen Descaler clears concrete scale and calcium, HCR removes rust, and LAM3 handles biological growth on exteriors, all with simpler storage and lighter exposure risk.",
     products: ["descaler", "hcr", "crhd", "lam3"],
@@ -65,7 +65,7 @@ const INDUSTRIES = [
   },
   {
     slug: "military-government", name: "Military / Government", icon: "ph-seal-check",
-    h1: "Procurement-ready HMIS 0-0-0 chemistry.",
+    h1: "Public buyers need more than a nice label.",
     sub: "Federal, state, local, and public-facility maintenance with documentation buyers expect.",
     intro: "MASEST routes SAM.gov, CAGE 0B2Q3, and NAICS 424690 procurement files for federal, state, local, and public-facility buyers. VertKleen maps hazardous acids, caustics, and water-treatment functions across public assets while keeping HMIS 0-0-0 documentation, SDS, and exception notes on hand.",
     products: ["hcr", "descaler", "crhd", "alumibrite"],
@@ -73,7 +73,7 @@ const INDUSTRIES = [
   },
   {
     slug: "education", name: "Education", icon: "ph-graduation-cap",
-    h1: "Clean campuses with everyone on site.",
+    h1: "Campus work has to happen while campus happens.",
     sub: "K-12 and university facilities cleaned and treated with students, faculty, and staff present.",
     intro: "Schools and universities maintain water systems, kitchens, and exteriors while occupied, so chemistry handling and documentation matter. VertKleen supports cleaning and treatment at HMIS 0-0-0 with campuses in use. Brevard County Schools proof sits behind the program.",
     products: ["cr", "hcr", "watersafe60", "lam3"],
@@ -81,7 +81,7 @@ const INDUSTRIES = [
   },
   {
     slug: "hvac-water", name: "HVAC / Water Treatment", icon: "ph-wind",
-    h1: "Cooling tower programs with lower-hazard chemistry.",
+    h1: "The tower program, translated into cleaner chemistry.",
     sub: "Inhibitor, antimicrobial support, passivation, pH control, and ASHRAE 188 support for cooling tower programs.",
     intro: "Cooling tower programs combine inhibitor, antimicrobial support, descaling acid, pH control, and sometimes a non-oxidizing biocide. VertKleen keeps the public product roster on WaterSafe60, Purgo, HCR, and CR, while DBNPA stays footnoted as the separate low-hazard program component when specified.",
     products: ["watersafe60", "purgo", "hcr", "cr"],
@@ -89,7 +89,7 @@ const INDUSTRIES = [
   },
   {
     slug: "plumbing", name: "Plumbing", icon: "ph-wrench",
-    h1: "Descale lines and fixtures without hydrochloric acid.",
+    h1: "Scale removal should not bring muriatic acid inside.",
     sub: "Water lines, fixtures, water heaters, and drains cleared of scale and calcium without hydrochloric acid handling.",
     intro: "Calcium, scale, and rust in supply lines, fixtures, and water heaters are usually attacked with hydrochloric acid products or CLR. VertKleen Descaler clears this buildup without hydrochloric acid handling, with metal compatibility reviewed for occupied-building plumbing work; HCR handles heavier rust and passivation.",
     products: ["descaler", "hcr", "neutral"],
@@ -247,15 +247,15 @@ function ctaBlock(ind) {
   <section class="block-dark">
     <div class="wrap">
       <div class="section-head center">
-        <span class="eyebrow">Get started</span>
-          <h2 class="headline">Plan a scoped ${ind.name} request.</h2>
-          <p class="subhead">Choose a quote, audit, or sample request. MASEST routes the request by industry, product, current chemical, and volume.</p>
+        <span class="eyebrow">Next move</span>
+          <h2 class="headline">Put the current chemical on the table.</h2>
+          <p class="subhead">Send the legacy product, surface, soil, volume, and buying deadline. MASEST routes the replacement, proof, sample, or partner path from there.</p>
       </div>
       <div class="cta-grid">
-        <a class="cta-tile" href="${q("quote")}"><i class="ph ph-tag" aria-hidden="true"></i><span class="cta-tile-t">Get a Quote</span><span class="cta-tile-s">Price by product and volume</span></a>
-        <a class="cta-tile" href="${q("audit")}"><i class="ph ph-clipboard-text" aria-hidden="true"></i><span class="cta-tile-t">Chemical Audit</span><span class="cta-tile-s">Map your legacy chemistry</span></a>
-        <a class="cta-tile" href="${q("sample")}"><i class="ph ph-package" aria-hidden="true"></i><span class="cta-tile-t">Sample Kit</span><span class="cta-tile-s">Trial 3 to 5 products on site</span></a>
-        <a class="cta-tile" href="${q("distributor")}"><i class="ph ph-handshake" aria-hidden="true"></i><span class="cta-tile-t">Distributor / Partner</span><span class="cta-tile-s">BSC, distributor, white-label</span></a>
+        <a class="cta-tile" href="${q("quote")}"><i class="ph ph-tag" aria-hidden="true"></i><span class="cta-tile-t">Price the replacement</span><span class="cta-tile-s">Product, volume, freight path</span></a>
+        <a class="cta-tile" href="${q("audit")}"><i class="ph ph-clipboard-text" aria-hidden="true"></i><span class="cta-tile-t">Map the current drum</span><span class="cta-tile-s">Legacy chemical to VertKleen fit</span></a>
+        <a class="cta-tile" href="${q("sample")}"><i class="ph ph-package" aria-hidden="true"></i><span class="cta-tile-t">Run a site trial</span><span class="cta-tile-s">Trial 3 to 5 products on site</span></a>
+        <a class="cta-tile" href="${q("distributor")}"><i class="ph ph-handshake" aria-hidden="true"></i><span class="cta-tile-t">Build a route</span><span class="cta-tile-s">BSC, distributor, white-label</span></a>
       </div>
     </div>
   </section>`;
