@@ -2541,15 +2541,43 @@ line-height: 1.35;
 }
 
 @media (max-width: 920px) {
-  .catalog-hero-media,
+.catalog-hero-media,
 .proof-strip {
-    grid-template-columns: 1fr;
-  }
+grid-template-columns: 1fr;
+}
 
-  .catalog-photo-large {
-    grid-row: auto;
-    min-height: 280px;
-  }
+.catalog-photo-large {
+grid-row: auto;
+min-height: 280px;
+}
+}
+
+@media (min-width: 721px) and (max-width: 920px) {
+.catalog-hero-media {
+grid-template-columns: repeat(3, minmax(0, 1fr));
+grid-template-rows: none;
+align-items: stretch;
+}
+
+.catalog-photo,
+.catalog-photo-large {
+grid-column: auto;
+grid-row: auto;
+min-height: 0;
+aspect-ratio: 4 / 3;
+overflow: hidden;
+background: #fff;
+}
+
+.catalog-photo img {
+height: 100%;
+max-height: none;
+aspect-ratio: auto;
+}
+
+.bottle-shot-frame img {
+object-fit: contain;
+}
 }
 
 @media (max-width: 620px) {
@@ -2612,10 +2640,16 @@ line-height: 1.35;
 
 .product-media-card img {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: contain;
+  height: clamp(220px, 23vw, 278px);
+  object-fit: cover;
   display: block;
+  box-sizing: border-box;
   background: var(--panel-cool);
+}
+
+.product-media-card-product img {
+  padding: 14px;
+  object-fit: contain;
 }
 
 .product-media-card figcaption {
@@ -3621,6 +3655,43 @@ body .page-hero .product-shot {
   max-height: 220px;
   width: 100%;
   object-fit: contain;
+}
+
+.product-detail-hero {
+  padding-top: clamp(34px, 4vw, 48px);
+  padding-bottom: clamp(32px, 4vw, 46px);
+}
+
+.product-detail-hero .display {
+  font-size: clamp(2.4rem, 4.6vw, 3.55rem);
+}
+
+.product-detail-hero .subhead {
+  max-width: 54ch;
+  line-height: 1.48;
+}
+
+.product-detail-hero .hero-ctas {
+  gap: 10px;
+  align-items: center;
+  margin-top: 22px;
+}
+
+.product-detail-hero .commerce-vol {
+  width: auto;
+  min-width: min(100%, 240px);
+  max-width: 260px;
+  min-height: 38px;
+  flex: 0 1 240px;
+  padding-inline: 12px 28px;
+  font-size: .82rem;
+}
+
+.product-detail-hero .commerce-unit-price,
+.product-detail-hero #pStock {
+  min-height: 36px;
+  margin-left: 0 !important;
+  font-size: .82rem;
 }
 
 main:has(#pMediaSection) > section:not(.page-hero):not(.block-dark) {

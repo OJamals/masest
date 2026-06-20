@@ -37,6 +37,23 @@ test("catalog keeps replacement checker and product shelf within a quick scan", 
   expect(catalog.y).toBeLessThan(1700);
 });
 
+test("catalog hero media stays uniform on tablet", async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 900 });
+  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+
+  const media = await page.locator(".catalog-hero-media .catalog-photo").evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      return { width: Math.round(rect.width), height: Math.round(rect.height) };
+    })
+  );
+  const heights = media.map((item) => item.height);
+
+  expect(media).toHaveLength(3);
+  expect(Math.max(...heights) - Math.min(...heights), `catalog hero media heights: ${JSON.stringify(media)}`).toBeLessThanOrEqual(3);
+  expect(Math.max(...heights)).toBeLessThanOrEqual(220);
+});
+
 test("product detail shows next decision without an oversized hero", async ({ page }) => {
   await page.route("**/api/products", (route) => route.fulfill({
     status: 200,
@@ -61,8 +78,12 @@ test("product detail shows next decision without an oversized hero", async ({ pa
     const rect = node.getBoundingClientRect();
     return rect.top + window.scrollY;
   });
+  const mediaHeights = await page.locator(".product-media-card img").evaluateAll((images) =>
+    images.map((image) => Math.round(image.getBoundingClientRect().height))
+  );
 
   expect(hero.height).toBeLessThan(800);
   expect(mediaTop).toBeLessThan(1900);
+  expect(Math.max(...mediaHeights) - Math.min(...mediaHeights), `product media heights: ${mediaHeights.join(", ")}`).toBeLessThanOrEqual(3);
   await expect(page.getByRole("button", { name: "Add to cart" })).toBeVisible();
 });

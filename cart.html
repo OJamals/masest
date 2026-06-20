@@ -90,10 +90,9 @@
   };
 async function loadCatalog() {
   try {
-    if (window.MASESTMain?.isLocalStaticCommerceSuppressed?.()) return;
     const token = await getToken().catch(() => null);
     const r = await fetch("/api/products", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
-      if (!r.ok) return;
+    if (!r.ok) return;
       const data = await r.json();
       (data.products || []).forEach(p => {
         const parent = p.products && typeof p.products === "object" ? p.products : p;

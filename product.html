@@ -16,12 +16,12 @@
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
-  .drum-ref{margin-top:22px;max-width:320px;padding:14px 16px;border:1px solid var(--line,#e3e6ea);border-radius:12px;background:var(--surface,#fff)}
+  .drum-ref{margin-top:14px;max-width:300px;padding:12px 14px;border:1px solid var(--line,#e3e6ea);border-radius:12px;background:var(--surface,#fff)}
   .drum-ref-head{font-weight:700;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#6b7280);margin-bottom:8px}
   .drum-ref-row{display:flex;justify-content:space-between;gap:16px;padding:4px 0;font-size:.95rem}
   .drum-ref-row span:last-child{font-variant-numeric:tabular-nums;font-weight:600}
-  .drum-ref .btn{margin-top:12px}
-  .drum-ref-note{margin:10px 0 0;font-size:.78rem;line-height:1.4;color:var(--muted,#6b7280)}
+  .drum-ref .btn{margin-top:10px}
+  .drum-ref-note{margin:8px 0 0;font-size:.76rem;line-height:1.35;color:var(--muted,#6b7280)}
 </style>
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/product.html">
@@ -303,9 +303,9 @@ document.addEventListener("DOMContentLoaded", () => {
   buySkel.className = "skeleton skeleton-text w-60";
   buySkel.style.cssText = "min-width:160px;height:1.5em;display:inline-block";
   buyBtn.parentNode.insertBefore(buySkel, buyBtn);
-  if (quoteFirst || (typeof isLocalStaticCommerceSuppressed === "function" && isLocalStaticCommerceSuppressed())) {
-    buySkel.remove();
-  } else {
+if (quoteFirst) {
+  buySkel.remove();
+} else {
     import("./js/auth.js").then(a => a.getToken()).catch(() => null).then(token => {
       const headers = { Accept: "application/json" };
       if (token) headers.Authorization = "Bearer " + token;
@@ -495,7 +495,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const figure = document.createElement("figure");
       const img = document.createElement("img");
       const caption = document.createElement("figcaption");
-      figure.className = "product-media-card";
+      figure.className = label === "Product photo" ? "product-media-card product-media-card-product" : "product-media-card";
       img.src = src;
       img.alt = alt;
       img.loading = "lazy";

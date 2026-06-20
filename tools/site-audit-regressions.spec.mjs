@@ -6,6 +6,8 @@ const PORT = 4218;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let server;
 
+test.describe.configure({ mode: "serial" });
+
 test.beforeAll(async () => {
   server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], {
     cwd: new URL("..", import.meta.url).pathname,
