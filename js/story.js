@@ -53,6 +53,22 @@ var BEAT_IN = 0.58, BEAT_OUT = 0.22, HOLD = 1.25;
     });
     return { act: act, stage: act.querySelector(".stage"), i: i, p: 0, active: false, fx: null, maxAt: maxAt, els: els, focusables: focusables, focusVisible: null, T: maxAt + BEAT_IN + HOLD };
   });
+  var saviorImagesWarmed = false;
+
+  function prewarmSaviorProofImages() {
+    if (saviorImagesWarmed) return;
+    saviorImagesWarmed = true;
+    Array.prototype.slice.call(story.querySelectorAll(".act-savior .savior-proof img")).forEach(function (img) {
+      var source = img.getAttribute("data-story-src");
+      if (source) {
+        img.src = source;
+        img.removeAttribute("data-story-src");
+      }
+      img.loading = "eager";
+      img.fetchPriority = "high";
+      if (img.decode) img.decode().catch(function () {});
+    });
+  }
 
   function syncStoryFocus() {
     states.forEach(function (st) {
@@ -90,6 +106,7 @@ states.forEach(function (st) {
         onLeaveBack: function () { if (st.stage) gsap.set(st.stage, { autoAlpha: 1 }); },
         onToggle: function (self) {
           st.active = self.isActive;
+          if (self.isActive && st.i >= 3) prewarmSaviorProofImages();
           if (self.isActive) resizeFx(st);
           updateRail();
           syncStoryFocus();

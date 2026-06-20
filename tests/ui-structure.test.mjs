@@ -308,16 +308,22 @@ test("about page routes buyers before service breadth", () => {
   assert.match(css, /\.about-services-disclosure summary b[\s\S]*white-space: normal/);
 });
 
-test("scrolly proof images are not lazy-gated", () => {
+test("scrolly proof images lazy-load until act four prewarms them", () => {
   const home = read("index.html");
+  const story = read("js/story.js");
   const actFive = home.match(/<section class="act act-savior"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.ok(actFive, "expected act five scrolly section");
   assert.match(actFive, /img\/field\/fill-before-enhanced\.webp/);
   assert.match(actFive, /img\/field\/filters-after-enhanced\.webp/);
-  assert.doesNotMatch(actFive, /loading="lazy"/);
-  assert.match(home, /<link rel="preload" as="image" href="img\/field\/fill-before-enhanced\.webp"/);
-  assert.match(home, /<link rel="preload" as="image" href="img\/field\/filters-after-enhanced\.webp"/);
+  assert.match(actFive, /data-story-src="img\/field\/fill-before-enhanced\.webp"[^>]*loading="lazy"[^>]*fetchpriority="low"/);
+  assert.match(actFive, /data-story-src="img\/field\/filters-after-enhanced\.webp"[^>]*loading="lazy"[^>]*fetchpriority="low"/);
+  assert.match(home, /<noscript><style>\.story-deferred-img\{display:none!important\}<\/style><\/noscript>/);
+  assert.match(actFive, /<noscript><img src="img\/field\/fill-before-enhanced\.webp"/);
+  assert.doesNotMatch(home, /<link rel="preload" as="image" href="img\/field\//);
+  assert.match(story, /function prewarmSaviorProofImages\(\)/);
+  assert.match(story, /data-story-src/);
+  assert.match(story, /self\.isActive && st\.i >= 3/);
 });
 
 test("scrolly chemical pills stay compact", () => {
@@ -327,6 +333,24 @@ test("scrolly chemical pills stay compact", () => {
   assert.ok(actFour, "expected act four scrolly section");
   assert.match(actFour, /<span class="vs vs-long">Glutaraldehyde 50%<\/span>/);
   assert.doesNotMatch(actFour, /<span class="vs">Glutaraldehyde 50%<\/span>/);
+});
+
+test("scrolly hazard overlays avoid stripe-gradient decoration", () => {
+  const storyCss = read("css/story.css");
+
+  assert.doesNotMatch(storyCss, /repeating-linear-gradient/);
+});
+
+test("shared media fallback avoids stripe-gradient decoration", () => {
+  const css = read("css/style.css");
+
+  assert.doesNotMatch(css, /repeating-linear-gradient/);
+});
+
+test("scrolly stage finish avoids svg turbulence filters", () => {
+  const storyCss = read("css/story.css");
+
+  assert.doesNotMatch(storyCss, /feTurbulence/);
 });
 
 test("simplified routes avoid black cards and cramped section seams", () => {

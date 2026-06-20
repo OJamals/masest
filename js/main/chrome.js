@@ -41,10 +41,10 @@ export function renderChrome() {
       </div>
     </details>`;
   };
-  const skip = document.createElement("a");
-  skip.className = "skip-link";
+  const skip = document.querySelector('.skip-link[href="#main"]') || document.createElement("a");
+  skip.classList.add("skip-link");
   skip.href = "#main";
-  skip.textContent = "Skip to content";
+  if (!skip.textContent.trim()) skip.textContent = "Skip to content";
   const nav = document.createElement("header");
   // Start in the dark-glass treatment when this page opens on the dark story,
   // so the first paint matches the backdrop (no white-bar flash before onScroll).

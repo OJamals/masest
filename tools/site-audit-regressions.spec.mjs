@@ -53,6 +53,38 @@ test("mobile header keeps logo, sign-in, cart, and menu inside the viewport", as
   }
 });
 
+test("shared chrome keeps one skip link after hydration", async ({ page }) => {
+  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.locator('.skip-link[href="#main"]')).toHaveCount(1);
+});
+
+test("contact and cart keep visible heading levels sequential", async ({ page }) => {
+  for (const pagePath of ["contact.html?type=quote", "cart.html"]) {
+    await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+
+    const skips = await page.locator("h1,h2,h3,h4,h5,h6").evaluateAll((headings) => {
+      const visibleLevel = (heading) => {
+        const rect = heading.getBoundingClientRect();
+        const style = getComputedStyle(heading);
+        if (!rect.width || !rect.height || style.display === "none" || style.visibility === "hidden") return null;
+        return {
+          level: Number(heading.tagName.slice(1)),
+          text: heading.textContent.trim().replace(/\s+/g, " "),
+        };
+      };
+      const visible = headings.map(visibleLevel).filter(Boolean);
+      return visible
+        .slice(1)
+        .map((heading, index) => ({ prev: visible[index], heading }))
+        .filter(({ prev, heading }) => heading.level > prev.level + 1);
+    });
+
+    expect(skips, `${pagePath} heading skips`).toEqual([]);
+  }
+});
+
 test("quote request starts as a short lead form and reveals procurement details progressively", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/contact.html?type=quote`, { waitUntil: "domcontentloaded" });

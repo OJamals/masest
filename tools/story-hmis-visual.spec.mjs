@@ -45,6 +45,45 @@ test("story scene watermarks are removed from the visual layer", async ({ page }
   expect(watermark.opacity).toBe(0);
 });
 
+test("desktop story rail label does not overlap the Act 1 headline", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+
+  const collision = await page.evaluate(() => {
+    const headline = document.querySelector('.story .act[data-act="1"] .act-h');
+    const activeLabel = document.querySelector(".story .rail-btn.is-on span");
+    const visibleBox = (el) => {
+      if (!el) return null;
+      const style = getComputedStyle(el);
+      const box = el.getBoundingClientRect();
+      if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) <= 0.05) return null;
+      return {
+        left: box.left,
+        right: box.right,
+        top: box.top,
+        bottom: box.bottom,
+        width: box.width,
+        height: box.height,
+      };
+    };
+    const headlineBox = visibleBox(headline);
+    const labelBox = visibleBox(activeLabel);
+    if (!headlineBox || !labelBox) return { overlaps: false, headlineBox, labelBox };
+
+    return {
+      overlaps: labelBox.left < headlineBox.right
+        && labelBox.right > headlineBox.left
+        && labelBox.top < headlineBox.bottom
+        && labelBox.bottom > headlineBox.top,
+      headlineBox,
+      labelBox,
+    };
+  });
+
+  expect(collision.overlaps, JSON.stringify(collision)).toBe(false);
+});
+
 test("HMIS story keeps copy separated from the hazard card on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
