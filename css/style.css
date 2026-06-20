@@ -4850,7 +4850,7 @@ main:has(#pMediaSection) .section-head {
 
 .service-card-meta b {
   color: var(--ink);
-  font-size: 1.04rem;
+  font-size: 1.2rem;
   font-variant-numeric: tabular-nums;
 }
 
