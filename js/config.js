@@ -1,5 +1,5 @@
-/* MASEST commerce — PUBLIC client config. Fill these in.
- * Only public/publishable values belong here — they ship to the browser.
+/* MASEST commerce - PUBLIC client config. Fill these in.
+ * Only public/publishable values belong here - they ship to the browser.
  * NEVER put secret keys here (Stripe secret, Klaviyo private, Supabase service-role).
  * Those live only in server environment variables, read server-side by functions. */
 window.MASEST_SUPABASE_URL = 'https://mvfxzvkzcqmnwcoblvfc.supabase.co';

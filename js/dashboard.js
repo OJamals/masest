@@ -1,4 +1,4 @@
-/* MASEST — user dashboard controller. Loaded as a module by dashboard.html.
+/* MASEST user dashboard controller. Loaded as a module by dashboard.html.
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
@@ -59,20 +59,20 @@ async function renderOverview() {
   const c = ACCOUNT?.company;
   const banner = $('approvalBanner');
   if (c && c.status !== 'approved') {
-    banner.innerHTML = `<div class="banner warn"><i class="ph ph-clock" aria-hidden="true"></i> Your account is <b>${esc(c.status)}</b>. Online ordering and NET terms unlock once MASEST approves it — we'll notify you here.</div>`;
+    banner.innerHTML = `<div class="banner warn"><i class="ph ph-clock" aria-hidden="true"></i> Your account is <b>${esc(c.status)}</b>. Online ordering and NET terms unlock once MASEST approves it. We'll notify you here.</div>`;
   } else { banner.innerHTML = ''; }
 
   $('ovAccount').innerHTML = `
     <h2 class="headline dash-section-title dash-section-title-sm">Account</h2>
-    <div class="dash-row"><span>Signed in as</span><b>${esc(ACCOUNT?.email || '—')}</b></div>
-    <div class="dash-row"><span>Company</span><b>${esc(c?.name || '—')}</b></div>
+    <div class="dash-row"><span>Signed in as</span><b>${esc(ACCOUNT?.email || 'Not set')}</b></div>
+    <div class="dash-row"><span>Company</span><b>${esc(c?.name || 'Not set')}</b></div>
     <div class="dash-row"><span>Status</span>${statusBadge(c?.status || 'pending')}</div>
     <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : 'Pending approval'}</b></div>
     <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + c?.net_terms_days : 'Not enabled'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
     <div class="dash-row"><span>Balance owed</span><b>${money(ACCOUNT.credit.net_outstanding, 'usd')}</b></div>
     <div class="dash-row"><span>Credit available</span><b>${money(ACCOUNT.credit.credit_available, 'usd')}</b></div>` : ''}`;
 
-  // Quick stats — pull counts in the background.
+  // Quick stats: pull counts in the background.
   const stats = $('ovStats');
   stats.innerHTML = [0, 1, 2].map(() => `<div class="stat"><div class="skeleton skeleton-text w-40" style="height:1.8em;margin:.15em 0 .55em"></div><div class="skeleton skeleton-text w-80"></div></div>`).join('');
   const [ord, notif] = await Promise.all([
@@ -158,7 +158,7 @@ async function renderMessages() {
   try { msgs = (await api('/api/account/messages')).messages; } catch { thread.innerHTML = '<p class="dash-status" data-state="err">Could not load messages.</p>'; return; }
   lastMsgCount = msgs.length;
   setBadge('badgeMessages', 0); // opening the tab marks staff msgs read server-side
-  if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question — orders, pricing, NET terms, anything.</div></div>`; }
+  if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question about orders, pricing, NET terms, or anything else.</div></div>`; }
   else {
     thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${esc(m.body)}<time>${fmtDT(m.created_at)}</time></div>`).join('');
     thread.scrollTop = thread.scrollHeight;
@@ -298,7 +298,7 @@ function wireProfileForm() {
  * While the dashboard is open and visible, poll for new notifications/messages so staff
  * replies surface without a manual reload. Cheap: one GET per cycle, paused when hidden. */
 function wireSecurityForm() {
-  $('secEmail').textContent = ACCOUNT?.email || '—';
+  $('secEmail').textContent = ACCOUNT?.email || 'Not set';
   $('secLogout').addEventListener('click', async () => { try { await logout(); } catch {} location.href = 'account.html'; });
   $('secReset').addEventListener('click', async () => {
     const status = $('secStatus');

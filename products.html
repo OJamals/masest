@@ -38,12 +38,11 @@
   <section class="hero product-catalog-hero proof-led-catalog">
     <div class="wrap hero-grid">
       <div class="hero-copy reveal">
-      <h1 class="display">Find your VertKleen replacement.</h1>
-        <p class="subhead">Already buying hydrochloric acid (muriatic acid), caustic soda, or a name-brand degreaser? Match the job to a VertKleen replacement, then compare products by category, proof, and quote path.</p>
+      <h1 class="display">VertKleen product finder.</h1>
+        <p class="subhead">Match legacy acids, caustics, degreasers, and water-treatment chemicals to the right VertKleen replacement.</p>
         <div class="hero-actions">
-        <a class="btn btn-primary btn-island" href="#swap"><span>Find your swap</span><span class="island-arrow" aria-hidden="true">↗</span></a>
-          <a class="btn btn-secondary" href="#catalog">Browse all products</a>
-          <a class="btn btn-secondary" href="services.html">Browse services</a>
+          <a class="btn btn-primary btn-island" href="#swap"><span>Find your swap</span><span class="island-arrow" aria-hidden="true">↗</span></a>
+          <a class="btn btn-secondary" href="#catalog">Browse products</a>
         </div>
         <div class="catalog-quick-facts" aria-label="Catalog facts">
           <span><b>HMIS 0-0-0</b> listed line</span>
@@ -72,18 +71,21 @@
     <div class="wrap">
       <div class="section-head reveal">
         <span class="catalog-label">Replacement checker</span>
-        <h2 class="headline">Find your VertKleen swap.</h2>
+        <h2 class="headline">Match your current chemical.</h2>
         <p class="subhead">Pick the chemical you use today or the job you need done. We show the VertKleen equivalent and filter the catalog to it.</p>
       </div>
       <div class="swap-finder reveal">
         <div class="swap-result" id="swapResult" hidden aria-live="polite"></div>
         <div class="swap-matrix" id="swapMatrix" role="group" aria-label="Replacement options"></div>
-        <p class="swap-note">Every product in this purchasable catalog is HMIS 0-0-0. Need help matching? <a href="contact.html?type=audit">Get a product match</a>.</p>
+        <p class="swap-note">Canonical catalog products use the HMIS 0-0-0 story; DBNPA is a low-hazard program component outside the parent product roster. Need help matching? <a href="contact.html?type=audit">Get a product match</a>.</p>
       </div>
     </div>
   </section>
 
   <section class="section shop-sec" id="catalog">
+    <span id="cat-water" class="sr-only" aria-hidden="true"></span>
+    <span id="cat-exterior" class="sr-only" aria-hidden="true"></span>
+    <span id="cat-glycol" class="sr-only" aria-hidden="true"></span>
     <div class="wrap">
       <div class="section-head reveal">
         <span class="catalog-label">Product catalog</span>
@@ -108,7 +110,7 @@
           <label for="shopSort">Sort</label>
           <select id="shopSort" class="shop-select">
             <option value="featured">Featured</option>
-            <option value="az">Name A–Z</option>
+            <option value="az">Name A-Z</option>
           </select>
           <span class="shop-count" id="shopCount" aria-live="polite"></span>
         </div>

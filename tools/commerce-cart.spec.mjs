@@ -84,7 +84,7 @@ test("cart accepts flattened connector variant rows", async ({ page }) => {
   });
   await page.reload({ waitUntil: "networkidle" });
 
-  await expect(page.getByText("VertKleen CRHD — 5 gal pail")).toBeVisible();
+  await expect(page.getByText("VertKleen CRHD - 5 gal pail")).toBeVisible();
   await expect(page.getByText("$125.00 each")).toBeVisible();
   await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeEnabled();
   await expect(page.locator("#shipEstOut")).toContainText("10 gal");

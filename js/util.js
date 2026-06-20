@@ -1,4 +1,4 @@
-/* MASEST — shared formatting/escaping helpers for module-loaded scripts.
+/* MASEST - shared formatting/escaping helpers for module-loaded scripts.
  * Imported by admin.js, dashboard.js, business.js, account-nav.js to avoid
  * redefining the same esc/money/date helpers in each. (Classic-loaded main.js
  * keeps its own copies since it is not an ES module.) */

@@ -64,7 +64,7 @@ function quoteDueInDays(days) {
 
 function setupProgress(company) {
   const setup = company.setup;
-  if (!setup?.steps?.length) return '<span class="muted">—</span>';
+  if (!setup?.steps?.length) return '<span class="muted">-</span>';
   const open = setup.steps.filter((step) => !step.done);
   const firstOpen = open[0]?.label || 'Complete';
   return `<span data-setup-state="${open.length ? 'open' : 'done'}"><b>${setup.percent || 0}%</b> <small class="muted">${esc(firstOpen)}</small></span>`;
@@ -405,10 +405,10 @@ async function renderCustomers() {
   if (!rows.length) { box.innerHTML = '<p class="muted" style="padding:14px">No customers.</p>'; return; }
   box.innerHTML = `<table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Tier</th><th>Role</th></tr></thead><tbody>${rows.map((c) => `
     <tr>
-      <td>${esc(c.full_name || '—')}${c.phone ? `<br><span class="muted">${esc(c.phone)}</span>` : ''}</td>
-      <td>${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '<span class="muted">—</span>'}</td>
-      <td>${esc(c.company_name || '—')}</td>
-      <td>${statusBadge(c.company_status || '—')}</td>
+      <td>${esc(c.full_name || '-')}${c.phone ? `<br><span class="muted">${esc(c.phone)}</span>` : ''}</td>
+      <td>${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '<span class="muted">-</span>'}</td>
+      <td>${esc(c.company_name || '-')}</td>
+      <td>${statusBadge(c.company_status || '-')}</td>
       <td>${esc(c.price_tier || 'retail')}</td>
       <td>${esc(c.role || '')}</td>
     </tr>`).join('')}</tbody></table>`;

@@ -85,10 +85,11 @@
       <div class="breadcrumb"><a href="products.html">Products</a> / <span id="bcName">&hellip;</span></div>
       <span class="eyebrow" id="pReplaces"></span>
       <h1 class="display" id="pName"></h1>
-      <p class="subhead" id="pDesc"></p>
-      <div class="hero-ctas" style="margin-top:30px">
-        <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
-      </div>
+ <p class="subhead" id="pDesc"></p>
+ <div class="hero-ctas" style="margin-top:30px">
+ <a class="btn btn-primary" id="pQuoteBtn" href="contact.html">Request quote</a>
+ <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
+ </div>
       <p class="cart-feedback" id="pCartFeedback" role="status" aria-live="polite" hidden></p>
       <div class="drum-ref" id="pDrums" hidden></div>
     </div>
@@ -162,6 +163,7 @@
 <script type="module" src="js/main.js?v=20260619b"></script>
 <script type="module">
   const { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal } = window.MASESTMain;
+  const { QUOTE_FIRST_IDS } = window.MASESTMain;
   const { isLocalStaticCommerceSuppressed, loadCommerceCatalog, refreshCommerceActions } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {
     const id = new URLSearchParams(location.search).get("id") || "hcr";
@@ -170,9 +172,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // and `crs`. Without this remap the /api/products `find` below returns no row and both
     // the "Add to cart" control and the drums/totes price block silently fail to render.
     // Keep in sync with COMMERCE_SKU_ALIASES in js/main/commerce-ui.js and the drum-pricing.json keys.
-    const COMMERCE_ALIAS = { crhd: "cr-hd", crs: "descaler" };
+    const COMMERCE_ALIAS = { crhd: "cr-hd" };
     const commerceId = COMMERCE_ALIAS[id] || id;
     const p = PRODUCTS[id];
+    const quoteFirst = Array.isArray(QUOTE_FIRST_IDS) && QUOTE_FIRST_IDS.includes(id);
     function productCanonicalUrl() {
       return `https://masest.co/product.html?id=${encodeURIComponent(id)}`;
     }
@@ -268,10 +271,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";
     const quoteHref = "contact.html?product=" + encodeURIComponent(p.name);
+    const quoteBtn = document.getElementById("pQuoteBtn");
+    if (quoteBtn) quoteBtn.href = quoteHref;
     const buyBtn = document.getElementById("pBuyBtn");
     const cartFeedback = document.getElementById("pCartFeedback");
 
-    // Related products — same catalog group (fallback: featured neighbours), current excluded.
+    // Related products: same catalog group (fallback: featured neighbours), current excluded.
     (function renderRelated() {
       const relWrap = document.getElementById("relatedWrap");
       const relGrid = document.getElementById("relatedGrid");
@@ -292,11 +297,10 @@ document.addEventListener("DOMContentLoaded", () => {
   buySkel.className = "skeleton skeleton-text w-60";
   buySkel.style.cssText = "min-width:160px;height:1.5em;display:inline-block";
   buyBtn.parentNode.insertBefore(buySkel, buyBtn);
-  if (typeof isLocalStaticCommerceSuppressed === "function" && isLocalStaticCommerceSuppressed()) {
+  if (quoteFirst || (typeof isLocalStaticCommerceSuppressed === "function" && isLocalStaticCommerceSuppressed())) {
     buySkel.remove();
-    return;
-  }
-  import("./js/auth.js").then(a => a.getToken()).catch(() => null).then(token => {
+  } else {
+    import("./js/auth.js").then(a => a.getToken()).catch(() => null).then(token => {
       const headers = { Accept: "application/json" };
       if (token) headers.Authorization = "Bearer " + token;
       return fetch("/api/products", { headers, cache: "no-store" });
@@ -394,7 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (chosen && chosen.track_stock && Number.isFinite(Number(chosen.stock))) {
             const n = Number(chosen.stock);
             if (n <= 0) { stockEl.textContent = "Out of stock"; stockEl.classList.add("badge-danger"); }
-            else if (n <= 10) { stockEl.textContent = "Low stock — " + n + " left"; stockEl.classList.add("badge-warning"); }
+            else if (n <= 10) { stockEl.textContent = "Low stock: " + n + " left"; stockEl.classList.add("badge-warning"); }
             else { stockEl.textContent = "In stock"; stockEl.classList.add("badge-success"); }
           } else {
             stockEl.textContent = "In stock"; stockEl.classList.add("badge-success");
@@ -433,10 +437,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       })
       .catch(() => { buySkel.remove(); });
+  }
 
     // Drums & totes (55 / 275 gal): list price for reference + freight-quote CTA.
     // Display only - these bulk sizes require freight review after order, never cart.
-    fetch("data/drum-pricing.json", { cache: "no-store" })
+    if (!quoteFirst) fetch("data/drum-pricing.json", { cache: "no-store" })
       .then(r => (r.ok ? r.json() : {}))
       .then(map => {
         const drums = map[commerceId];
@@ -488,6 +493,8 @@ document.addEventListener("DOMContentLoaded", () => {
       img.src = src;
       img.alt = alt;
       img.loading = "lazy";
+      img.width = 900;
+      img.height = 1200;
       caption.textContent = label;
       figure.append(img, caption);
       return figure;

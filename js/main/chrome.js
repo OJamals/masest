@@ -52,7 +52,7 @@ export function renderChrome() {
   nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-logo" href="${root}index.html"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
+      <a class="nav-logo" href="${root}index.html" aria-label="MASEST home"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
       <nav class="nav-links" id="navLinks">
         ${links.map(navItem).join("")}
       </nav>
@@ -164,7 +164,7 @@ export function renderChrome() {
         <div class="foot-secondary">
           <div class="foot-title">Company</div>
           <a href="${root}industries.html">Industries</a>
-          <a href="${root}about.html">About Us</a>
+          <a href="${root}about.html">Company</a>
           <a href="${root}contact.html">Contact</a>
         </div>
         <div>
@@ -178,7 +178,7 @@ export function renderChrome() {
       <div class="foot-news">
         <div class="foot-news-copy">
           <div class="foot-title">VertKleen Briefing</div>
-          <p>Field results, new SDS-backed SKUs, and program offers. No spam &mdash; unsubscribe anytime.</p>
+          <p>Field results, new SDS-backed SKUs, and program offers. No spam. Unsubscribe anytime.</p>
         </div>
         <form class="foot-news-form" id="footNews" novalidate>
           <input type="email" name="email" id="footNewsEmail" placeholder="you@company.com" aria-label="Email address" autocomplete="email" required>
@@ -189,7 +189,7 @@ export function renderChrome() {
       </div>
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
-        <span>VertKleen, SynTec and SynClean are trademarks of MASEST Consulting LLC.</span>
+        <span>VertKleen, SynTech and SynClean are trademarks of MASEST Consulting LLC.</span>
       </div>
     </div>`;
   document.body.append(foot);

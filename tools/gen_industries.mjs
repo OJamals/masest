@@ -49,7 +49,7 @@ const INDUSTRIES = [
   },
   {
     slug: "healthcare", name: "Healthcare", icon: "ph-hospital",
-    h1: "Maintain occupied healthcare facilities with lower-hazard chemistry.",
+    h1: "Lower-hazard chemistry for occupied healthcare.",
     sub: "Clean, passivate, and maintain water systems with the building occupied while reducing shutdown and fume-event risk.",
     intro: "Hospitals and occupied campuses cannot plan around fume events or shut a wing down for descaling. VertKleen cleans, passivates, and treats water systems with HMIS 0-0-0 product options, so maintenance can be planned around patients, staff, and visitors in the building.",
     products: ["watersafe60", "purgo", "hcr", "cr"],

@@ -22,7 +22,7 @@ export function initIndustryProducts() {
 }
 
 // Click any content photo to view it full-size. Document previews (.doc-link) open their
-// PDF instead, and before/after sliders ([data-ba]) keep their drag behavior — both excluded.
+// PDF instead, and before/after sliders ([data-ba]) keep their drag behavior - both excluded.
 export function initLightbox() {
   const ZOOM_SCOPE = ".proof-card, .case-card, .ind-gallery, figure.photo";
   const dlg = document.createElement("dialog");

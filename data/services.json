@@ -2,8 +2,8 @@
   "services": [
     {
       "sku": "MS-LAB-WTR-RAW-WATER-STANDARD-ANALYSIS",
-      "name": "Raw Water — Standard Analysis",
-      "category": "Lab Testing — Water Analysis",
+      "name": "Raw Water - Standard Analysis",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 278.57,
       "currency": "usd",
@@ -11,8 +11,8 @@
     },
     {
       "sku": "MS-LAB-WTR-TOWER-WATER-STANDARD-BIO-COUNTS",
-      "name": "Tower Water — Standard + Bio Counts",
-      "category": "Lab Testing — Water Analysis",
+      "name": "Tower Water - Standard + Bio Counts",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 607.14,
       "currency": "usd",
@@ -20,8 +20,8 @@
     },
     {
       "sku": "MS-LAB-WTR-CHILL-WATER-STANDARD-BIO-COUNTS",
-      "name": "Chill Water — Standard + Bio Counts",
-      "category": "Lab Testing — Water Analysis",
+      "name": "Chill Water - Standard + Bio Counts",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 464.29,
       "currency": "usd",
@@ -29,8 +29,8 @@
     },
     {
       "sku": "MS-LAB-WTR-CLOSED-LOOP-WATER-STANDARD-BIO-COUNTS",
-      "name": "Closed Loop Water — Standard + Bio Counts",
-      "category": "Lab Testing — Water Analysis",
+      "name": "Closed Loop Water - Standard + Bio Counts",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 464.29,
       "currency": "usd",
@@ -38,8 +38,8 @@
     },
     {
       "sku": "MS-LAB-WTR-STEAM-BOILER-WATER-STANDARD",
-      "name": "Steam Boiler Water — Standard",
-      "category": "Lab Testing — Water Analysis",
+      "name": "Steam Boiler Water - Standard",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 307.14,
       "currency": "usd",
@@ -48,7 +48,7 @@
     {
       "sku": "MS-LAB-WTR-PRETREATMENT-WATER-SOFT-DEGAS",
       "name": "Pretreatment Water (Soft/Degas)",
-      "category": "Lab Testing — Water Analysis",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 307.14,
       "currency": "usd",
@@ -56,8 +56,8 @@
     },
     {
       "sku": "MS-LAB-WTR-BOILER-FEED-WATER-STANDARD",
-      "name": "Boiler Feed Water — Standard",
-      "category": "Lab Testing — Water Analysis",
+      "name": "Boiler Feed Water - Standard",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 307.14,
       "currency": "usd",
@@ -65,8 +65,8 @@
     },
     {
       "sku": "MS-LAB-WTR-POLISHER-WATER-STANDARD",
-      "name": "Polisher Water — Standard",
-      "category": "Lab Testing — Water Analysis",
+      "name": "Polisher Water - Standard",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 307.14,
       "currency": "usd",
@@ -74,8 +74,8 @@
     },
     {
       "sku": "MS-LAB-WTR-STEAM-CONDENSATE-STANDARD",
-      "name": "Steam Condensate — Standard",
-      "category": "Lab Testing — Water Analysis",
+      "name": "Steam Condensate - Standard",
+      "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": 428.57,
       "currency": "usd",
@@ -84,7 +84,7 @@
     {
       "sku": "MS-LAB-BIO-BIOLOGICAL-COUNTS-HPC-DIP-SLIDE",
       "name": "Biological Counts (HPC/dip-slide)",
-      "category": "Lab Testing — Biological",
+      "category": "Lab Testing - Biological",
       "unit": "per sample",
       "public_price": 92.86,
       "currency": "usd",
@@ -92,8 +92,8 @@
     },
     {
       "sku": "MS-LAB-BIO-LEGIONELLA-FULL-CULTURE-SPECIE-ID",
-      "name": "Legionella — Full Culture + Specie ID",
-      "category": "Lab Testing — Biological",
+      "name": "Legionella - Full Culture + Specie ID",
+      "category": "Lab Testing - Biological",
       "unit": "per sample",
       "public_price": 421.43,
       "currency": "usd",
@@ -101,8 +101,8 @@
     },
     {
       "sku": "MS-LAB-BIO-LEGIONELLA-PCR-POS-NEG",
-      "name": "Legionella — PCR Pos/Neg",
-      "category": "Lab Testing — Biological",
+      "name": "Legionella - PCR Pos/Neg",
+      "category": "Lab Testing - Biological",
       "unit": "per sample",
       "public_price": 285.71,
       "currency": "usd",
@@ -111,7 +111,7 @@
     {
       "sku": "MS-LAB-BIO-BIOLOGICAL-IDENTIFICATIONS",
       "name": "Biological Identifications",
-      "category": "Lab Testing — Biological",
+      "category": "Lab Testing - Biological",
       "unit": "per sample",
       "public_price": 292.86,
       "currency": "usd",
@@ -120,7 +120,7 @@
     {
       "sku": "MS-LAB-MAT-CORROSION-COUPON-ANALYSIS-INCL-PHOTO",
       "name": "Corrosion Coupon Analysis (incl. photo)",
-      "category": "Lab Testing — Materials",
+      "category": "Lab Testing - Materials",
       "unit": "per coupon",
       "public_price": 108.57,
       "currency": "usd",
@@ -129,7 +129,7 @@
     {
       "sku": "MS-LAB-MAT-PIPE-ANALYSIS-DEPOSIT-MEASUREMENTS-PHOTOS",
       "name": "Pipe Analysis (Deposit + Measurements + Photos)",
-      "category": "Lab Testing — Materials",
+      "category": "Lab Testing - Materials",
       "unit": "per pipe",
       "public_price": 2500,
       "currency": "usd",
@@ -137,8 +137,8 @@
     },
     {
       "sku": "MS-LAB-MAT-DEPOSIT-ANALYSIS-STANDARD",
-      "name": "Deposit Analysis — Standard",
-      "category": "Lab Testing — Materials",
+      "name": "Deposit Analysis - Standard",
+      "category": "Lab Testing - Materials",
       "unit": "per sample",
       "public_price": 464.29,
       "currency": "usd",
@@ -147,7 +147,7 @@
     {
       "sku": "MS-LAB-MAT-SINGLE-ELEMENT-ANALYSIS-ICP-OR-IC",
       "name": "Single Element Analysis (ICP or IC)",
-      "category": "Lab Testing — Materials",
+      "category": "Lab Testing - Materials",
       "unit": "per sample",
       "public_price": 92.86,
       "currency": "usd",
@@ -156,7 +156,7 @@
     {
       "sku": "MS-LAB-MAT-ABBREVIATED-ANALYSIS-ICP-OR-IC",
       "name": "Abbreviated Analysis (ICP or IC)",
-      "category": "Lab Testing — Materials",
+      "category": "Lab Testing - Materials",
       "unit": "per sample",
       "public_price": 250,
       "currency": "usd",

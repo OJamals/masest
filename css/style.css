@@ -448,7 +448,7 @@ no dots) ---------- */
 .trust-cols span { display: block; font-size: .78rem; font-weight: 500; color: var(--muted); margin-top: 2px; }
 
 /* ---------- Bento grid ---------- */
-.bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.bento { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-flow: dense; gap: 18px; }
 .bento-cell {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card);
   padding: 32px 30px; box-shadow: var(--shadow-xs);
@@ -1569,12 +1569,22 @@ scroll-snap gallery
   top: 0;
   bottom: 0;
   left: var(--pos);
+  width: 40px;
+  background: transparent;
+  transform: translateX(-20px);
+  z-index: 2;
+  pointer-events: none;
+}
+.ba-handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
   width: 2px;
   background: #fff;
   transform: translateX(-1px);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .15);
-  z-index: 2;
-  pointer-events: none;
 }
 .ba-handle::after {
   content: "\2194";
@@ -3132,6 +3142,7 @@ fully clickable cards) ---- */
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-auto-flow: dense;
   gap: 18px;
 }
 
@@ -3149,7 +3160,7 @@ fully clickable cards) ---- */
 .shop-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: var(--shadow-md); }
 .shop-card:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.shop-card-link { display: flex; flex: 1; flex-direction: column; color: inherit; text-decoration: none; }
+.shop-card-link { display: flex; flex: 1; min-width: 0; flex-direction: column; color: inherit; text-decoration: none; }
 .shop-card-link:focus-visible { outline: none; }
 
 .shop-card-media {
@@ -3157,12 +3168,47 @@ fully clickable cards) ---- */
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  overflow: hidden;
   aspect-ratio: 4 / 3;
   background: var(--bg);
   border-bottom: 1px solid var(--line-soft);
 }
 .shop-card-media img { width: 100%; height: 100%; object-fit: contain; padding: 14px; }
-.shop-card-media i { font-size: 3rem; color: var(--accent); }
+.shop-card-media > i { font-size: 3rem; color: var(--accent); }
+.shop-card-placeholder {
+  width: calc(100% - 28px);
+  height: calc(100% - 28px);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(14, 124, 134, .16);
+  background:
+    radial-gradient(circle at 28% 18%, rgba(14, 124, 134, .18), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, .92), rgba(232, 244, 245, .72));
+  color: var(--accent-ink);
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+.shop-card-placeholder i {
+  font-size: 2.7rem;
+  color: var(--accent);
+}
+.shop-card-placeholder span {
+  max-width: 12ch;
+  color: var(--ink);
+  font-size: .78rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.product-data-note {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
 .shop-card-media .hmis-badge { position: absolute; top: 10px; right: 10px; }
 
 .shop-card-body {
@@ -4379,7 +4425,7 @@ main:has(#pMediaSection) .section-head {
 
 .services-hero-copy .display {
   max-width: 780px;
-  font-size: clamp(2.9rem, 6vw, 5.9rem);
+  font-size: clamp(2.7rem, 4.8vw, 4.7rem);
 }
 
 .services-hero-copy .subhead {
@@ -5010,7 +5056,7 @@ main:has(#pMediaSection) .section-head {
 }
 
 .proof-led-catalog .display {
-  max-width: 12.5ch;
+  max-width: 15ch;
 }
 
 .proof-led-catalog .catalog-hero-media {
@@ -5068,6 +5114,8 @@ main:has(#pMediaSection) .section-head {
 }
 
 .shop-card-media img {
+  width: 92%;
+  height: 92%;
   padding: 18px;
   transition: transform .7s var(--premium-ease), filter .7s var(--premium-ease);
 }

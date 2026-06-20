@@ -1,4 +1,4 @@
-/* MASEST — account control injected into the site nav (.nav-actions).
+/* MASEST - account control injected into the site nav (.nav-actions).
  * Logged out: a "Sign in" button. Signed in: an account dropdown (Dashboard, Orders,
  * Messages, Notifications, Settings, Admin if staff, Sign out). Loaded by main.js after
  * the nav is built: import('js/account-nav.js').then(m => m.initAccountNav({ nav, root })). */

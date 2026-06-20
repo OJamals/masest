@@ -73,7 +73,7 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.equal(services.status, 200, "services page should exist");
     const servicesHtml = await services.text();
     assert.match(servicesHtml, /data-service-catalog/, "services page should render the service catalog");
-    assert.match(servicesHtml, /Testing, field support, and water-management services/);
+    assert.match(servicesHtml, /Testing and field support/);
 
     const duplicateCatalogPages = readdirSync(root)
       .filter((name) => name.endsWith(".html") && name !== "services.html")
@@ -125,10 +125,22 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
         add: !!card.querySelector("[data-cart-add]"),
       })));
       assert.ok(cardStates.length > 0);
+      const quoteFirst = new Set(["cr2", "sar", "eg5050"]);
       assert.deepEqual(
-        cardStates.filter((card) => !card.price || !card.buybar || !card.select || !card.add),
+        cardStates.filter((card) => !quoteFirst.has(card.id) && (!card.price || !card.buybar || !card.select || !card.add)),
         [],
-        "every public product card should expose price and buy controls"
+        "buyable public product cards should expose price and buy controls"
+      );
+      assert.deepEqual(
+        cardStates
+          .filter((card) => quoteFirst.has(card.id))
+          .map((card) => ({ id: card.id, price: card.price, select: card.select, add: card.add })),
+        [
+          { id: "cr2", price: "", select: false, add: false },
+          { id: "sar", price: "", select: false, add: false },
+          { id: "eg5050", price: "", select: false, add: false },
+        ],
+        "quote-first products should stay visible without add-cart controls"
       );
       assert.deepEqual(apiErrors, []);
     } finally {

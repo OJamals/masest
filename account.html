@@ -70,8 +70,8 @@
 <main id="main">
   <section class="hero-split">
     <div class="wrap">
-      <h1 class="display">Your VertKleen account.</h1>
-      <p class="subhead">Sign in to track orders and reorder. New here? Create a business account &mdash; once approved, you unlock online ordering and, where eligible, NET terms.</p>
+      <h1 class="display">Your VertKleen buying desk.</h1>
+      <p class="subhead">Sign in to track orders, reorder approved products, and keep quotes moving. New buyers can create a business account for online ordering and eligible NET terms.</p>
     </div>
   </section>
 
@@ -145,11 +145,11 @@
       <!-- Signed-in summary -->
       <div class="form-card" id="acctSummary" hidden>
         <h2 class="headline" style="font-size:1.5rem;margin-bottom:4px">Account</h2>
-        <div class="acct-row"><span>Signed in as</span><b id="smEmail">&mdash;</b></div>
-        <div class="acct-row"><span>Company</span><b id="smCompany">&mdash;</b></div>
+        <div class="acct-row"><span>Signed in as</span><b id="smEmail">Not set</b></div>
+        <div class="acct-row"><span>Company</span><b id="smCompany">Not set</b></div>
         <div class="acct-row"><span>Status</span><span class="acct-badge" id="smStatus" data-s="pending">pending</span></div>
-        <div class="acct-row"><span>Online ordering</span><b id="smCheckout">&mdash;</b></div>
-        <div class="acct-row"><span>NET terms</span><b id="smNet">&mdash;</b></div>
+        <div class="acct-row"><span>Online ordering</span><b id="smCheckout">Not set</b></div>
+        <div class="acct-row"><span>NET terms</span><b id="smNet">Not set</b></div>
         <p class="acct-status" id="smNote" data-state="" style="min-height:0"></p>
         <div id="smOrders"></div>
         <a class="btn btn-primary" href="dashboard.html" style="margin-top:18px">Open dashboard</a>
@@ -272,8 +272,8 @@
     completeCard.hidden = true;
     if (!data) { authBox.hidden = false; summary.hidden = true; return; }
     authBox.hidden = true; summary.hidden = false;
-    $("smEmail").textContent = data.email || "—";
-    $("smCompany").textContent = data.company?.name || "—";
+    $("smEmail").textContent = data.email || "Not set";
+    $("smCompany").textContent = data.company?.name || "Not set";
     const st = data.company?.status || "pending";
     const badge = $("smStatus"); badge.textContent = st; badge.dataset.s = st;
     $("smCheckout").textContent = data.can_checkout ? "Enabled" : "Pending approval";
@@ -337,7 +337,7 @@
       setStatus(status, "Account created.", "ok");
       await refresh();
     } catch (e) {
-      setStatus(status, e.message === "already_registered" ? "Already set up — reloading…" : "Could not finish: " + (e.message || "try again"), "err");
+      setStatus(status, e.message === "already_registered" ? "Already set up. Reloading..." : "Could not finish: " + (e.message || "try again"), "err");
       if (e.message === "already_registered") await refresh();
     }
   });
@@ -355,7 +355,7 @@
       await refresh();
     } catch (err) {
       const raw = String(err.message || "");
-      setStatus(status, /captcha/i.test(raw) ? "Verification failed — reload and complete the challenge." : "Sign in failed. Check your email and password.", "err");
+      setStatus(status, /captcha/i.test(raw) ? "Verification failed. Reload and complete the challenge." : "Sign in failed. Check your email and password.", "err");
     } finally { resetCaptcha(); btn.disabled = false; }
   });
 
@@ -421,10 +421,10 @@
       let msg = map[err.message];
       if (!msg) {
         const detail = [err.message, err.code, err.status, err.name].filter(Boolean).join(" ").trim();
-        if (/captcha/i.test(detail)) msg = "Verification failed — reload the page, complete the challenge, then try again.";
-        else if (/rate.?limit|over_email|too many/i.test(detail)) msg = "Too many attempts — wait a few minutes, then try again.";
+        if (/captcha/i.test(detail)) msg = "Verification failed. Reload the page, complete the challenge, then try again.";
+        else if (/rate.?limit|over_email|too many/i.test(detail)) msg = "Too many attempts. Wait a few minutes, then try again.";
         else if (/sending.*email|confirmation email|smtp|500/i.test(detail)) msg = "We couldn't send the confirmation email. Contact us at sales@masest.co to finish setup.";
-        else if (/password/i.test(detail)) msg = "Password too weak — use at least 8 characters.";
+        else if (/password/i.test(detail)) msg = "Password too weak. Use at least 8 characters.";
         else if (/already.*registered|user.*exists|email.*exists/i.test(detail)) msg = "This email already has an account. Sign in instead.";
         else msg = "Could not create account (" + (detail || "unknown error") + "). Try again shortly.";
       }
@@ -442,7 +442,7 @@
     const err = params.get("error_code") || params.get("error");
     if (!err) {
       // Success: email confirmed / signed in. supabase-js consumes the token; show a confirmation.
-      if (params.get("access_token")) { history.replaceState(null, "", location.pathname); showBanner("Email confirmed — you’re signed in."); }
+      if (params.get("access_token")) { history.replaceState(null, "", location.pathname); showBanner("Email confirmed. You are signed in."); }
       return;
     }
     history.replaceState(null, "", location.pathname); // clear hash so reload doesn't repeat

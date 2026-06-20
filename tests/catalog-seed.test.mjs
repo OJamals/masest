@@ -77,3 +77,23 @@ test("seed script imports products, variants, and services from canonical catalo
   assert.match(script, /\['product_variants', variants, 'vsku'\]/);
   assert.match(script, /\['services', services, 'sku'\]/);
 });
+
+test("public catalog excludes non-canonical program aliases", () => {
+  const data = catalog();
+  const slugs = data.products.map((product) => product.slug);
+  assert.equal(data.products.length, 20);
+  assert.ok(!slugs.includes("crs"), "CRS needs owner confirmation before public ecommerce listing");
+  assert.ok(!slugs.includes("dbnpa"), "DBNPA stays a program component, not canonical parent SKU");
+});
+
+test("site copy respects documentation claim guardrails", () => {
+  const catalogJs = readSite("js/main/catalog-data.js");
+  const productHtml = readSite("product.html");
+  const productsHtml = readSite("products.html");
+  const resourcesHtml = readSite("resources.html");
+
+  assert.doesNotMatch(catalogJs, /ids:\s*\[[^\]]*"crs"/, "CRS should not be in public replacement checker");
+  assert.doesNotMatch(productHtml, /crs:\s*"descaler"/, "CRS should not inherit Descaler commerce pricing");
+  assert.doesNotMatch(productsHtml, /Every product in purchasable catalog HMIS 0-0-0/);
+  assert.doesNotMatch(resourcesHtml, /Boeing\/Airbus certified degreaser/);
+});

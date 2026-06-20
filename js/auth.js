@@ -1,4 +1,4 @@
-/* MASEST commerce — client auth helper (Phase 1 scaffold).
+/* MASEST commerce - client auth helper (Phase 1 scaffold).
  * Not yet referenced by any page; wire into an account page in Phase 1 UI work.
  * Set these before import (e.g. injected at build, or a small inline <script>):
  *   window.MASEST_SUPABASE_URL, window.MASEST_SUPABASE_ANON
@@ -34,7 +34,7 @@ async function postRegister(token, { company, profile }) {
 }
 
 /* Register a B2B account: create the auth user, then create the company (pending approval).
- * If email confirmation is ON, signUp returns no session — we return pending_email_confirmation
+ * If email confirmation is ON, signUp returns no session - we return pending_email_confirmation
  * and the caller stashes {company, profile}, finishing via completeRegistration() after the user
  * confirms + logs in. captchaToken is required when Supabase Auth CAPTCHA (Turnstile) is enabled. */
 export async function register({ email, password, company, profile, captchaToken }) {
@@ -48,7 +48,7 @@ export async function register({ email, password, company, profile, captchaToken
   return postRegister(token, { company, profile });
 }
 
-/* Finish registration for a user who already has a session but no company yet — the
+/* Finish registration for a user who already has a session but no company yet - the
  * Confirm-email ON path, after the confirmation link establishes a session on return. */
 export async function completeRegistration({ company, profile }) {
   const sb = requireClient();

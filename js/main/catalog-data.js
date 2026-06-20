@@ -7,7 +7,7 @@ export const PRODUCTS = {
     icon: "ph-flask",
  image: "img/products/hvac-hcr-studio.webp",
     tag: "Biodegradable acid replacement for descaling, rust removal, and passivation. Designed to reduce fuming, burn, and hazmat handling risk versus legacy acids.",
-    desc: "A biodegradable, SynTec-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. Designed to reduce fuming, burn, and hazmat handling risk versus legacy acids.",
+    desc: "A biodegradable, SynTech-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. Designed to reduce fuming, burn, and hazmat handling risk versus legacy acids.",
     uses: [
       "Cooling tower fill and heat-exchanger descaling",
       "Rust removal: restored diamond-plated stainless steel stained for years",
@@ -16,7 +16,7 @@ export const PRODUCTS = {
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-atom", "SynTec powered", "Patented technology matching legacy acid performance"],
+      ["ph-atom", "SynTech powered", "Patented technology matching legacy acid performance"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates and phosphates"],
       ["ph-truck", "Non-hazmat shipping", "No DOT hazmat freight, lower shipping cost"]
     ],
@@ -40,7 +40,7 @@ export const PRODUCTS = {
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Non-fuming handling profile with broad material compatibility"],
       ["ph-seal-check", "NSF/ANSI 60", "Certified for drinking-water system chemicals"],
-      ["ph-atom", "SynTec powered", "Replaces sodium and potassium hydroxide"],
+      ["ph-atom", "SynTech powered", "Replaces sodium and potassium hydroxide"],
       ["ph-leaf", "Lower-impact discharge", "Simpler wastewater discharge profile"]
     ],
     docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Certification", "Technical Application Sheet"]
@@ -121,19 +121,19 @@ export const PRODUCTS = {
     hmis: "0-0-0",
  icon: "ph-shield-plus",
  image: "img/products/purgo-studio.webp",
-    tag: "FIFRA 25(b) minimum-risk oxidizing biocide for microbiological and Legionella-risk control.",
-    desc: "A FIFRA 25(b) minimum-risk oxidizing biocide replacing stabilized bromine and bleach (HMIS 3-0-1) for microbiological and Legionella-risk control.",
+    tag: "FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment for water-program support.",
+    desc: "A FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment used in water-program support and occupied-site maintenance workflows.",
     uses: [
-      "Cooling tower microbiological control",
-      "Legionella risk management (ASHRAE 188)",
+      "Water-program microbial and odor-control support",
+      "ASHRAE 188 documentation support when paired with testing and WMP scope",
       "Occupied-campus water treatment",
-      "General-use: no restricted-use applicator license required"
+      "Minimum-risk antimicrobial cleaning workflows"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Replaces bromine and bleach rated 3-0-1"],
+      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling profile versus bromine and bleach workflows"],
       ["ph-seal-check", "FIFRA 25(b)", "Minimum-risk classification"],
-      ["ph-buildings", "Occupied-site fit", "Built for routine water-treatment programs"],
-      ["ph-certificate", "No license barrier", "General-use in Florida, no FDACS license needed"]
+      ["ph-buildings", "Occupied-site fit", "Built for routine maintenance programs"],
+      ["ph-clipboard-text", "Use with scope notes", "Exact use claims route through label and program documentation"]
     ],
     docs: ["Safety Data Sheet (SDS)", "FIFRA 25(b) Documentation", "Cooling Tower Program Brochure"]
   },
@@ -177,7 +177,7 @@ export const PRODUCTS = {
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-gauge", "About 50% active", "Higher active strength than common 15% degreasers"],
-      ["ph-seal-check", "OEM cleared", "Approved by Crown Forklift and Plug Power; meets Boeing and Airbus cleaning specs"],
+      ["ph-seal-check", "OEM and spec support", "Crown Forklift, Plug Power, and aerospace-spec files route through document request"],
       ["ph-truck", "Non-hazmat shipping", "No DOT hazmat freight, lower shipping cost"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "Case Study: Walmart Distribution Centers"]
@@ -222,7 +222,7 @@ export const PRODUCTS = {
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "No hydrofluoric or hydrochloric acid"],
-      ["ph-atom", "Synthetic acid", "SynTec brightening without the burn and fume risk"],
+      ["ph-atom", "Synthetic acid", "SynTech brightening without the burn and fume risk"],
       ["ph-chart-line-up", "Brightening Index 90.1", "Outperformed hydrochloric acid at 86.3 in VertKleen testing"],
       ["ph-leaf", "Biodegradable", "Low-impact discharge profile"]
     ],
@@ -259,7 +259,7 @@ export const PRODUCTS = {
  icon: "ph-house-line",
  image: "img/products/lam3-studio.webp",
     tag: "Spray-and-walk-away remover for lichen, algae, moss, mold, and mildew on roofs, pavers, stucco, and siding.",
-    desc: "A neutral, spray-and-walk-away treatment that clears lichen, algae, moss, mold, and mildew from roofs, pavers, stucco, siding, and concrete, with no bleach and no harm to surrounding plants.",
+    desc: "A neutral, spray-and-walk-away treatment that clears lichen, algae, moss, mold, and mildew from roofs, pavers, stucco, siding, and concrete without bleach; follow label directions around landscaping.",
     uses: [
       "Roofs, siding, stucco, and pavers",
       "Concrete, walkways, and exterior walls",
@@ -268,9 +268,9 @@ export const PRODUCTS = {
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Neutral pH, no bleach, lower fume burden"],
-      ["ph-plant", "Plant and pet compatible", "Use according to label around landscaping and animals"],
+      ["ph-plant", "Label-directed exterior use", "Follow label directions around landscaping and animals"],
       ["ph-timer", "Spray and walk away", "Keeps working up to a month; reapply about every six months"],
-      ["ph-leaf", "100% biodegradable", "Non-skin-irritant in OECD 404 testing"]
+      ["ph-leaf", "Biodegradable stain remover", "Use SDS precautions for mild skin and eye irritation"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Data Sheet (TDS)", "Front and Back Label"]
   },
@@ -315,7 +315,7 @@ export const PRODUCTS = {
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop", "Low-foam formula", "Built for machine wash and recirculating systems"],
-      ["ph-atom", "SynTec powered", "Heavy-duty degreasing without solvent odor"],
+      ["ph-atom", "SynTech powered", "Heavy-duty degreasing without solvent odor"],
       ["ph-truck", "Non-hazmat shipping", "No DOT hazmat freight, lower shipping cost"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
@@ -327,8 +327,8 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/hvac-cr-studio.webp",
-    tag: "Higher-concentration CR for demanding alkaline cleaning and water-treatment programs with published list pricing.",
-    desc: "A higher-concentration version of VertKleen CR for demanding alkaline cleaning and water-treatment work. Small packs are priced online; drums route through freight review.",
+    tag: "Higher-concentration CR-family SKU for demanding alkaline cleaning and water-treatment programs.",
+    desc: "A higher-concentration version of VertKleen CR for demanding alkaline cleaning and water-treatment work. Route through quote review until application notes and final SKU guidance are confirmed.",
     uses: [
       "Concentrated alkaline cleaning programs",
       "Water-treatment dosing where strength matters",
@@ -337,7 +337,7 @@ export const PRODUCTS = {
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop-half", "Higher concentration", "More active cleaning per gallon than standard CR"],
-      ["ph-atom", "SynTec powered", "Caustic-level performance with HMIS 0-0-0 handling"]
+      ["ph-atom", "SynTech powered", "Caustic-level performance with HMIS 0-0-0 handling"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -348,8 +348,8 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-wrench",
     image: "img/products/crs-studio.webp",
-    tag: "Specialty acid replacement for targeted descaling and water-side work with published list pricing.",
-    desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. Small packs are priced online; drums route through freight review.",
+    tag: "Specialty acid replacement for targeted descaling and water-side work.",
+    desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. Route through quote review until application sheets and final SKU guidance are confirmed.",
     uses: [
       "Specialty descaling and acid-cleaning jobs",
       "Water-side scale and mineral removal",
@@ -448,13 +448,13 @@ pg100: {
     replaces: "Economy 50% ethylene glycol blend",
     hmis: "0-0-0",
     icon: "ph-thermometer-cold",
-    tag: "Economy 50/50 ethylene glycol blend for routine loop top-offs and maintenance.",
-    desc: "A 50/50 ethylene glycol blend for routine closed-loop maintenance and top-off work.",
+    tag: "Economy 50/50 ethylene glycol blend for quote-reviewed loop top-offs and maintenance.",
+    desc: "A 50/50 ethylene glycol blend for closed-loop maintenance and top-off work where scope, fluid compatibility, and supply path are confirmed before purchase.",
     uses: ["Loop top-offs", "Routine freeze-protection maintenance", "Industrial heat-transfer service"],
     specs: [
       ["ph-drop", "EG 50/50", "Premixed ethylene glycol solution"],
       ["ph-thermometer-cold", "Freeze protection", "For routine loop service"],
-      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+      ["ph-truck", "Quote-reviewed", "Confirm pack size, loop chemistry, and freight path before purchase"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   }
@@ -466,7 +466,7 @@ export const CATALOG_ORDER = [
   "pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"
 ];
 
-// Catalog UI groupings (curated, not the raw `cat` field) — drive the category
+// Catalog UI groupings (curated, not the raw `cat` field) - drive the category
 // filter chips and grouping on the products page.
 export const CATALOG_GROUPS = [
   { key: "descale", label: "Rust & Scale", ids: ["hcr", "descaler"] },
@@ -476,11 +476,13 @@ export const CATALOG_GROUPS = [
   { key: "glycol", label: "Glycols", ids: ["pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"] }
 ];
 
+export const QUOTE_FIRST_IDS = ["crs", "cr2", "sar", "eg5050"];
+
 // Automated replacement checker: the legacy chemical a buyer uses today, the job
 // it does, and the VertKleen product ids that replace it. Single source of truth
 // for the compact top-of-page matrix and the live catalog filter.
 export const REPLACEMENT_MAP = [
-  { legacy: "Muriatic / hydrochloric acid", job: "Rust, scale & passivation", ids: ["hcr", "descaler", "crs"] },
+  { legacy: "Muriatic / hydrochloric acid", job: "Rust, scale & passivation", ids: ["hcr", "descaler"] },
   { legacy: "Caustic soda / sodium hydroxide", job: "pH adjustment & caustic cleaning", ids: ["cr"] },
   { legacy: "Simple Green / Zep / butyl degreasers", job: "Heavy-duty degreasing", ids: ["crhd"] },
   { legacy: "Caustic & solvent degreasers", job: "Degreasing sensitive surfaces", ids: ["neutral"] },
@@ -543,9 +545,9 @@ export const PRODUCT_CATALOG_COPY = {
     proof: "NSF/ANSI 60 and program documents"
   },
   purgo: {
-    job: "Microbiological control",
-    summary: "For water-treatment programs that need oxidizing control with easier occupied-site handling.",
-    fits: ["towers", "Legionella plans", "campuses", "general use"],
+    job: "Antimicrobial and odor-control support",
+    summary: "For programs that need minimum-risk antimicrobial support with easier occupied-site handling.",
+    fits: ["towers", "WMP support", "campuses", "general use"],
     proof: "Program documents and safety notes"
   },
   dbnpa: {
@@ -580,13 +582,13 @@ export const PRODUCT_CATALOG_COPY = {
   },
   cr2: {
     job: "Concentrated alkaline cleaning",
-    summary: "A higher-concentration CR for demanding alkaline cleaning and water-treatment programs with published list pricing.",
+    summary: "A higher-concentration CR-family SKU for accounts that already understand CR workflows; confirm application notes before rollout.",
     fits: ["alkaline cleaning", "water treatment", "high-pH", "dosing"],
     proof: "Application notes on request"
   },
   sar: {
     job: "Specialty acid replacement",
-    summary: "A tuned acid-replacement formulation for targeted descaling and water-side work with published list pricing.",
+    summary: "A tuned acid-replacement SKU for targeted descaling and water-side work; route through quote review until application sheets are final.",
     fits: ["descaling", "water-side scale", "specialty acid", "maintenance"],
     proof: "Application notes on request"
   }
@@ -623,7 +625,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   eg5050: {
     job: "Economy EG 50/50 blend",
-    summary: "Premixed 50/50 ethylene glycol blend for routine top-offs and maintenance.",
+    summary: "Premixed 50/50 ethylene glycol blend for quote-reviewed loop top-offs and maintenance.",
     fits: ["loop top-offs", "routine maintenance", "freeze protection"],
     proof: "Pricing launch spec"
   }

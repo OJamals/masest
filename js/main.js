@@ -1,6 +1,6 @@
 /* MASEST / VertKleen shared JS (v2, taste-skill applied)
    Icons: Phosphor web family only. No emoji. No em-dashes in copy. */
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCT_GALLERY, PRODUCTS, REPLACEMENT_MAP } from "./main/catalog-data.js";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCT_GALLERY, PRODUCTS, QUOTE_FIRST_IDS, REPLACEMENT_MAP } from "./main/catalog-data.js";
 import { renderChrome } from "./main/chrome.js";
 import { initResponsiveTables, initReveal } from "./main/effects.js";
 import { initServiceCatalog } from "./main/service-catalog.js";
@@ -22,6 +22,7 @@ window.MASESTMain = {
   PRODUCT_CATALOG_COPY,
   PRODUCT_GALLERY,
   PRODUCTS,
+  QUOTE_FIRST_IDS,
   REPLACEMENT_MAP,
   catalogCard,
   initReveal,

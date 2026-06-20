@@ -33,6 +33,9 @@ async function withServer(fn) {
 }
 
 async function routeProducts(page) {
+  await page.addInitScript(() => {
+    window.MASEST_ENABLE_LOCAL_API = true;
+  });
   await page.route("**/api/products", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",

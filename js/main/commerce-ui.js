@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, REPLACEMENT_MAP } from "./catalog-data.js";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, REPLACEMENT_MAP } from "./catalog-data.js";
 
 const IMAGE_DIMS = {
   "img/products/dbnpa-studio.webp": [900, 822],
@@ -47,19 +47,18 @@ const commerceState = {
 };
 
 const COMMERCE_SKU_ALIASES = {
-  crs: "descaler",
   crhd: "cr-hd",
 };
 
 function commerceRowFor(id) {
   const key = String(id || "").toLowerCase();
+  if (QUOTE_FIRST_IDS.includes(key)) return null;
   return commerceState.products.get(key) || commerceState.products.get(COMMERCE_SKU_ALIASES[key]);
 }
 
 function isLocalStaticPreview() {
   const localHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
-  const staticPreviewPort = /^(4173|4194|4195)$/.test(location.port);
-  return localHost && staticPreviewPort && !window.MASEST_ENABLE_LOCAL_API;
+  return localHost && !window.MASEST_ENABLE_LOCAL_API;
 }
 
 export function isLocalStaticCommerceSuppressed() {
@@ -298,9 +297,10 @@ export function catalogCard(id) {
     ? '<span class="hmis-badge">HMIS 0-0-0</span>'
     : '<span class="hmis-badge note">LOW HAZARD</span>';
   const mediaInfo = commerceMediaFor(id);
+  const group = CATALOG_GROUPS.find((g) => g.ids.includes(id));
   const media = mediaInfo.src
     ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="lazy" ${imageDimsAttr(mediaInfo.src)}>`
-    : `<i class="ph ${p.icon}" aria-hidden="true"></i>`;
+    : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
   return `
     <article class="shop-card" data-id="${id}">
       <div class="shop-card-core">

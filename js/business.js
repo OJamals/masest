@@ -1,6 +1,6 @@
-/* MASEST — Business hub controller. Gated to signed-in B2B accounts.
+/* MASEST - Business hub controller. Gated to signed-in B2B accounts.
  * Program-enrollment and bulk-order requests are posted through the company support thread
- * (/api/account/messages), so staff see them in the admin Messages tab — no extra tables. */
+ * (/api/account/messages), so staff see them in the admin Messages tab - no extra tables. */
 import { me, api } from './auth.js';
 import { esc } from './util.js';
 
@@ -18,7 +18,7 @@ function renderProfile(data) {
   const badge = `<span class="badge" data-s="${esc(c.status || 'pending')}">${esc(c.status || 'pending')}</span>`;
   $('bizProfile').innerHTML = `
     <h2>Your business</h2>
-    <div class="biz-row"><span>Company</span><b>${esc(c.name || '—')}</b></div>
+    <div class="biz-row"><span>Company</span><b>${esc(c.name || '-')}</b></div>
     <div class="biz-row"><span>Status</span>${badge}</div>
     <div class="biz-row"><span>NET terms</span><b>${data.can_use_net_terms ? 'NET-' + c.net_terms_days : 'Not enabled'}</b></div>
     <div class="biz-row"><span>Tax-exempt</span><b>${c.tax_exempt ? 'Yes' : 'No'}</b></div>
@@ -157,9 +157,9 @@ async function requestProgram(tier, btn) {
       // No online price configured yet → fall back to a request-enrollment message.
       try {
         await api('/api/account/messages', { method: 'POST', body: {
-          body: `Program enrollment request — ${tier} tier. Please scope a plan and pricing for our operation.`,
+          body: `Program enrollment request - ${tier} tier. Please scope a plan and pricing for our operation.`,
         } });
-        status.textContent = `${tier} request sent — your account team will follow up in your dashboard messages.`;
+        status.textContent = `${tier} request sent - your account team will follow up in your dashboard messages.`;
         status.dataset.state = 'ok';
       } catch { status.textContent = 'Could not send the request. Try again.'; status.dataset.state = 'err'; }
     } else if (e.status === 403 && e.data?.error === 'not_approved') {
@@ -179,7 +179,7 @@ async function renderProgramStatus() {
     if (active) { $('programStatus').textContent = `Active program: ${active.tier}.`; $('programStatus').dataset.state = 'ok'; }
   } catch { /* none */ }
   if (new URLSearchParams(location.search).get('program') === 'success') {
-    $('programStatus').textContent = 'Program started — thank you. It will show as active here shortly.';
+    $('programStatus').textContent = 'Program started - thank you. It will show as active here shortly.';
     $('programStatus').dataset.state = 'ok';
   }
 }
@@ -197,7 +197,7 @@ function wireBulk() {
         body: `Bulk / standing order request:\n${itemsText}${notes ? `\nNotes: ${notes}` : ''}`,
       } });
       e.target.reset();
-      status.textContent = 'Bulk request sent — we’ll reply with a quote in your dashboard messages.';
+      status.textContent = 'Bulk request sent - we’ll reply with a quote in your dashboard messages.';
       status.dataset.state = 'ok';
     } catch (err) {
       status.textContent = err.status === 401 ? 'Please sign in again.' : 'Could not send. Try again.';
@@ -249,7 +249,7 @@ async function boot() {
   if (!data) { $('bizGuest').hidden = false; return; }
   if (data.needs_profile) {
     $('bizGuest').hidden = false;
-    $('bizGuest').querySelector('p').textContent = 'Your email is confirmed — finish setting up your business account to access programs and bulk ordering.';
+    $('bizGuest').querySelector('p').textContent = 'Your email is confirmed - finish setting up your business account to access programs and bulk ordering.';
     $('bizGuest').querySelector('a').textContent = 'Finish setting up';
     return;
   }

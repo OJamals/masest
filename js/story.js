@@ -1,7 +1,7 @@
 /* ============================================================
-   MASEST / VertKleen — Scrollytelling engine v5
+   MASEST / VertKleen - Scrollytelling engine v5
    NATIVE browser scroll. One GSAP timeline per act, driven by
-   ScrollTrigger scrub (the single smoothing layer — no Lenis,
+   ScrollTrigger scrub (the single smoothing layer - no Lenis,
    no wheel multipliers, no custom damping). Wheel feel is the
    browser's own; animations catch up over ~0.3s.
    Act 1: curated field-photo reel. Act 2: debris accumulation
@@ -78,7 +78,7 @@ states.forEach(function (st) {
       trigger: st.act,
         /* One entry model for every act: the scrub begins as the stage pins
            just under the nav, so each act's [data-at] beats reveal while it's
-           held on screen — not during the slide-up, where they're missed.
+           held on screen - not during the slide-up, where they're missed.
            (The opener is already at the page top on load; same start applies.) */
         start: "top 67px",
         end: "bottom bottom",
@@ -199,7 +199,7 @@ states.forEach(function (st) {
     if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = (current + 1) + " / " + n; }
   }
 
-  /* ---- ACT 3: HMIS hazard diamond — cycle the four legacy chemicals ----
+  /* ---- ACT 3: HMIS hazard diamond - cycle the four legacy chemicals ----
      The diamond + label are driven entirely here (no [data-at] on the rig);
      numbers count up on the first chemical, then the rig dips at each boundary
      so the swap to the next chemical reads as a crossfade. Data + the no-JS
@@ -247,7 +247,7 @@ states.forEach(function (st) {
       if (hmisDiamond) hmisDiamond.setAttribute("aria-label",
         "Hazard diamond for " + c.name + ": health " + c.h + ", flammability " + c.f + ", reactivity " + c.r + ", " + c.type.toLowerCase());
     }
-    /* dip at internal boundaries only — full at the first chemical's start and the last one's hold */
+    /* dip at internal boundaries only - full at the first chemical's start and the last one's hold */
     var edgeIn = idx === 0 ? 1 : smooth(clamp(0, 1, local / 0.12));
     var edgeOut = idx === n - 1 ? 1 : smooth(clamp(0, 1, (1 - local) / 0.12));
     if (hmisStack) hmisStack.style.opacity = (enter * Math.min(edgeIn, edgeOut)).toFixed(3);
@@ -278,7 +278,7 @@ states.forEach(function (st) {
 
   /* ============================================================
      CANVAS SYSTEMS (ambient physics on gsap.ticker; scroll only
-     sets intensity via st.p — never blocks or smooths input)
+     sets intensity via st.p - never blocks or smooths input)
      ============================================================ */
   function makeSprite(r, rgb) {
     var cv = document.createElement("canvas");
@@ -349,18 +349,18 @@ states.forEach(function (st) {
     ctx.globalAlpha = 1;
   }
 
-  /* --- ACT 2: DEBRIS — falls into a vertical zig-zag pipe ---
+  /* --- ACT 2: DEBRIS - falls into a vertical zig-zag pipe ---
      The pipe is a polyline that descends through elbows. Debris is
      advected along the pipe's arc length (gravity biases it toward the
-     down-wall), and crust accumulates per arc-length bucket — heaviest
+     down-wall), and crust accumulates per arc-length bucket - heaviest
      at the elbows, where real systems clog first. Each enemy type favors
      a home stretch of the run, matching the four chips. The bore visibly
      narrows and flow speeds through the chokes (continuity preserved). */
   var DEB_TYPES = [
-    { c: "201,212,208", hs: 0.08 },  /* scale   — top horizontal run */
-    { c: "194,85,58",   hs: 0.34 },  /* rust    — right vertical     */
-    { c: "194,160,78",  hs: 0.58 },  /* grease  — middle bend        */
-    { c: "111,168,99",  hs: 0.84 }   /* biofilm — lower run / exit   */
+    { c: "201,212,208", hs: 0.08 },  /* scale   - top horizontal run */
+    { c: "194,85,58",   hs: 0.34 },  /* rust    - right vertical     */
+    { c: "194,160,78",  hs: 0.58 },  /* grease  - middle bend        */
+    { c: "111,168,99",  hs: 0.84 }   /* biofilm - lower run / exit   */
   ];
   /* normalized centerline (fractions of the stage). The chip CSS
      positions in story.css are hand-aligned to these points. */
@@ -463,7 +463,7 @@ states.forEach(function (st) {
     function crustAt(side, s) { return D.crust[side][bkt(s)]; }
     function openAt(s) { return Math.max(12, (half - crustAt(0, s)) + (half - crustAt(1, s))); }
     function flowSpeed(s) { return clamp(1, 3.2, P.bore / openAt(s)); }
-    /* elbow proximity 0..1 (higher = nearer a bend) boosts deposition —
+    /* elbow proximity 0..1 (higher = nearer a bend) boosts deposition -
        real systems clog at the bends first */
     function elbowBoost(s) {
       var best = 0;
@@ -704,12 +704,12 @@ states.forEach(function (st) {
     }
   }
   /* ============================================================
-     AUTHORITATIVE VISIBILITY — derived from scroll geometry, not
+     AUTHORITATIVE VISIBILITY - derived from scroll geometry, not
      from directional-callback history. Exactly one act's sticky
      stage owns the viewport; it shows, the rest hide. Because this
      is a pure function of position, a resize / window-move / the
      browser's scrollY-clamp on a now-shorter page cannot strand a
-     stage at visibility:hidden — the next frame (or refresh) snaps
+     stage at visibility:hidden - the next frame (or refresh) snaps
      it back to the truth. The onEnter/onLeave alpha sets above are
      now just hints; this is the source of truth.
      ============================================================ */
@@ -752,7 +752,7 @@ states.forEach(function (st) {
   syncStoryFocus();
 
   /* Paint the opening act at rest so the first field photo and the
-     parallax backdrop are visible on load, before any scroll — without
+     parallax backdrop are visible on load, before any scroll - without
      this the reel sits at its CSS opacity:0 until the first scroll. */
   if (states[0]) { states[0].p = 0; onActScrub(states[0]); }
   reassertVisibility();
@@ -768,7 +768,7 @@ states.forEach(function (st) {
 
   /* Window dragged between displays of different pixel density: refresh so the
      canvas re-rasterizes at the new DPR (its backing size folds devicePixelRatio)
-     and visibility re-asserts. Re-arms after each change — the query is DPR-specific. */
+     and visibility re-asserts. Re-arms after each change - the query is DPR-specific. */
   function watchDpr() {
     var mq = window.matchMedia("(resolution: " + (window.devicePixelRatio || 1) + "dppx)");
     var onChange = function () { mq.removeEventListener("change", onChange); ScrollTrigger.refresh(); watchDpr(); };

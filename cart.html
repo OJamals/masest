@@ -58,7 +58,7 @@
             <option value="west">US West</option>
           </select>
           <p class="ship-est-out" id="shipEstOut"></p>
-          <p class="ship-est-note">Estimate only — final freight confirmed on your invoice.</p>
+          <p class="ship-est-note">Estimate only. Final freight is confirmed on your invoice.</p>
         </div>
         <label class="field-label" for="checkoutEmail">Email for receipt</label>
         <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" placeholder="buyer@company.com">
@@ -101,7 +101,7 @@ async function loadCatalog() {
           const productName = parent.name || p.name || p.sku;
           const label = p.label || "Each";
           vmap.set(p.vsku, {
-            name: `${productName} — ${label}`,
+            name: `${productName} - ${label}`,
             gallons: Number(p.gallons) || 0,
             price: p.price == null ? null : Number(p.price),
             currency: p.currency || parent.currency || "usd",
@@ -124,7 +124,7 @@ async function loadCatalog() {
         variants.forEach(v => {
           if (!v || !v.vsku) return;
           vmap.set(v.vsku, {
-            name: `${p.name} — ${v.label}`,
+            name: `${p.name} - ${v.label}`,
             gallons: Number(v.gallons) || 0,
             price: v.price == null ? null : Number(v.price),
             currency: v.currency || p.currency || "usd",
@@ -352,7 +352,7 @@ async function loadCatalog() {
       const email = document.getElementById("checkoutEmail");
       if (email && !email.value) email.value = data.email || "";
     } else {
-      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Checking out as a guest. <a class="btn-sm" href="account.html?return=cart.html">Sign in or create an account</a> for NET terms and saved details — your cart stays with you.`;
+      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Checking out as a guest. <a class="btn-sm" href="account.html?return=cart.html">Sign in or create an account</a> for NET terms and saved details. Your cart stays with you.`;
     }
     box.hidden = false;
   }
