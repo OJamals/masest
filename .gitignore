@@ -7,3 +7,5 @@ backups/
 .dev.vars
 .wrangler/
 test-results/
+.headroom/
+.serena/
