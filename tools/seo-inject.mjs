@@ -22,7 +22,7 @@ const ORG = {
   logo: `${BASE}/img/masest-logo.png`,
   brand: 'VertKleen',
   description: 'HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.',
-  areaServed: 'Worldwide',
+  areaServed: 'United States and international commercial accounts',
   contactPoint: { '@type': 'ContactPoint', contactType: 'sales', url: `${BASE}/contact.html` },
 };
 

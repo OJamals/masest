@@ -301,13 +301,14 @@ export function catalogCard(id) {
   const media = mediaInfo.src
     ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="lazy" ${imageDimsAttr(mediaInfo.src)}>`
     : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
+  const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial chemistry");
   return `
     <article class="shop-card" data-id="${id}">
       <div class="shop-card-core">
       <a class="shop-card-link" href="product.html?id=${id}" aria-label="View details for ${p.name}">
         <span class="shop-card-media">${media}${badge}</span>
         <span class="shop-card-body">
-          <span class="shop-card-type">${copy.job || "Industrial chemistry"}</span>
+          <span class="shop-card-type">${type}</span>
           <b class="shop-card-name">${p.name}</b>
           <span class="shop-card-replaces">${p.replaces}</span>
           <span class="shop-card-cta">View details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
@@ -351,7 +352,7 @@ export function initCartButtons() {
 function swapRow(row, i) {
   const names = row.ids.map((id) => PRODUCTS[id]?.name).filter(Boolean).join(", ");
   return `
-    <button type="button" class="swap-row" data-row="${i}" aria-label="Show VertKleen swap for ${row.legacy}">
+    <button type="button" class="swap-row" data-row="${i}" aria-label="Show VertKleen replacement for ${row.legacy}">
       <span class="swap-legacy"><em>Replace</em>${row.legacy}</span>
       <span class="swap-job"><em>For</em>${row.job}</span>
       <span class="swap-arrow" aria-hidden="true"><i class="ph ph-arrow-right"></i></span>

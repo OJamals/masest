@@ -73,7 +73,13 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.equal(services.status, 200, "services page should exist");
     const servicesHtml = await services.text();
     assert.match(servicesHtml, /data-service-catalog/, "services page should render the service catalog");
-    assert.match(servicesHtml, /Testing and field support/);
+    assert.match(servicesHtml, /Technical services that make the chemical switch easier to approve/);
+    assert.match(servicesHtml, /35 quote-service line items plus 4 service packages/);
+    assert.doesNotMatch(servicesHtml, /"offerCount":"39"/);
+    const schema = JSON.parse(servicesHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)<\/script>/)[1]);
+    const serviceNode = schema["@graph"].find((node) => node["@type"] === "Service");
+    assert.equal(serviceNode.offers.offerCount, 35);
+    assert.match(serviceNode.offers.description, /quote-service line items/);
 
     const duplicateCatalogPages = readdirSync(root)
       .filter((name) => name.endsWith(".html") && name !== "services.html")
@@ -125,7 +131,7 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
         add: !!card.querySelector("[data-cart-add]"),
       })));
       assert.ok(cardStates.length > 0);
-      const quoteFirst = new Set(["cr2", "sar", "eg5050"]);
+      const quoteFirst = new Set(["watersafe60", "cr2", "sar", "eg5050"]);
       assert.deepEqual(
         cardStates.filter((card) => !quoteFirst.has(card.id) && (!card.price || !card.buybar || !card.select || !card.add)),
         [],
@@ -136,6 +142,7 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
           .filter((card) => quoteFirst.has(card.id))
           .map((card) => ({ id: card.id, price: card.price, select: card.select, add: card.add })),
         [
+          { id: "watersafe60", price: "", select: false, add: false },
           { id: "cr2", price: "", select: false, add: false },
           { id: "sar", price: "", select: false, add: false },
           { id: "eg5050", price: "", select: false, add: false },

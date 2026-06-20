@@ -1,7 +1,9 @@
 // Build MASEST commerce catalog artifacts from data/catalog.seed.json.
 //
-// Catalog policy, owner-approved 2026-06-18:
-// - All product families are buyable in small packs: 1, 2.5, and 5 gal.
+// Catalog policy, owner-approved 2026-06-20:
+// - Most product families are buyable in small packs: 1, 2.5, and 5 gal.
+// - Documentation-gated products stay quote-first until SDS/TDS/certification
+//   and launch pricing proof are confirmed: WaterSafe60, CR2, SAR, EG 50/50.
 // - Bulk 55/275 gal drums and totes stay quote-routed because freight/final
 //   scope changes at that size.
 // - Missing small-pack prices are derived from the product's 5 gal list price
@@ -14,6 +16,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 const here = (p) => new URL(`../${p}`, import.meta.url);
 const SMALL_PACKS = new Set([1, 2.5, 5]);
+const QUOTE_REVIEW_PRODUCTS = new Set(['watersafe60', 'cr2', 'sar', 'eg5050']);
 
 const catalog = JSON.parse(await readFile(here('data/catalog.seed.json'), 'utf8'));
 
@@ -43,15 +46,18 @@ function deriveSmallPackPrice(variant, pricedMap) {
 }
 
 // 1) Apply product and variant policy.
-for (const product of catalog.products) product.mode = 'buy';
+for (const product of catalog.products) {
+  product.mode = QUOTE_REVIEW_PRODUCTS.has(product.slug) ? 'quote' : 'buy';
+}
 
 const pricedMap = pricedByProduct(catalog.product_variants);
 for (const variant of catalog.product_variants) {
   const gallons = Number(variant.size_gal);
   if (SMALL_PACKS.has(gallons)) {
     variant.retail_price = deriveSmallPackPrice(variant, pricedMap);
-    variant.active = variant.retail_price != null;
-    variant.requires_quote = !variant.active;
+    const quoteReview = QUOTE_REVIEW_PRODUCTS.has(variant.product_slug);
+    variant.active = !quoteReview && variant.retail_price != null;
+    variant.requires_quote = quoteReview || !variant.active;
     continue;
   }
   if (gallons >= 55) {
@@ -68,14 +74,23 @@ const missingSmallPack = catalog.products.flatMap((product) => {
   const small = catalog.product_variants.filter((v) => (
     v.product_slug === product.slug && SMALL_PACKS.has(Number(v.size_gal))
   ));
-  return small.length && small.every((v) => v.active && Number(v.retail_price) > 0) ? [] : [product.slug];
+  if (!small.length) return [product.slug];
+  if (QUOTE_REVIEW_PRODUCTS.has(product.slug)) {
+    return product.mode === 'quote' && small.every((v) => v.active === false && v.requires_quote === true)
+      ? []
+      : [product.slug];
+  }
+  return product.mode === 'buy'
+    && small.every((v) => v.active === true && Number(v.retail_price) > 0 && v.requires_quote === false)
+    ? []
+    : [product.slug];
 });
 const dupV = findDupes(catalog.product_variants.map((v) => v.sku));
 const dupP = findDupes(catalog.products.map((p) => p.slug));
 const errors = [
   ...badPriced.map((v) => `active variant has invalid price: ${v.sku}`),
   ...bigBuyable.map((v) => `bulk variant must be quote-routed: ${v.sku}`),
-  ...missingSmallPack.map((slug) => `product missing priced small packs: ${slug}`),
+  ...missingSmallPack.map((slug) => `product small-pack readiness policy failed: ${slug}`),
   ...dupV.map((sku) => `duplicate variant sku: ${sku}`),
   ...dupP.map((slug) => `duplicate product slug: ${slug}`),
 ];

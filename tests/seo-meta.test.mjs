@@ -57,5 +57,5 @@ test("product no-script fallback starts with an h1", () => {
   const firstHeading = fallback.match(/<h([1-6])\b/i)?.[1];
 
   assert.equal(firstHeading, "1");
-  assert.match(fallback, /Procurement-ready VertKleen replacements\./);
+  assert.match(fallback, /Find the VertKleen replacement before the next PO\./);
 });

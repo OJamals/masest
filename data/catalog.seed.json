@@ -15,7 +15,7 @@
       "active": true,
       "public_visible": true,
       "sort": 1,
-      "description": "Rust, scale, calcium; acid replacement",
+      "description": "Rust, scale, calcium; acid-replacement workhorse with field proof",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -31,7 +31,7 @@
       "active": true,
       "public_visible": true,
       "sort": 2,
-      "description": "Algae, moss, drain; caustic replacement",
+      "description": "Caustic replacement for drains, organics, pH, and CIP",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -47,7 +47,7 @@
       "active": true,
       "public_visible": true,
       "sort": 3,
-      "description": "Non-corrosive HCl replacement; pH 0",
+      "description": "HCl-style descaling for coils, towers, pumps, and loops",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -63,7 +63,7 @@
       "active": true,
       "public_visible": true,
       "sort": 4,
-      "description": "Industrial degreaser; Boeing/Airbus cert",
+      "description": "High-active degreaser with Walmart DC proof; support files by request",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -79,7 +79,7 @@
       "active": true,
       "public_visible": true,
       "sort": 5,
-      "description": "Low-foam degreaser; machine-wash",
+      "description": "CR HD-style degreasing for scrubbers and recirculating wash",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -95,7 +95,7 @@
       "active": true,
       "public_visible": true,
       "sort": 6,
-      "description": "Neutral pH-7 degreaser; all surfaces",
+      "description": "pH-7 degreaser when surfaces, seals, or finishes get a vote",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -111,7 +111,7 @@
       "active": true,
       "public_visible": true,
       "sort": 7,
-      "description": "Universal cleaner / sanitizer (Fortis)",
+      "description": "One-bottle facility cleaner for wet zones, exteriors, and daily mess",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -127,7 +127,7 @@
       "active": true,
       "public_visible": true,
       "sort": 8,
-      "description": "Vehicle wash + wax; one-step",
+      "description": "Wash, wax, done - vehicle and marine gloss in one pass",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -143,7 +143,7 @@
       "active": true,
       "public_visible": true,
       "sort": 9,
-      "description": "Aluminum brightener; no-acid; no etching",
+      "description": "HF/HCl-free aluminum brightening with strong Acid Brightening Index proof",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -159,7 +159,7 @@
       "active": true,
       "public_visible": true,
       "sort": 10,
-      "description": "Antimicrobial bio-treatment; FIFRA 25(b)",
+      "description": "Minimum-risk antimicrobial and odor-control support; FIFRA 25(b)",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -175,7 +175,7 @@
       "active": true,
       "public_visible": true,
       "sort": 11,
-      "description": "Lichen, algae, moss, mold remover",
+      "description": "Spray-and-walk-away remover for lichen, algae, moss, and mold",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -185,13 +185,13 @@
       "family": "water_treatment_specialty",
       "group_key": "water",
       "hmis": "0-0-0",
-      "mode": "buy",
+      "mode": "quote",
       "taxable": true,
       "hazmat": false,
       "active": true,
       "public_visible": true,
       "sort": 12,
-      "description": "NSF/ANSI 60 cooling tower inhibitor",
+      "description": "Heavy-metal-free cooling tower inhibitor; NSF/ANSI 60 files by request",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -201,13 +201,13 @@
       "family": "water_treatment_specialty",
       "group_key": "water",
       "hmis": "0-0-0",
-      "mode": "buy",
+      "mode": "quote",
       "taxable": true,
       "hazmat": false,
       "active": true,
       "public_visible": true,
       "sort": 13,
-      "description": "Higher-concentration CR formulation",
+      "description": "Higher-concentration CR formulation for quote-scoped industrial work",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -217,13 +217,13 @@
       "family": "water_treatment_specialty",
       "group_key": "water",
       "hmis": "0-0-0",
-      "mode": "buy",
+      "mode": "quote",
       "taxable": true,
       "hazmat": false,
       "active": true,
       "public_visible": true,
       "sort": 14,
-      "description": "Specialty acid replacement",
+      "description": "Specialty acid replacement for quote-scoped water and process jobs",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -239,7 +239,7 @@
       "active": true,
       "public_visible": true,
       "sort": 15,
-      "description": "96% concentrate; inhibited glycol",
+      "description": "Florida-sourced inhibited PG concentrate for fast district replenishment",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -255,7 +255,7 @@
       "active": true,
       "public_visible": true,
       "sort": 16,
-      "description": "Ready-to-use propylene glycol dilution",
+      "description": "Ready-to-use inhibited PG blend without custom-mix delay",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -271,7 +271,7 @@
       "active": true,
       "public_visible": true,
       "sort": 17,
-      "description": "96% concentrate; Dow Ambitrol CN",
+      "description": "Florida-sourced inhibited EG concentrate for cooling-loop replenishment",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -287,7 +287,7 @@
       "active": true,
       "public_visible": true,
       "sort": 18,
-      "description": "Ready-to-use ethylene glycol dilution",
+      "description": "Ready-to-use inhibited EG blend for planned cooling-loop service",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -303,7 +303,7 @@
       "active": true,
       "public_visible": true,
       "sort": 19,
-      "description": "Industrial / non-cooling use",
+      "description": "Uninhibited EG concentrate for industrial and non-cooling use",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     },
     {
@@ -313,13 +313,13 @@
       "family": "glycol",
       "group_key": "glycol",
       "hmis": "0-0-0",
-      "mode": "buy",
+      "mode": "quote",
       "taxable": true,
       "hazmat": false,
       "active": true,
       "public_visible": true,
       "sort": 20,
-      "description": "50% pre-mix; uninhibited",
+      "description": "Quote-routed 50/50 EG pre-mix for scope-confirmed orders",
       "source": "VertKleen Pricing - Ecommerce Launch Spec"
     }
   ],
@@ -1322,10 +1322,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "11.26",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_flat_or_live",
       "ships_ground": true,
       "ships_ltl": false,
@@ -1340,10 +1340,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "28.14",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_flat_or_live",
       "ships_ground": true,
       "ships_ltl": false,
@@ -1358,10 +1358,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "56.28",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_or_ltl_by_weight",
       "ships_ground": true,
       "ships_ltl": true,
@@ -1412,10 +1412,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "12.17",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_flat_or_live",
       "ships_ground": true,
       "ships_ltl": false,
@@ -1430,10 +1430,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "30.42",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_flat_or_live",
       "ships_ground": true,
       "ships_ltl": false,
@@ -1448,10 +1448,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "60.85",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_or_ltl_by_weight",
       "ships_ground": true,
       "ships_ltl": true,
@@ -1502,10 +1502,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "10.09",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_flat_or_live",
       "ships_ground": true,
       "ships_ltl": false,
@@ -1520,10 +1520,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "25.22",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_flat_or_live",
       "ships_ground": true,
       "ships_ltl": false,
@@ -1538,10 +1538,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "50.45",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_or_ltl_by_weight",
       "ships_ground": true,
       "ships_ltl": true,
@@ -2042,10 +2042,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "9.60",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_flat_or_live",
       "ships_ground": true,
       "ships_ltl": false,
@@ -2060,10 +2060,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "24.00",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": false,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_flat_or_live",
       "ships_ground": true,
       "ships_ltl": false,
@@ -2078,10 +2078,10 @@
       "container_type": "trial_or_pail",
       "retail_price": "48.00",
       "currency": "usd",
-      "active": true,
+      "active": false,
       "public_visible": true,
       "account_only": false,
-      "requires_quote": false,
+      "requires_quote": true,
       "freight_mode": "ground_or_ltl_by_weight",
       "ships_ground": true,
       "ships_ltl": true,

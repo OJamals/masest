@@ -54,14 +54,14 @@ test("products page leads with a replacement checker before the catalog", () => 
   assert.ok(checkerIndex < catalogIndex, "checker should lead the catalog grid");
   assert.ok(catalogIndex < proofIndex, "catalog should come before proof details");
   assert.match(products, /Replacement checker/);
-  assert.match(products, /Find your VertKleen swap/);
+  assert.match(products, /Find replacement/);
 });
 
 test("about page exposes latest quote-service catalog from seed data", () => {
   const about = read("about.html");
 
   assert.match(about, /id="serviceCatalog"/);
-  assert.match(about, /35 quote services/);
+  assert.match(about, /35 quote-service line items/);
   assert.match(about, /4 service packages/);
   assert.match(serviceCatalog, /function initServiceCatalog/);
   assert.match(serviceCatalog, /data\/services\.json/);
@@ -136,8 +136,8 @@ test("products page keeps the field proof strip between catalog and CTA", () => 
 
 test("program function map is optional below the tiers", () => {
   const programs = read("programs.html");
-  const tiersIndex = programs.indexOf("Four tiers, one documented standard");
-  const mapIndex = programs.indexOf("Every function, replaced with 0-0-0");
+  const tiersIndex = programs.indexOf("A program ladder for every tower reality");
+  const mapIndex = programs.indexOf("The chemistry stack, translated function by function");
   const mapDisclosureIndex = programs.indexOf('class="resource-disclosure program-map-disclosure');
 
   assert.ok(tiersIndex > -1, "expected tiers content");
@@ -149,7 +149,7 @@ test("program function map is optional below the tiers", () => {
 
 test("proof page leads with conversion proof, not internal notes", () => {
   const proof = read("proof.html");
-  const heroIndex = proof.indexOf("Real jobs, documented results.");
+  const heroIndex = proof.indexOf("No showroom demos. Working equipment.");
   const libraryIndex = proof.indexOf('class="proof-library');
 
   assert.ok(heroIndex > -1, "expected proof hero");
@@ -192,7 +192,7 @@ test("contact page makes quote and audit intent obvious", () => {
   assert.ok(firstFieldIndex > -1, "expected form fields to remain");
   assert.ok(chooserIndex < firstFieldIndex, "intent chooser should sit before form fields");
   assert.match(contact, /Quote/);
-  assert.match(contact, /Free Audit/);
+  assert.match(contact, /Chemical Audit/);
 });
 
 test("footer carries secondary navigation in grouped lanes", () => {
@@ -274,7 +274,7 @@ test("resources page puts dense technical tables behind disclosure", () => {
 
   const summaryTag = resources.slice(disclosureIndex, resources.indexOf(">", disclosureIndex));
   assert.doesNotMatch(summaryTag, /\sopen\b/, "technical disclosure should be closed by default");
-  assert.match(resources, /Get SDS and certification files/);
+  assert.match(resources, /Request SDS and certificate-status files/);
   assert.match(resources, /Request a current quote/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.resource-router \.route-grid/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.resources-reference-disclosure summary/);
@@ -288,7 +288,7 @@ test("about page routes buyers before service breadth", () => {
   const statsIndex = about.indexOf('class="stat-band"');
   const routerIndex = about.indexOf('class="about-router');
   const disclosureIndex = about.indexOf('class="resource-disclosure about-services-disclosure');
-  const servicesIndex = about.indexOf("Full-spectrum technical services.");
+  const servicesIndex = about.indexOf("Services now have a real catalog");
   const teamIndex = about.indexOf("Talk to the people who built it.");
 
   assert.ok(statsIndex > -1, "expected credentials band to remain");

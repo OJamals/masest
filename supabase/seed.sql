@@ -12,15 +12,15 @@ values
 ('alumibrite','VertKleen AlumiBrite','degrease','0-0-0','buy',false,true,null,9),
 ('purgo','VertKleen Purgo','water','0-0-0','buy',false,true,null,10),
 ('lam3','VertKleen LAM3','water','0-0-0','buy',false,true,null,11),
-('watersafe60','WaterSafe60','water','0-0-0','buy',false,true,null,12),
-('cr2','VertKleen CR2','water','0-0-0','buy',false,true,null,13),
-('sar','VertKleen SAR','water','0-0-0','buy',false,true,null,14),
+('watersafe60','WaterSafe60','water','0-0-0','quote',false,true,null,12),
+('cr2','VertKleen CR2','water','0-0-0','quote',false,true,null,13),
+('sar','VertKleen SAR','water','0-0-0','quote',false,true,null,14),
 ('pg100','PG inhibited 100% concentrate','glycol','0-0-0','buy',false,true,null,15),
 ('pg50','PG inhibited 50% RTU','glycol','0-0-0','buy',false,true,null,16),
 ('eg100','EG inhibited 100% concentrate','glycol','0-0-0','buy',false,true,null,17),
 ('eg50','EG inhibited 50% RTU','glycol','0-0-0','buy',false,true,null,18),
 ('egu96','EG uninhibited 96% concentrate','glycol','0-0-0','buy',false,true,null,19),
-('eg5050','EG 50/50','glycol','0-0-0','buy',false,true,null,20)
+('eg5050','EG 50/50','glycol','0-0-0','quote',false,true,null,20)
 on conflict (sku) do update set
   name = excluded.name,
   group_key = excluded.group_key,

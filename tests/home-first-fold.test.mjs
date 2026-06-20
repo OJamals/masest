@@ -67,8 +67,8 @@ test("homepage first fold shows product path and quote path without scroll cue",
       });
 
       assert.equal(result.hasScrollCue, false, "first fold should not include a decorative scroll cue");
-      assert.ok(result.ctas.some((cta) => cta.text === "Meet the Line"), "product CTA should be visible in the first fold");
-      assert.ok(result.ctas.some((cta) => cta.text === "Request a Quote"), "quote CTA should be visible in the first fold");
+      assert.ok(result.ctas.some((cta) => cta.text === "Find the Replacement"), "product CTA should be visible in the first fold");
+      assert.ok(result.ctas.some((cta) => cta.text === "Scope a Trial"), "quote CTA should be visible in the first fold");
       await browser.close();
     } catch (error) {
       await browser.close();

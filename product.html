@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Product | MASEST VertKleen</title>
-<meta name="description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation for lower-hazard industrial chemistry.">
+<meta name="description" content="VertKleen product details with HMIS ratings, replacement targets, field use cases, photos, quote paths, and controlled technical documents.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta property="og:title" content="Product | MASEST VertKleen">
-<meta property="og:description" content="VertKleen product details: HMIS ratings, key specs, field-proven use cases, and technical documentation.">
+<meta property="og:description" content="HMIS ratings, replacement targets, field use cases, photos, quote paths, and controlled technical documents.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
@@ -46,8 +46,8 @@
 <section class="wrap static-product-fallback" id="staticProductFallback" aria-label="VertKleen product snapshots">
   <div class="section-head">
     <span class="eyebrow">Product line</span>
-    <h1 class="headline">Procurement-ready VertKleen replacements.</h1>
-    <p class="subhead">Use these static product snapshots when comparing common hazardous chemicals against the VertKleen line. Each product page adds galleries, quote routing, and controlled document requests.</p>
+    <h1 class="headline">Find the VertKleen replacement before the next PO.</h1>
+    <p class="subhead">Use these snapshots to compare legacy chemicals against the VertKleen line. Each product page adds photos, quote routing, and controlled document requests.</p>
   </div>
   <div class="static-product-grid">
     <article class="static-product-card">
@@ -59,7 +59,7 @@
     <article class="static-product-card">
       <b>VertKleen CR</b>
       <span>Replaces caustic soda</span>
-      <p>NSF/ANSI 60 caustic replacement and pH adjustment for water treatment and alkaline cleaning. HMIS 0-0-0.</p>
+      <p>Document-routed caustic replacement and pH adjustment for water treatment and alkaline cleaning. HMIS 0-0-0.</p>
       <a href="product.html?id=cr">Open CR</a>
     </article>
     <article class="static-product-card">
@@ -71,7 +71,7 @@
     <article class="static-product-card">
       <b>WaterSafe60</b>
       <span>Replaces phosphate, zinc, and molybdate blends</span>
-      <p>NSF/ANSI 60 scale and corrosion inhibitor for tower and loop programs. HMIS 0-0-0.</p>
+      <p>Document-routed scale and corrosion inhibitor for tower and loop programs. HMIS 0-0-0.</p>
       <a href="product.html?id=watersafe60">Open WaterSafe60</a>
     </article>
   </div>
@@ -106,7 +106,7 @@
 <section>
   <div class="wrap">
     <div class="section-head reveal">
-      <h2 class="headline">Why it wins.</h2>
+      <h2 class="headline">Why buyers approve it.</h2>
     </div>
     <div class="spec-list reveal" id="pSpecs"></div>
   </div>
@@ -116,8 +116,8 @@
 <section style="padding-top:0">
   <div class="wrap">
     <div class="section-head reveal">
-      <h2 class="headline">What tough jobs does it solve?</h2>
-      <p class="subhead">Field-proven in heavy industry, from cooling tower fills at Brevard County Schools to restaurant hoods and pipeline terminals.</p>
+      <h2 class="headline">Where teams put it to work.</h2>
+      <p class="subhead">Use cases are tied to field work where available: cooling tower fills, restaurant hoods, coils, pipelines, floors, vessels, and occupied campuses.</p>
     </div>
     <div class="reveal" id="pUses" style="display:grid;gap:12px;max-width:760px"></div>
   </div>
@@ -126,7 +126,7 @@
 <section class="section-slim product-media-section" id="pMediaSection" hidden>
   <div class="wrap">
     <div class="section-head reveal">
-      <h2 class="headline">Product and field photos.</h2>
+      <h2 class="headline">What it looks like in the real world.</h2>
       <p class="subhead">Studio images, proof photos, and source-backed field results where available.</p>
     </div>
     <div class="product-media-row reveal" id="pMedia"></div>
@@ -137,8 +137,8 @@
 <section style="padding-top:0">
   <div class="wrap">
     <div class="section-head reveal">
-      <h2 class="headline">Proof, on paper.</h2>
-      <p class="subhead">Safety data, technical sheets, certifications, and case documents are delivered through controlled document request routing, typically within one business day.</p>
+      <h2 class="headline">Proof for the buyer file.</h2>
+      <p class="subhead">Safety data, technical sheets, certificate-status files when available, and case documents route through controlled document delivery, typically within one business day.</p>
     </div>
     <div class="reveal" id="pDocs"></div>
   </div>
@@ -175,7 +175,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const COMMERCE_ALIAS = { crhd: "cr-hd" };
     const commerceId = COMMERCE_ALIAS[id] || id;
     const p = PRODUCTS[id];
-    const quoteFirst = Array.isArray(QUOTE_FIRST_IDS) && QUOTE_FIRST_IDS.includes(id);
+    const isCatalogProduct = Array.isArray(CATALOG_ORDER) && CATALOG_ORDER.includes(id);
+    const isProgramOnly = !isCatalogProduct && ["dbnpa", "crs"].includes(id);
+    const quoteFirst = (Array.isArray(QUOTE_FIRST_IDS) && QUOTE_FIRST_IDS.includes(id)) || isProgramOnly;
     function productCanonicalUrl() {
       return `https://masest.co/product.html?id=${encodeURIComponent(id)}`;
     }
@@ -237,8 +239,8 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="wrap grid-2">
             <div>
               <p class="eyebrow">Product</p>
-              <h1 class="display">We could not find that product.</h1>
-              <p class="subhead">The link may be outdated or mistyped. Browse the current VertKleen line, or send the MASEST team the application you are trying to solve.</p>
+              <h1 class="display">That product is not in the current catalog.</h1>
+              <p class="subhead">The link may be outdated, mistyped, or tied to an older source label. Browse the current VertKleen line, or send MASEST the application you need to solve.</p>
               <div class="hero-actions">
                 <a class="btn btn-primary" href="products.html">View Products</a>
                 <a class="btn btn-secondary" href="cart.html">Open cart</a>
@@ -257,9 +259,13 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("staticProductFallback")?.setAttribute("hidden", "");
     document.getElementById("bcName").textContent = p.name;
     setProductJsonLd(p);
-    document.getElementById("pReplaces").textContent = p.replaces;
+    document.getElementById("pReplaces").textContent = p.cat === "glycol"
+      ? `VertKleen Glycols / ${p.replaces}`
+      : p.replaces;
     document.getElementById("pName").textContent = p.name;
-    document.getElementById("pDesc").textContent = p.desc;
+    document.getElementById("pDesc").textContent = isProgramOnly
+      ? `${p.desc} This page is quote-only and exists to resolve older source-label links.`
+      : p.desc;
     function setProductImage(src, alt) {
       const img = document.getElementById("pImage");
       img.src = src;
@@ -270,7 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setProductImage(p.image, p.name + " product container");
     }
     document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";
-    const quoteHref = "contact.html?product=" + encodeURIComponent(p.name);
+    const quoteHref = "contact.html?product=" + encodeURIComponent(isProgramOnly ? `${p.name} program fit` : p.name);
     const quoteBtn = document.getElementById("pQuoteBtn");
     if (quoteBtn) quoteBtn.href = quoteHref;
     const buyBtn = document.getElementById("pBuyBtn");
@@ -465,10 +471,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (p.hmis === "0-0-0") {
       rows.innerHTML = ["Health", "Flammability", "Reactivity"].map(l =>
         `<div class="hmis-row"><span class="lbl">${l}</span><span class="val">0</span></div>`).join("");
-      document.getElementById("panelFoot").textContent = "HMIS 0-0-0 profile for the core line, with lower-fume handling and broad material compatibility documented by product SDS and application notes.";
+      document.getElementById("panelFoot").textContent = "HMIS 0-0-0 profile for the core line, with lower-fume handling and broad material compatibility routed through controlled SDS, label, and application-note requests.";
     } else {
       rows.innerHTML = `<div class="hmis-row"><span class="lbl">Classification</span><span class="val" style="width:auto;padding:0 14px;font-size:.9rem">Low</span></div>`;
-      document.getElementById("panelFoot").textContent = "EPA-registered, general-use. The program's one mild-hazard product; every other VertKleen product is HMIS 0-0-0.";
+      document.getElementById("panelFoot").textContent = "Document-gated program component; formal label, SDS, and registration proof route through MASEST before any public claim. Every cataloged VertKleen product in the program is HMIS 0-0-0.";
     }
 
     document.getElementById("pSpecs").innerHTML = p.specs.map(([ico, b, s]) =>

@@ -79,6 +79,8 @@ test("mobile pages expose persistent quote and chemical-map actions", async ({ p
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
   const bar = page.locator(".lead-action-bar");
+  await expect(bar).toBeHidden();
+  await page.mouse.wheel(0, 700);
   await expect(bar).toBeVisible();
   await expect(bar.getByRole("link", { name: /map chemical/i })).toHaveAttribute("href", /type=audit/);
   await expect(bar.getByRole("link", { name: /get quote/i })).toHaveAttribute("href", /type=quote/);
@@ -89,6 +91,8 @@ test("mobile industry detail pages keep quote and chemical-map actions", async (
   await page.goto(`${BASE_URL}/industries/plumbing.html`, { waitUntil: "domcontentloaded" });
 
   const bar = page.locator(".lead-action-bar");
+  await expect(bar).toBeHidden();
+  await page.mouse.wheel(0, 700);
   await expect(bar).toBeVisible();
   await expect(bar.getByRole("link", { name: /map chemical/i })).toHaveAttribute("href", /type=audit/);
   await expect(bar.getByRole("link", { name: /get quote/i })).toHaveAttribute("href", /type=quote/);

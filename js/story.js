@@ -196,7 +196,7 @@ states.forEach(function (st) {
       el.style.zIndex = Math.round(o * 10);
       if (o > best) { best = o; current = i; }          /* most-visible slide wins */
     }
-    if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = (current + 1) + " / " + n; }
+    if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = "Photo " + (current + 1) + " of " + n; }
   }
 
   /* ---- ACT 3: HMIS hazard diamond - cycle the four legacy chemicals ----

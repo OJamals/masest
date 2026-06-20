@@ -85,6 +85,20 @@ export function renderChrome() {
       <a href="${root}contact.html?type=quote"><i class="ph ph-tag" aria-hidden="true"></i><span>Get quote</span></a>
     `;
     document.body.append(leadBar);
+    const leadSentinel = document.createElement("div");
+    leadSentinel.className = "lead-action-sentinel";
+    leadSentinel.setAttribute("aria-hidden", "true");
+    document.body.append(leadSentinel);
+    const setLeadVisible = visible => leadBar.classList.toggle("is-visible", visible);
+    if ("IntersectionObserver" in window) {
+      setLeadVisible(false);
+      const leadObserver = new IntersectionObserver(entries => {
+        setLeadVisible(!entries[0]?.isIntersecting);
+      });
+      leadObserver.observe(leadSentinel);
+    } else {
+      setLeadVisible(true);
+    }
   }
 
   const burger = document.getElementById("navBurger");
@@ -145,8 +159,8 @@ export function renderChrome() {
         <div>
           <a class="foot-logo-link" href="${root}index.html" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
           <div class="foot-brand">MASEST VertKleen&trade;</div>
-          <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support. Family-owned on Florida's Space Coast, trusted in 50+ countries.</p>
-          <div class="foot-kicker">Primary path</div>
+          <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support from Florida's Space Coast.</p>
+          <div class="foot-kicker">Procurement routes</div>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Product Categories</div>
@@ -178,7 +192,7 @@ export function renderChrome() {
       <div class="foot-news">
         <div class="foot-news-copy">
           <div class="foot-title">VertKleen Briefing</div>
-          <p>Field results, new SDS-backed SKUs, and program offers. No spam. Unsubscribe anytime.</p>
+          <p>Field results, document-gated SKUs, and program notes. No spam. Unsubscribe anytime.</p>
         </div>
         <form class="foot-news-form" id="footNews" novalidate>
           <input type="email" name="email" id="footNewsEmail" placeholder="you@company.com" aria-label="Email address" autocomplete="email" required>

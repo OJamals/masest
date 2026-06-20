@@ -109,8 +109,9 @@ function serviceSort(a, b) {
   return String(a.name || "").localeCompare(String(b.name || ""));
 }
 
-function countLabel(count) {
-  return `${count} ${count === 1 ? "service" : "services"}`;
+function countLabel(count, category = "") {
+  if (category === "Service Packages") return `${count} ${count === 1 ? "package" : "packages"}`;
+  return `${count} ${count === 1 ? "line item" : "line items"}`;
 }
 
 function renderServiceCard(item) {
@@ -189,7 +190,7 @@ function renderPanels(groups) {
               <p>${htmlEscape(copy.note)}</p>
             </div>
             <div class="service-category-price">
-              <span>${htmlEscape(countLabel(items.length))}</span>
+              <span>${htmlEscape(countLabel(items.length, category))}</span>
               <b>${htmlEscape(range)}</b>
             </div>
           </div>
