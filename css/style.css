@@ -1674,8 +1674,8 @@ scroll-snap gallery
 }
 .case-card .case-eyebrow {
   font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .12em;
+  font-weight: 600;
+  letter-spacing: .05em;
   text-transform: uppercase;
   color: var(--accent);
 }
@@ -2738,8 +2738,8 @@ body.reveal-ready .matrix-disclosure.reveal {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
   background:
-    linear-gradient(135deg, rgba(14,124,134,.12), rgba(21,23,28,.04)),
-    repeating-linear-gradient(90deg, rgba(21,23,28,.035) 0 1px, transparent 1px 12px),
+    radial-gradient(74% 92% at 18% 16%, rgba(14,124,134,.14), transparent 64%),
+    linear-gradient(135deg, rgba(14,124,134,.1), rgba(21,23,28,.04)),
     var(--surface);
 }
 
