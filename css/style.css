@@ -336,6 +336,15 @@ at page end) */
     radial-gradient(90% 130% at 12% 0%, rgba(14,124,134,.32) 0%, transparent 55%),
     radial-gradient(70% 120% at 100% 100%, rgba(109,40,201,.18) 0%, transparent 55%);
 }
+.block-dark::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,.055) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, #000 0%, transparent 72%);
+}
 .block-dark .subhead { color: rgba(255,255,255,.72); }
 .block-dark .wrap { position: relative; z-index: 1; }
 
@@ -817,8 +826,8 @@ no number circles) ---------- */
   color: var(--muted); border-bottom: 1px solid var(--ink);
 }
 .cmp-table tbody tr + tr td { border-top: 1px solid var(--line); }
-.cmp-table .haz { color: var(--danger); font-weight: 700; }
-.cmp-table .safe { color: var(--accent-ink); font-weight: 700; }
+.cmp-table .haz { color: var(--danger); font-weight: 700; background: rgba(166,58,46,.06); }
+.cmp-table .safe { color: var(--accent-ink); font-weight: 700; background: rgba(14,124,134,.06); }
 .cmp-table a b { color: var(--accent-ink); }
 .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-card); }
 .table-scroll .cmp-table { min-width: 760px; }
@@ -1094,9 +1103,22 @@ no card chrome (distinct from bento) */
 
 /* Why it wins: three pillars,
 tile icon + text (borderless) */
-.why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(24px, 3vw, 40px); }
+.why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(20px, 2.8vw, 36px); }
+.why-col {
+  padding: 28px 24px 24px;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--shadow-xs);
+  transition: border-color .28s var(--ease-out), box-shadow .28s var(--ease-out), transform .28s var(--ease-out);
+}
+.why-col:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
 .why-col .ico {
-  width: 50px; height: 50px; border-radius: 14px; background: var(--accent-soft); color: var(--accent-ink);
+  width: 54px; height: 54px; border-radius: 14px; background: var(--accent-soft); color: var(--accent-ink);
   display: grid; place-items: center; font-size: 1.5rem; margin-bottom: 20px;
 }
 .why-col h3 { font-size: 1.18rem; margin-bottom: 8px; }
@@ -3171,7 +3193,7 @@ fully clickable cards) ---- */
   min-width: 0;
   overflow: hidden;
   aspect-ratio: 4 / 3;
-  background: var(--bg);
+  background: var(--panel-cool);
   border-bottom: 1px solid var(--line-soft);
 }
 .shop-card-media img { width: 100%; height: 100%; object-fit: contain; padding: 14px; }
@@ -3218,7 +3240,7 @@ fully clickable cards) ---- */
   padding: 16px;
   flex: 1;
 }
-.shop-card-type { font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); }
+.shop-card-type { font-size: .76rem; font-weight: 700; letter-spacing: .02em; text-transform: none; color: var(--muted); }
 .shop-card-name { font-size: 1.12rem; font-weight: 800; line-height: 1.2; }
 .shop-card-replaces { font-size: .88rem; color: var(--muted); flex: 1; }
 .shop-card-cta {
@@ -4285,7 +4307,7 @@ main:has(#pMediaSection) .section-head {
 
 .shop-card-type {
   min-height: 2.35em;
-  letter-spacing: .055em;
+  letter-spacing: .02em;
   line-height: 1.18;
   text-wrap: balance;
 }
