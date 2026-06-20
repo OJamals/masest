@@ -158,7 +158,7 @@ lined-up figures for all data numerics */
 .eyebrow {
   display: inline-flex; align-items: center; gap: 9px;
   font-size: .76rem; font-weight: 700;
-  letter-spacing: .14em; text-transform: uppercase;
+  letter-spacing: .07em; text-transform: uppercase;
   color: var(--accent-ink); margin-bottom: 16px;
 }
 /* ---------- Nav (height 64px,
@@ -982,6 +982,7 @@ figure.photo figcaption {
 }
 .contact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--accent); }
 .contact-card i { font-size: 1.8rem; color: var(--accent); margin-bottom: 14px; display: block; }
+.contact-card h2,
 .contact-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
 .contact-card p { color: var(--muted); font-size: .92rem; line-height: 1.7; }
 .contact-card a { color: var(--accent-ink); font-weight: 700; }
@@ -1330,8 +1331,8 @@ so no-JS / hidden-tab renders stay visible */
   margin-bottom: 10px;
   color: var(--accent-ink);
   font-size: .74rem;
-  font-weight: 800;
-  letter-spacing: .12em;
+  font-weight: 600;
+  letter-spacing: .05em;
   text-transform: uppercase;
 }
 .proof-card h3 { margin-bottom: 8px; font-size: 1.16rem; }
@@ -1849,8 +1850,8 @@ scroll-snap gallery
 .proof-card span {
   color: var(--accent-ink);
   font-size: .72rem;
-  font-weight: 800;
-  letter-spacing: .1em;
+  font-weight: 600;
+  letter-spacing: .05em;
   text-transform: uppercase;
 }
 .proof-card h3 {
@@ -2601,7 +2602,7 @@ line-height: 1.35;
   aspect-ratio: 4 / 3;
   object-fit: contain;
   display: block;
-  background: var(--bg);
+  background: var(--panel-cool);
 }
 
 .product-media-card figcaption {
@@ -3441,6 +3442,7 @@ fully clickable cards) ---- */
   border-radius: 14px;
   background: #fff;
 }
+.cart-line h2,
 .cart-line h3 { margin: 3px 0 6px; font-size: 1.08rem; }
 .cart-line p { margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.45; }
 .cart-line label,
@@ -3485,6 +3487,7 @@ fully clickable cards) ---- */
   text-align: center;
   color: var(--muted);
 }
+.cart-empty h2,
 .cart-empty h3 { color: var(--ink); margin-bottom: 8px; }
 .confirmation-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .confirmation-grid .route-card {
