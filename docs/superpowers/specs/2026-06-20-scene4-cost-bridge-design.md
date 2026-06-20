@@ -97,14 +97,15 @@ accurate). Rules:
   new product claims are introduced by this scene.
 - Every dollar figure carries a superscript `¹²³…` → a `.cost-sources` footnote
   line (also exposed to assistive tech).
-- **Running-total semantics (count-up target):** the meter counts to the
-  **conservative sum of the displayed line-item LOW bounds for the recurring
-  annual costs only** (PPE + transport/disposal + a single OSHA serious
-  violation) — explicitly labeled `/yr · conservative`. Because it sums only the
-  shown sourced lows, the number is defensible and reproducible from the visible
-  figures. The ~$115k incident is **excluded** from this total and shown
-  separately as the tail-risk amplifier. The implementer computes the target from
-  the chosen low bounds at build time and authors it as the resting DOM value.
+- **Running-total semantics (count-up target):** to stay fully defensible the
+  climbing number is a **single sourced figure, not a synthetic sum**. The
+  recurring lines (PPE, downtime, hazmat, OSHA) each show their own sourced range
+  as they reveal; they are **not** added together. The count-up itself animates
+  the climactic **~$115,000 average total cost of one workplace injury**
+  (OSHA $afety Pays; direct + indirect), revealed at the final beat as the
+  "one bad day" amplifier. One number, one citation, zero arithmetic the buyer
+  can dispute. The figure is authored as the resting DOM text (`115,000`) with a
+  `data-target` for the count-up; JS animates `0 → target`.
 
 | Line item | Figure shown | Source |
 |-----------|--------------|--------|
