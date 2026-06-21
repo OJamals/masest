@@ -40,7 +40,7 @@ export const PRODUCTS = {
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling profile with broad material compatibility"],
       ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 scope must be confirmed through document request"],
-      ["ph-atom", "SynTech powered", "Replaces sodium and potassium hydroxide"],
+      ["ph-atom", "SynClean powered", "Replaces sodium and potassium hydroxide"],
       ["ph-leaf", "Discharge planning", "Wastewater path reviewed by site and label conditions"]
     ],
     docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Scope Documentation Request", "Technical Application Sheet"]
@@ -337,7 +337,7 @@ export const PRODUCTS = {
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop-half", "Higher concentration", "More active cleaning per gallon than standard CR"],
-      ["ph-atom", "SynTech powered", "Caustic-level performance with HMIS 0-0-0 handling"]
+      ["ph-atom", "SynClean powered", "Caustic-level performance with HMIS 0-0-0 handling"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
