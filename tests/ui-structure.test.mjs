@@ -84,11 +84,12 @@ test("products page wires the checker and grid from product data", () => {
   assert.match(commerceUi, /function catalogCard/);
   assert.match(commerceUi, /function initShop/);
   assert.match(read("js/main.js"), /initShop\(\);/);
-  // whole-card link + single repeated action
+  // whole-card link + one footer action: buy controls for buyable items, quote CTA for quote-first items
   assert.match(commerceUi, /<article class="shop-card"/);
   assert.match(commerceUi, /class="shop-card-link" href="product\.html\?id=/);
   assert.doesNotMatch(commerceUi, /<a class="shop-card"[\s\S]*?<button class="shop-card-add"/);
-  assert.doesNotMatch(commerceUi, /shop-card-quote/);
+  assert.match(commerceUi, /QUOTE_FIRST_IDS\.includes\(id\)/);
+  assert.match(commerceUi, /shop-card-quote/);
   assert.match(commerceUi, /shop-card-bulk/);
   assert.match(read("products.html"), /programs\.html/);
   assert.match(read("products.html"), /contact\.html\?type=distributor/);

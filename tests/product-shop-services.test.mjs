@@ -65,9 +65,10 @@ test("products page is shop-focused and routes services to a standalone page", a
     const productsHtml = await fetch(`${BASE_URL}/products.html`).then((response) => response.text());
     assert.match(productsHtml, /href="services\.html"/, "products page should link to the services page");
     assert.doesNotMatch(productsHtml, /data-service-catalog/, "products page should not embed service catalog");
-    assert.match(productsHtml, /Published retail list price/);
+    assert.match(productsHtml, /Buyable small-pack list pricing/);
+    assert.match(productsHtml, /Quote-routed items scoped before purchase/);
     assert.match(productsHtml, /USD, ex-plant Melbourne, FL/);
-    assert.match(productsHtml, /55 and 275 gal freight finalized after order/);
+    assert.doesNotMatch(productsHtml, /55 and 275 gal freight finalized after order/);
 
     const services = await fetch(`${BASE_URL}/services.html`);
     assert.equal(services.status, 200, "services page should exist");

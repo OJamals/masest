@@ -60,6 +60,17 @@ function hcrProduct() {
   };
 }
 
+function quoteFirstProducts() {
+  return ["watersafe60", "cr2", "sar", "eg5050"].map((sku) => ({
+    sku,
+    active: true,
+    mode: "buy",
+    product_variants: [
+      { vsku: `${sku}-1`, label: "1 gal", gallons: 1, price: 9.99, currency: "usd", active: true, sort: 1 },
+    ],
+  }));
+}
+
 async function routeProducts(page, products = [hcrProduct()]) {
   await page.addInitScript(() => {
     window.MASEST_ENABLE_LOCAL_API = true;
@@ -80,11 +91,31 @@ test("static catalog does not show cart controls without commerce metadata", asy
       await page.locator(".shop-card").first().waitFor();
 
       assert.equal(await page.locator("[data-cart-add]").count(), 0);
-      assert.equal(await page.locator(".shop-card-quote").count(), 0);
+      assert.equal(await page.locator(".shop-card-quote").count(), 4);
 
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
       await page.locator("#checkoutPay").waitFor();
       assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("quote-first catalog products keep quote CTA instead of cart controls", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage();
+    try {
+      await routeProducts(page, [hcrProduct(), ...quoteFirstProducts()]);
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+
+      for (const id of ["watersafe60", "cr2", "sar", "eg5050"]) {
+        const card = page.locator(`.shop-card[data-id="${id}"]`);
+        await card.locator(".shop-card-quote").waitFor();
+        assert.equal(await card.locator("[data-cart-add]").count(), 0);
+        assert.equal(await card.locator(".commerce-vol").count(), 0);
+      }
     } finally {
       await browser.close();
     }

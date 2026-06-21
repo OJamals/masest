@@ -4,6 +4,7 @@ import test from "node:test";
 
 const readSite = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const catalog = () => JSON.parse(readSite("data/catalog.seed.json"));
+const drumPricing = () => JSON.parse(readSite("data/drum-pricing.json"));
 const QUOTE_REVIEW_PRODUCTS = new Set(["watersafe60", "cr2", "sar", "eg5050"]);
 
 test("canonical catalog carries all chemical products and variants", () => {
@@ -78,6 +79,20 @@ test("Supabase seed SQL imports buyable and quote-review variant state", () => {
   assert.match(seed, /'VK-EG5050-5','eg5050','5 gal',5,[\d.]+,false,3/);
   assert.match(seed, /'VK-PG100-5','pg100','5 gal',5,141,true,3/);
   assert.match(seed, /'VK-HCR-275','hcr','275 gal tote',275,2754\.67,false,5/);
+});
+
+test("public drum pricing excludes quote-review products", () => {
+  const pricing = drumPricing();
+  for (const slug of QUOTE_REVIEW_PRODUCTS) {
+    assert.equal(pricing[slug], undefined, `${slug} should route bulk pricing through quote intake`);
+  }
+});
+
+test("quote-review copy avoids certification certainty", () => {
+  const watersafe = catalog().products.find((product) => product.slug === "watersafe60");
+  assert.ok(watersafe, "WaterSafe60 catalog row should exist");
+  assert.match(watersafe.description, /status reviewed by request/);
+  assert.doesNotMatch(watersafe.description, /certified|files by request/i);
 });
 
 test("seed script imports products, variants, and services from canonical catalog", () => {

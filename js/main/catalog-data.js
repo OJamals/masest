@@ -39,11 +39,11 @@ export const PRODUCTS = {
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling profile with broad material compatibility"],
-      ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 scope must be confirmed through document request"],
+      ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 certificate status must be confirmed through document request"],
       ["ph-atom", "SynClean powered", "Replaces sodium and potassium hydroxide"],
       ["ph-leaf", "Discharge planning", "Wastewater path reviewed by site and label conditions"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Scope Documentation Request", "Technical Application Sheet"]
+    docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Certificate-Status Request", "Technical Application Sheet"]
   },
   neutral: {
     name: "VertKleen Neutral",
@@ -99,7 +99,7 @@ export const PRODUCTS = {
  icon: "ph-waves",
  image: "img/products/watersafe60-studio.webp",
     tag: "Scale and corrosion control for towers and loops without the phosphate, zinc, molybdate, or chromate baggage.",
-    desc: "A document-routed scale and corrosion inhibitor with no heavy metals: no zinc, no molybdate, no chromate. Built for water-treatment programs where asset protection and documentation both matter.",
+    desc: "A quote-routed scale and corrosion inhibitor with no heavy metals: no zinc, no molybdate, no chromate. Built for water-treatment programs where asset protection and documentation both matter.",
     uses: [
       "Cooling tower scale and corrosion control",
       "Closed-loop and chilled-water systems",
@@ -108,11 +108,11 @@ export const PRODUCTS = {
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Replaces blends rated up to HMIS 2-0-0"],
-      ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 scope must be confirmed through document request"],
+      ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 certificate status must be confirmed through document request"],
       ["ph-prohibit", "No heavy metals", "No chromate, zinc, or molybdate"],
       ["ph-clipboard-text", "Scoped documentation", "ASHRAE 188 program support by site scope"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Scope Documentation Request", "Cooling Tower Program Brochure"]
+    docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Certificate-Status Request", "Cooling Tower Program Brochure"]
   },
   purgo: {
     name: "Purgo",

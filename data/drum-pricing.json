@@ -153,48 +153,6 @@
       "currency": "usd"
     }
   ],
-  "watersafe60": [
-    {
-      "label": "55 gal drum",
-      "gallons": 55,
-      "price": 619.08,
-      "currency": "usd"
-    },
-    {
-      "label": "275 gal tote",
-      "gallons": 275,
-      "price": 2774.89,
-      "currency": "usd"
-    }
-  ],
-  "cr2": [
-    {
-      "label": "55 gal drum",
-      "gallons": 55,
-      "price": 669.32,
-      "currency": "usd"
-    },
-    {
-      "label": "275 gal tote",
-      "gallons": 275,
-      "price": 2434.19,
-      "currency": "usd"
-    }
-  ],
-  "sar": [
-    {
-      "label": "55 gal drum",
-      "gallons": 55,
-      "price": 554.92,
-      "currency": "usd"
-    },
-    {
-      "label": "275 gal tote",
-      "gallons": 275,
-      "price": 2182.95,
-      "currency": "usd"
-    }
-  ],
   "pg100": [
     {
       "label": "55 gal drum",
@@ -232,14 +190,6 @@
       "label": "55 gal drum",
       "gallons": 55,
       "price": 865,
-      "currency": "usd"
-    }
-  ],
-  "eg5050": [
-    {
-      "label": "55 gal drum",
-      "gallons": 55,
-      "price": 445,
       "currency": "usd"
     }
   ]

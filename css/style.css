@@ -3392,6 +3392,7 @@ fully clickable cards) ---- */
   display: inline-flex;
   min-height: 34px;
   align-items: center;
+  gap: 6px;
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 999px;

@@ -2,8 +2,9 @@
 //
 // Catalog policy, owner-approved 2026-06-20:
 // - Most product families are buyable in small packs: 1, 2.5, and 5 gal.
-// - Documentation-gated products stay quote-first until SDS/TDS/certification
-//   and launch pricing proof are confirmed: WaterSafe60, CR2, SAR, EG 50/50.
+// - Documentation-gated products stay quote-first until SDS/TDS,
+//   certificate-status, and launch pricing proof are confirmed: WaterSafe60,
+//   CR2, SAR, EG 50/50.
 // - Bulk 55/275 gal drums and totes stay quote-routed because freight/final
 //   scope changes at that size.
 // - Missing small-pack prices are derived from the product's 5 gal list price
@@ -187,6 +188,7 @@ function variantsSql(variants) {
 function drumPricingJson(variants) {
   const out = {};
   for (const v of variants) {
+    if (QUOTE_REVIEW_PRODUCTS.has(v.product_slug)) continue;
     if (Number(v.size_gal) >= 55 && v.retail_price != null) {
       (out[v.product_slug] ||= []).push({
         label: v.label,

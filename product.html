@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Product | MASEST VertKleen</title>
-<meta name="description" content="VertKleen product details with HMIS ratings, replacement targets, field use cases, photos, quote paths, and controlled technical documents.">
+  <meta name="description" content="VertKleen product details with HMIS ratings, replacement targets, field use cases, photos, small-pack checkout, quote paths, and controlled technical documents.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta property="og:title" content="Product | MASEST VertKleen">
-<meta property="og:description" content="HMIS ratings, replacement targets, field use cases, photos, quote paths, and controlled technical documents.">
+  <meta property="og:description" content="HMIS ratings, replacement targets, field use cases, photos, small-pack checkout, quote paths, and controlled technical documents.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
@@ -155,7 +155,7 @@
   <div class="wrap reveal">
     <h2 class="headline" id="ctaHead">Ready to retire the current drum?</h2>
     <p class="subhead">Quotes route by industry, volume, and location, so the first reply starts with the right product path.</p>
-    <a class="btn btn-primary" href="cart.html">Open cart</a>
+        <a class="btn btn-primary" href="contact.html?type=quote">Request product quote</a>
   </div>
 </section>
 </main>
@@ -191,11 +191,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const replacementLine = product.replaces
         ? (/^replaces\b/i.test(product.replaces) ? product.replaces : `Replaces ${product.replaces}`)
         : "";
-      const description = [
-        product.desc,
-        replacementLine ? `${replacementLine}.` : "",
-        product.hmis ? `HMIS ${product.hmis}.` : "",
-      ].filter(Boolean).join(" ");
+ const procurementRoute = quoteFirst
+ ? "Quote review required before purchase."
+ : "Small-pack checkout available; bulk sizes route through quote review.";
+ const description = [
+ product.desc,
+ replacementLine ? `${replacementLine}.` : "",
+ product.hmis ? `HMIS ${product.hmis}.` : "",
+ procurementRoute
+ ].filter(Boolean).join(" ");
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) canonical.href = canonicalUrl;
       document.title = title;
@@ -219,8 +223,9 @@ document.addEventListener("DOMContentLoaded", () => {
         "url": canonicalUrl,
         "image": product.image ? new URL(product.image, "https://masest.co/").href : undefined,
         "additionalProperty": [
-          { "@type": "PropertyValue", "name": "HMIS rating", "value": product.hmis || "0-0-0" },
-          { "@type": "PropertyValue", "name": "Replaces", "value": product.replaces || "Legacy chemistry" }
+ { "@type": "PropertyValue", "name": "HMIS rating", "value": product.hmis || "0-0-0" },
+ { "@type": "PropertyValue", "name": "Replaces", "value": product.replaces || "Legacy chemistry" },
+ { "@type": "PropertyValue", "name": "Procurement route", "value": quoteFirst ? "Quote review before purchase" : "Small-pack checkout; bulk quote review" }
         ].filter(Boolean)
       };
       let script = document.getElementById("productDetailJsonLd");
@@ -243,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <p class="subhead">The link may be outdated, mistyped, or tied to an older source label. Browse the current VertKleen line, or send MASEST the application you need to solve.</p>
               <div class="hero-actions">
                 <a class="btn btn-primary" href="products.html">Browse products</a>
-                <a class="btn btn-secondary" href="cart.html">Open cart</a>
+        <a class="btn btn-secondary" href="contact.html?type=quote">Request product quote</a>
               </div>
             </div>
             <div class="hmis-panel">
@@ -451,7 +456,7 @@ if (quoteFirst) {
   }
 
     // Drums & totes (55 / 275 gal): list price for reference + freight-quote CTA.
-    // Display only - these bulk sizes require freight review after order, never cart.
+    // Display only - these bulk sizes require freight review before release, never cart.
     if (!quoteFirst) fetch("data/drum-pricing.json", { cache: "no-store" })
       .then(r => (r.ok ? r.json() : {}))
       .then(map => {
@@ -466,7 +471,7 @@ if (quoteFirst) {
           `<div class="drum-ref-head">Drums &amp; totes</div>` +
           drums.map(d => `<div class="drum-ref-row"><span>${d.label}</span><span>${drumMoney(d.price, d.currency)}</span></div>`).join("") +
           `<a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(name)}&size=drum">Request a freight quote</a>` +
-          `<p class="drum-ref-note">List price shown. 55 &amp; 275 gal ship LTL; final freight is quoted after order.</p>`;
+          `<p class="drum-ref-note">Bulk reference only. 55 &amp; 275 gal ship LTL; final freight is quoted before release.</p>`;
         el.hidden = false;
       })
       .catch(() => {});

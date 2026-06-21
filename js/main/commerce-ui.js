@@ -177,6 +177,11 @@ function commerceActionHTML(id, variant = "chip") {
     + `</span>`;
 }
 
+function quoteActionHTML(id) {
+  const name = PRODUCTS[id]?.name || id;
+  return `<a class="shop-card-quote" href="contact.html?type=quote&product=${encodeURIComponent(name)}"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
+}
+
 function bulkPriceText(id) {
   const row = commerceRowFor(id);
   const variants = Array.isArray(row?.variants)
@@ -302,6 +307,10 @@ export function catalogCard(id) {
     ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="lazy" ${imageDimsAttr(mediaInfo.src)}>`
     : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
   const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial chemistry");
+  const quoteFirst = QUOTE_FIRST_IDS.includes(id);
+  const buybar = quoteFirst
+    ? quoteActionHTML(id)
+    : `${bulkPriceHTML(id)}<span class="shop-card-commerce" data-commerce-action="${id}"></span>`;
   return `
     <article class="shop-card" data-id="${id}">
       <div class="shop-card-core">
@@ -313,11 +322,10 @@ export function catalogCard(id) {
           <span class="shop-card-replaces">${p.replaces}</span>
           <span class="shop-card-cta">View details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
         </span>
-      </a>
-      <div class="shop-card-buybar">
-        ${bulkPriceHTML(id)}
-        <span class="shop-card-commerce" data-commerce-action="${id}"></span>
-      </div>
+        </a>
+        <div class="shop-card-buybar">
+          ${buybar}
+        </div>
       </div>
     </article>`;
 }
