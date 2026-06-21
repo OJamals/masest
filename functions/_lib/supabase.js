@@ -4,6 +4,7 @@
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
 import { filterSuppressed } from './email.js';
+import { isStaffEmail } from './authz.js';
 
 // Service-role client — bypasses RLS. SERVER ONLY. Never return its key or use client-side.
 export function adminClient(env) {
@@ -74,9 +75,7 @@ export async function tierPriceMap(sb, tier) {
 export async function requireStaff(request, env) {
   const { user } = await userFromRequest(request, env);
   if (!user) return { user: null, staff: false };
-  const allow = (env.ADMIN_EMAILS || env.ADMIN_EMAIL || '')
-    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  let staff = allow.includes(String(user.email || '').toLowerCase());
+  let staff = isStaffEmail(user.email, env);
   // Fallback: a profiles.is_staff=true flag (settable only server-side / via SQL) also grants staff,
   // so staff can be added/removed in the DB without a Cloudflare redeploy of ADMIN_EMAILS.
   if (!staff) {

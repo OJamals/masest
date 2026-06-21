@@ -41,10 +41,15 @@ test("QuickBooks setup docs call out online invoice payment requirements", () =>
 test("new NET and Stripe orders enter the QBO sync queue", () => {
   const checkout = read("functions/api/checkout.js");
   const webhook = read("functions/api/stripe-webhook.js");
+  const orderShape = read("functions/_lib/order-shape.js");
 
   assert.match(checkout, /payment_method:\s*'net'[\s\S]*qbo_sync_status:\s*'pending'/,
     "NET checkout orders should start pending QBO invoice sync");
-  assert.match(webhook, /payment_method:\s*'stripe'[\s\S]*qbo_sync_status:\s*'pending'/,
+  // The Stripe paid-order row is built by order-shape.js (orderRowFromSession), which the
+  // webhook delegates to; the row must still mark the order pending QBO sync.
+  assert.match(webhook, /orderRowFromSession\(/,
+    "webhook should build the paid order via orderRowFromSession");
+  assert.match(orderShape, /payment_method:\s*['"]stripe['"][\s\S]*qbo_sync_status:\s*['"]pending['"]/,
     "Stripe checkout orders should start pending QBO invoice/payment sync");
 });
 

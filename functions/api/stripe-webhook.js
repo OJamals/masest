@@ -5,6 +5,16 @@
 import Stripe from 'stripe';
 import { adminClient, json, sendEmail } from '../_lib/supabase.js';
 import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
+import {
+  centsToAmount,
+  parseCartMetadata,
+  orderRowFromSession,
+  cartLines,
+  orderItemRows,
+  stockDecrements,
+  isSubscriptionCheckout,
+  subscriptionRow,
+} from '../_lib/order-shape.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) =>
@@ -86,16 +96,12 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
 // Best-effort stock decrement for paid lines. Product-level (matches the admin stock UI). Never throws:
 // inventory drift must not fail the webhook (Stripe would retry the whole event).
 async function decrementVariantStock(sb, lines) {
-  for (const l of lines || []) {
-    if (!l.sku) continue;
+  for (const args of stockDecrements(lines)) {
     try {
-      const { error } = await sb.rpc('decrement_variant_stock', {
-        p_vsku: l.sku,
-        p_qty: Number(l.qty || 0),
-      });
-      if (error) console.error('stock_decrement_failed', l.sku, error.message);
+      const { error } = await sb.rpc('decrement_variant_stock', args);
+      if (error) console.error('stock_decrement_failed', args.p_vsku, error.message);
     } catch (e) {
-      console.error('stock_decrement_failed', l.sku, e?.message || e);
+      console.error('stock_decrement_failed', args.p_vsku, e?.message || e);
     }
   }
 }
@@ -122,15 +128,9 @@ export async function onRequestPost({ request, env }) {
     const sb = adminClient(env);
 
     // Program subscription checkout (mode=subscription): record enrollment, skip the order path.
-    if (s.mode === 'subscription') {
+    if (isSubscriptionCheckout(s)) {
       try {
-        await sb.from('program_subscriptions').upsert({
-          company_id: s.metadata?.company_id || null,
-          tier: s.metadata?.tier || null,
-          stripe_subscription_id: s.subscription || null,
-          stripe_customer_id: s.customer || null,
-          status: 'active',
-        }, { onConflict: 'stripe_subscription_id' });
+        await sb.from('program_subscriptions').upsert(subscriptionRow(s), { onConflict: 'stripe_subscription_id' });
         if (s.metadata?.company_id) {
           await sb.from('notifications').insert({
             company_id: s.metadata.company_id, type: 'account',
@@ -146,33 +146,21 @@ export async function onRequestPost({ request, env }) {
     const { data: dupe } = await sb.from('orders').select('id').eq('stripe_payment_intent', s.payment_intent).maybeSingle();
     if (dupe) return json(200, { received: true, duplicate: true });
 
-    let cart = [];
-    try { cart = JSON.parse(s.metadata?.cart || '[]'); } catch { cart = []; }
-    const subtotal = (s.amount_subtotal ?? 0) / 100;
-    const tax = (s.total_details?.amount_tax ?? 0) / 100;
-    const total = (s.amount_total ?? 0) / 100;
+    const cart = parseCartMetadata(s.metadata?.cart);
+    const subtotal = centsToAmount(s.amount_subtotal);
+    const tax = centsToAmount(s.total_details?.amount_tax);
+    const total = centsToAmount(s.amount_total);
 
-    const { data: order } = await sb.from('orders').insert({
-      company_id: s.metadata?.company_id || null,
-      status: 'paid',
-      payment_method: 'stripe',
-      qbo_sync_status: 'pending',
-      subtotal, tax, total,
-      currency: s.currency || 'usd',
-      stripe_payment_intent: s.payment_intent,
-      customer_email: buyerEmailFromStripeSession(s),
-      ship_address: s.shipping_details || s.customer_details || null,
-    }).select('id').single();
+    const { data: order } = await sb.from('orders')
+      .insert(orderRowFromSession(s, buyerEmailFromStripeSession(s)))
+      .select('id').single();
 
     // Cart keys are variant SKUs; names come from checkout metadata ("Product — 55 gal drum").
     let lines = [];
     if (cart.length) {
-      lines = cart.map((c) => ({ sku: c.sku, product_sku: c.product_sku || null, name: c.name || c.sku, qty: c.qty, unit_price: c.unit_price }));
+      lines = cartLines(cart);
       if (order) {
-        const { error: itemsErr } = await sb.from('order_items').insert(lines.map((l) => ({
-          order_id: order.id, sku: l.sku, product_sku: l.product_sku, name: l.name, qty: l.qty,
-          unit_price: l.unit_price, line_total: l.unit_price * l.qty,
-        })));
+        const { error: itemsErr } = await sb.from('order_items').insert(orderItemRows(lines, order.id));
         if (itemsErr) console.error('order_items_insert_failed', itemsErr.message);
       }
     }

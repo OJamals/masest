@@ -1,5 +1,6 @@
 // /api/admin/quotes - staff view of inbound /api/quote leads.
 import { adminClient, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
+import { buildConvertItems, netOrderRow } from '../../_lib/quote-convert.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -215,33 +216,13 @@ export async function onRequest({ request, env }) {
       const { data: company, error: coErr } = await sb.from('companies').select('id,status').eq('id', companyId).single();
       if (coErr || !company) return json(404, { error: 'company_not_found' });
 
-      const items = Array.isArray(body.items) ? body.items : [];
-      const clean = [];
-      for (const item of items) {
-        const qty = Math.max(1, parseInt(item.qty, 10) || 0);
-        const price = Number(item.unit_price);
-        const sku = String(item.sku || '').trim();
-        if (!sku || !Number.isFinite(price) || price < 0 || qty < 1) return json(400, { error: 'invalid_item' });
-        clean.push({
-          sku,
-          product_sku: sku,
-          name: String(item.name || sku).trim(),
-          qty,
-          unit_price: price,
-          line_total: +(price * qty).toFixed(2),
-        });
-      }
-      if (!clean.length) return json(400, { error: 'invalid_item' });
+      const built = buildConvertItems(body.items);
+      if (built.error) return json(400, { error: built.error });
+      const clean = built.items;
 
-      const subtotal = +clean.reduce((sum, item) => sum + item.line_total, 0).toFixed(2);
-      const { data: order, error: oErr } = await sb.from('orders').insert({
-        company_id: companyId,
-        status: 'net_open',
-        payment_method: 'net',
-        subtotal,
-        total: subtotal,
-        currency: 'usd',
-      }).select('id').single();
+      const { data: order, error: oErr } = await sb.from('orders')
+        .insert(netOrderRow(companyId, built.subtotal))
+        .select('id').single();
       if (oErr) return json(500, { error: oErr.message });
 
       const { error: iErr } = await sb.from('order_items').insert(clean.map((item) => ({ order_id: order.id, ...item })));

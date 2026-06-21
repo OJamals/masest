@@ -1,5 +1,6 @@
 // GET /api/account/me — returns the caller's profile + company (incl. approval status & NET terms).
 import { adminClient, userFromRequest, json } from '../../_lib/supabase.js';
+import { isStaffEmail } from '../../_lib/authz.js';
 import { buildAccountSetup } from '../../_lib/setup.js';
 import { companyCreditState } from '../../_lib/credit.js';
 
@@ -7,9 +8,7 @@ export async function onRequestGet({ request, env }) {
   const { user } = await userFromRequest(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
 
-  const allow = (env.ADMIN_EMAILS || env.ADMIN_EMAIL || '')
-    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const emailStaff = allow.includes(String(user.email || '').toLowerCase());
+  const emailStaff = isStaffEmail(user.email, env);
 
   const sb = adminClient(env);
   const { data: profile } = await sb

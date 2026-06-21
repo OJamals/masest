@@ -7,6 +7,10 @@ import test from "node:test";
 import { escapeHtml } from "../functions/api/stripe-webhook.js";
 
 const SRC = readFileSync(new URL("../functions/api/stripe-webhook.js", import.meta.url), "utf8");
+// Persistence shapes were extracted to _lib/order-shape.js (pure, unit-tested in
+// tests/stripe-webhook-shape.test.mjs); some contract checks below assert delegation
+// to it and pin the money math at its source of truth.
+const SHAPE = readFileSync(new URL("../functions/_lib/order-shape.js", import.meta.url), "utf8");
 
 // --- Unit: escapeHtml (imported, executed for real) ---
 test("escapeHtml escapes all five HTML-significant characters", () => {
@@ -52,9 +56,9 @@ test("webhook dedups on stripe_payment_intent before inserting an order", () => 
 
   const dupeQueryIdx = SRC.indexOf("'stripe_payment_intent', s.payment_intent");
   const dupeReturnIdx = SRC.indexOf("if (dupe)");
-  const orderInsertIdx = SRC.indexOf("from('orders').insert(");
+  const orderInsertIdx = SRC.indexOf("orderRowFromSession(");
   assert.ok(dupeQueryIdx > 0 && dupeReturnIdx > dupeQueryIdx, "dupe check must follow the lookup");
-  assert.ok(dupeReturnIdx < orderInsertIdx,
+  assert.ok(orderInsertIdx > dupeReturnIdx,
     "the duplicate short-circuit must run before the order insert (no duplicate orders on retry)");
 });
 
@@ -64,20 +68,26 @@ test("webhook decrements variant stock via the atomic RPC after a paid order", (
   assert.match(SRC, /if\s*\(\s*order\s*&&\s*lines\.length\s*\)\s*await\s+decrementVariantStock/,
     "must only decrement once the order persisted and there are lines");
 
-  const orderInsertIdx = SRC.indexOf("from('orders').insert(");
+  const orderInsertIdx = SRC.indexOf("orderRowFromSession(");
   const decrementIdx = SRC.indexOf("await decrementVariantStock(");
-  assert.ok(orderInsertIdx < decrementIdx,
+  assert.ok(orderInsertIdx > 0 && orderInsertIdx < decrementIdx,
     "stock decrement must happen after the order is recorded");
 });
 
 // --- Contract: monetary math is derived, not trusted from arbitrary fields ---
 test("order totals come from Stripe amount_* fields (cents -> dollars)", () => {
-  assert.match(SRC, /const\s+subtotal\s*=\s*\(s\.amount_subtotal\s*\?\?\s*0\)\s*\/\s*100/);
-  assert.match(SRC, /const\s+tax\s*=\s*\(s\.total_details\?\.amount_tax\s*\?\?\s*0\)\s*\/\s*100/);
-  assert.match(SRC, /const\s+total\s*=\s*\(s\.amount_total\s*\?\?\s*0\)\s*\/\s*100/);
+  // Webhook derives totals via centsToAmount(); the cents->dollars math is pinned in
+  // tests/stripe-webhook-shape.test.mjs against order-shape.js.
+  assert.match(SRC, /const\s+subtotal\s*=\s*centsToAmount\(s\.amount_subtotal\)/);
+  assert.match(SRC, /const\s+tax\s*=\s*centsToAmount\(s\.total_details\?\.amount_tax\)/);
+  assert.match(SRC, /const\s+total\s*=\s*centsToAmount\(s\.amount_total\)/);
+  assert.match(SHAPE, /return\s*\(cents\s*\?\?\s*0\)\s*\/\s*100/,
+    "centsToAmount must convert integer minor units to dollars");
 });
 
 test("order_items line_total is unit_price * qty", () => {
-  assert.match(SRC, /line_total:\s*l\.unit_price\s*\*\s*l\.qty/,
-    "each persisted line total must be computed as unit_price * qty");
+  assert.match(SRC, /orderItemRows\(lines,\s*order\.id\)/,
+    "webhook must build order_items via orderItemRows");
+  assert.match(SHAPE, /line_total:\s*l\.unit_price\s*\*\s*l\.qty/,
+    "orderItemRows must compute each line total as unit_price * qty");
 });
