@@ -1,5 +1,5 @@
 // /api/account/messages — support thread between the caller's company and MASEST staff.
-//   GET → thread (marks staff msgs read by user) · POST { body } → buyer posts (+ staff notification)
+//   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer posts (+ staff notification)
 import { adminClient, userFromRequest, companyForUser, json, readBody, sendEmail, emailLayout } from '../../_lib/supabase.js';
 
 export async function onRequest({ request, env }) {
@@ -11,6 +11,7 @@ export async function onRequest({ request, env }) {
   if (!companyId) return json(403, { error: 'no_company' });
 
   if (request.method === 'GET') {
+    const peek = new URL(request.url).searchParams.get('peek') === '1';
     const { data, error } = await sb
       .from('messages')
       .select('id,sender_role,body,order_id,created_at')
@@ -18,8 +19,10 @@ export async function onRequest({ request, env }) {
       .order('created_at', { ascending: true })
       .limit(200);
     if (error) return json(500, { error: 'server_error' });
-    await sb.from('messages').update({ read_by_user: true })
-      .eq('company_id', companyId).eq('sender_role', 'staff').eq('read_by_user', false);
+    if (!peek) {
+      await sb.from('messages').update({ read_by_user: true })
+        .eq('company_id', companyId).eq('sender_role', 'staff').eq('read_by_user', false);
+    }
     return json(200, { messages: data || [] });
   }
 

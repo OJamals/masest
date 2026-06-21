@@ -25,10 +25,23 @@
   .pill { display: inline-grid; min-width: 20px; min-height: 20px; place-items: center; border-radius: 999px; background: var(--ink); color: white; font-size: .72rem; padding: 0 6px; }
   .adm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   .adm-card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px; }
-  .adm-card h2, .adm-card h3 { margin: 0 0 12px; font-size: 1rem; }
-  .adm-stat { display: grid; gap: 4px; min-height: 92px; }
-  .adm-stat b { font-size: 1.25rem; }
-  .adm-panel { display: none; }
+.adm-card h2, .adm-card h3 { margin: 0 0 12px; font-size: 1rem; }
+.adm-stat { display: grid; gap: 4px; min-height: 92px; }
+.adm-stat b { font-size: 1.25rem; }
+.adm-report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.adm-report-card { min-height: 100%; }
+.adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 5px 0; }
+.adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.adm-action-list { display: grid; gap: 8px; }
+.adm-action-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-soft); }
+.adm-action-item:first-child { border-top: 0; padding-top: 0; }
+.adm-action-item b, .adm-action-item small { display: block; }
+.adm-action-item strong { font-variant-numeric: tabular-nums; color: var(--accent-ink); }
+.adm-mini-table { width: 100%; border-collapse: collapse; }
+.adm-mini-table th, .adm-mini-table td { padding: 8px 0; border-top: 1px solid var(--line-soft); text-align: left; font-size: .88rem; }
+.adm-mini-table th { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .07em; }
+.adm-mini-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.adm-panel { display: none; }
   .adm-panel[data-active="true"] { display: grid; gap: 16px; }
   .adm-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .adm-search, .adm-input, .adm-select, .adm-textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); font: inherit; padding: 10px 12px; }
@@ -128,7 +141,7 @@
       </div>
       </div>
 
-      <section class="adm-panel" role="tabpanel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admQbo" class="adm-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboSyncSummary" class="muted"></p><div class="adm-inline-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-arrows-clockwise"></i> Run sync</button></div><p id="qboSyncStatus" class="adm-status" role="status"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
+ <section class="adm-panel" role="tabpanel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div><div id="admActionRail" class="adm-action-rail" aria-live="polite"></div><div id="admQbo" class="adm-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboSyncSummary" class="muted"></p><div class="adm-inline-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-arrows-clockwise"></i> Run sync</button></div><p id="qboSyncStatus" class="adm-status" role="status"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
 
       <section class="adm-panel" role="tabpanel" data-panel="orders">
         <div class="adm-tools">

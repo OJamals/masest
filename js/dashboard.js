@@ -87,6 +87,7 @@ async function renderOverview() {
     ['ph-bell', notif.unread, 'Unread alerts'],
   ].map(([i, n, l]) => `<div class="stat"><div class="big-fig">${n}</div><div class="lbl"><i class="ph ${i}" aria-hidden="true"></i> ${l}</div></div>`).join('');
   renderSetupProgress();
+  await renderOverviewActivity(ord, notif);
 }
 
 function renderSetupProgress() {
@@ -112,12 +113,144 @@ function renderSetupProgress() {
           <small>${done ? 'Done' : 'Open'}</small>
         </a>`;
       }).join('')}
+  </div>`;
+}
+
+function openSetupSteps() {
+  const steps = ACCOUNT?.setup?.steps || [];
+  return steps.filter((step) => !(step.done || step.state === 'done'));
+}
+
+function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
+  const box = $('ovActionRail');
+  if (!box) return;
+  const openOrders = orders.filter((o) => !['fulfilled', 'cancelled', 'net_paid'].includes(o.status));
+  const openSteps = openSetupSteps();
+  const actions = [];
+  if (openSteps.length) {
+    actions.push({
+      id: 'setup',
+      icon: 'ph-clipboard-text',
+      label: 'Open business setup',
+      detail: `${openSteps.length} open ${openSteps.length === 1 ? 'step' : 'steps'}`,
+      href: 'business.html',
+    });
+  }
+  if (ACCOUNT?.can_checkout) {
+    actions.push({
+      id: 'cart',
+      icon: 'ph-shopping-cart',
+      label: 'Review cart',
+      detail: 'Checkout and quote review',
+      href: 'cart.html',
+    });
+  }
+  if (openOrders.length) {
+    actions.push({
+      id: 'orders',
+      icon: 'ph-truck',
+      label: 'Track orders',
+      detail: `${openOrders.length} active ${openOrders.length === 1 ? 'order' : 'orders'}`,
+      href: '#orders',
+    });
+  }
+  actions.push({
+    id: 'message',
+    icon: 'ph-chat-circle',
+    label: 'Message MASEST',
+    detail: messages.length ? `${messages.length} thread ${messages.length === 1 ? 'message' : 'messages'}` : 'Orders, pricing, NET terms',
+    href: '#messages',
+  });
+  box.innerHTML = `
+    <h2 class="headline dash-section-title dash-section-title-xs">Next actions</h2>
+    <div class="buyer-action-grid">
+      ${actions.map((action) => `<a class="buyer-action" data-buyer-action="${esc(action.id)}" href="${esc(action.href)}">
+        <i class="ph ${esc(action.icon)}" aria-hidden="true"></i>
+        <span><b>${esc(action.label)}</b><small>${esc(action.detail)}</small></span>
+        <i class="ph ph-caret-right" aria-hidden="true"></i>
+      </a>`).join('')}
     </div>`;
+  wirePanelLinks(box);
+}
+
+function newestByCreatedAt(list = []) {
+  return [...list].sort((a, b) => Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0));
+}
+
+function renderRecentOrders(orders = []) {
+  const box = $('ovRecentOrders');
+  if (!box) return;
+  const recent = newestByCreatedAt(orders).slice(0, 3);
+  if (!recent.length) {
+    box.innerHTML = `
+      <h2 class="headline dash-section-title dash-section-title-xs">Recent orders</h2>
+      <div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse <a href="products.html">catalog</a> to place first order.</div></div>`;
+    wirePanelLinks(box);
+    return;
+  }
+  box.innerHTML = `
+    <div class="dash-card-toolbar">
+      <h2 class="headline dash-section-title dash-section-title-tight">Recent orders</h2>
+      <a class="btn btn-ghost btn-sm" href="#orders">View all</a>
+    </div>
+    <div class="activity-list">
+      ${recent.map((order) => `<a class="activity-line" href="#orders">
+        <i class="ph ph-package" aria-hidden="true"></i>
+        <span><b>${esc(order.id || 'Order')}</b><small>${esc(fmtDate(order.created_at))} · ${money(order.total, order.currency || 'USD')}</small></span>
+        ${statusBadge(order.status || 'processing')}
+      </a>`).join('')}
+    </div>`;
+  wirePanelLinks(box);
+}
+
+function renderRecentMessages(messages = []) {
+  const box = $('ovRecentMessages');
+  if (!box) return;
+  const recent = newestByCreatedAt(messages).slice(0, 3);
+  if (!recent.length) {
+    box.innerHTML = `
+      <h2 class="headline dash-section-title dash-section-title-xs">Recent messages</h2>
+      <div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body"><a href="#messages">Message MASEST</a> about pricing, orders, or NET terms.</div></div>`;
+    wirePanelLinks(box);
+    return;
+  }
+  box.innerHTML = `
+    <div class="dash-card-toolbar">
+      <h2 class="headline dash-section-title dash-section-title-tight">Recent messages</h2>
+      <a class="btn btn-ghost btn-sm" href="#messages">Open</a>
+    </div>
+    <div class="activity-list">
+      ${recent.map((message) => `<a class="activity-line" href="#messages">
+        <i class="ph ${message.sender_role === 'staff' ? 'ph-headset' : 'ph-user'}" aria-hidden="true"></i>
+        <span><b>${message.sender_role === 'staff' ? 'MASEST' : 'You'}</b><small>${esc(message.body || '').slice(0, 86)}${(message.body || '').length > 86 ? '...' : ''}</small></span>
+        <time>${fmtDT(message.created_at)}</time>
+      </a>`).join('')}
+    </div>`;
+  wirePanelLinks(box);
+}
+
+async function renderOverviewActivity(orders = [], notif = { notifications: [] }) {
+  let messages = [];
+  try { messages = (await api('/api/account/messages?peek=1')).messages || []; } catch { messages = []; }
+  renderBuyerActionRail({ orders, notifications: notif.notifications || [], messages });
+  renderRecentOrders(orders);
+  renderRecentMessages(messages);
 }
 
 function setBadge(id, n) {
   const el = $(id); if (!el) return;
   if (n > 0) { el.textContent = n; el.hidden = false; } else { el.hidden = true; }
+}
+
+function wirePanelLinks(scope) {
+  if (!scope) return;
+  scope.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener('click', (event) => {
+    const tab = link.getAttribute('href').slice(1);
+    const panel = [...document.querySelectorAll('.dash-panel')].find((node) => node.dataset.panel === tab);
+    if (!panel) return;
+    event.preventDefault();
+    selectTab(tab);
+  }));
 }
 
 /* ---------- orders ---------- */

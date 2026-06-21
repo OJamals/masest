@@ -242,34 +242,89 @@ function setTab(tab) {
 }
 
 function renderSetupFollowups(stats = {}) {
-  const rows = stats.setup_followups?.open_steps || [];
-  if (!rows.length) {
-    return '<div class="adm-card" data-setup-followups><h2>Setup gaps</h2><p class="muted">No setup gaps.</p></div>';
+ const rows = stats.setup_followups?.open_steps || [];
+ if (!rows.length) {
+ return '<div class="adm-card" data-setup-followups><h2>Setup gaps</h2><p class="muted">No setup gaps.</p></div>';
   }
   return `<div class="adm-card" data-setup-followups><h2>Setup gaps</h2>${rows.map((row) => `
     <div class="dash-row"><span>${esc(row.label || row.key)}</span><b>${esc(row.count || 0)}</b></div>
-  `).join('')}</div>`;
+ `).join('')}</div>`;
+}
+
+function fmtInt(value) {
+ return Number(value || 0).toLocaleString();
+}
+
+function pct(value) {
+ return `${Math.round(Number(value || 0) * 1000) / 10}%`;
+}
+
+function renderOpsSummary(stats = {}) {
+ const commerce = stats.commerce || {};
+ const crm = stats.crm || {};
+ const accounts = stats.accounts || {};
+ const catalog = stats.catalog_health || {};
+ const analytics = stats.analytics || {};
+ const groups = [
+ ['Commerce', [
+ ['30d revenue', money(commerce.revenue_30d || 0, 'usd')],
+ ['AOV', money(commerce.average_order_value || 0, 'usd')],
+ ['Fulfillment queue', fmtInt(commerce.fulfillment_queue)],
+ ['NET exposure', money(commerce.net_exposure || 0, 'usd')],
+ ]],
+ ['CRM', [
+ ['Unread messages', fmtInt(crm.unread_messages)],
+ ['New quotes', fmtInt(crm.quotes_new)],
+ ['Urgent quotes', fmtInt(crm.quotes_urgent)],
+ ['Overdue follow-ups', fmtInt(crm.quotes_overdue)],
+ ]],
+ ['Accounts', [
+ ['Pending', fmtInt(accounts.pending)],
+ ['Approved', fmtInt(accounts.approved)],
+ ['Suspended', fmtInt(accounts.suspended)],
+ ['Setup gaps', fmtInt(crm.setup_followups)],
+ ]],
+ ['Catalog + analytics', [
+ ['Buy SKUs', fmtInt(catalog.buy)],
+ ['Low stock', fmtInt(catalog.low_stock)],
+ ['7d quote submits', fmtInt(analytics.quote_submits_7d)],
+ ['Quote rate', pct(analytics.quote_conversion_rate)],
+ ]],
+ ];
+ return `<div class="adm-report-grid">${groups.map(([title, rows]) => `
+ <div class="adm-card adm-report-card"><h2>${esc(title)}</h2>${rows.map(([label, value]) => `
+ <div class="dash-row"><span>${esc(label)}</span><b>${esc(value)}</b></div>
+ `).join('')}</div>`).join('')}${renderSetupFollowups(stats)}</div>`;
+}
+
+function renderActionRail(actions = []) {
+ if (!actions.length) return '<div class="adm-card"><h2>Priority actions</h2><p class="muted">No urgent admin actions.</p></div>';
+ return `<div class="adm-card"><h2>Priority actions</h2><div class="adm-action-list">${actions.map((item) => `
+ <a class="adm-action-item" href="${esc(item.href || '#overview')}"><span><b>${esc(item.label)}</b><small class="muted">Priority ${esc(item.priority || '')}</small></span><strong>${esc(item.value || 0)}</strong></a>
+ `).join('')}</div></div>`;
 }
 
 function renderStats(stats = {}) {
-  badge('aBadgePending', stats.companies?.pending || 0);
-  badge('aBadgeMsg', stats.messages?.unread || 0);
-  badge('aBadgeQuotes', stats.quotes?.new || stats.quotes?.new_count || 0);
-  const items = [
-    ['ph-currency-dollar', money(stats.revenue, 'usd'), 'Revenue'],
-    ['ph-package', stats.orders?.total || 0, 'Orders'],
-    ['ph-buildings', stats.companies?.pending || 0, 'Pending accounts'],
-    ['ph-check-circle', stats.companies?.approved || 0, 'Approved accounts'],
-    ['ph-clipboard-text', stats.setup_followups?.companies || 0, 'Setup follow-ups'],
-    ['ph-chats', stats.messages?.unread || 0, 'Unread messages'],
+ badge('aBadgePending', stats.companies?.pending || 0);
+ badge('aBadgeMsg', stats.messages?.unread || 0);
+ badge('aBadgeQuotes', stats.quotes?.new || stats.quotes?.new_count || 0);
+ const items = [
+ ['ph-currency-dollar', money(stats.commerce?.revenue_30d ?? stats.revenue, 'usd'), 'Revenue (30d)'],
+ ['ph-package', stats.commerce?.orders_7d || stats.orders?.total || 0, 'Orders (7d)'],
+ ['ph-buildings', stats.companies?.pending || 0, 'Pending accounts'],
+ ['ph-check-circle', stats.companies?.approved || 0, 'Approved accounts'],
+ ['ph-clipboard-text', stats.setup_followups?.companies || 0, 'Setup follow-ups'],
+ ['ph-chats', stats.messages?.unread || 0, 'Unread messages'],
     ['ph-calendar-check', stats.quotes_due?.overdue || 0, 'Quote follow-ups'],
     ['ph-warning', stats.inventory?.low_stock || 0, 'Low stock'],
     ['ph-flask', stats.catalog?.buy || 0, 'Buy SKUs'],
     ['ph-eye', stats.traffic?.views_7d || 0, 'Views (7d)'],
-  ];
-  $('admStats').innerHTML = items.map(([icon, value, label]) => `
-    <div class="adm-card adm-stat"><i class="ph ${icon}"></i><b>${esc(value)}</b><span class="muted">${esc(label)}</span></div>
-  `).join('') + renderSetupFollowups(stats);
+ ];
+ $('admStats').innerHTML = items.map(([icon, value, label]) => `
+ <div class="adm-card adm-stat"><i class="ph ${icon}"></i><b>${esc(value)}</b><span class="muted">${esc(label)}</span></div>
+ `).join('');
+ if ($('admOpsSummary')) $('admOpsSummary').innerHTML = renderOpsSummary(stats);
+ if ($('admActionRail')) $('admActionRail').innerHTML = renderActionRail(stats.actions || []);
 }
 
 async function renderOrders() {
@@ -1033,20 +1088,60 @@ async function renderOffers(force = false) {
   }
 }
 
+function renderTrafficFunnel(funnel = []) {
+ if (!funnel.length) return '<div class="adm-card"><h2>Funnel</h2><p class="muted">No funnel events yet.</p></div>';
+ return `<div class="adm-card"><h2>Funnel</h2><table class="adm-mini-table"><tbody>${funnel.map((row) => `
+ <tr><td>${esc(row.label || row.event)}</td><td class="num">${esc(row.count || 0)}</td><td class="num">${esc(pct(row.rate))}</td></tr>
+ `).join('')}</tbody></table></div>`;
+}
+
+function renderTrafficCampaigns(topCampaigns = []) {
+ if (!topCampaigns.length) return '<div class="adm-card"><h2>Campaigns</h2><p class="muted">No UTM campaigns recorded.</p></div>';
+ return `<div class="adm-card"><h2>Campaigns</h2><table class="adm-mini-table"><tbody>${topCampaigns.map((row) => `
+ <tr><td>${esc(row.key)}</td><td class="num">${esc(row.count)}</td></tr>
+ `).join('')}</tbody></table></div>`;
+}
+
+function renderTrafficDays(byDay = []) {
+ if (!byDay.length) return '<div class="adm-card"><h2>Daily trend</h2><p class="muted">No daily rows.</p></div>';
+ return `<div class="adm-card"><h2>Daily trend</h2><table class="adm-mini-table"><thead><tr><th>Day</th><th>Views</th><th>Unique</th><th>Conversion events</th></tr></thead><tbody>${byDay.map((row) => `
+ <tr><td>${esc(row.day)}</td><td class="num">${esc(row.pageviews ?? row.count ?? 0)}</td><td class="num">${esc(row.unique || 0)}</td><td class="num">${esc(row.conversion_events || 0)}</td></tr>
+ `).join('')}</tbody></table></div>`;
+}
+
+function renderTrafficList(title, rows = []) {
+ if (!rows.length) return `<div class="adm-card"><h2>${esc(title)}</h2><p class="muted">No rows.</p></div>`;
+ return `<div class="adm-card"><h2>${esc(title)}</h2>${rows.map((row) => `<div class="dash-row"><span>${esc(row.key)}</span><b>${esc(row.count)}</b></div>`).join('')}</div>`;
+}
+
 async function renderTraffic() {
-  const box = $('admTraffic');
-  box.textContent = 'Loading...';
-  try {
-    const data = await api('/api/admin/traffic?days=14');
-    if (!data.available) {
-      box.innerHTML = `<p class="muted">${esc(data.note || 'Traffic table not migrated yet.')}</p>`;
-      return;
-    }
-    box.innerHTML = `<h2>Traffic (14d)</h2><p><b>${esc(data.total)}</b> views, <b>${esc(data.unique)}</b> unique visitors</p>
-      <h3>Top paths</h3>${(data.topPaths || []).map((row) => `<p>${esc(row.key)} <span class="muted">${esc(row.count)}</span></p>`).join('')}`;
-  } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>';
-  }
+ const box = $('admTraffic');
+ box.textContent = 'Loading...';
+ try {
+ const data = await api('/api/admin/traffic?days=14');
+ if (!data.available) {
+ box.innerHTML = `<p class="muted">${esc(data.note || 'Traffic table not migrated yet.')}</p>`;
+ return;
+ }
+ box.innerHTML = `<div class="adm-traffic-report">
+ <div class="adm-grid">
+ <div class="adm-card adm-stat"><i class="ph ph-eye"></i><b>${esc(data.total)}</b><span class="muted">Tracked events</span></div>
+ <div class="adm-card adm-stat"><i class="ph ph-users-three"></i><b>${esc(data.unique)}</b><span class="muted">Known visitors</span></div>
+ <div class="adm-card adm-stat"><i class="ph ph-arrow-square-out"></i><b>${esc((data.events || []).find((row) => row.key === 'quote_submit')?.count || 0)}</b><span class="muted">Quote submits</span></div>
+ <div class="adm-card adm-stat"><i class="ph ph-shopping-cart"></i><b>${esc((data.events || []).find((row) => row.key === 'checkout_start')?.count || 0)}</b><span class="muted">Checkout starts</span></div>
+ </div>
+ <div class="adm-report-grid">
+ ${renderTrafficFunnel(data.funnel || [])}
+ ${renderTrafficCampaigns(data.topCampaigns || [])}
+ ${renderTrafficList('Top paths', data.topPaths || [])}
+ ${renderTrafficList('Referrers', data.topReferrers || [])}
+ ${renderTrafficList('Browsers', data.byBrowser || [])}
+ ${renderTrafficDays(data.byDay || [])}
+ </div>
+ </div>`;
+ } catch {
+ box.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>';
+ }
 }
 
 async function runSeoAudit() {
