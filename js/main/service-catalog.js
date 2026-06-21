@@ -243,7 +243,7 @@ function renderCatalog(root, catalog) {
   updateSummary(catalog, items);
 
   if (!items.length) {
-    root.innerHTML = `<div class="service-empty"><b>No services available.</b><p>Check back after the service catalog is loaded.</p></div>`;
+    root.innerHTML = `<div class="service-empty"><b>No services listed yet.</b><p>Use the contact form and MASEST will scope the service you need.</p><a class="btn btn-secondary btn-sm" href="contact.html">Request service</a></div>`;
     return;
   }
 
