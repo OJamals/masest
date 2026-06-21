@@ -30,7 +30,7 @@ function renderFailedOrders(orders = []) {
   root.innerHTML = `
     <h3>Failed syncs</h3>
     <div class="adm-table-wrap">
-      <table class="adm-table">
+      <table class="adm">
         <thead><tr><th>Order</th><th>Total</th><th>Attempts</th><th>Error</th><th></th></tr></thead>
         <tbody>
           ${orders.map((order) => `
@@ -103,7 +103,7 @@ export async function runQboSync() {
       status.textContent = "Running QuickBooks sync...";
       status.dataset.state = "";
     }
-    const result = await api("/api/admin/qbo/sync", "POST");
+    const result = await api("/api/admin/qbo/sync", { method: "POST" });
     if (status) {
       status.textContent = `Sync complete: ${result.synced || 0} synced, ${result.failed || 0} failed.`;
       status.dataset.state = result.ok ? "ok" : "err";
@@ -126,7 +126,7 @@ export async function retryQboOrder(orderId) {
     status.dataset.state = "";
   }
   try {
-    await api("/api/admin/qbo/retry", "POST", { id: orderId });
+    await api("/api/admin/qbo/retry", { method: "POST", body: { id: orderId } });
     if (status) {
       status.textContent = "Order requeued for QuickBooks sync.";
       status.dataset.state = "ok";

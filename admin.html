@@ -115,43 +115,43 @@
 
       <div class="adm-tabs-wrap">
       <div class="adm-tabs" role="tablist" aria-label="Admin sections">
-        <button class="adm-tab" data-tab="overview" type="button">Overview</button>
-        <button class="adm-tab" data-tab="orders" type="button">Orders</button>
-        <button class="adm-tab" data-tab="companies" type="button">Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
-        <button class="adm-tab" data-tab="customers" type="button">Customers</button>
-        <button class="adm-tab" data-tab="products" type="button">Products</button>
-        <button class="adm-tab" data-tab="pricing" type="button">Pricing</button>
-        <button class="adm-tab" data-tab="messages" type="button">Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
-        <button class="adm-tab" data-tab="quotes" type="button">Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
-        <button class="adm-tab" data-tab="offers" type="button">Emails</button>
-        <button class="adm-tab" data-tab="traffic" type="button">Traffic</button>
+        <button class="adm-tab" role="tab" data-tab="overview" type="button">Overview</button>
+        <button class="adm-tab" role="tab" data-tab="orders" type="button">Orders</button>
+        <button class="adm-tab" role="tab" data-tab="companies" type="button">Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
+        <button class="adm-tab" role="tab" data-tab="customers" type="button">Customers</button>
+        <button class="adm-tab" role="tab" data-tab="products" type="button">Products</button>
+        <button class="adm-tab" role="tab" data-tab="pricing" type="button">Pricing</button>
+        <button class="adm-tab" role="tab" data-tab="messages" type="button">Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
+        <button class="adm-tab" role="tab" data-tab="quotes" type="button">Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
+        <button class="adm-tab" role="tab" data-tab="offers" type="button">Emails</button>
+        <button class="adm-tab" role="tab" data-tab="traffic" type="button">Traffic</button>
       </div>
       </div>
 
-      <section class="adm-panel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admQbo" class="adm-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboSyncSummary" class="muted"></p><div class="adm-inline-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-arrows-clockwise"></i> Run sync</button></div><p id="qboSyncStatus" class="adm-status" role="status"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
+      <section class="adm-panel" role="tabpanel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admQbo" class="adm-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboSyncSummary" class="muted"></p><div class="adm-inline-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-arrows-clockwise"></i> Run sync</button></div><p id="qboSyncStatus" class="adm-status" role="status"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
 
-      <section class="adm-panel" data-panel="orders">
+      <section class="adm-panel" role="tabpanel" data-panel="orders">
         <div class="adm-tools">
           <select id="ordFilter" class="adm-select adm-select-sm"><option value="">All statuses</option></select>
-          <input id="ordSearch" class="adm-search" type="search" placeholder="Search orders">
+          <input id="ordSearch" class="adm-search" type="search" placeholder="Search orders" aria-label="Search orders">
           <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple"></i> Export CSV</button>
         </div>
         <div id="admOrders" class="adm-table-wrap">Loading...</div>
         <p id="ordStatus" class="adm-status" role="status"></p>
       </section>
 
-      <section class="adm-panel" data-panel="customers">
-        <input id="custSearch" class="adm-search" type="search" placeholder="Search customers">
+      <section class="adm-panel" role="tabpanel" data-panel="customers">
+        <input id="custSearch" class="adm-search" type="search" placeholder="Search customers" aria-label="Search customers">
         <div id="admCustomers" class="adm-table-wrap">Loading...</div>
       </section>
 
-      <section class="adm-panel" data-panel="companies">
-        <input id="coSearch" class="adm-search" type="search" placeholder="Search accounts">
+      <section class="adm-panel" role="tabpanel" data-panel="companies">
+        <input id="coSearch" class="adm-search" type="search" placeholder="Search accounts" aria-label="Search accounts">
         <div id="admCompanies" class="adm-table-wrap">Loading...</div>
         <div id="companyDetail" class="adm-card" hidden></div>
       </section>
 
-      <section class="adm-panel" data-panel="products">
+      <section class="adm-panel" role="tabpanel" data-panel="products">
         <div class="adm-card">
           <h2>Add / overwrite a product</h2>
           <form id="prodForm" class="adm-form-grid">
@@ -179,37 +179,37 @@
           </form>
           <p id="variantStatus" class="adm-status" role="status"></p>
         </div>
-        <input id="prodSearch" class="adm-search" type="search" placeholder="Search products">
+        <input id="prodSearch" class="adm-search" type="search" placeholder="Search products" aria-label="Search products">
         <div id="admProducts" class="adm-table-wrap">Loading...</div>
       </section>
 
-      <section class="adm-panel" data-panel="pricing">
+      <section class="adm-panel" role="tabpanel" data-panel="pricing">
         <div class="adm-card">
-          <input id="priceSearch" type="search" class="adm-search" placeholder="Search variants">
+          <input id="priceSearch" type="search" class="adm-search" placeholder="Search variants" aria-label="Search variants">
           <div id="admPricing">Loading...</div>
         </div>
       </section>
 
-      <section class="adm-panel" data-panel="messages">
+      <section class="adm-panel" role="tabpanel" data-panel="messages">
         <div id="msgGrid" class="thread-layout">
           <div id="admThreads" class="thread-list">Loading...</div>
           <div id="admThreadView" class="adm-card">Select a conversation.</div>
         </div>
       </section>
 
-      <section class="adm-panel" data-panel="quotes">
+      <section class="adm-panel" role="tabpanel" data-panel="quotes">
         <div class="adm-tools">
           <select id="qFilter" class="adm-select adm-select-sm"><option value="">All quotes</option><option>new</option><option>contacted</option><option>closed</option><option>spam</option></select>
           <select id="qPriority" class="adm-select adm-select-xs"><option value="">All priorities</option><option>urgent</option><option>high</option><option>normal</option><option>low</option></select>
           <input id="qOwner" class="adm-search" type="search" placeholder="Owner">
           <select id="qDue" class="adm-select adm-select-md"><option value="">All follow-ups</option><option value="overdue">Overdue</option><option value="upcoming">Upcoming</option><option value="unscheduled">Unscheduled</option></select>
-          <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes">
+          <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes" aria-label="Search quotes">
         </div>
         <div id="admQuotes" class="adm-panel-list">Loading...</div>
         <p id="qStatus" class="adm-status" role="status"></p>
       </section>
 
-      <section class="adm-panel" data-panel="offers">
+      <section class="adm-panel" role="tabpanel" data-panel="offers">
         <div class="adm-card">
           <h2>Send an offer / announcement</h2>
           <form id="offerForm" class="adm-form-grid">
@@ -225,7 +225,7 @@
         <div class="adm-card"><h2>Recent sends</h2><div id="admOffers">Loading...</div></div>
       </section>
 
-      <section class="adm-panel" data-panel="traffic">
+      <section class="adm-panel" role="tabpanel" data-panel="traffic">
         <div id="admTraffic" class="adm-card">Loading...</div>
       </section>
     </div>

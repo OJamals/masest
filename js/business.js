@@ -73,10 +73,10 @@ function wireCompanySetup() {
     if (status) { status.textContent = 'Saving setup...'; status.dataset.state = ''; }
     if (button) button.disabled = true;
     try {
-      await api('/api/account/company', 'POST', {
+      await api('/api/account/company', { method: 'POST', body: {
         tax_exempt: $('taxExempt').checked,
         resale_cert_url: $('resaleCertUrl').value.trim(),
-      });
+      } });
       const fresh = await me();
       renderProfile(fresh);
       renderSetupChecklist(fresh);
@@ -117,7 +117,7 @@ function wirePaymentSetup() {
       status.dataset.state = 'busy';
     }
     try {
-      const out = await api('/api/account/billing-portal', 'POST');
+      const out = await api('/api/account/billing-portal', { method: 'POST' });
       if (status) {
         status.textContent = 'Payment portal opened in this tab.';
         status.dataset.state = 'ok';
