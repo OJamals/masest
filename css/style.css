@@ -4284,10 +4284,10 @@ main:has(#pMediaSection) .section-head {
 
 .catalog-price-note {
   max-width: 1040px;
-  margin: -12px auto 30px;
+  margin: 18px 0 30px;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -4481,7 +4481,7 @@ main:has(#pMediaSection) .section-head {
 
   .catalog-price-note {
     justify-content: flex-start;
-    margin-top: -6px;
+    margin-top: 14px;
   }
 
   .catalog-price-note span {
