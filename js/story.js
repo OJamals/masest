@@ -264,6 +264,10 @@ states.forEach(function (st) {
   var costNum = costAct ? costAct.querySelector(".cost-num") : null;
   var costVert = costAct ? costAct.querySelector(".cost-vert") : null;
   var COST_TARGET = costNum ? (parseInt(costNum.getAttribute("data-target"), 10) || 0) : 0;
+  /* VertKleen card starts hidden and is faded in by updateCost once the legacy
+     total has climbed. This runs only under motion (the reduced-motion / no-GSAP
+     path returns early above), so the CSS fallback still shows the card. */
+  if (costVert) gsap.set(costVert, { autoAlpha: 0, y: 18 });
   function fmtCost(n) { return Math.round(n).toLocaleString("en-US"); }
   function updateCost(st) {
     if (!costNum) return;
@@ -271,7 +275,13 @@ states.forEach(function (st) {
     var a = beatFrac(st, 4.4), b = beatFrac(st, 5.0);
     var ramp = smooth(clamp(0, 1, (st.p - a) / (b - a)));
     setTxt(costNum, fmtCost(COST_TARGET * ramp));
-    if (costVert) costVert.classList.toggle("is-on", ramp > 0.6);
+    if (costVert) {
+      /* Sequence: legacy hidden costs climb first, THEN the VertKleen card fades
+         in. Reveal tracks the back half of the cost ramp (0.6 -> 0.95). */
+      var reveal = smooth(clamp(0, 1, (ramp - 0.6) / 0.35));
+      gsap.set(costVert, { autoAlpha: reveal, y: (1 - reveal) * 18 });
+      costVert.classList.toggle("is-on", reveal > 0.5);
+    }
   }
 
   /* ============================================================
