@@ -79,6 +79,7 @@ export function renderChrome() {
   if (leadBarPages.has(page) || isIndustryDetail) {
     const leadBar = document.createElement("div");
     leadBar.className = "lead-action-bar";
+    leadBar.setAttribute("role", "group");
     leadBar.setAttribute("aria-label", "Primary request actions");
     leadBar.innerHTML = `
       <a href="${root}contact.html?type=audit"><i class="ph ph-map-trifold" aria-hidden="true"></i><span>Map chemical</span></a>
