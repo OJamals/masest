@@ -87,7 +87,7 @@
       <h1 class="display" id="pName"></h1>
  <p class="subhead" id="pDesc"></p>
  <div class="hero-ctas u-mt-30">
- <a class="btn btn-primary" id="pQuoteBtn" href="contact.html">Request quote</a>
+ <a class="btn btn-primary" id="pQuoteBtn" href="contact.html">Request a quote</a>
  <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
  </div>
       <p class="cart-feedback" id="pCartFeedback" role="status" aria-live="polite" hidden></p>
@@ -242,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <h1 class="display">That product is not in the current catalog.</h1>
               <p class="subhead">The link may be outdated, mistyped, or tied to an older source label. Browse the current VertKleen line, or send MASEST the application you need to solve.</p>
               <div class="hero-actions">
-                <a class="btn btn-primary" href="products.html">View Products</a>
+                <a class="btn btn-primary" href="products.html">Browse products</a>
                 <a class="btn btn-secondary" href="cart.html">Open cart</a>
               </div>
             </div>
@@ -434,11 +434,16 @@ if (quoteFirst) {
             cart.add(sel.value, 1);
             buyBtn.textContent = "Added";
             cartFeedback.hidden = false;
+            cartFeedback.removeAttribute("data-state");
             cartFeedback.innerHTML = `Added to cart. <a href="cart.html">Review cart</a>`;
             setTimeout(() => { buyBtn.textContent = original; buyBtn.disabled = false; }, 900);
           } catch (err) {
-            buyBtn.textContent = "Try again";
-            setTimeout(() => { buyBtn.textContent = original; buyBtn.disabled = false; }, 1200);
+            cartFeedback.hidden = false;
+            cartFeedback.dataset.state = "err";
+            cartFeedback.textContent =
+              "Couldn't add to cart. Your browser may be blocking storage — try again, or use a regular (non-private) window.";
+            buyBtn.textContent = original;
+            buyBtn.disabled = false;
           }
         });
       })

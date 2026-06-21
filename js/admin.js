@@ -125,7 +125,7 @@ async function openCompanyDetail(id) {
     wireCompanyDetailActions(company);
     wireCompanyUserActions(company);
   } catch (err) {
-    box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load company.')}</p>`;
+    box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load this company. Reload to retry.')}</p>`;
   }
 }
 
@@ -141,7 +141,7 @@ function wireCompanyDetailActions(company) {
         await renderCompanies();
         await openCompanyDetail(company.id);
       } catch (err) {
-        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Action failed.')}</p>`);
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not apply the change. Retry.')}</p>`);
         button.disabled = false;
       }
     });
@@ -168,7 +168,7 @@ function wireCompanyUserActions(company) {
         await api('/api/admin/users', { method: 'POST', body: { action: 'set_role', company_id: company.id, profile_id: profileId, role } });
         await openCompanyDetail(company.id);
       } catch (err) {
-        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Role update failed.')}</p>`);
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not update the role. Retry.')}</p>`);
         button.disabled = false;
       }
     });
@@ -182,7 +182,7 @@ function wireCompanyUserActions(company) {
         await api('/api/admin/users', { method: 'POST', body: { action, company_id: company.id, invite_id: inviteId } });
         await openCompanyDetail(company.id);
       } catch (err) {
-        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Invite update failed.')}</p>`);
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not update the invite. Retry.')}</p>`);
         button.disabled = false;
       }
     });
@@ -334,7 +334,7 @@ async function renderOrders() {
   try {
     state.orders = (await api('/api/admin/orders' + (status ? `?status=${encodeURIComponent(status)}` : ''))).orders || [];
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load orders.</p>';
+    box.innerHTML = '<p class="adm-status" data-state="err">Could not load orders. Reload to retry.</p>';
     return;
   }
   const q = $('ordSearch').value.trim().toLowerCase();
@@ -390,7 +390,7 @@ async function renderOrders() {
         message('ordStatus', 'Tracking saved.', 'ok');
         await renderOrders();
       } catch (err) {
-        message('ordStatus', err.data?.error || 'Tracking update failed.', 'err');
+        message('ordStatus', err.data?.error || 'Could not update tracking. Retry.', 'err');
         button.disabled = false;
       }
     });
@@ -406,7 +406,7 @@ async function renderOrders() {
         message('ordStatus', 'Refunded.', 'ok');
         await renderOrders();
       } catch (err) {
-        message('ordStatus', err.data?.error || 'Refund failed.', 'err');
+        message('ordStatus', err.data?.error || 'Refund did not go through. Refresh and check before retrying.', 'err');
         button.disabled = false;
       }
     });
@@ -422,7 +422,7 @@ async function renderOrders() {
         message('ordStatus', 'Invoice recorded.', 'ok');
         await renderOrders();
       } catch (err) {
-        message('ordStatus', err.data?.error || 'Invoice update failed.', 'err');
+        message('ordStatus', err.data?.error || 'Could not update the invoice. Refresh and check before retrying.', 'err');
         button.disabled = false;
       }
     });
@@ -439,7 +439,7 @@ async function renderOrders() {
         message('ordStatus', 'Payment recorded.', 'ok');
         await renderOrders();
       } catch (err) {
-        message('ordStatus', err.data?.error || 'Payment update failed.', 'err');
+        message('ordStatus', err.data?.error || 'Could not update payment status. Refresh and check before retrying.', 'err');
         button.disabled = false;
       }
     });
@@ -452,7 +452,7 @@ async function renderCustomers() {
   try {
     state.customers = (await api('/api/admin/customers')).customers || [];
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load customers.</p>';
+    box.innerHTML = '<p class="adm-status" data-state="err">Could not load customers. Reload to retry.</p>';
     return;
   }
   const q = $('custSearch').value.trim().toLowerCase();
@@ -475,7 +475,7 @@ async function renderCompanies() {
   try {
     state.companies = (await api('/api/admin/companies')).companies || [];
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load accounts.</p>';
+    box.innerHTML = '<p class="adm-status" data-state="err">Could not load accounts. Reload to retry.</p>';
     return;
   }
   const q = $('coSearch').value.trim().toLowerCase();
@@ -541,7 +541,7 @@ async function renderProducts() {
       message('prodStatus', 'Apply site/supabase/schema-phase5.sql to enable product photos.', 'err');
     }
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load products.</p>';
+    box.innerHTML = '<p class="adm-status" data-state="err">Could not load products. Reload to retry.</p>';
     return;
   }
   const q = $('prodSearch').value.trim().toLowerCase();
@@ -607,7 +607,7 @@ async function renderProducts() {
       }
       message('prodStatus', 'Gallery updated.', 'ok');
       await renderProducts();
-    } catch (err) { message('prodStatus', err.data?.error || 'Gallery update failed.', 'err'); btn.disabled = false; }
+    } catch (err) { message('prodStatus', err.data?.error || 'Could not update the gallery. Retry.', 'err'); btn.disabled = false; }
   }));
 }
 
@@ -623,7 +623,7 @@ async function uploadProductImage(sku, file, slot) {
     message('prodStatus', `${sku} image uploaded.`, 'ok');
     await renderProducts();
   } catch (err) {
-    message('prodStatus', err.message || 'Upload failed.', 'err');
+    message('prodStatus', err.message || 'Could not upload the image. Check the file and retry.', 'err');
   }
 }
 
@@ -663,7 +663,7 @@ async function saveProductRow(sku) {
     message('prodStatus', response.warning || 'Saved.', response.warning ? 'err' : 'ok');
     await renderProducts();
   } catch (err) {
-    message('prodStatus', err.data?.error || 'Failed.', 'err');
+    message('prodStatus', err.data?.error || 'Could not save the product. Retry.', 'err');
   }
 }
 
@@ -674,7 +674,7 @@ async function removeProduct(sku) {
     message('prodStatus', 'Product deactivated.', 'ok');
     await renderProducts();
   } catch (err) {
-    message('prodStatus', err.data?.hint || err.data?.error || 'Remove failed.', 'err');
+    message('prodStatus', err.data?.hint || err.data?.error || 'Could not deactivate the product. Retry.', 'err');
   }
 }
 
@@ -696,7 +696,7 @@ async function saveVariantRow(vsku) {
     message('variantStatus', 'Variant saved.', 'ok');
     await renderProducts();
   } catch (err) {
-    message('variantStatus', err.data?.error || 'Failed.', 'err');
+    message('variantStatus', err.data?.error || 'Could not save the variant. Retry.', 'err');
   }
 }
 
@@ -707,7 +707,7 @@ async function removeVariant(vsku) {
     message('variantStatus', 'Variant deactivated.', 'ok');
     await renderProducts();
   } catch (err) {
-    message('variantStatus', err.data?.error || 'Remove failed.', 'err');
+    message('variantStatus', err.data?.error || 'Could not deactivate the variant. Retry.', 'err');
   }
 }
 
@@ -732,7 +732,7 @@ function wireProductForm() {
       event.target.reset();
       await renderProducts();
     } catch (err) {
-      message('prodStatus', err.data?.error || 'Failed.', 'err');
+      message('prodStatus', err.data?.error || 'Could not add the product. Check the fields and retry.', 'err');
     }
   });
 }
@@ -757,7 +757,7 @@ function wireVariantForm() {
       event.target.reset();
       await renderProducts();
     } catch (err) {
-      message('variantStatus', err.data?.error || 'Failed.', 'err');
+      message('variantStatus', err.data?.error || 'Could not add the variant. Check the fields and retry.', 'err');
     }
   });
 }
@@ -769,7 +769,7 @@ async function renderPricing() {
   try {
     data = await api('/api/admin/variant-pricing');
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load pricing.</p>';
+    box.innerHTML = '<p class="adm-status" data-state="err">Could not load pricing. Reload to retry.</p>';
     return;
   }
   const q = $('priceSearch').value.trim().toLowerCase();
@@ -799,7 +799,7 @@ async function renderPricing() {
         });
         message('priceRowStatus', `${row.dataset.vsku} ${input.dataset.priceTier} saved.`, 'ok');
       } catch (err) {
-        message('priceRowStatus', err.data?.error || 'Failed.', 'err');
+        message('priceRowStatus', err.data?.error || 'Could not save the price. Retry.', 'err');
       } finally {
         input.disabled = false;
       }
@@ -813,7 +813,7 @@ async function renderThreads() {
   try {
     state.threads = (await api('/api/admin/messages')).threads || [];
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load messages.</p>';
+    box.innerHTML = '<p class="adm-status" data-state="err">Could not load messages. Reload to retry.</p>';
     return;
   }
   if (!state.threads.length) {
@@ -853,11 +853,11 @@ async function openThread(companyId) {
         await openThread(companyId);
         await renderThreads();
       } catch (err) {
-        message('replyStatus', err.data?.error || 'Failed.', 'err');
+        message('replyStatus', err.data?.error || 'Could not send the reply. Retry.', 'err');
       }
     });
   } catch {
-    view.innerHTML = '<p class="adm-status" data-state="err">Failed to load thread.</p>';
+    view.innerHTML = '<p class="adm-status" data-state="err">Could not load this thread. Reload to retry.</p>';
   }
 }
 
@@ -868,7 +868,7 @@ async function renderQuotePipeline() {
   try {
     data = await api('/api/admin/quotes');
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed to load quotes.</p>';
+    box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
     return;
   }
 
@@ -973,7 +973,7 @@ async function renderQuotePipeline() {
         message('qStatus', 'Lead saved.', 'ok');
         await renderQuotePipeline();
       } catch (err) {
-        message('qStatus', err.data?.error || 'Save failed.', 'err');
+        message('qStatus', err.data?.error || 'Could not save the lead. Retry.', 'err');
         button.disabled = false;
       }
     });
@@ -997,7 +997,7 @@ async function renderQuotePipeline() {
         message('qStatus', `Order ${res.order_id} created.`, 'ok');
         await renderQuotePipeline();
       } catch (err) {
-        message('qStatus', err.data?.error || 'Convert failed.', 'err');
+        message('qStatus', err.data?.error || 'Could not convert the lead. Refresh and check for a new order before retrying.', 'err');
         button.disabled = false;
       }
     });
@@ -1020,7 +1020,7 @@ async function renderQuotePipeline() {
         message('qStatus', 'Follow-up snoozed.', 'ok');
         await renderQuotePipeline();
       } catch (err) {
-        message('qStatus', err.data?.error || 'Snooze failed.', 'err');
+        message('qStatus', err.data?.error || 'Could not snooze the follow-up. Retry.', 'err');
         button.disabled = false;
       }
     });
@@ -1043,7 +1043,7 @@ async function renderQuotePipeline() {
         message('qStatus', 'Follow-up sent.', 'ok');
         await renderQuotePipeline();
       } catch (err) {
-        message('qStatus', err.data?.error || 'Follow-up failed.', 'err');
+        message('qStatus', err.data?.error || 'Could not send the follow-up. Retry.', 'err');
         button.disabled = false;
       }
     });
@@ -1068,7 +1068,7 @@ function wireOfferForm() {
       message('offerStatus', `Sent to ${response.recipients || 0} account(s)${response.emailed ? ' + email' : ''}.`, 'ok');
       renderOffers(true);
     } catch (err) {
-      message('offerStatus', err.data?.error || 'Failed.', 'err');
+      message('offerStatus', err.data?.error || 'Could not send the offer. Retry.', 'err');
     }
   });
 }
@@ -1084,7 +1084,7 @@ async function renderOffers(force = false) {
     `).join('') : '<p class="muted">No sends yet.</p>';
     state.loaded.add('offers');
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>';
+    box.innerHTML = '<p class="adm-status" data-state="err">Could not load sends. Reload to retry.</p>';
   }
 }
 
@@ -1140,7 +1140,7 @@ async function renderTraffic() {
  </div>
  </div>`;
  } catch {
- box.innerHTML = '<p class="adm-status" data-state="err">Failed.</p>';
+ box.innerHTML = '<p class="adm-status" data-state="err">Could not load traffic. Reload to retry.</p>';
  }
 }
 
@@ -1227,7 +1227,7 @@ function wire() {
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(a.href);
       message('ordStatus', 'Exported.', 'ok');
-    } catch { message('ordStatus', 'Export failed.', 'err'); }
+    } catch { message('ordStatus', 'Could not export the CSV. Retry.', 'err'); }
   });
   $('admLogout').addEventListener('click', async () => { await logout(); location.reload(); });
   $('gateForm').addEventListener('submit', async (event) => {
@@ -1241,7 +1241,7 @@ function wire() {
       boot();
     } catch (err) {
       const raw = String(err?.message || '');
-      message('gateStatus', /captcha/i.test(raw) ? 'Verification failed. Reload and complete the challenge.' : 'Sign in failed.', 'err');
+      message('gateStatus', /captcha/i.test(raw) ? 'Verification failed. Reload and complete the challenge.' : 'Sign in failed. Check your email and password.', 'err');
     } finally {
       resetGateCaptcha();
     }

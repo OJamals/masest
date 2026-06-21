@@ -377,6 +377,7 @@ scoped to the hero */
   color: var(--muted);
   font-weight: 700;
 }
+.cart-feedback[data-state=err] { color: var(--danger); }
 .cart-feedback[hidden] { display: none !important; }
 .cart-feedback a {
   color: var(--accent-strong);
