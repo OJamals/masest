@@ -14,7 +14,36 @@ strokeWeight regular,
 one family.
    ============================================================ */
 
-@import url("../vendor/satoshi/satoshi.css");
+/* Satoshi @font-face inlined (was @import vendor/satoshi/satoshi.css) to drop the
+   chained stylesheet request; weights match the original face set. */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('../vendor/satoshi/satoshi-01.woff2') format('woff2'),
+       url('../vendor/satoshi/satoshi-02.woff') format('woff'),
+       url('../vendor/satoshi/satoshi-03.ttf') format('truetype');
+  font-weight: 400; font-display: swap; font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('../vendor/satoshi/satoshi-04.woff2') format('woff2'),
+       url('../vendor/satoshi/satoshi-05.woff') format('woff'),
+       url('../vendor/satoshi/satoshi-06.ttf') format('truetype');
+  font-weight: 500; font-display: swap; font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('../vendor/satoshi/satoshi-07.woff2') format('woff2'),
+       url('../vendor/satoshi/satoshi-08.woff') format('woff'),
+       url('../vendor/satoshi/satoshi-09.ttf') format('truetype');
+  font-weight: 700; font-display: swap; font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('../vendor/satoshi/satoshi-10.woff2') format('woff2'),
+       url('../vendor/satoshi/satoshi-11.woff') format('woff'),
+       url('../vendor/satoshi/satoshi-12.ttf') format('truetype');
+  font-weight: 900; font-display: swap; font-style: normal;
+}
 
 :root {
   --ink: #15171c;
