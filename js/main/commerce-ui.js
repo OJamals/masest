@@ -456,6 +456,18 @@ export function initShop() {
     apply();
   });
 
+  // "/" focuses product search for keyboard-first buyers; skip while typing in a field
+  if (searchEl) {
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target;
+      const tag = t && t.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (t && t.isContentEditable)) return;
+      e.preventDefault();
+      searchEl.focus();
+    });
+  }
+
   if (matrix && result) {
     matrix.addEventListener("click", (e) => {
       const row = e.target.closest(".swap-row");

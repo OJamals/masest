@@ -845,7 +845,7 @@ no number circles) ---------- */
   background: #fff; color: var(--ink); transition: border-color .2s, box-shadow .2s;
 }
 .field input::placeholder,
-.field textarea::placeholder { color: #6f757c; }
+.field textarea::placeholder { color: var(--muted); }
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -2321,12 +2321,22 @@ never inline text. */
   background: #fff;
   color: var(--ink);
   box-shadow: none;
+  transition: transform .18s var(--ease-out, cubic-bezier(.22,1,.36,1)),
+              box-shadow .18s var(--ease-out, cubic-bezier(.22,1,.36,1)),
+              background .18s ease;
 }
 .block-dark .btn-primary:hover,
 .on-dark .btn-primary:hover {
-  background: #edf2f3;
+  background: #fff;
   color: var(--ink);
-  box-shadow: none;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -10px rgba(14,124,134,.6), 0 0 0 1px rgba(255,255,255,.14);
+}
+@media (prefers-reduced-motion: reduce) {
+  .block-dark .btn-primary,
+  .on-dark .btn-primary { transition: none; }
+  .block-dark .btn-primary:hover,
+  .on-dark .btn-primary:hover { transform: none; }
 }
 
 /* Products router: override generic CTA tile route-card rules near EOF. */
