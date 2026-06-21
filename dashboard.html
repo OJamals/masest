@@ -77,7 +77,7 @@
   .msg.staff { align-self: flex-start; background: var(--accent-soft); color: var(--ink); border-bottom-left-radius: 4px; }
   .msg time { display: block; font-size: .68rem; opacity: .7; margin-top: 4px; }
   .notif { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
-  .notif.unread { background: var(--accent-tint); margin: 0 -22px; padding: 14px 22px; }
+  .notif.unread { background: var(--accent-tint); margin: 0; padding: 14px; border-radius: var(--r-input); }
   .notif i { color: var(--accent); font-size: 1.3rem; }
   .dash-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; }
   .dash-status[data-state=ok] { color: var(--accent-ink); }
@@ -120,6 +120,93 @@
   .notif-time { font-size: .78rem; }
   .notif-link { font-weight: 700; }
   .pay-copy { margin-bottom: 16px; }
+  .dash-card {
+    box-shadow: var(--shadow-xs);
+    min-width: 0;
+    overflow: hidden;
+  }
+  .dash-row {
+    align-items: flex-start;
+  }
+  .dash-row > span,
+  .dash-row > b,
+  .dash-card p,
+  .dash-card small {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .dash-row > b {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .dash-sidebar .dash-tab {
+    min-height: 42px;
+    border-radius: var(--r-input);
+    padding: 10px;
+    justify-content: flex-start;
+    line-height: 1.2;
+    text-align: left;
+  }
+  .dash-sidebar .dash-tab[aria-selected=true] {
+    background: var(--accent-soft);
+    border-color: rgba(14,124,134,.24);
+    color: var(--accent-ink);
+  }
+  .dash-tab i {
+    flex: 0 0 auto;
+  }
+  .dash-tab .pill {
+    margin-left: auto;
+  }
+  .buyer-action,
+  .activity-line,
+  .setup-step,
+  .notif {
+    min-width: 0;
+  }
+  .buyer-action,
+  .activity-line {
+    overflow: hidden;
+  }
+  .buyer-action > span,
+  .activity-line > span,
+  .notif-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .notif-body > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .dash-card .field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+    align-items: start;
+  }
+  .dash-card input,
+  .dash-card select,
+  .dash-card textarea {
+    min-width: 0;
+  }
+  .activity-line .badge {
+    max-width: 138px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dash-order-summary {
+    align-items: flex-start;
+  }
+  .dash-order-summary > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .dash-order-summary > b {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+  }
+  .msg {
+    overflow-wrap: anywhere;
+  }
   @media (prefers-reduced-motion: reduce) { .dash-tab { transition: none; } }
 @media (max-width: 820px) {
 .dash-layout { display: block; }
@@ -129,7 +216,28 @@
 .dash-nav-group { scroll-snap-align: start; }
 .buyer-action-grid, .overview-activity-grid { grid-template-columns: 1fr; }
 }
-  @media (max-width: 640px) { .msg { max-width: 92%; } }
+  @media (max-width: 640px) {
+    .msg { max-width: 92%; }
+    .dash-row,
+    .dash-order-summary,
+    .dash-card-toolbar {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .dash-row > b {
+      text-align: left;
+    }
+    .activity-line {
+      grid-template-columns: 28px minmax(0, 1fr);
+    }
+    .activity-line .badge {
+      grid-column: 2;
+      justify-self: start;
+    }
+    .dash-card .field-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 </head>
 <body class="site-soft-bg">

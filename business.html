@@ -14,13 +14,22 @@
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/story.css">
 <style>
-  .biz-wrap { max-width: 980px; margin: 0 auto; }
-  .biz-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px; margin-bottom: 18px; }
+  .biz-wrap { max-width: 1120px; margin: 0 auto; }
+  .biz-layout { display: grid; grid-template-columns: minmax(190px, 230px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .biz-main { min-width: 0; }
+  .biz-sidebar { position: sticky; top: 96px; align-self: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-card); background: rgba(255,255,255,.76); box-shadow: var(--shadow-xs); }
+  .biz-nav { display: flex; flex-direction: column; gap: 6px; }
+  .biz-nav span { color: var(--ink-soft); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 0 10px 4px; }
+  .biz-nav-link { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 10px; border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); color: var(--ink-soft); font-size: .9rem; font-weight: 700; line-height: 1.2; }
+  .biz-nav-link:hover { border-color: rgba(14,124,134,.26); color: var(--accent-ink); background: var(--accent-tint); }
+  .biz-nav-link i { flex: 0 0 auto; }
+  .biz-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px; margin-bottom: 18px; min-width: 0; overflow: hidden; box-shadow: var(--shadow-xs); scroll-margin-top: 92px; }
   .biz-card h2 { font-size: 1.55rem; font-weight: 700; letter-spacing: -.02em; margin-bottom: 4px; }
   .biz-card .lead { color: var(--ink-soft); font-size: 1rem; margin-bottom: 18px; line-height: 1.5; }
-  .biz-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 1rem; }
+  .biz-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 1rem; }
   .biz-row:last-child { border-bottom: 0; }
-  .biz-row b { color: var(--ink); }
+  .biz-row span, .biz-row b, .biz-card p, .setup-step span, .setup-step small { min-width: 0; overflow-wrap: anywhere; }
+  .biz-row b { color: var(--ink); text-align: right; }
   .badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
   .badge[data-s=pending] { background: #fef3c7; color: #92400e; }
   .badge[data-s=approved] { background: var(--accent-soft); color: var(--accent-ink); }
@@ -54,10 +63,18 @@
   .biz-field-gap { margin-top: 12px; }
   .biz-button-gap { margin-top: 14px; }
   .biz-invites { margin-top: 10px; }
+  @media (max-width: 820px) {
+    .biz-layout { display: block; }
+    .biz-sidebar { position: static; margin-bottom: 18px; padding: 10px; }
+    .biz-nav { flex-direction: row; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+    .biz-nav-link { min-width: 170px; scroll-snap-align: start; }
+  }
   @media (max-width: 720px) {
     .tier-grid { grid-template-columns: 1fr; }
     .biz-form { grid-template-columns: 1fr; }
     .biz-check-label { padding-bottom: 0; }
+    .biz-row { flex-direction: column; gap: 4px; }
+    .biz-row b { text-align: left; }
   }
 </style>
 </head>
@@ -95,14 +112,28 @@
       </div>
 
       <div id="bizApp" hidden>
-        <!-- Your business -->
-        <div class="biz-card" id="bizProfile"></div>
-        <div class="biz-card" id="bizSetup"></div>
-        <div class="biz-card" id="bizCompanySetup"></div>
-        <div class="biz-card" id="bizPaymentSetup"></div>
+        <div class="biz-layout">
+          <aside class="biz-sidebar" aria-label="Business navigation">
+            <nav class="biz-nav">
+              <span>Business</span>
+              <a class="biz-nav-link" href="#bizProfile"><i class="ph ph-briefcase" aria-hidden="true"></i> Company</a>
+              <a class="biz-nav-link" href="#bizSetup"><i class="ph ph-check-circle" aria-hidden="true"></i> Setup</a>
+              <a class="biz-nav-link" href="#bizTeam"><i class="ph ph-users-three" aria-hidden="true"></i> Team</a>
+              <a class="biz-nav-link" href="#bizPrograms"><i class="ph ph-calendar-check" aria-hidden="true"></i> Programs</a>
+              <a class="biz-nav-link" href="#bizBulk"><i class="ph ph-truck" aria-hidden="true"></i> Bulk orders</a>
+              <a class="biz-nav-link" href="dashboard.html"><i class="ph ph-squares-four" aria-hidden="true"></i> Dashboard</a>
+            </nav>
+          </aside>
 
-        <!-- Team (company admins only) -->
-        <div class="biz-card" id="bizTeam" hidden>
+          <div class="biz-main">
+            <!-- Your business -->
+            <div class="biz-card" id="bizProfile"></div>
+            <div class="biz-card" id="bizSetup"></div>
+            <div class="biz-card" id="bizCompanySetup"></div>
+            <div class="biz-card" id="bizPaymentSetup"></div>
+
+            <!-- Team (company admins only) -->
+            <div class="biz-card" id="bizTeam" hidden>
           <h2>Team members</h2>
           <p class="lead">Invite teammates to your company account: invited emails join automatically when they register and sign in.</p>
           <div id="teamMembers"><p class="muted">Loading…</p></div>
@@ -118,7 +149,7 @@
         </div>
 
         <!-- Programs -->
-        <div class="biz-card">
+        <div class="biz-card" id="bizPrograms">
           <h2>VertKleen service programs</h2>
           <p class="lead">Recurring treatment + maintenance programs tuned to your equipment and run hours. Request enrollment and your account team will scope a plan and pricing.</p>
           <div class="tier-grid" id="tierGrid"></div>
@@ -127,7 +158,7 @@
         </div>
 
         <!-- Bulk orders -->
-        <div class="biz-card">
+        <div class="biz-card" id="bizBulk">
           <h2>Bulk &amp; standing orders</h2>
           <p class="lead">Need volume pricing, drums, totes, or a recurring standing order? List the requirement and sales will return a scoped quote.</p>
           <form id="bulkForm" class="form-card biz-clean-form">
@@ -141,12 +172,14 @@
         </div>
 
         <!-- B2B messaging -->
-        <div class="biz-card">
+        <div class="biz-card" id="bizAccountTeam">
           <h2>Your account team</h2>
           <p class="lead">A direct B2B message line to MASEST: pricing, compliance docs (SDS, NSF/ANSI 60), NET terms, and order questions. We reply in your dashboard.</p>
           <div class="actions">
             <a class="btn btn-primary btn-sm" href="dashboard.html#messages">Open message board</a>
             <a class="btn btn-ghost btn-sm" href="dashboard.html">Go to dashboard</a>
+          </div>
+        </div>
           </div>
         </div>
       </div>

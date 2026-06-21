@@ -1159,9 +1159,9 @@ async function runSeoAudit() {
       return { page, ok: false };
     }
   }));
-  box.innerHTML = `<h2>SEO audit</h2><table class="adm"><tbody>${rows.map((row) => `
-    <tr><td>${esc(row.page)}</td><td class="${row.ok ? 'seo-ok' : 'seo-bad'}">${row.ok ? 'OK' : 'Check'}</td><td class="muted">title ${esc(row.title || 0)} / desc ${esc(row.desc || 0)}</td></tr>
-  `).join('')}</tbody></table>`;
+  box.innerHTML = `<h2>SEO audit</h2><div class="adm-table-wrap"><table class="adm"><tbody>${rows.map((row) => `
+      <tr><td>${esc(row.page)}</td><td class="${row.ok ? 'seo-ok' : 'seo-bad'}">${row.ok ? 'OK' : 'Check'}</td><td class="muted">title ${esc(row.title || 0)} / desc ${esc(row.desc || 0)}</td></tr>
+    `).join('')}</tbody></table></div>`;
   state.loaded.add('seo');
 }
 
