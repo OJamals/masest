@@ -418,7 +418,7 @@ async function renderOrders() {
       if (!invoiceId) { message('ordStatus', 'Enter a QuickBooks invoice ID first.', 'err'); return; }
       button.disabled = true;
       try {
-        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_invoice', qbo_invoice_id: invoiceId.trim() } });
+        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_invoice', qbo_invoice_id: invoiceId } });
         message('ordStatus', 'Invoice recorded.', 'ok');
         await renderOrders();
       } catch (err) {
@@ -435,7 +435,7 @@ async function renderOrders() {
       if (!paymentId) { message('ordStatus', 'Enter a QuickBooks payment ID first.', 'err'); return; }
       button.disabled = true;
       try {
-        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_payment', qbo_payment_id: paymentId.trim() } });
+        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_payment', qbo_payment_id: paymentId } });
         message('ordStatus', 'Payment recorded.', 'ok');
         await renderOrders();
       } catch (err) {
