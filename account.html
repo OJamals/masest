@@ -13,8 +13,27 @@
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
-  /* Full-width wrap (inherits .wrap 1180/28px gutters); the card is left-aligned with the hero copy. */
-  #acctAuth, #acctSummary { max-width: 440px; }
+  /* Full-width wrap (inherits .wrap 1180/28px gutters); the sign-in card is left-aligned with the hero copy. */
+  #acctAuth { max-width: 440px; }
+  /* Signed-in view: a two-column desk so the summary fills the space instead of floating alone. */
+  .acct-summary { display: grid; grid-template-columns: 1.3fr .85fr; gap: clamp(16px, 2.2vw, 26px); align-items: start; max-width: 940px; }
+  .acct-summary[hidden] { display: none; }
+  .acct-summary-main { padding: 26px 24px; }
+  .acct-summary-side { padding: 22px 20px; align-self: start; }
+  .acct-summary-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+  .acct-side-title { font-size: .76rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft); margin: 0 0 12px; }
+  .acct-link { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 13px; padding: 11px 12px; border-radius: var(--r-input); color: var(--ink); transition: background .2s ease; }
+  .acct-link + .acct-link { margin-top: 2px; }
+  .acct-link > i:first-child { font-size: 1.3rem; color: var(--accent-ink); }
+  .acct-link .acct-link-copy { display: flex; flex-direction: column; line-height: 1.3; }
+  .acct-link .acct-link-copy b { font-size: .95rem; font-weight: 600; }
+  .acct-link .acct-link-copy small { color: var(--ink-soft); font-size: .8rem; }
+  .acct-link-go { font-size: 1rem; color: var(--ink-soft); transition: transform .2s ease, color .2s ease; }
+  .acct-link:hover { background: var(--accent-soft); }
+  .acct-link:hover .acct-link-go { transform: translateX(3px); color: var(--accent-ink); }
+  @media (max-width: 760px) {
+    .acct-summary { grid-template-columns: 1fr; max-width: 440px; }
+  }
   /* Focused single-column auth: side-by-side email/password reads as an awkward wide sheet. */
   #acctAuth .field-grid { grid-template-columns: 1fr; gap: 14px; }
   #acctAuth .form-card { padding: 26px 24px; }
@@ -70,7 +89,7 @@
   <section class="hero-split">
     <div class="wrap">
       <h1 class="display">Your VertKleen buying desk.</h1>
-      <p class="subhead">Sign in to track orders, reorder approved products, and keep quotes moving. New buyers can create a business account for online ordering and eligible NET terms.</p>
+      <p class="subhead" id="acctSubhead">Sign in to track orders, reorder approved products, and keep quotes moving. New buyers can create a business account for online ordering and eligible NET terms.</p>
     </div>
   </section>
 
@@ -141,18 +160,29 @@
         <button type="button" class="btn btn-ghost btn-sm u-mt-10" id="cLogout">Sign out</button>
       </div>
 
-      <!-- Signed-in summary -->
-      <div class="form-card" id="acctSummary" hidden>
-        <h2 class="headline headline--xs">Account</h2>
-        <div class="acct-row"><span>Signed in as</span><b id="smEmail">Not set</b></div>
-        <div class="acct-row"><span>Company</span><b id="smCompany">Not set</b></div>
-        <div class="acct-row"><span>Status</span><span class="acct-badge" id="smStatus" data-s="pending">pending</span></div>
-        <div class="acct-row"><span>Online ordering</span><b id="smCheckout">Not set</b></div>
-        <div class="acct-row"><span>NET terms</span><b id="smNet">Not set</b></div>
-        <p class="acct-status u-minh-0" id="smNote" data-state=""></p>
-        <div id="smOrders"></div>
-        <a class="btn btn-primary u-mt-18" href="dashboard.html">Open dashboard</a>
-        <button type="button" class="btn btn-ghost u-mt-18 u-ml-8" id="logoutBtn">Sign out</button>
+      <!-- Signed-in summary: account + recent orders, with a quick-actions desk panel -->
+      <div id="acctSummary" class="acct-summary" hidden>
+        <div class="form-card acct-summary-main">
+          <h2 class="headline headline--xs">Account</h2>
+          <div class="acct-row"><span>Signed in as</span><b id="smEmail">Not set</b></div>
+          <div class="acct-row"><span>Company</span><b id="smCompany">Not set</b></div>
+          <div class="acct-row"><span>Status</span><span class="acct-badge" id="smStatus" data-s="pending">pending</span></div>
+          <div class="acct-row"><span>Online ordering</span><b id="smCheckout">Not set</b></div>
+          <div class="acct-row"><span>NET terms</span><b id="smNet">Not set</b></div>
+          <p class="acct-status u-minh-0" id="smNote" data-state=""></p>
+          <div id="smOrders"></div>
+          <div class="acct-summary-actions">
+            <a class="btn btn-primary" href="dashboard.html">Open dashboard</a>
+            <button type="button" class="btn btn-ghost" id="logoutBtn">Sign out</button>
+          </div>
+        </div>
+        <aside class="form-card acct-summary-side" aria-label="Quick actions">
+          <h3 class="acct-side-title">Quick actions</h3>
+          <a class="acct-link" href="products.html"><i class="ph ph-flask" aria-hidden="true"></i><span class="acct-link-copy"><b>Browse the catalog</b><small>Find a VertKleen replacement</small></span><i class="ph ph-arrow-right acct-link-go" aria-hidden="true"></i></a>
+          <a class="acct-link" href="dashboard.html#orders"><i class="ph ph-package" aria-hidden="true"></i><span class="acct-link-copy"><b>Your orders</b><small>Track and reorder</small></span><i class="ph ph-arrow-right acct-link-go" aria-hidden="true"></i></a>
+          <a class="acct-link" href="cart.html"><i class="ph ph-shopping-cart-simple" aria-hidden="true"></i><span class="acct-link-copy"><b>Cart &amp; checkout</b><small>Card, ACH, or NET terms</small></span><i class="ph ph-arrow-right acct-link-go" aria-hidden="true"></i></a>
+          <a class="acct-link" href="contact.html"><i class="ph ph-chat-circle-text" aria-hidden="true"></i><span class="acct-link-copy"><b>Talk to sales</b><small>Quotes and program help</small></span><i class="ph ph-arrow-right acct-link-go" aria-hidden="true"></i></a>
+        </aside>
       </div>
 
     </div>
@@ -202,6 +232,8 @@
   const $ = (id) => document.getElementById(id);
   const authBox = $("acctAuth");
   const summary = $("acctSummary");
+  const heroSub = $("acctSubhead");
+  const HERO_SUB_DEFAULT = heroSub ? heroSub.textContent : "";
 
   const PENDING_KEY = "masest_pending_registration";
   const isLocalPreview = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
@@ -269,7 +301,11 @@
   }
   function showSummary(data) {
     completeCard.hidden = true;
-    if (!data) { authBox.hidden = false; summary.hidden = true; return; }
+    if (!data) {
+      authBox.hidden = false; summary.hidden = true;
+      if (heroSub) heroSub.textContent = HERO_SUB_DEFAULT;
+      return;
+    }
     authBox.hidden = true; summary.hidden = false;
     $("smEmail").textContent = data.email || "Not set";
     $("smCompany").textContent = data.company?.name || "Not set";
@@ -279,6 +315,10 @@
     $("smNet").textContent = data.can_use_net_terms ? `NET-${data.company?.net_terms_days}` : "Not enabled";
     $("smNote").textContent = st === "approved" ? "" : "Your account is under review. We will email you when ordering is enabled.";
     $("smNote").dataset.state = st === "approved" ? "ok" : "";
+    if (heroSub) {
+      const who = data.company?.name || data.email;
+      heroSub.textContent = (who ? "Signed in as " + who + ". " : "") + "Reorder approved products, track orders, and keep quotes moving.";
+    }
   }
 
   async function renderOrders() {
