@@ -1165,6 +1165,34 @@ async function runSeoAudit() {
   `).join('')}</tbody></table>`;
 }
 
+// --- Cloudflare Turnstile on the staff gate (mirrors account.html sign-in) ---
+// Supabase Auth CAPTCHA is enabled, so signInWithPassword needs a captchaToken.
+// Skipped on local preview (no key) where the prod sitekey can't be solved.
+const TS_LOCAL = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
+const TS_SITEKEY = TS_LOCAL ? '' : (window.MASEST_TURNSTILE_SITEKEY || '');
+function initGateTurnstile() {
+  if (!TS_SITEKEY) return;
+  const form = $('gateForm');
+  if (!form || form.querySelector('.cf-turnstile')) return;
+  const btn = form.querySelector('button[type="submit"]');
+  const w = document.createElement('div');
+  w.className = 'cf-turnstile';
+  w.dataset.sitekey = TS_SITEKEY;
+  w.style.margin = '16px 0 0';
+  w.style.gridColumn = '1 / -1';
+  form.insertBefore(w, btn);
+  const s = document.createElement('script');
+  s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+  s.async = true; s.defer = true;
+  document.head.appendChild(s);
+}
+// Turnstile injects a hidden <input name="cf-turnstile-response"> on solve.
+function gateCaptchaToken() {
+  if (!TS_SITEKEY) return undefined;
+  return $('gateForm')?.querySelector('[name="cf-turnstile-response"]')?.value || '';
+}
+function resetGateCaptcha() { try { window.turnstile?.reset(); } catch (e) { /* not loaded */ } }
+
 function wire() {
   ORDER_STATUSES.forEach((status) => {
     $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${status}">${status.replaceAll('_', ' ')}</option>`);
@@ -1204,15 +1232,21 @@ function wire() {
   $('admLogout').addEventListener('click', async () => { await logout(); location.reload(); });
   $('gateForm').addEventListener('submit', async (event) => {
     event.preventDefault();
+    const cap = gateCaptchaToken();
+    if (TS_SITEKEY && !cap) { message('gateStatus', 'Complete the verification challenge.', 'err'); return; }
     message('gateStatus', 'Signing in...');
     try {
-      await login({ email: $('gEmail').value.trim(), password: $('gPass').value });
+      await login({ email: $('gEmail').value.trim(), password: $('gPass').value, captchaToken: cap });
       message('gateStatus', '');
       boot();
-    } catch {
-      message('gateStatus', 'Sign in failed.', 'err');
+    } catch (err) {
+      const raw = String(err?.message || '');
+      message('gateStatus', /captcha/i.test(raw) ? 'Verification failed. Reload and complete the challenge.' : 'Sign in failed.', 'err');
+    } finally {
+      resetGateCaptcha();
     }
   });
+  initGateTurnstile();
   wireProductForm();
   wireVariantForm();
   wireOfferForm();
