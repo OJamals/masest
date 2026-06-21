@@ -15,7 +15,7 @@ function cleanUrl(value) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const user = await userFromRequest(request, env);
+  const { user } = await userFromRequest(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
 
   const sb = adminClient(env);

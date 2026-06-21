@@ -54,6 +54,16 @@ test("dashboard organizes signed-in tools with a sidebar and account group", () 
   assert.match(dashboard, /class="dash-section-title"/, "dashboard panel headings should use reusable classes instead of inline style");
 });
 
+test("logged-in dashboard admin tabs sync with hash changes", () => {
+ const dashboard = read("js/dashboard.js");
+ const admin = read("js/admin.js");
+
+ assert.match(dashboard, /addEventListener\(['"]hashchange['"]/,
+ "dashboard should respond to same-page #tab navigation and browser back/forward");
+ assert.match(admin, /addEventListener\(['"]hashchange['"]/,
+ "admin should respond to same-page #tab navigation and browser back/forward");
+});
+
 test("account dropdown section labels are styled in the shared account nav", () => {
   const nav = read("js/account-nav.js");
 

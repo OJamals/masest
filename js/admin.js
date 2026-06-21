@@ -218,7 +218,7 @@ async function boot() {
 
 function setTab(tab) {
   state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
-  location.hash = state.tab;
+  if (location.hash.slice(1) !== state.tab) location.hash = state.tab;
   document.querySelectorAll('[data-panel]').forEach((panel) => {
     panel.dataset.active = String(panel.dataset.panel === state.tab);
   });
@@ -239,6 +239,10 @@ function setTab(tab) {
     traffic: renderTraffic,
   }[state.tab];
   render?.();
+}
+
+function syncTabFromHash() {
+  setTab(location.hash.slice(1) || 'overview');
 }
 
 function renderSetupFollowups(stats = {}) {
@@ -1200,6 +1204,7 @@ function wire() {
   document.querySelectorAll('[data-tab]').forEach((button) => {
     button.addEventListener('click', () => setTab(button.dataset.tab));
   });
+  window.addEventListener('hashchange', syncTabFromHash);
   $('ordFilter').addEventListener('change', renderOrders);
   $('ordSearch').addEventListener('input', renderOrders);
   $('coSearch').addEventListener('input', renderCompanies);

@@ -47,6 +47,10 @@ test("account company setup endpoint lets buyers update tax setup fields", () =>
   assert.match(src, /body\.tax_exempt !== undefined/, "endpoint should only update tax_exempt when submitted");
   assert.match(src, /invalid_resale_cert_url/, "endpoint should reject invalid resale certificate URLs");
   assert.match(src, /\.eq\('id', companyId\)/, "company update must be id-scoped");
+  assert.doesNotMatch(src, /\bconst\s+user\s*=\s*await\s+userFromRequest\b/,
+    "endpoint must not assign the userFromRequest wrapper directly to user");
+  assert.match(src, /const\s*\{\s*user\s*\}\s*=\s*await\s+userFromRequest\(/,
+    "endpoint must destructure { user } from userFromRequest before reading user.id");
 });
 
 test("business hub renders and submits company setup form", () => {

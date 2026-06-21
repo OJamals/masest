@@ -136,7 +136,7 @@ test("products page keeps the field proof strip between catalog and CTA", () => 
 
 test("program function map is optional below the tiers", () => {
   const programs = read("programs.html");
-  const tiersIndex = programs.indexOf("A program ladder for every tower reality");
+  const tiersIndex = programs.indexOf("Four program tiers, from manual dosing to full lifecycle");
   const mapIndex = programs.indexOf("The chemistry stack, translated function by function");
   const mapDisclosureIndex = programs.indexOf('class="resource-disclosure program-map-disclosure');
 

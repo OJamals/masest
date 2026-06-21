@@ -13,12 +13,24 @@ let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
 
 /* ---------- tabs / routing ---------- */
+const DASH_TABS = ['orders', 'messages', 'notifications', 'addresses', 'payment', 'profile', 'security'];
+
+function currentDashboardTab() {
+  const tab = location.hash.slice(1);
+  return DASH_TABS.includes(tab) ? tab : 'overview';
+}
+
 function selectTab(name) {
   document.querySelectorAll('.dash-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   document.querySelectorAll('.dash-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
   loadTab(name);
 }
+
+function syncTabFromHash() {
+  selectTab(currentDashboardTab());
+}
+
 function wireTabs() {
   document.querySelectorAll('.dash-tab').forEach((b) =>
     b.addEventListener('click', () => selectTab(b.dataset.tab)));
@@ -494,9 +506,8 @@ async function boot() {
   $('dashGreeting').textContent = `Welcome back${ACCOUNT.profile?.full_name ? ', ' + ACCOUNT.profile.full_name : ''}.`;
     wireTabs(); wireMessageForm(); wireNotifications(); wireAddressForm(); wireProfileForm(); wireSecurityForm();
   await renderOverview();
-    const start = ['orders', 'messages', 'notifications', 'addresses', 'payment', 'profile', 'security'].includes(location.hash.slice(1))
-    ? location.hash.slice(1) : 'overview';
-  selectTab(start);
+  selectTab(currentDashboardTab());
+  window.addEventListener('hashchange', syncTabFromHash);
   startPolling();
 }
 boot();

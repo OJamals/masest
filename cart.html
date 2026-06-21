@@ -221,7 +221,7 @@ async function loadCatalog() {
       status.textContent = "Remove bulk freight items before checkout, or send a quote request.";
     } else if (status.dataset.state === "err" && cartItems.length) {
       status.dataset.state = "";
-      status.textContent = "Final totals, freight, and tax are confirmed at checkout.";
+      status.textContent = "Cart totals are confirmed at checkout by server.";
     }
     if (!cartItems.length) {
       lines.innerHTML = `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
