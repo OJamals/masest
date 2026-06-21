@@ -221,7 +221,7 @@ async function loadCatalog() {
       status.textContent = "Remove bulk freight items before checkout, or send a quote request.";
     } else if (status.dataset.state === "err" && cartItems.length) {
       status.dataset.state = "";
-      status.textContent = "Cart totals are confirmed at checkout by the server.";
+      status.textContent = "Final totals, freight, and tax are confirmed at checkout.";
     }
     if (!cartItems.length) {
       lines.innerHTML = `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
@@ -229,20 +229,29 @@ async function loadCatalog() {
       updateShipping();
       return;
     }
-    lines.innerHTML = cartItems.map(item => `
+    lines.innerHTML = cartItems.map(item => {
+      const meta = vmap.get(item.sku);
+      const name = productName(item.sku);
+      const detail = meta?.purchasable
+        ? `${priceMoney(meta.price, meta.currency)} each · freight and tax confirmed at checkout.`
+        : meta
+          ? "Quote required · MASEST confirms pricing, freight, and tax."
+          : "Freight and tax confirmed at checkout.";
+      return `
       <article class="cart-line">
         <div>
           <span class="eyebrow">${item.sku}</span>
-          <h2>${productName(item.sku)}</h2>
-          <p>${vmap.get(item.sku)?.purchasable ? priceMoney(vmap.get(item.sku).price, vmap.get(item.sku).currency) + " each · " : vmap.get(item.sku) ? "Quote required · " : ""}freight + tax confirmed at checkout.</p>
+          <h2>${name}</h2>
+          <p>${detail}</p>
         </div>
         <label>
           <span>Qty</span>
-          <input type="number" min="1" step="1" value="${item.qty}" data-qty="${item.sku}">
+          <input type="number" min="1" step="1" value="${item.qty}" data-qty="${item.sku}" aria-label="Quantity for ${name}">
         </label>
         <button type="button" class="btn btn-ghost" data-remove="${item.sku}">Remove</button>
       </article>
-    `).join("");
+    `;
+    }).join("");
     updateSubtotal();
     updateShipping();
   }
