@@ -352,7 +352,7 @@ async function renderOrders() {
       <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
       <td>${esc(order.payment_method || '')}</td>
       <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-      <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? `Invoice ${esc(order.qbo_invoice_id)}` : 'Add invoice'}</button> <button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? `Payment ${esc(order.qbo_payment_id)}` : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && order.status !== 'cancelled' ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
+      <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && order.status !== 'cancelled' ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
     </tr>`;
   }).join('')}</tbody></table>`;
 
@@ -414,8 +414,8 @@ async function renderOrders() {
   box.querySelectorAll('[data-qbo-order]').forEach((button) => {
     button.addEventListener('click', async () => {
       const id = button.dataset.qboOrder;
-      const invoiceId = prompt('QuickBooks invoice ID');
-      if (!invoiceId) return;
+      const invoiceId = box.querySelector(`[data-qbo-invoice-input="${CSS.escape(id)}"]`)?.value.trim();
+      if (!invoiceId) { message('ordStatus', 'Enter a QuickBooks invoice ID first.', 'err'); return; }
       button.disabled = true;
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_invoice', qbo_invoice_id: invoiceId.trim() } });
@@ -431,8 +431,8 @@ async function renderOrders() {
   box.querySelectorAll('[data-qbo-payment-order]').forEach((button) => {
     button.addEventListener('click', async () => {
       const id = button.dataset.qboPaymentOrder;
-      const paymentId = prompt('QuickBooks payment ID');
-      if (!paymentId) return;
+      const paymentId = box.querySelector(`[data-qbo-payment-input="${CSS.escape(id)}"]`)?.value.trim();
+      if (!paymentId) { message('ordStatus', 'Enter a QuickBooks payment ID first.', 'err'); return; }
       button.disabled = true;
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_payment', qbo_payment_id: paymentId.trim() } });
