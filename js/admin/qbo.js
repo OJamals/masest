@@ -1,20 +1,7 @@
 import { api } from "../auth.js";
+import { esc, money } from "../util.js";
 
 const $ = (id) => document.getElementById(id);
-
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  }[char]));
-}
-
-function money(value, currency = "USD") {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(Number(value || 0));
-}
 
 function failedOrderName(order) {
   return order.companies?.name || order.id;
@@ -35,11 +22,11 @@ function renderFailedOrders(orders = []) {
         <tbody>
           ${orders.map((order) => `
             <tr>
-              <td>${escapeHtml(failedOrderName(order))}</td>
+              <td>${esc(failedOrderName(order))}</td>
               <td>${money(order.total, order.currency || "USD")}</td>
-              <td>${escapeHtml(order.qbo_attempts || 0)}</td>
-              <td>${escapeHtml(order.qbo_error || "Unknown QuickBooks error")}</td>
-              <td><button class="btn btn-ghost btn-sm" type="button" data-qbo-retry="${escapeHtml(order.id)}">Retry</button></td>
+              <td>${esc(order.qbo_attempts || 0)}</td>
+              <td>${esc(order.qbo_error || "Unknown QuickBooks error")}</td>
+              <td><button class="btn btn-ghost btn-sm" type="button" data-qbo-retry="${esc(order.id)}">Retry</button></td>
             </tr>
           `).join("")}
         </tbody>

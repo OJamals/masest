@@ -1050,6 +1050,7 @@ async function renderTraffic() {
 }
 
 async function runSeoAudit() {
+  if (state.loaded.has('seo')) return;
   const box = $('admSeo');
   const pages = ['index.html', 'products.html', 'programs.html', 'industries.html', 'about.html', 'contact.html'];
   const rows = await Promise.all(pages.map(async (page) => {
@@ -1066,6 +1067,7 @@ async function runSeoAudit() {
   box.innerHTML = `<h2>SEO audit</h2><table class="adm"><tbody>${rows.map((row) => `
     <tr><td>${esc(row.page)}</td><td class="${row.ok ? 'seo-ok' : 'seo-bad'}">${row.ok ? 'OK' : 'Check'}</td><td class="muted">title ${esc(row.title || 0)} / desc ${esc(row.desc || 0)}</td></tr>
   `).join('')}</tbody></table>`;
+  state.loaded.add('seo');
 }
 
 // --- Cloudflare Turnstile on the staff gate (mirrors account.html sign-in) ---
