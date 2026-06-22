@@ -33,7 +33,9 @@ test("cart checkout fires checkout_start", () => {
   assert.match(CART, /mtrack\(["']checkout_start["']\)/);
 });
 
-test("order-confirmed loads track.js and fires order_complete", () => {
+test("order-confirmed loads track.js and fires the order_confirmed funnel event", () => {
   assert.match(CONFIRM, /src="js\/track\.js"/);
-  assert.match(CONFIRM, /mtrack\(["']order_complete["']\)/);
+  // Must match the funnel/stats event name (admin traffic.js + stats.js count
+  // 'order_confirmed'); emitting 'order_complete' silently mis-buckets the row.
+  assert.match(CONFIRM, /mtrack\(["']order_confirmed["']\)/);
 });
