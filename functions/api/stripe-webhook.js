@@ -21,6 +21,23 @@ export function escapeHtml(value) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// Postgres unique-constraint violation (e.g. the orders.stripe_payment_intent guard).
+export function isUniqueViolation(error) {
+  return error?.code === '23505';
+}
+
+// Classify the paid-order insert so the webhook reacts correctly to each outcome:
+//   'ok'        -> persisted; proceed with items / email / stock / notify.
+//   'duplicate' -> a concurrent Stripe delivery already inserted this payment's order
+//                  (unique guard fired); treat as idempotent success (HTTP 200).
+//   'error'     -> transient/DB failure; the caller must return a 5xx so Stripe
+//                  re-delivers — acking 200 here would lose a paid order.
+export function classifyOrderInsert(error) {
+  if (!error) return 'ok';
+  if (isUniqueViolation(error)) return 'duplicate';
+  return 'error';
+}
+
 // Branded order-confirmation email via Resend. Never throws: email failure must not
 // fail the webhook (Stripe would retry the whole event). No-op if unconfigured or
 // the session has no buyer email. RESEND_FROM must be a Resend-verified sender.
@@ -151,9 +168,19 @@ export async function onRequestPost({ request, env }) {
     const tax = centsToAmount(s.total_details?.amount_tax);
     const total = centsToAmount(s.amount_total);
 
-    const { data: order } = await sb.from('orders')
+    const { data: order, error: orderErr } = await sb.from('orders')
       .insert(orderRowFromSession(s, buyerEmailFromStripeSession(s)))
       .select('id').single();
+
+    const insertOutcome = classifyOrderInsert(orderErr);
+    // A concurrent Stripe delivery already inserted this payment's order: idempotent success.
+    if (insertOutcome === 'duplicate') return json(200, { received: true, duplicate: true });
+    // Transient/DB failure persisting the order: do NOT ack. Return a 5xx so Stripe
+    // re-delivers the event — acking 200 here would lose a paid order with no fulfillment.
+    if (insertOutcome === 'error') {
+      console.error('order_insert_failed', orderErr?.message || orderErr);
+      return json(503, { error: 'order_persist_failed' });
+    }
 
     // Cart keys are variant SKUs; names come from checkout metadata ("Product — 55 gal drum").
     let lines = [];

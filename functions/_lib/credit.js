@@ -12,6 +12,14 @@ export function round2(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
+// True when a Supabase RPC failed because the function isn't deployed yet — Postgres
+// undefined_function (42883) or PostgREST's "function not found" (PGRST202). Lets
+// checkout.js prefer the atomic place_net_order RPC but fall back to the in-app credit
+// check when the migration hasn't been applied, so NET checkout never hard-breaks.
+export function isMissingFunctionError(error) {
+  return error?.code === '42883' || error?.code === 'PGRST202';
+}
+
 // Pure predicate: would an order of `orderTotal` push the company over its limit?
 // At-limit (==) is allowed; strictly over (>) is blocked.
 export function exceedsCredit(state, orderTotal) {
