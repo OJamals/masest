@@ -27,6 +27,20 @@ export function exceedsCredit(state, orderTotal) {
   return round2(state.outstanding + Number(orderTotal || 0)) > state.credit_limit;
 }
 
+// Pure NET-settlement planner for the manual (non-QBO) "mark NET paid" affordance.
+// Only a NET order in the net_open state may be settled, so staff cannot accidentally
+// flip a cart / card-paid / cancelled order to net_paid. Unlike record_qbo_payment this
+// needs no QuickBooks payment id; the optional free-text reference (check/wire no.) is
+// returned for the audit trail only — there is no settlement-reference column.
+export function planNetSettlement(order, { reference } = {}) {
+  if (!order) return { ok: false, error: 'not_found' };
+  if (order.payment_method !== 'net') return { ok: false, error: 'not_net' };
+  if (order.status === 'net_paid') return { ok: false, error: 'already_settled' };
+  if (order.status !== 'net_open') return { ok: false, error: 'not_open' };
+  const ref = String(reference || '').trim().slice(0, 200) || null;
+  return { ok: true, update: { status: 'net_paid' }, reference: ref };
+}
+
 // Reads the company's open NET balance and derives available credit.
 // `creditLimit` is companies.credit_limit (caller already loaded the company row).
 // Throws on query error so the caller chooses how to fail (checkout -> 503; me -> degrade).
