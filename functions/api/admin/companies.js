@@ -5,6 +5,7 @@ import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.j
 import { buildCompanySetup } from '../../_lib/setup.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { staffCan } from '../../_lib/authz.js';
+import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
@@ -14,14 +15,16 @@ export async function onRequest({ request, env }) {
   const sb = adminClient(env);
 
   if (request.method === 'GET') {
-    const status = new URL(request.url).searchParams.get('status');
+    const params = new URL(request.url).searchParams;
+    const status = params.get('status');
+    const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 500 });
     let q = sb.from('companies')
-      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,resale_cert_url,stripe_customer_id,created_at,profiles(id,full_name,phone,role)')
-      .order('created_at', { ascending: false }).limit(500);
+      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,resale_cert_url,stripe_customer_id,created_at,profiles(id,full_name,phone,role)', { count: 'exact' })
+      .order('created_at', { ascending: false }).range(offset, offset + limit - 1);
     if (status) q = q.eq('status', status);
-    const { data, error } = await q;
+    const { data, error, count } = await q;
     if (error) return json(500, { error: error.message });
-    return json(200, { companies: (data || []).map((company) => ({ ...company, setup: buildCompanySetup(company) })) });
+    return json(200, { companies: (data || []).map((company) => ({ ...company, setup: buildCompanySetup(company) })), ...pageEnvelope(data, { limit, offset, count }) });
   }
 
   if (request.method === 'POST') {
