@@ -3,6 +3,7 @@
 //   POST { email, role? }   → invite a teammate (role 'buyer'|'admin')
 //   DELETE { id }           → revoke a pending invite
 import { adminClient, userFromRequest, json, readBody, emailLayout, sendEmail } from '../../_lib/supabase.js';
+import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 
 async function callerContext(sb, userId) {
   const { data } = await sb.from('profiles').select('company_id,role').eq('id', userId).maybeSingle();
@@ -48,6 +49,9 @@ export async function onRequest({ request, env }) {
   if (!isCompanyAdmin) return json(403, { error: 'company_admin_required' });
 
   if (request.method === 'POST') {
+    // Throttle invites per inviter: each POST sends an email to an arbitrary address.
+    const rl = await rateLimit(env, 'team-invite', user.id || clientIp(request), { limit: 10, windowSec: 60 });
+    if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
     const body = await readBody(request);
     const email = String(body.email || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json(400, { error: 'invalid_email' });
