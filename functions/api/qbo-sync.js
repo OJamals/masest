@@ -77,14 +77,19 @@ async function orderItems(sb, orderId) {
   return data || [];
 }
 
-async function companyNamesFor(sb, order) {
-  if (!order.company_id) return {};
-  const { data, error } = await sb.from('companies')
-    .select('name')
-    .eq('id', order.company_id)
-    .maybeSingle();
+// Distinct, non-guest company ids across a claimed batch (#37 N+1 fix).
+export function uniqueCompanyIds(orders) {
+  return [...new Set((orders || []).map((o) => o.company_id).filter(Boolean))];
+}
+
+// One batched `companies` read for the whole sync batch instead of one per order —
+// a NET batch usually shares a buyer, so this collapses N reads to 1. Returns an
+// { id: name } map for documentPlanFor; nameless rows are dropped (it falls back).
+export async function companyNamesByIds(sb, ids) {
+  if (!ids.length) return {};
+  const { data, error } = await sb.from('companies').select('id,name').in('id', ids);
   if (error) throw new Error(error.message || 'qbo_company_read_failed');
-  return data?.name ? { [order.company_id]: data.name } : {};
+  return Object.fromEntries((data || []).filter((c) => c.name).map((c) => [c.id, c.name]));
 }
 
 async function markSynced(sb, order, result) {
@@ -139,13 +144,22 @@ export async function runQboSync({ env, batch = 10 }) {
     return json(503, { error: 'qbo_unavailable', detail: message, claimed: orders.length, failed: orders.length });
   }
 
+  // Resolve every buyer name in one query up front (#37). A failure here is a shared
+  // dependency for the whole batch, so requeue all claimed orders like a token failure.
+  let companyNames;
+  try {
+    companyNames = await companyNamesByIds(sb, uniqueCompanyIds(orders));
+  } catch (err) {
+    const message = await requeueClaimed(sb, orders, err);
+    return json(503, { error: 'qbo_company_lookup_failed', detail: message, claimed: orders.length, failed: orders.length });
+  }
+
   const results = [];
   let synced = 0;
   let failed = 0;
   for (const order of orders) {
     try {
       const items = await orderItems(sb, order.id);
-      const companyNames = await companyNamesFor(sb, order);
       const result = await syncOrder(sb, env, credentials.accessToken, credentials.realmId, order, items, companyNames);
       await markSynced(sb, order, result);
       await notifyInvoiceReady(sb, order, result);
