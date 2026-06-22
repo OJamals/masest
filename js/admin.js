@@ -54,6 +54,17 @@ function qboReconciliation(order) {
   return `<div class="muted" style="margin:6px 0 0;font-size:.78rem">QBO: ${parts.map(esc).join(' / ')}</div>`;
 }
 
+// NET aging badge (#10) — open NET balances show days-outstanding; overdue ones
+// (past company net_terms_days) escalate via net-age--over30/60/90 colouring.
+function netAgingBadge(order) {
+  const a = order.net_aging;
+  if (!a) return '';
+  const label = a.overdue ? `overdue ${a.daysOverdue}d` : `${a.ageDays}d open`;
+  const due = a.terms ? `, due ${a.dueIso.slice(0, 10)}` : '';
+  const title = `NET ${a.terms} — open ${a.ageDays} day(s)${a.overdue ? `, ${a.daysOverdue} past due` : due}`;
+  return `<br><span class="net-age net-age--${esc(a.bucket)}" title="${esc(title)}">${esc(label)}</span>`;
+}
+
 function trackingControls(order) {
   const id = esc(order.id);
   const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
@@ -398,7 +409,7 @@ async function renderOrders({ append = false } = {}) {
       <td>${esc(order.companies?.name || order.company_name || order.company_id || 'Guest')}</td>
       <td>${items || '<span class="muted">No items</span>'}</td>
       <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
-      <td>${esc(order.payment_method || '')}</td>
+      <td>${esc(order.payment_method || '')}${netAgingBadge(order)}</td>
       <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
       <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
     </tr>`;

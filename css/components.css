@@ -87,6 +87,24 @@
   background: currentColor;
 }
 
+/* NET aging chip (#10) — open-balance age in the admin order list; overdue
+   buckets escalate amber → red so finance can triage at a glance. */
+.net-age {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 7px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  border-radius: var(--r-pill, 999px);
+  background: var(--panel, #f1f3f4);
+  color: var(--muted, #5f656d);
+  white-space: nowrap;
+}
+.net-age--over30 { background: #fdf1d8; color: #8a5a09; }
+.net-age--over60 { background: #fbe6cf; color: #8a4a09; }
+.net-age--over90 { background: #f8e3df; color: var(--danger, #a63a2e); }
+
 /* ----------------------------------------------------------------------------
    Tabs — canonical tab strip (adopt incrementally; dashboard/admin keep theirs
    until refactored). role="tablist" on the container, role="tab" on buttons.
