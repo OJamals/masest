@@ -498,6 +498,17 @@ function startPolling() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pollLive(); });
 }
 
+// Hard session loss (token refresh failed): stop the live poller and steer to sign-in
+// instead of letting pollLive() hammer a dead session forever.
+let sessionExpiredHandled = false;
+document.addEventListener('masest:session-expired', () => {
+  if (sessionExpiredHandled) return;
+  sessionExpiredHandled = true;
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  const next = encodeURIComponent(location.pathname + location.hash);
+  location.href = `account.html?expired=1&next=${next}`;
+});
+
 /* ---------- boot ---------- */
 async function boot() {
   try { ACCOUNT = await me(); } catch { ACCOUNT = null; }

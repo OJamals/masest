@@ -39,6 +39,17 @@ export async function onRequestGet({ request, env }) {
     // pre-migration shape
   }
 
+  // Accurate money/count aggregates computed DB-side over the full orders table (the
+  // recentOrders sample above caps at 1000 and silently undercounts past that). Falls
+  // back to the sample when the admin_order_metrics RPC isn't deployed yet.
+  let metrics = null;
+  try {
+    const { data } = await sb.rpc('admin_order_metrics');
+    if (data) metrics = data;
+  } catch {
+    metrics = null;
+  }
+
   let lowStock = 0;
   let inactiveProducts = 0;
   try {
@@ -107,15 +118,19 @@ export async function onRequestGet({ request, env }) {
   const revenue7d = sumTotals(paidOrders.filter((order) => withinDays(order.created_at, 7)));
   const revenue30d = sumTotals(paidOrders.filter((order) => withinDays(order.created_at, 30)));
   const netOpenOrders = recentOrders.filter((order) => order.status === 'net_open');
+  // Prefer the DB-side aggregate; fall back to the recent-orders sample per field.
+  const revenueTotal = metrics ? Number(metrics.revenue_total) : revenue;
+  const paidCount = metrics ? Number(metrics.paid_count) : paidOrders.length;
   const commerce = {
-    revenue_7d: revenue7d,
-    revenue_30d: revenue30d,
+    revenue_7d: metrics ? Number(metrics.revenue_7d) : revenue7d,
+    revenue_30d: metrics ? Number(metrics.revenue_30d) : revenue30d,
+    revenue_total: revenueTotal,
     revenue_total_sample: revenue,
-    average_order_value: paidOrders.length ? Math.round(revenue / paidOrders.length) : 0,
-    orders_7d: recentOrders.filter((order) => withinDays(order.created_at, 7)).length,
-    fulfillment_queue: countStatus(recentOrders, ['paid', 'net_open']),
-    net_orders_open: netOpenOrders.length,
-    net_exposure: sumTotals(netOpenOrders),
+    average_order_value: paidCount ? Math.round(revenueTotal / paidCount) : 0,
+    orders_7d: metrics ? Number(metrics.orders_7d) : recentOrders.filter((order) => withinDays(order.created_at, 7)).length,
+    fulfillment_queue: metrics ? Number(metrics.fulfillment_queue) : countStatus(recentOrders, ['paid', 'net_open']),
+    net_orders_open: metrics ? Number(metrics.net_open_count) : netOpenOrders.length,
+    net_exposure: metrics ? Number(metrics.net_exposure) : sumTotals(netOpenOrders),
     by_status: byStatus,
   };
   const crm = {
@@ -156,8 +171,8 @@ export async function onRequestGet({ request, env }) {
   ].filter(Boolean);
 
   return json(200, {
-    revenue,
-    orders: { total: recentOrders.length, byStatus },
+    revenue: revenueTotal,
+    orders: { total: metrics ? Number(metrics.orders_total) : recentOrders.length, byStatus },
     companies: { pending: pendingCompanies, approved: approvedCompanies, suspended: suspendedCompanies },
     messages: { unread: unreadMessages },
     setup_followups,

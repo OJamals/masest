@@ -143,15 +143,38 @@ export async function getToken() {
   return data.session?.access_token || null;
 }
 
+/* Force a token refresh (used when the API rejects a request as expired). Returns true
+ * if a fresh session was obtained. */
+async function refreshSession() {
+  try {
+    const { data, error } = await requireClient().auth.refreshSession();
+    return !error && !!data?.session;
+  } catch { return false; }
+}
+
+/* Broadcast that the session is gone so pages can stop pollers and prompt re-auth
+ * (listen for 'masest:session-expired'). */
+function emitSessionExpired() {
+  try { document.dispatchEvent(new CustomEvent('masest:session-expired')); } catch {}
+}
+
 /* Authenticated JSON fetch helper for /api/* endpoints. Attaches the Bearer token,
- * JSON-encodes the body, and throws an Error (with .status and .data) on non-2xx. */
-export async function api(path, { method = 'GET', body } = {}) {
+ * JSON-encodes the body, and throws an Error (with .status and .data) on non-2xx.
+ * On a 401 it refreshes the session and retries once; if still unauthorized it emits
+ * 'masest:session-expired' so the UI can recover instead of silently failing. */
+export async function api(path, { method = 'GET', body, _retried = false } = {}) {
   const token = await getToken();
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const r = await fetch(path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+  if (r.status === 401 && !_retried && await refreshSession()) {
+    return api(path, { method, body, _retried: true });
+  }
   const out = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(out.error || 'request_failed'), { status: r.status, data: out });
+  if (!r.ok) {
+    if (r.status === 401) emitSessionExpired();
+    throw Object.assign(new Error(out.error || 'request_failed'), { status: r.status, data: out });
+  }
   return out;
 }
