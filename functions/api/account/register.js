@@ -35,7 +35,7 @@ export async function onRequestPost({ request, env }) {
       id: user.id, company_id: invite.company_id, role: invite.role || 'buyer',
       full_name: profile.full_name || null, phone: profile.phone || null,
     });
-    if (jErr) return json(500, { error: jErr.message });
+    if (jErr) { console.error('register_join_failed', jErr.message); return json(500, { error: 'server_error' }); }
     await sb.from('company_invites').update({ status: 'accepted' }).eq('id', invite.id);
     return json(201, { company_id: invite.company_id, joined: true, message: 'You’ve joined your team. Account ready.' });
   }
@@ -55,7 +55,7 @@ export async function onRequestPost({ request, env }) {
     })
     .select('id,status')
     .single();
-  if (coErr) return json(500, { error: coErr.message });
+  if (coErr) { console.error('register_company_failed', coErr.message); return json(500, { error: 'server_error' }); }
 
   const { error: pErr } = await sb.from('profiles').insert({
     id: user.id,
@@ -64,7 +64,7 @@ export async function onRequestPost({ request, env }) {
     full_name: profile.full_name || null,
     phone: profile.phone || null,
   });
-  if (pErr) return json(500, { error: pErr.message });
+  if (pErr) { console.error('register_profile_failed', pErr.message); return json(500, { error: 'server_error' }); }
 
   return json(201, {
     company_id: co.id,
