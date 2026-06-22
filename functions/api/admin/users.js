@@ -1,5 +1,6 @@
 // /api/admin/users - staff user management for company members and pending invites.
 import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
+import { recordAudit } from '../../_lib/audit.js';
 
 const ROLES = new Set(['admin', 'buyer']);
 
@@ -37,6 +38,7 @@ export async function onRequest({ request, env }) {
       .maybeSingle();
     if (error) return json(500, { error: error.message || 'role_update_failed' });
     if (!data) return json(404, { error: 'profile_not_found' });
+    await recordAudit(sb, { user, action: 'user.set_role', targetType: 'profile', targetId: profileId, detail: { role, company_id: companyId } });
     return json(200, { ok: true, profile: data });
   }
 
@@ -72,6 +74,7 @@ export async function onRequest({ request, env }) {
       .maybeSingle();
     if (error) return json(500, { error: error.message || 'invite_revoke_failed' });
     if (!data) return json(404, { error: 'pending_invite_not_found' });
+    await recordAudit(sb, { user, action: 'user.revoke_invite', targetType: 'company_invite', targetId: inviteId, detail: { company_id: companyId } });
     return json(200, { ok: true, invite: data });
   }
 
