@@ -305,13 +305,29 @@ async function renderOrders({ append = false } = {}) {
         ${trackingSteps(o)}
         ${o.qbo_invoice_id ? `<p class="muted">Invoice: ${esc(o.qbo_invoice_id)}</p>` : ''}
         ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
+        ${o.payment_method === 'stripe' ? `<button class="btn btn-ghost btn-sm" data-receipt="${esc(o.id)}">Receipt</button>` : ''}
       </div></details>`;
   }).join('') + pagerHtml('data-load-more-orders', st);
-  box.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', () => {
+  box.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', async () => {
     const o = list[Number(b.dataset.reorder)];
-    cartClear();
-    (o.order_items || []).forEach((it) => cartAdd(it.sku, it.qty));
-    location.href = 'cart.html';
+    b.disabled = true;
+    try {
+      const { lines: cartLines, issues } = await api('/api/account/order', { method: 'POST', body: { id: o.id } });
+      if (!cartLines || !cartLines.length) { alert('None of these items are available to reorder.'); b.disabled = false; return; }
+      cartClear();
+      cartLines.forEach((l) => cartAdd(l.sku, l.qty));
+      if (issues && issues.length) alert('Some items changed since your last order:\n' + issues.map((x) => `• ${x.name || x.sku} — ${x.reason.replace('_', ' ')}`).join('\n'));
+      location.href = 'cart.html';
+    } catch { b.disabled = false; }
+  }));
+  box.querySelectorAll('[data-receipt]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try {
+      const { receipt_url } = await api(`/api/account/order?id=${encodeURIComponent(b.dataset.receipt)}&receipt=1`);
+      if (receipt_url) window.open(receipt_url, '_blank', 'noopener');
+      else alert('No receipt is available for this order yet.');
+    } catch { /* ignore */ }
+    b.disabled = false;
   }));
   box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
 }
