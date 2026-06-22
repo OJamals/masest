@@ -2,7 +2,7 @@
  * Program-enrollment and bulk-order requests are posted through the company support thread
  * (/api/account/messages), so staff see them in the admin Messages tab - no extra tables. */
 import { me, api } from './auth.js';
-import { esc } from './util.js';
+import { esc, safeUrl } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -41,7 +41,7 @@ function renderSetupChecklist(data) {
     <p class="lead">${setup.done || 0} of ${setup.total || setup.steps.length} account steps complete. Finish these before relying on automated checkout, programs, or NET terms.</p>
     <div class="setup-list">
       ${setup.steps.map((step) => `
-        <a class="setup-step" data-setup-state="${step.done ? 'done' : 'open'}" href="${esc(step.action || 'dashboard.html')}">
+        <a class="setup-step" data-setup-state="${step.done ? 'done' : 'open'}" href="${esc(safeUrl(step.action || 'dashboard.html'))}">
           <i class="ph ${step.done ? 'ph-check-circle' : 'ph-circle'}" aria-hidden="true"></i>
           <span><b>${esc(step.label)}</b><small>${esc(step.detail)}</small></span>
           <small>${step.done ? 'Done' : 'Open'}</small>

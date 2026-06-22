@@ -2,7 +2,7 @@
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
-import { esc, money, fmtDate, fmtDT } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -63,7 +63,7 @@ function trackingSteps(order) {
   return `<div class="trackline" aria-label="Order tracking timeline">
     ${steps.map(([key, label], index) => `<span class="${index <= activeIndex ? 'done' : ''}" data-track-step="${key}">${esc(label)}</span>`).join('')}
     ${meta ? `<p class="muted">${meta}</p>` : ''}
-    ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(order.tracking_url)}" target="_blank" rel="noopener">Track shipment</a>` : ''}
+    ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl(order.tracking_url))}" target="_blank" rel="noopener">Track shipment</a>` : ''}
   </div>`;
 }
 
@@ -119,7 +119,7 @@ function renderSetupProgress() {
         const done = step.done || step.state === 'done';
         const detail = step.detail || step.description || '';
         return `
-        <a class="setup-step" data-setup-state="${done ? 'done' : 'open'}" href="${esc(step.action || 'business.html')}">
+        <a class="setup-step" data-setup-state="${done ? 'done' : 'open'}" href="${esc(safeUrl(step.action || 'business.html'))}">
           <i class="ph ${done ? 'ph-check-circle' : 'ph-circle'}" aria-hidden="true"></i>
           <span><b>${esc(step.label)}</b><small>${esc(detail)}</small></span>
           <small>${done ? 'Done' : 'Open'}</small>
@@ -176,7 +176,7 @@ function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
   box.innerHTML = `
     <h2 class="headline dash-section-title dash-section-title-xs">Next actions</h2>
     <div class="buyer-action-grid">
-      ${actions.map((action) => `<a class="buyer-action" data-buyer-action="${esc(action.id)}" href="${esc(action.href)}">
+      ${actions.map((action) => `<a class="buyer-action" data-buyer-action="${esc(action.id)}" href="${esc(safeUrl(action.href))}">
         <i class="ph ${esc(action.icon)}" aria-hidden="true"></i>
         <span><b>${esc(action.label)}</b><small>${esc(action.detail)}</small></span>
         <i class="ph ph-caret-right" aria-hidden="true"></i>
@@ -338,7 +338,7 @@ async function renderNotifications() {
         <div class="notif-body">
           <div><b>${esc(n.title)}</b> <span class="muted notif-time">· ${fmtDT(n.created_at)}</span></div>
         ${n.body ? `<div class="muted">${esc(n.body)}</div>` : ''}
-          ${n.link ? `<a href="${esc(n.link)}" class="muted notif-link">View →</a>` : ''}
+          ${n.link ? `<a href="${esc(safeUrl(n.link))}" class="muted notif-link">View →</a>` : ''}
       </div></div>`).join('');
 }
 function wireNotifications() {

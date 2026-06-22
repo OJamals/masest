@@ -1,6 +1,6 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
-import { esc, money, dateTime as date } from './util.js';
+import { esc, safeUrl, money, dateTime as date } from './util.js';
 import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 
 const $ = (id) => document.getElementById(id);
@@ -304,7 +304,7 @@ function renderOpsSummary(stats = {}) {
 function renderActionRail(actions = []) {
  if (!actions.length) return '<div class="adm-card"><h2>Priority actions</h2><p class="muted">No urgent admin actions.</p></div>';
  return `<div class="adm-card"><h2>Priority actions</h2><div class="adm-action-list">${actions.map((item) => `
- <a class="adm-action-item" href="${esc(item.href || '#overview')}"><span><b>${esc(item.label)}</b><small class="muted">Priority ${esc(item.priority || '')}</small></span><strong>${esc(item.value || 0)}</strong></a>
+ <a class="adm-action-item" href="${esc(safeUrl(item.href || '#overview'))}"><span><b>${esc(item.label)}</b><small class="muted">Priority ${esc(item.priority || '')}</small></span><strong>${esc(item.value || 0)}</strong></a>
  `).join('')}</div></div>`;
 }
 
@@ -556,7 +556,7 @@ async function renderProducts() {
   }
   box.innerHTML = `<table class="adm"><thead><tr><th>Photo</th><th>SKU</th><th>Name</th><th>Mode</th><th>Price</th><th>Stock</th><th>Photo URL</th><th>Alt</th><th>Variants</th><th>Active</th><th></th></tr></thead><tbody>${products.map((p) => `
     <tr data-product="${esc(p.sku)}">
-      <td>${p.image_url ? `<img class="product-photo" src="${esc(p.image_url)}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}${Array.isArray(p.gallery) && p.gallery.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${p.gallery.map((u, i) => `<span style="display:inline-flex;flex-direction:column;align-items:center"><img src="${esc(u)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"><span><button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(u)}" title="Make primary">★</button><button type="button" class="gbtn" data-gact="up" data-gidx="${i}" title="Move up">↑</button><button type="button" class="gbtn" data-gact="down" data-gidx="${i}" title="Move down">↓</button><button type="button" class="gbtn" data-gact="del" data-gurl="${esc(u)}" title="Remove">×</button></span></span>`).join('')}</div>` : ''}<br><label class="muted" style="font-size:.7rem;display:block;margin-top:4px">Upload<input type="file" accept="image/*" data-imgfile style="display:block;max-width:120px;font-size:.7rem"></label><label class="muted" style="font-size:.7rem;display:block">+ gallery<input type="file" accept="image/*" data-galfile style="display:block;max-width:120px;font-size:.7rem"></label></td>
+      <td>${p.image_url ? `<img class="product-photo" src="${esc(safeUrl(p.image_url))}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}${Array.isArray(p.gallery) && p.gallery.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${p.gallery.map((u, i) => `<span style="display:inline-flex;flex-direction:column;align-items:center"><img src="${esc(safeUrl(u))}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"><span><button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(u)}" title="Make primary">★</button><button type="button" class="gbtn" data-gact="up" data-gidx="${i}" title="Move up">↑</button><button type="button" class="gbtn" data-gact="down" data-gidx="${i}" title="Move down">↓</button><button type="button" class="gbtn" data-gact="del" data-gurl="${esc(u)}" title="Remove">×</button></span></span>`).join('')}</div>` : ''}<br><label class="muted" style="font-size:.7rem;display:block;margin-top:4px">Upload<input type="file" accept="image/*" data-imgfile style="display:block;max-width:120px;font-size:.7rem"></label><label class="muted" style="font-size:.7rem;display:block">+ gallery<input type="file" accept="image/*" data-galfile style="display:block;max-width:120px;font-size:.7rem"></label></td>
       <td><b>${esc(p.sku)}</b></td>
       <td><input class="adm-input" value="${esc(p.name)}" data-field="name"></td>
       <td><select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></td>
