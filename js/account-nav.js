@@ -47,7 +47,7 @@ function injectStyle() {
   .acct-notif-dot { position:absolute; top:-4px; right:-4px; min-width:15px; height:15px; padding:0 3px; border-radius:999px; background:#b42318; color:#fff; font-size:.58rem; font-weight:800; display:grid; place-items:center; line-height:1; box-shadow:0 0 0 2px var(--surface,#fff); }
   .nav.over-dark .acct-notif-dot { box-shadow:0 0 0 2px #0b0d12; }
   .acct-name { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .acct-dd-menu { position:absolute; right:0; top:calc(100% + 10px); min-width:236px; background:var(--surface,#fff);
+  .acct-dd-menu { position:fixed; left:8px; top:56px; width:min(236px, calc(100vw - 16px)); max-width:calc(100vw - 16px); max-height:calc(100vh - 16px); overflow:auto; background:var(--surface,#fff);
     border:1px solid var(--line,#e4e6e9); border-radius:var(--r-card,16px); box-shadow:0 18px 40px -16px rgba(0,0,0,.28); padding:8px; z-index:120; }
   .acct-menu-section { padding:4px 0; }
   .acct-menu-section + .acct-menu-section { border-top:1px solid var(--line,#e4e6e9); margin-top:4px; padding-top:8px; }
@@ -56,6 +56,9 @@ function injectStyle() {
     border:0; background:none; border-radius:10px; font:inherit; font-size:.9rem; font-weight:600; color:var(--ink,#15171c); text-decoration:none; cursor:pointer; }
   .acct-dd-menu a:hover, .acct-dd-menu button:hover { background:var(--accent-tint,#f1f8f8); color:var(--accent-ink,#0a5b62); }
   .acct-dd-menu i { font-size:1.15rem; color:var(--ink-soft,#393d44); }
+  .acct-dd-menu a.has-unread { font-weight:800; }
+  .acct-menu-count { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#b42318; color:#fff; font-size:.7rem; font-weight:800; display:inline-grid; place-items:center; line-height:1; }
+  .acct-menu-count[hidden] { display:none; }
   .acct-dd-menu .acct-signout { border-top:1px solid var(--line,#e4e6e9); margin-top:6px; padding-top:12px; color:#b42318; }
   .acct-dd-menu .acct-admin { color:var(--accent-ink,#0a5b62); }
   /* Cart: transparent shopping-cart icon with a count bubble (replaces the "Cart" text pill) */
@@ -70,6 +73,20 @@ function injectStyle() {
   .nav-cart .cart-count[hidden] { display:none; }
   @media (max-width:860px){ .acct-name{ display:none; } }`;
   document.head.appendChild(s);
+}
+
+function positionAccountMenu(dd) {
+  if (!dd?.open) return;
+  const menu = dd.querySelector('.acct-dd-menu');
+  const summary = dd.querySelector('summary');
+  if (!menu || !summary) return;
+  const rect = summary.getBoundingClientRect();
+  const menuWidth = Math.min(menu.offsetWidth || 236, window.innerWidth - 16);
+  const menuHeight = Math.min(menu.offsetHeight || 0, window.innerHeight - 16);
+  const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
+  const top = Math.max(8, Math.min(rect.bottom + 10, window.innerHeight - menuHeight - 8));
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
 }
 
 export async function initAccountNav({ nav, root = '' } = {}) {
@@ -107,7 +124,12 @@ async function renderAccountNav(actions, root = '') {
     mount.innerHTML = `<a class="nav-signin" href="${root}account.html">Finish setup</a>`;
   } else {
     const label = data.profile?.full_name || data.company?.name || data.email || 'Account';
-    const items = MENU.map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');
+    const items = MENU.map(([i, l, h]) => {
+      const isNotifications = l === 'Notifications';
+      const marker = isNotifications ? ' data-account-nav-notifications' : '';
+      const count = isNotifications ? '<span class="acct-menu-count" hidden>0</span>' : '';
+      return `<a href="${root}${h}"${marker}><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}${count}</a>`;
+    }).join('');
     const accountItems = ACCOUNT_MENU.map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');
     const admin = data.is_staff ? `<a class="acct-admin" href="${root}admin.html"><i class="ph ph-shield-check" aria-hidden="true"></i>Admin console</a>` : '';
     mount.innerHTML = `<details class="acct-dd">
@@ -128,10 +150,20 @@ async function renderAccountNav(actions, root = '') {
   if (api && data && !data.needs_profile) {
     api('/api/account/notifications').then(({ unread }) => {
       const av = mount.querySelector('.acct-avatar');
-      if (av && unread > 0) {
+      const notifLink = mount.querySelector('[data-account-nav-notifications]');
+      const notifCount = notifLink?.querySelector('.acct-menu-count');
+      const n = Number(unread) || 0;
+      const label = n > 9 ? '9+' : String(n);
+      if (notifLink && notifCount) {
+        notifLink.classList.toggle('has-unread', n > 0);
+        notifLink.setAttribute('aria-label', n > 0 ? `Notifications, ${n} unread` : 'Notifications');
+        notifCount.textContent = label;
+        notifCount.hidden = n <= 0;
+      }
+      if (av && n > 0) {
         const dot = document.createElement('span');
         dot.className = 'acct-notif-dot';
-        dot.textContent = unread > 9 ? '9+' : String(unread);
+        dot.textContent = label;
         av.appendChild(dot);
       }
     }).catch(() => {});
@@ -143,6 +175,10 @@ async function renderAccountNav(actions, root = '') {
   // Close the dropdown on outside click / Escape.
   const dd = mount.querySelector('details.acct-dd');
   if (dd) {
+    const syncMenuPosition = () => { if (dd.open) requestAnimationFrame(() => positionAccountMenu(dd)); };
+    dd.addEventListener('toggle', syncMenuPosition);
+    window.addEventListener('resize', syncMenuPosition);
+    window.addEventListener('scroll', syncMenuPosition, { passive: true, capture: true });
     document.addEventListener('click', (e) => { if (dd.open && !mount.contains(e.target)) dd.open = false; });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dd.open = false; });
   }
