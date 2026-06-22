@@ -10,7 +10,7 @@ import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { computeRefund } from '../../_lib/refund.js';
 import { stockIncrements } from '../../_lib/order-shape.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
-import { planNetSettlement } from '../../_lib/credit.js';
+import { planNetSettlement, netAging } from '../../_lib/credit.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -78,7 +78,7 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)', isCsv ? undefined : { count: 'exact' })
+      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,name,qty,unit_price,line_total)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
@@ -98,7 +98,8 @@ export async function onRequest({ request, env }) {
         headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="masest-orders.csv"' },
       });
     }
-    return json(200, { orders: data || [], ...pageEnvelope(data, { limit, offset, count }) });
+    const orders = (data || []).map((o) => ({ ...o, net_aging: netAging(o, o.companies?.net_terms_days) }));
+    return json(200, { orders, ...pageEnvelope(data, { limit, offset, count }) });
   }
 
   if (request.method === 'POST') {

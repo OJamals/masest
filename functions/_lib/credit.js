@@ -41,6 +41,28 @@ export function planNetSettlement(order, { reference } = {}) {
   return { ok: true, update: { status: 'net_paid' }, reference: ref };
 }
 
+// NET aging for an admin order view (#10 residual). Returns null unless the order
+// is an OPEN net balance — only those carry outstanding risk. termsDays =
+// company.net_terms_days (0 = no terms, so no meaningful due date → never overdue).
+// nowMs lets tests pin "now"; defaults to Date.now().
+export function netAging(order, termsDays, nowMs) {
+  if (!order || order.payment_method !== 'net' || order.status !== 'net_open') return null;
+  const created = Date.parse(order.created_at);
+  if (Number.isNaN(created)) return null;
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  const DAY = 86400000;
+  const terms = Math.max(0, Math.floor(Number(termsDays) || 0));
+  const ageDays = Math.max(0, Math.floor((now - created) / DAY));
+  const dueMs = created + terms * DAY;
+  const overdue = terms > 0 && now > dueMs;
+  const daysOverdue = overdue ? Math.max(0, Math.floor((now - dueMs) / DAY)) : 0;
+  const bucket = !overdue ? 'current'
+    : daysOverdue <= 30 ? 'over30'
+    : daysOverdue <= 60 ? 'over60'
+    : 'over90';
+  return { ageDays, terms, dueIso: new Date(dueMs).toISOString(), overdue, daysOverdue, bucket };
+}
+
 // Reads the company's open NET balance and derives available credit.
 // `creditLimit` is companies.credit_limit (caller already loaded the company row).
 // Throws on query error so the caller chooses how to fail (checkout -> 503; me -> degrade).
