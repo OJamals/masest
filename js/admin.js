@@ -388,7 +388,7 @@ async function renderOrders({ append = false } = {}) {
       <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
       <td>${esc(order.payment_method || '')}</td>
       <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-      <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
+      <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
     </tr>`;
   }).join('')}</tbody></table>` + admOrdersPager();
 
@@ -434,12 +434,22 @@ async function renderOrders({ append = false } = {}) {
   box.querySelectorAll('[data-refund-order]').forEach((button) => {
     button.addEventListener('click', async () => {
       const id = button.dataset.refundOrder;
-      if (!confirm('Refund this order via Stripe and mark it cancelled?')) return;
+      const amountInput = box.querySelector(`[data-refund-amount="${CSS.escape(id)}"]`);
+      const raw = amountInput?.value.trim();
+      const amount = raw ? Number(raw) : undefined;
+      if (raw && (!Number.isFinite(amount) || amount <= 0)) {
+        message('ordStatus', 'Enter a valid refund amount, or leave it blank to refund the full balance.', 'err');
+        return;
+      }
+      const prompt = amount
+        ? `Refund $${amount.toFixed(2)} to this order via Stripe?`
+        : 'Refund the full remaining balance via Stripe?';
+      if (!confirm(prompt)) return;
       button.disabled = true;
       message('ordStatus', 'Refunding...');
       try {
-        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'refund' } });
-        message('ordStatus', 'Refunded.', 'ok');
+        const res = await api('/api/admin/orders', { method: 'POST', body: { id, action: 'refund', amount } });
+        message('ordStatus', res.partial ? `Partial refund of $${Number(res.amount).toFixed(2)} issued.` : 'Refunded.', 'ok');
         await renderOrders();
       } catch (err) {
         message('ordStatus', err.data?.error || 'Refund did not go through. Refresh and check before retrying.', 'err');

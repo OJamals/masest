@@ -36,7 +36,7 @@ test('#42 refunds have a distinct refunded order status', () => {
   const migration = read('supabase/schema-refunds.sql');
   assert.match(api, /ORDER_STATUSES[\s\S]*'refunded'/);
   assert.match(api, /REFUND_BLOCKING_STATUSES[\s\S]*'refunded'/);
-  assert.match(api, /update\(\{\s*status:\s*'refunded'\s*\}\)/, 'refund action must mark order refunded');
+  assert.match(api, /update\.status\s*=\s*'refunded'/, 'refund action must mark a fully-refunded order refunded');
   assert.match(admin, /ORDER_STATUSES[\s\S]*'refunded'/, 'admin filter/status dropdown must include refunded');
   assert.match(admin, /REFUND_BLOCKING_STATUSES[\s\S]*'refunded'/, 'admin UI should hide refund action after refund');
   assert.match(schema, /order_status[\s\S]*'refunded'/);

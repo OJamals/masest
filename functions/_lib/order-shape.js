@@ -71,6 +71,14 @@ export function stockDecrements(lines) {
     .map((l) => ({ p_vsku: l.sku, p_qty: Number(l.qty || 0) }));
 }
 
+// RPC arg objects for `increment_variant_stock` — returns refunded line items to
+// inventory on a full refund. Same shape as the decrement args (only the RPC differs).
+export function stockIncrements(lines) {
+  return (lines || [])
+    .filter((l) => l.sku)
+    .map((l) => ({ p_vsku: l.sku, p_qty: Number(l.qty || 0) }));
+}
+
 // Subscription-mode checkout takes the program-enrollment path, not the order path.
 export function isSubscriptionCheckout(session) {
   return session?.mode === "subscription";
