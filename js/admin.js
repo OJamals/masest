@@ -359,6 +359,13 @@ function admOrdersPager() {
   return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" data-load-more-orders type="button">Load more${count}</button></div>`;
 }
 
+// Generic "Load more" footer for an accumulated admin list (#29).
+function admListPager(attr, loaded, total, hasMore) {
+  if (!hasMore) return '';
+  const count = total != null ? ` (${loaded} of ${total})` : '';
+  return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
+}
+
 async function renderOrders({ append = false } = {}) {
   const box = $('admOrders');
   const status = $('ordFilter').value;
@@ -521,19 +528,27 @@ async function renderCustomers() {
     </tr>`).join('')}</tbody></table>`;
 }
 
-async function renderCompanies() {
+async function renderCompanies({ append = false } = {}) {
   const box = $('admCompanies');
-  box.innerHTML = admSkeleton();
+  if (!append) { state.companies = []; state.companiesOffset = 0; box.innerHTML = admSkeleton(); }
   try {
-    state.companies = (await api('/api/admin/companies')).companies || [];
+    const params = new URLSearchParams({ limit: '100', offset: String(state.companiesOffset || 0) });
+    const res = await api('/api/admin/companies?' + params.toString());
+    state.companies = (state.companies || []).concat(res.companies || []);
+    state.companiesOffset = (state.companiesOffset || 0) + (res.companies || []).length;
+    state.companiesTotal = res.total;
+    state.companiesHasMore = !!res.has_more;
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Could not load accounts. Reload to retry.</p>';
+    if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load accounts. Reload to retry.</p>';
     return;
   }
+  const pager = admListPager('data-load-more-companies', state.companies.length, state.companiesTotal, state.companiesHasMore);
+  const wireMore = () => box.querySelector('[data-load-more-companies]')?.addEventListener('click', () => renderCompanies({ append: true }));
   const q = $('coSearch').value.trim().toLowerCase();
   const companies = state.companies.filter((company) => JSON.stringify(company).toLowerCase().includes(q));
   if (!companies.length) {
-    box.innerHTML = admEmpty('ph-buildings', 'No accounts', 'New B2B account signups appear here for approval.');
+    box.innerHTML = admEmpty('ph-buildings', q ? 'No matching accounts' : 'No accounts', q ? 'No accounts match your search.' : 'New B2B account signups appear here for approval.') + pager;
+    wireMore();
     return;
   }
   box.innerHTML = `<div class="adm-tools" style="margin-bottom:10px"><button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button></div><table class="adm"><thead><tr><th><input type="checkbox" id="coAll" aria-label="Select all"></th><th>Company</th><th>Status</th><th>Setup</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
@@ -548,10 +563,11 @@ async function renderCompanies() {
       <td>${esc((company.profiles || []).map((p) => p.full_name || p.role).join(', '))}</td>
       <td><button class="btn btn-ghost btn-sm" data-approve="${esc(company.id)}" type="button">Approve</button></td>
     </tr>
-  `).join('')}</tbody></table>`;
+  `).join('')}</tbody></table>` + pager;
   box.querySelectorAll('[data-open-company]').forEach((button) => {
     button.addEventListener('click', () => openCompanyDetail(button.dataset.openCompany));
   });
+  wireMore();
   box.querySelectorAll('[data-approve]').forEach((button) => {
     button.addEventListener('click', async () => {
       const id = button.dataset.approve;
@@ -913,26 +929,32 @@ async function openThread(companyId) {
   }
 }
 
-async function renderQuotePipeline() {
+async function renderQuotePipeline({ append = false } = {}) {
   const box = $('admQuotes');
-  box.innerHTML = admSkeleton();
+  if (!append) { state.quotes = []; state.quotesOffset = 0; box.innerHTML = admSkeleton(); }
   let data;
   try {
-    data = await api('/api/admin/quotes');
+    const params = new URLSearchParams({ limit: '100', offset: String(state.quotesOffset || 0) });
+    data = await api('/api/admin/quotes?' + params.toString());
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
+    if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
     return;
   }
 
-  state.quotes = data.quotes || [];
+  state.quotes = (state.quotes || []).concat(data.quotes || []);
+  state.quotesOffset = (state.quotesOffset || 0) + (data.quotes || []).length;
+  state.quotesTotal = data.total;
+  state.quotesHasMore = !!data.has_more;
   badge('aBadgeQuotes', data.urgent_count || data.new_count || 0);
   if (data.needs_migration) {
     box.innerHTML = '<p class="muted">No quote database yet. Apply supabase/schema-quotes.sql to store and triage leads here.</p>';
     return;
   }
   if (!state.companies?.length) {
-    try { state.companies = (await api('/api/admin/companies')).companies || []; } catch { state.companies = []; }
+    try { state.companies = (await api('/api/admin/companies?limit=500')).companies || []; } catch { state.companies = []; }
   }
+  const quotesPager = admListPager('data-load-more-quotes', state.quotes.length, state.quotesTotal, state.quotesHasMore);
+  const wireQuotesMore = () => box.querySelector('[data-load-more-quotes]')?.addEventListener('click', () => renderQuotePipeline({ append: true }));
 
   const coOpts = (state.companies || [])
     .map((company) => `<option value="${esc(company.id)}">${esc(company.name)} (${esc(company.status || '')})</option>`)
@@ -960,7 +982,8 @@ async function renderQuotePipeline() {
   });
 
   if (!quotes.length) {
-    box.innerHTML = admEmpty('ph-chats-circle', 'No quotes', 'Quote requests from the site appear here.');
+    box.innerHTML = admEmpty('ph-chats-circle', 'No quotes', 'Quote requests from the site appear here.') + quotesPager;
+    wireQuotesMore();
     return;
   }
 
@@ -1003,7 +1026,8 @@ async function renderQuotePipeline() {
         </div>
       </details>
     `;
-  }).join('');
+  }).join('') + quotesPager;
+  wireQuotesMore();
 
   box.querySelectorAll('[data-save-quote]').forEach((button) => {
     button.addEventListener('click', async () => {

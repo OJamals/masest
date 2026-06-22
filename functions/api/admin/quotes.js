@@ -2,6 +2,7 @@
 import { adminClient, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { buildConvertItems, netOrderRow } from '../../_lib/quote-convert.js';
 import { staffCanWrite } from '../../_lib/authz.js';
+import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -184,10 +185,11 @@ export async function onRequest({ request, env }) {
   const sb = adminClient(env);
 
   if (request.method === 'GET') {
-    const { data, error } = await sb.from('quotes')
-      .select('id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at')
+    const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 100, maxLimit: 300 });
+    const { data, error, count } = await sb.from('quotes')
+      .select('id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .limit(300);
+      .range(offset, offset + limit - 1);
     if (error) {
       if (/does not exist|relation|schema cache/i.test(error.message)) {
         return json(200, { quotes: [], new_count: 0, needs_migration: true });
@@ -196,10 +198,14 @@ export async function onRequest({ request, env }) {
     }
 
     const quotes = data || [];
+    // Badge counts must reflect ALL quotes, not just the current page.
+    const newCount = await sb.from('quotes').select('id', { count: 'exact', head: true }).eq('status', 'new');
+    const urgentCount = await sb.from('quotes').select('id', { count: 'exact', head: true }).eq('priority', 'urgent');
     return json(200, {
       quotes,
-      new_count: quotes.filter((quote) => quote.status === 'new').length,
-      urgent_count: quotes.filter((quote) => quote.priority === 'urgent').length,
+      new_count: newCount.count || 0,
+      urgent_count: urgentCount.count || 0,
+      ...pageEnvelope(quotes, { limit, offset, count }),
     });
   }
 
