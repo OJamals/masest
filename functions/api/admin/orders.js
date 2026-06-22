@@ -6,6 +6,7 @@
 import Stripe from 'stripe';
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
+import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -71,12 +72,13 @@ export async function onRequest({ request, env }) {
     const params = new URL(request.url).searchParams;
     const status = params.get('status');
     const isCsv = params.get('export') === 'csv';
-    const limit = isCsv ? 5000 : Math.min(200, parseInt(params.get('limit') || '100', 10) || 100);
+    const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)')
-      .neq('status', 'cart').order('created_at', { ascending: false }).limit(limit);
+      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)', isCsv ? undefined : { count: 'exact' })
+      .neq('status', 'cart').order('created_at', { ascending: false });
+    q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
-    const { data, error } = await q;
+    const { data, error, count } = await q;
     if (error) return json(500, { error: error.message });
 
     if (isCsv) {
@@ -92,7 +94,7 @@ export async function onRequest({ request, env }) {
         headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="masest-orders.csv"' },
       });
     }
-    return json(200, { orders: data || [] });
+    return json(200, { orders: data || [], ...pageEnvelope(data, { limit, offset, count }) });
   }
 
   if (request.method === 'POST') {

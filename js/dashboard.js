@@ -8,6 +8,10 @@ const $ = (id) => document.getElementById(id);
 
 let ACCOUNT = null;            // /api/account/me snapshot
 const loaded = {};             // which tabs have been populated
+const pages = {                // offset-pagination state per list (#29)
+  orders: { items: [], offset: 0, total: null, hasMore: false },
+  notifs: { items: [], offset: 0, total: null, hasMore: false },
+};
 let lastMsgCount = -1;         // messages currently rendered in the thread (for live-poll diffing)
 let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
@@ -266,13 +270,29 @@ function wirePanelLinks(scope) {
 }
 
 /* ---------- orders ---------- */
-async function renderOrders() {
+// "Load more" pager footer, shown only while more rows remain (#29).
+function pagerHtml(attr, st) {
+  if (!st.hasMore) return '';
+  const count = st.total != null ? ` <span class="muted">(${st.items.length} of ${st.total})</span>` : '';
+  return `<div class="dash-pager" style="text-align:center;margin-top:12px"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
+}
+
+async function renderOrders({ append = false } = {}) {
   loaded.orders = true;
   const box = $('ordersBody');
-  let list = [];
-  box.innerHTML = `<div class="skeleton skeleton-block" style="height:60px;margin-bottom:10px"></div>`.repeat(3);
-  try { list = await fetchOrders(); } catch { box.innerHTML = '<p class="dash-status" data-state="err">Could not load orders.</p>'; return; }
-  if (!list.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>`; return; }
+  const st = pages.orders;
+  if (!append) {
+    st.items = []; st.offset = 0;
+    box.innerHTML = `<div class="skeleton skeleton-block" style="height:60px;margin-bottom:10px"></div>`.repeat(3);
+  }
+  let res;
+  try { res = await api(`/api/account/orders?limit=25&offset=${st.offset}`); }
+  catch { if (!append) box.innerHTML = '<p class="dash-status" data-state="err">Could not load orders.</p>'; return; }
+  st.items = st.items.concat(res.orders || []);
+  st.offset += (res.orders || []).length;
+  st.total = res.total; st.hasMore = !!res.has_more;
+  if (!st.items.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>`; return; }
+  const list = st.items;
   box.innerHTML = list.map((o, i) => {
     const items = o.order_items || [];
     const n = items.reduce((s, it) => s + (it.qty || 0), 0);
@@ -286,13 +306,14 @@ async function renderOrders() {
         ${o.qbo_invoice_id ? `<p class="muted">Invoice: ${esc(o.qbo_invoice_id)}</p>` : ''}
         ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
       </div></details>`;
-  }).join('');
+  }).join('') + pagerHtml('data-load-more-orders', st);
   box.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', () => {
     const o = list[Number(b.dataset.reorder)];
     cartClear();
     (o.order_items || []).forEach((it) => cartAdd(it.sku, it.qty));
     location.href = 'cart.html';
   }));
+  box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
 }
 
 /* ---------- messages ---------- */
@@ -324,22 +345,28 @@ function wireMessageForm() {
 }
 
 /* ---------- notifications ---------- */
-async function renderNotifications() {
+async function renderNotifications({ append = false } = {}) {
   loaded.notifications = true;
   const box = $('notifBody');
+  const st = pages.notifs;
+  if (!append) { st.items = []; st.offset = 0; }
   let data;
-  try { data = await api('/api/account/notifications'); } catch { box.innerHTML = '<p class="dash-status" data-state="err">Could not load notifications.</p>'; return; }
+  try { data = await api(`/api/account/notifications?limit=50&offset=${st.offset}`); } catch { if (!append) box.innerHTML = '<p class="dash-status" data-state="err">Could not load notifications.</p>'; return; }
   setBadge('badgeNotifs', data.unread);
-  if (!data.notifications.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No notifications</div><div class="empty-body">Order updates, messages, and offers show up here.</div></div>`; return; }
+  st.items = st.items.concat(data.notifications || []);
+  st.offset += (data.notifications || []).length;
+  st.total = data.total; st.hasMore = !!data.has_more;
+  if (!st.items.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No notifications</div><div class="empty-body">Order updates, messages, and offers show up here.</div></div>`; return; }
   const icon = { order: 'ph-package', message: 'ph-chat-circle', offer: 'ph-tag', account: 'ph-user-check', system: 'ph-info' };
-  box.innerHTML = data.notifications.map((n) => `
+  box.innerHTML = st.items.map((n) => `
     <div class="notif ${n.read ? '' : 'unread'}">
       <i class="ph ${icon[n.type] || 'ph-info'}" aria-hidden="true"></i>
         <div class="notif-body">
           <div><b>${esc(n.title)}</b> <span class="muted notif-time">· ${fmtDT(n.created_at)}</span></div>
         ${n.body ? `<div class="muted">${esc(n.body)}</div>` : ''}
           ${n.link ? `<a href="${esc(safeUrl(n.link))}" class="muted notif-link">View →</a>` : ''}
-      </div></div>`).join('');
+      </div></div>`).join('') + pagerHtml('data-load-more-notifs', st);
+  box.querySelector('[data-load-more-notifs]')?.addEventListener('click', () => renderNotifications({ append: true }));
 }
 function wireNotifications() {
   $('markAllRead').addEventListener('click', async () => {

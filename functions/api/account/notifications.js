@@ -1,6 +1,7 @@
 // /api/account/notifications - in-app notifications for the caller's company.
 // GET -> { notifications, unread } | POST { id } | { all:true } -> mark read
 import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
+import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 
 export async function onRequest({ request, env }) {
   const { user } = await userFromRequest(request, env);
@@ -11,15 +12,21 @@ export async function onRequest({ request, env }) {
   if (!companyId) return json(403, { error: 'no_company' });
 
   if (request.method === 'GET') {
-    const { data, error } = await sb
+    const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 50, maxLimit: 100 });
+    const { data, error, count } = await sb
       .from('notifications')
-      .select('id,type,title,body,link,read,created_at')
+      .select('id,type,title,body,link,read,created_at', { count: 'exact' })
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .range(offset, offset + limit - 1);
     if (error) return json(500, { error: 'server_error' });
-    const unread = (data || []).filter((n) => !n.read).length;
-    return json(200, { notifications: data || [], unread });
+    // True unread count, independent of the current page.
+    const { count: unread } = await sb
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('read', false);
+    return json(200, { notifications: data || [], unread: unread || 0, ...pageEnvelope(data, { limit, offset, count }) });
   }
 
   if (request.method === 'POST') {

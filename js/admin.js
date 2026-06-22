@@ -347,20 +347,36 @@ function renderStats(stats = {}) {
  if ($('admActionRail')) $('admActionRail').innerHTML = renderActionRail(stats.actions || []);
 }
 
-async function renderOrders() {
+// "Load more" footer for the admin orders table — appends the next server page (#29).
+function admOrdersPager() {
+  if (!state.ordersHasMore) return '';
+  const count = state.ordersTotal != null ? ` (${state.orders.length} of ${state.ordersTotal})` : '';
+  return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" data-load-more-orders type="button">Load more${count}</button></div>`;
+}
+
+async function renderOrders({ append = false } = {}) {
   const box = $('admOrders');
-  box.textContent = 'Loading...';
   const status = $('ordFilter').value;
+  if (!append) { state.orders = []; state.ordersOffset = 0; box.textContent = 'Loading...'; }
   try {
-    state.orders = (await api('/api/admin/orders' + (status ? `?status=${encodeURIComponent(status)}` : ''))).orders || [];
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    params.set('limit', '100');
+    params.set('offset', String(state.ordersOffset || 0));
+    const res = await api('/api/admin/orders?' + params.toString());
+    state.orders = (state.orders || []).concat(res.orders || []);
+    state.ordersOffset = (state.ordersOffset || 0) + (res.orders || []).length;
+    state.ordersTotal = res.total;
+    state.ordersHasMore = !!res.has_more;
   } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Could not load orders. Reload to retry.</p>';
+    if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load orders. Reload to retry.</p>';
     return;
   }
   const q = $('ordSearch').value.trim().toLowerCase();
   const orders = state.orders.filter((order) => JSON.stringify(order).toLowerCase().includes(q));
   if (!orders.length) {
-    box.innerHTML = '<p class="muted" style="padding:14px">No orders.</p>';
+    box.innerHTML = `<p class="muted" style="padding:14px">No orders${q ? ' match your search.' : '.'}</p>` + admOrdersPager();
+    box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
     return;
   }
   box.innerHTML = `<table class="adm"><thead><tr><th>Date</th><th>Company</th><th>Items</th><th>Total</th><th>Pay</th><th>Status</th><th></th></tr></thead><tbody>${orders.map((order) => {
@@ -374,7 +390,7 @@ async function renderOrders() {
       <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
       <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>` : ''}</td>
     </tr>`;
-  }).join('')}</tbody></table>`;
+  }).join('')}</tbody></table>` + admOrdersPager();
 
   box.querySelectorAll('[data-save-order]').forEach((button) => {
     button.addEventListener('click', async () => {
@@ -464,6 +480,7 @@ async function renderOrders() {
       }
     });
   });
+  box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
 }
 
 async function renderCustomers() {
