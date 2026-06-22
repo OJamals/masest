@@ -1,15 +1,12 @@
 // /api/account/notifications - in-app notifications for the caller's company.
 // GET -> { notifications, unread } | POST { id } | { all:true } -> mark read
-import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
+import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 
 export async function onRequest({ request, env }) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return json(401, { error: 'unauthenticated' });
-
-  const sb = adminClient(env);
-  const companyId = await companyForUser(sb, user.id);
-  if (!companyId) return json(403, { error: 'no_company' });
+  const ctx = await requireCompany(request, env);
+  if (ctx.error) return ctx.error;
+  const { companyId, sb } = ctx;
 
   if (request.method === 'GET') {
     const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 50, maxLimit: 100 });

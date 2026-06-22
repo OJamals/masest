@@ -1,5 +1,5 @@
 // POST /api/account/company - self-scoped company setup fields for the caller's account.
-import { adminClient, companyForUser, json, readBody, userFromRequest } from '../../_lib/supabase.js';
+import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 
 function cleanUrl(value) {
   if (value === undefined) return undefined;
@@ -15,12 +15,9 @@ function cleanUrl(value) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return json(401, { error: 'unauthenticated' });
-
-  const sb = adminClient(env);
-  const companyId = await companyForUser(sb, user.id);
-  if (!companyId) return json(403, { error: 'no_company' });
+  const ctx = await requireCompany(request, env);
+  if (ctx.error) return ctx.error;
+  const { companyId, sb } = ctx;
 
   const body = await readBody(request);
   const patch = {};

@@ -41,16 +41,21 @@ test("account company setup endpoint lets buyers update tax setup fields", () =>
   assert.equal(existsSync(endpoint), true, "account company setup endpoint should exist");
   const src = readFileSync(endpoint, "utf8");
 
-  assert.match(src, /companyForUser/, "endpoint must scope updates to caller company");
+  assert.match(src, /requireCompany|companyForUser/, "endpoint must scope updates to caller company");
   assert.match(src, /resale_cert_url/, "endpoint should update resale certificate URL");
   assert.match(src, /tax_exempt/, "endpoint should update tax-exempt status");
   assert.match(src, /body\.tax_exempt !== undefined/, "endpoint should only update tax_exempt when submitted");
   assert.match(src, /invalid_resale_cert_url/, "endpoint should reject invalid resale certificate URLs");
   assert.match(src, /\.eq\('id', companyId\)/, "company update must be id-scoped");
+  // Auth result must be handled safely: via the requireCompany wrapper, or by
+  // destructuring { user } from userFromRequest (never assigning the wrapper to user).
+  const usesWrapper = /const\s+ctx\s*=\s*await\s+requireCompany\(/.test(src);
+  const destructuresUser = /const\s*\{\s*[^}]*\buser\b[^}]*\}\s*=\s*await\s+(requireCompany|userFromRequest)\(/.test(src)
+    || /const\s*\{[^}]*\buser\b[^}]*\}\s*=\s*ctx\b/.test(src);
   assert.doesNotMatch(src, /\bconst\s+user\s*=\s*await\s+userFromRequest\b/,
     "endpoint must not assign the userFromRequest wrapper directly to user");
-  assert.match(src, /const\s*\{\s*user\s*\}\s*=\s*await\s+userFromRequest\(/,
-    "endpoint must destructure { user } from userFromRequest before reading user.id");
+  assert.ok(usesWrapper || destructuresUser,
+    "endpoint must resolve auth via requireCompany or destructured userFromRequest");
 });
 
 test("business hub renders and submits company setup form", () => {

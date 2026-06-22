@@ -1,15 +1,12 @@
 // /api/account/messages — support thread between the caller's company and MASEST staff.
 //   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer posts (+ staff notification)
-import { adminClient, userFromRequest, companyForUser, json, readBody, sendEmail, emailLayout } from '../../_lib/supabase.js';
+import { requireCompany, json, readBody, sendEmail, emailLayout } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 
 export async function onRequest({ request, env }) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return json(401, { error: 'unauthenticated' });
-
-  const sb = adminClient(env);
-  const companyId = await companyForUser(sb, user.id);
-  if (!companyId) return json(403, { error: 'no_company' });
+  const ctx = await requireCompany(request, env);
+  if (ctx.error) return ctx.error;
+  const { user, companyId, sb } = ctx;
 
   if (request.method === 'GET') {
     const peek = new URL(request.url).searchParams.get('peek') === '1';

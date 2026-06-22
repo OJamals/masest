@@ -47,9 +47,11 @@ test('#43 company-scoped account routes share no-company contract and order shap
   const notifications = read('functions/api/account/notifications.js');
   const orders = read('functions/api/account/orders.js');
   const order = read('functions/api/account/order.js');
-  assert.match(notifications, /return json\(403,\s*\{\s*error:\s*'no_company'\s*\}\)/);
-  assert.match(orders, /return json\(403,\s*\{\s*error:\s*'no_company'\s*\}\)/);
-  assert.match(order, /return json\(403,\s*\{\s*error:\s*'no_company'\s*\}\)/);
+  // 403 no_company contract is now provided by the requireCompany wrapper (or inline literal).
+  const noCompanyContract = (src) => /requireCompany\(/.test(src) || /return json\(403,\s*\{\s*error:\s*'no_company'\s*\}\)/.test(src);
+  assert.ok(noCompanyContract(notifications), 'notifications must enforce the no_company 403 contract');
+  assert.ok(noCompanyContract(orders), 'orders must enforce the no_company 403 contract');
+  assert.ok(noCompanyContract(order), 'order must enforce the no_company 403 contract');
   assert.doesNotMatch(orders, /\.eq\(\s*'user_id'\s*,\s*user\.id\s*\)/, 'orders list must not fall back to user_id');
   assert.match(orders, /order_items\(sku,product_sku,name,qty,unit_price,line_total\)/);
   assert.match(order, /order_items\(sku,product_sku,name,qty,unit_price,line_total\)/);
