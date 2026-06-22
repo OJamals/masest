@@ -87,18 +87,44 @@ export async function requireStaff(request, env) {
   return { user, staff: false, role: null };
 }
 
-// Member email addresses for a company (via the auth admin API). Best-effort, deduped.
+// Resolve auth emails for a known set of user ids via getUserById — O(ids), not
+// O(all-users). Best-effort: failed lookups are skipped. Returns { [id]: email }.
+export async function emailsByIds(sb, ids) {
+  const unique = [...new Set((ids || []).filter(Boolean))];
+  const out = {};
+  await Promise.all(unique.map(async (id) => {
+    try {
+      const { data } = await sb.auth.admin.getUserById(id);
+      if (data?.user?.email) out[id] = data.user.email;
+    } catch { /* skip unresolved id */ }
+  }));
+  return out;
+}
+
+// Full id→email map for admin directories. Pages through listUsers so it never
+// truncates past a single page. Best-effort (stops on error).
+export async function allUserEmails(sb, { pageSize = 1000, maxPages = 100 } = {}) {
+  const out = new Map();
+  for (let page = 1; page <= maxPages; page++) {
+    let users;
+    try {
+      const { data } = await sb.auth.admin.listUsers({ page, perPage: pageSize });
+      users = data?.users || [];
+    } catch { break; }
+    for (const u of users) out.set(u.id, u.email);
+    if (users.length < pageSize) break;
+  }
+  return out;
+}
+
+// Member email addresses for a company. Best-effort, deduped.
 export async function companyEmails(sb, companyId) {
   if (!companyId) return [];
   const { data: profiles } = await sb.from('profiles').select('id').eq('company_id', companyId);
-  const ids = new Set((profiles || []).map((p) => p.id));
-  if (!ids.size) return [];
-  const emails = [];
-  try {
-    const { data } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    for (const u of data?.users || []) if (ids.has(u.id) && u.email) emails.push(u.email);
-  } catch { /* auth admin unavailable */ }
-  return [...new Set(emails)];
+  const ids = (profiles || []).map((p) => p.id);
+  if (!ids.length) return [];
+  const byId = await emailsByIds(sb, ids);
+  return [...new Set(Object.values(byId))];
 }
 
 // Fire-and-forget transactional email via Resend. No-op unless RESEND_API_KEY + recipients exist.

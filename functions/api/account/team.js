@@ -2,24 +2,13 @@
 //   GET                     → { members: [...], invites: [...], is_company_admin }
 //   POST { email, role? }   → invite a teammate (role 'buyer'|'admin')
 //   DELETE { id }           → revoke a pending invite
-import { adminClient, userFromRequest, json, readBody, emailLayout, sendEmail } from '../../_lib/supabase.js';
+import { adminClient, userFromRequest, json, readBody, emailLayout, sendEmail, emailsByIds } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 import { isLastAdmin, normalizeMemberRole } from '../../_lib/members.js';
 
 async function callerContext(sb, userId) {
   const { data } = await sb.from('profiles').select('company_id,role').eq('id', userId).maybeSingle();
   return data || {};
-}
-
-// Map profile ids -> emails via the auth admin API (best-effort).
-async function emailsFor(sb, ids) {
-  const want = new Set(ids);
-  const out = {};
-  try {
-    const { data } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    for (const u of data?.users || []) if (want.has(u.id)) out[u.id] = u.email;
-  } catch { /* unavailable */ }
-  return out;
 }
 
 export async function onRequest({ request, env }) {
@@ -34,7 +23,7 @@ export async function onRequest({ request, env }) {
   if (request.method === 'GET') {
     const { data: profiles } = await sb.from('profiles')
       .select('id,full_name,phone,role').eq('company_id', company_id);
-    const emails = await emailsFor(sb, (profiles || []).map((p) => p.id));
+    const emails = await emailsByIds(sb, (profiles || []).map((p) => p.id));
     const members = (profiles || []).map((p) => ({ ...p, email: emails[p.id] || null }));
     let invites = [];
     if (isCompanyAdmin) {

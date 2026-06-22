@@ -1,6 +1,6 @@
 // /api/admin/customers — flattened directory of all account members across
 // companies, with email, role, company, status and pricing tier. Read-only.
-import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, allUserEmails } from '../../_lib/supabase.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
@@ -14,11 +14,7 @@ export async function onRequest({ request, env }) {
   const { data: companies } = await sb.from('companies').select('id,name,status,price_tier,net_terms_days');
   const companyById = new Map((companies || []).map((c) => [c.id, c]));
 
-  const emailById = new Map();
-  try {
-    const { data: list } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    for (const u of list?.users || []) emailById.set(u.id, u.email);
-  } catch { /* email lookup best-effort */ }
+  const emailById = await allUserEmails(sb);
 
   const customers = (profiles || []).map((p) => {
     const c = companyById.get(p.company_id) || {};

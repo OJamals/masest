@@ -1,6 +1,6 @@
 // /api/admin/offers — staff broadcasts. GET → past sends · POST → in-app notification fan-out
 // (+ optional Resend email when send_email and RESEND_API_KEY are set).
-import { adminClient, requireStaff, json, readBody, emailLayout, sendEmail, htmlEscape } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, emailLayout, sendEmail, htmlEscape, emailsByIds } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 
 const AUDIENCES = ['all', 'approved', 'pending', 'company'];
@@ -28,16 +28,11 @@ async function targetCompanies(sb, audience, companyId) {
 
 async function memberEmails(sb, companyIds) {
   if (!companyIds.length) return [];
-  const set = new Set(companyIds);
-  const { data: profiles } = await sb.from('profiles').select('id,company_id');
-  const wanted = new Set((profiles || []).filter((p) => set.has(p.company_id)).map((p) => p.id));
-  if (!wanted.size) return [];
-  const emails = [];
-  try {
-    const { data } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    for (const u of data?.users || []) if (wanted.has(u.id) && u.email) emails.push(u.email);
-  } catch { /* auth admin unavailable */ }
-  return [...new Set(emails)];
+  const { data: profiles } = await sb.from('profiles').select('id').in('company_id', companyIds);
+  const ids = (profiles || []).map((p) => p.id);
+  if (!ids.length) return [];
+  const byId = await emailsByIds(sb, ids);
+  return [...new Set(Object.values(byId))];
 }
 
 export async function onRequest({ request, env }) {

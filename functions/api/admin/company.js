@@ -1,6 +1,6 @@
 // GET /api/admin/company?id=<uuid> — full detail for one company. Staff-only.
 // Returns the company, its members (+ emails), recent orders, message count, pending invites.
-import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, emailsByIds } from '../../_lib/supabase.js';
 import { buildCompanySetup } from '../../_lib/setup.js';
 
 export async function onRequestGet({ request, env }) {
@@ -18,12 +18,7 @@ export async function onRequestGet({ request, env }) {
   if (!company) return json(404, { error: 'not_found' });
 
   const { data: profiles } = await sb.from('profiles').select('id,full_name,phone,role').eq('company_id', id);
-  const emails = {};
-  try {
-    const want = new Set((profiles || []).map((p) => p.id));
-    const { data } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    for (const u of data?.users || []) if (want.has(u.id)) emails[u.id] = u.email;
-  } catch { /* auth admin unavailable */ }
+  const emails = await emailsByIds(sb, (profiles || []).map((p) => p.id));
   const members = (profiles || []).map((p) => ({ ...p, email: emails[p.id] || null }));
 
   const { data: orders } = await sb.from('orders')
