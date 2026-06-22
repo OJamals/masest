@@ -3,8 +3,15 @@
 // event checkout.session.completed. Put that endpoint's signing secret in STRIPE_WEBHOOK_SECRET.
 // On the Workers runtime signature verification must use the SubtleCrypto provider.
 import Stripe from 'stripe';
-import { adminClient, json, sendEmail } from '../_lib/supabase.js';
+import { adminClient, json, sendEmail, companyEmails } from '../_lib/supabase.js';
 import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
+import {
+  isDelinquentStatus,
+  planFailedPayment,
+  planRecoveredPayment,
+  planDispute,
+  planRefundReconcile,
+} from '../_lib/dunning.js';
 import {
   centsToAmount,
   parseCartMetadata,
@@ -219,5 +226,152 @@ export async function onRequestPost({ request, env }) {
     return json(200, { received: true });
   }
 
+  // Failed subscription payment → mark past_due + send a dunning notice (#24).
+  if (event.type === 'invoice.payment_failed') {
+    const sb = adminClient(env);
+    const plan = planFailedPayment(event.data.object);
+    if (plan.subscriptionId) {
+      await sb.from('program_subscriptions').update({ status: plan.status })
+        .eq('stripe_subscription_id', plan.subscriptionId).then(() => {}, () => {});
+    }
+    try { await notifyBillingFailure(env, sb, plan); }
+    catch (e) { console.error('dunning_failure_notice', e?.message || e); }
+    return json(200, { received: true });
+  }
+
+  // Subscription invoice paid → clear delinquency; email a recovery notice only if the
+  // subscription was actually past_due, so ordinary renewals never trigger an email.
+  if (event.type === 'invoice.paid' && event.data.object?.subscription) {
+    const sb = adminClient(env);
+    const inv = event.data.object;
+    const { data: row } = await sb.from('program_subscriptions')
+      .select('status,company_id').eq('stripe_subscription_id', inv.subscription).maybeSingle();
+    const plan = planRecoveredPayment(inv);
+    if (!plan.companyId && row?.company_id) plan.companyId = row.company_id;
+    await sb.from('program_subscriptions').update({ status: plan.status })
+      .eq('stripe_subscription_id', inv.subscription).then(() => {}, () => {});
+    if (isDelinquentStatus(row?.status)) {
+      try { await notifyBillingRecovered(env, sb, plan); }
+      catch (e) { console.error('dunning_recovery_notice', e?.message || e); }
+    }
+    return json(200, { received: true });
+  }
+
+  // Card dispute opened → alert staff with the linked order for evidence gathering.
+  if (event.type === 'charge.dispute.created') {
+    const sb = adminClient(env);
+    const plan = planDispute(event.data.object);
+    let orderId = null;
+    if (plan.paymentIntent) {
+      const { data: ord } = await sb.from('orders').select('id')
+        .eq('stripe_payment_intent', plan.paymentIntent).maybeSingle();
+      orderId = ord?.id || null;
+    }
+    try { await alertStaffDispute(env, plan, orderId); }
+    catch (e) { console.error('dispute_alert', e?.message || e); }
+    return json(200, { received: true });
+  }
+
+  // Refund issued outside the admin flow (e.g. Stripe dashboard) → reconcile the order's
+  // refunded_amount/status so the two never drift (idempotent via planRefundReconcile).
+  if (event.type === 'charge.refunded') {
+    const sb = adminClient(env);
+    const charge = event.data.object;
+    if (charge.payment_intent) {
+      const { data: order } = await sb.from('orders')
+        .select('id,company_id,status,total,refunded_amount')
+        .eq('stripe_payment_intent', charge.payment_intent).maybeSingle();
+      if (order) {
+        const plan = planRefundReconcile(charge, order);
+        const patch = { refunded_amount: plan.refundedAmount };
+        if (plan.fullyRefunded) patch.status = 'refunded';
+        await sb.from('orders').update(patch).eq('id', order.id).then(() => {}, () => {});
+      }
+    }
+    return json(200, { received: true });
+  }
+
   return json(200, { received: true });
+}
+
+// --- Billing-event notifications (#24). Defined below onRequestPost so the first DB
+// write in this file stays inside the signature-verified handler; these run only when
+// called from a verified event branch. ---
+
+// Compact branded transactional email for billing events. Arial/Helvetica is the
+// email-safe stack (web fonts don't render in mail clients), matching the order receipt.
+function billingEmailHtml(env, heading, paragraphs, cta) {
+  const body = (paragraphs || []).map((p) => `<p style="margin:0 0 14px;color:#445;font-size:14px;line-height:1.6">${p}</p>`).join('');
+  const button = cta
+    ? `<div style="margin:22px 0 0"><a href="${escapeHtml(cta.url)}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">${escapeHtml(cta.text)}</a></div>`
+    : '';
+  return `<div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
+    <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
+      <div style="background:#0e7c86;padding:18px 26px"><span style="color:#fff;font-size:19px;font-weight:800;letter-spacing:.04em">MASEST</span></div>
+      <div style="padding:26px;color:#223"><h2 style="margin:0 0 12px;color:#15171c;font-size:18px">${escapeHtml(heading)}</h2>${body}${button}</div>
+      <div style="background:#0b0d12;padding:16px 26px;color:#8a93a0;font-size:11px;line-height:1.7">MASEST Consulting LLC &middot; Questions? Reply to this email.</div>
+    </div>
+  </div>`;
+}
+
+function programsUrl(env) { return `${env.APP_URL || 'https://masest.co'}/dashboard.html#programs`; }
+
+// invoice.payment_failed → in-app notice + dunning email to the company.
+async function notifyBillingFailure(env, sb, plan) {
+  const amount = `${plan.currency} ${plan.amountDue.toFixed(2)}`;
+  const retryLine = plan.willRetry && plan.nextAttemptIso
+    ? `We'll retry automatically on ${escapeHtml(plan.nextAttemptIso.slice(0, 10))}. To avoid any interruption, please make sure the card on file is current.`
+    : 'This was the final automatic retry. Please update your payment method now to keep your program active.';
+  if (plan.companyId) {
+    await sb.from('notifications').insert({
+      company_id: plan.companyId, type: 'account', title: 'Payment failed',
+      body: `A subscription payment of ${amount} could not be collected.`, link: '/dashboard.html#programs',
+    }).then(() => {}, () => {});
+  }
+  await sendEmail(env, {
+    to: await companyEmails(sb, plan.companyId, 'billing'),
+    bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
+    subject: 'Action needed: your MASEST payment failed',
+    html: billingEmailHtml(env, 'Your payment didn’t go through', [
+      `We couldn’t collect <b>${amount}</b> for your MASEST program subscription (attempt ${plan.attempt}).`,
+      retryLine,
+    ], { url: programsUrl(env), text: 'Update payment method' }),
+    category: 'billing',
+  });
+}
+
+// invoice.paid after a delinquency → recovery notice (renewals stay silent; see caller).
+async function notifyBillingRecovered(env, sb, plan) {
+  if (plan.companyId) {
+    await sb.from('notifications').insert({
+      company_id: plan.companyId, type: 'account', title: 'Payment received',
+      body: 'Your subscription is active again. Thank you.', link: '/dashboard.html#programs',
+    }).then(() => {}, () => {});
+  }
+  await sendEmail(env, {
+    to: await companyEmails(sb, plan.companyId, 'billing'),
+    subject: 'Your MASEST subscription is active again',
+    html: billingEmailHtml(env, 'Payment received — you’re all set', [
+      `We collected <b>${plan.currency} ${plan.amountPaid.toFixed(2)}</b> and your program subscription is active again.`,
+      'No further action is needed. Thank you for being a MASEST customer.',
+    ], { url: programsUrl(env), text: 'View your programs' }),
+    category: 'billing',
+  });
+}
+
+// charge.dispute.created → staff alert with the linked order (best-effort recipient).
+async function alertStaffDispute(env, plan, orderId) {
+  const staff = env.ORDER_NOTIFY_EMAIL || env.SALES_EMAIL || env.ADMIN_EMAIL;
+  if (!staff) return;
+  await sendEmail(env, {
+    to: [staff],
+    subject: `⚠ Stripe dispute opened (${plan.reason})`,
+    html: billingEmailHtml(env, 'A card dispute was opened', [
+      `Charge <b>${escapeHtml(plan.chargeId || '?')}</b> (${plan.currency} ${plan.amount.toFixed(2)}) was disputed — reason <b>${escapeHtml(plan.reason)}</b>, status ${escapeHtml(plan.status)}.`,
+      orderId
+        ? `Linked order <b>${escapeHtml(orderId)}</b>. Respond in the Stripe dashboard before the evidence deadline.`
+        : 'No local order matched this payment intent. Respond in the Stripe dashboard before the evidence deadline.',
+    ]),
+    category: 'billing',
+  });
 }
