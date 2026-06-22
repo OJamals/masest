@@ -109,7 +109,7 @@ async function notifyInvoiceReady(sb, order, result) {
     type: 'order',
     title: 'Order invoice ready',
     body: `QuickBooks invoice ${result.docId} is linked to your order.`,
-    href: '/dashboard.html#orders',
+    link: '/dashboard.html#orders',
   });
 }
 

@@ -1,4 +1,4 @@
-// Admin audit log (issue #24): immutable trail of staff mutations.
+// Admin audit log (issue #20): immutable trail of staff mutations.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';

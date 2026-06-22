@@ -1,4 +1,4 @@
-// Best-effort immutable audit trail for staff mutations (issue #24).
+// Best-effort immutable audit trail for staff mutations (issue #20).
 //
 // recordAudit() must NEVER throw or block the underlying action — an audit-write
 // failure cannot be allowed to fail a refund or an approval. Call it with the

@@ -1,4 +1,4 @@
--- Admin audit log (issue #24). Apply in the Supabase SQL editor. Idempotent.
+-- Admin audit log (issue #20). Apply in the Supabase SQL editor. Idempotent.
 --
 -- Immutable trail of staff mutations (role grants, account approvals/terms, refunds, …)
 -- so there is a record of which staff did what. Written best-effort by _lib/audit.js
