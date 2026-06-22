@@ -1,6 +1,6 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
-import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex } from './util.js';
+import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, confirmDialog } from './util.js';
 import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 
 const $ = (id) => document.getElementById(id);
@@ -444,7 +444,7 @@ async function renderOrders({ append = false } = {}) {
       const prompt = amount
         ? `Refund $${amount.toFixed(2)} to this order via Stripe?`
         : 'Refund the full remaining balance via Stripe?';
-      if (!confirm(prompt)) return;
+      if (!(await confirmDialog(prompt, { confirmText: 'Refund', danger: true }))) return;
       button.disabled = true;
       message('ordStatus', 'Refunding...');
       try {
@@ -569,7 +569,7 @@ async function renderCompanies() {
   if (bulk) bulk.addEventListener('click', async () => {
     const ids = [...box.querySelectorAll('.co-check:checked')].map((c) => c.value);
     if (!ids.length) return;
-    if (!confirm(`Approve ${ids.length} account(s)?`)) return;
+    if (!(await confirmDialog(`Approve ${ids.length} account(s)?`, { confirmText: 'Approve' }))) return;
     bulk.disabled = true;
     try {
       await api('/api/admin/companies', { method: 'POST', body: { ids, action: 'approve' } });
@@ -715,7 +715,7 @@ async function saveProductRow(sku) {
 }
 
 async function removeProduct(sku) {
-  if (!confirm(`Deactivate ${sku}? Existing order history stays intact.`)) return;
+  if (!(await confirmDialog(`Deactivate ${sku}? Existing order history stays intact.`, { confirmText: 'Deactivate', danger: true }))) return;
   try {
     await api('/api/admin/products', { method: 'DELETE', body: { sku } });
     message('prodStatus', 'Product deactivated.', 'ok');
@@ -748,7 +748,7 @@ async function saveVariantRow(vsku) {
 }
 
 async function removeVariant(vsku) {
-  if (!confirm(`Deactivate ${vsku}? Existing order history stays intact.`)) return;
+  if (!(await confirmDialog(`Deactivate ${vsku}? Existing order history stays intact.`, { confirmText: 'Deactivate', danger: true }))) return;
   try {
     await api('/api/admin/products', { method: 'DELETE', body: { vsku } });
     message('variantStatus', 'Variant deactivated.', 'ok');
