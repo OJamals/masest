@@ -1,6 +1,7 @@
 // /api/account/messages — support thread between the caller's company and MASEST staff.
 //   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer posts (+ staff notification)
 import { adminClient, userFromRequest, companyForUser, json, readBody, sendEmail, emailLayout } from '../../_lib/supabase.js';
+import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 
 export async function onRequest({ request, env }) {
   const { user } = await userFromRequest(request, env);
@@ -27,6 +28,9 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
+    // Throttle per author: each post fires a staff-alert email.
+    const rl = await rateLimit(env, 'support-message', user.id || clientIp(request), { limit: 10, windowSec: 60 });
+    if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
     const body = await readBody(request);
     const text = String(body.body || '').trim();
     if (!text) return json(400, { error: 'empty_message' });
@@ -37,7 +41,7 @@ export async function onRequest({ request, env }) {
     }).select('id,created_at').single();
     if (error) return json(500, { error: 'server_error' });
 
-    // Best-effort staff email alert (low B2B volume; throttle is a future enhancement).
+    // Best-effort staff email alert (rate-limited above).
     const staffTo = (env.ADMIN_EMAILS || env.ADMIN_EMAIL || '')
       .split(',').map((s) => s.trim()).filter(Boolean);
     if (staffTo.length) {

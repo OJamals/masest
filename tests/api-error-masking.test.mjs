@@ -17,12 +17,14 @@ const CUSTOMER_FACING = [
   "functions/api/account/notifications.js",
   "functions/api/account/addresses.js",
   "functions/api/account/team.js",
+  "functions/api/account/register.js",
 ];
 
-test("customer-facing endpoints do not return raw error.message on 500", () => {
+test("customer-facing endpoints do not return any raw DB error.message on 5xx", () => {
   for (const path of CUSTOMER_FACING) {
     const src = read(path);
-    assert.doesNotMatch(src, /json\(500,\s*\{\s*error:\s*error\.message/, `${path} leaks raw DB error to client`);
+    // Catch the raw-message leak whatever the error variable is named (error/jErr/coErr/...).
+    assert.doesNotMatch(src, /json\(5\d\d,\s*\{\s*error:\s*\w+\.message/, `${path} leaks raw DB error to client`);
   }
 });
 
