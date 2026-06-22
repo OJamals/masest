@@ -3,6 +3,7 @@
 //   POST { id | ids:[...], action } → approve|reject|suspend|set_terms (single or bulk)
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import { buildCompanySetup } from '../../_lib/setup.js';
+import { recordAudit } from '../../_lib/audit.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
@@ -61,6 +62,7 @@ export async function onRequest({ request, env }) {
         }).then(() => {}, () => {});
       }
     }
+    await recordAudit(sb, { user, action: `company.${body.action}`, targetType: 'company', targetId: ids.join(','), detail: patch });
     return json(200, { ok: true, companies: data || [], company: (data || [])[0] || null, count: (data || []).length });
   }
 

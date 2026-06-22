@@ -5,6 +5,7 @@
 //   POST { id, action:'refund' }→ Stripe refund + cancel + notify
 import Stripe from 'stripe';
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
+import { recordAudit } from '../../_lib/audit.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
 const TRACKING_STATUSES = ['processing', 'packing', 'shipped', 'delivered', 'blocked'];
@@ -117,6 +118,7 @@ export async function onRequest({ request, env }) {
         .eq('id', body.id).select('id,company_id,status').single();
       if (e2) return json(500, { error: e2.message });
       await notifyCompany(sb, env, request, updated?.company_id, 'refunded', 'Your MASEST order was refunded. The amount will return to your original payment method.');
+      await recordAudit(sb, { user, action: 'order.refund', targetType: 'order', targetId: body.id, detail: { company_id: updated?.company_id } });
       return json(200, { ok: true, refunded: true, order: updated });
     }
 
