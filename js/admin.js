@@ -5,6 +5,13 @@ import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 
 const $ = (id) => document.getElementById(id);
 
+// Coalesce rapid input (search keystrokes) into a single trailing call so a query like
+// "walmart" triggers one fetch+render instead of one per character.
+function debounce(fn, ms = 220) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
 const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
 const QUOTE_STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const state = {
@@ -195,6 +202,14 @@ function message(id, text, kind = '') {
   el.textContent = text;
   el.dataset.state = kind;
 }
+
+// Session lost mid-use: drop back to the sign-in gate instead of failing silently.
+document.addEventListener('masest:session-expired', () => {
+  $('admGate').hidden = false;
+  $('admApp').hidden = true;
+  if ($('gateTitle')) $('gateTitle').textContent = 'Session expired';
+  if ($('gateMsg')) $('gateMsg').textContent = 'Please sign in again to continue.';
+});
 
 async function boot() {
   try {
@@ -1206,15 +1221,15 @@ function wire() {
   });
   window.addEventListener('hashchange', syncTabFromHash);
   $('ordFilter').addEventListener('change', renderOrders);
-  $('ordSearch').addEventListener('input', renderOrders);
-  $('coSearch').addEventListener('input', renderCompanies);
-  $('prodSearch').addEventListener('input', renderProducts);
-  $('priceSearch').addEventListener('input', renderPricing);
+  $('ordSearch').addEventListener('input', debounce(() => renderOrders()));
+  $('coSearch').addEventListener('input', debounce(() => renderCompanies()));
+  $('prodSearch').addEventListener('input', debounce(() => renderProducts()));
+  $('priceSearch').addEventListener('input', debounce(() => renderPricing()));
   $('qFilter').addEventListener('change', renderQuotePipeline);
   $('qPriority')?.addEventListener('change', renderQuotePipeline);
   $('qDue')?.addEventListener('change', renderQuotePipeline);
-  $('qSearch').addEventListener('input', renderQuotePipeline);
-  $('custSearch').addEventListener('input', renderCustomers);
+  $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline()));
+  $('custSearch').addEventListener('input', debounce(() => renderCustomers()));
   $('qboConnect')?.addEventListener('click', connectQbo);
   $('qboSyncNow')?.addEventListener('click', runQboSync);
   $('ordExport').addEventListener('click', async () => {
