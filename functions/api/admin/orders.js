@@ -9,6 +9,7 @@ import { recordAudit } from '../../_lib/audit.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { computeRefund } from '../../_lib/refund.js';
 import { stockIncrements } from '../../_lib/order-shape.js';
+import { staffCan } from '../../_lib/authz.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -64,7 +65,7 @@ async function notifyBuyerTracking(env, request, order, label, extra, exclude = 
 }
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
 
@@ -104,6 +105,7 @@ export async function onRequest({ request, env }) {
     if (!body.id) return json(400, { error: 'order_id_required' });
 
     if (body.action === 'refund') {
+      if (!staffCan(role, 'order.refund')) return json(403, { error: 'forbidden', message: 'Refunds require finance or owner access.' });
       const { data: ord, error: e1 } = await sb.from('orders')
         .select('id,company_id,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,order_items(sku,qty)').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });

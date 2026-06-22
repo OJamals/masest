@@ -1,6 +1,7 @@
 // /api/admin/users - staff user management for company members and pending invites.
 import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
+import { staffCan } from '../../_lib/authz.js';
 
 const ROLES = new Set(['admin', 'buyer']);
 
@@ -15,7 +16,7 @@ async function getInvite(sb, inviteId, companyId) {
 }
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
@@ -26,19 +27,20 @@ export async function onRequest({ request, env }) {
   const sb = adminClient(env);
 
   if (action === 'set_role') {
+    if (!staffCan(role, 'user.role')) return json(403, { error: 'forbidden', message: 'Changing member roles requires owner access.' });
     const profileId = String(body.profile_id || '').trim();
-    const role = String(body.role || '').trim();
+    const newRole = String(body.role || '').trim();
     if (!companyId || !profileId) return json(400, { error: 'profile_required' });
-    if (!ROLES.has(role)) return json(400, { error: 'invalid_role' });
+    if (!ROLES.has(newRole)) return json(400, { error: 'invalid_role' });
     const { data, error } = await sb.from('profiles')
-      .update({ role })
+      .update({ role: newRole })
       .eq('id', profileId)
       .eq('company_id', companyId)
       .select('id,company_id,role')
       .maybeSingle();
     if (error) return json(500, { error: error.message || 'role_update_failed' });
     if (!data) return json(404, { error: 'profile_not_found' });
-    await recordAudit(sb, { user, action: 'user.set_role', targetType: 'profile', targetId: profileId, detail: { role, company_id: companyId } });
+    await recordAudit(sb, { user, action: 'user.set_role', targetType: 'profile', targetId: profileId, detail: { role: newRole, company_id: companyId } });
     return json(200, { ok: true, profile: data });
   }
 
