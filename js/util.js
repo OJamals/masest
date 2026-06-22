@@ -58,3 +58,27 @@ export const wireTablist = (tablist, activate) => {
     activate?.(tabs[next]);
   });
 };
+
+/* ---- Styled confirm dialog (#31) ---- */
+
+// Accessible replacement for window.confirm(): a focus-trapped, Esc-dismissable native
+// <dialog>. Returns Promise<boolean>. The message is set via textContent (no HTML
+// injection). Falls back to window.confirm() where <dialog> is unsupported.
+export const confirmDialog = (message, { confirmText = 'Confirm', cancelText = 'Cancel', danger = false } = {}) =>
+  new Promise((resolve) => {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'confirm-dialog';
+    dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
+        <p class="confirm-dialog-msg"></p>
+        <menu class="confirm-dialog-actions">
+          <button value="cancel" class="btn btn-ghost btn-sm" type="submit">${esc(cancelText)}</button>
+          <button value="confirm" class="btn btn-sm${danger ? ' btn-danger' : ''}" type="submit">${esc(confirmText)}</button>
+        </menu>
+      </form>`;
+    dlg.querySelector('.confirm-dialog-msg').textContent = message;
+    if (typeof dlg.showModal !== 'function') { resolve(window.confirm(message)); return; }
+    document.body.appendChild(dlg);
+    dlg.addEventListener('close', () => { resolve(dlg.returnValue === 'confirm'); dlg.remove(); });
+    dlg.showModal();
+    dlg.querySelector('button[value="confirm"]').focus();
+  });

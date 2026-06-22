@@ -126,6 +126,14 @@
     .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: left; }
   }
+  /* Styled confirm dialog (#31) */
+  .confirm-dialog { border: 1px solid var(--line, #e5e7eb); border-radius: 12px; padding: 0; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  .confirm-dialog::backdrop { background: rgba(15,23,42,.45); }
+  .confirm-dialog-body { padding: 20px; margin: 0; }
+  .confirm-dialog-msg { margin: 0 0 18px; font-size: 1rem; line-height: 1.5; }
+  .confirm-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin: 0; padding: 0; }
+  .btn-danger { background: #dc2626; border-color: #dc2626; color: #fff; }
+  .btn-danger:hover { background: #b91c1c; border-color: #b91c1c; }
 </style>
 </head>
 <body class="site-soft-bg">
