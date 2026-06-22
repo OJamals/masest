@@ -1,5 +1,6 @@
 // /api/admin/products - staff catalog, stock, media, and variant management.
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
+import { staffCan } from '../../_lib/authz.js';
 
 const BASE_COLUMNS = [
   'sku',
@@ -155,7 +156,7 @@ export function normalizeVariant(input) {
 }
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
 
@@ -171,6 +172,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
+    if (!staffCan(role, 'product.write')) return json(403, { error: 'forbidden', message: 'Editing the catalog requires owner access.' });
     const body = await readBody(request);
     if (body.variant) {
       const normalized = normalizeVariant(body);
@@ -203,6 +205,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'DELETE') {
+    if (!staffCan(role, 'product.write')) return json(403, { error: 'forbidden', message: 'Editing the catalog requires owner access.' });
     const body = await readBody(request);
     if (body.vsku) {
       const vsku = String(body.vsku).trim();

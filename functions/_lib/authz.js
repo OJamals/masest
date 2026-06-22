@@ -17,3 +17,31 @@ export function isStaffEmail(email, env) {
   if (!e) return false;
   return parseAdminEmails(env).includes(e);
 }
+
+// ---- Staff role tiers (#21) ----
+// Platform-staff are no longer all-powerful: a role narrows what each staff member
+// can do. ADMIN_EMAILS members and legacy is_staff rows resolve to 'owner' (full).
+export const STAFF_ROLES = ["owner", "finance", "support", "read_only"];
+
+// capability -> roles permitted. Only the dangerous/financial mutations are gated
+// in this batch; everything else stays open to any staff (tightened in a follow-up).
+const STAFF_CAPABILITIES = {
+  "order.refund": ["owner", "finance"],
+  "company.credit": ["owner", "finance"],
+  "product.write": ["owner"],
+  "user.role": ["owner"],
+};
+
+// Map a raw profiles.staff_role into a known role. Unknown/blank -> 'owner' so
+// staff that predate tiers (no staff_role set) never silently lose access.
+export function normalizeStaffRole(value) {
+  const r = String(value || "").trim().toLowerCase();
+  return STAFF_ROLES.includes(r) ? r : "owner";
+}
+
+// Can a staff role perform a capability? Unknown capability -> owner-only (fail-safe).
+export function staffCan(role, capability) {
+  const allowed = STAFF_CAPABILITIES[capability];
+  if (!allowed) return role === "owner";
+  return allowed.includes(role);
+}

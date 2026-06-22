@@ -4,9 +4,10 @@
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import { buildCompanySetup } from '../../_lib/setup.js';
 import { recordAudit } from '../../_lib/audit.js';
+import { staffCan } from '../../_lib/authz.js';
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
 
@@ -24,6 +25,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
+    if (!staffCan(role, 'company.credit')) return json(403, { error: 'forbidden', message: 'Company approval, credit limits and terms require finance or owner access.' });
     const body = await readBody(request);
     const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : (body.id ? [body.id] : []);
     if (!ids.length) return json(400, { error: 'company_id_required' });

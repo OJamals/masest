@@ -74,17 +74,17 @@ export async function tierPriceMap(sb, tier) {
 // (comma-separated, case-insensitive). Returns { user, staff }.
 export async function requireStaff(request, env) {
   const { user } = await userFromRequest(request, env);
-  if (!user) return { user: null, staff: false };
-  let staff = isStaffEmail(user.email, env);
-  // Fallback: a profiles.is_staff=true flag (settable only server-side / via SQL) also grants staff,
-  // so staff can be added/removed in the DB without a Cloudflare redeploy of ADMIN_EMAILS.
-  if (!staff) {
-    try {
-      const { data } = await adminClient(env).from('profiles').select('is_staff').eq('id', user.id).maybeSingle();
-      staff = !!data?.is_staff;
-    } catch { /* is_staff column may not exist pre-migration → env gate only */ }
-  }
-  return { user, staff };
+  if (!user) return { user: null, staff: false, role: null };
+  // ADMIN_EMAILS members are root operators → owner (full capability).
+  if (isStaffEmail(user.email, env)) return { user, staff: true, role: 'owner' };
+  // Fallback: profiles.is_staff=true (settable only server-side / via SQL) also grants
+  // staff, so staff can be added/removed in the DB without a Cloudflare redeploy.
+  // profiles.staff_role (#21) narrows the tier; legacy rows without one default to owner.
+  try {
+    const { data } = await adminClient(env).from('profiles').select('is_staff,staff_role').eq('id', user.id).maybeSingle();
+    if (data?.is_staff) return { user, staff: true, role: normalizeStaffRole(data.staff_role) };
+  } catch { /* is_staff/staff_role column may not exist pre-migration → env gate only */ }
+  return { user, staff: false, role: null };
 }
 
 // Member email addresses for a company (via the auth admin API). Best-effort, deduped.
