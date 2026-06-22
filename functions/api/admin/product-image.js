@@ -7,14 +7,16 @@
 //   DELETE { sku, url } → removes the object + clears it from the product row.
 // Writes use the service-role key (server-only); reads are public via the bucket.
 import { requireStaff, adminClient, json } from '../../_lib/supabase.js';
+import { staffCanWrite } from '../../_lib/authz.js';
 
 const BUCKET = 'product-images';
 const publicUrl = (env, path) => `${env.SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
+  if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
   const sb = adminClient(env);
 
   if (request.method === 'POST') {

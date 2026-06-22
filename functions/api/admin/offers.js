@@ -1,6 +1,7 @@
 // /api/admin/offers — staff broadcasts. GET → past sends · POST → in-app notification fan-out
 // (+ optional Resend email when send_email and RESEND_API_KEY are set).
 import { adminClient, requireStaff, json, readBody, emailLayout, sendEmail, htmlEscape } from '../../_lib/supabase.js';
+import { staffCanWrite } from '../../_lib/authz.js';
 
 const AUDIENCES = ['all', 'approved', 'pending', 'company'];
 
@@ -40,7 +41,7 @@ async function memberEmails(sb, companyIds) {
 }
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
 
@@ -51,6 +52,8 @@ export async function onRequest({ request, env }) {
     if (error) return json(500, { error: error.message });
     return json(200, { offers: data || [] });
   }
+
+  if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
 
   if (request.method === 'POST') {
     const body = await readBody(request);

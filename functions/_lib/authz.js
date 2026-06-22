@@ -45,3 +45,9 @@ export function staffCan(role, capability) {
   if (!allowed) return role === "owner";
   return allowed.includes(role);
 }
+
+// Baseline write gate: read_only staff may never mutate. Every admin mutation path
+// checks this; fine-grained staffCan() then narrows specific dangerous actions.
+export function staffCanWrite(role) {
+  return role !== "read_only";
+}

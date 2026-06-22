@@ -1,7 +1,7 @@
 // /api/admin/users - staff user management for company members and pending invites.
 import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
-import { staffCan } from '../../_lib/authz.js';
+import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 
 const ROLES = new Set(['admin', 'buyer']);
 
@@ -20,6 +20,7 @@ export async function onRequest({ request, env }) {
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+  if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
 
   const body = await readBody(request);
   const action = String(body.action || '').trim();
