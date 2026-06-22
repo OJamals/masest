@@ -335,6 +335,12 @@
               <h2 class="headline dash-section-title dash-section-title-tight">Notifications</h2>
               <button class="btn btn-ghost btn-sm" id="markAllRead" type="button">Mark all read</button>
             </div>
+            <form id="notifPrefs" class="notif-prefs" aria-label="Email notification preferences" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px">
+              <span class="muted">Email me about:</span>
+              <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-pref="notify_orders"> Order updates</label>
+              <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-pref="notify_messages"> Messages</label>
+              <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-pref="notify_offers"> Offers</label>
+            </form>
             <div id="notifBody"><p class="muted">Loading…</p></div>
           </div>
         </div>

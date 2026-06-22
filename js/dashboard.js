@@ -392,6 +392,23 @@ function wireNotifications() {
     try { await api('/api/account/notifications', { method: 'POST', body: { all: true } }); } catch {}
     loaded.notifications = false; await renderNotifications();
   });
+  wireNotificationPrefs();
+}
+
+// Email notification preference toggles (#19). Load current state, persist on change.
+async function wireNotificationPrefs() {
+  const boxes = [...document.querySelectorAll('#notifPrefs [data-pref]')];
+  if (!boxes.length) return;
+  try {
+    const prefs = await api('/api/account/notification-prefs');
+    boxes.forEach((b) => { b.checked = prefs[b.dataset.pref] !== false; });
+  } catch { return; }
+  boxes.forEach((b) => b.addEventListener('change', async () => {
+    b.disabled = true;
+    try { await api('/api/account/notification-prefs', { method: 'PATCH', body: { [b.dataset.pref]: b.checked } }); }
+    catch { b.checked = !b.checked; }
+    b.disabled = false;
+  }));
 }
 
 /* ---------- addresses ---------- */

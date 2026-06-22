@@ -129,11 +129,34 @@ export async function allUserEmails(sb, { pageSize = 1000, maxPages = 100 } = {}
   return out;
 }
 
-// Member email addresses for a company. Best-effort, deduped.
-export async function companyEmails(sb, companyId) {
+// Notification preference columns (#19). category → profiles boolean column.
+const NOTIFY_PREF_COLUMN = {
+  orders: 'notify_orders',
+  offers: 'notify_offers',
+  messages: 'notify_messages',
+};
+
+// Keep only the known boolean preference flags from an arbitrary patch body.
+export function sanitizeNotificationPrefs(body) {
+  const out = {};
+  const src = body || {};
+  for (const col of Object.values(NOTIFY_PREF_COLUMN)) {
+    if (typeof src[col] === 'boolean') out[col] = src[col];
+  }
+  return out;
+}
+
+// Member email addresses for a company. Best-effort, deduped. When `category` is
+// given, members who opted out of that category (notify_* === false) are excluded;
+// a missing/null preference counts as opted-in.
+export async function companyEmails(sb, companyId, category) {
   if (!companyId) return [];
-  const { data: profiles } = await sb.from('profiles').select('id').eq('company_id', companyId);
-  const ids = (profiles || []).map((p) => p.id);
+  const prefCol = NOTIFY_PREF_COLUMN[category];
+  const cols = prefCol ? `id,${prefCol}` : 'id';
+  const { data: profiles } = await sb.from('profiles').select(cols).eq('company_id', companyId);
+  const ids = (profiles || [])
+    .filter((p) => !prefCol || p[prefCol] !== false)
+    .map((p) => p.id);
   if (!ids.length) return [];
   const byId = await emailsByIds(sb, ids);
   return [...new Set(Object.values(byId))];

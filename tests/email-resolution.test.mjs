@@ -42,7 +42,7 @@ test('companyEmails + admin/account email lookups use emailsByIds, not listUsers
   assert.match(sb, /export async function emailsByIds/);
   assert.match(sb, /export async function allUserEmails/);
   // companyEmails must use the per-id helper now
-  assert.match(sb, /companyEmails[\s\S]{0,400}emailsByIds\(/);
+  assert.match(sb, /companyEmails[\s\S]{0,800}emailsByIds\(/);
   for (const [path, helper] of [
     ['functions/api/account/team.js', /emailsByIds\(/],
     ['functions/api/admin/company.js', /emailsByIds\(/],
