@@ -54,7 +54,7 @@ export async function onRequest({ request, env }) {
     }).then(() => {}, () => {});
     // Email the company (best-effort) so buyers see the reply without checking the dashboard.
     const appUrl = env.APP_URL || new URL(request.url).origin;
-    const emails = await companyEmails(sb, companyId);
+    const emails = await companyEmails(sb, companyId, 'messages');
     await sendEmail(env, { to: emails, subject: 'New message from MASEST',
       html: emailLayout({
         heading: 'New message from MASEST',

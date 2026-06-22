@@ -28,8 +28,9 @@ async function targetCompanies(sb, audience, companyId) {
 
 async function memberEmails(sb, companyIds) {
   if (!companyIds.length) return [];
-  const { data: profiles } = await sb.from('profiles').select('id').in('company_id', companyIds);
-  const ids = (profiles || []).map((p) => p.id);
+  // Honour per-user offer opt-out (notify_offers === false).
+  const { data: profiles } = await sb.from('profiles').select('id,notify_offers').in('company_id', companyIds);
+  const ids = (profiles || []).filter((p) => p.notify_offers !== false).map((p) => p.id);
   if (!ids.length) return [];
   const byId = await emailsByIds(sb, ids);
   return [...new Set(Object.values(byId))];

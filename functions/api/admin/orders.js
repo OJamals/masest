@@ -26,7 +26,7 @@ async function notifyCompany(sb, env, request, companyId, label, extra) {
     body: extra || `Your order is now "${label}".`, link: '/dashboard.html#orders',
   }).then(() => {}, () => {});
   const appUrl = env.APP_URL || new URL(request.url).origin;
-  const emails = await companyEmails(sb, companyId);
+  const emails = await companyEmails(sb, companyId, 'orders');
   await sendEmail(env, {
     to: emails, subject: `Order ${label}`,
     html: emailLayout({
