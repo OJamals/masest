@@ -86,6 +86,47 @@ export async function onRequest({ request, env }) {
     return json(201, { ok: true, id: data.id });
   }
 
+  if (request.method === 'PATCH') {
+    const body = await readBody(request);
+    const src = body.address || body;
+    const id = src.id || body.id || new URL(request.url).searchParams.get('id');
+    if (!id) return json(400, { error: 'id_required' });
+
+    // Ownership: the row must belong to the caller's company.
+    const { data: existing, error: exErr } = await sb.from('addresses')
+      .select('id,type').eq('id', id).eq('company_id', companyId).maybeSingle();
+    if (exErr) return json(500, { error: 'server_error' });
+    if (!existing) return json(404, { error: 'not_found' });
+
+    const patch = {};
+    const editsFields = ['line1', 'line2', 'city', 'state', 'zip', 'type'].some((k) => src[k] !== undefined);
+    if (editsFields) {
+      const normalized = normalizeAddress(src);
+      if (normalized.error) return json(400, normalized);
+      Object.assign(patch, normalized.row);
+      delete patch.is_default; // default handled explicitly below
+    }
+    const makeDefault = src.is_default === true;
+    if (makeDefault) patch.is_default = true;
+    else if (src.is_default === false) patch.is_default = false;
+
+    if (!Object.keys(patch).length) return json(400, { error: 'nothing_to_update' });
+
+    const type = patch.type || existing.type;
+    // Reset other defaults of this type FIRST, then set this row, so the row
+    // staying default is never cleared (minimises any non-default window).
+    if (makeDefault) {
+      const reset = await sb.from('addresses')
+        .update({ is_default: false })
+        .eq('company_id', companyId).eq('type', type).neq('id', id);
+      if (reset.error) return json(500, { error: 'server_error' });
+    }
+    const { error: upErr } = await sb.from('addresses')
+      .update(patch).eq('id', id).eq('company_id', companyId);
+    if (upErr) return json(500, { error: 'server_error' });
+    return json(200, { ok: true, id });
+  }
+
   if (request.method === 'DELETE') {
     const body = await readBody(request);
     const id = body.id || new URL(request.url).searchParams.get('id');

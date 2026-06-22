@@ -386,11 +386,16 @@ async function renderAddresses() {
     <div class="dash-row">
       <span><b>${a.type === 'bill' ? 'Billing' : 'Shipping'}</b>${a.is_default ? ' · <span class="badge" data-s="approved">default</span>' : ''}<br>
         <span class="muted">${esc(a.line1)}${a.line2 ? ', ' + esc(a.line2) : ''}, ${esc(a.city)}, ${esc(a.state)} ${esc(a.zip)}</span></span>
-      <button class="btn btn-ghost btn-sm" data-del="${esc(a.id)}">Remove</button>
+      <span>${a.is_default ? '' : `<button class="btn btn-ghost btn-sm" data-set-default="${esc(a.id)}">Set default</button> `}<button class="btn btn-ghost btn-sm" data-del="${esc(a.id)}">Remove</button></span>
     </div>`).join('');
   box.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;
     try { await api('/api/account/addresses', { method: 'DELETE', body: { id: b.dataset.del } }); loaded.addresses = false; renderAddresses(); }
+    catch { b.disabled = false; }
+  }));
+  box.querySelectorAll('[data-set-default]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await api('/api/account/addresses', { method: 'PATCH', body: { id: b.dataset.setDefault, is_default: true } }); loaded.addresses = false; renderAddresses(); }
     catch { b.disabled = false; }
   }));
 }
