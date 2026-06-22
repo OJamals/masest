@@ -169,7 +169,17 @@ create policy profiles_read on public.profiles
 
 drop policy if exists profiles_self_update on public.profiles;
 create policy profiles_self_update on public.profiles
-  for update to authenticated using (id = auth.uid());
+  for update to authenticated
+  using (id = auth.uid())
+  -- WITH CHECK blocks self-escalation: a self-update may not produce a row that is
+  -- platform staff (is_staff) or company admin (role='admin'). Today authenticated has
+  -- no UPDATE grant on profiles at all, so this is defense-in-depth — it prevents a
+  -- future `grant update` from silently opening a privilege-escalation hole.
+  with check (
+    id = auth.uid()
+    and is_staff is not true
+    and (role is null or role <> 'admin')
+  );
 
 -- addresses / orders / order_items: scoped to caller's company
 drop policy if exists addresses_company on public.addresses;
