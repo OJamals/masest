@@ -218,7 +218,7 @@ test("proof image sets use uniform media slots", async ({ page }) => {
       pagePath: "proof.html",
       viewport: { width: 1440, height: 900 },
       selector: ".case-grid .case-card > :is(.case-media, .doc-link, .case-ba, img)",
-      expectedCount: 12,
+      countSelector: ".case-grid .case-card:not([hidden])",
       label: "proof case cards",
     },
   ];
@@ -248,7 +248,8 @@ test("proof image sets use uniform media slots", async ({ page }) => {
       };
     });
 
-    expect(result.boxes, `${set.label} media count`).toHaveLength(set.expectedCount);
+    const expectedCount = set.countSelector ? await page.locator(set.countSelector).count() : set.expectedCount;
+    expect(result.boxes, `${set.label} media count`).toHaveLength(expectedCount);
     expect(result.max - result.min, `${set.label} media heights: ${JSON.stringify(result.boxes)}`).toBeLessThanOrEqual(3);
   }
 });

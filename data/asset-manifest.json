@@ -108,6 +108,30 @@
       "alt": "Carib Brewery lab comparison table"
     },
     {
+      "id": "walmart-refrigeration-results",
+      "use": ["proof", "distribution", "hvac-water", "table"],
+      "source": "website_assets/00_site_ready_assets/assets/03_case_studies/walmart_distribution_facilities/S157_U0704_Walmart_refrigeration_results_table.png",
+      "sourceDoc": "VERTKLEEN CaseStudy-OEM Standard for American Refrigeration Systems 1.pdf",
+      "destination": "img/proof/cases/walmart-refrigeration-results.webp",
+      "alt": "Walmart refrigeration descaling results table for VertKleen Descaler"
+    },
+    {
+      "id": "trinidad-tank-cleaning",
+      "use": ["proof", "industrial", "food-beverage"],
+      "source": "website_assets/00_site_ready_assets/assets/03_case_studies/tank_cleaning_industrial/S150_U0746_page_01.png",
+      "sourceDoc": "Trinidad Tank Cleaning Test -CR .HCR. Speckleen.pdf",
+      "destination": "img/proof/cases/trinidad-tank-cr.webp",
+      "alt": "Bunker-fuel tank cleaning test before using VertKleen CR"
+    },
+    {
+      "id": "distribution-cold-storage-gallery",
+      "use": ["industry", "distribution"],
+      "source": "website_assets/00_site_ready_assets/assets/03_case_studies/walmart_distribution_facilities/",
+      "sourceDoc": "Walmart_DSC_OnSite_Assessment_1page.pdf and VERTKLEEN CaseStudy-OEM Standard for American Refrigeration Systems 1.pdf",
+      "destination": "img/industries/distribution-cold-storage/",
+      "alt": "Distribution cold-storage proof images for VertKleen CRHD, MultiWash, Purgo, and Descaler"
+    },
+    {
       "id": "moss-before-after",
       "use": ["proof", "before-after", "property"],
       "source": "website_assets/02_curated_photos/Before with thick moss 1.JPEG",
