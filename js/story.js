@@ -687,19 +687,16 @@ states.forEach(function (st) {
   var railCurrent = -1;
   var railTicking = false;
   function nearestRailIndex() {
-    var y = window.scrollY + window.innerHeight * 0.5;
+    var anchor = window.scrollY + Math.max(stickyOffset() + 2, window.innerHeight * 0.2);
+    var firstTop = states.length ? states[0].act.getBoundingClientRect().top + window.scrollY : 0;
     var current = 0;
-    var best = Infinity;
     for (var i = 0; i < states.length; i++) {
       var top = states[i].act.getBoundingClientRect().top + window.scrollY;
-      var mid = top + states[i].act.offsetHeight * 0.5;
-      var dist = Math.abs(y - mid);
-      if (dist < best) {
-        best = dist;
-        current = i;
-      }
+      var bottom = top + states[i].act.offsetHeight;
+      if (anchor >= top && anchor < bottom) return i;
+      if (anchor >= top) current = i;
     }
-    return current;
+    return anchor < firstTop ? 0 : current;
   }
   function updateRailProgress(current) {
     for (var j = 0; j < railBtns.length; j++) {
