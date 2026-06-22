@@ -10,6 +10,7 @@ import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { computeRefund } from '../../_lib/refund.js';
 import { stockIncrements } from '../../_lib/order-shape.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
+import { planNetSettlement } from '../../_lib/credit.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -210,6 +211,31 @@ export async function onRequest({ request, env }) {
       const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, 'payment received', notifyBody);
       await notifyBuyerTracking(env, request, order, 'payment received', notifyBody, companyRecipients);
       await recordAudit(sb, { user, action: 'order.record_qbo_payment', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, qbo_payment_id: paymentId } });
+      return json(200, { ok: true, order });
+    }
+
+    // Manual (non-QBO) NET settlement: mark an open NET balance paid without a
+    // QuickBooks payment id. Finance action — adjusts the company's credit state.
+    if (body.action === 'mark_net_paid') {
+      if (!staffCan(role, 'company.credit')) return json(403, { error: 'forbidden' });
+      const { data: ord, error: e1 } = await sb.from('orders')
+        .select('id,company_id,customer_email,status,payment_method').eq('id', body.id).single();
+      if (e1) return json(500, { error: e1.message });
+      const plan = planNetSettlement(ord, { reference: body.reference });
+      if (!plan.ok) return json(400, { error: plan.error });
+
+      const { data: order, error } = await sb.from('orders')
+        .update(plan.update)
+        .eq('id', body.id)
+        .select('id,company_id,customer_email,status,payment_method,total,currency')
+        .single();
+      if (error) return json(500, { error: error.message });
+      const notifyBody = plan.reference
+        ? `Your NET balance is settled (reference ${plan.reference}). Payment received — thank you.`
+        : 'Your NET balance is settled. Payment received — thank you.';
+      const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, 'payment received', notifyBody);
+      await notifyBuyerTracking(env, request, order, 'payment received', notifyBody, companyRecipients);
+      await recordAudit(sb, { user, action: 'order.mark_net_paid', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, reference: plan.reference } });
       return json(200, { ok: true, order });
     }
 
