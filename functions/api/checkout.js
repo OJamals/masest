@@ -4,7 +4,7 @@
 import Stripe from 'stripe';
 import { adminClient, userFromRequest, json, readBody, tierForRequest, tierPriceMap } from '../_lib/supabase.js';
 import { buildStripeCheckoutSessionParams } from '../_lib/checkout-session.js';
-import { companyCreditState, exceedsCredit } from '../_lib/credit.js';
+import { companyCreditState, exceedsCredit, isMissingFunctionError } from '../_lib/credit.js';
 
 function normalizeCart(cart) {
   const qtyBySku = {};
@@ -109,35 +109,62 @@ export async function onRequestPost({ request, env }) {
 
     const subtotal = sellable.reduce((s, p) => s + Number(p.price) * qtyBySku[p.sku], 0);
 
-    // Credit enforcement: hard-block NET orders that would exceed the company's credit limit.
-    let creditState;
-    try {
-      creditState = await companyCreditState(sb, company.id, company.credit_limit);
-    } catch (err) {
+    // Credit enforcement + order insert. Prefer the atomic place_net_order RPC, which
+    // re-checks the limit while holding a row lock on the company — closing the
+    // check-then-insert race where two concurrent NET orders could jointly exceed the
+    // limit. Fall back to the in-app check when the RPC isn't deployed yet, so NET
+    // checkout never hard-breaks before the migration is applied.
+    let order;
+    const { data: placed, error: placeErr } = await sb.rpc('place_net_order', {
+      p_company_id: company.id,
+      p_user_id: user.id,
+      p_email: user.email || null,
+      p_subtotal: subtotal,
+      p_currency: sellable[0].currency || 'usd',
+    });
+    if (placeErr && isMissingFunctionError(placeErr)) {
+      // Legacy fallback (pre-migration): non-atomic check, then insert.
+      let creditState;
+      try {
+        creditState = await companyCreditState(sb, company.id, company.credit_limit);
+      } catch (err) {
+        return json(503, { error: 'credit_check_unavailable' });
+      }
+      if (exceedsCredit(creditState, subtotal)) {
+        return json(403, {
+          error: 'credit_limit_exceeded',
+          credit_limit: creditState.credit_limit,
+          outstanding: creditState.outstanding,
+          available: creditState.available,
+          order_total: subtotal,
+        });
+      }
+      const { data: legacyOrder, error: orderErr } = await sb.from('orders').insert({
+        company_id: company.id,
+        user_id: user.id,
+        customer_email: user.email || null,
+        status: 'net_open',
+        payment_method: 'net',
+        qbo_sync_status: 'pending',
+        subtotal,
+        total: subtotal,
+        currency: sellable[0].currency || 'usd',
+      }).select('id').single();
+      if (orderErr) return json(500, { error: 'order_persist_failed' });
+      order = legacyOrder;
+    } else if (placeErr) {
       return json(503, { error: 'credit_check_unavailable' });
-    }
-    if (exceedsCredit(creditState, subtotal)) {
+    } else if (placed?.rejected) {
       return json(403, {
         error: 'credit_limit_exceeded',
-        credit_limit: creditState.credit_limit,
-        outstanding: creditState.outstanding,
-        available: creditState.available,
+        credit_limit: placed.credit_limit,
+        outstanding: placed.outstanding,
+        available: placed.available,
         order_total: subtotal,
       });
+    } else {
+      order = { id: placed.order_id };
     }
-
-    const { data: order, error: orderErr } = await sb.from('orders').insert({
-      company_id: company.id,
-      user_id: user.id,
-      customer_email: user.email || null,
-      status: 'net_open',
-      payment_method: 'net',
-      qbo_sync_status: 'pending',
-      subtotal,
-      total: subtotal,
-      currency: sellable[0].currency || 'usd',
-    }).select('id').single();
-    if (orderErr) return json(500, { error: orderErr.message });
 
     const { error: itemsErr } = await sb.from('order_items').insert(sellable.map((p) => ({
       order_id: order.id,
@@ -148,7 +175,7 @@ export async function onRequestPost({ request, env }) {
       unit_price: p.price,
       line_total: Number(p.price) * qtyBySku[p.sku],
     })));
-    if (itemsErr) return json(500, { error: itemsErr.message });
+    if (itemsErr) return json(500, { error: 'order_items_persist_failed' });
 
     const stockOk = await decrementVariantStock(sb, sellable, qtyBySku);
     if (!stockOk) {
@@ -169,7 +196,8 @@ export async function onRequestPost({ request, env }) {
   const secret = env.STRIPE_SECRET_KEY;
   if (!secret) return json(500, { error: 'stripe_not_configured' });
   const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
-  const appUrl = env.APP_URL || `https://${request.headers.get('host')}`;
+  const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');
+  if (!appUrl) return json(500, { error: 'app_url_not_configured' });
 
   let companyId = null;
   const { user } = await userFromRequest(request, env);
