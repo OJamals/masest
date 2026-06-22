@@ -149,7 +149,7 @@
         <label class="wide">Password <input id="gPass" class="adm-input" type="password" autocomplete="current-password" required></label>
         <button class="btn btn-primary" type="submit">Sign in</button>
       </form>
-      <p id="gateStatus" class="adm-status" role="status"></p>
+      <p id="gateStatus" class="adm-status" role="status" aria-live="polite"></p>
     </div>
 
     <div id="admApp" hidden>
@@ -194,7 +194,7 @@
           <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple"></i> Export CSV</button>
         </div>
         <div id="admOrders" class="adm-table-wrap">Loading...</div>
-        <p id="ordStatus" class="adm-status" role="status"></p>
+        <p id="ordStatus" class="adm-status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="customers">
@@ -221,7 +221,7 @@
             <label class="wide">Photo alt <input id="npPhotoAlt" class="adm-input" placeholder="VertKleen HCR bottle"></label>
             <button class="btn btn-primary" type="submit">Save product</button>
           </form>
-          <p id="prodStatus" class="adm-status" role="status"></p>
+          <p id="prodStatus" class="adm-status" role="status" aria-live="polite"></p>
         </div>
         <div class="adm-card">
           <h2>Add / overwrite a volume variant</h2>
@@ -263,7 +263,7 @@
           <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes" aria-label="Search quotes">
         </div>
         <div id="admQuotes" class="adm-panel-list">Loading...</div>
-        <p id="qStatus" class="adm-status" role="status"></p>
+        <p id="qStatus" class="adm-status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="offers">
@@ -277,7 +277,7 @@
             <label class="full">Body <textarea id="ofBody" class="adm-textarea"></textarea></label>
             <button class="btn btn-primary" type="submit">Send</button>
           </form>
-          <p id="offerStatus" class="adm-status" role="status"></p>
+          <p id="offerStatus" class="adm-status" role="status" aria-live="polite"></p>
         </div>
         <div class="adm-card"><h2>Recent sends</h2><div id="admOffers">Loading...</div></div>
       </section>

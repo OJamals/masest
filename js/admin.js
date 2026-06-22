@@ -1,6 +1,6 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
-import { esc, safeUrl, money, dateTime as date } from './util.js';
+import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex } from './util.js';
 import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 
 const $ = (id) => document.getElementById(id);
@@ -238,9 +238,9 @@ function setTab(tab) {
   document.querySelectorAll('[data-panel]').forEach((panel) => {
     panel.dataset.active = String(panel.dataset.panel === state.tab);
   });
-  document.querySelectorAll('[data-tab]').forEach((button) => {
-    button.setAttribute('aria-selected', String(button.dataset.tab === state.tab));
-  });
+  const tabs = [...document.querySelectorAll('[data-tab]')];
+  tabs.forEach((button) => button.setAttribute('aria-selected', String(button.dataset.tab === state.tab)));
+  rovingTabindex(tabs, (t) => t.dataset.tab === state.tab);
 
   const render = {
     overview: () => { renderStats(state.stats); runSeoAudit(); },
@@ -1247,6 +1247,7 @@ function wire() {
   document.querySelectorAll('[data-tab]').forEach((button) => {
     button.addEventListener('click', () => setTab(button.dataset.tab));
   });
+  wireTablist(document.querySelector('.adm-tabs[role="tablist"]'), (tab) => setTab(tab.dataset.tab));
   window.addEventListener('hashchange', syncTabFromHash);
   $('ordFilter').addEventListener('change', renderOrders);
   $('ordSearch').addEventListener('input', debounce(() => renderOrders()));
