@@ -44,6 +44,18 @@ export async function companyForUser(sb, userId) {
   return data?.company_id || null;
 }
 
+// Auth gate for company-scoped account routes (#38). Returns { user, companyId, sb }
+// on success, or { error: Response } to return early — collapses the repeated
+// userFromRequest → 401 → companyForUser → 403 boilerplate into one call.
+export async function requireCompany(request, env) {
+  const { user } = await userFromRequest(request, env);
+  if (!user) return { error: json(401, { error: 'unauthenticated' }) };
+  const sb = adminClient(env);
+  const companyId = await companyForUser(sb, user.id);
+  if (!companyId) return { error: json(403, { error: 'no_company' }) };
+  return { user, companyId, sb };
+}
+
 // Resolve the caller's pricing tier. Guests, anonymous requests, and non-approved
 // accounts always get 'retail'. Approved B2B companies get companies.price_tier.
 export async function tierForRequest(request, env) {

@@ -2,19 +2,16 @@
 //   GET                 → order detail | GET ?receipt=1 → { receipt_url, qbo_invoice_id }
 //   POST { id }         → "buy again": re-priced cart lines + availability issues
 import Stripe from 'stripe';
-import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
+import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { repriceCart } from '../../_lib/reorder.js';
 
 export async function onRequestGet({ request, env }) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return json(401, { error: 'unauthenticated' });
+  const ctx = await requireCompany(request, env);
+  if (ctx.error) return ctx.error;
+  const { companyId, sb } = ctx;
   const url = new URL(request.url);
   const id = url.searchParams.get('id');
   if (!id) return json(400, { error: 'order_id_required' });
-
-  const sb = adminClient(env);
-  const companyId = await companyForUser(sb, user.id);
-  if (!companyId) return json(403, { error: 'no_company' });
 
   const { data, error } = await sb
     .from('orders')
@@ -45,15 +42,12 @@ export async function onRequestGet({ request, env }) {
 // "Buy again": re-price the order's items against the current catalog and return
 // cart lines (checkout re-prices authoritatively). Reports dropped/changed items.
 export async function onRequestPost({ request, env }) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return json(401, { error: 'unauthenticated' });
+  const ctx = await requireCompany(request, env);
+  if (ctx.error) return ctx.error;
+  const { companyId, sb } = ctx;
   const body = await readBody(request);
   const id = body.id || new URL(request.url).searchParams.get('id');
   if (!id) return json(400, { error: 'order_id_required' });
-
-  const sb = adminClient(env);
-  const companyId = await companyForUser(sb, user.id);
-  if (!companyId) return json(403, { error: 'no_company' });
 
   const { data: order, error } = await sb
     .from('orders')

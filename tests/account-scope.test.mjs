@@ -12,8 +12,10 @@ const read = (name) => readFileSync(new URL(name, ACCOUNT_DIR), "utf8");
 const ACCOUNT_ROUTES = readdirSync(ACCOUNT_DIR).filter((f) => f.endsWith(".js"));
 
 // Self/tenant scoping primitives. A route is considered scoped if it constrains queries
-// by the resolved company (companyForUser / .eq('company_id', ...)) or by the auth user id.
-const SCOPE_RE = /companyForUser\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role/;
+// by the resolved company (requireCompany / companyForUser / .eq('company_id', ...)) or by
+// the auth user id. requireCompany resolves the caller's company from their session, so a
+// route built on it is tenant-scoped by construction.
+const SCOPE_RE = /requireCompany\(|companyForUser\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role/;
 
 test("account route discovery finds the known endpoints", () => {
   assert.ok(ACCOUNT_ROUTES.length >= 10, `expected >=10 account routes, found ${ACCOUNT_ROUTES.length}`);
@@ -22,15 +24,20 @@ test("account route discovery finds the known endpoints", () => {
   }
 });
 
-test("every account route authenticates via userFromRequest and 401s anon callers", () => {
+test("every account route authenticates (requireCompany or userFromRequest) and 401s anon callers", () => {
   for (const name of ACCOUNT_ROUTES) {
     const src = read(name);
-    assert.match(src, /import\s*\{[^}]*\buserFromRequest\b[^}]*\}\s*from\s*['"][^'"]*_lib\/supabase\.js['"]/,
-      `account/${name} must import userFromRequest`);
-    assert.match(src, /userFromRequest\(\s*request\s*,\s*env\s*\)/,
-      `account/${name} must call userFromRequest(request, env)`);
-    assert.match(src, /if\s*\(\s*!user\s*\)\s*return\s+json\(\s*401\s*,/,
-      `account/${name} must 401 when unauthenticated`);
+    // Routes authenticate either via the requireCompany wrapper (which does
+    // userFromRequest→401→companyForUser→403 internally) or the raw primitive.
+    const usesWrapper = /requireCompany\(\s*request\s*,\s*env\s*\)/.test(src);
+    const usesRaw = /userFromRequest\(\s*request\s*,\s*env\s*\)/.test(src);
+    assert.ok(usesWrapper || usesRaw,
+      `account/${name} must authenticate via requireCompany or userFromRequest`);
+    assert.match(src, /import\s*\{[^}]*\b(requireCompany|userFromRequest)\b[^}]*\}\s*from\s*['"][^'"]*_lib\/supabase\.js['"]/,
+      `account/${name} must import its auth primitive`);
+    const guards401 = /if\s*\(\s*ctx\.error\s*\)\s*return\s+ctx\.error/.test(src)
+      || /if\s*\(\s*!user\s*\)\s*return\s+json\(\s*401\s*,/.test(src);
+    assert.ok(guards401, `account/${name} must reject anonymous callers (401)`);
   }
 });
 
@@ -49,8 +56,11 @@ test("auth guard precedes any DB access inside the handler", () => {
     assert.ok(handlerMatch, `account/${name} must export an onRequest* handler`);
     const handler = src.slice(handlerMatch.index);
 
-    const guardIdx = handler.search(/if\s*\(\s*!user\s*\)\s*return\s+json\(\s*401/);
-    assert.ok(guardIdx >= 0, `account/${name} 401 guard not found in handler body`);
+    // Guard = the requireCompany call (auth+company resolved before sb exists) or the
+    // raw inline 401 check. Either must come before any DB access.
+    let guardIdx = handler.search(/requireCompany\(\s*request/);
+    if (guardIdx < 0) guardIdx = handler.search(/if\s*\(\s*!user\s*\)\s*return\s+json\(\s*401/);
+    assert.ok(guardIdx >= 0, `account/${name} auth guard not found in handler body`);
 
     const dataIdx = handler.search(/\bsb\s*\.\s*(from|rpc)\(/);
     if (dataIdx >= 0) {

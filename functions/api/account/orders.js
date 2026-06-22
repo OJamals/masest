@@ -1,14 +1,11 @@
 // GET /api/account/orders - recent orders for the authenticated caller's company.
-import { adminClient, userFromRequest, companyForUser, json } from '../../_lib/supabase.js';
+import { requireCompany, json } from '../../_lib/supabase.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 
 export async function onRequestGet({ request, env }) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return json(401, { error: 'unauthenticated' });
-
-  const sb = adminClient(env);
-  const companyId = await companyForUser(sb, user.id);
-  if (!companyId) return json(403, { error: 'no_company' });
+  const ctx = await requireCompany(request, env);
+  if (ctx.error) return ctx.error;
+  const { companyId, sb } = ctx;
 
   const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 25, maxLimit: 100 });
   const { data, error, count } = await sb.from('orders')
