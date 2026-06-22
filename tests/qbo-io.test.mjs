@@ -65,7 +65,7 @@ test("findOrCreateCustomer queries QBO then caches the found customer", async ()
   assert.equal(sb.store.qbo_customers["company:abc"].qbo_customer_id, "56");
 });
 
-test("findOrCreateItem creates a service item and caches it when QBO has no match", async () => {
+test("findOrCreateItem creates a NonInventory item for tangible goods and caches it", async () => {
   const sb = fakeSb();
   const requests = [];
   const itemId = await findOrCreateItem(sb, env, "tok", "realm", {
@@ -88,7 +88,7 @@ test("findOrCreateItem creates a service item and caches it when QBO has no matc
   const body = JSON.parse(create.init.body);
   assert.equal(body.Name, "CR-HD - 5 gal");
   assert.equal(body.Sku, "crhd-5");
-  assert.equal(body.Type, "Service");
+  assert.equal(body.Type, "NonInventory");
   assert.equal(body.IncomeAccountRef.value, "79");
 });
 

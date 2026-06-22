@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildInvoicePayload, buildInvoicePaymentPayload, buildSalesReceiptPayload } from "../functions/_lib/qbo.js";
+import { readFileSync } from "node:fs";
+import { buildInvoicePayload, buildInvoicePaymentPayload, qboItemType } from "../functions/_lib/qbo.js";
 
 const order = {
   id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -15,8 +16,8 @@ const items = [
 
 const itemRefs = { crhd: "101", sar: "102" };
 
-test("sales receipt payload maps one QBO line per order item", () => {
-  const payload = buildSalesReceiptPayload({ order, items, customerRef: "55", itemRefs });
+test("invoice payload maps one QBO line per order item", () => {
+  const payload = buildInvoicePayload({ order, items, customerRef: "55", itemRefs });
 
   assert.equal(payload.CustomerRef.value, "55");
   assert.equal(payload.DocNumber, "a1b2c3d4e5f67890abcde");
@@ -66,7 +67,7 @@ test("invoice payment payload links Stripe payment to the QuickBooks invoice", (
 
 test("payload builder fails clearly when an item ref is missing", () => {
   assert.throws(
-    () => buildSalesReceiptPayload({ order, items, customerRef: "55", itemRefs: { crhd: "101" } }),
+    () => buildInvoicePayload({ order, items, customerRef: "55", itemRefs: { crhd: "101" } }),
     /qbo_item_ref_missing:sar/,
   );
 });
@@ -77,8 +78,18 @@ test("QBO document payloads carry buyer email when present", () => {
     buildInvoicePayload({ order: emailedOrder, items, customerRef: "55", itemRefs }).BillEmail,
     { Address: "buyer@example.test" },
   );
-  assert.deepEqual(
-    buildSalesReceiptPayload({ order: emailedOrder, items, customerRef: "55", itemRefs }).BillEmail,
-    { Address: "buyer@example.test" },
-  );
+});
+
+// #41: physical goods must not be QBO 'Service' items (wrong COGS/inventory).
+test("qboItemType defaults tangible goods to NonInventory, services to Service", () => {
+  assert.equal(qboItemType({ sku: 'cr-hd' }), 'NonInventory');
+  assert.equal(qboItemType({ sku: 'cr-hd', type: 'service' }), 'Service');
+  assert.equal(qboItemType({ sku: 'x', mode: 'quote' }), 'Service');
+  assert.equal(qboItemType({ sku: 'x', mode: 'buy' }), 'NonInventory');
+});
+
+test("findOrCreateItem no longer hardcodes Type:'Service' + SalesReceipt stub removed", () => {
+  const src = readFileSync(new URL('../functions/_lib/qbo.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /buildSalesReceiptPayload/, 'dead SalesReceipt stub must be gone');
+  assert.match(src, /Type:\s*qboItemType\(/, 'item type must be derived, not hardcoded Service');
 });

@@ -72,8 +72,13 @@ function baseDocumentPayload({ order, items, customerRef, itemRefs }) {
   };
 }
 
-export function buildSalesReceiptPayload(input) {
-  return baseDocumentPayload(input);
+// QBO item type for a synced line. Tangible goods must NOT be 'Service' (#41) —
+// that produces wrong COGS/inventory. Default tangible → 'NonInventory' (same
+// account refs as Service, no asset-account/QtyOnHand requirements); explicit
+// service lines (type:'service' or product mode 'quote') stay 'Service'.
+export function qboItemType(item = {}) {
+  if (item.type === 'service' || item.mode === 'quote') return 'Service';
+  return 'NonInventory';
 }
 
 export function buildInvoicePayload(input) {
@@ -109,6 +114,11 @@ export function buildInvoicePaymentPayload({ order, customerRef, invoiceId }) {
 
 const GENERIC_CUSTOMER_NAME = 'Online Sales (MASEST)';
 
+// ADR (#41): paid orders post an Invoice + a Payment, NOT a SalesReceipt. SalesReceipt
+// would be the textbook doc for an immediately-paid sale, but Invoice+Payment keeps a
+// single, uniform document model across NET and card orders and an explicit AR→payment
+// trail for reconciliation. Switching to SalesReceipt is an accounting-policy change for
+// the owner to make once QBO is connected; until then this function never emits one.
 export function documentPlanFor(order, companyNames = {}) {
   const companyId = order?.company_id || null;
   if (order?.payment_method === 'net') {
@@ -147,14 +157,16 @@ export async function syncOrder(sb, env, accessToken, realmId, order, items = []
       itemRefs[item.sku] = await findOrCreateItem(sb, env, accessToken, realmId, {
         sku: item.sku,
         name: item.name || item.sku,
+        type: item.type,
+        mode: item.mode,
       }, { fetchImpl });
     }
   }
 
+  // documentPlanFor only ever yields 'invoice' / 'invoice_payment' (see ADR note there),
+  // so every document is an Invoice (a Payment is added below for paid orders).
   const payloadInput = { order, items, customerRef, itemRefs };
-  const payload = plan.docType === 'invoice' || plan.docType === 'invoice_payment'
-    ? buildInvoicePayload(payloadInput)
-    : buildSalesReceiptPayload(payloadInput);
+  const payload = buildInvoicePayload(payloadInput);
   let docId = null;
   if (plan.entity === 'Invoice') {
     docId = await findTransactionByField(env, accessToken, realmId, 'Invoice', 'DocNumber', payload.DocNumber, fetchImpl);
@@ -246,7 +258,8 @@ export async function findOrCreateCustomer(sb, env, accessToken, realmId, { key,
   return customerId;
 }
 
-export async function findOrCreateItem(sb, env, accessToken, realmId, { sku, name }, options = {}) {
+export async function findOrCreateItem(sb, env, accessToken, realmId, item, options = {}) {
+  const { sku, name } = item;
   const { data: cached, error } = await sb
     .from('qbo_items')
     .select('sku,qbo_item_id')
@@ -264,7 +277,7 @@ export async function findOrCreateItem(sb, env, accessToken, realmId, { sku, nam
     const created = await qboCreate(env, accessToken, realmId, 'Item', {
       Name: name || sku,
       Sku: sku,
-      Type: 'Service',
+      Type: qboItemType(item),
       IncomeAccountRef: { value: incomeAccountId },
     }, fetchImpl);
     itemId = created.Item?.Id;
