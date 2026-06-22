@@ -70,3 +70,19 @@ test("account dropdown section labels are styled in the shared account nav", () 
   assert.match(nav, /\.acct-menu-section/, "account dropdown grouped sections need explicit styling");
   assert.match(nav, /\.acct-menu-label/, "account dropdown labels need explicit styling");
 });
+
+test("account dropdown identifies notification badge source", () => {
+  const nav = read("js/account-nav.js");
+
+  assert.match(nav, /data-account-nav-notifications/, "notification menu row should be targetable for unread source count");
+  assert.match(nav, /\.acct-menu-count/, "dropdown should style per-row unread counts");
+  assert.match(nav, /notifLink\??\.querySelector\(['"]\.acct-menu-count['"]\)/, "unread fetch should update the Notifications row count");
+});
+
+test("account dropdown is viewport clamped for left edge buttons", () => {
+  const nav = read("js/account-nav.js");
+
+  assert.match(nav, /\.acct-dd-menu\s*\{[^}]*position:fixed/s, "dropdown menu should escape edge-clipping with fixed positioning");
+  assert.match(nav, /function positionAccountMenu/, "account nav should position dropdown relative to trigger");
+  assert.match(nav, /Math\.max\(8,\s*Math\.min/, "account dropdown should clamp within viewport gutters");
+});
