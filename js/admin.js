@@ -15,6 +15,11 @@ function debounce(fn, ms = 220) {
 const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
 const QUOTE_STATUSES = ['new', 'contacted', 'closed', 'spam'];
+
+// Loading skeleton + rich empty state for admin lists (#31). Reuse the shared
+// components.css .skeleton / .empty-state styles.
+const admSkeleton = (rows = 5) => `<div class="adm-skeletons" aria-hidden="true">${'<div class="skeleton skeleton-block" style="height:44px;margin-bottom:8px"></div>'.repeat(rows)}</div>`;
+const admEmpty = (icon, title, body) => `<div class="empty-state"><i class="ph ${icon} empty-icon" aria-hidden="true"></i><div class="empty-title">${esc(title)}</div><div class="empty-body">${esc(body)}</div></div>`;
 const state = {
   tab: 'overview',
   stats: null,
@@ -357,7 +362,7 @@ function admOrdersPager() {
 async function renderOrders({ append = false } = {}) {
   const box = $('admOrders');
   const status = $('ordFilter').value;
-  if (!append) { state.orders = []; state.ordersOffset = 0; box.textContent = 'Loading...'; }
+  if (!append) { state.orders = []; state.ordersOffset = 0; box.innerHTML = admSkeleton(); }
   try {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
@@ -375,7 +380,7 @@ async function renderOrders({ append = false } = {}) {
   const q = $('ordSearch').value.trim().toLowerCase();
   const orders = state.orders.filter((order) => JSON.stringify(order).toLowerCase().includes(q));
   if (!orders.length) {
-    box.innerHTML = `<p class="muted" style="padding:14px">No orders${q ? ' match your search.' : '.'}</p>` + admOrdersPager();
+    box.innerHTML = admEmpty('ph-package', q ? 'No matching orders' : 'No orders yet', q ? 'No orders match your search.' : 'Orders appear here once customers check out.') + admOrdersPager();
     box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
     return;
   }
@@ -495,7 +500,7 @@ async function renderOrders({ append = false } = {}) {
 
 async function renderCustomers() {
   const box = $('admCustomers');
-  box.textContent = 'Loading...';
+  box.innerHTML = admSkeleton();
   try {
     state.customers = (await api('/api/admin/customers')).customers || [];
   } catch {
@@ -504,7 +509,7 @@ async function renderCustomers() {
   }
   const q = $('custSearch').value.trim().toLowerCase();
   const rows = state.customers.filter((c) => JSON.stringify(c).toLowerCase().includes(q));
-  if (!rows.length) { box.innerHTML = '<p class="muted" style="padding:14px">No customers.</p>'; return; }
+  if (!rows.length) { box.innerHTML = admEmpty('ph-users', 'No customers', 'Approved customers and their companies appear here.'); return; }
   box.innerHTML = `<table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Tier</th><th>Role</th></tr></thead><tbody>${rows.map((c) => `
     <tr>
       <td>${esc(c.full_name || '-')}${c.phone ? `<br><span class="muted">${esc(c.phone)}</span>` : ''}</td>
@@ -518,7 +523,7 @@ async function renderCustomers() {
 
 async function renderCompanies() {
   const box = $('admCompanies');
-  box.textContent = 'Loading...';
+  box.innerHTML = admSkeleton();
   try {
     state.companies = (await api('/api/admin/companies')).companies || [];
   } catch {
@@ -528,7 +533,7 @@ async function renderCompanies() {
   const q = $('coSearch').value.trim().toLowerCase();
   const companies = state.companies.filter((company) => JSON.stringify(company).toLowerCase().includes(q));
   if (!companies.length) {
-    box.innerHTML = '<p class="muted" style="padding:14px">No accounts.</p>';
+    box.innerHTML = admEmpty('ph-buildings', 'No accounts', 'New B2B account signups appear here for approval.');
     return;
   }
   box.innerHTML = `<div class="adm-tools" style="margin-bottom:10px"><button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button></div><table class="adm"><thead><tr><th><input type="checkbox" id="coAll" aria-label="Select all"></th><th>Company</th><th>Status</th><th>Setup</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
@@ -580,7 +585,7 @@ async function renderCompanies() {
 
 async function renderProducts() {
   const box = $('admProducts');
-  box.textContent = 'Loading...';
+  box.innerHTML = admSkeleton();
   try {
     const response = await api('/api/admin/products');
     state.products = response.products || [];
@@ -594,7 +599,7 @@ async function renderProducts() {
   const q = $('prodSearch').value.trim().toLowerCase();
   const products = state.products.filter((product) => JSON.stringify(product).toLowerCase().includes(q));
   if (!products.length) {
-    box.innerHTML = '<p class="muted" style="padding:14px">No products.</p>';
+    box.innerHTML = admEmpty('ph-cube', 'No products', 'Add catalog products to manage them here.');
     return;
   }
   box.innerHTML = `<table class="adm"><thead><tr><th>Photo</th><th>SKU</th><th>Name</th><th>Mode</th><th>Price</th><th>Stock</th><th>Photo URL</th><th>Alt</th><th>Variants</th><th>Active</th><th></th></tr></thead><tbody>${products.map((p) => `
@@ -811,7 +816,7 @@ function wireVariantForm() {
 
 async function renderPricing() {
   const box = $('admPricing');
-  box.textContent = 'Loading...';
+  box.innerHTML = admSkeleton();
   let data;
   try {
     data = await api('/api/admin/variant-pricing');
@@ -856,7 +861,7 @@ async function renderPricing() {
 
 async function renderThreads() {
   const box = $('admThreads');
-  box.textContent = 'Loading...';
+  box.innerHTML = admSkeleton();
   try {
     state.threads = (await api('/api/admin/messages')).threads || [];
   } catch {
@@ -910,7 +915,7 @@ async function openThread(companyId) {
 
 async function renderQuotePipeline() {
   const box = $('admQuotes');
-  box.textContent = 'Loading...';
+  box.innerHTML = admSkeleton();
   let data;
   try {
     data = await api('/api/admin/quotes');
@@ -955,7 +960,7 @@ async function renderQuotePipeline() {
   });
 
   if (!quotes.length) {
-    box.innerHTML = '<p class="muted">No quotes.</p>';
+    box.innerHTML = admEmpty('ph-chats-circle', 'No quotes', 'Quote requests from the site appear here.');
     return;
   }
 
@@ -1123,7 +1128,7 @@ function wireOfferForm() {
 async function renderOffers(force = false) {
   if (state.loaded.has('offers') && !force) return;
   const box = $('admOffers');
-  box.textContent = 'Loading...';
+  box.innerHTML = admSkeleton();
   try {
     const offers = (await api('/api/admin/offers')).offers || [];
     box.innerHTML = offers.length ? offers.map((offer) => `
@@ -1163,7 +1168,7 @@ function renderTrafficList(title, rows = []) {
 
 async function renderTraffic() {
  const box = $('admTraffic');
- box.textContent = 'Loading...';
+ box.innerHTML = admSkeleton();
  try {
  const data = await api('/api/admin/traffic?days=14');
  if (!data.available) {
