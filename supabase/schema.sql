@@ -24,8 +24,9 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create type order_status as enum ('cart','pending_payment','paid','net_open','net_paid','fulfilled','cancelled');
+  create type order_status as enum ('cart','pending_payment','paid','net_open','net_paid','fulfilled','cancelled','refunded');
 exception when duplicate_object then null; end $$;
+alter type order_status add value if not exists 'refunded';
 
 do $$ begin
   create type payment_method as enum ('stripe','net');

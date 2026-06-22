@@ -7,7 +7,8 @@ import Stripe from 'stripe';
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 
-const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled'];
+const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
+const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
 const TRACKING_STATUSES = ['processing', 'packing', 'shipped', 'delivered', 'blocked'];
 
 function toCsv(rows) {
@@ -103,6 +104,9 @@ export async function onRequest({ request, env }) {
         .select('id,company_id,status,total,currency,payment_method,stripe_payment_intent').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       if (!ord) return json(404, { error: 'not_found' });
+      if (REFUND_BLOCKING_STATUSES.has(ord.status)) {
+        return json(400, { error: 'not_refundable', message: `Order is already ${ord.status}.` });
+      }
       if (ord.payment_method !== 'stripe' || !ord.stripe_payment_intent) {
         return json(400, { error: 'not_refundable', message: 'Only Stripe-paid orders can be refunded here. Cancel NET orders by setting status to cancelled.' });
       }
@@ -114,7 +118,7 @@ export async function onRequest({ request, env }) {
       } catch (err) {
         return json(502, { error: 'stripe_refund_failed', detail: err?.message || String(err) });
       }
-      const { data: updated, error: e2 } = await sb.from('orders').update({ status: 'cancelled' })
+      const { data: updated, error: e2 } = await sb.from('orders').update({ status: 'refunded' })
         .eq('id', body.id).select('id,company_id,status').single();
       if (e2) return json(500, { error: e2.message });
       await notifyCompany(sb, env, request, updated?.company_id, 'refunded', 'Your MASEST order was refunded. The amount will return to your original payment method.');
@@ -148,6 +152,7 @@ export async function onRequest({ request, env }) {
         .single();
       if (error) return json(500, { error: error.message });
       await notifyCompany(sb, env, request, order?.company_id, 'invoice ready', `QuickBooks invoice ${invoiceId} is linked to your order.`);
+      await recordAudit(sb, { user, action: 'order.record_qbo_invoice', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, qbo_invoice_id: invoiceId } });
       return json(200, { ok: true, order });
     }
 
@@ -176,6 +181,7 @@ export async function onRequest({ request, env }) {
       const notifyBody = `QuickBooks payment ${paymentId} is recorded for your order.`;
       const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, 'payment received', notifyBody);
       await notifyBuyerTracking(env, request, order, 'payment received', notifyBody, companyRecipients);
+      await recordAudit(sb, { user, action: 'order.record_qbo_payment', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, qbo_payment_id: paymentId } });
       return json(200, { ok: true, order });
     }
 
@@ -217,6 +223,7 @@ export async function onRequest({ request, env }) {
         : `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim();
       const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, notifyLabel, notifyBody);
       await notifyBuyerTracking(env, request, order, notifyLabel, notifyBody, companyRecipients);
+      await recordAudit(sb, { user, action: 'order.update_tracking', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, update } });
       return json(200, { ok: true, order });
     }
 
@@ -225,6 +232,7 @@ export async function onRequest({ request, env }) {
       .eq('id', body.id).select('id,company_id,status,total,currency').single();
     if (error) return json(500, { error: error.message });
     await notifyCompany(sb, env, request, order?.company_id, body.status.replace('_', ' '));
+    await recordAudit(sb, { user, action: 'order.set_status', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, status: body.status } });
     return json(200, { ok: true, order });
   }
 

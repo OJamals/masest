@@ -1,5 +1,5 @@
-// /api/account/notifications — in-app notifications for the caller's company.
-//   GET → { notifications, unread } · POST { id } | { all:true } → mark read
+// /api/account/notifications - in-app notifications for the caller's company.
+// GET -> { notifications, unread } | POST { id } | { all:true } -> mark read
 import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
 
 export async function onRequest({ request, env }) {
@@ -8,7 +8,7 @@ export async function onRequest({ request, env }) {
 
   const sb = adminClient(env);
   const companyId = await companyForUser(sb, user.id);
-  if (!companyId) return json(200, { notifications: [], unread: 0 });
+  if (!companyId) return json(403, { error: 'no_company' });
 
   if (request.method === 'GET') {
     const { data, error } = await sb

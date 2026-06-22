@@ -1,8 +1,37 @@
-// /api/account/addresses — saved ship/bill addresses for the caller's company.
-//   GET → list · POST { address } → create · DELETE { id } → remove
+// /api/account/addresses - saved ship/bill addresses for the caller's company.
+// GET -> list | POST { address } -> create | DELETE { id } -> remove
 import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
 
-const FIELDS = ['line1', 'line2', 'city', 'state', 'zip', 'country', 'is_default'];
+const MAX = { line1: 160, line2: 160, city: 80, zip: 20 };
+
+function cleanText(value, max) {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, max);
+}
+
+function normalizeAddress(input) {
+  const row = {
+    type: input.type === 'bill' ? 'bill' : 'ship',
+    line1: cleanText(input.line1, MAX.line1),
+    line2: cleanText(input.line2, MAX.line2),
+    city: cleanText(input.city, MAX.city),
+    state: String(input.state || '').trim().toUpperCase(),
+    zip: cleanText(input.zip, MAX.zip).toUpperCase(),
+    country: 'US',
+    is_default: input.is_default === true,
+  };
+
+  if (!row.line1 || !row.city || !row.state || !row.zip) {
+    return { error: 'address_incomplete', need: ['line1', 'city', 'state', 'zip'] };
+  }
+  if (!/^[A-Z]{2}$/.test(row.state)) return { error: 'invalid_state' };
+  if (!/^[0-9A-Z -]{3,20}$/.test(row.zip)) return { error: 'invalid_zip' };
+  return { row };
+}
+
+function isMissingRpc(error) {
+  const text = `${error?.code || ''} ${error?.message || ''} ${error?.details || ''}`;
+  return /PGRST202|Could not find.*create_company_address|function.*create_company_address/i.test(text);
+}
 
 export async function onRequest({ request, env }) {
   const { user } = await userFromRequest(request, env);
@@ -25,18 +54,36 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'POST') {
     const body = await readBody(request);
-    const a = body.address || body || {};
-    if (!a.line1 || !a.city || !a.state || !a.zip) {
-      return json(400, { error: 'address_incomplete', need: ['line1', 'city', 'state', 'zip'] });
-    }
-    const row = { company_id: companyId, type: a.type === 'bill' ? 'bill' : 'ship', country: 'US' };
-    for (const f of FIELDS) if (a[f] !== undefined) row[f] = a[f];
-    if (row.is_default) {
-      await sb.from('addresses').update({ is_default: false }).eq('company_id', companyId).eq('type', row.type);
-    }
+    const normalized = normalizeAddress(body.address || body || {});
+    if (normalized.error) return json(400, normalized);
+
+    const row = { company_id: companyId, ...normalized.row };
+    const rpc = await sb.rpc('create_company_address', {
+      p_company_id: companyId,
+      p_type: row.type,
+      p_line1: row.line1,
+      p_line2: row.line2 || null,
+      p_city: row.city,
+      p_state: row.state,
+      p_zip: row.zip,
+      p_is_default: row.is_default,
+    });
+    if (!rpc.error) return json(201, { ok: true, id: rpc.data });
+    if (!isMissingRpc(rpc.error)) return json(500, { error: 'server_error' });
+
     const { data, error } = await sb.from('addresses').insert(row).select('id').single();
     if (error) return json(500, { error: 'server_error' });
-    return json(201, { id: data.id });
+
+    if (row.is_default) {
+      const reset = await sb.from('addresses')
+        .update({ is_default: false })
+        .eq('company_id', companyId)
+        .eq('type', row.type)
+        .neq('id', data.id);
+      if (reset.error) return json(500, { error: 'server_error' });
+    }
+
+    return json(201, { ok: true, id: data.id });
   }
 
   if (request.method === 'DELETE') {
