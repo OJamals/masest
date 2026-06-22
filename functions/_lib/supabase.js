@@ -179,9 +179,23 @@ export async function sendEmail(env, { to, bcc = [], subject, html, category = n
 
 // Shared branded email shell. Callers pass already-escaped/safe heading + bodyHtml
 // (escape user input with htmlEscape first). Matches the order-confirmation design.
+function safeEmailHref(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('/')) return htmlEscape(raw);
+  try {
+    const url = new URL(raw);
+    if (url.protocol === 'https:' || url.protocol === 'http:' || url.protocol === 'mailto:') return htmlEscape(url.toString());
+  } catch {
+    return '';
+  }
+  return '';
+}
+
 export function emailLayout({ heading = '', bodyHtml = '', ctaText, ctaUrl } = {}) {
-  const cta = ctaText && ctaUrl
-    ? `<div style="margin:24px 0 0"><a href="${ctaUrl}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">${ctaText}</a></div>`
+  const href = safeEmailHref(ctaUrl);
+  const cta = ctaText && href
+    ? `<div style="margin:24px 0 0"><a href="${href}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">${htmlEscape(ctaText)}</a></div>`
     : '';
   return `
   <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">

@@ -51,7 +51,8 @@ export async function onRequest({ request, env }) {
     await sb.from('companies').update({ stripe_customer_id: customerId }).eq('id', companyId);
   }
 
-  const appUrl = env.APP_URL || new URL(request.url).origin;
+  const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');
+  if (!appUrl) return json(500, { error: 'app_url_not_configured' });
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     customer: customerId,

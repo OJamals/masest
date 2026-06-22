@@ -28,7 +28,8 @@ export async function onRequestPost({ request, env }) {
     await sb.from('companies').update({ stripe_customer_id: customerId }).eq('id', companyId);
   }
 
-  const appUrl = env.APP_URL || new URL(request.url).origin;
+  const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');
+  if (!appUrl) return json(500, { error: 'app_url_not_configured' });
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: `${appUrl}/dashboard.html#payment`,
