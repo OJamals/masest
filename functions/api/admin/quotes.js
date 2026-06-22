@@ -1,6 +1,7 @@
 // /api/admin/quotes - staff view of inbound /api/quote leads.
 import { adminClient, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { buildConvertItems, netOrderRow } from '../../_lib/quote-convert.js';
+import { staffCanWrite } from '../../_lib/authz.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -176,7 +177,7 @@ export async function onRequest({ request, env }) {
     }
   }
 
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
 
@@ -203,6 +204,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
+    if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     body = body || await readBody(request);
     if (body.action === 'sweep_due') {
       const result = await sweepDueQuotes({ sb, env, actor: user.email || 'staff', batch: body.batch });

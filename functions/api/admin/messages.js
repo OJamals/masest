@@ -1,9 +1,10 @@
 // /api/admin/messages — staff side of company support threads.
 //   GET → thread list · GET ?company_id= → full thread (marks read) · POST { company_id, body } → reply
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, htmlEscape, emailLayout } from '../../_lib/supabase.js';
+import { staffCanWrite } from '../../_lib/authz.js';
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
 
@@ -36,6 +37,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
+    if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await readBody(request);
     const companyId = body.company_id;
     const text = String(body.body || '').trim();

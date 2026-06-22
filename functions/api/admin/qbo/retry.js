@@ -1,10 +1,12 @@
 // POST /api/admin/qbo/retry - staff-only failed QBO sync requeue.
 import { adminClient, json, readBody, requireStaff } from '../../../_lib/supabase.js';
+import { staffCanWrite } from '../../../_lib/authz.js';
 
 export async function onRequestPost({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
+  if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
 
   const body = await readBody(request);
   const id = String(body.id || '').trim();

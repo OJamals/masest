@@ -9,7 +9,7 @@ import { recordAudit } from '../../_lib/audit.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { computeRefund } from '../../_lib/refund.js';
 import { stockIncrements } from '../../_lib/order-shape.js';
-import { staffCan } from '../../_lib/authz.js';
+import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -101,6 +101,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
+    if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await readBody(request);
     if (!body.id) return json(400, { error: 'order_id_required' });
 

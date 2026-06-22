@@ -3,11 +3,12 @@
 // POST /api/admin/variant-pricing { vsku, tier, price } → upsert one cell.
 //   price '' or null clears the cell (resolution then falls back to base price).
 import { requireStaff, adminClient, json, readBody } from '../../_lib/supabase.js';
+import { staffCanWrite } from '../../_lib/authz.js';
 
 const TIERS = ['retail', 'hvac', 'wholesale'];
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
   const sb = adminClient(env);
@@ -39,6 +40,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
+    if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await readBody(request);
     const vsku = String(body.vsku || '').trim().toLowerCase();
     const tier = String(body.tier || '').trim().toLowerCase();
