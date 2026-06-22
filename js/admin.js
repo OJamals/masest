@@ -2,8 +2,18 @@
 import { login, logout, api, getToken } from './auth.js';
 import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, confirmDialog } from './util.js';
 import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
+import { editKey, captureDirty, restoreDirty } from './admin/edits.js';
 
 const $ = (id) => document.getElementById(id);
+
+// #28 dirty-edit guard: flag an inline control the moment the user edits it, so a
+// later sibling save / cache re-render can snapshot and restore it (see admin/edits.js).
+function markDirty(event) {
+  const el = event.target;
+  if (el.matches?.('input:not([type=checkbox]):not([type=file]), select, textarea') && editKey(el)) {
+    el.dataset.dirty = '1';
+  }
+}
 
 // Coalesce rapid input (search keystrokes) into a single trailing call so a query like
 // "walmart" triggers one fetch+render instead of one per character.
@@ -258,6 +268,9 @@ function setTab(tab) {
   tabs.forEach((button) => button.setAttribute('aria-selected', String(button.dataset.tab === state.tab)));
   rovingTabindex(tabs, (t) => t.dataset.tab === state.tab);
 
+  // #28 cache: a tab already loaded re-renders from memory (refetch:false) instead of
+  // refetching; first visit (or post-mutation re-render) fetches. offers/traffic self-cache.
+  const cached = state.loaded.has(state.tab);
   const render = {
     overview: () => { renderStats(state.stats); runSeoAudit(); },
     orders: renderOrders,
@@ -267,10 +280,10 @@ function setTab(tab) {
     pricing: renderPricing,
     messages: renderThreads,
     quotes: renderQuotePipeline,
-    offers: renderOffers,
-    traffic: renderTraffic,
+    offers: () => renderOffers(),
+    traffic: () => renderTraffic(),
   }[state.tab];
-  render?.();
+  render?.({ refetch: !cached });
 }
 
 function syncTabFromHash() {
@@ -377,23 +390,27 @@ function admListPager(attr, loaded, total, hasMore) {
   return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
 }
 
-async function renderOrders({ append = false } = {}) {
+async function renderOrders({ append = false, refetch = true } = {}) {
   const box = $('admOrders');
+  const snap = captureDirty(box);
   const status = $('ordFilter').value;
-  if (!append) { state.orders = []; state.ordersOffset = 0; box.innerHTML = admSkeleton(); }
-  try {
-    const params = new URLSearchParams();
-    if (status) params.set('status', status);
-    params.set('limit', '100');
-    params.set('offset', String(state.ordersOffset || 0));
-    const res = await api('/api/admin/orders?' + params.toString());
-    state.orders = (state.orders || []).concat(res.orders || []);
-    state.ordersOffset = (state.ordersOffset || 0) + (res.orders || []).length;
-    state.ordersTotal = res.total;
-    state.ordersHasMore = !!res.has_more;
-  } catch {
-    if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load orders. Reload to retry.</p>';
-    return;
+  if (refetch) {
+    if (!append) { state.orders = []; state.ordersOffset = 0; box.innerHTML = admSkeleton(); }
+    try {
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      params.set('limit', '100');
+      params.set('offset', String(state.ordersOffset || 0));
+      const res = await api('/api/admin/orders?' + params.toString());
+      state.orders = (state.orders || []).concat(res.orders || []);
+      state.ordersOffset = (state.ordersOffset || 0) + (res.orders || []).length;
+      state.ordersTotal = res.total;
+      state.ordersHasMore = !!res.has_more;
+      state.loaded.add('orders');
+    } catch {
+      if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load orders. Reload to retry.</p>';
+      return;
+    }
   }
   const q = $('ordSearch').value.trim().toLowerCase();
   const orders = state.orders.filter((order) => JSON.stringify(order).toLowerCase().includes(q));
@@ -414,6 +431,7 @@ async function renderOrders({ append = false } = {}) {
       <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
     </tr>`;
   }).join('')}</tbody></table>` + admOrdersPager();
+  restoreDirty(box, snap);
 
   box.querySelectorAll('[data-save-order]').forEach((button) => {
     button.addEventListener('click', async () => {
@@ -516,16 +534,20 @@ async function renderOrders({ append = false } = {}) {
   box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
 }
 
-async function renderCustomers() {
+async function renderCustomers({ refetch = true } = {}) {
   const box = $('admCustomers');
-  box.innerHTML = admSkeleton();
-  try {
-    state.customers = (await api('/api/admin/customers')).customers || [];
-  } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Could not load customers. Reload to retry.</p>';
-    return;
+  if (refetch) {
+    box.innerHTML = admSkeleton();
+    try {
+      state.customers = (await api('/api/admin/customers')).customers || [];
+      state.loaded.add('customers');
+    } catch {
+      box.innerHTML = '<p class="adm-status" data-state="err">Could not load customers. Reload to retry.</p>';
+      return;
+    }
   }
   const q = $('custSearch').value.trim().toLowerCase();
+  state.customers = state.customers || [];
   const rows = state.customers.filter((c) => JSON.stringify(c).toLowerCase().includes(q));
   if (!rows.length) { box.innerHTML = admEmpty('ph-users', 'No customers', 'Approved customers and their companies appear here.'); return; }
   box.innerHTML = `<table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Tier</th><th>Role</th></tr></thead><tbody>${rows.map((c) => `
@@ -539,19 +561,23 @@ async function renderCustomers() {
     </tr>`).join('')}</tbody></table>`;
 }
 
-async function renderCompanies({ append = false } = {}) {
+async function renderCompanies({ append = false, refetch = true } = {}) {
   const box = $('admCompanies');
-  if (!append) { state.companies = []; state.companiesOffset = 0; box.innerHTML = admSkeleton(); }
-  try {
-    const params = new URLSearchParams({ limit: '100', offset: String(state.companiesOffset || 0) });
-    const res = await api('/api/admin/companies?' + params.toString());
-    state.companies = (state.companies || []).concat(res.companies || []);
-    state.companiesOffset = (state.companiesOffset || 0) + (res.companies || []).length;
-    state.companiesTotal = res.total;
-    state.companiesHasMore = !!res.has_more;
-  } catch {
-    if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load accounts. Reload to retry.</p>';
-    return;
+  const snap = captureDirty(box);
+  if (refetch) {
+    if (!append) { state.companies = []; state.companiesOffset = 0; box.innerHTML = admSkeleton(); }
+    try {
+      const params = new URLSearchParams({ limit: '100', offset: String(state.companiesOffset || 0) });
+      const res = await api('/api/admin/companies?' + params.toString());
+      state.companies = (state.companies || []).concat(res.companies || []);
+      state.companiesOffset = (state.companiesOffset || 0) + (res.companies || []).length;
+      state.companiesTotal = res.total;
+      state.companiesHasMore = !!res.has_more;
+      state.loaded.add('companies');
+    } catch {
+      if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load accounts. Reload to retry.</p>';
+      return;
+    }
   }
   const pager = admListPager('data-load-more-companies', state.companies.length, state.companiesTotal, state.companiesHasMore);
   const wireMore = () => box.querySelector('[data-load-more-companies]')?.addEventListener('click', () => renderCompanies({ append: true }));
@@ -575,6 +601,7 @@ async function renderCompanies({ append = false } = {}) {
       <td><button class="btn btn-ghost btn-sm" data-approve="${esc(company.id)}" type="button">Approve</button></td>
     </tr>
   `).join('')}</tbody></table>` + pager;
+  restoreDirty(box, snap);
   box.querySelectorAll('[data-open-company]').forEach((button) => {
     button.addEventListener('click', () => openCompanyDetail(button.dataset.openCompany));
   });
@@ -610,19 +637,24 @@ async function renderCompanies({ append = false } = {}) {
   });
 }
 
-async function renderProducts() {
+async function renderProducts({ refetch = true } = {}) {
   const box = $('admProducts');
-  box.innerHTML = admSkeleton();
-  try {
-    const response = await api('/api/admin/products');
-    state.products = response.products || [];
-    if (response.media_ready === false) {
-      message('prodStatus', 'Apply site/supabase/schema-phase5.sql to enable product photos.', 'err');
+  const snap = captureDirty(box);
+  if (refetch) {
+    box.innerHTML = admSkeleton();
+    try {
+      const response = await api('/api/admin/products');
+      state.products = response.products || [];
+      state.loaded.add('products');
+      if (response.media_ready === false) {
+        message('prodStatus', 'Apply site/supabase/schema-phase5.sql to enable product photos.', 'err');
+      }
+    } catch {
+      box.innerHTML = '<p class="adm-status" data-state="err">Could not load products. Reload to retry.</p>';
+      return;
     }
-  } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Could not load products. Reload to retry.</p>';
-    return;
   }
+  state.products = state.products || [];
   const q = $('prodSearch').value.trim().toLowerCase();
   const products = state.products.filter((product) => JSON.stringify(product).toLowerCase().includes(q));
   if (!products.length) {
@@ -647,6 +679,7 @@ async function renderProducts() {
       </td>
     </tr>
   `).join('')}</tbody></table>`;
+  restoreDirty(box, snap);
 
   box.querySelectorAll('[data-save-product]').forEach((button) => {
     button.addEventListener('click', () => saveProductRow(button.dataset.saveProduct));
@@ -841,16 +874,20 @@ function wireVariantForm() {
   });
 }
 
-async function renderPricing() {
+async function renderPricing({ refetch = true } = {}) {
   const box = $('admPricing');
-  box.innerHTML = admSkeleton();
-  let data;
-  try {
-    data = await api('/api/admin/variant-pricing');
-  } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Could not load pricing. Reload to retry.</p>';
-    return;
+  const snap = captureDirty(box);
+  if (refetch) {
+    box.innerHTML = admSkeleton();
+    try {
+      state.pricing = await api('/api/admin/variant-pricing');
+      state.loaded.add('pricing');
+    } catch {
+      box.innerHTML = '<p class="adm-status" data-state="err">Could not load pricing. Reload to retry.</p>';
+      return;
+    }
   }
+  const data = state.pricing || { tiers: ['retail', 'hvac', 'wholesale'], rows: [] };
   const q = $('priceSearch').value.trim().toLowerCase();
   const tiers = data.tiers || ['retail', 'hvac', 'wholesale'];
   const rows = (data.rows || []).filter((row) => JSON.stringify(row).toLowerCase().includes(q));
@@ -867,6 +904,7 @@ async function renderPricing() {
       ${tiers.map((tier) => `<td><input class="adm-input" data-price-tier="${esc(tier)}" type="number" step="0.01" min="0" value="${esc(row.tiers?.[tier] ?? '')}" placeholder="${row.base_price == null ? '-' : fmt(row.base_price)}"></td>`).join('')}
     </tr>
   `).join('')}</tbody></table><p id="priceRowStatus" class="adm-status" role="status"></p>`;
+  restoreDirty(box, snap);
   box.querySelectorAll('[data-price-tier]').forEach((input) => {
     input.addEventListener('change', async () => {
       const row = input.closest('[data-vsku]');
@@ -886,15 +924,19 @@ async function renderPricing() {
   });
 }
 
-async function renderThreads() {
+async function renderThreads({ refetch = true } = {}) {
   const box = $('admThreads');
-  box.innerHTML = admSkeleton();
-  try {
-    state.threads = (await api('/api/admin/messages')).threads || [];
-  } catch {
-    box.innerHTML = '<p class="adm-status" data-state="err">Could not load messages. Reload to retry.</p>';
-    return;
+  if (refetch) {
+    box.innerHTML = admSkeleton();
+    try {
+      state.threads = (await api('/api/admin/messages')).threads || [];
+      state.loaded.add('messages');
+    } catch {
+      box.innerHTML = '<p class="adm-status" data-state="err">Could not load messages. Reload to retry.</p>';
+      return;
+    }
   }
+  state.threads = state.threads || [];
   if (!state.threads.length) {
     box.innerHTML = '<p class="muted">No conversations.</p>';
     return;
@@ -940,24 +982,28 @@ async function openThread(companyId) {
   }
 }
 
-async function renderQuotePipeline({ append = false } = {}) {
+async function renderQuotePipeline({ append = false, refetch = true } = {}) {
   const box = $('admQuotes');
-  if (!append) { state.quotes = []; state.quotesOffset = 0; box.innerHTML = admSkeleton(); }
-  let data;
-  try {
-    const params = new URLSearchParams({ limit: '100', offset: String(state.quotesOffset || 0) });
-    data = await api('/api/admin/quotes?' + params.toString());
-  } catch {
-    if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
-    return;
+  const snap = captureDirty(box);
+  if (refetch) {
+    if (!append) { state.quotes = []; state.quotesOffset = 0; box.innerHTML = admSkeleton(); }
+    let data;
+    try {
+      const params = new URLSearchParams({ limit: '100', offset: String(state.quotesOffset || 0) });
+      data = await api('/api/admin/quotes?' + params.toString());
+    } catch {
+      if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
+      return;
+    }
+    state.quotes = (state.quotes || []).concat(data.quotes || []);
+    state.quotesOffset = (state.quotesOffset || 0) + (data.quotes || []).length;
+    state.quotesTotal = data.total;
+    state.quotesHasMore = !!data.has_more;
+    state.quotesNeedsMigration = !!data.needs_migration;
+    badge('aBadgeQuotes', data.urgent_count || data.new_count || 0);
+    state.loaded.add('quotes');
   }
-
-  state.quotes = (state.quotes || []).concat(data.quotes || []);
-  state.quotesOffset = (state.quotesOffset || 0) + (data.quotes || []).length;
-  state.quotesTotal = data.total;
-  state.quotesHasMore = !!data.has_more;
-  badge('aBadgeQuotes', data.urgent_count || data.new_count || 0);
-  if (data.needs_migration) {
+  if (state.quotesNeedsMigration) {
     box.innerHTML = '<p class="muted">No quote database yet. Apply supabase/schema-quotes.sql to store and triage leads here.</p>';
     return;
   }
@@ -1038,6 +1084,7 @@ async function renderQuotePipeline({ append = false } = {}) {
       </details>
     `;
   }).join('') + quotesPager;
+  restoreDirty(box, snap);
   wireQuotesMore();
 
   box.querySelectorAll('[data-save-quote]').forEach((button) => {
@@ -1289,16 +1336,25 @@ function wire() {
   });
   wireTablist(document.querySelector('.adm-tabs[role="tablist"]'), (tab) => setTab(tab.dataset.tab));
   window.addEventListener('hashchange', syncTabFromHash);
-  $('ordFilter').addEventListener('change', renderOrders);
-  $('ordSearch').addEventListener('input', debounce(() => renderOrders()));
-  $('coSearch').addEventListener('input', debounce(() => renderCompanies()));
-  $('prodSearch').addEventListener('input', debounce(() => renderProducts()));
-  $('priceSearch').addEventListener('input', debounce(() => renderPricing()));
-  $('qFilter').addEventListener('change', renderQuotePipeline);
-  $('qPriority')?.addEventListener('change', renderQuotePipeline);
-  $('qDue')?.addEventListener('change', renderQuotePipeline);
-  $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline()));
-  $('custSearch').addEventListener('input', debounce(() => renderCustomers()));
+  // Status filter hits a server query param → must refetch. Search + the quote
+  // facet filters are client-side over cached data → re-render in memory (#28).
+  $('ordFilter').addEventListener('change', () => renderOrders());
+  $('ordSearch').addEventListener('input', debounce(() => renderOrders({ refetch: false })));
+  $('coSearch').addEventListener('input', debounce(() => renderCompanies({ refetch: false })));
+  $('prodSearch').addEventListener('input', debounce(() => renderProducts({ refetch: false })));
+  $('priceSearch').addEventListener('input', debounce(() => renderPricing({ refetch: false })));
+  $('qFilter').addEventListener('change', () => renderQuotePipeline({ refetch: false }));
+  $('qPriority')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
+  $('qDue')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
+  $('qOwner')?.addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
+  $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
+  $('custSearch').addEventListener('input', debounce(() => renderCustomers({ refetch: false })));
+  // #28 dirty-edit guard: track in-progress inline edits so capture/restoreDirty can
+  // preserve sibling edits across a save or cache re-render.
+  ['admOrders', 'admCompanies', 'admProducts', 'admPricing', 'admQuotes'].forEach((id) => {
+    $(id)?.addEventListener('input', markDirty);
+    $(id)?.addEventListener('change', markDirty);
+  });
   $('qboConnect')?.addEventListener('click', connectQbo);
   $('qboSyncNow')?.addEventListener('click', runQboSync);
   $('ordExport').addEventListener('click', async () => {
