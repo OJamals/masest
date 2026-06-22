@@ -43,7 +43,7 @@ test('audit_log migration creates the table, enables RLS, grants service_role', 
 for (const [path, marker] of [
   ['functions/api/admin/users.js', /recordAudit\(sb,\s*\{\s*user,\s*action:\s*'user\.set_role'/],
   ['functions/api/admin/companies.js', /recordAudit\(sb,\s*\{\s*user,\s*action:\s*`company\./],
-  ['functions/api/admin/orders.js', /recordAudit\(sb,\s*\{\s*user,\s*action:\s*'order\.refund'/],
+  ['functions/api/admin/orders.js', /recordAudit\(sb,\s*\{[\s\S]{0,100}?'order\.refund'/],
 ]) {
   test(`${path} records an audit entry on its mutation`, () => {
     const src = read(path);

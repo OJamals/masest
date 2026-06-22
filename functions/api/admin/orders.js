@@ -7,6 +7,8 @@ import Stripe from 'stripe';
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
+import { computeRefund } from '../../_lib/refund.js';
+import { stockIncrements } from '../../_lib/order-shape.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -74,7 +76,7 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)', isCsv ? undefined : { count: 'exact' })
+      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name),order_items(sku,name,qty,unit_price,line_total)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
@@ -103,7 +105,7 @@ export async function onRequest({ request, env }) {
 
     if (body.action === 'refund') {
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,status,total,currency,payment_method,stripe_payment_intent').eq('id', body.id).single();
+        .select('id,company_id,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,order_items(sku,qty)').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       if (!ord) return json(404, { error: 'not_found' });
       if (REFUND_BLOCKING_STATUSES.has(ord.status)) {
@@ -112,20 +114,41 @@ export async function onRequest({ request, env }) {
       if (ord.payment_method !== 'stripe' || !ord.stripe_payment_intent) {
         return json(400, { error: 'not_refundable', message: 'Only Stripe-paid orders can be refunded here. Cancel NET orders by setting status to cancelled.' });
       }
+      // amount omitted → refund the whole remaining balance; otherwise a partial refund.
+      const plan = computeRefund({ total: ord.total, refundedAmount: ord.refunded_amount, requestedAmount: body.amount });
+      if (!plan.ok) return json(400, { error: plan.error });
       const secret = env.STRIPE_SECRET_KEY;
       if (!secret) return json(500, { error: 'stripe_not_configured' });
       const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
       try {
-        await stripe.refunds.create({ payment_intent: ord.stripe_payment_intent });
+        await stripe.refunds.create({ payment_intent: ord.stripe_payment_intent, amount: plan.amountCents });
       } catch (err) {
         return json(502, { error: 'stripe_refund_failed', detail: err?.message || String(err) });
       }
-      const { data: updated, error: e2 } = await sb.from('orders').update({ status: 'refunded' })
-        .eq('id', body.id).select('id,company_id,status').single();
+      const update = { refunded_amount: plan.newRefundedAmount };
+      if (plan.fullyRefunded) update.status = 'refunded';
+      const { data: updated, error: e2 } = await sb.from('orders').update(update)
+        .eq('id', body.id).select('id,company_id,status,total,refunded_amount').single();
       if (e2) return json(500, { error: e2.message });
-      await notifyCompany(sb, env, request, updated?.company_id, 'refunded', 'Your MASEST order was refunded. The amount will return to your original payment method.');
-      await recordAudit(sb, { user, action: 'order.refund', targetType: 'order', targetId: body.id, detail: { company_id: updated?.company_id } });
-      return json(200, { ok: true, refunded: true, order: updated });
+      // Return refunded line items to inventory only on a full refund (a partial
+      // amount can't be mapped to specific lines). Best-effort: never fail the refund.
+      if (plan.fullyRefunded) {
+        for (const args of stockIncrements(ord.order_items)) {
+          await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
+        }
+      }
+      const label = plan.fullyRefunded ? 'refunded' : 'partially refunded';
+      const refundMsg = plan.fullyRefunded
+        ? 'Your MASEST order was refunded. The amount will return to your original payment method.'
+        : `A partial refund of $${plan.amount.toFixed(2)} was issued to your original payment method.`;
+      await notifyCompany(sb, env, request, updated?.company_id, label, refundMsg);
+      await recordAudit(sb, {
+        user,
+        action: plan.fullyRefunded ? 'order.refund' : 'order.refund_partial',
+        targetType: 'order', targetId: body.id,
+        detail: { company_id: updated?.company_id, amount: plan.amount, refunded_amount: plan.newRefundedAmount, fully_refunded: plan.fullyRefunded },
+      });
+      return json(200, { ok: true, refunded: plan.fullyRefunded, partial: !plan.fullyRefunded, amount: plan.amount, order: updated });
     }
 
     if (body.action === 'record_qbo_invoice') {
