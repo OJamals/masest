@@ -2,7 +2,7 @@
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
-import { esc, safeUrl, money, fmtDate, fmtDT } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -25,7 +25,9 @@ function currentDashboardTab() {
 }
 
 function selectTab(name) {
-  document.querySelectorAll('.dash-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  const tabs = [...document.querySelectorAll('.dash-tab')];
+  tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  rovingTabindex(tabs, (t) => t.dataset.tab === name);
   document.querySelectorAll('.dash-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
   loadTab(name);
@@ -38,6 +40,7 @@ function syncTabFromHash() {
 function wireTabs() {
   document.querySelectorAll('.dash-tab').forEach((b) =>
     b.addEventListener('click', () => selectTab(b.dataset.tab)));
+  wireTablist(document.querySelector('.dash-tabs[role="tablist"]'), (tab) => selectTab(tab.dataset.tab));
 }
 function loadTab(name) {
   if (name === 'orders' && !loaded.orders) renderOrders();

@@ -26,3 +26,35 @@ export const fmtDate = (s) => { try { return new Date(s).toLocaleDateString(unde
 export const fmtDT = (s) => { try { return new Date(s).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 
 export const dateTime = (s) => (s ? new Date(s).toLocaleString() : '');
+
+/* ---- WAI-ARIA tablist keyboard pattern (#33) ---- */
+
+// Next focus index for a roving-tabindex tablist. Returns -1 for keys we don't handle.
+export const nextTabIndex = (key, current, count) => {
+  if (key === 'ArrowRight' || key === 'ArrowDown') return (current + 1) % count;
+  if (key === 'ArrowLeft' || key === 'ArrowUp') return (current - 1 + count) % count;
+  if (key === 'Home') return 0;
+  if (key === 'End') return count - 1;
+  return -1;
+};
+
+// Roving tabindex: only the selected tab is in the tab order (tabindex 0), the rest -1.
+export const rovingTabindex = (tabs, isSelected) => {
+  tabs.forEach((t) => t.setAttribute('tabindex', isSelected(t) ? '0' : '-1'));
+};
+
+// Arrow/Home/End navigation for a [role="tablist"]. `activate(tab)` selects it; focus
+// follows. Call once per tablist after the tabs exist.
+export const wireTablist = (tablist, activate) => {
+  if (!tablist) return;
+  tablist.addEventListener('keydown', (e) => {
+    const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+    const current = tabs.indexOf(document.activeElement);
+    if (current < 0) return;
+    const next = nextTabIndex(e.key, current, tabs.length);
+    if (next < 0) return;
+    e.preventDefault();
+    tabs[next].focus();
+    activate?.(tabs[next]);
+  });
+};
