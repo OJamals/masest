@@ -1539,3 +1539,71 @@ justify-content: flex-start;
   .story .act-cost .cost-vert { padding: clamp(13px, 1.6vw, 18px); }
   .story .act-cost .cost-drops { margin-bottom: 10px; gap: 6px; }
 }
+
+/* Reduced-motion/no-JS fallback must read as stacked scenes, not overlaid
+   animation frames. Keep animated SVG/cards in normal document flow. */
+.story:not(.story-ready) .act[data-act="2"] .stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(28px, 5vh, 52px);
+}
+
+.story:not(.story-ready) .act[data-act="2"] .pipe-diagram {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  order: 2;
+  width: min(980px, 92vw);
+  margin: 0 auto;
+}
+
+.story:not(.story-ready) .act[data-act="2"] .act-copy {
+  order: 1;
+}
+
+.story:not(.story-ready) .act[data-act="3"] .hmis-categories,
+.story:not(.story-ready) .act[data-act="3"] .hmis-chemical-deck {
+  grid-row: auto;
+  grid-column: auto;
+}
+
+.story:not(.story-ready) .act[data-act="3"] .hmis-chemical-deck {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+}
+
+.story:not(.story-ready) .act[data-act="3"] .hmis-chemical {
+  position: relative;
+  inset: auto;
+  min-height: 0;
+}
+
+@media (max-width: 760px) {
+  .story:not(.story-ready) .act[data-act="3"] .hmis-categories {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .story:not(.story-ready) .act[data-act="3"] .hmis-category {
+    min-height: 0;
+    padding: 9px 8px;
+    border-radius: 12px;
+  }
+
+  .story:not(.story-ready) .act[data-act="3"] .hmis-category b {
+    margin: 2px 0 3px;
+    font-size: 1.08rem;
+  }
+
+  .story:not(.story-ready) .act[data-act="3"] .hmis-category small {
+    font-size: .68rem;
+    line-height: 1.18;
+  }
+
+  .story:not(.story-ready) .act[data-act="3"] .hmis-chemical-deck {
+    margin-top: clamp(34px, 6vh, 54px);
+  }
+}

@@ -322,3 +322,72 @@ test("legacy cost meter counts up to the incident figure by the final beat", asy
   expect(early).toBeLessThan(115000);
   expect(end).toBe(115000);
 });
+
+test("reduced motion story fallback stacks animated scene content without overlap", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(300);
+
+  const layout = await page.evaluate(() => {
+    const box = (el) => {
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+    };
+    const overlap = (a, b) => {
+      const x = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+      const y = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      return x * y;
+    };
+    const story = document.querySelector(".story");
+    const act2Copy = box(document.querySelector('.story .act[data-act="2"] .act-copy'));
+    const act2Pipe = box(document.querySelector('.story .act[data-act="2"] .pipe-diagram'));
+    const chemicals = [...document.querySelectorAll('.story .act[data-act="3"] .hmis-chemical')]
+      .map((card) => ({ name: card.querySelector("strong")?.textContent || card.className, box: box(card) }))
+      .filter((card) => card.box && card.box.width > 1 && card.box.height > 1);
+    const hmisOverlaps = [];
+    for (let i = 0; i < chemicals.length; i += 1) {
+      for (let j = i + 1; j < chemicals.length; j += 1) {
+        if (overlap(chemicals[i].box, chemicals[j].box) > 4) hmisOverlaps.push(`${chemicals[i].name} / ${chemicals[j].name}`);
+      }
+    }
+    return {
+      fallbackActive: !story.classList.contains("story-ready"),
+      act2Gap: act2Copy && act2Pipe ? Math.round(act2Pipe.top - act2Copy.bottom) : null,
+      hmisOverlaps,
+      overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+
+  expect(layout.fallbackActive).toBe(true);
+  expect(layout.overflowX).toBe(0);
+  expect(layout.act2Gap).toBeGreaterThanOrEqual(12);
+  expect(layout.hmisOverlaps).toEqual([]);
+
+  await page.evaluate(() => {
+    const act = document.querySelector('.story .act[data-act="3"]');
+    window.scrollTo(0, act.offsetTop);
+  });
+  await page.waitForTimeout(300);
+
+  const act3Viewport = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.story .act[data-act="3"] .hmis-category, .story .act[data-act="3"] .hmis-chemical')]
+      .map((card) => {
+        const r = card.getBoundingClientRect();
+        return {
+          label: card.textContent.trim().replace(/\s+/g, " ").slice(0, 36),
+          top: Math.round(r.top),
+          bottom: Math.round(r.bottom),
+          visible: r.bottom > 0 && r.top < window.innerHeight,
+          cutByViewport: r.top < window.innerHeight && r.bottom > window.innerHeight,
+        };
+      });
+    return {
+      viewportHeight: window.innerHeight,
+      cutRows: cards.filter((card) => card.cutByViewport),
+    };
+  });
+
+  expect(act3Viewport.cutRows, JSON.stringify(act3Viewport)).toEqual([]);
+});
