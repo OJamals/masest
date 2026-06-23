@@ -39,7 +39,12 @@ test("admin overview renders operations summary and action rail", () => {
 });
 
 test("admin traffic page renders funnel campaigns and daily report", () => {
-  const js = read("js/admin.js");
+  // Traffic tab is split into its own module (#36); the admin entrypoint wires it in.
+  const admin = read("js/admin.js");
+  assert.match(admin, /from\s+["']\.\/admin\/traffic\.js["']/, "admin should import the traffic module");
+  assert.match(admin, /createTrafficRenderer\(/, "admin should wire the traffic renderer");
+
+  const js = read("js/admin/traffic.js");
   assert.match(js, /renderTrafficFunnel/, "traffic page should render funnel");
   assert.match(js, /renderTrafficCampaigns/, "traffic page should render campaigns");
   assert.match(js, /renderTrafficDays/, "traffic page should render daily rows");

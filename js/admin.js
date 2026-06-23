@@ -3,6 +3,8 @@ import { login, logout, api, getToken } from './auth.js';
 import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, confirmDialog } from './util.js';
 import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 import { editKey, captureDirty, restoreDirty } from './admin/edits.js';
+import { createTrafficRenderer } from './admin/traffic.js';
+import { createSeoAudit } from './admin/seo.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -1222,82 +1224,11 @@ async function renderOffers(force = false) {
   }
 }
 
-function renderTrafficFunnel(funnel = []) {
- if (!funnel.length) return '<div class="adm-card"><h2>Funnel</h2><p class="muted">No funnel events yet.</p></div>';
- return `<div class="adm-card"><h2>Funnel</h2><table class="adm-mini-table"><tbody>${funnel.map((row) => `
- <tr><td>${esc(row.label || row.event)}</td><td class="num">${esc(row.count || 0)}</td><td class="num">${esc(pct(row.rate))}</td></tr>
- `).join('')}</tbody></table></div>`;
-}
+// Traffic tab extracted to ./admin/traffic.js (#36 split). Shared primitives injected.
+const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
 
-function renderTrafficCampaigns(topCampaigns = []) {
- if (!topCampaigns.length) return '<div class="adm-card"><h2>Campaigns</h2><p class="muted">No UTM campaigns recorded.</p></div>';
- return `<div class="adm-card"><h2>Campaigns</h2><table class="adm-mini-table"><tbody>${topCampaigns.map((row) => `
- <tr><td>${esc(row.key)}</td><td class="num">${esc(row.count)}</td></tr>
- `).join('')}</tbody></table></div>`;
-}
-
-function renderTrafficDays(byDay = []) {
- if (!byDay.length) return '<div class="adm-card"><h2>Daily trend</h2><p class="muted">No daily rows.</p></div>';
- return `<div class="adm-card"><h2>Daily trend</h2><table class="adm-mini-table"><thead><tr><th>Day</th><th>Views</th><th>Unique</th><th>Conversion events</th></tr></thead><tbody>${byDay.map((row) => `
- <tr><td>${esc(row.day)}</td><td class="num">${esc(row.pageviews ?? row.count ?? 0)}</td><td class="num">${esc(row.unique || 0)}</td><td class="num">${esc(row.conversion_events || 0)}</td></tr>
- `).join('')}</tbody></table></div>`;
-}
-
-function renderTrafficList(title, rows = []) {
- if (!rows.length) return `<div class="adm-card"><h2>${esc(title)}</h2><p class="muted">No rows.</p></div>`;
- return `<div class="adm-card"><h2>${esc(title)}</h2>${rows.map((row) => `<div class="dash-row"><span>${esc(row.key)}</span><b>${esc(row.count)}</b></div>`).join('')}</div>`;
-}
-
-async function renderTraffic() {
- const box = $('admTraffic');
- box.innerHTML = admSkeleton();
- try {
- const data = await api('/api/admin/traffic?days=14');
- if (!data.available) {
- box.innerHTML = `<p class="muted">${esc(data.note || 'Traffic table not migrated yet.')}</p>`;
- return;
- }
- box.innerHTML = `<div class="adm-traffic-report">
- <div class="adm-grid">
- <div class="adm-card adm-stat"><i class="ph ph-eye"></i><b>${esc(data.total)}</b><span class="muted">Tracked events</span></div>
- <div class="adm-card adm-stat"><i class="ph ph-users-three"></i><b>${esc(data.unique)}</b><span class="muted">Known visitors</span></div>
- <div class="adm-card adm-stat"><i class="ph ph-arrow-square-out"></i><b>${esc((data.events || []).find((row) => row.key === 'quote_submit')?.count || 0)}</b><span class="muted">Quote submits</span></div>
- <div class="adm-card adm-stat"><i class="ph ph-shopping-cart"></i><b>${esc((data.events || []).find((row) => row.key === 'checkout_start')?.count || 0)}</b><span class="muted">Checkout starts</span></div>
- </div>
- <div class="adm-report-grid">
- ${renderTrafficFunnel(data.funnel || [])}
- ${renderTrafficCampaigns(data.topCampaigns || [])}
- ${renderTrafficList('Top paths', data.topPaths || [])}
- ${renderTrafficList('Referrers', data.topReferrers || [])}
- ${renderTrafficList('Browsers', data.byBrowser || [])}
- ${renderTrafficDays(data.byDay || [])}
- </div>
- </div>`;
- } catch {
- box.innerHTML = '<p class="adm-status" data-state="err">Could not load traffic. Reload to retry.</p>';
- }
-}
-
-async function runSeoAudit() {
-  if (state.loaded.has('seo')) return;
-  const box = $('admSeo');
-  const pages = ['index.html', 'products.html', 'programs.html', 'industries.html', 'about.html', 'contact.html'];
-  const rows = await Promise.all(pages.map(async (page) => {
-    try {
-      const html = await (await fetch('/' + page, { cache: 'no-store' })).text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const title = (doc.querySelector('title')?.textContent || '').trim();
-      const desc = (doc.querySelector('meta[name="description"]')?.content || '').trim();
-      return { page, title: title.length, desc: desc.length, ok: title && desc };
-    } catch {
-      return { page, ok: false };
-    }
-  }));
-  box.innerHTML = `<h2>SEO audit</h2><div class="adm-table-wrap"><table class="adm"><tbody>${rows.map((row) => `
-      <tr><td>${esc(row.page)}</td><td class="${row.ok ? 'seo-ok' : 'seo-bad'}">${row.ok ? 'OK' : 'Check'}</td><td class="muted">title ${esc(row.title || 0)} / desc ${esc(row.desc || 0)}</td></tr>
-    `).join('')}</tbody></table></div>`;
-  state.loaded.add('seo');
-}
+// SEO-audit tab extracted to ./admin/seo.js (#36 split). Shared state/lookup injected.
+const runSeoAudit = createSeoAudit({ $, state });
 
 // --- Cloudflare Turnstile on the staff gate (mirrors account.html sign-in) ---
 // Supabase Auth CAPTCHA is enabled, so signInWithPassword needs a captchaToken.
