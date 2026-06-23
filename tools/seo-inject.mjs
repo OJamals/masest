@@ -36,6 +36,8 @@ const PUBLIC = {
   'programs.html': { loc: '/programs.html', jsonld: [ORG] },
   'proof.html': { loc: '/proof.html', jsonld: [ORG] },
   'resources.html': { loc: '/resources.html', jsonld: [ORG] },
+  'privacy.html': { loc: '/privacy.html', priority: '0.3', changefreq: 'yearly', jsonld: [ORG, { '@type': 'WebPage', name: 'Privacy', url: `${BASE}/privacy.html` }] },
+  'terms.html': { loc: '/terms.html', priority: '0.3', changefreq: 'yearly', jsonld: [ORG, { '@type': 'WebPage', name: 'Terms', url: `${BASE}/terms.html` }] },
   'industries.html': { loc: '/industries.html', jsonld: [ORG] },
 };
 for (const f of readdirSync('industries').filter((n) => n.endsWith('.html'))) {

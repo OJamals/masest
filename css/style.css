@@ -1119,6 +1119,9 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 .foot-logo { width: 84px; height: auto; display: block; filter: drop-shadow(0 1px 3px rgba(0,0,0,.4)); }
 .foot-brand { font-weight: 900; color: #fff; font-size: 1.15rem; margin-bottom: 12px; }
 .foot-bottom { border-top: 1px solid rgba(255,255,255,.14); padding-top: 26px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: rgba(255,255,255,.75); }
+.foot-legal { display: inline-flex; gap: 14px; }
+.foot-legal a { color: rgba(255,255,255,.82); text-decoration: none; }
+.foot-legal a:hover { color: #fff; }
 
 /* Footer newsletter signup (Klaviyo) */
 .foot-news { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 40px; padding-top: 32px; padding-bottom: 4px; border-top: 1px solid rgba(255,255,255,.16); }

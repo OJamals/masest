@@ -53,7 +53,7 @@ export function renderChrome() {
   nav.innerHTML = `
     <div class="nav-inner">
       <a class="nav-logo" href="${root}index.html" aria-label="MASEST home"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
-      <nav class="nav-links" id="navLinks">
+      <nav class="nav-links" id="navLinks" aria-label="Primary">
         ${links.map(navItem).join("")}
       </nav>
         <div class="nav-actions">
@@ -204,6 +204,7 @@ export function renderChrome() {
       </div>
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
+        <span class="foot-legal"><a href="${root}privacy.html">Privacy</a><a href="${root}terms.html">Terms</a></span>
         <span>VertKleen, SynTech and SynClean are trademarks of MASEST Consulting LLC.</span>
       </div>
     </div>`;
