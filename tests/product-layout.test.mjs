@@ -48,7 +48,7 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
           perRow: cards.filter((c) => c.offsetTop === top).length,
         allLink: cards.every((c) => {
           const link = c.querySelector(".shop-card-link");
-          return link && /product\.html\?id=/.test(link.getAttribute("href"));
+          return link && /products\/[a-z0-9-]+/.test(link.getAttribute("href"));
         }),
         nestedInteractive: cards.some((c) => c.querySelector("a button, button a"))
         };

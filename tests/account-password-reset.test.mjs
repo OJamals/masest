@@ -30,7 +30,7 @@ test("account login supports Supabase password recovery", () => {
   assert.match(auth, /PASSWORD_RECOVERY/);
   assert.match(commerceUi, /isLocalStaticCommerceSuppressed/);
   assert.match(commerceUi, /accountPath/);
-  assert.match(chrome, /account\.html/);
+  assert.match(chrome, /href="\$\{root\}account"/);
 
   assert.match(email, /<h2>Reset your password<\/h2>/);
   assert.match(email, /\{\{ \.ConfirmationURL \}\}/);

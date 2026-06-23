@@ -122,7 +122,7 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
       assert.equal(first.subprice, "1 gal", "card should show the selected pack size");
       assert.ok(first.variantCount >= 3, "card should expose buyable pack choices");
       assert.equal(first.addLabel, "Add to cart");
-      assert.equal(first.href, "product.html?id=hcr");
+      assert.equal(first.href, "products/hcr");
 
       const cardStates = await page.locator(".shop-card").evaluateAll((cards) => cards.map((card) => ({
         id: card.dataset.id,

@@ -4,10 +4,16 @@ import { readFileSync } from "node:fs";
 
 const sitemap = readFileSync(new URL("../sitemap.xml", import.meta.url), "utf8");
 const pages = [...sitemap.matchAll(/<loc>https:\/\/masest\.co\/([^<]*)<\/loc>/g)]
-  .map((match) => match[1] || "index.html");
+  .map((match) => match[1] || "");
+
+function sourcePath(page) {
+  if (!page) return "index.html";
+  if (page.startsWith("products/")) return `${page}.html`;
+  return `${page}.html`;
+}
 
 function html(page) {
-  return readFileSync(new URL(`../${page}`, import.meta.url), "utf8");
+  return readFileSync(new URL(`../${sourcePath(page)}`, import.meta.url), "utf8");
 }
 
 function metaDescription(markup) {

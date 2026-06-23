@@ -8,24 +8,25 @@ export function renderChrome() {
   const page = pageName();
   // Pages under /industries/ sit one level deep; prefix chrome links with the
   // right root so the shared nav/footer resolve from any directory depth.
-  const root = /\/industries\//.test(location.pathname) ? "../" : "";
+  const root = /\/(?:industries|products)\//.test(location.pathname) ? "../" : "";
+  const isProductDetail = /\/products\/[^/]+(?:\.html)?$/.test(location.pathname);
   const links = [
-    { href: "products.html", label: "Products" },
-    { href: "services.html", label: "Services" },
+    { href: "products", label: "Products" },
+    { href: "services", label: "Services" },
     {
       key: "useCases",
       label: "Use Cases",
       children: [
-        { href: "industries.html", label: "Industries" },
-        { href: "proof.html", label: "Field Results" }
+        { href: "industries", label: "Industries" },
+        { href: "proof", label: "Field Results" }
       ]
     },
-    { href: "resources.html", label: "Resources" }
+    { href: "resources", label: "Resources" }
   ];
   const isActive = (href) => {
     if (page === href) return true;
-    if (href === "products.html" && page === "product.html") return true;
-    if (href === "industries.html" && /\/industries\//.test(location.pathname)) return true;
+    if (href === "products" && (page === "product" || isProductDetail)) return true;
+    if (href === "industries" && /\/industries\//.test(location.pathname)) return true;
     return false;
   };
   const navItem = item => {
@@ -52,38 +53,45 @@ export function renderChrome() {
   nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-logo" href="${root}index.html" aria-label="MASEST home"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
-      <nav class="nav-links" id="navLinks">
+      <a class="nav-logo" href="${root}" aria-label="MASEST home"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
+      <nav class="nav-links" id="navLinks" aria-label="Primary">
         ${links.map(navItem).join("")}
       </nav>
         <div class="nav-actions">
-          <a class="nav-auth-placeholder nav-signin" href="${root}account.html"><span>Sign in</span></a>
-          <a class="nav-cart" href="${root}cart.html" aria-label="Open cart"><i class="ph ph-shopping-cart-simple" aria-hidden="true"></i><b class="cart-count" data-cart-count hidden>0</b></a>
+          <a class="nav-auth-placeholder nav-signin" href="${root}account"><span>Sign in</span></a>
+          <a class="nav-cart" href="${root}cart" aria-label="Open cart"><i class="ph ph-shopping-cart-simple" aria-hidden="true"></i><b class="cart-count" data-cart-count hidden>0</b></a>
           <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
         </div>
     </div>`;
   document.body.prepend(nav);
   document.body.prepend(skip);
-  const leadBarPages = new Set([
-    "products.html",
-    "product.html",
-    "services.html",
-    "programs.html",
-    "proof.html",
-    "resources.html",
-    "industries.html",
-    "about.html",
-    "",
-  ]);
-  const isIndustryDetail = /\/industries\/[^/]+\.html$/.test(location.pathname);
-  if (leadBarPages.has(page) || isIndustryDetail) {
+ const leadBarPages = new Set([
+ "products",
+ "products.html",
+ "product",
+ "product.html",
+ "services",
+ "services.html",
+ "programs.html",
+ "proof",
+ "proof.html",
+ "resources",
+ "resources.html",
+ "industries",
+ "industries.html",
+ "about",
+ "about.html",
+ "",
+ ]);
+  const isIndustryDetail = /\/industries\/[^/]+(?:\.html)?$/.test(location.pathname);
+  if (leadBarPages.has(page) || isIndustryDetail || isProductDetail) {
     const leadBar = document.createElement("div");
     leadBar.className = "lead-action-bar";
     leadBar.setAttribute("role", "group");
     leadBar.setAttribute("aria-label", "Primary request actions");
     leadBar.innerHTML = `
-      <a href="${root}contact.html?type=audit"><i class="ph ph-map-trifold" aria-hidden="true"></i><span>Map chemical</span></a>
-      <a href="${root}contact.html?type=quote"><i class="ph ph-tag" aria-hidden="true"></i><span>Get quote</span></a>
+      <a href="${root}contact?type=audit"><i class="ph ph-map-trifold" aria-hidden="true"></i><span>Map chemical</span></a>
+      <a href="${root}contact?type=quote"><i class="ph ph-tag" aria-hidden="true"></i><span>Get quote</span></a>
     `;
     document.body.append(leadBar);
     const leadSentinel = document.createElement("div");
@@ -158,35 +166,35 @@ export function renderChrome() {
     <div class="wrap">
       <div class="foot-grid">
         <div>
-          <a class="foot-logo-link" href="${root}index.html" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
+          <a class="foot-logo-link" href="${root}" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
           <div class="foot-brand">MASEST VertKleen&trade;</div>
           <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support from Florida's Space Coast.</p>
           <div class="foot-kicker">Procurement routes</div>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Product Categories</div>
-          <a href="${root}products.html#cat-descale">Rust &amp; Scale</a>
-          <a href="${root}products.html#cat-degrease">Grease &amp; Grime</a>
-          <a href="${root}products.html#cat-water">Water Treatment</a>
-          <a href="${root}products.html#cat-exterior">Exterior &amp; Specialty</a>
+          <a href="${root}products#cat-descale">Rust &amp; Scale</a>
+          <a href="${root}products#cat-degrease">Grease &amp; Grime</a>
+          <a href="${root}products#cat-water">Water Treatment</a>
+          <a href="${root}products#cat-exterior">Exterior &amp; Specialty</a>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Resources + SDS</div>
-          <a href="${root}resources.html">Resources &amp; SDS</a>
-          <a href="${root}programs.html">Programs &amp; Pricing</a>
-          <a href="${root}proof.html">Proof &amp; Case Studies</a>
+          <a href="${root}resources">Resources &amp; SDS</a>
+          <a href="${root}programs">Programs &amp; Pricing</a>
+          <a href="${root}proof">Proof &amp; Case Studies</a>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Company</div>
-          <a href="${root}industries.html">Industries</a>
-          <a href="${root}about.html">Company</a>
-          <a href="${root}contact.html">Contact</a>
+          <a href="${root}industries">Industries</a>
+          <a href="${root}about">Company</a>
+          <a href="${root}contact">Contact</a>
         </div>
         <div>
           <div class="foot-title">Contact</div>
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
           <a href="tel:+18134063852">(813) 406-3852</a>
-          <a href="${root}contact.html" data-crisp-open data-crisp-message="Hi, I need help matching VertKleen to an application.">Live chat</a>
+          <a href="${root}contact" data-crisp-open data-crisp-message="Hi, I need help matching VertKleen to an application.">Live chat</a>
           <p style="margin-top:10px;font-size:.8rem;line-height:1.7">CAGE 0B2Q3<br>NAICS 424690<br>SAM.gov registered<br>Minority-owned (self-certified)</p>
         </div>
       </div>
@@ -204,6 +212,7 @@ export function renderChrome() {
       </div>
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
+        <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a></span>
         <span>VertKleen, SynTech and SynClean are trademarks of MASEST Consulting LLC.</span>
       </div>
     </div>`;

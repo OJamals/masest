@@ -45,11 +45,13 @@ test("private/transactional pages are noindex", () => {
   }
 });
 
-test("sitemap lists industry subpages and stays valid", () => {
-  const xml = read("sitemap.xml");
-  assert.match(xml, /industries\/oil-gas\.html/, "sitemap missing industry pages");
-  const locs = [...xml.matchAll(/<loc>([^<]+)/g)].map((m) => m[1]);
-  assert.equal(locs.length, new Set(locs).size, "sitemap has duplicate <loc> entries");
+test("sitemap lists industry and product detail pages as final URLs", () => {
+ const xml = read("sitemap.xml");
+ assert.match(xml, /https:\/\/masest\.co\/industries\/oil-gas/, "sitemap missing industry pages");
+ assert.match(xml, /https:\/\/masest\.co\/products\/hcr/, "sitemap missing product detail pages");
+ assert.doesNotMatch(xml, /<loc>https:\/\/masest\.co\/[^<]+\.html<\/loc>/, "sitemap should list final extensionless URLs");
+ const locs = [...xml.matchAll(/<loc>([^<]+)/g)].map((m) => m[1]);
+ assert.equal(locs.length, new Set(locs).size, "sitemap has duplicate <loc> entries");
 });
 test("product no-script fallback starts with an h1", () => {
   const html = read("product.html");
