@@ -10,7 +10,7 @@ test("package exposes one-command build and verification scripts", () => {
   const scripts = pkg.scripts || {};
 
   assert.match(scripts.check || "", /node tools\/check-js\.mjs/);
-  assert.match(scripts.test || "", /node --test --test-concurrency=1 tests\/\*\.test\.mjs/);
+  assert.match(scripts.test || "", /node --test --test-concurrency=1 --test-timeout=\d+ tests\/\*\.test\.mjs/);
   assert.match(scripts.build || "", /node tools\/cf-build\.mjs/);
   assert.match(scripts.verify || "", /npm run check && npm test && npm run build/);
   assert.match(scripts.serve || "", /python3 -m http\.server 4195/);

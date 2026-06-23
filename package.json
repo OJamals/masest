@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "check": "node tools/check-js.mjs",
-    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "test": "node --test --test-concurrency=1 --test-timeout=120000 tests/*.test.mjs",
     "build": "node tools/cf-build.mjs",
     "verify": "npm run check && npm test && npm run build && npm run verify:site",
     "verify:site": "node tools/verify_site.mjs",
