@@ -2,7 +2,7 @@
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
-import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, confirmDialog } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -513,6 +513,53 @@ function wireProfileForm() {
 function wireSecurityForm() {
   $('secEmail').textContent = ACCOUNT?.email || 'Not set';
   $('secLogout').addEventListener('click', async () => { try { await logout(); } catch {} location.href = 'account.html'; });
+
+  // Email change — Supabase sends a confirmation link; the email only switches once verified.
+  $('emailChangeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = $('secEmailStatus'); const input = $('secNewEmail');
+    status.textContent = 'Sending…'; status.dataset.state = '';
+    try {
+      const r = await api('/api/account/me', { method: 'POST', body: { email: input.value.trim() } });
+      status.textContent = r.unchanged ? 'That is already your email.' : 'Check your inbox to confirm the change.';
+      status.dataset.state = 'ok';
+      if (!r.unchanged) input.value = '';
+    } catch (err) {
+      status.textContent = err.data?.error === 'invalid_email' ? 'Enter a valid email address.' : 'Could not update email. Try again.';
+      status.dataset.state = 'err';
+    }
+  });
+
+  // GDPR data export — stream the JSON document to a file download.
+  $('dataExportBtn').addEventListener('click', async () => {
+    const status = $('privacyStatus');
+    status.textContent = 'Preparing export…'; status.dataset.state = '';
+    try {
+      const data = await api('/api/account/export');
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = 'masest-data-export.json'; a.click();
+      URL.revokeObjectURL(url);
+      status.textContent = 'Download started.'; status.dataset.state = 'ok';
+    } catch { status.textContent = 'Could not export your data. Try again.'; status.dataset.state = 'err'; }
+  });
+
+  // GDPR account deletion — irreversible; double-confirm via the shared dialog (no native confirm()).
+  $('acctDeleteBtn').addEventListener('click', async () => {
+    const ok = await confirmDialog(
+      'Permanently delete your account? Your sign-in and personal details are erased. Order history is kept (anonymized) for tax and accounting records. This cannot be undone.',
+      { confirmText: 'Delete account', cancelText: 'Keep account', danger: true },
+    );
+    if (!ok) return;
+    const status = $('privacyStatus');
+    status.textContent = 'Deleting…'; status.dataset.state = '';
+    try {
+      await api('/api/account/delete', { method: 'POST', body: { confirm: 'DELETE' } });
+      try { await logout(); } catch {}
+      location.href = 'index.html';
+    } catch { status.textContent = 'Could not delete your account. Contact support.'; status.dataset.state = 'err'; }
+  });
+
   $('secReset').addEventListener('click', async () => {
     const status = $('secStatus');
     const btn = $('secReset');

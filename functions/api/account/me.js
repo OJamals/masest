@@ -1,8 +1,15 @@
-// GET /api/account/me — returns the caller's profile + company (incl. approval status & NET terms).
-import { adminClient, userFromRequest, json } from '../../_lib/supabase.js';
+// GET  /api/account/me — returns the caller's profile + company (incl. approval status & NET terms).
+// POST /api/account/me — change the caller's login email (Supabase double opt-in re-verification).
+import { createClient } from '@supabase/supabase-js';
+import { adminClient, userFromRequest, json, readBody } from '../../_lib/supabase.js';
 import { isStaffEmail } from '../../_lib/authz.js';
 import { buildAccountSetup } from '../../_lib/setup.js';
 import { companyCreditState } from '../../_lib/credit.js';
+
+// Pragmatic email shape check — the real gate is Supabase's confirmation email to the new address.
+export function isValidEmail(value) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value || '').trim());
+}
 
 export async function onRequestGet({ request, env }) {
   const { user } = await userFromRequest(request, env);
@@ -50,4 +57,26 @@ export async function onRequestGet({ request, env }) {
     credit,
     setup: buildAccountSetup(profile, company),
   });
+}
+
+// Change the caller's login email. Uses a user-scoped client so Supabase runs its
+// native secure-email-change flow (confirmation links to old + new addresses); the
+// email only switches once the new address is verified. No admin override here.
+export async function onRequestPost({ request, env }) {
+  const { user, token } = await userFromRequest(request, env);
+  if (!user || !token) return json(401, { error: 'unauthenticated' });
+
+  const { email } = await readBody(request);
+  const clean = String(email || '').trim().toLowerCase();
+  if (!isValidEmail(clean)) return json(400, { error: 'invalid_email' });
+  if (clean === String(user.email || '').toLowerCase()) return json(200, { unchanged: true, email: clean });
+
+  const sb = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { error } = await sb.auth.updateUser({ email: clean });
+  if (error) return json(400, { error: 'email_update_failed', detail: error.message });
+
+  return json(200, { pending_verification: true, email: clean });
 }

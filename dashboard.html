@@ -377,10 +377,25 @@
           <div class="dash-card">
             <h2 class="dash-section-title">Security</h2>
             <div class="dash-row"><span>Account email</span><b id="secEmail">Not set</b></div>
+            <form id="emailChangeForm" class="security-email-form">
+              <div class="field"><label for="secNewEmail">Change account email</label>
+                <input id="secNewEmail" type="email" autocomplete="email" placeholder="new@email.com"></div>
+              <button class="btn btn-secondary btn-sm" id="secEmailBtn" type="submit">Update email</button>
+              <span class="dash-status" id="secEmailStatus" role="status" aria-live="polite"></span>
+            </form>
             <div class="security-actions">
               <button class="btn btn-primary btn-sm" id="secReset" type="button">Send password reset</button>
               <button class="btn btn-ghost btn-sm" id="secLogout" type="button">Sign out</button>
               <span class="dash-status" id="secStatus" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+          <div class="dash-card">
+            <h2 class="dash-section-title">Privacy &amp; data</h2>
+            <p class="muted">Download everything we hold for your account, or permanently close it.</p>
+            <div class="security-actions">
+              <button class="btn btn-secondary btn-sm" id="dataExportBtn" type="button">Download my data</button>
+              <button class="btn btn-ghost btn-sm" id="acctDeleteBtn" type="button">Delete my account</button>
+              <span class="dash-status" id="privacyStatus" role="status" aria-live="polite"></span>
             </div>
           </div>
         </div>
