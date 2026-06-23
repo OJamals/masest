@@ -119,7 +119,9 @@ test('search inputs filter in memory (refetch:false), not refetch per keystroke'
 test('list renderers gate the fetch on a refetch flag', () => {
   assert.match(admin, /async function renderOrders\(\{ append = false, refetch = true \} = \{\}\)/);
   assert.match(admin, /async function renderCompanies\(\{ append = false, refetch = true \} = \{\}\)/);
-  assert.match(admin, /async function renderProducts\(\{ refetch = true \} = \{\}\)/);
+  // Products tab split into its own module in #36; same refetch-gated signature.
+  const products = readFileSync(join(root, 'js/admin/products.js'), 'utf8');
+  assert.match(products, /async function renderProducts\(\{ refetch = true \} = \{\}\)/);
 });
 
 test('setTab renders cached tabs from memory instead of refetching', () => {

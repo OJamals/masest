@@ -7,7 +7,9 @@ const readRoot = (path) => readFileSync(new URL(`../${path.replace(/^site\//, ""
 
 test("admin UI can add, edit, and remove purchasable volume variants", () => {
   const html = read("admin.html");
-  const admin = read("js/admin.js");
+  // Products tab (incl. variant CRUD) split into its own module in #36.
+  assert.match(read("js/admin.js"), /from\s+["']\.\/admin\/products\.js["']/, "admin should import the products module");
+  const admin = read("js/admin/products.js");
 
   for (const id of ["variantForm", "nvProductSku", "nvSku", "nvLabel", "nvGallons", "nvPrice", "nvStock"]) {
     assert.match(html, new RegExp(`id="${id}"`), `missing ${id}`);
