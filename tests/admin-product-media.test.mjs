@@ -7,7 +7,9 @@ const readRoot = (path) => readFileSync(new URL(`../${path.replace(/^site\//, ""
 
 test("admin catalog can manage product photos and remove products", () => {
   const html = read("admin.html");
-  const admin = read("js/admin.js");
+  // Products tab split into its own module in #36.
+  assert.match(read("js/admin.js"), /from\s+["']\.\/admin\/products\.js["']/, "admin should import the products module");
+  const admin = read("js/admin/products.js");
 
   assert.match(html, /id="npImageUrl"/, "product form should collect a public image URL");
   assert.match(html, /id="npPhotoAlt"/, "product form should collect product photo alt text");
