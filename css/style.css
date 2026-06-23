@@ -208,7 +208,7 @@ h3 { font-family: var(--font); letter-spacing: -0.022em; line-height: 1.06; font
    descenders collide with the subhead once the heading wraps. Hero wrappers that set
    their own subhead margin (.hero-copy, .page-hero, .contact-hero, …) are equal-or-
    higher specificity and defined later, so they still win — this only fills the gap. */
-.display + .subhead { margin-top: clamp(14px, 2.5vw, 22px); }
+.display + .subhead { margin-top: 22px; }
 /* Tabular,
 lined-up figures for all data numerics */
 .display,
@@ -432,7 +432,7 @@ scoped to the hero */
   display: grid; grid-template-columns: 1.06fr .94fr; gap: clamp(40px, 5vw, 72px); align-items: center;
 }
 .hero-copy .subhead { margin: 22px 0 34px; max-width: 30ch; }
-.contact-hero .subhead { margin-top: clamp(32px, 4vw, 48px); }
+.contact-hero .subhead { margin-top: 22px; }
 .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
 .cart-feedback {
   margin-top: 14px;
@@ -929,7 +929,7 @@ no number circles) ---------- */
 /* ---------- Page hero (interior,
 light) ---------- */
 .page-hero { padding: 76px 0 64px; }
-.page-hero .subhead { margin-top: 16px; }
+.page-hero .subhead { margin-top: 22px; }
 body:has(.about-router) .page-hero { padding-bottom: clamp(28px, 4vw, 44px); }
 body:has(.about-router) .page-hero + section { padding-top: clamp(42px, 6vw, 66px); }
 body:has(.about-router) .page-hero + section .hero-grid { align-items: start; }
