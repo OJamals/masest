@@ -29,6 +29,7 @@ test("admin entrypoint wires per-tab split modules (#36)", () => {
     { mod: "offers", factory: "createOffersTab", inline: /async function renderOffers\s*\(/ },
     { mod: "products", factory: "createProductsTab", inline: /async function renderProducts\s*\(/ },
     { mod: "pricing", factory: "createPricingTab", inline: /async function renderPricing\s*\(/ },
+    { mod: "customers", factory: "createCustomersTab", inline: /async function renderCustomers\s*\(/ },
   ];
   for (const { mod, factory, inline } of tabs) {
     assert.match(admin, new RegExp(`from\\s+["']\\./admin/${mod}\\.js["']`), `admin should import ./admin/${mod}.js`);
