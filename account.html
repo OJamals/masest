@@ -15,25 +15,6 @@
 <style>
   /* Full-width wrap (inherits .wrap 1180/28px gutters); the sign-in card is left-aligned with the hero copy. */
   #acctAuth { max-width: 440px; }
-  /* Signed-in view: a two-column desk so the summary fills the space instead of floating alone. */
-  .acct-summary { display: grid; grid-template-columns: 1.3fr .85fr; gap: clamp(16px, 2.2vw, 26px); align-items: start; max-width: 940px; }
-  .acct-summary[hidden] { display: none; }
-  .acct-summary-main { padding: 26px 24px; }
-  .acct-summary-side { padding: 22px 20px; align-self: start; }
-  .acct-summary-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
-  .acct-side-title { font-size: .76rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft); margin: 0 0 12px; }
-  .acct-link { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 13px; padding: 11px 12px; border-radius: var(--r-input); color: var(--ink); transition: background .2s ease; }
-  .acct-link + .acct-link { margin-top: 2px; }
-  .acct-link > i:first-child { font-size: 1.3rem; color: var(--accent-ink); }
-  .acct-link .acct-link-copy { display: flex; flex-direction: column; line-height: 1.3; }
-  .acct-link .acct-link-copy b { font-size: .95rem; font-weight: 600; }
-  .acct-link .acct-link-copy small { color: var(--ink-soft); font-size: .8rem; }
-  .acct-link-go { font-size: 1rem; color: var(--ink-soft); transition: transform .2s ease, color .2s ease; }
-  .acct-link:hover { background: var(--accent-soft); }
-  .acct-link:hover .acct-link-go { transform: translateX(3px); color: var(--accent-ink); }
-  @media (max-width: 760px) {
-    .acct-summary { grid-template-columns: 1fr; max-width: 440px; }
-  }
   /* Focused single-column auth: side-by-side email/password reads as an awkward wide sheet. */
   #acctAuth .field-grid { grid-template-columns: 1fr; gap: 14px; }
   #acctAuth .form-card { padding: 26px 24px; }
@@ -160,31 +141,6 @@
         <button type="button" class="btn btn-ghost btn-sm u-mt-10" id="cLogout">Sign out</button>
       </div>
 
-      <!-- Signed-in summary: account + recent orders, with a quick-actions desk panel -->
-      <div id="acctSummary" class="acct-summary" hidden>
-        <div class="form-card acct-summary-main">
-          <h2 class="headline headline--xs">Account</h2>
-          <div class="acct-row"><span>Signed in as</span><b id="smEmail">Not set</b></div>
-          <div class="acct-row"><span>Company</span><b id="smCompany">Not set</b></div>
-          <div class="acct-row"><span>Status</span><span class="acct-badge" id="smStatus" data-s="pending">pending</span></div>
-          <div class="acct-row"><span>Online ordering</span><b id="smCheckout">Not set</b></div>
-          <div class="acct-row"><span>NET terms</span><b id="smNet">Not set</b></div>
-          <p class="acct-status u-minh-0" id="smNote" data-state=""></p>
-          <div id="smOrders"></div>
-          <div class="acct-summary-actions">
-            <a class="btn btn-primary" href="dashboard.html">Open dashboard</a>
-            <button type="button" class="btn btn-ghost" id="logoutBtn">Sign out</button>
-          </div>
-        </div>
-        <aside class="form-card acct-summary-side" aria-label="Quick actions">
-          <h3 class="acct-side-title">Quick actions</h3>
-          <a class="acct-link" href="products.html"><i class="ph ph-flask" aria-hidden="true"></i><span class="acct-link-copy"><b>Browse the catalog</b><small>Find a VertKleen replacement</small></span><i class="ph ph-arrow-right acct-link-go" aria-hidden="true"></i></a>
-          <a class="acct-link" href="dashboard.html#orders"><i class="ph ph-package" aria-hidden="true"></i><span class="acct-link-copy"><b>Your orders</b><small>Track and reorder</small></span><i class="ph ph-arrow-right acct-link-go" aria-hidden="true"></i></a>
-          <a class="acct-link" href="cart.html"><i class="ph ph-shopping-cart-simple" aria-hidden="true"></i><span class="acct-link-copy"><b>Cart &amp; checkout</b><small>Card, ACH, or NET terms</small></span><i class="ph ph-arrow-right acct-link-go" aria-hidden="true"></i></a>
-          <a class="acct-link" href="contact.html"><i class="ph ph-chat-circle-text" aria-hidden="true"></i><span class="acct-link-copy"><b>Talk to sales</b><small>Quotes and program help</small></span><i class="ph ph-arrow-right acct-link-go" aria-hidden="true"></i></a>
-        </aside>
-      </div>
-
     </div>
   </section>
 </main>
@@ -226,14 +182,10 @@
 
 <!-- Auth wiring: module imports the Supabase helper -->
 <script type="module">
-  import { register, login, logout, me, completeRegistration, resendConfirmation, resetPasswordForEmail, updatePassword, onPasswordRecovery, orders as fetchOrders } from "./js/auth.js";
-  import { add as cartAdd, clear as cartClear } from "./js/cart.js";
+  import { register, login, logout, me, completeRegistration, resendConfirmation, resetPasswordForEmail, updatePassword, onPasswordRecovery } from "./js/auth.js";
 
   const $ = (id) => document.getElementById(id);
   const authBox = $("acctAuth");
-  const summary = $("acctSummary");
-  const heroSub = $("acctSubhead");
-  const HERO_SUB_DEFAULT = heroSub ? heroSub.textContent : "";
 
   const PENDING_KEY = "masest_pending_registration";
   const isLocalPreview = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
@@ -284,7 +236,6 @@
   function setRecoveryMode(on) {
     completeCard.hidden = true;
     authBox.hidden = false;
-    summary.hidden = true;
     document.querySelectorAll(".acct-pane").forEach((pane) => {
       pane.hidden = pane.dataset.pane !== (on ? "reset-password" : "login");
     });
@@ -296,70 +247,28 @@
   }
 
   function showComplete() {
-    authBox.hidden = true; summary.hidden = true; completeCard.hidden = false;
+    authBox.hidden = true; completeCard.hidden = false;
     $("cCompany").focus();
   }
-  function showSummary(data) {
+  function showAuth() {
     completeCard.hidden = true;
-    if (!data) {
-      authBox.hidden = false; summary.hidden = true;
-      if (heroSub) heroSub.textContent = HERO_SUB_DEFAULT;
-      return;
-    }
-    authBox.hidden = true; summary.hidden = false;
-    $("smEmail").textContent = data.email || "Not set";
-    $("smCompany").textContent = data.company?.name || "Not set";
-    const st = data.company?.status || "pending";
-    const badge = $("smStatus"); badge.textContent = st; badge.dataset.s = st;
-    $("smCheckout").textContent = data.can_checkout ? "Enabled" : "Pending approval";
-    $("smNet").textContent = data.can_use_net_terms ? `NET-${data.company?.net_terms_days}` : "Not enabled";
-    $("smNote").textContent = st === "approved" ? "" : "Your account is under review. We will email you when ordering is enabled.";
-    $("smNote").dataset.state = st === "approved" ? "ok" : "";
-    if (heroSub) {
-      const who = data.company?.name || data.email;
-      heroSub.textContent = (who ? "Signed in as " + who + ". " : "") + "Reorder approved products, track orders, and keep quotes moving.";
-    }
+    authBox.hidden = false;
   }
-
-  async function renderOrders() {
-    const box = $("smOrders");
-    if (!box) return;
-    let list = [];
-    box.innerHTML = `<div class="skeleton skeleton-block" style="height:48px;margin-bottom:8px"></div>`.repeat(2);
-    try { list = await fetchOrders(); } catch { list = []; }
-    if (!list.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>`; return; }
-    const money = (n, c) => (c || "USD").toUpperCase() + " " + Number(n || 0).toFixed(2);
-    const fmtDate = (s) => { try { return new Date(s).toLocaleDateString(); } catch { return ""; } };
-    box.innerHTML = '<h3 style="font-size:1rem;margin:18px 0 6px">Recent orders</h3>'
-      + list.map((o, i) => {
-          const items = o.order_items || [];
-          const n = items.reduce((s, it) => s + (it.qty || 0), 0);
-          return '<div class="acct-row"><span>' + fmtDate(o.created_at) + " · " + o.status + " · " + n + " item" + (n === 1 ? "" : "s")
-            + '</span><span><b>' + money(o.total, o.currency) + "</b> "
-            + (items.length ? '<button type="button" class="btn btn-ghost btn-sm" data-reorder="' + i + '" style="margin-left:10px">Reorder</button>' : "")
-            + "</span></div>";
-        }).join("");
-    box.querySelectorAll("[data-reorder]").forEach((b) => b.addEventListener("click", () => {
-      const o = list[Number(b.dataset.reorder)];
-      cartClear();
-      (o.order_items || []).forEach((it) => cartAdd(it.sku, it.qty));
-      location.href = "cart.html";
-    }));
-  }
-
   async function refresh() {
     await completePendingRegistration();
     let data = null;
     try { data = await me(); } catch (e) {}
     if (isRecoveryUrl()) { setRecoveryMode(true); return; }
     if (data && data.needs_profile) { showComplete(); return; }
-    showSummary(data);
-    // If we arrived from checkout (account.html?return=cart.html), go back once signed in.
     if (data) {
+      // Signed in: the dashboard is the single signed-in surface (#32). Send them there,
+      // honoring ?return= when we arrived from a checkout bounce.
       const ret = new URLSearchParams(location.search).get("return");
-      if (ret && /^[a-z0-9._\/-]+\.html(\?[^\s"'<>]*)?(#[^\s"'<>]*)?$/i.test(ret) && !ret.includes("//")) { location.replace(ret); return; }
+      const dest = (ret && /^[a-z0-9._\/-]+\.html(\?[^\s"'<>]*)?(#[^\s"'<>]*)?$/i.test(ret) && !ret.includes("//")) ? ret : "dashboard.html";
+      location.replace(dest);
+      return;
     }
-    if (data) renderOrders();
+    showAuth();
   }
 
   // Finish setup for a confirmed user that has no company/profile yet.
@@ -380,7 +289,7 @@
       if (e.message === "already_registered") await refresh();
     }
   });
-  $("cLogout").addEventListener("click", async () => { await logout(); showSummary(null); });
+  $("cLogout").addEventListener("click", async () => { await logout(); showAuth(); });
 
   $("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -470,8 +379,6 @@
       setStatus(status, msg, "err");
     } finally { resetCaptcha(); btn.disabled = false; }
   });
-
-  $("logoutBtn").addEventListener("click", async () => { await logout(); showSummary(null); });
 
   // Handle the Supabase email-confirmation redirect landing on this page.
   function handleAuthRedirect() {
