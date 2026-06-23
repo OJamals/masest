@@ -387,19 +387,48 @@ async function renderNotifications({ append = false } = {}) {
   if (!st.items.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No notifications</div><div class="empty-body">Order updates, messages, and offers show up here.</div></div>`; return; }
   const icon = { order: 'ph-package', message: 'ph-chat-circle', offer: 'ph-tag', account: 'ph-user-check', system: 'ph-info' };
   box.innerHTML = st.items.map((n) => `
-    <div class="notif ${n.read ? '' : 'unread'}">
+    <div class="notif ${n.read ? '' : 'unread'}" data-id="${esc(n.id)}">
       <i class="ph ${icon[n.type] || 'ph-info'}" aria-hidden="true"></i>
         <div class="notif-body">
           <div><b>${esc(n.title)}</b> <span class="muted notif-time">· ${fmtDT(n.created_at)}</span></div>
         ${n.body ? `<div class="muted">${esc(n.body)}</div>` : ''}
-          ${n.link ? `<a href="${esc(safeUrl(n.link))}" class="muted notif-link">View →</a>` : ''}
+          ${n.link ? `<a href="${esc(safeUrl(n.link))}" class="muted notif-link" data-id="${esc(n.id)}">View →</a>` : ''}
       </div></div>`).join('') + pagerHtml('data-load-more-notifs', st);
   box.querySelector('[data-load-more-notifs]')?.addEventListener('click', () => renderNotifications({ append: true }));
+}
+// Clear one unread notification from every on-screen badge without a reload.
+// Guarded on the row's `unread` class so re-clicking a read item never over-decrements.
+function markNotifReadUI(row) {
+  if (!row || !row.classList.contains('unread')) return;
+  row.classList.remove('unread');
+  const dec = (n) => Math.max(0, (parseInt(n, 10) || 0) - 1);
+  const b = $('badgeNotifs'); if (b) setBadge('badgeNotifs', dec(b.textContent));
+  document.querySelectorAll('.acct-notif-dot').forEach((d) => {
+    const n = dec(d.textContent); if (n <= 0) d.remove(); else d.textContent = n > 9 ? '9+' : String(n);
+  });
+  const navLink = document.querySelector('[data-account-nav-notifications]');
+  const cnt = navLink?.querySelector('.acct-menu-count');
+  if (cnt) { const n = dec(cnt.textContent); cnt.textContent = n > 9 ? '9+' : String(n); cnt.hidden = n <= 0; navLink.classList.toggle('has-unread', n > 0); }
 }
 function wireNotifications() {
   $('markAllRead').addEventListener('click', async () => {
     try { await api('/api/account/notifications', { method: 'POST', body: { all: true } }); } catch {}
     loaded.notifications = false; await renderNotifications();
+  });
+  // Opening a notification: mark it read (so the bubble clears) and, when it points
+  // back into this dashboard, switch tabs in-page instead of a full reload to overview.
+  $('notifBody').addEventListener('click', (e) => {
+    const a = e.target.closest('.notif-link'); if (!a) return;
+    const id = a.dataset.id; if (!id) return;
+    markNotifReadUI(a.closest('.notif'));
+    api('/api/account/notifications', { method: 'POST', body: { id } }).catch(() => {});
+    const url = new URL(a.href, location.href);
+    const norm = (p) => p.replace(/\.html$/, '');
+    if (norm(url.pathname) === norm(location.pathname)) {
+      e.preventDefault();
+      const hash = url.hash.slice(1);
+      selectTab(DASH_TABS.includes(hash) ? hash : 'overview');
+    }
   });
   wireNotificationPrefs();
 }
