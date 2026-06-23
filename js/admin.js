@@ -118,7 +118,7 @@ function setTab(tab) {
   // refetching; first visit (or post-mutation re-render) fetches. offers/traffic self-cache.
   const cached = state.loaded.has(state.tab);
   const render = {
-    overview: () => { renderStats(state.stats); runSeoAudit(); },
+    overview: () => { renderStats(state.stats); runSeoAudit(); wireReports(); },
     orders: renderOrders,
     companies: renderCompanies,
     customers: renderCustomers,
@@ -197,6 +197,51 @@ function renderActionRail(actions = []) {
  return `<div class="adm-card"><h2>Priority actions</h2><div class="adm-action-list">${actions.map((item) => `
  <a class="adm-action-item" href="${esc(safeUrl(item.href || '#overview'))}"><span><b>${esc(item.label)}</b><small class="muted">Priority ${esc(item.priority || '')}</small></span><strong>${esc(item.value || 0)}</strong></a>
  `).join('')}</div></div>`;
+}
+
+// Authenticated CSV download (Bearer) — fetch then blob-save, since a plain link
+// can't attach the auth header. Mirrors the orders export above.
+async function downloadCsv(url, filename, statusId) {
+  message(statusId, 'Preparing export...');
+  try {
+    const token = await getToken();
+    const r = await fetch(url, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+    if (!r.ok) throw new Error('export_failed');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await r.blob());
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+    message(statusId, 'Exported.', 'ok');
+  } catch { message(statusId, 'Could not export the CSV. Retry.', 'err'); }
+}
+
+// Reports & exports card (#96). Bound once — the overview tab re-renders on each visit.
+let reportsWired = false;
+function wireReports() {
+  if (reportsWired || !$('repRun')) return;
+  reportsWired = true;
+  const range = () => {
+    const from = $('repFrom').value, to = $('repTo').value;
+    const qs = new URLSearchParams();
+    if (from) qs.set('from', from);
+    if (to) qs.set('to', to);
+    return qs.toString();
+  };
+  $('repRun').addEventListener('click', async () => {
+    message('repResult', 'Running report...');
+    try {
+      const r = await api('/api/admin/reports' + (range() ? '?' + range() : ''));
+      $('repResult').dataset.state = 'ok';
+      $('repResult').textContent = `Revenue ${money(r.revenue)} · Tax ${money(r.tax)} · ${r.paid_orders}/${r.orders} paid · AOV ${money(r.average_order_value)}`;
+    } catch { message('repResult', 'Could not run the report. Retry.', 'err'); }
+  });
+  $('repOrdersCsv').addEventListener('click', () =>
+    downloadCsv('/api/admin/reports?export=csv' + (range() ? '&' + range() : ''), 'masest-revenue.csv', 'repResult'));
+  $('repCustomersCsv').addEventListener('click', () =>
+    downloadCsv('/api/admin/customers?export=csv', 'masest-customers.csv', 'repResult'));
+  $('repQuotesCsv').addEventListener('click', () =>
+    downloadCsv('/api/admin/quotes?export=csv', 'masest-quotes.csv', 'repResult'));
 }
 
 function renderStats(stats = {}) {
