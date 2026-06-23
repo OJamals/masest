@@ -3,7 +3,7 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog } from '../util.js';
+import { esc, confirmDialog, delegate } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
 export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager }) {
@@ -153,12 +153,10 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       }
     }
     const pager = admListPager('data-load-more-companies', state.companies.length, state.companiesTotal, state.companiesHasMore);
-    const wireMore = () => box.querySelector('[data-load-more-companies]')?.addEventListener('click', () => renderCompanies({ append: true }));
     const q = $('coSearch').value.trim().toLowerCase();
     const companies = state.companies.filter((company) => JSON.stringify(company).toLowerCase().includes(q));
     if (!companies.length) {
       box.innerHTML = admEmpty('ph-buildings', q ? 'No matching accounts' : 'No accounts', q ? 'No accounts match your search.' : 'New B2B account signups appear here for approval.') + pager;
-      wireMore();
       return;
     }
     box.innerHTML = `<div class="adm-tools" style="margin-bottom:10px"><button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button></div><table class="adm"><thead><tr><th><input type="checkbox" id="coAll" aria-label="Select all"></th><th>Company</th><th>Status</th><th>Setup</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
@@ -175,30 +173,30 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       </tr>
     `).join('')}</tbody></table>` + pager;
     restoreDirty(box, snap);
-    box.querySelectorAll('[data-open-company]').forEach((button) => {
-      button.addEventListener('click', () => openCompanyDetail(button.dataset.openCompany));
-    });
-    wireMore();
-    box.querySelectorAll('[data-approve]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.approve;
-        await api('/api/admin/companies', {
-          method: 'POST',
-          body: {
-            id,
-            action: 'approve',
-            net_terms_days: Number(box.querySelector(`[data-net="${CSS.escape(id)}"]`).value || 0),
-            credit_limit: Number(box.querySelector(`[data-credit="${CSS.escape(id)}"]`).value || 0),
-            price_tier: box.querySelector(`[data-tier="${CSS.escape(id)}"]`).value,
-          },
-        });
-        renderCompanies();
+  }
+
+  // List actions delegated once on the stable #admCompanies container (#36).
+  function wireCompanies() {
+    const box = $('admCompanies');
+    if (!box) return;
+    delegate(box, 'click', '[data-open-company]', (event, button) => openCompanyDetail(button.dataset.openCompany));
+    delegate(box, 'click', '[data-load-more-companies]', () => renderCompanies({ append: true }));
+    delegate(box, 'click', '[data-approve]', async (event, button) => {
+      const id = button.dataset.approve;
+      await api('/api/admin/companies', {
+        method: 'POST',
+        body: {
+          id,
+          action: 'approve',
+          net_terms_days: Number(box.querySelector(`[data-net="${CSS.escape(id)}"]`).value || 0),
+          credit_limit: Number(box.querySelector(`[data-credit="${CSS.escape(id)}"]`).value || 0),
+          price_tier: box.querySelector(`[data-tier="${CSS.escape(id)}"]`).value,
+        },
       });
+      renderCompanies();
     });
-    const coAll = $('coAll');
-    if (coAll) coAll.addEventListener('change', () => box.querySelectorAll('.co-check').forEach((c) => { c.checked = coAll.checked; }));
-    const bulk = $('bulkApprove');
-    if (bulk) bulk.addEventListener('click', async () => {
+    delegate(box, 'change', '#coAll', (event, coAll) => box.querySelectorAll('.co-check').forEach((c) => { c.checked = coAll.checked; }));
+    delegate(box, 'click', '#bulkApprove', async (event, bulk) => {
       const ids = [...box.querySelectorAll('.co-check:checked')].map((c) => c.value);
       if (!ids.length) return;
       if (!(await confirmDialog(`Approve ${ids.length} account(s)?`, { confirmText: 'Approve' }))) return;
@@ -210,5 +208,5 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     });
   }
 
-  return { renderCompanies };
+  return { renderCompanies, wireCompanies };
 }

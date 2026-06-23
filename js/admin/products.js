@@ -2,7 +2,7 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog } from '../util.js';
+import { esc, safeUrl, confirmDialog, delegate } from '../util.js';
 import { getToken } from '../auth.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
@@ -50,26 +50,23 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     </tr>
   `).join('')}</tbody></table>`;
     restoreDirty(box, snap);
+  }
 
-    box.querySelectorAll('[data-save-product]').forEach((button) => {
-      button.addEventListener('click', () => saveProductRow(button.dataset.saveProduct));
-    });
-    box.querySelectorAll('[data-remove-product]').forEach((button) => {
-      button.addEventListener('click', () => removeProduct(button.dataset.removeProduct));
-    });
-    box.querySelectorAll('[data-save-variant]').forEach((button) => {
-      button.addEventListener('click', () => saveVariantRow(button.dataset.saveVariant));
-    });
-    box.querySelectorAll('[data-remove-variant]').forEach((button) => {
-      button.addEventListener('click', () => removeVariant(button.dataset.removeVariant));
-    });
-    box.querySelectorAll('[data-imgfile]').forEach((inp) => inp.addEventListener('change', () => {
+  // Row + media actions delegated once on the stable #admProducts container (#36).
+  function wireProducts() {
+    const box = $('admProducts');
+    if (!box) return;
+    delegate(box, 'click', '[data-save-product]', (event, button) => saveProductRow(button.dataset.saveProduct));
+    delegate(box, 'click', '[data-remove-product]', (event, button) => removeProduct(button.dataset.removeProduct));
+    delegate(box, 'click', '[data-save-variant]', (event, button) => saveVariantRow(button.dataset.saveVariant));
+    delegate(box, 'click', '[data-remove-variant]', (event, button) => removeVariant(button.dataset.removeVariant));
+    delegate(box, 'change', '[data-imgfile]', (event, inp) => {
       if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'primary');
-    }));
-    box.querySelectorAll('[data-galfile]').forEach((inp) => inp.addEventListener('change', () => {
+    });
+    delegate(box, 'change', '[data-galfile]', (event, inp) => {
       if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'gallery');
-    }));
-    box.querySelectorAll('[data-gact]').forEach((btn) => btn.addEventListener('click', async () => {
+    });
+    delegate(box, 'click', '[data-gact]', async (event, btn) => {
       const sku = btn.closest('[data-product]')?.dataset.product;
       if (!sku) return;
       const prod = (state.products || []).find((x) => x.sku === sku);
@@ -90,7 +87,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         message('prodStatus', 'Gallery updated.', 'ok');
         await renderProducts();
       } catch (err) { message('prodStatus', err.data?.error || 'Could not update the gallery. Retry.', 'err'); btn.disabled = false; }
-    }));
+    });
   }
 
   async function uploadProductImage(sku, file, slot) {
@@ -244,5 +241,5 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     });
   }
 
-  return { renderProducts, wireProductForm, wireVariantForm };
+  return { renderProducts, wireProductForm, wireVariantForm, wireProducts };
 }
