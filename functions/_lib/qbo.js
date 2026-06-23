@@ -115,6 +115,44 @@ export function buildInvoicePaymentPayload({ order, customerRef, invoiceId }) {
   };
 }
 
+// #22 — reversing CreditMemo for a refund. A full refund reverses the exact invoice
+// lines; a partial refund can't be mapped to specific lines, so it posts one line for
+// the refunded dollar amount against the first item's ref (the credit-memo TOTAL is
+// what reconciles against AR — line attribution on partials is approximate and the
+// owner can recategorize in QBO).
+// ponytail: single-line partial credit memo; only full refunds reverse exact lines.
+export function buildCreditMemoPayload({ order, items = [], customerRef, itemRefs, taxExempt = false, amount, fullyRefunded = false }) {
+  let lines;
+  if (fullyRefunded) {
+    lines = items.map((item) => lineFor(item, itemRefs, taxExempt));
+  } else {
+    const refundAmount = Number(amount || 0);
+    const first = items[0];
+    const ref = first ? itemRefs?.[first.sku] : null;
+    if (!ref) throw new Error('qbo_credit_memo_item_ref_missing');
+    lines = [{
+      DetailType: 'SalesItemLineDetail',
+      Amount: refundAmount,
+      Description: `Partial refund for order ${order.id}`,
+      SalesItemLineDetail: {
+        ItemRef: { value: ref },
+        Qty: 1,
+        UnitPrice: refundAmount,
+        ...(taxExempt ? { TaxCodeRef: { value: 'NON' } } : {}),
+      },
+    }];
+  }
+  const billEmail = billEmailFor(order);
+  return {
+    CustomerRef: { value: customerRef },
+    PrivateNote: `MASEST refund for order ${order.id}`,
+    Line: lines,
+    // Only a full reversal carries the original tax; a partial dollar refund is posted untaxed.
+    ...(fullyRefunded ? { TxnTaxDetail: { TotalTax: Number(order.tax || 0) } } : {}),
+    ...(billEmail ? { BillEmail: billEmail } : {}),
+  };
+}
+
 const GENERIC_CUSTOMER_NAME = 'Online Sales (MASEST)';
 
 // ADR (#41): paid orders post an Invoice + a Payment, NOT a SalesReceipt. SalesReceipt
@@ -192,6 +230,42 @@ export async function syncOrder(sb, env, accessToken, realmId, order, items = []
   }
 
   return { docId, docType: plan.docType };
+}
+
+// #22 — post a reversing CreditMemo for one refund. Idempotent on the refund id
+// (DocNumber): a retried sync reuses the existing CreditMemo instead of double-crediting.
+export async function syncRefund(sb, env, accessToken, realmId, refund, order, items = [], companyNames = {}, options = {}) {
+  const fetchImpl = options.fetchImpl || fetch;
+  const plan = documentPlanFor(order, companyNames);
+  const customerRef = await findOrCreateCustomer(sb, env, accessToken, realmId, plan.customer, { fetchImpl });
+  const itemRefs = {};
+  for (const item of items || []) {
+    if (!itemRefs[item.sku]) {
+      itemRefs[item.sku] = await findOrCreateItem(sb, env, accessToken, realmId, {
+        sku: item.sku,
+        name: item.name || item.sku,
+        type: item.type,
+        mode: item.mode,
+      }, { fetchImpl });
+    }
+  }
+  const docNum = docNumber(refund.id);
+  const payload = {
+    ...buildCreditMemoPayload({
+      order, items, customerRef, itemRefs,
+      taxExempt: Boolean(options.taxExempt),
+      amount: refund.amount,
+      fullyRefunded: refund.fully_refunded,
+    }),
+    DocNumber: docNum,
+  };
+  let docId = await findTransactionByField(env, accessToken, realmId, 'CreditMemo', 'DocNumber', docNum, fetchImpl);
+  if (!docId) {
+    const created = await qboCreate(env, accessToken, realmId, 'CreditMemo', payload, fetchImpl);
+    docId = created?.CreditMemo?.Id;
+  }
+  if (!docId) throw new Error('qbo_credit_memo_id_missing');
+  return { creditMemoId: docId };
 }
 
 function qboHeaders(accessToken) {
