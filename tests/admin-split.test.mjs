@@ -18,6 +18,23 @@ test("admin entrypoint imports QuickBooks controls from a split module", () => {
   assert.match(qbo, /\/api\/admin\/qbo\/connect\?format=json/);
 });
 
+test("admin entrypoint wires per-tab split modules (#36)", () => {
+  const admin = read("js/admin.js");
+  // Each extracted tab must be imported and wired from the entrypoint, and its
+  // renderer must no longer be defined inline in admin.js.
+  const tabs = [
+    { mod: "traffic", factory: "createTrafficRenderer", inline: /function renderTrafficFunnel\s*\(/ },
+    { mod: "seo", factory: "createSeoAudit", inline: /async function runSeoAudit\s*\(/ },
+    { mod: "threads", factory: "createThreadsTab", inline: /async function renderThreads\s*\(/ },
+    { mod: "offers", factory: "createOffersTab", inline: /async function renderOffers\s*\(/ },
+  ];
+  for (const { mod, factory, inline } of tabs) {
+    assert.match(admin, new RegExp(`from\\s+["']\\./admin/${mod}\\.js["']`), `admin should import ./admin/${mod}.js`);
+    assert.match(admin, new RegExp(`${factory}\\(`), `admin should wire ${factory}`);
+    assert.doesNotMatch(admin, inline, `${mod} renderer should not be defined inline in admin.js`);
+  }
+});
+
 test("admin QuickBooks panel renders failed sync retry controls", () => {
   const html = read("admin.html");
   const qbo = read("js/admin/qbo.js");
