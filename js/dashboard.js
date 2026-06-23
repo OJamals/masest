@@ -67,9 +67,14 @@ function trackingSteps(order) {
     order.tracking_number && `Tracking: ${esc(order.tracking_number)}`,
     order.estimated_delivery_at && `ETA: ${esc(fmtDT(order.estimated_delivery_at))}`,
   ].filter(Boolean).join(' · ');
+  const events = (order.shipment_events || [])
+    .slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const history = events.length ? `<ul class="ship-history">${events.map((e) =>
+    `<li><b>${esc(e.status)}</b> · ${esc(fmtDT(e.created_at))}${e.note ? ` — ${esc(e.note)}` : ''}</li>`).join('')}</ul>` : '';
   return `<div class="trackline" aria-label="Order tracking timeline">
     ${steps.map(([key, label], index) => `<span class="${index <= activeIndex ? 'done' : ''}" data-track-step="${key}">${esc(label)}</span>`).join('')}
     ${meta ? `<p class="muted">${meta}</p>` : ''}
+    ${history}
     ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl(order.tracking_url))}" target="_blank" rel="noopener">Track shipment</a>` : ''}
   </div>`;
 }

@@ -9,7 +9,7 @@ export async function onRequestGet({ request, env }) {
 
   const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 25, maxLimit: 100 });
   const { data, error, count } = await sb.from('orders')
-    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,order_items(sku,product_sku,name,qty,unit_price,line_total)', { count: 'exact' })
+    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,order_items(sku,product_sku,name,qty,unit_price,line_total),shipment_events(status,note,created_at)', { count: 'exact' })
     .eq('company_id', companyId)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
