@@ -74,11 +74,29 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'GET') {
     const params = new URL(request.url).searchParams;
+
+    // Per-order drill-down (#95): full detail + staff-action timeline for one order.
+    const detailId = params.get('id');
+    if (detailId) {
+      const { data: order, error } = await sb.from('orders')
+        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)')
+        .eq('id', detailId).single();
+      if (error) return json(error.code === 'PGRST116' ? 404 : 500, { error: error.message });
+      const { data: timeline } = await sb.from('audit_log')
+        .select('action,actor_email,detail,created_at')
+        .eq('target_type', 'order').eq('target_id', detailId)
+        .order('created_at', { ascending: false }).limit(50);
+      return json(200, {
+        order: { ...order, net_aging: netAging(order, order.companies?.net_terms_days) },
+        timeline: timeline || [],
+      });
+    }
+
     const status = params.get('status');
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,name,qty,unit_price,line_total)', isCsv ? undefined : { count: 'exact' })
+      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);

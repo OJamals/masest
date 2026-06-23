@@ -94,3 +94,17 @@ export const confirmDialog = (message, { confirmText = 'Confirm', cancelText = '
     dlg.showModal();
     dlg.querySelector('button[value="confirm"]').focus();
   });
+
+// Read-only detail modal. `html` is trusted markup the caller assembles with esc()'d
+// data (admin views only). Native <dialog> — accessible, no framework. No-op on
+// browsers without showModal().
+export function detailDialog(html) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'detail-dialog';
+  dlg.innerHTML = `<div class="detail-dialog-body">${html}</div>`
+    + `<form method="dialog" class="detail-dialog-actions"><button class="btn btn-ghost btn-sm" value="close" type="submit">Close</button></form>`;
+  if (typeof dlg.showModal !== 'function') return;
+  document.body.appendChild(dlg);
+  dlg.addEventListener('close', () => dlg.remove());
+  dlg.showModal();
+}

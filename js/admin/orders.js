@@ -3,7 +3,7 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate } from '../util.js';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
 export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager }) {
@@ -87,7 +87,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
         <td>${esc(order.payment_method || '')}${netAgingBadge(order)}</td>
         <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-        <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>${order.status === 'net_open' ? ` <button class="btn btn-primary btn-sm" data-mark-net-paid-order="${esc(order.id)}" type="button" aria-label="Mark NET order ${esc(order.id)} paid">Mark NET paid</button>` : ''}` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
+        <td><button class="btn btn-ghost btn-sm" data-order-detail="${esc(order.id)}" type="button">Details</button> ${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>${order.status === 'net_open' ? ` <button class="btn btn-primary btn-sm" data-mark-net-paid-order="${esc(order.id)}" type="button" aria-label="Mark NET order ${esc(order.id)} paid">Mark NET paid</button>` : ''}` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
       </tr>`;
     }).join('')}</tbody></table>` + admOrdersPager();
     restoreDirty(box, snap);
@@ -95,9 +95,42 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
 
   // Row actions are delegated once on the stable #admOrders container (#36): a single
   // listener per action survives every innerHTML re-render instead of re-binding per row.
+  function orderDetailHtml(order, timeline) {
+    const addr = order.ship_address?.address || order.ship_address || null;
+    const shipLines = addr
+      ? [addr.line1, addr.line2, [addr.city, addr.state, addr.postal_code].filter(Boolean).join(', '), addr.country]
+        .filter(Boolean).map(esc).join('<br>')
+      : '<span class="muted">No shipping address</span>';
+    const items = (order.order_items || []).map((i) => `<tr>
+      <td>${esc(i.name || i.sku)}${i.backordered ? ' <span class="badge badge-warning">backordered</span>' : ''}</td>
+      <td style="text-align:center">${esc(i.qty)}</td>
+      <td style="text-align:right">${esc(money(i.unit_price, order.currency))}</td>
+      <td style="text-align:right">${esc(money(i.line_total, order.currency))}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No items</td></tr>';
+    const events = (timeline || []).map((e) =>
+      `<li><b>${esc(e.action)}</b> — ${esc(date(e.created_at))}${e.actor_email ? ` by ${esc(e.actor_email)}` : ''}</li>`).join('')
+      || '<li class="muted">No staff actions recorded</li>';
+    return `<h3 style="margin:0 0 4px">Order ${esc(order.id)}</h3>
+      <p class="muted" style="margin:0 0 12px">${esc(order.companies?.name || order.company_id || 'Guest')} · ${esc(order.customer_email || '')} · ${esc(order.status)} · ${esc(order.payment_method || '')}</p>
+      <table class="adm" style="width:100%"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Line</th></tr></thead><tbody>${items}</tbody></table>
+      <p style="margin:12px 0 0"><b>Total</b> ${esc(money(order.total ?? order.subtotal, order.currency))}${Number(order.tax) ? ` (tax ${esc(money(order.tax, order.currency))})` : ''}${Number(order.refunded_amount) > 0 ? ` · refunded ${esc(money(order.refunded_amount, order.currency))}` : ''}</p>
+      <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
+      <h4 style="margin:16px 0 4px">Staff timeline</h4><ul style="margin:0;padding-left:18px">${events}</ul>`;
+  }
+
   function wireOrders() {
     const box = $('admOrders');
     if (!box) return;
+    delegate(box, 'click', '[data-order-detail]', async (event, button) => {
+      button.disabled = true;
+      try {
+        const res = await api('/api/admin/orders?id=' + encodeURIComponent(button.dataset.orderDetail));
+        detailDialog(orderDetailHtml(res.order, res.timeline));
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Could not load order detail. Retry.', 'err');
+      } finally {
+        button.disabled = false;
+      }
+    });
     delegate(box, 'click', '[data-save-order]', async (event, button) => {
       const id = button.dataset.saveOrder;
       const status = box.querySelector(`[data-order-status="${CSS.escape(id)}"]`).value;
