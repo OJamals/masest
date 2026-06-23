@@ -154,7 +154,15 @@ export async function onRequestPost({ request, env }) {
     // Program subscription checkout (mode=subscription): record enrollment, skip the order path.
     if (isSubscriptionCheckout(s)) {
       try {
-        await sb.from('program_subscriptions').upsert(subscriptionRow(s), { onConflict: 'stripe_subscription_id' });
+        const row = subscriptionRow(s);
+        // Promote the checkout placeholder inserted at session creation (matched by
+        // checkout session id). Falls back to upsert for sessions predating the placeholder.
+        const { data: promoted } = await sb.from('program_subscriptions')
+          .update({ status: row.status, stripe_subscription_id: row.stripe_subscription_id, stripe_customer_id: row.stripe_customer_id, tier: row.tier })
+          .eq('stripe_checkout_session_id', s.id).select('id');
+        if (!promoted?.length) {
+          await sb.from('program_subscriptions').upsert(row, { onConflict: 'stripe_subscription_id' });
+        }
         if (s.metadata?.company_id) {
           await sb.from('notifications').insert({
             company_id: s.metadata.company_id, type: 'account',

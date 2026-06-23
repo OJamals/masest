@@ -9,6 +9,13 @@ create table if not exists public.program_subscriptions (
   status                 text not null default 'checkout',  -- checkout|active|trialing|past_due|canceled
   created_at             timestamptz not null default now()
 );
+-- Links the checkout placeholder (inserted before Stripe assigns a subscription id)
+-- to the checkout.session.completed webhook, so the webhook promotes the row in
+-- place instead of inserting a duplicate. ADDITIVE for existing installs.
+alter table public.program_subscriptions
+  add column if not exists stripe_checkout_session_id text;
+create unique index if not exists program_subs_checkout_idx
+  on public.program_subscriptions (stripe_checkout_session_id);
 create index if not exists program_subs_company_idx on public.program_subscriptions (company_id);
 alter table public.program_subscriptions enable row level security;
 drop policy if exists program_subs_company on public.program_subscriptions;
