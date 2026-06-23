@@ -1,7 +1,7 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
 import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, confirmDialog } from './util.js';
-import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
+import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 import { editKey, captureDirty, restoreDirty } from './admin/edits.js';
 import { createTrafficRenderer } from './admin/traffic.js';
 import { createSeoAudit } from './admin/seo.js';
@@ -315,6 +315,7 @@ function wire() {
   });
   $('qboConnect')?.addEventListener('click', connectQbo);
   $('qboSyncNow')?.addEventListener('click', runQboSync);
+  $('qboDisconnect')?.addEventListener('click', disconnectQbo);
   $('ordExport').addEventListener('click', async () => {
     message('ordStatus', 'Preparing export...');
     try {

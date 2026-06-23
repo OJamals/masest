@@ -1,6 +1,22 @@
 // POST /api/qbo-sync — cron/manual QBO sync worker entrypoint.
-import { adminClient, json } from '../_lib/supabase.js';
+import { adminClient, json, sendEmail, htmlEscape } from '../_lib/supabase.js';
 import { getAccessToken, nextSyncState, syncOrder, syncRefund } from '../_lib/qbo.js';
+
+// #26 — a doc that exhausts MAX_ATTEMPTS dead-letters to 'error' and stops retrying.
+// Email staff once per run per queue so it doesn't rot silently in the table.
+async function alertDeadLetter(env, kind, items) {
+  const to = env.ORDER_NOTIFY_EMAIL || env.SALES_EMAIL || env.ADMIN_EMAIL;
+  if (!to || !items.length) return;
+  const rows = items.map((i) => `<li><b>${htmlEscape(i.id)}</b> — ${htmlEscape(i.error || 'unknown error')}</li>`).join('');
+  try {
+    await sendEmail(env, {
+      to: [to],
+      subject: `⚠ QBO sync dead-letter: ${items.length} ${kind} stopped retrying`,
+      html: `<p>These ${kind} hit the QuickBooks retry limit and need manual attention (admin → QuickBooks panel → Retry):</p><ul>${rows}</ul>`,
+      category: 'billing',
+    });
+  } catch { /* alerting must never break the sync run */ }
+}
 
 function boundedBatch(request) {
   const requested = Number(new URL(request.url).searchParams.get('batch') || 10);
@@ -137,7 +153,7 @@ async function requeueOne(sb, order, err, table = 'orders') {
     .update({ ...next, qbo_error: message })
     .eq('id', order.id);
   if (error) throw new Error(error.message || 'qbo_order_requeue_failed');
-  return message;
+  return { message, deadLettered: next.qbo_sync_status === 'error' };
 }
 
 export async function runQboSync({ env, batch = 10 }) {
@@ -169,6 +185,7 @@ export async function runQboSync({ env, batch = 10 }) {
   }
 
   const results = [];
+  const deadLetters = [];
   let synced = 0;
   let failed = 0;
   for (const order of orders) {
@@ -182,11 +199,13 @@ export async function runQboSync({ env, batch = 10 }) {
       synced += 1;
       results.push({ id: order.id, ok: true, doc_id: result.docId, doc_type: result.docType });
     } catch (err) {
-      const detail = await requeueOne(sb, order, err);
+      const { message: detail, deadLettered } = await requeueOne(sb, order, err);
       failed += 1;
+      if (deadLettered) deadLetters.push({ id: order.id, error: detail });
       results.push({ id: order.id, ok: false, error: detail });
     }
   }
+  await alertDeadLetter(env, 'orders', deadLetters);
 
   return json(200, { ok: failed === 0, claimed: orders.length, synced, failed, results });
 }
@@ -229,6 +248,7 @@ export async function runQboRefundSync({ env, batch = 10 }) {
   }
 
   const results = [];
+  const deadLetters = [];
   let synced = 0;
   let failed = 0;
   for (const refund of refunds) {
@@ -249,11 +269,13 @@ export async function runQboRefundSync({ env, batch = 10 }) {
       synced += 1;
       results.push({ id: refund.id, ok: true, credit_memo_id: result.creditMemoId });
     } catch (err) {
-      const detail = await requeueOne(sb, refund, err, 'qbo_refunds');
+      const { message: detail, deadLettered } = await requeueOne(sb, refund, err, 'qbo_refunds');
       failed += 1;
+      if (deadLettered) deadLetters.push({ id: refund.id, error: detail });
       results.push({ id: refund.id, ok: false, error: detail });
     }
   }
+  await alertDeadLetter(env, 'refunds', deadLetters);
 
   return json(200, { ok: failed === 0, claimed: refunds.length, synced, failed, results });
 }
