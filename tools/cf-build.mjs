@@ -10,7 +10,7 @@ const OUT = 'dist';
 
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
-  /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^node_modules\//,
+  /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^node_modules(\/|$)/,
   /^dist\//, /^\.github\//, /^\.vscode\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
