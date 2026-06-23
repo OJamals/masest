@@ -25,6 +25,8 @@ test("Cloudflare build emits baseline security headers", () => {
   assert.match(build, /X-Frame-Options:\s*SAMEORIGIN/);
   assert.match(build, /Strict-Transport-Security:/);
   assert.match(build, /Permissions-Policy:/);
+  assert.match(build, /script-src[^;]*https:\/\/challenges\.cloudflare\.com/, "Turnstile script must be allowed for auth forms");
+  assert.match(build, /frame-src[^;]*https:\/\/challenges\.cloudflare\.com/, "Turnstile frame must be allowed for auth forms");
 });
 
 test("HTML pages use one fresh shared stylesheet cache-buster", () => {
