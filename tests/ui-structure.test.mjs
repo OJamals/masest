@@ -12,17 +12,17 @@ test("global navigation stays focused on buyer decisions", () => {
   const navBlock = chrome.match(/const links = \[[\s\S]*?\];/);
 
   assert.ok(navBlock, "expected renderChrome nav links block");
-  assert.match(navBlock[0], /products\.html/);
-  assert.doesNotMatch(navBlock[0], /programs\.html/);
-  assert.match(navBlock[0], /proof\.html/);
-  assert.match(navBlock[0], /industries\.html/);
+  assert.match(navBlock[0], /products/);
+  assert.doesNotMatch(navBlock[0], /programs/);
+  assert.match(navBlock[0], /proof/);
+  assert.match(navBlock[0], /industries/);
   assert.doesNotMatch(navBlock[0], /why-vertkleen\.html/);
-  assert.doesNotMatch(navBlock[0], /about\.html/);
-  assert.doesNotMatch(navBlock[0], /contact\.html/);
+  assert.doesNotMatch(navBlock[0], /about/);
+  assert.doesNotMatch(navBlock[0], /contact/);
 });
 
 test("global navigation exposes account sign-in and registration", () => {
-  assert.match(chrome, /href="\$\{root\}account\.html"/);
+assert.match(chrome, /href="\$\{root\}account"/);
   assert.match(chrome, /Sign in/);
 });
 
@@ -39,7 +39,7 @@ test("product cards use details as the only repeated card action", () => {
 
   assert.ok(cardBlock, "expected productCard block");
   assert.match(cardBlock[0], /View Details/);
-  assert.doesNotMatch(cardBlock[0], /contact\.html\?product/);
+  assert.doesNotMatch(cardBlock[0], /contact\?product/);
   assert.doesNotMatch(cardBlock[0], /Request a Quote/);
 });
 
@@ -86,13 +86,13 @@ test("products page wires the checker and grid from product data", () => {
   assert.match(read("js/main.js"), /initShop\(\);/);
   // whole-card link + one footer action: buy controls for buyable items, quote CTA for quote-first items
   assert.match(commerceUi, /<article class="shop-card"/);
-  assert.match(commerceUi, /class="shop-card-link" href="product\.html\?id=/);
+  assert.match(commerceUi, /class="shop-card-link" href="products\//);
   assert.doesNotMatch(commerceUi, /<a class="shop-card"[\s\S]*?<button class="shop-card-add"/);
   assert.match(commerceUi, /QUOTE_FIRST_IDS\.includes\(id\)/);
   assert.match(commerceUi, /shop-card-quote/);
   assert.match(commerceUi, /shop-card-bulk/);
-  assert.match(read("products.html"), /programs\.html/);
-  assert.match(read("products.html"), /contact\.html\?type=distributor/);
+  assert.match(read("products.html"), /programs/);
+  assert.match(read("products.html"), /contact\?type=distributor/);
   assert.doesNotMatch(read("products.html"), /Request a Quote/);
 });
 
@@ -132,7 +132,7 @@ test("products page keeps the field proof strip between catalog and CTA", () => 
   assert.match(products, /30 min/);
   assert.match(products, /Brewery CIP/);
   assert.match(products, /Occupied sites/);
-  assert.match(products, /proof\.html/);
+  assert.match(products, /proof/);
 });
 
 test("program function map is optional below the tiers", () => {
@@ -239,7 +239,7 @@ test("industry generator keeps fallback nav off the removed Programs tab", () =>
   const navBlock = generator.match(/const NAV = \[[\s\S]*?\];/);
   assert.ok(navBlock, "expected generated industry nav source");
   assert.doesNotMatch(navBlock[0], /Programs/);
-  assert.doesNotMatch(navBlock[0], /programs\.html/);
+  assert.doesNotMatch(navBlock[0], /programs/);
   assert.match(navBlock[0], /Use Cases/);
 });
 
@@ -393,7 +393,7 @@ test("commerce setup exposes a complete buyer cart path", () => {
   const confirmation = read("order-confirmed.html");
   const cartJs = read("js/cart.js");
 
-  assert.match(chrome, /cart\.html/);
+  assert.match(chrome, /cart/);
   assert.match(chrome, /cart-count/);
   assert.match(commerceUi, /data-cart-add/);
   assert.match(commerceUi, /initCartButtons/);

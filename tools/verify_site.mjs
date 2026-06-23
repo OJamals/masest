@@ -14,9 +14,9 @@ const ignoredDirs = new Set([
   "_local",
   "backups",
   "dist",
-  "masest.co-audit",
-  "node_modules",
-  "test-results",
+"node_modules",
+"masest.co-audit",
+"test-results",
   "vendor",
 ]);
 
@@ -106,10 +106,19 @@ function checkLocalRefs() {
   }
 }
 
-function sitemapPages() {
-  const xml = read("sitemap.xml");
-  const urls = [...xml.matchAll(/<loc>https:\/\/masest\.co\/([^<]*)<\/loc>/g)].map((match) => match[1]);
-  return urls.map((urlPath) => (urlPath ? urlPath : "index.html"));
+function sitemapEntries() {
+const xml = read("sitemap.xml");
+const urls = [...xml.matchAll(/<loc>https:\/\/masest\.co\/([^<]*)<\/loc>/g)].map((match) => match[1]);
+return urls.map((canonicalPath) => ({ canonicalPath: canonicalPath || "" }));
+}
+
+function publicSourceForCanonical(canonicalPath) {
+if (!canonicalPath) return "index.html";
+const direct = `${canonicalPath}.html`;
+if (fs.existsSync(path.join(projectRoot, direct))) return direct;
+const index = path.join(canonicalPath, "index.html");
+if (fs.existsSync(path.join(projectRoot, index))) return index;
+return direct;
 }
 
 function extractMeta(html, name) {
@@ -132,10 +141,11 @@ function extractCanonical(html) {
 }
 
 function checkSeoContracts() {
-  const pages = sitemapPages();
-  ok(pages.length >= 10, "sitemap should expose public product, proof, resource, and industry pages");
+  const entries = sitemapEntries();
+  ok(entries.length >= 30, "sitemap should expose public product, proof, resource, and industry pages");
 
-  for (const page of pages) {
+  for (const entry of entries) {
+const page = publicSourceForCanonical(entry.canonicalPath);
     ok(fs.existsSync(path.join(projectRoot, page)), `sitemap page missing: ${page}`);
     if (!fs.existsSync(path.join(projectRoot, page))) continue;
 
@@ -144,7 +154,7 @@ function checkSeoContracts() {
     const description = extractMeta(html, "description");
     const ogImage = extractMeta(html, "og:image");
     const canonical = extractCanonical(html);
-    const expectedCanonical = `https://masest.co/${page === "index.html" ? "" : page}`;
+    const expectedCanonical = `https://masest.co/${entry.canonicalPath}`;
 
     ok(title.length >= 12, `${page} missing useful title`);
     ok(description.length >= 50, `${page} missing useful meta description`);

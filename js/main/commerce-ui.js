@@ -12,14 +12,16 @@ function imageDimsAttr(src) {
   return `width="${width}" height="${height}"`;
 }
 
-export function productCard(id, heroCard = false) {
+export function productCard(id, heroCard = false, eager = false) {
   const p = PRODUCTS[id];
   const catalog = PRODUCT_CATALOG_COPY[id] || {};
  const badge = p.hmis === "0-0-0"
  ? '<span class="hmis-badge">HMIS 0-0-0</span>'
  : '<span class="hmis-badge note">LOW HAZARD</span>';
+  const mediaLoading = heroCard || eager ? "eager" : "lazy";
+  const mediaPriority = heroCard || eager ? ' fetchpriority="high"' : "";
   const media = p.image
-    ? `<a class="prod-media" href="product.html?id=${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="lazy" ${imageDimsAttr(p.image)}></a>`
+    ? `<a class="prod-media" href="products/${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="${mediaLoading}"${mediaPriority} ${imageDimsAttr(p.image)}></a>`
     : "";
   const fitList = (catalog.fits || []).map((fit) => `<li>${fit}</li>`).join("");
   return `
@@ -32,7 +34,7 @@ export function productCard(id, heroCard = false) {
       ${fitList ? `<ul class="product-fit-list">${fitList}</ul>` : ""}
       <span class="product-proof-line">${catalog.proof || "Stats, studies, and documents on the detail page"}</span>
       <div class="prod-actions">
-        <a class="btn btn-ink btn-sm" href="product.html?id=${id}">View Details</a>
+        <a class="btn btn-ink btn-sm" href="products/${id}">View Details</a>
         <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button"></span>
       </div>
   </div>`;
@@ -179,7 +181,7 @@ function commerceActionHTML(id, variant = "chip") {
 
 function quoteActionHTML(id) {
   const name = PRODUCTS[id]?.name || id;
-  return `<a class="shop-card-quote" href="contact.html?type=quote&product=${encodeURIComponent(name)}"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
+  return `<a class="shop-card-quote" href="contact?type=quote&product=${encodeURIComponent(name)}"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
 }
 
 function bulkPriceText(id) {
@@ -294,7 +296,7 @@ export function refreshCommerceActions(root = document) {
   });
 }
 
-export function catalogCard(id) {
+export function catalogCard(id, eager = false) {
   const p = PRODUCTS[id];
   if (!p) return "";
   const copy = PRODUCT_CATALOG_COPY[id] || {};
@@ -304,7 +306,7 @@ export function catalogCard(id) {
   const mediaInfo = commerceMediaFor(id);
   const group = CATALOG_GROUPS.find((g) => g.ids.includes(id));
   const media = mediaInfo.src
-    ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="lazy" ${imageDimsAttr(mediaInfo.src)}>`
+    ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} ${imageDimsAttr(mediaInfo.src)}>`
     : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
   const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial chemistry");
   const quoteFirst = QUOTE_FIRST_IDS.includes(id);
@@ -314,7 +316,7 @@ export function catalogCard(id) {
   return `
     <article class="shop-card" data-id="${id}">
       <div class="shop-card-core">
-      <a class="shop-card-link" href="product.html?id=${id}" aria-label="View details for ${p.name}">
+      <a class="shop-card-link" href="products/${id}" aria-label="View details for ${p.name}">
         <span class="shop-card-media">${media}${badge}</span>
         <span class="shop-card-body">
           <span class="shop-card-type">${type}</span>
@@ -427,7 +429,7 @@ export function initShop() {
 
   const apply = () => {
     const ids = visibleIds();
-    grid.innerHTML = ids.map(catalogCard).join("");
+    grid.innerHTML = ids.map((id, index) => catalogCard(id, index < 2)).join("");
     refreshCommerceActions(grid);
     if (countEl) countEl.textContent = `Showing ${ids.length} of ${CATALOG_ORDER.length}`;
     if (emptyEl) emptyEl.hidden = ids.length > 0;
@@ -485,7 +487,7 @@ export function initShop() {
       state.group = "all";
       matrix.querySelectorAll(".swap-row").forEach((r) => r.classList.toggle("active", r === row));
       syncChips();
-      const links = data.ids.map((id) => `<a href="product.html?id=${id}">${PRODUCTS[id].name}</a>`).join(" · ");
+      const links = data.ids.map((id) => `<a href="products/${id}">${PRODUCTS[id].name}</a>`).join(" · ");
       result.innerHTML =
         `<span class="swap-result-q"><em>Replace</em>${data.legacy}</span>` +
         `<i class="ph ph-arrow-right" aria-hidden="true"></i>` +

@@ -144,8 +144,8 @@ test("mobile hamburger menu centers use-case trigger and exposes child links", a
   expect(topLevelColors).not.toContain("rgb(255, 255, 255)");
 
   await page.locator(".nav-group summary").click();
-  await expect(nav.getByRole("link", { name: "Industries" })).toHaveAttribute("href", "../industries.html");
-  await expect(nav.getByRole("link", { name: "Field Results" })).toHaveAttribute("href", "../proof.html");
+  await expect(nav.getByRole("link", { name: "Industries" })).toHaveAttribute("href", "../industries");
+  await expect(nav.getByRole("link", { name: "Field Results" })).toHaveAttribute("href", "../proof");
 
   const labelDelta = await page.locator(".nav-group summary").evaluate((node) => {
     const label = node.querySelector(".nav-group-label");

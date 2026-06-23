@@ -21,7 +21,7 @@
 <meta property="og:url" content="https://masest.co/">
 <meta property="og:image" content="https://masest.co/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/","logo":"https://masest.co/img/masest-logo.png","brand":"VertKleen","description":"HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.","areaServed":"United States and international commercial accounts","contactPoint":{"@type":"ContactPoint","contactType":"sales","url":"https://masest.co/contact.html"}},{"@type":"WebSite","name":"MASEST VertKleen","url":"https://masest.co/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/","logo":"https://masest.co/img/masest-logo.png","brand":"VertKleen","description":"HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.","areaServed":"United States and international commercial accounts","contactPoint":{"@type":"ContactPoint","contactType":"sales","url":"https://masest.co/contact"}},{"@type":"WebSite","name":"MASEST VertKleen","url":"https://masest.co/"}]}</script>
 <!-- /seo:auto -->
 </head>
 <body>
@@ -68,7 +68,7 @@
           <figcaption><b>Scale</b><span>Mineral buildup narrowing the passage.</span></figcaption>
         </figure>
         <figure class="reel-slide" data-slide="1">
-          <img src="img/story/rust.webp" alt="Close-up of pitted, oxidized industrial steel" loading="eager" decoding="async" width="1200" height="1334">
+          <img src="img/story/rust.webp" alt="Close-up of pitted, oxidized industrial steel" loading="eager" fetchpriority="high" decoding="async" width="1200" height="1334">
           <figcaption><b>Rust</b><span>Oxidation eating into exposed steel.</span></figcaption>
         </figure>
         <figure class="reel-slide" data-slide="2">
@@ -362,35 +362,35 @@
             <td class="job">Acid cleaning &amp; passivation</td>
             <td>Hydrochloric and inhibited acids</td>
             <td class="haz hmis-tag">3&#8209;0&#8209;1</td>
-            <td><a href="product.html?id=hcr"><b>VertKleen HCR</b></a></td>
+            <td><a href="products/hcr"><b>VertKleen HCR</b></a></td>
             <td class="safe hmis-tag">0&#8209;0&#8209;0</td>
           </tr>
           <tr>
             <td class="job">pH control &amp; caustic</td>
             <td>Caustic soda, sodium hydroxide</td>
             <td class="haz hmis-tag">3&#8209;0&#8209;1</td>
-            <td><a href="product.html?id=cr"><b>VertKleen CR</b></a></td>
+            <td><a href="products/cr"><b>VertKleen CR</b></a></td>
             <td class="safe hmis-tag">0&#8209;0&#8209;0</td>
           </tr>
           <tr>
             <td class="job">Degreasing</td>
             <td>Caustic and solvent degreasers</td>
             <td class="haz hmis-tag">2&#8209;1&#8209;0</td>
-            <td><a href="product.html?id=neutral"><b>VertKleen Neutral</b></a></td>
+            <td><a href="products/neutral"><b>VertKleen Neutral</b></a></td>
             <td class="safe hmis-tag">0&#8209;0&#8209;0</td>
           </tr>
           <tr>
             <td class="job">Scale &amp; corrosion inhibitor</td>
             <td>Phosphate, zinc, molybdate blends</td>
             <td class="haz hmis-tag">2&#8209;0&#8209;0</td>
-            <td><a href="product.html?id=watersafe60"><b>WaterSafe60</b></a></td>
+            <td><a href="products/watersafe60"><b>WaterSafe60</b></a></td>
             <td class="safe hmis-tag">0&#8209;0&#8209;0</td>
           </tr>
           <tr>
             <td class="job">Oxidizing biocide</td>
             <td>Stabilized bromine, bleach</td>
             <td class="haz hmis-tag">3&#8209;0&#8209;1</td>
-            <td><a href="product.html?id=purgo"><b>Purgo</b></a></td>
+            <td><a href="products/purgo"><b>Purgo</b></a></td>
             <td class="safe hmis-tag">0&#8209;0&#8209;0</td>
           </tr>
           <tr>
@@ -594,9 +594,9 @@
 <script type="module" src="js/main.js?v=20260619b"></script>
 <script src="js/track.js" defer></script>
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
-<script src="vendor/gsap/gsap.min.js"></script>
-<script src="vendor/gsap/ScrollTrigger.min.js"></script>
-<script src="js/story.js"></script>
+<script src="vendor/gsap/gsap.min.js" defer></script>
+<script src="vendor/gsap/ScrollTrigger.min.js" defer></script>
+<script src="js/story.js" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {
