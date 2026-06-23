@@ -1,5 +1,11 @@
 // GET /api/admin/traffic?days=14 - first-party traffic aggregates page_views. Staff-only.
 import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
+import { cached } from '../../_lib/cache.js';
+
+// Aggregates up to 10k page_views rows in JS per load; the result is org-wide, so
+// cache it briefly per `days` window (no-op until RATE_KV is bound). Staff auth runs
+// BEFORE the cache lookup.
+const TRAFFIC_TTL_SEC = 60;
 
 const FUNNEL = [
   ['pageview', 'Page views'],
@@ -47,9 +53,14 @@ export async function onRequestGet({ request, env }) {
   if (!staff) return json(403, { error: 'forbidden' });
 
   const days = Math.min(90, Math.max(1, parseInt(new URL(request.url).searchParams.get('days') || '14', 10) || 14));
+  const sb = adminClient(env);
+  const payload = await cached(env, `cache:admin:traffic:v1:d=${days}`, TRAFFIC_TTL_SEC, () => computeTraffic(sb, days));
+  return json(200, payload);
+}
+
+async function computeTraffic(sb, days) {
   const sinceIso = new Date(Date.now() - days * 86400e3).toISOString();
 
-  const sb = adminClient(env);
   let rows = [];
   try {
     const { data, error } = await sb.from('page_views')
@@ -60,7 +71,7 @@ export async function onRequestGet({ request, env }) {
     if (error) throw error;
     rows = data || [];
   } catch {
-    return json(200, {
+    return {
       available: false,
       note: 'page_views not migrated yet apply schema-phase5.sql and schema-conversion.sql.',
       total: 0,
@@ -72,7 +83,7 @@ export async function onRequestGet({ request, env }) {
       events: [],
       funnel: [],
       topCampaigns: [],
-    });
+    };
   }
 
   const eventCounts = rows.reduce((map, row) => {
@@ -100,7 +111,7 @@ export async function onRequestGet({ request, env }) {
     .sort((a, b) => a.day.localeCompare(b.day))
     .map((row) => ({ ...row, unique: row.unique.size }));
 
-  return json(200, {
+  return {
     available: true,
     days,
     total: rows.length,
@@ -114,5 +125,5 @@ export async function onRequestGet({ request, env }) {
       .map(([key, count]) => ({ key, count })),
     funnel,
     topCampaigns: tally(rows, 'utm_source', campaignKey).slice(0, 12),
-  });
+  };
 }

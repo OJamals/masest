@@ -1,6 +1,11 @@
 // GET /api/admin/stats - dashboard overview metrics. Staff-only. Degrades gracefully pre-migration.
 import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
 import { buildCompanySetup, setupStepBreakdown } from '../../_lib/setup.js';
+import { cached } from '../../_lib/cache.js';
+
+// ~15 count queries + a 1000-row scan per load; the result is org-wide, so cache it
+// briefly (no-op until RATE_KV is bound). Staff auth runs BEFORE the cache lookup.
+const STATS_TTL_SEC = 60;
 
 const since = (days) => new Date(Date.now() - days * 86400e3).toISOString();
 const action = (priority, label, value, href) => ({ priority, label, value, href });
@@ -14,6 +19,11 @@ export async function onRequestGet({ request, env }) {
   if (!staff) return json(403, { error: 'forbidden' });
 
   const sb = adminClient(env);
+  const payload = await cached(env, 'cache:admin:stats:v1', STATS_TTL_SEC, () => computeStats(sb));
+  return json(200, payload);
+}
+
+async function computeStats(sb) {
   const count = async (table, build) => {
     try {
       let q = sb.from(table).select('*', { count: 'exact', head: true });
@@ -170,7 +180,7 @@ export async function onRequestGet({ request, env }) {
     setup_followups.companies ? action(6, 'Close account setup gaps', setup_followups.companies, '#companies') : null,
   ].filter(Boolean);
 
-  return json(200, {
+  return {
     revenue: revenueTotal,
     orders: { total: metrics ? Number(metrics.orders_total) : recentOrders.length, byStatus },
     companies: { pending: pendingCompanies, approved: approvedCompanies, suspended: suspendedCompanies },
@@ -187,5 +197,5 @@ export async function onRequestGet({ request, env }) {
     catalog_health: catalog_health,
     analytics: analytics,
     actions: actions,
-  });
+  };
 }
