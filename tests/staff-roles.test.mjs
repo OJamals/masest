@@ -21,7 +21,7 @@ test('normalizeStaffRole defaults unknown/blank to owner (legacy staff keep acce
 
 // ---- staffCan capability matrix ----
 test('owner can do everything', () => {
-  for (const cap of ['order.refund', 'company.credit', 'product.write', 'user.role']) {
+  for (const cap of ['order.refund', 'company.credit', 'product.write', 'user.role', 'company.view_as']) {
     assert.equal(staffCan('owner', cap), true, cap);
   }
 });
@@ -29,11 +29,25 @@ test('owner can do everything', () => {
 test('finance can refund + change credit, but not product writes or role changes', () => {
   assert.equal(staffCan('finance', 'order.refund'), true);
   assert.equal(staffCan('finance', 'company.credit'), true);
+  assert.equal(staffCan('finance', 'company.view_as'), true);
   assert.equal(staffCan('finance', 'product.write'), false);
   assert.equal(staffCan('finance', 'user.role'), false);
 });
 
-test('support and read_only are barred from all four dangerous capabilities', () => {
+test('support can view-as, but cannot mutate dangerous paths', () => {
+  assert.equal(staffCan('support', 'company.view_as'), true);
+  for (const cap of ['order.refund', 'company.credit', 'product.write', 'user.role']) {
+    assert.equal(staffCan('support', cap), false, `support/${cap}`);
+  }
+});
+
+test('read_only is barred from support view-as and dangerous capabilities', () => {
+  for (const cap of ['company.view_as', 'order.refund', 'company.credit', 'product.write', 'user.role']) {
+    assert.equal(staffCan('read_only', cap), false, `read_only/${cap}`);
+  }
+});
+
+test('dangerous capabilities remain denied to support/read_only', () => {
   for (const role of ['support', 'read_only']) {
     for (const cap of ['order.refund', 'company.credit', 'product.write', 'user.role']) {
       assert.equal(staffCan(role, cap), false, `${role}/${cap}`);
@@ -60,6 +74,7 @@ for (const [path, cap] of [
   ['functions/api/admin/companies.js', 'company.credit'],
   ['functions/api/admin/products.js', 'product.write'],
   ['functions/api/admin/users.js', 'user.role'],
+  ['functions/api/admin/impersonate.js', 'company.view_as'],
 ]) {
   test(`${path} gates its mutation with staffCan('${cap}')`, () => {
     const src = read(path);

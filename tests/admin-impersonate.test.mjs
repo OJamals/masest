@@ -9,6 +9,10 @@ const UI = readFileSync(new URL("../js/admin/companies.js", import.meta.url), "u
 test("endpoint is staff-gated, audited, read-only, and only reads", () => {
   assert.match(API, /requireStaff/);
   assert.match(API, /if \(!staff\) return json\(403/);
+  assert.match(API, /staffCan\(role,\s*'company\.view_as'\)/);
+  assert.match(API, /Support view-as requires support access/);
+  assert.match(API, /email:\s*emailById\[p\.id\]/);
+  assert.doesNotMatch(API, /emailById\.get/);
   assert.match(API, /recordAudit\([\s\S]*action: 'admin\.impersonate_view'/);
   assert.match(API, /read_only: true/);
   assert.doesNotMatch(API, /\.(insert|update|delete|upsert)\(/); // no writes as the customer

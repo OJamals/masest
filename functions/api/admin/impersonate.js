@@ -4,11 +4,15 @@
 import { adminClient, requireStaff, json, emailsByIds } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { companyCreditState } from '../../_lib/credit.js';
+import { staffCan } from '../../_lib/authz.js';
 
 export async function onRequestGet({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
+  if (!staffCan(role, 'company.view_as')) {
+    return json(403, { error: 'forbidden', message: 'Support view-as requires support access.' });
+  }
 
   const companyId = new URL(request.url).searchParams.get('company_id');
   if (!companyId) return json(400, { error: 'company_id_required' });
@@ -22,7 +26,7 @@ export async function onRequestGet({ request, env }) {
   const { data: profiles } = await sb.from('profiles')
     .select('id,full_name,phone,role').eq('company_id', companyId);
   const emailById = await emailsByIds(sb, (profiles || []).map((p) => p.id));
-  const members = (profiles || []).map((p) => ({ ...p, email: emailById.get(p.id) || null }));
+  const members = (profiles || []).map((p) => ({ ...p, email: emailById[p.id] || null }));
 
   const { data: orders } = await sb.from('orders')
     .select('id,status,payment_method,total,currency,created_at,tracking_status')

@@ -191,6 +191,7 @@ export async function onRequest({ request, env }) {
     }
 
     if (body.action === 'record_qbo_invoice') {
+      if (!staffCan(role, 'company.credit')) return json(403, { error: 'forbidden' });
       const invoiceId = String(body.qbo_invoice_id || '').trim();
       if (!invoiceId) return json(400, { error: 'qbo_invoice_id_required' });
 
@@ -221,6 +222,7 @@ export async function onRequest({ request, env }) {
     }
 
     if (body.action === 'record_qbo_payment') {
+      if (!staffCan(role, 'company.credit')) return json(403, { error: 'forbidden' });
       const paymentId = String(body.qbo_payment_id || '').trim();
       if (!paymentId) return json(400, { error: 'qbo_payment_id_required' });
 

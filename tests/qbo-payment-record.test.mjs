@@ -14,6 +14,9 @@ test("admin orders can record a QuickBooks payment id for NET orders", () => {
   assert.match(ADMIN_ORDERS, /qbo_payment_id:\s*paymentId/);
   assert.match(ADMIN_ORDERS, /status:\s*['"]net_paid['"]/);
   assert.match(ADMIN_ORDERS, /payment received/);
+  assert.match(ADMIN_ORDERS,
+    /record_qbo_payment['"]\s*\)\s*\{[\s\S]{0,200}?staffCan\(role,\s*['"]company\.credit['"]\)/,
+    "manual payment recording must require owner/finance via company.credit");
 });
 
 test("admin orders UI exposes a QuickBooks payment record action", () => {
