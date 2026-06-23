@@ -12,6 +12,7 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
     name: product.name,
     qty: qtyBySku[product.sku],
     unit_price: Number(product.price),
+    backordered: !!product.backordered,
   }));
 
   const params = {
@@ -24,7 +25,14 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
             price_data: {
               currency: product.currency || "usd",
               unit_amount: Math.round(Number(product.price) * 100),
-              product_data: { name: product.name, metadata: { sku: product.sku } },
+              product_data: {
+                name: product.name,
+                metadata: { sku: product.sku },
+                // Stripe Tax: only flag explicitly non-taxable goods; taxable lines use the
+                // account default tax code. (price_data lines only — Price-backed lines carry
+                // their tax code on the Stripe Product.)
+                ...(product.taxable === false ? { tax_code: "txcd_00000000" } : {}),
+              },
               tax_behavior: "exclusive",
             },
           }

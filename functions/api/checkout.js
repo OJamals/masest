@@ -23,6 +23,7 @@ function variantIsStocked(variant, qty) {
 async function decrementVariantStock(sb, sellable, qtyBySku) {
   for (const line of sellable) {
     if (!line.track_stock || line.stock == null) continue;
+    if (line.backordered) continue; // stock already at/below zero — don't decrement
     const qty = qtyBySku[line.sku];
     const { data, error } = await sb.rpc('decrement_variant_stock', { p_vsku: line.sku, p_qty: qty });
     if (error || data !== true) return false;
@@ -42,7 +43,7 @@ export async function onRequestPost({ request, env }) {
   const sb = adminClient(env);
   const { data: variants, error } = await sb
     .from('product_variants')
-    .select('vsku,product_sku,label,price,currency,stripe_price_id,active,stock,track_stock,products(name,mode,active,taxable)')
+    .select('vsku,product_sku,label,price,currency,stripe_price_id,active,stock,track_stock,allow_backorder,products(name,mode,active,taxable)')
     .in('vsku', skus);
   if (error) return json(500, { error: 'server_error' });
 
@@ -56,7 +57,10 @@ export async function onRequestPost({ request, env }) {
       rejected.push(vsku);
       continue;
     }
-    if (!variantIsStocked(v, qtyBySku[vsku])) {
+    // Out of stock blocks checkout unless the variant allows backorder, in which case
+    // the line is sold and flagged (stock left untouched, fulfillment ships on restock).
+    const inStock = variantIsStocked(v, qtyBySku[vsku]);
+    if (!inStock && !v.allow_backorder) {
       outOfStock.push(vsku);
       continue;
     }
@@ -70,6 +74,7 @@ export async function onRequestPost({ request, env }) {
       stripe_price_id: v.stripe_price_id,
       stock: v.stock,
       track_stock: v.track_stock,
+      backordered: !inStock,
     });
   }
   if (rejected.length) {
@@ -85,6 +90,13 @@ export async function onRequestPost({ request, env }) {
       skus: outOfStock,
       message: 'Some items do not have enough stock. Adjust quantities or request a quote.',
     });
+  }
+
+  // One order = one currency (Stripe forbids mixed-currency sessions, and the subtotal sum
+  // would be meaningless). Catalog is USD today; this guards a future non-USD variant.
+  const currencies = new Set(sellable.map((p) => (p.currency || 'usd').toLowerCase()));
+  if (currencies.size > 1) {
+    return json(409, { error: 'mixed_currency', message: 'Items in your cart use different currencies. Order them separately.' });
   }
 
   const { tier } = await tierForRequest(request, env);
@@ -174,6 +186,7 @@ export async function onRequestPost({ request, env }) {
       qty: qtyBySku[p.sku],
       unit_price: p.price,
       line_total: Number(p.price) * qtyBySku[p.sku],
+      backordered: !!p.backordered,
     })));
     if (itemsErr) return json(500, { error: 'order_items_persist_failed' });
 

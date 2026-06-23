@@ -47,6 +47,7 @@ export function cartLines(cart) {
     name: c.name || c.sku,
     qty: c.qty,
     unit_price: c.unit_price,
+    backordered: !!c.backordered,
   }));
 }
 
@@ -60,14 +61,16 @@ export function orderItemRows(lines, orderId) {
     qty: l.qty,
     unit_price: l.unit_price,
     line_total: l.unit_price * l.qty,
+    backordered: !!l.backordered,
   }));
 }
 
 // RPC arg objects for `decrement_variant_stock`. Lines without a SKU are skipped
-// (matches the webhook's `if (!l.sku) continue`).
+// (matches the webhook's `if (!l.sku) continue`); backordered lines are skipped too —
+// their stock is already at/below zero, so decrementing would fail the whole order.
 export function stockDecrements(lines) {
   return (lines || [])
-    .filter((l) => l.sku)
+    .filter((l) => l.sku && !l.backordered)
     .map((l) => ({ p_vsku: l.sku, p_qty: Number(l.qty || 0) }));
 }
 
