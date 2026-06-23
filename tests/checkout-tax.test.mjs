@@ -8,6 +8,27 @@ const base = {
   qtyBySku: { A: 2 },
 };
 
+test("non-taxable product gets the non-taxable tax_code; taxable uses account default", () => {
+  const exempt = buildStripeCheckoutSessionParams({
+    ...base, email: "x@y.co",
+    sellable: [{ sku: "A", name: "A", price: 10, stripe_price_id: null, taxable: false }],
+  });
+  assert.equal(exempt.line_items[0].price_data.product_data.tax_code, "txcd_00000000");
+  const taxed = buildStripeCheckoutSessionParams({
+    ...base, email: "x@y.co",
+    sellable: [{ sku: "A", name: "A", price: 10, stripe_price_id: null, taxable: true }],
+  });
+  assert.equal(taxed.line_items[0].price_data.product_data.tax_code, undefined);
+});
+
+test("backordered flag rides along in the cart metadata", () => {
+  const p = buildStripeCheckoutSessionParams({
+    ...base, email: "x@y.co",
+    sellable: [{ sku: "A", name: "A", price: 10, stripe_price_id: null, backordered: true }],
+  });
+  assert.equal(JSON.parse(p.metadata.cart)[0].backordered, true);
+});
+
 test("automatic_tax stays OFF by default, ON only when taxEnabled", () => {
   assert.equal(buildStripeCheckoutSessionParams({ ...base, email: "x@y.co" }).automatic_tax.enabled, false);
   assert.equal(buildStripeCheckoutSessionParams({ ...base, email: "x@y.co", taxEnabled: true }).automatic_tax.enabled, true);
