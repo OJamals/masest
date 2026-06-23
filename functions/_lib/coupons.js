@@ -45,7 +45,8 @@ export function buildCouponParams(body) {
   if (b.minimum_amount !== undefined && b.minimum_amount !== null && b.minimum_amount !== '') {
     const min = Number(b.minimum_amount);
     if (!Number.isFinite(min) || min < 0) return { error: 'invalid_minimum_amount' };
-    promo.restrictions = { minimum_amount: Math.round(min * 100), minimum_amount_currency: currency };
+    // 0 = no minimum: omit restrictions. Stripe rejects a minimum_amount of 0.
+    if (min > 0) promo.restrictions = { minimum_amount: Math.round(min * 100), minimum_amount_currency: currency };
   }
 
   return { coupon, promo };
