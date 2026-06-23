@@ -18,7 +18,8 @@ test("admin companies API returns setup progress for every company", () => {
 });
 
 test("admin companies table exposes setup progress and open gaps", () => {
-  const src = read("js/admin.js");
+  // Companies tab (incl. setupProgress) moved into its own module in #36.
+  const src = read("js/admin/companies.js");
   assert.match(src, /function setupProgress\(/, "admin UI should format company setup progress");
   assert.match(src, /<th>Setup<\/th>/, "companies table should include a setup column");
   assert.match(src, /data-setup-state/, "open setup gaps should have non-color-only state");
@@ -28,7 +29,8 @@ test("admin companies table exposes setup progress and open gaps", () => {
 test("admin company detail exposes setup and has a working detail panel", () => {
   const endpoint = read("functions/api/admin/company.js");
   const html = read("admin.html");
-  const js = read("js/admin.js");
+  // The company-detail drawer (openCompanyDetail) moved into the companies module in #36.
+  const js = read("js/admin/companies.js");
   assert.match(endpoint, /setup:\s*buildCompanySetup\(/,
     "single-company endpoint should return setup progress");
   assert.match(html, /id="companyDetail"/,
