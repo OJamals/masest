@@ -22,7 +22,7 @@ test('quotes badge counts come from dedicated count queries, not the page', () =
 });
 
 test('admin companies + quotes lists expose Load more controls', () => {
-  const src = read('js/admin.js');
-  assert.match(src, /data-load-more-companies/);
-  assert.match(src, /data-load-more-quotes/);
+  // Companies tab split into its own module in #36; quotes still lives in admin.js.
+  assert.match(read('js/admin/companies.js'), /data-load-more-companies/);
+  assert.match(read('js/admin.js'), /data-load-more-quotes/);
 });
