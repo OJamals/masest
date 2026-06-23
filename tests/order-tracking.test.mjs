@@ -8,7 +8,7 @@ const SCHEMA = read("../supabase/schema.sql");
 const ADMIN_ORDERS = read("../functions/api/admin/orders.js");
 const ACCOUNT_ORDERS = read("../functions/api/account/orders.js");
 const ACCOUNT_ORDER = read("../functions/api/account/order.js");
-const ADMIN_JS = read("../js/admin.js");
+const ADMIN_JS = read("../js/admin/orders.js"); // Orders tab moved in #36
 const DASHBOARD_JS = read("../js/dashboard.js");
 
 test("orders schema stores customer-visible shipment tracking fields", () => {

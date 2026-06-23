@@ -117,8 +117,9 @@ test('search inputs filter in memory (refetch:false), not refetch per keystroke'
 });
 
 test('list renderers gate the fetch on a refetch flag', () => {
-  assert.match(admin, /async function renderOrders\(\{ append = false, refetch = true \} = \{\}\)/);
-  // Companies + products tabs split into their own modules in #36; same refetch-gated signatures.
+  // Orders, companies + products tabs split into their own modules in #36; same refetch-gated signatures.
+  const orders = readFileSync(join(root, 'js/admin/orders.js'), 'utf8');
+  assert.match(orders, /async function renderOrders\(\{ append = false, refetch = true \} = \{\}\)/);
   const companies = readFileSync(join(root, 'js/admin/companies.js'), 'utf8');
   assert.match(companies, /async function renderCompanies\(\{ append = false, refetch = true \} = \{\}\)/);
   const products = readFileSync(join(root, 'js/admin/products.js'), 'utf8');
@@ -131,8 +132,9 @@ test('setTab renders cached tabs from memory instead of refetching', () => {
 });
 
 test('renderers mark their dataset loaded so revisits hit the cache', () => {
-  assert.match(admin, /state\.loaded\.add\('orders'\)/);
-  // renderCompanies (and its loaded.add) moved into the companies module in #36.
+  // renderOrders + renderCompanies (and their loaded.add) moved into their modules in #36.
+  const ordersMod = readFileSync(join(root, 'js/admin/orders.js'), 'utf8');
+  assert.match(ordersMod, /state\.loaded\.add\('orders'\)/);
   const companies = readFileSync(join(root, 'js/admin/companies.js'), 'utf8');
   assert.match(companies, /state\.loaded\.add\('companies'\)/);
 });
