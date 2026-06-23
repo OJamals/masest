@@ -87,7 +87,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
         <td>${esc(order.payment_method || '')}${netAgingBadge(order)}</td>
         <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-        <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
+        <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>${order.status === 'net_open' ? ` <button class="btn btn-primary btn-sm" data-mark-net-paid-order="${esc(order.id)}" type="button" aria-label="Mark NET order ${esc(order.id)} paid">Mark NET paid</button>` : ''}` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
       </tr>`;
     }).join('')}</tbody></table>` + admOrdersPager();
     restoreDirty(box, snap);
@@ -182,6 +182,22 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         await renderOrders();
       } catch (err) {
         message('ordStatus', err.data?.error || 'Could not update payment status. Refresh and check before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    // Manual NET settlement (#10): mark an open NET balance paid without a QuickBooks
+    // payment id. Finance action — gated server-side by staffCan('company.credit').
+    delegate(box, 'click', '[data-mark-net-paid-order]', async (event, button) => {
+      const id = button.dataset.markNetPaidOrder;
+      if (!(await confirmDialog('Mark this NET balance as paid? This settles the order and frees the company\'s credit.', { confirmText: 'Mark paid' }))) return;
+      button.disabled = true;
+      message('ordStatus', 'Marking paid...');
+      try {
+        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'mark_net_paid' } });
+        message('ordStatus', 'NET balance marked paid.', 'ok');
+        await renderOrders();
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Could not mark the NET balance paid. Retry.', 'err');
         button.disabled = false;
       }
     });
