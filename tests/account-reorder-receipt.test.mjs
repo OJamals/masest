@@ -53,4 +53,6 @@ test('dashboard reorder calls the endpoint and offers a receipt link', () => {
   const src = read('js/dashboard.js');
   assert.match(src, /\/api\/account\/order'?,?\s*\{\s*method:\s*'POST'/, 'reorder hits the POST endpoint');
   assert.match(src, /data-receipt/, 'orders expose a receipt control');
+  assert.match(src, /safeUrl\(receipt_url\)/, 'receipt popup must sanitize returned URL');
+  assert.match(src, /window\.open\(receiptUrl,/, 'receipt popup opens only sanitized URL variable');
 });

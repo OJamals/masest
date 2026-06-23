@@ -26,6 +26,8 @@ test('safeUrl neutralizes script-bearing schemes (case/space-insensitive)', () =
   assert.equal(safeUrl('javascript:alert(1)'), '#');
   assert.equal(safeUrl('JavaScript:alert(1)'), '#');
   assert.equal(safeUrl('  javascript:alert(1)'), '#');
+  assert.equal(safeUrl('java\nscript:alert(1)'), '#');
+  assert.equal(safeUrl('java\tscript:alert(1)'), '#');
   assert.equal(safeUrl('data:text/html,<script>alert(1)</script>'), '#');
   assert.equal(safeUrl('vbscript:msgbox(1)'), '#');
 });

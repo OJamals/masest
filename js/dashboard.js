@@ -333,7 +333,10 @@ async function renderOrders({ append = false } = {}) {
     b.disabled = true;
     try {
       const { receipt_url } = await api(`/api/account/order?id=${encodeURIComponent(b.dataset.receipt)}&receipt=1`);
-      if (receipt_url) window.open(receipt_url, '_blank', 'noopener,noreferrer');
+      if (receipt_url) {
+        const receiptUrl = safeUrl(receipt_url);
+        window.open(receiptUrl, '_blank', 'noopener,noreferrer');
+      }
       else alert('No receipt is available for this order yet.');
     } catch { /* ignore */ }
     b.disabled = false;

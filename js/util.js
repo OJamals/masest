@@ -14,8 +14,9 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
 export const safeUrl = (u) => {
   const s = String(u ?? '').trim();
   if (!s) return '';
-  if (/^(https?:|mailto:)/i.test(s)) return s;   // explicitly allowed schemes
-  if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return '#'; // any other scheme (javascript:, data:, vbscript:, …)
+  const schemeProbe = s.replace(/[\u0000-\u001F\u007F\s]+/g, '');
+  if (/^(https?:|mailto:)/i.test(schemeProbe)) return s;   // explicitly allowed schemes
+  if (/^[a-z][a-z0-9+.-]*:/i.test(schemeProbe)) return '#'; // any other scheme (javascript:, data:, vbscript:, …)
   return s;                                        // relative / anchor / path — no scheme
 };
 
