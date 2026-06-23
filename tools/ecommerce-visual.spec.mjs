@@ -55,6 +55,9 @@ test("catalog hero media stays uniform on tablet", async ({ page }) => {
 });
 
 test("product detail shows next decision without an oversized hero", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.MASEST_ENABLE_LOCAL_API = true;
+  });
   await page.route("**/api/products", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",

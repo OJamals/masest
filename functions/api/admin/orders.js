@@ -32,7 +32,7 @@ async function notifyCompany(sb, env, request, companyId, label, extra) {
     to: emails, subject: `Order ${label}`,
     html: emailLayout({
       heading: `Order ${label}`,
-      bodyHtml: `<p>${extra || `Your MASEST order status is now <b>${label}</b>.`}</p>`,
+      bodyHtml: `<p>${htmlEscape(extra || `Your MASEST order status is now "${label}".`)}</p>`,
       ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders`,
     }),
   });
@@ -74,11 +74,29 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'GET') {
     const params = new URL(request.url).searchParams;
+
+    // Per-order drill-down (#95): full detail + staff-action timeline for one order.
+    const detailId = params.get('id');
+    if (detailId) {
+      const { data: order, error } = await sb.from('orders')
+        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at)')
+        .eq('id', detailId).single();
+      if (error) return json(error.code === 'PGRST116' ? 404 : 500, { error: error.message });
+      const { data: timeline } = await sb.from('audit_log')
+        .select('action,actor_email,detail,created_at')
+        .eq('target_type', 'order').eq('target_id', detailId)
+        .order('created_at', { ascending: false }).limit(50);
+      return json(200, {
+        order: { ...order, net_aging: netAging(order, order.companies?.net_terms_days) },
+        timeline: timeline || [],
+      });
+    }
+
     const status = params.get('status');
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,name,qty,unit_price,line_total)', isCsv ? undefined : { count: 'exact' })
+      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
@@ -126,7 +144,15 @@ export async function onRequest({ request, env }) {
       if (!secret) return json(500, { error: 'stripe_not_configured' });
       const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
       try {
-        await stripe.refunds.create({ payment_intent: ord.stripe_payment_intent, amount: plan.amountCents });
+        // Deterministic idempotency key so a retried / double-submitted refund settles
+        // once at Stripe. Keyed on the order + its pre-refund state + this amount: an
+        // identical retry dedupes, while a distinct later partial refund still goes
+        // through (different prior refunded_amount → different key).
+        const idempotencyKey = `refund:${ord.id}:${ord.refunded_amount || 0}:${plan.amountCents}`;
+        await stripe.refunds.create(
+          { payment_intent: ord.stripe_payment_intent, amount: plan.amountCents },
+          { idempotencyKey },
+        );
       } catch (err) {
         return json(502, { error: 'stripe_refund_failed', detail: err?.message || String(err) });
       }
@@ -142,6 +168,14 @@ export async function onRequest({ request, env }) {
           await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
         }
       }
+      // Queue a reversing QBO credit memo (#22) so the books match the refund. The
+      // worker posts it and retries on failure; best-effort here — never fail the
+      // refund (the money already moved at Stripe) if the enqueue hiccups.
+      await sb.from('qbo_refunds').insert({
+        order_id: ord.id,
+        amount: plan.amount,
+        fully_refunded: plan.fullyRefunded,
+      }).then(() => {}, () => {});
       const label = plan.fullyRefunded ? 'refunded' : 'partially refunded';
       const refundMsg = plan.fullyRefunded
         ? 'Your MASEST order was refunded. The amount will return to your original payment method.'
@@ -157,6 +191,7 @@ export async function onRequest({ request, env }) {
     }
 
     if (body.action === 'record_qbo_invoice') {
+      if (!staffCan(role, 'company.credit')) return json(403, { error: 'forbidden' });
       const invoiceId = String(body.qbo_invoice_id || '').trim();
       if (!invoiceId) return json(400, { error: 'qbo_invoice_id_required' });
 
@@ -187,6 +222,7 @@ export async function onRequest({ request, env }) {
     }
 
     if (body.action === 'record_qbo_payment') {
+      if (!staffCan(role, 'company.credit')) return json(403, { error: 'forbidden' });
       const paymentId = String(body.qbo_payment_id || '').trim();
       if (!paymentId) return json(400, { error: 'qbo_payment_id_required' });
 
@@ -246,6 +282,7 @@ export async function onRequest({ request, env }) {
       const carrier = String(body.carrier || '').trim().slice(0, 80) || null;
       const trackingNumber = String(body.tracking_number || '').trim().slice(0, 120) || null;
       const trackingUrl = String(body.tracking_url || '').trim().slice(0, 500) || null;
+      const note = String(body.note || '').trim().slice(0, 280) || null;
       if (trackingUrl && !/^https?:\/\//i.test(trackingUrl)) return json(400, { error: 'invalid_tracking_url' });
       const estimatedDeliveryAt = body.estimated_delivery_at ? new Date(body.estimated_delivery_at) : null;
       if (estimatedDeliveryAt && Number.isNaN(estimatedDeliveryAt.getTime())) return json(400, { error: 'invalid_estimated_delivery_at' });
@@ -272,6 +309,10 @@ export async function onRequest({ request, env }) {
         .select('id,company_id,customer_email,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
         .single();
       if (error) return json(500, { error: error.message });
+      // Append a customer-visible shipment event (history) — best-effort; never fail the update.
+      await sb.from('shipment_events').insert({
+        order_id: body.id, status: trackingStatus, carrier, tracking_number: trackingNumber, note,
+      }).then(() => {}, () => {});
       const notifyLabel = fulfilled ? 'fulfilled' : 'tracking updated';
       const notifyBody = fulfilled
         ? `Your order has shipped. ${carrier || 'Carrier'} ${trackingNumber}`.trim()

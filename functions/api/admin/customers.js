@@ -1,6 +1,7 @@
 // /api/admin/customers — flattened directory of all account members across
 // companies, with email, role, company, status and pricing tier. Read-only.
 import { adminClient, requireStaff, json, allUserEmails } from '../../_lib/supabase.js';
+import { csvResponse } from '../../_lib/reports.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
@@ -25,5 +26,13 @@ export async function onRequest({ request, env }) {
     };
   });
   customers.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+
+  if (new URL(request.url).searchParams.get('export') === 'csv') {
+    const rows = [['Name', 'Email', 'Phone', 'Role', 'Company', 'Company status', 'Tier', 'NET days']];
+    for (const c of customers) {
+      rows.push([c.full_name || '', c.email || '', c.phone || '', c.role || '', c.company_name || '', c.company_status || '', c.price_tier, c.net_terms_days]);
+    }
+    return csvResponse(rows, 'masest-customers');
+  }
   return json(200, { customers });
 }

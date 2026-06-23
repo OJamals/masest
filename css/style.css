@@ -61,6 +61,16 @@ one family.
   --accent-soft: #e3f0f1;
   --accent-tint: #f1f8f8;
   --danger: #a63a2e;          /* form errors, hazard markers — AA on white (6.4:1) */
+  --status-success-bg: #e7f5ed;
+  --status-success-ink: #17623b;
+  --status-warning-bg: #fef3c7;
+  --status-warning-ink: #92400e;
+  --status-warning-strong-bg: #fbe6cf;
+  --status-warning-strong-ink: #8a4a09;
+  --status-danger-bg: #fee2e2;
+  --status-danger-ink: #b42318;
+  --status-danger-soft-bg: #fae8e6;
+  --status-danger-soft-ink: #8a2d24;
   --brand-grad: linear-gradient(118deg, #13343a 0%, #0e7c86 58%, #77a8a0 100%);
   --surface-raised: linear-gradient(180deg, rgba(255,255,255,.96), rgba(246,250,249,.9));
   --surface-edge: inset 0 1px 0 rgba(255,255,255,.86), inset 0 -1px 0 rgba(15,74,80,.035);
@@ -193,6 +203,12 @@ h3 { font-family: var(--font); letter-spacing: -0.022em; line-height: 1.06; font
   font-size: clamp(1.02rem, 1.5vw, 1.2rem); color: var(--muted); font-weight: 400;
   line-height: 1.55; max-width: 62ch; text-wrap: pretty;
 }
+/* Default gap when a subhead directly follows a display heading. Without it a hero
+   in a bare .wrap (account, dashboard, admin) has zero space and the .display
+   descenders collide with the subhead once the heading wraps. Hero wrappers that set
+   their own subhead margin (.hero-copy, .page-hero, .contact-hero, …) are equal-or-
+   higher specificity and defined later, so they still win — this only fills the gap. */
+.display + .subhead { margin-top: 22px; }
 /* Tabular,
 lined-up figures for all data numerics */
 .display,
@@ -416,7 +432,7 @@ scoped to the hero */
   display: grid; grid-template-columns: 1.06fr .94fr; gap: clamp(40px, 5vw, 72px); align-items: center;
 }
 .hero-copy .subhead { margin: 22px 0 34px; max-width: 30ch; }
-.contact-hero .subhead { margin-top: clamp(32px, 4vw, 48px); }
+.contact-hero .subhead { margin-top: 22px; }
 .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
 .cart-feedback {
   margin-top: 14px;
@@ -913,7 +929,7 @@ no number circles) ---------- */
 /* ---------- Page hero (interior,
 light) ---------- */
 .page-hero { padding: 76px 0 64px; }
-.page-hero .subhead { margin-top: 16px; }
+.page-hero .subhead { margin-top: 22px; }
 body:has(.about-router) .page-hero { padding-bottom: clamp(28px, 4vw, 44px); }
 body:has(.about-router) .page-hero + section { padding-top: clamp(42px, 6vw, 66px); }
 body:has(.about-router) .page-hero + section .hero-grid { align-items: start; }
@@ -1120,7 +1136,7 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 .foot-brand { font-weight: 900; color: #fff; font-size: 1.15rem; margin-bottom: 12px; }
 .foot-bottom { border-top: 1px solid rgba(255,255,255,.14); padding-top: 26px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: rgba(255,255,255,.75); }
 .foot-legal { display: inline-flex; gap: 14px; }
-.foot-legal a { color: rgba(255,255,255,.86); }
+.foot-legal a { color: rgba(255,255,255,.82); text-decoration: none; }
 .foot-legal a:hover { color: #fff; }
 
 /* Footer newsletter signup (Klaviyo) */
@@ -3596,8 +3612,8 @@ fully clickable cards) ---- */
   box-shadow: 0 0 0 3px rgba(14,124,134,.14);
 }
 .cart-status { margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
-.cart-status[data-state=ok] { color: #087f5b; }
-.cart-status[data-state=err] { color: #b42318; }
+.cart-status[data-state=ok] { color: var(--status-success-ink); }
+.cart-status[data-state=err] { color: var(--status-danger-ink); }
 .cart-actions { display: grid; gap: 10px; margin-top: 18px; }
 .cart-actions .btn { width: 100%; justify-content: center; }
 .cart-actions .btn:disabled { cursor: not-allowed; }
@@ -5474,6 +5490,11 @@ body.products-page .conversion-proof .proof-pill em {
   gap: clamp(22px, 5vw, 60px);
 }
 
+.product-job-router .headline,
+.product-job-router-copy {
+  grid-column: 1;
+}
+
 .product-job-router-copy {
   max-width: 580px;
   margin: 18px 0 0;
@@ -5482,6 +5503,8 @@ body.products-page .conversion-proof .proof-pill em {
 .product-job-router-actions {
   display: flex;
   flex-wrap: wrap;
+  grid-column: 2;
+  grid-row: 1 / span 2;
   justify-content: flex-end;
   gap: 12px;
 }
@@ -5534,6 +5557,13 @@ body.products-page .conversion-proof .proof-pill em {
   .product-job-router .wrap {
     grid-template-columns: 1fr;
     justify-items: center;
+  }
+
+  .product-job-router .headline,
+  .product-job-router-copy,
+  .product-job-router-actions {
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .product-job-router-copy {

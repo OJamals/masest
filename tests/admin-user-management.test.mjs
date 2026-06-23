@@ -22,7 +22,8 @@ test("admin users endpoint manages company member roles and invites", () => {
 });
 
 test("admin company detail exposes member role and invite actions", () => {
-  const src = read("js/admin.js");
+  // Company detail (members/invites + their wiring) moved into the companies module (#36 split).
+  const src = read("js/admin/companies.js");
 
   assert.match(src, /company-members/, "detail panel should render member management");
   assert.match(src, /data-member-role/, "member role select should be stable");

@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const sitemap = readFileSync(new URL("../sitemap.xml", import.meta.url), "utf8");
+const verifySite = readFileSync(new URL("../tools/verify_site.mjs", import.meta.url), "utf8");
+const sourceText = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const pages = [...sitemap.matchAll(/<loc>https:\/\/masest\.co\/([^<]*)<\/loc>/g)]
   .map((match) => match[1] || "");
 
@@ -45,6 +47,52 @@ test("public sitemap pages expose social preview metadata", () => {
     assert.ok(hasMeta(markup, "property", "og:description"), `${page} missing og:description`);
     assert.ok(hasMeta(markup, "property", "og:image"), `${page} missing og:image`);
     assert.ok(hasMeta(markup, "name", "twitter:card"), `${page} missing twitter:card`);
+  }
+});
+
+test("site verifier ignores local audit capture artifacts", () => {
+  assert.match(
+    verifySite,
+    /"masest\.co-audit"/,
+    "verify_site should not scan downloaded audit HTML captures as source pages",
+  );
+});
+
+test("status colors use shared semantic tokens outside the token source", () => {
+  const statusSwatches = [
+    "#e7f5ed",
+    "#17623b",
+    "#fae8e6",
+    "#8a2d24",
+    "#fff2ce",
+    "#7a4f00",
+    "#fef3c7",
+    "#92400e",
+    "#fee2e2",
+    "#b42318",
+    "#fdf1d8",
+    "#8a5a09",
+    "#f8e3df",
+    "#a25b35",
+    "#087f5b",
+    "#e4f4ea",
+    "#1c6b3d",
+    "#fbe6cf",
+    "#8a4a09",
+  ];
+  const files = [
+    "admin.html",
+    "dashboard.html",
+    "business.html",
+    "account.html",
+    "css/components.css",
+  ];
+
+  for (const file of files) {
+    const source = sourceText(file);
+    for (const swatch of statusSwatches) {
+      assert.ok(!source.includes(swatch), `${file} uses raw status swatch ${swatch}`);
+    }
   }
 });
 

@@ -3,6 +3,7 @@ import { adminClient, emailLayout, htmlEscape, json, logEmailEvent, readBody, re
 import { buildConvertItems, netOrderRow } from '../../_lib/quote-convert.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
+import { csvResponse } from '../../_lib/reports.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -185,6 +186,17 @@ export async function onRequest({ request, env }) {
   const sb = adminClient(env);
 
   if (request.method === 'GET') {
+    if (new URL(request.url).searchParams.get('export') === 'csv') {
+      const { data, error } = await sb.from('quotes')
+        .select('id,created_at,type,name,email,company,phone,product,industry,location,status,priority,next_step,due_at,lead_score,assigned_to')
+        .order('created_at', { ascending: false }).limit(5000);
+      if (error) return json(500, { error: error.message });
+      const rows = [['Quote', 'Date', 'Type', 'Name', 'Email', 'Company', 'Phone', 'Product', 'Industry', 'Location', 'Status', 'Priority', 'Next step', 'Due', 'Lead score', 'Assigned']];
+      for (const qt of data || []) {
+        rows.push([qt.id, qt.created_at, qt.type || '', qt.name || '', qt.email || '', qt.company || '', qt.phone || '', qt.product || '', qt.industry || '', qt.location || '', qt.status || '', qt.priority || '', qt.next_step || '', qt.due_at || '', qt.lead_score ?? '', qt.assigned_to || '']);
+      }
+      return csvResponse(rows, 'masest-quotes');
+    }
     const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 100, maxLimit: 300 });
     const { data, error, count } = await sb.from('quotes')
       .select('id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at', { count: 'exact' })

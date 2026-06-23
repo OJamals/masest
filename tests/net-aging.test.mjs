@@ -88,7 +88,7 @@ test('admin orders endpoint selects net_terms_days and attaches net_aging', () =
 });
 
 test('admin.js renders a NET aging badge from net_aging', () => {
-  const src = readFileSync(join(root, 'js/admin.js'), 'utf8');
+  const src = readFileSync(join(root, 'js/admin/orders.js'), 'utf8'); // netAgingBadge moved in #36
   assert.match(src, /net_aging/, 'order row must read net_aging');
   assert.match(src, /net-age/, 'must render a net-age badge element');
 });

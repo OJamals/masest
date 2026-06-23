@@ -2,7 +2,7 @@
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
-import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,6 +38,7 @@ function syncTabFromHash() {
 }
 
 function wireTabs() {
+  linkTabsToPanels(document, 'dash');
   document.querySelectorAll('.dash-tab').forEach((b) =>
     b.addEventListener('click', () => selectTab(b.dataset.tab)));
   wireTablist(document.querySelector('.dash-tabs[role="tablist"]'), (tab) => selectTab(tab.dataset.tab));
@@ -67,10 +68,15 @@ function trackingSteps(order) {
     order.tracking_number && `Tracking: ${esc(order.tracking_number)}`,
     order.estimated_delivery_at && `ETA: ${esc(fmtDT(order.estimated_delivery_at))}`,
   ].filter(Boolean).join(' · ');
+  const events = (order.shipment_events || [])
+    .slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const history = events.length ? `<ul class="ship-history">${events.map((e) =>
+    `<li><b>${esc(e.status)}</b> · ${esc(fmtDT(e.created_at))}${e.note ? ` — ${esc(e.note)}` : ''}</li>`).join('')}</ul>` : '';
   return `<div class="trackline" aria-label="Order tracking timeline">
     ${steps.map(([key, label], index) => `<span class="${index <= activeIndex ? 'done' : ''}" data-track-step="${key}">${esc(label)}</span>`).join('')}
     ${meta ? `<p class="muted">${meta}</p>` : ''}
-    ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl(order.tracking_url))}" target="_blank" rel="noopener">Track shipment</a>` : ''}
+    ${history}
+    ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl(order.tracking_url))}" target="_blank" rel="noopener noreferrer">Track shipment</a>` : ''}
   </div>`;
 }
 
@@ -327,7 +333,10 @@ async function renderOrders({ append = false } = {}) {
     b.disabled = true;
     try {
       const { receipt_url } = await api(`/api/account/order?id=${encodeURIComponent(b.dataset.receipt)}&receipt=1`);
-      if (receipt_url) window.open(receipt_url, '_blank', 'noopener');
+      if (receipt_url) {
+        const receiptUrl = safeUrl(receipt_url);
+        window.open(receiptUrl, '_blank', 'noopener,noreferrer');
+      }
       else alert('No receipt is available for this order yet.');
     } catch { /* ignore */ }
     b.disabled = false;
@@ -378,19 +387,48 @@ async function renderNotifications({ append = false } = {}) {
   if (!st.items.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No notifications</div><div class="empty-body">Order updates, messages, and offers show up here.</div></div>`; return; }
   const icon = { order: 'ph-package', message: 'ph-chat-circle', offer: 'ph-tag', account: 'ph-user-check', system: 'ph-info' };
   box.innerHTML = st.items.map((n) => `
-    <div class="notif ${n.read ? '' : 'unread'}">
+    <div class="notif ${n.read ? '' : 'unread'}" data-id="${esc(n.id)}">
       <i class="ph ${icon[n.type] || 'ph-info'}" aria-hidden="true"></i>
         <div class="notif-body">
           <div><b>${esc(n.title)}</b> <span class="muted notif-time">· ${fmtDT(n.created_at)}</span></div>
         ${n.body ? `<div class="muted">${esc(n.body)}</div>` : ''}
-          ${n.link ? `<a href="${esc(safeUrl(n.link))}" class="muted notif-link">View →</a>` : ''}
+          ${n.link ? `<a href="${esc(safeUrl(n.link))}" class="muted notif-link" data-id="${esc(n.id)}">View →</a>` : ''}
       </div></div>`).join('') + pagerHtml('data-load-more-notifs', st);
   box.querySelector('[data-load-more-notifs]')?.addEventListener('click', () => renderNotifications({ append: true }));
+}
+// Clear one unread notification from every on-screen badge without a reload.
+// Guarded on the row's `unread` class so re-clicking a read item never over-decrements.
+function markNotifReadUI(row) {
+  if (!row || !row.classList.contains('unread')) return;
+  row.classList.remove('unread');
+  const dec = (n) => Math.max(0, (parseInt(n, 10) || 0) - 1);
+  const b = $('badgeNotifs'); if (b) setBadge('badgeNotifs', dec(b.textContent));
+  document.querySelectorAll('.acct-notif-dot').forEach((d) => {
+    const n = dec(d.textContent); if (n <= 0) d.remove(); else d.textContent = n > 9 ? '9+' : String(n);
+  });
+  const navLink = document.querySelector('[data-account-nav-notifications]');
+  const cnt = navLink?.querySelector('.acct-menu-count');
+  if (cnt) { const n = dec(cnt.textContent); cnt.textContent = n > 9 ? '9+' : String(n); cnt.hidden = n <= 0; navLink.classList.toggle('has-unread', n > 0); }
 }
 function wireNotifications() {
   $('markAllRead').addEventListener('click', async () => {
     try { await api('/api/account/notifications', { method: 'POST', body: { all: true } }); } catch {}
     loaded.notifications = false; await renderNotifications();
+  });
+  // Opening a notification: mark it read (so the bubble clears) and, when it points
+  // back into this dashboard, switch tabs in-page instead of a full reload to overview.
+  $('notifBody').addEventListener('click', (e) => {
+    const a = e.target.closest('.notif-link'); if (!a) return;
+    const id = a.dataset.id; if (!id) return;
+    markNotifReadUI(a.closest('.notif'));
+    api('/api/account/notifications', { method: 'POST', body: { id } }).catch(() => {});
+    const url = new URL(a.href, location.href);
+    const norm = (p) => p.replace(/\.html$/, '');
+    if (norm(url.pathname) === norm(location.pathname)) {
+      e.preventDefault();
+      const hash = url.hash.slice(1);
+      selectTab(DASH_TABS.includes(hash) ? hash : 'overview');
+    }
   });
   wireNotificationPrefs();
 }
@@ -513,6 +551,53 @@ function wireProfileForm() {
 function wireSecurityForm() {
   $('secEmail').textContent = ACCOUNT?.email || 'Not set';
   $('secLogout').addEventListener('click', async () => { try { await logout(); } catch {} location.href = 'account.html'; });
+
+  // Email change — Supabase sends a confirmation link; the email only switches once verified.
+  $('emailChangeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = $('secEmailStatus'); const input = $('secNewEmail');
+    status.textContent = 'Sending…'; status.dataset.state = '';
+    try {
+      const r = await api('/api/account/me', { method: 'POST', body: { email: input.value.trim() } });
+      status.textContent = r.unchanged ? 'That is already your email.' : 'Check your inbox to confirm the change.';
+      status.dataset.state = 'ok';
+      if (!r.unchanged) input.value = '';
+    } catch (err) {
+      status.textContent = err.data?.error === 'invalid_email' ? 'Enter a valid email address.' : 'Could not update email. Try again.';
+      status.dataset.state = 'err';
+    }
+  });
+
+  // GDPR data export — stream the JSON document to a file download.
+  $('dataExportBtn').addEventListener('click', async () => {
+    const status = $('privacyStatus');
+    status.textContent = 'Preparing export…'; status.dataset.state = '';
+    try {
+      const data = await api('/api/account/export');
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = 'masest-data-export.json'; a.click();
+      URL.revokeObjectURL(url);
+      status.textContent = 'Download started.'; status.dataset.state = 'ok';
+    } catch { status.textContent = 'Could not export your data. Try again.'; status.dataset.state = 'err'; }
+  });
+
+  // GDPR account deletion — irreversible; double-confirm via the shared dialog (no native confirm()).
+  $('acctDeleteBtn').addEventListener('click', async () => {
+    const ok = await confirmDialog(
+      'Permanently delete your account? Your sign-in and personal details are erased. Order history is kept (anonymized) for tax and accounting records. This cannot be undone.',
+      { confirmText: 'Delete account', cancelText: 'Keep account', danger: true },
+    );
+    if (!ok) return;
+    const status = $('privacyStatus');
+    status.textContent = 'Deleting…'; status.dataset.state = '';
+    try {
+      await api('/api/account/delete', { method: 'POST', body: { confirm: 'DELETE' } });
+      try { await logout(); } catch {}
+      location.href = 'index.html';
+    } catch { status.textContent = 'Could not delete your account. Contact support.'; status.dataset.state = 'err'; }
+  });
+
   $('secReset').addEventListener('click', async () => {
     const status = $('secStatus');
     const btn = $('secReset');

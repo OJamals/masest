@@ -14,8 +14,9 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
 export const safeUrl = (u) => {
   const s = String(u ?? '').trim();
   if (!s) return '';
-  if (/^(https?:|mailto:)/i.test(s)) return s;   // explicitly allowed schemes
-  if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return '#'; // any other scheme (javascript:, data:, vbscript:, …)
+  const schemeProbe = s.replace(/[\u0000-\u001F\u007F\s]+/g, '');
+  if (/^(https?:|mailto:)/i.test(schemeProbe)) return s;   // explicitly allowed schemes
+  if (/^[a-z][a-z0-9+.-]*:/i.test(schemeProbe)) return '#'; // any other scheme (javascript:, data:, vbscript:, …)
   return s;                                        // relative / anchor / path — no scheme
 };
 
@@ -43,6 +44,19 @@ export const rovingTabindex = (tabs, isSelected) => {
   tabs.forEach((t) => t.setAttribute('tabindex', isSelected(t) ? '0' : '-1'));
 };
 
+// Connect WAI-ARIA tabs to panels. Pages still own selected/hidden state.
+export const linkTabsToPanels = (root = document, prefix = 'tab') => {
+  const panels = [...root.querySelectorAll('[role="tabpanel"][data-panel]')];
+  root.querySelectorAll('[role="tab"][data-tab]').forEach((tab) => {
+    const panel = panels.find((p) => p.dataset.panel === tab.dataset.tab);
+    if (!panel) return;
+    tab.id ||= `${prefix}-${tab.dataset.tab}-tab`;
+    panel.id ||= `${prefix}-${tab.dataset.tab}-panel`;
+    tab.setAttribute('aria-controls', panel.id);
+    panel.setAttribute('aria-labelledby', tab.id);
+  });
+};
+
 // Arrow/Home/End navigation for a [role="tablist"]. `activate(tab)` selects it; focus
 // follows. Call once per tablist after the tabs exist.
 export const wireTablist = (tablist, activate) => {
@@ -56,6 +70,18 @@ export const wireTablist = (tablist, activate) => {
     e.preventDefault();
     tabs[next].focus();
     activate?.(tabs[next]);
+  });
+};
+
+// Event delegation: bind ONE listener on a stable container that dispatches to the
+// nearest ancestor matching `selector`. Survives innerHTML re-renders of the rows
+// (the listener lives on the container, not the rows), so it is bound once at wire
+// time instead of re-bound on every render. handler(event, matchedElement).
+export const delegate = (container, type, selector, handler) => {
+  if (!container) return;
+  container.addEventListener(type, (event) => {
+    const target = event.target.closest(selector);
+    if (target && container.contains(target)) handler(event, target);
   });
 };
 
@@ -82,3 +108,17 @@ export const confirmDialog = (message, { confirmText = 'Confirm', cancelText = '
     dlg.showModal();
     dlg.querySelector('button[value="confirm"]').focus();
   });
+
+// Read-only detail modal. `html` is trusted markup the caller assembles with esc()'d
+// data (admin views only). Native <dialog> — accessible, no framework. No-op on
+// browsers without showModal().
+export function detailDialog(html) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'detail-dialog';
+  dlg.innerHTML = `<div class="detail-dialog-body">${html}</div>`
+    + `<form method="dialog" class="detail-dialog-actions"><button class="btn btn-ghost btn-sm" value="close" type="submit">Close</button></form>`;
+  if (typeof dlg.showModal !== 'function') return;
+  document.body.appendChild(dlg);
+  dlg.addEventListener('close', () => dlg.remove());
+  dlg.showModal();
+}

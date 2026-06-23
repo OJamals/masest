@@ -6,7 +6,7 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 
 test("admin Orders uses inline QBO id inputs, not blocking prompt()", () => {
-  const src = read("js/admin.js");
+  const src = read("js/admin/orders.js"); // Orders tab moved in #36
   assert.doesNotMatch(src, /prompt\(['"]QuickBooks invoice ID['"]\)/, "invoice prompt() must be removed");
   assert.doesNotMatch(src, /prompt\(['"]QuickBooks payment ID['"]\)/, "payment prompt() must be removed");
   assert.match(src, /data-qbo-invoice-input/, "row should render an inline invoice-id input");

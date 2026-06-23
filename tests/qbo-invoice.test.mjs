@@ -19,10 +19,13 @@ test("admin orders can record a QuickBooks invoice id for NET orders", () => {
     "manual invoice recording should mark QBO sync complete");
   assert.match(source, /qbo_doc_type:\s*['"]invoice['"]/,
     "manual invoice recording should mark the linked QBO document as an invoice");
+  assert.match(source,
+    /record_qbo_invoice['"]\s*\)\s*\{[\s\S]{0,200}?staffCan\(role,\s*['"]company\.credit['"]\)/,
+    "manual invoice recording must require owner/finance via company.credit");
 });
 
 test("admin orders UI exposes the QuickBooks invoice action", () => {
-  const admin = read("js/admin.js");
+  const admin = read("js/admin/orders.js"); // Orders tab moved in #36
   assert.match(admin, /data-qbo-order/,
     "admin order rows must expose a QuickBooks invoice action");
   assert.match(admin, /QuickBooks invoice ID/,

@@ -28,6 +28,7 @@ export const STAFF_ROLES = ["owner", "finance", "support", "read_only"];
 const STAFF_CAPABILITIES = {
   "order.refund": ["owner", "finance"],
   "company.credit": ["owner", "finance"],
+  "company.view_as": ["owner", "finance", "support"],
   "product.write": ["owner"],
   "user.role": ["owner"],
 };

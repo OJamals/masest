@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260620c">
+<link rel="stylesheet" href="css/style.css?v=20260623a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -30,20 +30,20 @@
   .biz-row span, .biz-row b, .biz-card p, .setup-step span, .setup-step small { min-width: 0; overflow-wrap: anywhere; }
   .biz-row b { color: var(--ink); text-align: right; }
   .badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-  .badge[data-s=pending] { background: #fef3c7; color: #92400e; }
+  .badge[data-s=pending] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .badge[data-s=approved] { background: var(--accent-soft); color: var(--accent-ink); }
-  .badge[data-s=rejected], .badge[data-s=suspended] { background: #fee2e2; color: #b42318; }
+  .badge[data-s=rejected], .badge[data-s=suspended] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
   .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
   .tier { border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px; display: flex; flex-direction: column; }
   .tier h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: -.01em; }
   .tier .tier-tag { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-ink); margin-bottom: 8px; }
   .tier p { font-size: .85rem; color: var(--ink-soft); line-height: 1.45; flex: 1; margin: 6px 0 14px; }
   .biz-status { margin-top: 12px; font-size: 1rem; font-weight: 600; min-height: 1em; }
-  .biz-status[data-state=ok] { color: var(--accent-ink); } .biz-status[data-state=err] { color: #b42318; }
+  .biz-status[data-state=ok] { color: var(--accent-ink); } .biz-status[data-state=err] { color: var(--status-danger-ink); }
   .setup-list { display: grid; gap: 10px; margin-top: 14px; }
   .setup-step { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; }
   .setup-step i { font-size: 1.1rem; color: var(--accent-ink); margin-top: 2px; }
-  .setup-step[data-setup-state="open"] i { color: #92400e; }
+  .setup-step[data-setup-state="open"] i { color: var(--status-warning-ink); }
   .setup-step b { display: block; font-size: 1rem; }
   .setup-step small { display: block; color: var(--muted); line-height: 1.35; margin-top: 2px; }
   .muted { color: var(--ink-soft); font-size: 1rem; }
@@ -136,7 +136,7 @@
           <h2>Team members</h2>
           <p class="lead">Invite teammates to your company account. Invited emails join automatically once they register and sign in.</p>
           <div id="teamMembers"><p class="muted">Loading…</p></div>
-          <form id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
+          <form onsubmit="return false" id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
             <div class="biz-inline-form">
               <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
               <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
@@ -160,7 +160,7 @@
         <div class="biz-card" id="bizBulk">
           <h2>Bulk &amp; standing orders</h2>
           <p class="lead">Need volume pricing, drums, totes, or a recurring standing order? List the requirement and sales will return a scoped quote.</p>
-          <form id="bulkForm" class="form-card biz-clean-form">
+          <form onsubmit="return false" id="bulkForm" class="form-card biz-clean-form">
             <div class="field"><label for="bulkItems">What do you need? *</label>
               <textarea id="bulkItems" rows="3" placeholder="e.g. 4× 55-gal HCR, 2× 275-gal tote Neutral, monthly" required></textarea></div>
             <div class="field biz-field-gap"><label for="bulkNotes">Delivery / timing notes</label>

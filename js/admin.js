@@ -1,13 +1,18 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
-import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, confirmDialog } from './util.js';
-import { connectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
+import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog } from './util.js';
+import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 import { editKey, captureDirty, restoreDirty } from './admin/edits.js';
 import { createTrafficRenderer } from './admin/traffic.js';
 import { createSeoAudit } from './admin/seo.js';
 import { createThreadsTab } from './admin/threads.js';
 import { createOffersTab } from './admin/offers.js';
 import { createProductsTab } from './admin/products.js';
+import { createPricingTab } from './admin/pricing.js';
+import { createCustomersTab } from './admin/customers.js';
+import { createCompaniesTab } from './admin/companies.js';
+import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js';
+import { createQuotesTab } from './admin/quotes.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -27,9 +32,6 @@ function debounce(fn, ms = 220) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
-const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
-const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
-const QUOTE_STATUSES = ['new', 'contacted', 'closed', 'spam'];
 
 // Loading skeleton + rich empty state for admin lists (#31). Reuse the shared
 // components.css .skeleton / .empty-state styles.
@@ -61,173 +63,8 @@ function sourceLabel(message) {
   return '';
 }
 
-function qboReconciliation(order) {
-  const parts = [];
-  if (order.qbo_doc_id) parts.push(`${order.qbo_doc_type || 'qbo'} ${order.qbo_doc_id}`);
-  if (order.qbo_payment_id) parts.push(`payment ${order.qbo_payment_id}`);
-  if (!parts.length) return '';
-  return `<div class="muted" style="margin:6px 0 0;font-size:.78rem">QBO: ${parts.map(esc).join(' / ')}</div>`;
-}
-
 // NET aging badge (#10) — open NET balances show days-outstanding; overdue ones
 // (past company net_terms_days) escalate via net-age--over30/60/90 colouring.
-function netAgingBadge(order) {
-  const a = order.net_aging;
-  if (!a) return '';
-  const label = a.overdue ? `overdue ${a.daysOverdue}d` : `${a.ageDays}d open`;
-  const due = a.terms ? `, due ${a.dueIso.slice(0, 10)}` : '';
-  const title = `NET ${a.terms} — open ${a.ageDays} day(s)${a.overdue ? `, ${a.daysOverdue} past due` : due}`;
-  return `<br><span class="net-age net-age--${esc(a.bucket)}" title="${esc(title)}">${esc(label)}</span>`;
-}
-
-function trackingControls(order) {
-  const id = esc(order.id);
-  const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
-  return `${qboReconciliation(order)}<details class="adm-track"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
-    <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
-      <select class="adm-select" data-track-status="${id}" style="max-width:150px">
-        ${['processing', 'packing', 'shipped', 'delivered', 'blocked'].map((status) => `<option value="${status}" ${status === (order.tracking_status || 'processing') ? 'selected' : ''}>${status.replaceAll('_', ' ')}</option>`).join('')}
-      </select>
-      <input class="adm-input" data-track-carrier="${id}" value="${esc(order.carrier || '')}" placeholder="Carrier" style="max-width:130px">
-      <input class="adm-input" data-track-number="${id}" value="${esc(order.tracking_number || '')}" placeholder="Tracking #" style="max-width:150px">
-      <input class="adm-input" data-track-url="${id}" value="${esc(order.tracking_url || '')}" placeholder="Tracking URL" style="max-width:230px">
-      <input class="adm-input" data-track-eta="${id}" value="${esc(eta)}" type="datetime-local" aria-label="Estimated delivery" style="max-width:190px">
-      <button class="btn btn-ghost btn-sm" data-save-tracking="${id}" type="button">Save tracking</button>
-    </div>
-  </details>`;
-}
-
-function quoteDueInDays(days) {
-  return new Date(Date.now() + days * 86400e3).toISOString();
-}
-
-function setupProgress(company) {
-  const setup = company.setup;
-  if (!setup?.steps?.length) return '<span class="muted">-</span>';
-  const open = setup.steps.filter((step) => !step.done);
-  const firstOpen = open[0]?.label || 'Complete';
-  return `<span data-setup-state="${open.length ? 'open' : 'done'}"><b>${setup.percent || 0}%</b> <small class="muted">${esc(firstOpen)}</small></span>`;
-}
-
-function renderCompanyMembers(company, members = []) {
-  if (!members.length) return '<div class="company-members"><h3>Members</h3><p class="muted">No members.</p></div>';
-  return `<div class="company-members"><h3>Members</h3>${members.map((member) => `
-    <div class="dash-row">
-      <span>${esc(member.email || member.full_name || member.id)} <small class="muted">${esc(member.full_name || '')}</small></span>
-      <span>
-        <select class="adm-select" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}">
-          <option value="buyer" ${member.role === 'buyer' ? 'selected' : ''}>Buyer</option>
-          <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option>
-        </select>
-        <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}">Save</button>
-      </span>
-    </div>`).join('')}</div>`;
-}
-
-function renderCompanyInvites(company, invites = []) {
-  if (!invites.length) return '<div class="company-invites"><h3>Pending invites</h3><p class="muted">No pending invites.</p></div>';
-  return `<div class="company-invites"><h3>Pending invites</h3>${invites.map((invite) => `
-    <div class="dash-row">
-      <span>${esc(invite.email)} <small class="muted">${esc(invite.role || 'buyer')}</small></span>
-      <span>
-        <button class="btn btn-ghost btn-sm" type="button" data-invite-resend="${esc(invite.id)}" data-company-id="${esc(company.id)}">Resend</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-invite-revoke="${esc(invite.id)}" data-company-id="${esc(company.id)}">Revoke</button>
-      </span>
-    </div>`).join('')}</div>`;
-}
-
-async function openCompanyDetail(id) {
-  const box = $('companyDetail');
-  if (!box) return;
-  box.hidden = false;
-  box.textContent = 'Loading company...';
-  try {
-    const detail = await api(`/api/admin/company?id=${encodeURIComponent(id)}`);
-    const company = detail.company || {};
-    const openSteps = company.setup?.steps?.filter((step) => !step.done) || [];
-    box.innerHTML = `
-      <h2>${esc(company.name || 'Company')}</h2>
-      <div class="dash-row"><span>Status</span>${statusBadge(company.status)}</div>
-      <div class="dash-row"><span>Setup</span>${setupProgress(detail.company)}</div>
-      <div class="dash-row"><span>Members</span><b>${(detail.members || []).length}</b></div>
-      <div class="dash-row"><span>Orders</span><b>${(detail.orders || []).length}</b></div>
-      <div class="dash-row"><span>Messages</span><b>${detail.message_count || 0}</b></div>
-      <div class="company-detail-actions" data-company-id="${esc(company.id || id)}">
-        <button class="btn btn-primary btn-sm" type="button" data-company-detail-action="approve">Approve</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="suspend">Suspend</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="messages">Messages</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
-      </div>
-      ${renderCompanyMembers(company, detail.members || [])}
-      ${renderCompanyInvites(company, detail.invites || [])}
-      <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;
-    wireCompanyDetailActions(company);
-    wireCompanyUserActions(company);
-  } catch (err) {
-    box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load this company. Reload to retry.')}</p>`;
-  }
-}
-
-function wireCompanyDetailActions(company) {
-  const box = $('companyDetail');
-  if (!box || !company?.id) return;
-  box.querySelectorAll('[data-company-detail-action]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const action = button.dataset.companyDetailAction;
-      button.disabled = true;
-      try {
-        await api('/api/admin/companies', { method: 'POST', body: { id: company.id, action } });
-        await renderCompanies();
-        await openCompanyDetail(company.id);
-      } catch (err) {
-        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not apply the change. Retry.')}</p>`);
-        button.disabled = false;
-      }
-    });
-  });
-  box.querySelectorAll('[data-company-detail-tab]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const tab = button.dataset.companyDetailTab;
-      const search = tab === 'orders' ? $('ordSearch') : null;
-      if (search) search.value = company.id;
-      setTab(tab);
-    });
-  });
-}
-
-function wireCompanyUserActions(company) {
-  const box = $('companyDetail');
-  if (!box || !company?.id) return;
-  box.querySelectorAll('[data-member-save]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const profileId = button.dataset.memberSave;
-      const role = box.querySelector(`[data-member-role="${CSS.escape(profileId)}"]`)?.value;
-      button.disabled = true;
-      try {
-        await api('/api/admin/users', { method: 'POST', body: { action: 'set_role', company_id: company.id, profile_id: profileId, role } });
-        await openCompanyDetail(company.id);
-      } catch (err) {
-        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not update the role. Retry.')}</p>`);
-        button.disabled = false;
-      }
-    });
-  });
-  box.querySelectorAll('[data-invite-resend],[data-invite-revoke]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const inviteId = button.dataset.inviteResend || button.dataset.inviteRevoke;
-      const action = button.dataset.inviteResend ? 'resend_invite' : 'revoke_invite';
-      button.disabled = true;
-      try {
-        await api('/api/admin/users', { method: 'POST', body: { action, company_id: company.id, invite_id: inviteId } });
-        await openCompanyDetail(company.id);
-      } catch (err) {
-        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not update the invite. Retry.')}</p>`);
-        button.disabled = false;
-      }
-    });
-  });
-}
-
 function message(id, text, kind = '') {
   const el = $(id);
   if (!el) return;
@@ -281,12 +118,12 @@ function setTab(tab) {
   // refetching; first visit (or post-mutation re-render) fetches. offers/traffic self-cache.
   const cached = state.loaded.has(state.tab);
   const render = {
-    overview: () => { renderStats(state.stats); runSeoAudit(); },
+    overview: () => { renderStats(state.stats); runSeoAudit(); wireReports(); },
     orders: renderOrders,
     companies: renderCompanies,
     customers: renderCustomers,
-    products: renderProducts,
-    pricing: renderPricing,
+    products: () => { renderProducts(); wireInventory(); },
+    pricing: () => { renderPricing(); wireCoupons(); },
     messages: renderThreads,
     quotes: renderQuotePipeline,
     offers: () => renderOffers(),
@@ -362,6 +199,137 @@ function renderActionRail(actions = []) {
  `).join('')}</div></div>`;
 }
 
+// Authenticated CSV download (Bearer) — fetch then blob-save, since a plain link
+// can't attach the auth header. Mirrors the orders export above.
+async function downloadCsv(url, filename, statusId) {
+  message(statusId, 'Preparing export...');
+  try {
+    const token = await getToken();
+    const r = await fetch(url, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+    if (!r.ok) throw new Error('export_failed');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await r.blob());
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+    message(statusId, 'Exported.', 'ok');
+  } catch { message(statusId, 'Could not export the CSV. Retry.', 'err'); }
+}
+
+// Reports & exports card (#96). Bound once — the overview tab re-renders on each visit.
+let reportsWired = false;
+function wireReports() {
+  if (reportsWired || !$('repRun')) return;
+  reportsWired = true;
+  const range = () => {
+    const from = $('repFrom').value, to = $('repTo').value;
+    const qs = new URLSearchParams();
+    if (from) qs.set('from', from);
+    if (to) qs.set('to', to);
+    return qs.toString();
+  };
+  $('repRun').addEventListener('click', async () => {
+    message('repResult', 'Running report...');
+    try {
+      const r = await api('/api/admin/reports' + (range() ? '?' + range() : ''));
+      $('repResult').dataset.state = 'ok';
+      $('repResult').textContent = `Revenue ${money(r.revenue)} · Tax ${money(r.tax)} · ${r.paid_orders}/${r.orders} paid · AOV ${money(r.average_order_value)}`;
+    } catch { message('repResult', 'Could not run the report. Retry.', 'err'); }
+  });
+  $('repOrdersCsv').addEventListener('click', () =>
+    downloadCsv('/api/admin/reports?export=csv' + (range() ? '&' + range() : ''), 'masest-revenue.csv', 'repResult'));
+  $('repCustomersCsv').addEventListener('click', () =>
+    downloadCsv('/api/admin/customers?export=csv', 'masest-customers.csv', 'repResult'));
+  $('repQuotesCsv').addEventListener('click', () =>
+    downloadCsv('/api/admin/quotes?export=csv', 'masest-quotes.csv', 'repResult'));
+}
+
+// Inventory card (#98): bulk stock import + low-stock reorder list. Bound once;
+// the Products tab re-renders on each visit.
+let inventoryWired = false;
+async function renderLowStock() {
+  const box = $('invLow');
+  if (!box) return;
+  try {
+    const r = await api('/api/admin/inventory?view=low');
+    const low = r.low_stock || [];
+    box.innerHTML = low.length
+      ? `<table class="adm"><thead><tr><th>SKU</th><th>Product</th><th>Variant</th><th class="num">Stock</th><th class="num">Reorder</th></tr></thead><tbody>${low.map((v) =>
+          `<tr><td>${esc(v.vsku)}</td><td>${esc(v.products?.name || '')}</td><td>${esc(v.label)}</td><td class="num">${esc(v.stock)}</td><td class="num">${esc(v.reorder_point ?? 10)}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="muted">No variants at or below their reorder point.</p>';
+  } catch { box.innerHTML = '<p class="adm-status" data-state="err">Could not load low stock.</p>'; }
+}
+function wireInventory() {
+  renderLowStock();
+  if (inventoryWired || !$('invApply')) return;
+  inventoryWired = true;
+  $('invApply').addEventListener('click', async () => {
+    const csv = $('invCsv').value.trim();
+    if (!csv) { message('invStatus', 'Paste vsku,stock rows first.', 'err'); return; }
+    message('invStatus', 'Applying...');
+    try {
+      const r = await api('/api/admin/inventory', { method: 'POST', body: { csv } });
+      message('invStatus', `Updated ${r.updated.length}${r.failed.length ? `, ${r.failed.length} failed` : ''}.`, r.failed.length ? 'err' : 'ok');
+      if (r.updated.length) { $('invCsv').value = ''; renderLowStock(); }
+    } catch (err) { message('invStatus', err.data?.error || 'Could not apply stock. Retry.', 'err'); }
+  });
+  $('invReorderCsv').addEventListener('click', () =>
+    downloadCsv('/api/admin/inventory?view=low&export=csv', 'masest-low-stock.csv', 'invStatus'));
+}
+
+// Promo codes card (#97): Stripe promotion-code management. Bound once.
+let couponsWired = false;
+function couponDiscount(c) {
+  if (c.percent_off != null) return `${esc(c.percent_off)}% off`;
+  if (c.amount_off != null) return `${esc(money(c.amount_off, c.currency))} off`;
+  return '';
+}
+async function renderCoupons() {
+  const box = $('cpList');
+  if (!box) return;
+  try {
+    const r = await api('/api/admin/coupons');
+    const list = r.coupons || [];
+    box.innerHTML = list.length
+      ? `<table class="adm"><thead><tr><th>Code</th><th>Discount</th><th>Min</th><th class="num">Uses</th><th>Expires</th><th></th></tr></thead><tbody>${list.map((c) =>
+          `<tr><td><b>${esc(c.code)}</b>${c.active ? '' : ' <span class="badge">inactive</span>'}</td><td>${couponDiscount(c)}</td><td>${c.minimum_amount != null ? esc(money(c.minimum_amount, c.currency)) : '—'}</td><td class="num">${esc(c.times_redeemed)}${c.max_redemptions ? `/${esc(c.max_redemptions)}` : ''}</td><td>${c.expires_at ? esc(date(c.expires_at * 1000)) : '—'}</td><td>${c.active ? `<button class="btn btn-ghost btn-sm" data-coupon-off="${esc(c.id)}" type="button">Deactivate</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="muted">No promo codes yet.</p>';
+  } catch { box.innerHTML = '<p class="adm-status" data-state="err">Could not load promo codes.</p>'; }
+}
+function wireCoupons() {
+  renderCoupons();
+  if (couponsWired || !$('cpCreate')) return;
+  couponsWired = true;
+  $('cpCreate').addEventListener('click', async () => {
+    const body = {
+      code: $('cpCode').value.trim(),
+      percent_off: $('cpPercent').value.trim(),
+      amount_off: $('cpAmount').value.trim(),
+      minimum_amount: $('cpMin').value.trim(),
+      max_redemptions: $('cpMax').value.trim(),
+      expires_at: $('cpExpires').value,
+    };
+    if (!body.code) { message('cpStatus', 'Enter a code.', 'err'); return; }
+    message('cpStatus', 'Creating...');
+    try {
+      await api('/api/admin/coupons', { method: 'POST', body });
+      message('cpStatus', 'Code created.', 'ok');
+      ['cpCode', 'cpPercent', 'cpAmount', 'cpMin', 'cpMax', 'cpExpires'].forEach((id) => { $(id).value = ''; });
+      renderCoupons();
+    } catch (err) { message('cpStatus', err.data?.error || 'Could not create the code. Retry.', 'err'); }
+  });
+  $('cpList').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-coupon-off]');
+    if (!btn) return;
+    if (!(await confirmDialog('Deactivate this promo code? It can no longer be redeemed.', { confirmText: 'Deactivate', danger: true }))) return;
+    btn.disabled = true;
+    try {
+      await api('/api/admin/coupons', { method: 'POST', body: { id: btn.dataset.couponOff, action: 'deactivate' } });
+      renderCoupons();
+    } catch { message('cpStatus', 'Could not deactivate. Retry.', 'err'); btn.disabled = false; }
+  });
+}
+
 function renderStats(stats = {}) {
  badge('aBadgePending', stats.companies?.pending || 0);
  badge('aBadgeMsg', stats.messages?.unread || 0);
@@ -386,12 +354,6 @@ function renderStats(stats = {}) {
 }
 
 // "Load more" footer for the admin orders table — appends the next server page (#29).
-function admOrdersPager() {
-  if (!state.ordersHasMore) return '';
-  const count = state.ordersTotal != null ? ` (${state.orders.length} of ${state.ordersTotal})` : '';
-  return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" data-load-more-orders type="button">Load more${count}</button></div>`;
-}
-
 // Generic "Load more" footer for an accumulated admin list (#29).
 function admListPager(attr, loaded, total, hasMore) {
   if (!hasMore) return '';
@@ -399,510 +361,23 @@ function admListPager(attr, loaded, total, hasMore) {
   return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
 }
 
-async function renderOrders({ append = false, refetch = true } = {}) {
-  const box = $('admOrders');
-  const snap = captureDirty(box);
-  const status = $('ordFilter').value;
-  if (refetch) {
-    if (!append) { state.orders = []; state.ordersOffset = 0; box.innerHTML = admSkeleton(); }
-    try {
-      const params = new URLSearchParams();
-      if (status) params.set('status', status);
-      params.set('limit', '100');
-      params.set('offset', String(state.ordersOffset || 0));
-      const res = await api('/api/admin/orders?' + params.toString());
-      state.orders = (state.orders || []).concat(res.orders || []);
-      state.ordersOffset = (state.ordersOffset || 0) + (res.orders || []).length;
-      state.ordersTotal = res.total;
-      state.ordersHasMore = !!res.has_more;
-      state.loaded.add('orders');
-    } catch {
-      if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load orders. Reload to retry.</p>';
-      return;
-    }
-  }
-  const q = $('ordSearch').value.trim().toLowerCase();
-  const orders = state.orders.filter((order) => JSON.stringify(order).toLowerCase().includes(q));
-  if (!orders.length) {
-    box.innerHTML = admEmpty('ph-package', q ? 'No matching orders' : 'No orders yet', q ? 'No orders match your search.' : 'Orders appear here once customers check out.') + admOrdersPager();
-    box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
-    return;
-  }
-  box.innerHTML = `<table class="adm"><thead><tr><th>Date</th><th>Company</th><th>Items</th><th>Total</th><th>Pay</th><th>Status</th><th></th></tr></thead><tbody>${orders.map((order) => {
-    const items = (order.order_items || []).map((item) => `${esc(item.qty)} x ${esc(item.name || item.sku)}`).join('<br>');
-    return `<tr>
-      <td>${esc(date(order.created_at))}</td>
-      <td>${esc(order.companies?.name || order.company_name || order.company_id || 'Guest')}</td>
-      <td>${items || '<span class="muted">No items</span>'}</td>
-      <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
-      <td>${esc(order.payment_method || '')}${netAgingBadge(order)}</td>
-      <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-      <td>${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
-    </tr>`;
-  }).join('')}</tbody></table>` + admOrdersPager();
-  restoreDirty(box, snap);
-
-  box.querySelectorAll('[data-save-order]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.saveOrder;
-      const status = box.querySelector(`[data-order-status="${CSS.escape(id)}"]`).value;
-      button.disabled = true;
-      try {
-        await api('/api/admin/orders', { method: 'POST', body: { id, status } });
-        await renderOrders();
-      } finally {
-        button.disabled = false;
-      }
-    });
-  });
-  box.querySelectorAll('[data-save-tracking]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.saveTracking;
-      const pick = (name) => box.querySelector(`[data-track-${name}="${CSS.escape(id)}"]`);
-      button.disabled = true;
-      try {
-        await api('/api/admin/orders', {
-          method: 'POST',
-          body: {
-            id,
-            action: 'update_tracking',
-            tracking_status: pick('status').value,
-            carrier: pick('carrier').value.trim(),
-            tracking_number: pick('number').value.trim(),
-            tracking_url: pick('url').value.trim(),
-            estimated_delivery_at: pick('eta').value,
-          },
-        });
-        message('ordStatus', 'Tracking saved.', 'ok');
-        await renderOrders();
-      } catch (err) {
-        message('ordStatus', err.data?.error || 'Could not update tracking. Retry.', 'err');
-        button.disabled = false;
-      }
-    });
-  });
-  box.querySelectorAll('[data-refund-order]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.refundOrder;
-      const amountInput = box.querySelector(`[data-refund-amount="${CSS.escape(id)}"]`);
-      const raw = amountInput?.value.trim();
-      const amount = raw ? Number(raw) : undefined;
-      if (raw && (!Number.isFinite(amount) || amount <= 0)) {
-        message('ordStatus', 'Enter a valid refund amount, or leave it blank to refund the full balance.', 'err');
-        return;
-      }
-      const prompt = amount
-        ? `Refund $${amount.toFixed(2)} to this order via Stripe?`
-        : 'Refund the full remaining balance via Stripe?';
-      if (!(await confirmDialog(prompt, { confirmText: 'Refund', danger: true }))) return;
-      button.disabled = true;
-      message('ordStatus', 'Refunding...');
-      try {
-        const res = await api('/api/admin/orders', { method: 'POST', body: { id, action: 'refund', amount } });
-        message('ordStatus', res.partial ? `Partial refund of $${Number(res.amount).toFixed(2)} issued.` : 'Refunded.', 'ok');
-        await renderOrders();
-      } catch (err) {
-        message('ordStatus', err.data?.error || 'Refund did not go through. Refresh and check before retrying.', 'err');
-        button.disabled = false;
-      }
-    });
-  });
-  box.querySelectorAll('[data-qbo-order]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.qboOrder;
-      const invoiceId = box.querySelector(`[data-qbo-invoice-input="${CSS.escape(id)}"]`)?.value.trim();
-      if (!invoiceId) { message('ordStatus', 'Enter a QuickBooks invoice ID first.', 'err'); return; }
-      button.disabled = true;
-      try {
-        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_invoice', qbo_invoice_id: invoiceId } });
-        message('ordStatus', 'Invoice recorded.', 'ok');
-        await renderOrders();
-      } catch (err) {
-        message('ordStatus', err.data?.error || 'Could not update the invoice. Refresh and check before retrying.', 'err');
-        button.disabled = false;
-      }
-    });
-  });
-
-  box.querySelectorAll('[data-qbo-payment-order]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.qboPaymentOrder;
-      const paymentId = box.querySelector(`[data-qbo-payment-input="${CSS.escape(id)}"]`)?.value.trim();
-      if (!paymentId) { message('ordStatus', 'Enter a QuickBooks payment ID first.', 'err'); return; }
-      button.disabled = true;
-      try {
-        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_payment', qbo_payment_id: paymentId } });
-        message('ordStatus', 'Payment recorded.', 'ok');
-        await renderOrders();
-      } catch (err) {
-        message('ordStatus', err.data?.error || 'Could not update payment status. Refresh and check before retrying.', 'err');
-        button.disabled = false;
-      }
-    });
-  });
-  box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
-}
-
-async function renderCustomers({ refetch = true } = {}) {
-  const box = $('admCustomers');
-  if (refetch) {
-    box.innerHTML = admSkeleton();
-    try {
-      state.customers = (await api('/api/admin/customers')).customers || [];
-      state.loaded.add('customers');
-    } catch {
-      box.innerHTML = '<p class="adm-status" data-state="err">Could not load customers. Reload to retry.</p>';
-      return;
-    }
-  }
-  const q = $('custSearch').value.trim().toLowerCase();
-  state.customers = state.customers || [];
-  const rows = state.customers.filter((c) => JSON.stringify(c).toLowerCase().includes(q));
-  if (!rows.length) { box.innerHTML = admEmpty('ph-users', 'No customers', 'Approved customers and their companies appear here.'); return; }
-  box.innerHTML = `<table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Tier</th><th>Role</th></tr></thead><tbody>${rows.map((c) => `
-    <tr>
-      <td>${esc(c.full_name || '-')}${c.phone ? `<br><span class="muted">${esc(c.phone)}</span>` : ''}</td>
-      <td>${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '<span class="muted">-</span>'}</td>
-      <td>${esc(c.company_name || '-')}</td>
-      <td>${statusBadge(c.company_status || '-')}</td>
-      <td>${esc(c.price_tier || 'retail')}</td>
-      <td>${esc(c.role || '')}</td>
-    </tr>`).join('')}</tbody></table>`;
-}
-
-async function renderCompanies({ append = false, refetch = true } = {}) {
-  const box = $('admCompanies');
-  const snap = captureDirty(box);
-  if (refetch) {
-    if (!append) { state.companies = []; state.companiesOffset = 0; box.innerHTML = admSkeleton(); }
-    try {
-      const params = new URLSearchParams({ limit: '100', offset: String(state.companiesOffset || 0) });
-      const res = await api('/api/admin/companies?' + params.toString());
-      state.companies = (state.companies || []).concat(res.companies || []);
-      state.companiesOffset = (state.companiesOffset || 0) + (res.companies || []).length;
-      state.companiesTotal = res.total;
-      state.companiesHasMore = !!res.has_more;
-      state.loaded.add('companies');
-    } catch {
-      if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load accounts. Reload to retry.</p>';
-      return;
-    }
-  }
-  const pager = admListPager('data-load-more-companies', state.companies.length, state.companiesTotal, state.companiesHasMore);
-  const wireMore = () => box.querySelector('[data-load-more-companies]')?.addEventListener('click', () => renderCompanies({ append: true }));
-  const q = $('coSearch').value.trim().toLowerCase();
-  const companies = state.companies.filter((company) => JSON.stringify(company).toLowerCase().includes(q));
-  if (!companies.length) {
-    box.innerHTML = admEmpty('ph-buildings', q ? 'No matching accounts' : 'No accounts', q ? 'No accounts match your search.' : 'New B2B account signups appear here for approval.') + pager;
-    wireMore();
-    return;
-  }
-  box.innerHTML = `<div class="adm-tools" style="margin-bottom:10px"><button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button></div><table class="adm"><thead><tr><th><input type="checkbox" id="coAll" aria-label="Select all"></th><th>Company</th><th>Status</th><th>Setup</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
-    <tr>
-      <td><input type="checkbox" class="co-check" value="${esc(company.id)}"></td>
-      <td><button class="link-name" data-open-company="${esc(company.id)}" type="button">${esc(company.name)}</button></td>
-      <td>${statusBadge(company.status)}</td>
-      <td>${setupProgress(company)}</td>
-      <td><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${esc(company.id)}"></td>
-      <td><input class="adm-input" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${esc(company.id)}"></td>
-      <td><select class="adm-select" data-tier="${esc(company.id)}">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></td>
-      <td>${esc((company.profiles || []).map((p) => p.full_name || p.role).join(', '))}</td>
-      <td><button class="btn btn-ghost btn-sm" data-approve="${esc(company.id)}" type="button">Approve</button></td>
-    </tr>
-  `).join('')}</tbody></table>` + pager;
-  restoreDirty(box, snap);
-  box.querySelectorAll('[data-open-company]').forEach((button) => {
-    button.addEventListener('click', () => openCompanyDetail(button.dataset.openCompany));
-  });
-  wireMore();
-  box.querySelectorAll('[data-approve]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.approve;
-      await api('/api/admin/companies', {
-        method: 'POST',
-        body: {
-          id,
-          action: 'approve',
-          net_terms_days: Number(box.querySelector(`[data-net="${CSS.escape(id)}"]`).value || 0),
-          credit_limit: Number(box.querySelector(`[data-credit="${CSS.escape(id)}"]`).value || 0),
-          price_tier: box.querySelector(`[data-tier="${CSS.escape(id)}"]`).value,
-        },
-      });
-      renderCompanies();
-    });
-  });
-  const coAll = $('coAll');
-  if (coAll) coAll.addEventListener('change', () => box.querySelectorAll('.co-check').forEach((c) => { c.checked = coAll.checked; }));
-  const bulk = $('bulkApprove');
-  if (bulk) bulk.addEventListener('click', async () => {
-    const ids = [...box.querySelectorAll('.co-check:checked')].map((c) => c.value);
-    if (!ids.length) return;
-    if (!(await confirmDialog(`Approve ${ids.length} account(s)?`, { confirmText: 'Approve' }))) return;
-    bulk.disabled = true;
-    try {
-      await api('/api/admin/companies', { method: 'POST', body: { ids, action: 'approve' } });
-      await renderCompanies();
-    } finally { bulk.disabled = false; }
-  });
-}
+// Customers tab extracted to ./admin/customers.js (#36 split). statusBadge + primitives injected.
+const { renderCustomers } = createCustomersTab({ $, api, state, admSkeleton, admEmpty, statusBadge });
+// Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
+const { renderCompanies, wireCompanies } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager });
+// Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
+const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager });
+// Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
+const { renderQuotePipeline, wireQuotes } = createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager });
 
 // Products tab extracted to ./admin/products.js (#36 split). Shared primitives injected.
-const { renderProducts, wireProductForm, wireVariantForm } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
+const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
 
-async function renderPricing({ refetch = true } = {}) {
-  const box = $('admPricing');
-  const snap = captureDirty(box);
-  if (refetch) {
-    box.innerHTML = admSkeleton();
-    try {
-      state.pricing = await api('/api/admin/variant-pricing');
-      state.loaded.add('pricing');
-    } catch {
-      box.innerHTML = '<p class="adm-status" data-state="err">Could not load pricing. Reload to retry.</p>';
-      return;
-    }
-  }
-  const data = state.pricing || { tiers: ['retail', 'hvac', 'wholesale'], rows: [] };
-  const q = $('priceSearch').value.trim().toLowerCase();
-  const tiers = data.tiers || ['retail', 'hvac', 'wholesale'];
-  const rows = (data.rows || []).filter((row) => JSON.stringify(row).toLowerCase().includes(q));
-  const fmt = (value) => value == null ? '' : Number(value).toFixed(2);
-  if (!rows.length) {
-    box.innerHTML = '<p class="muted" style="padding:14px">No variants.</p>';
-    return;
-  }
-  box.innerHTML = `<table class="adm"><thead><tr><th>Variant</th><th>VSKU</th><th>Base</th>${tiers.map((tier) => `<th>${esc(tier)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `
-    <tr data-vsku="${esc(row.vsku)}">
-      <td>${esc(row.product_name)} - ${esc(row.label)}${row.mode === 'quote' ? ' <span class="badge" data-s="quote">quote</span>' : ''}</td>
-      <td><code>${esc(row.vsku)}</code></td>
-      <td class="muted">${row.base_price == null ? '-' : fmt(row.base_price)}</td>
-      ${tiers.map((tier) => `<td><input class="adm-input" data-price-tier="${esc(tier)}" type="number" step="0.01" min="0" value="${esc(row.tiers?.[tier] ?? '')}" placeholder="${row.base_price == null ? '-' : fmt(row.base_price)}"></td>`).join('')}
-    </tr>
-  `).join('')}</tbody></table><p id="priceRowStatus" class="adm-status" role="status"></p>`;
-  restoreDirty(box, snap);
-  box.querySelectorAll('[data-price-tier]').forEach((input) => {
-    input.addEventListener('change', async () => {
-      const row = input.closest('[data-vsku]');
-      input.disabled = true;
-      try {
-        await api('/api/admin/variant-pricing', {
-          method: 'POST',
-          body: { vsku: row.dataset.vsku, tier: input.dataset.priceTier, price: input.value },
-        });
-        message('priceRowStatus', `${row.dataset.vsku} ${input.dataset.priceTier} saved.`, 'ok');
-      } catch (err) {
-        message('priceRowStatus', err.data?.error || 'Could not save the price. Retry.', 'err');
-      } finally {
-        input.disabled = false;
-      }
-    });
-  });
-}
+// Pricing tab extracted to ./admin/pricing.js (#36 split). Shared primitives injected.
+const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message, admSkeleton });
 
 // Messages/threads tab extracted to ./admin/threads.js (#36 split). Shared primitives + sourceLabel injected.
-const renderThreads = createThreadsTab({ $, api, state, message, admSkeleton, sourceLabel });
-
-async function renderQuotePipeline({ append = false, refetch = true } = {}) {
-  const box = $('admQuotes');
-  const snap = captureDirty(box);
-  if (refetch) {
-    if (!append) { state.quotes = []; state.quotesOffset = 0; box.innerHTML = admSkeleton(); }
-    let data;
-    try {
-      const params = new URLSearchParams({ limit: '100', offset: String(state.quotesOffset || 0) });
-      data = await api('/api/admin/quotes?' + params.toString());
-    } catch {
-      if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
-      return;
-    }
-    state.quotes = (state.quotes || []).concat(data.quotes || []);
-    state.quotesOffset = (state.quotesOffset || 0) + (data.quotes || []).length;
-    state.quotesTotal = data.total;
-    state.quotesHasMore = !!data.has_more;
-    state.quotesNeedsMigration = !!data.needs_migration;
-    badge('aBadgeQuotes', data.urgent_count || data.new_count || 0);
-    state.loaded.add('quotes');
-  }
-  if (state.quotesNeedsMigration) {
-    box.innerHTML = '<p class="muted">No quote database yet. Apply supabase/schema-quotes.sql to store and triage leads here.</p>';
-    return;
-  }
-  if (!state.companies?.length) {
-    try { state.companies = (await api('/api/admin/companies?limit=500')).companies || []; } catch { state.companies = []; }
-  }
-  const quotesPager = admListPager('data-load-more-quotes', state.quotes.length, state.quotesTotal, state.quotesHasMore);
-  const wireQuotesMore = () => box.querySelector('[data-load-more-quotes]')?.addEventListener('click', () => renderQuotePipeline({ append: true }));
-
-  const coOpts = (state.companies || [])
-    .map((company) => `<option value="${esc(company.id)}">${esc(company.name)} (${esc(company.status || '')})</option>`)
-    .join('');
-  const q = $('qSearch').value.trim().toLowerCase();
-  const filter = $('qFilter').value;
-  const priority = $('qPriority')?.value || '';
-  const ownerFilter = $('qOwner')?.value.trim().toLowerCase() || '';
-  const dueFilter = $('qDue')?.value || '';
-  const now = Date.now();
-  const quotes = state.quotes.filter((quote) => {
-    const text = JSON.stringify(quote).toLowerCase();
-    const ownerMatch = !ownerFilter || String(quote.assigned_to || '').toLowerCase().includes(ownerFilter);
-    const dueAt = quote.due_at ? new Date(quote.due_at).getTime() : null;
-    const active = !['closed', 'spam'].includes(quote.status);
-    const dueMatch = !dueFilter
-      || (dueFilter === 'overdue' && active && dueAt && dueAt <= now)
-      || (dueFilter === 'upcoming' && active && dueAt && dueAt > now)
-      || (dueFilter === 'unscheduled' && active && !dueAt);
-    return (!q || text.includes(q))
-      && (!filter || quote.status === filter)
-      && (!priority || quote.priority === priority)
-      && ownerMatch
-      && dueMatch;
-  });
-
-  if (!quotes.length) {
-    box.innerHTML = admEmpty('ph-chats-circle', 'No quotes', 'Quote requests from the site appear here.') + quotesPager;
-    wireQuotesMore();
-    return;
-  }
-
-  box.innerHTML = quotes.map((quote) => {
-    const id = esc(quote.id);
-    const dueValue = quote.due_at ? new Date(quote.due_at).toISOString().slice(0, 16) : '';
-    const score = Number.isFinite(Number(quote.lead_score)) ? Number(quote.lead_score) : 0;
-    return `
-      <details class="quote-item">
-        <summary>
-          <b>${esc(quote.company || quote.name || quote.email)}</b>
-          ${statusBadge(quote.status || 'new')}
-          ${statusBadge(quote.priority || 'normal')}
-          <span class="muted">Score ${esc(score)}</span>
-        </summary>
-        <p>${esc(quote.message || '')}</p>
-        <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
-          <select class="adm-select" data-quote-status="${id}">
-            ${QUOTE_STATUSES.map((status) => `<option value="${status}" ${status === quote.status ? 'selected' : ''}>${status}</option>`).join('')}
-          </select>
-          <select class="adm-select" data-quote-priority="${id}">
-            ${['urgent', 'high', 'normal', 'low'].map((value) => `<option value="${value}" ${value === (quote.priority || 'normal') ? 'selected' : ''}>${value}</option>`).join('')}
-          </select>
-          <input class="adm-input" data-quote-next-step="${id}" value="${esc(quote.next_step || '')}" placeholder="Next step" style="max-width:220px">
-          <input class="adm-input" data-quote-owner="${id}" value="${esc(quote.assigned_to || '')}" placeholder="Owner" style="max-width:160px">
-          <input class="adm-input" data-quote-due-at="${id}" type="datetime-local" value="${esc(dueValue)}" aria-label="Follow-up due" style="max-width:190px">
-          <button class="btn btn-ghost btn-sm" data-save-quote="${id}" type="button">Save</button>
-          <button class="btn btn-ghost btn-sm" data-snooze-quote="${id}" type="button">Snooze 2d</button>
-          <button class="btn btn-ghost btn-sm" data-followup="${id}" type="button">Send follow-up</button>
-          <a class="btn btn-ghost btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>
-        </div>
-        <textarea class="adm-textarea" data-quote-notes="${id}" placeholder="Internal notes">${esc(quote.notes || '')}</textarea>
-        <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
-          <select class="adm-select" data-conv-co="${id}" style="max-width:200px"><option value="">Convert to order for...</option>${coOpts}</select>
-          <input class="adm-input" data-conv-sku="${id}" placeholder="SKU" style="max-width:120px">
-          <input class="adm-input" data-conv-name="${id}" placeholder="Item name" style="max-width:150px">
-          <input class="adm-input" type="number" min="1" value="1" data-conv-qty="${id}" style="max-width:64px" aria-label="Qty">
-          <input class="adm-input" type="number" min="0" step="0.01" data-conv-price="${id}" placeholder="Unit $" style="max-width:90px">
-          <button class="btn btn-ghost btn-sm" data-convert="${id}" type="button">Convert to order</button>
-        </div>
-      </details>
-    `;
-  }).join('') + quotesPager;
-  restoreDirty(box, snap);
-  wireQuotesMore();
-
-  box.querySelectorAll('[data-save-quote]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.saveQuote;
-      button.disabled = true;
-      try {
-        await api('/api/admin/quotes', {
-          method: 'POST',
-          body: {
-        id,
-        status: box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value,
-        priority: box.querySelector(`[data-quote-priority="${CSS.escape(id)}"]`).value,
-        assigned_to: box.querySelector(`[data-quote-owner="${CSS.escape(id)}"]`).value,
-        next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
-            due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
-            notes: box.querySelector(`[data-quote-notes="${CSS.escape(id)}"]`).value,
-          },
-        });
-        message('qStatus', 'Lead saved.', 'ok');
-        await renderQuotePipeline();
-      } catch (err) {
-        message('qStatus', err.data?.error || 'Could not save the lead. Retry.', 'err');
-        button.disabled = false;
-      }
-    });
-  });
-
-  box.querySelectorAll('[data-convert]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.convert;
-      const pick = (key) => box.querySelector(`[data-conv-${key}="${CSS.escape(id)}"]`);
-      const company_id = pick('co').value;
-      const sku = pick('sku').value.trim();
-      const name = pick('name').value.trim();
-      const qty = pick('qty').value;
-      const unit_price = pick('price').value;
-      if (!company_id) { message('qStatus', 'Pick a company to convert into.', 'err'); return; }
-      if (!sku || unit_price === '') { message('qStatus', 'SKU and unit price are required.', 'err'); return; }
-      button.disabled = true;
-      message('qStatus', 'Creating order...');
-      try {
-        const res = await api('/api/admin/quotes', { method: 'POST', body: { id, action: 'convert', company_id, items: [{ sku, name, qty, unit_price }] } });
-        message('qStatus', `Order ${res.order_id} created.`, 'ok');
-        await renderQuotePipeline();
-      } catch (err) {
-        message('qStatus', err.data?.error || 'Could not convert the lead. Refresh and check for a new order before retrying.', 'err');
-        button.disabled = false;
-      }
-    });
-  });
-
-  box.querySelectorAll('[data-snooze-quote]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.snoozeQuote;
-      button.disabled = true;
-      try {
-        await api('/api/admin/quotes', {
-          method: 'POST',
-          body: {
-            id,
-            status: 'contacted',
-            next_step: 'Snoozed for two days',
-            due_at: quoteDueInDays(2),
-          },
-        });
-        message('qStatus', 'Follow-up snoozed.', 'ok');
-        await renderQuotePipeline();
-      } catch (err) {
-        message('qStatus', err.data?.error || 'Could not snooze the follow-up. Retry.', 'err');
-        button.disabled = false;
-      }
-    });
-  });
-
-  box.querySelectorAll('[data-followup]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const id = button.dataset.followup;
-      button.disabled = true;
-      try {
-        await api('/api/admin/quotes', {
-          method: 'POST',
-          body: {
-            id,
-            action: 'followup',
-            next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
-            due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
-          },
-        });
-        message('qStatus', 'Follow-up sent.', 'ok');
-        await renderQuotePipeline();
-      } catch (err) {
-        message('qStatus', err.data?.error || 'Could not send the follow-up. Retry.', 'err');
-        button.disabled = false;
-      }
-    });
-  });
-}
+const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, sourceLabel });
 
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
 const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton });
@@ -942,6 +417,7 @@ function gateCaptchaToken() {
 function resetGateCaptcha() { try { window.turnstile?.reset(); } catch (e) { /* not loaded */ } }
 
 function wire() {
+  linkTabsToPanels(document, 'adm');
   ORDER_STATUSES.forEach((status) => {
     $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${status}">${status.replaceAll('_', ' ')}</option>`);
   });
@@ -971,6 +447,7 @@ function wire() {
   });
   $('qboConnect')?.addEventListener('click', connectQbo);
   $('qboSyncNow')?.addEventListener('click', runQboSync);
+  $('qboDisconnect')?.addEventListener('click', disconnectQbo);
   $('ordExport').addEventListener('click', async () => {
     message('ordStatus', 'Preparing export...');
     try {
@@ -1009,6 +486,13 @@ function wire() {
   wireProductForm();
   wireVariantForm();
   wireOfferForm();
+  // Delegated row actions, bound once on each tab's table container (#36).
+  wireOrders();
+  wireCompanies();
+  wireProducts();
+  wirePricing();
+  wireQuotes();
+  wireThreads();
 }
 
 wire();

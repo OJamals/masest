@@ -10,8 +10,8 @@ const OUT = 'dist';
 
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
- /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^node_modules\//,
- /^dist\//, /^masest\.co-audit\//, /^\.github\//, /^\.vscode\//,
+  /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^node_modules\//,
+  /^dist\//, /^\.github\//, /^\.vscode\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
   // Internal seed sources — not client assets (only data/drum-pricing.json is fetched).
@@ -20,7 +20,7 @@ const DENY = [
 
 rmSync(OUT, { recursive: true, force: true });
 
-const files = execSync('git ls-files --cached --others --exclude-standard', { encoding: 'utf8' }).split('\n').filter(Boolean);
+const files = execSync('git ls-files', { encoding: 'utf8' }).split('\n').filter(Boolean);
 let n = 0;
 for (const f of files) {
   if (DENY.some((r) => r.test(f))) continue;
@@ -38,7 +38,7 @@ writeFileSync(join(OUT, '_headers'),
   X-Frame-Options: SAMEORIGIN
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()
-  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://client.crisp.chat https://settings.crisp.chat; connect-src 'self' https://*.supabase.co https://api.stripe.com https://api.crisp.chat https://client.crisp.chat https://settings.crisp.chat https://*.crisp.chat wss://*.crisp.chat; frame-src https://client.crisp.chat https://game.crisp.chat; form-action 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://client.crisp.chat https://settings.crisp.chat; connect-src 'self' https://*.supabase.co https://api.stripe.com https://api.crisp.chat https://client.crisp.chat https://settings.crisp.chat https://*.crisp.chat wss://*.crisp.chat; frame-src https://challenges.cloudflare.com https://client.crisp.chat https://game.crisp.chat; form-action 'self'; upgrade-insecure-requests
 `);
 
 console.log(`cf-build: copied ${n} static files to ${OUT}/`);

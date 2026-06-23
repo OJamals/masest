@@ -5,6 +5,7 @@
 // has no price, returns 409 {fallback:true} so the client falls back to the request-enrollment flow.
 import Stripe from 'stripe';
 import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
+import { subscribeAction } from '../../_lib/order-shape.js';
 
 const TIERS = ['Bronze', 'Silver', 'Gold', 'Platinum'];
 
@@ -18,7 +19,7 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'GET') {
     const { data } = await sb.from('program_subscriptions')
-      .select('tier,status,created_at').eq('company_id', companyId)
+      .select('tier,status,created_at,stripe_subscription_id').eq('company_id', companyId)
       .order('created_at', { ascending: false });
     return json(200, { subscriptions: data || [] });
   }
@@ -51,6 +52,29 @@ export async function onRequest({ request, env }) {
     await sb.from('companies').update({ stripe_customer_id: customerId }).eq('id', companyId);
   }
 
+  // If the company already has a live subscription, swap the price on it in place
+  // (proration applied) rather than creating a second subscription — the latter would
+  // double-bill. First-time enrollment (or only stale/canceled rows) falls through to checkout.
+  // ponytail: newest row wins; a re-enrollment after cancel reads the canceled row and
+  // correctly falls through to checkout (canceled ∉ live statuses).
+  const { data: existing } = await sb.from('program_subscriptions')
+    .select('id,tier,status,stripe_subscription_id').eq('company_id', companyId)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  const verdict = subscribeAction(existing, tier);
+  if (verdict.action === 'unchanged') return json(200, { unchanged: true, tier });
+  if (verdict.action === 'swap') {
+    const sub = await stripe.subscriptions.retrieve(verdict.subscriptionId);
+    const itemId = sub.items?.data?.[0]?.id;
+    if (!itemId) return json(502, { error: 'subscription_item_missing' });
+    await stripe.subscriptions.update(verdict.subscriptionId, {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: 'create_prorations',
+      metadata: { company_id: companyId, tier },
+    });
+    await sb.from('program_subscriptions').update({ tier }).eq('id', existing.id);
+    return json(200, { swapped: true, tier });
+  }
+
   const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');
   if (!appUrl) return json(500, { error: 'app_url_not_configured' });
   const session = await stripe.checkout.sessions.create({
@@ -62,5 +86,11 @@ export async function onRequest({ request, env }) {
     metadata: { company_id: companyId, tier },
     subscription_data: { metadata: { company_id: companyId, tier } },
   });
+  // Placeholder so the user sees a pending program immediately, and so the webhook can
+  // promote this exact row (matched by checkout session id) instead of racing or duplicating.
+  await sb.from('program_subscriptions').insert({
+    company_id: companyId, tier, stripe_customer_id: customerId,
+    stripe_checkout_session_id: session.id, status: 'checkout',
+  }).then(() => {}, () => {});
   return json(200, { url: session.url });
 }

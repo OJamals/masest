@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260622a">
+<link rel="stylesheet" href="css/style.css?v=20260623a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -20,7 +20,7 @@
     font-size: .9rem; cursor: pointer; transition: border-color .2s, color .2s, background .2s; }
   .dash-tab:hover { border-color: var(--ink); color: var(--ink); }
   .dash-tab[aria-selected=true] { background: var(--accent); color: #fff; border-color: transparent; }
-  .dash-tab .pill { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #b42318;
+  .dash-tab .pill { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--status-danger-ink);
     color: #fff; font-size: .68rem; display: inline-grid; place-items: center; }
   .dash-tab[aria-selected=true] .pill { background: #fff; color: var(--accent-ink); }
   .dash-panel[hidden] { display: none; }
@@ -31,7 +31,7 @@
   .dash-row b { color: var(--ink); }
   .dash-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; color: var(--muted); }
   .dash-status[data-state=ok] { color: var(--accent-ink); }
-  .dash-status[data-state=err] { color: #b42318; }
+  .dash-status[data-state=err] { color: var(--status-danger-ink); }
   .dash-status[data-state=busy] { color: var(--muted); }
   .setup-list { display: grid; gap: 10px; margin-top: 14px; }
   .setup-step { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; }
@@ -51,8 +51,7 @@
   .activity-line time, .activity-line .activity-meta { color: var(--muted); font-size: .78rem; white-space: nowrap; }
   .activity-link { margin-top: 12px; }
   .setup-step i { font-size: 1.1rem; color: var(--accent-ink); margin-top: 2px; }
-  .setup-step[data-setup-state="open"] i { color: #a25b35; }
-  .setup-step[data-setup-state="open"] i { color: #92400e; }
+  .setup-step[data-setup-state="open"] i { color: var(--status-warning-ink); }
   .setup-step b { display: block; font-size: .95rem; }
   .setup-step small { display: block; color: var(--muted); line-height: 1.35; margin-top: 2px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
@@ -61,15 +60,17 @@
   .stat .big-fig { font-size: 2rem; font-weight: 900; letter-spacing: -.04em; color: var(--accent-ink); line-height: 1; }
   .stat .lbl { font-size: .82rem; color: var(--ink-soft); font-weight: 700; margin-top: 6px; }
   .badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-  .badge[data-s=pending] { background: #fef3c7; color: #92400e; }
+  .badge[data-s=pending] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .badge[data-s=approved], .badge[data-s=paid], .badge[data-s=fulfilled], .badge[data-s=net_paid] { background: var(--accent-soft); color: var(--accent-ink); }
-  .badge[data-s=rejected], .badge[data-s=suspended], .badge[data-s=cancelled] { background: #fee2e2; color: #b42318; }
+  .badge[data-s=rejected], .badge[data-s=suspended], .badge[data-s=cancelled] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
   .badge[data-s=net_open], .badge[data-s=pending_payment] { background: #e0e7ff; color: #3730a3; }
   .trackline { display: grid; gap: 8px; margin: 12px 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.68); }
   .trackline span { position: relative; padding-left: 22px; color: var(--muted); font-size: .86rem; }
   .trackline span::before { content: ""; position: absolute; left: 0; top: .32em; width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); }
   .trackline span.done { color: var(--ink); font-weight: 700; }
   .trackline span.done::before { border-color: var(--accent); background: var(--accent); }
+  .ship-history { list-style: none; margin: 4px 0 0; padding: 8px 0 0; border-top: 1px dashed var(--line); display: grid; gap: 4px; font-size: .82rem; color: var(--muted); }
+  .ship-history b { color: var(--ink); text-transform: capitalize; }
   .msg-thread { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; padding: 4px; }
   .msg { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: .92rem; line-height: 1.45; }
   .msg.buyer { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
@@ -80,9 +81,9 @@
   .notif i { color: var(--accent); font-size: 1.3rem; }
   .dash-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; }
   .dash-status[data-state=ok] { color: var(--accent-ink); }
-  .dash-status[data-state=err] { color: #b42318; }
+  .dash-status[data-state=err] { color: var(--status-danger-ink); }
   .banner { border-radius: var(--r-card); padding: 16px 18px; font-size: .92rem; font-weight: 600; margin-bottom: 18px; }
-  .banner.warn { background: #fef3c7; color: #92400e; }
+  .banner.warn { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .muted { color: var(--ink-soft); font-size: .9rem; }
   .inline-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
   .dash-wrap { max-width: 1120px; }
@@ -320,7 +321,7 @@
           <div class="dash-card">
             <h2 class="headline dash-section-title">Messages with MASEST</h2>
             <div class="msg-thread" id="msgThread"><p class="muted">Loading…</p></div>
-            <form id="msgForm" class="dash-panel-form">
+            <form onsubmit="return false" id="msgForm" class="dash-panel-form">
               <div class="field"><label for="msgInput" class="sr-only">Message</label>
                 <textarea id="msgInput" rows="3" placeholder="Type a message to the MASEST team…" required></textarea></div>
               <button class="btn btn-primary btn-sm msg-send" type="submit">Send</button>
@@ -335,7 +336,7 @@
               <h2 class="headline dash-section-title dash-section-title-tight">Notifications</h2>
               <button class="btn btn-ghost btn-sm" id="markAllRead" type="button">Mark all read</button>
             </div>
-            <form id="notifPrefs" class="notif-prefs" aria-label="Email notification preferences" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px">
+            <form onsubmit="return false" id="notifPrefs" class="notif-prefs" aria-label="Email notification preferences" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px">
               <span class="muted">Email me about:</span>
               <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-pref="notify_orders"> Order updates</label>
               <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-pref="notify_messages"> Messages</label>
@@ -352,7 +353,7 @@
           </div>
           <div class="dash-card">
             <h3 class="dash-card-subtitle">Add an address</h3>
-            <form id="addrForm" class="form-card dash-clean-form">
+            <form onsubmit="return false" id="addrForm" class="form-card dash-clean-form">
               <div class="field-grid">
                 <div class="field"><label for="aType">Address type</label>
                   <select id="aType"><option value="ship">Shipping</option><option value="bill">Billing</option></select></div>
@@ -377,10 +378,25 @@
           <div class="dash-card">
             <h2 class="dash-section-title">Security</h2>
             <div class="dash-row"><span>Account email</span><b id="secEmail">Not set</b></div>
+            <form onsubmit="return false" id="emailChangeForm" class="security-email-form">
+              <div class="field"><label for="secNewEmail">Change account email</label>
+                <input id="secNewEmail" type="email" autocomplete="email" placeholder="new@email.com"></div>
+              <button class="btn btn-secondary btn-sm" id="secEmailBtn" type="submit">Update email</button>
+              <span class="dash-status" id="secEmailStatus" role="status" aria-live="polite"></span>
+            </form>
             <div class="security-actions">
               <button class="btn btn-primary btn-sm" id="secReset" type="button">Send password reset</button>
               <button class="btn btn-ghost btn-sm" id="secLogout" type="button">Sign out</button>
               <span class="dash-status" id="secStatus" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+          <div class="dash-card">
+            <h2 class="dash-section-title">Privacy &amp; data</h2>
+            <p class="muted">Download everything we hold for your account, or permanently close it.</p>
+            <div class="security-actions">
+              <button class="btn btn-secondary btn-sm" id="dataExportBtn" type="button">Download my data</button>
+              <button class="btn btn-ghost btn-sm" id="acctDeleteBtn" type="button">Delete my account</button>
+              <span class="dash-status" id="privacyStatus" role="status" aria-live="polite"></span>
             </div>
           </div>
         </div>
@@ -388,7 +404,7 @@
         <div class="dash-panel" data-panel="profile" role="tabpanel" hidden>
           <div class="dash-card">
             <h2 class="headline dash-section-title">Your profile</h2>
-            <form id="profileForm" class="form-card dash-clean-form">
+            <form onsubmit="return false" id="profileForm" class="form-card dash-clean-form">
               <div class="field-grid">
                 <div class="field"><label>Email</label><input id="pfEmail" disabled></div>
                 <div class="field"><label>Company</label><input id="pfCompany" disabled></div>

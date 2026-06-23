@@ -63,7 +63,7 @@ for (const [path, defLimit] of [
 
 // ---- client load-more UI ----
 test('admin orders list exposes a Load more control', () => {
-  assert.match(read('js/admin.js'), /data-load-more-orders/);
+  assert.match(read('js/admin/orders.js'), /data-load-more-orders/); // Orders tab moved in #36
 });
 
 test('dashboard orders + notifications lists expose Load more controls', () => {

@@ -27,6 +27,12 @@ test.afterAll(async () => {
   await once(server, "exit").catch(() => {});
 });
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.MASEST_ENABLE_LOCAL_API = true;
+  });
+});
+
 test("product add-to-cart resolves the crhd commerce sku", async ({ page }) => {
   // Editorial id and the live catalog sku are both `crhd` (COMMERCE_ALIAS is empty in
   // product.html), so the buy button resolves the /api/products row directly — no remap.

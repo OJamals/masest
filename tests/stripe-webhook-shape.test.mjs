@@ -70,21 +70,29 @@ test("cartLines normalizes raw cart entries to order lines", () => {
   assert.deepEqual(
     cartLines([{ sku: "VK-1", product_sku: "vk", name: "VK 1gal", qty: 2, unit_price: 9.5 }, { sku: "VK-2", qty: 1, unit_price: 4 }]),
     [
-      { sku: "VK-1", product_sku: "vk", name: "VK 1gal", qty: 2, unit_price: 9.5 },
-      { sku: "VK-2", product_sku: null, name: "VK-2", qty: 1, unit_price: 4 },
+      { sku: "VK-1", product_sku: "vk", name: "VK 1gal", qty: 2, unit_price: 9.5, backordered: false },
+      { sku: "VK-2", product_sku: null, name: "VK-2", qty: 1, unit_price: 4, backordered: false },
     ],
+  );
+});
+
+test("cartLines carries the backordered flag through", () => {
+  assert.deepEqual(
+    cartLines([{ sku: "A", qty: 1, unit_price: 5, backordered: true }]),
+    [{ sku: "A", product_sku: null, name: "A", qty: 1, unit_price: 5, backordered: true }],
   );
 });
 
 test("orderItemRows attaches order id and raw line_total (unit_price*qty)", () => {
   assert.deepEqual(orderItemRows([{ sku: "A", product_sku: null, name: "A", qty: 3, unit_price: 2 }], "ord-1"), [
-    { order_id: "ord-1", sku: "A", product_sku: null, name: "A", qty: 3, unit_price: 2, line_total: 6 },
+    { order_id: "ord-1", sku: "A", product_sku: null, name: "A", qty: 3, unit_price: 2, line_total: 6, backordered: false },
   ]);
+  assert.equal(orderItemRows([{ sku: "A", qty: 1, unit_price: 2, backordered: true }], "o")[0].backordered, true);
 });
 
-test("stockDecrements skips skuless lines and maps rpc args", () => {
+test("stockDecrements skips skuless AND backordered lines", () => {
   assert.deepEqual(
-    stockDecrements([{ sku: "A", qty: 2 }, { sku: "", qty: 9 }, { qty: 1 }, { sku: "B" }]),
+    stockDecrements([{ sku: "A", qty: 2 }, { sku: "", qty: 9 }, { qty: 1 }, { sku: "B" }, { sku: "C", qty: 5, backordered: true }]),
     [{ p_vsku: "A", p_qty: 2 }, { p_vsku: "B", p_qty: 0 }],
   );
 });

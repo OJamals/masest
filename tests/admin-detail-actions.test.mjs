@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const src = readFileSync(new URL("../js/admin.js", import.meta.url), "utf8");
+// Company detail-action buttons moved into js/admin/companies.js (#36 split).
+const src = readFileSync(new URL("../js/admin/companies.js", import.meta.url), "utf8");
 
 test("company detail panel exposes direct action buttons", () => {
   assert.match(src, /company-detail-actions/, "detail actions should be grouped for scanning");
