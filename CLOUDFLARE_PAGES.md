@@ -54,7 +54,7 @@ curl -s "https://masest.co/api/products?cb=$(date +%s)"
 
 ## QuickBooks Online
 
-Apply `supabase/schema-qbo.sql` and `supabase/schema-qbo-refunds.sql` (the refund→credit-memo queue, #22), then apply `supabase/qbo-cron.example.sql` after replacing `<QBO_SYNC_SECRET>`. The cron template requires Supabase `pg_cron`, `pg_net`, and `pgcrypto`, and it stores a SHA-256 hash of the sync secret in Supabase as a fallback when Cloudflare Pages secret edits are unavailable.
+Apply `supabase/schema-qbo.sql`, `supabase/schema-qbo-refunds.sql` (the refund→credit-memo queue, #22), and `supabase/schema-qbo-reaper.sql` (visibility-timeout claim that reclaims stuck `processing` rows, #26), then apply `supabase/qbo-cron.example.sql` after replacing `<QBO_SYNC_SECRET>`. The cron template requires Supabase `pg_cron`, `pg_net`, and `pgcrypto`, and it stores a SHA-256 hash of the sync secret in Supabase as a fallback when Cloudflare Pages secret edits are unavailable.
 
 Set these Cloudflare Pages secrets before enabling the worker:
 

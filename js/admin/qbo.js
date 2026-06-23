@@ -1,5 +1,5 @@
 import { api } from "../auth.js";
-import { esc, money } from "../util.js";
+import { esc, money, confirmDialog } from "../util.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -47,6 +47,8 @@ export async function renderQboStatus() {
     status.textContent = info.connected ? `Connected${info.realm_id ? ` (${info.realm_id})` : ""}.` : "Not connected.";
     status.dataset.state = info.connected ? "ok" : "err";
     button.innerHTML = info.connected ? '<i class="ph ph-plugs-connected"></i> Reconnect QuickBooks' : '<i class="ph ph-plugs-connected"></i> Connect QuickBooks';
+    const disconnectBtn = $("qboDisconnect");
+    if (disconnectBtn) disconnectBtn.hidden = !info.connected;
     if (summary) {
       const counts = info.sync_counts || {};
       summary.textContent = `Queue: ${counts.pending || 0} pending, ${counts.error || 0} error, ${counts.synced || 0} synced.`;
@@ -74,6 +76,24 @@ export async function connectQbo() {
   } catch (err) {
     if (status) {
       status.textContent = err.data?.error || "QuickBooks connect failed.";
+      status.dataset.state = "err";
+    }
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+export async function disconnectQbo() {
+  if (!(await confirmDialog("Disconnect QuickBooks? This revokes the token at Intuit; you'll need to reconnect to resume syncing.", { confirmText: 'Disconnect', danger: true }))) return;
+  const status = $("qboStatus");
+  const button = $("qboDisconnect");
+  try {
+    if (button) button.disabled = true;
+    await api("/api/admin/qbo/disconnect", { method: "POST" });
+    await renderQboStatus();
+  } catch (err) {
+    if (status) {
+      status.textContent = err.data?.error || "QuickBooks disconnect failed.";
       status.dataset.state = "err";
     }
   } finally {

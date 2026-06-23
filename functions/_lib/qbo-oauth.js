@@ -1,5 +1,6 @@
 const INTUIT_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const INTUIT_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+const INTUIT_REVOKE_URL = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
 const STATE_TTL_MS = 10 * 60 * 1000;
 
 function stateSecret(env) {
@@ -88,4 +89,22 @@ export async function exchangeQboCode(request, env, code) {
     throw new Error(`qbo_oauth_exchange_failed:${response.status}:${detail.slice(0, 200)}`);
   }
   return response.json();
+}
+
+// #26 — revoke a token at Intuit so the grant is killed on their side too (not just
+// cleared locally). Pass the refresh token; revoking it invalidates the whole grant.
+export async function revokeQboToken(env, token, options = {}) {
+  const fetchImpl = options.fetchImpl || fetch;
+  if (!token) return false;
+  if (!env.QBO_CLIENT_ID || !env.QBO_CLIENT_SECRET) throw new Error('qbo_oauth_not_configured');
+  const response = await fetchImpl(INTUIT_REVOKE_URL, {
+    method: 'POST',
+    headers: {
+      authorization: `Basic ${btoa(`${env.QBO_CLIENT_ID}:${env.QBO_CLIENT_SECRET}`)}`,
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({ token }),
+  });
+  return response.ok;
 }
