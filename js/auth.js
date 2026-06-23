@@ -2,8 +2,10 @@
  * Not yet referenced by any page; wire into an account page in Phase 1 UI work.
  * Set these before import (e.g. injected at build, or a small inline <script>):
  *   window.MASEST_SUPABASE_URL, window.MASEST_SUPABASE_ANON
- * Loads Supabase from CDN so the static site needs no bundler. */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+ * Supabase is self-hosted (vendor/supabase-js.esm.js), NOT loaded from a third-party
+ * CDN — an esm.sh 503 outage previously took down all auth site-wide. Regenerate the
+ * bundle per the header in that file. */
+import { createClient } from '../vendor/supabase-js.esm.js';
 
 const url = window.MASEST_SUPABASE_URL;
 const anon = window.MASEST_SUPABASE_ANON;
