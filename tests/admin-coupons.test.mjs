@@ -28,3 +28,9 @@ test("rejects bad code, no discount, out-of-range percent, negative amount", () 
   assert.equal(buildCouponParams({ code: "GOOD", amount_off: -1 }).error, "invalid_amount");
   assert.equal(buildCouponParams({ code: "GOOD", percent_off: 10, max_redemptions: 0 }).error, "invalid_max_redemptions");
 });
+
+test("minimum_amount of 0 means no minimum (omitted — Stripe rejects a 0 minimum)", () => {
+  const r = buildCouponParams({ code: "GOOD", percent_off: 10, minimum_amount: 0 });
+  assert.equal(r.promo.restrictions, undefined);
+  assert.equal(buildCouponParams({ code: "GOOD", percent_off: 10, minimum_amount: -5 }).error, "invalid_minimum_amount");
+});
