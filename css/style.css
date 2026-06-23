@@ -203,6 +203,12 @@ h3 { font-family: var(--font); letter-spacing: -0.022em; line-height: 1.06; font
   font-size: clamp(1.02rem, 1.5vw, 1.2rem); color: var(--muted); font-weight: 400;
   line-height: 1.55; max-width: 62ch; text-wrap: pretty;
 }
+/* Default gap when a subhead directly follows a display heading. Without it a hero
+   in a bare .wrap (account, dashboard, admin) has zero space and the .display
+   descenders collide with the subhead once the heading wraps. Hero wrappers that set
+   their own subhead margin (.hero-copy, .page-hero, .contact-hero, …) are equal-or-
+   higher specificity and defined later, so they still win — this only fills the gap. */
+.display + .subhead { margin-top: clamp(14px, 2.5vw, 22px); }
 /* Tabular,
 lined-up figures for all data numerics */
 .display,

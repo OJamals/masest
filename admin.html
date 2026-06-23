@@ -158,7 +158,7 @@
     <div id="admGate" class="adm-card">
       <h2 id="gateTitle">Staff sign in</h2>
       <p id="gateMsg" class="muted">Sign in with a MASEST staff account.</p>
-      <form id="gateForm" class="adm-form-grid">
+      <form onsubmit="return false" id="gateForm" class="adm-form-grid">
         <label class="wide">Email <input id="gEmail" class="adm-input" type="email" autocomplete="email" required></label>
         <label class="wide">Password <input id="gPass" class="adm-input" type="password" autocomplete="current-password" required></label>
         <button class="btn btn-primary" type="submit">Sign in</button>
@@ -233,7 +233,7 @@
         </div>
         <div class="adm-card">
           <h2>Add / overwrite a product</h2>
-          <form id="prodForm" class="adm-form-grid">
+          <form onsubmit="return false" id="prodForm" class="adm-form-grid">
             <label>SKU <input id="npSku" class="adm-input" required></label>
             <label class="wide">Name <input id="npName" class="adm-input"></label>
             <label>Mode <select id="npMode" class="adm-select"><option value="buy">Buy</option><option value="quote">Quote</option></select></label>
@@ -247,7 +247,7 @@
         </div>
         <div class="adm-card">
           <h2>Add / overwrite a volume variant</h2>
-          <form id="variantForm" class="adm-form-grid">
+          <form onsubmit="return false" id="variantForm" class="adm-form-grid">
             <label>Product SKU <input id="nvProductSku" class="adm-input" required></label>
             <label>Variant SKU <input id="nvSku" class="adm-input" required></label>
             <label>Label <input id="nvLabel" class="adm-input" placeholder="5 gal pail" required></label>
@@ -306,7 +306,7 @@
       <section class="adm-panel" role="tabpanel" data-panel="offers">
         <div class="adm-card">
           <h2>Send an offer / announcement</h2>
-          <form id="offerForm" class="adm-form-grid">
+          <form onsubmit="return false" id="offerForm" class="adm-form-grid">
             <label class="wide">Title <input id="ofTitle" class="adm-input" required></label>
             <label class="wide">CTA URL <input id="ofCta" class="adm-input" value="/products.html"></label>
             <label>Audience <select id="ofAud" class="adm-select"><option value="approved">Approved</option><option value="pending">Pending</option><option value="all">All</option></select></label>

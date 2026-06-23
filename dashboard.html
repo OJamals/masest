@@ -321,7 +321,7 @@
           <div class="dash-card">
             <h2 class="headline dash-section-title">Messages with MASEST</h2>
             <div class="msg-thread" id="msgThread"><p class="muted">Loading…</p></div>
-            <form id="msgForm" class="dash-panel-form">
+            <form onsubmit="return false" id="msgForm" class="dash-panel-form">
               <div class="field"><label for="msgInput" class="sr-only">Message</label>
                 <textarea id="msgInput" rows="3" placeholder="Type a message to the MASEST team…" required></textarea></div>
               <button class="btn btn-primary btn-sm msg-send" type="submit">Send</button>
@@ -336,7 +336,7 @@
               <h2 class="headline dash-section-title dash-section-title-tight">Notifications</h2>
               <button class="btn btn-ghost btn-sm" id="markAllRead" type="button">Mark all read</button>
             </div>
-            <form id="notifPrefs" class="notif-prefs" aria-label="Email notification preferences" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px">
+            <form onsubmit="return false" id="notifPrefs" class="notif-prefs" aria-label="Email notification preferences" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px">
               <span class="muted">Email me about:</span>
               <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-pref="notify_orders"> Order updates</label>
               <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-pref="notify_messages"> Messages</label>
@@ -353,7 +353,7 @@
           </div>
           <div class="dash-card">
             <h3 class="dash-card-subtitle">Add an address</h3>
-            <form id="addrForm" class="form-card dash-clean-form">
+            <form onsubmit="return false" id="addrForm" class="form-card dash-clean-form">
               <div class="field-grid">
                 <div class="field"><label for="aType">Address type</label>
                   <select id="aType"><option value="ship">Shipping</option><option value="bill">Billing</option></select></div>
@@ -378,7 +378,7 @@
           <div class="dash-card">
             <h2 class="dash-section-title">Security</h2>
             <div class="dash-row"><span>Account email</span><b id="secEmail">Not set</b></div>
-            <form id="emailChangeForm" class="security-email-form">
+            <form onsubmit="return false" id="emailChangeForm" class="security-email-form">
               <div class="field"><label for="secNewEmail">Change account email</label>
                 <input id="secNewEmail" type="email" autocomplete="email" placeholder="new@email.com"></div>
               <button class="btn btn-secondary btn-sm" id="secEmailBtn" type="submit">Update email</button>
@@ -404,7 +404,7 @@
         <div class="dash-panel" data-panel="profile" role="tabpanel" hidden>
           <div class="dash-card">
             <h2 class="headline dash-section-title">Your profile</h2>
-            <form id="profileForm" class="form-card dash-clean-form">
+            <form onsubmit="return false" id="profileForm" class="form-card dash-clean-form">
               <div class="field-grid">
                 <div class="field"><label>Email</label><input id="pfEmail" disabled></div>
                 <div class="field"><label>Company</label><input id="pfCompany" disabled></div>
