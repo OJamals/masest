@@ -3,7 +3,7 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog } from '../util.js';
+import { esc, money, dateTime as date, confirmDialog, delegate } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
 export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager }) {
@@ -76,7 +76,6 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const orders = state.orders.filter((order) => JSON.stringify(order).toLowerCase().includes(q));
     if (!orders.length) {
       box.innerHTML = admEmpty('ph-package', q ? 'No matching orders' : 'No orders yet', q ? 'No orders match your search.' : 'Orders appear here once customers check out.') + admOrdersPager();
-      box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
       return;
     }
     box.innerHTML = `<table class="adm"><thead><tr><th>Date</th><th>Company</th><th>Items</th><th>Total</th><th>Pay</th><th>Status</th><th></th></tr></thead><tbody>${orders.map((order) => {
@@ -92,107 +91,102 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       </tr>`;
     }).join('')}</tbody></table>` + admOrdersPager();
     restoreDirty(box, snap);
-
-    box.querySelectorAll('[data-save-order]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.saveOrder;
-        const status = box.querySelector(`[data-order-status="${CSS.escape(id)}"]`).value;
-        button.disabled = true;
-        try {
-          await api('/api/admin/orders', { method: 'POST', body: { id, status } });
-          await renderOrders();
-        } finally {
-          button.disabled = false;
-        }
-      });
-    });
-    box.querySelectorAll('[data-save-tracking]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.saveTracking;
-        const pick = (name) => box.querySelector(`[data-track-${name}="${CSS.escape(id)}"]`);
-        button.disabled = true;
-        try {
-          await api('/api/admin/orders', {
-            method: 'POST',
-            body: {
-              id,
-              action: 'update_tracking',
-              tracking_status: pick('status').value,
-              carrier: pick('carrier').value.trim(),
-              tracking_number: pick('number').value.trim(),
-              tracking_url: pick('url').value.trim(),
-              estimated_delivery_at: pick('eta').value,
-            },
-          });
-          message('ordStatus', 'Tracking saved.', 'ok');
-          await renderOrders();
-        } catch (err) {
-          message('ordStatus', err.data?.error || 'Could not update tracking. Retry.', 'err');
-          button.disabled = false;
-        }
-      });
-    });
-    box.querySelectorAll('[data-refund-order]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.refundOrder;
-        const amountInput = box.querySelector(`[data-refund-amount="${CSS.escape(id)}"]`);
-        const raw = amountInput?.value.trim();
-        const amount = raw ? Number(raw) : undefined;
-        if (raw && (!Number.isFinite(amount) || amount <= 0)) {
-          message('ordStatus', 'Enter a valid refund amount, or leave it blank to refund the full balance.', 'err');
-          return;
-        }
-        const prompt = amount
-          ? `Refund $${amount.toFixed(2)} to this order via Stripe?`
-          : 'Refund the full remaining balance via Stripe?';
-        if (!(await confirmDialog(prompt, { confirmText: 'Refund', danger: true }))) return;
-        button.disabled = true;
-        message('ordStatus', 'Refunding...');
-        try {
-          const res = await api('/api/admin/orders', { method: 'POST', body: { id, action: 'refund', amount } });
-          message('ordStatus', res.partial ? `Partial refund of $${Number(res.amount).toFixed(2)} issued.` : 'Refunded.', 'ok');
-          await renderOrders();
-        } catch (err) {
-          message('ordStatus', err.data?.error || 'Refund did not go through. Refresh and check before retrying.', 'err');
-          button.disabled = false;
-        }
-      });
-    });
-    box.querySelectorAll('[data-qbo-order]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.qboOrder;
-        const invoiceId = box.querySelector(`[data-qbo-invoice-input="${CSS.escape(id)}"]`)?.value.trim();
-        if (!invoiceId) { message('ordStatus', 'Enter a QuickBooks invoice ID first.', 'err'); return; }
-        button.disabled = true;
-        try {
-          await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_invoice', qbo_invoice_id: invoiceId } });
-          message('ordStatus', 'Invoice recorded.', 'ok');
-          await renderOrders();
-        } catch (err) {
-          message('ordStatus', err.data?.error || 'Could not update the invoice. Refresh and check before retrying.', 'err');
-          button.disabled = false;
-        }
-      });
-    });
-
-    box.querySelectorAll('[data-qbo-payment-order]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.qboPaymentOrder;
-        const paymentId = box.querySelector(`[data-qbo-payment-input="${CSS.escape(id)}"]`)?.value.trim();
-        if (!paymentId) { message('ordStatus', 'Enter a QuickBooks payment ID first.', 'err'); return; }
-        button.disabled = true;
-        try {
-          await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_payment', qbo_payment_id: paymentId } });
-          message('ordStatus', 'Payment recorded.', 'ok');
-          await renderOrders();
-        } catch (err) {
-          message('ordStatus', err.data?.error || 'Could not update payment status. Refresh and check before retrying.', 'err');
-          button.disabled = false;
-        }
-      });
-    });
-    box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
   }
 
-  return { renderOrders };
+  // Row actions are delegated once on the stable #admOrders container (#36): a single
+  // listener per action survives every innerHTML re-render instead of re-binding per row.
+  function wireOrders() {
+    const box = $('admOrders');
+    if (!box) return;
+    delegate(box, 'click', '[data-save-order]', async (event, button) => {
+      const id = button.dataset.saveOrder;
+      const status = box.querySelector(`[data-order-status="${CSS.escape(id)}"]`).value;
+      button.disabled = true;
+      try {
+        await api('/api/admin/orders', { method: 'POST', body: { id, status } });
+        await renderOrders();
+      } finally {
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-save-tracking]', async (event, button) => {
+      const id = button.dataset.saveTracking;
+      const pick = (name) => box.querySelector(`[data-track-${name}="${CSS.escape(id)}"]`);
+      button.disabled = true;
+      try {
+        await api('/api/admin/orders', {
+          method: 'POST',
+          body: {
+            id,
+            action: 'update_tracking',
+            tracking_status: pick('status').value,
+            carrier: pick('carrier').value.trim(),
+            tracking_number: pick('number').value.trim(),
+            tracking_url: pick('url').value.trim(),
+            estimated_delivery_at: pick('eta').value,
+          },
+        });
+        message('ordStatus', 'Tracking saved.', 'ok');
+        await renderOrders();
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Could not update tracking. Retry.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-refund-order]', async (event, button) => {
+      const id = button.dataset.refundOrder;
+      const amountInput = box.querySelector(`[data-refund-amount="${CSS.escape(id)}"]`);
+      const raw = amountInput?.value.trim();
+      const amount = raw ? Number(raw) : undefined;
+      if (raw && (!Number.isFinite(amount) || amount <= 0)) {
+        message('ordStatus', 'Enter a valid refund amount, or leave it blank to refund the full balance.', 'err');
+        return;
+      }
+      const prompt = amount
+        ? `Refund $${amount.toFixed(2)} to this order via Stripe?`
+        : 'Refund the full remaining balance via Stripe?';
+      if (!(await confirmDialog(prompt, { confirmText: 'Refund', danger: true }))) return;
+      button.disabled = true;
+      message('ordStatus', 'Refunding...');
+      try {
+        const res = await api('/api/admin/orders', { method: 'POST', body: { id, action: 'refund', amount } });
+        message('ordStatus', res.partial ? `Partial refund of $${Number(res.amount).toFixed(2)} issued.` : 'Refunded.', 'ok');
+        await renderOrders();
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Refund did not go through. Refresh and check before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-qbo-order]', async (event, button) => {
+      const id = button.dataset.qboOrder;
+      const invoiceId = box.querySelector(`[data-qbo-invoice-input="${CSS.escape(id)}"]`)?.value.trim();
+      if (!invoiceId) { message('ordStatus', 'Enter a QuickBooks invoice ID first.', 'err'); return; }
+      button.disabled = true;
+      try {
+        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_invoice', qbo_invoice_id: invoiceId } });
+        message('ordStatus', 'Invoice recorded.', 'ok');
+        await renderOrders();
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Could not update the invoice. Refresh and check before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-qbo-payment-order]', async (event, button) => {
+      const id = button.dataset.qboPaymentOrder;
+      const paymentId = box.querySelector(`[data-qbo-payment-input="${CSS.escape(id)}"]`)?.value.trim();
+      if (!paymentId) { message('ordStatus', 'Enter a QuickBooks payment ID first.', 'err'); return; }
+      button.disabled = true;
+      try {
+        await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_payment', qbo_payment_id: paymentId } });
+        message('ordStatus', 'Payment recorded.', 'ok');
+        await renderOrders();
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Could not update payment status. Refresh and check before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-load-more-orders]', () => renderOrders({ append: true }));
+  }
+
+  return { renderOrders, wireOrders };
 }

@@ -59,6 +59,18 @@ export const wireTablist = (tablist, activate) => {
   });
 };
 
+// Event delegation: bind ONE listener on a stable container that dispatches to the
+// nearest ancestor matching `selector`. Survives innerHTML re-renders of the rows
+// (the listener lives on the container, not the rows), so it is bound once at wire
+// time instead of re-bound on every render. handler(event, matchedElement).
+export const delegate = (container, type, selector, handler) => {
+  if (!container) return;
+  container.addEventListener(type, (event) => {
+    const target = event.target.closest(selector);
+    if (target && container.contains(target)) handler(event, target);
+  });
+};
+
 /* ---- Styled confirm dialog (#31) ---- */
 
 // Accessible replacement for window.confirm(): a focus-trapped, Esc-dismissable native

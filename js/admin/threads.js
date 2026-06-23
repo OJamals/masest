@@ -1,7 +1,7 @@
 // Admin messages/threads tab (#36 per-tab split). Lists buyer conversations and
 // opens a thread with an inline reply form. Shared primitives + the admin-local
 // sourceLabel/message helpers are injected; esc/date come from the shared util.
-import { esc, dateTime as date } from '../util.js';
+import { esc, dateTime as date, delegate } from '../util.js';
 
 export function createThreadsTab({ $, api, state, message, admSkeleton, sourceLabel }) {
   async function openThread(companyId) {
@@ -57,10 +57,14 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, sourceLa
       <br><span class="muted">${esc((thread.last_body || '').slice(0, 80))}</span>
     </button>
   `).join('');
-    box.querySelectorAll('[data-company-thread]').forEach((button) => {
-      button.addEventListener('click', () => openThread(button.dataset.companyThread));
-    });
   }
 
-  return renderThreads;
+  // Thread-open clicks delegated once on the stable #admThreads list container (#36).
+  function wireThreads() {
+    const box = $('admThreads');
+    if (!box) return;
+    delegate(box, 'click', '[data-company-thread]', (event, button) => openThread(button.dataset.companyThread));
+  }
+
+  return { renderThreads, wireThreads };
 }

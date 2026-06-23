@@ -233,20 +233,20 @@ function admListPager(attr, loaded, total, hasMore) {
 // Customers tab extracted to ./admin/customers.js (#36 split). statusBadge + primitives injected.
 const { renderCustomers } = createCustomersTab({ $, api, state, admSkeleton, admEmpty, statusBadge });
 // Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
-const { renderCompanies } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager });
+const { renderCompanies, wireCompanies } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager });
 // Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
-const { renderOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager });
+const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager });
 // Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
-const { renderQuotePipeline } = createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager });
+const { renderQuotePipeline, wireQuotes } = createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager });
 
 // Products tab extracted to ./admin/products.js (#36 split). Shared primitives injected.
-const { renderProducts, wireProductForm, wireVariantForm } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
+const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
 
 // Pricing tab extracted to ./admin/pricing.js (#36 split). Shared primitives injected.
-const { renderPricing } = createPricingTab({ $, api, state, message, admSkeleton });
+const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message, admSkeleton });
 
 // Messages/threads tab extracted to ./admin/threads.js (#36 split). Shared primitives + sourceLabel injected.
-const renderThreads = createThreadsTab({ $, api, state, message, admSkeleton, sourceLabel });
+const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, sourceLabel });
 
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
 const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton });
@@ -353,6 +353,13 @@ function wire() {
   wireProductForm();
   wireVariantForm();
   wireOfferForm();
+  // Delegated row actions, bound once on each tab's table container (#36).
+  wireOrders();
+  wireCompanies();
+  wireProducts();
+  wirePricing();
+  wireQuotes();
+  wireThreads();
 }
 
 wire();

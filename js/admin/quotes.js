@@ -3,7 +3,7 @@
 // state, message, admSkeleton, admEmpty) and the admin-local statusBadge / badge /
 // admListPager helpers are injected; esc comes from util.js and the dirty-edit
 // helpers from edits.js. The quote-status list + due-date helper live here.
-import { esc } from '../util.js';
+import { esc, delegate } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
 export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager }) {
@@ -42,7 +42,6 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       try { state.companies = (await api('/api/admin/companies?limit=500')).companies || []; } catch { state.companies = []; }
     }
     const quotesPager = admListPager('data-load-more-quotes', state.quotes.length, state.quotesTotal, state.quotesHasMore);
-    const wireQuotesMore = () => box.querySelector('[data-load-more-quotes]')?.addEventListener('click', () => renderQuotePipeline({ append: true }));
 
     const coOpts = (state.companies || [])
       .map((company) => `<option value="${esc(company.id)}">${esc(company.name)} (${esc(company.status || '')})</option>`)
@@ -71,7 +70,6 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
 
     if (!quotes.length) {
       box.innerHTML = admEmpty('ph-chats-circle', 'No quotes', 'Quote requests from the site appear here.') + quotesPager;
-      wireQuotesMore();
       return;
     }
 
@@ -116,104 +114,98 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       `;
     }).join('') + quotesPager;
     restoreDirty(box, snap);
-    wireQuotesMore();
+  }
 
-    box.querySelectorAll('[data-save-quote]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.saveQuote;
-        button.disabled = true;
-        try {
-          await api('/api/admin/quotes', {
-            method: 'POST',
-            body: {
-          id,
-          status: box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value,
-          priority: box.querySelector(`[data-quote-priority="${CSS.escape(id)}"]`).value,
-          assigned_to: box.querySelector(`[data-quote-owner="${CSS.escape(id)}"]`).value,
-          next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
-              due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
-              notes: box.querySelector(`[data-quote-notes="${CSS.escape(id)}"]`).value,
-            },
-          });
-          message('qStatus', 'Lead saved.', 'ok');
-          await renderQuotePipeline();
-        } catch (err) {
-          message('qStatus', err.data?.error || 'Could not save the lead. Retry.', 'err');
-          button.disabled = false;
-        }
-      });
+  // Pipeline row actions delegated once on the stable #admQuotes container (#36).
+  function wireQuotes() {
+    const box = $('admQuotes');
+    if (!box) return;
+    delegate(box, 'click', '[data-load-more-quotes]', () => renderQuotePipeline({ append: true }));
+    delegate(box, 'click', '[data-save-quote]', async (event, button) => {
+      const id = button.dataset.saveQuote;
+      button.disabled = true;
+      try {
+        await api('/api/admin/quotes', {
+          method: 'POST',
+          body: {
+            id,
+            status: box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value,
+            priority: box.querySelector(`[data-quote-priority="${CSS.escape(id)}"]`).value,
+            assigned_to: box.querySelector(`[data-quote-owner="${CSS.escape(id)}"]`).value,
+            next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
+            due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
+            notes: box.querySelector(`[data-quote-notes="${CSS.escape(id)}"]`).value,
+          },
+        });
+        message('qStatus', 'Lead saved.', 'ok');
+        await renderQuotePipeline();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Could not save the lead. Retry.', 'err');
+        button.disabled = false;
+      }
     });
-
-    box.querySelectorAll('[data-convert]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.convert;
-        const pick = (key) => box.querySelector(`[data-conv-${key}="${CSS.escape(id)}"]`);
-        const company_id = pick('co').value;
-        const sku = pick('sku').value.trim();
-        const name = pick('name').value.trim();
-        const qty = pick('qty').value;
-        const unit_price = pick('price').value;
-        if (!company_id) { message('qStatus', 'Pick a company to convert into.', 'err'); return; }
-        if (!sku || unit_price === '') { message('qStatus', 'SKU and unit price are required.', 'err'); return; }
-        button.disabled = true;
-        message('qStatus', 'Creating order...');
-        try {
-          const res = await api('/api/admin/quotes', { method: 'POST', body: { id, action: 'convert', company_id, items: [{ sku, name, qty, unit_price }] } });
-          message('qStatus', `Order ${res.order_id} created.`, 'ok');
-          await renderQuotePipeline();
-        } catch (err) {
-          message('qStatus', err.data?.error || 'Could not convert the lead. Refresh and check for a new order before retrying.', 'err');
-          button.disabled = false;
-        }
-      });
+    delegate(box, 'click', '[data-convert]', async (event, button) => {
+      const id = button.dataset.convert;
+      const pick = (key) => box.querySelector(`[data-conv-${key}="${CSS.escape(id)}"]`);
+      const company_id = pick('co').value;
+      const sku = pick('sku').value.trim();
+      const name = pick('name').value.trim();
+      const qty = pick('qty').value;
+      const unit_price = pick('price').value;
+      if (!company_id) { message('qStatus', 'Pick a company to convert into.', 'err'); return; }
+      if (!sku || unit_price === '') { message('qStatus', 'SKU and unit price are required.', 'err'); return; }
+      button.disabled = true;
+      message('qStatus', 'Creating order...');
+      try {
+        const res = await api('/api/admin/quotes', { method: 'POST', body: { id, action: 'convert', company_id, items: [{ sku, name, qty, unit_price }] } });
+        message('qStatus', `Order ${res.order_id} created.`, 'ok');
+        await renderQuotePipeline();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Could not convert the lead. Refresh and check for a new order before retrying.', 'err');
+        button.disabled = false;
+      }
     });
-
-    box.querySelectorAll('[data-snooze-quote]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.snoozeQuote;
-        button.disabled = true;
-        try {
-          await api('/api/admin/quotes', {
-            method: 'POST',
-            body: {
-              id,
-              status: 'contacted',
-              next_step: 'Snoozed for two days',
-              due_at: quoteDueInDays(2),
-            },
-          });
-          message('qStatus', 'Follow-up snoozed.', 'ok');
-          await renderQuotePipeline();
-        } catch (err) {
-          message('qStatus', err.data?.error || 'Could not snooze the follow-up. Retry.', 'err');
-          button.disabled = false;
-        }
-      });
+    delegate(box, 'click', '[data-snooze-quote]', async (event, button) => {
+      const id = button.dataset.snoozeQuote;
+      button.disabled = true;
+      try {
+        await api('/api/admin/quotes', {
+          method: 'POST',
+          body: {
+            id,
+            status: 'contacted',
+            next_step: 'Snoozed for two days',
+            due_at: quoteDueInDays(2),
+          },
+        });
+        message('qStatus', 'Follow-up snoozed.', 'ok');
+        await renderQuotePipeline();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Could not snooze the follow-up. Retry.', 'err');
+        button.disabled = false;
+      }
     });
-
-    box.querySelectorAll('[data-followup]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.dataset.followup;
-        button.disabled = true;
-        try {
-          await api('/api/admin/quotes', {
-            method: 'POST',
-            body: {
-              id,
-              action: 'followup',
-              next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
-              due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
-            },
-          });
-          message('qStatus', 'Follow-up sent.', 'ok');
-          await renderQuotePipeline();
-        } catch (err) {
-          message('qStatus', err.data?.error || 'Could not send the follow-up. Retry.', 'err');
-          button.disabled = false;
-        }
-      });
+    delegate(box, 'click', '[data-followup]', async (event, button) => {
+      const id = button.dataset.followup;
+      button.disabled = true;
+      try {
+        await api('/api/admin/quotes', {
+          method: 'POST',
+          body: {
+            id,
+            action: 'followup',
+            next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
+            due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
+          },
+        });
+        message('qStatus', 'Follow-up sent.', 'ok');
+        await renderQuotePipeline();
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Could not send the follow-up. Retry.', 'err');
+        button.disabled = false;
+      }
     });
   }
 
-  return { renderQuotePipeline };
+  return { renderQuotePipeline, wireQuotes };
 }

@@ -1,7 +1,7 @@
 // Admin pricing tab (#36 per-tab split). Per-variant tier pricing grid with inline
 // row saves. Shared primitives ($, api, state, message, admSkeleton) are injected;
 // esc comes from util.js and the dirty-edit helpers from edits.js.
-import { esc } from '../util.js';
+import { esc, delegate } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
 export function createPricingTab({ $, api, state, message, admSkeleton }) {
@@ -36,24 +36,28 @@ export function createPricingTab({ $, api, state, message, admSkeleton }) {
       </tr>
     `).join('')}</tbody></table><p id="priceRowStatus" class="adm-status" role="status"></p>`;
     restoreDirty(box, snap);
-    box.querySelectorAll('[data-price-tier]').forEach((input) => {
-      input.addEventListener('change', async () => {
-        const row = input.closest('[data-vsku]');
-        input.disabled = true;
-        try {
-          await api('/api/admin/variant-pricing', {
-            method: 'POST',
-            body: { vsku: row.dataset.vsku, tier: input.dataset.priceTier, price: input.value },
-          });
-          message('priceRowStatus', `${row.dataset.vsku} ${input.dataset.priceTier} saved.`, 'ok');
-        } catch (err) {
-          message('priceRowStatus', err.data?.error || 'Could not save the price. Retry.', 'err');
-        } finally {
-          input.disabled = false;
-        }
-      });
+  }
+
+  // Per-row tier edits delegated once on the stable #admPricing container (#36).
+  function wirePricing() {
+    const box = $('admPricing');
+    if (!box) return;
+    delegate(box, 'change', '[data-price-tier]', async (event, input) => {
+      const row = input.closest('[data-vsku]');
+      input.disabled = true;
+      try {
+        await api('/api/admin/variant-pricing', {
+          method: 'POST',
+          body: { vsku: row.dataset.vsku, tier: input.dataset.priceTier, price: input.value },
+        });
+        message('priceRowStatus', `${row.dataset.vsku} ${input.dataset.priceTier} saved.`, 'ok');
+      } catch (err) {
+        message('priceRowStatus', err.data?.error || 'Could not save the price. Retry.', 'err');
+      } finally {
+        input.disabled = false;
+      }
     });
   }
 
-  return { renderPricing };
+  return { renderPricing, wirePricing };
 }
