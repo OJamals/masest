@@ -3,8 +3,29 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate } from '../util.js';
+import { esc, confirmDialog, delegate, detailDialog, money, dateTime as date } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
+
+// Read-only "view as customer" snapshot (#100) — what the account sees, for support.
+function viewAsHtml(s) {
+  const c = s.company || {};
+  const members = (s.members || []).map((m) =>
+    `<li>${esc(m.full_name || m.email || m.id)}${m.email ? ` · ${esc(m.email)}` : ''} <span class="muted">(${esc(m.role || 'member')})</span></li>`).join('') || '<li class="muted">No members</li>';
+  const orders = (s.orders || []).map((o) =>
+    `<tr><td>${esc(date(o.created_at))}</td><td>${esc(o.status)}</td><td>${esc(o.tracking_status || '')}</td><td style="text-align:right">${esc(money(o.total, o.currency))}</td></tr>`).join('')
+    || '<tr><td colspan="4" class="muted">No orders</td></tr>';
+  const subs = (s.subscriptions || []).map((x) => `${esc(x.tier || 'program')} (${esc(x.status)})`).join(', ') || 'None';
+  const credit = s.credit
+    ? (s.credit.unlimited ? 'Unlimited NET' : `${esc(money(s.credit.credit_available))} available of ${esc(money(s.credit.credit_limit))}`)
+    : '—';
+  return `<p class="badge badge-warning">Read-only support view — no changes are made as the customer.</p>
+    <h3 style="margin:8px 0 4px">${esc(c.name || 'Company')}</h3>
+    <p class="muted" style="margin:0 0 12px">${esc(c.status || '')} · ${esc(c.price_tier || 'retail')} tier · ${(c.net_terms_days || 0)}d NET${c.tax_exempt ? ' · tax-exempt' : ''}</p>
+    <p><b>Credit:</b> ${credit} &nbsp; <b>Programs:</b> ${subs} &nbsp; <b>Messages:</b> ${esc(s.message_count || 0)} &nbsp; <b>Addresses:</b> ${(s.addresses || []).length}</p>
+    <h4 style="margin:16px 0 4px">Members</h4><ul style="margin:0;padding-left:18px">${members}</ul>
+    <h4 style="margin:16px 0 4px">Recent orders</h4>
+    <table class="adm" style="width:100%"><thead><tr><th>Date</th><th>Status</th><th>Shipment</th><th>Total</th></tr></thead><tbody>${orders}</tbody></table>`;
+}
 
 export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager }) {
   function setupProgress(company) {
@@ -58,6 +79,18 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           button.disabled = false;
         }
       });
+    });
+    const viewAs = box.querySelector('[data-company-view-as]');
+    if (viewAs) viewAs.addEventListener('click', async () => {
+      viewAs.disabled = true;
+      try {
+        const snap = await api(`/api/admin/impersonate?company_id=${encodeURIComponent(company.id)}`);
+        detailDialog(viewAsHtml(snap));
+      } catch (err) {
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load the customer view.')}</p>`);
+      } finally {
+        viewAs.disabled = false;
+      }
     });
     box.querySelectorAll('[data-company-detail-tab]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -123,6 +156,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="suspend">Suspend</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="messages">Messages</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-company-view-as="${esc(company.id || id)}">View as customer</button>
         </div>
         ${renderCompanyMembers(company, detail.members || [])}
         ${renderCompanyInvites(company, detail.invites || [])}
