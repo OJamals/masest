@@ -1,6 +1,6 @@
 // POST /api/qbo-sync — cron/manual QBO sync worker entrypoint.
 import { adminClient, json } from '../_lib/supabase.js';
-import { getAccessToken, nextSyncState, syncOrder } from '../_lib/qbo.js';
+import { getAccessToken, nextSyncState, syncOrder, syncRefund } from '../_lib/qbo.js';
 
 function boundedBatch(request) {
   const requested = Number(new URL(request.url).searchParams.get('batch') || 10);
@@ -58,11 +58,11 @@ async function verifySyncSecret(request, env) {
   };
 }
 
-async function requeueClaimed(sb, orders, err) {
+async function requeueClaimed(sb, orders, err, table = 'orders') {
   const message = err?.message || String(err);
   await Promise.all((orders || []).map((order) => {
     const next = nextSyncState(order.qbo_attempts || 0);
-    return sb.from('orders')
+    return sb.from(table)
       .update({ ...next, qbo_error: message })
       .eq('id', order.id);
   }));
@@ -130,10 +130,10 @@ async function notifyInvoiceReady(sb, order, result) {
   });
 }
 
-async function requeueOne(sb, order, err) {
+async function requeueOne(sb, order, err, table = 'orders') {
   const next = nextSyncState(order.qbo_attempts || 0);
   const message = err?.message || String(err);
-  const { error } = await sb.from('orders')
+  const { error } = await sb.from(table)
     .update({ ...next, qbo_error: message })
     .eq('id', order.id);
   if (error) throw new Error(error.message || 'qbo_order_requeue_failed');
@@ -191,6 +191,73 @@ export async function runQboSync({ env, batch = 10 }) {
   return json(200, { ok: failed === 0, claimed: orders.length, synced, failed, results });
 }
 
+// #22 — drain the refund queue: one reversing CreditMemo per qbo_refunds row.
+// Mirrors runQboSync (claim → token → batched lookups → per-row sync/requeue) but
+// loads each refund's parent order + items since refunds carry only an order_id.
+export async function runQboRefundSync({ env, batch = 10 }) {
+  const sb = adminClient(env);
+  const { data: claimed, error } = await sb.rpc('claim_qbo_refunds', { batch });
+  if (error) return json(500, { error: error.message || 'qbo_refund_claim_failed' });
+
+  const refunds = claimed || [];
+  if (!refunds.length) return json(200, { ok: true, claimed: 0, synced: 0, failed: 0 });
+
+  let credentials;
+  try {
+    credentials = await getAccessToken(sb, env);
+  } catch (err) {
+    const message = await requeueClaimed(sb, refunds, err, 'qbo_refunds');
+    return json(503, { error: 'qbo_unavailable', detail: message, claimed: refunds.length, failed: refunds.length });
+  }
+
+  let ordersById;
+  let companyNames;
+  let taxExemptIds;
+  try {
+    const orderIds = [...new Set(refunds.map((r) => r.order_id))];
+    const { data: ords, error: oerr } = await sb.from('orders')
+      .select('id,company_id,customer_email,payment_method,total,tax,stripe_payment_intent')
+      .in('id', orderIds);
+    if (oerr) throw new Error(oerr.message || 'qbo_refund_order_read_failed');
+    ordersById = Object.fromEntries((ords || []).map((o) => [o.id, o]));
+    const ids = uniqueCompanyIds(ords || []);
+    companyNames = await companyNamesByIds(sb, ids);
+    taxExemptIds = await companyTaxExemptByIds(sb, ids);
+  } catch (err) {
+    const message = await requeueClaimed(sb, refunds, err, 'qbo_refunds');
+    return json(503, { error: 'qbo_refund_lookup_failed', detail: message, claimed: refunds.length, failed: refunds.length });
+  }
+
+  const results = [];
+  let synced = 0;
+  let failed = 0;
+  for (const refund of refunds) {
+    try {
+      const order = ordersById[refund.order_id];
+      if (!order) throw new Error('qbo_refund_order_missing');
+      const items = await orderItems(sb, order.id);
+      const result = await syncRefund(sb, env, credentials.accessToken, credentials.realmId, refund, order, items, companyNames, {
+        taxExempt: taxExemptIds.has(order.company_id),
+      });
+      const { error: uerr } = await sb.from('qbo_refunds').update({
+        qbo_sync_status: 'synced',
+        qbo_credit_memo_id: result.creditMemoId,
+        qbo_error: null,
+        qbo_next_attempt_at: null,
+      }).eq('id', refund.id);
+      if (uerr) throw new Error(uerr.message || 'qbo_refund_update_failed');
+      synced += 1;
+      results.push({ id: refund.id, ok: true, credit_memo_id: result.creditMemoId });
+    } catch (err) {
+      const detail = await requeueOne(sb, refund, err, 'qbo_refunds');
+      failed += 1;
+      results.push({ id: refund.id, ok: false, error: detail });
+    }
+  }
+
+  return json(200, { ok: failed === 0, claimed: refunds.length, synced, failed, results });
+}
+
 export async function onRequestPost({ request, env }) {
   let secretCheck;
   try {
@@ -202,5 +269,12 @@ export async function onRequestPost({ request, env }) {
   if (!secretCheck.authorized) {
     return json(401, { error: 'unauthorized' });
   }
-  return runQboSync({ env, batch: boundedBatch(request) });
+  // Drain both queues each run: order invoices then refund credit memos.
+  const batch = boundedBatch(request);
+  const ordersRes = await runQboSync({ env, batch });
+  const refundsRes = await runQboRefundSync({ env, batch });
+  const orders = await ordersRes.json().catch(() => ({}));
+  const refunds = await refundsRes.json().catch(() => ({}));
+  const status = ordersRes.status !== 200 ? ordersRes.status : refundsRes.status;
+  return json(status, { ok: Boolean(orders.ok) && Boolean(refunds.ok), orders, refunds });
 }

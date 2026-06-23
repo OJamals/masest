@@ -150,6 +150,14 @@ export async function onRequest({ request, env }) {
           await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
         }
       }
+      // Queue a reversing QBO credit memo (#22) so the books match the refund. The
+      // worker posts it and retries on failure; best-effort here — never fail the
+      // refund (the money already moved at Stripe) if the enqueue hiccups.
+      await sb.from('qbo_refunds').insert({
+        order_id: ord.id,
+        amount: plan.amount,
+        fully_refunded: plan.fullyRefunded,
+      }).then(() => {}, () => {});
       const label = plan.fullyRefunded ? 'refunded' : 'partially refunded';
       const refundMsg = plan.fullyRefunded
         ? 'Your MASEST order was refunded. The amount will return to your original payment method.'
