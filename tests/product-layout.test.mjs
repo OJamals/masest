@@ -94,6 +94,39 @@ test("replacement checker shows the swap and filters the catalog", async () => {
   });
 });
 
+test("product job router headline does not overlap its copy", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    try {
+      for (const viewport of [
+        { width: 390, height: 900 },
+        { width: 1440, height: 1000 },
+      ]) {
+        const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
+        try {
+          await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+          const rects = await page.evaluate(() => {
+            const headline = document.querySelector(".product-job-router .headline");
+            const copy = document.querySelector(".product-job-router-copy");
+            return {
+              headlineBottom: headline.getBoundingClientRect().bottom,
+              copyTop: copy.getBoundingClientRect().top,
+            };
+          });
+          assert.ok(
+            rects.copyTop - rects.headlineBottom >= 8,
+            `headline/copy gap collapsed at ${viewport.width}px`,
+          );
+        } finally {
+          await page.close();
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("product detail renders HMIS panel rows from product data", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });

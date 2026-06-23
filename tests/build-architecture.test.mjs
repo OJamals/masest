@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -25,6 +25,21 @@ test("Cloudflare build emits baseline security headers", () => {
   assert.match(build, /X-Frame-Options:\s*SAMEORIGIN/);
   assert.match(build, /Strict-Transport-Security:/);
   assert.match(build, /Permissions-Policy:/);
+});
+
+test("HTML pages use one fresh shared stylesheet cache-buster", () => {
+  const pages = [
+    ...readdirSync(root).filter((name) => name.endsWith(".html")),
+    ...readdirSync(new URL("industries/", root)).filter((name) => name.endsWith(".html")).map((name) => `industries/${name}`),
+  ].sort();
+  const versions = new Set();
+  for (const page of pages) {
+    const html = read(page);
+    const match = html.match(/css\/style\.css\?v=([^"']+)/);
+    assert.ok(match, `${page} must link css/style.css with cache-buster`);
+    versions.add(match[1]);
+  }
+  assert.deepEqual([...versions], ["20260623a"]);
 });
 
 test("architecture doc captures current app boundaries and target structure", () => {
