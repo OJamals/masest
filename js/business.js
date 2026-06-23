@@ -152,6 +152,8 @@ async function requestProgram(tier, btn) {
   try {
     const r = await api('/api/programs/subscribe', { method: 'POST', body: { tier } });
     if (r.url) { location.href = r.url; return; } // Stripe subscription checkout
+    if (r.swapped) { status.textContent = `Switched to the ${tier} program — your next invoice is prorated.`; status.dataset.state = 'ok'; renderProgramStatus(); return; }
+    if (r.unchanged) { status.textContent = `You're already on the ${tier} program.`; status.dataset.state = 'ok'; return; }
   } catch (e) {
     if (e.status === 409 && e.data?.fallback) {
       // No online price configured yet → fall back to a request-enrollment message.
@@ -176,12 +178,39 @@ async function renderProgramStatus() {
   try {
     const { subscriptions } = await api('/api/programs/subscribe');
     const active = (subscriptions || []).find((s) => s.status === 'active' || s.status === 'trialing');
-    if (active) { $('programStatus').textContent = `Active program: ${active.tier}.`; $('programStatus').dataset.state = 'ok'; }
+    if (active) {
+      $('programStatus').textContent = `Active program: ${active.tier}.`; $('programStatus').dataset.state = 'ok';
+      renderProgramManage(active);
+    }
   } catch { /* none */ }
   if (new URLSearchParams(location.search).get('program') === 'success') {
     $('programStatus').textContent = 'Program started - thank you. It will show as active here shortly.';
     $('programStatus').dataset.state = 'ok';
   }
+}
+
+// Self-serve "manage / cancel program" button → Stripe Customer Portal cancel flow
+// (proration/pause configured in the portal configuration). Idempotent: replaces any prior button.
+function renderProgramManage(active) {
+  const status = $('programStatus');
+  let btn = $('programManageBtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'programManageBtn';
+    btn.type = 'button';
+    btn.className = 'btn btn-secondary btn-sm';
+    status.insertAdjacentElement('afterend', btn);
+  }
+  btn.textContent = 'Manage or cancel program';
+  btn.onclick = async () => {
+    btn.disabled = true;
+    status.textContent = 'Opening Stripe…'; status.dataset.state = '';
+    try {
+      const r = await api('/api/account/billing-portal', { method: 'POST', body: { flow: 'cancel', subscription: active.stripe_subscription_id } });
+      if (r.url) { location.href = r.url; return; }
+    } catch { status.textContent = 'Could not open the billing portal. Try again.'; status.dataset.state = 'err'; }
+    btn.disabled = false;
+  };
 }
 
 function wireBulk() {

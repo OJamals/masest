@@ -95,3 +95,20 @@ export function subscriptionRow(session) {
     status: "active",
   };
 }
+
+// A subscription is live (bills the customer) until terminally canceled. A tier
+// change for any of these MUST swap the price on the SAME Stripe subscription —
+// creating a second one would double-bill.
+const LIVE_SUB_STATUSES = ["active", "trialing", "past_due", "checkout"];
+
+// Decide what POST /api/programs/subscribe should do for `tier`, given the
+// company's most-recent subscription row (or null). Pure: no Stripe/DB calls —
+// the handler executes the verdict. Guards the double-billing risk: an existing
+// live subscription is updated in place, never duplicated.
+export function subscribeAction(existing, tier) {
+  if (existing && LIVE_SUB_STATUSES.includes(existing.status) && existing.stripe_subscription_id) {
+    if (existing.tier === tier) return { action: "unchanged" };
+    return { action: "swap", subscriptionId: existing.stripe_subscription_id };
+  }
+  return { action: "checkout" };
+}
