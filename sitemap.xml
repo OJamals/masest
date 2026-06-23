@@ -8,6 +8,8 @@
   <url><loc>https://masest.co/proof.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/resources.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/newsletter.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://masest.co/privacy.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://masest.co/terms.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://masest.co/about.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://masest.co/contact.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/industries/oil-gas.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>

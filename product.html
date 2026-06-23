@@ -94,7 +94,7 @@
       <div class="drum-ref" id="pDrums" hidden></div>
     </div>
     <div class="hmis-panel">
-      <img id="pImage" class="product-shot" src="img/products/hvac-hcr-studio.webp" alt="" hidden loading="lazy" decoding="async" width="900" height="1200">
+      <img id="pImage" class="product-shot" src="img/products/hvac-hcr-studio.webp" alt="" hidden loading="eager" fetchpriority="high" decoding="async" width="900" height="1200">
       <div class="panel-title" id="panelTitle">HMIS Hazard Rating</div>
       <div class="hmis-rows" id="panelRows"></div>
       <div class="panel-foot" id="panelFoot"></div>
@@ -194,12 +194,13 @@ document.addEventListener("DOMContentLoaded", () => {
  const procurementRoute = quoteFirst
  ? "Quote review required before purchase."
  : "Small-pack checkout available; bulk sizes route through quote review.";
- const description = [
- product.desc,
- replacementLine ? `${replacementLine}.` : "",
- product.hmis ? `HMIS ${product.hmis}.` : "",
- procurementRoute
- ].filter(Boolean).join(" ");
+      const rawDescription = [
+        product.desc,
+        replacementLine ? `${replacementLine}.` : "",
+        product.hmis ? `HMIS ${product.hmis}.` : "",
+        procurementRoute
+      ].filter(Boolean).join(" ");
+      const description = rawDescription.length > 160 ? `${rawDescription.slice(0, 157).trimEnd()}...` : rawDescription;
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) canonical.href = canonicalUrl;
       document.title = title;
