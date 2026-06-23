@@ -199,11 +199,42 @@ export async function onRequestPost({ request, env }) {
   const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');
   if (!appUrl) return json(500, { error: 'app_url_not_configured' });
 
+  const taxEnabled = env.STRIPE_TAX_ENABLED === 'true';
+
   let companyId = null;
+  let company = null;
   const { user } = await userFromRequest(request, env);
   if (user) {
     const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
     companyId = profile?.company_id || null;
+    if (companyId) {
+      const { data } = await sb.from('companies')
+        .select('id,name,tax_exempt,stripe_customer_id').eq('id', companyId).maybeSingle();
+      company = data || null;
+    }
+  }
+
+  // Bind B2B checkouts to the company's Stripe Customer so tax is computed against it.
+  // When tax is live, mark a tax_exempt company's Customer 'exempt' so it isn't charged.
+  let customerId = null;
+  if (company) {
+    try {
+      customerId = company.stripe_customer_id;
+      if (!customerId) {
+        const cu = await stripe.customers.create({
+          email: body.email || user?.email || undefined, name: company.name || undefined,
+          metadata: { company_id: company.id },
+        });
+        customerId = cu.id;
+        await sb.from('companies').update({ stripe_customer_id: customerId }).eq('id', company.id);
+      }
+      if (taxEnabled) {
+        await stripe.customers.update(customerId, { tax_exempt: company.tax_exempt ? 'exempt' : 'none' });
+      }
+    } catch (err) {
+      // Customer setup must never block checkout — fall back to email-only (taxed normally).
+      customerId = null;
+    }
   }
 
   try {
@@ -213,6 +244,8 @@ export async function onRequestPost({ request, env }) {
       companyId,
       sellable,
       qtyBySku,
+      taxEnabled,
+      customerId,
     }));
     return json(200, { url: session.url });
   } catch (err) {

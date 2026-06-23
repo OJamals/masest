@@ -1,5 +1,10 @@
 // Pure helpers shared by checkout + webhook (no env, no I/O).
-export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sellable, qtyBySku }) {
+// taxEnabled gates Stripe automatic_tax (kept OFF until a Stripe origin address is
+// set — flipping it on without one errors every checkout). When a customerId is
+// supplied (B2B account) the session binds to that Stripe Customer so tax is computed
+// against — and any tax_exempt='exempt' marking on — that customer; guests fall back
+// to customer_email.
+export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sellable, qtyBySku, taxEnabled = false, customerId = null }) {
   const cleanEmail = String(email || "").trim();
   const cart = sellable.map((product) => ({
     sku: product.sku,
@@ -25,10 +30,9 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
           }
     )),
     payment_method_types: ["card", "us_bank_account"],
-    // Stripe Tax stays OFF until a head-office address is set in Stripe — kept in
-    // sync with the live inline session in functions/api/checkout.js so the two
-    // can't diverge. Flip both together when re-enabling.
-    automatic_tax: { enabled: false },
+    // Gated by STRIPE_TAX_ENABLED (see caller). Off by default; requires a Stripe
+    // origin/head-office address before it can be flipped on, or sessions error.
+    automatic_tax: { enabled: !!taxEnabled },
     shipping_address_collection: { allowed_countries: ["US"] },
     billing_address_collection: "required",
     success_url: `${appUrl}/order-confirmed.html?session_id={CHECKOUT_SESSION_ID}`,
@@ -40,7 +44,16 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
     },
   };
 
-  if (cleanEmail) params.customer_email = cleanEmail;
+  // A Checkout Session takes a Customer OR a customer_email, never both. B2B accounts
+  // bind to their Customer (carries the tax_exempt marking); guests use the email.
+  if (customerId) {
+    params.customer = customerId;
+    // Persist the address captured at checkout back onto the Customer so Stripe Tax
+    // (and exemption) resolve on this and future invoices.
+    params.customer_update = { address: "auto", shipping: "auto", name: "auto" };
+  } else if (cleanEmail) {
+    params.customer_email = cleanEmail;
+  }
 
   return params;
 }
