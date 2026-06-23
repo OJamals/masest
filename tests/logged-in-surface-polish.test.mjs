@@ -27,7 +27,9 @@ test("admin dashboard has production shell affordances without inline layout hac
   assert.match(html, /adm-panel-header/, "admin panels should expose consistent panel header utility");
   assert.match(html, /adm-inline-actions/, "admin inline action rows should use reusable classes");
   assert.doesNotMatch(html, /style="/, "admin shell should not rely on inline style polish");
-  assert.match(js, /SEO audit[\s\S]*adm-table-wrap/, "admin SEO audit table should render in the scroll-safe table wrapper");
+  assert.match(js, /from\s+["']\.\/admin\/seo\.js["']/, "admin should import the split SEO-audit module");
+  const seo = read("js/admin/seo.js"); // SEO-audit tab extracted in #36 split
+  assert.match(seo, /SEO audit[\s\S]*adm-table-wrap/, "admin SEO audit table should render in the scroll-safe table wrapper");
 });
 
 test("dashboard panels protect form and notification text from clipping", () => {
