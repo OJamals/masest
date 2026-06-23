@@ -40,7 +40,7 @@ export function docNumber(orderId) {
   return String(orderId || '').replaceAll('-', '').slice(0, 21);
 }
 
-function lineFor(item, itemRefs) {
+function lineFor(item, itemRefs, taxExempt = false) {
   const itemRef = itemRefs?.[item.sku];
   if (!itemRef) throw new Error(`qbo_item_ref_missing:${item.sku}`);
   return {
@@ -51,6 +51,9 @@ function lineFor(item, itemRefs) {
       ItemRef: { value: itemRef },
       Qty: Number(item.qty || 0),
       UnitPrice: Number(item.unit_price || 0),
+      // #27: tax-exempt buyer → force non-taxable. Only added when exempt so
+      // non-exempt invoices keep their existing (QBO-default) tax behavior.
+      ...(taxExempt ? { TaxCodeRef: { value: 'NON' } } : {}),
     },
   };
 }
@@ -60,13 +63,13 @@ function billEmailFor(order) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? { Address: email } : null;
 }
 
-function baseDocumentPayload({ order, items, customerRef, itemRefs }) {
+function baseDocumentPayload({ order, items, customerRef, itemRefs, taxExempt = false }) {
   const billEmail = billEmailFor(order);
   return {
     CustomerRef: { value: customerRef },
     DocNumber: docNumber(order.id),
     PrivateNote: `MASEST order ${order.id}`,
-    Line: (items || []).map((item) => lineFor(item, itemRefs)),
+    Line: (items || []).map((item) => lineFor(item, itemRefs, taxExempt)),
     TxnTaxDetail: { TotalTax: Number(order.tax || 0) },
     ...(billEmail ? { BillEmail: billEmail } : {}),
   };
@@ -165,7 +168,7 @@ export async function syncOrder(sb, env, accessToken, realmId, order, items = []
 
   // documentPlanFor only ever yields 'invoice' / 'invoice_payment' (see ADR note there),
   // so every document is an Invoice (a Payment is added below for paid orders).
-  const payloadInput = { order, items, customerRef, itemRefs };
+  const payloadInput = { order, items, customerRef, itemRefs, taxExempt: Boolean(options.taxExempt) };
   const payload = buildInvoicePayload(payloadInput);
   let docId = null;
   if (plan.entity === 'Invoice') {

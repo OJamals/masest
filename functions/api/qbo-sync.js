@@ -92,6 +92,18 @@ export async function companyNamesByIds(sb, ids) {
   return Object.fromEntries((data || []).filter((c) => c.name).map((c) => [c.id, c.name]));
 }
 
+// #27 — tax-exempt buyers must get non-taxable QBO invoice lines. One batched read
+// for the whole sync batch (like companyNamesByIds; not N+1). Kept separate from the
+// name lookup so the #37 name-map contract stays untouched.
+// ponytail: second batched query per run, not per order — merge into the name read
+// only if QBO sync latency ever shows up in a profile.
+export async function companyTaxExemptByIds(sb, ids) {
+  if (!ids.length) return new Set();
+  const { data, error } = await sb.from('companies').select('id,tax_exempt').in('id', ids);
+  if (error) throw new Error(error.message || 'qbo_company_read_failed');
+  return new Set((data || []).filter((c) => c.tax_exempt).map((c) => c.id));
+}
+
 async function markSynced(sb, order, result) {
   const patch = {
     qbo_sync_status: 'synced',
@@ -147,8 +159,10 @@ export async function runQboSync({ env, batch = 10 }) {
   // Resolve every buyer name in one query up front (#37). A failure here is a shared
   // dependency for the whole batch, so requeue all claimed orders like a token failure.
   let companyNames;
+  let taxExemptIds;
   try {
     companyNames = await companyNamesByIds(sb, uniqueCompanyIds(orders));
+    taxExemptIds = await companyTaxExemptByIds(sb, uniqueCompanyIds(orders));
   } catch (err) {
     const message = await requeueClaimed(sb, orders, err);
     return json(503, { error: 'qbo_company_lookup_failed', detail: message, claimed: orders.length, failed: orders.length });
@@ -160,7 +174,9 @@ export async function runQboSync({ env, batch = 10 }) {
   for (const order of orders) {
     try {
       const items = await orderItems(sb, order.id);
-      const result = await syncOrder(sb, env, credentials.accessToken, credentials.realmId, order, items, companyNames);
+      const result = await syncOrder(sb, env, credentials.accessToken, credentials.realmId, order, items, companyNames, {
+        taxExempt: taxExemptIds.has(order.company_id),
+      });
       await markSynced(sb, order, result);
       await notifyInvoiceReady(sb, order, result);
       synced += 1;
