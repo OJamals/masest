@@ -193,6 +193,19 @@
 /* ----------------------------------------------------------------------------
    Modal / dialog — overlay with focus-trap (JS adds .open; Esc + backdrop close)
 ---------------------------------------------------------------------------- */
+/* Native <dialog> detail modal (admin order drill-down) — sizing only; rest is UA default. */
+.detail-dialog {
+  width: min(640px, 94vw);
+  max-height: 86vh;
+  overflow: auto;
+  border: 0;
+  border-radius: var(--r-lg, 22px);
+  box-shadow: var(--shadow-lg, 0 28px 64px -16px rgba(20, 24, 32, .16));
+  padding: 24px;
+}
+.detail-dialog::backdrop { background: rgba(20, 24, 32, .46); }
+.detail-dialog-actions { margin: 18px 0 0; text-align: right; }
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
