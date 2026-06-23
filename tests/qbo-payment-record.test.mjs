@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 const ADMIN_ORDERS = read("functions/api/admin/orders.js");
-const ADMIN_UI = read("js/admin.js");
+const ADMIN_UI = read("js/admin/orders.js"); // Orders tab moved in #36
 
 test("admin orders can record a QuickBooks payment id for NET orders", () => {
   assert.match(ADMIN_ORDERS, /body\.action\s*===\s*['"]record_qbo_payment['"]/);

@@ -98,6 +98,6 @@ test('schema-refunds.sql adds refunded_amount + increment_variant_stock', () => 
 
 // ---- admin UI sends a refund amount ----
 test('admin refund control exposes an amount field', () => {
-  const src = read('js/admin.js');
+  const src = read('js/admin/orders.js'); // Orders tab moved in #36
   assert.match(src, /data-refund-amount/, 'refund UI must let staff enter a partial amount');
 });

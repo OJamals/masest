@@ -22,7 +22,7 @@ test("admin orders can record a QuickBooks invoice id for NET orders", () => {
 });
 
 test("admin orders UI exposes the QuickBooks invoice action", () => {
-  const admin = read("js/admin.js");
+  const admin = read("js/admin/orders.js"); // Orders tab moved in #36
   assert.match(admin, /data-qbo-order/,
     "admin order rows must expose a QuickBooks invoice action");
   assert.match(admin, /QuickBooks invoice ID/,

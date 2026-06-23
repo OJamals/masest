@@ -17,7 +17,7 @@ test("admin orders API exposes QuickBooks sync document and payment ids", () => 
 });
 
 test("admin orders UI renders QuickBooks sync ids for reconciliation", () => {
-  const admin = read("js/admin.js");
+  const admin = read("js/admin/orders.js"); // Orders tab moved in #36
 
   assert.match(admin, /qboReconciliation\(order\)/,
     "orders table should render a reusable QuickBooks reconciliation summary");

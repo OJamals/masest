@@ -31,7 +31,7 @@ test('#40 address default reset uses RPC and safe fallback ordering', () => {
 
 test('#42 refunds have a distinct refunded order status', () => {
   const api = read('functions/api/admin/orders.js');
-  const admin = read('js/admin.js');
+  const admin = read('js/admin/orders.js'); // Orders consts moved in #36
   const schema = read('supabase/schema.sql');
   const migration = read('supabase/schema-refunds.sql');
   assert.match(api, /ORDER_STATUSES[\s\S]*'refunded'/);
