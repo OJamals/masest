@@ -88,6 +88,8 @@
   .adm-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .adm-report-controls { align-items: end; gap: 10px; }
   .adm-inv-subhead { margin: 18px 0 8px; font-size: .9rem; }
+  .adm-coupon-form { gap: 8px; margin-bottom: 14px; }
+  .adm-coupon-form .adm-input { max-width: 120px; }
   #invCsv { min-height: 90px; margin-bottom: 10px; }
   .adm-report-controls .field { margin: 0; }
   .adm-select-sm { max-width: 220px; }
@@ -261,6 +263,21 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="pricing">
+        <div class="adm-card" id="admCoupons">
+          <div class="adm-panel-header"><h2>Promo codes</h2></div>
+          <p class="muted">Stripe promotion codes — buyers enter them at card checkout. (NET on-account orders don't take promo codes.)</p>
+          <div class="adm-inline-actions adm-coupon-form">
+            <input id="cpCode" class="adm-input" placeholder="CODE" aria-label="Promo code">
+            <input id="cpPercent" class="adm-input" type="number" min="1" max="100" step="1" placeholder="% off" aria-label="Percent off">
+            <input id="cpAmount" class="adm-input" type="number" min="0" step="0.01" placeholder="$ off" aria-label="Amount off">
+            <input id="cpMin" class="adm-input" type="number" min="0" step="0.01" placeholder="Min order $" aria-label="Minimum order">
+            <input id="cpMax" class="adm-input" type="number" min="1" step="1" placeholder="Max uses" aria-label="Max redemptions">
+            <input id="cpExpires" class="adm-input" type="date" aria-label="Expires">
+            <button id="cpCreate" class="btn btn-primary btn-sm" type="button">Create code</button>
+            <span id="cpStatus" class="adm-status" role="status" aria-live="polite"></span>
+          </div>
+          <div id="cpList" class="adm-list">Loading...</div>
+        </div>
         <div class="adm-card">
           <input id="priceSearch" type="search" class="adm-search" placeholder="Search variants" aria-label="Search variants">
           <div id="admPricing">Loading...</div>

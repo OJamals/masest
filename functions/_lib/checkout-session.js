@@ -38,6 +38,10 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
           }
     )),
     payment_method_types: ["card", "us_bank_account"],
+    // Lets buyers enter a Stripe promotion code at checkout (#97). Codes/coupons are
+    // managed via /api/admin/coupons; Stripe validates expiry/usage/minimum. NET
+    // on-account orders don't run through Checkout, so they don't take promo codes.
+    allow_promotion_codes: true,
     // Gated by STRIPE_TAX_ENABLED (see caller). Off by default; requires a Stripe
     // origin/head-office address before it can be flipped on, or sessions error.
     automatic_tax: { enabled: !!taxEnabled },
