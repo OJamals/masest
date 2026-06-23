@@ -67,7 +67,7 @@
 
   <section class="section section-slim">
     <div class="wrap contact-layout">
-      <form class="form-card" id="quoteForm" data-endpoint="/api/quote">
+      <form onsubmit="return false" class="form-card" id="quoteForm" data-endpoint="/api/quote">
         <input type="hidden" name="type" id="fType" value="quote">
         <div aria-hidden="true" class="sr-only">
           <label for="fGotcha">Leave this field empty</label>

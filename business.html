@@ -136,7 +136,7 @@
           <h2>Team members</h2>
           <p class="lead">Invite teammates to your company account. Invited emails join automatically once they register and sign in.</p>
           <div id="teamMembers"><p class="muted">Loading…</p></div>
-          <form id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
+          <form onsubmit="return false" id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
             <div class="biz-inline-form">
               <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
               <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
@@ -160,7 +160,7 @@
         <div class="biz-card" id="bizBulk">
           <h2>Bulk &amp; standing orders</h2>
           <p class="lead">Need volume pricing, drums, totes, or a recurring standing order? List the requirement and sales will return a scoped quote.</p>
-          <form id="bulkForm" class="form-card biz-clean-form">
+          <form onsubmit="return false" id="bulkForm" class="form-card biz-clean-form">
             <div class="field"><label for="bulkItems">What do you need? *</label>
               <textarea id="bulkItems" rows="3" placeholder="e.g. 4× 55-gal HCR, 2× 275-gal tote Neutral, monthly" required></textarea></div>
             <div class="field biz-field-gap"><label for="bulkNotes">Delivery / timing notes</label>
