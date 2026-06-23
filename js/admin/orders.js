@@ -39,6 +39,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         <input class="adm-input" data-track-number="${id}" value="${esc(order.tracking_number || '')}" placeholder="Tracking #" style="max-width:150px">
         <input class="adm-input" data-track-url="${id}" value="${esc(order.tracking_url || '')}" placeholder="Tracking URL" style="max-width:230px">
         <input class="adm-input" data-track-eta="${id}" value="${esc(eta)}" type="datetime-local" aria-label="Estimated delivery" style="max-width:190px">
+        <input class="adm-input" data-track-note="${id}" placeholder="Note (shown to customer)" aria-label="Shipment note" style="max-width:230px">
         <button class="btn btn-ghost btn-sm" data-save-tracking="${id}" type="button">Save tracking</button>
       </div>
     </details>`;
@@ -109,11 +110,18 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const events = (timeline || []).map((e) =>
       `<li><b>${esc(e.action)}</b> — ${esc(date(e.created_at))}${e.actor_email ? ` by ${esc(e.actor_email)}` : ''}</li>`).join('')
       || '<li class="muted">No staff actions recorded</li>';
+    const shipEvents = (order.shipment_events || [])
+      .slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const shipHistory = shipEvents.length
+      ? `<h4 style="margin:16px 0 4px">Shipment history</h4><ul style="margin:0;padding-left:18px">${shipEvents.map((e) =>
+          `<li><b>${esc(e.status)}</b> — ${esc(date(e.created_at))}${e.carrier ? ` · ${esc(e.carrier)}` : ''}${e.tracking_number ? ` ${esc(e.tracking_number)}` : ''}${e.note ? ` — ${esc(e.note)}` : ''}</li>`).join('')}</ul>`
+      : '';
     return `<h3 style="margin:0 0 4px">Order ${esc(order.id)}</h3>
       <p class="muted" style="margin:0 0 12px">${esc(order.companies?.name || order.company_id || 'Guest')} · ${esc(order.customer_email || '')} · ${esc(order.status)} · ${esc(order.payment_method || '')}</p>
       <table class="adm" style="width:100%"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Line</th></tr></thead><tbody>${items}</tbody></table>
       <p style="margin:12px 0 0"><b>Total</b> ${esc(money(order.total ?? order.subtotal, order.currency))}${Number(order.tax) ? ` (tax ${esc(money(order.tax, order.currency))})` : ''}${Number(order.refunded_amount) > 0 ? ` · refunded ${esc(money(order.refunded_amount, order.currency))}` : ''}</p>
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
+      ${shipHistory}
       <h4 style="margin:16px 0 4px">Staff timeline</h4><ul style="margin:0;padding-left:18px">${events}</ul>`;
   }
 
@@ -157,6 +165,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
             tracking_number: pick('number').value.trim(),
             tracking_url: pick('url').value.trim(),
             estimated_delivery_at: pick('eta').value,
+            note: pick('note').value.trim(),
           },
         });
         message('ordStatus', 'Tracking saved.', 'ok');

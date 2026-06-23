@@ -79,7 +79,7 @@ export async function onRequest({ request, env }) {
     const detailId = params.get('id');
     if (detailId) {
       const { data: order, error } = await sb.from('orders')
-        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)')
+        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at)')
         .eq('id', detailId).single();
       if (error) return json(error.code === 'PGRST116' ? 404 : 500, { error: error.message });
       const { data: timeline } = await sb.from('audit_log')
@@ -280,6 +280,7 @@ export async function onRequest({ request, env }) {
       const carrier = String(body.carrier || '').trim().slice(0, 80) || null;
       const trackingNumber = String(body.tracking_number || '').trim().slice(0, 120) || null;
       const trackingUrl = String(body.tracking_url || '').trim().slice(0, 500) || null;
+      const note = String(body.note || '').trim().slice(0, 280) || null;
       if (trackingUrl && !/^https?:\/\//i.test(trackingUrl)) return json(400, { error: 'invalid_tracking_url' });
       const estimatedDeliveryAt = body.estimated_delivery_at ? new Date(body.estimated_delivery_at) : null;
       if (estimatedDeliveryAt && Number.isNaN(estimatedDeliveryAt.getTime())) return json(400, { error: 'invalid_estimated_delivery_at' });
@@ -306,6 +307,10 @@ export async function onRequest({ request, env }) {
         .select('id,company_id,customer_email,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
         .single();
       if (error) return json(500, { error: error.message });
+      // Append a customer-visible shipment event (history) — best-effort; never fail the update.
+      await sb.from('shipment_events').insert({
+        order_id: body.id, status: trackingStatus, carrier, tracking_number: trackingNumber, note,
+      }).then(() => {}, () => {});
       const notifyLabel = fulfilled ? 'fulfilled' : 'tracking updated';
       const notifyBody = fulfilled
         ? `Your order has shipped. ${carrier || 'Carrier'} ${trackingNumber}`.trim()
