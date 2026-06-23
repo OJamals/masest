@@ -8,6 +8,7 @@ const ADMIN_QUOTES = read("../functions/api/admin/quotes.js");
 const ADMIN_STATS = read("../functions/api/admin/stats.js");
 const QUOTE_INTAKE = read("../functions/api/quote.js");
 const ADMIN_JS = read("../js/admin.js");
+const QUOTES_JS = read("../js/admin/quotes.js"); // quotes pipeline tab moved in #36
 const ADMIN_HTML = read("../admin.html");
 const QUOTE_SCHEMA = read("../supabase/schema-quotes.sql");
 
@@ -41,11 +42,11 @@ test("admin quotes API reads and updates pipeline fields", () => {
 
 test("admin quote inbox supports lead owner assignment", () => {
   assert.match(ADMIN_HTML, /id="qOwner"/);
-  assert.match(ADMIN_JS, /const ownerFilter = \$\('qOwner'\)\?\.value/);
-  assert.match(ADMIN_JS, /ownerMatch/);
-  assert.match(ADMIN_JS, /data-quote-owner/);
-  assert.match(ADMIN_JS, /assigned_to:\s*box\.querySelector/);
-  assert.match(ADMIN_JS, /quote\.assigned_to/);
+  assert.match(QUOTES_JS, /const ownerFilter = \$\('qOwner'\)\?\.value/);
+  assert.match(QUOTES_JS, /ownerMatch/);
+  assert.match(QUOTES_JS, /data-quote-owner/);
+  assert.match(QUOTES_JS, /assigned_to:\s*box\.querySelector/);
+  assert.match(QUOTES_JS, /quote\.assigned_to/);
 });
 
 test("admin quotes API can send a lead follow-up email", () => {
@@ -83,22 +84,22 @@ test("admin quotes API sweeps stale due leads with email and notes", () => {
 test("admin quote inbox exposes pipeline controls", () => {
   assert.match(ADMIN_HTML, /id="qPriority"/);
   assert.match(ADMIN_HTML, /id="qDue"/);
-  assert.match(ADMIN_JS, /data-quote-priority/);
-  assert.match(ADMIN_JS, /data-quote-next-step/);
-  assert.match(ADMIN_JS, /data-quote-due-at/);
-  assert.match(ADMIN_JS, /const dueFilter = \$\('qDue'\)\?\.value \|\| ''/);
-  assert.match(ADMIN_JS, /dueFilter === 'overdue'/);
-  assert.match(ADMIN_JS, /dueFilter === 'upcoming'/);
-  assert.match(ADMIN_JS, /dueFilter === 'unscheduled'/);
-  assert.match(ADMIN_JS, /priority:\s*box\.querySelector/);
-  assert.match(ADMIN_JS, /next_step:\s*box\.querySelector/);
-  assert.match(ADMIN_JS, /due_at:\s*box\.querySelector/);
-  assert.match(ADMIN_JS, /data-followup/);
-  assert.match(ADMIN_JS, /action:\s*'followup'/);
-  assert.match(ADMIN_JS, /function quoteDueInDays/);
-  assert.match(ADMIN_JS, /data-snooze-quote/);
-  assert.match(ADMIN_JS, /due_at:\s*quoteDueInDays\(2\)/);
-  assert.match(ADMIN_JS, /next_step:\s*'Snoozed for two days'/);
+  assert.match(QUOTES_JS, /data-quote-priority/);
+  assert.match(QUOTES_JS, /data-quote-next-step/);
+  assert.match(QUOTES_JS, /data-quote-due-at/);
+  assert.match(QUOTES_JS, /const dueFilter = \$\('qDue'\)\?\.value \|\| ''/);
+  assert.match(QUOTES_JS, /dueFilter === 'overdue'/);
+  assert.match(QUOTES_JS, /dueFilter === 'upcoming'/);
+  assert.match(QUOTES_JS, /dueFilter === 'unscheduled'/);
+  assert.match(QUOTES_JS, /priority:\s*box\.querySelector/);
+  assert.match(QUOTES_JS, /next_step:\s*box\.querySelector/);
+  assert.match(QUOTES_JS, /due_at:\s*box\.querySelector/);
+  assert.match(QUOTES_JS, /data-followup/);
+  assert.match(QUOTES_JS, /action:\s*'followup'/);
+  assert.match(QUOTES_JS, /function quoteDueInDays/);
+  assert.match(QUOTES_JS, /data-snooze-quote/);
+  assert.match(QUOTES_JS, /due_at:\s*quoteDueInDays\(2\)/);
+  assert.match(QUOTES_JS, /next_step:\s*'Snoozed for two days'/);
 });
 
 test("admin overview surfaces due quote follow-ups", () => {
