@@ -32,7 +32,7 @@ async function notifyCompany(sb, env, request, companyId, label, extra) {
     to: emails, subject: `Order ${label}`,
     html: emailLayout({
       heading: `Order ${label}`,
-      bodyHtml: `<p>${extra || `Your MASEST order status is now <b>${label}</b>.`}</p>`,
+      bodyHtml: `<p>${htmlEscape(extra || `Your MASEST order status is now "${label}".`)}</p>`,
       ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders`,
     }),
   });
@@ -126,7 +126,15 @@ export async function onRequest({ request, env }) {
       if (!secret) return json(500, { error: 'stripe_not_configured' });
       const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
       try {
-        await stripe.refunds.create({ payment_intent: ord.stripe_payment_intent, amount: plan.amountCents });
+        // Deterministic idempotency key so a retried / double-submitted refund settles
+        // once at Stripe. Keyed on the order + its pre-refund state + this amount: an
+        // identical retry dedupes, while a distinct later partial refund still goes
+        // through (different prior refunded_amount → different key).
+        const idempotencyKey = `refund:${ord.id}:${ord.refunded_amount || 0}:${plan.amountCents}`;
+        await stripe.refunds.create(
+          { payment_intent: ord.stripe_payment_intent, amount: plan.amountCents },
+          { idempotencyKey },
+        );
       } catch (err) {
         return json(502, { error: 'stripe_refund_failed', detail: err?.message || String(err) });
       }
