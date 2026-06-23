@@ -306,12 +306,12 @@ document.addEventListener("DOMContentLoaded", () => {
     })();
 
     const buySkel = document.createElement("span");
-  buySkel.className = "skeleton skeleton-text w-60";
-  buySkel.style.cssText = "min-width:160px;height:1.5em;display:inline-block";
-  buyBtn.parentNode.insertBefore(buySkel, buyBtn);
-if (quoteFirst) {
-  buySkel.remove();
-} else {
+    buySkel.className = "skeleton skeleton-text w-60";
+    buySkel.style.cssText = "min-width:160px;height:1.5em;display:inline-block";
+    buyBtn.parentNode.insertBefore(buySkel, buyBtn);
+    if (quoteFirst || (typeof isLocalStaticCommerceSuppressed === "function" && isLocalStaticCommerceSuppressed())) {
+      buySkel.remove();
+    } else {
     import("./js/auth.js").then(a => a.getToken()).catch(() => null).then(token => {
       const headers = { Accept: "application/json" };
       if (token) headers.Authorization = "Bearer " + token;

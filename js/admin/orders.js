@@ -6,8 +6,9 @@
 import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
+export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
+
 export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager }) {
-  const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
   const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
 
   function qboReconciliation(order) {

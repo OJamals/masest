@@ -2,7 +2,7 @@
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
-import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, confirmDialog } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,6 +38,7 @@ function syncTabFromHash() {
 }
 
 function wireTabs() {
+  linkTabsToPanels(document, 'dash');
   document.querySelectorAll('.dash-tab').forEach((b) =>
     b.addEventListener('click', () => selectTab(b.dataset.tab)));
   wireTablist(document.querySelector('.dash-tabs[role="tablist"]'), (tab) => selectTab(tab.dataset.tab));
@@ -75,7 +76,7 @@ function trackingSteps(order) {
     ${steps.map(([key, label], index) => `<span class="${index <= activeIndex ? 'done' : ''}" data-track-step="${key}">${esc(label)}</span>`).join('')}
     ${meta ? `<p class="muted">${meta}</p>` : ''}
     ${history}
-    ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl(order.tracking_url))}" target="_blank" rel="noopener">Track shipment</a>` : ''}
+    ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl(order.tracking_url))}" target="_blank" rel="noopener noreferrer">Track shipment</a>` : ''}
   </div>`;
 }
 
@@ -332,7 +333,7 @@ async function renderOrders({ append = false } = {}) {
     b.disabled = true;
     try {
       const { receipt_url } = await api(`/api/account/order?id=${encodeURIComponent(b.dataset.receipt)}&receipt=1`);
-      if (receipt_url) window.open(receipt_url, '_blank', 'noopener');
+      if (receipt_url) window.open(receipt_url, '_blank', 'noopener,noreferrer');
       else alert('No receipt is available for this order yet.');
     } catch { /* ignore */ }
     b.disabled = false;

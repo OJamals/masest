@@ -27,7 +27,7 @@ assert.match(
 );
 assert.match(
   story,
-  /start:\s*"top 67px"/,
+  /function storyStart\(\)\s*{\s*return "top " \+ stickyOffset\(\) \+ "px";\s*}[\s\S]*start:\s*storyStart/,
   "pinned scrollybook acts start at the visible top below the nav for every act",
 );
 assert.match(css, /body\.nav-open/, "mobile menu has scroll-lock CSS");

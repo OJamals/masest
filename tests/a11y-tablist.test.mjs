@@ -31,6 +31,9 @@ test('util exposes wireTablist + rovingTabindex with key handling', () => {
   const src = read('js/util.js');
   assert.match(src, /export const wireTablist/);
   assert.match(src, /export const rovingTabindex/);
+  assert.match(src, /export const linkTabsToPanels/);
+  assert.match(src, /aria-controls/);
+  assert.match(src, /aria-labelledby/);
   assert.match(src, /preventDefault\(\)/, 'arrow keys must not scroll the page');
 });
 
@@ -41,6 +44,7 @@ test('admin + dashboard wire the tablist keyboard pattern + roving tabindex', ()
     assert.match(src, /import\s*\{[^}]*wireTablist[^}]*\}\s*from\s*['"]\.\/util\.js['"]/, `${p} must import the helper`);
     assert.match(src, /wireTablist\(/, `${p} must wire keyboard nav`);
     assert.match(src, /rovingTabindex\(/, `${p} must apply roving tabindex on tab change`);
+    assert.match(src, /linkTabsToPanels\(/, `${p} must connect tabs to their panels`);
   }
 });
 

@@ -43,6 +43,19 @@ export const rovingTabindex = (tabs, isSelected) => {
   tabs.forEach((t) => t.setAttribute('tabindex', isSelected(t) ? '0' : '-1'));
 };
 
+// Connect WAI-ARIA tabs to panels. Pages still own selected/hidden state.
+export const linkTabsToPanels = (root = document, prefix = 'tab') => {
+  const panels = [...root.querySelectorAll('[role="tabpanel"][data-panel]')];
+  root.querySelectorAll('[role="tab"][data-tab]').forEach((tab) => {
+    const panel = panels.find((p) => p.dataset.panel === tab.dataset.tab);
+    if (!panel) return;
+    tab.id ||= `${prefix}-${tab.dataset.tab}-tab`;
+    panel.id ||= `${prefix}-${tab.dataset.tab}-panel`;
+    tab.setAttribute('aria-controls', panel.id);
+    panel.setAttribute('aria-labelledby', tab.id);
+  });
+};
+
 // Arrow/Home/End navigation for a [role="tablist"]. `activate(tab)` selects it; focus
 // follows. Call once per tablist after the tabs exist.
 export const wireTablist = (tablist, activate) => {

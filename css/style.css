@@ -61,6 +61,16 @@ one family.
   --accent-soft: #e3f0f1;
   --accent-tint: #f1f8f8;
   --danger: #a63a2e;          /* form errors, hazard markers — AA on white (6.4:1) */
+  --status-success-bg: #e7f5ed;
+  --status-success-ink: #17623b;
+  --status-warning-bg: #fef3c7;
+  --status-warning-ink: #92400e;
+  --status-warning-strong-bg: #fbe6cf;
+  --status-warning-strong-ink: #8a4a09;
+  --status-danger-bg: #fee2e2;
+  --status-danger-ink: #b42318;
+  --status-danger-soft-bg: #fae8e6;
+  --status-danger-soft-ink: #8a2d24;
   --brand-grad: linear-gradient(118deg, #13343a 0%, #0e7c86 58%, #77a8a0 100%);
   --surface-raised: linear-gradient(180deg, rgba(255,255,255,.96), rgba(246,250,249,.9));
   --surface-edge: inset 0 1px 0 rgba(255,255,255,.86), inset 0 -1px 0 rgba(15,74,80,.035);
@@ -3596,8 +3606,8 @@ fully clickable cards) ---- */
   box-shadow: 0 0 0 3px rgba(14,124,134,.14);
 }
 .cart-status { margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
-.cart-status[data-state=ok] { color: #087f5b; }
-.cart-status[data-state=err] { color: #b42318; }
+.cart-status[data-state=ok] { color: var(--status-success-ink); }
+.cart-status[data-state=err] { color: var(--status-danger-ink); }
 .cart-actions { display: grid; gap: 10px; margin-top: 18px; }
 .cart-actions .btn { width: 100%; justify-content: center; }
 .cart-actions .btn:disabled { cursor: not-allowed; }

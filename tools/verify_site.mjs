@@ -14,6 +14,7 @@ const ignoredDirs = new Set([
   "_local",
   "backups",
   "dist",
+  "masest.co-audit",
   "node_modules",
   "test-results",
   "vendor",

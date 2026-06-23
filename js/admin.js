@@ -1,6 +1,6 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
-import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, confirmDialog } from './util.js';
+import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog } from './util.js';
 import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 import { editKey, captureDirty, restoreDirty } from './admin/edits.js';
 import { createTrafficRenderer } from './admin/traffic.js';
@@ -11,7 +11,7 @@ import { createProductsTab } from './admin/products.js';
 import { createPricingTab } from './admin/pricing.js';
 import { createCustomersTab } from './admin/customers.js';
 import { createCompaniesTab } from './admin/companies.js';
-import { createOrdersTab } from './admin/orders.js';
+import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js';
 import { createQuotesTab } from './admin/quotes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -417,6 +417,7 @@ function gateCaptchaToken() {
 function resetGateCaptcha() { try { window.turnstile?.reset(); } catch (e) { /* not loaded */ } }
 
 function wire() {
+  linkTabsToPanels(document, 'adm');
   ORDER_STATUSES.forEach((status) => {
     $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${status}">${status.replaceAll('_', ' ')}</option>`);
   });

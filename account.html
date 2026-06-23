@@ -23,11 +23,11 @@
   .acct-pane[hidden] { display: none; }
   .acct-status { margin-top: 14px; font-size: .9rem; font-weight: 600; min-height: 1em; }
   .acct-status[data-state=ok] { color: var(--accent-ink); }
-  .acct-status[data-state=err] { color: #b42318; }
+  .acct-status[data-state=err] { color: var(--status-danger-ink); }
   .acct-badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-  .acct-badge[data-s=pending] { background: #fef3c7; color: #92400e; }
+  .acct-badge[data-s=pending] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .acct-badge[data-s=approved] { background: var(--accent-soft); color: var(--accent-ink); }
-  .acct-badge[data-s=rejected], .acct-badge[data-s=suspended] { background: #fee2e2; color: #b42318; }
+  .acct-badge[data-s=rejected], .acct-badge[data-s=suspended] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
   .acct-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: .95rem; }
   .acct-row b { color: var(--ink); }
   .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; font-size: .9rem; }

@@ -88,7 +88,11 @@
     crhd: "VertKleen CR-HD",
     hcr: "VertKleen HCR",
   };
-async function loadCatalog() {
+  function isLocalStaticPreview() {
+    return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname) && !window.MASEST_ENABLE_LOCAL_API;
+  }
+  async function loadCatalog() {
+  if (isLocalStaticPreview()) return;
   try {
     const token = await getToken().catch(() => null);
     const r = await fetch("/api/products", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
@@ -366,7 +370,7 @@ async function loadCatalog() {
   }
 
   render(); // fast first paint with raw SKUs
-  loadCatalog().then(render); // re-render with variant names + shipping once catalog loads
+  if (!isLocalStaticPreview()) loadCatalog().then(render); // re-render with variant names + shipping once catalog loads
   renderCartAccount();
 </script>
 </body>

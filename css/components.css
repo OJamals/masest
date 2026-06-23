@@ -76,9 +76,9 @@
   white-space: nowrap;
 }
 .badge-accent  { background: var(--accent-soft, #e3f0f1); color: var(--accent-ink, #0a5b62); }
-.badge-success { background: #e4f4ea; color: #1c6b3d; }
-.badge-warning { background: #fdf1d8; color: #8a5a09; }
-.badge-danger  { background: #f8e3df; color: var(--danger, #a63a2e); }
+.badge-success { background: var(--status-success-bg); color: var(--status-success-ink); }
+.badge-warning { background: var(--status-warning-bg); color: var(--status-warning-ink); }
+.badge-danger  { background: var(--status-danger-bg); color: var(--status-danger-ink); }
 .badge-dot::before {
   content: "";
   width: 6px;
@@ -101,9 +101,9 @@
   color: var(--muted, #5f656d);
   white-space: nowrap;
 }
-.net-age--over30 { background: #fdf1d8; color: #8a5a09; }
-.net-age--over60 { background: #fbe6cf; color: #8a4a09; }
-.net-age--over90 { background: #f8e3df; color: var(--danger, #a63a2e); }
+.net-age--over30 { background: var(--status-warning-bg); color: var(--status-warning-ink); }
+.net-age--over60 { background: var(--status-warning-strong-bg); color: var(--status-warning-strong-ink); }
+.net-age--over90 { background: var(--status-danger-bg); color: var(--status-danger-ink); }
 
 /* ----------------------------------------------------------------------------
    Tabs — canonical tab strip (adopt incrementally; dashboard/admin keep theirs

@@ -30,6 +30,19 @@ test('safeUrl neutralizes script-bearing schemes (case/space-insensitive)', () =
   assert.equal(safeUrl('vbscript:msgbox(1)'), '#');
 });
 
+test('new-tab links prevent opener and referrer leakage', () => {
+  for (const file of ['index.html', 'proof.html', 'js/dashboard.js']) {
+    const src = read(file);
+    for (const match of src.matchAll(/<a\b[^>]*target=["']_blank["'][^>]*>/g)) {
+      const rel = match[0].match(/\brel=["']([^"']*)["']/)?.[1] || '';
+      assert.match(rel, /\bnoopener\b/, `${file} new-tab link missing noopener`);
+      assert.match(rel, /\bnoreferrer\b/, `${file} new-tab link missing noreferrer`);
+    }
+  }
+
+  assert.match(read('js/dashboard.js'), /window\.open\([^)]*['"]noopener,noreferrer['"]/);
+});
+
 test('safeUrl coerces empty/nullish to empty string', () => {
   assert.equal(safeUrl(''), '');
   assert.equal(safeUrl(null), '');

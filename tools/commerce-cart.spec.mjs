@@ -27,6 +27,12 @@ test.afterAll(async () => {
   await once(server, "exit").catch(() => {});
 });
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.MASEST_ENABLE_LOCAL_API = true;
+  });
+});
+
 test("cart shows server catalog prices and estimated subtotal", async ({ page }) => {
   await page.route("**/api/products", async (route) => {
     await route.fulfill({

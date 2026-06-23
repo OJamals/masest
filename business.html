@@ -30,20 +30,20 @@
   .biz-row span, .biz-row b, .biz-card p, .setup-step span, .setup-step small { min-width: 0; overflow-wrap: anywhere; }
   .biz-row b { color: var(--ink); text-align: right; }
   .badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-  .badge[data-s=pending] { background: #fef3c7; color: #92400e; }
+  .badge[data-s=pending] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .badge[data-s=approved] { background: var(--accent-soft); color: var(--accent-ink); }
-  .badge[data-s=rejected], .badge[data-s=suspended] { background: #fee2e2; color: #b42318; }
+  .badge[data-s=rejected], .badge[data-s=suspended] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
   .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
   .tier { border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px; display: flex; flex-direction: column; }
   .tier h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: -.01em; }
   .tier .tier-tag { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-ink); margin-bottom: 8px; }
   .tier p { font-size: .85rem; color: var(--ink-soft); line-height: 1.45; flex: 1; margin: 6px 0 14px; }
   .biz-status { margin-top: 12px; font-size: 1rem; font-weight: 600; min-height: 1em; }
-  .biz-status[data-state=ok] { color: var(--accent-ink); } .biz-status[data-state=err] { color: #b42318; }
+  .biz-status[data-state=ok] { color: var(--accent-ink); } .biz-status[data-state=err] { color: var(--status-danger-ink); }
   .setup-list { display: grid; gap: 10px; margin-top: 14px; }
   .setup-step { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; }
   .setup-step i { font-size: 1.1rem; color: var(--accent-ink); margin-top: 2px; }
-  .setup-step[data-setup-state="open"] i { color: #92400e; }
+  .setup-step[data-setup-state="open"] i { color: var(--status-warning-ink); }
   .setup-step b { display: block; font-size: 1rem; }
   .setup-step small { display: block; color: var(--muted); line-height: 1.35; margin-top: 2px; }
   .muted { color: var(--ink-soft); font-size: 1rem; }

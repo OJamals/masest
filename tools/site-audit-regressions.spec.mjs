@@ -285,3 +285,16 @@ test("visible content images reserve dimensions on key buyer pages", async ({ pa
     expect(missing, `${pagePath} visible images missing width/height`).toEqual([]);
   }
 });
+
+test("cart and product static preview avoid unavailable commerce API", async ({ page }) => {
+  const apiRequests = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/products")) apiRequests.push(request.url());
+  });
+
+  for (const pagePath of ["cart.html", "product.html?id=hcr"]) {
+    await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "networkidle" });
+  }
+
+  expect(apiRequests).toEqual([]);
+});
