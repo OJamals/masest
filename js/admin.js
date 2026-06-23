@@ -122,7 +122,7 @@ function setTab(tab) {
     orders: renderOrders,
     companies: renderCompanies,
     customers: renderCustomers,
-    products: renderProducts,
+    products: () => { renderProducts(); wireInventory(); },
     pricing: renderPricing,
     messages: renderThreads,
     quotes: renderQuotePipeline,
@@ -242,6 +242,39 @@ function wireReports() {
     downloadCsv('/api/admin/customers?export=csv', 'masest-customers.csv', 'repResult'));
   $('repQuotesCsv').addEventListener('click', () =>
     downloadCsv('/api/admin/quotes?export=csv', 'masest-quotes.csv', 'repResult'));
+}
+
+// Inventory card (#98): bulk stock import + low-stock reorder list. Bound once;
+// the Products tab re-renders on each visit.
+let inventoryWired = false;
+async function renderLowStock() {
+  const box = $('invLow');
+  if (!box) return;
+  try {
+    const r = await api('/api/admin/inventory?view=low');
+    const low = r.low_stock || [];
+    box.innerHTML = low.length
+      ? `<table class="adm"><thead><tr><th>SKU</th><th>Product</th><th>Variant</th><th class="num">Stock</th><th class="num">Reorder</th></tr></thead><tbody>${low.map((v) =>
+          `<tr><td>${esc(v.vsku)}</td><td>${esc(v.products?.name || '')}</td><td>${esc(v.label)}</td><td class="num">${esc(v.stock)}</td><td class="num">${esc(v.reorder_point ?? 10)}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="muted">No variants at or below their reorder point.</p>';
+  } catch { box.innerHTML = '<p class="adm-status" data-state="err">Could not load low stock.</p>'; }
+}
+function wireInventory() {
+  renderLowStock();
+  if (inventoryWired || !$('invApply')) return;
+  inventoryWired = true;
+  $('invApply').addEventListener('click', async () => {
+    const csv = $('invCsv').value.trim();
+    if (!csv) { message('invStatus', 'Paste vsku,stock rows first.', 'err'); return; }
+    message('invStatus', 'Applying...');
+    try {
+      const r = await api('/api/admin/inventory', { method: 'POST', body: { csv } });
+      message('invStatus', `Updated ${r.updated.length}${r.failed.length ? `, ${r.failed.length} failed` : ''}.`, r.failed.length ? 'err' : 'ok');
+      if (r.updated.length) { $('invCsv').value = ''; renderLowStock(); }
+    } catch (err) { message('invStatus', err.data?.error || 'Could not apply stock. Retry.', 'err'); }
+  });
+  $('invReorderCsv').addEventListener('click', () =>
+    downloadCsv('/api/admin/inventory?view=low&export=csv', 'masest-low-stock.csv', 'invStatus'));
 }
 
 function renderStats(stats = {}) {

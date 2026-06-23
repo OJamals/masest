@@ -87,6 +87,8 @@
   .adm-panel-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
   .adm-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .adm-report-controls { align-items: end; gap: 10px; }
+  .adm-inv-subhead { margin: 18px 0 8px; font-size: .9rem; }
+  #invCsv { min-height: 90px; margin-bottom: 10px; }
   .adm-report-controls .field { margin: 0; }
   .adm-select-sm { max-width: 220px; }
   .adm-select-xs { max-width: 180px; }
@@ -219,6 +221,14 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="products">
+        <div class="adm-card" id="admInventory">
+          <div class="adm-panel-header"><h2>Inventory</h2><button id="invReorderCsv" class="btn btn-ghost btn-sm" type="button">Reorder CSV</button></div>
+          <p class="muted">Bulk-set stock: one <code>vsku,stock</code> per line (a header row is ignored).</p>
+          <textarea id="invCsv" class="adm-textarea" placeholder="VK-1,120&#10;VK-2,0" aria-label="Bulk stock CSV"></textarea>
+          <div class="adm-inline-actions"><button id="invApply" class="btn btn-primary btn-sm" type="button">Apply stock</button><span id="invStatus" class="adm-status" role="status" aria-live="polite"></span></div>
+          <h3 class="adm-inv-subhead">Low stock</h3>
+          <div id="invLow" class="adm-list">Loading...</div>
+        </div>
         <div class="adm-card">
           <h2>Add / overwrite a product</h2>
           <form id="prodForm" class="adm-form-grid">
