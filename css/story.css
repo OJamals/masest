@@ -316,6 +316,9 @@
   stroke-dashoffset: 0;
   opacity: .66;
 }
+.pipe-callout {
+  --burn: 0;
+}
 .pipe-buildup {
   --build: 0;
   stroke-width: calc(4px + var(--build) * 10px);
@@ -332,10 +335,10 @@
   stroke: color-mix(in oklab, var(--c, var(--s-line)), transparent 24%);
   stroke-width: 2;
   stroke-linecap: round;
+  opacity: var(--burn);
 }
 .pipe-callout foreignObject { overflow: visible; }
 .pipe-callout .chip {
-  --burn: 0;
   --c: var(--s-line);
   position: static !important;
   left: auto !important;
@@ -356,6 +359,7 @@
   font-size: 15px;
   font-weight: 800;
   line-height: 1;
+  opacity: var(--burn);
 }
 .pipe-callout .chip i {
   position: relative;
@@ -436,7 +440,7 @@
   position: relative; z-index: 5; width: min(880px, 90vw); margin: clamp(56px, 8vh, 96px) auto 0;
   display: flex; flex-direction: column; justify-content: center; gap: clamp(18px, 2.4vh, 30px);
 }
-/* HMIS hazard diamond — cycles the four legacy chemicals (scrub-driven in story.js) */
+/* HMIS hazard diamond - cycles the four conventional chemicals (scrub-driven in story.js) */
 .hmis-stack {
   display: flex; align-items: center; justify-content: center;
   gap: clamp(26px, 4.5vw, 58px); flex-wrap: wrap; will-change: opacity;
@@ -484,18 +488,18 @@
 .lg-sep { opacity: .35; }
 
 /* Static fallback (no JS / reduced motion): show the four-chemical list, hide the live diamond */
-.hmis-legacy { display: none; }
+.hmis-conventional { display: none; }
 .story:not(.story-ready) .hmis-stack, .story:not(.story-ready) .hmis-legend { display: none; }
-.story:not(.story-ready) .hmis-legacy {
+.story:not(.story-ready) .hmis-conventional {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
   width: min(680px, 92vw); margin: 0 auto; padding: 0; list-style: none;
 }
-.hmis-legacy li {
+.hmis-conventional li {
   display: flex; flex-direction: column; gap: 4px; padding: 16px 18px;
   border: 1px solid var(--s-line); border-radius: 14px; background: rgba(255, 255, 255, .03);
 }
-.hmis-legacy li b { color: var(--s-ink); font-size: 1.05rem; }
-.hmis-legacy li span { color: var(--s-mut); font-size: .85rem; letter-spacing: .02em; }
+.hmis-conventional li b { color: var(--s-ink); font-size: 1.05rem; }
+.hmis-conventional li span { color: var(--s-mut); font-size: .85rem; letter-spacing: .02em; }
 .story.story-ready .hmis-stack,
 .story.story-ready .hmis-legend { display: none; }
 
@@ -758,6 +762,9 @@
     top: 63%;
     width: min(660px, 132vw);
   }
+  .pipe-callouts {
+    display: none;
+  }
   .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
   .chip.c-scale  { left: 6%; top: 53%; }
   .chip.c-rust   { left: 28%; top: 60%; }
@@ -770,33 +777,42 @@
     left: 50%;
     bottom: clamp(76px, 11vh, 118px);
     transform: translateX(-50%);
-    width: min(340px, calc(100vw - 44px));
+    width: min(360px, calc(100vw - 28px));
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 8px 6px;
     pointer-events: none;
   }
   .pipe-mobile-labels span {
+    --c: var(--s-danger-ink);
+    min-width: 0;
     display: inline-flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 8px;
     min-height: 34px;
-    padding: 7px 10px;
-    border: 1px solid rgba(255, 255, 255, .16);
+    padding: 7px clamp(8px, 2.4vw, 10px);
+    border: 1px solid color-mix(in oklab, var(--c), transparent 64%);
     border-radius: 999px;
-    background: rgba(11, 13, 18, .72);
+    background: color-mix(in oklab, rgba(11, 13, 18, .78) 88%, var(--c));
     color: var(--s-ink);
-    font-size: .78rem;
+    font-size: clamp(.72rem, 3.4vw, .78rem);
     font-weight: 800;
+    white-space: nowrap;
     -webkit-backdrop-filter: blur(7px);
     backdrop-filter: blur(7px);
   }
+  .pipe-mobile-labels span:nth-child(1) { --c: #c9d4d0; }
+  .pipe-mobile-labels span:nth-child(2) { --c: #c2553a; }
+  .pipe-mobile-labels span:nth-child(3) { --c: #c2a04e; }
+  .pipe-mobile-labels span:nth-child(4) { --c: #6fa863; }
   .pipe-mobile-labels i {
     width: 8px;
     height: 8px;
+    flex: 0 0 auto;
     border-radius: 50%;
-    background: var(--s-danger-ink);
-    box-shadow: 0 0 12px rgba(255, 138, 108, .55);
+    background: var(--c);
+    box-shadow: 0 0 12px color-mix(in oklab, var(--c), transparent 44%);
   }
   .hmis-factors { gap: 10px; }
   .factor { padding: 18px 10px; border-radius: 14px; }
@@ -804,7 +820,7 @@
   .hmis-rig { margin-top: 24vh; }
   .hmis-story {
     width: min(350px, 90vw);
-    min-height: 300px;
+    min-height: clamp(244px, 37vh, 270px);
     margin-top: 2vh;
     display: grid;
     align-items: center;
@@ -818,12 +834,12 @@
   .hmis-category { min-height: auto; padding: 12px 15px; }
   .hmis-category b { margin: 5px 0 4px; font-size: 1.35rem; }
   .hmis-category small { font-size: .82rem; line-height: 1.34; }
-  .hmis-chemical-deck { min-height: 280px; }
+  .hmis-chemical-deck { min-height: clamp(244px, 37vh, 270px); }
   .hmis-chemical {
     grid-template-columns: 62px minmax(0, 1fr);
     gap: 14px;
     align-content: center;
-    min-height: 280px;
+    min-height: clamp(244px, 37vh, 270px);
     padding: 14px;
   }
   .ghs-diamond { width: 54px; border-width: 3px; }
@@ -1291,7 +1307,7 @@ font-size: .68rem;
   gap: clamp(18px, 2.4vh, 28px);
 }
 
-/* The category teaching cards (fade out at beat 2.25) and the legacy chemical
+/* The category teaching cards (fade out at beat 2.25) and the conventional chemical
    deck (first card enters beat 2.35) are never on screen together, yet stacked
    they reserved two bands of column height — pushing the final chemical card
    past the stage bottom (clipped by overflow:hidden) on short laptops, with a
@@ -1420,8 +1436,8 @@ font-size: .68rem;
 @media (max-width: 760px) {
 .story .act-hmis .stage {
 justify-content: flex-start;
-    gap: clamp(22px, 4.8vh, 34px);
-    padding-top: clamp(108px, 15vh, 132px);
+    gap: clamp(16px, 3.2vh, 26px);
+    padding-top: clamp(76px, 11vh, 104px);
   }
 
   .story .act[data-act="3"] .hmis-rig {
@@ -1457,18 +1473,19 @@ justify-content: flex-start;
 
 
 @media (max-width: 760px) {
-  .hmis-chemical-deck { min-height: 360px; }
+  .hmis-chemical-deck { min-height: clamp(244px, 37vh, 270px); }
   .hmis-chemical {
     grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-    padding: 16px;
+    gap: 8px;
+    min-height: clamp(244px, 37vh, 270px);
+    padding: 10px;
   }
   .hmis-chemical-name strong {
-    font-size: clamp(1.35rem, 8vw, 2rem);
+    font-size: clamp(1.28rem, 7vw, 1.8rem);
   }
   .hmis-warning {
-    grid-template-columns: 54px minmax(0, 1fr);
-    padding: 14px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    padding: 10px;
   }
   .hmis-warning .hmis-score {
     grid-column: 1 / -1;
@@ -1477,7 +1494,7 @@ justify-content: flex-start;
 }
 
 /* ============================================================
-   ACT 4 — THE COST (split-screen: legacy climbs, VertKleen at zero)
+   ACT 4 — THE COST (split-screen: conventional cost climbs, VertKleen at zero)
    No plain opacity:0 on [data-at] here — the global fallback near the
    top of this file owns reveal/visibility. Keep the stage within its
    floor on short viewports (see scene-3 overflow fix).
@@ -1510,13 +1527,13 @@ justify-content: flex-start;
   margin-inline: auto;
   align-items: start;
 }
-.story .act-cost .cost-legacy,
+.story .act-cost .cost-conventional,
 .story .act-cost .cost-vert {
   border-radius: 18px;
   padding: clamp(16px, 1.8vw, 26px);
   border: 1px solid rgba(255, 255, 255, .08);
 }
-.story .act-cost .cost-legacy {
+.story .act-cost .cost-conventional {
   background:
     radial-gradient(130% 120% at 50% 0%, rgba(255, 77, 45, .14), transparent 70%),
     rgba(255, 255, 255, .03);
@@ -1596,7 +1613,7 @@ justify-content: flex-start;
     gap: 10px;
   }
 
-  .story .act-cost .cost-legacy,
+  .story .act-cost .cost-conventional,
   .story .act-cost .cost-vert {
     border-radius: 16px;
     padding: 12px;
@@ -1728,7 +1745,7 @@ justify-content: flex-start;
   .story .act-cost .cost-lines { gap: 7px; }
   .story .act-cost .cost-incident { margin-top: 9px; }
   .story .act-cost .cost-total { font-size: clamp(1.8rem, 4.6vw, 2.6rem); }
-  .story .act-cost .cost-legacy,
+  .story .act-cost .cost-conventional,
   .story .act-cost .cost-vert { padding: clamp(13px, 1.6vw, 18px); }
   .story .act-cost .cost-drops { margin-bottom: 10px; gap: 6px; }
 }
@@ -1748,7 +1765,7 @@ justify-content: flex-start;
     gap: 5px;
   }
 
-  .story .act-cost .cost-legacy,
+  .story .act-cost .cost-conventional,
   .story .act-cost .cost-vert {
     padding: 10px 12px;
   }

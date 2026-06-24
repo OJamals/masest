@@ -84,6 +84,64 @@ test("desktop story rail label does not overlap the Act 1 headline", async ({ pa
   expect(collision.overlaps, JSON.stringify(collision)).toBe(false);
 });
 
+test("mobile pipe labels match callout colors and fit their chips", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+
+  const labels = await page.evaluate(() => {
+    const act = document.querySelector('.story .act[data-act="2"]');
+    act.scrollIntoView({ block: "center" });
+    const mobile = [...act.querySelectorAll(".pipe-mobile-labels span")];
+    const callouts = [...act.querySelectorAll(".pipe-callout .chip")];
+    return mobile.map((label, index) => {
+      const dot = label.querySelector("i");
+      const calloutDot = callouts[index]?.querySelector("i");
+      return {
+        text: label.textContent.trim(),
+        labelColor: getComputedStyle(dot).backgroundColor,
+        calloutColor: calloutDot ? getComputedStyle(calloutDot).backgroundColor : null,
+        clientWidth: label.clientWidth,
+        scrollWidth: label.scrollWidth,
+      };
+    });
+  });
+
+  expect(labels).toHaveLength(4);
+  for (const label of labels) {
+    expect(label.labelColor, JSON.stringify(labels)).toBe(label.calloutColor);
+    expect(label.scrollWidth, JSON.stringify(labels)).toBeLessThanOrEqual(label.clientWidth);
+  }
+});
+
+test("pipe callout chips and leader lines fade from the same burn state", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+
+  const fades = await page.evaluate(() => {
+    const act = document.querySelector('.story .act[data-act="2"]');
+    return [...act.querySelectorAll(".pipe-callout")].map((callout, index) => {
+      const burn = (index + 1) / 4;
+      callout.style.setProperty("--burn", String(burn));
+      callout.style.opacity = "1";
+      const chip = callout.querySelector(".chip");
+      const line = callout.querySelector("line");
+      return {
+        text: chip.textContent.trim(),
+        burn,
+        chipOpacity: Number(getComputedStyle(chip).opacity),
+        lineOpacity: Number(getComputedStyle(line).opacity),
+      };
+    });
+  });
+
+  expect(fades).toHaveLength(4);
+  for (const fade of fades) {
+    expect(fade.chipOpacity, JSON.stringify(fades)).toBeCloseTo(fade.lineOpacity, 2);
+    expect(fade.chipOpacity, JSON.stringify(fades)).toBeCloseTo(fade.burn, 2);
+  }
+});
+
 test("HMIS story keeps copy separated from category deck on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
@@ -193,13 +251,13 @@ test("final HMIS chemical card stays fully in frame on a short laptop", async ({
 });
 
 test("HMIS category and warning cards stay inside viewport on mobile", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 390, height: 700 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
-  const layout = await page.evaluate(() => {
+  const layout = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     const act = document.querySelector('.story .act[data-act="3"]');
-    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.52);
-    const cards = [...document.querySelectorAll('.story .act[data-act="3"] .hmis-category, .story .act[data-act="3"] .hmis-chemical')]
+    const cards = [...act.querySelectorAll('.hmis-category, .hmis-chemical')]
       .map((card) => {
         const box = card.getBoundingClientRect();
         return {
@@ -208,10 +266,34 @@ test("HMIS category and warning cards stay inside viewport on mobile", async ({ 
           width: box.width,
         };
       });
+    const chemicalFrames = [];
+    for (const pause of [0.42, 0.45, 0.48, 0.51, 0.54, 0.57, 0.6, 0.63, 0.66, 0.69, 0.72]) {
+      window.scrollTo(0, act.offsetTop + act.offsetHeight * pause);
+      await wait(180);
+      const cardsInFrame = [...act.querySelectorAll(".hmis-chemical")]
+        .map((card) => {
+          const box = card.getBoundingClientRect();
+          const style = getComputedStyle(card);
+          return {
+            name: card.querySelector("strong")?.textContent || "",
+            opacity: Number(style.opacity),
+            top: box.top,
+            bottom: box.bottom,
+            height: box.height,
+          };
+        })
+        .filter((card) => card.opacity > 0.2);
+      if (cardsInFrame.length) chemicalFrames.push({
+        pause,
+        cards: cardsInFrame,
+      });
+    }
     return {
       viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
       overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       cards,
+      chemicalFrames,
     };
   });
 
@@ -221,6 +303,13 @@ test("HMIS category and warning cards stay inside viewport on mobile", async ({ 
     expect(card.left).toBeGreaterThanOrEqual(0);
     expect(card.right).toBeLessThanOrEqual(layout.viewportWidth);
     expect(card.width).toBeGreaterThan(180);
+  }
+  expect(layout.chemicalFrames.length, JSON.stringify(layout.chemicalFrames)).toBeGreaterThanOrEqual(3);
+  for (const frame of layout.chemicalFrames) {
+    for (const card of frame.cards) {
+      expect(card.top, JSON.stringify(frame)).toBeGreaterThanOrEqual(64);
+      expect(card.bottom, JSON.stringify(frame)).toBeLessThanOrEqual(layout.viewportHeight - 16);
+    }
   }
 });
 
@@ -235,7 +324,7 @@ test("story renders five acts with the cost bridge and savior last", async ({ pa
   await expect(page.locator('.story .act[data-act="5"].act-savior')).toHaveCount(1);
 });
 
-test("cost act has four legacy lines, a sourced incident total, and a VertKleen column", async ({ page }) => {
+test("cost act has four conventional lines, a sourced incident total, and a VertKleen column", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
@@ -252,16 +341,16 @@ test("cost columns sit side by side on desktop and stack on mobile", async ({ pa
 
   await page.setViewportSize({ width: 1440, height: 900 });
   const desktop = await page.evaluate(() => {
-    const l = document.querySelector('.act-cost .cost-legacy').getBoundingClientRect();
+    const l = document.querySelector('.act-cost .cost-conventional').getBoundingClientRect();
     const v = document.querySelector('.act-cost .cost-vert').getBoundingClientRect();
-    return { sameRow: Math.abs(l.top - v.top) < 24, legacyLeftOfVert: l.right <= v.left + 1 };
+    return { sameRow: Math.abs(l.top - v.top) < 24, conventionalLeftOfVert: l.right <= v.left + 1 };
   });
   expect(desktop.sameRow).toBe(true);
-  expect(desktop.legacyLeftOfVert).toBe(true);
+  expect(desktop.conventionalLeftOfVert).toBe(true);
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobile = await page.evaluate(() => {
-    const l = document.querySelector('.act-cost .cost-legacy').getBoundingClientRect();
+    const l = document.querySelector('.act-cost .cost-conventional').getBoundingClientRect();
     const v = document.querySelector('.act-cost .cost-vert').getBoundingClientRect();
     return { stacked: v.top >= l.bottom - 1, overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth };
   });
@@ -304,7 +393,7 @@ test("cost scene fits a short laptop with the rig in frame", async ({ page }) =>
   expect(frame.rigBottom).toBeLessThanOrEqual(frame.vh);
 });
 
-test("legacy cost meter counts up to the incident figure by the final beat", async ({ page }) => {
+test("conventional cost meter counts up to the incident figure by the final beat", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });

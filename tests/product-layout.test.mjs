@@ -1,16 +1,26 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { chromium } from "playwright";
+import { PRODUCTS } from "../js/main/catalog-data.js";
 
 const PORT = 4187;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const PROJECT_ROOT = new URL("..", import.meta.url);
 
 function serverReady() {
   return fetch(`${BASE_URL}/products.html`)
     .then((response) => response.ok)
     .catch(() => false);
+}
+
+function htmlText(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 async function withServer(fn) {
@@ -76,6 +86,20 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
       await browser.close();
     }
   });
+});
+
+test("static product detail heroes publish full catalog copy", () => {
+  for (const [id, product] of Object.entries(PRODUCTS)) {
+    const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
+    const subhead = html.match(/<p class="subhead">([^<]*)<\/p>/)?.[1] || "";
+
+    assert.ok(subhead, `${id} static detail page should include hero copy`);
+    assert.ok(
+      subhead.includes(htmlText(product.desc)),
+      `${id} hero copy should include the full product description`,
+    );
+    assert.ok(!subhead.includes("..."), `${id} hero copy should not be pre-truncated`);
+  }
 });
 
 test("replacement checker shows the swap and filters the catalog", async () => {

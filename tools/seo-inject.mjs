@@ -187,7 +187,11 @@ function productDescription(id, product) {
     ? "Quote review required before purchase."
     : "Small-pack checkout available where stocked; bulk sizes route through quote review.";
   const parts = [copy.summary, product.desc, product.replaces, route].filter(Boolean);
-  const sentence = parts.join(" ").replace(/\s+/g, " ").trim();
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+function productMetaDescription(id, product) {
+  const sentence = productDescription(id, product);
   if (sentence.length <= 155) return sentence;
   return `${sentence.slice(0, 152).replace(/\s+\S*$/, "")}...`;
 }
@@ -231,6 +235,7 @@ function productSchema(id, product) {
 function productPage(id, product) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
   const desc = productDescription(id, product);
+  const metaDesc = productMetaDescription(id, product);
   const img = product.image ? `../${product.image}` : `../${PRODUCT_FALLBACK_IMAGE}`;
   const uses = (product.uses || copy.fits || []).map((item) => `<li>${text(item)}</li>`).join("\n");
   const specs = (product.specs || [])
@@ -249,11 +254,11 @@ function productPage(id, product) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${text(product.name)} | MASEST VertKleen</title>
-<meta name="description" content="${attr(desc)}">
+<meta name="description" content="${attr(metaDesc)}">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <meta property="og:title" content="${attr(product.name)} | MASEST VertKleen">
-<meta property="og:description" content="${attr(desc)}">
+<meta property="og:description" content="${attr(metaDesc)}">
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">

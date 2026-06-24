@@ -148,7 +148,12 @@ states.forEach(function (st) {
   var pipeChips = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".chip")) : [];
   var pipeFlowPaths = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".pipe-flow")) : [];
   var pipeBuildupPaths = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".pipe-buildup")) : [];
-  pipeChips.forEach(function (c) { c._beat = parseInt(c.getAttribute("data-at"), 10) || 1; c._burning = false; });
+  pipeChips.forEach(function (c) {
+    var callout = c.closest ? c.closest(".pipe-callout") : null;
+    c._callout = callout;
+    c._beat = parseInt(c.getAttribute("data-at") || (callout && callout.getAttribute("data-at")), 10) || 1;
+    c._burning = false;
+  });
   pipeBuildupPaths.forEach(function (p) { p._beat = parseInt(p.getAttribute("data-at"), 10) || 1; });
 
   function updateChips2(st) {
@@ -158,6 +163,7 @@ states.forEach(function (st) {
       var c = pipeChips[k];
       var b = smooth((st.p - beatFrac(st, c._beat)) / win);
       c.style.setProperty("--burn", b.toFixed(3));
+      if (c._callout) c._callout.style.setProperty("--burn", b.toFixed(3));
       var on = b > 0.5;
       if (on !== c._burning) { c._burning = on; c.classList.toggle("is-burning", on); }
     }
@@ -205,11 +211,11 @@ states.forEach(function (st) {
     if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = "Photo " + (current + 1) + " of " + n; }
   }
 
-  /* ---- ACT 3: HMIS hazard diamond - cycle the four legacy chemicals ----
+  /* ---- ACT 3: HMIS hazard diamond - cycle the four conventional chemicals ----
      The diamond + label are driven entirely here (no [data-at] on the rig);
      numbers count up on the first chemical, then the rig dips at each boundary
      so the swap to the next chemical reads as a crossfade. Data + the no-JS
-     fallback both live in the .hmis-legacy list. */
+     fallback both live in the .hmis-conventional list. */
   var hmisAct = story.querySelector(".act-hmis");
   var hmisStack = hmisAct ? hmisAct.querySelector(".hmis-stack") : null;
   var hmisDiamond = hmisAct ? hmisAct.querySelector(".hmis-diamond") : null;
@@ -224,7 +230,7 @@ states.forEach(function (st) {
   var lgH = hmisAct ? hmisAct.querySelector(".lg-h") : null;
   var lgF = hmisAct ? hmisAct.querySelector(".lg-f") : null;
   var lgR = hmisAct ? hmisAct.querySelector(".lg-r") : null;
-  var chems = hmisAct ? Array.prototype.slice.call(hmisAct.querySelectorAll(".hmis-legacy li")).map(function (li) {
+  var chems = hmisAct ? Array.prototype.slice.call(hmisAct.querySelectorAll(".hmis-conventional li")).map(function (li) {
     var d = li.dataset;
     return { h: +d.h, f: +d.f, r: +d.r, type: d.type, picto: d.picto, name: d.name, desc: d.desc };
   }) : [];
@@ -259,12 +265,12 @@ states.forEach(function (st) {
     if (hmisStack) hmisStack.style.opacity = (enter * Math.min(edgeIn, edgeOut)).toFixed(3);
   }
 
-  /* ---- ACT 4: legacy cost meter counts up; VertKleen stays at zero ---- */
+  /* ---- ACT 4: conventional cost meter counts up; VertKleen stays at zero ---- */
   var costAct = story.querySelector(".act-cost");
   var costNum = costAct ? costAct.querySelector(".cost-num") : null;
   var costVert = costAct ? costAct.querySelector(".cost-vert") : null;
   var COST_TARGET = costNum ? (parseInt(costNum.getAttribute("data-target"), 10) || 0) : 0;
-  /* VertKleen card starts hidden and is faded in by updateCost once the legacy
+  /* VertKleen card starts hidden and is faded in by updateCost once the conventional
      total has climbed. This runs only under motion (the reduced-motion / no-GSAP
      path returns early above), so the CSS fallback still shows the card. */
   if (costVert) gsap.set(costVert, { autoAlpha: 0, y: 18 });
@@ -588,7 +594,7 @@ states.forEach(function (st) {
     ctx.restore();
   }
 
-  /* Legacy filled-band renderer. The live scene uses drawCrustPatches above:
+  /* Previous filled-band renderer. The live scene uses drawCrustPatches above:
      wall deposits read as buildup, while this filled band made triangular sheets.
      closes toward the chokes. One quad per bucket, colored by the enemy
      that built it. */
