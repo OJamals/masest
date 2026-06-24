@@ -83,16 +83,18 @@ function trackingSteps(order) {
 async function renderOverview() {
   const c = ACCOUNT?.company;
   const banner = $('approvalBanner');
-  if (c && c.status !== 'approved') {
-    banner.innerHTML = `<div class="banner warn"><i class="ph ph-clock" aria-hidden="true"></i> Your account is <b>${esc(c.status)}</b>. Online ordering and NET terms unlock once MASEST approves it. We'll notify you here.</div>`;
+  if (!c) {
+    banner.innerHTML = `<div class="banner warn"><i class="ph ph-briefcase" aria-hidden="true"></i> Your account is active. Set up a business profile when you need checkout, programs, or NET terms.</div>`;
+  } else if (c.status !== 'approved') {
+    banner.innerHTML = `<div class="banner warn"><i class="ph ph-clock" aria-hidden="true"></i> Your business is <b>${esc(c.status)}</b>. Checkout, programs, payment setup, and NET terms unlock after MASEST approves it.</div>`;
   } else { banner.innerHTML = ''; }
 
   $('ovAccount').innerHTML = `
     <h2 class="headline dash-section-title dash-section-title-sm">Account</h2>
     <div class="dash-row"><span>Signed in as</span><b>${esc(ACCOUNT?.email || 'Not set')}</b></div>
-    <div class="dash-row"><span>Company</span><b>${esc(c?.name || 'Not set')}</b></div>
-    <div class="dash-row"><span>Status</span>${statusBadge(c?.status || 'pending')}</div>
-    <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : 'Pending approval'}</b></div>
+    <div class="dash-row"><span>Company</span><b>${esc(c?.name || 'Not set up')}</b></div>
+    <div class="dash-row"><span>Business status</span>${c ? statusBadge(c.status || 'pending') : '<span class="badge" data-s="pending">not set up</span>'}</div>
+    <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : (c ? 'Pending approval' : 'Set up business')}</b></div>
     <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + c?.net_terms_days : 'Not enabled'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
     <div class="dash-row"><span>Balance owed</span><b>${money(ACCOUNT.credit.net_outstanding, 'usd')}</b></div>
     <div class="dash-row"><span>Credit available</span><b>${money(ACCOUNT.credit.credit_available, 'usd')}</b></div>` : ''}`;
@@ -156,7 +158,7 @@ function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
     actions.push({
       id: 'setup',
       icon: 'ph-clipboard-text',
-      label: 'Open business setup',
+      label: ACCOUNT?.company ? 'Open business setup' : 'Set up business',
       detail: `${openSteps.length} open ${openSteps.length === 1 ? 'step' : 'steps'}`,
       href: 'business.html',
     });
@@ -306,6 +308,11 @@ async function renderOrders({ append = false } = {}) {
   loaded.orders = true;
   const box = $('ordersBody');
   const st = pages.orders;
+  if (!ACCOUNT?.company) {
+    st.items = []; st.offset = 0; st.total = 0; st.hasMore = false;
+    box.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before placing or tracking company orders.</div><a class="btn btn-primary btn-sm" href="business.html">Set up business</a></div>`;
+    return;
+  }
   if (!append) {
     st.items = []; st.offset = 0;
     box.innerHTML = `<div class="skeleton skeleton-block" style="height:60px;margin-bottom:10px"></div>`.repeat(3);
@@ -364,6 +371,10 @@ async function renderOrders({ append = false } = {}) {
 async function renderMessages() {
   loaded.messages = true;
   const thread = $('msgThread');
+  if (!ACCOUNT?.company) {
+    thread.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before starting account-team message threads.</div><a class="btn btn-primary btn-sm" href="business.html">Set up business</a></div>`;
+    return;
+  }
   let msgs = [];
   try { msgs = (await api('/api/account/messages')).messages; } catch { thread.innerHTML = '<p class="dash-status" data-state="err">Could not load messages.</p>'; return; }
   lastMsgCount = msgs.length;
@@ -393,6 +404,12 @@ async function renderNotifications({ append = false } = {}) {
   loaded.notifications = true;
   const box = $('notifBody');
   const st = pages.notifs;
+  if (!ACCOUNT?.company) {
+    st.items = []; st.offset = 0; st.total = 0; st.hasMore = false;
+    setBadge('badgeNotifs', 0);
+    box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No business notifications yet</div><div class="empty-body">Business approvals, order updates, and account-team messages start after you create a business profile.</div><a class="btn btn-primary btn-sm" href="business.html">Set up business</a></div>`;
+    return;
+  }
   if (!append) { st.items = []; st.offset = 0; }
   let data;
   try { data = await api(`/api/account/notifications?limit=50&offset=${st.offset}`); } catch { if (!append) box.innerHTML = '<p class="dash-status" data-state="err">Could not load notifications.</p>'; return; }
@@ -496,6 +513,10 @@ async function wireNotificationPrefs() {
 async function renderAddresses() {
   loaded.addresses = true;
   const box = $('addrList');
+  if (!ACCOUNT?.company) {
+    box.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">No business profile yet</div><div class="empty-body">Create a business profile before adding shipping or billing addresses.</div><a class="btn btn-primary btn-sm" href="business.html">Set up business</a></div>`;
+    return;
+  }
   let list = [];
   try { list = (await api('/api/account/addresses')).addresses; } catch { box.innerHTML = '<p class="dash-status" data-state="err">Could not load addresses.</p>'; return; }
   if (!list.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-map-pin empty-icon" aria-hidden="true"></i><div class="empty-title">No saved addresses</div><div class="empty-body">Add a billing or shipping address to speed up checkout.</div></div>`; return; }
@@ -539,12 +560,15 @@ async function renderPayment() {
   loaded.payment = true;
   const box = $('payBody');
   const approved = ACCOUNT?.can_checkout;
+  const lockedCopy = ACCOUNT?.company
+    ? 'Available once your business is approved for online ordering.'
+    : 'Available after you create a business profile and MASEST approves it.';
   box.innerHTML = `
     <h2 class="headline dash-section-title dash-section-title-sm">Payment methods</h2>
     <p class="muted pay-copy">Saved cards and bank accounts are managed securely by Stripe. We never store card details on our servers.</p>
     ${approved
       ? '<button class="btn btn-primary" id="portalBtn">Manage payment methods</button>'
-      : '<p class="muted">Available once your account is approved for online ordering.</p>'}
+      : `<p class="muted">${lockedCopy}</p>`}
     <span class="dash-status" id="payStatus" role="status" aria-live="polite"></span>`;
   const btn = $('portalBtn');
   if (btn) btn.addEventListener('click', async () => {

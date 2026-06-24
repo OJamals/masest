@@ -51,6 +51,9 @@
   .biz-card[hidden] { display: none; }
   .tier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .biz-form { display: grid; grid-template-columns: minmax(140px, .7fr) minmax(260px, 1.3fr) auto; gap: 12px; align-items: end; }
+  .biz-form-create { grid-template-columns: minmax(180px, 1fr) minmax(120px, .55fr) minmax(220px, 1fr); }
+  .biz-form-create button { grid-column: 1 / -1; justify-self: start; }
+  .biz-form-create .status { grid-column: 1 / -1; margin: 0; }
   .biz-form label { display: grid; gap: 6px; font-weight: 700; font-size: .86rem; color: var(--ink-soft); }
   .biz-check-label { display: flex !important; flex-direction: row; align-items: center; gap: 8px; padding-bottom: 11px; }
   .biz-form input[type="url"] { width: 100%; }
@@ -71,6 +74,7 @@
   @media (max-width: 720px) {
     .tier-grid { grid-template-columns: 1fr; }
     .biz-form { grid-template-columns: 1fr; }
+    .biz-form-create .status { grid-column: auto; }
     .biz-check-label { padding-bottom: 0; }
     .biz-row { flex-direction: column; gap: 4px; }
     .biz-row b { text-align: left; }
@@ -95,8 +99,8 @@
 <main id="main">
   <section class="hero-split">
     <div class="wrap">
-      <h1 class="display">Procurement hub for approved buyers.</h1>
-      <p class="subhead">Set up your company profile, enroll in VertKleen service programs, request bulk pricing, and keep account-team conversations in one place.</p>
+      <h1 class="display">Business setup and procurement hub.</h1>
+      <p class="subhead">Create a business profile for approval, enroll in VertKleen service programs, request bulk pricing, and keep account-team conversations in one place.</p>
     </div>
   </section>
 

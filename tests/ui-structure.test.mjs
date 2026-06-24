@@ -26,6 +26,13 @@ assert.match(chrome, /href="\$\{root\}account"/);
   assert.match(chrome, /Sign in/);
 });
 
+test("global logo links navigate to the home page from top-level pages", () => {
+  assert.match(chrome, /const homeHref = root \|\| "\.\/"/, "shared chrome should define an explicit home link for top-level pages");
+  assert.match(chrome, /class="nav-logo" href="\$\{homeHref\}"/, "header logo should use the explicit home link");
+  assert.match(chrome, /class="foot-logo-link" href="\$\{homeHref\}"/, "footer logo should use the explicit home link");
+  assert.doesNotMatch(chrome, /class="(?:nav-logo|foot-logo-link)" href="\$\{root\}"/, "logo href must not collapse to the current page on top-level routes");
+});
+
 test("global navigation groups proof and industries as use cases", () => {
   assert.match(chrome, /useCases/);
   assert.match(chrome, /Use Cases/);

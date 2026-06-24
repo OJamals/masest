@@ -110,10 +110,10 @@
 
         <!-- Register -->
         <form class="form-card acct-pane" id="registerForm" data-pane="register" hidden novalidate onsubmit="return false">
-          <h2 class="acct-title">Create a business account</h2>
-          <p class="acct-sub">New accounts are reviewed before ordering or NET terms are enabled. Your details go only to the MASEST sales team.</p>
+          <h2 class="acct-title">Create an account</h2>
+          <p class="acct-sub">User accounts are available immediately. Add a company now if you want MASEST to review it for checkout, programs, and NET terms.</p>
           <div class="field-grid">
-            <div class="field"><label for="rCompany">Company *</label><input id="rCompany" name="company" type="text" placeholder="Gulf Coast Mechanical" required></div>
+            <div class="field"><label for="rCompany">Company</label><input id="rCompany" name="company" type="text" placeholder="Optional - Gulf Coast Mechanical"></div>
             <div class="field"><label for="rName">Full name</label><input id="rName" name="full_name" type="text" placeholder="Marisol Vega"></div>
             <div class="field"><label for="rEmail">Email *</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
             <div class="field"><label for="rPhone">Phone</label><input id="rPhone" name="phone" type="tel" placeholder="(727) 348-6519"></div>
@@ -131,8 +131,8 @@
       <!-- Email confirmed but company/profile not yet created: finish setup -->
       <div class="form-card" id="completeCard" hidden>
         <h2 class="acct-title">Finish setting up</h2>
-        <p class="acct-sub">Your email is confirmed. Add your company to complete your business account.</p>
-        <div class="field"><label for="cCompany">Company *</label><input id="cCompany" type="text" placeholder="Gulf Coast Mechanical" required></div>
+        <p class="acct-sub">Your email is confirmed. Add your company now, or leave it blank and set up a business later from the dashboard.</p>
+        <div class="field"><label for="cCompany">Company</label><input id="cCompany" type="text" placeholder="Optional - Gulf Coast Mechanical"></div>
         <div class="field u-mt-12"><label for="cName">Full name</label><input id="cName" type="text" placeholder="Marisol Vega"></div>
         <div class="field u-mt-12"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="(727) 348-6519"></div>
         <label class="checkbox-row"><input type="checkbox" id="cExempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
@@ -274,15 +274,14 @@
   // Finish setup for a confirmed user that has no company/profile yet.
   $("cBtn").addEventListener("click", async () => {
     const status = $("cStatus");
-    const name = $("cCompany").value.trim();
-    if (!name) { setStatus(status, "Enter your company name.", "err"); return; }
     setStatus(status, "Finishing…", "");
     try {
+      const name = $("cCompany").value.trim();
       await completeRegistration({
         company: { name, tax_exempt: $("cExempt").checked },
         profile: { full_name: $("cName").value.trim() || null, phone: $("cPhone").value.trim() || null },
       });
-      setStatus(status, "Account created.", "ok");
+      setStatus(status, name ? "Account created. Business profile submitted for approval." : "Account created.", "ok");
       await refresh();
     } catch (e) {
       setStatus(status, e.message === "already_registered" ? "Already set up. Reloading..." : "Could not finish: " + (e.message || "try again"), "err");
@@ -359,13 +358,13 @@
       if (out?.pending_email_confirmation) {
         // Confirm-email ON: stash so we can finish company/profile creation after confirm + login.
         localStorage.setItem(PENDING_KEY, JSON.stringify({ company, profile }));
-        setStatus(status, "Account created. Check your email to confirm, then sign in.", "ok");
+        setStatus(status, company.name ? "Account created. Check your email to confirm; business review starts after confirmation." : "Account created. Check your email to confirm, then sign in.", "ok");
       } else {
-        setStatus(status, "Account created and pending approval.", "ok");
+        setStatus(status, company.name ? "Account created. Business profile is pending approval." : "Account created. You can set up a business from the dashboard.", "ok");
         await refresh();
       }
     } catch (err) {
-      const map = { already_registered: "This account already exists. Sign in instead.", company_name_required: "Enter your company name." };
+      const map = { already_registered: "This account already exists. Sign in instead.", company_name_required: "Enter a company name or leave the company field blank." };
       let msg = map[err.message];
       if (!msg) {
         const detail = [err.message, err.code, err.status, err.name].filter(Boolean).join(" ").trim();

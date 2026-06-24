@@ -9,6 +9,7 @@ export function renderChrome() {
   // Pages under /industries/ sit one level deep; prefix chrome links with the
   // right root so the shared nav/footer resolve from any directory depth.
   const root = /\/(?:industries|products)\//.test(location.pathname) ? "../" : "";
+  const homeHref = root || "./";
   const isProductDetail = /\/products\/[^/]+(?:\.html)?$/.test(location.pathname);
   const links = [
     { href: "products", label: "Products" },
@@ -53,7 +54,7 @@ export function renderChrome() {
   nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-logo" href="${root}" aria-label="MASEST home"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
+      <a class="nav-logo" href="${homeHref}" aria-label="MASEST home"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
       <nav class="nav-links" id="navLinks" aria-label="Primary">
         ${links.map(navItem).join("")}
       </nav>
@@ -173,7 +174,7 @@ export function renderChrome() {
     <div class="wrap">
       <div class="foot-grid">
         <div>
-          <a class="foot-logo-link" href="${root}" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
+          <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
           <div class="foot-brand">MASEST VertKleen&trade;</div>
           <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support from Florida's Space Coast.</p>
           <div class="foot-kicker">Procurement routes</div>
