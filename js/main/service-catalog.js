@@ -243,7 +243,7 @@ function renderCatalog(root, catalog) {
   updateSummary(catalog, items);
 
   if (!items.length) {
-    root.innerHTML = `<div class="service-empty"><b>No services listed yet.</b><p>Use the contact form and MASEST will scope the service you need.</p><a class="btn btn-secondary btn-sm" href="contact.html">Request service</a></div>`;
+    root.innerHTML = `<div class="service-empty"><b>No services listed yet.</b><p>Use the contact form and MASEST will scope the service you need.</p><a class="btn btn-secondary btn-sm" href="contact">Request service</a></div>`;
     return;
   }
 
@@ -280,7 +280,7 @@ export function initServiceCatalog() {
     })
     .catch(() => {
       roots.forEach((root) => {
-        root.innerHTML = `<div class="service-error"><b>Service catalog could not load.</b><p>Use the contact form and MASEST will confirm service scope manually.</p><a class="btn btn-secondary btn-sm" href="contact.html">Request service</a></div>`;
+        root.innerHTML = `<div class="service-error"><b>Service catalog could not load.</b><p>Use the contact form and MASEST will confirm service scope manually.</p><a class="btn btn-secondary btn-sm" href="contact">Request service</a></div>`;
       });
     });
 }

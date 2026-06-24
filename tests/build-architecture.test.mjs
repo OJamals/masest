@@ -41,7 +41,7 @@ test("HTML pages use one fresh shared stylesheet cache-buster", () => {
     assert.ok(match, `${page} must link css/style.css with cache-buster`);
     versions.add(match[1]);
   }
-  assert.deepEqual([...versions], ["20260623a"]);
+  assert.deepEqual([...versions], ["20260623c"]);
 });
 
 test("architecture doc captures current app boundaries and target structure", () => {

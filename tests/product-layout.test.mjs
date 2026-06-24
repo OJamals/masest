@@ -127,6 +127,54 @@ test("product job router headline does not overlap its copy", async () => {
   });
 });
 
+test("public CTA groups keep a consistent gap from their lead copy", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const cases = [
+      ["services.html", ".services-hero-copy .subhead", ".services-hero-copy .hero-actions", 28, 36],
+      ["proof.html", ".page-hero .subhead", ".page-hero .btn", 28, 36],
+      ["proof.html", ".cmp-note", ".proof-doc-link", 22, 32],
+      ["about.html", "#services-pricing .subhead", "#services-pricing .hero-actions", 28, 36],
+      ["about.html", "#serviceCatalog .subhead", "#serviceCatalog .btn", 28, 36],
+      ["industries.html", ".block-dark .section-head .subhead", ".block-dark .section-head .btn", 28, 36],
+      ["programs.html", ".cta-band .subhead", ".cta-band .btn", 34, 42],
+      ["resources.html", ".cta-band .subhead", ".cta-band .btn", 34, 42],
+    ];
+
+    try {
+      for (const viewport of [
+        { width: 390, height: 900 },
+        { width: 1440, height: 1000 },
+      ]) {
+        const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
+        try {
+          for (const [path, beforeSelector, actionSelector, minGap, maxGap] of cases) {
+            await page.goto(`${BASE_URL}/${path}`, { waitUntil: "networkidle" });
+            const gap = await page.evaluate(({ beforeSelector, actionSelector }) => {
+              const before = document.querySelector(beforeSelector);
+              const action = document.querySelector(actionSelector);
+              if (!before || !action) return null;
+              const beforeRect = before.getBoundingClientRect();
+              const actionRect = action.getBoundingClientRect();
+              return Math.round(actionRect.top - beforeRect.bottom);
+            }, { beforeSelector, actionSelector });
+
+            assert.ok(gap !== null, `${path} missing ${beforeSelector} or ${actionSelector}`);
+            assert.ok(
+              gap >= minGap && gap <= maxGap,
+              `${path} ${actionSelector} gap ${gap}px should stay between ${minGap}px and ${maxGap}px at ${viewport.width}px`,
+            );
+          }
+        } finally {
+          await page.close();
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("product detail renders HMIS panel rows from product data", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });

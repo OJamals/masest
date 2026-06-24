@@ -63,7 +63,7 @@ function apiProductsPayload() {
 test("products page is shop-focused and routes services to a standalone page", async () => {
   await withServer(async () => {
     const productsHtml = await fetch(`${BASE_URL}/products.html`).then((response) => response.text());
-    assert.match(productsHtml, /href="services\.html"/, "products page should link to the services page");
+    assert.match(productsHtml, /href="services"/, "products page should link to the services page");
     assert.doesNotMatch(productsHtml, /data-service-catalog/, "products page should not embed service catalog");
     assert.match(productsHtml, /Buyable small-pack list pricing/);
     assert.match(productsHtml, /Quote-routed items scoped before purchase/);

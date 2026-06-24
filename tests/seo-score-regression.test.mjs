@@ -38,6 +38,13 @@ function flattenJsonLd(block) {
   return block ? [block] : [];
 }
 
+function collectStrings(value, strings = []) {
+  if (typeof value === "string") strings.push(value);
+  else if (Array.isArray(value)) value.forEach((item) => collectStrings(item, strings));
+  else if (value && typeof value === "object") Object.values(value).forEach((item) => collectStrings(item, strings));
+  return strings;
+}
+
 const publicHtml = [
   "index.html",
   "products.html",
@@ -53,6 +60,8 @@ const publicHtml = [
     .filter((file) => file.endsWith(".html"))
     .map((file) => `industries/${file}`),
 ];
+
+const publicLinkHtml = [...publicHtml, "product.html"];
 
 test("sitemap lists final extensionless canonical URLs and product details", () => {
   const xml = read("sitemap.xml");
@@ -72,6 +81,27 @@ test("public page canonicals and Open Graph URLs match final extensionless URLs"
     assert.equal(canonical(html), expected, `${file} canonical`);
     assert.equal(extractAttr(html, 'property=["\']og:url["\']', "content"), expected, `${file} og:url`);
   }
+});
+
+test("public page links and schema do not publish legacy html URLs", () => {
+  const offenders = [];
+  const legacyUrl = /(?:^|\/)[a-z0-9_/-]+\.html(?:[?#]|$)|\/product(?:\.html)?\?/i;
+  for (const file of publicLinkHtml) {
+    const html = read(file);
+    for (const match of html.matchAll(/\bhref=["']([^"']+)["']/gi)) {
+      const href = match[1];
+      if (/^(?:mailto:|tel:|data:|blob:|javascript:|#)/i.test(href)) continue;
+      if (legacyUrl.test(href)) offenders.push(`${file} href ${href}`);
+    }
+    for (const block of jsonLdBlocks(html)) {
+      for (const value of collectStrings(block)) {
+        if (/^https:\/\/masest\.co\//.test(value) && legacyUrl.test(value)) {
+          offenders.push(`${file} schema ${value}`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(offenders, []);
 });
 
 test("product detail pages are static, crawlable, and schema-rich", () => {

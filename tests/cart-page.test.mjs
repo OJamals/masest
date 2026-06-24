@@ -27,20 +27,34 @@ async function withServer(fn) {
     cwd: new URL("..", import.meta.url),
     stdio: ["ignore", "pipe", "pipe"],
   });
+  let exited = false;
+  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
 
   try {
     const deadline = Date.now() + 5000;
     while (Date.now() < deadline) {
       if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      if (await serverReady()) break;
+      const ready = await serverReady();
+      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
+      if (ready) break;
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     if (Date.now() >= deadline) throw new Error("server did not start");
 
     await fn();
   } finally {
-    server.kill("SIGTERM");
-    await once(server, "exit").catch(() => {});
+    if (!exited) server.kill("SIGTERM");
+    await Promise.race([
+      exitedOnce,
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+    if (!exited) {
+      server.kill("SIGKILL");
+      await Promise.race([
+        exitedOnce,
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    }
   }
 }
 

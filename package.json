@@ -18,7 +18,6 @@
     "stripe": "^17.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.60.0",
-    "impeccable": "^3.0.3"
+    "@playwright/test": "1.60.0"
   }
 }

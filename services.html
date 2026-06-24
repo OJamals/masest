@@ -10,10 +10,10 @@
   <meta property="og:type" content="website">
 <link rel="icon" href="img/favicon-enhanced.png">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260623a">
+  <link rel="stylesheet" href="css/style.css?v=20260623c">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@graph":[{"@type":"Service","name":"MASEST technical services","provider":{"@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/"},"serviceType":"Lab testing, field services, consulting, bid support, and ASHRAE 188 water management planning","description":"Catalog includes 35 quote-service line items plus 4 service packages. Final scope, schedule, deliverables, and price are confirmed before work begins.","areaServed":"United States","offers":{"@type":"AggregateOffer","priceCurrency":"USD","lowPrice":"71.43","highPrice":"4942.86","offerCount":35,"description":"Offer count covers quote-service line items; packaged service bundles are listed separately on the page."}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://masest.co/"},{"@type":"ListItem","position":2,"name":"Services","item":"https://masest.co/services.html"}]}]}
+  {"@context":"https://schema.org","@graph":[{"@type":"Service","name":"MASEST technical services","provider":{"@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/"},"serviceType":"Lab testing, field services, consulting, bid support, and ASHRAE 188 water management planning","description":"Catalog includes 35 quote-service line items plus 4 service packages. Final scope, schedule, deliverables, and price are confirmed before work begins.","areaServed":"United States","offers":{"@type":"AggregateOffer","priceCurrency":"USD","lowPrice":"71.43","highPrice":"4942.86","offerCount":35,"description":"Offer count covers quote-service line items; packaged service bundles are listed separately on the page."}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://masest.co/"},{"@type":"ListItem","position":2,"name":"Services","item":"https://masest.co/services"}]}]}
   </script>
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/services">
@@ -27,12 +27,12 @@
   <a class="skip-link" href="#main">Skip to content</a>
   <noscript>
     <nav class="nojs-nav">
-      <a href="products.html">Products</a>
-  <a href="services.html">Services</a>
+      <a href="products">Products</a>
+  <a href="services">Services</a>
       <span>Use Cases</span>
-      <a href="industries.html">Industries</a>
-      <a href="proof.html">Field Results</a>
-      <a href="resources.html">Resources</a>
+      <a href="industries">Industries</a>
+      <a href="proof">Field Results</a>
+      <a href="resources">Resources</a>
     </nav>
   </noscript>
 
@@ -44,7 +44,7 @@
           <p class="subhead">Use planning prices to scope lab testing, field sampling, EHS and environmental consulting, bid support, and ASHRAE 188 water-management planning. MASEST confirms site conditions, schedule, deliverables, and final price before work starts.</p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="#serviceCatalog">Browse service pricing</a>
-            <a class="btn btn-secondary" href="contact.html?type=services">Request service scope</a>
+            <a class="btn btn-secondary" href="contact?type=services">Request service scope</a>
           </div>
           <div class="service-hero-badges" aria-label="Service catalog facts">
             <span><b data-service-count>35</b> service line items</span>
@@ -64,10 +64,15 @@
           <h2 class="headline">Name the work, and the quote moves faster.</h2>
           <p>The catalog separates 35 line items from 4 service packages, so buyers can name the work before scope review begins.</p>
         </div>
-        <div class="service-stats reveal" aria-label="Catalog summary">
-          <div><b data-service-count>35</b><span>service line items</span></div>
-          <div><b data-package-count>4</b><span>service packages</span></div>
-          <div><b data-category-count>8</b><span>service categories</span></div>
+        <div class="service-data-panel reveal">
+          <div class="service-stats" aria-label="Catalog summary">
+            <div><b data-service-count>35</b><span>service line items</span></div>
+            <div><b data-package-count>4</b><span>service packages</span></div>
+            <div><b data-category-count>8</b><span>service categories</span></div>
+          </div>
+          <div class="data-viz-card service-mix-viz" data-service-mix-viz aria-label="Service catalog mix">
+            <p class="viz-fallback">Service mix loads from the canonical catalog below.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -135,7 +140,7 @@
           <h2 class="headline">Know which service you need?</h2>
           <p>Send the line item, site context, and timing. MASEST confirms the right scope before payment, lab work, or dispatch.</p>
         </div>
-        <a class="btn btn-primary" href="contact.html">Request service</a>
+        <a class="btn btn-primary" href="contact">Request service</a>
       </div>
     </section>
   </main>

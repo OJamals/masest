@@ -15,6 +15,7 @@ import {
 } from "./main/commerce-ui.js";
 import { initBeforeAfter, initProofFilters, initQuoteForm } from "./main/engagement.js";
 import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js";
+import { initDataVisualizations } from "./main/data-visuals.js";
 
 window.MASESTMain = {
   CATALOG_GROUPS,
@@ -46,4 +47,5 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!isLocalStaticCommerceSuppressed()) loadCommerceCatalog().then(() => refreshCommerceActions(document));
   initShop();
   initServiceCatalog();
+  initDataVisualizations();
 });

@@ -3,7 +3,7 @@
 // into the Worker separately (from the repo root), so functions are NOT copied here.
 // Run by Pages as the build command: `node tools/cf-build.mjs`.
 import { execSync } from 'node:child_process';
-import { mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const OUT = 'dist';
@@ -24,6 +24,7 @@ const files = execSync('git ls-files', { encoding: 'utf8' }).split('\n').filter(
 let n = 0;
 for (const f of files) {
   if (DENY.some((r) => r.test(f))) continue;
+  if (!existsSync(f)) continue;
   const dest = join(OUT, f);
   mkdirSync(dirname(dest), { recursive: true });
   copyFileSync(f, dest);

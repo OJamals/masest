@@ -60,7 +60,7 @@ test("storefront grid uses owner-updated product photos from the commerce API", 
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
-      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
       const image = page.locator('.shop-card[data-id="hcr"] .shop-card-media img');
       await image.waitFor();
       assert.equal(await image.getAttribute("src"), "img/products/owner-hcr.webp");
@@ -77,7 +77,8 @@ test("product detail publishes product-specific SEO metadata", async () => {
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
-      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "networkidle" });
+      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen HCR"));
 
       const meta = await page.evaluate(() => ({
         title: document.title,
@@ -93,8 +94,8 @@ test("product detail publishes product-specific SEO metadata", async () => {
       assert.equal(meta.ogTitle, "VertKleen HCR | MASEST VertKleen");
       assert.match(meta.ogDescription, /descaling, rust removal, passivation/);
       assert.doesNotMatch(meta.description, /Replaces Replaces/);
-      assert.equal(meta.ogUrl, "https://masest.co/product.html?id=hcr");
-      assert.equal(meta.canonical, "https://masest.co/product.html?id=hcr");
+      assert.equal(meta.ogUrl, "https://masest.co/products/hcr");
+      assert.equal(meta.canonical, "https://masest.co/products/hcr");
     } finally {
       await browser.close();
     }
@@ -107,9 +108,10 @@ test("product detail uses owner-updated product photos from the commerce API", a
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
-      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "networkidle" });
+      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
       const image = page.locator("#pImage");
       await image.waitFor();
+      await page.waitForFunction(() => document.querySelector("#pImage")?.getAttribute("src") === "img/products/owner-hcr.webp");
       assert.equal(await image.getAttribute("src"), "img/products/owner-hcr.webp");
       assert.equal(await image.getAttribute("alt"), "Owner uploaded HCR drum photo");
     } finally {

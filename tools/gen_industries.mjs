@@ -128,9 +128,9 @@ const INDUSTRIES = [
 ];
 
 const NAV = [
-  ["index.html", "MASEST"], ["products.html", "Products"], ["services.html", "Services"], [null, "Use Cases"],
-  ["industries.html", "Industries"], ["proof.html", "Field Results"],
-  ["resources.html", "Resources"]
+  ["", "MASEST"], ["products", "Products"], ["services", "Services"], [null, "Use Cases"],
+  ["industries", "Industries"], ["proof", "Field Results"],
+  ["resources", "Resources"]
 ];
 
 // Per-industry field gallery. Images live at img/industries/<slug>/g{1,2,3}.webp
@@ -250,12 +250,12 @@ function industrySchema(ind, plain) {
         brand: "VertKleen",
         description: "HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.",
         areaServed: "United States and international commercial accounts",
-        contactPoint: { "@type": "ContactPoint", contactType: "sales", url: "https://masest.co/contact.html" }
+        contactPoint: { "@type": "ContactPoint", contactType: "sales", url: "https://masest.co/contact" }
       },
       {
         "@type": "WebPage",
         name: `${ind.name} VertKleen replacements`,
-        url: `https://masest.co/industries/${ind.slug}.html`,
+        url: `https://masest.co/industries/${ind.slug}`,
         description: ind.sub.replace(/&amp;/g, "&")
       },
       {
@@ -263,15 +263,15 @@ function industrySchema(ind, plain) {
         name: `${ind.name} VertKleen replacement program`,
         provider: { "@type": "Organization", name: "MASEST Consulting LLC", url: "https://masest.co/" },
         serviceType: `${ind.name} industrial cleaning chemistry replacement`,
-        url: `https://masest.co/industries/${ind.slug}.html`,
+        url: `https://masest.co/industries/${ind.slug}`,
         areaServed: "United States and international commercial accounts"
       },
       {
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: "https://masest.co/" },
-          { "@type": "ListItem", position: 2, name: "Industries", item: "https://masest.co/industries.html" },
-          { "@type": "ListItem", position: 3, name: ind.name, item: `https://masest.co/industries/${ind.slug}.html` }
+          { "@type": "ListItem", position: 2, name: "Industries", item: "https://masest.co/industries" },
+          { "@type": "ListItem", position: 3, name: ind.name, item: `https://masest.co/industries/${ind.slug}` }
         ]
       }
     ]
@@ -279,7 +279,7 @@ function industrySchema(ind, plain) {
 }
 
 function ctaBlock(ind) {
-  const q = (type) => `../contact.html?industry=${enc(ind.name)}&type=${type}`;
+  const q = (type) => `../contact?industry=${enc(ind.name)}&type=${type}`;
   return `
   <section class="block-dark">
     <div class="wrap">
@@ -328,7 +328,7 @@ function page(ind) {
   const nav = NAV.map(([href, label]) => {
     if (!href) return `    <span>${label}</span>`;
     const content = label === "MASEST" ? `<b>${label}</b>` : label;
-    return `    <a href="../${href}"${href === "industries.html" ? ' aria-current="page"' : ""}>${content}</a>`;
+    return `    <a href="../${href}"${href === "industries" ? ' aria-current="page"' : ""}>${content}</a>`;
   }).join("\n");
   const plain = ind.h1.replace(/&amp;/g, "&").replace(/<[^>]+>/g, "");
   return `<!DOCTYPE html>
@@ -339,17 +339,17 @@ function page(ind) {
 <title>${ind.name} | MASEST VertKleen</title>
 <meta name="description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta name="theme-color" content="#fafbfc">
-<link rel="canonical" href="https://masest.co/industries/${ind.slug}.html">
+<link rel="canonical" href="https://masest.co/industries/${ind.slug}">
 <meta property="og:title" content="${ind.name} | MASEST VertKleen">
 <meta property="og:description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
-<meta property="og:url" content="https://masest.co/industries/${ind.slug}.html">
+<meta property="og:url" content="https://masest.co/industries/${ind.slug}">
 <meta property="og:image" content="https://masest.co/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260623a">
+<link rel="stylesheet" href="../css/style.css?v=20260623c">
 <link rel="stylesheet" href="../css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
@@ -365,7 +365,7 @@ ${nav}
 <main id="main">
   <section class="hero-split">
     <div class="wrap">
-      <span class="eyebrow"><a href="../industries.html">Industries</a> / ${ind.name}</span>
+      <span class="eyebrow"><a href="../industries">Industries</a> / ${ind.name}</span>
       <h1 class="display">${ind.h1}</h1>
       <p class="subhead">${ind.sub}</p>
     </div>
@@ -377,7 +377,7 @@ ${nav}
         <span class="ind-icon"><i class="ph ${ind.icon}" aria-hidden="true"></i></span>
         <h2 class="headline">Why VertKleen fits ${ind.name}.</h2>
         <p>${ind.intro}</p>
-        <a class="btn btn-ink" href="../proof.html">See the proof</a>
+        <a class="btn btn-ink" href="../proof">See the proof</a>
       </div>
       <figure class="ind-intro-photo">
         <img src="../img/proof/cases/${ind.proof.img}.webp" alt="${ind.proof.caption.replace(/"/g, "&quot;")}" loading="lazy" ${proofImageDimsAttr(ind.proof.img)}>

@@ -130,7 +130,7 @@ export function renderChrome() {
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control: login button when logged out, account dropdown when signed in.
-  import("/js/account-nav.js").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
+  import("/js/account-nav.js?v=20260623c").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);

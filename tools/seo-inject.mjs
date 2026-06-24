@@ -68,6 +68,8 @@ const PRIVATE = [
   "order-confirmed.html",
 ];
 
+const PRODUCT_FALLBACK = "product.html";
+
 const attr = (value) => String(value ?? "")
   .replace(/&/g, "&amp;")
   .replace(/"/g, "&quot;")
@@ -79,6 +81,36 @@ const text = (value) => String(value ?? "")
   .replace(/>/g, "&gt;");
 
 const pick = (html, re) => html.match(re)?.[1]?.trim() || "";
+
+function cleanPath(path) {
+  if (path === "index.html") return "";
+  if (path.endsWith("/index.html")) return path.slice(0, -"index.html".length);
+  return path.replace(/\.html$/i, "");
+}
+
+function cleanRelativePath(prefix, path) {
+  if (path === "index.html") return prefix || "/";
+  return `${prefix}${cleanPath(path)}`;
+}
+
+function cleanPublicUrl(raw) {
+  if (!raw || /^(?:mailto:|tel:|data:|blob:|javascript:|#)/i.test(raw)) return raw;
+  if (/^index(?:[?#]|$)/i.test(raw)) return raw.replace(/^index/i, "/");
+  if (/^\.\.\/index(?:[?#]|$)/i.test(raw)) return raw.replace(/^\.\.\/index/i, "../");
+  return raw
+    .replace(/https:\/\/masest\.co\/product\.html\?id=([a-z0-9-]+)/gi, `${BASE}/products/$1`)
+    .replace(/(^|[="'(\s])((?:\.\.\/)?|\/?)product\.html\?id=([a-z0-9-]+)/gi, "$1$2products/$3")
+    .replace(/https:\/\/masest\.co\/([a-z0-9_/-]+)\.html(?=([?#"'<)\s]|$))/gi, (_match, p) => `${BASE}/${cleanPath(p)}`)
+    .replace(/(^|[="'(\s])((?:\.\.\/)?|\/?)([a-z0-9_/-]+)\.html(?=([?#"'<)\s]|$))/gi,
+      (_match, lead, prefix, p) => `${lead}${cleanRelativePath(prefix, p)}`);
+}
+
+function normalizePublicUrls(html) {
+  return html
+    .replace(/\b(?:href|action)=["']([^"']+)["']/gi, (match, raw) => match.replace(raw, cleanPublicUrl(raw)))
+    .replace(/https:\/\/masest\.co\/product\.html\?id=([a-z0-9-]+)/gi, `${BASE}/products/$1`)
+    .replace(/https:\/\/masest\.co\/([a-z0-9_/-]+)\.html(?=([?#"'<)\s]|$))/gi, (_match, p) => `${BASE}/${cleanPath(p)}`);
+}
 
 function stripOld(html) {
   const re = new RegExp(`\\n?${START}[\\s\\S]*?${END}\\n?`, "g");
@@ -126,10 +158,22 @@ async function processPage(file, meta, isPrivate = false) {
       html = html.replace(/(<meta name="viewport"[^>]*>)/i, '$1\n<meta name="robots" content="noindex">');
     }
   } else {
+    html = normalizePublicUrls(html);
     html = html.replace(/<\/head>/i, `${buildBlock(html, meta)}\n</head>`);
   }
   if (html !== before) {
     await writeFile(file, html);
+    return 1;
+  }
+  return 0;
+}
+
+async function processProductFallback() {
+  let html = await readFile(PRODUCT_FALLBACK, "utf8");
+  const before = html;
+  html = normalizePublicUrls(html);
+  if (html !== before) {
+    await writeFile(PRODUCT_FALLBACK, html);
     return 1;
   }
   return 0;
@@ -211,7 +255,7 @@ function productPage(id, product) {
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260623a">
+<link rel="stylesheet" href="../css/style.css?v=20260623c">
 <link rel="stylesheet" href="../css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="../css/components.css">
 <!-- seo:auto -->
@@ -248,7 +292,7 @@ ${jsonLd(productSchema(id, product))}
         </div>
       </div>
       <figure class="product-hero-media reveal">
-        <img src="${attr(img)}" alt="${attr(product.name)} product photo" width="900" height="1200" fetchpriority="high" decoding="async">
+        <img src="${attr(img)}" alt="${attr(product.name)} product photo" fetchpriority="high" decoding="async">
       </figure>
     </div>
   </section>
@@ -316,6 +360,7 @@ let changed = 0;
 for (const [file, meta] of Object.entries(PUBLIC)) changed += await processPage(file, meta, false);
 for (const file of PRIVATE) changed += await processPage(file, null, true);
 changed += await writeProductPages();
+changed += await processProductFallback();
 changed += await writeSitemap();
 
 console.log(`\nseo-inject: ${changed} files changed`);

@@ -3,7 +3,7 @@
 // event checkout.session.completed. Put that endpoint's signing secret in STRIPE_WEBHOOK_SECRET.
 // On the Workers runtime signature verification must use the SubtleCrypto provider.
 import Stripe from 'stripe';
-import { adminClient, json, sendEmail, companyEmails } from '../_lib/supabase.js';
+import { adminClient, json, sendEmail, companyEmails, htmlEscape } from '../_lib/supabase.js';
 import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
 import {
   isDelinquentStatus,
@@ -23,10 +23,7 @@ import {
   subscriptionRow,
 } from '../_lib/order-shape.js';
 
-export function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
+export { htmlEscape as escapeHtml } from '../_lib/supabase.js';
 
 // Postgres unique-constraint violation (e.g. the orders.stripe_payment_intent guard).
 export function isUniqueViolation(error) {
@@ -60,15 +57,15 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
 
   const rows = (lines || []).map((l) =>
     `<tr>`
-    + `<td style="padding:8px 0;border-bottom:1px solid #eef">${escapeHtml(l.name)} `
-    + `<span style="color:#789">(${escapeHtml(l.sku)})</span></td>`
+    + `<td style="padding:8px 0;border-bottom:1px solid #eef">${htmlEscape(l.name)} `
+    + `<span style="color:#789">(${htmlEscape(l.sku)})</span></td>`
     + `<td style="padding:8px 0;border-bottom:1px solid #eef;text-align:center">${l.qty}</td>`
     + `<td style="padding:8px 0;border-bottom:1px solid #eef;text-align:right">${fmt(l.unit_price * l.qty)}</td>`
     + `</tr>`).join('');
 
   const addr = session.shipping_details?.address || session.customer_details?.address || null;
   const shipBlock = addr
-    ? `<p style="margin:18px 0 0;color:#445"><b>Ship to</b><br>${[addr.line1, addr.line2, [addr.city, addr.state, addr.postal_code].filter(Boolean).join(', '), addr.country].filter(Boolean).map(escapeHtml).join('<br>')}</p>`
+    ? `<p style="margin:18px 0 0;color:#445"><b>Ship to</b><br>${[addr.line1, addr.line2, [addr.city, addr.state, addr.postal_code].filter(Boolean).join(', '), addr.country].filter(Boolean).map(htmlEscape).join('<br>')}</p>`
     : '';
 
   const appUrl = env.APP_URL || 'https://masest.co';
@@ -80,7 +77,7 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
         <span style="color:#bfe4e7;font-size:11px;letter-spacing:.16em;margin-left:8px">VERTKLEEN</span>
       </div>
       <div style="padding:28px;color:#223">
-        <h2 style="margin:0 0 4px;color:#15171c">Order confirmed${escapeHtml(ref)}</h2>
+        <h2 style="margin:0 0 4px;color:#15171c">Order confirmed${htmlEscape(ref)}</h2>
         <p style="margin:0 0 20px;color:#556;font-size:14px;line-height:1.5">Thank you. MASEST will reconcile freight and documentation before fulfillment. Your payment processor sends a separate card receipt.</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <thead><tr>
@@ -311,12 +308,12 @@ export async function onRequestPost({ request, env }) {
 function billingEmailHtml(env, heading, paragraphs, cta) {
   const body = (paragraphs || []).map((p) => `<p style="margin:0 0 14px;color:#445;font-size:14px;line-height:1.6">${p}</p>`).join('');
   const button = cta
-    ? `<div style="margin:22px 0 0"><a href="${escapeHtml(cta.url)}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">${escapeHtml(cta.text)}</a></div>`
+    ? `<div style="margin:22px 0 0"><a href="${htmlEscape(cta.url)}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">${htmlEscape(cta.text)}</a></div>`
     : '';
   return `<div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
     <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
       <div style="background:#0e7c86;padding:18px 26px"><span style="color:#fff;font-size:19px;font-weight:800;letter-spacing:.04em">MASEST</span></div>
-      <div style="padding:26px;color:#223"><h2 style="margin:0 0 12px;color:#15171c;font-size:18px">${escapeHtml(heading)}</h2>${body}${button}</div>
+      <div style="padding:26px;color:#223"><h2 style="margin:0 0 12px;color:#15171c;font-size:18px">${htmlEscape(heading)}</h2>${body}${button}</div>
       <div style="background:#0b0d12;padding:16px 26px;color:#8a93a0;font-size:11px;line-height:1.7">MASEST Consulting LLC &middot; Questions? Reply to this email.</div>
     </div>
   </div>`;
@@ -328,7 +325,7 @@ function programsUrl(env) { return `${env.APP_URL || 'https://masest.co'}/dashbo
 async function notifyBillingFailure(env, sb, plan) {
   const amount = `${plan.currency} ${plan.amountDue.toFixed(2)}`;
   const retryLine = plan.willRetry && plan.nextAttemptIso
-    ? `We'll retry automatically on ${escapeHtml(plan.nextAttemptIso.slice(0, 10))}. To avoid any interruption, please make sure the card on file is current.`
+    ? `We'll retry automatically on ${htmlEscape(plan.nextAttemptIso.slice(0, 10))}. To avoid any interruption, please make sure the card on file is current.`
     : 'This was the final automatic retry. Please update your payment method now to keep your program active.';
   if (plan.companyId) {
     await sb.from('notifications').insert({
@@ -375,9 +372,9 @@ async function alertStaffDispute(env, plan, orderId) {
     to: [staff],
     subject: `⚠ Stripe dispute opened (${plan.reason})`,
     html: billingEmailHtml(env, 'A card dispute was opened', [
-      `Charge <b>${escapeHtml(plan.chargeId || '?')}</b> (${plan.currency} ${plan.amount.toFixed(2)}) was disputed — reason <b>${escapeHtml(plan.reason)}</b>, status ${escapeHtml(plan.status)}.`,
+      `Charge <b>${htmlEscape(plan.chargeId || '?')}</b> (${plan.currency} ${plan.amount.toFixed(2)}) was disputed — reason <b>${htmlEscape(plan.reason)}</b>, status ${htmlEscape(plan.status)}.`,
       orderId
-        ? `Linked order <b>${escapeHtml(orderId)}</b>. Respond in the Stripe dashboard before the evidence deadline.`
+        ? `Linked order <b>${htmlEscape(orderId)}</b>. Respond in the Stripe dashboard before the evidence deadline.`
         : 'No local order matched this payment intent. Respond in the Stripe dashboard before the evidence deadline.',
     ]),
     category: 'billing',

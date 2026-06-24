@@ -32,9 +32,9 @@ function injectStyle() {
   const s = document.createElement('style');
   s.id = 'acct-nav-style';
   s.textContent = `
-  .nav-account { display:flex; align-items:center; }
+  .nav-account { display:flex; align-items:center; align-self:stretch; padding:0; }
   .nav-signin { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--r-pill,999px);
-    border:1.5px solid var(--line,#e4e6e9); font-weight:700; font-size:.9rem; color:var(--ink,#15171c); text-decoration:none; white-space:nowrap; }
+    justify-content:center; align-self:center; min-height:42px; line-height:1; border:1.5px solid var(--line,#e4e6e9); font-weight:700; font-size:.9rem; color:var(--ink,#15171c); text-decoration:none; white-space:nowrap; }
   .nav-signin:hover { border-color:var(--ink,#15171c); }
   .nav.over-dark .nav-signin { color:#fff; border-color:rgba(255,255,255,.35); }
   .acct-dd { position:relative; }

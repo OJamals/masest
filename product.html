@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260623a">
+<link rel="stylesheet" href="css/style.css?v=20260623c">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -24,8 +24,8 @@
   .drum-ref-note{margin:8px 0 0;font-size:.76rem;line-height:1.35;color:var(--muted,#6b7280)}
 </style>
 <!-- seo:auto -->
-<link rel="canonical" href="https://masest.co/product.html">
-<meta property="og:url" content="https://masest.co/product.html">
+<link rel="canonical" href="https://masest.co/product">
+<meta property="og:url" content="https://masest.co/product">
 <meta property="og:image" content="https://masest.co/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <!-- /seo:auto -->
@@ -35,13 +35,13 @@
 
 <noscript>
 <nav class="nojs-nav" aria-label="Site">
-  <a href="index.html"><b>MASEST</b></a>
-  <a href="products.html">Products</a>
-  <a href="services.html">Services</a>
+  <a href="/"><b>MASEST</b></a>
+  <a href="products">Products</a>
+  <a href="services">Services</a>
   <span>Use Cases</span>
-  <a href="industries.html">Industries</a>
-  <a href="proof.html">Field Results</a>
-  <a href="resources.html">Resources</a>
+  <a href="industries">Industries</a>
+  <a href="proof">Field Results</a>
+  <a href="resources">Resources</a>
 </nav>
 <section class="wrap static-product-fallback" id="staticProductFallback" aria-label="VertKleen product snapshots">
   <div class="section-head">
@@ -54,25 +54,25 @@
       <b>VertKleen HCR</b>
       <span>Replaces hydrochloric acid</span>
       <p>Descaling, rust removal, passivation, and acid cleaning. HMIS 0-0-0.</p>
-      <a href="product.html?id=hcr">Open HCR</a>
+      <a href="products/hcr">Open HCR</a>
     </article>
     <article class="static-product-card">
       <b>VertKleen CR</b>
       <span>Replaces caustic soda</span>
       <p>Document-routed caustic replacement and pH adjustment for water treatment and alkaline cleaning. HMIS 0-0-0.</p>
-      <a href="product.html?id=cr">Open CR</a>
+      <a href="products/cr">Open CR</a>
     </article>
     <article class="static-product-card">
       <b>VertKleen CRHD</b>
       <span>Replaces caustic and solvent degreasers</span>
       <p>Heavy-duty degreasing for oils, hoods, machinery, and industrial floors. HMIS 0-0-0.</p>
-      <a href="product.html?id=crhd">Open CRHD</a>
+      <a href="products/crhd">Open CRHD</a>
     </article>
     <article class="static-product-card">
       <b>WaterSafe60</b>
       <span>Replaces phosphate, zinc, and molybdate blends</span>
       <p>Document-routed scale and corrosion inhibitor for tower and loop programs. HMIS 0-0-0.</p>
-      <a href="product.html?id=watersafe60">Open WaterSafe60</a>
+      <a href="products/watersafe60">Open WaterSafe60</a>
     </article>
   </div>
 </section>
@@ -82,12 +82,12 @@
 <section class="page-hero product-detail-hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="breadcrumb"><a href="products.html">Products</a> / <span id="bcName">&hellip;</span></div>
+      <div class="breadcrumb"><a href="products">Products</a> / <span id="bcName">&hellip;</span></div>
       <span class="eyebrow" id="pReplaces"></span>
       <h1 class="display" id="pName"></h1>
  <p class="subhead" id="pDesc"></p>
  <div class="hero-ctas u-mt-30">
- <a class="btn btn-primary" id="pQuoteBtn" href="contact.html">Request a quote</a>
+ <a class="btn btn-primary" id="pQuoteBtn" href="contact">Request a quote</a>
  <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
  </div>
       <p class="cart-feedback" id="pCartFeedback" role="status" aria-live="polite" hidden></p>
@@ -155,7 +155,7 @@
   <div class="wrap reveal">
     <h2 class="headline" id="ctaHead">Ready to retire the current drum?</h2>
     <p class="subhead">Quotes route by industry, volume, and location, so the first reply starts with the right product path.</p>
-        <a class="btn btn-primary" href="contact.html?type=quote">Request product quote</a>
+        <a class="btn btn-primary" href="contact?type=quote">Request product quote</a>
   </div>
 </section>
 </main>
@@ -179,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const isProgramOnly = !isCatalogProduct && ["dbnpa", "crs"].includes(id);
     const quoteFirst = (Array.isArray(QUOTE_FIRST_IDS) && QUOTE_FIRST_IDS.includes(id)) || isProgramOnly;
     function productCanonicalUrl() {
-      return `https://masest.co/product.html?id=${encodeURIComponent(id)}`;
+      return `https://masest.co/products/${encodeURIComponent(id)}`;
     }
     function setMetaContent(selector, value) {
       const el = document.querySelector(selector);
@@ -248,8 +248,8 @@ document.addEventListener("DOMContentLoaded", () => {
               <h1 class="display">That product is not in the current catalog.</h1>
               <p class="subhead">The link may be outdated, mistyped, or tied to an older source label. Browse the current VertKleen line, or send MASEST the application you need to solve.</p>
               <div class="hero-actions">
-                <a class="btn btn-primary" href="products.html">Browse products</a>
-        <a class="btn btn-secondary" href="contact.html?type=quote">Request product quote</a>
+                <a class="btn btn-primary" href="products">Browse products</a>
+        <a class="btn btn-secondary" href="contact?type=quote">Request product quote</a>
               </div>
             </div>
             <div class="hmis-panel">
@@ -441,7 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
             buyBtn.textContent = "Added";
             cartFeedback.hidden = false;
             cartFeedback.removeAttribute("data-state");
-            cartFeedback.innerHTML = `Added to cart. <a href="cart.html">Review cart</a>`;
+            cartFeedback.innerHTML = `Added to cart. <a href="cart">Review cart</a>`;
             setTimeout(() => { buyBtn.textContent = original; buyBtn.disabled = false; }, 900);
           } catch (err) {
             cartFeedback.hidden = false;
@@ -471,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
         el.innerHTML =
           `<div class="drum-ref-head">Drums &amp; totes</div>` +
           drums.map(d => `<div class="drum-ref-row"><span>${d.label}</span><span>${drumMoney(d.price, d.currency)}</span></div>`).join("") +
-          `<a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(name)}&size=drum">Request a freight quote</a>` +
+          `<a class="btn btn-ghost btn-sm" href="contact?product=${encodeURIComponent(name)}&size=drum">Request a freight quote</a>` +
           `<p class="drum-ref-note">Bulk reference only. 55 &amp; 275 gal ship LTL; final freight is quoted before release.</p>`;
         el.hidden = false;
       })
@@ -520,7 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
  document.getElementById("pDocs").innerHTML = p.docs.map(d =>
       `<div class="doc-row"><div><b>${d}</b><span>Controlled document request</span></div>
-       <a class="btn btn-ghost btn-sm" href="contact.html?product=${encodeURIComponent(p.name)}&doc=${encodeURIComponent(d)}" aria-label="Request ${d} for ${p.name}">Request</a></div>`).join("");
+       <a class="btn btn-ghost btn-sm" href="contact?product=${encodeURIComponent(p.name)}&doc=${encodeURIComponent(d)}" aria-label="Request ${d} for ${p.name}">Request</a></div>`).join("");
 
     initReveal();
   });

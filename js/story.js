@@ -508,9 +508,6 @@ states.forEach(function (st) {
     }
     ctx.closePath(); ctx.clip();
 
-    /* crust band (under the flow + moving debris) */
-    drawCrustPatches(ctx, D);
-
     /* flow streaks: faster where the bore is choked */
     ctx.strokeStyle = "rgba(244,246,248,0.12)"; ctx.lineWidth = 1.2;
     for (var f = 0; f < D.flow.length; f++) {
@@ -551,6 +548,9 @@ states.forEach(function (st) {
 
     ctx.globalAlpha = 1;
     ctx.restore();
+
+    /* Wall deposits sit on the pipe surface, not inside the flow channel. */
+    drawCrustPatches(ctx, D);
   }
 
   function drawCrustPatches(ctx, D) {
@@ -565,8 +565,8 @@ states.forEach(function (st) {
         if (t < 0.6) continue;
         var s0 = b * bs, s1 = Math.min(P.L, (b + 1.35) * bs);
         var a0 = atS(P, s0), a1 = atS(P, s1);
-        var width = clamp(2.5, half * 0.34, t * 0.62);
-        var inset = half - width * 0.72;
+        var width = clamp(3.2, half * 0.38, t * 0.72);
+        var inset = half + width * 0.06;
         ctx.globalAlpha = clamp(0.28, 0.82, 0.28 + t / D.maxCrust * 0.54);
         ctx.strokeStyle = "rgb(" + (col[b] || col[b + 1] || "201,212,208") + ")";
         ctx.lineWidth = width;
@@ -577,7 +577,7 @@ states.forEach(function (st) {
         if (b % 6 === 0) {
           var m = atS(P, (s0 + s1) * 0.5);
           ctx.beginPath();
-          ctx.arc(m.x + m.nx * sign * (inset - width * 0.15), m.y + m.ny * sign * (inset - width * 0.15), Math.max(1.6, width * 0.42), 0, 6.2832);
+          ctx.arc(m.x + m.nx * sign * inset, m.y + m.ny * sign * inset, Math.max(1.6, width * 0.42), 0, 6.2832);
           ctx.fillStyle = ctx.strokeStyle;
           ctx.fill();
         }
