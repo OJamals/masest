@@ -158,13 +158,13 @@ export async function syncCrispAccountContext() {
       account_company: companyName,
       account_company_id: company.id,
       account_status: company.status,
-      account_staff: Boolean(account.is_staff),
+      account_staff: account.can_admin === true,
       account_can_checkout: Boolean(account.can_checkout),
     }) || pushed;
 
     pushed = setCrispSegments([
       account.needs_profile ? "account_needs_profile" : "account_authenticated",
-      account.is_staff ? "account_staff" : "",
+      account.can_admin === true ? "account_staff" : "",
       company.status ? `company_${company.status}` : "",
     ]) || pushed;
     return pushed;

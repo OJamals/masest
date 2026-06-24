@@ -1,0 +1,544 @@
+[
+  {
+    "label": "laptop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "actNo": 2,
+    "frac": 0.3,
+    "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/patched-laptop-act2-0p3.png",
+    "metrics": {
+      "shot": "",
+      "viewport": {
+        "w": 1280,
+        "h": 720
+      },
+      "overflowX": 0,
+      "clipped": [
+        {
+          "cls": "pipe-diagram",
+          "text": "Scale Rust Grease Biofilm",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 220,
+            "top": 269,
+            "right": 1060,
+            "bottom": 724,
+            "width": 840,
+            "height": 455
+          }
+        }
+      ],
+      "overlaps": [
+        {
+          "a": "pipe-diagram",
+          "b": "act-p",
+          "area": 54912
+        }
+      ],
+      "nodes": [
+        {
+          "cls": "pipe-diagram",
+          "text": "Scale Rust Grease Biofilm",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 220,
+            "top": 269,
+            "right": 1060,
+            "bottom": 724,
+            "width": 840,
+            "height": 455
+          }
+        },
+        {
+          "cls": "act-h",
+          "text": "Buildup does not ask permission.",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 328,
+            "top": 128,
+            "right": 952,
+            "bottom": 245,
+            "width": 624,
+            "height": 116
+          }
+        },
+        {
+          "cls": "act-p",
+          "text": "Minerals crystallize into scale. Steel oxidizes into ru",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 328,
+            "top": 265,
+            "right": 952,
+            "bottom": 357,
+            "width": 624,
+            "height": 92
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "actNo": 2,
+    "frac": 0.3,
+    "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/patched-desktop-act2-0p3.png",
+    "metrics": {
+      "shot": "",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "overflowX": 0,
+      "clipped": [],
+      "overlaps": [
+        {
+          "a": "pipe-diagram",
+          "b": "act-p",
+          "area": 19968
+        }
+      ],
+      "nodes": [
+        {
+          "cls": "pipe-diagram",
+          "text": "Scale Rust Grease Biofilm",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 220,
+            "top": 341,
+            "right": 1220,
+            "bottom": 883,
+            "width": 1000,
+            "height": 542
+          }
+        },
+        {
+          "cls": "act-h",
+          "text": "Buildup does not ask permission.",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 408,
+            "top": 144,
+            "right": 1032,
+            "bottom": 261,
+            "width": 624,
+            "height": 116
+          }
+        },
+        {
+          "cls": "act-p",
+          "text": "Minerals crystallize into scale. Steel oxidizes into ru",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 408,
+            "top": 281,
+            "right": 1032,
+            "bottom": 373,
+            "width": 624,
+            "height": 92
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "mobile",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "actNo": 4,
+    "frac": 0.3,
+    "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/patched-mobile-act4-0p3.png",
+    "metrics": {
+      "shot": "",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "overflowX": 0,
+      "clipped": [],
+      "overlaps": [
+        {
+          "a": "cost-rig",
+          "b": "cost-vert",
+          "area": 60900
+        }
+      ],
+      "nodes": [
+        {
+          "cls": "act-h",
+          "text": "The drum is the cheapest part.",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 20,
+            "top": 96,
+            "right": 370,
+            "bottom": 152,
+            "width": 350,
+            "height": 56
+          }
+        },
+        {
+          "cls": "cost-rig",
+          "text": "Legacy chemistry PPE & training$1,000s / yr1 Vacate & v",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 20,
+            "top": 160,
+            "right": 370,
+            "bottom": 642,
+            "width": 350,
+            "height": 482
+          }
+        },
+        {
+          "cls": "cost-legacy",
+          "text": "Legacy chemistry PPE & training$1,000s / yr1 Vacate & v",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 20,
+            "top": 160,
+            "right": 370,
+            "bottom": 450,
+            "width": 350,
+            "height": 290
+          }
+        },
+        {
+          "cls": "cost-line",
+          "text": "PPE & training$1,000s / yr1",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 191,
+            "right": 357,
+            "bottom": 240,
+            "width": 324,
+            "height": 49
+          }
+        },
+        {
+          "cls": "cost-line",
+          "text": "Vacate & ventilatedowntime / job2",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 245,
+            "right": 357,
+            "bottom": 294,
+            "width": 324,
+            "height": 49
+          }
+        },
+        {
+          "cls": "cost-line",
+          "text": "Hazmat ship, store, dispose$135–$395 / drum3",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 299,
+            "right": 357,
+            "bottom": 347,
+            "width": 324,
+            "height": 48
+          }
+        },
+        {
+          "cls": "cost-line",
+          "text": "OSHA exposureup to $16,550 / violation4",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 352,
+            "right": 357,
+            "bottom": 401,
+            "width": 324,
+            "height": 49
+          }
+        },
+        {
+          "cls": "cost-incident",
+          "text": "+ one workplace injury $0 average total cost, direct + ",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 410,
+            "right": 357,
+            "bottom": 439,
+            "width": 324,
+            "height": 29
+          }
+        },
+        {
+          "cls": "cost-vert",
+          "text": "VertKleen HMIS0-0-0 PPE burden Vapor & vacate step DOT ",
+          "opacity": 0.42,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 20,
+            "top": 468,
+            "right": 370,
+            "bottom": 652,
+            "width": 350,
+            "height": 184
+          }
+        },
+        {
+          "cls": "cost-drops",
+          "text": "PPE burden Vapor & vacate step DOT handling profile Haz",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 554,
+            "right": 357,
+            "bottom": 590,
+            "width": 324,
+            "height": 36
+          }
+        },
+        {
+          "cls": "cost-proof",
+          "text": "Documented switch: about $10,000 / yr saved replacing a",
+          "opacity": 0.9,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 598,
+            "right": 357,
+            "bottom": 631,
+            "width": 324,
+            "height": 33
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "mobile",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "actNo": 4,
+    "frac": 0.62,
+    "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/patched-mobile-act4-0p62.png",
+    "metrics": {
+      "shot": "",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "overflowX": 0,
+      "clipped": [],
+      "overlaps": [],
+      "nodes": [
+        {
+          "cls": "act-h",
+          "text": "The drum is the cheapest part.",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 20,
+            "top": 96,
+            "right": 370,
+            "bottom": 152,
+            "width": 350,
+            "height": 56
+          }
+        },
+        {
+          "cls": "cost-rig",
+          "text": "Legacy chemistry PPE & training$1,000s / yr1 Vacate & v",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 20,
+            "top": 160,
+            "right": 370,
+            "bottom": 642,
+            "width": 350,
+            "height": 482
+          }
+        },
+        {
+          "cls": "cost-legacy",
+          "text": "Legacy chemistry PPE & training$1,000s / yr1 Vacate & v",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 20,
+            "top": 160,
+            "right": 370,
+            "bottom": 450,
+            "width": 350,
+            "height": 290
+          }
+        },
+        {
+          "cls": "cost-line",
+          "text": "PPE & training$1,000s / yr1",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 191,
+            "right": 357,
+            "bottom": 240,
+            "width": 324,
+            "height": 49
+          }
+        },
+        {
+          "cls": "cost-line",
+          "text": "Vacate & ventilatedowntime / job2",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 245,
+            "right": 357,
+            "bottom": 294,
+            "width": 324,
+            "height": 49
+          }
+        },
+        {
+          "cls": "cost-line",
+          "text": "Hazmat ship, store, dispose$135–$395 / drum3",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 299,
+            "right": 357,
+            "bottom": 347,
+            "width": 324,
+            "height": 48
+          }
+        },
+        {
+          "cls": "cost-line",
+          "text": "OSHA exposureup to $16,550 / violation4",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 352,
+            "right": 357,
+            "bottom": 401,
+            "width": 324,
+            "height": 49
+          }
+        },
+        {
+          "cls": "cost-incident",
+          "text": "+ one workplace injury $0 average total cost, direct + ",
+          "opacity": 1,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 410,
+            "right": 357,
+            "bottom": 439,
+            "width": 324,
+            "height": 29
+          }
+        },
+        {
+          "cls": "cost-vert is-on",
+          "text": "VertKleen HMIS0-0-0 PPE burden Vapor & vacate step DOT ",
+          "opacity": 0.9648,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 20,
+            "top": 458,
+            "right": 370,
+            "bottom": 643,
+            "width": 350,
+            "height": 184
+          }
+        },
+        {
+          "cls": "cost-drops",
+          "text": "PPE burden Vapor & vacate step DOT handling profile Haz",
+          "opacity": 1,
+          "display": "grid",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 545,
+            "right": 357,
+            "bottom": 581,
+            "width": 324,
+            "height": 36
+          }
+        },
+        {
+          "cls": "cost-proof",
+          "text": "Documented switch: about $10,000 / yr saved replacing a",
+          "opacity": 0.9,
+          "display": "block",
+          "visibility": "visible",
+          "rect": {
+            "left": 33,
+            "top": 589,
+            "right": 357,
+            "bottom": 622,
+            "width": 324,
+            "height": 33
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,300 @@
+{
+  "path": "/products.html",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "overflowX": 0,
+  "count": 20,
+  "bodyFont": "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif",
+  "cards": [
+    {
+      "i": 0,
+      "id": "hcr",
+      "cardRect": {
+        "left": 158,
+        "top": -539,
+        "right": 423,
+        "bottom": -57,
+        "width": 265,
+        "height": 482
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/hvac-hcr-studio.webp",
+      "imageRect": {
+        "left": 182,
+        "top": -516,
+        "right": 399,
+        "bottom": -315,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 1,
+      "id": "descaler",
+      "cardRect": {
+        "left": 445,
+        "top": -539,
+        "right": 709,
+        "bottom": -57,
+        "width": 265,
+        "height": 482
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/descaler-studio.webp",
+      "imageRect": {
+        "left": 468,
+        "top": -516,
+        "right": 685,
+        "bottom": -315,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 2,
+      "id": "cr",
+      "cardRect": {
+        "left": 731,
+        "top": -539,
+        "right": 996,
+        "bottom": -57,
+        "width": 265,
+        "height": 482
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/hvac-cr-studio.webp",
+      "imageRect": {
+        "left": 755,
+        "top": -516,
+        "right": 972,
+        "bottom": -315,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 3,
+      "id": "crhd",
+      "cardRect": {
+        "left": 1018,
+        "top": -539,
+        "right": 1282,
+        "bottom": -57,
+        "width": 265,
+        "height": 482
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/crhd-studio.webp",
+      "imageRect": {
+        "left": 1041,
+        "top": -516,
+        "right": 1258,
+        "bottom": -315,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 4,
+      "id": "cr-hd-low-foam",
+      "cardRect": {
+        "left": 158,
+        "top": -35,
+        "right": 423,
+        "bottom": 464,
+        "width": 265,
+        "height": 499
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/crhd-studio.webp",
+      "imageRect": {
+        "left": 182,
+        "top": -12,
+        "right": 399,
+        "bottom": 190,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 5,
+      "id": "neutral",
+      "cardRect": {
+        "left": 445,
+        "top": -35,
+        "right": 709,
+        "bottom": 464,
+        "width": 265,
+        "height": 499
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/neutral-studio.webp",
+      "imageRect": {
+        "left": 468,
+        "top": -12,
+        "right": 685,
+        "bottom": 190,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 6,
+      "id": "multiwash",
+      "cardRect": {
+        "left": 731,
+        "top": -35,
+        "right": 996,
+        "bottom": 464,
+        "width": 265,
+        "height": 499
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/multiwash-studio.webp",
+      "imageRect": {
+        "left": 755,
+        "top": -12,
+        "right": 972,
+        "bottom": 190,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 7,
+      "id": "watersafe60",
+      "cardRect": {
+        "left": 1018,
+        "top": -35,
+        "right": 1282,
+        "bottom": 464,
+        "width": 265,
+        "height": 499
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/watersafe60-studio.webp",
+      "imageRect": {
+        "left": 1041,
+        "top": -12,
+        "right": 1258,
+        "bottom": 190,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 8,
+      "id": "cr2",
+      "cardRect": {
+        "left": 158,
+        "top": 486,
+        "right": 423,
+        "bottom": 985,
+        "width": 265,
+        "height": 499
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/hvac-cr-studio.webp",
+      "imageRect": {
+        "left": 182,
+        "top": 509,
+        "right": 399,
+        "bottom": 711,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 9,
+      "id": "sar",
+      "cardRect": {
+        "left": 445,
+        "top": 486,
+        "right": 709,
+        "bottom": 985,
+        "width": 265,
+        "height": 499
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/crs-studio.webp",
+      "imageRect": {
+        "left": 468,
+        "top": 509,
+        "right": 685,
+        "bottom": 711,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 10,
+      "id": "purgo",
+      "cardRect": {
+        "left": 731,
+        "top": 486,
+        "right": 996,
+        "bottom": 985,
+        "width": 265,
+        "height": 499
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/purgo-studio.webp",
+      "imageRect": {
+        "left": 755,
+        "top": 509,
+        "right": 972,
+        "bottom": 711,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    },
+    {
+      "i": 11,
+      "id": "lam3",
+      "cardRect": {
+        "left": 1018,
+        "top": 486,
+        "right": 1282,
+        "bottom": 985,
+        "width": 265,
+        "height": 499
+      },
+      "mediaBackground": "rgb(255, 255, 255)",
+      "image": "img/products/lam3-studio.webp",
+      "imageRect": {
+        "left": 1041,
+        "top": 509,
+        "right": 1258,
+        "bottom": 711,
+        "width": 217,
+        "height": 202
+      },
+      "imageFit": "contain",
+      "clippedX": false
+    }
+  ]
+}

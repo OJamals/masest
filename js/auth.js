@@ -117,7 +117,7 @@ export async function me() {
   // Authenticated but no company/profile yet (email confirmed before the company step ran):
   // surface it so the page can offer a "finish setup" form instead of looking logged-out.
   const body = await r.json().catch(() => null);
-  if (r.status === 404 && body?.error === 'no_profile') return { needs_profile: true, email: body.email, is_staff: body.is_staff };
+  if (r.status === 404 && body?.error === 'no_profile') return { needs_profile: true, email: body.email, can_admin: body.can_admin === true, staff: body.staff || null };
   return null;
 }
 

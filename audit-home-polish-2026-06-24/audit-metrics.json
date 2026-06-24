@@ -1,0 +1,2796 @@
+{
+  "storyDesktop": [
+    {
+      "actNo": 1,
+      "frac": 0.08,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act1-0p08.png",
+      "metrics": {
+        "actNo": 1,
+        "scrollY": 27,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 1,
+      "frac": 0.55,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act1-0p55.png",
+      "metrics": {
+        "actNo": 1,
+        "scrollY": 188,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 2,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act2-0p3.png",
+      "metrics": {
+        "actNo": 2,
+        "scrollY": 1544,
+        "overflowX": 0,
+        "clipped": [
+          {
+            "sel": "pipe-diagram",
+            "text": "Scale Rust Grease Biofilm",
+            "rect": {
+              "left": 160,
+              "top": 309,
+              "right": 1280,
+              "bottom": 915,
+              "width": 1120,
+              "height": 607
+            }
+          }
+        ],
+        "overlaps": [
+          {
+            "a": "pipe-diagram",
+            "at": "Scale Rust Grease Biofilm",
+            "b": "act-p",
+            "bt": "Minerals crystallize into scale. Steel oxidizes into rust. G",
+            "area": 40170
+          }
+        ]
+      }
+    },
+    {
+      "actNo": 2,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act2-0p62.png",
+      "metrics": {
+        "actNo": 2,
+        "scrollY": 1867,
+        "overflowX": 0,
+        "clipped": [
+          {
+            "sel": "pipe-diagram",
+            "text": "Scale Rust Grease Biofilm",
+            "rect": {
+              "left": 160,
+              "top": 309,
+              "right": 1280,
+              "bottom": 915,
+              "width": 1120,
+              "height": 607
+            }
+          }
+        ],
+        "overlaps": [
+          {
+            "a": "pipe-diagram",
+            "at": "Scale Rust Grease Biofilm",
+            "b": "act-p",
+            "bt": "Minerals crystallize into scale. Steel oxidizes into rust. G",
+            "area": 40170
+          }
+        ]
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.18,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act3-0p18.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 3482,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.44,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act3-0p44.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 3962,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.66,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act3-0p66.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 4368,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.82,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act3-0p82.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 4663,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 4,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act4-0p3.png",
+      "metrics": {
+        "actNo": 4,
+        "scrollY": 6197,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 4,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act4-0p62.png",
+      "metrics": {
+        "actNo": 4,
+        "scrollY": 6520,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 5,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act5-0p3.png",
+      "metrics": {
+        "actNo": 5,
+        "scrollY": 8149,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 5,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-desktop-act5-0p62.png",
+      "metrics": {
+        "actNo": 5,
+        "scrollY": 8517,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    }
+  ],
+  "storyLaptop": [
+    {
+      "actNo": 1,
+      "frac": 0.08,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act1-0p08.png",
+      "metrics": {
+        "actNo": 1,
+        "scrollY": 22,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 1,
+      "frac": 0.55,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act1-0p55.png",
+      "metrics": {
+        "actNo": 1,
+        "scrollY": 151,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 2,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act2-0p3.png",
+      "metrics": {
+        "actNo": 2,
+        "scrollY": 1236,
+        "overflowX": 0,
+        "clipped": [
+          {
+            "sel": "pipe-diagram",
+            "text": "Scale Rust Grease Biofilm",
+            "rect": {
+              "left": 80,
+              "top": 186,
+              "right": 1200,
+              "bottom": 793,
+              "width": 1120,
+              "height": 607
+            }
+          }
+        ],
+        "overlaps": [
+          {
+            "a": "pipe-diagram",
+            "at": "Scale Rust Grease Biofilm",
+            "b": "act-h",
+            "bt": "Buildup does not ask permission.",
+            "area": 36455
+          }
+        ]
+      }
+    },
+    {
+      "actNo": 2,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act2-0p62.png",
+      "metrics": {
+        "actNo": 2,
+        "scrollY": 1494,
+        "overflowX": 0,
+        "clipped": [
+          {
+            "sel": "pipe-diagram",
+            "text": "Scale Rust Grease Biofilm",
+            "rect": {
+              "left": 80,
+              "top": 186,
+              "right": 1200,
+              "bottom": 793,
+              "width": 1120,
+              "height": 607
+            }
+          }
+        ],
+        "overlaps": [
+          {
+            "a": "pipe-diagram",
+            "at": "Scale Rust Grease Biofilm",
+            "b": "act-h",
+            "bt": "Buildup does not ask permission.",
+            "area": 36455
+          }
+        ]
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.18,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act3-0p18.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 2786,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.44,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act3-0p44.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 3169,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.66,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act3-0p66.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 3494,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.82,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act3-0p82.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 3730,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 4,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act4-0p3.png",
+      "metrics": {
+        "actNo": 4,
+        "scrollY": 4958,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 4,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act4-0p62.png",
+      "metrics": {
+        "actNo": 4,
+        "scrollY": 5216,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 5,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act5-0p3.png",
+      "metrics": {
+        "actNo": 5,
+        "scrollY": 6519,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 5,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-laptop-act5-0p62.png",
+      "metrics": {
+        "actNo": 5,
+        "scrollY": 6814,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    }
+  ],
+  "storyMobile": [
+    {
+      "actNo": 1,
+      "frac": 0.08,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act1-0p08.png",
+      "metrics": {
+        "actNo": 1,
+        "scrollY": 27,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 1,
+      "frac": 0.55,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act1-0p55.png",
+      "metrics": {
+        "actNo": 1,
+        "scrollY": 186,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 2,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act2-0p3.png",
+      "metrics": {
+        "actNo": 2,
+        "scrollY": 1430,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 2,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act2-0p62.png",
+      "metrics": {
+        "actNo": 2,
+        "scrollY": 1695,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.18,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act3-0p18.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 3202,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.44,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act3-0p44.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 3707,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.66,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act3-0p66.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 4134,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 3,
+      "frac": 0.82,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act3-0p82.png",
+      "metrics": {
+        "actNo": 3,
+        "scrollY": 4445,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 4,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act4-0p3.png",
+      "metrics": {
+        "actNo": 4,
+        "scrollY": 5886,
+        "overflowX": 0,
+        "clipped": [
+          {
+            "sel": "cost-rig",
+            "text": "Legacy chemistry PPE & training$1,000s / yr1 Vacate & ventil",
+            "rect": {
+              "left": 20,
+              "top": 133,
+              "right": 371,
+              "bottom": 848,
+              "width": 351,
+              "height": 715
+            }
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 4,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act4-0p62.png",
+      "metrics": {
+        "actNo": 4,
+        "scrollY": 6151,
+        "overflowX": 0,
+        "clipped": [
+          {
+            "sel": "cost-rig",
+            "text": "Legacy chemistry PPE & training$1,000s / yr1 Vacate & ventil",
+            "rect": {
+              "left": 20,
+              "top": 133,
+              "right": 371,
+              "bottom": 848,
+              "width": 351,
+              "height": 715
+            }
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 5,
+      "frac": 0.3,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act5-0p3.png",
+      "metrics": {
+        "actNo": 5,
+        "scrollY": 7651,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    },
+    {
+      "actNo": 5,
+      "frac": 0.62,
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/story-mobile-act5-0p62.png",
+      "metrics": {
+        "actNo": 5,
+        "scrollY": 8015,
+        "overflowX": 0,
+        "clipped": [],
+        "overlaps": []
+      }
+    }
+  ],
+  "pagesDesktop": [
+    {
+      "page": "index.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-desktop-index-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 52,
+          "rgb(255, 255, 255)": 9,
+          "rgb(244, 246, 248)": 30,
+          "rgb(57, 61, 68)": 2,
+          "rgb(0, 0, 0)": 1,
+          "rgb(207, 255, 248)": 1,
+          "rgba(244, 246, 248, 0.62)": 10,
+          "rgb(10, 91, 98)": 2,
+          "rgb(95, 101, 109)": 27,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 139,
+          "Arial": 2
+        },
+        "bad": [
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Healthcare & Education",
+            "left": 1497,
+            "right": 1693,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Occupied-campus cleaning programs",
+            "left": 1497,
+            "right": 1693,
+            "width": 196
+          },
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Manufacturing",
+            "left": 1765,
+            "right": 1961,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Aluminum extrusion and processing",
+            "left": 1765,
+            "right": 1961,
+            "width": 196
+          },
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Food & Beverage",
+            "left": 2033,
+            "right": 2229,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Breweries, distilleries, and restaurants",
+            "left": 2033,
+            "right": 2229,
+            "width": 196
+          }
+        ],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "The dirt is obvious. The hazard hides in the drum.",
+            "size": "56px",
+            "weight": "900",
+            "lineHeight": "58.24px",
+            "top": 264
+          },
+          {
+            "tag": "H2",
+            "text": "Buildup does not ask permission.",
+            "size": "56px",
+            "weight": "900",
+            "lineHeight": "58.24px",
+            "top": 1655
+          },
+          {
+            "tag": "H2",
+            "text": "HMIS gives the danger a number.",
+            "size": "56px",
+            "weight": "900",
+            "lineHeight": "58.24px",
+            "top": 3757
+          },
+          {
+            "tag": "H2",
+            "text": "The drum is the cheapest part.",
+            "size": "46.4px",
+            "weight": "900",
+            "lineHeight": "48.256px",
+            "top": 6853
+          },
+          {
+            "tag": "H3",
+            "text": "Legacy chemistry",
+            "size": "12.8px",
+            "weight": "900",
+            "lineHeight": "13.568px",
+            "top": 7039
+          },
+          {
+            "tag": "H3",
+            "text": "VertKleen",
+            "size": "12.8px",
+            "weight": "900",
+            "lineHeight": "13.568px",
+            "top": 7027
+          },
+          {
+            "tag": "H2",
+            "text": "Industrial work. 0-0-0 profile.",
+            "size": "59.2px",
+            "weight": "900",
+            "lineHeight": "60.384px",
+            "top": 9089
+          },
+          {
+            "tag": "H2",
+            "text": "The VertKleen replacement story",
+            "size": "24px",
+            "weight": "700",
+            "lineHeight": "25.44px",
+            "top": 11125
+          },
+          {
+            "tag": "H2",
+            "text": "Keep the job. Replace the legacy chemistry.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 11710
+          },
+          {
+            "tag": "H2",
+            "text": "Protect equipment without punishing the crew.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 12704
+          },
+          {
+            "tag": "H3",
+            "text": "Lower-hazard sites",
+            "size": "18.88px",
+            "weight": "700",
+            "lineHeight": "20.0128px",
+            "top": 12959
+          },
+          {
+            "tag": "H3",
+            "text": "Less compliance drag",
+            "size": "18.88px",
+            "weight": "700",
+            "lineHeight": "20.0128px",
+            "top": 12959
+          },
+          {
+            "tag": "H3",
+            "text": "Lower liability & cost",
+            "size": "18.88px",
+            "weight": "700",
+            "lineHeight": "20.0128px",
+            "top": 12959
+          },
+          {
+            "tag": "H2",
+            "text": "Start with the chemical you want gone.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 13320
+          },
+          {
+            "tag": "H3",
+            "text": "Retire hydrochloric acid.",
+            "size": "27.2px",
+            "weight": "700",
+            "lineHeight": "28.832px",
+            "top": 13650
+          },
+          {
+            "tag": "H3",
+            "text": "Retire the caustic.",
+            "size": "27.2px",
+            "weight": "700",
+            "lineHeight": "28.832px",
+            "top": 13650
+          },
+          {
+            "tag": "H2",
+            "text": "The VertKleen line, by the job it replaces.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 13965
+          },
+          {
+            "tag": "H3",
+            "text": "VertKleen HCR",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 15166
+          }
+        ]
+      }
+    },
+    {
+      "page": "products.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-desktop-products-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 75,
+          "rgb(255, 255, 255)": 7,
+          "rgb(57, 61, 68)": 10,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 10,
+          "rgb(10, 91, 98)": 2,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 124,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Find the chemical you can retire.",
+            "size": "80px",
+            "weight": "900",
+            "lineHeight": "81.6px",
+            "top": 175
+          },
+          {
+            "tag": "H2",
+            "text": "Your current chemical has an exit plan.",
+            "size": "48px",
+            "weight": "700",
+            "lineHeight": "50.88px",
+            "top": 784
+          },
+          {
+            "tag": "H2",
+            "text": "Shop the line by the job it replaces.",
+            "size": "48px",
+            "weight": "700",
+            "lineHeight": "50.88px",
+            "top": 1742
+          },
+          {
+            "tag": "H2",
+            "text": "Field proof before the first PO.",
+            "size": "29.6px",
+            "weight": "700",
+            "lineHeight": "31.376px",
+            "top": 5011
+          },
+          {
+            "tag": "H2",
+            "text": "Not sure where to start?",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 5469
+          }
+        ]
+      }
+    },
+    {
+      "page": "services.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-desktop-services-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 101,
+          "rgb(255, 255, 255)": 6,
+          "rgb(57, 61, 68)": 12,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 57,
+          "rgb(10, 91, 98)": 2,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 197,
+          "Arial": 2
+        },
+        "bad": [
+          {
+            "tag": "A",
+            "cls": "skip-link",
+            "text": "Skip to content",
+            "left": -9999,
+            "right": -9858,
+            "width": 141
+          }
+        ],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Technical services that make the chemical switch eas",
+            "size": "69.12px",
+            "weight": "900",
+            "lineHeight": "70.5024px",
+            "top": 189
+          },
+          {
+            "tag": "H2",
+            "text": "Name the work, and the quote moves faster.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 3085
+          },
+          {
+            "tag": "H3",
+            "text": "Water analysis and Consulting carry the broadest quo",
+            "size": "24.8px",
+            "weight": "700",
+            "lineHeight": "29.264px",
+            "top": 3113
+          },
+          {
+            "tag": "H2",
+            "text": "Planning price first. Final price after scope.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 3728
+          },
+          {
+            "tag": "H2",
+            "text": "Browse the full service catalog.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 1057
+          },
+          {
+            "tag": "H3",
+            "text": "Water analysis",
+            "size": "28.8px",
+            "weight": "700",
+            "lineHeight": "30.528px",
+            "top": 1464
+          },
+          {
+            "tag": "H3",
+            "text": "Boiler Feed Water - Standard",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 1616
+          },
+          {
+            "tag": "H3",
+            "text": "Chill Water - Standard + Biological Counts",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 1616
+          },
+          {
+            "tag": "H3",
+            "text": "Closed Loop Water - Standard + Biological Counts",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 1810
+          },
+          {
+            "tag": "H3",
+            "text": "Polisher Water - Standard",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 1810
+          },
+          {
+            "tag": "H3",
+            "text": "Pretreatment Water (Soft/Degas)",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2005
+          },
+          {
+            "tag": "H3",
+            "text": "Raw Water - Standard Analysis",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2005
+          },
+          {
+            "tag": "H3",
+            "text": "Steam Boiler Water - Standard",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2200
+          },
+          {
+            "tag": "H3",
+            "text": "Steam Condensate - Standard",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2200
+          },
+          {
+            "tag": "H3",
+            "text": "Tower Water - Standard + Biological Counts",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2394
+          },
+          {
+            "tag": "H3",
+            "text": "Biological testing",
+            "size": "28.8px",
+            "weight": "700",
+            "lineHeight": "30.528px",
+            "top": 0
+          },
+          {
+            "tag": "H3",
+            "text": "Biological Counts (HPC/dip - slide)",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 0
+          },
+          {
+            "tag": "H3",
+            "text": "Biological Identifications",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 0
+          }
+        ]
+      }
+    },
+    {
+      "page": "industries.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-desktop-industries-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 55,
+          "rgb(255, 255, 255)": 4,
+          "rgb(57, 61, 68)": 5,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 14,
+          "rgb(10, 91, 98)": 3,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 101,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "One replacement story, tuned by industry.",
+            "size": "80px",
+            "weight": "900",
+            "lineHeight": "81.6px",
+            "top": 175
+          },
+          {
+            "tag": "H2",
+            "text": "Take the shortest route to approval.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 624
+          },
+          {
+            "tag": "H3",
+            "text": "Oil & Gas",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 1093
+          },
+          {
+            "tag": "H3",
+            "text": "Marine",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 1277
+          },
+          {
+            "tag": "H3",
+            "text": "Manufacturing",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 1461
+          },
+          {
+            "tag": "H3",
+            "text": "Distribution / Cold Storage",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 1645
+          },
+          {
+            "tag": "H3",
+            "text": "Food & Beverage",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 1829
+          },
+          {
+            "tag": "H3",
+            "text": "Healthcare",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 2013
+          },
+          {
+            "tag": "H3",
+            "text": "Construction",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 2197
+          },
+          {
+            "tag": "H3",
+            "text": "Military / Government",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 2381
+          },
+          {
+            "tag": "H3",
+            "text": "Education",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 2565
+          },
+          {
+            "tag": "H3",
+            "text": "HVAC / Water Treatment",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 2749
+          },
+          {
+            "tag": "H3",
+            "text": "Plumbing",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 2917
+          },
+          {
+            "tag": "H2",
+            "text": "Field photos by sector.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 3175
+          },
+          {
+            "tag": "H2",
+            "text": "Partner, distribute, or white-label VertKleen.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 3884
+          }
+        ]
+      }
+    },
+    {
+      "page": "proof.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-desktop-proof-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 33,
+          "rgb(255, 255, 255)": 11,
+          "rgb(57, 61, 68)": 11,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 21,
+          "rgb(10, 91, 98)": 5,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 101,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "No showroom demos. Working equipment.",
+            "size": "80px",
+            "weight": "900",
+            "lineHeight": "81.6px",
+            "top": 175
+          },
+          {
+            "tag": "H2",
+            "text": "Trusted where the work could not pause.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 899
+          },
+          {
+            "tag": "H2",
+            "text": "Before and after, same surface, same job.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 1481
+          },
+          {
+            "tag": "H2",
+            "text": "Measured against the acid it replaces.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 2261
+          },
+          {
+            "tag": "H2",
+            "text": "Case files worth forwarding.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 3216
+          },
+          {
+            "tag": "H3",
+            "text": "Evidence spans 14 field case files across 6 sectors.",
+            "size": "24.8px",
+            "weight": "700",
+            "lineHeight": "29.264px",
+            "top": 3468
+          },
+          {
+            "tag": "H3",
+            "text": "20-year rust and scale, cleared in 30 minutes",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 4086
+          },
+          {
+            "tag": "H3",
+            "text": "Full CR + HCR CIP at seven Florida breweries",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 4086
+          },
+          {
+            "tag": "H3",
+            "text": "Simple Green replaced across Walmart DCs",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 4086
+          },
+          {
+            "tag": "H3",
+            "text": "Refrigeration descaling in one maintenance window",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 4644
+          },
+          {
+            "tag": "H3",
+            "text": "Bunker-fuel tank cleaning test",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 4644
+          },
+          {
+            "tag": "H3",
+            "text": "43-foot Yellowfin washed and waxed dockside",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 4644
+          },
+          {
+            "tag": "H3",
+            "text": "Occupied campus cleaned by drone at UF Shands",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 5202
+          },
+          {
+            "tag": "H3",
+            "text": "Restaurant hood filters and floors degreased",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 5202
+          },
+          {
+            "tag": "H3",
+            "text": "Fire-pump solenoid and cavity descaled",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 5202
+          },
+          {
+            "tag": "H3",
+            "text": "AC coil cleaned, lower monthly bill",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 5768
+          },
+          {
+            "tag": "H3",
+            "text": "Commercial tourist airboat aluminum restored",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 5768
+          },
+          {
+            "tag": "H3",
+            "text": "Farm HVAC rust removed, one application",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 5768
+          }
+        ]
+      }
+    },
+    {
+      "page": "resources.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-desktop-resources-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 50,
+          "rgb(255, 255, 255)": 4,
+          "rgb(57, 61, 68)": 5,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 15,
+          "rgb(10, 91, 98)": 4,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 98,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Procurement-ready resources in one place.",
+            "size": "80px",
+            "weight": "900",
+            "lineHeight": "81.6px",
+            "top": 175
+          },
+          {
+            "tag": "H2",
+            "text": "Get the document, price the job, or map the replacem",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 551
+          },
+          {
+            "tag": "H2",
+            "text": "Dilution numbers buyers ask for first.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 1196
+          },
+          {
+            "tag": "H2",
+            "text": "One program can clean the whole dealership.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 1987
+          },
+          {
+            "tag": "H2",
+            "text": "The CR then HCR brewery sequence.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 3214
+          },
+          {
+            "tag": "H3",
+            "text": "Hot-water pre-rinse",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 3386
+          },
+          {
+            "tag": "H3",
+            "text": "CR alkaline wash",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 3510
+          },
+          {
+            "tag": "H3",
+            "text": "HCR acid wash",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 3680
+          },
+          {
+            "tag": "H3",
+            "text": "Final rinse and verify",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 3827
+          },
+          {
+            "tag": "H2",
+            "text": "Descaling protocol that protects the charge.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 4085
+          },
+          {
+            "tag": "H2",
+            "text": "The cold-storage walkdown checklist.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 4965
+          },
+          {
+            "tag": "H2",
+            "text": "Source tables, rebuilt for humans.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 5751
+          },
+          {
+            "tag": "H3",
+            "text": "Cooling tower legacy chemistry vs. VertKleen",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 5909
+          },
+          {
+            "tag": "H3",
+            "text": "Descaler vs. conventional acids",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 6532
+          },
+          {
+            "tag": "H3",
+            "text": "Dealership area product and dilution",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 7022
+          },
+          {
+            "tag": "H3",
+            "text": "Glycol price list",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 7908
+          },
+          {
+            "tag": "H3",
+            "text": "HVAC facility pricing table",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 8710
+          },
+          {
+            "tag": "H3",
+            "text": "Property maintenance pricing table",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 9064
+          }
+        ]
+      }
+    },
+    {
+      "page": "contact.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-desktop-contact-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 23,
+          "rgb(255, 255, 255)": 4,
+          "rgb(57, 61, 68)": 5,
+          "rgb(0, 0, 0)": 2,
+          "rgb(95, 101, 109)": 10,
+          "rgb(10, 91, 98)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 63,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Tell us what is on the shelf today.",
+            "size": "80px",
+            "weight": "900",
+            "lineHeight": "81.6px",
+            "top": 175
+          },
+          {
+            "tag": "H2",
+            "text": "Request received.",
+            "size": "27.2px",
+            "weight": "700",
+            "lineHeight": "28.832px",
+            "top": 0
+          },
+          {
+            "tag": "H2",
+            "text": "Sales",
+            "size": "17.6px",
+            "weight": "700",
+            "lineHeight": "18.656px",
+            "top": 833
+          },
+          {
+            "tag": "H2",
+            "text": "Technical",
+            "size": "17.6px",
+            "weight": "700",
+            "lineHeight": "18.656px",
+            "top": 1043
+          },
+          {
+            "tag": "H2",
+            "text": "Government Buyers",
+            "size": "17.6px",
+            "weight": "700",
+            "lineHeight": "18.656px",
+            "top": 1252
+          },
+          {
+            "tag": "H2",
+            "text": "What MASEST does with this.",
+            "size": "43.2px",
+            "weight": "700",
+            "lineHeight": "45.792px",
+            "top": 1564
+          }
+        ]
+      }
+    },
+    {
+      "page": "products/pg100.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-desktop-products-pg100-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 15,
+          "rgb(255, 255, 255)": 3,
+          "rgb(57, 61, 68)": 4,
+          "rgb(0, 0, 0)": 1,
+          "rgb(10, 91, 98)": 3,
+          "rgb(95, 101, 109)": 2,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 46,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "PG inhibited 100% concentrate",
+            "size": "56.8px",
+            "weight": "900",
+            "lineHeight": "57.936px",
+            "top": 147
+          },
+          {
+            "tag": "H2",
+            "text": "Propylene glycol concentrate",
+            "size": "32.8px",
+            "weight": "700",
+            "lineHeight": "37.392px",
+            "top": 533
+          },
+          {
+            "tag": "H2",
+            "text": "Why it survives review.",
+            "size": "32.8px",
+            "weight": "700",
+            "lineHeight": "37.392px",
+            "top": 533
+          },
+          {
+            "tag": "H3",
+            "text": "Controlled documents",
+            "size": "17.28px",
+            "weight": "700",
+            "lineHeight": "21.6px",
+            "top": 873
+          }
+        ]
+      }
+    }
+  ],
+  "pagesMobile": [
+    {
+      "page": "index.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-mobile-index-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 52,
+          "rgb(255, 255, 255)": 13,
+          "rgb(57, 61, 68)": 2,
+          "rgb(0, 0, 0)": 1,
+          "rgb(244, 246, 248)": 26,
+          "rgb(207, 255, 248)": 1,
+          "rgba(244, 246, 248, 0.62)": 10,
+          "rgb(10, 91, 98)": 2,
+          "rgb(95, 101, 109)": 27,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 139,
+          "Arial": 2
+        },
+        "bad": [
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Marine",
+            "left": 295,
+            "right": 491,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Cruise ship and vessel operations",
+            "left": 295,
+            "right": 491,
+            "width": 196
+          },
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Construction",
+            "left": 563,
+            "right": 759,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Equipment, concrete, and site maintenance",
+            "left": 563,
+            "right": 759,
+            "width": 196
+          },
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Military & Government",
+            "left": 831,
+            "right": 1027,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "SAM.gov registered, procurement-ready",
+            "left": 831,
+            "right": 1027,
+            "width": 196
+          },
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "HVAC & Water Treatment",
+            "left": 1099,
+            "right": 1295,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Cooling towers and Legionella programs",
+            "left": 1099,
+            "right": 1295,
+            "width": 196
+          },
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Healthcare & Education",
+            "left": 1367,
+            "right": 1563,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Occupied-campus cleaning programs",
+            "left": 1367,
+            "right": 1563,
+            "width": 196
+          },
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Manufacturing",
+            "left": 1635,
+            "right": 1831,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Aluminum extrusion and processing",
+            "left": 1635,
+            "right": 1831,
+            "width": 196
+          },
+          {
+            "tag": "H3",
+            "cls": "",
+            "text": "Food & Beverage",
+            "left": 1903,
+            "right": 2099,
+            "width": 196
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "text": "Breweries, distilleries, and restaurants",
+            "left": 1903,
+            "right": 2099,
+            "width": 196
+          }
+        ],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "The dirt is obvious. The hazard hides in the drum.",
+            "size": "32px",
+            "weight": "900",
+            "lineHeight": "33.28px",
+            "top": 168
+          },
+          {
+            "tag": "H2",
+            "text": "Buildup does not ask permission.",
+            "size": "32px",
+            "weight": "900",
+            "lineHeight": "33.28px",
+            "top": 1442
+          },
+          {
+            "tag": "H2",
+            "text": "HMIS gives the danger a number.",
+            "size": "32px",
+            "weight": "900",
+            "lineHeight": "33.28px",
+            "top": 3095
+          },
+          {
+            "tag": "H2",
+            "text": "The drum is the cheapest part.",
+            "size": "27.3px",
+            "weight": "900",
+            "lineHeight": "27.846px",
+            "top": 5788
+          },
+          {
+            "tag": "H3",
+            "text": "Legacy chemistry",
+            "size": "12.8px",
+            "weight": "900",
+            "lineHeight": "13.568px",
+            "top": 5874
+          },
+          {
+            "tag": "H3",
+            "text": "VertKleen",
+            "size": "12.8px",
+            "weight": "900",
+            "lineHeight": "13.568px",
+            "top": 6220
+          },
+          {
+            "tag": "H2",
+            "text": "Industrial work. 0-0-0 profile.",
+            "size": "32.76px",
+            "weight": "900",
+            "lineHeight": "32.76px",
+            "top": 7511
+          },
+          {
+            "tag": "H2",
+            "text": "The VertKleen replacement story",
+            "size": "24px",
+            "weight": "700",
+            "lineHeight": "25.44px",
+            "top": 9411
+          },
+          {
+            "tag": "H2",
+            "text": "Keep the job. Replace the legacy chemistry.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 10239
+          },
+          {
+            "tag": "H2",
+            "text": "Protect equipment without punishing the crew.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 12687
+          },
+          {
+            "tag": "H3",
+            "text": "Lower-hazard sites",
+            "size": "18.88px",
+            "weight": "700",
+            "lineHeight": "20.0128px",
+            "top": 12927
+          },
+          {
+            "tag": "H3",
+            "text": "Less compliance drag",
+            "size": "18.88px",
+            "weight": "700",
+            "lineHeight": "20.0128px",
+            "top": 13244
+          },
+          {
+            "tag": "H3",
+            "text": "Lower liability & cost",
+            "size": "18.88px",
+            "weight": "700",
+            "lineHeight": "20.0128px",
+            "top": 13560
+          },
+          {
+            "tag": "H2",
+            "text": "Start with the chemical you want gone.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 13865
+          },
+          {
+            "tag": "H3",
+            "text": "Retire hydrochloric acid.",
+            "size": "27.2px",
+            "weight": "700",
+            "lineHeight": "28.832px",
+            "top": 14152
+          },
+          {
+            "tag": "H3",
+            "text": "Retire the caustic.",
+            "size": "27.2px",
+            "weight": "700",
+            "lineHeight": "28.832px",
+            "top": 14512
+          },
+          {
+            "tag": "H2",
+            "text": "The VertKleen line, by the job it replaces.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 14788
+          },
+          {
+            "tag": "H3",
+            "text": "VertKleen HCR",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 15633
+          }
+        ]
+      }
+    },
+    {
+      "page": "products.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-mobile-products-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 74,
+          "rgb(255, 255, 255)": 8,
+          "rgb(57, 61, 68)": 10,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 10,
+          "rgb(10, 91, 98)": 2,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 124,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Find the chemical you can retire.",
+            "size": "42.9px",
+            "weight": "900",
+            "lineHeight": "44.187px",
+            "top": 97
+          },
+          {
+            "tag": "H2",
+            "text": "Your current chemical has an exit plan.",
+            "size": "31.2px",
+            "weight": "700",
+            "lineHeight": "33.696px",
+            "top": 654
+          },
+          {
+            "tag": "H2",
+            "text": "Shop the line by the job it replaces.",
+            "size": "32px",
+            "weight": "700",
+            "lineHeight": "33.92px",
+            "top": 1484
+          },
+          {
+            "tag": "H2",
+            "text": "Field proof before the first PO.",
+            "size": "21.6px",
+            "weight": "700",
+            "lineHeight": "22.896px",
+            "top": 11989
+          },
+          {
+            "tag": "H2",
+            "text": "Not sure where to start?",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 12748
+          }
+        ]
+      }
+    },
+    {
+      "page": "services.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-mobile-services-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 100,
+          "rgb(255, 255, 255)": 7,
+          "rgb(57, 61, 68)": 12,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 57,
+          "rgb(10, 91, 98)": 2,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 197,
+          "Arial": 2
+        },
+        "bad": [
+          {
+            "tag": "A",
+            "cls": "skip-link",
+            "text": "Skip to content",
+            "left": -9999,
+            "right": -9858,
+            "width": 141
+          }
+        ],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Technical services that make the chemical switch eas",
+            "size": "39px",
+            "weight": "900",
+            "lineHeight": "40.17px",
+            "top": 97
+          },
+          {
+            "tag": "H2",
+            "text": "Name the work, and the quote moves faster.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 4174
+          },
+          {
+            "tag": "H3",
+            "text": "Water analysis and Consulting carry the broadest quo",
+            "size": "18.88px",
+            "weight": "700",
+            "lineHeight": "22.2784px",
+            "top": 4721
+          },
+          {
+            "tag": "H2",
+            "text": "Planning price first. Final price after scope.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 5589
+          },
+          {
+            "tag": "H2",
+            "text": "Browse the full service catalog.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 717
+          },
+          {
+            "tag": "H3",
+            "text": "Water analysis",
+            "size": "21.6px",
+            "weight": "700",
+            "lineHeight": "22.896px",
+            "top": 1397
+          },
+          {
+            "tag": "H3",
+            "text": "Boiler Feed Water - Standard",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 1672
+          },
+          {
+            "tag": "H3",
+            "text": "Chill Water - Standard + Biological Counts",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 1926
+          },
+          {
+            "tag": "H3",
+            "text": "Closed Loop Water - Standard + Biological Counts",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2199
+          },
+          {
+            "tag": "H3",
+            "text": "Polisher Water - Standard",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2473
+          },
+          {
+            "tag": "H3",
+            "text": "Pretreatment Water (Soft/Degas)",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2727
+          },
+          {
+            "tag": "H3",
+            "text": "Raw Water - Standard Analysis",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 2981
+          },
+          {
+            "tag": "H3",
+            "text": "Steam Boiler Water - Standard",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 3234
+          },
+          {
+            "tag": "H3",
+            "text": "Steam Condensate - Standard",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 3488
+          },
+          {
+            "tag": "H3",
+            "text": "Tower Water - Standard + Biological Counts",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 3742
+          },
+          {
+            "tag": "H3",
+            "text": "Biological testing",
+            "size": "21.6px",
+            "weight": "700",
+            "lineHeight": "22.896px",
+            "top": 0
+          },
+          {
+            "tag": "H3",
+            "text": "Biological Counts (HPC/dip - slide)",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 0
+          },
+          {
+            "tag": "H3",
+            "text": "Biological Identifications",
+            "size": "16px",
+            "weight": "700",
+            "lineHeight": "20px",
+            "top": 0
+          }
+        ]
+      }
+    },
+    {
+      "page": "industries.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-mobile-industries-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 54,
+          "rgb(255, 255, 255)": 5,
+          "rgb(57, 61, 68)": 5,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 14,
+          "rgb(10, 91, 98)": 3,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 101,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "One replacement story, tuned by industry.",
+            "size": "48px",
+            "weight": "900",
+            "lineHeight": "48.96px",
+            "top": 147
+          },
+          {
+            "tag": "H2",
+            "text": "Take the shortest route to approval.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 635
+          },
+          {
+            "tag": "H3",
+            "text": "Oil & Gas",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 1578
+          },
+          {
+            "tag": "H3",
+            "text": "Marine",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 2072
+          },
+          {
+            "tag": "H3",
+            "text": "Manufacturing",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 2566
+          },
+          {
+            "tag": "H3",
+            "text": "Distribution / Cold Storage",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 3083
+          },
+          {
+            "tag": "H3",
+            "text": "Food & Beverage",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 3601
+          },
+          {
+            "tag": "H3",
+            "text": "Healthcare",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 4071
+          },
+          {
+            "tag": "H3",
+            "text": "Construction",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 4589
+          },
+          {
+            "tag": "H3",
+            "text": "Military / Government",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 5083
+          },
+          {
+            "tag": "H3",
+            "text": "Education",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 5577
+          },
+          {
+            "tag": "H3",
+            "text": "HVAC / Water Treatment",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 6071
+          },
+          {
+            "tag": "H3",
+            "text": "Plumbing",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 6394
+          },
+          {
+            "tag": "H2",
+            "text": "Field photos by sector.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 6724
+          },
+          {
+            "tag": "H2",
+            "text": "Partner, distribute, or white-label VertKleen.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 7523
+          }
+        ]
+      }
+    },
+    {
+      "page": "proof.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-mobile-proof-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 32,
+          "rgb(255, 255, 255)": 12,
+          "rgb(57, 61, 68)": 11,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 21,
+          "rgb(10, 91, 98)": 5,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 101,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "No showroom demos. Working equipment.",
+            "size": "48px",
+            "weight": "900",
+            "lineHeight": "48.96px",
+            "top": 147
+          },
+          {
+            "tag": "H2",
+            "text": "Trusted where the work could not pause.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 1029
+          },
+          {
+            "tag": "H2",
+            "text": "Before and after, same surface, same job.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 1593
+          },
+          {
+            "tag": "H2",
+            "text": "Measured against the acid it replaces.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 2431
+          },
+          {
+            "tag": "H2",
+            "text": "Case files worth forwarding.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 3989
+          },
+          {
+            "tag": "H3",
+            "text": "Evidence spans 14 field case files across 6 sectors.",
+            "size": "18.88px",
+            "weight": "700",
+            "lineHeight": "22.2784px",
+            "top": 4270
+          },
+          {
+            "tag": "H3",
+            "text": "20-year rust and scale, cleared in 30 minutes",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 5301
+          },
+          {
+            "tag": "H3",
+            "text": "Full CR + HCR CIP at seven Florida breweries",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 5814
+          },
+          {
+            "tag": "H3",
+            "text": "Simple Green replaced across Walmart DCs",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 6350
+          },
+          {
+            "tag": "H3",
+            "text": "Refrigeration descaling in one maintenance window",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 6910
+          },
+          {
+            "tag": "H3",
+            "text": "Bunker-fuel tank cleaning test",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 7470
+          },
+          {
+            "tag": "H3",
+            "text": "43-foot Yellowfin washed and waxed dockside",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 8006
+          },
+          {
+            "tag": "H3",
+            "text": "Occupied campus cleaned by drone at UF Shands",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 8519
+          },
+          {
+            "tag": "H3",
+            "text": "Restaurant hood filters and floors degreased",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 9055
+          },
+          {
+            "tag": "H3",
+            "text": "Fire-pump solenoid and cavity descaled",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 9599
+          },
+          {
+            "tag": "H3",
+            "text": "AC coil cleaned, lower monthly bill",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 10112
+          },
+          {
+            "tag": "H3",
+            "text": "Commercial tourist airboat aluminum restored",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 10625
+          },
+          {
+            "tag": "H3",
+            "text": "Farm HVAC rust removed, one application",
+            "size": "17.92px",
+            "weight": "700",
+            "lineHeight": "23.296px",
+            "top": 11138
+          }
+        ]
+      }
+    },
+    {
+      "page": "resources.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-mobile-resources-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 49,
+          "rgb(255, 255, 255)": 5,
+          "rgb(57, 61, 68)": 5,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 15,
+          "rgb(10, 91, 98)": 4,
+          "rgba(255, 255, 255, 0.72)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 98,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Procurement-ready resources in one place.",
+            "size": "48px",
+            "weight": "900",
+            "lineHeight": "48.96px",
+            "top": 147
+          },
+          {
+            "tag": "H2",
+            "text": "Get the document, price the job, or map the replacem",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 563
+          },
+          {
+            "tag": "H2",
+            "text": "Dilution numbers buyers ask for first.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 1492
+          },
+          {
+            "tag": "H2",
+            "text": "One program can clean the whole dealership.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 3866
+          },
+          {
+            "tag": "H2",
+            "text": "The CR then HCR brewery sequence.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 7422
+          },
+          {
+            "tag": "H3",
+            "text": "Hot-water pre-rinse",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 7731
+          },
+          {
+            "tag": "H3",
+            "text": "CR alkaline wash",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 7969
+          },
+          {
+            "tag": "H3",
+            "text": "HCR acid wash",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 8300
+          },
+          {
+            "tag": "H3",
+            "text": "Final rinse and verify",
+            "size": "19.2px",
+            "weight": "700",
+            "lineHeight": "20.352px",
+            "top": 8631
+          },
+          {
+            "tag": "H2",
+            "text": "Descaling protocol that protects the charge.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 8903
+          },
+          {
+            "tag": "H2",
+            "text": "The cold-storage walkdown checklist.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 10185
+          },
+          {
+            "tag": "H2",
+            "text": "Source tables, rebuilt for humans.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 11758
+          },
+          {
+            "tag": "H3",
+            "text": "Cooling tower legacy chemistry vs. VertKleen",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 12009
+          },
+          {
+            "tag": "H3",
+            "text": "Descaler vs. conventional acids",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 14389
+          },
+          {
+            "tag": "H3",
+            "text": "Dealership area product and dilution",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 16426
+          },
+          {
+            "tag": "H3",
+            "text": "Glycol price list",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 19724
+          },
+          {
+            "tag": "H3",
+            "text": "HVAC facility pricing table",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 22904
+          },
+          {
+            "tag": "H3",
+            "text": "Property maintenance pricing table",
+            "size": "18.72px",
+            "weight": "700",
+            "lineHeight": "19.8432px",
+            "top": 24374
+          }
+        ]
+      }
+    },
+    {
+      "page": "contact.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-mobile-contact-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 23,
+          "rgb(255, 255, 255)": 4,
+          "rgb(57, 61, 68)": 5,
+          "rgb(0, 0, 0)": 2,
+          "rgb(95, 101, 109)": 10,
+          "rgb(10, 91, 98)": 1,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 63,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Tell us what is on the shelf today.",
+            "size": "48px",
+            "weight": "900",
+            "lineHeight": "48.96px",
+            "top": 147
+          },
+          {
+            "tag": "H2",
+            "text": "Request received.",
+            "size": "27.2px",
+            "weight": "700",
+            "lineHeight": "28.832px",
+            "top": 0
+          },
+          {
+            "tag": "H2",
+            "text": "Sales",
+            "size": "17.6px",
+            "weight": "700",
+            "lineHeight": "18.656px",
+            "top": 2089
+          },
+          {
+            "tag": "H2",
+            "text": "Technical",
+            "size": "17.6px",
+            "weight": "700",
+            "lineHeight": "18.656px",
+            "top": 2298
+          },
+          {
+            "tag": "H2",
+            "text": "Government Buyers",
+            "size": "17.6px",
+            "weight": "700",
+            "lineHeight": "18.656px",
+            "top": 2508
+          },
+          {
+            "tag": "H2",
+            "text": "What MASEST does with this.",
+            "size": "30.4px",
+            "weight": "700",
+            "lineHeight": "32.224px",
+            "top": 2701
+          }
+        ]
+      }
+    },
+    {
+      "page": "products/pg100.html",
+      "shot": "/Users/omar/Claude/Projects/MASEST/audit-home-polish-2026-06-24/page-mobile-products-pg100-html.png",
+      "metrics": {
+        "overflowX": 0,
+        "colors": {
+          "rgb(21, 23, 28)": 13,
+          "rgb(255, 255, 255)": 4,
+          "rgb(10, 91, 98)": 4,
+          "rgb(57, 61, 68)": 4,
+          "rgb(0, 0, 0)": 1,
+          "rgb(95, 101, 109)": 2,
+          "rgb(244, 246, 248)": 14,
+          "rgba(255, 255, 255, 0.74)": 2,
+          "rgba(255, 255, 255, 0.7)": 2,
+          "rgba(255, 255, 255, 0.82)": 2
+        },
+        "fonts": {
+          "Satoshi, -apple-system, \"system-ui\", \"Segoe UI\", Helvetica, Arial, sans-serif": 46,
+          "Arial": 2
+        },
+        "bad": [],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "PG inhibited 100% concentrate",
+            "size": "38.4px",
+            "weight": "900",
+            "lineHeight": "39.168px",
+            "top": 165
+          },
+          {
+            "tag": "H2",
+            "text": "Propylene glycol concentrate",
+            "size": "23.2px",
+            "weight": "700",
+            "lineHeight": "26.448px",
+            "top": 725
+          },
+          {
+            "tag": "H2",
+            "text": "Why it survives review.",
+            "size": "23.2px",
+            "weight": "700",
+            "lineHeight": "26.448px",
+            "top": 1153
+          },
+          {
+            "tag": "H3",
+            "text": "Controlled documents",
+            "size": "17.28px",
+            "weight": "700",
+            "lineHeight": "21.6px",
+            "top": 1497
+          }
+        ]
+      }
+    }
+  ]
+}

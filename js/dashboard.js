@@ -278,6 +278,22 @@ function wirePanelLinks(scope) {
   }));
 }
 
+function openReservedTab() {
+  const tab = window.open('about:blank', '_blank');
+  try { if (tab) tab.opener = null; } catch {}
+  return tab;
+}
+
+function sendReservedTab(tab, url) {
+  const target = safeUrl(url);
+  if (tab) tab.location.href = target;
+  else location.href = target;
+}
+
+function closeReservedTab(tab) {
+  try { tab?.close(); } catch {}
+}
+
 /* ---------- orders ---------- */
 // "Load more" pager footer, shown only while more rows remain (#29).
 function pagerHtml(attr, st) {
@@ -386,15 +402,26 @@ async function renderNotifications({ append = false } = {}) {
   st.total = data.total; st.hasMore = !!data.has_more;
   if (!st.items.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No notifications</div><div class="empty-body">Order updates, messages, and offers show up here.</div></div>`; return; }
   const icon = { order: 'ph-package', message: 'ph-chat-circle', offer: 'ph-tag', account: 'ph-user-check', system: 'ph-info' };
-  box.innerHTML = st.items.map((n) => `
-    <div class="notif ${n.read ? '' : 'unread'}" data-id="${esc(n.id)}">
+  box.innerHTML = st.items.map((n) => {
+    const target = resolveNotificationTarget(n);
+    return `
+    <div class="notif ${n.read ? '' : 'unread'}" data-id="${esc(n.id)}" data-notif-link="${esc(target)}" ${target ? 'role="button" tabindex="0"' : ''}>
       <i class="ph ${icon[n.type] || 'ph-info'}" aria-hidden="true"></i>
         <div class="notif-body">
           <div><b>${esc(n.title)}</b> <span class="muted notif-time">· ${fmtDT(n.created_at)}</span></div>
         ${n.body ? `<div class="muted">${esc(n.body)}</div>` : ''}
-          ${n.link ? `<a href="${esc(safeUrl(n.link))}" class="muted notif-link" data-id="${esc(n.id)}">View →</a>` : ''}
-      </div></div>`).join('') + pagerHtml('data-load-more-notifs', st);
+          ${target ? `<span class="muted notif-link">View →</span>` : ''}
+      </div></div>`;
+  }).join('') + pagerHtml('data-load-more-notifs', st);
   box.querySelector('[data-load-more-notifs]')?.addEventListener('click', () => renderNotifications({ append: true }));
+}
+
+function resolveNotificationTarget(n) {
+  if (n.link) return safeUrl(n.link);
+  if (n.type === 'message') return 'dashboard.html#messages';
+  if (n.type === 'order') return 'dashboard.html#orders';
+  if (n.type === 'account') return 'dashboard.html#profile';
+  return '';
 }
 // Clear one unread notification from every on-screen badge without a reload.
 // Guarded on the row's `unread` class so re-clicking a read item never over-decrements.
@@ -415,20 +442,36 @@ function wireNotifications() {
     try { await api('/api/account/notifications', { method: 'POST', body: { all: true } }); } catch {}
     loaded.notifications = false; await renderNotifications();
   });
-  // Opening a notification: mark it read (so the bubble clears) and, when it points
-  // back into this dashboard, switch tabs in-page instead of a full reload to overview.
-  $('notifBody').addEventListener('click', (e) => {
-    const a = e.target.closest('.notif-link'); if (!a) return;
-    const id = a.dataset.id; if (!id) return;
-    markNotifReadUI(a.closest('.notif'));
-    api('/api/account/notifications', { method: 'POST', body: { id } }).catch(() => {});
-    const url = new URL(a.href, location.href);
+  function openDashboardTarget(target) {
+    if (!target) return;
+    const url = new URL(target, location.href);
     const norm = (p) => p.replace(/\.html$/, '');
     if (norm(url.pathname) === norm(location.pathname)) {
-      e.preventDefault();
       const hash = url.hash.slice(1);
       selectTab(DASH_TABS.includes(hash) ? hash : 'overview');
+      return;
     }
+    location.href = url.href;
+  }
+  // Opening a notification: mark it read and route dashboard targets in-page.
+  function openNotification(row) {
+    if (!row) return;
+    const id = row.dataset.id;
+    if (id) {
+      markNotifReadUI(row);
+      api('/api/account/notifications', { method: 'POST', body: { id } }).catch(() => {});
+    }
+    openDashboardTarget(row.dataset.notifLink || '');
+  }
+  $('notifBody').addEventListener('click', (e) => {
+    const row = e.target.closest('.notif'); if (!row) return;
+    openNotification(row);
+  });
+  $('notifBody').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const row = e.target.closest('.notif'); if (!row) return;
+    e.preventDefault();
+    openNotification(row);
   });
   wireNotificationPrefs();
 }
@@ -505,6 +548,7 @@ async function renderPayment() {
     <span class="dash-status" id="payStatus" role="status" aria-live="polite"></span>`;
   const btn = $('portalBtn');
   if (btn) btn.addEventListener('click', async () => {
+    const portalTab = openReservedTab();
     const status = $('payStatus');
     const originalText = btn.textContent;
     btn.disabled = true;
@@ -513,10 +557,13 @@ async function renderPayment() {
     status.dataset.state = 'busy';
     try {
       const { url } = await api('/api/account/billing-portal', { method: 'POST' });
-      status.textContent = 'Payment portal opened in this tab.';
+      status.textContent = 'Payment portal opened in a new tab.';
       status.dataset.state = 'ok';
-      location.href = url;
+      sendReservedTab(portalTab, url);
+      btn.textContent = originalText;
+      btn.disabled = false;
     } catch (err) {
+      closeReservedTab(portalTab);
       status.textContent = err.data?.error === 'stripe_not_configured' ? 'Stripe is not configured for this workspace yet.' : 'Could not open the payment portal. Try again.';
       status.dataset.state = 'err';
       btn.textContent = originalText;

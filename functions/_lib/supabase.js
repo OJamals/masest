@@ -4,7 +4,7 @@
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
 import { filterSuppressed } from './email.js';
-import { isStaffEmail } from './authz.js';
+import { isStaffEmail, normalizeStaffRole } from './authz.js';
 
 // Service-role client — bypasses RLS. SERVER ONLY. Never return its key or use client-side.
 export function adminClient(env) {

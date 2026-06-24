@@ -2,7 +2,7 @@
 // POST /api/account/me — change the caller's login email (Supabase double opt-in re-verification).
 import { createClient } from '@supabase/supabase-js';
 import { adminClient, userFromRequest, json, readBody } from '../../_lib/supabase.js';
-import { isStaffEmail } from '../../_lib/authz.js';
+import { isStaffEmail, normalizeStaffRole } from '../../_lib/authz.js';
 import { buildAccountSetup } from '../../_lib/setup.js';
 import { companyCreditState } from '../../_lib/credit.js';
 
@@ -20,11 +20,18 @@ export async function onRequestGet({ request, env }) {
   const sb = adminClient(env);
   const { data: profile } = await sb
     .from('profiles')
-    .select('id,company_id,role,full_name,phone,is_staff')
+    .select('id,company_id,role,full_name,phone,is_staff,staff_role')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile) return json(404, { error: 'no_profile', email: user.email, is_staff: emailStaff });
+  if (!profile) {
+    return json(404, {
+      error: 'no_profile',
+      email: user.email,
+      can_admin: emailStaff,
+      staff: emailStaff ? { role: 'owner', source: 'env' } : null,
+    });
+  }
 
   const { data: company } = await sb
     .from('companies')
@@ -47,11 +54,16 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
+  const profileStaffRole = profile.staff_role ? normalizeStaffRole(profile.staff_role) : null;
+  const profileStaff = profile.is_staff === true && !!profileStaffRole;
+  const canAdmin = emailStaff || profileStaff;
+
   return json(200, {
     email: user.email,
     profile,
     company,
-    is_staff: emailStaff || !!profile.is_staff,
+    can_admin: canAdmin,
+    staff: canAdmin ? { role: emailStaff ? 'owner' : profileStaffRole, source: emailStaff ? 'env' : 'profile' } : null,
     can_checkout: company?.status === 'approved',
     can_use_net_terms: company?.status === 'approved' && (company?.net_terms_days || 0) > 0,
     credit,

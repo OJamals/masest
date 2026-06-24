@@ -17,6 +17,8 @@ import {
 
 const BASE = "https://masest.co";
 const OG_IMAGE = `${BASE}/img/og-card.png`;
+const PRODUCT_FALLBACK_IMAGE = "img/products/masest-poster-transparent.png";
+const PRODUCT_FALLBACK_IMAGE_URL = `${BASE}/${PRODUCT_FALLBACK_IMAGE}`;
 const START = "<!-- seo:auto -->";
 const END = "<!-- /seo:auto -->";
 
@@ -211,7 +213,7 @@ function productSchema(id, product) {
         category: "Industrial cleaning chemistry",
         description: productDescription(id, product),
         url: `${BASE}/products/${id}`,
-        image: product.image ? `${BASE}/${product.image}` : OG_IMAGE,
+        image: product.image ? `${BASE}/${product.image}` : PRODUCT_FALLBACK_IMAGE_URL,
         additionalProperty: [
           { "@type": "PropertyValue", name: "HMIS rating", value: product.hmis },
           { "@type": "PropertyValue", name: "Replaces", value: product.replaces },
@@ -229,7 +231,7 @@ function productSchema(id, product) {
 function productPage(id, product) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
   const desc = productDescription(id, product);
-  const img = product.image ? `../${product.image}` : "../img/og-card.png";
+  const img = product.image ? `../${product.image}` : `../${PRODUCT_FALLBACK_IMAGE}`;
   const uses = (product.uses || copy.fits || []).map((item) => `<li>${text(item)}</li>`).join("\n");
   const specs = (product.specs || [])
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
@@ -296,15 +298,15 @@ ${jsonLd(productSchema(id, product))}
       </figure>
     </div>
   </section>
-  <section class="section">
+  <section class="section product-static-section">
     <div class="wrap product-static-grid">
-      <article class="product-static-panel reveal">
+      <article class="product-static-panel">
         <span class="eyebrow">Replacement target</span>
         <h2>${text(product.replaces || "Industrial chemistry replacement")}</h2>
         <p>${text(procurement)}</p>
         <ul class="product-fit-list">${uses}</ul>
       </article>
-      <article class="product-static-panel reveal">
+      <article class="product-static-panel">
         <span class="eyebrow">Buyer file</span>
         <h2>Why it survives review.</h2>
         <ul class="spec-list">${specs}</ul>

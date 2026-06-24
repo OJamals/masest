@@ -137,6 +137,13 @@
     transform: translateY(0);
   }
 
+  .lead-action-bar.is-suppressed {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(14px);
+  }
+
   .lead-action-bar a {
     min-height: 46px;
     display: inline-flex;

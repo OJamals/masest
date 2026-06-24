@@ -34,6 +34,7 @@ test("business hub shows the same account setup checklist", () => {
   assert.match(html, /id="bizSetup"/, "business hub needs a setup checklist mount");
   assert.match(js, /function renderSetupChecklist\(/, "business hub should render setup checklist");
   assert.match(js, /data\.setup/, "business setup should use account/me setup data");
+  assert.match(js, /Account dashboard/, "business profile should expose an obvious route back to the account dashboard");
 });
 
 test("account company setup endpoint lets buyers update tax setup fields", () => {
@@ -90,7 +91,7 @@ test("business hub exposes Stripe payment setup portal", () => {
 
   assert.match(js, /function renderPaymentSetup\(/, "business hub should render payment setup action");
   assert.match(js, /\/api\/account\/billing-portal/, "business hub should open billing portal endpoint");
-  assert.match(js, /window\.location\.assign/, "business hub should redirect to Stripe portal URL");
+  assert.match(js, /sendReservedTab\(portalTab, out\.url\)/, "business hub should open the Stripe portal without replacing the hub tab");
   assert.match(js, /stripe_not_configured/, "business hub should show Stripe setup errors clearly");
 });
 test("setup helper uses Stripe-specific payment setup copy", () => {

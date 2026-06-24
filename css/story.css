@@ -267,7 +267,7 @@
   z-index: 2;
   left: 50%;
   top: 68%;
-  width: min(1120px, 92vw);
+  width: min(1000px, 88vw);
   height: auto;
   transform: translate(-50%, -50%);
   overflow: visible;
@@ -452,7 +452,7 @@
 .dm-special { fill: #f4f6f8; }
 .dm-border { fill: none; stroke: #0b0d12; stroke-width: 4; stroke-linejoin: round; }
 .dm-num {
-  font-family: var(--s-font, 'Inter', system-ui, sans-serif);
+  font-family: var(--body-font);
   font-weight: 800; font-size: 44px; fill: #0b0d12; text-anchor: middle;
 }
 
@@ -754,6 +754,10 @@
   .story .act[data-act="3"] { height: 330vh; }
  .story .act-savior { height: 235vh; }
   .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
+  .pipe-diagram {
+    top: 63%;
+    width: min(660px, 132vw);
+  }
   .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
   .chip.c-scale  { left: 6%; top: 53%; }
   .chip.c-rust   { left: 28%; top: 60%; }
@@ -827,6 +831,13 @@
   .hmis-chemical p { font-size: .84rem; line-height: 1.34; }
   .hmis-score { grid-column: 1 / -1; justify-self: start; }
   .hmis-score em { width: 31px; height: 35px; font-size: .95rem; }
+}
+
+@media (min-width: 761px) and (max-height: 820px) {
+  .pipe-diagram {
+    top: 69%;
+    width: min(820px, 82vw);
+  }
 }
 
 /* Image polish layer: keeps the real field evidence, but frames it with more
@@ -1570,6 +1581,139 @@ justify-content: flex-start;
   .story .act-cost .cost-rig { grid-template-columns: minmax(0, 1fr); }
 }
 
+@media (max-width: 760px) {
+  .story .act-cost .act-h {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+    line-height: 1.02;
+  }
+
+  .story .act-cost .act-copy .kicker {
+    margin-bottom: 5px;
+    font-size: .66rem;
+  }
+
+  .story .act-cost .cost-rig {
+    gap: 10px;
+  }
+
+  .story .act-cost .cost-legacy,
+  .story .act-cost .cost-vert {
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .story .act-cost .cost-line {
+    gap: 9px;
+    font-size: .92rem;
+  }
+
+  .story .act-cost .cost-proof,
+  .story .act-cost .cost-payoff {
+    font-size: .92rem;
+    line-height: 1.42;
+  }
+
+  .story .act-cost .cost-sources {
+    display: none;
+  }
+
+  .story.story-ready .act-cost .cost-col-h,
+  .story.story-ready .act-cost .cost-line {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+
+  .story .act-cost .stage {
+    justify-content: flex-start;
+    padding-top: calc(66px + env(safe-area-inset-top, 0px));
+    padding-bottom: 20px;
+    gap: 8px;
+  }
+
+  .story .act-cost .act-copy.top {
+    width: min(350px, 100%);
+  }
+
+  .story .act-cost .cost-rig {
+    width: min(350px, 100%);
+    gap: 8px;
+  }
+
+  .story .act-cost .cost-col-h {
+    margin-bottom: 8px;
+    font-size: .7rem;
+    letter-spacing: .13em;
+  }
+
+  .story .act-cost .cost-lines {
+    gap: 5px;
+  }
+
+  .story .act-cost .cost-line {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 7px 9px;
+    padding: 6px 9px;
+    font-size: .78rem;
+    line-height: 1.2;
+  }
+
+  .story .act-cost .cost-line i {
+    font-size: 1rem;
+  }
+
+  .story .act-cost .cost-line .cost-fig {
+    grid-column: 2;
+    white-space: normal;
+    font-size: .73rem;
+    opacity: .78;
+  }
+
+  .story .act-cost .cost-incident {
+    margin-top: 6px;
+  }
+
+  .story .act-cost .cost-incident-label,
+  .story .act-cost .cost-incident small {
+    display: none;
+  }
+
+  .story .act-cost .cost-total {
+    font-size: clamp(1.45rem, 8vw, 2rem);
+  }
+
+  .story .act-cost .cost-zero {
+    margin-bottom: 7px;
+  }
+
+  .story .act-cost .cost-zero b {
+    font-size: clamp(1.55rem, 8vw, 2.1rem);
+  }
+
+  .story .act-cost .cost-drops {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px 8px;
+    margin-bottom: 8px;
+  }
+
+  .story .act-cost .cost-drops li {
+    align-items: flex-start;
+    gap: 6px;
+    font-size: .78rem;
+    line-height: 1.24;
+  }
+
+  .story .act-cost .cost-proof,
+  .story .act-cost .cost-payoff {
+    font-size: .78rem;
+    line-height: 1.32;
+  }
+
+  .story .act-cost .cost-payoff {
+    display: none;
+  }
+}
+
 /* Short viewports / stacked: the centered stack (copy + rig + sources) must
    stay within the pinned stage, or overflow:hidden clips the rig — same class
    of bug as the scene-3 fix. Compress vertical rhythm and drop the supporting
@@ -1587,6 +1731,32 @@ justify-content: flex-start;
   .story .act-cost .cost-legacy,
   .story .act-cost .cost-vert { padding: clamp(13px, 1.6vw, 18px); }
   .story .act-cost .cost-drops { margin-bottom: 10px; gap: 6px; }
+}
+
+@media (max-width: 760px) {
+  .story .act-cost .stage {
+    justify-content: flex-start;
+    padding: calc(66px + env(safe-area-inset-top, 0px)) 20px 20px;
+    gap: 8px;
+  }
+
+  .story .act-cost .cost-line {
+    padding: 6px 9px;
+  }
+
+  .story .act-cost .cost-lines {
+    gap: 5px;
+  }
+
+  .story .act-cost .cost-legacy,
+  .story .act-cost .cost-vert {
+    padding: 10px 12px;
+  }
+
+  .story .act-cost .cost-drops {
+    margin-bottom: 8px;
+    gap: 5px 8px;
+  }
 }
 
 /* Reduced-motion/no-JS fallback must read as stacked scenes, not overlaid

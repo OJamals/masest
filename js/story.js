@@ -40,7 +40,7 @@
      A 1.2-unit hold keeps the finished composition on stage
      until the act unpins and slides away naturally.
      ============================================================ */
-var BEAT_IN = 0.58, BEAT_OUT = 0.22, HOLD = 1.25;
+var BEAT_IN = 0.64, BEAT_OUT = 0.26, HOLD = 1.35;
   var acts = gsap.utils.toArray(story.querySelectorAll(".act"));
   var firstAct = acts[0];
 
@@ -88,7 +88,7 @@ states.forEach(function (st) {
            (The opener is already at the page top on load; same start applies.) */
         start: storyStart,
         end: "bottom bottom",
-        scrub: 0.30,
+        scrub: 0.42,
         invalidateOnRefresh: true,        /* re-record tween endpoints at the new size */
         onToggle: function (self) {
           st.active = self.isActive;
@@ -273,7 +273,8 @@ states.forEach(function (st) {
     if (!costNum) return;
     /* ramp the count-up across the incident reveal (beat 4.4 -> 5.0) */
     var a = beatFrac(st, 4.4), b = beatFrac(st, 5.0);
-    var ramp = smooth(clamp(0, 1, (st.p - a) / (b - a)));
+    var compactCost = window.innerWidth <= 760;
+    var ramp = compactCost ? 1 : smooth(clamp(0, 1, (st.p - a) / (b - a)));
     setTxt(costNum, fmtCost(COST_TARGET * ramp));
     if (costVert) {
       /* Foreshadow the counterpoint before the incident total peaks so the

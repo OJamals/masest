@@ -13,6 +13,22 @@ const TIERS = [
   { key: 'Platinum', tag: 'Enterprise', desc: 'Custom program, dedicated manager, on-site reviews, and consolidated billing.' },
 ];
 
+function openReservedTab() {
+  const tab = window.open('about:blank', '_blank');
+  try { if (tab) tab.opener = null; } catch {}
+  return tab;
+}
+
+function sendReservedTab(tab, url) {
+  const target = safeUrl(url);
+  if (tab) tab.location.href = target;
+  else location.href = target;
+}
+
+function closeReservedTab(tab) {
+  try { tab?.close(); } catch {}
+}
+
 function renderProfile(data) {
   const c = data.company || {};
   const badge = `<span class="badge" data-s="${esc(c.status || 'pending')}">${esc(c.status || 'pending')}</span>`;
@@ -23,6 +39,7 @@ function renderProfile(data) {
     <div class="biz-row"><span>NET terms</span><b>${data.can_use_net_terms ? 'NET-' + c.net_terms_days : 'Not enabled'}</b></div>
     <div class="biz-row"><span>Tax-exempt</span><b>${c.tax_exempt ? 'Yes' : 'No'}</b></div>
     <div class="actions">
+      <a class="btn btn-primary btn-sm" href="dashboard.html">Account dashboard</a>
       <a class="btn btn-ghost btn-sm" href="dashboard.html#profile">Edit profile</a>
       <a class="btn btn-ghost btn-sm" href="dashboard.html#addresses">Manage addresses</a>
       ${data.can_checkout ? '<a class="btn btn-ghost btn-sm" href="products.html">Browse catalog</a>' : ''}
@@ -108,6 +125,7 @@ function wirePaymentSetup() {
   const button = $('paymentSetupPortal');
   if (!button) return;
   button.addEventListener('click', async () => {
+    const portalTab = openReservedTab();
     const status = $('paymentSetupStatus');
     button.disabled = true;
     const originalText = button.textContent;
@@ -119,11 +137,14 @@ function wirePaymentSetup() {
     try {
       const out = await api('/api/account/billing-portal', { method: 'POST' });
       if (status) {
-        status.textContent = 'Payment portal opened in this tab.';
+        status.textContent = 'Payment portal opened in a new tab.';
         status.dataset.state = 'ok';
       }
-      window.location.assign(out.url);
+      sendReservedTab(portalTab, out.url);
+      button.textContent = originalText;
+      button.disabled = false;
     } catch (err) {
+      closeReservedTab(portalTab);
       if (status) {
         status.textContent = err.data?.error === 'stripe_not_configured' ? 'Stripe is not configured for this workspace yet.' : 'Could not open the payment portal. Try again.';
         status.dataset.state = 'err';
@@ -203,12 +224,13 @@ function renderProgramManage(active) {
   }
   btn.textContent = 'Manage or cancel program';
   btn.onclick = async () => {
+    const portalTab = openReservedTab();
     btn.disabled = true;
     status.textContent = 'Opening Stripe…'; status.dataset.state = '';
     try {
       const r = await api('/api/account/billing-portal', { method: 'POST', body: { flow: 'cancel', subscription: active.stripe_subscription_id } });
-      if (r.url) { location.href = r.url; return; }
-    } catch { status.textContent = 'Could not open the billing portal. Try again.'; status.dataset.state = 'err'; }
+      if (r.url) { sendReservedTab(portalTab, r.url); status.textContent = 'Billing portal opened in a new tab.'; status.dataset.state = 'ok'; btn.disabled = false; return; }
+    } catch { closeReservedTab(portalTab); status.textContent = 'Could not open the billing portal. Try again.'; status.dataset.state = 'err'; }
     btn.disabled = false;
   };
 }

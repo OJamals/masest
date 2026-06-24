@@ -1,0 +1,23 @@
+{
+  "accountMenuAdminHidden": true,
+  "notificationClickNoReload": true,
+  "notificationClickUrl": "http://127.0.0.1:4195/dashboard.html#messages",
+  "messagesVisible": 2,
+  "dashboardPortalPopupUrl": "http://127.0.0.1:4195/audit-post-login-qa-2026-06-24/mock-stripe-portal.html",
+  "dashboardPortalKeptDashboard": true,
+  "businessDashboardLink": 2,
+  "businessPaymentPopupUrl": "http://127.0.0.1:4195/audit-post-login-qa-2026-06-24/mock-stripe-portal.html",
+  "businessPortalKeptBusiness": true,
+  "screenshotFiles": [
+    "01-dashboard-overview-desktop.png",
+    "02-account-menu-admin-hidden.png",
+    "03-dashboard-notifications-before-click.png",
+    "04-dashboard-message-opened-from-notification.png",
+    "05-dashboard-payment-new-tab-state.png",
+    "06-business-hub-desktop.png",
+    "07-business-payment-new-tab-state.png",
+    "08-business-hub-mobile.png",
+    "09-dashboard-notifications-mobile.png"
+  ],
+  "accountMenuText": "WORKSPACE\nDashboard\nBusiness\nOrders\nMessages\nNotifications\n2\nACCOUNT\nProfile\nSecurity\nAddresses\nPayment methods\nSign out"
+}

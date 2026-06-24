@@ -105,6 +105,13 @@ export function renderChrome() {
         setLeadVisible(!entries[0]?.isIntersecting);
       });
       leadObserver.observe(leadSentinel);
+      const shopGrid = document.getElementById("shopGrid");
+      if (shopGrid) {
+        const shopObserver = new IntersectionObserver(entries => {
+          leadBar.classList.toggle("is-suppressed", entries.some(entry => entry.isIntersecting));
+        }, { rootMargin: "0px 0px -96px 0px", threshold: 0.01 });
+        shopObserver.observe(shopGrid);
+      }
     } else {
       setLeadVisible(true);
     }
@@ -161,7 +168,7 @@ export function renderChrome() {
   window.addEventListener("scroll", onScroll, { passive: true });
 
   const foot = document.createElement("footer");
-  foot.className = "reveal";
+  foot.className = "";
   foot.innerHTML = `
     <div class="wrap">
       <div class="foot-grid">

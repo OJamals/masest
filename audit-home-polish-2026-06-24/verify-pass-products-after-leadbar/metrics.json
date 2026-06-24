@@ -1,0 +1,25 @@
+{
+  "overflowX": 0,
+  "bar": {
+    "visible": false,
+    "classes": "lead-action-bar is-visible is-suppressed",
+    "rect": {
+      "top": 782,
+      "bottom": 846
+    }
+  },
+  "cardButtons": [
+    {
+      "i": 0,
+      "top": 212,
+      "bottom": 261,
+      "hiddenByBar": false
+    },
+    {
+      "i": 1,
+      "top": 728,
+      "bottom": 777,
+      "hiddenByBar": false
+    }
+  ]
+}

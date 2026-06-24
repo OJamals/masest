@@ -1,3 +1,5 @@
+const PRODUCT_FALLBACK_IMAGE = "img/products/masest-poster-transparent.png";
+
 export const PRODUCTS = {
   hcr: {
     name: "VertKleen HCR",
@@ -368,6 +370,7 @@ pg100: {
     replaces: "Propylene glycol concentrate",
     hmis: "0-0-0",
     icon: "ph-thermometer-cold",
+    image: PRODUCT_FALLBACK_IMAGE,
     tag: "Florida-sourced inhibited propylene glycol concentrate for closed-loop heat-transfer and freeze-protection programs.",
     desc: "An inhibited propylene glycol concentrate for commercial HVAC, hydronic, and process-loop freeze protection. The Brevard Schools price list emphasizes local Florida pickup, low freight, and short lead times.",
     uses: ["Closed-loop HVAC systems", "Hydronic freeze protection", "Process heat-transfer loops"],
@@ -384,6 +387,7 @@ pg100: {
     replaces: "50% propylene glycol blend",
     hmis: "0-0-0",
     icon: "ph-thermometer-cold",
+    image: PRODUCT_FALLBACK_IMAGE,
     tag: "Premixed inhibited 50% propylene glycol for maintenance teams that do not want field mixing to become the job.",
     desc: "A ready-to-use inhibited 50% propylene glycol blend for HVAC and hydronic loop service. Scope confirms loop compatibility and supply path before rollout.",
     uses: ["Closed-loop HVAC systems", "Hydronic loop top-offs", "Facility freeze-protection maintenance"],
@@ -400,6 +404,7 @@ pg100: {
     replaces: "Ethylene glycol concentrate",
     hmis: "0-0-0",
     icon: "ph-thermometer-cold",
+    image: PRODUCT_FALLBACK_IMAGE,
     tag: "Inhibited ethylene glycol concentrate for industrial heat-transfer loops that need corrosion protection and local supply.",
     desc: "An inhibited ethylene glycol concentrate for industrial loop fill, freeze protection, and heat-transfer programs. Application review confirms inhibitor and loop compatibility.",
     uses: ["Industrial heat-transfer loops", "Closed-loop freeze protection", "Process-loop maintenance"],
@@ -416,6 +421,7 @@ pg100: {
     replaces: "50% ethylene glycol blend",
     hmis: "0-0-0",
     icon: "ph-thermometer-cold",
+    image: PRODUCT_FALLBACK_IMAGE,
     tag: "Premixed inhibited 50% ethylene glycol for industrial loop top-offs and freeze-protection maintenance.",
     desc: "A ready-to-use inhibited 50% ethylene glycol blend for industrial heat-transfer and freeze-protection loops.",
     uses: ["Industrial loop top-offs", "Closed-loop freeze protection", "Heat-transfer maintenance"],
@@ -432,6 +438,7 @@ pg100: {
     replaces: "Ethylene glycol uninhibited concentrate",
     hmis: "0-0-0",
     icon: "ph-thermometer-cold",
+    image: PRODUCT_FALLBACK_IMAGE,
     tag: "Uninhibited 96% ethylene glycol concentrate when the inhibitor strategy is handled elsewhere.",
     desc: "An uninhibited 96% ethylene glycol concentrate for industrial heat-transfer loop programs where inhibitor strategy is handled separately.",
     uses: ["Utility loop service", "Industrial freeze protection", "Process heat-transfer maintenance"],
@@ -448,6 +455,7 @@ pg100: {
     replaces: "50% ethylene glycol pre-mix",
     hmis: "0-0-0",
     icon: "ph-thermometer-cold",
+    image: PRODUCT_FALLBACK_IMAGE,
     tag: "50/50 ethylene glycol blend for quote-reviewed loop top-offs, maintenance, and supply planning.",
     desc: "A 50/50 ethylene glycol blend for closed-loop maintenance and top-off work where scope, fluid compatibility, and supply path are confirmed before purchase.",
     uses: ["Loop top-offs", "Routine freeze-protection maintenance", "Industrial heat-transfer service"],

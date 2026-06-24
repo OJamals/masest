@@ -3,6 +3,7 @@
 import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, REPLACEMENT_MAP } from "./catalog-data.js";
 
 const IMAGE_DIMS = {
+  "img/products/masest-poster-transparent.png": [1193, 610],
   "img/products/dbnpa-studio.webp": [900, 822],
   "img/products/crs-studio.webp": [899, 1200],
 };

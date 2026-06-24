@@ -34,7 +34,7 @@ function injectStyle() {
   s.textContent = `
   .nav-account { display:flex; align-items:center; align-self:stretch; padding:0; }
   .nav-signin { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--r-pill,999px);
-    justify-content:center; align-self:center; min-height:42px; line-height:1; border:1.5px solid var(--line,#e4e6e9); font-weight:700; font-size:.9rem; color:var(--ink,#15171c); text-decoration:none; white-space:nowrap; }
+    justify-content:center; align-self:center; min-height:44px; line-height:1; border:1.5px solid var(--line,#e4e6e9); font-weight:700; font-size:.9rem; color:var(--ink,#15171c); text-decoration:none; white-space:nowrap; }
   .nav-signin:hover { border-color:var(--ink,#15171c); }
   .nav.over-dark .nav-signin { color:#fff; border-color:rgba(255,255,255,.35); }
   .acct-dd { position:relative; }
@@ -131,7 +131,7 @@ async function renderAccountNav(actions, root = '') {
       return `<a href="${root}${h}"${marker}><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}${count}</a>`;
     }).join('');
     const accountItems = ACCOUNT_MENU.map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');
-    const admin = data.is_staff ? `<a class="acct-admin" href="${root}admin.html"><i class="ph ph-shield-check" aria-hidden="true"></i>Admin console</a>` : '';
+    const admin = data.can_admin === true ? `<a class="acct-admin" href="${root}admin.html"><i class="ph ph-shield-check" aria-hidden="true"></i>Admin console</a>` : '';
     mount.innerHTML = `<details class="acct-dd">
       <summary aria-haspopup="true"><span class="acct-avatar">${esc((label[0] || 'A').toUpperCase())}</span><span class="acct-name">${esc(firstName(label))}</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
       <div class="acct-dd-menu" role="menu">
