@@ -336,6 +336,64 @@ test("scrolly legacy burden scene is removed", () => {
   assert.equal((index.match(/class="rail-btn"/g) || []).length, 5);
 });
 
+test("scrolly chapter rail is decorative progress, not hidden buttons", () => {
+  const index = read("index.html");
+  const rail = index.match(/<div class="story-rail"[\s\S]*?<\/div>\s*<\/div>/)?.[0] || "";
+
+  assert.ok(rail, "expected story rail markup");
+  assert.match(rail, /aria-hidden="true"/);
+  assert.doesNotMatch(rail, /<button class="rail-btn"/);
+  assert.doesNotMatch(rail, /tabindex="-1"/);
+  assert.equal((rail.match(/class="rail-btn"/g) || []).length, 5);
+});
+
+test("scrolly story has a static summary for reduced motion and assistive tech", () => {
+  const index = read("index.html");
+  const summary = index.match(/<section class="story-summary"[\s\S]*?<\/section>/)?.[0] || "";
+
+  assert.ok(summary, "expected static story summary");
+  assert.match(summary, /aria-labelledby="storySummaryTitle"/);
+  assert.match(summary, /id="storySummaryTitle"/);
+  assert.match(summary, /The dirt is obvious/);
+  assert.match(summary, /HMIS gives the danger a number/);
+  assert.match(summary, /Industrial work\. 0-0-0 profile/);
+});
+
+test("scrolly opener states the replacement promise early", () => {
+  const index = read("index.html");
+  const storyCss = read("css/story.css");
+  const actOne = index.match(/<section class="act" data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
+
+  assert.match(actOne, /class="story-promise"/);
+  assert.match(actOne, /VertKleen keeps the industrial job/);
+  assert.match(actOne, /lower-burden chemistry/);
+  assert.match(storyCss, /\.story-promise/);
+});
+
+test("scrolly buildup scene includes mobile-readable accumulation labels", () => {
+  const index = read("index.html");
+  const storyCss = read("css/story.css");
+  const actTwo = index.match(/<section class="act" data-act="2"[\s\S]*?<\/section>/)?.[0] || "";
+
+  assert.match(actTwo, /class="pipe-mobile-labels"/);
+  assert.match(actTwo, />Scale</);
+  assert.match(actTwo, />Rust</);
+  assert.match(actTwo, />Grease</);
+  assert.match(actTwo, />Biofilm</);
+  assert.match(storyCss, /\.pipe-mobile-labels/);
+  assert.match(storyCss, /@media \(max-width: 760px\)[\s\S]*\.pipe-mobile-labels/);
+});
+
+test("scrolly story offsets chat launcher on mobile", () => {
+  const storyJs = read("js/story.js");
+  const storyCss = read("css/story.css");
+
+  assert.match(storyJs, /syncStoryPageState/);
+  assert.match(storyJs, /story-in-view/);
+  assert.match(storyCss, /body\.story-in-view #crisp-chatbox/);
+  assert.match(storyCss, /body\.story-in-view \.crisp-client/);
+});
+
 test("scrolly HMIS scene teaches categories before chemical warnings", () => {
   const index = read("index.html");
   const actThree = index.match(/<section class="act act-hmis"[\s\S]*?<\/section>/)?.[0];

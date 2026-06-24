@@ -7,30 +7,44 @@ import { chromium } from "playwright";
 const PORT = 4187;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
+function serverReady() {
+  return fetch(`${BASE_URL}/products.html`)
+    .then((response) => response.ok)
+    .catch(() => false);
+}
+
 async function withServer(fn) {
   const server = spawn("python3", ["-m", "http.server", String(PORT)], {
     cwd: new URL("..", import.meta.url),
     stdio: ["ignore", "pipe", "pipe"]
   });
+  let exited = false;
+  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
 
   try {
     const deadline = Date.now() + 5000;
     while (Date.now() < deadline) {
       if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      try {
-        const response = await fetch(`${BASE_URL}/products.html`);
-        if (response.ok) break;
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        continue;
-      }
+      const ready = await serverReady();
+      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
+      if (ready) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     if (Date.now() >= deadline) throw new Error("server did not start");
     await fn();
   } finally {
-    server.kill("SIGTERM");
-    await once(server, "exit").catch(() => {});
+    if (!exited) server.kill("SIGTERM");
+    await Promise.race([
+      exitedOnce,
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+    if (!exited) {
+      server.kill("SIGKILL");
+      await Promise.race([
+        exitedOnce,
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    }
   }
 }
 

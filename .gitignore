@@ -5,6 +5,8 @@ node_modules
 package-lock.json
 dist/
 backups/
+audits/
+design-qa.md
 .dev.vars
 .wrangler/
 test-results/

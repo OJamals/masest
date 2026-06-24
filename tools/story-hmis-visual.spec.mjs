@@ -323,6 +323,90 @@ test("legacy cost meter counts up to the incident figure by the final beat", asy
   expect(end).toBe(115000);
 });
 
+test("cost scene foreshadows VertKleen before the incident total peaks", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+  await page.waitForTimeout(300);
+
+  const frame = await page.evaluate(async () => {
+    const act = document.querySelector('.story .act[data-act="4"]');
+    window.scrollTo(0, act.offsetTop + (act.offsetHeight - window.innerHeight) * 0.5);
+    await new Promise((r) => setTimeout(r, 700));
+    const card = act.querySelector(".cost-vert");
+    const box = card.getBoundingClientRect();
+    const style = getComputedStyle(card);
+    return {
+      opacity: Number(style.opacity),
+      visible: style.visibility !== "hidden" && box.width > 200 && box.height > 200,
+      top: box.top,
+      bottom: box.bottom,
+      viewportHeight: window.innerHeight,
+    };
+  });
+
+  expect(frame.visible, JSON.stringify(frame)).toBe(true);
+  expect(frame.opacity, JSON.stringify(frame)).toBeGreaterThanOrEqual(0.38);
+  expect(frame.top, JSON.stringify(frame)).toBeGreaterThanOrEqual(0);
+  expect(frame.bottom, JSON.stringify(frame)).toBeLessThanOrEqual(frame.viewportHeight);
+});
+
+test("savior scene holds readable proof cards and CTAs in the payoff window", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+  await page.waitForTimeout(300);
+
+  const payoff = await page.evaluate(async () => {
+    const act = document.querySelector('.story .act[data-act="5"]');
+    const samples = [];
+    for (const frac of [0.45, 0.72]) {
+      window.scrollTo(0, act.offsetTop + (act.offsetHeight - window.innerHeight) * frac);
+      await new Promise((r) => setTimeout(r, 700));
+      const cards = [...act.querySelectorAll(".zero-axis")].map((card) => {
+        const box = card.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        return {
+          text: card.textContent.trim().replace(/\s+/g, " "),
+          opacity: Number(style.opacity),
+          top: box.top,
+          bottom: box.bottom,
+          width: box.width,
+        };
+      });
+      const ctas = [...act.querySelectorAll(".savior-ctas .btn")].map((btn) => {
+        const box = btn.getBoundingClientRect();
+        const style = getComputedStyle(btn);
+        return {
+          text: btn.textContent.trim(),
+          opacity: Number(style.opacity),
+          visible: style.visibility !== "hidden" && box.width > 80 && box.height > 32,
+          top: box.top,
+          bottom: box.bottom,
+        };
+      });
+      samples.push({ frac, cards, ctas });
+    }
+    return { samples, viewportHeight: window.innerHeight };
+  });
+
+  for (const sample of payoff.samples) {
+    expect(sample.cards).toHaveLength(3);
+    for (const card of sample.cards) {
+      expect(card.opacity, JSON.stringify(payoff)).toBeGreaterThanOrEqual(0.72);
+      expect(card.width, JSON.stringify(payoff)).toBeGreaterThan(150);
+      expect(card.top, JSON.stringify(payoff)).toBeGreaterThanOrEqual(0);
+      expect(card.bottom, JSON.stringify(payoff)).toBeLessThanOrEqual(payoff.viewportHeight);
+    }
+    expect(sample.ctas).toHaveLength(2);
+    for (const cta of sample.ctas) {
+      expect(cta.visible, JSON.stringify(payoff)).toBe(true);
+      expect(cta.opacity, JSON.stringify(payoff)).toBeGreaterThanOrEqual(0.72);
+      expect(cta.bottom, JSON.stringify(payoff)).toBeLessThanOrEqual(payoff.viewportHeight);
+    }
+  }
+});
+
 test("reduced motion story fallback stacks animated scene content without overlap", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });

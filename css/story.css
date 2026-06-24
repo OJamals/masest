@@ -77,7 +77,7 @@
 }
 .rail-btn {
   display: inline-flex; align-items: center; gap: 10px;
-  background: none; border: 0; padding: 4px; cursor: pointer;
+  background: none; border: 0; padding: 4px; cursor: default;
   color: var(--s-mut); font: inherit; text-align: left;
 }
 .rail-btn b {
@@ -111,8 +111,7 @@
   opacity: 0; transform: translateX(-6px); transition: opacity .4s var(--s-ease), transform .4s var(--s-ease);
   white-space: nowrap;
 }
-.rail-btn:hover span,
-.rail-btn:focus-visible span { opacity: 1; transform: none; }
+.rail-btn.is-on span { opacity: 0; transform: translateX(-6px); }
 .rail-btn.is-on b { border-color: var(--s-danger-ink); color: var(--s-danger-ink); background: rgba(169, 52, 32, .1); }
 .rail-btn.is-on.safe b { border-color: var(--s-safe-text); color: var(--s-safe-text); background: rgba(16, 179, 163, .18); }
 @media (max-width: 900px) { .story-rail { display: none; } }
@@ -150,6 +149,15 @@
   margin-top: 20px; font-size: clamp(1.02rem, 1.5vw, 1.2rem); line-height: 1.6;
   color: var(--s-mut); max-width: 54ch; text-wrap: pretty;
   text-shadow: 0 2px 24px rgba(7, 9, 13, .6);
+}
+.story-promise {
+  margin: 14px 0 16px;
+  max-width: 50ch;
+  color: var(--s-safe-text);
+  font-size: clamp(.88rem, 1.05vw, 1rem);
+  font-weight: 800;
+  line-height: 1.45;
+  text-shadow: 0 2px 24px rgba(7, 9, 13, .62);
 }
 .story .act-copy.top .act-p { margin-left: auto; margin-right: auto; }
 .story .story-ctas {
@@ -365,6 +373,9 @@
   border: 1px solid color-mix(in oklab, var(--c), transparent 30%);
   border-radius: inherit;
   animation: chipPulse 2.2s var(--s-ease) infinite;
+}
+.pipe-mobile-labels {
+  display: none;
 }
 .callout-scale { --c: #c9d4d0; }
 .callout-rust { --c: #c2553a; }
@@ -664,6 +675,9 @@
 .savior-wrap h2 .accent { color: var(--s-safe-text); }
 .savior-wrap .lede { margin: clamp(12px, 2vh, 22px) auto 0; max-width: 50ch; font-size: clamp(1rem, 1.4vw, 1.18rem); color: var(--s-mut); line-height: 1.5; }
 .savior-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.story.story-ready .act-savior .savior-ctas {
+  transform: translateY(-8px);
+}
 .savior-ctas .btn-primary { background: var(--s-safe); color: var(--s-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(8, 121, 111, .62); }
 .savior-ctas .btn-primary:hover { background: #5fe9d6; }
 .savior-ctas .btn-ghost { background: rgba(255, 255, 255, .04); color: #fff; border: 1.5px solid rgba(255, 255, 255, .28); }
@@ -730,6 +744,11 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 760px) {
+  body.story-in-view #crisp-chatbox,
+  body.story-in-view .crisp-client {
+    transform: translateY(-78px) scale(.86) !important;
+    transform-origin: right bottom !important;
+  }
   .story .act { height: 198vh; }
   .story .act[data-act="1"] { height: 140vh; }
   .story .act[data-act="3"] { height: 330vh; }
@@ -741,6 +760,40 @@
   .chip.c-grease { left: 52%; top: 70%; }
   .pipe-chips .chip { max-width: min(44vw, 172px); white-space: normal; line-height: 1.15; }
   .chip.c-bio    { left: auto; right: 6%; top: 54%; }
+  .pipe-mobile-labels {
+    position: absolute;
+    z-index: 5;
+    left: 50%;
+    bottom: clamp(76px, 11vh, 118px);
+    transform: translateX(-50%);
+    width: min(340px, calc(100vw - 44px));
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    pointer-events: none;
+  }
+  .pipe-mobile-labels span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    background: rgba(11, 13, 18, .72);
+    color: var(--s-ink);
+    font-size: .78rem;
+    font-weight: 800;
+    -webkit-backdrop-filter: blur(7px);
+    backdrop-filter: blur(7px);
+  }
+  .pipe-mobile-labels i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--s-danger-ink);
+    box-shadow: 0 0 12px rgba(255, 138, 108, .55);
+  }
   .hmis-factors { gap: 10px; }
   .factor { padding: 18px 10px; border-radius: 14px; }
   .factor .fmeaning { font-size: .78rem; }
@@ -1104,10 +1157,6 @@ font-size: .68rem;
 }
 
 @media (hover: hover) {
-  .story .rail-btn:hover {
-    color: var(--story-rail-hot);
-    transform: translateX(3px);
-  }
 }
 
 @media (max-width: 760px) {
@@ -1119,7 +1168,7 @@ font-size: .68rem;
   }
 
   .story .rail-btn.is-on,
-  .story .rail-btn:hover {
+  .story .rail-btn {
     transform: none;
   }
 }

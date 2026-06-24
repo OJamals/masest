@@ -276,9 +276,9 @@ states.forEach(function (st) {
     var ramp = smooth(clamp(0, 1, (st.p - a) / (b - a)));
     setTxt(costNum, fmtCost(COST_TARGET * ramp));
     if (costVert) {
-      /* Sequence: legacy hidden costs climb first, THEN the VertKleen card fades
-         in. Reveal tracks the back half of the cost ramp (0.6 -> 0.95). */
-      var reveal = smooth(clamp(0, 1, (ramp - 0.6) / 0.35));
+      /* Foreshadow the counterpoint before the incident total peaks so the
+         split screen reads as comparison, not a one-sided warning. */
+      var reveal = Math.max(0.42, smooth(clamp(0, 1, (st.p - beatFrac(st, 2.45)) / (beatFrac(st, 4.25) - beatFrac(st, 2.45)))));
       gsap.set(costVert, { autoAlpha: reveal, y: (1 - reveal) * 18 });
       costVert.classList.toggle("is-on", reveal > 0.5);
     }
@@ -673,19 +673,13 @@ states.forEach(function (st) {
      CHAPTER RAIL
      ============================================================ */
   var railBtns = Array.prototype.slice.call(story.querySelectorAll(".rail-btn"));
-  railBtns.forEach(function (btn, i) {
-    btn.addEventListener("click", function () {
-      var target = acts[i];
-      if (!target) return;
-      var top = target.getBoundingClientRect().top + window.scrollY;
-      var landings = [0.24, 0.42, 0.42, 0.50, 0.32]; /* enemy, buildup, score, cost, zero */
-      var travel = Math.max(0, target.offsetHeight - window.innerHeight);
-      var y = top + travel * (landings[i] || 0.5);
-      window.scrollTo({ top: y, behavior: "smooth" });
-    });
-  });
   var railCurrent = -1;
   var railTicking = false;
+  function syncStoryPageState() {
+    var rect = story.getBoundingClientRect();
+    var inView = rect.bottom > stickyOffset() && rect.top < window.innerHeight;
+    document.body.classList.toggle("story-in-view", inView);
+  }
   function nearestRailIndex() {
     var anchor = window.scrollY + Math.max(stickyOffset() + 2, window.innerHeight * 0.2);
     var firstTop = states.length ? states[0].act.getBoundingClientRect().top + window.scrollY : 0;
@@ -747,6 +741,7 @@ states.forEach(function (st) {
   /* Full re-assert after a geometry change: fix alpha, then repaint the on-stage
      act's canvas + scrub-driven extras at the new size. */
   function reassertVisibility() {
+    syncStoryPageState();
     var on = states[reassertAlpha(true)];
     if (on) { resizeFx(on); onActScrub(on); }
   }
@@ -760,11 +755,13 @@ states.forEach(function (st) {
       var idx = reassertAlpha();
       updateRail(idx);
       syncStoryFocus(idx);
+      syncStoryPageState();
     });
   }
   window.addEventListener("scroll", scheduleRailUpdate, { passive: true });
   updateRail();
   syncStoryFocus();
+  syncStoryPageState();
 
   /* Paint the opening act at rest so the first field photo and the
      parallax backdrop are visible on load, before any scroll - without
