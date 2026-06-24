@@ -13,7 +13,7 @@ test('normalizeStaffRole passes through known roles (case-insensitive)', () => {
   assert.equal(normalizeStaffRole(' READ_ONLY '), 'read_only');
 });
 
-test('normalizeStaffRole defaults unknown/blank to owner (legacy staff keep access)', () => {
+test('normalizeStaffRole defaults unknown/blank to owner (older staff keep access)', () => {
   assert.equal(normalizeStaffRole(''), 'owner');
   assert.equal(normalizeStaffRole(null), 'owner');
   assert.equal(normalizeStaffRole('superuser'), 'owner');

@@ -29,6 +29,14 @@ test("Cloudflare build emits baseline security headers", () => {
   assert.match(build, /frame-src[^;]*https:\/\/challenges\.cloudflare\.com/, "Turnstile frame must be allowed for auth forms");
 });
 
+test("Cloudflare build excludes local audit capture artifacts", () => {
+  const build = read("tools/cf-build.mjs");
+
+  assert.match(build, /\^audit-\[\^\/\]\+\\\/\//, "dated audit capture folders must not publish");
+  assert.match(build, /\^audits\?\\\/\//, "generic audit capture folders must not publish");
+  assert.match(build, /\^masest\\\.co-audit\\\//, "downloaded site audit captures must not publish");
+});
+
 test("HTML pages use one fresh shared stylesheet cache-buster", () => {
   const pages = [
     ...readdirSync(root).filter((name) => name.endsWith(".html")),

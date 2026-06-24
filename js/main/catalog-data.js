@@ -18,7 +18,7 @@ export const PRODUCTS = {
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-atom", "SynTech powered", "Patented technology matching legacy acid performance"],
+      ["ph-atom", "SynTech powered", "Patented technology matching mineral-acid performance"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates, and phosphates"],
       ["ph-truck", "Lower-friction shipping", "No DOT hazmat freight on the core line"]
     ],
@@ -486,21 +486,21 @@ export const CATALOG_GROUPS = [
 
 export const QUOTE_FIRST_IDS = ["crs", "watersafe60", "cr2", "sar", "eg5050"];
 
-// Automated replacement checker: the legacy chemical a buyer uses today, the job
+// Automated replacement checker: the current chemical a buyer uses today, the job
 // it does, and the VertKleen product ids that replace it. Single source of truth
 // for the compact top-of-page matrix and the live catalog filter.
 export const REPLACEMENT_MAP = [
-  { legacy: "Muriatic / hydrochloric acid", job: "Rust, scale & passivation", ids: ["hcr", "descaler"] },
-  { legacy: "Caustic soda / sodium hydroxide", job: "pH adjustment & caustic cleaning", ids: ["cr"] },
-  { legacy: "Simple Green / Zep / butyl degreasers", job: "Heavy-duty degreasing", ids: ["crhd"] },
-  { legacy: "Caustic & solvent degreasers", job: "Degreasing sensitive surfaces", ids: ["neutral"] },
-  { legacy: "CLR / Calci-Solve", job: "Coil & heat-transfer descaling", ids: ["descaler"] },
-  { legacy: "General-purpose caustic cleaners", job: "Everyday facility washing", ids: ["multiwash"] },
-  { legacy: "Phosphate / zinc / molybdate blends", job: "Scale & corrosion control", ids: ["watersafe60"] },
-  { legacy: "Stabilized bromine / bleach", job: "Oxidizing biocide", ids: ["purgo"] },
-  { legacy: "Wet & Forget / bleach roof cleaners", job: "Exterior moss, algae & mold", ids: ["lam3"] },
-  { legacy: "Hydrofluoric / HCl brighteners", job: "Aluminum brightening", ids: ["alumibrite"] },
-  { legacy: "Separate wash, wax & bug removers", job: "Vehicle wash & wax", ids: ["torque"] }
+  { current: "Muriatic / hydrochloric acid", job: "Rust, scale & passivation", ids: ["hcr", "descaler"] },
+  { current: "Caustic soda / sodium hydroxide", job: "pH adjustment & caustic cleaning", ids: ["cr"] },
+  { current: "Simple Green / Zep / butyl degreasers", job: "Heavy-duty degreasing", ids: ["crhd"] },
+  { current: "Caustic & solvent degreasers", job: "Degreasing sensitive surfaces", ids: ["neutral"] },
+  { current: "CLR / Calci-Solve", job: "Coil & heat-transfer descaling", ids: ["descaler"] },
+  { current: "General-purpose caustic cleaners", job: "Everyday facility washing", ids: ["multiwash"] },
+  { current: "Phosphate / zinc / molybdate blends", job: "Scale & corrosion control", ids: ["watersafe60"] },
+  { current: "Stabilized bromine / bleach", job: "Oxidizing biocide", ids: ["purgo"] },
+  { current: "Wet & Forget / bleach roof cleaners", job: "Exterior moss, algae & mold", ids: ["lam3"] },
+  { current: "Hydrofluoric / HCl brighteners", job: "Aluminum brightening", ids: ["alumibrite"] },
+  { current: "Separate wash, wax & bug removers", job: "Vehicle wash & wax", ids: ["torque"] }
 ];
 
 export const PRODUCT_CATALOG_COPY = {

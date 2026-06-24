@@ -40,5 +40,5 @@ test('functions/api/account/company.js authenticates users before creating or up
   assert.match(src, /\.from\('companies'\)[\s\S]{0,260}\.insert\(\{[\s\S]{0,180}status: 'pending'/, 'must create new businesses pending approval');
   assert.match(src, /\.from\('profiles'\)[\s\S]{0,180}\.update\(\{ company_id: company\.id, role: 'admin' \}\)[\s\S]{0,100}\.eq\('id', user\.id\)/, 'must link only the authenticated profile to the new business');
   assert.match(src, /\.from\('companies'\)[\s\S]{0,180}\.update\(patch\)[\s\S]{0,100}\.eq\('id', profile\.company_id\)/, 'must scope existing business updates by the caller profile company');
-  assert.doesNotMatch(src, /companyForUser\(/, 'must not re-derive company via legacy helper');
+  assert.doesNotMatch(src, /companyForUser\(/, 'must not re-derive company via older helper');
 });

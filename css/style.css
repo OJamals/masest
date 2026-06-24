@@ -506,7 +506,7 @@ scoped to the hero */
 }
 .zero-card .panel-foot b { color: var(--ink-soft); font-weight: 700; }
 
-/* Legacy .hmis-panel kept for interior product pages (refined) */
+/* Previous .hmis-panel kept for interior product pages (refined) */
 .hmis-panel {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
   padding: 34px; box-shadow: var(--shadow-lg);
@@ -1517,8 +1517,8 @@ so no-JS / hidden-tab renders stay visible */
     text-transform: uppercase;
   }
   .cmp-table td:nth-child(1)::before { content: "Function"; }
-  .cmp-table td:nth-child(2)::before { content: "Legacy"; }
-  .cmp-table td:nth-child(3)::before { content: "Legacy HMIS"; }
+  .cmp-table td:nth-child(2)::before { content: "Traditional"; }
+  .cmp-table td:nth-child(3)::before { content: "Traditional HMIS"; }
   .cmp-table td:nth-child(4)::before { content: "VertKleen"; }
 .cmp-table td:nth-child(5)::before { content: "VertKleen HMIS"; }
   .cmp-table.responsive-labels td::before { content: attr(data-label); }
@@ -3359,7 +3359,7 @@ interactive matrix) ---- */
   color: var(--muted);
   margin-bottom: 3px;
 }
-.swap-legacy { font-weight: 700; }
+.swap-current { font-weight: 700; }
 .swap-job { color: var(--ink-soft); font-size: .94rem; }
 .swap-arrow { color: var(--accent); justify-self: center; }
 .swap-vk { font-weight: 800; color: var(--accent-ink); }
@@ -3833,7 +3833,7 @@ body .swap-row {
   text-align: left;
 }
 
-body .swap-legacy,
+body .swap-current,
 body .swap-job,
 body .swap-vk {
   min-width: 0;
@@ -3961,7 +3961,7 @@ main:has(#pMediaSection) .section-head {
     grid-template-columns: 1fr;
   }
 
-  body .swap-row > span:not(.swap-legacy):not(.swap-vk),
+  body .swap-row > span:not(.swap-current):not(.swap-vk),
   body .swap-job {
     display: none;
   }

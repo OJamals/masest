@@ -113,10 +113,10 @@ async function insertMessage(sb, row) {
     const { data, error } = await sb.from('messages').insert(row).select('id,created_at').single();
     if (!error) return data;
   } catch {
-    // Fall through to legacy schema retry.
+    // Fall through to the older schema retry.
   }
-  const { source, external_thread_id, external_message_id, ...legacyRow } = row;
-  const { data } = await sb.from('messages').insert(legacyRow).select('id,created_at').single();
+  const { source, external_thread_id, external_message_id, ...fallbackRow } = row;
+  const { data } = await sb.from('messages').insert(fallbackRow).select('id,created_at').single();
   return data;
 }
 

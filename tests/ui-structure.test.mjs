@@ -331,12 +331,12 @@ test("scrolly savior scene does not stretch proof images under zero score", () =
   assert.doesNotMatch(story, /data-story-src/);
 });
 
-test("scrolly legacy burden scene is removed", () => {
+test("scrolly chemical burden scene is removed", () => {
   const index = read("index.html");
 
   assert.doesNotMatch(index, /<section class="act act-chems"[\s\S]*?<\/section>/);
   assert.doesNotMatch(index, /The chemicals/);
-  assert.doesNotMatch(index, /legacy-loadout/);
+  assert.doesNotMatch(index, /loadout/);
   // scene 4 "The Cost" was inserted before the savior, so savior is now act 5
   assert.match(index, /<section class="act act-cost" data-act="4">/);
   assert.match(index, /<section class="act act-savior" data-act="5" data-fx="motes">/);

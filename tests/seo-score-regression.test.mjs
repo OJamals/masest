@@ -83,7 +83,7 @@ test("public page canonicals and Open Graph URLs match final extensionless URLs"
   }
 });
 
-test("public page links and schema do not publish legacy html URLs", () => {
+test("public page links and schema do not publish stale html URLs", () => {
   const offenders = [];
   const legacyUrl = /(?:^|\/)[a-z0-9_/-]+\.html(?:[?#]|$)|\/product(?:\.html)?\?/i;
   for (const file of publicLinkHtml) {

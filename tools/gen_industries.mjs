@@ -140,7 +140,7 @@ const GALLERY = {
   "oil-gas": [
     ["VertKleen HCR dissolving two decades of rust in a jar test", "Rust dissolved in an HCR jar test"],
     ["Measured HCR dose for a controlled descaling test", "Measured dose, controlled descale"],
-    ["Rusted steel beside a cleaned test patch", "Cleaned patch vs. legacy acid"]
+    ["Rusted steel beside a cleaned test patch", "Cleaned patch vs. muriatic acid"]
   ],
   "marine": [
     ["Yellowfin helm and console cleaned with VertKleen Torque", "Helm and console cleaned"],
@@ -286,11 +286,11 @@ function ctaBlock(ind) {
       <div class="section-head center">
         <span class="eyebrow">Next move</span>
           <h2 class="headline">Put the current chemical on the table.</h2>
-          <p class="subhead">Send the legacy product, surface, soil, volume, and buying deadline. MASEST routes the replacement, proof, sample, or partner path from there.</p>
+          <p class="subhead">Send the current product, surface, soil, volume, and buying deadline. MASEST routes the replacement, proof, sample, or partner path from there.</p>
       </div>
       <div class="cta-grid">
         <a class="cta-tile" href="${q("quote")}"><i class="ph ph-tag" aria-hidden="true"></i><span class="cta-tile-t">Price the replacement</span><span class="cta-tile-s">Product, volume, freight path</span></a>
-        <a class="cta-tile" href="${q("audit")}"><i class="ph ph-clipboard-text" aria-hidden="true"></i><span class="cta-tile-t">Map the current drum</span><span class="cta-tile-s">Legacy chemical to VertKleen fit</span></a>
+        <a class="cta-tile" href="${q("audit")}"><i class="ph ph-clipboard-text" aria-hidden="true"></i><span class="cta-tile-t">Map the current drum</span><span class="cta-tile-s">Current chemical to VertKleen fit</span></a>
         <a class="cta-tile" href="${q("sample")}"><i class="ph ph-package" aria-hidden="true"></i><span class="cta-tile-t">Run a site trial</span><span class="cta-tile-s">Trial 3 to 5 products on site</span></a>
         <a class="cta-tile" href="${q("distributor")}"><i class="ph ph-handshake" aria-hidden="true"></i><span class="cta-tile-t">Build a route</span><span class="cta-tile-s">BSC, distributor, white-label</span></a>
       </div>
@@ -393,7 +393,7 @@ ${industryDetailBlock(ind)}
       <div class="section-head">
         <span class="eyebrow">Recommended</span>
         <h2 class="headline">VertKleen products for ${ind.name}.</h2>
-        <p class="subhead">Replacement options for the legacy chemistry this work usually relies on first.</p>
+        <p class="subhead">Replacement options for the harsh chemistry this work usually relies on first.</p>
       </div>
       <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>

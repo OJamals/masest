@@ -91,7 +91,7 @@ export async function requireStaff(request, env) {
   if (isStaffEmail(user.email, env)) return { user, staff: true, role: 'owner' };
   // Fallback: profiles.is_staff=true (settable only server-side / via SQL) also grants
   // staff, so staff can be added/removed in the DB without a Cloudflare redeploy.
-  // profiles.staff_role (#21) narrows the tier; legacy rows without one default to owner.
+  // profiles.staff_role (#21) narrows the tier; older rows without one default to owner.
   try {
     const { data } = await adminClient(env).from('profiles').select('is_staff,staff_role').eq('id', user.id).maybeSingle();
     if (data?.is_staff) return { user, staff: true, role: normalizeStaffRole(data.staff_role) };

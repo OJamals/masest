@@ -3,7 +3,7 @@
 -- stats.js computed revenue / AOV / order counts from the most-recent 1000 orders only,
 -- so every money figure silently undercounts once total orders exceed 1000. This RPC
 -- computes the aggregates DB-side over the full table. stats.js prefers it and falls back
--- to the legacy in-JS sample when it isn't deployed.
+-- to the older in-JS sample when it isn't deployed.
 create or replace function public.admin_order_metrics()
 returns json
 language sql

@@ -12,7 +12,7 @@ test("Cloudflare Supabase helper imports the v2 named createClient export", () =
 
 test("NET checkout does not acknowledge orders before persistence succeeds", () => {
   const checkout = readRepo("functions/api/checkout.js");
-  // Order persistence (atomic place_net_order RPC, or the legacy fallback insert) must
+  // Order persistence (atomic place_net_order RPC, or the pre-migration fallback insert) must
   // be error-checked before any success ack, and must NOT leak the raw DB message.
   assert.match(checkout, /error:\s*orderErr/);
   assert.match(checkout, /if\s*\(orderErr\s*\)\s*return\s+json\(500,\s*\{\s*error:\s*'order_persist_failed'/);

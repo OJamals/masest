@@ -20,7 +20,7 @@ export function isStaffEmail(email, env) {
 
 // ---- Staff role tiers (#21) ----
 // Platform-staff are no longer all-powerful: a role narrows what each staff member
-// can do. ADMIN_EMAILS members and legacy is_staff rows resolve to 'owner' (full).
+// can do. ADMIN_EMAILS members and older is_staff rows resolve to 'owner' (full).
 export const STAFF_ROLES = ["owner", "finance", "support", "read_only"];
 
 // capability -> roles permitted. Only the dangerous/financial mutations are gated

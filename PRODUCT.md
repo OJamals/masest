@@ -7,7 +7,7 @@ product
 ## Users
 
 Industrial buyers, facilities teams, distributors, and operators who need to
-replace hazardous legacy chemicals with safer VertKleen products. They arrive
+replace hazardous incumbent chemicals with safer VertKleen products. They arrive
 with a job, a current chemical, a surface, and a volume; the interface must help
 them find the right product, review proof, request documentation, and move into
 quote or checkout without chemistry-first friction.

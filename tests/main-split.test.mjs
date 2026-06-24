@@ -122,7 +122,7 @@ test("all pages load shared main as a module", () => {
   assert.deepEqual(offenders, []);
 });
 
-test("legacy inline pages use the module compatibility surface", () => {
+test("older inline pages use the module compatibility surface", () => {
   const main = read("js/main.js");
   assert.match(main, /window\.MASESTMain/);
   assert.match(main, /productCard/);

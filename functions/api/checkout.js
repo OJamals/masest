@@ -135,7 +135,7 @@ export async function onRequestPost({ request, env }) {
       p_currency: sellable[0].currency || 'usd',
     });
     if (placeErr && isMissingFunctionError(placeErr)) {
-      // Legacy fallback (pre-migration): non-atomic check, then insert.
+      // Pre-migration fallback: non-atomic check, then insert.
       let creditState;
       try {
         creditState = await companyCreditState(sb, company.id, company.credit_limit);
@@ -151,7 +151,7 @@ export async function onRequestPost({ request, env }) {
           order_total: subtotal,
         });
       }
-      const { data: legacyOrder, error: orderErr } = await sb.from('orders').insert({
+      const { data: fallbackOrder, error: orderErr } = await sb.from('orders').insert({
         company_id: company.id,
         user_id: user.id,
         customer_email: user.email || null,
@@ -163,7 +163,7 @@ export async function onRequestPost({ request, env }) {
         currency: sellable[0].currency || 'usd',
       }).select('id').single();
       if (orderErr) return json(500, { error: 'order_persist_failed' });
-      order = legacyOrder;
+      order = fallbackOrder;
     } else if (placeErr) {
       return json(503, { error: 'credit_check_unavailable' });
     } else if (placed?.rejected) {

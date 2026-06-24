@@ -5,7 +5,7 @@
 //        webhook idempotent under concurrent Stripe delivery (insert conflict -> 200).
 //   #9 — Credit-limit race: NET orders are placed via an atomic locking RPC
 //        (place_net_order) that re-checks the limit under a row lock; the app falls
-//        back to the legacy check when the RPC isn't deployed yet.
+//        back to the pre-migration check when the RPC isn't deployed yet.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -65,7 +65,7 @@ test('checkout places NET orders via the atomic place_net_order RPC', () => {
   assert.match(CHECKOUT, /\.rpc\(\s*'place_net_order'/, 'must call the locking RPC');
 });
 
-test('checkout falls back to the legacy credit check when the RPC is absent', () => {
+test('checkout falls back to the pre-migration credit check when the RPC is absent', () => {
   assert.match(CHECKOUT, /isMissingFunctionError\(/, 'must detect a missing RPC and fall back');
 });
 

@@ -3,7 +3,7 @@
 --
 -- Model: price_tiers holds an explicit price per (vsku, tier). The API resolves
 -- the caller's effective price as price_tiers[tier] ?? product_variants.price
--- (legacy base = the fallback / list price). companies.price_tier maps an
+-- (base price = the fallback / list price). companies.price_tier maps an
 -- approved B2B account to its tier; guests + pending accounts get 'retail'.
 
 do $$ begin

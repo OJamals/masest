@@ -81,5 +81,5 @@ end;
 $$;
 
 -- CF Functions call this through the service-role client; without this grant the RPC
--- 404s and checkout.js silently falls back to the non-atomic legacy path.
+-- 404s and checkout.js silently falls back to the non-atomic pre-migration path.
 grant execute on function public.place_net_order(uuid, uuid, text, numeric, text) to service_role;

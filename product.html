@@ -47,7 +47,7 @@
   <div class="section-head">
     <span class="eyebrow">Product line</span>
     <h1 class="headline">Find the VertKleen replacement before the next PO.</h1>
-    <p class="subhead">Use these snapshots to compare the legacy chemical against the VertKleen line. Each product page adds photos, quote routing, and controlled document requests.</p>
+    <p class="subhead">Use these snapshots to compare the current chemical against the VertKleen line. Each product page adds photos, quote routing, and controlled document requests.</p>
   </div>
   <div class="static-product-grid">
     <article class="static-product-card">
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "image": product.image ? new URL(product.image, "https://masest.co/").href : undefined,
         "additionalProperty": [
  { "@type": "PropertyValue", "name": "HMIS rating", "value": product.hmis || "0-0-0" },
- { "@type": "PropertyValue", "name": "Replaces", "value": product.replaces || "Legacy chemistry" },
+ { "@type": "PropertyValue", "name": "Replaces", "value": product.replaces || "Current chemistry" },
  { "@type": "PropertyValue", "name": "Procurement route", "value": quoteFirst ? "Quote review before purchase" : "Small-pack checkout; bulk quote review" }
         ].filter(Boolean)
       };

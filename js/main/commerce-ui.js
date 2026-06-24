@@ -363,8 +363,8 @@ export function initCartButtons() {
 function swapRow(row, i) {
   const names = row.ids.map((id) => PRODUCTS[id]?.name).filter(Boolean).join(", ");
   return `
-    <button type="button" class="swap-row" data-row="${i}" aria-label="Show VertKleen replacement for ${row.legacy}">
-      <span class="swap-legacy"><em>Replace</em>${row.legacy}</span>
+    <button type="button" class="swap-row" data-row="${i}" aria-label="Show VertKleen replacement for ${row.current}">
+      <span class="swap-current"><em>Replace</em>${row.current}</span>
       <span class="swap-job"><em>For</em>${row.job}</span>
       <span class="swap-arrow" aria-hidden="true"><i class="ph ph-arrow-right"></i></span>
       <span class="swap-vk"><em>Use</em>${names}</span>
@@ -490,7 +490,7 @@ export function initShop() {
       syncChips();
       const links = data.ids.map((id) => `<a href="products/${id}">${PRODUCTS[id].name}</a>`).join(" · ");
       result.innerHTML =
-        `<span class="swap-result-q"><em>Replace</em>${data.legacy}</span>` +
+        `<span class="swap-result-q"><em>Replace</em>${data.current}</span>` +
         `<i class="ph ph-arrow-right" aria-hidden="true"></i>` +
         `<span class="swap-result-a"><em>Switch to</em>${links}</span>` +
         `<button type="button" class="swap-clear" id="swapClear">Clear</button>`;
