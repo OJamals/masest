@@ -307,6 +307,10 @@
   position: absolute; z-index: 3; margin: 0;
   right: clamp(20px, 7vw, 110px); top: clamp(88px, 11vh, 112px); transform: none;
   width: min(430px, 64vw); aspect-ratio: 9 / 10;
+  /* Cap to the visible stage so the card + its caption never spill past the
+     pinned 100svh and get clipped by the stage's overflow:hidden on short
+     viewports. object-fit:cover on the slides absorbs the cropped height. */
+  max-height: calc(100svh - clamp(88px, 11vh, 112px) - 52px);
 }
 .reel-slide {
   position: absolute; inset: 0; margin: 0; opacity: 0; will-change: opacity, transform;
@@ -380,34 +384,46 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* No SVG filters anywhere in this diagram: the flow streaks animate every frame,
+   and a filter on ANY sibling (even a static one) forces the whole filter region
+   to re-rasterize each of those frames - the Act 2 jank. Depth is built from
+   layered hard-edged strokes instead: a wide low-opacity halo reads as a soft
+   contact shadow without a blur pass. */
 .pipe-shadow {
-  stroke: rgba(0, 0, 0, .42);
-  stroke-width: 92;
-  filter: blur(14px);
-  opacity: .75;
+  stroke: rgba(0, 0, 0, .5);
+  stroke-width: 88;
+  opacity: .55;
 }
 .pipe-shell {
   stroke: url("#pipeSteel");
   stroke-width: 74;
-  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, .45));
 }
 .pipe-bore {
   stroke: rgba(7, 10, 15, .92);
   stroke-width: 44;
 }
+/* Flow is three filter-free strokes (wide+faint -> crisp -> bright pulse) that
+   read as a glowing core without an SVG filter - so the dash motion no longer
+   drags a feGaussianBlur re-raster behind it. The dash offset is advanced by the
+   act's scrub in story.js: zero idle cost (the pipe only repaints while the user
+   actually scrolls, never on a paused frame), and under reduced-motion / no-JS the
+   strokes simply sit static. */
+.pipe-flow-glow {
+  stroke: url("#pipeFlow");
+  stroke-width: 30;
+  stroke-dasharray: 34 28;
+  opacity: .16;
+}
 .pipe-flow-core {
   stroke: url("#pipeFlow");
   stroke-width: 16;
   stroke-dasharray: 34 28;
-  stroke-dashoffset: 0;
-  opacity: .72;
-  filter: url("#pipeGlow");
+  opacity: .82;
 }
 .pipe-flow-pulse {
   stroke: rgba(255, 255, 255, .88);
   stroke-width: 5;
   stroke-dasharray: 5 35;
-  stroke-dashoffset: 0;
   opacity: .66;
 }
 .pipe-callout {
@@ -418,8 +434,10 @@
   stroke-width: calc(4px + var(--build) * 10px);
   stroke-dasharray: 1;
   stroke-dashoffset: calc(1 - var(--build));
-  opacity: calc(.20 + var(--build) * .68);
-  filter: drop-shadow(0 0 calc(var(--build) * 8px) rgba(255, 255, 255, .13));
+  /* No filter: this path's geometry (stroke-width/dashoffset) is rewritten every
+     scrub frame, so any filter here forces a per-frame re-raster. The opacity +
+     stroke-width ramp carries the "accumulating" read on its own. */
+  opacity: calc(.24 + var(--build) * .66);
 }
 .pipe-scale { stroke: rgb(201, 212, 208); }
 .pipe-rust { stroke: rgb(194, 85, 58); }
@@ -541,7 +559,9 @@
 }
 .hmis-diamond {
   width: clamp(216px, 33vw, 330px); height: auto; overflow: visible;
-  filter: drop-shadow(0 20px 52px rgba(0, 0, 0, .5));
+  /* Tighter blur radius = cheaper raster while the stack opacity crossfades each
+     frame; the depth read holds at 30px. */
+  filter: drop-shadow(0 16px 30px rgba(0, 0, 0, .5));
 }
 .dm-q { stroke: #0b0d12; stroke-width: 3; stroke-linejoin: round; }
 .dm-flam { fill: var(--hmis-f); }
@@ -851,7 +871,11 @@
   .story .act[data-act="1"] { height: 140vh; }
   .story .act[data-act="3"] { height: 330vh; }
  .story .act-savior { height: 235vh; }
-  .reel { position: relative; right: auto; top: auto; transform: none; width: 78vw; margin: 0 auto 24px; }
+  /* Stacked in-flow under the copy inside the pinned 100dvh stage (overflow:hidden -
+     it cannot scroll internally), so the copy + reel must both fit one screen. The
+     copy is ~60vh, so the reel is sized down to the remaining band and its caption
+     stays on-card instead of clipping off the bottom edge. */
+  .reel { position: relative; right: auto; top: auto; transform: none; width: min(50vw, 196px); margin: 2px auto 0; max-height: 26vh; }
   .pipe-diagram {
     top: 63%;
     width: min(660px, 132vw);

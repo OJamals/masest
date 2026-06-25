@@ -4,11 +4,12 @@
    ScrollTrigger scrub (the single smoothing layer - no Lenis,
    no wheel multipliers, no custom damping). Wheel feel is the
    browser's own; animations catch up over ~0.3s.
-   Act 1: curated field-photo reel. Act 2: debris accumulation
-   inside a pipe (sticking physics). Act 3: HMIS factor by
+   Act 1: curated field-photo reel (canvas fumes). Act 2: SVG
+   pipe - scroll-driven buildup on the walls, CSS-animated flow
+   (no canvas, no per-frame SVG filter). Act 3: HMIS factor by
    factor. Act 4: chemicals dropped onto the hazard scale, then
-   zeroed. Degrades to a stacked, fully-visible layout without
-   JS, when CDN libs fail, or under prefers-reduced-motion.
+   zeroed (canvas motes). Degrades to a stacked, fully-visible
+   layout without JS, when CDN libs fail, or under reduced-motion.
    ============================================================ */
 (function () {
   "use strict";
@@ -172,6 +173,9 @@ states.forEach(function (st) {
 
   function updatePipeDiagram(st, win) {
     if (!pipeAct) return;
+    /* Flow streaks slide as the act is scrubbed - cheap dashoffset writes with no
+       SVG filter behind them (the glow is now layered strokes, not a feGaussianBlur),
+       so this no longer re-rasterizes a blur region every frame. */
     var travel = -240 - st.p * 420;
     for (var f = 0; f < pipeFlowPaths.length; f++) {
       pipeFlowPaths[f].style.strokeDashoffset = (travel - f * 62).toFixed(1);
@@ -180,7 +184,6 @@ states.forEach(function (st) {
       var path = pipeBuildupPaths[i];
       var b = smooth((st.p - beatFrac(st, path._beat)) / win);
       path.style.setProperty("--build", b.toFixed(3));
-      path.style.strokeDashoffset = (1 - b).toFixed(3);
     }
   }
 
@@ -327,14 +330,6 @@ states.forEach(function (st) {
     return { ctx: ctx, resize: resize, w: function () { return cv.clientWidth; }, h: function () { return cv.clientHeight; } };
   }
   function rnd(a, b) { return a + Math.random() * (b - a); }
-  function seededRng(seed) {
-    var s = seed >>> 0;
-    return function () {
-      s = Math.imul(1664525, s) + 1013904223 >>> 0;
-      return s / 4294967296;
-    };
-  }
-  function rndWith(rng, a, b) { return a + rng() * (b - a); }
   function flowAngle(x, y, t) {
     return Math.sin(x * 0.0028 + t * 0.45) + Math.cos(y * 0.0035 - t * 0.3) + Math.sin((x + y) * 0.0012 + t * 0.2);
   }
@@ -364,275 +359,6 @@ states.forEach(function (st) {
     ctx.globalAlpha = 1;
   }
 
-  /* --- ACT 2: DEBRIS - falls into a vertical zig-zag pipe ---
-     The pipe is a polyline that descends through elbows. Debris is
-     advected along the pipe's arc length (gravity biases it toward the
-     down-wall), and crust accumulates per arc-length bucket - heaviest
-     at the elbows, where real systems clog first. Each enemy type favors
-     a home stretch of the run, matching the four chips. The bore visibly
-     narrows and flow speeds through the chokes (continuity preserved). */
-  var DEB_TYPES = [
-    { c: "201,212,208", hs: 0.08 },  /* scale   - top horizontal run */
-    { c: "194,85,58",   hs: 0.34 },  /* rust    - right vertical     */
-    { c: "194,160,78",  hs: 0.58 },  /* grease  - middle bend        */
-    { c: "111,168,99",  hs: 0.84 }   /* biofilm - lower run / exit   */
-  ];
-  /* normalized centerline (fractions of the stage). The chip CSS
-     positions in story.css are hand-aligned to these points. */
-  /* Routed below the centered headline + paragraph, but kept fully in-frame.
-     The previous path ran to 1.08h, which clipped the lower pipe on ordinary
-     desktop viewports and made the scene read like a broken staircase. */
-  var PIPE_N = [
-    [0.10, 0.45], [0.25, 0.45], [0.25, 0.55], [0.44, 0.55],
-    [0.44, 0.65], [0.63, 0.65], [0.63, 0.75], [0.84, 0.75], [0.84, 0.90]
-  ];
-  var BUCKET_N = 64;
-
-  function buildPipe(w, h) {
-    var compact = w < 760;
-    var bore = clamp(compact ? 34 : 38, compact ? 62 : 82, h * (compact ? 0.085 : 0.108));
-    var pts = PIPE_N.map(function (p) {
-      var x = compact ? (0.05 + p[0] * 0.9) : p[0];
-      return { x: x * w, y: p[1] * h };
-    });
-    var segs = [], cum = [0], L = 0;
-    for (var i = 0; i < pts.length - 1; i++) {
-      var a = pts[i], b = pts[i + 1];
-      var dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
-      var tx = dx / len, ty = dy / len;
-      segs.push({ a: a, b: b, len: len, tx: tx, ty: ty, nx: -ty, ny: tx });
-      L += len; cum.push(L);
-    }
-    return { pts: pts, segs: segs, cum: cum, L: L, bore: bore };
-  }
-  /* arc position s -> world point + tangent + normal of its segment
-     (gp = normal·gravity, i.e. how much "down" pushes along +normal) */
-  function atS(P, s) {
-    s = clamp(0, P.L, s);
-    var i = P.segs.length - 1;
-    for (var k = 0; k < P.segs.length; k++) { if (s <= P.cum[k + 1]) { i = k; break; } }
-    var sg = P.segs[i], t = (s - P.cum[i]) / sg.len;
-    return {
-      x: sg.a.x + (sg.b.x - sg.a.x) * t, y: sg.a.y + (sg.b.y - sg.a.y) * t,
-      nx: sg.nx, ny: sg.ny, gp: sg.ny
-    };
-  }
-  function strokePipe(ctx, P) {
-    ctx.beginPath();
-    ctx.moveTo(P.pts[0].x, P.pts[0].y);
-    for (var i = 1; i < P.pts.length; i++) ctx.lineTo(P.pts[i].x, P.pts[i].y);
-    ctx.stroke();
-  }
-  function spawnPart(D, s) {
-    var rng = D.rng || Math.random;
-    var t = DEB_TYPES[(rng() * (D.unlocked || 1)) | 0];
-    if (s == null && D.P) s = clamp(0, D.P.L * 0.96, t.hs * D.P.L + rndWith(rng, -D.P.bore * 2.4, D.P.bore * 0.8));
-    D.parts.push({ t: t, s: s, o: rndWith(rng, -D.half * 0.4, D.half * 0.4), v: rndWith(rng, 0.9, 1.8), r: rndWith(rng, 2.2, 4.4) });
-  }
-
-  function unlockedDebrisTypes(st) {
-    var n = 1;
-    if (st.p >= beatFrac(st, 2) - INW(st) * 0.2) n = 2;
-    if (st.p >= beatFrac(st, 3) - INW(st) * 0.2) n = 3;
-    if (st.p >= beatFrac(st, 4) - INW(st) * 0.2) n = 4;
-    return n;
-  }
-  function depositDebris(D, s, side, t, r) {
-    var b = Math.max(0, Math.min(BUCKET_N, (s / D.bs) | 0));
-    var arr = D.crust[side], col = D.ccol[side];
-    arr[b] = Math.min(D.maxCrust, arr[b] + r * 1.5);
-    col[b] = t.c;
-    if (b > 0) { arr[b - 1] = Math.min(D.maxCrust, arr[b - 1] + r * 0.6); if (!col[b - 1]) col[b - 1] = t.c; }
-    if (b < BUCKET_N) { arr[b + 1] = Math.min(D.maxCrust, arr[b + 1] + r * 0.6); if (!col[b + 1]) col[b + 1] = t.c; }
-  }
-
-  function fxDebris(st, c, dt, time) {
-    var ctx = c.ctx, w = c.w(), h = c.h();
-    ctx.clearRect(0, 0, w, h);
-
-    if (!st.deb || st.deb.w !== w || st.deb.h !== h) {
-      var P = buildPipe(w, h);
-      var half = P.bore / 2, maxCrust = half * 0.9, bs = P.L / BUCKET_N;
-      st.deb = {
-        w: w, h: h, P: P, half: half, maxCrust: maxCrust, bs: bs,
-        crust: [new Float32Array(BUCKET_N + 1), new Float32Array(BUCKET_N + 1)], /* thickness, side 0:+normal 1:-normal */
-        ccol: [new Array(BUCKET_N + 1), new Array(BUCKET_N + 1)],                 /* dominant enemy color per bucket */
-        parts: [], flow: [],
-        rng: seededRng((w * 73856093 ^ h * 19349663 ^ 0x2d2a2d) >>> 0)
-      };
-      st.deb.unlocked = unlockedDebrisTypes(st);
-      for (var fi = 0; fi < 22; fi++) st.deb.flow.push({ s: rndWith(st.deb.rng, 0, P.L), o: rndWith(st.deb.rng, -half * 0.5, half * 0.5), len: rndWith(st.deb.rng, 20, 46) });
-      /* pre-seed crust to scroll progress, so a mid-act jump still shows
-         the buildup story so far (heaviest near each enemy's home) */
-      var seed = Math.floor(smooth(st.p) * 160);
-      for (var sd = 0; sd < seed; sd++) {
-        var ty0 = DEB_TYPES[(st.deb.rng() * st.deb.unlocked) | 0];
-        var ss = clamp(0, P.L, (ty0.hs + rndWith(st.deb.rng, -0.08, 0.08)) * P.L);
-        depositDebris(st.deb, ss, st.deb.rng() < 0.5 ? 0 : 1, ty0, rndWith(st.deb.rng, 2.2, 4.4));
-      }
-      for (var ip = 0; ip < 26; ip++) spawnPart(st.deb, null);
-    }
-    var D = st.deb, P = D.P, half = D.half;
-    D.unlocked = unlockedDebrisTypes(st);
-    function bkt(s) { return Math.max(0, Math.min(BUCKET_N, (s / D.bs) | 0)); }
-    function crustAt(side, s) { return D.crust[side][bkt(s)]; }
-    function openAt(s) { return Math.max(12, (half - crustAt(0, s)) + (half - crustAt(1, s))); }
-    function flowSpeed(s) { return clamp(1, 3.2, P.bore / openAt(s)); }
-    /* elbow proximity 0..1 (higher = nearer a bend) boosts deposition -
-       real systems clog at the bends first */
-    function elbowBoost(s) {
-      var best = 0;
-      for (var e = 1; e < P.cum.length - 1; e++) {
-        var f = 1 - Math.abs(s - P.cum[e]) / (P.bore * 1.7);
-        if (f > best) best = f;
-      }
-      return best < 0 ? 0 : best;
-    }
-
-    /* ---- casing: outer wall, dark bore, flanged elbows (not clipped) ---- */
-    ctx.lineJoin = "round"; ctx.lineCap = "round";
-    ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = P.bore + 10; strokePipe(ctx, P);
-    ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = P.bore + 2;  strokePipe(ctx, P);
-    ctx.strokeStyle = "rgba(8,10,14,0.55)";     ctx.lineWidth = P.bore;      strokePipe(ctx, P);
-    ctx.fillStyle = "rgba(255,255,255,0.14)";
-    for (var jt = 1; jt < P.pts.length - 1; jt++) {
-      var pj = P.pts[jt];
-      ctx.fillRect(pj.x - (half + 7), pj.y - 5, P.bore + 14, 10);
-      ctx.fillRect(pj.x - 5, pj.y - (half + 7), 10, P.bore + 14);
-    }
-
-    /* ---- clip moving parts to the pipe interior (offset polygon) ---- */
-    ctx.save();
-    ctx.beginPath();
-    for (var lp = 0; lp < P.pts.length; lp++) {
-      var sgl = P.segs[Math.min(lp, P.segs.length - 1)];
-      var lx = P.pts[lp].x + sgl.nx * half, ly = P.pts[lp].y + sgl.ny * half;
-      lp === 0 ? ctx.moveTo(lx, ly) : ctx.lineTo(lx, ly);
-    }
-    for (var rp = P.pts.length - 1; rp >= 0; rp--) {
-      var sgr = P.segs[Math.min(rp, P.segs.length - 1)];
-      ctx.lineTo(P.pts[rp].x - sgr.nx * half, P.pts[rp].y - sgr.ny * half);
-    }
-    ctx.closePath(); ctx.clip();
-
-    /* flow streaks: faster where the bore is choked */
-    ctx.strokeStyle = "rgba(244,246,248,0.12)"; ctx.lineWidth = 1.2;
-    for (var f = 0; f < D.flow.length; f++) {
-      var fl = D.flow[f];
-      fl.s += (0.9 + flowSpeed(fl.s)) * dt * 60;
-      if (fl.s > P.L) { fl.s = rnd(0, 30); fl.o = rnd(-half * 0.5, half * 0.5); }
-      var a0 = atS(P, fl.s - fl.len), a1 = atS(P, fl.s);
-      ctx.beginPath();
-      ctx.moveTo(a0.x + a0.nx * fl.o, a0.y + a0.ny * fl.o);
-      ctx.lineTo(a1.x + a1.nx * fl.o, a1.y + a1.ny * fl.o);
-      ctx.stroke();
-    }
-
-    /* spawn + advect debris down the run */
-    var stickBase = 0.02 + st.p * 0.10;
-    while (D.parts.length < 30) spawnPart(D, null);
-    ctx.globalAlpha = 0.9;
-    for (var k = D.parts.length - 1; k >= 0; k--) {
-      var d = D.parts[k];
-      var here = atS(P, d.s);
-      d.s += d.v * flowSpeed(d.s) * dt * 60;
-      if (d.s > P.L) { D.parts.splice(k, 1); continue; }
-      /* gravity (projected onto the segment normal) pulls toward the
-         down-wall; add a little jitter */
-      d.o += here.gp * 0.5 + Math.sin(time * 1.2 + d.s * 0.05) * 0.18;
-      var side = d.o >= 0 ? 0 : 1;
-      var openSide = half - crustAt(side, d.s);
-      if (d.o > openSide) d.o = openSide; if (d.o < -(half - crustAt(1, d.s))) d.o = -(half - crustAt(1, d.s));
-      var homeNear = 1 - Math.min(1, Math.abs(d.s / P.L - d.t.hs) * 2.2);
-      var stickP = homeNear < 0.18 ? 0 : stickBase * (0.5 + elbowBoost(d.s) * 1.8) * (homeNear * homeNear);
-      if (Math.abs(d.o) > (half - crustAt(side, d.s)) - 3 && Math.random() < stickP) {
-        depositDebris(D, d.s, side, d.t, d.r);
-        D.parts.splice(k, 1); continue;
-      }
-      ctx.fillStyle = "rgb(" + d.t.c + ")";
-      ctx.beginPath(); ctx.arc(here.x + here.nx * d.o, here.y + here.ny * d.o, d.r, 0, 6.2832); ctx.fill();
-    }
-
-    ctx.globalAlpha = 1;
-    ctx.restore();
-
-    /* Wall deposits sit on the pipe surface, not inside the flow channel. */
-    drawCrustPatches(ctx, D);
-  }
-
-  function drawCrustPatches(ctx, D) {
-    var P = D.P, half = D.half, bs = D.bs;
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    for (var side = 0; side < 2; side++) {
-      var sign = side === 0 ? 1 : -1, arr = D.crust[side], col = D.ccol[side];
-      for (var b = 0; b < BUCKET_N; b += 2) {
-        var t = (arr[b] + arr[b + 1]) * 0.5;
-        if (t < 0.6) continue;
-        var s0 = b * bs, s1 = Math.min(P.L, (b + 1.35) * bs);
-        var a0 = atS(P, s0), a1 = atS(P, s1);
-        var width = clamp(3.2, half * 0.38, t * 0.72);
-        var inset = half + width * 0.06;
-        ctx.globalAlpha = clamp(0.28, 0.82, 0.28 + t / D.maxCrust * 0.54);
-        ctx.strokeStyle = "rgb(" + (col[b] || col[b + 1] || "201,212,208") + ")";
-        ctx.lineWidth = width;
-        ctx.beginPath();
-        ctx.moveTo(a0.x + a0.nx * sign * inset, a0.y + a0.ny * sign * inset);
-        ctx.lineTo(a1.x + a1.nx * sign * inset, a1.y + a1.ny * sign * inset);
-        ctx.stroke();
-        if (b % 6 === 0) {
-          var m = atS(P, (s0 + s1) * 0.5);
-          ctx.beginPath();
-          ctx.arc(m.x + m.nx * sign * inset, m.y + m.ny * sign * inset, Math.max(1.6, width * 0.42), 0, 6.2832);
-          ctx.fillStyle = ctx.strokeStyle;
-          ctx.fill();
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  /* Previous filled-band renderer. The live scene uses drawCrustPatches above:
-     wall deposits read as buildup, while this filled band made triangular sheets.
-     closes toward the chokes. One quad per bucket, colored by the enemy
-     that built it. */
-  function drawCrust(ctx, D) {
-    var P = D.P, half = D.half, bs = D.bs;
-    for (var side = 0; side < 2; side++) {
-      var sign = side === 0 ? 1 : -1, arr = D.crust[side], col = D.ccol[side];
-      for (var b = 0; b < BUCKET_N; b++) {
-        var t0 = arr[b], t1 = arr[b + 1];
-        if (t0 < 0.6 && t1 < 0.6) continue;
-        var a0 = atS(P, b * bs), a1 = atS(P, (b + 1) * bs);
-        ctx.fillStyle = "rgb(" + (col[b] || "201,212,208") + ")";
-        ctx.beginPath();
-        ctx.moveTo(a0.x + a0.nx * sign * half, a0.y + a0.ny * sign * half);
-        ctx.lineTo(a0.x + a0.nx * sign * (half - t0), a0.y + a0.ny * sign * (half - t0));
-        ctx.lineTo(a1.x + a1.nx * sign * (half - t1), a1.y + a1.ny * sign * (half - t1));
-        ctx.lineTo(a1.x + a1.nx * sign * half, a1.y + a1.ny * sign * half);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-    /* darken the inner lip for depth */
-    ctx.strokeStyle = "rgba(8,10,14,0.5)"; ctx.lineWidth = 1.5;
-    for (var sd = 0; sd < 2; sd++) {
-      var sg = sd === 0 ? 1 : -1, a = D.crust[sd];
-      ctx.beginPath();
-      var started = false;
-      for (var bb = 0; bb <= BUCKET_N; bb++) {
-        if (a[bb] < 0.6) { started = false; continue; }
-        var pp = atS(P, bb * bs);
-        var ix = pp.x + pp.nx * sg * (half - a[bb]), iy = pp.y + pp.ny * sg * (half - a[bb]);
-        started ? ctx.lineTo(ix, iy) : ctx.moveTo(ix, iy);
-        started = true;
-      }
-      ctx.stroke();
-    }
-  }
-
   /* --- ACT 4: clean teal motes drifting up --- */
   function fxMotes(st, c, dt, time) {
     var ctx = c.ctx, w = c.w(), h = c.h();
@@ -652,7 +378,7 @@ states.forEach(function (st) {
     ctx.globalAlpha = 1;
   }
 
-  var FX = { fumes: fxFumes, debris: fxDebris, motes: fxMotes };
+  var FX = { fumes: fxFumes, motes: fxMotes };
   states.forEach(function (st) {
     var type = st.act.getAttribute("data-fx");
     var cv = st.act.querySelector(".fx-canvas");
