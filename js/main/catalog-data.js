@@ -132,7 +132,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "Replaces blends rated up to HMIS 2-0-0"],
       ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 certificate status must be confirmed through document request"],
       ["ph-prohibit", "No heavy metals", "No chromate, zinc, or molybdate"],
-      ["ph-clipboard-text", "Scoped documentation", "ASHRAE 188 program support by site scope"]
+      ["ph-clipboard-text", "Documentation by site", "ASHRAE 188 program support sized to your site"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/watersafe60-sds.pdf" },
@@ -154,7 +154,7 @@ export const PRODUCTS = {
     desc: "A FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment for occupied-site maintenance. Purgo stays within its label: it isn't a registered disinfectant and isn't sold as one.",
     uses: [
       "Minimum-risk antimicrobial and odor-control support",
-      "ASHRAE 188 documentation support when paired with testing and WMP scope",
+      "ASHRAE 188 documentation support when paired with testing and a water management program",
       "Occupied-campus water treatment",
       "Minimum-risk antimicrobial cleaning workflows"
     ],
@@ -162,7 +162,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling versus bromine and bleach"],
       ["ph-seal-check", "FIFRA 25(b)", "Minimum-risk classification"],
       ["ph-buildings", "Occupied-site fit", "Built for routine maintenance programs"],
-      ["ph-clipboard-text", "Use with scope notes", "Exact use claims route through label and program documentation"]
+      ["ph-clipboard-text", "Confirm against docs", "Exact use claims confirmed against the label and program documentation"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-purgo-sds.pdf" },
@@ -214,7 +214,7 @@ export const PRODUCTS = {
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-gauge", "About 50% active", "Higher active strength than common 15% degreasers"],
-      ["ph-seal-check", "Equipment files", "Crown Forklift, Plug Power, and aerospace-spec support files route through document request"],
+      ["ph-seal-check", "Equipment files", "Crown Forklift, Plug Power, and aerospace-spec equipment files available on request"],
       ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
     ],
     docs: [
@@ -241,10 +241,10 @@ export const PRODUCTS = {
       "Refrigeration systems: chloride-free protocol for ammonia systems"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "HMIS 0-0-0 profile with no NFPA pictograms"],
+      ["ph-shield-check", "HMIS 0-0-0", "HMIS 0-0-0 with no NFPA pictograms"],
       ["ph-trend-down", "Far less corrosion", "0.59 mpy versus hydrochloric at 609 mpy in VertKleen testing"],
       ["ph-snowflake", "Metal compatibility", "Used with aluminum, copper, steel, and stainless protocols"],
-      ["ph-drop", "Discharge planning", "Built to reduce acid-neutralization friction; confirm site rules"]
+      ["ph-drop", "Discharge planning", "Built to reduce acid neutralization; confirm site rules"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-descaler-sds.pdf" },
@@ -274,7 +274,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "No hydrofluoric or hydrochloric acid"],
       ["ph-atom", "Synthetic acid", "SynTech brightening without the burn and fume risk"],
       ["ph-chart-line-up", "Brightening Index 90.1", "Outperformed hydrochloric acid at 86.3 in VertKleen testing"],
-      ["ph-leaf", "Biodegradable", "Lower-impact discharge profile; confirm site rules"]
+      ["ph-leaf", "Biodegradable", "Lower-impact discharge; confirm site rules"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -286,7 +286,7 @@ export const PRODUCTS = {
  icon: "ph-sparkle",
  image: "img/products/torque-studio.webp",
     tag: "Vehicle wash and wax in one process for operators who do not want three bottles for one finish.",
-    desc: "An all-in-one wash and wax that cleans and protects in a single step across vehicles, fleet, RV, and marine. The Yellowfin case file sums up the visual proof: grime line gone.",
+    desc: "An all-in-one wash and wax that cleans and protects in a single step across vehicles, fleet, RV, and marine. The Yellowfin job shows the proof: grime line gone.",
     uses: [
       "Vehicle, fleet, and RV wash and wax",
       "Marine and boat exteriors",
@@ -321,7 +321,7 @@ export const PRODUCTS = {
       "Field-proven clearing mildew from a painted column over two weeks"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Neutral pH, no bleach, lower fume burden"],
+      ["ph-shield-check", "HMIS 0-0-0", "Neutral pH, no bleach, low fumes"],
       ["ph-plant", "Label-directed exterior use", "Follow label directions around landscaping and animals"],
       ["ph-timer", "Spray and walk away", "Keeps working up to a month; reapply about every six months"],
       ["ph-leaf", "Biodegradable stain remover", "Use SDS precautions for mild skin and eye irritation"]
@@ -395,7 +395,7 @@ export const PRODUCTS = {
     uses: [
       "Concentrated alkaline cleaning programs",
       "Water-treatment dosing where strength matters",
-      "High-pH cleaning with an HMIS 0-0-0 profile"
+      "High-pH cleaning at an HMIS 0-0-0 rating"
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
@@ -416,7 +416,7 @@ export const PRODUCTS = {
     uses: [
       "Specialty descaling and acid-cleaning jobs",
       "Water-side scale and mineral removal",
-      "Applications needing a tuned acid-replacement profile"
+      "Applications needing a tuned acid replacement"
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
@@ -442,7 +442,7 @@ pg100: {
     specs: [
       ["ph-drop", "Propylene glycol", "Concentrated inhibited glycol"],
       ["ph-thermometer-cold", "Freeze protection", "For loop fill and maintenance programs"],
-      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums quoted with freight"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -459,7 +459,7 @@ pg100: {
     specs: [
       ["ph-drop", "PG 50 blend", "Premixed propylene glycol solution"],
       ["ph-thermometer-cold", "Freeze protection", "For routine loop service"],
-      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums quoted with freight"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -476,7 +476,7 @@ pg100: {
     specs: [
       ["ph-drop", "Ethylene glycol", "Concentrated inhibited glycol"],
       ["ph-thermometer-cold", "Freeze protection", "For loop fill and maintenance programs"],
-      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums quoted with freight"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -493,7 +493,7 @@ pg100: {
     specs: [
       ["ph-drop", "EG 50 blend", "Premixed ethylene glycol solution"],
       ["ph-thermometer-cold", "Freeze protection", "For routine loop service"],
-      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums quoted with freight"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -510,7 +510,7 @@ pg100: {
     specs: [
       ["ph-drop", "EG uninhibited", "Concentrated glycol for utility loops"],
       ["ph-thermometer-cold", "Freeze protection", "For loop fill and maintenance programs"],
-      ["ph-truck", "Bulk-ready", "Small packs priced online; drums route through freight review"]
+      ["ph-truck", "Bulk-ready", "Small packs priced online; drums quoted with freight"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
