@@ -5969,16 +5969,16 @@ body.products-page .conversion-proof .proof-pill em {
 
 /* Impeccable public-surface polish: generated industry pages, resources, proof cards. */
 .resources-page .section-slim {
-  padding-bottom: clamp(44px, 5vw, 62px);
+  padding-bottom: clamp(28px, 3vw, 40px);
 }
 
 .resources-page .section-slim + .resource-disclosure {
-  margin-top: clamp(18px, 3vw, 34px);
+  margin-top: clamp(8px, 1.4vw, 18px);
 }
 
 .resources-page .resource-disclosure {
   width: min(1124px, calc(100% - 56px));
-  margin-block: clamp(22px, 4vw, 42px);
+  margin-block: clamp(16px, 3vw, 32px);
 }
 
 .resources-page .resource-disclosure + section {
