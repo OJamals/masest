@@ -22,7 +22,12 @@ export const PRODUCTS = {
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates, and phosphates"],
       ["ph-truck", "Lower-friction shipping", "No DOT hazmat freight on the core line"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "Cooling Tower Case Study: Brevard County Schools"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-hcr-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-hcr-tds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-hcr-label.pdf" },
+      "Cooling Tower Case Study: Brevard County Schools"
+    ]
   },
   cr: {
     name: "VertKleen CR",
@@ -45,7 +50,12 @@ export const PRODUCTS = {
       ["ph-atom", "SynClean powered", "Replaces sodium and potassium hydroxide"],
       ["ph-leaf", "Discharge planning", "Wastewater path reviewed by site and label conditions"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Certificate-Status Request", "Technical Application Sheet"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-cr-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-cr-tds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-cr-label.pdf" },
+      "NSF/ANSI 60 Certificate-Status Request"
+    ]
   },
   neutral: {
     name: "VertKleen Neutral",
@@ -68,7 +78,11 @@ export const PRODUCTS = {
       ["ph-atom", "SynClean powered", "Patented degreasing technology"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC; discharge path remains site-reviewed"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-neutral-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-neutral-tds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-neutral-label.pdf" }
+    ]
   },
   multiwash: {
     name: "VertKleen MultiWash",
@@ -91,7 +105,11 @@ export const PRODUCTS = {
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates and phosphates"],
       ["ph-truck", "Lower-friction shipping", "Non-hazmat handling profile for the core line"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-multiwash-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-multiwash-tds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-multiwash-label.pdf" }
+    ]
   },
   watersafe60: {
     name: "WaterSafe60",
@@ -114,7 +132,12 @@ export const PRODUCTS = {
       ["ph-prohibit", "No heavy metals", "No chromate, zinc, or molybdate"],
       ["ph-clipboard-text", "Scoped documentation", "ASHRAE 188 program support by site scope"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "NSF/ANSI 60 Certificate-Status Request", "Cooling Tower Program Brochure"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/watersafe60-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/watersafe60-tds.pdf" },
+      { label: "WaterSafe60 / CR User Guide (NSF 60)", file: "docs/sds/watersafe60-cr-nsf60-user-guide.pdf" },
+      "NSF/ANSI 60 Certificate-Status Request"
+    ]
   },
   purgo: {
     name: "Purgo",
@@ -137,7 +160,12 @@ export const PRODUCTS = {
       ["ph-buildings", "Occupied-site fit", "Built for routine maintenance programs"],
       ["ph-clipboard-text", "Use with scope notes", "Exact use claims route through label and program documentation"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "FIFRA 25(b) Documentation", "Cooling Tower Program Brochure"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-purgo-sds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-purgo-label.pdf" },
+      { label: "Purgo 101 Overview", file: "docs/sds/vertkleen-purgo-101.pdf" },
+      "FIFRA 25(b) Documentation"
+    ]
   },
   dbnpa: {
     name: "DBNPA Tablet",
@@ -182,7 +210,12 @@ export const PRODUCTS = {
       ["ph-seal-check", "Equipment files", "Crown Forklift, Plug Power, and aerospace-spec support files route through document request"],
       ["ph-truck", "Lower-friction shipping", "No DOT hazmat freight on the core line"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "Case Study: Walmart Distribution Centers"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crhd-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-crhd-tds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-crhd-label.pdf" },
+      "Case Study: Walmart Distribution Centers"
+    ]
   },
   descaler: {
     name: "VertKleen Descaler",
@@ -205,7 +238,13 @@ export const PRODUCTS = {
       ["ph-snowflake", "Metal compatibility", "Used with aluminum, copper, steel, and stainless protocols"],
       ["ph-drop", "Discharge planning", "Built to reduce acid-neutralization friction; confirm site rules"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Descaler vs Acids Corrosion Data", "Case Study: Walmart Refrigeration Systems"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-descaler-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-descaler-tds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-descaler-label.pdf" },
+      "Descaler vs Acids Corrosion Data",
+      "Case Study: Walmart Refrigeration Systems"
+    ]
   },
   alumibrite: {
     name: "VertKleen AlumiBrite",
@@ -251,7 +290,11 @@ export const PRODUCTS = {
       ["ph-seal-check", "Finish-care support", "Product fit reviewed against finish-care requirements"],
       ["ph-leaf", "Biodegradable", "Low VOC; discharge path remains site-reviewed"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-torque-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-torque-tds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-torque-label.pdf" }
+    ]
   },
   lam3: {
     name: "VertKleen LAM3",
@@ -297,7 +340,11 @@ export const PRODUCTS = {
       ["ph-waves", "Water-side scale", "Targets calcium, rust, and mineral buildup"],
       ["ph-leaf", "Dilution guide", "Use ratios align with the VertKleen dilution guide"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet", "HCR & Descaler Userguide"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crs-sds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-crs-label.pdf" },
+      "HCR & Descaler Userguide"
+    ]
   },
   "cr-hd-low-foam": {
     name: "VertKleen CR HD Low Foam",
@@ -362,7 +409,11 @@ export const PRODUCTS = {
       ["ph-drop-half", "Acid replacement", "Targeted descaling without muriatic-acid handling"],
       ["ph-waves", "Water-side scale", "Calcium, rust, and mineral buildup"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-sar-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-sar-tds.pdf" },
+      { label: "Product Label", file: "docs/sds/vertkleen-sar-label.pdf" }
+    ]
   },
 pg100: {
     name: "PG inhibited 100% concentrate",

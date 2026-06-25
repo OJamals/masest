@@ -518,9 +518,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }));
   }
 
- document.getElementById("pDocs").innerHTML = p.docs.map(d =>
-      `<div class="doc-row"><div><b>${d}</b><span>Controlled document request</span></div>
-       <a class="btn btn-ghost btn-sm" href="contact?product=${encodeURIComponent(p.name)}&doc=${encodeURIComponent(d)}" aria-label="Request ${d} for ${p.name}">Request</a></div>`).join("");
+ document.getElementById("pDocs").innerHTML = p.docs.map(d => {
+      const label = (d && typeof d === "object") ? d.label : d;
+      const file = (d && typeof d === "object" && d.file) ? d.file : null;
+      if (file) {
+        return `<div class="doc-row"><div><b>${label}</b><span>Direct download (PDF)</span></div>
+       <a class="btn btn-ghost btn-sm" href="${file}" target="_blank" rel="noopener" download aria-label="Download ${label} for ${p.name}">Download</a></div>`;
+      }
+      return `<div class="doc-row"><div><b>${label}</b><span>Controlled document request</span></div>
+       <a class="btn btn-ghost btn-sm" href="contact?product=${encodeURIComponent(p.name)}&doc=${encodeURIComponent(label)}" aria-label="Request ${label} for ${p.name}">Request</a></div>`;
+    }).join("");
 
     initReveal();
   });

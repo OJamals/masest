@@ -242,7 +242,13 @@ function productPage(id, product) {
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
     .join("\n");
   const docs = (product.docs || [])
-    .map((doc) => `<li>${text(doc)}</li>`)
+    .map((doc) => {
+      if (doc && typeof doc === "object" && doc.file) {
+        return `<li class="doc-file"><a href="../${attr(doc.file)}" target="_blank" rel="noopener" download>${text(doc.label)}<span class="doc-pill">PDF</span></a></li>`;
+      }
+      const label = doc && typeof doc === "object" ? doc.label : doc;
+      return `<li>${text(label)}</li>`;
+    })
     .join("\n");
   const procurement = QUOTE_FIRST_IDS.includes(id)
     ? "Quote review required before purchase."
