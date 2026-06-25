@@ -164,7 +164,7 @@ export async function onRequestPost({ request, env }) {
           await sb.from('notifications').insert({
             company_id: s.metadata.company_id, type: 'account',
             title: `${s.metadata?.tier || 'Program'} program active`,
-            body: 'Your VertKleen service program is now active.', link: '/business.html',
+            body: 'Your VertKleen service program is now active.', link: '/dashboard.html#business',
           }).then(() => {}, () => {});
         }
       } catch (e) { console.error('program_sub_record_failed', e?.message || e); }

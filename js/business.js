@@ -40,9 +40,8 @@ function renderProfile(data) {
     <div class="biz-row"><span>NET terms</span><b>${data.can_use_net_terms ? 'NET-' + c.net_terms_days : 'Not enabled'}</b></div>
     <div class="biz-row"><span>Tax-exempt</span><b>${c?.tax_exempt ? 'Yes' : 'No'}</b></div>
     <div class="actions">
-      <a class="btn btn-primary btn-sm" href="dashboard.html">Account dashboard</a>
-      <a class="btn btn-ghost btn-sm" href="dashboard.html#profile">Edit profile</a>
-      ${c ? '<a class="btn btn-ghost btn-sm" href="dashboard.html#addresses">Manage addresses</a>' : ''}
+      <a class="btn btn-primary btn-sm" href="#profile">Edit profile</a>
+      ${c ? '<a class="btn btn-ghost btn-sm" href="#addresses">Manage addresses</a>' : ''}
       ${data.can_checkout ? '<a class="btn btn-ghost btn-sm" href="products.html">Browse catalog</a>' : ''}
     </div>
     ${!c ? '<p class="muted" style="margin-top:12px">Your user account is active. Create a business profile below when you need checkout, programs, or NET terms.</p>' : ''}
@@ -334,14 +333,33 @@ function initTeam() {
   });
 }
 
-async function boot() {
-  let data = null;
-  try { data = await me(); } catch { data = null; }
-  if (!data) { $('bizGuest').hidden = false; return; }
+function showBusinessGuest(message, label = 'Sign in or create an account') {
+  const guest = $('bizGuest');
+  if (!guest) return;
+  if (!guest.querySelector('p') || !guest.querySelector('a')) {
+    guest.className = 'biz-card';
+    guest.innerHTML = `
+      <h2>Finish business setup</h2>
+      <p class="muted">${esc(message)}</p>
+      <a class="btn btn-primary" href="account.html?return=dashboard.html%23business">${esc(label)}</a>`;
+  } else {
+    guest.querySelector('p').textContent = message;
+    guest.querySelector('a').textContent = label;
+  }
+  guest.hidden = false;
+}
+
+export async function initBusinessHub(initialData = null) {
+  let data = initialData;
+  if (!data) {
+    try { data = await me(); } catch { data = null; }
+  }
+  if (!data) {
+    showBusinessGuest('Programs, bulk orders, and your account team are available once you sign in to a business account.');
+    return;
+  }
   if (data.needs_profile) {
-    $('bizGuest').hidden = false;
-    $('bizGuest').querySelector('p').textContent = 'Your email is confirmed - finish setting up your business account to access programs and bulk ordering.';
-    $('bizGuest').querySelector('a').textContent = 'Finish setting up';
+    showBusinessGuest('Your email is confirmed - finish setting up your business account to access programs and bulk ordering.', 'Finish setting up');
     return;
   }
   $('bizApp').hidden = false;
@@ -356,4 +374,7 @@ async function boot() {
   wireBulk();
   if (data.company && data.profile?.role === 'admin') initTeam();
 }
-boot();
+
+if (document.body?.dataset.businessPage === 'true') {
+  initBusinessHub();
+}

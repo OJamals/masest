@@ -3,6 +3,7 @@
 import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog } from './util.js';
+import { initBusinessHub } from './business.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -17,7 +18,7 @@ let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
 
 /* ---------- tabs / routing ---------- */
-const DASH_TABS = ['orders', 'messages', 'notifications', 'addresses', 'payment', 'profile', 'security'];
+const DASH_TABS = ['orders', 'messages', 'notifications', 'business', 'addresses', 'payment', 'profile', 'security'];
 
 function currentDashboardTab() {
   const tab = location.hash.slice(1);
@@ -28,6 +29,11 @@ function selectTab(name) {
   const tabs = [...document.querySelectorAll('.dash-tab')];
   tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   rovingTabindex(tabs, (t) => t.dataset.tab === name);
+  const activeTab = tabs.find((tab) => tab.dataset.tab === name);
+  const rail = activeTab?.closest('.dash-tabs');
+  if (activeTab && rail && rail.scrollWidth > rail.clientWidth) {
+    activeTab.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
   document.querySelectorAll('.dash-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
   loadTab(name);
@@ -47,6 +53,15 @@ function loadTab(name) {
   if (name === 'orders' && !loaded.orders) renderOrders();
   if (name === 'messages' && !loaded.messages) renderMessages();
   if (name === 'notifications' && !loaded.notifications) renderNotifications();
+  if (name === 'business' && !loaded.business) {
+    loaded.business = true;
+    initBusinessHub(ACCOUNT)
+      .then(() => wirePanelLinks(document.querySelector('[data-panel="business"]')))
+      .catch(() => {
+        const box = $('bizProfile');
+        if (box) box.innerHTML = '<p class="dash-status" data-state="err">Could not load business tools.</p>';
+      });
+  }
   if (name === 'addresses' && !loaded.addresses) renderAddresses();
   if (name === 'payment' && !loaded.payment) renderPayment();
   if (name === 'profile' && !loaded.profile) renderProfile();
@@ -101,7 +116,7 @@ async function renderOverview() {
 
   // Quick stats: pull counts in the background.
   const stats = $('ovStats');
-  stats.innerHTML = [0, 1, 2].map(() => `<div class="stat"><div class="skeleton skeleton-text w-40" style="height:1.8em;margin:.15em 0 .55em"></div><div class="skeleton skeleton-text w-80"></div></div>`).join('');
+  stats.innerHTML = [0, 1, 2].map(() => `<div class="stat"><div class="skeleton skeleton-text w-40 dash-stat-skeleton-main"></div><div class="skeleton skeleton-text w-80"></div></div>`).join('');
   const [ord, notif] = await Promise.all([
     fetchOrders().catch(() => []),
     api('/api/account/notifications').catch(() => ({ notifications: [], unread: 0 })),
@@ -134,7 +149,7 @@ function renderSetupProgress() {
         const done = step.done || step.state === 'done';
         const detail = step.detail || step.description || '';
         return `
-        <a class="setup-step" data-setup-state="${done ? 'done' : 'open'}" href="${esc(safeUrl(step.action || 'business.html'))}">
+        <a class="setup-step" data-setup-state="${done ? 'done' : 'open'}" href="${esc(safeUrl(dashboardHref(step.action || '#business')))}">
           <i class="ph ${done ? 'ph-check-circle' : 'ph-circle'}" aria-hidden="true"></i>
           <span><b>${esc(step.label)}</b><small>${esc(detail)}</small></span>
           <small>${done ? 'Done' : 'Open'}</small>
@@ -160,7 +175,7 @@ function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
       icon: 'ph-clipboard-text',
       label: ACCOUNT?.company ? 'Open business setup' : 'Set up business',
       detail: `${openSteps.length} open ${openSteps.length === 1 ? 'step' : 'steps'}`,
-      href: 'business.html',
+      href: '#business',
     });
   }
   if (ACCOUNT?.can_checkout) {
@@ -269,6 +284,13 @@ function setBadge(id, n) {
   if (n > 0) { el.textContent = n; el.hidden = false; } else { el.hidden = true; }
 }
 
+function dashboardHref(raw = '') {
+  const href = String(raw || '');
+  if (/^business\.html(?:[?#].*)?$/i.test(href)) return '#business';
+  if (/^dashboard\.html#/.test(href)) return href.replace(/^dashboard\.html/, '');
+  return href;
+}
+
 function wirePanelLinks(scope) {
   if (!scope) return;
   scope.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener('click', (event) => {
@@ -301,7 +323,7 @@ function closeReservedTab(tab) {
 function pagerHtml(attr, st) {
   if (!st.hasMore) return '';
   const count = st.total != null ? ` <span class="muted">(${st.items.length} of ${st.total})</span>` : '';
-  return `<div class="dash-pager" style="text-align:center;margin-top:12px"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
+  return `<div class="dash-pager"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
 }
 
 async function renderOrders({ append = false } = {}) {
@@ -310,12 +332,13 @@ async function renderOrders({ append = false } = {}) {
   const st = pages.orders;
   if (!ACCOUNT?.company) {
     st.items = []; st.offset = 0; st.total = 0; st.hasMore = false;
-    box.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before placing or tracking company orders.</div><a class="btn btn-primary btn-sm" href="business.html">Set up business</a></div>`;
+    box.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before placing or tracking company orders.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
+    wirePanelLinks(box);
     return;
   }
   if (!append) {
     st.items = []; st.offset = 0;
-    box.innerHTML = `<div class="skeleton skeleton-block" style="height:60px;margin-bottom:10px"></div>`.repeat(3);
+    box.innerHTML = `<div class="skeleton skeleton-block dash-order-skeleton"></div>`.repeat(3);
   }
   let res;
   try { res = await api(`/api/account/orders?limit=25&offset=${st.offset}`); }
@@ -372,7 +395,8 @@ async function renderMessages() {
   loaded.messages = true;
   const thread = $('msgThread');
   if (!ACCOUNT?.company) {
-    thread.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before starting account-team message threads.</div><a class="btn btn-primary btn-sm" href="business.html">Set up business</a></div>`;
+    thread.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before starting account-team message threads.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
+    wirePanelLinks(thread);
     return;
   }
   let msgs = [];
@@ -407,7 +431,8 @@ async function renderNotifications({ append = false } = {}) {
   if (!ACCOUNT?.company) {
     st.items = []; st.offset = 0; st.total = 0; st.hasMore = false;
     setBadge('badgeNotifs', 0);
-    box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No business notifications yet</div><div class="empty-body">Business approvals, order updates, and account-team messages start after you create a business profile.</div><a class="btn btn-primary btn-sm" href="business.html">Set up business</a></div>`;
+    box.innerHTML = `<div class="empty-state"><i class="ph ph-bell empty-icon" aria-hidden="true"></i><div class="empty-title">No business notifications yet</div><div class="empty-body">Business approvals, order updates, and account-team messages start after you create a business profile.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
+    wirePanelLinks(box);
     return;
   }
   if (!append) { st.items = []; st.offset = 0; }
@@ -514,7 +539,8 @@ async function renderAddresses() {
   loaded.addresses = true;
   const box = $('addrList');
   if (!ACCOUNT?.company) {
-    box.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">No business profile yet</div><div class="empty-body">Create a business profile before adding shipping or billing addresses.</div><a class="btn btn-primary btn-sm" href="business.html">Set up business</a></div>`;
+    box.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">No business profile yet</div><div class="empty-body">Create a business profile before adding shipping or billing addresses.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
+    wirePanelLinks(box);
     return;
   }
   let list = [];

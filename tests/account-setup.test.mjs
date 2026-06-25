@@ -12,7 +12,7 @@ test("account/me returns buyer setup progress for dashboards", () => {
   assert.match(src, /if \(profile\.company_id\)/, "account-only profiles should not query a null company id");
   assert.match(helper, /resale_cert_url/, "setup needs resale certificate state");
   assert.match(helper, /stripe_customer_id/, "setup needs payment portal state");
-  assert.match(helper, /'tax'[\s\S]+?'business\.html'/, "tax setup action should point to the business setup form");
+  assert.match(helper, /'tax'[\s\S]+?'dashboard\.html#business'/, "tax setup action should point to the dashboard business setup form");
   assert.match(src, /setup:\s*buildAccountSetup\(/, "account response should include setup progress");
   for (const key of ["profile", "approval", "tax", "payment", "net_terms"]) {
     assert.match(helper, new RegExp(`'${key}'`), `missing setup step ${key}`);
@@ -42,13 +42,13 @@ test("buyer dashboard renders business setup progress", () => {
   assert.match(js, /data-setup-state/, "setup steps need non-color-only state hooks");
 });
 
-test("business hub shows the same account setup checklist", () => {
-  const html = read("business.html");
+test("dashboard business panel shows the same account setup checklist", () => {
+  const html = read("dashboard.html");
   const js = read("js/business.js");
   assert.match(html, /id="bizSetup"/, "business hub needs a setup checklist mount");
   assert.match(js, /function renderSetupChecklist\(/, "business hub should render setup checklist");
   assert.match(js, /data\.setup/, "business setup should use account/me setup data");
-  assert.match(js, /Account dashboard/, "business profile should expose an obvious route back to the account dashboard");
+  assert.match(html, /data-tab="business"/, "dashboard should expose business as a first-class panel");
 });
 
 test("account company setup endpoint lets buyers update tax setup fields", () => {
@@ -77,8 +77,8 @@ test("account company setup endpoint lets buyers update tax setup fields", () =>
     "endpoint must resolve auth via requireCompany or destructured userFromRequest");
 });
 
-test("business hub renders and submits company setup form", () => {
-  const html = read("business.html");
+test("dashboard business panel renders and submits company setup form", () => {
+  const html = read("dashboard.html");
   const js = read("js/business.js");
 
   assert.match(html, /id="bizCompanySetup"/, "business hub should mount company setup form");
@@ -88,6 +88,17 @@ test("business hub renders and submits company setup form", () => {
   assert.match(js, /Submit for approval/, "company creation should be framed as an approval request");
   assert.match(js, /\/api\/account\/company/, "company setup form should submit to account company endpoint");
   assert.match(js, /tax_exempt/, "company setup form should include tax-exempt control");
+});
+
+test("embedded business panel renders guest and needs-profile states safely", () => {
+  const html = read("dashboard.html");
+  const js = read("js/business.js");
+
+  assert.match(html, /id="bizGuest" hidden/, "dashboard business panel needs an embedded guest mount");
+  assert.match(js, /function showBusinessGuest\(/, "business module should render guest copy for embedded mounts");
+  assert.match(js, /data\.needs_profile[\s\S]+showBusinessGuest/, "needs-profile accounts should not assume legacy guest children exist");
+  assert.match(js, /account\.html\?return=dashboard\.html%23business/, "embedded sign-in links should preserve the dashboard hash in the return query");
+  assert.doesNotMatch(js, /querySelector\('p'\)\.textContent = 'Your email is confirmed/, "needs-profile branch must not dereference missing embedded children directly");
 });
 
 test("shared setup helper is used by account and admin setup surfaces", () => {
@@ -114,6 +125,14 @@ test("business hub exposes Stripe payment setup portal", () => {
   assert.match(js, /Payment setup unlocks after business approval/, "payment setup should be locked before business approval");
   assert.match(js, /sendReservedTab\(portalTab, out\.url\)/, "business hub should open the Stripe portal without replacing the hub tab");
   assert.match(js, /stripe_not_configured/, "business hub should show Stripe setup errors clearly");
+});
+
+test("legacy business page forwards to the dashboard business panel", () => {
+  const html = read("business.html");
+
+  assert.match(html, /dashboard\.html\$\{params\}\$\{targetHash\}/, "legacy business URL should preserve query strings and forward into dashboard");
+  assert.match(html, /#bizProfile[\s\S]+#bizPrograms[\s\S]+#bizBulk/, "legacy business section hashes should map to the dashboard business tab");
+  assert.match(html, /dashboard\.html#business/, "no-JS fallback should point to the dashboard business panel");
 });
 test("setup helper uses Stripe-specific payment setup copy", () => {
   const helper = read("functions/_lib/setup.js");

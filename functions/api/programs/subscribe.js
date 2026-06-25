@@ -81,8 +81,8 @@ export async function onRequest({ request, env }) {
     mode: 'subscription',
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/business.html?program=success`,
-    cancel_url: `${appUrl}/business.html`,
+    success_url: `${appUrl}/dashboard.html?program=success#business`,
+    cancel_url: `${appUrl}/dashboard.html#business`,
     metadata: { company_id: companyId, tier },
     subscription_data: { metadata: { company_id: companyId, tier } },
   });

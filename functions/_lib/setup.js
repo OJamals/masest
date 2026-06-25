@@ -30,10 +30,10 @@ export function buildAccountSetup(profile, company) {
   const hasNetTerms = approved && (company?.net_terms_days || 0) > 0;
   return setupSummary([
     setupStep('profile', 'Profile', hasProfile, hasProfile ? 'Name and phone are on file.' : 'Add a contact name and phone.', 'dashboard.html#profile'),
-    setupStep('approval', 'Business approval', approved, approved ? 'Business approved for online ordering.' : (hasBusiness ? `Business status: ${company.status || 'pending'}.` : 'Set up a business profile to request approval.'), 'business.html'),
-    setupStep('tax', 'Tax file', hasTaxFile, hasTaxFile ? 'Tax or resale certificate is on file.' : (hasBusiness ? 'Add resale or tax-exempt documentation when applicable.' : 'Available after business setup.'), 'business.html'),
-    setupStep('payment', 'Payment', hasPayment, hasPayment ? 'Stripe customer record is ready.' : (hasBusiness ? 'Open the secure Stripe portal after approval.' : 'Available after business approval.'), 'business.html#payment'),
-    setupStep('net_terms', 'NET terms', hasNetTerms, hasNetTerms ? `NET-${company.net_terms_days} terms enabled.` : (hasBusiness ? 'Staff will enable terms after approval.' : 'Available after business approval.'), 'business.html'),
+    setupStep('approval', 'Business approval', approved, approved ? 'Business approved for online ordering.' : (hasBusiness ? `Business status: ${company.status || 'pending'}.` : 'Set up a business profile to request approval.'), 'dashboard.html#business'),
+    setupStep('tax', 'Tax file', hasTaxFile, hasTaxFile ? 'Tax or resale certificate is on file.' : (hasBusiness ? 'Add resale or tax-exempt documentation when applicable.' : 'Available after business setup.'), 'dashboard.html#business'),
+    setupStep('payment', 'Payment', hasPayment, hasPayment ? 'Stripe customer record is ready.' : (hasBusiness ? 'Open the secure Stripe portal after approval.' : 'Available after business approval.'), 'dashboard.html#business'),
+    setupStep('net_terms', 'NET terms', hasNetTerms, hasNetTerms ? `NET-${company.net_terms_days} terms enabled.` : (hasBusiness ? 'Staff will enable terms after approval.' : 'Available after business approval.'), 'dashboard.html#business'),
   ]);
 }
 

@@ -8,7 +8,8 @@ does not break the live site.
 
 ### User dashboard — `dashboard.html` + `js/dashboard.js`
 Tabs: Overview · Orders (history + status + reorder) · Messages (support thread) · Notifications ·
-Addresses (save/remove ship & bill) · Payment (Stripe Customer Portal — saved cards/ACH) · Profile (edit name/phone).
+Addresses (save/remove ship & bill) · Payment (Stripe Customer Portal — saved cards/ACH) ·
+Profile (edit name/phone) · Business (company setup, approval status, team, programs, bulk requests).
 Linked from `account.html` ("Open dashboard") once signed in.
 
 ### Admin console — `admin.html` + `js/admin.js`  (staff only)

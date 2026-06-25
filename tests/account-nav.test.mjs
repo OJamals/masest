@@ -24,6 +24,7 @@ test("account nav replaces the placeholder and exposes business plus account sec
   assert.match(nav, /replaceWith\(mount\)/, "account nav should replace the placeholder instead of adding a second control");
   assert.match(nav, /Dashboard/, "signed-in nav should link to dashboard");
   assert.match(nav, /Business/, "signed-in nav should link to business tools");
+  assert.match(nav, /dashboard\.html#business/, "business tools should open inside the user dashboard");
   assert.match(nav, /Profile/, "account section should include profile");
   assert.match(nav, /Security/, "account section should include security");
   assert.match(nav, /Addresses/, "account section should include addresses");

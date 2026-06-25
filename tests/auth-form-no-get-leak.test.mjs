@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 // history, server access logs, Referer header). `onsubmit="return false"` blocks the
 // native submit synchronously regardless of module timing; the addEventListener
 // handlers still run the real logic. Guard against regressing any form.
-const PAGES = ["account.html", "admin.html", "business.html", "contact.html", "newsletter.html", "dashboard.html"];
+const PAGES = ["account.html", "admin.html", "contact.html", "newsletter.html", "dashboard.html"];
 
 for (const page of PAGES) {
   test(`${page}: no form can native-submit (no action, onsubmit guarded)`, () => {

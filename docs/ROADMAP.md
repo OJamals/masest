@@ -63,10 +63,10 @@ login, logout, password reset, email confirm, Turnstile. `account.html` is sign-
 
 **User dashboard** (`dashboard.html`/`js/dashboard.js`): overview + stats, orders (with reorder),
 messages (live-polled), notifications (live-polled, mark-read), saved addresses, payment (Stripe portal),
-profile. 30s visibility-aware polling syncs badges + new staff replies.
-
-**Business hub** (`business.html`): company profile, team invites (company-admin only), programs
-(Stripe subscription checkout with request-enrollment fallback), bulk/standing-order requests.
+profile, and business tools for company setup, approval status, team invites (company-admin only),
+programs (Stripe subscription checkout with request-enrollment fallback), and bulk/standing-order requests.
+30s visibility-aware polling syncs badges + new staff replies. `business.html` is a private compatibility
+redirect into the dashboard business tab.
 
 **Admin console** (`admin.html`/`js/admin.js`): overview/stats, orders (status change + buyer email),
 companies + company detail view, products (add/remove/stock), messages (reply + buyer email + notification),

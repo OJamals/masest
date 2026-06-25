@@ -11,6 +11,7 @@ test("dashboard notifications open same-page targets without reloading", () => {
   assert.match(js, /data-notif-link/, "notification rows should carry their navigation target");
   assert.match(js, /function openNotification/, "notification activation should be centralized");
   assert.match(js, /selectTab\(DASH_TABS\.includes\(hash\) \? hash : 'overview'\)/, "same-dashboard notification links should switch tabs in-page");
+  assert.match(js, /scrollIntoView\(\{\s*block:\s*'nearest',\s*inline:\s*'center'\s*\}\)/, "overflowing mobile tab rails should reveal the active tab");
   assert.match(js, /addEventListener\('keydown'/, "keyboard activation should match click activation");
 });
 
