@@ -77,8 +77,8 @@ test("homepage first fold shows product path and quote path without scroll cue",
       });
 
       assert.equal(result.hasScrollCue, false, "first fold should not include a decorative scroll cue");
-      assert.ok(result.ctas.some((cta) => cta.text === "Find the Replacement"), "product CTA should be visible in the first fold");
-      assert.ok(result.ctas.some((cta) => cta.text === "Scope a Trial"), "quote CTA should be visible in the first fold");
+      assert.ok(result.ctas.some((cta) => cta.text === "Find your replacement"), "product CTA should be visible in the first fold");
+      assert.ok(result.ctas.some((cta) => cta.text === "Request a trial"), "quote CTA should be visible in the first fold");
       assert.deepEqual(
         result.shortcuts.map((shortcut) => shortcut.href),
         ["products#swap", "proof", "account"],
@@ -117,7 +117,7 @@ test("homepage keeps a primary action visible on short mobile", async () => {
             label === text;
         });
         return {
-          hasPrimary: visibleInFold("a, button", "Find the Replacement"),
+          hasPrimary: visibleInFold("a, button", "Find your replacement"),
           visibleShortcuts: [...document.querySelectorAll(".story-shortcuts a")].filter((el) => {
             const rect = el.getBoundingClientRect();
             const style = getComputedStyle(el);

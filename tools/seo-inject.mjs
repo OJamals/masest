@@ -184,8 +184,8 @@ async function processProductFallback() {
 function productDescription(id, product) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
   const route = QUOTE_FIRST_IDS.includes(id)
-    ? "Quote review required before purchase."
-    : "Small-pack checkout available where stocked; bulk sizes route through quote review.";
+    ? "Quoted before purchase."
+    : "Small packs ship from stock where available; drums and totes are quoted.";
   const parts = [copy.summary, product.desc, product.replaces, route].filter(Boolean);
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
@@ -223,8 +223,8 @@ function productSchema(id, product) {
           { "@type": "PropertyValue", name: "Replaces", value: product.replaces },
           {
             "@type": "PropertyValue",
-            name: "Procurement route",
-            value: QUOTE_FIRST_IDS.includes(id) ? "Quote review" : "Small-pack checkout and bulk quote review",
+            name: "Procurement",
+            value: QUOTE_FIRST_IDS.includes(id) ? "Quoted before purchase" : "Small packs in stock; bulk quoted",
           },
         ].filter((item) => item.value),
       },
@@ -252,8 +252,8 @@ function productPage(id, product) {
     })
     .join("\n");
   const procurement = QUOTE_FIRST_IDS.includes(id)
-    ? "Quote review required before purchase."
-    : "Small-pack checkout may be available; drums, totes, and program supply route through quote review.";
+    ? "Quoted before purchase."
+    : "Small packs ship from stock where available; drums, totes, and program supply are quoted.";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -319,10 +319,10 @@ ${jsonLd(productSchema(id, product))}
         <ul class="product-fit-list">${uses}</ul>
       </article>
       <article class="product-static-panel">
-        <span class="eyebrow">Buyer file</span>
+        <span class="eyebrow">The case for it</span>
         <h2>Why it survives review.</h2>
         <ul class="spec-list">${specs}</ul>
-        ${docs ? `<h3>Controlled documents</h3><ul class="product-fit-list">${docs}</ul>` : ""}
+        ${docs ? `<h3>Documents</h3><ul class="product-fit-list">${docs}</ul>` : ""}
       </article>
     </div>
   </section>

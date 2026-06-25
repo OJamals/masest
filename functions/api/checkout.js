@@ -50,8 +50,11 @@ export async function onRequestPost({ request, env }) {
   const sellable = [];
   const rejected = [];
   const outOfStock = [];
+  // Index variants by vsku once so the per-line lookup below is O(1) (vsku is unique
+  // within the .in() result), keeping cart validation linear in line count.
+  const variantBySku = new Map((variants ?? []).map((v) => [v.vsku, v]));
   for (const vsku of skus) {
-    const v = variants?.find((x) => x.vsku === vsku);
+    const v = variantBySku.get(vsku);
     const prod = v?.products;
     if (!v || v.active === false || v.price == null || !Number.isFinite(Number(v.price)) || !prod || prod.active === false || prod.mode !== 'buy') {
       rejected.push(vsku);

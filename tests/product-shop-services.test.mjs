@@ -66,7 +66,7 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.match(productsHtml, /href="services"/, "products page should link to the services page");
     assert.doesNotMatch(productsHtml, /data-service-catalog/, "products page should not embed service catalog");
     assert.match(productsHtml, /Buyable small-pack list pricing/);
-    assert.match(productsHtml, /Quote-routed items scoped before purchase/);
+    assert.match(productsHtml, /Quoted items priced before you buy/);
     assert.match(productsHtml, /USD, ex-plant Melbourne, FL/);
     assert.doesNotMatch(productsHtml, /55 and 275 gal freight finalized after order/);
 
