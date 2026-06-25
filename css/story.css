@@ -497,53 +497,14 @@
 .callout-rust { --c: #c2553a; }
 .callout-grease { --c: #c2a04e; }
 .callout-bio { --c: #6fa863; }
-.pipe-chips { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-/* --burn (0..1) is driven by scroll in story.js: each chip ignites as its debris
-   type accumulates in the pipe, so the label conveys the physics, not just a fade. */
-.pipe-chips .chip {
-  --burn: 0; --c: var(--s-line);
-  position: absolute; display: inline-flex; align-items: center; gap: 9px;
-  padding: 9px 15px; border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--s-line), var(--c) calc(var(--burn) * 55%));
-  background:
-    linear-gradient(0deg, color-mix(in oklab, transparent, var(--c) calc(var(--burn) * 12%)) 0 100%),
-    rgba(11, 13, 18, .78);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  font-size: .84rem; font-weight: 700; letter-spacing: .02em; color: var(--s-ink);
-  white-space: nowrap;
-}
-.pipe-chips .chip i {
-  position: relative; width: 9px; height: 9px; border-radius: 50%; flex: none;
-  background: var(--c);
-  box-shadow: 0 0 calc(3px + var(--burn) * 16px) calc(var(--burn) * 1px)
-    color-mix(in oklab, var(--c), transparent 35%);
-  transform: scale(calc(1 + var(--burn) * 0.4));
-}
-/* Leader drawing from the chip toward its clog zone on the pipe (down-right). */
-.pipe-chips .chip::after {
-  content: ""; position: absolute; left: 17px; top: calc(100% - 3px);
-  width: 1.5px; height: 24px; border-radius: 2px;
-  background: linear-gradient(var(--c), transparent);
-  transform-origin: top center; transform: rotate(40deg) scaleY(var(--burn));
-  opacity: calc(var(--burn) * .9);
-}
-/* Active accumulation: a ring pulses out of the dot (reuses the page's pulse motif). */
-.pipe-chips .chip.is-burning i::after {
-  content: ""; position: absolute; inset: -3px; border-radius: 50%;
-  border: 1.5px solid var(--c);
-  animation: chipPulse 2.2s var(--s-ease) infinite;
-}
+/* chipPulse: the ignite ring on the live SVG callout chips (.pipe-callout .chip).
+   The old absolute .pipe-chips overlay + .chip.c-* positioning were removed - that
+   container never existed in the DOM (Act 2's chips live in SVG <foreignObject>s,
+   and their --c comes from the .callout-* classes above). */
 @keyframes chipPulse {
   0%   { transform: scale(.55); opacity: .6; }
   70%, 100% { transform: scale(2.4); opacity: 0; }
 }
-/* Anchored just above each vertical run's mouth, staggered down-right with the
-   pipe (PIPE_N in story.js: run mouths at x 0.25/0.44/0.63/0.84). Sit below the
-   centered copy so chips never collide with the headline or paragraph. */
-.chip.c-scale  { left: clamp(236px, 20vw, 306px); top: 43%; --c: #c9d4d0; }
-.chip.c-rust   { left: 36%; top: 54%; --c: #c2553a; }
-.chip.c-grease { left: 58%; top: 62%; --c: #c2a04e; }
-.chip.c-bio    { left: 76%; top: 48%; --c: #6fa863; }
 
 /* ============================================================
    ACT 3 — THE SCORE (HMIS explained, factor by factor)
@@ -850,14 +811,10 @@
 }
 .story:not(.story-ready) .reel-slide { position: relative; opacity: 1; aspect-ratio: 9 / 10; }
 .story:not(.story-ready) .reel-tag, .story:not(.story-ready) .reel-idx { display: none; }
-.story:not(.story-ready) .pipe-chips {
-  position: static; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 26px;
-}
-.story:not(.story-ready) .pipe-chips .chip { position: static; }
 .story:not(.story-ready) .hmis-rig { margin-top: 30px; }
 @media (prefers-reduced-motion: reduce) {
   .story .chem-tag .pulse,
-  .pipe-chips .chip.is-burning i::after { animation: none; }
+  .pipe-callout .chip.is-burning i::after { animation: none; }
 }
 
 /* ---------- Responsive ---------- */
@@ -884,11 +841,6 @@
     display: none;
   }
   .story .act-copy.bl { align-self: center; text-align: center; padding-bottom: 4vh; padding-left: 28px; }
-  .chip.c-scale  { left: 6%; top: 53%; }
-  .chip.c-rust   { left: 28%; top: 60%; }
-  .chip.c-grease { left: 52%; top: 70%; }
-  .pipe-chips .chip { max-width: min(44vw, 172px); white-space: normal; line-height: 1.15; }
-  .chip.c-bio    { left: auto; right: 6%; top: 54%; }
   .pipe-mobile-labels {
     position: absolute;
     z-index: 5;
