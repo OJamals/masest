@@ -17,11 +17,12 @@ test("admin companies API returns setup progress for every company", () => {
   assert.match(helper, /percent/, "admin setup should include percent complete");
 });
 
-test("admin companies table exposes setup progress and open gaps", () => {
+test("admin companies list exposes setup progress and open gaps", () => {
   // Companies tab (incl. setupProgress) moved into its own module in #36.
   const src = read("js/admin/companies.js");
   assert.match(src, /function setupProgress\(/, "admin UI should format company setup progress");
-  assert.match(src, /<th>Setup<\/th>/, "companies table should include a setup column");
+  assert.match(src, /<span>Setup<\/span>\$\{setupProgress\(company\)\}/, "companies list should include a setup field");
+  assert.match(src, /company-admin-list/, "companies should render in a responsive admin list");
   assert.match(src, /data-setup-state/, "open setup gaps should have non-color-only state");
   assert.match(src, /company\.setup/, "admin company rows should use API setup data");
 });

@@ -16,7 +16,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     if (order.qbo_doc_id) parts.push(`${order.qbo_doc_type || 'qbo'} ${order.qbo_doc_id}`);
     if (order.qbo_payment_id) parts.push(`payment ${order.qbo_payment_id}`);
     if (!parts.length) return '';
-    return `<div class="muted" style="margin:6px 0 0;font-size:.78rem">QBO: ${parts.map(esc).join(' / ')}</div>`;
+    return `<div class="muted admin-inline-note">QBO: ${parts.map(esc).join(' / ')}</div>`;
   }
 
   function netAgingBadge(order) {
@@ -32,15 +32,15 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const id = esc(order.id);
     const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
     return `${qboReconciliation(order)}<details class="adm-track"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
-      <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
-        <select class="adm-select" data-track-status="${id}" style="max-width:150px">
+      <div class="adm-track-controls">
+        <select class="adm-select" data-track-status="${id}">
           ${['processing', 'packing', 'shipped', 'delivered', 'blocked'].map((status) => `<option value="${status}" ${status === (order.tracking_status || 'processing') ? 'selected' : ''}>${status.replaceAll('_', ' ')}</option>`).join('')}
         </select>
-        <input class="adm-input" data-track-carrier="${id}" value="${esc(order.carrier || '')}" placeholder="Carrier" style="max-width:130px">
-        <input class="adm-input" data-track-number="${id}" value="${esc(order.tracking_number || '')}" placeholder="Tracking #" style="max-width:150px">
-        <input class="adm-input" data-track-url="${id}" value="${esc(order.tracking_url || '')}" placeholder="Tracking URL" style="max-width:230px">
-        <input class="adm-input" data-track-eta="${id}" value="${esc(eta)}" type="datetime-local" aria-label="Estimated delivery" style="max-width:190px">
-        <input class="adm-input" data-track-note="${id}" placeholder="Note (shown to customer)" aria-label="Shipment note" style="max-width:230px">
+        <input class="adm-input" data-track-carrier="${id}" value="${esc(order.carrier || '')}" placeholder="Carrier">
+        <input class="adm-input" data-track-number="${id}" value="${esc(order.tracking_number || '')}" placeholder="Tracking #">
+        <input class="adm-input admin-input-wide" data-track-url="${id}" value="${esc(order.tracking_url || '')}" placeholder="Tracking URL">
+        <input class="adm-input" data-track-eta="${id}" value="${esc(eta)}" type="datetime-local" aria-label="Estimated delivery">
+        <input class="adm-input admin-input-wide" data-track-note="${id}" placeholder="Note (shown to customer)" aria-label="Shipment note">
         <button class="btn btn-ghost btn-sm" data-save-tracking="${id}" type="button">Save tracking</button>
       </div>
     </details>`;
@@ -49,7 +49,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
   function admOrdersPager() {
     if (!state.ordersHasMore) return '';
     const count = state.ordersTotal != null ? ` (${state.orders.length} of ${state.ordersTotal})` : '';
-    return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" data-load-more-orders type="button">Load more${count}</button></div>`;
+    return `<div class="adm-list-pager"><button class="btn btn-ghost btn-sm" data-load-more-orders type="button">Load more${count}</button></div>`;
   }
 
   async function renderOrders({ append = false, refetch = true } = {}) {
@@ -80,18 +80,43 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       box.innerHTML = admEmpty('ph-package', q ? 'No matching orders' : 'No orders yet', q ? 'No orders match your search.' : 'Orders appear here once customers check out.') + admOrdersPager();
       return;
     }
-    box.innerHTML = `<table class="adm"><thead><tr><th>Date</th><th>Company</th><th>Items</th><th>Total</th><th>Pay</th><th>Status</th><th></th></tr></thead><tbody>${orders.map((order) => {
-      const items = (order.order_items || []).map((item) => `${esc(item.qty)} x ${esc(item.name || item.sku)}`).join('<br>');
-      return `<tr>
-        <td>${esc(date(order.created_at))}</td>
-        <td>${esc(order.companies?.name || order.company_name || order.company_id || 'Guest')}</td>
-        <td>${items || '<span class="muted">No items</span>'}</td>
-        <td>${esc(money(order.total ?? order.subtotal, order.currency))}</td>
-        <td>${esc(order.payment_method || '')}${netAgingBadge(order)}</td>
-        <td><select class="adm-select" data-order-status="${esc(order.id)}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></td>
-        <td><button class="btn btn-ghost btn-sm" data-order-detail="${esc(order.id)}" type="button">Details</button> ${trackingControls(order)}<button class="btn btn-ghost btn-sm" data-save-order="${esc(order.id)}" type="button">Save</button>${order.payment_method === 'net' ? ` <input class="adm-input" data-qbo-invoice-input="${esc(order.id)}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-order="${esc(order.id)}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button> <input class="adm-input" data-qbo-payment-input="${esc(order.id)}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${esc(order.id)}" style="max-width:150px"><button class="btn btn-ghost btn-sm" data-qbo-payment-order="${esc(order.id)}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>${order.status === 'net_open' ? ` <button class="btn btn-primary btn-sm" data-mark-net-paid-order="${esc(order.id)}" type="button" aria-label="Mark NET order ${esc(order.id)} paid">Mark NET paid</button>` : ''}` : ''}${order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? ` <input class="adm-input" data-refund-amount="${esc(order.id)}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${esc(order.id)} (leave blank to refund the full balance)" style="max-width:170px"><button class="btn btn-ghost btn-sm" data-refund-order="${esc(order.id)}" type="button">Refund</button>${Number(order.refunded_amount) > 0 ? ` <span class="muted" style="font-size:.85em">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : ''}</td>
-      </tr>`;
-    }).join('')}</tbody></table>` + admOrdersPager();
+    box.innerHTML = `<div class="admin-order-list">${orders.map((order) => {
+      const id = esc(order.id);
+      const items = (order.order_items || [])
+        .map((item) => `<li>${esc(item.qty)} x ${esc(item.name || item.sku)}</li>`)
+        .join('');
+      const netControls = order.payment_method === 'net' ? `
+        <input class="adm-input admin-input-sm" data-qbo-invoice-input="${id}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${id}">
+        <button class="btn btn-ghost btn-sm" data-qbo-order="${id}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button>
+        <input class="adm-input admin-input-sm" data-qbo-payment-input="${id}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${id}">
+        <button class="btn btn-ghost btn-sm" data-qbo-payment-order="${id}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>
+        ${order.status === 'net_open' ? `<button class="btn btn-primary btn-sm" data-mark-net-paid-order="${id}" type="button" aria-label="Mark NET order ${id} paid">Mark NET paid</button>` : ''}` : '';
+      const refundControls = order.payment_method === 'stripe' && !REFUND_BLOCKING_STATUSES.has(order.status) ? `
+        <input class="adm-input admin-input-md" data-refund-amount="${id}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${id} (leave blank to refund the full balance)">
+        <button class="btn btn-ghost btn-sm" data-refund-order="${id}" type="button">Refund</button>
+        ${Number(order.refunded_amount) > 0 ? `<span class="muted admin-inline-note">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : '';
+      return `<article class="admin-order-card">
+        <div class="admin-order-head">
+          <div>
+            <span class="admin-kicker">${esc(date(order.created_at))}</span>
+            <h3>${esc(order.companies?.name || order.company_name || order.company_id || 'Guest')}</h3>
+          </div>
+          <b>${esc(money(order.total ?? order.subtotal, order.currency))}</b>
+        </div>
+        <div class="admin-order-meta">
+          <div><span>Items</span><ul class="admin-order-items">${items || '<li class="muted">No items</li>'}</ul></div>
+          <div><span>Pay</span><b>${esc(order.payment_method || '')}${netAgingBadge(order)}</b></div>
+          <label><span>Status</span><select class="adm-select" data-order-status="${id}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></label>
+        </div>
+        <div class="admin-order-actions">
+          <button class="btn btn-ghost btn-sm" data-order-detail="${id}" type="button">Details</button>
+          ${trackingControls(order)}
+          <button class="btn btn-ghost btn-sm" data-save-order="${id}" type="button">Save</button>
+          ${netControls}
+          ${refundControls}
+        </div>
+      </article>`;
+    }).join('')}</div>` + admOrdersPager();
     restoreDirty(box, snap);
   }
 

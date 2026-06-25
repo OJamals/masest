@@ -29,7 +29,8 @@ test("admin dashboard has production shell affordances without inline layout hac
   assert.doesNotMatch(html, /style="/, "admin shell should not rely on inline style polish");
   assert.match(js, /from\s+["']\.\/admin\/seo\.js["']/, "admin should import the split SEO-audit module");
   const seo = read("js/admin/seo.js"); // SEO-audit tab extracted in #36 split
-  assert.match(seo, /SEO audit[\s\S]*adm-table-wrap/, "admin SEO audit table should render in the scroll-safe table wrapper");
+  assert.match(seo, /SEO audit[\s\S]*seo-audit-list/, "admin SEO audit should render in a responsive list");
+  assert.doesNotMatch(seo, /<table class="adm"/, "admin SEO audit should not hide mobile content in a wide table");
 });
 
 test("dashboard panels protect form and notification text from clipping", () => {
@@ -41,7 +42,7 @@ test("dashboard panels protect form and notification text from clipping", () => 
   assert.match(html, /\.notif-prefs\s*\{[^}]*display:\s*flex/, "notification preferences should use a reusable layout class");
   assert.match(html, /class="notif-pref-label"/, "notification preference labels should use reusable classes");
   assert.match(html, /\.dash-pager/, "dashboard pagers should use reusable spacing classes");
-  assert.match(html, /@media \(max-width: 820px\)[\s\S]*\.dash-sidebar \.dash-tabs\s*\{[^}]*flex-wrap:\s*nowrap/, "mobile dashboard nav should stay a single horizontal rail");
+  assert.match(html, /@media \(max-width: 820px\)[\s\S]*\.dash-sidebar \.dash-tabs\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/, "mobile dashboard nav should show all sections in a no-overflow grid");
   assert.match(html, /@media \(max-width: 820px\)[\s\S]*\.dash-nav-group\s*\{\s*display:\s*contents;\s*\}/, "mobile dashboard nav should flatten grouped sections");
   assert.doesNotMatch(html, /\.notif\.unread\s*\{[^}]*margin:\s*0\s+-/, "unread notifications should not use negative margins inside cards");
   assert.doesNotMatch(html, /style="/, "dashboard shell should not rely on inline layout styles");

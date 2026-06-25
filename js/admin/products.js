@@ -31,24 +31,39 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       box.innerHTML = admEmpty('ph-cube', 'No products', 'Add catalog products to manage them here.');
       return;
     }
-    box.innerHTML = `<table class="adm"><thead><tr><th>Photo</th><th>SKU</th><th>Name</th><th>Mode</th><th>Price</th><th>Stock</th><th>Photo URL</th><th>Alt</th><th>Variants</th><th>Active</th><th></th></tr></thead><tbody>${products.map((p) => `
-    <tr data-product="${esc(p.sku)}">
-      <td>${p.image_url ? `<img class="product-photo" src="${esc(safeUrl(p.image_url))}" alt="${esc(p.photo_alt || p.name || '')}">` : '<span class="muted">No photo</span>'}${Array.isArray(p.gallery) && p.gallery.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${p.gallery.map((u, i) => `<span style="display:inline-flex;flex-direction:column;align-items:center"><img src="${esc(safeUrl(u))}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"><span><button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(u)}" title="Make primary">★</button><button type="button" class="gbtn" data-gact="up" data-gidx="${i}" title="Move up">↑</button><button type="button" class="gbtn" data-gact="down" data-gidx="${i}" title="Move down">↓</button><button type="button" class="gbtn" data-gact="del" data-gurl="${esc(u)}" title="Remove">×</button></span></span>`).join('')}</div>` : ''}<br><label class="muted" style="font-size:.7rem;display:block;margin-top:4px">Upload<input type="file" accept="image/*" data-imgfile style="display:block;max-width:120px;font-size:.7rem"></label><label class="muted" style="font-size:.7rem;display:block">+ gallery<input type="file" accept="image/*" data-galfile style="display:block;max-width:120px;font-size:.7rem"></label></td>
-      <td><b>${esc(p.sku)}</b></td>
-      <td><input class="adm-input" value="${esc(p.name)}" data-field="name"></td>
-      <td><select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></td>
-      <td><input class="adm-input" type="number" min="0" step="0.01" value="${esc(p.price ?? '')}" data-field="price"></td>
-      <td><input class="adm-input" type="number" min="0" step="1" value="${esc(p.stock ?? '')}" data-field="stock"></td>
-      <td><input class="adm-input" value="${esc(p.image_url || '')}" data-field="image_url"></td>
-      <td><input class="adm-input" value="${esc(p.photo_alt || '')}" data-field="photo_alt"></td>
-      <td>${variantRows(p)}</td>
-      <td><input type="checkbox" ${p.active !== false ? 'checked' : ''} data-field="active"></td>
-      <td>
-        <button class="btn btn-primary btn-sm" data-save-product="${esc(p.sku)}" type="button">Save</button>
-        <button class="btn btn-ghost btn-sm" data-remove-product="${esc(p.sku)}" type="button">Remove</button>
-      </td>
-    </tr>
-  `).join('')}</tbody></table>`;
+    box.innerHTML = `<div class="product-admin-list">${products.map((p) => `
+    <article class="product-admin-card" data-product="${esc(p.sku)}">
+      <div class="product-admin-head">
+        <div class="product-admin-media">
+          ${productMedia(p)}
+        </div>
+        <div class="product-admin-title">
+          <span class="product-admin-sku">${esc(p.sku)}</span>
+          <h3>${esc(p.name || p.sku)}</h3>
+        </div>
+        <div class="product-admin-actions">
+          <label class="product-active-toggle"><input type="checkbox" ${p.active !== false ? 'checked' : ''} data-field="active"> Active</label>
+          <button class="btn btn-primary btn-sm" data-save-product="${esc(p.sku)}" type="button">Save</button>
+          <button class="btn btn-ghost btn-sm" data-remove-product="${esc(p.sku)}" type="button">Remove</button>
+        </div>
+      </div>
+      <div class="product-admin-fields">
+        <label>Name <input class="adm-input" value="${esc(p.name)}" data-field="name"></label>
+        <label>Mode <select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></label>
+        <label>Price <input class="adm-input" type="number" min="0" step="0.01" value="${esc(p.price ?? '')}" data-field="price"></label>
+        <label>Stock <input class="adm-input" type="number" min="0" step="1" value="${esc(p.stock ?? '')}" data-field="stock"></label>
+        <label class="wide">Photo URL <input class="adm-input" value="${esc(p.image_url || '')}" data-field="image_url"></label>
+        <label class="wide">Photo alt <input class="adm-input" value="${esc(p.photo_alt || '')}" data-field="photo_alt"></label>
+      </div>
+      <div class="product-admin-variants">
+        <div class="product-admin-subhead">
+          <h4>Variants</h4>
+          <span>${esc((p.product_variants || []).length)} configured</span>
+        </div>
+        ${variantRows(p)}
+      </div>
+    </article>
+  `).join('')}</div>`;
     restoreDirty(box, snap);
   }
 
@@ -106,16 +121,40 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     }
   }
 
+  function productMedia(product) {
+    const primary = product.image_url
+      ? `<img class="product-photo" src="${esc(safeUrl(product.image_url))}" alt="${esc(product.photo_alt || product.name || '')}">`
+      : '<span class="product-photo product-photo-empty">No photo</span>';
+    const gallery = Array.isArray(product.gallery) && product.gallery.length
+      ? `<div class="product-gallery">${product.gallery.map((url, index) => `
+        <span class="product-gallery-item">
+          <img src="${esc(safeUrl(url))}" alt="">
+          <span class="product-gallery-actions">
+            <button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(url)}" title="Make primary">★</button>
+            <button type="button" class="gbtn" data-gact="up" data-gidx="${index}" title="Move up">↑</button>
+            <button type="button" class="gbtn" data-gact="down" data-gidx="${index}" title="Move down">↓</button>
+            <button type="button" class="gbtn" data-gact="del" data-gurl="${esc(url)}" title="Remove">×</button>
+          </span>
+        </span>`).join('')}</div>`
+      : '';
+    return `
+      ${primary}
+      ${gallery}
+      <label class="product-file-control">Upload<input type="file" accept="image/*" data-imgfile></label>
+      <label class="product-file-control">+ gallery<input type="file" accept="image/*" data-galfile></label>
+    `;
+  }
+
   function variantRows(product) {
     const variants = (product.product_variants || []).slice().sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
     if (!variants.length) return '<span class="muted">No variants</span>';
     return `<div class="variant-stack">${variants.map((v) => `
     <div class="variant-row" data-variant="${esc(v.vsku)}">
-      <input class="adm-input" value="${esc(v.label || '')}" data-vfield="label" aria-label="Variant label">
-      <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.gallons ?? '')}" data-vfield="gallons" aria-label="Gallons">
-      <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.price ?? '')}" data-vfield="price" aria-label="Variant price">
-      <input class="adm-input" type="number" min="0" step="1" value="${esc(v.stock ?? '')}" data-vfield="stock" aria-label="Variant stock">
-      <label class="muted"><input type="checkbox" ${v.active !== false ? 'checked' : ''} data-vfield="active"> active</label>
+      <label>Label <input class="adm-input" value="${esc(v.label || '')}" data-vfield="label" aria-label="Variant label"></label>
+      <label>Gallons <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.gallons ?? '')}" data-vfield="gallons" aria-label="Gallons"></label>
+      <label>Price <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.price ?? '')}" data-vfield="price" aria-label="Variant price"></label>
+      <label>Stock <input class="adm-input" type="number" min="0" step="1" value="${esc(v.stock ?? '')}" data-vfield="stock" aria-label="Variant stock"></label>
+      <label class="variant-active"><input type="checkbox" ${v.active !== false ? 'checked' : ''} data-vfield="active"> Active</label>
       <button class="btn btn-primary btn-sm" data-save-variant="${esc(v.vsku)}" type="button">Save</button>
       <button class="btn btn-ghost btn-sm" data-remove-variant="${esc(v.vsku)}" type="button">Remove</button>
       <input type="hidden" value="${esc(v.product_sku || product.sku)}" data-vfield="product_sku">

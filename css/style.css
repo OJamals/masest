@@ -5044,11 +5044,13 @@ button.viz-segment {
 .service-catalog-page .service-catalog-band {
   order: 1;
   padding-top: clamp(24px, 4vw, 44px);
+  padding-bottom: 0;
   background: var(--bg);
 }
 
 .service-catalog-page .service-positioning {
   order: 2;
+  padding-top: clamp(16px, 2vw, 24px);
 }
 
 .service-catalog-page .services-recommendation {

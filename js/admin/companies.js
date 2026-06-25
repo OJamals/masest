@@ -225,19 +225,31 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       box.innerHTML = admEmpty('ph-buildings', q ? 'No matching accounts' : 'No accounts', q ? 'No accounts match your search.' : 'New B2B account signups appear here for approval.') + pager;
       return;
     }
-    box.innerHTML = `<div class="adm-tools" style="margin-bottom:10px"><button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button></div><table class="adm"><thead><tr><th><input type="checkbox" id="coAll" aria-label="Select all"></th><th>Company</th><th>Status</th><th>Setup</th><th>NET</th><th>Credit</th><th>Tier</th><th>Members</th><th></th></tr></thead><tbody>${companies.map((company) => `
-      <tr>
-        <td><input type="checkbox" class="co-check" value="${esc(company.id)}"></td>
-        <td><button class="link-name" data-open-company="${esc(company.id)}" type="button">${esc(company.name)}</button></td>
-        <td>${statusBadge(company.status)}</td>
-        <td>${setupProgress(company)}</td>
-        <td><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${esc(company.id)}"></td>
-        <td><input class="adm-input" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${esc(company.id)}"></td>
-        <td><select class="adm-select" data-tier="${esc(company.id)}">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></td>
-        <td>${esc((company.profiles || []).map((p) => p.full_name || p.role).join(', '))}</td>
-        <td><button class="btn btn-ghost btn-sm" data-approve="${esc(company.id)}" type="button">Approve</button></td>
-      </tr>
-    `).join('')}</tbody></table>` + pager;
+    box.innerHTML = `<div class="adm-tools adm-tools-flush">
+      <label class="admin-select-all"><input type="checkbox" id="coAll" aria-label="Select all"> Select all</label>
+      <button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button>
+    </div>
+    <div class="company-admin-list">${companies.map((company) => {
+      const id = esc(company.id);
+      const members = (company.profiles || []).map((p) => p.full_name || p.role).join(', ');
+      return `<article class="company-admin-card">
+        <div class="company-admin-head">
+          <label class="company-admin-check"><input type="checkbox" class="co-check" value="${id}"><span>Select</span></label>
+          <button class="link-name" data-open-company="${id}" type="button">${esc(company.name)}</button>
+          ${statusBadge(company.status)}
+        </div>
+        <div class="company-admin-fields">
+          <div><span>Setup</span>${setupProgress(company)}</div>
+          <label><span>NET days</span><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${id}"></label>
+          <label><span>Credit</span><input class="adm-input" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${id}"></label>
+          <label><span>Tier</span><select class="adm-select" data-tier="${id}">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></label>
+          <div><span>Members</span><b>${esc(members || '-')}</b></div>
+        </div>
+        <div class="company-admin-actions">
+          <button class="btn btn-ghost btn-sm" data-approve="${id}" type="button">Approve</button>
+        </div>
+      </article>`;
+    }).join('')}</div>` + pager;
     restoreDirty(box, snap);
   }
 

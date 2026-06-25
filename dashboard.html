@@ -274,11 +274,13 @@
   @media (prefers-reduced-motion: reduce) { .dash-tab { transition: none; } }
 @media (max-width: 820px) {
 .dash-layout { display: block; }
-.dash-sidebar { position: sticky; top: 68px; z-index: 20; margin-bottom: 18px; padding: 8px; }
-.dash-sidebar .dash-tabs { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+.dash-sidebar { position: static; margin-bottom: 18px; padding: 8px; }
+.dash-sidebar .dash-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; overflow: visible; padding-bottom: 0; }
 .dash-nav-group { display: contents; }
 .dash-nav-group > span { display: none; }
-.dash-sidebar .dash-tab { flex: 0 0 auto; width: auto; white-space: nowrap; scroll-snap-align: start; }
+.dash-sidebar .dash-tab { position: relative; width: 100%; min-height: 44px; justify-content: center; white-space: normal; text-align: center; padding: 9px 8px; }
+.dash-sidebar .dash-tab i { display: none; }
+.dash-sidebar .dash-tab .pill { position: absolute; top: 4px; right: 5px; min-width: 16px; min-height: 16px; padding: 0 4px; font-size: .65rem; margin-left: 0; }
 .buyer-action-grid, .overview-activity-grid { grid-template-columns: 1fr; }
 }
   @media (max-width: 640px) {

@@ -56,6 +56,16 @@ test("site verifier ignores local audit capture artifacts", () => {
     /"masest\.co-audit"/,
     "verify_site should not scan downloaded audit HTML captures as source pages",
   );
+  assert.match(
+    verifySite,
+    /"\.claude"/,
+    "verify_site should not scan local Claude worktree artifacts as source pages",
+  );
+  assert.match(
+    verifySite,
+    /value\.includes\("\$\{"\)/,
+    "verify_site should ignore JS template-literal URLs inside HTML scripts",
+  );
 });
 
 test("status colors use shared semantic tokens outside the token source", () => {

@@ -19,9 +19,13 @@ export function createSeoAudit({ $, state }) {
         return { page, ok: false };
       }
     }));
-    box.innerHTML = `<h2>SEO audit</h2><div class="adm-table-wrap"><table class="adm"><tbody>${rows.map((row) => `
-      <tr><td>${esc(row.page)}</td><td class="${row.ok ? 'seo-ok' : 'seo-bad'}">${row.ok ? 'OK' : 'Check'}</td><td class="muted">title ${esc(row.title || 0)} / desc ${esc(row.desc || 0)}</td></tr>
-    `).join('')}</tbody></table></div>`;
+    box.innerHTML = `<h2>SEO audit</h2><div class="seo-audit-list">${rows.map((row) => `
+      <div class="seo-audit-row">
+        <b class="seo-audit-page">${esc(row.page)}</b>
+        <span class="seo-audit-status ${row.ok ? 'seo-ok' : 'seo-bad'}">${row.ok ? 'OK' : 'Check'}</span>
+        <span class="seo-audit-meta muted">title ${esc(row.title || 0)} / desc ${esc(row.desc || 0)}</span>
+      </div>
+    `).join('')}</div>`;
     state.loaded.add('seo');
   };
 }

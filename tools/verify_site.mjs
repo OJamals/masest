@@ -9,6 +9,7 @@ const failures = [];
 const warnings = [];
 
 const ignoredDirs = new Set([
+  ".claude",
   ".git",
   ".qa-local",
   "_local",
@@ -58,6 +59,7 @@ function localPathFromUrl(raw, fromFile) {
   if (!value || value.startsWith("#")) return null;
   if (/^(?:https?:|mailto:|tel:|data:|blob:|javascript:)/i.test(value)) return null;
   if (value.startsWith("/api/")) return null;
+  if (value.includes("${")) return null;
   if (value.startsWith("{{") || value.startsWith("<%")) return null;
 
   const withoutHash = value.split("#", 1)[0].split("?", 1)[0];
