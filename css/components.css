@@ -321,3 +321,16 @@ body .product-detail-hero { padding-bottom: 42px; }
 /* Programs pricing: the cadence label sits on its own line so the widest tier
    ($5,000-15,000+) never wraps "/ mo" awkwardly while narrower tiers stay inline. */
 .tier-price small { display: block; margin-top: 2px; }
+
+/* CRM contact panel (admin company drawer) — slice 1 */
+.crm-panel { margin-top: 16px; border-top: 1px solid var(--border, #e5e7eb); padding-top: 12px; }
+.crm-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.crm-tabs .is-active { background: var(--surface-2, #eef2f7); font-weight: 600; }
+.crm-feed, .crm-task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.crm-feed-item, .crm-task { display: grid; grid-template-columns: 20px 1fr auto; gap: 8px; align-items: start; }
+.crm-feed-title { font-weight: 600; }
+.crm-feed-detail { font-size: .85rem; color: var(--muted, #6b7280); white-space: pre-wrap; }
+.crm-feed-at { font-size: .75rem; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.crm-task.is-done .crm-feed-title { text-decoration: line-through; opacity: .6; }
+.crm-note-form, .crm-task-form { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.crm-note-form textarea, .crm-task-form input { flex: 1 1 160px; }

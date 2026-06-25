@@ -27,7 +27,7 @@ function viewAsHtml(s) {
     <table class="adm" style="width:100%"><thead><tr><th>Date</th><th>Status</th><th>Shipment</th><th>Total</th></tr></thead><tbody>${orders}</tbody></table>`;
 }
 
-export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager }) {
+export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm }) {
   function setupProgress(company) {
     const setup = company.setup;
     if (!setup?.steps?.length) return '<span class="muted">-</span>';
@@ -195,6 +195,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;
       wireCompanyDetailActions(company);
       wireCompanyUserActions(company);
+      if (crm) crm.mount(box, 'company', company.id || id);
     } catch (err) {
       box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load this company. Reload to retry.')}</p>`;
     }
