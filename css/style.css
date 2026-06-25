@@ -6471,3 +6471,24 @@ body.product-detail-page main > section.product-static-section {
   color: var(--accent);
   border-color: #fff;
 }
+
+/* ----------------------------------------------------------------------------
+   a11y / touch — neutralize hover-only transforms on devices without a true
+   hover pointer, so a tap can't leave a card stuck in its lifted/zoomed hover
+   state. Pointers with real hover (mouse, trackpad) keep the full motion.
+   Appended at EOF so it wins over the per-breakpoint .shop-card:hover rules at
+   equal specificity. */
+@media (hover: none) {
+  .shop-card:hover { transform: none; }
+  .shop-card:hover .shop-card-cta i { transform: none; }
+  .shop-card:hover .shop-card-media img { transform: none; }
+}
+
+/* Press feedback — parity with .btn:active. The commerce pill BUTTONS dip on
+   press for tactile confirmation. Excludes .commerce-vol (a <select>, not a
+   button). transform-only transition leaves the existing instant hover recolor
+   untouched. */
+.shop-card-add,
+.shop-card-quote { transition: transform .12s var(--ease-out); }
+.shop-card-add:active,
+.shop-card-quote:active { transform: scale(.97); }
