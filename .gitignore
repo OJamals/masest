@@ -6,6 +6,7 @@ package-lock.json
 dist/
 backups/
 audits/
+audit-layout-hunt-*/
 design-qa.md
 .dev.vars
 .wrangler/
