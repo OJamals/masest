@@ -9,7 +9,7 @@ export const PRODUCTS = {
     icon: "ph-flask",
  image: "img/products/hvac-hcr-studio.webp",
     tag: "The acid-replacement route when rust, scale, calcium, passivation, or tower cleanup is still tied to hydrochloric acid.",
-    desc: "A biodegradable, SynTech-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. The Brevard field file is the blunt version: CLR sat for 36 hours; HCR cleared 20-year rust in 30 minutes.",
+    desc: "A biodegradable, SynTech-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. The Brevard field test says it bluntly: CLR sat for 36 hours; HCR cleared 20-year rust in 30 minutes.",
     uses: [
       "Cooling tower fill and heat-exchanger descaling",
       "Rust removal: restored diamond-plated stainless steel stained for years",
@@ -20,7 +20,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-atom", "SynTech powered", "Patented technology matching mineral-acid performance"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates, and phosphates"],
-      ["ph-truck", "Lower-friction shipping", "No DOT hazmat freight on the core line"]
+      ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-hcr-sds.pdf" },
@@ -47,7 +47,7 @@ export const PRODUCTS = {
       "Caustic replacement across industrial CIP"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling profile with broad material compatibility"],
+      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling, broad material compatibility"],
       ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 certificate status must be confirmed through document request"],
       ["ph-atom", "SynClean powered", "Replaces sodium and potassium hydroxide"],
       ["ph-leaf", "Discharge planning", "Wastewater path reviewed by site and label conditions"]
@@ -75,7 +75,7 @@ export const PRODUCTS = {
       "Facility and fleet maintenance"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling profile replacing flammable solvent degreasers"],
+      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling, replaces flammable solvent degreasers"],
       ["ph-scales", "True pH 7", "Neutral chemistry for sensitive equipment and seals"],
       ["ph-atom", "SynClean powered", "Patented degreasing technology"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC; discharge path remains site-reviewed"]
@@ -94,7 +94,7 @@ export const PRODUCTS = {
  icon: "ph-sparkle",
  image: "img/products/multiwash-studio.webp",
     tag: "One-bottle facility cleaner for wet zones, drains, concrete, glass, exteriors, and pressure washing while the building stays open.",
-    desc: "A versatile multi-surface cleaner for facilities, drains, concrete, exterior washing, and occupied-campus maintenance, built around the broad-use MultiWash story in MASEST collateral.",
+    desc: "A versatile multi-surface cleaner for facilities, drains, concrete, exterior washing, and occupied-campus maintenance.",
     uses: [
       "Concrete drains and hardscape cleaning",
       "Pressure-washing programs",
@@ -105,7 +105,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-atom", "SynClean powered", "Patented cleaning technology"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates and phosphates"],
-      ["ph-truck", "Lower-friction shipping", "Non-hazmat handling profile for the core line"]
+      ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-multiwash-sds.pdf" },
@@ -121,7 +121,7 @@ export const PRODUCTS = {
  icon: "ph-waves",
  image: "img/products/watersafe60-studio.webp",
     tag: "Scale and corrosion control for towers and loops without the phosphate, zinc, molybdate, or chromate baggage.",
-    desc: "A quote-routed scale and corrosion inhibitor with no heavy metals: no zinc, no molybdate, no chromate. Built for water-treatment programs where asset protection and documentation both matter.",
+    desc: "A scale and corrosion inhibitor with no heavy metals — no zinc, no molybdate, no chromate. Built for water-treatment programs where asset protection and documentation both matter.",
     uses: [
       "Cooling tower scale and corrosion control",
       "Closed-loop and chilled-water systems",
@@ -151,7 +151,7 @@ export const PRODUCTS = {
  icon: "ph-shield-plus",
  image: "img/products/purgo-studio.webp",
     tag: "Minimum-risk antimicrobial and odor-control support where the claim needs to stay label-honest.",
-    desc: "A FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment used in occupied-site maintenance workflows. Purgo stays label-tied here: not sold as a registered disinfectant, not dressed up as one.",
+    desc: "A FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment for occupied-site maintenance. Purgo stays within its label: it isn't a registered disinfectant and isn't sold as one.",
     uses: [
       "Minimum-risk antimicrobial and odor-control support",
       "ASHRAE 188 documentation support when paired with testing and WMP scope",
@@ -159,7 +159,7 @@ export const PRODUCTS = {
       "Minimum-risk antimicrobial cleaning workflows"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling profile versus bromine and bleach workflows"],
+      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling versus bromine and bleach"],
       ["ph-seal-check", "FIFRA 25(b)", "Minimum-risk classification"],
       ["ph-buildings", "Occupied-site fit", "Built for routine maintenance programs"],
       ["ph-clipboard-text", "Use with scope notes", "Exact use claims route through label and program documentation"]
@@ -182,7 +182,7 @@ export const PRODUCTS = {
  icon: "ph-pill",
  image: "img/products/dbnpa-studio.webp",
     tag: "Footnoted controlled-release non-oxidizing biocide component. One tablet per quarter.",
-    desc: "Controlled-release tablets for non-oxidizing rotation, dosed at one tablet per quarter. DBNPA is a cooling-tower program component, not part of the canonical 20-parent ecommerce product roster; label, SDS, and registration proof route through document request.",
+    desc: "Controlled-release tablets for non-oxidizing rotation, dosed at one tablet per quarter. DBNPA is a cooling-tower program component, not one of the 20 parent catalog products; label, SDS, and registration proof are available on request.",
     uses: [
       "Quarterly non-oxidizing biocide rotation",
       "Cooling tower microbiological programs",
@@ -215,7 +215,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-gauge", "About 50% active", "Higher active strength than common 15% degreasers"],
       ["ph-seal-check", "Equipment files", "Crown Forklift, Plug Power, and aerospace-spec support files route through document request"],
-      ["ph-truck", "Lower-friction shipping", "No DOT hazmat freight on the core line"]
+      ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crhd-sds.pdf" },
@@ -341,7 +341,7 @@ export const PRODUCTS = {
  icon: "ph-wrench",
  image: "img/products/crs-studio.webp",
     tag: "A real source-label reference for calcium, rust, and scale, routed carefully until SKU ownership is confirmed.",
-    desc: "CRS appears in source material as a descaler-family label for rust, calcium, scale, and water-side buildup. Public catalog routing keeps the ecommerce parent under VertKleen Descaler until SKU ownership is confirmed.",
+    desc: "CRS is a descaler-family label for rust, calcium, scale, and water-side buildup. It's sold under the VertKleen Descaler catalog listing for now.",
     uses: [
       "Underbody and equipment rust removal",
       "HVAC coils and cooling towers",
@@ -368,7 +368,7 @@ export const PRODUCTS = {
     icon: "ph-drop-half",
     image: "img/products/crhd-studio.webp",
     tag: "CRHD muscle with the foam turned down for scrubbers, parts washers, and recirculating systems.",
-    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters, with the same HMIS 0-0-0 handling profile as CRHD.",
+    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters, with the same HMIS 0-0-0 rating as CRHD.",
     uses: [
       "Automatic floor scrubbers and machine wash",
       "Parts washers and recirculating wash systems",
@@ -379,7 +379,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop", "Low-foam formula", "Built for machine wash and recirculating systems"],
       ["ph-atom", "SynTech powered", "Heavy-duty degreasing without solvent odor"],
-      ["ph-truck", "Lower-friction shipping", "No DOT hazmat freight on the core line"]
+      ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -391,7 +391,7 @@ export const PRODUCTS = {
     icon: "ph-drop-half",
     image: "img/products/hvac-cr-studio.webp",
     tag: "The stronger CR-family route for accounts that already know the standard CR workflow.",
-    desc: "A higher-concentration version of VertKleen CR for demanding alkaline cleaning and water-treatment work. Route through quote review until application notes and final SKU guidance are confirmed.",
+    desc: "A higher-concentration version of VertKleen CR for demanding alkaline cleaning and water-treatment work. We quote it case by case while application notes and final SKU guidance are confirmed.",
     uses: [
       "Concentrated alkaline cleaning programs",
       "Water-treatment dosing where strength matters",
@@ -412,7 +412,7 @@ export const PRODUCTS = {
     icon: "ph-wrench",
     image: "img/products/crs-studio.webp",
     tag: "A quote-reviewed specialty acid replacement for targeted descaling and water-side work.",
-    desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. Route through quote review until application sheets and final SKU guidance are confirmed.",
+    desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. We quote it case by case while application sheets and final SKU guidance are confirmed.",
     uses: [
       "Specialty descaling and acid-cleaning jobs",
       "Water-side scale and mineral removal",
@@ -454,7 +454,7 @@ pg100: {
     icon: "ph-thermometer-cold",
     image: PRODUCT_FALLBACK_IMAGE,
     tag: "Premixed inhibited 50% propylene glycol for maintenance teams that do not want field mixing to become the job.",
-    desc: "A ready-to-use inhibited 50% propylene glycol blend for HVAC and hydronic loop service. Scope confirms loop compatibility and supply path before rollout.",
+    desc: "A ready-to-use inhibited 50% propylene glycol blend for HVAC and hydronic loop service. We confirm loop compatibility and supply before rollout.",
     uses: ["Closed-loop HVAC systems", "Hydronic loop top-offs", "Facility freeze-protection maintenance"],
     specs: [
       ["ph-drop", "PG 50 blend", "Premixed propylene glycol solution"],
@@ -471,7 +471,7 @@ pg100: {
     icon: "ph-thermometer-cold",
     image: PRODUCT_FALLBACK_IMAGE,
     tag: "Inhibited ethylene glycol concentrate for industrial heat-transfer loops that need corrosion protection and local supply.",
-    desc: "An inhibited ethylene glycol concentrate for industrial loop fill, freeze protection, and heat-transfer programs. Application review confirms inhibitor and loop compatibility.",
+    desc: "An inhibited ethylene glycol concentrate for industrial loop fill, freeze protection, and heat-transfer programs. We confirm inhibitor and loop compatibility.",
     uses: ["Industrial heat-transfer loops", "Closed-loop freeze protection", "Process-loop maintenance"],
     specs: [
       ["ph-drop", "Ethylene glycol", "Concentrated inhibited glycol"],
@@ -522,7 +522,7 @@ pg100: {
     icon: "ph-thermometer-cold",
     image: PRODUCT_FALLBACK_IMAGE,
     tag: "50/50 ethylene glycol blend for quote-reviewed loop top-offs, maintenance, and supply planning.",
-    desc: "A 50/50 ethylene glycol blend for closed-loop maintenance and top-off work where scope, fluid compatibility, and supply path are confirmed before purchase.",
+    desc: "A 50/50 ethylene glycol blend for closed-loop maintenance and top-off work; we confirm fluid compatibility and supply before purchase.",
     uses: ["Loop top-offs", "Routine freeze-protection maintenance", "Industrial heat-transfer service"],
     specs: [
       ["ph-drop", "EG 50/50", "Premixed ethylene glycol solution"],
@@ -571,7 +571,7 @@ export const REPLACEMENT_MAP = [
 export const PRODUCT_CATALOG_COPY = {
   hcr: {
     job: "Rust, scale, and heavy deposits",
-    summary: "Use when rust staining, mineral scale, or passivation work needs industrial strength and a buyer file better than a muriatic-acid SDS.",
+    summary: "Use when rust staining, mineral scale, or passivation work needs industrial strength and documentation better than a muriatic-acid SDS.",
     fits: ["HVAC", "metal restoration", "concrete", "pipelines"],
     proof: "CLR-failed / HCR-cleared proof and cooling-tower notes"
   },
@@ -601,7 +601,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   neutral: {
     job: "Sensitive surfaces and seals",
-    summary: "Choose this when grease needs to move but the surface, seal, metal, or finish needs a neutral chemistry profile.",
+    summary: "Choose this when grease needs to move but the surface, seal, metal, or finish needs neutral, pH-7 chemistry.",
     fits: ["equipment", "marine", "aviation", "fleet"],
     proof: "SDS and technical application sheet"
   },
@@ -631,7 +631,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   lam3: {
     job: "Moss, algae, mold, and mildew",
-    summary: "Spray and walk away on roofs, pavers, siding, stucco, concrete, ponds, and exterior walls; let dwell time do the long-tail cleaning work.",
+    summary: "Spray and walk away on roofs, pavers, siding, stucco, concrete, ponds, and exterior walls; let the dwell time do the slow work.",
     fits: ["roofs", "pavers", "siding", "stucco"],
     proof: "Before-and-after exterior photos"
   },
@@ -661,7 +661,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   sar: {
     job: "Specialty acid replacement",
-    summary: "A tuned acid-replacement SKU for targeted descaling and water-side work; route through quote review until application sheets are final.",
+    summary: "A tuned acid-replacement SKU for targeted descaling and water-side work; quoted case by case until application sheets are final.",
     fits: ["descaling", "water-side scale", "specialty acid", "maintenance"],
     proof: "Application notes on request"
   }
@@ -680,7 +680,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   eg100: {
     job: "Inhibited ethylene glycol concentrate",
-    summary: "Concentrated inhibited EG for industrial heat-transfer and freeze-protection loops where performance matters more than consumer positioning.",
+    summary: "Concentrated inhibited EG for industrial heat-transfer and freeze-protection loops where loop performance is the priority.",
     fits: ["industrial loops", "process systems", "freeze protection"],
     proof: "Pricing launch spec"
   },
@@ -698,7 +698,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   eg5050: {
     job: "EG 50/50 blend",
-    summary: "Premixed EG 50/50 blend for quote-reviewed loop top-offs and maintenance.",
+    summary: "Premixed EG 50/50 blend for loop top-offs and maintenance, quoted to order.",
     fits: ["loop top-offs", "routine maintenance", "freeze protection"],
     proof: "Pricing launch spec"
   }

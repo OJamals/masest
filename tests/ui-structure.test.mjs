@@ -157,7 +157,7 @@ test("program function map is optional below the tiers", () => {
 
 test("proof page leads with conversion proof, not internal notes", () => {
   const proof = read("proof.html");
-  const heroIndex = proof.indexOf("No showroom demos. Working equipment.");
+  const heroIndex = proof.indexOf("The proof came off working equipment.");
   const libraryIndex = proof.indexOf('class="proof-library');
 
   assert.ok(heroIndex > -1, "expected proof hero");
@@ -296,7 +296,7 @@ test("about page routes buyers before service breadth", () => {
   const statsIndex = about.indexOf('class="stat-band"');
   const routerIndex = about.indexOf('class="about-router');
   const disclosureIndex = about.indexOf('class="resource-disclosure about-services-disclosure');
-  const servicesIndex = about.indexOf("Services now have a real catalog");
+  const servicesIndex = about.indexOf("Every service has a line item and a price.");
   const teamIndex = about.indexOf("Talk to the people who built it.");
 
   assert.ok(statsIndex > -1, "expected credentials band to remain");
@@ -363,7 +363,7 @@ test("scrolly story has a static summary for reduced motion and assistive tech",
   assert.match(summary, /id="storySummaryTitle"/);
   assert.match(summary, /The dirt is obvious/);
   assert.match(summary, /HMIS gives the danger a number/);
-  assert.match(summary, /Industrial work\. 0-0-0 profile/);
+  assert.match(summary, /Industrial muscle, rated 0-0-0/);
 });
 
 test("scrolly opener states the replacement promise early", () => {
@@ -372,8 +372,8 @@ test("scrolly opener states the replacement promise early", () => {
   const actOne = index.match(/<section class="act" data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actOne, /class="story-promise"/);
-  assert.match(actOne, /VertKleen keeps the industrial job/);
-  assert.match(actOne, /lower-burden chemistry/);
+  assert.match(actOne, /VertKleen strips scale, rust, grease/);
+  assert.match(actOne, /HMIS 0-0-0 safety rating/);
   assert.match(storyCss, /\.story-promise/);
 });
 
