@@ -110,18 +110,15 @@
 
         <!-- Register -->
         <form class="form-card acct-pane" id="registerForm" data-pane="register" hidden novalidate onsubmit="return false">
-          <h2 class="acct-title">Create an account</h2>
-          <p class="acct-sub">User accounts are available immediately. Add a company now if you want MASEST to review it for checkout, programs, and NET terms.</p>
+          <h2 class="acct-title">Create your account</h2>
+          <p class="acct-sub">Your account is ready the moment you sign up — no approval needed. Set up and verify your business later from your dashboard to unlock B2B ordering, NET terms, and programs.</p>
           <div class="field-grid">
-            <div class="field"><label for="rCompany">Company</label><input id="rCompany" name="company" type="text" placeholder="Optional - Gulf Coast Mechanical"></div>
             <div class="field"><label for="rName">Full name</label><input id="rName" name="full_name" type="text" placeholder="Marisol Vega"></div>
-            <div class="field"><label for="rEmail">Email *</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
             <div class="field"><label for="rPhone">Phone</label><input id="rPhone" name="phone" type="tel" placeholder="(727) 348-6519"></div>
+            <div class="field"><label for="rEmail">Email *</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
             <div class="field"><label for="rPass">Password *</label><div class="pw-wrap"><input id="rPass" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required><button type="button" class="pw-toggle" data-target="rPass" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
             <div class="field"><label for="rPass2">Confirm password *</label><div class="pw-wrap"><input id="rPass2" name="password_confirm" type="password" autocomplete="new-password" placeholder="Re-enter password" minlength="8" required><button type="button" class="pw-toggle" data-target="rPass2" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
-            <div class="field"><label for="rCert">Resale / tax-exempt cert URL</label><input id="rCert" name="resale_cert_url" type="url" placeholder="Link to certificate (optional)"></div>
           </div>
-          <label class="checkbox-row"><input type="checkbox" id="rExempt" name="tax_exempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
           <button type="submit" class="btn btn-primary u-block-cta" id="rBtn">Create account</button>
           <p class="acct-status" id="rStatus" role="status" aria-live="polite"></p>
           <p class="acct-switch">Already have an account? <button type="button" data-pane="login">Sign in</button></p>
@@ -131,11 +128,9 @@
       <!-- Email confirmed but company/profile not yet created: finish setup -->
       <div class="form-card" id="completeCard" hidden>
         <h2 class="acct-title">Finish setting up</h2>
-        <p class="acct-sub">Your email is confirmed. Add your company now, or leave it blank and set up a business later from the dashboard.</p>
-        <div class="field"><label for="cCompany">Company</label><input id="cCompany" type="text" placeholder="Optional - Gulf Coast Mechanical"></div>
-        <div class="field u-mt-12"><label for="cName">Full name</label><input id="cName" type="text" placeholder="Marisol Vega"></div>
+        <p class="acct-sub">Your email is confirmed. Add your contact details and you’re in — set up your business anytime from the dashboard.</p>
+        <div class="field"><label for="cName">Full name</label><input id="cName" type="text" placeholder="Marisol Vega"></div>
         <div class="field u-mt-12"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="(727) 348-6519"></div>
-        <label class="checkbox-row"><input type="checkbox" id="cExempt"> We are tax-exempt and will provide a resale/exemption certificate.</label>
         <button type="button" class="btn btn-primary u-block-cta" id="cBtn">Finish setup</button>
         <p class="acct-status" id="cStatus" role="status" aria-live="polite"></p>
         <button type="button" class="btn btn-ghost btn-sm u-mt-10" id="cLogout">Sign out</button>
@@ -248,7 +243,7 @@
 
   function showComplete() {
     authBox.hidden = true; completeCard.hidden = false;
-    $("cCompany").focus();
+    $("cName").focus();
   }
   function showAuth() {
     completeCard.hidden = true;
@@ -276,12 +271,10 @@
     const status = $("cStatus");
     setStatus(status, "Finishing…", "");
     try {
-      const name = $("cCompany").value.trim();
       await completeRegistration({
-        company: { name, tax_exempt: $("cExempt").checked },
         profile: { full_name: $("cName").value.trim() || null, phone: $("cPhone").value.trim() || null },
       });
-      setStatus(status, name ? "Account created. Business profile submitted for approval." : "Account created.", "ok");
+      setStatus(status, "Account ready.", "ok");
       await refresh();
     } catch (e) {
       setStatus(status, e.message === "already_registered" ? "Already set up. Reloading..." : "Could not finish: " + (e.message || "try again"), "err");
@@ -351,20 +344,19 @@
     const cap = captchaToken("registerForm");
     if (TS_SITEKEY && !cap) { setStatus(status, "Complete the verification challenge.", "err"); return; }
     btn.disabled = true; setStatus(status, "Creating account…", "");
-    const company = { name: $("rCompany").value.trim(), tax_exempt: $("rExempt").checked, resale_cert_url: $("rCert").value.trim() || null };
     const profile = { full_name: $("rName").value.trim() || null, phone: $("rPhone").value.trim() || null };
     try {
-      const out = await register({ email: $("rEmail").value.trim(), password: $("rPass").value, company, profile, captchaToken: cap });
+      const out = await register({ email: $("rEmail").value.trim(), password: $("rPass").value, profile, captchaToken: cap });
       if (out?.pending_email_confirmation) {
-        // Confirm-email ON: stash so we can finish company/profile creation after confirm + login.
-        localStorage.setItem(PENDING_KEY, JSON.stringify({ company, profile }));
-        setStatus(status, company.name ? "Account created. Check your email to confirm; business review starts after confirmation." : "Account created. Check your email to confirm, then sign in.", "ok");
+        // Confirm-email ON: stash the profile so we can finish it after confirm + login.
+        localStorage.setItem(PENDING_KEY, JSON.stringify({ profile }));
+        setStatus(status, "Account created. Check your email to confirm, then sign in.", "ok");
       } else {
-        setStatus(status, company.name ? "Account created. Business profile is pending approval." : "Account created. You can set up a business from the dashboard.", "ok");
+        setStatus(status, "Account created. You can set up your business anytime from the dashboard.", "ok");
         await refresh();
       }
     } catch (err) {
-      const map = { already_registered: "This account already exists. Sign in instead.", company_name_required: "Enter a company name or leave the company field blank." };
+      const map = { already_registered: "This account already exists. Sign in instead." };
       let msg = map[err.message];
       if (!msg) {
         const detail = [err.message, err.code, err.status, err.name].filter(Boolean).join(" ").trim();

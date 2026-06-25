@@ -22,12 +22,13 @@ function emitAuth() {
   try { document.dispatchEvent(new CustomEvent('masest:auth')); } catch {}
 }
 
-// POST the company/profile to the registration function using a valid session token.
-async function postRegister(token, { company, profile }) {
+// POST the user profile to the registration function using a valid session token. No company
+// is created at signup — business setup is a separate, deliberate step from the dashboard.
+async function postRegister(token, { profile }) {
   const r = await fetch('/api/account/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ company, profile }),
+    body: JSON.stringify({ profile }),
   });
   const out = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(out.error || 'register_failed');
@@ -35,11 +36,12 @@ async function postRegister(token, { company, profile }) {
   return out;
 }
 
-/* Register a B2B account: create the auth user, then create the company (pending approval).
- * If email confirmation is ON, signUp returns no session - we return pending_email_confirmation
- * and the caller stashes {company, profile}, finishing via completeRegistration() after the user
- * confirms + logs in. captchaToken is required when Supabase Auth CAPTCHA (Turnstile) is enabled. */
-export async function register({ email, password, company, profile, captchaToken }) {
+/* Register a user account: create the auth user, then bootstrap the profile. The account is
+ * active immediately — no admin approval to register. If email confirmation is ON, signUp
+ * returns no session: we return pending_email_confirmation and the caller stashes {profile},
+ * finishing via completeRegistration() after the user confirms + logs in. captchaToken is
+ * required when Supabase Auth CAPTCHA (Turnstile) is enabled. */
+export async function register({ email, password, profile, captchaToken }) {
   const sb = requireClient();
   const options = { emailRedirectTo: `${window.location.origin}/account.html` };
   if (captchaToken) options.captchaToken = captchaToken;
@@ -47,17 +49,17 @@ export async function register({ email, password, company, profile, captchaToken
   if (error) throw error;
   const token = signUp.session?.access_token;
   if (!token) return { pending_email_confirmation: true };
-  return postRegister(token, { company, profile });
+  return postRegister(token, { profile });
 }
 
-/* Finish registration for a user who already has a session but no company yet - the
+/* Finish registration for a user who already has a session but no profile yet - the
  * Confirm-email ON path, after the confirmation link establishes a session on return. */
-export async function completeRegistration({ company, profile }) {
+export async function completeRegistration({ profile }) {
   const sb = requireClient();
   const { data } = await sb.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error('not_authenticated');
-  return postRegister(token, { company, profile });
+  return postRegister(token, { profile });
 }
 
 /* Resend the signup confirmation email (when the prior link expired or was consumed). */

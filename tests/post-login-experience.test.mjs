@@ -24,12 +24,12 @@ test("message notifications default to the messages panel", () => {
 test("account-only dashboard guides business setup instead of failing tabs", () => {
   const js = read("js/dashboard.js");
 
-  assert.match(js, /Your account is active\. Set up a business profile/, "dashboard should distinguish active user accounts from business approval");
+  assert.match(js, /Your account is ready\./, "dashboard should distinguish active user accounts from business verification");
   assert.match(js, /Business setup required/, "messages tab should explain business setup before company-scoped threads");
   assert.match(js, /Create a business profile before placing or tracking company orders/, "orders tab should not call company-scoped APIs before business setup");
   assert.match(js, /No business notifications yet/, "notifications tab should not show a load failure before business setup");
   assert.match(js, /No business profile yet/, "addresses tab should explain business setup before company-scoped addresses");
-  assert.match(js, /Available after you create a business profile and MASEST approves it/, "payment tab should name the account-only locked state");
+  assert.match(js, /Set up your business under .* to save a card on file/, "payment tab should name the account-only locked state");
   assert.match(js, /ACCOUNT\?\.company \? 'Open business setup' : 'Set up business'/, "next action should promote business creation for account-only users");
 });
 

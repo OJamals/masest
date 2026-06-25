@@ -68,7 +68,8 @@ function loadTab(name) {
 }
 
 /* ---------- overview ---------- */
-function statusBadge(s) { return `<span class="badge" data-s="${esc(s)}">${esc(s)}</span>`; }
+function statusBadge(s, label) { return `<span class="badge" data-s="${esc(s)}">${esc(label || s)}</span>`; }
+function bizStatusLabel(s) { return ({ approved: 'Verified', pending: 'Under review', rejected: 'Needs attention', suspended: 'Suspended' })[s] || s; }
 function trackingSteps(order) {
   const status = order.tracking_status || 'processing';
   const steps = [
@@ -99,17 +100,20 @@ async function renderOverview() {
   const c = ACCOUNT?.company;
   const banner = $('approvalBanner');
   if (!c) {
-    banner.innerHTML = `<div class="banner warn"><i class="ph ph-briefcase" aria-hidden="true"></i> Your account is active. Set up a business profile when you need checkout, programs, or NET terms.</div>`;
-  } else if (c.status !== 'approved') {
-    banner.innerHTML = `<div class="banner warn"><i class="ph ph-clock" aria-hidden="true"></i> Your business is <b>${esc(c.status)}</b>. Checkout, programs, payment setup, and NET terms unlock after MASEST approves it.</div>`;
+    banner.innerHTML = `<div class="banner info"><i class="ph ph-rocket-launch" aria-hidden="true"></i><span>Your account is ready. <a href="#business">Set up your business</a> to unlock B2B ordering, NET terms, QuickBooks invoicing, and service programs.</span></div>`;
+  } else if (c.status === 'pending') {
+    banner.innerHTML = `<div class="banner info"><i class="ph ph-clock-countdown" aria-hidden="true"></i><span>We’re verifying your business — usually 1–2 business days. B2B ordering, NET terms, and programs unlock once it’s approved.</span></div>`;
+  } else if (c.status === 'rejected' || c.status === 'suspended') {
+    banner.innerHTML = `<div class="banner warn"><i class="ph ph-warning-circle" aria-hidden="true"></i><span>Your business needs attention. <a href="#business">Review your business details</a> to continue.</span></div>`;
   } else { banner.innerHTML = ''; }
+  wirePanelLinks(banner);
 
   $('ovAccount').innerHTML = `
     <h2 class="headline dash-section-title dash-section-title-sm">Account</h2>
     <div class="dash-row"><span>Signed in as</span><b>${esc(ACCOUNT?.email || 'Not set')}</b></div>
-    <div class="dash-row"><span>Company</span><b>${esc(c?.name || 'Not set up')}</b></div>
-    <div class="dash-row"><span>Business status</span>${c ? statusBadge(c.status || 'pending') : '<span class="badge" data-s="pending">not set up</span>'}</div>
-    <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : (c ? 'Pending approval' : 'Set up business')}</b></div>
+    <div class="dash-row"><span>Business</span><b>${esc(c?.name || 'Not set up')}</b></div>
+    <div class="dash-row"><span>Verification</span>${c ? statusBadge(c.status || 'pending', bizStatusLabel(c.status)) : '<span class="badge" data-s="pending">Not set up</span>'}</div>
+    <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : (c ? 'Under review' : 'Set up business')}</b></div>
     <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + c?.net_terms_days : 'Not enabled'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
     <div class="dash-row"><span>Balance owed</span><b>${money(ACCOUNT.credit.net_outstanding, 'usd')}</b></div>
     <div class="dash-row"><span>Credit available</span><b>${money(ACCOUNT.credit.credit_available, 'usd')}</b></div>` : ''}`;
@@ -585,17 +589,17 @@ function wireAddressForm() {
 async function renderPayment() {
   loaded.payment = true;
   const box = $('payBody');
-  const approved = ACCOUNT?.can_checkout;
-  const lockedCopy = ACCOUNT?.company
-    ? 'Available once your business is approved for online ordering.'
-    : 'Available after you create a business profile and MASEST approves it.';
+  // Stripe card payments live in the user context and are NOT gated by business verification.
+  // The Stripe customer is company-scoped, so a company must exist — but it need not be approved.
+  const hasCompany = Boolean(ACCOUNT?.company);
   box.innerHTML = `
     <h2 class="headline dash-section-title dash-section-title-sm">Payment methods</h2>
-    <p class="muted pay-copy">Saved cards and bank accounts are managed securely by Stripe. We never store card details on our servers.</p>
-    ${approved
+    <p class="muted pay-copy">Saved cards are managed securely by Stripe. We never store card details on our servers. NET invoicing is handled separately under <a href="#business">Business → QuickBooks invoicing</a>.</p>
+    ${hasCompany
       ? '<button class="btn btn-primary" id="portalBtn">Manage payment methods</button>'
-      : `<p class="muted">${lockedCopy}</p>`}
+      : '<p class="muted">Set up your business under <a href="#business">Business</a> to save a card on file.</p>'}
     <span class="dash-status" id="payStatus" role="status" aria-live="polite"></span>`;
+  wirePanelLinks(box);
   const btn = $('portalBtn');
   if (btn) btn.addEventListener('click', async () => {
     const portalTab = openReservedTab();

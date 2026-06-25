@@ -20,17 +20,25 @@ test("account/me returns buyer setup progress for dashboards", () => {
   assert.match(helper, /percent/, "setup should include an overall percent");
 });
 
-test("registration allows user accounts before business approval", () => {
+test("registration creates user accounts only — never a company / approval gate", () => {
   const endpoint = read("functions/api/account/register.js");
+  const company = read("functions/api/account/company.js");
   const account = read("account.html");
 
+  // Signup activates the user immediately and never creates a company (no admin approval to register).
   assert.match(endpoint, /account_ready:\s*true/, "registration should mark the user account ready immediately");
-  assert.match(endpoint, /needs_business:\s*true/, "company-free registration should tell the client business setup is still open");
-  assert.match(endpoint, /company_id:\s*null/, "company-free registration should create a profile without a company");
-  assert.match(endpoint, /business_pending_approval:\s*true/, "creating a company should start business approval separately");
-  assert.doesNotMatch(endpoint, /if \(!company\.name/, "company name should not be mandatory for user registration");
-  assert.match(account, /<label for="rCompany">Company<\/label>/, "company should be optional in the registration form");
-  assert.doesNotMatch(account, /id="rCompany"[^>]+required/, "registration form should not require a company");
+  assert.match(endpoint, /needs_business:\s*true/, "registration should tell the client business setup is still open");
+  assert.match(endpoint, /company_id:\s*null/, "registration should create a profile without a company");
+  assert.doesNotMatch(endpoint, /from\('companies'\)\s*\.insert|\.from\('companies'\)\n\s*\.insert/, "registration must not create a company");
+  assert.doesNotMatch(endpoint, /status:\s*'pending'/, "registration must not start a business approval gate");
+
+  // The admin business-verification gate lives entirely on the separate company endpoint.
+  assert.match(company, /status:\s*'pending'/, "creating a business should start admin verification (pending)");
+  assert.match(company, /business_pending_approval:\s*true/, "company creation should signal the verification gate to the client");
+
+  // The signup form is a pure user account — no business fields.
+  assert.doesNotMatch(account, /id="rCompany"/, "signup form must not collect a company");
+  assert.doesNotMatch(account, /id="rCert"/, "signup form must not collect a resale certificate");
 });
 
 test("buyer dashboard renders business setup progress", () => {
@@ -117,14 +125,28 @@ test("shared setup helper is used by account and admin setup surfaces", () => {
   assert.match(adminStats, /import .*buildCompanySetup.*setupStepBreakdown.*_lib\/setup\.js/, "admin stats should import shared setup helpers");
 });
 
-test("business hub exposes Stripe payment setup portal", () => {
-  const js = read("js/business.js");
+test("Stripe card portal lives in the user context, not the business hub", () => {
+  const dash = read("js/dashboard.js");
+  const business = read("js/business.js");
 
-  assert.match(js, /function renderPaymentSetup\(/, "business hub should render payment setup action");
-  assert.match(js, /\/api\/account\/billing-portal/, "business hub should open billing portal endpoint");
-  assert.match(js, /Payment setup unlocks after business approval/, "payment setup should be locked before business approval");
-  assert.match(js, /sendReservedTab\(portalTab, out\.url\)/, "business hub should open the Stripe portal without replacing the hub tab");
-  assert.match(js, /stripe_not_configured/, "business hub should show Stripe setup errors clearly");
+  // Stripe card management stays on the user-context Payment methods tab.
+  assert.match(dash, /\/api\/account\/billing-portal/, "user payment tab should open the Stripe billing portal");
+  assert.match(dash, /Manage payment methods/, "user payment tab should expose the Stripe card portal");
+  // The standalone Stripe payment-setup card has moved OUT of the business hub.
+  assert.doesNotMatch(business, /function renderPaymentSetup\(/, "business hub should no longer own the Stripe payment-setup card");
+});
+
+test("business hub exposes the QuickBooks invoicing portal", () => {
+  const js = read("js/business.js");
+  const endpoint = new URL("functions/api/account/invoices.js", root);
+
+  assert.equal(existsSync(endpoint), true, "the business invoicing endpoint should exist");
+  assert.match(js, /function renderInvoicing\(/, "business hub should render the QuickBooks invoicing portal");
+  assert.match(js, /\/api\/account\/invoices/, "business hub should load NET invoices from the invoices endpoint");
+  assert.match(js, /QuickBooks/, "the business invoicing portal should be branded QuickBooks");
+  const invoices = readFileSync(endpoint, "utf8");
+  assert.match(invoices, /requireCompany/, "the invoices endpoint must be company-scoped");
+  assert.match(invoices, /status === 'approved'|approved/, "NET invoicing should be gated to verified businesses");
 });
 
 test("legacy business page forwards to the dashboard business panel", () => {

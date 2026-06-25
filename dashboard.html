@@ -82,8 +82,12 @@
   .dash-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; }
   .dash-status[data-state=ok] { color: var(--accent-ink); }
   .dash-status[data-state=err] { color: var(--status-danger-ink); }
-  .banner { border-radius: var(--r-card); padding: 16px 18px; font-size: .92rem; font-weight: 600; margin-bottom: 18px; }
+  .banner { border-radius: var(--r-card); padding: 16px 18px; font-size: .92rem; font-weight: 600; margin-bottom: 18px; display: flex; gap: 10px; align-items: flex-start; }
+  .banner i { font-size: 1.15rem; flex: 0 0 auto; margin-top: 1px; }
   .banner.warn { background: var(--status-warning-bg); color: var(--status-warning-ink); }
+  .banner.info { background: var(--accent-soft); color: var(--accent-ink); }
+  .banner.ok { background: var(--status-success-bg); color: var(--status-success-ink); }
+  .banner a { color: inherit; text-decoration: underline; }
   .muted { color: var(--ink-soft); font-size: .9rem; }
   .inline-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
   .dash-wrap { max-width: 1120px; }
@@ -243,6 +247,30 @@
   .biz-field-gap { margin-top: 12px; }
   .biz-button-gap { margin-top: 14px; }
   .biz-invites { margin-top: 10px; }
+  /* business verification banner (inline, inside the profile card) */
+  .biz-banner { margin: 14px 0 4px; padding: 12px 14px; border-radius: var(--r-input, 10px); font-size: .9rem; font-weight: 600; line-height: 1.45; }
+  .biz-banner[data-tone=info] { background: var(--accent-soft); color: var(--accent-ink); }
+  .biz-banner[data-tone=ok] { background: var(--status-success-bg); color: var(--status-success-ink); }
+  .biz-banner[data-tone=warn] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
+  /* business registration form */
+  .biz-reg-form { display: block; }
+  .biz-reg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+  .biz-reg-grid > label { display: grid; gap: 6px; font-weight: 700; font-size: .82rem; color: var(--ink-soft); min-width: 0; }
+  .biz-reg-grid input, .biz-reg-grid select { width: 100%; }
+  .biz-reg-full { grid-column: 1 / -1; }
+  .biz-reg-grid .biz-check-label { padding: 4px 0 0; font-size: .9rem; color: var(--ink); }
+  .biz-verify-note { display: flex; gap: 8px; align-items: flex-start; margin: 16px 0 4px; padding: 12px 14px; background: var(--accent-soft); color: var(--accent-ink); border-radius: var(--r-input, 10px); font-size: .86rem; font-weight: 600; line-height: 1.45; }
+  .biz-verify-note i { font-size: 1.1rem; flex: 0 0 auto; }
+  /* QuickBooks invoicing portal */
+  .biz-inv-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .biz-inv-stat { border: 1px solid var(--line); border-radius: var(--r-input, 10px); padding: 12px 14px; display: grid; gap: 4px; }
+  .biz-inv-stat small { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
+  .biz-inv-stat b { font-size: 1.1rem; font-weight: 800; }
+  .biz-inv-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .biz-inv-table th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); padding: 0 10px 8px; border-bottom: 1px solid var(--line); }
+  .biz-inv-table td { padding: 11px 10px; border-bottom: 1px solid var(--line-soft, var(--line)); }
+  .biz-inv-amt { text-align: right; font-variant-numeric: tabular-nums; }
+  .biz-inv-foot { margin-top: 12px; font-size: .85rem; }
   @media (prefers-reduced-motion: reduce) { .dash-tab { transition: none; } }
 @media (max-width: 820px) {
 .dash-layout { display: block; }
@@ -275,7 +303,9 @@
       grid-template-columns: 1fr;
     }
     .tier-grid,
-    .biz-form {
+    .biz-form,
+    .biz-reg-grid,
+    .biz-inv-summary {
       grid-template-columns: 1fr;
     }
     .biz-form-create .status {
@@ -406,7 +436,7 @@
             <div class="biz-card" id="bizProfile"></div>
             <div class="biz-card" id="bizSetup"></div>
             <div class="biz-card" id="bizCompanySetup"></div>
-            <div class="biz-card" id="bizPaymentSetup"></div>
+            <div class="biz-card" id="bizInvoicing" hidden></div>
 
             <div class="biz-card" id="bizTeam" hidden>
               <h2>Team members</h2>

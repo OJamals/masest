@@ -62,9 +62,10 @@ test("signup with email confirmation ON gates the user instead of logging in", a
 
   await page.goto(`${BASE_URL}/account.html`, { waitUntil: "domcontentloaded" });
 
-  // Reveal the register pane from the sign-in view.
+  // Reveal the register pane from the sign-in view. Signup collects a user account only —
+  // business setup happens later from the dashboard, so there is no company field here.
   await page.locator('.acct-switch [data-pane="register"]').first().click();
-  await page.locator("#rCompany").fill("Gulf Coast Mechanical");
+  await page.locator("#rName").fill("Marisol Vega");
   await page.locator("#rEmail").fill("newbuyer@example.com");
   await page.locator("#rPass").fill("supersecret123");
   await page.locator("#rPass2").fill("supersecret123");
@@ -74,10 +75,10 @@ test("signup with email confirmation ON gates the user instead of logging in", a
   await expect(page.locator("#rStatus")).toContainText(/confirm/i);
   await expect(page.locator("#rStatus")).toHaveAttribute("data-state", "ok");
 
-  // The pending company/profile is stashed for completion after confirmation.
+  // The pending user profile is stashed for completion after confirmation.
   const pending = await page.evaluate(() => {
     const k = Object.keys(localStorage).find((x) => /pending/i.test(x));
     return k ? localStorage.getItem(k) : null;
   });
-  expect(pending).toContain("Gulf Coast Mechanical");
+  expect(pending).toContain("Marisol Vega");
 });

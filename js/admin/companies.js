@@ -3,7 +3,7 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, dateTime as date } from '../util.js';
+import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
 // Read-only "view as customer" snapshot (#100) — what the account sees, for support.
@@ -34,6 +34,30 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const open = setup.steps.filter((step) => !step.done);
     const firstOpen = open[0]?.label || 'Complete';
     return `<span data-setup-state="${open.length ? 'open' : 'done'}"><b>${setup.percent || 0}%</b> <small class="muted">${esc(firstOpen)}</small></span>`;
+  }
+
+  // Business verification dossier (schema-business-profile.sql) — what staff review to approve.
+  function bizDossier(c) {
+    const L_ENTITY = { llc: 'LLC', c_corp: 'C-Corporation', s_corp: 'S-Corporation', partnership: 'Partnership', sole_prop: 'Sole proprietor', nonprofit: 'Non-profit', government: 'Government', other: 'Other' };
+    const L_IND = { hvac: 'HVAC / mechanical', facilities: 'Facilities', marine: 'Marine', food_bev: 'Food & beverage', manufacturing: 'Manufacturing', municipal: 'Municipal', distributor: 'Distributor', other: 'Other' };
+    const L_VOL = { under_10k: 'Under $10k/yr', '10k_50k': '$10k–$50k/yr', '50k_250k': '$50k–$250k/yr', '250k_plus': '$250k+/yr' };
+    const rows = [
+      ['Legal name', c.legal_name],
+      ['DBA', c.dba],
+      ['Entity type', L_ENTITY[c.entity_type] || c.entity_type],
+      ['Tax ID / EIN', c.tax_id],
+      ['Industry', L_IND[c.industry] || c.industry],
+      ['Est. annual volume', L_VOL[c.est_annual_volume] || c.est_annual_volume],
+      ['Requested terms', c.requested_net_terms != null ? (c.requested_net_terms > 0 ? 'NET-' + c.requested_net_terms : 'Pay as you go') : null],
+      ['Business phone', c.business_phone],
+      ['Business email', c.business_email],
+      ['Contact', [c.contact_name, c.contact_title].filter(Boolean).join(' · ')],
+      ['Tax-exempt', c.tax_exempt ? 'Yes' : null],
+      ['Submitted', c.submitted_at ? date(c.submitted_at) : null],
+    ].filter(([, v]) => v);
+    const link = (label, url) => url ? `<div class="dash-row"><span>${esc(label)}</span><a href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">View →</a></div>` : '';
+    const body = rows.map(([k, v]) => `<div class="dash-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('') + link('Website', c.website) + link('Resale certificate', c.resale_cert_url);
+    return `<div class="company-dossier"><h3>Business details</h3>${body || '<p class="muted">No verification details submitted yet.</p>'}</div>`;
   }
 
   function renderCompanyMembers(company, members = []) {
@@ -69,9 +93,14 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     box.querySelectorAll('[data-company-detail-action]').forEach((button) => {
       button.addEventListener('click', async () => {
         const action = button.dataset.companyDetailAction;
+        const body = { id: company.id, action };
+        if (action === 'reject') {
+          body.reason = box.querySelector('#rejectReason')?.value.trim() || '';
+          if (!(await confirmDialog('Reject this business? The customer is notified with your reason.', { confirmText: 'Reject', danger: true }))) return;
+        }
         button.disabled = true;
         try {
-          await api('/api/admin/companies', { method: 'POST', body: { id: company.id, action } });
+          await api('/api/admin/companies', { method: 'POST', body });
           await renderCompanies();
           await openCompanyDetail(company.id);
         } catch (err) {
@@ -153,11 +182,14 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <div class="dash-row"><span>Messages</span><b>${detail.message_count || 0}</b></div>
         <div class="company-detail-actions" data-company-id="${esc(company.id || id)}">
           <button class="btn btn-primary btn-sm" type="button" data-company-detail-action="approve">Approve</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="reject">Reject</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="suspend">Suspend</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="messages">Messages</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-view-as="${esc(company.id || id)}">View as customer</button>
         </div>
+        <input class="adm-input" id="rejectReason" type="text" placeholder="Rejection reason (shown to the customer)" style="width:100%;margin:8px 0 4px">
+        ${bizDossier(company)}
         ${renderCompanyMembers(company, detail.members || [])}
         ${renderCompanyInvites(company, detail.invites || [])}
         <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;

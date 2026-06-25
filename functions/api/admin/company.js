@@ -17,6 +17,16 @@ export async function onRequestGet({ request, env }) {
     .eq('id', id).maybeSingle();
   if (!company) return json(404, { error: 'not_found' });
 
+  // Business verification dossier (schema-business-profile.sql). Selected separately and
+  // defensively so the company detail still loads if that migration has not been applied.
+  let business = {};
+  try {
+    const { data: biz } = await sb.from('companies')
+      .select('legal_name,dba,entity_type,tax_id,business_phone,business_email,website,industry,est_annual_volume,requested_net_terms,contact_name,contact_title,submitted_at,verified_at,rejection_reason')
+      .eq('id', id).maybeSingle();
+    if (biz) business = biz;
+  } catch { business = {}; }
+
   const { data: profiles } = await sb.from('profiles').select('id,full_name,phone,role').eq('company_id', id);
   const emails = await emailsByIds(sb, (profiles || []).map((p) => p.id));
   const members = (profiles || []).map((p) => ({ ...p, email: emails[p.id] || null }));
@@ -32,7 +42,7 @@ export async function onRequestGet({ request, env }) {
     .select('id,email,role,status').eq('company_id', id).eq('status', 'pending');
 
   return json(200, {
-    company: { ...company, setup: buildCompanySetup(company, profiles || []) },
+    company: { ...company, ...business, setup: buildCompanySetup(company, profiles || []) },
     members,
     orders: orders || [],
     message_count,
