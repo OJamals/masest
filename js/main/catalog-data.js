@@ -139,6 +139,7 @@ export const PRODUCTS = {
       { label: "Technical Data Sheet (TDS)", file: "docs/sds/watersafe60-tds.pdf" },
       { label: "WaterSafe60 / CR User Guide (NSF 60)", file: "docs/sds/watersafe60-cr-nsf60-user-guide.pdf" },
       { label: "Titration / Sigma Test Data", file: "docs/sds/watersafe60-titration-test.pdf" },
+      { label: "Cooling Tower Chemistry Brochure", file: "docs/sds/vertkleen-cooling-tower-brochure.pdf" },
       "NSF/ANSI 60 Certificate-Status Request"
     ]
   },
@@ -169,6 +170,7 @@ export const PRODUCTS = {
       { label: "Purgo 101 Overview", file: "docs/sds/vertkleen-purgo-101.pdf" },
       { label: "Base Data Sheet", file: "docs/sds/vertkleen-purgo-base-data.pdf" },
       { label: "Bacterial Persistence Test", file: "docs/sds/vertkleen-purgo-bacterial-persistence-test.pdf" },
+      { label: "Cooling Tower Chemistry Brochure", file: "docs/sds/vertkleen-cooling-tower-brochure.pdf" },
       "FIFRA 25(b) Documentation"
     ]
   },

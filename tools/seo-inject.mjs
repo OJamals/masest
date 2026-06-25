@@ -247,7 +247,8 @@ function productPage(id, product) {
         return `<li class="doc-file"><a href="../${attr(doc.file)}" target="_blank" rel="noopener" download>${text(doc.label)}<span class="doc-pill">PDF</span></a></li>`;
       }
       const label = doc && typeof doc === "object" ? doc.label : doc;
-      return `<li>${text(label)}</li>`;
+      const href = `../contact?type=technical&product=${encodeURIComponent(product.name)}&doc=${encodeURIComponent(label)}`;
+      return `<li class="doc-file doc-request"><a href="${attr(href)}">${text(label)}<span class="doc-pill doc-pill-req">Request</span></a></li>`;
     })
     .join("\n");
   const procurement = QUOTE_FIRST_IDS.includes(id)

@@ -6459,3 +6459,15 @@ body.product-detail-page main > section.product-static-section {
   background: #fff;
   color: var(--accent);
 }
+/* Request pill: muted outline (document not yet published as a download) */
+.doc-pill-req {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.product-static-panel .product-fit-list li.doc-file a:hover .doc-pill-req,
+.product-static-panel .product-fit-list li.doc-file a:focus-visible .doc-pill-req {
+  background: #fff;
+  color: var(--accent);
+  border-color: #fff;
+}
