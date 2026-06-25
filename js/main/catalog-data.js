@@ -26,6 +26,8 @@ export const PRODUCTS = {
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-hcr-sds.pdf" },
       { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-hcr-tds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-hcr-label.pdf" },
+      { label: "HCR & Descaler User Guide + Dilution Rates", file: "docs/sds/vertkleen-hcr-descaler-userguide.pdf" },
+      { label: "Field Note: Pool Filter Cleaning", file: "docs/sds/vertkleen-hcr-pool-filter.pdf" },
       "Cooling Tower Case Study: Brevard County Schools"
     ]
   },
@@ -136,6 +138,7 @@ export const PRODUCTS = {
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/watersafe60-sds.pdf" },
       { label: "Technical Data Sheet (TDS)", file: "docs/sds/watersafe60-tds.pdf" },
       { label: "WaterSafe60 / CR User Guide (NSF 60)", file: "docs/sds/watersafe60-cr-nsf60-user-guide.pdf" },
+      { label: "Titration / Sigma Test Data", file: "docs/sds/watersafe60-titration-test.pdf" },
       "NSF/ANSI 60 Certificate-Status Request"
     ]
   },
@@ -164,6 +167,8 @@ export const PRODUCTS = {
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-purgo-sds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-purgo-label.pdf" },
       { label: "Purgo 101 Overview", file: "docs/sds/vertkleen-purgo-101.pdf" },
+      { label: "Base Data Sheet", file: "docs/sds/vertkleen-purgo-base-data.pdf" },
+      { label: "Bacterial Persistence Test", file: "docs/sds/vertkleen-purgo-bacterial-persistence-test.pdf" },
       "FIFRA 25(b) Documentation"
     ]
   },
@@ -214,6 +219,7 @@ export const PRODUCTS = {
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crhd-sds.pdf" },
       { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-crhd-tds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-crhd-label.pdf" },
+      { label: "Degreaser Comparison", file: "docs/sds/vertkleen-crhd-degreaser-comparison.pdf" },
       "Case Study: Walmart Distribution Centers"
     ]
   },
@@ -242,6 +248,7 @@ export const PRODUCTS = {
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-descaler-sds.pdf" },
       { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-descaler-tds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-descaler-label.pdf" },
+      { label: "HCR & Descaler User Guide + Dilution Rates", file: "docs/sds/vertkleen-hcr-descaler-userguide.pdf" },
       "Descaler vs Acids Corrosion Data",
       "Case Study: Walmart Refrigeration Systems"
     ]
@@ -317,7 +324,12 @@ export const PRODUCTS = {
       ["ph-timer", "Spray and walk away", "Keeps working up to a month; reapply about every six months"],
       ["ph-leaf", "Biodegradable stain remover", "Use SDS precautions for mild skin and eye irritation"]
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Data Sheet (TDS)", "Front and Back Label"]
+    docs: [
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-lam3-sds.pdf" },
+      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-lam3-tds.pdf" },
+      { label: "Product Label (Front)", file: "docs/sds/vertkleen-lam3-label-front.pdf" },
+      { label: "Product Label (Back)", file: "docs/sds/vertkleen-lam3-label-back.pdf" }
+    ]
   },
   crs: {
     name: "VertKleen CRS",
@@ -343,7 +355,7 @@ export const PRODUCTS = {
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crs-sds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-crs-label.pdf" },
-      "HCR & Descaler Userguide"
+      { label: "HCR & Descaler User Guide + Dilution Rates", file: "docs/sds/vertkleen-hcr-descaler-userguide.pdf" }
     ]
   },
   "cr-hd-low-foam": {
