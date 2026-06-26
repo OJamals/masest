@@ -5,6 +5,10 @@ const RESEND_STATUS = {
   "email.delivered": "delivered",
   "email.bounced": "bounced",
   "email.complained": "complained",
+  // A send Resend accepts can still permanently fail or stall in delivery; capture those
+  // so a row never stays 'sent' forever (these signals were previously dropped → null).
+  "email.failed": "failed",
+  "email.delivery_delayed": "delayed",
 };
 
 // Returns recipients not present in the suppression set (case-insensitive on email).
@@ -13,8 +17,8 @@ export function filterSuppressed(recipients, suppressedSet) {
   return recipients.filter((addr) => !suppressedSet.has(String(addr).toLowerCase()));
 }
 
-// Maps a Resend webhook event type to an internal email_events.status, or null if the
-// event should not change status (delivery_delayed, unknown).
+// Maps a Resend webhook event type to an internal email_events.status, or null for
+// unknown events (which leave the row's status untouched).
 export function mapResendEvent(type) {
   return RESEND_STATUS[type] || null;
 }

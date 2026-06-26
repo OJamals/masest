@@ -1,6 +1,7 @@
 // POST /api/resend-webhook — Resend (Svix) delivery-event sink.
 // Configure in Resend Dashboard → Webhooks → endpoint <domain>/api/resend-webhook,
-// subscribe to delivered / bounced / complained. Set RESEND_WEBHOOK_SECRET in CF env.
+// subscribe to delivered / bounced / complained / failed / delivery_delayed.
+// Set RESEND_WEBHOOK_SECRET in CF env.
 // Returns 200 for accepted/duplicate/unknown events (avoid Resend retry storms),
 // 400 only on signature failure. No-op (200) if the secret is unset.
 import { json, recordSuppression, updateEmailStatus } from '../_lib/supabase.js';
