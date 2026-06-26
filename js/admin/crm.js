@@ -6,6 +6,8 @@
 import { esc, dateTime as date, confirmDialog } from '../util.js';
 
 const KINDS = [['note', 'Note'], ['call', 'Call'], ['email', 'Email'], ['meeting', 'Meeting']];
+const CONTACT_ROLES = [['procurement', 'Procurement'], ['plant_manager', 'Plant Manager'], ['maintenance', 'Maintenance'], ['engineering', 'Engineering'], ['operations', 'Operations'], ['accounts_payable', 'Accounts Payable'], ['executive', 'Executive'], ['other', 'Other']];
+const roleLabel = (r) => (CONTACT_ROLES.find(([v]) => v === r) || ['', r])[1] || r;
 
 export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
   const errRow = (msg) => `<p class="adm-status" data-state="err">${esc(msg || 'Could not load. Retry.')}</p>`;
@@ -16,6 +18,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         <button class="btn btn-ghost btn-sm is-active" type="button" data-crm-tab="timeline" aria-pressed="true">Timeline</button>
         <button class="btn btn-ghost btn-sm" type="button" data-crm-tab="tasks" aria-pressed="false">Tasks</button>
         <button class="btn btn-ghost btn-sm" type="button" data-crm-tab="notes" aria-pressed="false">Notes</button>
+        ${subjectType === 'company' ? '<button class="btn btn-ghost btn-sm" type="button" data-crm-tab="contacts" aria-pressed="false">Contacts</button>' : ''}
       </div>
       <div class="crm-body" data-crm-body aria-live="polite">${admSkeleton(3)}</div>
     </div>`;
@@ -72,6 +75,30 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     return composer + list;
   }
 
+  function renderContacts(contacts) {
+    const composer = `<form class="crm-contact-form" data-crm-contact-form>
+      <input class="adm-input" data-crm-contact-name placeholder="Contact name" aria-label="Contact name" required>
+      <select class="adm-select" data-crm-contact-role aria-label="Role">${CONTACT_ROLES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+      <input class="adm-input" data-crm-contact-title placeholder="Job title" aria-label="Job title">
+      <input class="adm-input" data-crm-contact-email type="email" placeholder="Email" aria-label="Email">
+      <input class="adm-input" data-crm-contact-phone placeholder="Phone" aria-label="Phone">
+      <label class="crm-contact-primary-toggle"><input type="checkbox" data-crm-contact-primary> Primary</label>
+      <button class="btn btn-primary btn-sm" type="submit" data-crm-contact-submit>Add contact</button>
+    </form>`;
+    const list = contacts.length ? `<ul class="crm-contact-list">${contacts.map((c) => `<li class="crm-contact${c.is_primary ? ' is-primary' : ''}">
+      <div class="crm-contact-main">
+        <div class="crm-contact-name">${c.is_primary ? '<span class="crm-contact-star" title="Primary contact">★</span> ' : ''}${esc(c.name)}<span class="crm-contact-role">${esc(roleLabel(c.role))}</span></div>
+        <div class="crm-feed-detail muted">${[c.title, c.email, c.phone].filter(Boolean).map(esc).join(' · ') || '—'}</div>
+      </div>
+      <span class="crm-contact-actions">
+        ${c.is_primary ? '' : `<button class="btn btn-ghost btn-sm" type="button" data-crm-contact-primary-set="${esc(c.id)}">Make primary</button>`}
+        <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-edit="${esc(c.id)}">Edit</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-del="${esc(c.id)}" aria-label="Delete contact">Delete</button>
+      </span></li>`).join('')}</ul>`
+      : admEmpty('ph-address-book', 'No contacts', 'Add procurement, plant or maintenance contacts for this account.');
+    return composer + list;
+  }
+
   async function load(body, subjectType, subjectId, tab) {
     body.innerHTML = admSkeleton(3);
     const sid = encodeURIComponent(subjectId);
@@ -82,6 +109,10 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       } else if (tab === 'notes') {
         const { notes } = await api(`/api/admin/crm/notes?subject_type=${subjectType}&subject_id=${sid}`);
         body.innerHTML = renderNotes(notes || []);
+      } else if (tab === 'contacts') {
+        const { contacts } = await api(`/api/admin/crm/contacts?company_id=${sid}`);
+        body._contacts = contacts || [];
+        body.innerHTML = renderContacts(contacts || []);
       } else {
         const { tasks } = await api(`/api/admin/crm/tasks?subject_type=${subjectType}&subject_id=${sid}`);
         body.innerHTML = renderTasks(tasks || []);
@@ -117,6 +148,40 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         return;
       }
 
+      const cDel = event.target.closest('[data-crm-contact-del]');
+      if (cDel) {
+        if (!(await confirmDialog('Delete this contact?', { confirmText: 'Delete', danger: true }))) return;
+        cDel.disabled = true;
+        try { await api(`/api/admin/crm/contacts?id=${encodeURIComponent(cDel.dataset.crmContactDel)}`, { method: 'DELETE' }); load(body, subjectType, subjectId, 'contacts'); }
+        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); cDel.disabled = false; }
+        return;
+      }
+
+      const cPrim = event.target.closest('[data-crm-contact-primary-set]');
+      if (cPrim) {
+        cPrim.disabled = true;
+        try { await api('/api/admin/crm/contacts', { method: 'POST', body: { id: cPrim.dataset.crmContactPrimarySet, is_primary: true } }); load(body, subjectType, subjectId, 'contacts'); }
+        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); cPrim.disabled = false; }
+        return;
+      }
+
+      const cEdit = event.target.closest('[data-crm-contact-edit]');
+      if (cEdit) {
+        const c = (body._contacts || []).find((x) => String(x.id) === String(cEdit.dataset.crmContactEdit));
+        const form = panel.querySelector('[data-crm-contact-form]');
+        if (!c || !form) return;
+        form.querySelector('[data-crm-contact-name]').value = c.name || '';
+        form.querySelector('[data-crm-contact-role]').value = c.role || 'other';
+        form.querySelector('[data-crm-contact-title]').value = c.title || '';
+        form.querySelector('[data-crm-contact-email]').value = c.email || '';
+        form.querySelector('[data-crm-contact-phone]').value = c.phone || '';
+        form.querySelector('[data-crm-contact-primary]').checked = !!c.is_primary;
+        form.dataset.editId = c.id;
+        form.querySelector('[data-crm-contact-submit]').textContent = 'Save contact';
+        form.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+
       const toggle = event.target.closest('[data-crm-task-toggle]');
       if (toggle) {
         toggle.disabled = true;
@@ -141,6 +206,21 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         const due = form.querySelector('[data-crm-task-due]').value;
         const assignee = form.querySelector('[data-crm-task-assignee]').value.trim();
         try { await api('/api/admin/crm/tasks', { method: 'POST', body: { subject_type: subjectType, subject_id: subjectId, title, due_at: due || null, assigned_to: assignee || null } }); load(body, subjectType, subjectId, 'tasks'); }
+        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); }
+      } else if (form.matches('[data-crm-contact-form]')) {
+        const name = form.querySelector('[data-crm-contact-name]').value.trim();
+        if (!name) return;
+        const payload = {
+          company_id: subjectId,
+          name,
+          role: form.querySelector('[data-crm-contact-role]').value,
+          title: form.querySelector('[data-crm-contact-title]').value.trim() || null,
+          email: form.querySelector('[data-crm-contact-email]').value.trim() || null,
+          phone: form.querySelector('[data-crm-contact-phone]').value.trim() || null,
+          is_primary: form.querySelector('[data-crm-contact-primary]').checked,
+        };
+        if (form.dataset.editId) payload.id = form.dataset.editId;
+        try { await api('/api/admin/crm/contacts', { method: 'POST', body: payload }); load(body, subjectType, subjectId, 'contacts'); }
         catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); }
       }
     });
