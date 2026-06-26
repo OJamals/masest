@@ -9,10 +9,16 @@ import {
 test("public content snapshot helper loads optional CMS snapshots", () => {
   const source = readFileSync(new URL("../js/main/content-snapshots.js", import.meta.url), "utf8");
   assert.match(source, /loadContentSnapshot/);
+  assert.match(source, /fetch\(`\/data\/content\/\$\{file\}`/, "snapshot fetches must be root-relative for extensionless product detail pages");
   assert.match(source, /proof\.json/);
   assert.match(source, /resources\.json/);
   assert.match(source, /industries\.json/);
   assert.match(source, /faqs\.json/);
+});
+
+test("service catalog tries the root CMS snapshot before legacy static services data", () => {
+  const source = readFileSync(new URL("../js/main/service-catalog.js", import.meta.url), "utf8");
+  assert.match(source, /\["\/data\/content\/services\.json", "\/data\/services\.json"\]/);
 });
 
 test("public pages expose CMS mount points without replacing hardcoded fallback content", () => {

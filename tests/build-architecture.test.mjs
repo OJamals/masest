@@ -26,6 +26,8 @@ test("Cloudflare build emits baseline security headers", () => {
   assert.match(build, /Strict-Transport-Security:/);
   assert.match(build, /Permissions-Policy:/);
   assert.match(build, /script-src[^;]*https:\/\/challenges\.cloudflare\.com/, "Turnstile script must be allowed for auth forms");
+  assert.match(build, /script-src[^;]*https:\/\/static\.cloudflareinsights\.com/, "Cloudflare analytics script must be allowed when Pages injects it");
+  assert.match(build, /connect-src[^;]*https:\/\/cloudflareinsights\.com/, "Cloudflare analytics beacon must be allowed when Pages injects it");
   assert.match(build, /frame-src[^;]*https:\/\/challenges\.cloudflare\.com/, "Turnstile frame must be allowed for auth forms");
 });
 

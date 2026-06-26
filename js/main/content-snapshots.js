@@ -38,7 +38,7 @@ export function filterContentRows(rows = [], { category = "" } = {}) {
 
 export async function loadContentSnapshot(file) {
   try {
-    const response = await fetch(`data/content/${file}`, { cache: "no-store" });
+    const response = await fetch(`/data/content/${file}`, { cache: "no-store" });
     if (!response.ok) return null;
     return await response.json();
   } catch {
