@@ -4,6 +4,8 @@ import { buildConvertItems, netOrderRow } from '../../_lib/quote-convert.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { csvResponse } from '../../_lib/reports.js';
+import { stagePatch, pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
+import { klaviyoTrack } from '../../_lib/klaviyo.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -186,6 +188,22 @@ export async function onRequest({ request, env }) {
   const sb = adminClient(env);
 
   if (request.method === 'GET') {
+    if (new URL(request.url).searchParams.get('view') === 'pipeline') {
+      const { data, error } = await sb.from('quotes').select('id,pipeline_stage,deal_value').neq('status', 'spam').limit(5000);
+      if (error) {
+        if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { summary: pipelineSummary([]), needs_migration: true });
+        return json(500, { error: error.message });
+      }
+      return json(200, { summary: pipelineSummary(data || []) });
+    }
+    if (new URL(request.url).searchParams.get('view') === 'report') {
+      const { data, error } = await sb.from('quotes').select('id,pipeline_stage,deal_value,expected_close,lost_reason').neq('status', 'spam').limit(5000);
+      if (error) {
+        if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { report: pipelineReport([]), needs_migration: true });
+        return json(500, { error: error.message });
+      }
+      return json(200, { report: pipelineReport(data || []) });
+    }
     if (new URL(request.url).searchParams.get('export') === 'csv') {
       const { data, error } = await sb.from('quotes')
         .select('id,created_at,type,name,email,company,phone,product,industry,location,status,priority,next_step,due_at,lead_score,assigned_to')
@@ -199,7 +217,7 @@ export async function onRequest({ request, env }) {
     }
     const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 100, maxLimit: 300 });
     const { data, error, count } = await sb.from('quotes')
-      .select('id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at', { count: 'exact' })
+      .select('id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     if (error) {
@@ -229,6 +247,34 @@ export async function onRequest({ request, env }) {
       return json(result.ok ? 200 : 500, result);
     }
 
+    if (Array.isArray(body.ids) && body.ids.length) {
+      const ids = body.ids.slice(0, 200);
+      const bulk = {};
+      if (body.status) {
+        if (!STATUSES.includes(body.status)) return json(400, { error: 'invalid_status' });
+        bulk.status = body.status;
+        bulk.handled_at = body.status === 'new' ? null : new Date().toISOString();
+        bulk.handled_by = body.status === 'new' ? null : (user.email || null);
+      }
+      if (body.priority) {
+        if (!PRIORITIES.includes(body.priority)) return json(400, { error: 'invalid_priority' });
+        bulk.priority = body.priority;
+      }
+      if (typeof body.assigned_to === 'string') {
+        const assignedTo = body.assigned_to.trim().slice(0, 160);
+        Object.assign(bulk, { assigned_to: assignedTo || null, assigned_at: assignedTo ? new Date().toISOString() : null });
+      }
+      if (body.pipeline_stage !== undefined) {
+        const res = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
+        if (res.error) return json(400, { error: res.error });
+        Object.assign(bulk, res.patch);
+      }
+      if (!Object.keys(bulk).length) return json(400, { error: 'nothing_to_update' });
+      const { error, count } = await sb.from('quotes').update(bulk, { count: 'exact' }).in('id', ids);
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true, updated: count ?? ids.length });
+    }
+
     if (!body.id) return json(400, { error: 'id_required' });
 
     if (body.action === 'convert') {
@@ -250,6 +296,8 @@ export async function onRequest({ request, env }) {
 
       await sb.from('quotes').update({
         status: 'closed',
+        pipeline_stage: 'won',
+        stage_changed_at: new Date().toISOString(),
         handled_at: new Date().toISOString(),
         handled_by: user.email || null,
         next_step: 'Converted to order',
@@ -305,7 +353,7 @@ export async function onRequest({ request, env }) {
         due_at: due || null,
         notes: notes.slice(0, 4000),
       }).eq('id', body.id)
-        .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at')
+        .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason')
         .single();
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true, quote: data });
@@ -332,6 +380,23 @@ export async function onRequest({ request, env }) {
     if (typeof body.notes === 'string') patch.notes = body.notes.slice(0, 4000);
     if (typeof body.next_step === 'string') patch.next_step = body.next_step.slice(0, 500);
 
+    if (body.pipeline_stage !== undefined) {
+      const res = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
+      if (res.error) return json(400, { error: res.error });
+      Object.assign(patch, res.patch);
+    }
+    if (body.deal_value !== undefined) {
+      if (body.deal_value === null || body.deal_value === '') patch.deal_value = null;
+      else {
+        const v = Number(body.deal_value);
+        if (!Number.isFinite(v) || v < 0) return json(400, { error: 'invalid_deal_value' });
+        patch.deal_value = v;
+      }
+    }
+    if (body.expected_close !== undefined) {
+      patch.expected_close = body.expected_close ? String(body.expected_close).slice(0, 10) : null;
+    }
+
     const parsedDueAt = dueAt(body.due_at);
     if (parsedDueAt === false) return json(400, { error: 'invalid_due_at' });
     if (parsedDueAt !== undefined) patch.due_at = parsedDueAt;
@@ -339,9 +404,21 @@ export async function onRequest({ request, env }) {
     if (!Object.keys(patch).length) return json(400, { error: 'nothing_to_update' });
 
     const { data, error } = await sb.from('quotes').update(patch).eq('id', body.id)
-      .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at')
+      .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,email,product,company,type')
       .single();
     if (error) return json(500, { error: error.message });
+
+    // Stage moves emit a Klaviyo metric event so owner-built flows (templates/cadences) can
+    // fire. An event does NOT itself send mail. Best-effort — never blocks the response.
+    if (body.pipeline_stage !== undefined && data?.email) {
+      await klaviyoTrack(env, {
+        email: data.email,
+        metric: 'Deal Stage Changed',
+        value: data.deal_value,
+        properties: { stage: data.pipeline_stage, deal_value: data.deal_value, product: data.product, company: data.company, type: data.type, source: 'pipeline' },
+      }).catch(() => {});
+    }
+
     return json(200, { ok: true, quote: data });
   }
 

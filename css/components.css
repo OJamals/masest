@@ -334,3 +334,45 @@ body .product-detail-hero { padding-bottom: 42px; }
 .crm-task.is-done .crm-feed-title { text-decoration: line-through; opacity: .6; }
 .crm-note-form, .crm-task-form { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .crm-note-form textarea, .crm-task-form input { flex: 1 1 160px; }
+
+/* CRM deal pipeline (admin Quotes board + deal drawer) — slice 2 */
+.pipe-toggle { display: inline-flex; gap: 4px; margin: 0 0 12px; }
+.pipe-toggle .is-active { background: var(--surface-2, #eef2f7); font-weight: 600; }
+.pipe-forecast { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; margin: 0 0 12px; padding: 12px 14px; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; background: var(--surface, #fff); }
+.pipe-forecast b { font-size: 1.1rem; }
+.pipe-forecast .pipe-chip { font-size: .8rem; color: var(--muted, #6b7280); }
+.pipe-board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+.pipe-col { flex: 0 0 240px; background: var(--surface-2, #f4f7f8); border: 1px solid var(--border, #e5e7eb); border-radius: 10px; padding: 8px; min-height: 120px; }
+.pipe-col.is-over { outline: 2px dashed var(--accent, #0e7c86); outline-offset: -2px; }
+.pipe-col-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; padding: 4px 6px 8px; }
+.pipe-col-head .muted { font-weight: 400; font-size: .8rem; }
+.pipe-card { background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: grab; display: grid; gap: 6px; }
+.pipe-card:focus-visible { outline: 2px solid var(--accent, #0e7c86); outline-offset: 1px; }
+.pipe-card.is-dragging { opacity: .5; }
+.pipe-card.is-stale { border-left: 3px solid var(--status-warning-ink); }
+.pipe-card-title { font-weight: 600; }
+.pipe-card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .8rem; color: var(--muted, #6b7280); }
+.pipe-card select { font-size: .75rem; width: 100%; }
+.adm-drawer { border: none; border-radius: 12px 0 0 12px; padding: 0; width: min(560px, 94vw); max-width: 94vw; height: 100vh; max-height: 100vh; margin: 0 0 0 auto; background: var(--surface, #fff); color: var(--ink, #1a1a1a); }
+.adm-drawer::backdrop { background: rgba(0, 0, 0, .4); }
+.adm-drawer-inner { padding: 20px; display: grid; gap: 12px; }
+.adm-drawer-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border, #e5e7eb); padding-bottom: 8px; }
+.adm-drawer-tabs .is-active { background: var(--surface-2, #eef2f7); font-weight: 600; }
+.drawer-details { display: grid; gap: 8px; }
+.drawer-details label { display: grid; gap: 2px; font-size: .85rem; }
+@media (max-width: 900px) { .pipe-col { flex-basis: 200px; } }
+
+/* CRM pipeline reports (slice 3) */
+.pipe-report { display: grid; gap: 16px; }
+.pipe-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.pipe-kpi { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; background: var(--surface, #fff); }
+.pipe-kpi b { font-size: 1.2rem; }
+.pipe-report-block { border: 1px solid var(--border, #e5e7eb); border-radius: 10px; padding: 12px 14px; background: var(--surface, #fff); }
+.pipe-report-block h3 { margin: 0 0 10px; font-size: .95rem; }
+.pipe-funnel-row { display: grid; grid-template-columns: 130px 1fr auto; gap: 10px; align-items: center; margin-bottom: 6px; }
+.pipe-funnel-label { font-size: .85rem; }
+.pipe-funnel-val { font-size: .8rem; color: var(--muted, #6b7280); white-space: nowrap; }
+.pipe-bar { display: block; height: 14px; border-radius: 7px; background: var(--surface-2, #eef2f7); overflow: hidden; }
+.pipe-bar-fill { display: block; height: 100%; background: var(--accent, #0e7c86); border-radius: 7px; }
+.pipe-loss { display: flex; flex-wrap: wrap; gap: 8px; }
+.pipe-loss .pipe-chip { padding: 4px 10px; border: 1px solid var(--border, #e5e7eb); border-radius: 999px; font-size: .8rem; }

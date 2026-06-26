@@ -75,3 +75,38 @@ export async function subscribeLeadByIndustry(env, { email, industry } = {}) {
   const r = await klaviyoSubscribe(env, email, listId);
   return { ...r, listId };
 }
+
+// Build a Klaviyo Events-API payload for a server-side metric (e.g. a pipeline stage
+// change). Pure — unit-tested without network.
+export function buildEventPayload({ email, metric, properties = {}, value } = {}) {
+  const attributes = {
+    properties,
+    metric: { data: { type: 'metric', attributes: { name: metric } } },
+    profile: { data: { type: 'profile', attributes: { email } } },
+  };
+  if (Number.isFinite(Number(value))) attributes.value = Number(value);
+  return { data: { type: 'event', attributes } };
+}
+
+// Record a server-side metric event in Klaviyo. NOTE: an event does NOT send email — it only
+// triggers a send if the owner has built a Klaviyo flow on that metric. Best-effort: skips
+// (no throw) without a private key, metric name, or valid email.
+export async function klaviyoTrack(env, { email, metric, properties, value } = {}) {
+  const key = env.KLAVIYO_PRIVATE_KEY;
+  if (!key || !metric || !EMAIL_RE.test(String(email || ''))) return { ok: false, skipped: true };
+  try {
+    const resp = await globalThis.fetch('https://a.klaviyo.com/api/events/', {
+      method: 'POST',
+      headers: {
+        Authorization: `Klaviyo-API-Key ${key}`,
+        revision: REVISION,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify(buildEventPayload({ email, metric, properties, value })),
+    });
+    return { ok: resp.status === 202 || resp.status === 200, status: resp.status };
+  } catch {
+    return { ok: false, error: true };
+  }
+}
