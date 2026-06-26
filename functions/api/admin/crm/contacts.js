@@ -3,7 +3,7 @@
 import { adminClient, json, readBody, requireStaff } from '../../../_lib/supabase.js';
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
-import { contactRow, contactPatch, mergeFields } from '../../../_lib/crm-contacts.js';
+import { contactRow, contactPatch, mergeFields, parseContactsCsv } from '../../../_lib/crm-contacts.js';
 
 const SELECT = 'id,company_id,name,role,title,email,phone,is_primary,notes,created_by,created_at,updated_at';
 
@@ -30,6 +30,28 @@ export async function onRequest({ request, env }) {
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await readBody(request);
+
+    if (body.action === 'import') {
+      const companyId = String(body.company_id || '').trim();
+      if (!companyId) return json(400, { error: 'company_required' });
+      const parsed = parseContactsCsv(body.csv || '');
+      if (!parsed.length) return json(400, { error: 'no_rows' });
+      const rows = [];
+      const errors = [];
+      parsed.slice(0, 500).forEach((r, i) => {
+        const built = contactRow({ ...r, company_id: companyId, actor: user.email || null });
+        if (built.error) errors.push({ row: i + 1, error: built.error });
+        else rows.push(built.row);
+      });
+      let inserted = 0;
+      if (rows.length) {
+        const { data, error } = await sb.from('crm_contacts').insert(rows).select('id');
+        if (error) return json(500, { error: error.message });
+        inserted = (data || []).length;
+      }
+      await recordAudit(sb, { user, action: 'crm.contact_import', targetType: 'company', targetId: companyId, detail: { inserted, skipped: errors.length } });
+      return json(200, { ok: true, inserted, skipped: errors.length, errors: errors.slice(0, 10) });
+    }
 
     if (body.action === 'merge') {
       const fromId = Number(body.from_id);
