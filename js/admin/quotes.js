@@ -240,32 +240,22 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         <p class="muted" style="margin:2px 0 0">${esc(quote.type || 'quote')} · ${esc(quote.status || 'new')} · ${esc(STAGE_LABELS[quote.pipeline_stage || 'new'])}</p></div>
         <button class="btn btn-ghost btn-sm" data-drawer-close type="button" aria-label="Close">✕</button>
       </div>
-      <div class="adm-drawer-tabs" role="group" aria-label="Deal detail">
-        <button class="btn btn-ghost btn-sm is-active" data-drawer-tab="details" type="button">Details</button>
-        <button class="btn btn-ghost btn-sm" data-drawer-tab="timeline" type="button">Timeline</button>
-        <button class="btn btn-ghost btn-sm" data-drawer-tab="tasks" type="button">Tasks</button>
-        <button class="btn btn-ghost btn-sm" data-drawer-tab="notes" type="button">Notes</button>
-      </div>
-      <div data-drawer-body></div>
+      <div data-drawer-details>${detailsHtml(quote)}</div>
       <p class="adm-status" data-drawer-status role="status" aria-live="polite"></p>
+      <div data-drawer-crm></div>
     </div>`;
     if (typeof dlg.showModal !== 'function') return;
     document.body.appendChild(dlg);
-    const body = dlg.querySelector('[data-drawer-body]');
-    const showTab = (tab) => {
-      dlg.querySelectorAll('[data-drawer-tab]').forEach((b) => b.classList.toggle('is-active', b.dataset.drawerTab === tab));
-      if (tab === 'details') { body.innerHTML = detailsHtml(quote); } else { body.innerHTML = ''; crm.mount(body, 'quote', quote.id); }
-    };
+    // Drawer-level actions only; the mounted CRM panel binds its own listeners and
+    // owns the Timeline / Tasks / Notes sub-tabs (same shape as the company drawer).
     dlg.addEventListener('click', async (event) => {
       if (event.target.closest('[data-drawer-close]')) { dlg.close(); return; }
-      const tab = event.target.closest('[data-drawer-tab]');
-      if (tab) { showTab(tab.dataset.drawerTab); return; }
       if (event.target.closest('[data-drawer-save]')) { await saveDrawer(dlg, quote); return; }
       if (event.target.closest('[data-drawer-convert]')) { await convertDrawer(dlg, quote); }
     });
     dlg.addEventListener('close', () => dlg.remove());
     dlg.showModal();
-    showTab('details');
+    crm.mount(dlg.querySelector('[data-drawer-crm]'), 'quote', quote.id);
   }
 
   // ---- List view (the original accordion pipeline) ----
