@@ -5,6 +5,7 @@ import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { csvResponse } from '../../_lib/reports.js';
 import { stagePatch, pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
+import { klaviyoTrack } from '../../_lib/klaviyo.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -403,9 +404,21 @@ export async function onRequest({ request, env }) {
     if (!Object.keys(patch).length) return json(400, { error: 'nothing_to_update' });
 
     const { data, error } = await sb.from('quotes').update(patch).eq('id', body.id)
-      .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at')
+      .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,email,product,company,type')
       .single();
     if (error) return json(500, { error: error.message });
+
+    // Stage moves emit a Klaviyo metric event so owner-built flows (templates/cadences) can
+    // fire. An event does NOT itself send mail. Best-effort — never blocks the response.
+    if (body.pipeline_stage !== undefined && data?.email) {
+      await klaviyoTrack(env, {
+        email: data.email,
+        metric: 'Deal Stage Changed',
+        value: data.deal_value,
+        properties: { stage: data.pipeline_stage, deal_value: data.deal_value, product: data.product, company: data.company, type: data.type, source: 'pipeline' },
+      }).catch(() => {});
+    }
+
     return json(200, { ok: true, quote: data });
   }
 

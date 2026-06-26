@@ -46,3 +46,8 @@ test('stays staff + write guarded', () => {
   assert.match(src, /requireStaff/);
   assert.match(src, /staffCanWrite\(role\)/);
 });
+
+test('fires a Klaviyo metric event on stage change', () => {
+  assert.match(src, /klaviyoTrack\(/);
+  assert.match(src, /'Deal Stage Changed'/);
+});
