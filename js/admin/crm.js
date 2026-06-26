@@ -91,6 +91,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         <div class="crm-feed-detail muted">${[c.title, c.email, c.phone].filter(Boolean).map(esc).join(' · ') || '—'}</div>
       </div>
       <span class="crm-contact-actions">
+        <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-history="${esc(c.id)}">History</button>
         ${c.is_primary ? '' : `<button class="btn btn-ghost btn-sm" type="button" data-crm-contact-primary-set="${esc(c.id)}">Make primary</button>`}
         <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-edit="${esc(c.id)}">Edit</button>
         <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-del="${esc(c.id)}" aria-label="Delete contact">Delete</button>
@@ -122,6 +123,29 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     }
   }
 
+  // A contact's own activity drawer — reuses this same panel mounted as a 'contact'
+  // subject (Timeline = its linked deals + notes + tasks; no nested Contacts tab).
+  function openContactDrawer(contact) {
+    document.querySelector('.adm-drawer[data-contact-drawer]')?.remove();
+    const dlg = document.createElement('dialog');
+    dlg.className = 'adm-drawer';
+    dlg.setAttribute('data-contact-drawer', '');
+    dlg.innerHTML = `<div class="adm-drawer-inner">
+      <div class="adm-tools" style="justify-content:space-between;align-items:start">
+        <div><h2 style="margin:0">${esc(contact.name)}</h2>
+        <p class="muted" style="margin:2px 0 0">${esc(roleLabel(contact.role))}${contact.title ? ` · ${esc(contact.title)}` : ''}${contact.email ? ` · ${esc(contact.email)}` : ''}</p></div>
+        <button class="btn btn-ghost btn-sm" data-drawer-close type="button" aria-label="Close">✕</button>
+      </div>
+      <div data-contact-crm></div>
+    </div>`;
+    if (typeof dlg.showModal !== 'function') return;
+    document.body.appendChild(dlg);
+    dlg.addEventListener('click', (event) => { if (event.target.closest('[data-drawer-close]')) dlg.close(); });
+    dlg.addEventListener('close', () => dlg.remove());
+    dlg.showModal();
+    mount(dlg.querySelector('[data-contact-crm]'), 'contact', contact.id);
+  }
+
   function mount(container, subjectType, subjectId) {
     container.insertAdjacentHTML('beforeend', panelShell(subjectType, subjectId));
     const panel = container.querySelector('.crm-panel');
@@ -138,6 +162,13 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     panel.addEventListener('click', async (event) => {
       const tabBtn = event.target.closest('[data-crm-tab]');
       if (tabBtn) { show(tabBtn.dataset.crmTab); return; }
+
+      const cHist = event.target.closest('[data-crm-contact-history]');
+      if (cHist) {
+        const c = (body._contacts || []).find((x) => String(x.id) === String(cHist.dataset.crmContactHistory));
+        if (c) openContactDrawer(c);
+        return;
+      }
 
       const del = event.target.closest('[data-crm-note-del]');
       if (del) {

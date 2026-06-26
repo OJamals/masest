@@ -3,7 +3,7 @@
 // normalized data out, so this is unit-testable against fake clients. Mirrors the
 // functions/_lib/quote-convert.js pattern.
 
-export const SUBJECT_TYPES = ['company', 'quote'];
+export const SUBJECT_TYPES = ['company', 'quote', 'contact'];
 export const NOTE_KINDS = ['note', 'call', 'email', 'meeting'];
 
 export function validSubject(type, id) {
