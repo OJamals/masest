@@ -335,6 +335,18 @@ body .product-detail-hero { padding-bottom: 42px; }
 .crm-note-form, .crm-task-form { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .crm-note-form textarea, .crm-task-form input { flex: 1 1 160px; }
 
+/* CRM contacts (company drawer) — slice 4 */
+.crm-contact-form { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.crm-contact-form input { flex: 1 1 140px; }
+.crm-contact-primary-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted, #6b7280); white-space: nowrap; }
+.crm-contact-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.crm-contact { display: flex; justify-content: space-between; align-items: start; gap: 8px; padding: 8px 10px; border: 1px solid var(--border, #e5e7eb); border-radius: 8px; background: var(--surface, #fff); }
+.crm-contact.is-primary { border-color: var(--accent, #0e7c86); background: var(--surface-2, #eef2f7); }
+.crm-contact-name { font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.crm-contact-star { color: var(--accent, #0e7c86); }
+.crm-contact-role { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--accent, #0e7c86); border: 1px solid var(--accent, #0e7c86); border-radius: 999px; padding: 1px 8px; }
+.crm-contact-actions { display: inline-flex; gap: 2px; flex-shrink: 0; }
+
 /* CRM deal pipeline (admin Quotes board + deal drawer) — slice 2 */
 .pipe-toggle { display: inline-flex; gap: 4px; margin: 0 0 12px; }
 .pipe-toggle .is-active { background: var(--surface-2, #eef2f7); font-weight: 600; }
