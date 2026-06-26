@@ -18,6 +18,12 @@ test('serves a pipeline forecast view', () => {
   assert.match(src, /pipelineSummary\(/);
 });
 
+test('serves a pipeline report view', () => {
+  assert.match(src, /=== 'report'/);
+  assert.match(src, /pipelineReport\(/);
+  assert.match(src, /expected_close,lost_reason/);
+});
+
 test('POST validates stage + accepts deal fields', () => {
   assert.match(src, /stagePatch\(/);
   assert.match(src, /if \(res\.error\) return json\(400/); // stage validation propagated as 400

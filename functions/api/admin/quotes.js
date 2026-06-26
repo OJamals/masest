@@ -4,7 +4,7 @@ import { buildConvertItems, netOrderRow } from '../../_lib/quote-convert.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { csvResponse } from '../../_lib/reports.js';
-import { stagePatch, pipelineSummary } from '../../_lib/crm-pipeline.js';
+import { stagePatch, pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -194,6 +194,14 @@ export async function onRequest({ request, env }) {
         return json(500, { error: error.message });
       }
       return json(200, { summary: pipelineSummary(data || []) });
+    }
+    if (new URL(request.url).searchParams.get('view') === 'report') {
+      const { data, error } = await sb.from('quotes').select('id,pipeline_stage,deal_value,expected_close,lost_reason').neq('status', 'spam').limit(5000);
+      if (error) {
+        if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { report: pipelineReport([]), needs_migration: true });
+        return json(500, { error: error.message });
+      }
+      return json(200, { report: pipelineReport(data || []) });
     }
     if (new URL(request.url).searchParams.get('export') === 'csv') {
       const { data, error } = await sb.from('quotes')
