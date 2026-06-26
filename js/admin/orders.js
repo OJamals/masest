@@ -5,6 +5,7 @@
 // helpers from edits.js. The order-status list and refund-blocking set live here.
 import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
+import { createSavedViews } from './saved-views.js';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 
@@ -52,8 +53,25 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     return `<div class="adm-list-pager"><button class="btn btn-ghost btn-sm" data-load-more-orders type="button">Load more${count}</button></div>`;
   }
 
+  // Saved filter views (status + search), injected once above #admOrders. Reuses the
+  // quotes-tab helper with an 'orders' key so the two tabs keep separate saved views.
+  const savedViews = createSavedViews({
+    key: 'orders',
+    getFilters: () => ({ status: $('ordFilter')?.value || '', search: $('ordSearch')?.value || '' }),
+    applyFilters: (f) => {
+      if ($('ordFilter')) $('ordFilter').value = f.status || '';
+      if ($('ordSearch')) $('ordSearch').value = f.search || '';
+      renderOrders({ refetch: true }); // status is a server-side filter → refetch
+    },
+  });
+  function ensureSavedViews() {
+    const box = $('admOrders');
+    if (box) savedViews.mount(box);
+  }
+
   async function renderOrders({ append = false, refetch = true } = {}) {
     const box = $('admOrders');
+    ensureSavedViews();
     const snap = captureDirty(box);
     const status = $('ordFilter').value;
     if (refetch) {
