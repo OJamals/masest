@@ -2,6 +2,7 @@
 //   GET → thread list · GET ?company_id= → full thread (marks read) · POST { company_id, body } → reply
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, htmlEscape, emailLayout } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
+import { sendCrispMessage } from '../../_lib/crisp.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
@@ -48,6 +49,14 @@ export async function onRequest({ request, env }) {
       read_by_staff: true, read_by_user: false,
     }).select('id,created_at').single();
     if (error) return json(500, { error: error.message });
+    // Two-way Crisp: if this company has a live chat session, push the reply into it so
+    // the visitor sees it in the widget. Best-effort; the webhook claims the echo (no dup).
+    try {
+      const { data: sess } = await sb.from('crisp_sessions')
+        .select('session_id').eq('company_id', companyId)
+        .order('updated_at', { ascending: false }).limit(1).maybeSingle();
+      if (sess?.session_id) await sendCrispMessage(env, { sessionId: sess.session_id, text });
+    } catch { /* mirror is best-effort */ }
     await sb.from('notifications').insert({
       company_id: companyId, type: 'message', title: 'New message from MASEST',
       body: text.slice(0, 140), link: '/dashboard.html#messages',

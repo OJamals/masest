@@ -92,6 +92,11 @@ test("handleCrispEvent writes operator replies as staff messages and buyer notif
   const chain = (table) => ({
     select: () => chain(table),
     eq: () => chain(table),
+    is: () => chain(table),
+    gte: () => chain(table),
+    order: () => chain(table),
+    limit: () => chain(table),
+    update: () => ({ eq: () => ({}) }),
     maybeSingle: async () => ({ data: table === "crisp_sessions" ? null : null }),
     upsert: (row) => {
       writes.push({ table, op: "upsert", row });

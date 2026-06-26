@@ -151,6 +151,22 @@ async function routeCrispMessage(sb, env, event) {
   if (await alreadySynced(sb, externalMessageId)) return { routed: false, duplicate: true };
 
   const isOperator = data.from === 'operator' || event.event === 'message:received';
+
+  // Echo de-dup: an operator message is often the echo of a dashboard reply we just pushed
+  // to Crisp (/api/admin/messages → sendCrispMessage). Claim that pending local row instead
+  // of inserting a duplicate. Operator messages typed directly in Crisp match nothing → insert.
+  if (isOperator) {
+    const since = new Date(Date.now() - 120000).toISOString();
+    const { data: pending } = await sb.from('messages').select('id')
+      .eq('company_id', companyId).eq('sender_role', 'staff').eq('body', text)
+      .is('external_message_id', null).gte('created_at', since)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (pending?.id) {
+      await sb.from('messages').update({ external_message_id: externalMessageId, external_thread_id: sessionId, source: 'crisp' }).eq('id', pending.id);
+      return { routed: true, claimed: pending.id };
+    }
+  }
+
   const buyerMessageRole = { sender_role: 'buyer' };
   const staffMessageRole = { sender_role: 'staff' };
   const inserted = await insertMessage(sb, {
