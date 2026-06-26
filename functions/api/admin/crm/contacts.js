@@ -3,7 +3,7 @@
 import { adminClient, json, readBody, requireStaff } from '../../../_lib/supabase.js';
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
-import { contactRow, contactPatch } from '../../../_lib/crm-contacts.js';
+import { contactRow, contactPatch, mergeFields } from '../../../_lib/crm-contacts.js';
 
 const SELECT = 'id,company_id,name,role,title,email,phone,is_primary,notes,created_by,created_at,updated_at';
 
@@ -30,6 +30,33 @@ export async function onRequest({ request, env }) {
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await readBody(request);
+
+    if (body.action === 'merge') {
+      const fromId = Number(body.from_id);
+      const intoId = Number(body.into_id);
+      if (!fromId || !intoId || fromId === intoId) return json(400, { error: 'invalid_merge' });
+      const { data: rows, error: gErr } = await sb.from('crm_contacts')
+        .select('id,company_id,name,title,email,phone,is_primary').in('id', [fromId, intoId]).is('deleted_at', null);
+      if (gErr) return json(500, { error: gErr.message });
+      const from = (rows || []).find((r) => r.id === fromId);
+      const into = (rows || []).find((r) => r.id === intoId);
+      if (!from || !into) return json(404, { error: 'not_found' });
+      if (from.company_id !== into.company_id) return json(400, { error: 'different_company' });
+
+      // Repoint everything the duplicate owns onto the survivor.
+      await sb.from('quotes').update({ contact_id: intoId }).eq('contact_id', fromId);
+      await sb.from('crm_notes').update({ subject_id: String(intoId) }).eq('subject_type', 'contact').eq('subject_id', String(fromId));
+      await sb.from('crm_tasks').update({ subject_id: String(intoId) }).eq('subject_type', 'contact').eq('subject_id', String(fromId));
+
+      // Backfill the survivor's blank fields, then retire the duplicate.
+      const fill = mergeFields(into, from);
+      if (Object.keys(fill).length) await sb.from('crm_contacts').update(fill).eq('id', intoId);
+      await sb.from('crm_contacts').update({ deleted_at: new Date().toISOString() }).eq('id', fromId);
+
+      const { data: survivor } = await sb.from('crm_contacts').select(SELECT).eq('id', intoId).single();
+      await recordAudit(sb, { user, action: 'crm.contact_merge', targetType: 'company', targetId: into.company_id, detail: { from: fromId, into: intoId } });
+      return json(200, { ok: true, contact: survivor });
+    }
 
     if (body.id) {
       const built = contactPatch(body, new Date());
