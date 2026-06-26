@@ -28,11 +28,24 @@ export function isSuppressingEvent(type) {
   return type === "email.bounced" || type === "email.complained";
 }
 
+// True when `timestampSeconds` (Unix seconds) is within `toleranceSec` of now. Used to
+// reject replayed webhook payloads — a captured valid signature is worthless once stale.
+// `nowMs` is injectable for deterministic tests.
+export function isFreshTimestamp(timestampSeconds, toleranceSec = 300, nowMs = Date.now()) {
+  const ts = Number(timestampSeconds);
+  if (!Number.isFinite(ts)) return false;
+  const nowSec = Math.floor(nowMs / 1000);
+  return Math.abs(nowSec - ts) <= toleranceSec;
+}
+
 // Verifies a Svix (Resend) webhook signature. secret is "whsec_<base64>"; headers carry
 // svix-id, svix-timestamp, and a space-separated svix-signature of "v1,<base64sig>" items.
-// Signed content is `${id}.${timestamp}.${body}`. Returns a boolean. Async (SubtleCrypto).
-export async function verifySvixSignature(secret, { id, timestamp, signature }, body) {
+// Signed content is `${id}.${timestamp}.${body}`. Rejects stale timestamps (replay guard,
+// ±toleranceSec, default 5 min — Svix's recommendation) before checking the HMAC.
+// Returns a boolean. Async (SubtleCrypto). `nowMs` is injectable for tests.
+export async function verifySvixSignature(secret, { id, timestamp, signature }, body, { toleranceSec = 300, nowMs = Date.now() } = {}) {
   if (!secret || !id || !timestamp || !signature) return false;
+  if (!isFreshTimestamp(timestamp, toleranceSec, nowMs)) return false;
   try {
     const rawSecret = secret.startsWith("whsec_") ? secret.slice(6) : secret;
     const keyBytes = Uint8Array.from(atob(rawSecret), (c) => c.charCodeAt(0));

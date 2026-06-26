@@ -5,6 +5,7 @@ import {
   filterSuppressed,
   mapResendEvent,
   isSuppressingEvent,
+  isFreshTimestamp,
   verifySvixSignature,
 } from "../functions/_lib/email.js";
 
@@ -42,12 +43,16 @@ function signSvix(secretB64, id, ts, body) {
   return `v1,${sig}`;
 }
 
-test("verifySvixSignature accepts a valid signature", async () => {
+// Inject nowMs = the signed timestamp so the freshness guard passes and these tests
+// exercise the HMAC path, not the clock.
+const FRESH = (ts) => ({ nowMs: Number(ts) * 1000 });
+
+test("verifySvixSignature accepts a valid, fresh signature", async () => {
   const secretB64 = Buffer.from("supersecretkey").toString("base64");
   const id = "msg_1", ts = "1700000000", body = '{"type":"email.delivered"}';
   const header = signSvix(secretB64, id, ts, body);
   const ok = await verifySvixSignature(`whsec_${secretB64}`,
-    { id, timestamp: ts, signature: header }, body);
+    { id, timestamp: ts, signature: header }, body, FRESH(ts));
   assert.equal(ok, true);
 });
 
@@ -56,10 +61,29 @@ test("verifySvixSignature rejects a tampered body", async () => {
   const id = "msg_1", ts = "1700000000";
   const header = signSvix(secretB64, id, ts, '{"type":"email.delivered"}');
   const ok = await verifySvixSignature(`whsec_${secretB64}`,
-    { id, timestamp: ts, signature: header }, '{"type":"email.bounced"}');
+    { id, timestamp: ts, signature: header }, '{"type":"email.bounced"}', FRESH(ts));
   assert.equal(ok, false);
+});
+
+test("verifySvixSignature rejects a replayed (stale) but otherwise valid signature", async () => {
+  const secretB64 = Buffer.from("supersecretkey").toString("base64");
+  const id = "msg_1", ts = "1700000000", body = '{"type":"email.delivered"}';
+  const header = signSvix(secretB64, id, ts, body);
+  // valid HMAC, but the timestamp is ~10 min older than "now" → replay guard rejects
+  const stale = await verifySvixSignature(`whsec_${secretB64}`,
+    { id, timestamp: ts, signature: header }, body, { nowMs: (Number(ts) + 600) * 1000 });
+  assert.equal(stale, false);
 });
 
 test("verifySvixSignature rejects missing parts", async () => {
   assert.equal(await verifySvixSignature("whsec_x", { id: "", timestamp: "", signature: "" }, "b"), false);
+});
+
+test("isFreshTimestamp enforces a tolerance window", () => {
+  const now = 1700000000 * 1000;
+  assert.equal(isFreshTimestamp(1700000000, 300, now), true);
+  assert.equal(isFreshTimestamp(1700000000 - 299, 300, now), true);
+  assert.equal(isFreshTimestamp(1700000000 - 301, 300, now), false); // too old
+  assert.equal(isFreshTimestamp(1700000000 + 301, 300, now), false); // too far future
+  assert.equal(isFreshTimestamp("not-a-number", 300, now), false);
 });
