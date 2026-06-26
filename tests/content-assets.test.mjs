@@ -33,6 +33,8 @@ test("content editor has an asset picker contract", () => {
   const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
   assert.match(source, /contentAssetPicker/);
   assert.match(source, /data-content-asset-field/);
+  assert.match(source, /data-content-asset-alt/);
+  assert.match(source, /pairedAssetAltField/);
   assert.match(source, /\/api\/admin\/content-assets/);
 });
 

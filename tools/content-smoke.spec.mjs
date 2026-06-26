@@ -150,12 +150,15 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
 
   await page.locator("#contentWorkflowRows [data-content-edit]").first().click();
   await expect(page.locator('[data-content-payload-field="image"]')).toBeVisible();
+  await page.locator('[data-content-payload-field="image_alt"]').fill("");
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
   await expect(page.locator("#contentAssetPicker")).toBeVisible();
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-asset-manager.png`, fullPage: true });
   await page.locator("[data-content-asset-path]").first().click();
   await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("img/proof/cases/brewery.webp");
+  await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
 
+  await page.locator('[data-content-payload-field="image_alt"]').fill("Stale alt from prior image");
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
   await page.locator("#contentAssetFile").setInputFiles({
     name: "uploaded-brewery.webp",
@@ -165,6 +168,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.locator("#contentAssetAlt").fill("Uploaded brewery proof image");
   await page.locator('[data-content-action="upload_asset"]').click();
   await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("cms/proof/uploaded-brewery.webp");
+  await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Uploaded brewery proof image");
   await expect(page.locator("#contentStatus")).toHaveText("Asset uploaded.");
 
   await page.locator('[data-content-action="preview"]').click();

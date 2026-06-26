@@ -478,7 +478,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       const data = await api("/api/admin/content-assets");
       const assets = data.assets || [];
       list.innerHTML = assets.map((asset) => `
-        <button class="adm-list-row adm-content-asset-row" type="button" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(asset.public_url || asset.storage_path)}">
+        <button class="adm-list-row adm-content-asset-row" type="button" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(asset.public_url || asset.storage_path)}" data-content-asset-alt="${esc(asset.alt || "")}">
           <b>${esc(asset.storage_path)}</b>
           <span>${esc(asset.alt || "")}</span>
         </button>
@@ -492,12 +492,25 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
-  function assignAssetValue(fieldKey, assetPath, message = "Asset path inserted.") {
-    const root = $("admContent");
+  function pairedAssetAltField(fieldKey) {
+    if (!fieldKey) return "";
+    if (fieldKey === "image") return "image_alt";
+    return `${fieldKey}_alt`;
+  }
+
+  function findPayloadField(root, fieldKey) {
+    if (!root || !fieldKey) return null;
     const selectorKey = window.CSS?.escape ? CSS.escape(fieldKey) : fieldKey.replace(/"/g, '\\"');
-    const control = root?.querySelector(`[data-content-payload-field="${selectorKey}"]`);
+    return root.querySelector(`[data-content-payload-field="${selectorKey}"]`);
+  }
+
+  function assignAssetValue(fieldKey, assetPath, assetAlt = "", message = "Asset path inserted.") {
+    const root = $("admContent");
+    const control = findPayloadField(root, fieldKey);
     if (control) {
       control.value = assetPath || "";
+      const altControl = findPayloadField(root, pairedAssetAltField(fieldKey));
+      if (assetAlt && altControl) altControl.value = assetAlt;
       syncStructuredPayload();
       setStatus(message, "ok");
     }
@@ -509,6 +522,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     assignAssetValue(
       button.dataset.contentAssetField || assetTargetField,
       button.dataset.contentAssetPath || "",
+      button.dataset.contentAssetAlt || "",
     );
   }
 
@@ -536,7 +550,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (!assetPath) throw new Error("upload_missing_asset_path");
       if (fileInput) fileInput.value = "";
       if (altInput) altInput.value = "";
-      assignAssetValue(assetTargetField, assetPath, "Asset uploaded.");
+      assignAssetValue(assetTargetField, assetPath, result.asset?.alt || alt, "Asset uploaded.");
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Asset upload failed.", "err");
     }
