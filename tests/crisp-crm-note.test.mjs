@@ -7,6 +7,11 @@ function mockSb(writes, { failCrmNotes = false } = {}) {
   const chain = (table) => ({
     select: () => chain(table),
     eq: () => chain(table),
+    is: () => chain(table),
+    gte: () => chain(table),
+    order: () => chain(table),
+    limit: () => chain(table),
+    update: () => ({ eq: () => ({}) }),
     maybeSingle: async () => ({ data: null }),
     upsert: (row) => { writes.push({ table, op: 'upsert', row }); return { select: () => ({ maybeSingle: async () => ({ data: row }) }) }; },
     insert: (row) => {
