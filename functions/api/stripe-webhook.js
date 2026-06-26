@@ -111,6 +111,8 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
     subject: `Your MASEST order${ref} is confirmed`,
     html,
     category: 'order',
+    // Stripe retries checkout.session.completed; key on the order so a retry can't re-send.
+    idempotencyKey: order?.id ? `order-confirm:${order.id}` : (session?.id ? `order-confirm:${session.id}` : null),
   });
 }
 

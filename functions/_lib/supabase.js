@@ -203,7 +203,7 @@ export async function recordSuppression(env, email, reason) {
   } catch { /* advisory */ }
 }
 
-export async function sendEmail(env, { to, bcc = [], subject, html, category = null }) {
+export async function sendEmail(env, { to, bcc = [], subject, html, text = null, category = null, idempotencyKey = null, replyTo = null }) {
   const allTo = Array.isArray(to) ? to : [];
   const allBcc = Array.isArray(bcc) ? bcc : [];
   if (!env.RESEND_API_KEY || (!allTo.length && !allBcc.length)) return false;
@@ -219,11 +219,19 @@ export async function sendEmail(env, { to, bcc = [], subject, html, category = n
   // Resend requires a `to`; if only bcc recipients survive, use `from` as the visible to.
   const payloadTo = toR.length ? toR : [from];
   const sentTo = [...toR, ...bccR].join(', ');
+  // Idempotency-Key dedupes a logical email for 24h, so a retried Stripe/QBO webhook
+  // can't double-send. reply_to defaults to RESEND_REPLY_TO so replies reach a human.
+  const reply = replyTo || env.RESEND_REPLY_TO || null;
+  const headers = { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' };
+  if (idempotencyKey) headers['Idempotency-Key'] = String(idempotencyKey).slice(0, 256);
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from, to: payloadTo, ...(bccR.length ? { bcc: bccR } : {}), subject, html }),
+      headers,
+      body: JSON.stringify({
+        from, to: payloadTo, ...(bccR.length ? { bcc: bccR } : {}), subject, html,
+        ...(text ? { text } : {}), ...(reply ? { reply_to: reply } : {}),
+      }),
     });
     let resendId = null;
     try { resendId = (await r.clone().json())?.id || null; } catch { /* non-json body */ }
