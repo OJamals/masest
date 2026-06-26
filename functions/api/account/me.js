@@ -5,6 +5,7 @@ import { adminClient, userFromRequest, json, readBody } from '../../_lib/supabas
 import { isStaffEmail, normalizeStaffRole } from '../../_lib/authz.js';
 import { buildAccountSetup } from '../../_lib/setup.js';
 import { companyCreditState } from '../../_lib/credit.js';
+import { crispIdentityToken } from '../../_lib/crisp.js';
 
 // Pragmatic email shape check — the real gate is Supabase's confirmation email to the new address.
 export function isValidEmail(value) {
@@ -62,8 +63,13 @@ export async function onRequestGet({ request, env }) {
   const profileStaff = profile.is_staff === true && !!profileStaffRole;
   const canAdmin = emailStaff || profileStaff;
 
+  // Crisp identity signature for the authenticated email — lets the chat widget mark the
+  // session's email verified (null when the secret isn't configured).
+  const crispSignature = env.CRISP_IDENTITY_SECRET ? await crispIdentityToken(user.email, env.CRISP_IDENTITY_SECRET) : null;
+
   return json(200, {
     email: user.email,
+    crisp_signature: crispSignature,
     profile,
     company,
     can_admin: canAdmin,

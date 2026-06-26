@@ -145,9 +145,15 @@ export async function syncCrispAccountContext() {
     const name = cleanString(profile.full_name);
     const phone = cleanString(profile.phone);
     const companyName = cleanString(company.name);
+    const emailSignature = cleanString(account.crisp_signature);
 
     let pushed = false;
-    if (EMAIL_RE.test(email)) pushed = pushCrisp(["set", "user:email", [email]]) || pushed;
+    if (EMAIL_RE.test(email)) {
+      // Pass the server-issued signature so Crisp marks the email verified (identity
+      // verification). Falls back to an unsigned push when the secret isn't configured.
+      const emailArg = emailSignature ? [email, emailSignature] : [email];
+      pushed = pushCrisp(["set", "user:email", emailArg]) || pushed;
+    }
     if (name) pushed = pushCrisp(["set", "user:nickname", [name]]) || pushed;
     if (phone) pushed = pushCrisp(["set", "user:phone", [phone]]) || pushed;
     if (companyName) pushed = pushCrisp(["set", "user:company", [companyName]]) || pushed;

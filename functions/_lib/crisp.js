@@ -7,6 +7,18 @@ export function crispConfigured(env) {
   return Boolean(env && env.CRISP_TOKEN_ID && env.CRISP_TOKEN_KEY && env.MASEST_CRISP_ID);
 }
 
+// Crisp identity-verification signature = HMAC-SHA256(email) hex, using the dashboard's
+// Identity Verification secret. The client passes it as the 2nd arg of `set user:email`
+// so Crisp marks the session's email verified — a visitor can't claim an email they don't
+// own (the signature is only issued by /api/account/me to the authenticated user). Async.
+export async function crispIdentityToken(email, secret) {
+  if (!secret || !email) return '';
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(String(email).toLowerCase()));
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Build the message-create payload for an operator text message. Pure — unit-tested.
 export function buildOperatorMessage(text) {
   return { type: 'text', from: 'operator', origin: 'chat', content: String(text ?? '').slice(0, 4000) };
