@@ -61,8 +61,8 @@ test("shared chrome keeps one skip link after hydration", async ({ page }) => {
   await expect(page.locator('.skip-link[href="#main"]')).toHaveCount(1);
 });
 
-test("contact and cart keep visible heading levels sequential", async ({ page }) => {
-  for (const pagePath of ["contact.html?type=quote", "cart.html"]) {
+test("core pages keep visible heading levels sequential", async ({ page }) => {
+  for (const pagePath of ["index.html", "contact.html?type=quote", "cart.html"]) {
     await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
 
