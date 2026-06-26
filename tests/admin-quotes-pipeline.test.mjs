@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+
+const src = readFileSync(new URL('../functions/api/admin/quotes.js', import.meta.url), 'utf8');
+
+test('imports the pure pipeline lib at the right depth', () => {
+  assert.match(src, /from '\.\.\/\.\.\/_lib\/crm-pipeline\.js'/);
+  assert.doesNotMatch(src, /from '\.\.\/_lib\/crm-pipeline/);
+});
+
+test('GET list selects the new pipeline columns', () => {
+  assert.match(src, /pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason/);
+});
+
+test('serves a pipeline forecast view', () => {
+  assert.match(src, /=== 'pipeline'/);
+  assert.match(src, /pipelineSummary\(/);
+});
+
+test('POST validates stage + accepts deal fields', () => {
+  assert.match(src, /stagePatch\(/);
+  assert.match(src, /if \(res\.error\) return json\(400/); // stage validation propagated as 400
+  assert.match(src, /body\.deal_value/);
+  assert.match(src, /invalid_deal_value/);
+  assert.match(src, /body\.expected_close/);
+});
+
+test('convert marks the quote won', () => {
+  assert.match(src, /pipeline_stage: 'won'/);
+});
+
+test('stays staff + write guarded', () => {
+  assert.match(src, /requireStaff/);
+  assert.match(src, /staffCanWrite\(role\)/);
+});
