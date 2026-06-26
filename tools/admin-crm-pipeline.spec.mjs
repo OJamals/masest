@@ -100,3 +100,39 @@ test("quotes board renders 6 stage columns and opens a deal drawer", async ({ pa
   await page.locator('.adm-drawer .crm-panel [data-crm-tab="notes"]').click();
   await expect(page.locator('.adm-drawer [data-crm-note-body]')).toBeVisible();
 });
+
+const REPORT = {
+  kpis: { open_count: 4, open_value: 39100, weighted: 35550, win_rate: 0.5, won_count: 1, won_value: 12000, lost_count: 1, avg_deal: 9100 },
+  funnel: [
+    { stage: "new", reached: 7, rate: 1 }, { stage: "qualified", reached: 6, rate: 0.857 },
+    { stage: "sample_audit", reached: 4, rate: 0.667 }, { stage: "proposal", reached: 3, rate: 0.75 },
+    { stage: "won", reached: 1, rate: 0.333 },
+  ],
+  forecast_months: [
+    { month: "2026-07", value: 11800, weighted: 4540, count: 2 },
+    { month: "2026-08", value: 26000, weighted: 18200, count: 1 },
+    { month: "unscheduled", value: 1300, weighted: 650, count: 1 },
+  ],
+  loss_reasons: [{ reason: "price", count: 1 }],
+};
+
+test("quotes reports view renders KPIs, funnel and forecast", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/quotes**", (route) => {
+    const url = route.request().url();
+    if (url.includes("view=report")) return route.fulfill(json({ report: REPORT }));
+    if (url.includes("view=pipeline")) return route.fulfill(json({ summary: SUMMARY }));
+    return route.fulfill(json({ quotes: [QUOTE], total: 1, has_more: false, new_count: 1, urgent_count: 0 }));
+  });
+  await page.route("**/api/admin/companies**", (route) => route.fulfill(json({ companies: [], total: 0, has_more: false })));
+
+  await page.goto(`${BASE_URL}/admin.html#quotes`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator('.pipe-toggle [data-view="report"]').click();
+
+  await expect(page.locator(".pipe-kpis .pipe-kpi")).toHaveCount(6);
+  await expect(page.locator(".pipe-report-block").filter({ hasText: "Conversion funnel" })).toBeVisible();
+  await expect(page.locator(".pipe-bar-fill").first()).toBeVisible();
+  await expect(page.locator(".pipe-report-block").filter({ hasText: "close month" })).toBeVisible();
+  await expect(page.locator(".pipe-loss .pipe-chip")).toHaveCount(1);
+});

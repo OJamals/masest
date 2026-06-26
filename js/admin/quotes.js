@@ -43,7 +43,8 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     const wrap = document.createElement('div');
     wrap.className = 'pipe-toggle';
     wrap.innerHTML = `<button class="btn btn-ghost btn-sm" data-view="list" type="button">List</button>
-      <button class="btn btn-ghost btn-sm" data-view="board" type="button">Board</button>`;
+      <button class="btn btn-ghost btn-sm" data-view="board" type="button">Board</button>
+      <button class="btn btn-ghost btn-sm" data-view="report" type="button">Reports</button>`;
     box.parentElement.insertBefore(wrap, box);
     wrap.addEventListener('click', (event) => {
       const b = event.target.closest('[data-view]');
@@ -65,6 +66,55 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       <span>Open <b>${fmtMoney(summary.open_value)}</b></span>
       <span>Weighted forecast <b>${fmtMoney(summary.weighted)}</b></span>
       ${chips}
+    </div>`;
+  }
+
+  // ---- Reports view (slice 3) ----
+  function kpiCards(k) {
+    const card = (label, val) => `<div class="pipe-kpi"><span class="muted">${label}</span><b>${val}</b></div>`;
+    return `<div class="pipe-kpis">
+      ${card('Open deals', k.open_count)}
+      ${card('Open value', fmtMoney(k.open_value))}
+      ${card('Weighted forecast', fmtMoney(k.weighted))}
+      ${card('Win rate', `${Math.round((k.win_rate || 0) * 100)}%`)}
+      ${card('Won', `${k.won_count} · ${fmtMoney(k.won_value)}`)}
+      ${card('Avg deal', fmtMoney(k.avg_deal))}
+    </div>`;
+  }
+  function funnelHtml(funnel) {
+    const max = Math.max(1, funnel[0]?.reached || 1);
+    const rows = funnel.map((f) => `<div class="pipe-funnel-row">
+      <span class="pipe-funnel-label">${STAGE_LABELS[f.stage]}</span>
+      <span class="pipe-bar"><span class="pipe-bar-fill" style="width:${Math.round((f.reached / max) * 100)}%"></span></span>
+      <span class="pipe-funnel-val">${f.reached}${f.rate < 1 ? ` · ${Math.round(f.rate * 100)}%` : ''}</span>
+    </div>`).join('');
+    return `<section class="pipe-report-block"><h3>Conversion funnel</h3>${rows}</section>`;
+  }
+  function forecastMonthsHtml(months) {
+    if (!months.length) return '<section class="pipe-report-block"><h3>Forecast by month</h3><p class="muted">No open deals with a value yet.</p></section>';
+    const max = Math.max(1, ...months.map((m) => m.value));
+    const rows = months.map((m) => `<div class="pipe-funnel-row">
+      <span class="pipe-funnel-label">${m.month === 'unscheduled' ? 'Unscheduled' : esc(m.month)}</span>
+      <span class="pipe-bar"><span class="pipe-bar-fill" style="width:${Math.round((m.value / max) * 100)}%"></span></span>
+      <span class="pipe-funnel-val">${fmtMoney(m.weighted)} <span class="muted">of ${fmtMoney(m.value)}</span></span>
+    </div>`).join('');
+    return `<section class="pipe-report-block"><h3>Weighted forecast by close month</h3>${rows}</section>`;
+  }
+  function lossHtml(reasons) {
+    if (!reasons.length) return '';
+    const chips = reasons.map((r) => `<span class="pipe-chip"><b>${r.count}</b> ${esc(String(r.reason).replace(/_/g, ' '))}</span>`).join('');
+    return `<section class="pipe-report-block"><h3>Loss reasons</h3><div class="pipe-loss">${chips}</div></section>`;
+  }
+  async function renderReport() {
+    const box = $('admQuotes');
+    let report = null;
+    try { report = (await api('/api/admin/quotes?view=report')).report; } catch { report = null; }
+    if (!report) { box.innerHTML = '<p class="adm-status" data-state="err">Could not load the report. Reload to retry.</p>'; return; }
+    box.innerHTML = `<div class="pipe-report">
+      ${kpiCards(report.kpis)}
+      ${funnelHtml(report.funnel || [])}
+      ${forecastMonthsHtml(report.forecast_months || [])}
+      ${lossHtml(report.loss_reasons || [])}
     </div>`;
   }
 
@@ -360,7 +410,9 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     if (!state.companies?.length) {
       try { state.companies = (await api('/api/admin/companies?limit=500')).companies || []; } catch { state.companies = []; }
     }
-    if ((state.quotesView || 'list') === 'board') { await renderBoard(); return; }
+    const view = state.quotesView || 'list';
+    if (view === 'board') { await renderBoard(); return; }
+    if (view === 'report') { await renderReport(); return; }
     renderList();
   }
 

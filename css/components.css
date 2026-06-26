@@ -361,3 +361,18 @@ body .product-detail-hero { padding-bottom: 42px; }
 .drawer-details { display: grid; gap: 8px; }
 .drawer-details label { display: grid; gap: 2px; font-size: .85rem; }
 @media (max-width: 900px) { .pipe-col { flex-basis: 200px; } }
+
+/* CRM pipeline reports (slice 3) */
+.pipe-report { display: grid; gap: 16px; }
+.pipe-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.pipe-kpi { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; background: var(--surface, #fff); }
+.pipe-kpi b { font-size: 1.2rem; }
+.pipe-report-block { border: 1px solid var(--border, #e5e7eb); border-radius: 10px; padding: 12px 14px; background: var(--surface, #fff); }
+.pipe-report-block h3 { margin: 0 0 10px; font-size: .95rem; }
+.pipe-funnel-row { display: grid; grid-template-columns: 130px 1fr auto; gap: 10px; align-items: center; margin-bottom: 6px; }
+.pipe-funnel-label { font-size: .85rem; }
+.pipe-funnel-val { font-size: .8rem; color: var(--muted, #6b7280); white-space: nowrap; }
+.pipe-bar { display: block; height: 14px; border-radius: 7px; background: var(--surface-2, #eef2f7); overflow: hidden; }
+.pipe-bar-fill { display: block; height: 100%; background: var(--accent, #0e7c86); border-radius: 7px; }
+.pipe-loss { display: flex; flex-wrap: wrap; gap: 8px; }
+.pipe-loss .pipe-chip { padding: 4px 10px; border: 1px solid var(--border, #e5e7eb); border-radius: 999px; font-size: .8rem; }
