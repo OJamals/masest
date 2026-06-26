@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
 // Reuses the static-server + stubbed-API harness from admin-crm-drawer.spec.mjs:
 // boots admin.js past the Supabase gate, drives Quotes tab → Board toggle →
 // 6 stage columns → open a card → deal drawer with 4 sub-tabs → Notes composer.
-const PORT = 4189;
+const PORT = 4226;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let server;
 
