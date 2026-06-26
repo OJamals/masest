@@ -5,6 +5,7 @@ import { adminClient, json } from '../../_lib/supabase.js';
 const MESSAGE_EVENTS = new Set(['message:send', 'message:received']);
 const SESSION_EVENTS = new Set(['session:set_data', 'session:set_email', 'session:set_phone', 'session:set_nickname']);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 function toHex(buffer) {
   return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -137,6 +138,30 @@ async function logChatNote(sb, { companyId, text, isOperator }) {
   }
 }
 
+// Inbound People sync: when a chat session belongs to a known account (company_id is set
+// from the logged-in account_company_id — NOT the fallback) and has an email, ensure a CRM
+// contact exists for it. Dedup by (company, email). Best-effort; anonymous chats (no
+// account company) create nothing, so the fallback company is never polluted.
+async function syncChatLeadToCrm(sb, session) {
+  const companyId = asUuid(session?.company_id);
+  const email = clean(session?.email, 254).toLowerCase();
+  if (!companyId || !EMAIL_RE.test(email)) return;
+  try {
+    const { data: existing } = await sb.from('crm_contacts').select('id')
+      .eq('company_id', companyId).eq('email', email).is('deleted_at', null).limit(1).maybeSingle();
+    if (existing) return;
+    await sb.from('crm_contacts').insert({
+      company_id: companyId,
+      name: clean(session?.nickname, 200) || email,
+      email,
+      role: 'other',
+      created_by: 'crisp:chat',
+    });
+  } catch {
+    // CRM table may be absent / RLS — inbound contact capture is best-effort
+  }
+}
+
 async function routeCrispMessage(sb, env, event) {
   const data = event.data || {};
   const sessionId = clean(data.session_id, 120);
@@ -202,11 +227,13 @@ export async function handleCrispEvent(sb, env, event) {
   if (SESSION_EVENTS.has(event.event)) {
     const session = await upsertCrispSession(sb, event);
     if (session?.__error) return { routed: false, error: 'crisp_session_upsert_failed', detail: session.__error };
+    await syncChatLeadToCrm(sb, session);
     return { routed: true, session: true };
   }
   if (MESSAGE_EVENTS.has(event.event)) {
     const session = await upsertCrispSession(sb, event);
     if (session?.__error) return { routed: false, error: 'crisp_session_upsert_failed', detail: session.__error };
+    await syncChatLeadToCrm(sb, session);
     return routeCrispMessage(sb, env, event);
   }
   return { routed: false, ignored: true };
