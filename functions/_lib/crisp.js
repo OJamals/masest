@@ -24,6 +24,17 @@ export function buildOperatorMessage(text) {
   return { type: 'text', from: 'operator', origin: 'chat', content: String(text ?? '').slice(0, 4000) };
 }
 
+// Build a Crisp People profile body from a CRM contact. Pure — unit-tested.
+export function buildPersonProfile({ email, name, company, phone } = {}) {
+  const profile = { email: String(email || '').toLowerCase() };
+  const person = {};
+  if (name) person.nickname = String(name).slice(0, 120);
+  if (phone) person.phones = [String(phone).slice(0, 40)];
+  if (Object.keys(person).length) profile.person = person;
+  if (company) profile.company = { name: String(company).slice(0, 160) };
+  return profile;
+}
+
 function authHeaders(env) {
   const basic = btoa(`${env.CRISP_TOKEN_ID}:${env.CRISP_TOKEN_KEY}`);
   return { Authorization: `Basic ${basic}`, 'X-Crisp-Tier': 'plugin', 'content-type': 'application/json', accept: 'application/json' };
@@ -39,6 +50,20 @@ export async function sendCrispMessage(env, { sessionId, text } = {}) {
       { method: 'POST', headers: authHeaders(env), body: JSON.stringify(buildOperatorMessage(text)) },
     );
     return { ok: resp.status >= 200 && resp.status < 300, status: resp.status };
+  } catch {
+    return { ok: false, error: true };
+  }
+}
+
+// Seed/refresh a CRM contact in Crisp People so operators see account context when the
+// person chats. Best-effort: 201 created or 409 already-exists both count as ok.
+export async function upsertCrispPerson(env, contact = {}) {
+  if (!crispConfigured(env) || !contact.email) return { ok: false, skipped: true };
+  try {
+    const resp = await fetch(`${CRISP_API}/website/${env.MASEST_CRISP_ID}/people/profile`, {
+      method: 'POST', headers: authHeaders(env), body: JSON.stringify(buildPersonProfile(contact)),
+    });
+    return { ok: resp.status === 201 || resp.status === 200 || resp.status === 409, status: resp.status };
   } catch {
     return { ok: false, error: true };
   }
