@@ -45,6 +45,10 @@ export async function onRequest({ request, env }) {
       name ? safe(sb.from('quotes').select('id,type,status,product,created_at').ilike('company', name).order('created_at', { ascending: false }).limit(50)) : Promise.resolve([]),
     ]);
     extra = { orders, messages, audit, shipments, quotes };
+  } else if (subjectType === 'contact') {
+    // A contact's activity = the deals it's the buyer on (quotes.contact_id) + its notes/tasks.
+    const quotes = await safe(sb.from('quotes').select('id,type,status,product,created_at').eq('contact_id', Number(id) || -1).order('created_at', { ascending: false }).limit(50));
+    extra = { ...extra, quotes };
   }
 
   const [notes, tasks] = await Promise.all([notesP, tasksP]);
