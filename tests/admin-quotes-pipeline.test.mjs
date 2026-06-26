@@ -36,6 +36,12 @@ test('convert marks the quote won', () => {
   assert.match(src, /pipeline_stage: 'won'/);
 });
 
+test('supports bulk row updates by id array', () => {
+  assert.match(src, /Array\.isArray\(body\.ids\)/);
+  assert.match(src, /\.in\('id', ids\)/);
+  assert.match(src, /updated:/);
+});
+
 test('stays staff + write guarded', () => {
   assert.match(src, /requireStaff/);
   assert.match(src, /staffCanWrite\(role\)/);

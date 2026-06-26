@@ -340,13 +340,22 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       return;
     }
 
-    box.innerHTML = quotes.map((quote) => {
+    const bulkBar = `<div class="adm-tools adm-tools-flush" style="flex-wrap:wrap">
+      <label class="admin-select-all"><input type="checkbox" id="qAll" aria-label="Select all"> Select all</label>
+      <select class="adm-select" id="qBulkStage"><option value="">Set stage…</option>${STAGES.map((s) => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}</select>
+      <select class="adm-select" id="qBulkPriority"><option value="">Set priority…</option>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}">${p}</option>`).join('')}</select>
+      <input class="adm-input" id="qBulkOwner" placeholder="Assign owner" style="max-width:160px">
+      <button class="btn btn-ghost btn-sm" id="qBulkApply" type="button">Apply to selected</button>
+    </div>`;
+
+    box.innerHTML = bulkBar + quotes.map((quote) => {
       const id = esc(quote.id);
       const dueValue = quote.due_at ? new Date(quote.due_at).toISOString().slice(0, 16) : '';
       const score = Number.isFinite(Number(quote.lead_score)) ? Number(quote.lead_score) : 0;
       return `
         <details class="quote-item">
           <summary>
+            <label class="q-check-wrap"><input type="checkbox" class="q-check" value="${id}" aria-label="Select lead"></label>
             <b>${esc(quote.company || quote.name || quote.email)}</b>
             ${statusBadge(quote.pipeline_stage || 'new')}
             ${statusBadge(quote.status || 'new')}
@@ -444,6 +453,31 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       event.preventDefault();
       col.classList.remove('is-over');
       if (dragId) { const id = dragId; dragId = null; moveStage(id, col.dataset.col); }
+    });
+
+    // List: bulk selection + actions.
+    delegate(box, 'click', '.q-check', (event) => event.stopPropagation());
+    delegate(box, 'change', '#qAll', (event, all) => box.querySelectorAll('.q-check').forEach((c) => { c.checked = all.checked; }));
+    delegate(box, 'click', '#qBulkApply', async (event, button) => {
+      const ids = [...box.querySelectorAll('.q-check:checked')].map((c) => c.value);
+      if (!ids.length) { message('qStatus', 'Select at least one lead.', 'err'); return; }
+      const stage = box.querySelector('#qBulkStage')?.value || '';
+      const priority = box.querySelector('#qBulkPriority')?.value || '';
+      const owner = box.querySelector('#qBulkOwner')?.value.trim() || '';
+      const payload = { ids };
+      if (stage) payload.pipeline_stage = stage;
+      if (priority) payload.priority = priority;
+      if (owner) payload.assigned_to = owner;
+      if (Object.keys(payload).length === 1) { message('qStatus', 'Pick a stage, priority or owner to apply.', 'err'); return; }
+      button.disabled = true;
+      try {
+        const res = await api('/api/admin/quotes', { method: 'POST', body: payload });
+        message('qStatus', `Updated ${res.updated ?? ids.length} lead(s).`, 'ok');
+        await renderQuotePipeline({ refetch: true });
+      } catch (err) {
+        message('qStatus', err.data?.error || 'Bulk update failed. Retry.', 'err');
+        button.disabled = false;
+      }
     });
 
     // List: open drawer + the existing row controls.

@@ -136,3 +136,27 @@ test("quotes reports view renders KPIs, funnel and forecast", async ({ page }) =
   await expect(page.locator(".pipe-report-block").filter({ hasText: "close month" })).toBeVisible();
   await expect(page.locator(".pipe-loss .pipe-chip")).toHaveCount(1);
 });
+
+test("quotes list bulk action posts an ids array", async ({ page }) => {
+  await bootAsStaff(page);
+  let captured = null;
+  await page.route("**/api/admin/quotes**", (route) => {
+    const url = route.request().url();
+    if (route.request().method() === "POST") {
+      captured = JSON.parse(route.request().postData() || "{}");
+      return route.fulfill(json({ ok: true, updated: 1 }));
+    }
+    if (url.includes("view=pipeline")) return route.fulfill(json({ summary: SUMMARY }));
+    return route.fulfill(json({ quotes: [QUOTE], total: 1, has_more: false, new_count: 1, urgent_count: 0 }));
+  });
+  await page.route("**/api/admin/companies**", (route) => route.fulfill(json({ companies: [], total: 0, has_more: false })));
+
+  await page.goto(`${BASE_URL}/admin.html#quotes`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator('.q-check[value="q-1"]').check();
+  await page.locator("#qBulkStage").selectOption("proposal");
+  await page.locator("#qBulkApply").click();
+
+  await expect.poll(() => captured).not.toBeNull();
+  expect(captured).toMatchObject({ ids: ["q-1"], pipeline_stage: "proposal" });
+});

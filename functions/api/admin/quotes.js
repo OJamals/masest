@@ -246,6 +246,34 @@ export async function onRequest({ request, env }) {
       return json(result.ok ? 200 : 500, result);
     }
 
+    if (Array.isArray(body.ids) && body.ids.length) {
+      const ids = body.ids.slice(0, 200);
+      const bulk = {};
+      if (body.status) {
+        if (!STATUSES.includes(body.status)) return json(400, { error: 'invalid_status' });
+        bulk.status = body.status;
+        bulk.handled_at = body.status === 'new' ? null : new Date().toISOString();
+        bulk.handled_by = body.status === 'new' ? null : (user.email || null);
+      }
+      if (body.priority) {
+        if (!PRIORITIES.includes(body.priority)) return json(400, { error: 'invalid_priority' });
+        bulk.priority = body.priority;
+      }
+      if (typeof body.assigned_to === 'string') {
+        const assignedTo = body.assigned_to.trim().slice(0, 160);
+        Object.assign(bulk, { assigned_to: assignedTo || null, assigned_at: assignedTo ? new Date().toISOString() : null });
+      }
+      if (body.pipeline_stage !== undefined) {
+        const res = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
+        if (res.error) return json(400, { error: res.error });
+        Object.assign(bulk, res.patch);
+      }
+      if (!Object.keys(bulk).length) return json(400, { error: 'nothing_to_update' });
+      const { error, count } = await sb.from('quotes').update(bulk, { count: 'exact' }).in('id', ids);
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true, updated: count ?? ids.length });
+    }
+
     if (!body.id) return json(400, { error: 'id_required' });
 
     if (body.action === 'convert') {
