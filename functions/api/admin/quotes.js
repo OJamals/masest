@@ -204,6 +204,26 @@ export async function onRequest({ request, env }) {
       }
       return json(200, { report: pipelineReport(data || []) });
     }
+    if (new URL(request.url).searchParams.get('view') === 'contacts') {
+      const id = new URL(request.url).searchParams.get('id');
+      if (!id) return json(400, { error: 'id_required' });
+      const { data: q } = await sb.from('quotes').select('id,email,company').eq('id', id).maybeSingle();
+      if (!q) return json(404, { error: 'not_found' });
+      let companyId = await companyIdForQuote(sb, { email: q.email });
+      if (!companyId && q.company) {
+        const { data: co } = await sb.from('companies').select('id').ilike('name', String(q.company).trim()).limit(1).maybeSingle();
+        companyId = co?.id || null;
+      }
+      if (!companyId) return json(200, { company_id: null, contacts: [] });
+      const { data: contacts, error } = await sb.from('crm_contacts')
+        .select('id,name,role,title,email,is_primary').eq('company_id', companyId).is('deleted_at', null)
+        .order('is_primary', { ascending: false }).order('name', { ascending: true }).limit(200);
+      if (error) {
+        if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { company_id: companyId, contacts: [], needs_migration: true });
+        return json(500, { error: error.message });
+      }
+      return json(200, { company_id: companyId, contacts: contacts || [] });
+    }
     if (new URL(request.url).searchParams.get('export') === 'csv') {
       const { data, error } = await sb.from('quotes')
         .select('id,created_at,type,name,email,company,phone,product,industry,location,status,priority,next_step,due_at,lead_score,assigned_to')
@@ -217,7 +237,7 @@ export async function onRequest({ request, env }) {
     }
     const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 100, maxLimit: 300 });
     const { data, error, count } = await sb.from('quotes')
-      .select('id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason', { count: 'exact' })
+      .select('id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     if (error) {
@@ -396,6 +416,9 @@ export async function onRequest({ request, env }) {
     if (body.expected_close !== undefined) {
       patch.expected_close = body.expected_close ? String(body.expected_close).slice(0, 10) : null;
     }
+    if (body.contact_id !== undefined) {
+      patch.contact_id = body.contact_id === null || body.contact_id === '' ? null : (Number(body.contact_id) || null);
+    }
 
     const parsedDueAt = dueAt(body.due_at);
     if (parsedDueAt === false) return json(400, { error: 'invalid_due_at' });
@@ -404,7 +427,7 @@ export async function onRequest({ request, env }) {
     if (!Object.keys(patch).length) return json(400, { error: 'nothing_to_update' });
 
     const { data, error } = await sb.from('quotes').update(patch).eq('id', body.id)
-      .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,email,product,company,type')
+      .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,contact_id,email,product,company,type')
       .single();
     if (error) return json(500, { error: error.message });
 

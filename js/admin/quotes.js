@@ -242,6 +242,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       <label>Deal value <input class="adm-input" data-d-deal type="number" min="0" step="0.01" value="${q.deal_value ?? ''}"></label>
       <label>Expected close <input class="adm-input" data-d-close type="date" value="${esc(closeValue)}"></label>
       <label>Owner <input class="adm-input" data-d-owner value="${esc(q.assigned_to || '')}"></label>
+      <label>Buyer contact <select class="adm-select" data-d-contact aria-label="Buyer contact"><option value="">— none —</option>${q.contact_id ? `<option value="${esc(q.contact_id)}" selected>Linked contact #${esc(q.contact_id)}</option>` : ''}</select></label>
       <label>Next step <input class="adm-input" data-d-next value="${esc(q.next_step || '')}"></label>
       <label>Follow-up due <input class="adm-input" data-d-due type="datetime-local" value="${esc(dueValue)}"></label>
       <label>Notes <textarea class="adm-textarea" data-d-notes>${esc(q.notes || '')}</textarea></label>
@@ -274,6 +275,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         next_step: v('[data-d-next]'),
         due_at: v('[data-d-due]'),
         notes: v('[data-d-notes]'),
+        contact_id: v('[data-d-contact]') || null,
       } });
       if (res.quote) Object.assign(quote, res.quote);
       status.textContent = 'Saved.';
@@ -307,6 +309,20 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     }
   }
 
+  // Populate the Buyer contact picker from the deal's resolved company (server maps
+  // the quote → company via account email or company name, then returns its contacts).
+  async function loadDrawerContacts(dlg, quote) {
+    const sel = dlg.querySelector('[data-d-contact]');
+    if (!sel) return;
+    try {
+      const { contacts, company_id } = await api(`/api/admin/quotes?view=contacts&id=${encodeURIComponent(quote.id)}`);
+      if (!company_id) { sel.innerHTML = '<option value="">— no linked account —</option>'; sel.disabled = true; return; }
+      const opts = ['<option value="">— none —</option>'].concat((contacts || []).map((c) =>
+        `<option value="${esc(c.id)}"${String(c.id) === String(quote.contact_id) ? ' selected' : ''}>${esc(c.name)}${c.is_primary ? ' ★' : ''}${c.title ? ` · ${esc(c.title)}` : ''}</option>`));
+      sel.innerHTML = opts.join('');
+    } catch { /* keep the placeholder option on failure */ }
+  }
+
   function openQuoteDrawer(quote) {
     document.querySelector('.adm-drawer[data-quote-drawer]')?.remove();
     const dlg = document.createElement('dialog');
@@ -334,6 +350,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     dlg.addEventListener('close', () => dlg.remove());
     dlg.showModal();
     crm.mount(dlg.querySelector('[data-drawer-crm]'), 'quote', quote.id);
+    loadDrawerContacts(dlg, quote);
   }
 
   // ---- List view (the original accordion pipeline) ----
