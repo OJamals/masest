@@ -349,6 +349,8 @@ body .product-detail-hero { padding-bottom: 42px; }
 
 /* CRM deal pipeline (admin Quotes board + deal drawer) — slice 2 */
 .pipe-toggle { display: inline-flex; gap: 4px; margin: 0 0 12px; }
+.saved-views { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 12px; }
+.saved-views .adm-input { max-width: 160px; }
 .pipe-toggle .is-active { background: var(--surface-2, #eef2f7); font-weight: 600; }
 .pipe-forecast { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; margin: 0 0 12px; padding: 12px 14px; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; background: var(--surface, #fff); }
 .pipe-forecast b { font-size: 1.1rem; }

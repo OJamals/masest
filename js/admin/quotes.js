@@ -8,6 +8,7 @@
 import { esc, delegate, money, confirmDialog } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 import { createCrmPanel } from './crm.js';
+import { createSavedViews } from './saved-views.js';
 
 export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager }) {
   const QUOTE_STATUSES = ['new', 'contacted', 'closed', 'spam'];
@@ -54,6 +55,33 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       renderQuotePipeline({ refetch: false });
     });
     reflectToggle();
+  }
+
+  // ---- Saved filter views (injected once next to the toggle, survives list swaps) ----
+  const savedViews = createSavedViews({
+    key: 'quotes',
+    getFilters: () => ({
+      search: $('qSearch')?.value || '',
+      status: $('qFilter')?.value || '',
+      priority: $('qPriority')?.value || '',
+      owner: $('qOwner')?.value || '',
+      due: $('qDue')?.value || '',
+      view: state.quotesView || 'list',
+    }),
+    applyFilters: (f) => {
+      if ($('qSearch')) $('qSearch').value = f.search || '';
+      if ($('qFilter')) $('qFilter').value = f.status || '';
+      if ($('qPriority')) $('qPriority').value = f.priority || '';
+      if ($('qOwner')) $('qOwner').value = f.owner || '';
+      if ($('qDue')) $('qDue').value = f.due || '';
+      state.quotesView = f.view || 'list';
+      reflectToggle();
+      renderQuotePipeline({ refetch: false });
+    },
+  });
+  function ensureSavedViews() {
+    const box = $('admQuotes');
+    if (box) savedViews.mount(box);
   }
 
   // ---- Board view ----
@@ -412,6 +440,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       state.loaded.add('quotes');
     }
     ensureToggle();
+    ensureSavedViews();
     if (state.quotesNeedsMigration) {
       box.innerHTML = '<p class="muted">No quote database yet. Apply supabase/schema-quotes.sql to store and triage leads here.</p>';
       return;
