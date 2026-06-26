@@ -94,6 +94,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-history="${esc(c.id)}">History</button>
         ${c.is_primary ? '' : `<button class="btn btn-ghost btn-sm" type="button" data-crm-contact-primary-set="${esc(c.id)}">Make primary</button>`}
         <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-edit="${esc(c.id)}">Edit</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-merge="${esc(c.id)}">Merge</button>
         <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-del="${esc(c.id)}" aria-label="Delete contact">Delete</button>
       </span></li>`).join('')}</ul>`
       : admEmpty('ph-address-book', 'No contacts', 'Add procurement, plant or maintenance contacts for this account.');
@@ -121,6 +122,30 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     } catch (err) {
       body.innerHTML = errRow(err.data?.error);
     }
+  }
+
+  // Pick the survivor when merging a duplicate contact. Resolves to the chosen id, or null.
+  function pickMergeTarget(others) {
+    return new Promise((resolve) => {
+      const dlg = document.createElement('dialog');
+      dlg.className = 'confirm-dialog';
+      dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
+        <p class="confirm-dialog-msg">Merge into which contact? The duplicate is removed; its deals, notes and tasks move to the survivor.</p>
+        <label>Survivor <select class="adm-select" data-merge-into>${others.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}${c.title ? ` · ${esc(c.title)}` : ''}</option>`).join('')}</select></label>
+        <menu class="confirm-dialog-actions">
+          <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Cancel</button>
+          <button value="ok" class="btn btn-danger btn-sm" type="submit">Merge</button>
+        </menu>
+      </form>`;
+      if (typeof dlg.showModal !== 'function') { resolve(null); return; }
+      document.body.appendChild(dlg);
+      dlg.addEventListener('close', () => {
+        const into = dlg.returnValue === 'ok' ? (dlg.querySelector('[data-merge-into]')?.value || null) : null;
+        dlg.remove();
+        resolve(into);
+      });
+      dlg.showModal();
+    });
   }
 
   // A contact's own activity drawer — reuses this same panel mounted as a 'contact'
@@ -176,6 +201,18 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         del.disabled = true;
         try { await api(`/api/admin/crm/notes?id=${encodeURIComponent(del.dataset.crmNoteDel)}`, { method: 'DELETE' }); load(body, subjectType, subjectId, 'notes'); }
         catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); del.disabled = false; }
+        return;
+      }
+
+      const cMerge = event.target.closest('[data-crm-contact-merge]');
+      if (cMerge) {
+        const fromId = cMerge.dataset.crmContactMerge;
+        const others = (body._contacts || []).filter((x) => String(x.id) !== String(fromId));
+        if (!others.length) { body.insertAdjacentHTML('beforeend', errRow('No other contact to merge into.')); return; }
+        const intoId = await pickMergeTarget(others);
+        if (!intoId) return;
+        try { await api('/api/admin/crm/contacts', { method: 'POST', body: { action: 'merge', from_id: fromId, into_id: intoId } }); load(body, subjectType, subjectId, 'contacts'); }
+        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); }
         return;
       }
 

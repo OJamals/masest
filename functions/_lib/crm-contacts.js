@@ -74,3 +74,15 @@ export function contactPatch({ name, role, title, email, phone, is_primary, note
   patch.updated_at = (now || new Date()).toISOString();
   return { patch };
 }
+
+// When merging a duplicate into a survivor, backfill ONLY the survivor's blank
+// title/email/phone from the duplicate (never overwrite a value the survivor has).
+// Pure — returns the patch of fields to fill (possibly empty).
+export function mergeFields(survivor = {}, loser = {}) {
+  const blank = (v) => v === null || v === undefined || String(v).trim() === '';
+  const out = {};
+  for (const k of ['title', 'email', 'phone']) {
+    if (blank(survivor[k]) && !blank(loser[k])) out[k] = loser[k];
+  }
+  return out;
+}
