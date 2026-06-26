@@ -11,6 +11,10 @@ design-qa.md
 .dev.vars
 .wrangler/
 test-results/
+output/playwright/
+playwright-report/
+blob-report/
+.playwright/
 .headroom/
 .serena/
 

@@ -266,15 +266,38 @@ function renderCatalog(root, catalog) {
   bindTabs(root);
 }
 
+function hasServicesCatalog(catalog) {
+  return Boolean(
+    (Array.isArray(catalog?.services) && catalog.services.length)
+    || (Array.isArray(catalog?.service_packages) && catalog.service_packages.length)
+  );
+}
+
+async function fetchServicesCatalog() {
+  const paths = ["data/content/services.json", "data/services.json"];
+  let lastError;
+  for (const path of paths) {
+    try {
+      const response = await fetch(path, { cache: "no-store" });
+      if (!response.ok) throw new Error(`${path}: ${response.status}`);
+      const catalog = await response.json();
+      if (path === "data/content/services.json" && !hasServicesCatalog(catalog)) {
+        lastError = new Error("content_services_empty");
+        continue;
+      }
+      return catalog;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("services_catalog_unavailable");
+}
+
 export function initServiceCatalog() {
   const roots = Array.from(document.querySelectorAll("[data-service-catalog]"));
   if (!roots.length) return;
 
-  fetch("data/services.json", { cache: "no-store" })
-    .then((response) => {
-      if (!response.ok) throw new Error("services_catalog_unavailable");
-      return response.json();
-    })
+  fetchServicesCatalog()
     .then((catalog) => {
       roots.forEach((root) => renderCatalog(root, catalog));
     })

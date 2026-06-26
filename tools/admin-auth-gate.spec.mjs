@@ -25,6 +25,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!server) return;
+  if (server.exitCode !== null || server.signalCode !== null) return;
   let exited = false;
   const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
   server.kill();

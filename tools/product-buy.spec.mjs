@@ -54,7 +54,7 @@ test("product add-to-cart resolves the crhd commerce sku", async ({ page }) => {
   await page.getByRole("button", { name: /Add to cart/ }).click();
 
   await expect(page.getByText("Added to cart")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Review cart" })).toHaveAttribute("href", "cart.html");
+  await expect(page.getByRole("link", { name: "Review cart" })).toHaveAttribute("href", "cart");
   await expect(page.locator("[data-cart-count]")).toHaveText("1");
 });
 

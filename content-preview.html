@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content preview | MASEST VertKleen</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="css/style.css?v=20260625a">
+<style>
+  body { min-height: 100vh; }
+  .content-preview-shell { padding: clamp(28px, 6vw, 56px) 0; }
+  .content-preview-card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: clamp(18px, 4vw, 34px); box-shadow: var(--shadow-xs); }
+  .content-preview-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+  .content-preview-pill { display: inline-flex; align-items: center; min-height: 24px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: .78rem; font-weight: 800; padding: 3px 9px; }
+  .content-preview-grid { display: grid; gap: 12px; margin-top: 22px; }
+  .content-preview-grid dl { display: grid; grid-template-columns: minmax(92px, .36fr) minmax(0, 1fr); gap: 8px 14px; margin: 0; }
+  .content-preview-grid dt { color: var(--muted); font-weight: 800; }
+  .content-preview-grid dd { margin: 0; overflow-wrap: anywhere; }
+  .content-preview-code { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 12px; font-size: .82rem; line-height: 1.45; white-space: pre-wrap; }
+  @media (max-width: 560px) {
+    .content-preview-grid dl { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body class="site-soft-bg">
+  <noscript>
+  <nav class="nojs-nav" aria-label="Site">
+    <a href="/"><b>MASEST</b></a>
+    <a href="products">Products</a>
+    <a href="services">Services</a>
+    <span>Use Cases</span>
+    <a href="industries">Industries</a>
+    <a href="proof">Field Results</a>
+    <a href="resources">Resources</a>
+  </nav>
+  </noscript>
+  <main id="contentPreviewRoot" class="content-preview-shell" aria-live="polite">
+    <div class="wrap">
+      <div class="content-preview-card">
+        <p class="muted">Waiting for preview content.</p>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="js/content-preview.js"></script>
+</body>
+</html>

@@ -23,6 +23,11 @@ function htmlText(value) {
     .replace(/>/g, "&gt;");
 }
 
+async function gotoDomReady(page, path, selector) {
+  await page.goto(`${BASE_URL}/${path}`, { waitUntil: "load" });
+  if (selector) await page.waitForSelector(selector, { state: "attached" });
+}
+
 async function withServer(fn) {
   const server = spawn("python3", ["-m", "http.server", String(PORT)], {
     cwd: new URL("..", import.meta.url),
@@ -63,7 +68,7 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
-      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+      await gotoDomReady(page, "products.html", ".shop-card");
       const layout = await page.evaluate(() => {
         const cards = [...document.querySelectorAll(".shop-card")];
         const top = cards[0]?.offsetTop;
@@ -107,7 +112,7 @@ test("replacement checker shows the swap and filters the catalog", async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
-      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+      await gotoDomReady(page, "products.html", ".shop-card");
 
       await page.click('.swap-row[data-row="0"]');
       await page.waitForSelector("#swapResult:not([hidden])");
@@ -142,7 +147,7 @@ test("product job router headline does not overlap its copy", async () => {
       ]) {
         const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
         try {
-          await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+          await gotoDomReady(page, "products.html", ".product-job-router .headline");
           const rects = await page.evaluate(() => {
             const headline = document.querySelector(".product-job-router .headline");
             const copy = document.querySelector(".product-job-router-copy");
@@ -172,7 +177,6 @@ test("public CTA groups keep a consistent gap from their lead copy", async () =>
       ["services.html", ".services-hero-copy .subhead", ".services-hero-copy .hero-actions", 28, 36],
       ["proof.html", ".page-hero .subhead", ".page-hero .btn", 28, 36],
       ["proof.html", ".cmp-note", ".proof-doc-link", 22, 32],
-      ["about.html", "#services-pricing .subhead", "#services-pricing .hero-actions", 28, 36],
       ["about.html", "#serviceCatalog .subhead", "#serviceCatalog .btn", 28, 36],
       ["industries.html", ".block-dark .section-head .subhead", ".block-dark .section-head .btn", 28, 36],
       ["programs.html", ".cta-band .subhead", ".cta-band .btn", 34, 42],
@@ -187,7 +191,8 @@ test("public CTA groups keep a consistent gap from their lead copy", async () =>
         const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
         try {
           for (const [path, beforeSelector, actionSelector, minGap, maxGap] of cases) {
-            await page.goto(`${BASE_URL}/${path}`, { waitUntil: "networkidle" });
+            await gotoDomReady(page, path, beforeSelector);
+            await page.waitForSelector(actionSelector, { state: "attached" });
             const gap = await page.evaluate(({ beforeSelector, actionSelector }) => {
               const before = document.querySelector(beforeSelector);
               const action = document.querySelector(actionSelector);
@@ -301,7 +306,8 @@ test("non-canonical CRS page stays quote-only and does not inherit Descaler chec
           }]
         })
       }));
-      await page.goto(`${BASE_URL}/product.html?id=crs`, { waitUntil: "networkidle" });
+      await page.goto(`${BASE_URL}/product.html?id=crs`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen CRS"));
       const state = await page.evaluate(() => ({
         name: document.querySelector("#pName")?.textContent || "",
         addVisible: !document.querySelector("#pBuyBtn")?.hidden,

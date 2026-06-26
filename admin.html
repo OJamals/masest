@@ -144,6 +144,40 @@
   .seo-audit-status { font-weight: 800; text-align: right; }
   .seo-audit-meta { text-align: right; }
   .seo-ok { color: var(--status-success-ink); } .seo-warn { color: var(--status-warning-ink); } .seo-bad { color: var(--status-danger-ink); }
+  .adm-content-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr); gap: 16px; align-items: start; }
+  .adm-content-stack { display: grid; gap: 16px; min-width: 0; }
+  .adm-content-side { display: grid; gap: 16px; min-width: 0; }
+  .adm-content-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .adm-content-fields .full { grid-column: 1 / -1; }
+  .adm-content-fields .wide { grid-column: span 2; }
+  .adm-content-fields .adm-content-field-text { min-height: 76px; font-family: inherit; }
+  .adm-content-check { min-height: 44px; display: flex !important; align-items: center; gap: 8px; align-self: stretch; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 8px 10px; }
+  .adm-content-check input { width: 18px; height: 18px; }
+  .adm-content-asset-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+  .adm-content-asset-control label { margin: 0; }
+  .adm-content-upload { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) auto; gap: 10px; align-items: end; margin: 0 0 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .adm-content-upload label { display: grid; gap: 5px; min-width: 0; font-size: .82rem; color: var(--muted); }
+  .adm-content-upload .btn { min-height: 40px; }
+  .adm-content-asset-row { width: 100%; display: grid; gap: 3px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); padding: 10px 12px; }
+  .adm-content-asset-row + .adm-content-asset-row { margin-top: 8px; }
+  .adm-content-asset-row span { color: var(--muted); overflow-wrap: anywhere; }
+  .adm-content-editor .adm-textarea { min-height: 180px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.45; }
+  .adm-content-list table.adm { min-width: 640px; }
+  .adm-content-row { cursor: pointer; }
+  .adm-content-row:hover { background: var(--panel); }
+  .adm-content-title { font-weight: 800; color: var(--ink); }
+  .adm-content-meta { display: block; margin-top: 3px; font-size: .76rem; color: var(--muted); }
+  .adm-content-revision-row { width: 100%; display: grid; gap: 3px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); padding: 10px 12px; }
+  .adm-content-revision-row + .adm-content-revision-row { margin-top: 8px; }
+  .adm-content-revision-row span, .adm-content-revision-row small { color: var(--muted); overflow-wrap: anywhere; }
+  .adm-content-workflow-row { width: 100%; display: grid; gap: 3px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); padding: 10px 12px; }
+  .adm-content-workflow-row + .adm-content-workflow-row { margin-top: 8px; }
+  .adm-content-workflow-row span { color: var(--muted); overflow-wrap: anywhere; }
+  .adm-content-manifest { display: grid; gap: 8px; margin-top: 10px; }
+  .adm-content-manifest-row { display: grid; gap: 3px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .adm-content-manifest-row b { font-size: .82rem; color: var(--ink); overflow-wrap: anywhere; }
+  .adm-content-manifest-row span { font-size: .76rem; color: var(--muted); overflow-wrap: anywhere; }
+  .adm-content-preview iframe { width: 100%; min-height: 420px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
   .company-detail-actions, .company-user-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
   .company-user-actions { margin-top: 0; justify-content: flex-end; }
   @media (max-width: 920px) { .adm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thread-layout { grid-template-columns: 1fr; } }
@@ -187,6 +221,7 @@
     .admin-order-meta,
     .company-admin-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .product-admin-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .adm-content-layout { grid-template-columns: 1fr; }
     .variant-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .variant-active { align-self: center; }
   }
@@ -194,6 +229,10 @@
     .adm-wrap { padding: 0 18px; }
     .adm-tools { align-items: stretch; }
     .adm-tools > * { width: 100%; max-width: none; }
+    .adm-content-fields { grid-template-columns: 1fr; }
+    .adm-content-fields .wide { grid-column: auto; }
+    .adm-content-asset-control { grid-template-columns: 1fr; }
+    .adm-content-upload { grid-template-columns: 1fr; }
     .admin-order-head,
     .company-admin-head,
     .admin-order-meta,
@@ -281,6 +320,10 @@
               <span>Catalog</span>
               <button class="adm-tab" role="tab" data-tab="products" type="button"><i class="ph ph-flask" aria-hidden="true"></i> Products</button>
               <button class="adm-tab" role="tab" data-tab="pricing" type="button"><i class="ph ph-currency-dollar" aria-hidden="true"></i> Pricing</button>
+            </div>
+            <div class="adm-nav-group">
+              <span>Content</span>
+              <button class="adm-tab" role="tab" data-tab="content" type="button"><i class="ph ph-note-pencil" aria-hidden="true"></i> Content</button>
             </div>
             <div class="adm-nav-group">
               <span>Comms</span>
@@ -377,6 +420,10 @@
           <input id="priceSearch" type="search" class="adm-search" placeholder="Search variants" aria-label="Search variants">
           <div id="admPricing">Loading...</div>
         </div>
+      </section>
+
+      <section class="adm-panel" role="tabpanel" data-panel="content">
+        <div id="admContent">Loading...</div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="messages">

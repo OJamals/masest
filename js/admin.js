@@ -9,6 +9,7 @@ import { createThreadsTab } from './admin/threads.js';
 import { createOffersTab } from './admin/offers.js';
 import { createProductsTab } from './admin/products.js';
 import { createPricingTab } from './admin/pricing.js';
+import { createContentTab } from './admin/content.js';
 import { createCustomersTab } from './admin/customers.js';
 import { createCompaniesTab } from './admin/companies.js';
 import { createCrmPanel } from './admin/crm.js';
@@ -44,6 +45,7 @@ const state = {
   orders: [],
   companies: [],
   products: [],
+  content: [],
   quotes: [],
   threads: [],
   loaded: new Set(),
@@ -125,6 +127,7 @@ function setTab(tab) {
     customers: renderCustomers,
     products: () => { renderProducts(); wireInventory(); },
     pricing: () => { renderPricing(); wireCoupons(); },
+    content: renderContent,
     messages: renderThreads,
     quotes: renderQuotePipeline,
     offers: () => renderOffers(),
@@ -379,6 +382,9 @@ const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = creat
 // Pricing tab extracted to ./admin/pricing.js (#36 split). Shared primitives injected.
 const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message, admSkeleton });
 
+// Content tab: staff-managed CMS entries for non-commerce public content.
+const { renderContent, wireContent } = createContentTab({ $, api, state, admSkeleton, admEmpty });
+
 // Messages/threads tab extracted to ./admin/threads.js (#36 split). Shared primitives + sourceLabel injected.
 const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, sourceLabel });
 
@@ -494,6 +500,7 @@ function wire() {
   wireCompanies();
   wireProducts();
   wirePricing();
+  wireContent();
   wireQuotes();
   wireThreads();
 }

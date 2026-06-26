@@ -224,6 +224,43 @@ function checkCommerceContracts() {
   ok(/window\.MASESTMain/.test(main), "js/main.js should preserve window.MASESTMain compatibility");
 }
 
+function verifyOptionalContentSnapshot() {
+  const manifestFile = path.join(projectRoot, "data/content/manifest.json");
+  if (fs.existsSync(manifestFile)) {
+    const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+    if (!manifest.generated_at || !manifest.files) failures.push("data/content/manifest.json missing generated_at/files");
+  }
+
+  const checks = [
+    ["data/content/services.json", ["services", "service_packages"]],
+    ["data/content/page-meta.json", ["page_meta"]],
+    ["data/content/proof.json", ["proof_cards"]],
+    ["data/content/resources.json", ["resource_cards"]],
+    ["data/content/industries.json", ["industry_cards"]],
+    ["data/content/faqs.json", ["faq_blocks"]],
+  ];
+  for (const [relative, keys] of checks) {
+    const file = path.join(projectRoot, relative);
+    if (!fs.existsSync(file)) continue;
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+    for (const key of keys) {
+      if (!Array.isArray(parsed[key])) failures.push(`${relative} missing ${key} array`);
+    }
+    for (const entry of [...(parsed.proof_cards || []), ...(parsed.industry_cards || [])]) {
+      if (entry.image && !entry.image_alt) failures.push(`${relative} entry ${entry.slug || entry.title} has image without image_alt`);
+    }
+    for (const entry of [
+      ...(parsed.proof_cards || []),
+      ...(parsed.resource_cards || []),
+      ...(parsed.industry_cards || []),
+    ]) {
+      if (entry.href && /^(?:javascript|data|vbscript):/i.test(String(entry.href).trim())) {
+        failures.push(`${relative} entry ${entry.slug || entry.title} has unsafe href`);
+      }
+    }
+  }
+}
+
 function checkSyntax() {
   for (const file of jsFiles) {
     const result = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
@@ -238,6 +275,7 @@ checkSeoContracts();
 checkRobotsAndPrivatePages();
 checkClaimDiscipline();
 checkCommerceContracts();
+verifyOptionalContentSnapshot();
 checkSyntax();
 
 for (const warning of warnings) {

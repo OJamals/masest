@@ -83,7 +83,7 @@ test("approved business NET checkout posts the cart payload with auth and clears
     window.MASEST_SUPABASE_URL = "https://example.supabase.co";
     window.MASEST_SUPABASE_ANON = "anon";
   });
-  await page.route("https://esm.sh/@supabase/supabase-js@2", (route) => route.fulfill({
+  await page.route("**/vendor/supabase-js.esm.js", (route) => route.fulfill({
     status: 200,
     contentType: "application/javascript",
     body: `

@@ -30,6 +30,10 @@ const STAFF_CAPABILITIES = {
   "company.credit": ["owner", "finance"],
   "company.view_as": ["owner", "finance", "support"],
   "product.write": ["owner"],
+  "content.assets": ["owner"],
+  "content.publish": ["owner"],
+  "content.review": ["owner"],
+  "content.write": ["owner"],
   "user.role": ["owner"],
 };
 

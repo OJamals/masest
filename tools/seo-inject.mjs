@@ -7,7 +7,7 @@
  * public URLs. Cloudflare Pages serves these files directly.
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import {
   PRODUCT_CATALOG_COPY,
@@ -84,10 +84,47 @@ const text = (value) => String(value ?? "")
 
 const pick = (html, re) => html.match(re)?.[1]?.trim() || "";
 
+function loadContentPageMeta() {
+  const file = "data/content/page-meta.json";
+  if (!existsSync(file)) return new Map();
+  const parsed = JSON.parse(readFileSync(file, "utf8"));
+  const rows = Array.isArray(parsed.page_meta) ? parsed.page_meta : [];
+  const out = new Map();
+  for (const row of rows) {
+    for (const key of [row.page, row.slug]) {
+      const normalized = pageMetaKey(key);
+      if (normalized || normalized === "") out.set(normalized, row);
+    }
+  }
+  return out;
+}
+
 function cleanPath(path) {
   if (path === "index.html") return "";
   if (path.endsWith("/index.html")) return path.slice(0, -"index.html".length);
   return path.replace(/\.html$/i, "");
+}
+
+function pageMetaKey(value) {
+  const raw = String(value || "").trim().replace(/^\/+/, "");
+  if (!raw) return "";
+  return cleanPath(raw);
+}
+
+function pageMetaOverrides(entry = {}) {
+  const seo = entry.seo && typeof entry.seo === "object" ? entry.seo : {};
+  return {
+    title: seo.title || entry.meta_title || entry.title || "",
+    description: seo.description || entry.meta_description || entry.description || "",
+    og_image: seo.og_image || entry.og_image || "",
+    jsonld: seo.jsonld || entry.jsonld || null,
+  };
+}
+
+function applyContentPageMeta(file, meta, contentPageMeta) {
+  const override = contentPageMeta.get(pageMetaKey(file));
+  if (!override) return meta;
+  return { ...meta, content: pageMetaOverrides(override) };
 }
 
 function cleanRelativePath(prefix, path) {
@@ -128,9 +165,40 @@ function jsonLd(data) {
   return `<script type="application/ld+json">${JSON.stringify(data)}</script>`;
 }
 
+function absoluteAssetUrl(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${BASE}/${value.replace(/^\/+/, "")}`;
+}
+
+function replaceTitle(html, title) {
+  if (!title) return html;
+  if (/<title>[\s\S]*?<\/title>/i.test(html)) {
+    return html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${text(title)}</title>`);
+  }
+  return html.replace(/<head>/i, `<head>\n<title>${text(title)}</title>`);
+}
+
+function replaceMetaDescription(html, description) {
+  if (!description) return html;
+  const tag = `<meta name="description" content="${attr(description)}">`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    return html.replace(/<meta\s+name=["']description["'][^>]*>/i, tag);
+  }
+  return html.replace(/<\/title>/i, `</title>\n${tag}`);
+}
+
+function applyContentHtmlMeta(html, content = {}) {
+  return replaceMetaDescription(replaceTitle(html, content.title), content.description);
+}
+
 function buildBlock(html, meta) {
-  const title = pick(html, /<title>([^<]*)<\/title>/i) || "MASEST VertKleen";
-  const desc = pick(html, /<meta\s+name="description"\s+content="([^"]*)"/i) || "";
+  const content = meta.content || {};
+  const title = content.title || pick(html, /<title>([^<]*)<\/title>/i) || "MASEST VertKleen";
+  const desc = content.description || pick(html, /<meta\s+name="description"\s+content="([^"]*)"/i) || "";
+  const ogImage = absoluteAssetUrl(content.og_image) || OG_IMAGE;
+  const jsonld = content.jsonld || meta.jsonld;
   const url = `${BASE}${meta.loc}`;
   const hasOgTitle = /property="og:title"/.test(html);
   const hasOgDesc = /property="og:description"/.test(html);
@@ -139,12 +207,12 @@ function buildBlock(html, meta) {
   if (!hasOgTitle) lines.push(`<meta property="og:title" content="${attr(title)}">`);
   if (!hasOgDesc && desc) lines.push(`<meta property="og:description" content="${attr(desc)}">`);
   lines.push(`<meta property="og:url" content="${url}">`);
-  lines.push(`<meta property="og:image" content="${OG_IMAGE}">`);
+  lines.push(`<meta property="og:image" content="${attr(ogImage)}">`);
   lines.push('<meta name="twitter:card" content="summary_large_image">');
-  if (meta.jsonld?.length) {
-    const data = meta.jsonld.length === 1
-      ? { "@context": "https://schema.org", ...meta.jsonld[0] }
-      : { "@context": "https://schema.org", "@graph": meta.jsonld };
+  if (jsonld?.length) {
+    const data = jsonld.length === 1
+      ? { "@context": "https://schema.org", ...jsonld[0] }
+      : { "@context": "https://schema.org", "@graph": jsonld };
     lines.push(jsonLd(data));
   }
   lines.push(END);
@@ -161,6 +229,7 @@ async function processPage(file, meta, isPrivate = false) {
     }
   } else {
     html = normalizePublicUrls(html);
+    html = applyContentHtmlMeta(html, meta.content);
     html = html.replace(/<\/head>/i, `${buildBlock(html, meta)}\n</head>`);
   }
   if (html !== before) {
@@ -371,7 +440,10 @@ ${entries.map((entry) => `  <url><loc>${BASE}${entry.loc}</loc><changefreq>${ent
 }
 
 let changed = 0;
-for (const [file, meta] of Object.entries(PUBLIC)) changed += await processPage(file, meta, false);
+const contentPageMeta = loadContentPageMeta();
+for (const [file, meta] of Object.entries(PUBLIC)) {
+  changed += await processPage(file, applyContentPageMeta(file, meta, contentPageMeta), false);
+}
 for (const file of PRIVATE) changed += await processPage(file, null, true);
 changed += await writeProductPages();
 changed += await processProductFallback();

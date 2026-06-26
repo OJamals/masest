@@ -58,10 +58,19 @@ async function bootAsStaff(page) {
 test("staff converts a quote into a NET order with the expected payload", async ({ page }) => {
   await bootAsStaff(page);
 
-  // Company list feeds the "Convert to order for…" dropdown.
+  // Company list feeds the drawer's "Convert to order" company dropdown.
   await page.route("**/api/admin/companies**", (route) => route.fulfill({
     status: 200, contentType: "application/json",
     body: JSON.stringify({ companies: [{ id: "co-1", name: "Acme Mfg", status: "active" }] }),
+  }));
+  await page.route("**/api/admin/crm/timeline**", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ timeline: [] }),
+  }));
+  await page.route("**/api/admin/crm/tasks**", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ tasks: [] }),
+  }));
+  await page.route("**/api/admin/crm/notes**", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ notes: [] }),
   }));
 
   let convertBody = null;
@@ -83,19 +92,20 @@ test("staff converts a quote into a NET order with the expected payload", async 
 
   await page.goto(`${BASE_URL}/admin.html#quotes`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
-  // Convert controls live inside a collapsed <details>; expand it before interacting.
+  // Conversion now lives in the deal drawer; expand the lead row and open it.
   await page.locator(".quote-item summary").first().click();
-  await expect(page.locator('[data-convert="q-1"]')).toBeVisible();
+  await page.locator('[data-open-quote="q-1"]').click();
+  const drawer = page.locator('.adm-drawer[data-quote-drawer]');
+  await expect(drawer).toBeVisible();
 
-  const conv = (k) => page.locator(`[data-conv-${k}="q-1"]`);
-  await conv("co").selectOption("co-1");
-  await conv("sku").fill("GLY-PG-55");
-  await conv("name").fill("PG Glycol Drum");
-  await conv("qty").fill("4");
-  await conv("price").fill("289.50");
+  await drawer.locator("[data-d-co]").selectOption("co-1");
+  await drawer.locator("[data-d-sku]").fill("GLY-PG-55");
+  await drawer.locator("[data-d-name]").fill("PG Glycol Drum");
+  await drawer.locator("[data-d-qty]").fill("4");
+  await drawer.locator("[data-d-price]").fill("289.50");
 
   const convResp = page.waitForResponse((r) => r.url().includes("/api/admin/quotes") && r.request().method() === "POST");
-  await page.locator('[data-convert="q-1"]').click();
+  await drawer.locator("[data-drawer-convert]").click();
   await convResp;
 
   // The client posts raw input strings for qty/unit_price; the function coerces them server-side.
@@ -105,7 +115,7 @@ test("staff converts a quote into a NET order with the expected payload", async 
     company_id: "co-1",
     items: [{ sku: "GLY-PG-55", name: "PG Glycol Drum", qty: "4", unit_price: "289.50" }],
   });
-  await expect(page.locator("#qStatus")).toHaveText("Order ord-99 created.");
+  await expect(drawer.locator("[data-drawer-status]")).toHaveText("Order ord-99 created.");
 });
 
 test("staff replies to a support thread with the expected payload", async ({ page }) => {

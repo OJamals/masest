@@ -473,6 +473,10 @@
   line-height: 1;
   opacity: var(--burn);
 }
+.pipe-callout .chip.c-scale { --c: #c9d4d0; }
+.pipe-callout .chip.c-rust { --c: #c2553a; }
+.pipe-callout .chip.c-grease { --c: #c2a04e; }
+.pipe-callout .chip.c-bio { --c: #6fa863; }
 .pipe-callout .chip i {
   position: relative;
   width: 13px;
@@ -1557,11 +1561,11 @@ justify-content: flex-start;
 
 
 @media (max-width: 760px) {
-  .hmis-chemical-deck { min-height: clamp(244px, 37vh, 270px); }
+  .hmis-chemical-deck { min-height: clamp(230px, 34vh, 244px); }
   .hmis-chemical {
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
-    min-height: clamp(244px, 37vh, 270px);
+    min-height: clamp(230px, 34vh, 244px);
     padding: 10px;
   }
   .hmis-chemical-name strong {

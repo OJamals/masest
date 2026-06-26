@@ -4791,6 +4791,7 @@ main:has(#pMediaSection) .section-head {
 .services-recommendation,
 .service-catalog-band,
 .services-proof,
+.services-cms-faq,
 .services-final-cta {
   padding: clamp(56px, 8vw, 96px) 0;
 }
@@ -5061,8 +5062,12 @@ button.viz-segment {
   order: 4;
 }
 
-.service-catalog-page .services-final-cta {
+.service-catalog-page .services-cms-faq {
   order: 5;
+}
+
+.service-catalog-page .services-final-cta {
+  order: 6;
 }
 
 .service-catalog-page .services-hero-grid,

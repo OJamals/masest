@@ -4,12 +4,14 @@
   "type": "module",
   "scripts": {
     "check": "node tools/check-js.mjs",
+    "build:content": "node tools/build-content.mjs",
     "test": "node --test --test-concurrency=1 --test-timeout=120000 tests/*.test.mjs",
     "build": "node tools/cf-build.mjs",
     "verify": "npm run check && npm test && npm run build && npm run verify:site",
     "verify:site": "node tools/verify_site.mjs",
     "serve": "python3 -m http.server 4195",
-    "smoke:admin": "playwright test tools/admin-auth-gate.spec.mjs tools/admin-quote-message-flows.spec.mjs --reporter=line",
+    "smoke:admin": "playwright test tools/admin-auth-gate.spec.mjs tools/admin-quote-message-flows.spec.mjs tools/admin-content-cms.spec.mjs --reporter=line",
+    "smoke:cms": "playwright test tools/content-smoke.spec.mjs --reporter=line",
     "qa:remediation": "playwright test tools/*.spec.mjs --reporter=line",
     "seed": "node tools/seed-products.mjs"
   },

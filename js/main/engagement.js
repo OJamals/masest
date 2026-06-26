@@ -56,12 +56,14 @@ async function submitRequest(form, data) {
 
 export function initProofFilters() {
   const filters = [...document.querySelectorAll("[data-proof-filter]")];
-  const cards = [...document.querySelectorAll("[data-proof-card]")];
-  if (!filters.length || !cards.length) return;
+  if (!filters.length) return;
 
   filters.forEach((filter) => {
+    if (filter.dataset.proofFilterWired === "true") return;
+    filter.dataset.proofFilterWired = "true";
     filter.addEventListener("click", () => {
       const kind = filter.dataset.proofFilter;
+      const cards = [...document.querySelectorAll("[data-proof-card]")];
       filters.forEach((item) => {
         const active = item === filter;
         item.classList.toggle("active", active);
