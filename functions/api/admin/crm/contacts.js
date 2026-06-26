@@ -4,6 +4,7 @@ import { adminClient, json, readBody, requireStaff } from '../../../_lib/supabas
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
 import { contactRow, contactPatch, mergeFields, parseContactsCsv } from '../../../_lib/crm-contacts.js';
+import { upsertCrispPerson } from '../../../_lib/crisp.js';
 
 const SELECT = 'id,company_id,name,role,title,email,phone,is_primary,notes,created_by,created_at,updated_at';
 
@@ -104,6 +105,11 @@ export async function onRequest({ request, env }) {
     const { data, error } = await sb.from('crm_contacts').insert(built.row).select(SELECT).single();
     if (error) return json(500, { error: error.message });
     await recordAudit(sb, { user, action: 'crm.contact_add', targetType: 'company', targetId: built.row.company_id, detail: { role: built.row.role } });
+    // Seed the contact into Crisp People so operators see CRM context if they chat. Best-effort.
+    if (built.row.email) {
+      const { data: co } = await sb.from('companies').select('name').eq('id', built.row.company_id).maybeSingle();
+      await upsertCrispPerson(env, { email: built.row.email, name: built.row.name, company: co?.name, phone: built.row.phone });
+    }
     return json(200, { ok: true, contact: data });
   }
 
