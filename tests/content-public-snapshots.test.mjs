@@ -42,6 +42,16 @@ test("public CMS renderer supports multi-mount category filters", () => {
   assert.match(css, /\.service-catalog-page \.services-cms-faq\s*\{\s*order:\s*5;/);
 });
 
+test("public CMS industry cards render editor-managed images", () => {
+  const source = readFileSync(new URL("../js/main/content-snapshots.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../css/style.css", import.meta.url), "utf8");
+
+  assert.match(source, /route-card-media-card/);
+  assert.match(source, /card\.image_alt \|\| card\.title/);
+  assert.match(css, /\.route-card-media-card\s*\{/);
+  assert.match(css, /\.route-card-media img\s*\{/);
+});
+
 test("category filtering returns matching rows and uncategorized fallback rows", () => {
   const rows = [
     { slug: "service-scope", category: "services" },

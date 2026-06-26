@@ -75,6 +75,18 @@ function resourceCard(card) {
 
 function industryCard(card) {
   const href = safeContentHref(card.href, "industries.html");
+  if (card.image) {
+    return `
+      <a class="route-card route-card-media-card" href="${esc(href)}">
+        <figure class="route-card-media">
+          <img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy">
+        </figure>
+        <span class="route-card-kicker">${esc(card.category || "Industry")}</span>
+        <strong>${esc(card.title || "Untitled industry")}</strong>
+        <b>${esc(card.summary || "")}</b>
+      </a>
+    `;
+  }
   return `
     <a class="route-card" href="${esc(href)}">
       <span>${esc(card.category || "Industry")}</span>

@@ -207,6 +207,33 @@ test("public pages render category-filtered CMS FAQs", async ({ page }) => {
   await expect(page.locator('[data-cms-content="faq_blocks"]')).not.toContainText("How are service line items scoped?");
 });
 
+test("public industry CMS cards render managed images", async ({ page }) => {
+  await page.route("**/data/content/industries.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      industry_cards: [{
+        slug: "cold-storage",
+        category: "Distribution",
+        title: "Cold storage",
+        href: "industries/distribution-cold-storage",
+        image: "img/proof/cases/fire-pump.webp",
+        image_alt: "Cold storage condenser cleaned with VertKleen",
+        summary: "Refrigeration maintenance proof for facilities teams.",
+      }],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/industries.html`, { waitUntil: "domcontentloaded" });
+  const card = page.locator('[data-cms-content="industry_cards"] .route-card-media-card');
+  await expect(card).toHaveAttribute("href", "industries/distribution-cold-storage");
+  await expect(card.locator("img")).toHaveAttribute("alt", "Cold storage condenser cleaned with VertKleen");
+  await expect(card).toContainText("Cold storage");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  expect(overflow).toBe(false);
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/public-industries-cms-image-card.png`, fullPage: true });
+});
+
 for (const pagePath of ["/services.html", "/proof.html", "/resources.html", "/industries.html"]) {
   test(`public page has no horizontal overflow: ${pagePath}`, async ({ page }) => {
     await page.goto(`${BASE_URL}${pagePath}`, { waitUntil: "domcontentloaded" });
