@@ -11,6 +11,7 @@ import { createProductsTab } from './admin/products.js';
 import { createPricingTab } from './admin/pricing.js';
 import { createCustomersTab } from './admin/customers.js';
 import { createCompaniesTab } from './admin/companies.js';
+import { createCrmPanel } from './admin/crm.js';
 import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js';
 import { createQuotesTab } from './admin/quotes.js';
 
@@ -364,7 +365,9 @@ function admListPager(attr, loaded, total, hasMore) {
 // Customers tab extracted to ./admin/customers.js (#36 split). statusBadge + primitives injected.
 const { renderCustomers } = createCustomersTab({ $, api, state, admSkeleton, admEmpty, statusBadge });
 // Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
-const { renderCompanies, wireCompanies } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager });
+// CRM contact panel (timeline/tasks/notes) injected into the company drawer.
+const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
+const { renderCompanies, wireCompanies } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm });
 // Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
 const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager });
 // Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
