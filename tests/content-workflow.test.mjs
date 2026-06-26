@@ -24,6 +24,8 @@ test("content API exposes workflow actions with publish and review permissions",
 test("content editor surfaces workflow queues and actions", () => {
   const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
   assert.match(source, /contentWorkflowQueue/);
+  assert.match(source, /workflowEntries/);
+  assert.match(source, /status:\s*"all"/);
   assert.match(source, /data-content-workflow/);
   assert.match(source, /Submit for review/);
   assert.match(source, /Schedule publish/);

@@ -107,27 +107,30 @@ async function bootAsStaff(page) {
       }],
     }),
   }));
-  await page.route(/\/api\/admin\/content(?:\?.*)?$/, (route) => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({
-      entries: [{
-        type: "proof_card",
-        slug: "brewery-cip",
-        title: "Brewery CIP",
-        status: "in_review",
-        locale: "en",
-        payload: {
-          kind: "food",
-          image: "img/proof/cases/brewery.webp",
-          image_alt: "Brewery tank cleaned with VertKleen CR and HCR",
-          result: "Matched legacy CIP sequence.",
-        },
-        seo: {},
-        updated_at: "2026-06-25T12:00:00Z",
-      }],
-    }),
-  }));
+  await page.route(/\/api\/admin\/content(?:\?.*)?$/, (route) => {
+    const url = new URL(route.request().url());
+    const status = url.searchParams.get("status") || "published";
+    const workflowEntry = {
+      type: "proof_card",
+      slug: "brewery-cip",
+      title: "Brewery CIP",
+      status: "in_review",
+      locale: "en",
+      payload: {
+        kind: "food",
+        image: "img/proof/cases/brewery.webp",
+        image_alt: "Brewery tank cleaned with VertKleen CR and HCR",
+        result: "Matched legacy CIP sequence.",
+      },
+      seo: {},
+      updated_at: "2026-06-25T12:00:00Z",
+    };
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: status === "all" ? [workflowEntry] : [] }),
+    });
+  });
 }
 
 test("cms editor supports preview, revision history, workflow, and asset picker", async ({ page }) => {
@@ -138,11 +141,14 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(page.locator("#contentPreviewFrame")).toBeVisible();
   await expect(page.locator("#contentRevisionList")).toBeVisible();
   await expect(page.locator("#contentWorkflowQueue")).toBeVisible();
+  await expect(page.locator("#contentStatusFilter")).toHaveValue("published");
+  await expect(page.locator("#contentList")).toContainText("No content entries");
+  await expect(page.locator("#contentWorkflowRows")).toContainText("Brewery CIP");
   await expect(page.locator("#contentManifestRows")).toContainText("services.json");
   await expect(page.locator("#contentManifestRows")).toContainText("services: 1");
   await expect(page.locator("#contentManifestRows")).toContainText("service packages: 1");
 
-  await page.locator("[data-content-edit]").first().click();
+  await page.locator("#contentWorkflowRows [data-content-edit]").first().click();
   await expect(page.locator('[data-content-payload-field="image"]')).toBeVisible();
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
   await expect(page.locator("#contentAssetPicker")).toBeVisible();

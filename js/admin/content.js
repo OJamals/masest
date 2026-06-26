@@ -50,10 +50,11 @@ function mergeStructuredPayload(type, existing, values) {
 function fieldTemplate(field, payload) {
   const value = fieldValue(payload, field.key);
   const cls = field.className || "";
+  const required = field.required ? " required aria-required=\"true\"" : "";
   if (field.kind === "textarea" || field.kind === "list") {
     return `
       <label class="${esc(cls)}">${esc(field.label)}
-        <textarea class="adm-textarea adm-content-field-text" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true">${esc(value)}</textarea>
+        <textarea class="adm-textarea adm-content-field-text" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true"${required}>${esc(value)}</textarea>
       </label>
     `;
   }
@@ -65,7 +66,7 @@ function fieldTemplate(field, payload) {
       </label>
     `;
   }
-  const input = `<input class="adm-input" type="${field.kind === "number" ? "number" : "text"}"${field.kind === "number" ? ' step="0.01"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}">`;
+  const input = `<input class="adm-input" type="${field.kind === "number" ? "number" : "text"}"${field.kind === "number" ? ' step="0.01"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
   if (ASSET_FIELD_KEYS.has(field.key)) {
     return `
       <div class="adm-content-asset-control ${esc(cls)}">
@@ -208,7 +209,7 @@ function workflowTemplate(admEmpty) {
       <div class="adm-panel-header">
         <div>
           <h2>Content operations</h2>
-          <p class="muted">Review, scheduled, and change-request queues from the active filters.</p>
+          <p class="muted">Review, scheduled, and change-request queues stay visible outside the status filter.</p>
         </div>
       </div>
       <div id="contentWorkflowRows" class="adm-list">
@@ -305,7 +306,11 @@ function readStructuredValues() {
   return values;
 }
 
-function selectedFormEntry() {
+function selectedFormEntry({ validate = false } = {}) {
+  const form = document.getElementById("contentForm");
+  if (validate && form && !form.reportValidity()) {
+    throw new Error("Complete the required content fields before saving.");
+  }
   let payload;
   let seo;
   try {
@@ -328,6 +333,7 @@ function selectedFormEntry() {
 export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let mounted = false;
   let assetTargetField = "image";
+  let workflowEntries = [];
 
   function setStatus(text, kind = "") {
     const el = $("contentStatus");
@@ -542,6 +548,14 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     return { type, status };
   }
 
+  async function loadContentEntries({ type = "", status = "published" } = {}) {
+    const query = new URLSearchParams();
+    if (type) query.set("type", type);
+    if (status) query.set("status", status);
+    const data = await api(`/api/admin/content?${query.toString()}`);
+    return data.entries || [];
+  }
+
   function renderList() {
     const list = $("contentList");
     if (!list) return;
@@ -551,7 +565,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   function renderWorkflowQueue() {
     const list = $("contentWorkflowRows");
     if (!list) return;
-    const rows = (state.content || []).filter((entry) => (
+    const rows = (workflowEntries || []).filter((entry) => (
       ["in_review", "changes_requested", "scheduled"].includes(entry.status)
     ));
     if (!rows.length) {
@@ -571,18 +585,19 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (refetch) {
       const list = $("contentList");
       if (list) list.innerHTML = admSkeleton(5);
-      const query = new URLSearchParams();
       const { type, status } = filters();
-      if (type) query.set("type", type);
-      if (status) query.set("status", status);
-      try {
-        const data = await api(`/api/admin/content?${query.toString()}`);
-        state.content = data.entries || [];
+      const listRequest = loadContentEntries({ type, status });
+      const workflowRequest = status === "all" ? listRequest : loadContentEntries({ type, status: "all" });
+      const [listResult, workflowResult] = await Promise.allSettled([listRequest, workflowRequest]);
+      if (listResult.status === "fulfilled") {
+        state.content = listResult.value;
         state.loaded.add("content");
-      } catch (error) {
+      } else {
+        const error = listResult.reason || {};
         state.content = [];
         setStatus(error.data?.message || error.data?.error || "Content entries unavailable.", "err");
       }
+      workflowEntries = workflowResult.status === "fulfilled" ? workflowResult.value : [];
     }
     renderList();
     renderWorkflowQueue();
@@ -593,7 +608,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     try {
       const result = await api("/api/admin/content", {
         method: "POST",
-        body: { publish, entry: selectedFormEntry() },
+        body: { publish, entry: selectedFormEntry({ validate: true }) },
       });
       populateForm(result.entry || {});
       setStatus(
@@ -611,7 +626,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     try {
       const result = await api("/api/admin/content", {
         method: "POST",
-        body: { action, entry: selectedFormEntry() },
+        body: { action, entry: selectedFormEntry({ validate: true }) },
       });
       populateForm(result.entry || {});
       setStatus(`Workflow updated: ${action.replace(/_/g, " ")}.`, "ok");
@@ -675,7 +690,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
 
   function editEntry(key) {
     const [type, slug, locale] = String(key || "").split(":");
-    const entry = (state.content || []).find((row) => (
+    const entry = [...(state.content || []), ...(workflowEntries || [])].find((row) => (
       row.type === type && row.slug === slug && (row.locale || "en") === (locale || "en")
     ));
     if (entry) populateForm(entry);
