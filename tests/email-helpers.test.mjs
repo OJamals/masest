@@ -22,14 +22,18 @@ test("mapResendEvent maps Resend event types to internal status", () => {
   assert.equal(mapResendEvent("email.bounced"), "bounced");
   assert.equal(mapResendEvent("email.complained"), "complained");
   assert.equal(mapResendEvent("email.sent"), "sent");
-  assert.equal(mapResendEvent("email.delivery_delayed"), null);
+  assert.equal(mapResendEvent("email.failed"), "failed");
+  assert.equal(mapResendEvent("email.delivery_delayed"), "delayed");
   assert.equal(mapResendEvent("unknown.event"), null);
 });
 
-test("isSuppressingEvent true only for bounce + complaint", () => {
+test("isSuppressingEvent true only for bounce + complaint (NOT failed/delayed)", () => {
   assert.equal(isSuppressingEvent("email.bounced"), true);
   assert.equal(isSuppressingEvent("email.complained"), true);
   assert.equal(isSuppressingEvent("email.delivered"), false);
+  // failed/delayed update status but must NOT suppress (could be transient)
+  assert.equal(isSuppressingEvent("email.failed"), false);
+  assert.equal(isSuppressingEvent("email.delivery_delayed"), false);
 });
 
 function signSvix(secretB64, id, ts, body) {
