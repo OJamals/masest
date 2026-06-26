@@ -17,6 +17,48 @@ export function filterSuppressed(recipients, suppressedSet) {
   return recipients.filter((addr) => !suppressedSet.has(String(addr).toLowerCase()));
 }
 
+// Categories a recipient may opt out of without losing transactional mail. Everything
+// else (order, billing, team, staff alerts, lead auto-reply) is transactional.
+export const MARKETING_CATEGORIES = new Set(['lead_followup', 'lead_followup_reminder', 'offer']);
+
+export function categoryStream(category) {
+  return MARKETING_CATEGORIES.has(String(category)) ? 'marketing' : 'transactional';
+}
+
+// Per-stream suppression filter. `suppressionMap` is Map<emailLower, Set<stream>>.
+// 'all' (hard bounce/complaint) blocks every category; 'marketing' (unsubscribe) blocks
+// only marketing categories, so a marketing opt-out never kills order/billing receipts.
+export function filterByStream(recipients, category, suppressionMap) {
+  if (!Array.isArray(recipients)) return [];
+  const marketing = categoryStream(category) === 'marketing';
+  return recipients.filter((addr) => {
+    const streams = suppressionMap && suppressionMap.get(String(addr).toLowerCase());
+    if (!streams) return true;
+    if (streams.has('all')) return false;
+    if (marketing && streams.has('marketing')) return false;
+    return true;
+  });
+}
+
+// Signed unsubscribe token: HMAC-SHA256(email) hex. Lets the one-click endpoint suppress
+// only addresses we actually emailed — not arbitrary ones. Async (SubtleCrypto).
+export async function unsubscribeToken(email, secret) {
+  if (!secret || !email) return '';
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(String(email).toLowerCase()));
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function verifyUnsubscribeToken(email, token, secret) {
+  if (!token) return false;
+  const expected = await unsubscribeToken(email, secret);
+  if (!expected || expected.length !== String(token).length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i += 1) diff |= expected.charCodeAt(i) ^ String(token).charCodeAt(i);
+  return diff === 0;
+}
+
 // Maps a Resend webhook event type to an internal email_events.status, or null for
 // unknown events (which leave the row's status untouched).
 export function mapResendEvent(type) {

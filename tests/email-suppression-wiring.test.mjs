@@ -4,9 +4,9 @@ import test from "node:test";
 
 const SRC = readFileSync(new URL("../functions/_lib/supabase.js", import.meta.url), "utf8");
 
-test("sendEmail filters suppressed recipients before sending", () => {
-  assert.match(SRC, /loadSuppressed\(/, "sendEmail must load the suppression set");
-  assert.match(SRC, /filterSuppressed\(/, "sendEmail must filter recipients");
+test("sendEmail filters suppressed recipients per stream before sending", () => {
+  assert.match(SRC, /loadSuppressed\(/, "sendEmail must load the suppression map");
+  assert.match(SRC, /filterByStream\(allTo, category/, "sendEmail must filter by category stream");
 });
 
 test("sendEmail logs an email_events row with category and resend id", () => {

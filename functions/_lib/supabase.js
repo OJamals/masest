@@ -3,7 +3,7 @@
 // Cloudflare has no `process.env`; env vars arrive via the per-request `env` binding,
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
-import { filterSuppressed } from './email.js';
+import { filterByStream, categoryStream, unsubscribeToken } from './email.js';
 import { isStaffEmail, normalizeStaffRole } from './authz.js';
 
 // Service-role client — bypasses RLS. SERVER ONLY. Never return its key or use client-side.
@@ -164,14 +164,21 @@ export async function companyEmails(sb, companyId, category) {
 
 // Fire-and-forget transactional email via Resend. No-op unless RESEND_API_KEY + recipients exist.
 // Load the subset of `emails` that are suppressed. Fails open (empty Set on error).
+// Returns Map<emailLower, Set<stream>> for the given addresses. Fails open (empty Map).
 export async function loadSuppressed(env, emails) {
   try {
     const sb = adminClient(env);
     const lowered = emails.map((e) => String(e).toLowerCase());
-    const { data } = await sb.from('email_suppressions').select('email').in('email', lowered);
-    return new Set((data || []).map((r) => r.email.toLowerCase()));
+    const { data } = await sb.from('email_suppressions').select('email,stream').in('email', lowered);
+    const map = new Map();
+    for (const r of data || []) {
+      const key = String(r.email).toLowerCase();
+      if (!map.has(key)) map.set(key, new Set());
+      map.get(key).add(r.stream || 'all');
+    }
+    return map;
   } catch {
-    return new Set();
+    return new Map();
   }
 }
 
@@ -194,12 +201,13 @@ export async function updateEmailStatus(env, resendId, status) {
   } catch { /* advisory */ }
 }
 
-// Upsert a suppression (best-effort).
-export async function recordSuppression(env, email, reason) {
+// Upsert a suppression for one stream (best-effort). stream 'all' = hard block
+// (bounce/complaint, the default); 'marketing' = unsubscribe (transactional still sends).
+export async function recordSuppression(env, email, reason, stream = 'all') {
   if (!email) return;
   try {
     await adminClient(env).from('email_suppressions')
-      .upsert({ email: String(email).toLowerCase(), reason }, { onConflict: 'email' });
+      .upsert({ email: String(email).toLowerCase(), reason, stream }, { onConflict: 'email,stream' });
   } catch { /* advisory */ }
 }
 
@@ -209,8 +217,10 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
   if (!env.RESEND_API_KEY || (!allTo.length && !allBcc.length)) return false;
   const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
   const suppressed = await loadSuppressed(env, [...allTo, ...allBcc]);
-  const toR = filterSuppressed(allTo, suppressed).slice(0, 50);
-  const bccR = filterSuppressed(allBcc, suppressed).slice(0, 50);
+  // Per-stream: a marketing opt-out blocks only marketing categories; hard blocks ('all')
+  // block everything. Transactional receipts survive a marketing unsubscribe.
+  const toR = filterByStream(allTo, category, suppressed).slice(0, 50);
+  const bccR = filterByStream(allBcc, category, suppressed).slice(0, 50);
   const logTo = [...allTo, ...allBcc].join(', ');
   if (!toR.length && !bccR.length) {
     await logEmailEvent(env, { to_email: logTo, category, subject, status: 'failed', error: 'all_recipients_suppressed' });
@@ -224,6 +234,15 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
   const reply = replyTo || env.RESEND_REPLY_TO || null;
   const headers = { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' };
   if (idempotencyKey) headers['Idempotency-Key'] = String(idempotencyKey).slice(0, 256);
+  // Marketing categories carry a one-click List-Unsubscribe (token-signed, single recipient)
+  // → suppresses only the 'marketing' stream, so the buyer keeps order/billing receipts.
+  if (categoryStream(category) === 'marketing' && env.EMAIL_UNSUB_SECRET && toR.length === 1) {
+    const target = toR[0];
+    const tok = await unsubscribeToken(target, env.EMAIL_UNSUB_SECRET);
+    const url = `${env.APP_URL || 'https://masest.co'}/api/email/unsubscribe?email=${encodeURIComponent(target)}&token=${tok}`;
+    headers['List-Unsubscribe'] = `<${url}>`;
+    headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+  }
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
