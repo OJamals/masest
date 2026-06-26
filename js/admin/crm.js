@@ -98,7 +98,10 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-del="${esc(c.id)}" aria-label="Delete contact">Delete</button>
       </span></li>`).join('')}</ul>`
       : admEmpty('ph-address-book', 'No contacts', 'Add procurement, plant or maintenance contacts for this account.');
-    return composer + list;
+    const importBar = `<div class="crm-contact-import">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer">Import CSV<input type="file" accept=".csv,text/csv" data-crm-contact-import hidden></label>
+      <span class="muted" style="font-size:.78rem">columns: name, role, title, email, phone</span></div>`;
+    return composer + importBar + list;
   }
 
   async function load(body, subjectType, subjectId, tab) {
@@ -257,6 +260,23 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         try { await api('/api/admin/crm/tasks', { method: 'PATCH', body: { id: toggle.dataset.crmTaskToggle, action } }); load(body, subjectType, subjectId, 'tasks'); }
         catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); toggle.disabled = false; }
       }
+    });
+
+    panel.addEventListener('change', async (event) => {
+      const imp = event.target.closest('[data-crm-contact-import]');
+      if (!imp || !imp.files || !imp.files[0]) return;
+      const file = imp.files[0];
+      imp.disabled = true;
+      try {
+        const csv = await file.text();
+        const res = await api('/api/admin/crm/contacts', { method: 'POST', body: { action: 'import', company_id: subjectId, csv } });
+        await load(body, subjectType, subjectId, 'contacts');
+        body.insertAdjacentHTML('afterbegin', `<p class="adm-status" data-state="ok">Imported ${res.inserted}, skipped ${res.skipped}.</p>`);
+      } catch (err) {
+        body.insertAdjacentHTML('beforeend', errRow(err.data?.error));
+      }
+      imp.value = '';
+      imp.disabled = false;
     });
 
     panel.addEventListener('submit', async (event) => {

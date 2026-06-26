@@ -337,6 +337,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 
 /* CRM contacts (company drawer) — slice 4 */
 .crm-contact-form { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.crm-contact-import { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
 .crm-contact-form input { flex: 1 1 140px; }
 .crm-contact-primary-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted, #6b7280); white-space: nowrap; }
 .crm-contact-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }

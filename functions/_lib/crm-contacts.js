@@ -86,3 +86,44 @@ export function mergeFields(survivor = {}, loser = {}) {
   }
   return out;
 }
+
+const CSV_COLS = ['name', 'role', 'title', 'email', 'phone'];
+
+// Split one CSV line, honoring double-quoted fields with embedded commas + "" escapes.
+function splitCsvLine(line) {
+  const out = [];
+  let cur = '';
+  let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (q) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; } else q = false;
+      } else cur += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ',') { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+// Parse a contacts CSV into row objects {name,role,title,email,phone}. Detects a header
+// row (any recognized column name) and maps by it; otherwise treats columns positionally
+// in CSV_COLS order. Rows without a name are dropped. Pure — unit-tested.
+export function parseContactsCsv(text) {
+  const lines = String(text || '').split(/\r\n|\r|\n/).filter((l) => l.trim() !== '');
+  if (!lines.length) return [];
+  const first = splitCsvLine(lines[0]).map((c) => c.trim().toLowerCase());
+  const hasHeader = first.some((c) => CSV_COLS.includes(c));
+  const map = hasHeader ? first.map((c) => (CSV_COLS.includes(c) ? c : null)) : CSV_COLS;
+  const start = hasHeader ? 1 : 0;
+  const out = [];
+  for (let i = start; i < lines.length; i++) {
+    const cells = splitCsvLine(lines[i]);
+    const row = {};
+    cells.forEach((val, idx) => { const key = map[idx]; if (key) row[key] = String(val).trim(); });
+    if (row.name) out.push(row);
+  }
+  return out;
+}
