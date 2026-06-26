@@ -211,3 +211,26 @@ path proven without a pointer); loading / empty / error states present; new endp
 schema tests added; PR opened off `feat/crm-contact-view` (owner merges Slice 1 + 2, or this slice
 rebases onto `main` if Slice 1 merges first). `schema-crm-pipeline.sql` handed to owner for prod
 apply. Durable decisions recorded in file memory.
+
+---
+
+## Addendum — Slice 3 (Pipeline Reporting) folded into this PR
+
+Reporting was originally listed as a later slice. Because it is the direct payoff of the
+pipeline data and adds no shared-file surface, it was built into this branch as a third
+**Reports** view on the Quotes toggle (List | Board | Reports):
+
+- **Pure aggregators** in `functions/_lib/crm-pipeline.js`: `conversionFunnel` (reached-count
+  funnel + step rates, lost excluded), `forecastByMonth` (open valued deals by `expected_close`
+  YYYY-MM, weighted, `unscheduled` bucket last), `lossReasonBreakdown`, `pipelineKpis`
+  (open/won/lost counts + values, win rate, avg deal), and `pipelineReport` bundling all four.
+- **API** `GET /api/admin/quotes?view=report` returns `pipelineReport` over all non-spam rows.
+- **UI** `renderReport()` in `js/admin/quotes.js`: KPI cards, conversion-funnel bars,
+  weighted-forecast-by-month bars, loss-reason chips. CSS `.pipe-report*` / `.pipe-kpi*` /
+  `.pipe-bar*` in `css/components.css`.
+- **Tests**: `tests/admin-crm-report-lib.test.mjs` (5) + report assertions in
+  `tests/admin-quotes-pipeline.test.mjs` + a second Playwright test (Reports KPIs/funnel/forecast).
+  Full suite 700/700.
+
+Still deferred: contact-level records, email templates/sequences, saved segments, multiple
+pipelines, round-robin/SLA.
