@@ -25,6 +25,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
   }
 
   function timelineIcon(type) {
+    if (type === 'note:chat') return 'ph-chat-circle';
     if (type.startsWith('note')) return 'ph-note';
     if (type.startsWith('task')) return 'ph-check-square';
     return ({ order: 'ph-package', message: 'ph-chat-circle', shipment: 'ph-truck', audit: 'ph-shield', quote: 'ph-file-text' })[type] || 'ph-circle';

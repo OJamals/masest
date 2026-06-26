@@ -120,6 +120,23 @@ async function insertMessage(sb, row) {
   return data;
 }
 
+// Mirror a chat line into the CRM timeline as a company note (kind 'chat'). Best-effort:
+// the message already landed in `messages`; a missing crm_notes table or constraint must
+// never fail the webhook. Called only for newly-synced messages, so retries don't double-log.
+async function logChatNote(sb, { companyId, text, isOperator }) {
+  try {
+    await sb.from('crm_notes').insert({
+      subject_type: 'company',
+      subject_id: String(companyId),
+      kind: 'chat',
+      body: String(text).slice(0, 4000),
+      created_by: isOperator ? 'crisp:operator' : 'crisp:visitor',
+    });
+  } catch {
+    // chat still lives in messages; CRM mirror is non-critical
+  }
+}
+
 async function routeCrispMessage(sb, env, event) {
   const data = event.data || {};
   const sessionId = clean(data.session_id, 120);
@@ -158,6 +175,8 @@ async function routeCrispMessage(sb, env, event) {
       link: '/dashboard.html#messages',
     });
   }
+
+  await logChatNote(sb, { companyId, text, isOperator });
 
   return { routed: true, id: inserted?.id };
 }
