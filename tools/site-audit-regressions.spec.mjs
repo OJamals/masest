@@ -61,6 +61,30 @@ test("shared chrome keeps one skip link after hydration", async ({ page }) => {
   await expect(page.locator('.skip-link[href="#main"]')).toHaveCount(1);
 });
 
+test("newsletter signup keeps a labelled touch-sized email field", async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 1000 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${BASE_URL}/newsletter.html`, { waitUntil: "domcontentloaded" });
+
+    const email = page.locator("#newsletterForm").getByLabel("Email address");
+    await expect(email).toBeVisible();
+    const box = await email.boundingBox();
+    expect(box?.width, `${viewport.width} email width`).toBeGreaterThanOrEqual(240);
+    expect(box?.height, `${viewport.width} email height`).toBeGreaterThanOrEqual(44);
+  }
+});
+
+test("industry thumbnails expose explicit link names", async ({ page }) => {
+  await page.goto(`${BASE_URL}/industries.html`, { waitUntil: "domcontentloaded" });
+
+  const labels = await page.locator(".row-thumb").evaluateAll((links) => links.map((link) => link.getAttribute("aria-label")));
+  expect(labels.length).toBeGreaterThanOrEqual(10);
+  expect(labels.every(Boolean)).toBe(true);
+});
+
 test("core pages keep visible heading levels sequential", async ({ page }) => {
   for (const pagePath of ["index.html", "contact.html?type=quote", "cart.html"]) {
     await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
