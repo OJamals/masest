@@ -211,7 +211,7 @@ export async function recordSuppression(env, email, reason, stream = 'all') {
   } catch { /* advisory */ }
 }
 
-export async function sendEmail(env, { to, bcc = [], subject, html, text = null, category = null, idempotencyKey = null, replyTo = null }) {
+export async function sendEmail(env, { to, bcc = [], subject, html, text = null, category = null, idempotencyKey = null, replyTo = null, attachments = [] }) {
   const allTo = Array.isArray(to) ? to : [];
   const allBcc = Array.isArray(bcc) ? bcc : [];
   if (!env.RESEND_API_KEY || (!allTo.length && !allBcc.length)) return false;
@@ -250,6 +250,9 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
       body: JSON.stringify({
         from, to: payloadTo, ...(bccR.length ? { bcc: bccR } : {}), subject, html,
         ...(text ? { text } : {}), ...(reply ? { reply_to: reply } : {}),
+        // Resend fetches `path` URLs itself (no extra latency here); 40MB cap. Caller
+        // builds these (e.g. order SDS PDFs via sds-docs.js); omitted when empty.
+        ...(Array.isArray(attachments) && attachments.length ? { attachments } : {}),
       }),
     });
     let resendId = null;
