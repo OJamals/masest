@@ -11,6 +11,36 @@ const RESEND_STATUS = {
   "email.delivery_delayed": "delayed",
 };
 
+// Derive a readable text/plain alternative from a branded HTML email body. Multipart
+// mail (text + html) scores better with spam filters and serves plain-text clients and
+// screen readers. Best-effort, not a full HTML parser: drops style/script, turns links
+// into "label (url)", maps block-level tags to line breaks, strips remaining tags, and
+// decodes the handful of entities our templates emit. Returns '' for empty/blank input.
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'", nbsp: ' ', middot: '·', mdash: '—', ndash: '–' };
+
+export function htmlToText(html) {
+  let s = String(html || '');
+  if (!s.trim()) return '';
+  s = s.replace(/<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ');
+  // <a href="url">label</a> → "label (url)", but skip when the label already is the url.
+  s = s.replace(/<a\b[^>]*?href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, (_m, href, label) => {
+    const text = label.replace(/<[^>]+>/g, '').trim();
+    const url = String(href).trim();
+    if (!url || url.startsWith('mailto:') || text === url) return text || url;
+    return `${text} (${url})`;
+  });
+  s = s.replace(/<\s*br\s*\/?\s*>/gi, '\n');
+  s = s.replace(/<\/(p|div|tr|h[1-6]|li|table|thead|tbody)\s*>/gi, '\n');
+  s = s.replace(/<\s*(li)\b[^>]*>/gi, '• ');
+  s = s.replace(/<td\b[^>]*>/gi, '  ').replace(/<\/td\s*>/gi, '');
+  s = s.replace(/<[^>]+>/g, '');
+  s = s.replace(/&(#?\w+);/g, (m, e) => (e in ENTITIES ? ENTITIES[e] : m));
+  // Collapse runs of spaces/tabs, trim each line, cap consecutive blank lines at one.
+  s = s.replace(/[ \t]+/g, ' ').split('\n').map((l) => l.trim()).join('\n');
+  s = s.replace(/\n{3,}/g, '\n\n').trim();
+  return s;
+}
+
 // Returns recipients not present in the suppression set (case-insensitive on email).
 export function filterSuppressed(recipients, suppressedSet) {
   if (!Array.isArray(recipients)) return [];
