@@ -1,8 +1,18 @@
 // /api/admin/crm/timeline — virtual, read-time merge of a contact's activity.
 // Queries existing per-company signals + crm_notes/crm_tasks; never instruments
 // write paths. Each source is wrapped in safe() so a missing table degrades to [].
-import { adminClient, json, requireStaff } from '../../../_lib/supabase.js';
-import { mergeTimeline, validSubject } from '../../../_lib/crm.js';
+import { adminClient, json, requireStaff, companyEmails } from '../../../_lib/supabase.js';
+import { mergeTimeline, validSubject, filterCompanyEmails } from '../../../_lib/crm.js';
+
+// Resolve a company's known email addresses — member accounts (via auth) + CRM contacts —
+// so deliverability events can be matched to it. Best-effort, deduped, bounded.
+async function companyEmailSet(sb, env, companyId) {
+  const [members, contacts] = await Promise.all([
+    companyEmails(sb, companyId).catch(() => []),
+    safe(sb.from('crm_contacts').select('email').eq('company_id', companyId).is('deleted_at', null).not('email', 'is', null).limit(100)).then((rows) => rows.map((r) => r.email)),
+  ]);
+  return [...new Set([...members, ...contacts].map((e) => String(e || '').toLowerCase().trim()).filter(Boolean))].slice(0, 25);
+}
 
 async function safe(builder) {
   try {
@@ -44,7 +54,14 @@ export async function onRequest({ request, env }) {
       orderIds.length ? safe(sb.from('shipment_events').select('order_id,status,carrier,tracking_number,created_at').in('order_id', orderIds).order('created_at', { ascending: false }).limit(100)) : Promise.resolve([]),
       name ? safe(sb.from('quotes').select('id,type,status,product,created_at').ilike('company', name).order('created_at', { ascending: false }).limit(50)) : Promise.resolve([]),
     ]);
-    extra = { orders, messages, audit, shipments, quotes };
+    // Deliverability: match email_events to the company's emails. to_email is a comma-joined
+    // recipient list, so a per-address ILIKE (PostgREST-parameterized → no injection) finds
+    // events regardless of age; filterCompanyEmails dedups and re-confirms the match.
+    const addrs = await companyEmailSet(sb, env, id);
+    const eventLists = await Promise.all(addrs.map((addr) =>
+      safe(sb.from('email_events').select('id,to_email,category,subject,status,created_at').ilike('to_email', `%${addr}%`).order('created_at', { ascending: false }).limit(50))));
+    const emails = filterCompanyEmails(eventLists.flat(), addrs);
+    extra = { orders, messages, audit, shipments, quotes, emails };
   } else if (subjectType === 'contact') {
     // A contact's activity = the deals it's the buyer on (quotes.contact_id) + its notes/tasks.
     const quotes = await safe(sb.from('quotes').select('id,type,status,product,created_at').eq('contact_id', Number(id) || -1).order('created_at', { ascending: false }).limit(50));

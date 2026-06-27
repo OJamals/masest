@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validSubject, noteRow, taskRow, taskPatch, mergeTimeline, NOTE_KINDS } from '../functions/_lib/crm.js';
+import { validSubject, noteRow, taskRow, taskPatch, mergeTimeline, filterCompanyEmails, NOTE_KINDS } from '../functions/_lib/crm.js';
 
 test('validSubject accepts known types with an id', () => {
   assert.equal(validSubject('company', 'c1'), true);
@@ -56,4 +56,40 @@ test('mergeTimeline normalizes, sorts newest-first and bounds', () => {
 test('mergeTimeline respects the limit', () => {
   const orders = Array.from({ length: 50 }, (_, i) => ({ id: i, status: 'x', created_at: `2026-06-${String((i % 27) + 1).padStart(2, '0')}T00:00:00Z` }));
   assert.equal(mergeTimeline({ orders }, { limit: 10 }).length, 10);
+});
+
+test('mergeTimeline includes email events with status-typed entries', () => {
+  const out = mergeTimeline({
+    emails: [
+      { id: 1, to_email: 'b@x.co', subject: 'Order confirmed', category: 'order', status: 'delivered', created_at: '2026-06-25T00:00:00Z' },
+      { id: 2, to_email: 'b@x.co', subject: 'Offer', category: 'offer', status: 'bounced', created_at: '2026-06-26T00:00:00Z' },
+    ],
+  });
+  assert.equal(out[0].type, 'email:bounced', 'newest first');
+  assert.match(out[0].detail, /Offer · offer/);
+  assert.equal(out[1].type, 'email:delivered');
+  assert.match(out[1].detail, /Order confirmed/);
+});
+
+test('filterCompanyEmails keeps only events for the company addresses, deduped', () => {
+  const events = [
+    { id: 1, to_email: 'buyer@acme.co, notify@masest.co' }, // joined recipient list
+    { id: 2, to_email: 'BUYER@ACME.CO' },                    // case-insensitive
+    { id: 1, to_email: 'buyer@acme.co' },                    // duplicate id → dropped
+    { id: 3, to_email: 'someone-else@other.co' },            // no match → dropped
+    { id: 4, to_email: '' },                                 // empty → dropped
+  ];
+  const out = filterCompanyEmails(events, ['buyer@acme.co']);
+  assert.deepEqual(out.map((e) => e.id), [1, 2]);
+});
+
+test('filterCompanyEmails returns [] when no company emails are known', () => {
+  assert.deepEqual(filterCompanyEmails([{ id: 1, to_email: 'a@b.co' }], []), []);
+});
+
+test('filterCompanyEmails matches a full address inside a joined recipient list', () => {
+  // The needle is a whole company address; it is found as a substring of the
+  // comma-joined to_email — the reason matching is substring rather than equality.
+  const out = filterCompanyEmails([{ id: 1, to_email: 'ops@masest.co, buyer@acme.co' }], ['buyer@acme.co']);
+  assert.deepEqual(out.map((e) => e.id), [1]);
 });
