@@ -94,6 +94,11 @@ export async function onRequest({ request, env }) {
       const { data, error } = await sb.from('crm_contacts').update(built.patch).eq('id', existing.id).select(SELECT).single();
       if (error) return json(500, { error: error.message });
       await recordAudit(sb, { user, action: 'crm.contact_update', targetType: 'company', targetId: existing.company_id, detail: { contact: existing.id } });
+      // Propagate the edit to Crisp People so the operator-facing profile stays in sync. Best-effort.
+      if (data?.email) {
+        const { data: co } = await sb.from('companies').select('name').eq('id', data.company_id).maybeSingle();
+        await upsertCrispPerson(env, { email: data.email, name: data.name, company: co?.name, phone: data.phone });
+      }
       return json(200, { ok: true, contact: data });
     }
 

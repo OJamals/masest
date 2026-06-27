@@ -56,14 +56,22 @@ export async function sendCrispMessage(env, { sessionId, text } = {}) {
 }
 
 // Seed/refresh a CRM contact in Crisp People so operators see account context when the
-// person chats. Best-effort: 201 created or 409 already-exists both count as ok.
+// person chats. Creates via POST; if the profile already exists (409), PATCHes it so CRM
+// edits (name / phone / company) propagate instead of going stale. People sub-routes accept
+// the email as the people_id. Best-effort: any non-2xx / network error is a no-op, never a throw.
 export async function upsertCrispPerson(env, contact = {}) {
   if (!crispConfigured(env) || !contact.email) return { ok: false, skipped: true };
+  const base = `${CRISP_API}/website/${env.MASEST_CRISP_ID}/people/profile`;
+  const body = JSON.stringify(buildPersonProfile(contact));
   try {
-    const resp = await fetch(`${CRISP_API}/website/${env.MASEST_CRISP_ID}/people/profile`, {
-      method: 'POST', headers: authHeaders(env), body: JSON.stringify(buildPersonProfile(contact)),
-    });
-    return { ok: resp.status === 201 || resp.status === 200 || resp.status === 409, status: resp.status };
+    const resp = await fetch(base, { method: 'POST', headers: authHeaders(env), body });
+    if (resp.status === 201 || resp.status === 200) return { ok: true, status: resp.status, created: true };
+    if (resp.status === 409) {
+      const pid = encodeURIComponent(String(contact.email).toLowerCase());
+      const upd = await fetch(`${base}/${pid}`, { method: 'PATCH', headers: authHeaders(env), body });
+      return { ok: upd.status >= 200 && upd.status < 300, status: upd.status, updated: true };
+    }
+    return { ok: false, status: resp.status };
   } catch {
     return { ok: false, error: true };
   }
