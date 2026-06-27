@@ -39,7 +39,7 @@ export async function onRequest({ request, env }) {
         if (!staffCan(role, "content.write")) {
           return json(403, { error: "forbidden", message: "Submitting content requires owner access." });
         }
-        result = await repo.transition(entry, user.id, "in_review", "Submitted for review");
+        result = await repo.transition(entry, user.id, "in_review", body.note || "Submitted for review");
       } else if (action === "request_changes") {
         if (!staffCan(role, "content.review")) {
           return json(403, { error: "forbidden", message: "Requesting changes requires owner access." });
@@ -57,7 +57,7 @@ export async function onRequest({ request, env }) {
           });
         }
         entry.scheduled_at = scheduledAt.toISOString();
-        result = await repo.transition(entry, user.id, "scheduled", "Scheduled publish");
+        result = await repo.transition(entry, user.id, "scheduled", body.note || "Scheduled publish");
       } else if (action === "publish") {
         if (!staffCan(role, "content.publish")) {
           return json(403, { error: "forbidden", message: "Publishing content requires owner access." });

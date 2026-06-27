@@ -134,6 +134,9 @@ function formTemplate() {
         <label class="wide">Title <input id="contentTitle" class="adm-input" required></label>
         <label class="wide">Slug <input id="contentSlug" class="adm-input" required></label>
         <label class="wide">Publish at <input id="contentScheduledAt" class="adm-input" type="datetime-local"></label>
+        <label class="full">Workflow note
+          <textarea id="contentWorkflowNote" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
+        </label>
         <div id="contentStructuredFields" class="adm-content-fields full"></div>
         <label class="full">Payload JSON <textarea id="contentPayload" class="adm-textarea" spellcheck="false">{}</textarea></label>
         <label class="full">SEO JSON <textarea id="contentSeo" class="adm-textarea" spellcheck="false">{}</textarea></label>
@@ -456,6 +459,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     $("contentTitle").value = entry.title || "";
     $("contentSlug").value = entry.slug || "";
     $("contentScheduledAt").value = dateTimeLocalValue(entry.scheduled_at);
+    $("contentWorkflowNote").value = entry.review_note || "";
     slugManuallyEdited = Boolean(entry.slug);
     lastGeneratedSlug = slugifyContentTitle(entry.title || "");
     $("contentPayload").value = jsonText(entry.payload);
@@ -657,6 +661,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         <b>${esc(entry.title)}</b>
         <span>${esc(labelFor(TYPES, entry.type))} · ${esc(entry.status.replace(/_/g, " "))}</span>
         ${entry.status === "scheduled" && scheduledDisplay(entry.scheduled_at) ? `<small>Scheduled for ${esc(scheduledDisplay(entry.scheduled_at))}</small>` : ""}
+        ${entry.review_note ? `<small>${esc(entry.review_note)}</small>` : ""}
       </button>
     `).join("");
   }
@@ -710,10 +715,11 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         $("contentScheduledAt")?.focus();
         return;
       }
+      const note = $("contentWorkflowNote")?.value.trim() || "";
       setStatus(`Updating workflow: ${action.replace(/_/g, " ")}...`);
       const result = await api("/api/admin/content", {
         method: "POST",
-        body: { action, entry },
+        body: { action, note, entry },
       });
       populateForm(result.entry || {});
       setStatus(`Workflow updated: ${action.replace(/_/g, " ")}.`, "ok");

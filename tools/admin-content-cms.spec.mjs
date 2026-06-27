@@ -231,6 +231,57 @@ test("content editor requires a datetime before scheduling publish", async ({ pa
   expect(postCount).toBe(0);
 });
 
+test("content editor sends workflow notes and surfaces review notes", async ({ page }) => {
+  await bootAsStaff(page);
+
+  let workflowBody = null;
+  let entries = contentList().entries;
+  await page.route("**/api/admin/content**", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      workflowBody = req.postDataJSON();
+      const workflowEntry = {
+        ...workflowBody.entry,
+        status: "changes_requested",
+        review_note: workflowBody.note,
+      };
+      entries = [workflowEntry];
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, entry: workflowEntry }),
+      });
+    }
+    const url = new URL(req.url());
+    const status = url.searchParams.get("status") || "published";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: status === "all" ? entries : entries.filter((entry) => entry.status === status) }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("[data-content-edit]").first().click();
+
+  const note = "Tighten the compliance wording before publishing.";
+  await expect(page.locator("#contentWorkflowNote")).toBeVisible();
+  await page.locator("#contentWorkflowNote").fill(note);
+
+  const workflowResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('[data-content-workflow="request_changes"]').click();
+  await workflowResponse;
+
+  expect(workflowBody.action).toBe("request_changes");
+  expect(workflowBody.note).toBe(note);
+  await expect(page.locator("#contentWorkflowNote")).toHaveValue(note);
+  await expect(page.locator("#contentWorkflowRows")).toContainText("Water analysis");
+  await expect(page.locator("#contentWorkflowRows")).toContainText(note);
+});
+
 test("mobile content editor switches to page metadata fields without overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await bootAsStaff(page);

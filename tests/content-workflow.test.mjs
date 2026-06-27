@@ -18,6 +18,8 @@ test("content API exposes workflow actions with publish and review permissions",
   assert.match(source, /action === "request_changes"/);
   assert.match(source, /action === "schedule"/);
   assert.match(source, /scheduled_at_required/);
+  assert.match(source, /body\.note \|\| "Submitted for review"/);
+  assert.match(source, /body\.note \|\| "Scheduled publish"/);
   assert.match(source, /staffCan\(role, "content\.review"\)/);
   assert.match(source, /staffCan\(role, "content\.publish"\)/);
 });
@@ -28,6 +30,8 @@ test("content editor surfaces workflow queues and actions", () => {
   assert.match(source, /workflowEntries/);
   assert.match(source, /status:\s*"all"/);
   assert.match(source, /data-content-workflow/);
+  assert.match(source, /contentWorkflowNote/);
+  assert.match(source, /body:\s*\{\s*action,\s*note,\s*entry\s*\}/);
   assert.match(source, /Submit for review/);
   assert.match(source, /Schedule publish/);
 });
