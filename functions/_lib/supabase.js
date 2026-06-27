@@ -3,7 +3,7 @@
 // Cloudflare has no `process.env`; env vars arrive via the per-request `env` binding,
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
-import { filterByStream, categoryStream, unsubscribeToken } from './email.js';
+import { filterByStream, categoryStream, unsubscribeToken, htmlToText } from './email.js';
 import { isStaffEmail, normalizeStaffRole } from './authz.js';
 
 // Service-role client — bypasses RLS. SERVER ONLY. Never return its key or use client-side.
@@ -232,6 +232,9 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
   // Idempotency-Key dedupes a logical email for 24h, so a retried Stripe/QBO webhook
   // can't double-send. reply_to defaults to RESEND_REPLY_TO so replies reach a human.
   const reply = replyTo || env.RESEND_REPLY_TO || null;
+  // Always send multipart: a caller-supplied text wins, else derive one from the HTML.
+  // text/plain improves spam scoring and serves plain-text clients + screen readers.
+  const bodyText = text || htmlToText(html) || null;
   const headers = { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' };
   if (idempotencyKey) headers['Idempotency-Key'] = String(idempotencyKey).slice(0, 256);
   // Marketing categories carry a one-click List-Unsubscribe (token-signed, single recipient)
@@ -249,7 +252,7 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
       headers,
       body: JSON.stringify({
         from, to: payloadTo, ...(bccR.length ? { bcc: bccR } : {}), subject, html,
-        ...(text ? { text } : {}), ...(reply ? { reply_to: reply } : {}),
+        ...(bodyText ? { text: bodyText } : {}), ...(reply ? { reply_to: reply } : {}),
         // Resend fetches `path` URLs itself (no extra latency here); 40MB cap. Caller
         // builds these (e.g. order SDS PDFs via sds-docs.js); omitted when empty.
         ...(Array.isArray(attachments) && attachments.length ? { attachments } : {}),

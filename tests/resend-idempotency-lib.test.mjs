@@ -19,5 +19,9 @@ test('Idempotency-Key header is set only when a key is supplied (deduped 24h)', 
 
 test('reply_to falls back to RESEND_REPLY_TO; text + reply_to only when present', () => {
   assert.match(src, /const reply = replyTo \|\| env\.RESEND_REPLY_TO \|\| null/);
-  assert.match(src, /\.\.\.\(text \? \{ text \} : \{\}\), \.\.\.\(reply \? \{ reply_to: reply \} : \{\}\)/);
+  assert.match(src, /\.\.\.\(bodyText \? \{ text: bodyText \} : \{\}\), \.\.\.\(reply \? \{ reply_to: reply \} : \{\}\)/);
+});
+
+test('a text/plain body is derived from the HTML when the caller omits one', () => {
+  assert.match(src, /const bodyText = text \|\| htmlToText\(html\) \|\| null/);
 });
