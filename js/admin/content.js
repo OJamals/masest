@@ -179,10 +179,27 @@ function assetPickerTemplate(admEmpty) {
           <h2>Asset manager</h2>
           <p class="muted">Upload CMS images or select existing asset metadata for structured fields.</p>
         </div>
+        <button class="btn btn-ghost btn-sm" type="button" data-content-action="close_assets">
+          <i class="ph ph-x" aria-hidden="true"></i> Close
+        </button>
+      </div>
+      <div class="adm-content-asset-tools">
+        <input id="contentAssetSearch" class="adm-search" type="search" placeholder="Search asset paths" aria-label="Search CMS assets">
+        <select id="contentAssetStatusFilter" class="adm-select" aria-label="Filter CMS asset status">
+          <option value="available">Available assets</option>
+          <option value="archived">Archived assets</option>
+          <option value="all">All assets</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" type="button" data-content-action="refresh_assets">
+          <i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh
+        </button>
       </div>
       <form id="contentAssetUpload" class="adm-content-upload" onsubmit="return false">
+        <label>Folder
+          <input id="contentAssetFolder" class="adm-input" type="text" value="cms" maxlength="64">
+        </label>
         <label>Image file
-          <input id="contentAssetFile" class="adm-input" type="file" accept="image/*">
+          <input id="contentAssetFile" class="adm-input" type="file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp">
         </label>
         <label>Alt text
           <input id="contentAssetAlt" class="adm-input" type="text" placeholder="Describe the image">
@@ -191,7 +208,21 @@ function assetPickerTemplate(admEmpty) {
           <i class="ph ph-upload-simple" aria-hidden="true"></i> Upload
         </button>
       </form>
-      <div class="adm-list">${admEmpty("ph-image", "No assets", "Add asset metadata before selecting media.")}</div>
+      <form id="contentAssetRegister" class="adm-content-register" onsubmit="return false">
+        <label>Existing path or URL
+          <input id="contentAssetPath" class="adm-input" type="text" placeholder="img/proof/cases/example.webp">
+        </label>
+        <label>Alt text
+          <input id="contentAssetPathAlt" class="adm-input" type="text" placeholder="Describe the image">
+        </label>
+        <label>Credit
+          <input id="contentAssetCredit" class="adm-input" type="text" placeholder="Optional">
+        </label>
+        <button class="btn btn-secondary btn-sm" type="button" data-content-action="register_asset">
+          <i class="ph ph-link-simple" aria-hidden="true"></i> Register
+        </button>
+      </form>
+      <div id="contentAssetRows" class="adm-list" aria-live="polite">${admEmpty("ph-image", "No assets", "Add asset metadata before selecting media.")}</div>
     </div>
   `;
 }
@@ -552,23 +583,46 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
-  async function openAssetPicker(fieldKey) {
+  function closeAssetPicker() {
     const panel = $("contentAssetPicker");
-    if (!panel) return;
-    assetTargetField = fieldKey || assetTargetField || "image";
-    panel.hidden = false;
-    const list = panel.querySelector(".adm-list");
+    if (panel) panel.hidden = true;
+  }
+
+  function assetValue(asset = {}) {
+    return asset.public_url || asset.storage_path || "";
+  }
+
+  function assetRowTemplate(asset = {}) {
+    const value = assetValue(asset);
+    const status = asset.status || "available";
+    return `
+      <button class="adm-list-row adm-content-asset-row" type="button" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">
+        <span class="adm-content-asset-thumb" aria-hidden="true">${value ? `<img src="${esc(value)}" alt="" loading="lazy">` : `<i class="ph ph-image"></i>`}</span>
+        <span class="adm-content-asset-info">
+          <b>${esc(asset.storage_path || value)}</b>
+          <span>${esc(asset.alt || "No alt text")}</span>
+          <small>${esc([status, asset.credit || "", asset.mime_type || ""].filter(Boolean).join(" · "))}</small>
+        </span>
+      </button>
+    `;
+  }
+
+  async function loadAssets() {
+    const panel = $("contentAssetPicker");
+    const list = $("contentAssetRows") || panel?.querySelector(".adm-list");
     if (!list) return;
+    const query = new URLSearchParams();
+    const q = $("contentAssetSearch")?.value.trim() || "";
+    const status = $("contentAssetStatusFilter")?.value || "available";
+    if (q) query.set("q", q);
+    if (status) query.set("status", status);
     list.innerHTML = admSkeleton(5);
     try {
-      const data = await api("/api/admin/content-assets");
+      const path = `/api/admin/content-assets${query.toString() ? `?${query.toString()}` : ""}`;
+      const data = await api(path);
       const assets = data.assets || [];
-      list.innerHTML = assets.map((asset) => `
-        <button class="adm-list-row adm-content-asset-row" type="button" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(asset.public_url || asset.storage_path)}" data-content-asset-alt="${esc(asset.alt || "")}">
-          <b>${esc(asset.storage_path)}</b>
-          <span>${esc(asset.alt || "")}</span>
-        </button>
-      `).join("") || admEmpty("ph-image", "No assets", "Add asset metadata before selecting media.");
+      list.innerHTML = assets.map((asset) => assetRowTemplate(asset)).join("")
+        || admEmpty("ph-image", "No assets", "Upload an image or register an existing path.");
     } catch (error) {
       list.innerHTML = admEmpty(
         "ph-warning",
@@ -576,6 +630,14 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         error.data?.message || error.data?.error || error.message || "Try again.",
       );
     }
+  }
+
+  async function openAssetPicker(fieldKey) {
+    const panel = $("contentAssetPicker");
+    if (!panel) return;
+    assetTargetField = fieldKey || assetTargetField || "image";
+    panel.hidden = false;
+    await loadAssets();
   }
 
   function pairedAssetAltField(fieldKey) {
@@ -615,6 +677,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   async function uploadAsset() {
     const fileInput = $("contentAssetFile");
     const altInput = $("contentAssetAlt");
+    const folderInput = $("contentAssetFolder");
     const file = fileInput?.files?.[0];
     const alt = altInput?.value.trim() || "";
     if (!file) {
@@ -629,6 +692,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     form.append("file", file);
     form.append("alt", alt);
     form.append("usage", assetTargetField || "image");
+    form.append("folder", folderInput?.value.trim() || "cms");
     setStatus("Uploading asset...");
     try {
       const result = await api("/api/admin/content-assets", { method: "POST", body: form });
@@ -639,6 +703,40 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       assignAssetValue(assetTargetField, assetPath, result.asset?.alt || alt, "Asset uploaded.");
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Asset upload failed.", "err");
+    }
+  }
+
+  async function registerAsset() {
+    const pathInput = $("contentAssetPath");
+    const altInput = $("contentAssetPathAlt");
+    const creditInput = $("contentAssetCredit");
+    const storagePath = pathInput?.value.trim() || "";
+    const alt = altInput?.value.trim() || "";
+    if (!storagePath) {
+      setStatus("Add an existing path or public URL before registering.", "err");
+      return;
+    }
+    if (!alt) {
+      setStatus("Add alt text before registering an asset.", "err");
+      return;
+    }
+    setStatus("Registering asset...");
+    try {
+      const result = await api("/api/admin/content-assets", {
+        method: "POST",
+        body: {
+          storage_path: storagePath,
+          alt,
+          credit: creditInput?.value.trim() || "",
+          usage: [assetTargetField || "image"],
+        },
+      });
+      if (pathInput) pathInput.value = "";
+      if (altInput) altInput.value = "";
+      if (creditInput) creditInput.value = "";
+      assignAssetValue(assetTargetField, assetValue(result.asset), result.asset?.alt || alt, "Asset registered.");
+    } catch (error) {
+      setStatus(error.data?.message || error.data?.error || error.message || "Asset registration failed.", "err");
     }
   }
 
@@ -843,6 +941,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (event.target.matches("#contentTypeFilter, #contentStatusFilter")) {
         renderContent({ refetch: true });
       }
+      if (event.target.matches("#contentAssetStatusFilter")) {
+        void loadAssets();
+      }
     });
     root.addEventListener("input", (event) => {
       if (event.target.matches("#contentTitle")) syncSlugFromTitle();
@@ -866,7 +967,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (action === "archive") return archiveContent();
       if (action === "preview") return refreshPreview();
       if (action === "asset") return openAssetPicker(button.dataset.contentAssetTarget);
+      if (action === "refresh_assets") return loadAssets();
+      if (action === "close_assets") return closeAssetPicker();
       if (action === "upload_asset") return uploadAsset();
+      if (action === "register_asset") return registerAsset();
     });
   }
 

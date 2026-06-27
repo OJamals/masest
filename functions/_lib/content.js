@@ -29,6 +29,11 @@ function compactRow(row) {
   return Object.fromEntries(Object.entries(row).filter(([, value]) => value !== undefined));
 }
 
+function unsafeAssetReference(value) {
+  const compact = String(value || "").trim().replace(/[\u0000-\u001F\u007F\s]+/g, "");
+  return /^(?:javascript|data|vbscript):/i.test(compact);
+}
+
 export function normalizeContentEntry(input = {}) {
   const type = String(input.type || "").trim();
   const status = String(input.status || "draft").trim();
@@ -175,8 +180,10 @@ export function createContentRepository(sb) {
 
     async listAssets({ q = "", status = "available" } = {}) {
       let query = sb.from("content_assets").select("*");
-      if (status) query = query.eq("status", status);
-      if (q) query = query.ilike("storage_path", `%${q}%`);
+      const assetStatus = String(status || "").trim();
+      const search = String(q || "").trim();
+      if (assetStatus && assetStatus !== "all") query = query.eq("status", assetStatus);
+      if (search) query = query.ilike("storage_path", `%${search}%`);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
       if (error) throw error;
       return data || [];
@@ -186,6 +193,7 @@ export function createContentRepository(sb) {
       const storagePath = String(input.storage_path || "").trim();
       const alt = String(input.alt || "").trim();
       if (!storagePath) return { ok: false, error: "storage_path_required" };
+      if (unsafeAssetReference(storagePath)) return { ok: false, error: "storage_path_invalid" };
       if (!alt) return { ok: false, error: "alt_required" };
       const status = input.status === "archived" ? "archived" : "available";
       const { data, error } = await sb

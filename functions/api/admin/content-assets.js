@@ -4,9 +4,23 @@ import { staffCan } from "../../_lib/authz.js";
 import { createContentRepository } from "../../_lib/content.js";
 
 const DEFAULT_CONTENT_ASSET_BUCKET = "content-assets";
+const DEFAULT_MAX_CONTENT_ASSET_BYTES = 6 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Map([
+  ["image/avif", "avif"],
+  ["image/jpeg", "jpg"],
+  ["image/png", "png"],
+  ["image/webp", "webp"],
+]);
+const ALLOWED_IMAGE_EXTENSIONS = new Set(["avif", "jpeg", "jpg", "png", "webp"]);
 
 function contentAssetBucket(env = {}) {
   return String(env.CONTENT_ASSET_BUCKET || DEFAULT_CONTENT_ASSET_BUCKET).trim() || DEFAULT_CONTENT_ASSET_BUCKET;
+}
+
+function contentAssetMaxBytes(env = {}) {
+  const configured = Number(env.CONTENT_ASSET_MAX_BYTES);
+  if (!Number.isFinite(configured) || configured <= 0) return DEFAULT_MAX_CONTENT_ASSET_BYTES;
+  return Math.min(configured, 25 * 1024 * 1024);
 }
 
 function encodeStoragePath(path) {
@@ -16,7 +30,7 @@ function encodeStoragePath(path) {
 function contentAssetPublicUrl(env, storagePath) {
   const path = String(storagePath || "").trim();
   if (!path) return "";
-  if (/^(https?:)?\/\//i.test(path) || path.startsWith("/") || path.startsWith("img/") || path.startsWith("data:")) {
+  if (/^(https?:)?\/\//i.test(path) || path.startsWith("/") || path.startsWith("img/")) {
     return path;
   }
   const base = String(env.SUPABASE_URL || "").replace(/\/+$/, "");
@@ -60,13 +74,23 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
   if (!file || typeof file === "string") return { status: 400, body: { error: "file_required" } };
 
   const type = String(file.type || "");
-  if (!type.startsWith("image/")) return { status: 400, body: { error: "not_an_image" } };
+  if (!ALLOWED_IMAGE_TYPES.has(type)) return { status: 400, body: { error: "unsupported_image_type" } };
+
+  const size = Number(file.size || 0);
+  if (size <= 0) return { status: 400, body: { error: "file_empty" } };
+  if (size > contentAssetMaxBytes(env)) return { status: 413, body: { error: "asset_too_large" } };
 
   const alt = String(form.get("alt") || "").trim();
   if (!alt) return { status: 400, body: { error: "alt_required" } };
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { status: 500, body: { error: "storage_not_configured" } };
+  }
 
   const fileName = String(file.name || "asset");
-  const ext = cleanFilePart(fileName.split(".").pop(), "webp") || "webp";
+  const rawExt = cleanFilePart(fileName.split(".").pop(), ALLOWED_IMAGE_TYPES.get(type));
+  const ext = ALLOWED_IMAGE_EXTENSIONS.has(rawExt)
+    ? (rawExt === "jpeg" ? "jpg" : rawExt)
+    : ALLOWED_IMAGE_TYPES.get(type);
   const stem = cleanFilePart(fileName.replace(/\.[^.]+$/, ""), "asset");
   const folder = cleanFilePart(form.get("folder"), "cms");
   const storagePath = `${folder}/${crypto.randomUUID()}-${stem}.${ext}`;
@@ -113,7 +137,7 @@ export async function onRequest({ request, env }) {
     try {
       const assets = await repo.listAssets({
         q: url.searchParams.get("q") || "",
-        status: url.searchParams.get("status") || "available",
+        status: url.searchParams.get("status") === "all" ? "" : url.searchParams.get("status") || "available",
       });
       return json(200, { assets: assets.map((asset) => withPublicUrl(env, asset)) });
     } catch (error) {

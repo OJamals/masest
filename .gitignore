@@ -15,6 +15,7 @@ output/playwright/
 playwright-report/
 blob-report/
 .playwright/
+.codebase-memory/
 .headroom/
 .serena/
 

@@ -84,6 +84,9 @@ alter table public.content_assets
   add column if not exists updated_by uuid references auth.users(id) on delete set null,
   add column if not exists updated_at timestamptz not null default now();
 
+create index if not exists content_assets_status_created_idx
+  on public.content_assets (status, created_at desc);
+
 alter table public.content_entries enable row level security;
 alter table public.content_revisions enable row level security;
 alter table public.content_assets enable row level security;

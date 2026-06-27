@@ -70,16 +70,19 @@ async function bootAsStaff(page) {
       },
     }),
   }));
-  await page.route("**/api/admin/content-assets", async (route) => {
+  await page.route("**/api/admin/content-assets**", async (route) => {
     if (route.request().method() === "POST") {
+      const isJson = (route.request().headers()["content-type"] || "").includes("application/json");
       return route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           ok: true,
           asset: {
-            storage_path: "cms/proof/uploaded-brewery.webp",
-            alt: "Uploaded brewery proof image",
+            storage_path: isJson ? "img/proof/cases/registered-brewery.webp" : "cms/proof/uploaded-brewery.webp",
+            public_url: isJson ? "img/proof/cases/registered-brewery.webp" : "cms/proof/uploaded-brewery.webp",
+            alt: isJson ? "Registered brewery proof image" : "Uploaded brewery proof image",
+            status: "available",
           },
         }),
       });
@@ -90,7 +93,10 @@ async function bootAsStaff(page) {
       body: JSON.stringify({
         assets: [{
           storage_path: "img/proof/cases/brewery.webp",
+          public_url: "img/proof/cases/brewery.webp",
           alt: "Brewery tank cleaned with VertKleen CR and HCR",
+          status: "available",
+          credit: "MASEST field team",
         }],
       }),
     });
@@ -153,10 +159,24 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.locator('[data-content-payload-field="image_alt"]').fill("");
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
   await expect(page.locator("#contentAssetPicker")).toBeVisible();
+  await expect(page.locator("#contentAssetSearch")).toBeVisible();
+  await expect(page.locator("#contentAssetStatusFilter")).toHaveValue("available");
+  await page.locator("#contentAssetSearch").fill("brewery");
+  await page.locator('[data-content-action="refresh_assets"]').click();
+  await expect(page.locator("#contentAssetRows")).toContainText("MASEST field team");
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-asset-manager.png`, fullPage: true });
   await page.locator("[data-content-asset-path]").first().click();
   await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("img/proof/cases/brewery.webp");
   await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
+
+  await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
+  await page.locator("#contentAssetPath").fill("img/proof/cases/registered-brewery.webp");
+  await page.locator("#contentAssetPathAlt").fill("Registered brewery proof image");
+  await page.locator("#contentAssetCredit").fill("MASEST archive");
+  await page.locator('[data-content-action="register_asset"]').click();
+  await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("img/proof/cases/registered-brewery.webp");
+  await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Registered brewery proof image");
+  await expect(page.locator("#contentStatus")).toHaveText("Asset registered.");
 
   await page.locator('[data-content-payload-field="image_alt"]').fill("Stale alt from prior image");
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
