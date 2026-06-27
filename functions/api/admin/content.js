@@ -49,6 +49,14 @@ export async function onRequest({ request, env }) {
         if (!staffCan(role, "content.publish")) {
           return json(403, { error: "forbidden", message: "Scheduling content requires owner access." });
         }
+        const scheduledAt = new Date(entry.scheduled_at || "");
+        if (!entry.scheduled_at || Number.isNaN(scheduledAt.getTime())) {
+          return json(400, {
+            error: "scheduled_at_required",
+            message: "Choose a publish date before scheduling.",
+          });
+        }
+        entry.scheduled_at = scheduledAt.toISOString();
         result = await repo.transition(entry, user.id, "scheduled", "Scheduled publish");
       } else if (action === "publish") {
         if (!staffCan(role, "content.publish")) {

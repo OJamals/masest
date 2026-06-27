@@ -17,6 +17,7 @@ test("content API exposes workflow actions with publish and review permissions",
   assert.match(source, /action === "submit_review"/);
   assert.match(source, /action === "request_changes"/);
   assert.match(source, /action === "schedule"/);
+  assert.match(source, /scheduled_at_required/);
   assert.match(source, /staffCan\(role, "content\.review"\)/);
   assert.match(source, /staffCan\(role, "content\.publish"\)/);
 });

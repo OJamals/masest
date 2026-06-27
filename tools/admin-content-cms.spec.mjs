@@ -154,6 +154,83 @@ test("content editor auto-generates slugs while preserving manual overrides", as
   await expect(page.locator("#contentSlug")).toHaveValue("raw-water-pilot-trial-2");
 });
 
+test("content editor schedules publish with an explicit datetime", async ({ page }) => {
+  await bootAsStaff(page);
+
+  let scheduledBody = null;
+  let entries = contentList().entries;
+  await page.route("**/api/admin/content**", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      scheduledBody = req.postDataJSON();
+      const scheduledEntry = { ...scheduledBody.entry, status: "scheduled" };
+      entries = [scheduledEntry];
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, entry: scheduledEntry }),
+      });
+    }
+    const url = new URL(req.url());
+    const status = url.searchParams.get("status") || "published";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: status === "all" ? entries : entries.filter((entry) => entry.status === status) }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("[data-content-edit]").first().click();
+
+  await expect(page.locator("#contentScheduledAt")).toBeVisible();
+  await page.locator("#contentScheduledAt").fill("2026-07-01T09:30");
+  const expectedScheduledAt = await page.locator("#contentScheduledAt").evaluate((input) => new Date(input.value).toISOString());
+
+  const scheduleResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('[data-content-workflow="schedule"]').click();
+  await scheduleResponse;
+
+  expect(scheduledBody.action).toBe("schedule");
+  expect(scheduledBody.entry.scheduled_at).toBe(expectedScheduledAt);
+  await expect(page.locator("#contentStatus")).toHaveText("Workflow updated: schedule.");
+  await expect(page.locator("#contentWorkflowRows")).toContainText("Water analysis");
+  await expect(page.locator("#contentWorkflowRows")).toContainText("Scheduled for");
+});
+
+test("content editor requires a datetime before scheduling publish", async ({ page }) => {
+  await bootAsStaff(page);
+
+  let postCount = 0;
+  await page.route("**/api/admin/content**", async (route) => {
+    if (route.request().method() === "POST") {
+      postCount += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, entry: { ...route.request().postDataJSON().entry, status: "scheduled" } }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(contentList()),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("[data-content-edit]").first().click();
+  await expect(page.locator("#contentScheduledAt")).toHaveValue("");
+
+  await page.locator('[data-content-workflow="schedule"]').click();
+  await expect(page.locator("#contentStatus")).toHaveText("Choose a publish date before scheduling.");
+  expect(postCount).toBe(0);
+});
+
 test("mobile content editor switches to page metadata fields without overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await bootAsStaff(page);

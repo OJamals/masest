@@ -46,6 +46,21 @@ function slugifyContentTitle(value) {
     .slice(0, 96);
 }
 
+function dateTimeLocalValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function scheduledDisplay(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString();
+}
+
 function fieldValue(payload, key) {
   const value = payload && typeof payload === "object" && !Array.isArray(payload) ? payload[key] : "";
   if (Array.isArray(value)) return value.join(", ");
@@ -118,6 +133,7 @@ function formTemplate() {
         <label>Locale <input id="contentLocale" class="adm-input" value="en" maxlength="12"></label>
         <label class="wide">Title <input id="contentTitle" class="adm-input" required></label>
         <label class="wide">Slug <input id="contentSlug" class="adm-input" required></label>
+        <label class="wide">Publish at <input id="contentScheduledAt" class="adm-input" type="datetime-local"></label>
         <div id="contentStructuredFields" class="adm-content-fields full"></div>
         <label class="full">Payload JSON <textarea id="contentPayload" class="adm-textarea" spellcheck="false">{}</textarea></label>
         <label class="full">SEO JSON <textarea id="contentSeo" class="adm-textarea" spellcheck="false">{}</textarea></label>
@@ -317,6 +333,16 @@ function readStructuredValues() {
   return values;
 }
 
+function readScheduledAt() {
+  const value = document.getElementById("contentScheduledAt")?.value || "";
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Scheduled publish time is invalid.");
+  }
+  return date.toISOString();
+}
+
 function selectedFormEntry({ validate = false } = {}) {
   const form = document.getElementById("contentForm");
   if (validate && form && !form.reportValidity()) {
@@ -336,6 +362,7 @@ function selectedFormEntry({ validate = false } = {}) {
     locale: document.getElementById("contentLocale").value.trim() || "en",
     title: document.getElementById("contentTitle").value.trim(),
     slug: slugifyContentTitle(document.getElementById("contentSlug").value.trim()),
+    scheduled_at: readScheduledAt(),
     payload,
     seo,
   };
@@ -428,6 +455,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     $("contentLocale").value = entry.locale || "en";
     $("contentTitle").value = entry.title || "";
     $("contentSlug").value = entry.slug || "";
+    $("contentScheduledAt").value = dateTimeLocalValue(entry.scheduled_at);
     slugManuallyEdited = Boolean(entry.slug);
     lastGeneratedSlug = slugifyContentTitle(entry.title || "");
     $("contentPayload").value = jsonText(entry.payload);
@@ -628,6 +656,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       <button class="adm-list-row adm-content-workflow-row" type="button" data-content-edit="${esc(entry.type)}:${esc(entry.slug)}:${esc(entry.locale || "en")}">
         <b>${esc(entry.title)}</b>
         <span>${esc(labelFor(TYPES, entry.type))} · ${esc(entry.status.replace(/_/g, " "))}</span>
+        ${entry.status === "scheduled" && scheduledDisplay(entry.scheduled_at) ? `<small>Scheduled for ${esc(scheduledDisplay(entry.scheduled_at))}</small>` : ""}
       </button>
     `).join("");
   }
@@ -674,11 +703,17 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   async function runWorkflow(action) {
-    setStatus(`Updating workflow: ${action.replace(/_/g, " ")}...`);
     try {
+      const entry = selectedFormEntry({ validate: true });
+      if (action === "schedule" && !entry.scheduled_at) {
+        setStatus("Choose a publish date before scheduling.", "err");
+        $("contentScheduledAt")?.focus();
+        return;
+      }
+      setStatus(`Updating workflow: ${action.replace(/_/g, " ")}...`);
       const result = await api("/api/admin/content", {
         method: "POST",
-        body: { action, entry: selectedFormEntry({ validate: true }) },
+        body: { action, entry },
       });
       populateForm(result.entry || {});
       setStatus(`Workflow updated: ${action.replace(/_/g, " ")}.`, "ok");
@@ -773,6 +808,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     root.addEventListener("input", (event) => {
       if (event.target.matches("#contentTitle")) syncSlugFromTitle();
       if (event.target.matches("#contentSlug")) normalizeManualSlug();
+      if (event.target.matches("#contentScheduledAt")) refreshPreview();
       if (event.target.matches("[data-content-payload-field]")) syncStructuredPayload();
     });
     root.addEventListener("change", (event) => {
