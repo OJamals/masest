@@ -128,6 +128,32 @@ test("staff edits structured CMS service fields and posts normalized payload", a
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-structured-desktop.png` });
 });
 
+test("content editor auto-generates slugs while preserving manual overrides", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/content**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(contentList()),
+  }));
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await expect(page.locator("#contentSlug")).toHaveValue("");
+
+  await page.locator("#contentTitle").fill("Cooling Tower & CIP: Before/After!");
+  await expect(page.locator("#contentSlug")).toHaveValue("cooling-tower-and-cip-before-after");
+
+  await page.locator("#contentSlug").fill("Custom Case Study");
+  await expect(page.locator("#contentSlug")).toHaveValue("custom-case-study");
+  await page.locator("#contentTitle").fill("Changed title should not replace the slug");
+  await expect(page.locator("#contentSlug")).toHaveValue("custom-case-study");
+
+  await page.locator('[data-content-action="new"]').click();
+  await expect(page.locator("#contentSlug")).toHaveValue("");
+  await page.locator("#contentTitle").fill("Raw Water Pilot Trial #2");
+  await expect(page.locator("#contentSlug")).toHaveValue("raw-water-pilot-trial-2");
+});
+
 test("mobile content editor switches to page metadata fields without overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await bootAsStaff(page);

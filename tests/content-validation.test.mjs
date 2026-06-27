@@ -99,6 +99,16 @@ test("admin content module is registered with lazy render and wire hooks", () =>
   assert.match(module, /publish:\s*true/);
 });
 
+test("admin content editor normalizes slugs without clobbering manual edits", () => {
+  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
+  assert.match(source, /slugifyContentTitle/);
+  assert.match(source, /syncSlugFromTitle/);
+  assert.match(source, /normalizeManualSlug/);
+  assert.match(source, /slugManuallyEdited/);
+  assert.match(source, /#contentTitle/);
+  assert.match(source, /#contentSlug/);
+});
+
 test("content export tool writes service and page metadata snapshot paths", () => {
   const source = readFileSync(new URL("../tools/build-content.mjs", import.meta.url), "utf8");
   assert.match(source, /CONTENT_EXPORT_OUT_DIR/);

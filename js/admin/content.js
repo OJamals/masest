@@ -35,6 +35,17 @@ function jsonText(value) {
   return JSON.stringify(value && typeof value === "object" ? value : {}, null, 2);
 }
 
+function slugifyContentTitle(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 96);
+}
+
 function fieldValue(payload, key) {
   const value = payload && typeof payload === "object" && !Array.isArray(payload) ? payload[key] : "";
   if (Array.isArray(value)) return value.join(", ");
@@ -324,7 +335,7 @@ function selectedFormEntry({ validate = false } = {}) {
     type: document.getElementById("contentType").value,
     locale: document.getElementById("contentLocale").value.trim() || "en",
     title: document.getElementById("contentTitle").value.trim(),
-    slug: document.getElementById("contentSlug").value.trim(),
+    slug: slugifyContentTitle(document.getElementById("contentSlug").value.trim()),
     payload,
     seo,
   };
@@ -334,6 +345,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let mounted = false;
   let assetTargetField = "image";
   let workflowEntries = [];
+  let slugManuallyEdited = false;
+  let lastGeneratedSlug = "";
 
   function setStatus(text, kind = "") {
     const el = $("contentStatus");
@@ -415,6 +428,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     $("contentLocale").value = entry.locale || "en";
     $("contentTitle").value = entry.title || "";
     $("contentSlug").value = entry.slug || "";
+    slugManuallyEdited = Boolean(entry.slug);
+    lastGeneratedSlug = slugifyContentTitle(entry.title || "");
     $("contentPayload").value = jsonText(entry.payload);
     $("contentSeo").value = jsonText(entry.seo);
     renderStructuredFields(entry.type || "service", entry.payload || {});
@@ -425,6 +440,29 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
     setStatus("");
     void loadRevisions(entry);
+    refreshPreview();
+  }
+
+  function syncSlugFromTitle() {
+    const title = $("contentTitle");
+    const slug = $("contentSlug");
+    if (!title || !slug || slugManuallyEdited) return;
+    if (slug.value && slug.value !== lastGeneratedSlug) {
+      slugManuallyEdited = true;
+      return;
+    }
+    const nextSlug = slugifyContentTitle(title.value);
+    slug.value = nextSlug;
+    lastGeneratedSlug = nextSlug;
+    refreshPreview();
+  }
+
+  function normalizeManualSlug() {
+    const slug = $("contentSlug");
+    if (!slug) return;
+    slug.value = slugifyContentTitle(slug.value);
+    slugManuallyEdited = Boolean(slug.value);
+    lastGeneratedSlug = slug.value;
     refreshPreview();
   }
 
@@ -733,6 +771,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       }
     });
     root.addEventListener("input", (event) => {
+      if (event.target.matches("#contentTitle")) syncSlugFromTitle();
+      if (event.target.matches("#contentSlug")) normalizeManualSlug();
       if (event.target.matches("[data-content-payload-field]")) syncStructuredPayload();
     });
     root.addEventListener("change", (event) => {
