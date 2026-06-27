@@ -231,6 +231,66 @@ test("content editor requires a datetime before scheduling publish", async ({ pa
   expect(postCount).toBe(0);
 });
 
+test("content operations publishes due scheduled entries in batch", async ({ page }) => {
+  await bootAsStaff(page);
+
+  let publishScheduledBody = null;
+  let entries = contentList().entries.map((entry) => ({
+    ...entry,
+    status: "scheduled",
+    scheduled_at: "2026-06-30T13:00:00.000Z",
+    review_note: "Ready after final compliance approval.",
+  }));
+  await page.route("**/api/admin/content**", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      publishScheduledBody = req.postDataJSON();
+      entries = entries.map((entry) => ({
+        ...entry,
+        status: "published",
+        scheduled_at: null,
+        published_at: "2026-06-30T13:01:00.000Z",
+      }));
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          count: entries.length,
+          entries,
+          publish_hook: { ok: true, skipped: false, status: 200 },
+        }),
+      });
+    }
+    const url = new URL(req.url());
+    const status = url.searchParams.get("status") || "published";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: status === "all" ? entries : entries.filter((entry) => entry.status === status) }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await expect(page.locator("#contentWorkflowRows")).toContainText("Water analysis");
+  await expect(page.locator("#contentWorkflowRows")).toContainText("Ready after final compliance approval.");
+  await page.locator("#contentWorkflowQueue").scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, -88));
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-scheduled-batch-desktop.png` });
+
+  const publishResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('[data-content-action="publish_scheduled"]').click();
+  await publishResponse;
+
+  expect(publishScheduledBody.action).toBe("publish_scheduled");
+  await expect(page.locator("#contentStatus")).toHaveText("Published 1 scheduled item. Static rebuild triggered.");
+  await expect(page.locator("#contentList")).toContainText("Water analysis");
+  await expect(page.locator("#contentWorkflowRows")).not.toContainText("Ready after final compliance approval.");
+});
+
 test("content editor sends workflow notes and surfaces review notes", async ({ page }) => {
   await bootAsStaff(page);
 
@@ -301,4 +361,7 @@ test("mobile content editor switches to page metadata fields without overflow", 
   expect(overflow).toBe(false);
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-structured-mobile.png` });
+  await page.locator("#contentWorkflowQueue").scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, -88));
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-operations-mobile.png` });
 });

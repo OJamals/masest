@@ -241,6 +241,9 @@ function workflowTemplate(admEmpty) {
           <h2>Content operations</h2>
           <p class="muted">Review, scheduled, and change-request queues stay visible outside the status filter.</p>
         </div>
+        <button class="btn btn-secondary btn-sm" type="button" data-content-action="publish_scheduled">
+          <i class="ph ph-clock-countdown" aria-hidden="true"></i> Publish due scheduled
+        </button>
       </div>
       <div id="contentWorkflowRows" class="adm-list">
         ${admEmpty("ph-kanban", "No workflow items", "Submit drafts for review or schedule content to populate this queue.")}
@@ -392,6 +395,19 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (hook.ok) return "Published. Static rebuild triggered.";
     const detail = hook.status || hook.message || hook.error || "hook failed";
     return `Published. Static rebuild failed: ${detail}.`;
+  }
+
+  function publishScheduledStatusText(result = {}) {
+    const count = Number(result.count || 0);
+    if (!count) return "No due scheduled content to publish.";
+    const noun = count === 1 ? "item" : "items";
+    const base = `Published ${count} scheduled ${noun}.`;
+    const hook = result.publish_hook;
+    if (!hook) return base;
+    if (hook.skipped) return `${base} Static rebuild hook not configured.`;
+    if (hook.ok) return `${base} Static rebuild triggered.`;
+    const detail = hook.status || hook.message || hook.error || "hook failed";
+    return `${base} Static rebuild failed: ${detail}.`;
   }
 
   function mount() {
@@ -729,6 +745,23 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
+  async function publishScheduledContent() {
+    setStatus("Publishing due scheduled content...");
+    try {
+      const result = await api("/api/admin/content", {
+        method: "POST",
+        body: { action: "publish_scheduled" },
+      });
+      setStatus(
+        publishScheduledStatusText(result),
+        result.publish_hook?.ok === false ? "err" : "ok",
+      );
+      await renderContent({ refetch: true });
+    } catch (error) {
+      setStatus(error.data?.message || error.data?.error || "Scheduled publish failed.", "err");
+    }
+  }
+
   async function archiveContent() {
     let entry;
     try {
@@ -829,6 +862,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (action === "new") return populateForm();
       if (action === "draft") return saveContent({ publish: false });
       if (action === "publish") return saveContent({ publish: true });
+      if (action === "publish_scheduled") return publishScheduledContent();
       if (action === "archive") return archiveContent();
       if (action === "preview") return refreshPreview();
       if (action === "asset") return openAssetPicker(button.dataset.contentAssetTarget);

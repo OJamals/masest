@@ -35,7 +35,15 @@ export async function onRequest({ request, env }) {
     const entry = body.entry || body;
     try {
       let result;
-      if (action === "submit_review") {
+      if (action === "publish_scheduled") {
+        if (!staffCan(role, "content.publish")) {
+          return json(403, { error: "forbidden", message: "Publishing scheduled content requires owner access." });
+        }
+        result = await repo.publishScheduledDue({}, user.id);
+        if (result.ok && result.count > 0) {
+          result.publish_hook = await triggerContentPublishBuild(env, result.entries[0]);
+        }
+      } else if (action === "submit_review") {
         if (!staffCan(role, "content.write")) {
           return json(403, { error: "forbidden", message: "Submitting content requires owner access." });
         }

@@ -272,10 +272,39 @@ export function createContentRepository(sb) {
       const validation = validateContentEntry({ ...input, status: "published" });
       if (!validation.ok) return validation;
       return this.saveEntry(
-        { ...validation.entry, published_at: new Date().toISOString() },
+        {
+          ...validation.entry,
+          published_at: new Date().toISOString(),
+          scheduled_at: null,
+          review_note: null,
+        },
         userId,
         "Published",
       );
+    },
+
+    async publishScheduledDue({ now = new Date().toISOString(), limit = 25, locale = "" } = {}, userId) {
+      const timestamp = new Date(now);
+      if (Number.isNaN(timestamp.getTime())) return { ok: false, error: "invalid_publish_time" };
+      const batchLimit = Math.min(Math.max(Number(limit) || 25, 1), 100);
+      let query = sb
+        .from("content_entries")
+        .select("*")
+        .eq("status", "scheduled")
+        .lte("scheduled_at", timestamp.toISOString());
+      if (locale) query = query.eq("locale", locale);
+      const { data, error } = await query
+        .order("scheduled_at", { ascending: true })
+        .limit(batchLimit);
+      if (error) throw error;
+
+      const entries = [];
+      for (const entry of data || []) {
+        const result = await this.publish(entry, userId);
+        if (!result.ok) return result;
+        entries.push(result.entry);
+      }
+      return { ok: true, count: entries.length, entries };
     },
 
     async saveEntry(input, userId, note) {
