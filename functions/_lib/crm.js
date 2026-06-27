@@ -57,9 +57,26 @@ export function taskPatch({ action, assigned_to, actor }, now) {
   return { error: 'invalid_action' };
 }
 
+// email_events.to_email is a comma-joined recipient list (to + bcc). Keep only the events
+// addressed to one of this company's known emails (members + contacts), matched as a
+// case-insensitive substring so a joined "buyer@x, notify@masest.co" still matches the
+// buyer. Deduped by id. Pure — the handler does the querying.
+export function filterCompanyEmails(events, emails) {
+  const needles = [...new Set((emails || []).map((e) => String(e || '').toLowerCase().trim()).filter(Boolean))];
+  if (!needles.length) return [];
+  const seen = new Set();
+  const out = [];
+  for (const ev of events || []) {
+    const hay = String(ev?.to_email || '').toLowerCase();
+    if (!hay || ev.id == null || seen.has(ev.id)) continue;
+    if (needles.some((n) => hay.includes(n))) { seen.add(ev.id); out.push(ev); }
+  }
+  return out;
+}
+
 // Normalize heterogeneous source rows into one timeline shape, newest first.
 // Each source is an array; missing/failed sources pass []. Bounded to `limit`.
-export function mergeTimeline({ orders = [], messages = [], shipments = [], audit = [], quotes = [], notes = [], tasks = [] }, { limit = 200 } = {}) {
+export function mergeTimeline({ orders = [], messages = [], shipments = [], audit = [], quotes = [], notes = [], tasks = [], emails = [] }, { limit = 200 } = {}) {
   const items = [];
   const iso = (v) => (v ? new Date(v).toISOString() : null);
   const cap = (s, n) => String(s ?? '').slice(0, n);
@@ -75,6 +92,10 @@ export function mergeTimeline({ orders = [], messages = [], shipments = [], audi
   for (const t of tasks) {
     items.push({ at: iso(t.created_at), type: 'task', title: `Task: ${t.title || ''}`.trim(), detail: t.assigned_to ? `→ ${t.assigned_to}` : 'unassigned', ref: { task: t.id }, by: t.created_by || '' });
     if (t.completed_at) items.push({ at: iso(t.completed_at), type: 'task_done', title: `Done: ${t.title || ''}`.trim(), detail: t.completed_by || '', ref: { task: t.id } });
+  }
+  for (const e of emails) {
+    const st = e.status || 'sent';
+    items.push({ at: iso(e.created_at), type: `email:${st}`, title: `Email ${st}`, detail: [e.subject, e.category].filter(Boolean).map((x) => cap(x, 120)).join(' · '), ref: { email: e.id } });
   }
   return items
     .filter((i) => i.at)
