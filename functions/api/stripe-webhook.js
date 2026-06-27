@@ -5,6 +5,7 @@
 import Stripe from 'stripe';
 import { adminClient, json, sendEmail, companyEmails, htmlEscape } from '../_lib/supabase.js';
 import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
+import { sdsAttachments } from '../_lib/sds-docs.js';
 import {
   isDelinquentStatus,
   planFailedPayment,
@@ -69,6 +70,11 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
     : '';
 
   const appUrl = env.APP_URL || 'https://masest.co';
+  // Attach the Safety Data Sheet for each chemical in the order (Resend fetches by URL).
+  const attachments = sdsAttachments(lines, appUrl);
+  const sdsNote = attachments.length
+    ? `<p style="margin:0 0 20px;color:#556;font-size:13px;line-height:1.5">Safety Data Sheet${attachments.length > 1 ? 's are' : ' is'} attached to this email for the ${attachments.length > 1 ? 'products' : 'product'} you ordered.</p>`
+    : '';
   const html = `
   <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
     <div style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
@@ -79,6 +85,7 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
       <div style="padding:28px;color:#223">
         <h2 style="margin:0 0 4px;color:#15171c">Order confirmed${htmlEscape(ref)}</h2>
         <p style="margin:0 0 20px;color:#556;font-size:14px;line-height:1.5">Thank you. MASEST will reconcile freight and documentation before fulfillment. Your payment processor sends a separate card receipt.</p>
+        ${sdsNote}
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <thead><tr>
             <th style="text-align:left;padding:6px 0;border-bottom:2px solid #d7e3e3">Product</th>
@@ -111,6 +118,7 @@ async function sendOrderConfirmation({ env, session, order, lines, subtotal, tax
     subject: `Your MASEST order${ref} is confirmed`,
     html,
     category: 'order',
+    attachments,
     // Stripe retries checkout.session.completed; key on the order so a retry can't re-send.
     idempotencyKey: order?.id ? `order-confirm:${order.id}` : (session?.id ? `order-confirm:${session.id}` : null),
   });
