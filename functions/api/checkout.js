@@ -2,9 +2,39 @@
 // mode 'pay' -> Stripe-hosted Checkout Session.
 // mode 'net' -> approved B2B account order.
 import Stripe from 'stripe';
-import { adminClient, userFromRequest, json, readBody, tierForRequest, tierPriceMap } from '../_lib/supabase.js';
+import { adminClient, userFromRequest, json, readBody, tierForRequest, tierPriceMap, sendEmail, emailLayout, htmlEscape } from '../_lib/supabase.js';
 import { buildStripeCheckoutSessionParams } from '../_lib/checkout-session.js';
 import { companyCreditState, exceedsCredit, isMissingFunctionError } from '../_lib/credit.js';
+import { sdsAttachments } from '../_lib/sds-docs.js';
+import { orderItemsTableHtml, sdsNoteHtml } from '../_lib/order-email.js';
+
+// Branded confirmation for a NET (on-account) order. Stripe orders are confirmed by the
+// webhook; NET orders had no email at all. Best-effort: the order is already placed and
+// stock decremented, so an email failure must never fail the checkout response.
+async function sendNetOrderConfirmation({ env, order, lines, toEmail }) {
+  try {
+    if (!env.RESEND_API_KEY || !toEmail) return;
+    const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
+    const currency = lines[0]?.currency || 'usd';
+    const total = lines.reduce((s, l) => s + (Number(l.unit_price) || 0) * (Number(l.qty) || 0), 0);
+    const ref = order?.id ? ` #${order.id}` : '';
+    const attachments = sdsAttachments(lines, appUrl);
+    const bodyHtml = `<p style="margin:0 0 16px;color:#556;font-size:14px;line-height:1.5">Your order is placed on account. A QuickBooks invoice will follow under your NET terms; no payment is due now.</p>`
+      + orderItemsTableHtml(lines, { currency, subtotal: total, total })
+      + sdsNoteHtml(attachments.length);
+    await sendEmail(env, {
+      to: [toEmail],
+      bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
+      subject: `Your MASEST order${ref} is placed (NET terms)`,
+      html: emailLayout({ heading: `Order placed${htmlEscape(ref)}`, bodyHtml, ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders` }),
+      category: 'order',
+      attachments,
+      idempotencyKey: order?.id ? `order-confirm:${order.id}` : null,
+    });
+  } catch {
+    // Confirmation email is advisory — never fail a placed NET order on it.
+  }
+}
 
 function normalizeCart(cart) {
   const qtyBySku = {};
@@ -201,6 +231,13 @@ export async function onRequestPost({ request, env }) {
         message: 'Stock changed before the order could be placed. Review the cart and try again.',
       });
     }
+
+    await sendNetOrderConfirmation({
+      env,
+      order,
+      lines: sellable.map((p) => ({ name: p.name, sku: p.sku, qty: qtyBySku[p.sku], unit_price: p.price, currency: p.currency })),
+      toEmail: user.email,
+    });
 
     return json(201, {
       net: true,
