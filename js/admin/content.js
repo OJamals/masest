@@ -20,6 +20,12 @@ const STATUSES = [
 ];
 
 const STRUCTURED_KEYS = structuredPayloadKeys();
+const SEO_FIELDS = [
+  { key: "title", label: "Meta title", kind: "text", max: 70 },
+  { key: "description", label: "Meta description", kind: "textarea", max: 180 },
+  { key: "og_image", label: "Social image", kind: "text" },
+];
+const SEO_FIELD_KEYS = new Set(SEO_FIELDS.map((field) => field.key));
 
 function labelFor(options, value) {
   return options.find(([key]) => key === value)?.[1] || value || "";
@@ -73,6 +79,36 @@ function mergeStructuredPayload(type, existing, values) {
   return { ...payload, ...normalizeStructuredPayload(type, values) };
 }
 
+function cleanSeoUrl(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  const schemeProbe = trimmed.replace(/[\u0000-\u001F\u007F\s]+/g, "");
+  if (/^(?:javascript|data|vbscript):/i.test(schemeProbe)) return "";
+  return trimmed;
+}
+
+function seoFieldValue(seo, key) {
+  const value = seo && typeof seo === "object" && !Array.isArray(seo) ? seo[key] : "";
+  return value ?? "";
+}
+
+function normalizeSeoValues(values = {}) {
+  const seo = {};
+  const title = String(values.title || "").trim();
+  const description = String(values.description || "").trim();
+  const ogImage = cleanSeoUrl(values.og_image);
+  if (title) seo.title = title;
+  if (description) seo.description = description;
+  if (ogImage) seo.og_image = ogImage;
+  return seo;
+}
+
+function mergeSeoPayload(existing, values) {
+  const seo = existing && typeof existing === "object" && !Array.isArray(existing) ? { ...existing } : {};
+  for (const key of SEO_FIELD_KEYS) delete seo[key];
+  return { ...seo, ...normalizeSeoValues(values) };
+}
+
 function fieldTemplate(field, payload) {
   const value = fieldValue(payload, field.key);
   const cls = field.className || "";
@@ -118,6 +154,44 @@ function structuredFieldsTemplate(type, payload) {
   return fields.map((field) => fieldTemplate(field, payload)).join("");
 }
 
+function seoFieldTemplate(field, seo) {
+  const value = seoFieldValue(seo, field.key);
+  const count = String(value || "").length;
+  const maxlength = field.max ? ` maxlength="${esc(field.max)}"` : "";
+  const meter = field.max ? `<small id="contentSeo${field.key}Count" class="adm-content-seo-meter">${esc(count)} / ${esc(field.max)}</small>` : "";
+  if (field.kind === "textarea") {
+    return `
+      <label class="full">${esc(field.label)}
+        <textarea class="adm-textarea adm-content-field-text" data-content-seo-field="${esc(field.key)}" rows="3"${maxlength}>${esc(value)}</textarea>
+        ${meter}
+      </label>
+    `;
+  }
+  const input = `<input class="adm-input" type="text" data-content-seo-field="${esc(field.key)}" value="${esc(value)}"${maxlength}>`;
+  if (field.key === "og_image") {
+    return `
+      <div class="adm-content-asset-control wide">
+        <label>${esc(field.label)}
+          ${input}
+        </label>
+        <button class="btn btn-ghost btn-sm" type="button" data-content-action="seo_asset" data-content-seo-asset-target="${esc(field.key)}">
+          <i class="ph ph-image" aria-hidden="true"></i> Choose
+        </button>
+      </div>
+    `;
+  }
+  return `
+    <label class="wide">${esc(field.label)}
+      ${input}
+      ${meter}
+    </label>
+  `;
+}
+
+function seoFieldsTemplate(seo = {}) {
+  return SEO_FIELDS.map((field) => seoFieldTemplate(field, seo)).join("");
+}
+
 function formTemplate() {
   return `
     <div class="adm-card adm-content-editor">
@@ -139,7 +213,11 @@ function formTemplate() {
         </label>
         <div id="contentStructuredFields" class="adm-content-fields full"></div>
         <label class="full">Payload JSON <textarea id="contentPayload" class="adm-textarea" spellcheck="false">{}</textarea></label>
-        <label class="full">SEO JSON <textarea id="contentSeo" class="adm-textarea" spellcheck="false">{}</textarea></label>
+        <fieldset id="contentSeoFields" class="adm-content-seo full"></fieldset>
+        <details class="adm-content-json full">
+          <summary>SEO JSON</summary>
+          <textarea id="contentSeo" class="adm-textarea" spellcheck="false">{}</textarea>
+        </details>
         <div class="adm-inline-actions full">
           <button class="btn btn-ghost btn-sm" type="button" data-content-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
           <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
@@ -361,11 +439,23 @@ function safePayloadJson() {
   }
 }
 
+function readSeoJson() {
+  return JSON.parse(document.getElementById("contentSeo").value || "{}");
+}
+
 function readStructuredValues() {
   const values = {};
   document.querySelectorAll("[data-content-payload-field]").forEach((control) => {
     const key = control.dataset.contentPayloadField;
     values[key] = control.type === "checkbox" ? control.checked : control.value;
+  });
+  return values;
+}
+
+function readSeoValues() {
+  const values = {};
+  document.querySelectorAll("[data-content-seo-field]").forEach((control) => {
+    values[control.dataset.contentSeoField] = control.value;
   });
   return values;
 }
@@ -390,7 +480,7 @@ function selectedFormEntry({ validate = false } = {}) {
   try {
     const type = document.getElementById("contentType").value;
     payload = mergeStructuredPayload(type, readPayloadJson(), readStructuredValues());
-    seo = JSON.parse(document.getElementById("contentSeo").value || "{}");
+    seo = mergeSeoPayload(readSeoJson(), readSeoValues());
   } catch (error) {
     throw new Error(`Invalid JSON: ${error.message}`);
   }
@@ -408,6 +498,7 @@ function selectedFormEntry({ validate = false } = {}) {
 export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let mounted = false;
   let assetTargetField = "image";
+  let assetTargetKind = "payload";
   let workflowEntries = [];
   let slugManuallyEdited = false;
   let lastGeneratedSlug = "";
@@ -446,6 +537,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (!root || mounted) return;
     root.innerHTML = shellTemplate(admEmpty);
     renderStructuredFields("service", {});
+    renderSeoFields({});
     $("contentPreviewFrame")?.addEventListener("load", () => refreshPreview());
     void renderExportStatus();
     mounted = true;
@@ -457,11 +549,42 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     box.innerHTML = structuredFieldsTemplate(type, payload);
   }
 
+  function updateSeoMeters() {
+    for (const field of SEO_FIELDS) {
+      if (!field.max) continue;
+      const control = document.querySelector(`[data-content-seo-field="${field.key}"]`);
+      const meter = $(`contentSeo${field.key}Count`);
+      if (!control || !meter) continue;
+      const count = String(control.value || "").length;
+      meter.textContent = `${count} / ${field.max}`;
+      meter.dataset.state = count >= field.max ? "warn" : "";
+    }
+  }
+
+  function renderSeoFields(seo = {}) {
+    const box = $("contentSeoFields");
+    if (!box) return;
+    box.innerHTML = `<legend>Search metadata</legend>${seoFieldsTemplate(seo)}`;
+    updateSeoMeters();
+  }
+
   function syncStructuredPayload() {
     try {
       const type = $("contentType")?.value || "service";
       const payload = mergeStructuredPayload(type, readPayloadJson(), readStructuredValues());
       $("contentPayload").value = jsonText(payload);
+      setStatus("");
+      refreshPreview();
+    } catch (error) {
+      setStatus(`Invalid JSON: ${error.message}`, "err");
+    }
+  }
+
+  function syncSeoPayload() {
+    try {
+      const seo = mergeSeoPayload(readSeoJson(), readSeoValues());
+      $("contentSeo").value = jsonText(seo);
+      updateSeoMeters();
       setStatus("");
       refreshPreview();
     } catch (error) {
@@ -512,6 +635,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     $("contentPayload").value = jsonText(entry.payload);
     $("contentSeo").value = jsonText(entry.seo);
     renderStructuredFields(entry.type || "service", entry.payload || {});
+    renderSeoFields(entry.seo || {});
     const badge = $("contentEditorBadge");
     if (badge) {
       badge.textContent = entry.status || "draft";
@@ -596,7 +720,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     const value = assetValue(asset);
     const status = asset.status || "available";
     return `
-      <button class="adm-list-row adm-content-asset-row" type="button" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">
+      <button class="adm-list-row adm-content-asset-row" type="button" data-content-asset-kind="${esc(assetTargetKind)}" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">
         <span class="adm-content-asset-thumb" aria-hidden="true">${value ? `<img src="${esc(value)}" alt="" loading="lazy">` : `<i class="ph ph-image"></i>`}</span>
         <span class="adm-content-asset-info">
           <b>${esc(asset.storage_path || value)}</b>
@@ -632,10 +756,11 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
-  async function openAssetPicker(fieldKey) {
+  async function openAssetPicker(fieldKey, kind = "payload") {
     const panel = $("contentAssetPicker");
     if (!panel) return;
     assetTargetField = fieldKey || assetTargetField || "image";
+    assetTargetKind = kind || "payload";
     panel.hidden = false;
     await loadAssets();
   }
@@ -652,14 +777,26 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     return root.querySelector(`[data-content-payload-field="${selectorKey}"]`);
   }
 
-  function assignAssetValue(fieldKey, assetPath, assetAlt = "", message = "Asset path inserted.") {
+  function findSeoField(root, fieldKey) {
+    if (!root || !fieldKey) return null;
+    const selectorKey = window.CSS?.escape ? CSS.escape(fieldKey) : fieldKey.replace(/"/g, '\\"');
+    return root.querySelector(`[data-content-seo-field="${selectorKey}"]`);
+  }
+
+  function assignAssetValue(fieldKey, assetPath, assetAlt = "", message = "Asset path inserted.", kind = assetTargetKind) {
     const root = $("admContent");
-    const control = findPayloadField(root, fieldKey);
+    const control = kind === "seo"
+      ? findSeoField(root, fieldKey)
+      : findPayloadField(root, fieldKey) || findSeoField(root, fieldKey);
     if (control) {
       control.value = assetPath || "";
-      const altControl = findPayloadField(root, pairedAssetAltField(fieldKey));
-      if (assetAlt && altControl) altControl.value = assetAlt;
-      syncStructuredPayload();
+      if (kind === "seo") {
+        syncSeoPayload();
+      } else {
+        const altControl = findPayloadField(root, pairedAssetAltField(fieldKey));
+        if (assetAlt && altControl) altControl.value = assetAlt;
+        syncStructuredPayload();
+      }
       setStatus(message, "ok");
     }
     const panel = $("contentAssetPicker");
@@ -671,6 +808,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       button.dataset.contentAssetField || assetTargetField,
       button.dataset.contentAssetPath || "",
       button.dataset.contentAssetAlt || "",
+      "Asset path inserted.",
+      button.dataset.contentAssetKind || assetTargetKind,
     );
   }
 
@@ -700,7 +839,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (!assetPath) throw new Error("upload_missing_asset_path");
       if (fileInput) fileInput.value = "";
       if (altInput) altInput.value = "";
-      assignAssetValue(assetTargetField, assetPath, result.asset?.alt || alt, "Asset uploaded.");
+      assignAssetValue(assetTargetField, assetPath, result.asset?.alt || alt, "Asset uploaded.", assetTargetKind);
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Asset upload failed.", "err");
     }
@@ -734,7 +873,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (pathInput) pathInput.value = "";
       if (altInput) altInput.value = "";
       if (creditInput) creditInput.value = "";
-      assignAssetValue(assetTargetField, assetValue(result.asset), result.asset?.alt || alt, "Asset registered.");
+      assignAssetValue(assetTargetField, assetValue(result.asset), result.asset?.alt || alt, "Asset registered.", assetTargetKind);
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Asset registration failed.", "err");
     }
@@ -938,6 +1077,15 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
           setStatus(`Invalid JSON: ${error.message}`, "err");
         }
       }
+      if (event.target.matches("#contentSeo")) {
+        try {
+          renderSeoFields(readSeoJson());
+          setStatus("");
+          refreshPreview();
+        } catch (error) {
+          setStatus(`Invalid JSON: ${error.message}`, "err");
+        }
+      }
       if (event.target.matches("#contentTypeFilter, #contentStatusFilter")) {
         renderContent({ refetch: true });
       }
@@ -950,9 +1098,11 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (event.target.matches("#contentSlug")) normalizeManualSlug();
       if (event.target.matches("#contentScheduledAt")) refreshPreview();
       if (event.target.matches("[data-content-payload-field]")) syncStructuredPayload();
+      if (event.target.matches("[data-content-seo-field]")) syncSeoPayload();
     });
     root.addEventListener("change", (event) => {
       if (event.target.matches("[data-content-payload-field]")) syncStructuredPayload();
+      if (event.target.matches("[data-content-seo-field]")) syncSeoPayload();
     });
     delegate(root, "click", "[data-content-edit]", (_event, button) => editEntry(button.dataset.contentEdit));
     delegate(root, "click", "[data-content-revision]", (_event, button) => restoreRevision(button.dataset.contentRevision));
@@ -967,6 +1117,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (action === "archive") return archiveContent();
       if (action === "preview") return refreshPreview();
       if (action === "asset") return openAssetPicker(button.dataset.contentAssetTarget);
+      if (action === "seo_asset") return openAssetPicker(button.dataset.contentSeoAssetTarget, "seo");
       if (action === "refresh_assets") return loadAssets();
       if (action === "close_assets") return closeAssetPicker();
       if (action === "upload_asset") return uploadAsset();

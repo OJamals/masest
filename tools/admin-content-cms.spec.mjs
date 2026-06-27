@@ -107,8 +107,13 @@ test("staff edits structured CMS service fields and posts normalized payload", a
   await page.locator("[data-content-edit]").first().click();
 
   await expect(page.locator('[data-content-payload-field="sku"]')).toHaveValue("MS-LAB-WATER");
+  await expect(page.locator('[data-content-seo-field="description"]')).toHaveValue("Industrial water analysis.");
   await page.locator('[data-content-payload-field="public_price"]').fill("130.25");
   await page.locator('[data-content-payload-field="active"]').uncheck();
+  await page.locator('[data-content-seo-field="title"]').fill("Industrial water analysis | MASEST");
+  await page.locator('[data-content-seo-field="description"]').fill("Industrial water analysis for field teams replacing legacy service calls.");
+  await page.locator('[data-content-seo-field="og_image"]').fill("img/proof/cases/water-analysis.webp");
+  await expect(page.locator("#contentSeo")).toHaveValue(/Industrial water analysis \| MASEST/);
   await page.locator('[data-content-action="preview"]').click();
 
   const frame = page.frameLocator("#contentPreviewFrame");
@@ -123,6 +128,9 @@ test("staff edits structured CMS service fields and posts normalized payload", a
   expect(saveBody.entry.type).toBe("service");
   expect(saveBody.entry.payload.public_price).toBe(130.25);
   expect(saveBody.entry.payload.active).toBe(false);
+  expect(saveBody.entry.seo.title).toBe("Industrial water analysis | MASEST");
+  expect(saveBody.entry.seo.description).toBe("Industrial water analysis for field teams replacing legacy service calls.");
+  expect(saveBody.entry.seo.og_image).toBe("img/proof/cases/water-analysis.webp");
   await expect(page.locator("#contentStatus")).toHaveText("Draft saved.");
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-structured-desktop.png` });

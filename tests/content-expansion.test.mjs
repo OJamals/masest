@@ -101,6 +101,19 @@ test("admin CMS editor exposes structured fields for each content type", () => {
   assert.deepEqual(pageMetaFields, ["page", "description", "og_image", "jsonld_type"]);
 });
 
+test("admin CMS editor exposes native SEO metadata controls", () => {
+  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
+  assert.match(source, /contentSeoFields/);
+  assert.match(source, /key: "title", label: "Meta title"/);
+  assert.match(source, /key: "description", label: "Meta description"/);
+  assert.match(source, /key: "og_image", label: "Social image"/);
+  assert.match(source, /data-content-seo-field="\$\{esc\(field\.key\)\}"/);
+  assert.match(source, /mergeSeoPayload/);
+  assert.match(source, /syncSeoPayload/);
+  assert.match(source, /data-content-action="seo_asset"/);
+  assert.match(source, /contentSeo/);
+});
+
 test("structured CMS editor fields normalize booleans, numbers, and lists", () => {
   assert.deepEqual(
     normalizeStructuredPayload("service", {
