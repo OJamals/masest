@@ -74,6 +74,31 @@ export function filterCompanyEmails(events, emails) {
   return out;
 }
 
+// taskDigest groups a caller-filtered array of overdue+open tasks by assignee email
+// and returns per-group digests plus a total count. Pure — no I/O, no Date.now().
+// `now` must be injected (a Date instance). `staffKey` is the bucket for tasks whose
+// `assigned_to` is absent or not a valid email address (default '__staff__').
+export function taskDigest(tasks, { now, staffKey = '__staff__' } = {}) {
+  const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  const buckets = new Map();
+  for (const task of tasks || []) {
+    const raw = String(task.assigned_to || '').trim().toLowerCase();
+    const isEmail = EMAIL_RE.test(raw);
+    const key = isEmail ? raw : staffKey;
+    const assignee = isEmail ? raw : null;
+    if (!buckets.has(key)) buckets.set(key, { key, assignee, tasks: [] });
+    const dueMs = new Date(task.due_at).getTime();
+    const overdueDays = Math.max(0, Math.floor((nowMs - dueMs) / 86400000));
+    buckets.get(key).tasks.push({ ...task, overdueDays });
+  }
+  const groups = [...buckets.values()].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  for (const group of groups) {
+    group.tasks.sort((a, b) => (a.due_at < b.due_at ? -1 : a.due_at > b.due_at ? 1 : 0));
+  }
+  return { groups, total: (tasks || []).length };
+}
+
 // Normalize heterogeneous source rows into one timeline shape, newest first.
 // Each source is an array; missing/failed sources pass []. Bounded to `limit`.
 export function mergeTimeline({ orders = [], messages = [], shipments = [], audit = [], quotes = [], notes = [], tasks = [], emails = [] }, { limit = 200 } = {}) {
