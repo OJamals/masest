@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-26T00:00:00.000Z",
+  "generated_at": "2026-06-28T06:24:13.810Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -43,6 +43,13 @@
         "faq_blocks": 0
       },
       "sha256": "7adb17e0896c20986f8bb876d3cdc4d783c94ff42754e0066881096522171991"
+    },
+    "page-sections.json": {
+      "count": 0,
+      "counts": {
+        "page_sections": 0
+      },
+      "sha256": "821f70f7015adbbc3108bf28458e4d453e52c680f0933500b6efb1f694ff43d6"
     }
   }
 }
