@@ -340,6 +340,7 @@ function renderStats(stats = {}) {
  badge('aBadgePending', stats.companies?.pending || 0);
  badge('aBadgeMsg', stats.messages?.unread || 0);
  badge('aBadgeQuotes', stats.quotes?.new || stats.quotes?.new_count || 0);
+ badge('aBadgeCrm', stats.crm_tasks?.overdue || stats.crm?.tasks_overdue || 0);
  const items = [
  ['ph-currency-dollar', money(stats.commerce?.revenue_30d ?? stats.revenue, 'usd'), 'Revenue (30d)'],
  ['ph-package', stats.commerce?.orders_7d || stats.orders?.total || 0, 'Orders (7d)'],

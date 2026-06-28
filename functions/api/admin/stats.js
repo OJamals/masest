@@ -103,6 +103,7 @@ async function computeStats(sb) {
     overdueQuoteFollowups,
     newQuotes,
     urgentQuotes,
+    overdueTasks,
   ] = await Promise.all([
     count('companies', (q) => q.eq('status', 'pending')),
     count('companies', (q) => q.eq('status', 'approved')),
@@ -118,6 +119,7 @@ async function computeStats(sb) {
     count('quotes', (q) => q.lte('due_at', nowIso).neq('status', 'closed').neq('status', 'spam')),
     count('quotes', (q) => q.eq('status', 'new')),
     count('quotes', (q) => q.eq('priority', 'urgent').neq('status', 'closed').neq('status', 'spam')),
+    count('crm_tasks', (q) => q.eq('status', 'open').not('due_at', 'is', null).lte('due_at', nowIso)),
   ]);
 
   const byStatus = recentOrders.reduce((m, order) => {
@@ -149,6 +151,7 @@ async function computeStats(sb) {
     quotes_urgent: urgentQuotes,
     quotes_overdue: overdueQuoteFollowups,
     setup_followups: setup_followups.companies,
+    tasks_overdue: overdueTasks,
   };
   const accounts = {
     pending: pendingCompanies,
@@ -187,6 +190,7 @@ async function computeStats(sb) {
     messages: { unread: unreadMessages },
     setup_followups,
     quotes_due: { overdue: overdueQuoteFollowups },
+    crm_tasks: { overdue: overdueTasks },
     quotes: { new: newQuotes, urgent: urgentQuotes },
     catalog: { buy: buyCount, quote: quoteCount },
     inventory: { low_stock: lowStock },
