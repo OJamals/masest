@@ -48,6 +48,9 @@ test("content editor has an asset picker contract", () => {
   assert.match(source, /contentAssetStatusFilter/);
   assert.match(source, /refresh_assets/);
   assert.match(source, /close_assets/);
+  assert.match(source, /data-content-asset-status-action/);
+  assert.match(source, /updateAssetStatus/);
+  assert.match(source, /assetCache/);
   assert.match(source, /pairedAssetAltField/);
   assert.match(source, /\/api\/admin\/content-assets/);
 });

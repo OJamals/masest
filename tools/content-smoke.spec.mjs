@@ -37,6 +37,13 @@ test.afterAll(async () => {
 });
 
 async function bootAsStaff(page) {
+  let contentAssets = [{
+    storage_path: "img/proof/cases/brewery.webp",
+    public_url: "img/proof/cases/brewery.webp",
+    alt: "Brewery tank cleaned with VertKleen CR and HCR",
+    status: "available",
+    credit: "MASEST field team",
+  }];
   await page.addInitScript(() => {
     window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
     window.MASEST_SUPABASE_ANON = "stub-anon-key";
@@ -71,33 +78,50 @@ async function bootAsStaff(page) {
     }),
   }));
   await page.route("**/api/admin/content-assets**", async (route) => {
-    if (route.request().method() === "POST") {
+    const req = route.request();
+    if (req.method() === "POST") {
       const isJson = (route.request().headers()["content-type"] || "").includes("application/json");
+      let asset;
+      if (isJson) {
+        const body = req.postDataJSON();
+        asset = {
+          ...(contentAssets.find((row) => row.storage_path === body.storage_path) || {}),
+          ...body,
+          public_url: body.public_url || body.storage_path,
+          status: body.status === "archived" ? "archived" : "available",
+        };
+      } else {
+        asset = {
+          storage_path: "cms/proof/uploaded-brewery.webp",
+          public_url: "cms/proof/uploaded-brewery.webp",
+          alt: "Uploaded brewery proof image",
+          status: "available",
+        };
+      }
+      const index = contentAssets.findIndex((row) => row.storage_path === asset.storage_path);
+      if (index >= 0) contentAssets[index] = asset;
+      else contentAssets.unshift(asset);
       return route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           ok: true,
-          asset: {
-            storage_path: isJson ? "img/proof/cases/registered-brewery.webp" : "cms/proof/uploaded-brewery.webp",
-            public_url: isJson ? "img/proof/cases/registered-brewery.webp" : "cms/proof/uploaded-brewery.webp",
-            alt: isJson ? "Registered brewery proof image" : "Uploaded brewery proof image",
-            status: "available",
-          },
+          asset,
         }),
       });
     }
+    const url = new URL(req.url());
+    const q = (url.searchParams.get("q") || "").toLowerCase();
+    const status = url.searchParams.get("status") || "available";
+    const assets = contentAssets.filter((asset) => (
+      (status === "all" || asset.status === status)
+      && (!q || `${asset.storage_path} ${asset.alt || ""}`.toLowerCase().includes(q))
+    ));
     return route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        assets: [{
-          storage_path: "img/proof/cases/brewery.webp",
-          public_url: "img/proof/cases/brewery.webp",
-          alt: "Brewery tank cleaned with VertKleen CR and HCR",
-          status: "available",
-          credit: "MASEST field team",
-        }],
+        assets,
       }),
     });
   });
@@ -163,6 +187,17 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(page.locator("#contentAssetStatusFilter")).toHaveValue("available");
   await page.locator("#contentAssetSearch").fill("brewery");
   await page.locator('[data-content-action="refresh_assets"]').click();
+  await expect(page.locator("#contentAssetRows")).toContainText("MASEST field team");
+  await page.locator("[data-content-asset-status-action]").first().click();
+  await expect(page.locator("#contentStatus")).toHaveText("Asset archived.");
+  await expect(page.locator("#contentAssetRows")).toContainText("No assets");
+  await page.locator("#contentAssetStatusFilter").selectOption("archived");
+  await expect(page.locator("#contentAssetRows")).toContainText("Brewery tank cleaned with VertKleen CR and HCR");
+  await expect(page.locator("[data-content-asset-status-action]").first()).toContainText("Restore");
+  await page.locator("[data-content-asset-status-action]").first().click();
+  await expect(page.locator("#contentStatus")).toHaveText("Asset restored.");
+  await expect(page.locator("#contentAssetRows")).toContainText("No assets");
+  await page.locator("#contentAssetStatusFilter").selectOption("available");
   await expect(page.locator("#contentAssetRows")).toContainText("MASEST field team");
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-asset-manager.png`, fullPage: true });
   await page.locator("[data-content-asset-path]").first().click();

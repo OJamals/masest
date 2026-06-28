@@ -173,13 +173,16 @@
   .adm-content-upload label:nth-child(3), .adm-content-upload .btn { grid-column: 1 / -1; }
   .adm-content-upload input[type="file"] { font-size: .78rem; }
   .adm-content-upload .btn, .adm-content-register .btn { min-height: 40px; justify-content: center; width: 100%; }
-  .adm-content-asset-row { width: 100%; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; align-items: center; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); padding: 10px 12px; }
+  .adm-content-asset-row { width: 100%; display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; align-items: center; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); padding: 10px 12px; }
+  .adm-content-asset-row[data-content-asset-status="archived"] { opacity: .72; }
   .adm-content-asset-row + .adm-content-asset-row { margin-top: 8px; }
   .adm-content-asset-thumb { width: 64px; height: 50px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); overflow: hidden; color: var(--muted); }
   .adm-content-asset-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .adm-content-asset-info { display: grid; gap: 3px; min-width: 0; }
   .adm-content-asset-info span, .adm-content-asset-info small { color: var(--muted); overflow-wrap: anywhere; }
   .adm-content-asset-info small { font-size: .76rem; }
+  .adm-content-asset-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .adm-content-asset-actions .btn { min-width: 104px; justify-content: center; }
   .adm-content-editor .adm-textarea { min-height: 180px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.45; }
   .adm-content-list table.adm { min-width: 640px; }
   .adm-content-row { cursor: pointer; }
@@ -256,6 +259,8 @@
     .adm-content-asset-tools, .adm-content-upload, .adm-content-register { grid-template-columns: 1fr; }
     .adm-content-asset-row { grid-template-columns: 54px minmax(0, 1fr); }
     .adm-content-asset-thumb { width: 54px; height: 46px; }
+    .adm-content-asset-actions { grid-column: 1 / -1; justify-content: stretch; }
+    .adm-content-asset-actions .btn { flex: 1 1 120px; }
     .admin-order-head,
     .company-admin-head,
     .admin-order-meta,

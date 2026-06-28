@@ -499,6 +499,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let mounted = false;
   let assetTargetField = "image";
   let assetTargetKind = "payload";
+  let assetCache = new Map();
   let workflowEntries = [];
   let slugManuallyEdited = false;
   let lastGeneratedSlug = "";
@@ -719,15 +720,28 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   function assetRowTemplate(asset = {}) {
     const value = assetValue(asset);
     const status = asset.status || "available";
+    const storagePath = asset.storage_path || value;
+    const archived = status === "archived";
+    const nextStatus = archived ? "available" : "archived";
+    const statusLabel = archived ? "Restore" : "Archive";
+    const statusIcon = archived ? "ph-arrow-counter-clockwise" : "ph-archive";
     return `
-      <button class="adm-list-row adm-content-asset-row" type="button" data-content-asset-kind="${esc(assetTargetKind)}" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">
+      <div class="adm-list-row adm-content-asset-row" data-content-asset-status="${esc(status)}">
         <span class="adm-content-asset-thumb" aria-hidden="true">${value ? `<img src="${esc(value)}" alt="" loading="lazy">` : `<i class="ph ph-image"></i>`}</span>
         <span class="adm-content-asset-info">
           <b>${esc(asset.storage_path || value)}</b>
           <span>${esc(asset.alt || "No alt text")}</span>
           <small>${esc([status, asset.credit || "", asset.mime_type || ""].filter(Boolean).join(" · "))}</small>
         </span>
-      </button>
+        <span class="adm-content-asset-actions">
+          <button class="btn btn-secondary btn-sm" type="button" data-content-asset-kind="${esc(assetTargetKind)}" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">
+            <i class="ph ph-check" aria-hidden="true"></i> Select
+          </button>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-asset-status-action data-content-asset-storage-path="${esc(storagePath)}" data-content-asset-next-status="${esc(nextStatus)}">
+            <i class="ph ${esc(statusIcon)}" aria-hidden="true"></i> ${esc(statusLabel)}
+          </button>
+        </span>
+      </div>
     `;
   }
 
@@ -745,6 +759,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       const path = `/api/admin/content-assets${query.toString() ? `?${query.toString()}` : ""}`;
       const data = await api(path);
       const assets = data.assets || [];
+      assetCache = new Map(assets.map((asset) => [asset.storage_path || assetValue(asset), asset]));
       list.innerHTML = assets.map((asset) => assetRowTemplate(asset)).join("")
         || admEmpty("ph-image", "No assets", "Upload an image or register an existing path.");
     } catch (error) {
@@ -753,6 +768,42 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         "Assets unavailable",
         error.data?.message || error.data?.error || error.message || "Try again.",
       );
+    }
+  }
+
+  async function updateAssetStatus(button) {
+    const storagePath = button.dataset.contentAssetStoragePath || "";
+    const nextStatus = button.dataset.contentAssetNextStatus === "archived" ? "archived" : "available";
+    const asset = assetCache.get(storagePath);
+    if (!storagePath || !asset) {
+      setStatus("Refresh assets before updating this asset.", "err");
+      return;
+    }
+    const alt = String(asset.alt || "").trim();
+    if (!alt) {
+      setStatus("Add alt text before changing this asset status.", "err");
+      return;
+    }
+    button.disabled = true;
+    setStatus(nextStatus === "archived" ? "Archiving asset..." : "Restoring asset...");
+    try {
+      const result = await api("/api/admin/content-assets", {
+        method: "POST",
+        body: {
+          ...asset,
+          storage_path: storagePath,
+          alt,
+          status: nextStatus,
+        },
+      });
+      const updated = result.asset || { ...asset, status: nextStatus };
+      assetCache.set(updated.storage_path || storagePath, updated);
+      setStatus(nextStatus === "archived" ? "Asset archived." : "Asset restored.", "ok");
+      await loadAssets();
+    } catch (error) {
+      setStatus(error.data?.message || error.data?.error || error.message || "Asset status update failed.", "err");
+    } finally {
+      button.disabled = false;
     }
   }
 
@@ -1107,6 +1158,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     delegate(root, "click", "[data-content-edit]", (_event, button) => editEntry(button.dataset.contentEdit));
     delegate(root, "click", "[data-content-revision]", (_event, button) => restoreRevision(button.dataset.contentRevision));
     delegate(root, "click", "[data-content-asset-path]", (_event, button) => assignAssetPath(button));
+    delegate(root, "click", "[data-content-asset-status-action]", (_event, button) => updateAssetStatus(button));
     delegate(root, "click", "[data-content-workflow]", (_event, button) => runWorkflow(button.dataset.contentWorkflow));
     delegate(root, "click", "[data-content-action]", (_event, button) => {
       const action = button.dataset.contentAction;
