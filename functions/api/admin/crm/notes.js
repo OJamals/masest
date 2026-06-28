@@ -22,10 +22,10 @@ export async function onRequest({ request, env }) {
       .is('deleted_at', null)
       .order('created_at', { ascending: false }).limit(200);
     if (error) {
-      if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { notes: [], needs_migration: true });
+      if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { notes: [], needs_migration: true, viewer: { email: user.email || null, can_delete_any: role === 'owner' } });
       return json(500, { error: error.message });
     }
-    return json(200, { notes: data || [] });
+    return json(200, { notes: data || [], viewer: { email: user.email || null, can_delete_any: role === 'owner' } });
   }
 
   if (request.method === 'POST') {

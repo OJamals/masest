@@ -41,7 +41,8 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       <time class="crm-feed-at muted">${esc(date(i.at))}</time></li>`).join('')}</ul>`;
   }
 
-  function renderNotes(notes) {
+  function renderNotes(notes, viewer) {
+    const canDelete = (n) => viewer && (viewer.can_delete_any || (n.created_by && n.created_by === viewer.email));
     const composer = `<form class="crm-note-form" data-crm-note-form>
       <select class="adm-select" data-crm-note-kind aria-label="Note type">${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
       <textarea class="adm-input" data-crm-note-body rows="2" placeholder="Log a note, call, email or meeting…" required></textarea>
@@ -52,7 +53,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       <div><div class="crm-feed-title">${esc(n.kind)} <span class="muted">· ${esc(n.created_by || '')}</span></div>
       <div class="crm-feed-detail">${esc(n.body)}</div></div>
       <span class="crm-feed-at"><time class="muted">${esc(date(n.created_at))}</time>
-      <button class="btn btn-ghost btn-sm" type="button" data-crm-note-del="${esc(n.id)}" aria-label="Delete note">Delete</button></span></li>`).join('')}</ul>`
+      ${canDelete(n) ? `<button class="btn btn-ghost btn-sm" type="button" data-crm-note-del="${esc(n.id)}" aria-label="Delete note">Delete</button>` : ''}</span></li>`).join('')}</ul>`
       : admEmpty('ph-note', 'No notes', 'Log the first call, email or meeting.');
     return composer + list;
   }
@@ -115,8 +116,8 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         const { timeline } = await api(`/api/admin/crm/timeline?subject_type=${subjectType}&subject_id=${sid}`);
         body.innerHTML = renderTimeline(timeline || []);
       } else if (tab === 'notes') {
-        const { notes } = await api(`/api/admin/crm/notes?subject_type=${subjectType}&subject_id=${sid}`);
-        body.innerHTML = renderNotes(notes || []);
+        const { notes, viewer } = await api(`/api/admin/crm/notes?subject_type=${subjectType}&subject_id=${sid}`);
+        body.innerHTML = renderNotes(notes || [], viewer);
       } else if (tab === 'contacts') {
         const { contacts } = await api(`/api/admin/crm/contacts?company_id=${sid}`);
         body._contacts = contacts || [];

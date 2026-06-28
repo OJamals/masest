@@ -52,3 +52,15 @@ test('tasks endpoint supports global scopes', () => {
   assert.match(TASKS, /scope === 'overdue'/);
   assert.match(TASKS, /scope === 'open'/);
 });
+
+test('notes GET returns viewer with email and can_delete_any', () => {
+  // Both the success path and the needs_migration fallback must carry viewer
+  assert.match(NOTES, /viewer:\s*\{[^}]*can_delete_any:\s*role\s*===\s*'owner'/);
+  // Exactly 2 occurrences: success path + needs_migration fallback
+  const count = (NOTES.match(/can_delete_any/g) || []).length;
+  assert.equal(count, 2, 'can_delete_any must appear exactly twice (success + migration fallback)');
+  // viewer.email uses user.email
+  assert.match(NOTES, /viewer:\s*\{[^}]*email:\s*user\.email\s*\|\|\s*null/);
+  // DELETE guard is still intact (not weakened)
+  assert.match(NOTES, /if\s*\(!isOwner\s*&&\s*note\.created_by\s*!==\s*\(user\.email\s*\|\|\s*null\)\)/);
+});

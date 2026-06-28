@@ -46,3 +46,21 @@ test('crm panel has styles', () => {
   assert.match(CSS, /\.crm-panel/);
   assert.match(CSS, /\.crm-feed/);
 });
+
+test('renderNotes accepts viewer arg and gates Delete via canDelete', () => {
+  // Function signature accepts viewer parameter
+  assert.match(CRM, /function renderNotes\(notes,\s*viewer\)/);
+  // canDelete closure uses viewer.can_delete_any and viewer.email
+  assert.match(CRM, /viewer\.can_delete_any/);
+  assert.match(CRM, /n\.created_by\s*===\s*viewer\.email/);
+  // Delete button is conditional — not emitted unconditionally
+  assert.match(CRM, /canDelete\(n\)\s*\?/);
+  assert.doesNotMatch(CRM, /data-crm-note-del[^`]*aria-label="Delete note">Delete<\/button>`\s*<\/span>/);
+});
+
+test('load() notes branch destructures viewer and passes it to renderNotes', () => {
+  // Destructures viewer from the API response
+  assert.match(CRM, /const\s*\{\s*notes,\s*viewer\s*\}\s*=\s*await\s*api\(/);
+  // Calls renderNotes with both args
+  assert.match(CRM, /renderNotes\(notes\s*\|\|\s*\[\]\s*,\s*viewer\)/);
+});
