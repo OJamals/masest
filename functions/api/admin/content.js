@@ -58,6 +58,11 @@ export async function onRequest({ request, env }) {
           return json(403, { error: "forbidden", message: "Force unlocking content requires reviewer access." });
         }
         result = await repo.unlock(entry, user.id, { force: true });
+      } else if (action === "unarchive") {
+        if (!staffCan(role, "content.write")) {
+          return json(403, { error: "forbidden", message: "Restoring archived content requires owner access." });
+        }
+        result = await repo.unarchive(entry, user.id);
       } else if (action === "submit_review") {
         if (!staffCan(role, "content.write")) {
           return json(403, { error: "forbidden", message: "Submitting content requires owner access." });

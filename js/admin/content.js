@@ -241,6 +241,7 @@ function formTemplate() {
           <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
           <button class="btn btn-primary btn-sm" type="button" data-content-action="publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish</button>
           <button class="btn btn-ghost btn-sm" type="button" data-content-action="archive"><i class="ph ph-archive" aria-hidden="true"></i> Archive</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore draft</button>
           <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
           <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
           <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule publish</button>
@@ -569,7 +570,12 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       lockStatus.dataset.state = blocked ? "err" : locked ? "ok" : "";
     }
     const root = $("admContent");
-    root?.querySelectorAll('[data-content-action="draft"], [data-content-action="publish"], [data-content-action="archive"], [data-content-workflow]')
+    const archived = entry.status === "archived";
+    const archiveButton = root?.querySelector('[data-content-action="archive"]');
+    const unarchiveButton = root?.querySelector('[data-content-action="unarchive"]');
+    if (archiveButton) archiveButton.hidden = archived;
+    if (unarchiveButton) unarchiveButton.hidden = !archived;
+    root?.querySelectorAll('[data-content-action="draft"], [data-content-action="publish"], [data-content-action="archive"], [data-content-action="unarchive"], [data-content-workflow]')
       .forEach((control) => { control.disabled = blocked; });
     const lockButton = root?.querySelector('[data-content-action="lock"]');
     const unlockButton = root?.querySelector('[data-content-action="unlock"]');
@@ -1156,6 +1162,28 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
+  async function unarchiveContent() {
+    if (stopIfLocked()) return;
+    const preserveLockOwner = editorLockOwned;
+    const entry = selectedEntryIdentity();
+    if (!entry.type || !entry.slug) {
+      setStatus("Choose an archived entry before restoring.", "err");
+      return;
+    }
+    setStatus("Restoring archived entry...");
+    try {
+      const result = await api("/api/admin/content", {
+        method: "POST",
+        body: { action: "unarchive", entry },
+      });
+      populateForm(result.entry || {}, { preserveLockOwner });
+      setStatus("Restored as draft.", "ok");
+      await renderContent({ refetch: true });
+    } catch (error) {
+      setStatus(error.data?.message || error.data?.error || "Restore failed.", "err");
+    }
+  }
+
   async function restoreRevision(version) {
     if (stopIfLocked()) return;
     const preserveLockOwner = editorLockOwned;
@@ -1274,6 +1302,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (action === "publish") return saveContent({ publish: true });
       if (action === "publish_scheduled") return publishScheduledContent();
       if (action === "archive") return archiveContent();
+      if (action === "unarchive") return unarchiveContent();
       if (action === "preview") return refreshPreview();
       if (action === "asset") return openAssetPicker(button.dataset.contentAssetTarget);
       if (action === "seo_asset") return openAssetPicker(button.dataset.contentSeoAssetTarget, "seo");

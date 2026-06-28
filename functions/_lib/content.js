@@ -419,5 +419,28 @@ export function createContentRepository(sb) {
       await writeRevision(sb, data, userId, "Archived");
       return { ok: true, entry: data };
     },
+
+    async unarchive({ type, slug, locale = "en" }, userId, options = {}) {
+      const prior = await existingEntry(sb, { type, slug: normalizeSlug(slug), locale });
+      if (!prior?.id) return { ok: false, error: "entry_not_found" };
+      const conflict = contentLockConflict(prior, userId, options);
+      if (conflict) return conflict;
+      const { data, error } = await sb
+        .from("content_entries")
+        .update({
+          status: "draft",
+          scheduled_at: null,
+          published_at: null,
+          review_note: null,
+          updated_by: userId || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", prior.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      await writeRevision(sb, data, userId, "Restored from archive");
+      return { ok: true, entry: data };
+    },
   };
 }

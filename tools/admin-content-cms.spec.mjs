@@ -409,6 +409,69 @@ test("content editor blocks writes behind active editorial locks", async ({ page
   await expect(page.locator('[data-content-action="force_unlock"]')).toBeDisabled();
 });
 
+test("content editor restores archived entries back to draft", async ({ page }) => {
+  await bootAsStaff(page);
+
+  let restoreBody = null;
+  let entry = {
+    ...contentList().entries[0],
+    status: "archived",
+    published_at: "2026-06-25T12:00:00.000Z",
+    review_note: "Archived after old campaign sunset.",
+  };
+  await page.route("**/api/admin/content**", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      restoreBody = req.postDataJSON();
+      if (restoreBody.action === "unarchive") {
+        entry = {
+          ...entry,
+          status: "draft",
+          published_at: null,
+          review_note: null,
+        };
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, entry }),
+      });
+    }
+    const url = new URL(req.url());
+    const status = url.searchParams.get("status") || "published";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: status === "all" || entry.status === status ? [entry] : [] }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("#contentStatusFilter").selectOption("archived");
+  await page.locator("[data-content-edit]").first().click();
+
+  await expect(page.locator("#contentEditorBadge")).toHaveText("archived");
+  await expect(page.locator('[data-content-action="archive"]')).toBeHidden();
+  await expect(page.locator('[data-content-action="unarchive"]')).toBeVisible();
+  await page.locator("#contentForm .adm-inline-actions").screenshot({
+    path: `${SCREENSHOT_DIR}/admin-content-archived-restore-desktop.png`,
+  });
+
+  const restoreResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('[data-content-action="unarchive"]').click();
+  await restoreResponse;
+
+  expect(restoreBody.action).toBe("unarchive");
+  expect(restoreBody.entry).toMatchObject({ type: "service", slug: "water-analysis", locale: "en" });
+  await expect(page.locator("#contentStatus")).toHaveText("Restored as draft.");
+  await expect(page.locator("#contentEditorBadge")).toHaveText("draft");
+  await expect(page.locator('[data-content-action="archive"]')).toBeVisible();
+  await expect(page.locator('[data-content-action="unarchive"]')).toBeHidden();
+});
+
 test("mobile content editor switches to page metadata fields without overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await bootAsStaff(page);

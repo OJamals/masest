@@ -21,6 +21,8 @@ test("content API exposes workflow actions with publish and review permissions",
   assert.match(source, /action === "lock"/);
   assert.match(source, /action === "unlock"/);
   assert.match(source, /action === "force_unlock"/);
+  assert.match(source, /action === "unarchive"/);
+  assert.match(source, /repo\.unarchive/);
   assert.match(source, /scheduled_at_required/);
   assert.match(source, /publishScheduledDue/);
   assert.match(source, /body\.note \|\| "Submitted for review"/);
@@ -38,6 +40,7 @@ test("content repository enforces active editorial locks", () => {
   assert.match(source, /error:\s*"content_locked"/);
   assert.match(source, /async lock\(/);
   assert.match(source, /async unlock\(/);
+  assert.match(source, /async unarchive\(/);
   assert.match(source, /this\.publish\(entry, userId, \{ force: true \}\)/);
 });
 
@@ -58,6 +61,8 @@ test("content editor surfaces workflow queues and actions", () => {
   assert.match(source, /data-content-action="lock"/);
   assert.match(source, /data-content-action="unlock"/);
   assert.match(source, /data-content-action="force_unlock"/);
+  assert.match(source, /data-content-action="unarchive"/);
   assert.match(source, /editorBlockedByLock/);
   assert.match(source, /updateContentLock/);
+  assert.match(source, /unarchiveContent/);
 });
