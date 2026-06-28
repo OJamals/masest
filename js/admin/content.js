@@ -26,6 +26,7 @@ const SEO_FIELDS = [
   { key: "og_image", label: "Social image", kind: "text" },
 ];
 const SEO_FIELD_KEYS = new Set(SEO_FIELDS.map((field) => field.key));
+const CONTENT_LOCK_TTL_MS = 30 * 60 * 1000;
 
 function labelFor(options, value) {
   return options.find(([key]) => key === value)?.[1] || value || "";
@@ -65,6 +66,17 @@ function scheduledDisplay(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleString();
+}
+
+function entryKeyValue(entry = {}) {
+  if (!entry.type || !entry.slug) return "";
+  return `${entry.type}:${entry.slug}:${entry.locale || "en"}`;
+}
+
+function activeContentLock(entry = {}) {
+  if (!entry.locked_by || !entry.locked_at) return false;
+  const lockedAt = new Date(entry.locked_at).getTime();
+  return Number.isFinite(lockedAt) && Date.now() - lockedAt <= CONTENT_LOCK_TTL_MS;
 }
 
 function fieldValue(payload, key) {
@@ -211,6 +223,12 @@ function formTemplate() {
         <label class="full">Workflow note
           <textarea id="contentWorkflowNote" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
         </label>
+        <div class="adm-content-lockbar full">
+          <span id="contentLockStatus" class="adm-content-lock-status" data-state="">Unlocked</span>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
+        </div>
         <div id="contentStructuredFields" class="adm-content-fields full"></div>
         <label class="full">Payload JSON <textarea id="contentPayload" class="adm-textarea" spellcheck="false">{}</textarea></label>
         <fieldset id="contentSeoFields" class="adm-content-seo full"></fieldset>
@@ -500,6 +518,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let assetTargetField = "image";
   let assetTargetKind = "payload";
   let assetCache = new Map();
+  let currentEntry = {};
+  let currentEntryKey = "";
+  let editorLockOwned = false;
   let workflowEntries = [];
   let slugManuallyEdited = false;
   let lastGeneratedSlug = "";
@@ -509,6 +530,53 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (!el) return;
     el.textContent = text;
     el.dataset.state = kind;
+  }
+
+  function selectedEntryIdentity() {
+    return {
+      type: $("contentType")?.value || "service",
+      slug: slugifyContentTitle($("contentSlug")?.value || ""),
+      locale: $("contentLocale")?.value.trim() || "en",
+    };
+  }
+
+  function editorBlockedByLock() {
+    return activeContentLock(currentEntry) && !editorLockOwned;
+  }
+
+  function stopIfLocked() {
+    if (!editorBlockedByLock()) return false;
+    setStatus("This entry is locked by another editor. Force unlock it before editing.", "err");
+    return true;
+  }
+
+  function updateLockUi(entry = currentEntry) {
+    const lockStatus = $("contentLockStatus");
+    const locked = activeContentLock(entry);
+    const hasEntry = Boolean(entry.type && entry.slug);
+    const blocked = locked && !editorLockOwned;
+    if (lockStatus) {
+      const lockedAt = entry.locked_at ? new Date(entry.locked_at).toLocaleString() : "";
+      lockStatus.textContent = !hasEntry
+        ? "Save an entry before locking"
+        : locked && editorLockOwned
+          ? `Locked by you${lockedAt ? ` since ${lockedAt}` : ""}`
+          : locked
+            ? `Locked by another editor${lockedAt ? ` since ${lockedAt}` : ""}`
+            : entry.locked_by
+              ? "Prior lock expired"
+              : "Unlocked";
+      lockStatus.dataset.state = blocked ? "err" : locked ? "ok" : "";
+    }
+    const root = $("admContent");
+    root?.querySelectorAll('[data-content-action="draft"], [data-content-action="publish"], [data-content-action="archive"], [data-content-workflow]')
+      .forEach((control) => { control.disabled = blocked; });
+    const lockButton = root?.querySelector('[data-content-action="lock"]');
+    const unlockButton = root?.querySelector('[data-content-action="unlock"]');
+    const forceButton = root?.querySelector('[data-content-action="force_unlock"]');
+    if (lockButton) lockButton.disabled = !hasEntry || (locked && editorLockOwned);
+    if (unlockButton) unlockButton.disabled = !hasEntry || !locked || !editorLockOwned;
+    if (forceButton) forceButton.disabled = !hasEntry || !locked || editorLockOwned;
   }
 
   function publishStatusText(result = {}) {
@@ -624,7 +692,12 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
-  function populateForm(entry = {}) {
+  function populateForm(entry = {}, { lockOwned = false, preserveLockOwner = false } = {}) {
+    const nextKey = entryKeyValue(entry);
+    const sameEntry = nextKey && nextKey === currentEntryKey;
+    currentEntry = entry || {};
+    currentEntryKey = nextKey;
+    editorLockOwned = Boolean(lockOwned || (preserveLockOwner && sameEntry && editorLockOwned && activeContentLock(entry)));
     $("contentType").value = entry.type || "service";
     $("contentLocale").value = entry.locale || "en";
     $("contentTitle").value = entry.title || "";
@@ -644,6 +717,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
     setStatus("");
     void loadRevisions(entry);
+    updateLockUi(entry);
     refreshPreview();
   }
 
@@ -994,13 +1068,15 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   async function saveContent({ publish = false } = {}) {
+    if (stopIfLocked()) return;
+    const preserveLockOwner = editorLockOwned;
     setStatus(publish ? "Publishing..." : "Saving draft...");
     try {
       const result = await api("/api/admin/content", {
         method: "POST",
         body: { publish, entry: selectedFormEntry({ validate: true }) },
       });
-      populateForm(result.entry || {});
+      populateForm(result.entry || {}, { preserveLockOwner });
       setStatus(
         publish ? publishStatusText(result) : "Draft saved.",
         publish && result.publish_hook?.ok === false ? "err" : "ok",
@@ -1012,6 +1088,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   async function runWorkflow(action) {
+    if (stopIfLocked()) return;
+    const preserveLockOwner = editorLockOwned;
     try {
       const entry = selectedFormEntry({ validate: true });
       if (action === "schedule" && !entry.scheduled_at) {
@@ -1025,7 +1103,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         method: "POST",
         body: { action, note, entry },
       });
-      populateForm(result.entry || {});
+      populateForm(result.entry || {}, { preserveLockOwner });
       setStatus(`Workflow updated: ${action.replace(/_/g, " ")}.`, "ok");
       await renderContent({ refetch: true });
     } catch (error) {
@@ -1051,6 +1129,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   async function archiveContent() {
+    if (stopIfLocked()) return;
+    const preserveLockOwner = editorLockOwned;
     let entry;
     try {
       entry = selectedFormEntry();
@@ -1068,7 +1148,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         method: "DELETE",
         body: { type: entry.type, slug: entry.slug, locale: entry.locale },
       });
-      populateForm(result.entry || {});
+      populateForm(result.entry || {}, { preserveLockOwner });
       setStatus("Archived.", "ok");
       await renderContent({ refetch: true });
     } catch (error) {
@@ -1077,6 +1157,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   async function restoreRevision(version) {
+    if (stopIfLocked()) return;
+    const preserveLockOwner = editorLockOwned;
     let entry;
     try {
       entry = selectedFormEntry();
@@ -1094,11 +1176,33 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         method: "POST",
         body: { type: entry.type, slug: entry.slug, locale: entry.locale, version },
       });
-      populateForm(result.entry || {});
+      populateForm(result.entry || {}, { preserveLockOwner });
       setStatus(`Restored version ${version} as a draft.`, "ok");
       await renderContent({ refetch: true });
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || "Restore failed.", "err");
+    }
+  }
+
+  async function updateContentLock(action) {
+    const entry = selectedEntryIdentity();
+    if (!entry.type || !entry.slug) {
+      setStatus("Choose a saved entry before changing the editor lock.", "err");
+      return;
+    }
+    const label = action === "lock" ? "Claiming lock..." : action === "force_unlock" ? "Force unlocking..." : "Releasing lock...";
+    setStatus(label);
+    try {
+      const result = await api("/api/admin/content", {
+        method: "POST",
+        body: { action, entry },
+      });
+      populateForm(result.entry || currentEntry, { lockOwned: action === "lock" });
+      setStatus(action === "lock" ? "Lock claimed." : "Lock released.", "ok");
+      await renderContent({ refetch: true });
+    } catch (error) {
+      setStatus(error.data?.message || error.data?.error || "Lock update failed.", "err");
+      updateLockUi();
     }
   }
 
@@ -1163,6 +1267,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     delegate(root, "click", "[data-content-action]", (_event, button) => {
       const action = button.dataset.contentAction;
       if (action === "new") return populateForm();
+      if (action === "lock") return updateContentLock("lock");
+      if (action === "unlock") return updateContentLock("unlock");
+      if (action === "force_unlock") return updateContentLock("force_unlock");
       if (action === "draft") return saveContent({ publish: false });
       if (action === "publish") return saveContent({ publish: true });
       if (action === "publish_scheduled") return publishScheduledContent();

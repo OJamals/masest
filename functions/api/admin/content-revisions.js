@@ -31,7 +31,7 @@ export async function onRequest({ request, env }) {
     const body = await readBody(request);
     try {
       const result = await repo.restoreRevision(body || {}, user.id);
-      if (!result.ok) return json(400, { error: result.error });
+      if (!result.ok) return json(result.error === "content_locked" ? 409 : 400, result);
       return json(200, result);
     } catch (error) {
       return json(500, { error: error.message });

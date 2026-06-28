@@ -18,12 +18,27 @@ test("content API exposes workflow actions with publish and review permissions",
   assert.match(source, /action === "request_changes"/);
   assert.match(source, /action === "schedule"/);
   assert.match(source, /action === "publish_scheduled"/);
+  assert.match(source, /action === "lock"/);
+  assert.match(source, /action === "unlock"/);
+  assert.match(source, /action === "force_unlock"/);
   assert.match(source, /scheduled_at_required/);
   assert.match(source, /publishScheduledDue/);
   assert.match(source, /body\.note \|\| "Submitted for review"/);
   assert.match(source, /body\.note \|\| "Scheduled publish"/);
   assert.match(source, /staffCan\(role, "content\.review"\)/);
   assert.match(source, /staffCan\(role, "content\.publish"\)/);
+  assert.match(source, /result\.error === "content_locked" \? 409/);
+});
+
+test("content repository enforces active editorial locks", () => {
+  const source = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
+  assert.match(source, /CONTENT_LOCK_TTL_MS/);
+  assert.match(source, /activeContentLock/);
+  assert.match(source, /contentLockConflict/);
+  assert.match(source, /error:\s*"content_locked"/);
+  assert.match(source, /async lock\(/);
+  assert.match(source, /async unlock\(/);
+  assert.match(source, /this\.publish\(entry, userId, \{ force: true \}\)/);
 });
 
 test("content editor surfaces workflow queues and actions", () => {
@@ -39,4 +54,10 @@ test("content editor surfaces workflow queues and actions", () => {
   assert.match(source, /Submit for review/);
   assert.match(source, /Schedule publish/);
   assert.match(source, /Publish due scheduled/);
+  assert.match(source, /contentLockStatus/);
+  assert.match(source, /data-content-action="lock"/);
+  assert.match(source, /data-content-action="unlock"/);
+  assert.match(source, /data-content-action="force_unlock"/);
+  assert.match(source, /editorBlockedByLock/);
+  assert.match(source, /updateContentLock/);
 });

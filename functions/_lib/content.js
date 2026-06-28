@@ -12,6 +12,7 @@ export const CONTENT_STATUSES = new Set([
   "changes_requested",
   "scheduled",
 ]);
+export const CONTENT_LOCK_TTL_MS = 30 * 60 * 1000;
 
 export function normalizeSlug(value) {
   return String(value || "")
@@ -27,6 +28,28 @@ function objectValue(value) {
 
 function compactRow(row) {
   return Object.fromEntries(Object.entries(row).filter(([, value]) => value !== undefined));
+}
+
+function activeContentLock(entry = {}, nowMs = Date.now()) {
+  const row = entry || {};
+  if (!row.locked_by || !row.locked_at) return false;
+  const lockedAt = new Date(row.locked_at).getTime();
+  if (Number.isNaN(lockedAt)) return false;
+  return nowMs - lockedAt <= CONTENT_LOCK_TTL_MS;
+}
+
+function contentLockConflict(entry = {}, userId, { force = false } = {}) {
+  const row = entry || {};
+  if (force || !activeContentLock(row)) return null;
+  const lockedBy = String(row.locked_by || "");
+  if (!lockedBy || lockedBy === String(userId || "")) return null;
+  return {
+    ok: false,
+    error: "content_locked",
+    message: "This entry is locked by another editor. Force unlock it or wait for the lock to expire.",
+    locked_by: row.locked_by,
+    locked_at: row.locked_at,
+  };
 }
 
 function unsafeAssetReference(value) {
@@ -244,7 +267,7 @@ export function createContentRepository(sb) {
       );
     },
 
-    async transition(input = {}, userId, nextStatus, note) {
+    async transition(input = {}, userId, nextStatus, note, options = {}) {
       const normalized = normalizeContentEntry({
         ...input,
         title: input.title || input.slug,
@@ -252,6 +275,8 @@ export function createContentRepository(sb) {
       });
       const prior = await existingEntry(sb, normalized);
       if (!prior?.id) return { ok: false, error: "entry_not_found" };
+      const conflict = contentLockConflict(prior, userId, options);
+      if (conflict) return conflict;
       const patch = compactRow({
         status: nextStatus,
         scheduled_at: input.scheduled_at || null,
@@ -270,13 +295,13 @@ export function createContentRepository(sb) {
       return { ok: true, entry: data };
     },
 
-    async saveDraft(input, userId) {
+    async saveDraft(input, userId, options = {}) {
       const validation = validateContentEntry({ ...input, status: "draft" });
       if (!validation.ok) return validation;
-      return this.saveEntry(validation.entry, userId, "Draft saved");
+      return this.saveEntry(validation.entry, userId, "Draft saved", options);
     },
 
-    async publish(input, userId) {
+    async publish(input, userId, options = {}) {
       const validation = validateContentEntry({ ...input, status: "published" });
       if (!validation.ok) return validation;
       return this.saveEntry(
@@ -288,6 +313,7 @@ export function createContentRepository(sb) {
         },
         userId,
         "Published",
+        options,
       );
     },
 
@@ -308,15 +334,17 @@ export function createContentRepository(sb) {
 
       const entries = [];
       for (const entry of data || []) {
-        const result = await this.publish(entry, userId);
+        const result = await this.publish(entry, userId, { force: true });
         if (!result.ok) return result;
         entries.push(result.entry);
       }
       return { ok: true, count: entries.length, entries };
     },
 
-    async saveEntry(input, userId, note) {
+    async saveEntry(input, userId, note, options = {}) {
       const prior = await existingEntry(sb, input);
+      const conflict = contentLockConflict(prior, userId, options);
+      if (conflict) return conflict;
       const version = Number(prior?.version || 0) + 1;
       const now = new Date().toISOString();
       const row = compactRow({
@@ -336,13 +364,55 @@ export function createContentRepository(sb) {
       return { ok: true, entry: data };
     },
 
-    async archive({ type, slug, locale = "en" }, userId) {
+    async lock({ type, slug, locale = "en" } = {}, userId, options = {}) {
+      const entry = await existingEntry(sb, { type, slug: normalizeSlug(slug), locale });
+      if (!entry?.id) return { ok: false, error: "entry_not_found" };
+      const conflict = contentLockConflict(entry, userId, options);
+      if (conflict) return conflict;
+      const { data, error } = await sb
+        .from("content_entries")
+        .update({
+          locked_by: userId || null,
+          locked_at: new Date().toISOString(),
+          updated_by: userId || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", entry.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return { ok: true, entry: data };
+    },
+
+    async unlock({ type, slug, locale = "en" } = {}, userId, options = {}) {
+      const entry = await existingEntry(sb, { type, slug: normalizeSlug(slug), locale });
+      if (!entry?.id) return { ok: false, error: "entry_not_found" };
+      const conflict = contentLockConflict(entry, userId, options);
+      if (conflict) return conflict;
+      const { data, error } = await sb
+        .from("content_entries")
+        .update({
+          locked_by: null,
+          locked_at: null,
+          updated_by: userId || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", entry.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return { ok: true, entry: data };
+    },
+
+    async archive({ type, slug, locale = "en" }, userId, options = {}) {
+      const prior = await existingEntry(sb, { type, slug: normalizeSlug(slug), locale });
+      if (!prior?.id) return { ok: false, error: "entry_not_found" };
+      const conflict = contentLockConflict(prior, userId, options);
+      if (conflict) return conflict;
       const { data, error } = await sb
         .from("content_entries")
         .update({ status: "archived", updated_by: userId || null, updated_at: new Date().toISOString() })
-        .eq("type", type)
-        .eq("slug", normalizeSlug(slug))
-        .eq("locale", locale)
+        .eq("id", prior.id)
         .select("*")
         .single();
       if (error) throw error;

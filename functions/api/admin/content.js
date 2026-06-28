@@ -43,6 +43,21 @@ export async function onRequest({ request, env }) {
         if (result.ok && result.count > 0) {
           result.publish_hook = await triggerContentPublishBuild(env, result.entries[0]);
         }
+      } else if (action === "lock") {
+        if (!staffCan(role, "content.write")) {
+          return json(403, { error: "forbidden", message: "Locking content requires owner access." });
+        }
+        result = await repo.lock(entry, user.id);
+      } else if (action === "unlock") {
+        if (!staffCan(role, "content.write")) {
+          return json(403, { error: "forbidden", message: "Unlocking content requires owner access." });
+        }
+        result = await repo.unlock(entry, user.id);
+      } else if (action === "force_unlock") {
+        if (!staffCan(role, "content.review")) {
+          return json(403, { error: "forbidden", message: "Force unlocking content requires reviewer access." });
+        }
+        result = await repo.unlock(entry, user.id, { force: true });
       } else if (action === "submit_review") {
         if (!staffCan(role, "content.write")) {
           return json(403, { error: "forbidden", message: "Submitting content requires owner access." });
@@ -80,7 +95,7 @@ export async function onRequest({ request, env }) {
         }
         result = await repo.saveDraft(entry, user.id);
       }
-      if (!result.ok) return json(400, { error: result.error });
+      if (!result.ok) return json(result.error === "content_locked" ? 409 : 400, result);
       return json(200, result);
     } catch (error) {
       return json(500, { error: error.message });
@@ -94,6 +109,7 @@ export async function onRequest({ request, env }) {
     const body = await readBody(request);
     try {
       const result = await repo.archive(body, user.id);
+      if (!result.ok) return json(result.error === "content_locked" ? 409 : 400, result);
       return json(200, result);
     } catch (error) {
       return json(500, { error: error.message });

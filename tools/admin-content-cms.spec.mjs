@@ -350,6 +350,65 @@ test("content editor sends workflow notes and surfaces review notes", async ({ p
   await expect(page.locator("#contentWorkflowRows")).toContainText(note);
 });
 
+test("content editor blocks writes behind active editorial locks", async ({ page }) => {
+  await bootAsStaff(page);
+
+  const posts = [];
+  let entry = {
+    ...contentList().entries[0],
+    locked_by: "other-editor",
+    locked_at: new Date().toISOString(),
+  };
+  await page.route("**/api/admin/content**", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      const body = req.postDataJSON();
+      posts.push(body);
+      if (body.action === "force_unlock") {
+        entry = { ...entry, locked_by: null, locked_at: null };
+      } else if (body.action === "lock") {
+        entry = { ...entry, locked_by: "staff-user", locked_at: new Date().toISOString() };
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, entry }),
+      });
+    }
+    const url = new URL(req.url());
+    const status = url.searchParams.get("status") || "published";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: status === "all" || entry.status === status ? [entry] : [] }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("[data-content-edit]").first().click();
+
+  await expect(page.locator("#contentLockStatus")).toContainText("Locked by another editor");
+  await expect(page.locator('[data-content-action="draft"]')).toBeDisabled();
+  await expect(page.locator('[data-content-workflow="submit_review"]')).toBeDisabled();
+  await expect(page.locator('[data-content-action="force_unlock"]')).toBeEnabled();
+  await scrollContentPanelIntoView(page);
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-locks-desktop.png` });
+
+  await page.locator('[data-content-action="force_unlock"]').click();
+  await expect(page.locator("#contentStatus")).toHaveText("Lock released.");
+  expect(posts.at(-1).action).toBe("force_unlock");
+  await expect(page.locator("#contentLockStatus")).toHaveText("Unlocked");
+  await expect(page.locator('[data-content-action="draft"]')).toBeEnabled();
+
+  await page.locator('[data-content-action="lock"]').click();
+  await expect(page.locator("#contentStatus")).toHaveText("Lock claimed.");
+  expect(posts.at(-1).action).toBe("lock");
+  await expect(page.locator("#contentLockStatus")).toContainText("Locked by you");
+  await expect(page.locator('[data-content-action="unlock"]')).toBeEnabled();
+  await expect(page.locator('[data-content-action="force_unlock"]')).toBeDisabled();
+});
+
 test("mobile content editor switches to page metadata fields without overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await bootAsStaff(page);
