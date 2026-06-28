@@ -13,6 +13,7 @@ test("CMS type registry exposes every supported non-commerce type", () => {
     "faq_block",
     "industry_card",
     "page_meta",
+    "page_section",
     "proof_card",
     "resource_card",
     "service",
@@ -58,6 +59,7 @@ test("snapshotGroups returns every public export target", () => {
     "resources.json",
     "industries.json",
     "faqs.json",
+    "page-sections.json",
   ]);
   assert.ok(contentPayloadFields("proof_card").some((field) => field.key === "result"));
 });

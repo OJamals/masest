@@ -71,5 +71,8 @@ test("content publish API and editor surface static rebuild hook state", () => {
   assert.match(api, /publish_hook/);
   assert.match(ui, /publish_hook/);
   assert.match(ui, /Static rebuild/);
+  assert.match(ui, /public pages keep the previous export until a build runs/);
+  assert.match(ui, /publishStatusKind/);
+  assert.match(ui, /hook\?\.skipped\) return "warn"/);
   assert.match(env, /CONTENT_PUBLISH_HOOK_URL/);
 });

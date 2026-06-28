@@ -41,12 +41,22 @@ test("build-content writes a manifest with counts and generated timestamp", () =
             payload: { question: "How does freight work?", answer: "Reviewed during quote." },
             seo: {},
           },
+          {
+            type: "page_section",
+            slug: "services-proof",
+            title: "Services proof",
+            status: "published",
+            locale: "en",
+            payload: { page: "services", region: "body", headline: "A managed service proof block.", active: true },
+            seo: {},
+          },
         ]),
       },
     });
     const manifest = JSON.parse(readFileSync(join(outDir, "manifest.json"), "utf8"));
     assert.equal(typeof manifest.generated_at, "string");
     assert.equal(manifest.files["faqs.json"].count, 1);
+    assert.equal(manifest.files["page-sections.json"].count, 1);
     assert.equal(manifest.files["services.json"].count, 2);
     assert.deepEqual(manifest.files["services.json"].counts, {
       services: 1,

@@ -360,6 +360,47 @@ test("content operations publishes due scheduled entries in batch", async ({ pag
   await expect(page.locator("#contentWorkflowRows")).not.toContainText("Ready after final compliance approval.");
 });
 
+test("content editor warns when publish cannot trigger a static rebuild", async ({ page }) => {
+  await bootAsStaff(page);
+
+  let publishBody = null;
+  await page.route("**/api/admin/content**", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      publishBody = req.postDataJSON();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          entry: { ...publishBody.entry, status: "published" },
+          publish_hook: { ok: true, skipped: true },
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(contentList()),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("[data-content-edit]").first().click();
+
+  const publishResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('[data-content-action="publish"]').click();
+  await publishResponse;
+
+  expect(publishBody.publish).toBe(true);
+  await expect(page.locator("#contentStatus")).toContainText("Published in CMS.");
+  await expect(page.locator("#contentStatus")).toContainText("public pages keep the previous export until a build runs");
+  await expect(page.locator("#contentStatus")).toHaveAttribute("data-state", "warn");
+});
+
 test("content editor sends workflow notes and surfaces review notes", async ({ page }) => {
   await bootAsStaff(page);
 
@@ -533,7 +574,7 @@ test("content editor restores archived entries back to draft", async ({ page }) 
   await expect(page.locator('[data-content-action="unarchive"]')).toBeHidden();
 });
 
-test("mobile content editor switches to page metadata fields without overflow", async ({ page }) => {
+test("mobile content editor switches to page metadata and page-section fields without overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await bootAsStaff(page);
   await page.route("**/api/admin/content**", (route) => route.fulfill({
@@ -547,6 +588,11 @@ test("mobile content editor switches to page metadata fields without overflow", 
   await page.locator("#contentType").selectOption("page_meta");
   await expect(page.locator('[data-content-payload-field="page"]')).toBeVisible();
   await expect(page.locator('[data-content-payload-field="description"]')).toBeVisible();
+  await page.locator("#contentType").selectOption("page_section");
+  await expect(page.locator('[data-content-payload-field="page"]')).toBeVisible();
+  await expect(page.locator('[data-content-payload-field="region"]')).toBeVisible();
+  await expect(page.locator('[data-content-payload-field="headline"]')).toBeVisible();
+  await expect(page.locator('[data-content-action="asset"]').first()).toBeVisible();
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   expect(overflow).toBe(false);

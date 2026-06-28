@@ -610,7 +610,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   function publishStatusText(result = {}) {
     const hook = result.publish_hook;
     if (!hook) return "Published.";
-    if (hook.skipped) return "Published. Static rebuild hook not configured.";
+    if (hook.skipped) return "Published in CMS. Static rebuild hook is not configured, so public pages keep the previous export until a build runs.";
     if (hook.ok) return "Published. Static rebuild triggered.";
     const detail = hook.status || hook.message || hook.error || "hook failed";
     return `Published. Static rebuild failed: ${detail}.`;
@@ -623,10 +623,17 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     const base = `Published ${count} scheduled ${noun}.`;
     const hook = result.publish_hook;
     if (!hook) return base;
-    if (hook.skipped) return `${base} Static rebuild hook not configured.`;
+    if (hook.skipped) return `${base} Static rebuild hook is not configured, so public pages keep the previous export until a build runs.`;
     if (hook.ok) return `${base} Static rebuild triggered.`;
     const detail = hook.status || hook.message || hook.error || "hook failed";
     return `${base} Static rebuild failed: ${detail}.`;
+  }
+
+  function publishStatusKind(result = {}) {
+    const hook = result.publish_hook;
+    if (hook?.ok === false) return "err";
+    if (hook?.skipped) return "warn";
+    return "ok";
   }
 
   function mount() {
@@ -1107,7 +1114,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       populateForm(result.entry || {}, { preserveLockOwner });
       setStatus(
         publish ? publishStatusText(result) : "Draft saved.",
-        publish && result.publish_hook?.ok === false ? "err" : "ok",
+        publish ? publishStatusKind(result) : "ok",
       );
       await renderContent({ refetch: true });
     } catch (error) {
@@ -1148,7 +1155,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       });
       setStatus(
         publishScheduledStatusText(result),
-        result.publish_hook?.ok === false ? "err" : "ok",
+        publishStatusKind(result),
       );
       await renderContent({ refetch: true });
     } catch (error) {

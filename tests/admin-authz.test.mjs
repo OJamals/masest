@@ -36,6 +36,8 @@ const NON_STAFF_GATES = {
 const PRE_GUARD_DB_GATES = {
   // Automation sweep invoked by the CRM cron behind a constant-time shared-secret check.
   "quotes.js": /QUOTE_CRM_SECRET/,
+  // Automation digest invoked by the CRM task cron behind the same shared-secret check.
+  "crm/tasks.js": /QUOTE_CRM_SECRET/,
 };
 
 // Detects the service-role CLIENT creation itself (adminClient(env)) — not only chained

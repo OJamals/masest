@@ -63,6 +63,22 @@ test("content export writes all non-commerce CMS snapshot groups", () => {
       payload: { question: "How fast are quotes returned?", answer: "Most requests receive a reply within one business day." },
       seo: {},
     },
+    {
+      type: "page_section",
+      slug: "home-procurement-proof",
+      title: "Home procurement proof",
+      status: "published",
+      locale: "en",
+      payload: {
+        page: "home",
+        region: "body",
+        headline: "Proof buyers can route.",
+        body: "Add field results without editing static HTML.",
+        sort_order: 20,
+        active: true,
+      },
+      seo: {},
+    },
   ];
 
   try {
@@ -84,6 +100,7 @@ test("content export writes all non-commerce CMS snapshot groups", () => {
     assert.equal(readJson(join(outDir, "resources.json")).resource_cards[0].href, "resources.html#sds");
     assert.equal(readJson(join(outDir, "industries.json")).industry_cards[0].title, "Cold storage");
     assert.equal(readJson(join(outDir, "faqs.json")).faq_blocks[0].question, "How fast are quotes returned?");
+    assert.equal(readJson(join(outDir, "page-sections.json")).page_sections[0].headline, "Proof buyers can route.");
   } finally {
     rmSync(outDir, { recursive: true, force: true });
   }
@@ -99,6 +116,22 @@ test("admin CMS editor exposes structured fields for each content type", () => {
 
   const pageMetaFields = contentPayloadFields("page_meta").map((field) => field.key);
   assert.deepEqual(pageMetaFields, ["page", "description", "og_image", "jsonld_type"]);
+
+  const pageSectionFields = contentPayloadFields("page_section").map((field) => field.key);
+  assert.deepEqual(pageSectionFields, [
+    "page",
+    "region",
+    "category",
+    "eyebrow",
+    "headline",
+    "body",
+    "cta",
+    "href",
+    "image",
+    "image_alt",
+    "sort_order",
+    "active",
+  ]);
 });
 
 test("admin CMS editor exposes native SEO metadata controls", () => {

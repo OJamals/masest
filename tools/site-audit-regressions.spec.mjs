@@ -142,6 +142,10 @@ test("mobile pages expose persistent quote and chemical-map actions", async ({ p
   await expect(bar).toBeVisible();
   await expect(bar.getByRole("link", { name: /map chemical/i })).toHaveAttribute("href", /type=audit/);
   await expect(bar.getByRole("link", { name: /get quote/i })).toHaveAttribute("href", /type=quote/);
+
+  const quoteBox = await bar.getByRole("link", { name: /get quote/i }).boundingBox();
+  expect(quoteBox?.y, "quote action top edge").toBeGreaterThanOrEqual(0);
+  expect((quoteBox?.y || 0) + (quoteBox?.height || 0), "quote action bottom edge").toBeLessThanOrEqual(844);
 });
 
 test("mobile industry detail pages keep quote and chemical-map actions", async ({ page }) => {
@@ -390,7 +394,11 @@ test("scroll reveal sections become visible on long buyer pages", async ({ page 
     const section = page.locator(item.selector).first();
     await section.evaluate((node) => {
       const top = node.getBoundingClientRect().top + window.scrollY;
+      const root = document.documentElement;
+      const previousScrollBehavior = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
       window.scrollTo(0, Math.max(0, top - Math.round(window.innerHeight * 0.65)));
+      root.style.scrollBehavior = previousScrollBehavior;
     });
     await page.waitForTimeout(800);
 

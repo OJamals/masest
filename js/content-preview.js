@@ -7,6 +7,7 @@ const LABELS = {
   resource_card: "Resource card",
   industry_card: "Industry card",
   faq_block: "FAQ block",
+  page_section: "Page section",
   page_meta: "Page metadata",
 };
 

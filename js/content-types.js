@@ -70,6 +70,24 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "answer", label: "Answer", kind: "textarea", className: "full", required: true },
     ],
   },
+  page_section: {
+    label: "Page sections",
+    snapshot: { file: "page-sections.json", key: "page_sections" },
+    fields: [
+      { key: "page", label: "Page", kind: "text", required: true },
+      { key: "region", label: "Region", kind: "text", required: true },
+      { key: "category", label: "Category", kind: "text" },
+      { key: "eyebrow", label: "Eyebrow", kind: "text" },
+      { key: "headline", label: "Headline", kind: "text", className: "wide", required: true },
+      { key: "body", label: "Body", kind: "textarea", className: "full" },
+      { key: "cta", label: "CTA label", kind: "text" },
+      { key: "href", label: "CTA link", kind: "text" },
+      { key: "image", label: "Image path", kind: "text" },
+      { key: "image_alt", label: "Image alt", kind: "text" },
+      { key: "sort_order", label: "Sort order", kind: "number" },
+      { key: "active", label: "Active", kind: "checkbox" },
+    ],
+  },
   page_meta: {
     label: "Page metadata",
     snapshot: { file: "page-meta.json", key: "page_meta" },
@@ -109,6 +127,10 @@ const SNAPSHOT_GROUPS = Object.freeze([
   {
     file: "faqs.json",
     types: Object.freeze([Object.freeze({ type: "faq_block", key: "faq_blocks" })]),
+  },
+  {
+    file: "page-sections.json",
+    types: Object.freeze([Object.freeze({ type: "page_section", key: "page_sections" })]),
   },
 ]);
 
