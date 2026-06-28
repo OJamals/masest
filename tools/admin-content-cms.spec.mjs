@@ -162,6 +162,67 @@ test("content editor auto-generates slugs while preserving manual overrides", as
   await expect(page.locator("#contentSlug")).toHaveValue("raw-water-pilot-trial-2");
 });
 
+test("content editor duplicates entries as collision-safe drafts", async ({ page }) => {
+  await bootAsStaff(page);
+
+  let saveBody = null;
+  const entries = [
+    contentList().entries[0],
+    {
+      ...contentList().entries[0],
+      slug: "water-analysis-copy",
+      title: "Water analysis copy",
+      status: "draft",
+    },
+  ];
+  await page.route("**/api/admin/content**", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      saveBody = req.postDataJSON();
+      const saved = { ...saveBody.entry, status: saveBody.publish ? "published" : "draft" };
+      entries.push(saved);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, entry: saved }),
+      });
+    }
+    const url = new URL(req.url());
+    const status = url.searchParams.get("status") || "published";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: status === "all" ? entries : entries.filter((entry) => entry.status === status) }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("[data-content-edit]").first().click();
+
+  await page.locator('[data-content-action="duplicate"]').click();
+  await expect(page.locator("#contentEditorBadge")).toHaveText("draft");
+  await expect(page.locator("#contentTitle")).toHaveValue("Water analysis copy");
+  await expect(page.locator("#contentSlug")).toHaveValue("water-analysis-copy-2");
+  await expect(page.locator("#contentStatus")).toHaveText("Duplicated as a new draft. Review the slug, then save.");
+  expect(saveBody).toBeNull();
+  await page.locator("#contentForm .adm-inline-actions").screenshot({
+    path: `${SCREENSHOT_DIR}/admin-content-duplicate-draft-desktop.png`,
+  });
+
+  const saveResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('[data-content-action="draft"]').click();
+  await saveResponse;
+
+  expect(saveBody.publish).toBe(false);
+  expect(saveBody.entry.slug).toBe("water-analysis-copy-2");
+  expect(saveBody.entry.title).toBe("Water analysis copy");
+  expect(saveBody.entry.payload.sku).toBe("MS-LAB-WATER");
+  await expect(page.locator("#contentStatus")).toHaveText("Draft saved.");
+});
+
 test("content editor schedules publish with an explicit datetime", async ({ page }) => {
   await bootAsStaff(page);
 

@@ -238,6 +238,7 @@ function formTemplate() {
         </details>
         <div class="adm-inline-actions full">
           <button class="btn btn-ghost btn-sm" type="button" data-content-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
           <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
           <button class="btn btn-primary btn-sm" type="button" data-content-action="publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish</button>
           <button class="btn btn-ghost btn-sm" type="button" data-content-action="archive"><i class="ph ph-archive" aria-hidden="true"></i> Archive</button>
@@ -541,6 +542,27 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     };
   }
 
+  function usedContentSlugs(type, locale) {
+    return new Set(
+      [...(state.content || []), ...(workflowEntries || [])]
+        .filter((entry) => entry.type === type && (entry.locale || "en") === (locale || "en"))
+        .map((entry) => entry.slug)
+        .filter(Boolean),
+    );
+  }
+
+  function duplicateSlug(entry = {}) {
+    const base = slugifyContentTitle(`${entry.slug || entry.title || "content"}-copy`) || "content-copy";
+    const used = usedContentSlugs(entry.type || "service", entry.locale || "en");
+    if (!used.has(base)) return base;
+    for (let index = 2; index < 1000; index += 1) {
+      const suffix = `-${index}`;
+      const next = `${base.slice(0, Math.max(1, 96 - suffix.length))}${suffix}`;
+      if (!used.has(next)) return next;
+    }
+    return `${Date.now()}-${base}`.slice(0, 96);
+  }
+
   function editorBlockedByLock() {
     return activeContentLock(currentEntry) && !editorLockOwned;
   }
@@ -575,7 +597,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     const unarchiveButton = root?.querySelector('[data-content-action="unarchive"]');
     if (archiveButton) archiveButton.hidden = archived;
     if (unarchiveButton) unarchiveButton.hidden = !archived;
-    root?.querySelectorAll('[data-content-action="draft"], [data-content-action="publish"], [data-content-action="archive"], [data-content-action="unarchive"], [data-content-workflow]')
+    root?.querySelectorAll('[data-content-action="duplicate"], [data-content-action="draft"], [data-content-action="publish"], [data-content-action="archive"], [data-content-action="unarchive"], [data-content-workflow]')
       .forEach((control) => { control.disabled = blocked; });
     const lockButton = root?.querySelector('[data-content-action="lock"]');
     const unlockButton = root?.querySelector('[data-content-action="unlock"]');
@@ -1162,6 +1184,33 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
+  function duplicateContent() {
+    if (stopIfLocked()) return;
+    let entry;
+    try {
+      entry = selectedFormEntry();
+    } catch (error) {
+      setStatus(error.message, "err");
+      return;
+    }
+    if (!entry.type || !entry.slug || !entry.title) {
+      setStatus("Choose an entry before duplicating.", "err");
+      return;
+    }
+    populateForm({
+      ...entry,
+      title: `${entry.title} copy`,
+      slug: duplicateSlug(entry),
+      status: "draft",
+      scheduled_at: null,
+      published_at: null,
+      review_note: null,
+      locked_by: null,
+      locked_at: null,
+    });
+    setStatus("Duplicated as a new draft. Review the slug, then save.", "ok");
+  }
+
   async function unarchiveContent() {
     if (stopIfLocked()) return;
     const preserveLockOwner = editorLockOwned;
@@ -1295,6 +1344,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     delegate(root, "click", "[data-content-action]", (_event, button) => {
       const action = button.dataset.contentAction;
       if (action === "new") return populateForm();
+      if (action === "duplicate") return duplicateContent();
       if (action === "lock") return updateContentLock("lock");
       if (action === "unlock") return updateContentLock("unlock");
       if (action === "force_unlock") return updateContentLock("force_unlock");

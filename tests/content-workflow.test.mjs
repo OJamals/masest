@@ -62,7 +62,9 @@ test("content editor surfaces workflow queues and actions", () => {
   assert.match(source, /data-content-action="unlock"/);
   assert.match(source, /data-content-action="force_unlock"/);
   assert.match(source, /data-content-action="unarchive"/);
+  assert.match(source, /data-content-action="duplicate"/);
   assert.match(source, /editorBlockedByLock/);
   assert.match(source, /updateContentLock/);
   assert.match(source, /unarchiveContent/);
+  assert.match(source, /duplicateContent/);
 });
