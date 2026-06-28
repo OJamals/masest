@@ -3,6 +3,13 @@
 // normalized data out, so this is unit-testable against fake clients. Mirrors the
 // functions/_lib/quote-convert.js pattern.
 
+// Escape LIKE/ILIKE metacharacters so a value is matched literally (Postgres uses
+// backslash as the default LIKE escape char). Without this, %/_ in a company name or
+// email act as wildcards and over-match. Pure.
+export function escapeLike(value) {
+  return String(value ?? '').replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 export const SUBJECT_TYPES = ['company', 'quote', 'contact'];
 export const NOTE_KINDS = ['note', 'call', 'email', 'meeting'];
 
