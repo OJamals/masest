@@ -310,6 +310,97 @@ test("visible content images reserve dimensions on key buyer pages", async ({ pa
   }
 });
 
+test("scroll reveal sections become visible on long buyer pages", async ({ page }) => {
+  const cases = [
+    {
+      pagePath: "index.html",
+      viewport: { width: 1440, height: 1000 },
+      selector: ".section-head.reveal",
+      label: "home post-story section",
+    },
+    {
+      pagePath: "index.html",
+      viewport: { width: 390, height: 844 },
+      selector: ".why-col.reveal",
+      label: "home mobile benefit card",
+    },
+    {
+      pagePath: "products.html",
+      viewport: { width: 1440, height: 1000 },
+      selector: ".swap-finder.reveal",
+      label: "product replacement checker",
+    },
+    {
+      pagePath: "product.html?id=hcr",
+      viewport: { width: 390, height: 844 },
+      selector: ".product-media-row.reveal",
+      label: "product proof media",
+    },
+    {
+      pagePath: "services.html",
+      viewport: { width: 1440, height: 1000 },
+      selector: ".service-data-panel.reveal",
+      label: "service data panel",
+    },
+    {
+      pagePath: "services.html",
+      viewport: { width: 390, height: 844 },
+      selector: ".service-catalog-shell.reveal",
+      label: "mobile service catalog",
+    },
+    {
+      pagePath: "resources.html",
+      viewport: { width: 1440, height: 1000 },
+      selector: ".resources-reference-disclosure .table-scroll.reveal",
+      label: "desktop resource comparison table",
+      openReference: true,
+    },
+    {
+      pagePath: "resources.html",
+      viewport: { width: 390, height: 844 },
+      selector: ".resources-reference-disclosure .table-scroll.reveal",
+      label: "resource comparison table",
+      openReference: true,
+    },
+    {
+      pagePath: "proof.html",
+      viewport: { width: 390, height: 844 },
+      selector: ".ba-figure.reveal",
+      label: "mobile proof before-after card",
+    },
+  ];
+
+  for (const item of cases) {
+    await page.setViewportSize(item.viewport);
+    await page.goto(`${BASE_URL}/${item.pagePath}`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+    if (item.openReference) {
+      await page.locator(".resources-reference-disclosure summary").click();
+      await expect(page.locator(".resources-reference-disclosure")).toHaveJSProperty("open", true);
+    }
+
+    const section = page.locator(item.selector).first();
+    await section.evaluate((node) => {
+      const top = node.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, Math.max(0, top - Math.round(window.innerHeight * 0.65)));
+    });
+    await page.waitForTimeout(800);
+
+    const state = await section.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        inClass: node.classList.contains("in"),
+        opacity: Number(style.opacity),
+        transform: style.transform,
+      };
+    });
+
+    expect(state.inClass, `${item.label} should receive reveal class`).toBe(true);
+    expect(state.opacity, `${item.label} opacity`).toBeGreaterThan(0.85);
+    expect(state.transform, `${item.label} transform`).toBe("none");
+  }
+});
+
 test("cart and product static preview avoid unavailable commerce API", async ({ page }) => {
   const apiRequests = [];
   page.on("request", (request) => {

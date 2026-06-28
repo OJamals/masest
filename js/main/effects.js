@@ -17,6 +17,7 @@ export function initResponsiveTables() {
 }
 
 export function initReveal() {
+  const revealState = window.__masestReveal || (window.__masestReveal = {});
   const syncRevealFocus = (el, visible) => {
     const focusables = [];
     const selector = "a[href], button, input, select, textarea, [tabindex], .table-scroll";
@@ -35,6 +36,19 @@ export function initReveal() {
       }
     });
   };
+  const revealElement = el => {
+    if (el.classList.contains("in")) return;
+    el.classList.add("in");
+    syncRevealFocus(el, true);
+    revealState.observer?.unobserve(el);
+  };
+  const nearViewport = el => {
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0
+      && rect.height > 0
+      && rect.top < window.innerHeight + 96
+      && rect.bottom > -96;
+  };
 
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     document.querySelectorAll(".reveal").forEach(el => {
@@ -45,15 +59,26 @@ export function initReveal() {
   }
 
   document.body.classList.add("reveal-ready");
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.classList.add("in");
-        syncRevealFocus(e.target, true);
-        io.unobserve(e.target);
-      }
+  revealState.revealVisible = () => {
+    document.querySelectorAll(".reveal:not(.in)").forEach(el => {
+      if (nearViewport(el)) revealElement(el);
     });
-  }, { threshold: 0.12 });
+  };
+  const scheduleRevealScan = () => {
+    if (revealState.scanFrame) return;
+    revealState.scanFrame = requestAnimationFrame(() => {
+      revealState.scanFrame = 0;
+      revealState.revealVisible?.();
+    });
+  };
+  if (!revealState.observer) {
+    revealState.observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) revealElement(e.target);
+      });
+    }, { rootMargin: "0px 0px 96px 0px", threshold: 0 });
+  }
+  const io = revealState.observer;
 
   document.querySelectorAll(".reveal").forEach(el => {
     if (el.dataset.revealObserved) return;
@@ -61,4 +86,12 @@ export function initReveal() {
     syncRevealFocus(el, el.classList.contains("in"));
     io.observe(el);
   });
+  if (!revealState.listenersBound) {
+    revealState.listenersBound = true;
+    window.addEventListener("scroll", scheduleRevealScan, { passive: true });
+    window.addEventListener("resize", scheduleRevealScan);
+    window.addEventListener("pageshow", scheduleRevealScan);
+  }
+  scheduleRevealScan();
+  setTimeout(() => revealState.revealVisible?.(), 250);
 }
