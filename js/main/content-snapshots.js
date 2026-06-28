@@ -1,3 +1,5 @@
+import { initReveal } from "./effects.js";
+
 const SNAPSHOT_FILES = {
   proof_cards: "proof.json",
   resource_cards: "resources.json",
@@ -139,6 +141,7 @@ function pageSection(row) {
 }
 
 function renderMount(name, snapshot, key, renderer) {
+  let rendered = false;
   document.querySelectorAll(`[data-cms-content="${name}"]`).forEach((mount) => {
     const rows = filterContentRows(snapshot?.[key], {
       category: mount.dataset.cmsCategory,
@@ -148,7 +151,9 @@ function renderMount(name, snapshot, key, renderer) {
     if (!rows.length) return;
     mount.innerHTML = rows.map(renderer).join("");
     mount.dataset.cmsLoaded = "true";
+    rendered = true;
   });
+  return rendered;
 }
 
 export async function initContentSnapshots() {
@@ -160,9 +165,17 @@ export async function initContentSnapshots() {
     loadContentSnapshot(SNAPSHOT_FILES.page_sections),
   ]);
 
-  renderMount("proof_cards", proof, "proof_cards", proofCard);
-  renderMount("resource_cards", resources, "resource_cards", resourceCard);
-  renderMount("industry_cards", industries, "industry_cards", industryCard);
-  renderMount("faq_blocks", faqs, "faq_blocks", faqBlock);
-  renderMount("page_sections", pageSections, "page_sections", pageSection);
+  const rendered = [
+    renderMount("proof_cards", proof, "proof_cards", proofCard),
+    renderMount("resource_cards", resources, "resource_cards", resourceCard),
+    renderMount("industry_cards", industries, "industry_cards", industryCard),
+    renderMount("faq_blocks", faqs, "faq_blocks", faqBlock),
+    renderMount("page_sections", pageSections, "page_sections", pageSection),
+  ].some(Boolean);
+
+  // CMS content is injected after initReveal() ran at DOMContentLoaded, so the
+  // scroll-reveal IntersectionObserver never saw these nodes. Re-run the
+  // idempotent reveal pass so injected `.reveal` sections/cards become visible
+  // for motion-enabled users without requiring a scroll/resize.
+  if (rendered) initReveal();
 }
