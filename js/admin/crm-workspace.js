@@ -5,7 +5,7 @@
 // are injected; esc/delegate come from util.js.
 import { esc, delegate, dateTime as date } from '../util.js';
 
-export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty }) {
+export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm }) {
   const SUBTABS = [['tasks', 'Tasks'], ['contacts', 'Contacts']];
 
   function shell() {
@@ -46,8 +46,43 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty }) {
       body.innerHTML = toggle + `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load tasks. Retry.')}</p>`;
     }
   }
+  function contactRow(c) {
+    const role = c.role ? `<span class="crm-contact-role">${esc(c.role)}</span>` : '';
+    const meta = [c.title, c.email, c.phone].filter(Boolean).map(esc).join(' · ') || '—';
+    const company = c.company_name ? `<span class="muted">${esc(c.company_name)}</span>` : '';
+    return `<li class="crm-contact">
+      <div class="crm-contact-main">
+        <div class="crm-contact-name">${esc(c.name)} ${role} ${company}</div>
+        <div class="crm-feed-detail muted">${meta}</div>
+      </div>
+      <span class="crm-contact-actions">
+        <button class="btn btn-ghost btn-sm" type="button" data-dir-open="${esc(c.id)}">Open</button>
+      </span></li>`;
+  }
+
+  async function runContactSearch(body, term) {
+    const results = body.querySelector('[data-dir-results]');
+    results.innerHTML = admSkeleton(3);
+    try {
+      const { contacts, needs_migration } = await api(`/api/admin/crm/contacts?q=${encodeURIComponent(term)}`);
+      if (needs_migration) { results.innerHTML = '<p class="muted">No CRM database yet. Apply supabase/schema-crm-contacts.sql.</p>'; return; }
+      results.innerHTML = (contacts || []).length
+        ? `<ul class="crm-contact-list">${contacts.map(contactRow).join('')}</ul>`
+        : admEmpty('ph-address-book', 'No matches', 'No contacts match that search.');
+      results._contacts = contacts || [];
+    } catch (err) {
+      results.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Search failed. Retry.')}</p>`;
+    }
+  }
+
   async function renderContacts(body) {
-    body.innerHTML = admEmpty('ph-address-book', 'Contact directory', 'Search contacts across every account here.');
+    const term = state.crmContactQ || '';
+    body.innerHTML = `<form class="adm-tools" data-dir-form>
+        <input class="adm-search" type="search" data-dir-q placeholder="Search contacts by name, email or phone" aria-label="Search contacts" value="${esc(term)}">
+        <button class="btn btn-primary btn-sm" type="submit">Search</button>
+      </form>
+      <div data-dir-results></div>`;
+    if (term.length >= 2) await runContactSearch(body, term);
   }
 
   function showView(view) {
@@ -88,6 +123,18 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty }) {
       } catch (err) {
         btn.disabled = false;
       }
+    });
+    delegate(box, 'submit', '[data-dir-form]', (event, form) => {
+      event.preventDefault();
+      const term = form.querySelector('[data-dir-q]').value.trim();
+      state.crmContactQ = term;
+      const body = box.querySelector('[data-crm-ws-body]');
+      if (term.length >= 2) runContactSearch(body, term);
+    });
+    delegate(box, 'click', '[data-dir-open]', (event, btn) => {
+      const results = box.querySelector('[data-dir-results]');
+      const c = (results?._contacts || []).find((x) => String(x.id) === String(btn.dataset.dirOpen));
+      if (c && crm?.openContactDrawer) crm.openContactDrawer(c);
     });
   }
 

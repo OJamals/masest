@@ -319,5 +319,5 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     show('timeline');
   }
 
-  return { mount };
+  return { mount, openContactDrawer };
 }

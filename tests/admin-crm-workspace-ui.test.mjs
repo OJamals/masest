@@ -77,3 +77,27 @@ test('needs_migration fallback shown in inbox', () => {
   assert.match(WS, /needs_migration/);
   assert.match(WS, /schema-crm\.sql/);
 });
+
+// Plan 003: contact directory assertions
+const CRM = read('js/admin/crm.js');
+
+test('crm.js exports openContactDrawer on the returned object', () => {
+  assert.match(CRM, /return \{ mount, openContactDrawer \}/);
+});
+
+test('crm-workspace.js renderContacts calls /api/admin/crm/contacts?q=', () => {
+  assert.match(WS, /\/api\/admin\/crm\/contacts\?q=/);
+});
+
+test('crm-workspace.js renders data-dir-open buttons for results', () => {
+  assert.match(WS, /data-dir-open=/);
+});
+
+test('crm-workspace.js accepts crm in factory args and uses openContactDrawer', () => {
+  assert.match(WS, /createCrmWorkspace\(\{[^}]*crm[^}]*\}|crm \}/);
+  assert.match(WS, /crm\?\.openContactDrawer/);
+});
+
+test('admin.js passes crm into createCrmWorkspace', () => {
+  assert.match(ADMIN, /createCrmWorkspace\(\{[^}]*crm[^}]*\}|createCrmWorkspace\(\{.*crm.*\}\)/);
+});

@@ -17,7 +17,34 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'GET') {
     const companyId = url.searchParams.get('company_id');
-    if (!companyId || !String(companyId).trim()) return json(400, { error: 'company_required' });
+    const q = String(url.searchParams.get('q') || '').trim();
+
+    // Cross-company directory search (no company_id): match name/email/phone.
+    if (!companyId) {
+      if (q.length < 2) return json(400, { error: 'query_too_short' });
+      const like = `%${q}%`;
+      const { data, error } = await sb.from('crm_contacts').select(SELECT)
+        .is('deleted_at', null)
+        .or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
+        .order('name', { ascending: true }).limit(100);
+      if (error) {
+        if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { contacts: [], needs_migration: true });
+        return json(500, { error: error.message });
+      }
+      const rows = data || [];
+      // Resolve company names in one batched lookup.
+      const companyIds = [...new Set(rows.map((r) => r.company_id).filter(Boolean))];
+      const names = new Map();
+      if (companyIds.length) {
+        const { data: cos } = await sb.from('companies').select('id,name').in('id', companyIds);
+        for (const c of cos || []) names.set(String(c.id), c.name);
+      }
+      for (const r of rows) r.company_name = names.get(String(r.company_id)) || null;
+      return json(200, { contacts: rows });
+    }
+
+    // Company-scoped list (existing behavior — unchanged).
+    if (!String(companyId).trim()) return json(400, { error: 'company_required' });
     const { data, error } = await sb.from('crm_contacts').select(SELECT)
       .eq('company_id', String(companyId)).is('deleted_at', null)
       .order('is_primary', { ascending: false }).order('name', { ascending: true }).limit(200);

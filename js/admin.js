@@ -378,7 +378,7 @@ const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, a
 // Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
 const { renderQuotePipeline, wireQuotes } = createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager });
 // CRM workspace tab: top-level home for cross-account CRM surfaces (Tasks inbox, Contact directory).
-const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty });
+const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm });
 
 // Products tab extracted to ./admin/products.js (#36 split). Shared primitives injected.
 const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
