@@ -6,6 +6,7 @@ const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const WS = read('js/admin/crm-workspace.js');
 const ADMIN = read('js/admin.js');
 const HTML = read('admin.html');
+const CSS = read('css/components.css');
 
 test('workspace exports a mountable factory', () => {
   assert.match(WS, /export function createCrmWorkspace/);
@@ -59,6 +60,10 @@ test('inbox renders three scope filter buttons (open, mine, overdue)', () => {
 test('task rows carry data-inbox-toggle and crm-task class', () => {
   assert.match(WS, /data-inbox-toggle=/);
   assert.match(WS, /"crm-task"/);
+});
+
+test('task rows reserve grid columns for toggle, content, badge and open action', () => {
+  assert.match(CSS, /\.crm-task\s*\{[^}]*grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\)\s+auto\s+auto/s);
 });
 
 test('PATCH complete/reopen actions are used for toggle', () => {
