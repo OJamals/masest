@@ -22,7 +22,8 @@ export async function onRequest({ request, env }) {
     // Cross-company directory search (no company_id): match name/email/phone.
     if (!companyId) {
       if (q.length < 2) return json(400, { error: 'query_too_short' });
-      const like = `%${q}%`;
+      // Strip chars that break PostgREST .or() grammar (comma = condition separator, parens = grouping).
+      const like = `%${q.replace(/[(),]/g, ' ')}%`;
       const { data, error } = await sb.from('crm_contacts').select(SELECT)
         .is('deleted_at', null)
         .or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`)

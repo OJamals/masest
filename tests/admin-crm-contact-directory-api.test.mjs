@@ -43,3 +43,7 @@ test('existing staff guard unchanged', () => {
   assert.match(src, /requireStaff/);
   assert.match(src, /staffCanWrite\(role\)/);
 });
+
+test('search strips .or()-breaking chars from the query', () => {
+  assert.match(src, /q\.replace\(\/\[\(\),\]\/g, ' '\)/);
+});
