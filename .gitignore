@@ -8,6 +8,10 @@ backups/
 audits/
 audit-layout-hunt-*/
 design-qa.md
+# Internal advisor/improve handoff docs — must NOT ship: cf-build publishes tracked
+# files, so committing these would expose them at masest.co/plans/.
+plans/
+advisor-plans/
 .dev.vars
 .wrangler/
 test-results/
