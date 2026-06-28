@@ -30,7 +30,26 @@ export async function onRequest({ request, env }) {
       if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { tasks: [], needs_migration: true });
       return json(500, { error: error.message });
     }
-    return json(200, { tasks: data || [] });
+    const tasks = data || [];
+    if (['mine', 'overdue', 'open'].includes(scope) && tasks.length) {
+      const ids = { company: new Set(), quote: new Set(), contact: new Set() };
+      for (const t of tasks) if (ids[t.subject_type]) ids[t.subject_type].add(t.subject_id);
+      const labels = { company: new Map(), quote: new Map(), contact: new Map() };
+      if (ids.company.size) {
+        const { data: rows, error: e } = await sb.from('companies').select('id,name').in('id', [...ids.company]);
+        if (!e) for (const r of rows || []) labels.company.set(String(r.id), r.name);
+      }
+      if (ids.quote.size) {
+        const { data: rows, error: e } = await sb.from('quotes').select('id,company,name,email').in('id', [...ids.quote]);
+        if (!e) for (const r of rows || []) labels.quote.set(String(r.id), r.company || r.name || r.email || `Quote ${r.id}`);
+      }
+      if (ids.contact.size) {
+        const { data: rows, error: e } = await sb.from('crm_contacts').select('id,name').in('id', [...[...ids.contact].map(Number)]);
+        if (!e) for (const r of rows || []) labels.contact.set(String(r.id), r.name);
+      }
+      for (const t of tasks) t.subject_label = labels[t.subject_type]?.get(String(t.subject_id)) || null;
+    }
+    return json(200, { tasks });
   }
 
   if (request.method === 'POST') {
