@@ -35,7 +35,6 @@
 
 /* Acts give scroll room; the stage pins (CSS sticky, JS scrubs) */
 .story .act { position: relative; height: 212vh; padding: 0; }
-.story .act[data-act="1"] { height: 138vh; }   /* photo reel hands off before sticky stage is pushed out */
 .story .act[data-act="3"] { height: 305vh; }   /* HMIS categories + chemical warnings */
 .story .act-savior { height: 228vh; }
 .story .stage {

@@ -84,6 +84,38 @@ test("desktop story rail label does not overlap the Act 1 headline", async ({ pa
   expect(collision.overlaps, JSON.stringify(collision)).toBe(false);
 });
 
+test("desktop story handoff keeps visible content between Act 1 and Act 2", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(600);
+
+  for (const y of [1000, 1200, 1600, 2000]) {
+    await page.evaluate((targetY) => window.scrollTo(0, targetY), y);
+    await page.waitForTimeout(900);
+
+    const visibleContent = await page.evaluate(() => [
+      ...document.querySelectorAll("#story [data-at], #story .reel-slide, #story .pipe-diagram"),
+    ]
+      .map((node) => {
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return {
+          text: node.textContent.trim().replace(/\s+/g, " ").slice(0, 80),
+          visible: rect.width > 20
+            && rect.height > 20
+            && rect.bottom > 120
+            && rect.top < window.innerHeight - 80
+            && style.display !== "none"
+            && style.visibility !== "hidden"
+            && Number(style.opacity) > 0.15,
+        };
+      })
+      .filter((item) => item.visible));
+
+    expect(visibleContent.length, `blank story handoff at scrollY ${y}`).toBeGreaterThan(0);
+  }
+});
+
 test("mobile pipe labels match callout colors and fit their chips", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });

@@ -208,6 +208,14 @@ test("desktop use-case dropdown fits both labels inside the panel", async ({ pag
   for (const link of fit.links) {
     expect(link.visibleWidth, `${link.text} label should fit its link`).toBeGreaterThanOrEqual(link.scrollWidth);
   }
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".nav-group")).not.toHaveJSProperty("open", true);
+
+  await page.locator(".nav-group summary").click();
+  await expect(page.locator(".nav-group")).toHaveJSProperty("open", true);
+  await page.mouse.wheel(0, 240);
+  await expect(page.locator(".nav-group")).not.toHaveJSProperty("open", true);
 });
 
 test("mobile home uses original conversion controls without the quick-action switcher", async ({ page }) => {

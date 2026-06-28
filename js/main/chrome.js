@@ -148,10 +148,18 @@ export function renderChrome() {
   burger.addEventListener("click", () => {
     setMenuOpen(!navLinks.classList.contains("open"));
   });
+  const navGroups = Array.from(navLinks.querySelectorAll(".nav-group"));
+  const closeNavGroups = () => {
+    navGroups.forEach(group => { group.open = false; });
+  };
   const closeMenu = () => {
     setMenuOpen(false);
+    closeNavGroups();
   };
   navLinks.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
+  document.addEventListener("click", e => {
+    if (!nav.contains(e.target)) closeNavGroups();
+  });
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") closeMenu();
   });
@@ -163,6 +171,7 @@ export function renderChrome() {
     scrollRAF = 0;
     nav.classList.toggle("scrolled", window.scrollY > 8);
     nav.classList.toggle("over-dark", useDarkNav || (story && story.getBoundingClientRect().bottom > 66));
+    if (!navLinks.classList.contains("open")) closeNavGroups();
   };
   const onScroll = () => { if (!scrollRAF) scrollRAF = requestAnimationFrame(applyScroll); };
   applyScroll();
