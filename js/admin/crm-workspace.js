@@ -5,7 +5,19 @@
 // are injected; esc/delegate come from util.js.
 import { esc, delegate, dateTime as date } from '../util.js';
 
-export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject }) {
+const DIR_ROLES = [
+  ['', 'All roles'],
+  ['procurement', 'Procurement'],
+  ['plant_manager', 'Plant Manager'],
+  ['maintenance', 'Maintenance'],
+  ['engineering', 'Engineering'],
+  ['operations', 'Operations'],
+  ['accounts_payable', 'Accounts Payable'],
+  ['executive', 'Executive'],
+  ['other', 'Other'],
+];
+
+export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager }) {
   const SUBTABS = [['tasks', 'Tasks'], ['contacts', 'Contacts']];
 
   function shell() {
@@ -65,16 +77,28 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
       </span></li>`;
   }
 
-  async function runContactSearch(body, term) {
+  async function runContactSearch(body, { append = false } = {}) {
+    const q = state.crmContactQ || '';
+    const role = state.crmContactRole || '';
     const results = body.querySelector('[data-dir-results]');
-    results.innerHTML = admSkeleton(3);
+    if (q.length < 2 && !role) {
+      results.innerHTML = admEmpty('ph-address-book', 'Search contacts', 'Enter a name, email or phone — or pick a role — to search.');
+      results._contacts = [];
+      return;
+    }
+    if (!append) results.innerHTML = admSkeleton(3);
     try {
-      const { contacts, needs_migration } = await api(`/api/admin/crm/contacts?q=${encodeURIComponent(term)}`);
+      const offset = append ? (results._contacts?.length || 0) : 0;
+      const params = new URLSearchParams({ limit: '50', offset: String(offset) });
+      if (q.length >= 2) params.set('q', q);
+      if (role) params.set('role', role);
+      const { contacts, needs_migration, total, has_more } = await api(`/api/admin/crm/contacts?${params}`);
       if (needs_migration) { results.innerHTML = '<p class="muted">No CRM database yet. Apply supabase/schema-crm-contacts.sql.</p>'; return; }
-      results.innerHTML = (contacts || []).length
-        ? `<ul class="crm-contact-list">${contacts.map(contactRow).join('')}</ul>`
+      const next = append ? [...(results._contacts || []), ...(contacts || [])] : (contacts || []);
+      results._contacts = next;
+      results.innerHTML = next.length
+        ? `<ul class="crm-contact-list">${next.map(contactRow).join('')}</ul>${admListPager('data-dir-more', next.length, total, has_more)}`
         : admEmpty('ph-address-book', 'No matches', 'No contacts match that search.');
-      results._contacts = contacts || [];
     } catch (err) {
       results.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Search failed. Retry.')}</p>`;
     }
@@ -82,12 +106,15 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
 
   async function renderContacts(body) {
     const term = state.crmContactQ || '';
+    const currentRole = state.crmContactRole || '';
+    const roleOpts = DIR_ROLES.map(([v, l]) => `<option value="${esc(v)}"${v === currentRole ? ' selected' : ''}>${esc(l)}</option>`).join('');
     body.innerHTML = `<form class="adm-tools" data-dir-form>
         <input class="adm-search" type="search" data-dir-q placeholder="Search contacts by name, email or phone" aria-label="Search contacts" value="${esc(term)}">
+        <select class="adm-select" data-dir-role aria-label="Filter by role">${roleOpts}</select>
         <button class="btn btn-primary btn-sm" type="submit">Search</button>
       </form>
       <div data-dir-results></div>`;
-    if (term.length >= 2) await runContactSearch(body, term);
+    if (term.length >= 2 || currentRole) await runContactSearch(body);
   }
 
   function showView(view) {
@@ -131,10 +158,15 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     });
     delegate(box, 'submit', '[data-dir-form]', (event, form) => {
       event.preventDefault();
-      const term = form.querySelector('[data-dir-q]').value.trim();
-      state.crmContactQ = term;
-      const body = box.querySelector('[data-crm-ws-body]');
-      if (term.length >= 2) runContactSearch(body, term);
+      state.crmContactQ = form.querySelector('[data-dir-q]').value.trim();
+      runContactSearch(box.querySelector('[data-crm-ws-body]'), { append: false });
+    });
+    delegate(box, 'change', '[data-dir-role]', (event, sel) => {
+      state.crmContactRole = sel.value;
+      runContactSearch(box.querySelector('[data-crm-ws-body]'), { append: false });
+    });
+    delegate(box, 'click', '[data-dir-more]', () => {
+      runContactSearch(box.querySelector('[data-crm-ws-body]'), { append: true });
     });
     delegate(box, 'click', '[data-dir-open]', (event, btn) => {
       const results = box.querySelector('[data-dir-results]');

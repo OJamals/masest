@@ -389,7 +389,7 @@ function openSubject(type, id, label) {
 }
 
 // CRM workspace tab: top-level home for cross-account CRM surfaces (Tasks inbox, Contact directory).
-const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject });
+const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager });
 
 // Products tab extracted to ./admin/products.js (#36 split). Shared primitives injected.
 const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });

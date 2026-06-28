@@ -16,9 +16,10 @@ test('short query rejected with query_too_short', () => {
   assert.match(src, /q\.length < 2/);
 });
 
-test('search branch caps at 100 rows and sorts by name', () => {
-  assert.match(src, /\.limit\(100\)/);
-  assert.match(src, /\.order\('name', \{ ascending: true \}\)\.limit\(100\)/);
+test('search branch paginates via .range() with count:exact and sorts by name', () => {
+  assert.match(src, /\.range\(offset, offset \+ limit - 1\)/);
+  assert.match(src, /\{ count: 'exact' \}/);
+  assert.match(src, /\.order\('name', \{ ascending: true \}\)\.range\(/);
 });
 
 test('company names resolved via batched companies lookup', () => {

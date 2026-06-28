@@ -3,7 +3,8 @@
 import { adminClient, json, readBody, requireStaff } from '../../../_lib/supabase.js';
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
-import { contactRow, contactPatch, mergeFields, parseContactsCsv } from '../../../_lib/crm-contacts.js';
+import { contactRow, contactPatch, mergeFields, parseContactsCsv, CONTACT_ROLES } from '../../../_lib/crm-contacts.js';
+import { parsePage, pageEnvelope } from '../../../_lib/paginate.js';
 import { upsertCrispPerson } from '../../../_lib/crisp.js';
 
 const SELECT = 'id,company_id,name,role,title,email,phone,is_primary,notes,created_by,created_at,updated_at';
@@ -19,15 +20,21 @@ export async function onRequest({ request, env }) {
     const companyId = url.searchParams.get('company_id');
     const q = String(url.searchParams.get('q') || '').trim();
 
-    // Cross-company directory search (no company_id): match name/email/phone.
+    // Cross-company directory search (no company_id): match name/email/phone, optional role filter.
     if (!companyId) {
-      if (q.length < 2) return json(400, { error: 'query_too_short' });
-      // Strip chars that break PostgREST .or() grammar (comma = condition separator, parens = grouping).
-      const like = `%${q.replace(/[(),]/g, ' ')}%`;
-      const { data, error } = await sb.from('crm_contacts').select(SELECT)
-        .is('deleted_at', null)
-        .or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
-        .order('name', { ascending: true }).limit(100);
+      const role = String(url.searchParams.get('role') || '').trim();
+      const hasRole = CONTACT_ROLES.includes(role);
+      if (q.length < 2 && !hasRole) return json(400, { error: 'query_too_short' });
+      const { limit, offset } = parsePage(url.searchParams, { defaultLimit: 50, maxLimit: 100 });
+      // Build query incrementally so role-only searches skip the .or() filter.
+      let query = sb.from('crm_contacts').select(SELECT, { count: 'exact' }).is('deleted_at', null);
+      if (q.length >= 2) {
+        // Strip chars that break PostgREST .or() grammar (comma = condition separator, parens = grouping).
+        const like = `%${q.replace(/[(),]/g, ' ')}%`;
+        query = query.or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`);
+      }
+      if (hasRole) query = query.eq('role', role);
+      const { data, error, count } = await query.order('name', { ascending: true }).range(offset, offset + limit - 1);
       if (error) {
         if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { contacts: [], needs_migration: true });
         return json(500, { error: error.message });
@@ -41,7 +48,7 @@ export async function onRequest({ request, env }) {
         for (const c of cos || []) names.set(String(c.id), c.name);
       }
       for (const r of rows) r.company_name = names.get(String(r.company_id)) || null;
-      return json(200, { contacts: rows });
+      return json(200, { contacts: rows, ...pageEnvelope(rows, { limit, offset, count }) });
     }
 
     // Company-scoped list (existing behavior — unchanged).

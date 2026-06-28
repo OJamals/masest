@@ -85,8 +85,8 @@ test('crm.js exports openContactDrawer on the returned object', () => {
   assert.match(CRM, /return \{ mount, openContactDrawer \}/);
 });
 
-test('crm-workspace.js renderContacts calls /api/admin/crm/contacts?q=', () => {
-  assert.match(WS, /\/api\/admin\/crm\/contacts\?q=/);
+test('crm-workspace.js runContactSearch calls /api/admin/crm/contacts with URLSearchParams', () => {
+  assert.match(WS, /\/api\/admin\/crm\/contacts\?\$\{params\}/);
 });
 
 test('crm-workspace.js renders data-dir-open buttons for results', () => {
