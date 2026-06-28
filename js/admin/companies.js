@@ -27,7 +27,7 @@ function viewAsHtml(s) {
     <table class="adm" style="width:100%"><thead><tr><th>Date</th><th>Status</th><th>Shipment</th><th>Total</th></tr></thead><tbody>${orders}</tbody></table>`;
 }
 
-export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm }) {
+export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab }) {
   function setupProgress(company) {
     const setup = company.setup;
     if (!setup?.steps?.length) return '<span class="muted">-</span>';

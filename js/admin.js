@@ -373,7 +373,7 @@ const { renderCustomers } = createCustomersTab({ $, api, state, admSkeleton, adm
 // Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
 // CRM contact panel (timeline/tasks/notes) injected into the company drawer.
 const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
-const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm });
+const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab });
 // Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
 const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager });
 // Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
