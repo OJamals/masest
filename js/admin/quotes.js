@@ -353,6 +353,16 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     loadDrawerContacts(dlg, quote);
   }
 
+  async function openQuoteById(id) {
+    try {
+      const { quote } = await api('/api/admin/quotes?id=' + encodeURIComponent(id));
+      if (quote) openQuoteDrawer(quote);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[openQuoteById] could not load quote', id, err);
+    }
+  }
+
   // ---- List view (the original accordion pipeline) ----
   function renderList() {
     const box = $('admQuotes');
@@ -592,5 +602,5 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     });
   }
 
-  return { renderQuotePipeline, wireQuotes };
+  return { renderQuotePipeline, wireQuotes, openQuoteById };
 }

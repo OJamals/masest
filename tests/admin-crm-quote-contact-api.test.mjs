@@ -14,7 +14,10 @@ test('serves a buyer-contact candidate view resolved from the deal company', () 
 });
 
 test('GET list + patch select expose contact_id', () => {
-  assert.match(src, /lost_reason,contact_id', \{ count: 'exact' \}/);
+  // Since Plan 007 extracted the list columns into QUOTE_SELECT, we verify
+  // the const holds contact_id and the list select uses the const with count.
+  assert.match(src, /const QUOTE_SELECT\s*=\s*'[^']*lost_reason,contact_id'/);
+  assert.match(src, /\.select\(QUOTE_SELECT,\s*\{[^}]*count[^}]*\}/);
   assert.match(src, /expected_close,lost_reason,contact_id,email,product,company,type/);
 });
 

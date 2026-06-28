@@ -5,7 +5,7 @@
 // are injected; esc/delegate come from util.js.
 import { esc, delegate, dateTime as date } from '../util.js';
 
-export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm }) {
+export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject }) {
   const SUBTABS = [['tasks', 'Tasks'], ['contacts', 'Contacts']];
 
   function shell() {
@@ -23,11 +23,16 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm }
   function taskRow(t) {
     const overdue = t.due_at && new Date(t.due_at) < new Date();
     const subj = t.subject_label ? `${esc(t.subject_label)}` : esc(t.subject_type);
+    const canOpen = t.subject_type === 'company' || t.subject_type === 'quote' || t.subject_type === 'contact';
+    const openBtn = canOpen
+      ? `<button class="btn btn-ghost btn-sm" type="button" data-inbox-open data-subj-type="${esc(t.subject_type)}" data-subj-id="${esc(t.subject_id)}" data-subj-label="${esc(t.subject_label || '')}">Open</button>`
+      : '';
     return `<li class="crm-task">
       <button class="btn btn-ghost btn-sm" type="button" data-inbox-toggle="${esc(t.id)}" data-inbox-status="${esc(t.status)}" aria-label="${t.status === 'done' ? 'Reopen' : 'Complete'} task">${t.status === 'done' ? '↺' : '✓'}</button>
       <div><div class="crm-feed-title">${esc(t.title)}</div>
       <div class="crm-feed-detail muted">${subj} · ${t.assigned_to ? `→ ${esc(t.assigned_to)}` : 'Unassigned'}${t.due_at ? ` · due ${esc(date(t.due_at))}` : ''}</div></div>
-      ${overdue ? '<span class="badge badge-warning">Overdue</span>' : '<span></span>'}</li>`;
+      ${overdue ? '<span class="badge badge-warning">Overdue</span>' : '<span></span>'}
+      ${openBtn}</li>`;
   }
 
   // Tasks inbox — replaces plan 001 placeholder.
@@ -135,6 +140,9 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm }
       const results = box.querySelector('[data-dir-results]');
       const c = (results?._contacts || []).find((x) => String(x.id) === String(btn.dataset.dirOpen));
       if (c && crm?.openContactDrawer) crm.openContactDrawer(c);
+    });
+    delegate(box, 'click', '[data-inbox-open]', (event, btn) => {
+      if (openSubject) openSubject(btn.dataset.subjType, btn.dataset.subjId, btn.dataset.subjLabel);
     });
   }
 

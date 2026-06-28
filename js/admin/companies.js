@@ -287,5 +287,5 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     });
   }
 
-  return { renderCompanies, wireCompanies };
+  return { renderCompanies, wireCompanies, openCompanyDetail };
 }

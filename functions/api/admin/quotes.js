@@ -9,6 +9,7 @@ import { klaviyoTrack } from '../../_lib/klaviyo.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
 
 function timingSafeEqual(a, b) {
   const sa = String(a || '');
@@ -235,9 +236,18 @@ export async function onRequest({ request, env }) {
       }
       return csvResponse(rows, 'masest-quotes');
     }
+    const _singleId = new URL(request.url).searchParams.get('id');
+    if (_singleId && !new URL(request.url).searchParams.get('view') && new URL(request.url).searchParams.get('export') !== 'csv') {
+      const { data, error } = await sb.from('quotes').select(QUOTE_SELECT).eq('id', _singleId).maybeSingle();
+      if (error) {
+        if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { quote: null, needs_migration: true });
+        return json(500, { error: error.message });
+      }
+      return json(data ? 200 : 404, data ? { quote: data } : { error: 'not_found' });
+    }
     const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 100, maxLimit: 300 });
     const { data, error, count } = await sb.from('quotes')
-      .select('id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id', { count: 'exact' })
+      .select(QUOTE_SELECT, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     if (error) {

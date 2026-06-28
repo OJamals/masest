@@ -373,13 +373,23 @@ const { renderCustomers } = createCustomersTab({ $, api, state, admSkeleton, adm
 // Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
 // CRM contact panel (timeline/tasks/notes) injected into the company drawer.
 const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
-const { renderCompanies, wireCompanies } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm });
+const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm });
 // Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
 const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager });
 // Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
-const { renderQuotePipeline, wireQuotes } = createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager });
+const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager });
+// Deep-link dispatcher: jumps from a CRM inbox task row to the owning surface.
+// Declared as a hoisted function so it is in scope when passed to createCrmWorkspace;
+// references openCompanyDetail, openQuoteById and crm (all initialized above this line).
+function openSubject(type, id, label) {
+  if (type === 'company') { setTab('companies'); openCompanyDetail(id); }
+  else if (type === 'quote') { setTab('quotes'); openQuoteById(id); }
+  else if (type === 'contact') { crm.openContactDrawer({ id, name: label || ('Contact ' + id) }); }
+  else { setTab('crm'); }
+}
+
 // CRM workspace tab: top-level home for cross-account CRM surfaces (Tasks inbox, Contact directory).
-const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm });
+const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject });
 
 // Products tab extracted to ./admin/products.js (#36 split). Shared primitives injected.
 const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
