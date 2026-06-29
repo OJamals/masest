@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-29T03:39:10.347Z",
+  "generated_at": "2026-06-29T05:06:25.302Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -52,11 +52,11 @@
       "sha256": "821f70f7015adbbc3108bf28458e4d453e52c680f0933500b6efb1f694ff43d6"
     },
     "pricing.json": {
-      "count": 0,
+      "count": 4,
       "counts": {
-        "pricing_tiers": 0
+        "pricing_tiers": 4
       },
-      "sha256": "a81cb0ed7bffc4316e99ab26ccc7a7a2863d48dfafe14199560691d4a934a8f0"
+      "sha256": "d511d5d57d98596c75d7dd45b157618d8173fe47a63922cd9d3abdf1ba1b8bd8"
     }
   }
 }
