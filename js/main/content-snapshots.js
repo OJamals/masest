@@ -50,6 +50,15 @@ export function filterContentRows(rows = [], { category = "", page = "", region 
   }).sort((a, b) => Number(a?.sort_order || 0) - Number(b?.sort_order || 0));
 }
 
+export function mergeCmsMountHtml(fallbackHtml = "", cmsHtml = "", { mode = "", alreadyLoaded = false } = {}) {
+  const fallback = String(fallbackHtml || "");
+  const cms = String(cmsHtml || "");
+  if (alreadyLoaded || !cms) return fallback;
+  if (String(mode || "").trim().toLowerCase() === "replace") return cms;
+  if (!fallback.trim()) return cms;
+  return `${fallback}${cms}`;
+}
+
 export async function loadContentSnapshot(file) {
   try {
     const response = await fetch(`/data/content/${file}`, { cache: "no-store" });
@@ -143,13 +152,21 @@ function pageSection(row) {
 function renderMount(name, snapshot, key, renderer) {
   let rendered = false;
   document.querySelectorAll(`[data-cms-content="${name}"]`).forEach((mount) => {
+    if (mount.dataset.cmsLoaded === "true") return;
     const rows = filterContentRows(snapshot?.[key], {
       category: mount.dataset.cmsCategory,
       page: mount.dataset.cmsPage,
       region: mount.dataset.cmsRegion,
     });
     if (!rows.length) return;
-    mount.innerHTML = rows.map(renderer).join("");
+    const html = rows.map(renderer).join("");
+    const mode = mount.dataset.cmsRender || "";
+    const shouldReplace = String(mode).trim().toLowerCase() === "replace";
+    if (shouldReplace || !mount.innerHTML.trim()) {
+      mount.innerHTML = mergeCmsMountHtml(mount.innerHTML, html, { mode });
+    } else {
+      mount.insertAdjacentHTML("beforeend", html);
+    }
     mount.dataset.cmsLoaded = "true";
     rendered = true;
   });

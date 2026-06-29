@@ -29,6 +29,35 @@ test("public pages expose CMS mount points without replacing hardcoded fallback 
   }
 });
 
+test("public CMS renderer preserves fallback cards unless replacement is explicit", async () => {
+  const snapshots = await import("../js/main/content-snapshots.js");
+  assert.equal(typeof snapshots.mergeCmsMountHtml, "function");
+
+  const fallback = '<a class="route-card" href="contact">Static quote path</a>';
+  const cms = '<a class="route-card" href="resources">CMS resource path</a>';
+
+  assert.equal(
+    snapshots.mergeCmsMountHtml(fallback, cms),
+    `${fallback}${cms}`,
+    "partial CMS card snapshots should append to existing fallback cards",
+  );
+  assert.equal(
+    snapshots.mergeCmsMountHtml("", cms),
+    cms,
+    "empty CMS mounts should render CMS rows normally",
+  );
+  assert.equal(
+    snapshots.mergeCmsMountHtml(fallback, cms, { mode: "replace" }),
+    cms,
+    "explicit replacement mode should replace fallback content",
+  );
+  assert.equal(
+    snapshots.mergeCmsMountHtml(`${fallback}${cms}`, cms, { alreadyLoaded: true }),
+    `${fallback}${cms}`,
+    "repeated render should not duplicate CMS rows",
+  );
+});
+
 test("core public pages expose generic CMS page-section slots", () => {
   for (const file of [
     "index.html",
