@@ -138,6 +138,9 @@ language sql stable security definer set search_path = public as $$
   select company_id from public.profiles where id = auth.uid()
 $$;
 
+revoke all on function public.current_company_id() from public;
+grant execute on function public.current_company_id() to authenticated, service_role;
+
 -- ---------- RLS ----------
 alter table public.companies   enable row level security;
 alter table public.profiles    enable row level security;
@@ -211,6 +214,7 @@ grant all privileges on all tables in schema public to service_role;
 grant all privileges on all sequences in schema public to service_role;
 
 grant usage on schema public to anon, authenticated;
+revoke truncate, references, trigger, maintain on all tables in schema public from anon, authenticated;
 grant select on public.products to anon, authenticated;
 grant select on public.companies, public.profiles, public.addresses,
                 public.orders, public.order_items to authenticated;

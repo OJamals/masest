@@ -44,6 +44,7 @@ alter table public.quotes enable row level security;
 
 -- Privilege grants. Tables created via raw SQL (pooler, as role `postgres`) skip Supabase's
 -- auto-grant event trigger, so service_role hits "permission denied" (42501) on insert —
--- BYPASSRLS does NOT bypass table-level privileges. RLS above (no policies) still blocks
--- anon/authenticated at the row level even with the grant.
-grant all on table public.quotes to anon, authenticated, service_role;
+-- BYPASSRLS does NOT bypass table-level privileges. Public submissions go through
+-- /api/quote with the service-role client, so browser roles do not need table grants.
+revoke all on table public.quotes from anon, authenticated;
+grant all on table public.quotes to service_role;

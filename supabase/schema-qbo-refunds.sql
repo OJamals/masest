@@ -49,4 +49,5 @@ end
 $$;
 
 grant select, insert, update on public.qbo_refunds to service_role;
+revoke all on function public.claim_qbo_refunds(int) from public;
 grant execute on function public.claim_qbo_refunds(int) to service_role;

@@ -55,4 +55,5 @@ begin
 end;
 $$;
 
+revoke all on function public.create_company_address(uuid, address_type, text, text, text, text, text, boolean) from public;
 grant execute on function public.create_company_address(uuid, address_type, text, text, text, text, text, boolean) to service_role;

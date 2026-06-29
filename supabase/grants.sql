@@ -10,7 +10,10 @@ grant all privileges on all tables in schema public to service_role;
 grant all privileges on all sequences in schema public to service_role;
 
 -- Browser roles. RLS policies still govern WHICH ROWS each can see.
+-- Keep browser grants narrow; service-role Pages Functions handle all admin/CRM/CMS writes.
 grant usage on schema public to anon, authenticated;
+revoke truncate, references, trigger, maintain on all tables in schema public from anon, authenticated;
+revoke all on table public.quotes from anon, authenticated;
 grant select on public.products to anon, authenticated;
 grant select on public.companies, public.profiles, public.addresses,
                 public.orders, public.order_items to authenticated;

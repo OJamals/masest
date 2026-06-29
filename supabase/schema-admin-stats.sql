@@ -24,4 +24,5 @@ as $$
   );
 $$;
 
+revoke all on function public.admin_order_metrics() from public;
 grant execute on function public.admin_order_metrics() to service_role;

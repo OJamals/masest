@@ -32,4 +32,5 @@ begin
 end;
 $$;
 
+revoke all on function public.increment_variant_stock(text, integer) from public;
 grant execute on function public.increment_variant_stock(text, integer) to service_role;

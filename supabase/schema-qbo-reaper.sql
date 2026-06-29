@@ -56,5 +56,7 @@ begin
 end
 $$;
 
+revoke all on function public.claim_qbo_orders(int) from public;
+revoke all on function public.claim_qbo_refunds(int) from public;
 grant execute on function public.claim_qbo_orders(int) to service_role;
 grant execute on function public.claim_qbo_refunds(int) to service_role;

@@ -78,4 +78,5 @@ grant select, insert, update on public.qbo_tokens to service_role;
 grant select, insert, update on public.qbo_sync_settings to service_role;
 grant select, insert, update on public.qbo_items to service_role;
 grant select, insert, update on public.qbo_customers to service_role;
+revoke all on function public.claim_qbo_orders(int) from public;
 grant execute on function public.claim_qbo_orders(int) to service_role;

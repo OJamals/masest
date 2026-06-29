@@ -39,10 +39,11 @@ conversion engine — split into **Scheduled** (committed/near-term) and **Poten
 - Concurrent Codex agents may edit the same tree — re-Read / re-grep anchors before editing, and rebase before push.
 
 **Known gotchas (learned the hard way)**
-- **Table privileges:** a table created via raw SQL on the pooler (role `postgres`) skips Supabase's
-  auto-grant trigger. `service_role` bypasses RLS but NOT table GRANTs → inserts fail `42501` and our
-  best-effort endpoints report `saved:false` with no error. Always add
-  `grant all on table public.<t> to anon, authenticated, service_role;` in the schema file.
+- **Table/RPC privileges:** a table or function created via raw SQL on the pooler (role `postgres`)
+  skips Supabase's auto-grant trigger. `service_role` bypasses RLS but NOT table/function GRANTs,
+  while PostgreSQL grants new functions to `PUBLIC` by default. Grant tables/functions only to
+  `service_role` unless a browser role truly needs direct RLS-mediated access, then re-run
+  `supabase/schema-rpc-hardening.sql`.
 - **Email deliverability:** Resend `last_event:"delivered"` means the recipient MX accepted at SMTP, NOT
   that it hit the inbox. `@masest.co` is behind **Proofpoint**; senders must be allow-listed there or mail
   is quarantined. (All current senders/recipients are now allow-listed.)
