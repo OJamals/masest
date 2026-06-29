@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
@@ -8,6 +8,11 @@ import { publicContentSnapshot } from "../functions/_lib/content.js";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUT_DIR = process.env.CONTENT_EXPORT_OUT_DIR || join(ROOT, "data/content");
+
+// Default published-entry ordering used by every snapshot source (Supabase REST,
+// the pooler, and CONTENT_EXPORT_SOURCE) so regenerated files are byte-stable
+// regardless of which path produced them.
+export const ENTRY_ORDER_SQL = "status='published' order by type asc, slug asc";
 
 function writeJson(path, value) {
   const text = `${JSON.stringify(value, null, 2)}\n`;
@@ -67,7 +72,51 @@ function typedPayload(snapshot, type, key) {
   };
 }
 
-async function loadEntries() {
+// Map published content_entries → the per-file snapshot payloads. Pure: same
+// entries always yield the same payloads, so build-content and publish-content
+// produce byte-identical output.
+export function snapshotPayloads(entries) {
+  const snapshot = publicContentSnapshot(entries);
+  return {
+    "services.json": servicesPayload(snapshot),
+    "page-meta.json": pageMetaPayload(snapshot),
+    "proof.json": typedPayload(snapshot, "proof_card", "proof_cards"),
+    "resources.json": typedPayload(snapshot, "resource_card", "resource_cards"),
+    "industries.json": typedPayload(snapshot, "industry_card", "industry_cards"),
+    "faqs.json": typedPayload(snapshot, "faq_block", "faq_blocks"),
+    "page-sections.json": typedPayload(snapshot, "page_section", "page_sections"),
+    "pricing.json": typedPayload(snapshot, "pricing_tier", "pricing_tiers"),
+  };
+}
+
+// Read the prior manifest's generated_at, but only if every file's sha matches —
+// so regenerating an unchanged snapshot set keeps the same timestamp and produces
+// no git diff. Makes publishing deterministic: a diff means content actually changed.
+function stableGeneratedAt(outDir, files) {
+  try {
+    const prev = JSON.parse(readFileSync(join(outDir, "manifest.json"), "utf8"));
+    const prevFiles = prev?.files || {};
+    const keys = Object.keys(files);
+    const unchanged = keys.length === Object.keys(prevFiles).length
+      && keys.every((f) => prevFiles[f]?.sha256 === files[f].sha256);
+    if (unchanged && typeof prev.generated_at === "string") return prev.generated_at;
+  } catch { /* no prior manifest — fall through to a fresh timestamp */ }
+  return new Date().toISOString();
+}
+
+// Write all snapshot files + manifest into outDir. Returns the list of file names.
+export function writeSnapshots(entries, outDir = OUT_DIR) {
+  mkdirSync(outDir, { recursive: true });
+  const writes = snapshotPayloads(entries);
+  const files = {};
+  for (const [file, value] of Object.entries(writes)) {
+    files[file] = manifestEntry(writeJson(join(outDir, file), value), value);
+  }
+  writeJson(join(outDir, "manifest.json"), { generated_at: stableGeneratedAt(outDir, files), files });
+  return Object.keys(writes);
+}
+
+export async function loadEntries() {
   if (process.env.CONTENT_EXPORT_SOURCE) return JSON.parse(process.env.CONTENT_EXPORT_SOURCE);
 
   const url = process.env.SUPABASE_URL;
@@ -86,33 +135,19 @@ async function loadEntries() {
 }
 
 async function main() {
-  mkdirSync(OUT_DIR, { recursive: true });
-
   const entries = await loadEntries();
   if (!entries) {
     console.log("build-content: content source not configured; no snapshots written");
     return;
   }
-
-  const snapshot = publicContentSnapshot(entries);
-  const writes = {
-    "services.json": servicesPayload(snapshot),
-    "page-meta.json": pageMetaPayload(snapshot),
-    "proof.json": typedPayload(snapshot, "proof_card", "proof_cards"),
-    "resources.json": typedPayload(snapshot, "resource_card", "resource_cards"),
-    "industries.json": typedPayload(snapshot, "industry_card", "industry_cards"),
-    "faqs.json": typedPayload(snapshot, "faq_block", "faq_blocks"),
-    "page-sections.json": typedPayload(snapshot, "page_section", "page_sections"),
-    "pricing.json": typedPayload(snapshot, "pricing_tier", "pricing_tiers"),
-  };
-  const files = {};
-  for (const [file, value] of Object.entries(writes)) {
-    files[file] = manifestEntry(writeJson(join(OUT_DIR, file), value), value);
-  }
-  writeJson(join(OUT_DIR, "manifest.json"), { generated_at: new Date().toISOString(), files });
+  writeSnapshots(entries, OUT_DIR);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+// Run the CLI only when invoked directly — importing this module (publish-content,
+// tests) must be side-effect-free.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
