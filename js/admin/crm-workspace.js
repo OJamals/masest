@@ -64,7 +64,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     }
   }
   function contactRow(c) {
-    const role = c.role ? `<span class="crm-contact-role">${esc(c.role)}</span>` : '';
+    const role = c.role ? `<span class="crm-contact-role">${esc(String(c.role).replace(/_/g, ' '))}</span>` : '';
     const meta = [c.title, c.email, c.phone].filter(Boolean).map(esc).join(' · ') || '—';
     const company = c.company_name ? `<span class="muted">${esc(c.company_name)}</span>` : '';
     return `<li class="crm-contact">
