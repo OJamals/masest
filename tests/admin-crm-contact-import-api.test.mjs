@@ -9,12 +9,25 @@ test('import action parses CSV + validates each row via contactRow', () => {
   assert.match(src, /parseContactsCsv\(body\.csv \|\| ''\)/);
   assert.match(src, /company_required/);
   assert.match(src, /no_rows/);
-  assert.match(src, /contactRow\(\{ \.\.\.r, company_id: companyId/);
+  assert.match(src, /prepareContactImportRows\(parsed,\s*\{\s*companyId,\s*actor:/);
 });
 
-test('import bulk-inserts valid rows, caps at 500, returns counts + errors', () => {
-  assert.match(src, /\.slice\(0, 500\)/);
+test('import prefilters existing active contact emails before bulk insert', () => {
+  assert.match(src, /select\('email'\)/);
+  assert.match(src, /\.eq\('company_id', companyId\)/);
+  assert.match(src, /\.is\('deleted_at', null\)/);
+  assert.match(src, /existingEmailKeys/);
+  assert.match(src, /duplicate_email/);
+  assert.match(src, /skipped_duplicates/);
+});
+
+test('import bulk-inserts filtered valid rows and returns counts + errors', () => {
   assert.match(src, /from\('crm_contacts'\)\.insert\(rows\)/);
-  assert.match(src, /inserted, skipped: errors\.length, errors: errors\.slice\(0, 10\)/);
+  assert.match(src, /inserted, skipped: errors\.length, skipped_duplicates: duplicateSkips/);
   assert.match(src, /crm\.contact_import/);
+});
+
+test('import turns unique-index races into a clear duplicate-email conflict', () => {
+  assert.match(src, /crm_contacts_company_email_uniq/);
+  assert.match(src, /json\(409,\s*\{\s*error: 'duplicate_email'/);
 });

@@ -24,6 +24,10 @@ export function validRole(role) {
   return CONTACT_ROLES.includes(String(role));
 }
 
+export function contactEmailKey(email) {
+  return String(email ?? '').trim().toLowerCase();
+}
+
 const trimCap = (v, n) => {
   const s = String(v ?? '').trim();
   return s ? s.slice(0, n) : null;
@@ -126,4 +130,32 @@ export function parseContactsCsv(text) {
     if (row.name) out.push(row);
   }
   return out;
+}
+
+export function prepareContactImportRows(parsedRows = [], { companyId, actor, limit = 500 } = {}) {
+  const rows = [];
+  const entries = [];
+  const errors = [];
+  const seenEmailKeys = new Set();
+
+  (parsedRows || []).slice(0, limit).forEach((raw, index) => {
+    const rowNumber = index + 1;
+    const built = contactRow({ ...raw, company_id: companyId, actor });
+    if (built.error) {
+      errors.push({ row: rowNumber, error: built.error });
+      return;
+    }
+
+    const emailKey = contactEmailKey(built.row.email);
+    if (emailKey && seenEmailKeys.has(emailKey)) {
+      errors.push({ row: rowNumber, error: 'duplicate_email', email: emailKey });
+      return;
+    }
+
+    if (emailKey) seenEmailKeys.add(emailKey);
+    rows.push(built.row);
+    entries.push({ rowNumber, row: built.row, emailKey });
+  });
+
+  return { rows, entries, errors, emailKeys: [...seenEmailKeys] };
 }

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseContactsCsv } from '../functions/_lib/crm-contacts.js';
+import {
+  contactEmailKey,
+  parseContactsCsv,
+  prepareContactImportRows,
+} from '../functions/_lib/crm-contacts.js';
 
 test('parses a header row + maps columns by name', () => {
   const rows = parseContactsCsv('name,role,email\nJane Doe,procurement,jane@acme.co\nBob,maintenance,bob@acme.co');
@@ -34,4 +38,40 @@ test('drops rows without a name + blank lines', () => {
 test('empty input yields no rows', () => {
   assert.deepEqual(parseContactsCsv(''), []);
   assert.deepEqual(parseContactsCsv('   '), []);
+});
+
+test('contactEmailKey normalizes emails for case-insensitive import dedup', () => {
+  assert.equal(contactEmailKey(' Jane@Acme.CO '), 'jane@acme.co');
+  assert.equal(contactEmailKey('   '), '');
+  assert.equal(contactEmailKey(null), '');
+});
+
+test('prepareContactImportRows skips duplicate emails inside one CSV batch', () => {
+  const parsed = parseContactsCsv('name,email\nJane,jane@acme.co\nJanet, JANE@ACME.CO \nBob,bob@acme.co');
+  const result = prepareContactImportRows(parsed, { companyId: 'co_1', actor: 'staff@masest.co' });
+
+  assert.deepEqual(result.rows.map((row) => row.name), ['Jane', 'Bob']);
+  assert.deepEqual(result.emailKeys, ['jane@acme.co', 'bob@acme.co']);
+  assert.deepEqual(result.errors, [{ row: 2, error: 'duplicate_email', email: 'jane@acme.co' }]);
+});
+
+test('prepareContactImportRows keeps valid contacts that have no email', () => {
+  const parsed = parseContactsCsv('name,role,email\nJane,procurement,\nBob,maintenance,bob@acme.co');
+  const result = prepareContactImportRows(parsed, { companyId: 'co_1', actor: 'staff@masest.co' });
+
+  assert.deepEqual(result.rows.map((row) => [row.name, row.email]), [['Jane', null], ['Bob', 'bob@acme.co']]);
+  assert.deepEqual(result.emailKeys, ['bob@acme.co']);
+  assert.deepEqual(result.errors, []);
+});
+
+test('prepareContactImportRows preserves validation errors with source row numbers', () => {
+  const parsed = [
+    { name: 'Jane', email: 'not-an-email' },
+    { name: 'Bob', email: 'bob@acme.co' },
+  ];
+  const result = prepareContactImportRows(parsed, { companyId: 'co_1', actor: 'staff@masest.co' });
+
+  assert.deepEqual(result.rows.map((row) => row.name), ['Bob']);
+  assert.deepEqual(result.emailKeys, ['bob@acme.co']);
+  assert.deepEqual(result.errors, [{ row: 1, error: 'invalid_email' }]);
 });

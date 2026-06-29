@@ -3,11 +3,24 @@
 import { adminClient, json, readBody, requireStaff } from '../../../_lib/supabase.js';
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
-import { contactRow, contactPatch, mergeFields, parseContactsCsv, CONTACT_ROLES } from '../../../_lib/crm-contacts.js';
+import { contactEmailKey, contactRow, contactPatch, mergeFields, parseContactsCsv, prepareContactImportRows, CONTACT_ROLES } from '../../../_lib/crm-contacts.js';
 import { parsePage, pageEnvelope } from '../../../_lib/paginate.js';
 import { upsertCrispPerson } from '../../../_lib/crisp.js';
 
 const SELECT = 'id,company_id,name,role,title,email,phone,is_primary,notes,created_by,created_at,updated_at';
+
+function isMissingCrmContactsTable(error) {
+  return /does not exist|relation|schema cache/i.test(error?.message || '');
+}
+
+function isCrmContactUniqueConflict(error) {
+  return /crm_contacts_company_email_uniq|duplicate key value|23505/i.test([
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.code,
+  ].filter(Boolean).join(' '));
+}
 
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
@@ -72,21 +85,47 @@ export async function onRequest({ request, env }) {
       if (!companyId) return json(400, { error: 'company_required' });
       const parsed = parseContactsCsv(body.csv || '');
       if (!parsed.length) return json(400, { error: 'no_rows' });
-      const rows = [];
-      const errors = [];
-      parsed.slice(0, 500).forEach((r, i) => {
-        const built = contactRow({ ...r, company_id: companyId, actor: user.email || null });
-        if (built.error) errors.push({ row: i + 1, error: built.error });
-        else rows.push(built.row);
+      const prepared = prepareContactImportRows(parsed, { companyId, actor: user.email || null });
+      const errors = [...prepared.errors];
+      const existingEmailKeys = new Set();
+      if (prepared.emailKeys.length) {
+        const { data: existing, error: existingErr } = await sb.from('crm_contacts')
+          .select('email')
+          .eq('company_id', companyId)
+          .is('deleted_at', null)
+          .not('email', 'is', null)
+          .limit(2000);
+        if (existingErr) {
+          if (isMissingCrmContactsTable(existingErr)) {
+            return json(200, { ok: false, inserted: 0, skipped: errors.length, skipped_duplicates: errors.filter((entry) => entry.error === 'duplicate_email').length, errors: errors.slice(0, 10), needs_migration: true });
+          }
+          return json(500, { error: existingErr.message });
+        }
+        for (const contact of existing || []) {
+          const key = contactEmailKey(contact.email);
+          if (key) existingEmailKeys.add(key);
+        }
+      }
+      const entries = prepared.entries.filter((entry) => {
+        if (entry.emailKey && existingEmailKeys.has(entry.emailKey)) {
+          errors.push({ row: entry.rowNumber, error: 'duplicate_email', email: entry.emailKey });
+          return false;
+        }
+        return true;
       });
+      const rows = entries.map((entry) => entry.row);
+      const duplicateSkips = errors.filter((entry) => entry.error === 'duplicate_email').length;
       let inserted = 0;
       if (rows.length) {
         const { data, error } = await sb.from('crm_contacts').insert(rows).select('id');
+        if (isCrmContactUniqueConflict(error)) {
+          return json(409, { error: 'duplicate_email', message: 'One or more contacts already exist. Refresh and retry the import.' });
+        }
         if (error) return json(500, { error: error.message });
         inserted = (data || []).length;
       }
-      await recordAudit(sb, { user, action: 'crm.contact_import', targetType: 'company', targetId: companyId, detail: { inserted, skipped: errors.length } });
-      return json(200, { ok: true, inserted, skipped: errors.length, errors: errors.slice(0, 10) });
+      await recordAudit(sb, { user, action: 'crm.contact_import', targetType: 'company', targetId: companyId, detail: { inserted, skipped: errors.length, skipped_duplicates: duplicateSkips } });
+      return json(200, { ok: true, inserted, skipped: errors.length, skipped_duplicates: duplicateSkips, errors: errors.slice(0, 10) });
     }
 
     if (body.action === 'merge') {
