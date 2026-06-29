@@ -326,6 +326,8 @@ body .product-detail-hero { padding-bottom: 42px; }
 .crm-panel { margin-top: 16px; border-top: 1px solid var(--border, #e5e7eb); padding-top: 12px; }
 .crm-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
 .crm-tabs .is-active { background: var(--surface-2, #eef2f7); font-weight: 600; }
+.crm-inbox-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+.crm-inbox-tools .crm-tabs { margin-bottom: 0; }
 .crm-feed, .crm-task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .crm-feed-item { display: grid; grid-template-columns: 20px 1fr auto; gap: 8px; align-items: start; }
 .crm-task { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: start; }

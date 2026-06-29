@@ -4,6 +4,7 @@
 // (#36 per-tab split). Shared primitives ($, api, state, admSkeleton, admEmpty)
 // are injected; esc/delegate come from util.js.
 import { esc, delegate, dateTime as date } from '../util.js';
+import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js';
 
 const DIR_ROLES = [
   ['', 'All roles'],
@@ -31,6 +32,9 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
   }
 
   const TASK_SCOPES = [['open', 'All open'], ['mine', 'Assigned to me'], ['overdue', 'Overdue']];
+  // The currently loaded inbox tasks for the active scope. The assignee filter
+  // narrows this in-memory (no refetch), so it persists across assignee changes.
+  let inboxTasks = [];
 
   function taskRow(t) {
     const overdue = t.due_at && new Date(t.due_at) < new Date();
@@ -47,20 +51,47 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
       ${openBtn}</li>`;
   }
 
+  function scopeButtons(scope) {
+    return `<div class="crm-tabs" role="group" aria-label="Task scope">${TASK_SCOPES.map(([v, l]) => `<button class="btn btn-ghost btn-sm${v === scope ? ' is-active' : ''}" type="button" data-inbox-scope="${v}" aria-pressed="${v === scope}">${l}</button>`).join('')}</div>`;
+  }
+
+  // Assignee facet <select>, derived from the loaded inbox. Suppressed when there
+  // is only one bucket (facets = just the "All" head) since there's nothing to narrow.
+  function assigneeSelect() {
+    const facets = taskAssigneeFacets(inboxTasks);
+    if (facets.length <= 2) return '';
+    const current = state.crmTaskAssignee || '';
+    const opts = facets.map((f) => `<option value="${esc(f.value)}"${f.value === current ? ' selected' : ''}>${esc(f.label)} (${f.count})</option>`).join('');
+    return `<select class="adm-select adm-select-sm" data-inbox-assignee aria-label="Filter tasks by assignee">${opts}</select>`;
+  }
+
+  // Render the toolbar + the assignee-filtered list from the already-loaded inboxTasks.
+  function paintInbox(body) {
+    const scope = state.crmTaskScope || 'open';
+    const toolbar = `<div class="crm-inbox-tools">${scopeButtons(scope)}${assigneeSelect()}</div>`;
+    const visible = filterTasksByAssignee(inboxTasks, state.crmTaskAssignee || '');
+    let list;
+    if (visible.length) list = `<ul class="crm-task-list">${visible.map(taskRow).join('')}</ul>`;
+    else if (inboxTasks.length) list = admEmpty('ph-funnel', 'No tasks', 'No open follow-ups for this assignee.');
+    else list = admEmpty('ph-check-square', 'No tasks', scope === 'overdue' ? 'Nothing overdue — you are caught up.' : 'No open follow-ups.');
+    body.innerHTML = toolbar + list;
+  }
+
   // Tasks inbox — replaces plan 001 placeholder.
   async function renderTasks(body) {
     const scope = state.crmTaskScope || 'open';
     body.innerHTML = admSkeleton(4);
-    const toggle = `<div class="crm-tabs" role="group" aria-label="Task scope">${TASK_SCOPES.map(([v, l]) => `<button class="btn btn-ghost btn-sm${v === scope ? ' is-active' : ''}" type="button" data-inbox-scope="${v}" aria-pressed="${v === scope}">${l}</button>`).join('')}</div>`;
     try {
       const { tasks, needs_migration } = await api(`/api/admin/crm/tasks?scope=${scope}`);
-      if (needs_migration) { body.innerHTML = toggle + '<p class="muted">No CRM database yet. Apply supabase/schema-crm.sql.</p>'; return; }
-      const list = (tasks || []).length
-        ? `<ul class="crm-task-list">${tasks.map(taskRow).join('')}</ul>`
-        : admEmpty('ph-check-square', 'No tasks', scope === 'overdue' ? 'Nothing overdue — you are caught up.' : 'No open follow-ups.');
-      body.innerHTML = toggle + list;
+      if (needs_migration) { inboxTasks = []; body.innerHTML = scopeButtons(scope) + '<p class="muted">No CRM database yet. Apply supabase/schema-crm.sql.</p>'; return; }
+      inboxTasks = tasks || [];
+      // Drop a stale assignee selection that no longer appears in the new scope.
+      const facetValues = new Set(taskAssigneeFacets(inboxTasks).map((f) => f.value));
+      if (state.crmTaskAssignee && !facetValues.has(state.crmTaskAssignee)) state.crmTaskAssignee = '';
+      paintInbox(body);
     } catch (err) {
-      body.innerHTML = toggle + `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load tasks. Retry.')}</p>`;
+      inboxTasks = [];
+      body.innerHTML = scopeButtons(scope) + `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load tasks. Retry.')}</p>`;
     }
   }
   function contactRow(c) {
@@ -145,6 +176,11 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     delegate(box, 'click', '[data-inbox-scope]', (event, btn) => {
       state.crmTaskScope = btn.dataset.inboxScope;
       renderTasks(box.querySelector('[data-crm-ws-body]'));
+    });
+    delegate(box, 'change', '[data-inbox-assignee]', (event, sel) => {
+      // Re-filter the loaded inbox in place — no refetch.
+      state.crmTaskAssignee = sel.value;
+      paintInbox(box.querySelector('[data-crm-ws-body]'));
     });
     delegate(box, 'click', '[data-inbox-toggle]', async (event, btn) => {
       btn.disabled = true;
