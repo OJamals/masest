@@ -136,7 +136,11 @@ export async function loadEntries() {
 
 async function main() {
   const entries = await loadEntries();
-  if (!entries) {
+  // loadEntries returns null ONLY when no source is configured — skip then.
+  // An empty array means the source IS configured with zero published entries,
+  // which must still regenerate (writing empty snapshots), so guard on null
+  // explicitly rather than falsiness (an empty array is truthy anyway).
+  if (entries === null) {
     console.log("build-content: content source not configured; no snapshots written");
     return;
   }

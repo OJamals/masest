@@ -63,6 +63,24 @@ test("writeSnapshots writes every file + a manifest with counts", () => {
   }
 });
 
+test("writeSnapshots regenerates empty snapshots for zero published entries (not skipped)", () => {
+  // Guards the null-vs-empty distinction: a configured source with no published
+  // rows must still rewrite every snapshot as empty (so the live site clears),
+  // never leave stale files. (An empty array is truthy — it does not skip.)
+  const dir = mkdtempSync(join(tmpdir(), "masest-publish-empty-"));
+  try {
+    const names = writeSnapshots([], dir);
+    for (const name of names) {
+      const parsed = JSON.parse(readFileSync(join(dir, name), "utf8"));
+      for (const arr of Object.values(parsed)) assert.deepEqual(arr, []);
+    }
+    const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
+    assert.equal(manifest.files["pricing.json"].count, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("writeSnapshots is idempotent — unchanged content keeps generated_at (no churn)", () => {
   const dir = mkdtempSync(join(tmpdir(), "masest-publish-idem-"));
   try {
