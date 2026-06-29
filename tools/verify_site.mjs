@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -229,6 +230,17 @@ function verifyOptionalContentSnapshot() {
   if (fs.existsSync(manifestFile)) {
     const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
     if (!manifest.generated_at || !manifest.files) failures.push("data/content/manifest.json missing generated_at/files");
+    // Integrity: each committed snapshot must hash to its manifest sha256. The
+    // publish workflow (npm run publish:content) trusts these shas to decide
+    // "nothing to publish", so a hand-edit or stale manifest must fail the gate.
+    for (const [name, entry] of Object.entries(manifest.files || {})) {
+      const snapshot = path.join(projectRoot, "data/content", name);
+      if (!fs.existsSync(snapshot)) { failures.push(`data/content/${name} listed in manifest but missing`); continue; }
+      const actual = createHash("sha256").update(fs.readFileSync(snapshot)).digest("hex");
+      if (entry?.sha256 && actual !== entry.sha256) {
+        failures.push(`data/content/${name} sha256 does not match manifest (run npm run build:content)`);
+      }
+    }
   }
 
   const checks = [
