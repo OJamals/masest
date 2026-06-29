@@ -6,6 +6,7 @@ const SNAPSHOT_FILES = {
   industry_cards: "industries.json",
   faq_blocks: "faqs.json",
   page_sections: "page-sections.json",
+  pricing_tiers: "pricing.json",
 };
 
 function esc(value) {
@@ -149,6 +150,27 @@ function pageSection(row) {
   `;
 }
 
+function pricingTier(tier) {
+  const href = safeContentHref(tier.href, "contact");
+  const featured = tier.featured === true;
+  const features = Array.isArray(tier.features) ? tier.features : [];
+  const list = features.length
+    ? `<ul class="tier-list">${features.map((item) => `<li><i class="ph ph-check" aria-hidden="true"></i>${esc(item)}</li>`).join("")}</ul>`
+    : "";
+  return `
+    <div class="tier-card${featured ? " featured" : ""} reveal">
+      ${tier.badge ? `<span class="tier-badge">${esc(tier.badge)}</span>` : ""}
+      <div class="tier-name">${esc(tier.name || tier.title || "Tier")}</div>
+      ${tier.audience ? `<div class="tier-sub">${esc(tier.audience)}</div>` : ""}
+      ${tier.price ? `<div class="tier-price">${esc(tier.price)}${tier.price_unit ? `<small> ${esc(tier.price_unit)}</small>` : ""}</div>` : ""}
+      ${tier.annual ? `<div class="tier-annual">${esc(tier.annual)}</div>` : ""}
+      ${list}
+      ${tier.replaces ? `<p class="tier-foot">${esc(tier.replaces)}</p>` : ""}
+      ${tier.cta ? `<a class="btn ${featured ? "btn-primary" : "btn-ghost"} btn-sm" href="${esc(href)}">${esc(tier.cta)}</a>` : ""}
+    </div>
+  `;
+}
+
 function renderMount(name, snapshot, key, renderer) {
   let rendered = false;
   document.querySelectorAll(`[data-cms-content="${name}"]`).forEach((mount) => {
@@ -174,12 +196,13 @@ function renderMount(name, snapshot, key, renderer) {
 }
 
 export async function initContentSnapshots() {
-  const [proof, resources, industries, faqs, pageSections] = await Promise.all([
+  const [proof, resources, industries, faqs, pageSections, pricingTiers] = await Promise.all([
     loadContentSnapshot(SNAPSHOT_FILES.proof_cards),
     loadContentSnapshot(SNAPSHOT_FILES.resource_cards),
     loadContentSnapshot(SNAPSHOT_FILES.industry_cards),
     loadContentSnapshot(SNAPSHOT_FILES.faq_blocks),
     loadContentSnapshot(SNAPSHOT_FILES.page_sections),
+    loadContentSnapshot(SNAPSHOT_FILES.pricing_tiers),
   ]);
 
   const rendered = [
@@ -188,6 +211,7 @@ export async function initContentSnapshots() {
     renderMount("industry_cards", industries, "industry_cards", industryCard),
     renderMount("faq_blocks", faqs, "faq_blocks", faqBlock),
     renderMount("page_sections", pageSections, "page_sections", pageSection),
+    renderMount("pricing_tiers", pricingTiers, "pricing_tiers", pricingTier),
   ].some(Boolean);
 
   // CMS content is injected after initReveal() ran at DOMContentLoaded, so the

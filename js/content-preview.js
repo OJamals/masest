@@ -9,6 +9,7 @@ const LABELS = {
   faq_block: "FAQ block",
   page_section: "Page section",
   page_meta: "Page metadata",
+  pricing_tier: "Pricing tier",
 };
 
 function esc(value) {

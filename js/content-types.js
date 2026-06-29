@@ -98,6 +98,25 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "jsonld_type", label: "JSON-LD type", kind: "text" },
     ],
   },
+  pricing_tier: {
+    label: "Pricing tiers",
+    snapshot: { file: "pricing.json", key: "pricing_tiers" },
+    fields: [
+      { key: "badge", label: "Badge", kind: "text" },
+      { key: "name", label: "Tier name", kind: "text", className: "wide", required: true },
+      { key: "audience", label: "Audience", kind: "text", className: "wide" },
+      { key: "price", label: "Price", kind: "text" },
+      { key: "price_unit", label: "Price unit", kind: "text" },
+      { key: "annual", label: "Annual range", kind: "text" },
+      { key: "features", label: "Features", kind: "list", className: "full" },
+      { key: "replaces", label: "Replaces", kind: "text", className: "wide" },
+      { key: "cta", label: "CTA label", kind: "text" },
+      { key: "href", label: "CTA link", kind: "text" },
+      { key: "featured", label: "Featured", kind: "checkbox" },
+      { key: "sort_order", label: "Sort order", kind: "number" },
+      { key: "active", label: "Active", kind: "checkbox" },
+    ],
+  },
 });
 
 const SNAPSHOT_GROUPS = Object.freeze([
@@ -131,6 +150,10 @@ const SNAPSHOT_GROUPS = Object.freeze([
   {
     file: "page-sections.json",
     types: Object.freeze([Object.freeze({ type: "page_section", key: "page_sections" })]),
+  },
+  {
+    file: "pricing.json",
+    types: Object.freeze([Object.freeze({ type: "pricing_tier", key: "pricing_tiers" })]),
   },
 ]);
 

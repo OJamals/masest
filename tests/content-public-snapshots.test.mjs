@@ -15,6 +15,7 @@ test("public content snapshot helper loads optional CMS snapshots", () => {
   assert.match(source, /industries\.json/);
   assert.match(source, /faqs\.json/);
   assert.match(source, /page-sections\.json/);
+  assert.match(source, /pricing\.json/);
 });
 
 test("service catalog tries the root CMS snapshot before legacy static services data", () => {
@@ -23,10 +24,17 @@ test("service catalog tries the root CMS snapshot before legacy static services 
 });
 
 test("public pages expose CMS mount points without replacing hardcoded fallback content", () => {
-  for (const file of ["services.html", "proof.html", "resources.html", "industries.html"]) {
+  for (const file of ["services.html", "proof.html", "resources.html", "industries.html", "programs.html"]) {
     const html = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.match(html, /data-cms-content/);
   }
+});
+
+test("programs pricing tiers mount as a CMS-replaceable region over hardcoded fallback", () => {
+  const html = readFileSync(new URL("../programs.html", import.meta.url), "utf8");
+  assert.match(html, /data-cms-content="pricing_tiers"/, "programs.html must mount the pricing_tiers snapshot");
+  assert.match(html, /data-cms-render="replace"/, "CMS tiers should replace the hardcoded fallback when present");
+  assert.match(html, /class="tier-card/, "hardcoded tier cards must remain as fallback");
 });
 
 test("public CMS renderer preserves fallback cards unless replacement is explicit", async () => {

@@ -14,12 +14,47 @@ test("CMS type registry exposes every supported non-commerce type", () => {
     "industry_card",
     "page_meta",
     "page_section",
+    "pricing_tier",
     "proof_card",
     "resource_card",
     "service",
     "service_package",
   ]);
   assert.equal(CONTENT_TYPE_DEFINITIONS.product, undefined);
+});
+
+test("pricing_tier normalizes tier fields and enforces a required name", () => {
+  assert.deepEqual(
+    normalizeStructuredPayload("pricing_tier", {
+      badge: " Silver · Most chosen ",
+      name: " Standard ",
+      price: "$900-1,800",
+      price_unit: " / mo",
+      features: "CR\nNeutral, Descaler",
+      featured: "on",
+      sort_order: "2",
+      active: "true",
+      chips: "should not survive",
+    }),
+    {
+      badge: "Silver · Most chosen",
+      name: "Standard",
+      price: "$900-1,800",
+      price_unit: "/ mo",
+      features: ["CR", "Neutral", "Descaler"],
+      featured: true,
+      sort_order: 2,
+      active: true,
+    },
+  );
+  assert.deepEqual(validateStructuredPayload("pricing_tier", { badge: "Bronze" }), {
+    ok: false,
+    error: "name_required",
+  });
+  assert.deepEqual(validateStructuredPayload("pricing_tier", { name: "Essentials", href: "javascript:alert(1)" }), {
+    ok: false,
+    error: "href_invalid_url",
+  });
 });
 
 test("registry normalizes type-specific structured payloads", () => {
@@ -60,6 +95,7 @@ test("snapshotGroups returns every public export target", () => {
     "industries.json",
     "faqs.json",
     "page-sections.json",
+    "pricing.json",
   ]);
   assert.ok(contentPayloadFields("proof_card").some((field) => field.key === "result"));
 });
