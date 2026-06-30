@@ -3,7 +3,7 @@
 // snapshots from published entries so a human can review + commit them.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -110,6 +110,53 @@ test("publish:content regenerates snapshots from CONTENT_EXPORT_SOURCE", () => {
     assert.match(stdout, /regenerated snapshots from 2 published entries/);
     const pricing = JSON.parse(readFileSync(join(dir, "pricing.json"), "utf8"));
     assert.equal(pricing.pricing_tiers.length, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("publish:content refuses to wipe an existing non-empty snapshot without --allow-empty", () => {
+  const dir = mkdtempSync(join(tmpdir(), "masest-publish-guard-"));
+  try {
+    const prior = `${JSON.stringify({ pricing_tiers: [{ slug: "essentials" }] }, null, 2)}\n`;
+    writeFileSync(join(dir, "pricing.json"), prior);
+
+    let threw = false;
+    try {
+      execFileSync(process.execPath, ["tools/publish-content.mjs"], {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: { ...process.env, CONTENT_EXPORT_OUT_DIR: dir, CONTENT_EXPORT_SOURCE: "[]" },
+      });
+    } catch (err) {
+      threw = true;
+      assert.match(String(err.stderr || ""), /refusing to publish/);
+      assert.match(String(err.stderr || ""), /pricing\.json: 1/);
+    }
+
+    assert.ok(threw, "exits non-zero before wiping a non-empty snapshot");
+    assert.equal(readFileSync(join(dir, "pricing.json"), "utf8"), prior);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("publish:content allows intentional empty snapshots with --allow-empty", () => {
+  const dir = mkdtempSync(join(tmpdir(), "masest-publish-allow-empty-"));
+  try {
+    writeFileSync(join(dir, "pricing.json"), `${JSON.stringify({ pricing_tiers: [{ slug: "essentials" }] }, null, 2)}\n`);
+
+    const stdout = execFileSync(process.execPath, ["tools/publish-content.mjs", "--allow-empty"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: { ...process.env, CONTENT_EXPORT_OUT_DIR: dir, CONTENT_EXPORT_SOURCE: "[]" },
+    });
+
+    assert.match(stdout, /regenerated snapshots from 0 published entries/);
+    const pricing = JSON.parse(readFileSync(join(dir, "pricing.json"), "utf8"));
+    assert.deepEqual(pricing.pricing_tiers, []);
+    const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
+    assert.equal(manifest.files["pricing.json"].count, 0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -14,45 +14,14 @@
 //   git add data/content/ && git commit && git push   # publish → CF deploy
 //
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEntries, snapshotPayloads, writeSnapshots } from "./build-content.mjs";
+import { findSnapshotWipes, loadEntries, snapshotPayloads, writeSnapshots } from "./build-content.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUT_DIR = process.env.CONTENT_EXPORT_OUT_DIR || join(ROOT, "data/content");
 const DB_URL = process.env.SUPABASE_DB_URL || process.env.CONTENT_DB_URL || "";
 const ALLOW_EMPTY = process.argv.includes("--allow-empty");
-
-// Total rows across every snapshot key in a payload object ({ key: [...rows] }).
-function snapshotRowCount(payload) {
-  let total = 0;
-  for (const value of Object.values(payload || {})) {
-    if (Array.isArray(value)) total += value.length;
-  }
-  return total;
-}
-
-// Guard against the silent-wipe failure mode: a partial/empty pull (e.g. no DB
-// reachable, transient pooler drop) would otherwise regenerate a live snapshot
-// down to zero rows and quietly publish the deletion. Refuse to shrink any
-// currently non-empty snapshot to 0 unless --allow-empty is passed.
-function findSnapshotWipes(payloads, outDir) {
-  const wipes = [];
-  for (const [file, payload] of Object.entries(payloads)) {
-    if (snapshotRowCount(payload) > 0) continue;
-    const path = join(outDir, file);
-    if (!existsSync(path)) continue;
-    let oldCount = 0;
-    try {
-      oldCount = snapshotRowCount(JSON.parse(readFileSync(path, "utf8")));
-    } catch {
-      continue;
-    }
-    if (oldCount > 0) wipes.push(`${file}: ${oldCount} → 0`);
-  }
-  return wipes;
-}
 
 // Pull published entries over a direct Postgres (pooler) connection — the path
 // for operators who hold the pooler connection string rather than the REST
@@ -125,7 +94,7 @@ async function main() {
     return;
   }
 
-  writeSnapshots(entries, OUT_DIR);
+  writeSnapshots(entries, OUT_DIR, { allowEmpty: ALLOW_EMPTY });
   console.log(`publish-content: regenerated snapshots from ${published.length} published entr${published.length === 1 ? "y" : "ies"}.`);
 
   const changed = changedSnapshotFiles();

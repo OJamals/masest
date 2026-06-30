@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
@@ -105,10 +105,53 @@ function stableGeneratedAt(outDir, files) {
   return new Date().toISOString();
 }
 
+// Total rows across every snapshot key in a payload object ({ key: [...rows] }).
+export function snapshotRowCount(payload) {
+  let total = 0;
+  for (const value of Object.values(payload || {})) {
+    if (Array.isArray(value)) total += value.length;
+  }
+  return total;
+}
+
+// Find snapshots that would be regenerated down to zero rows while a non-empty
+// version already exists on disk. This is the silent-wipe failure mode: an empty
+// or partial source (unreachable DB, wrong credentials) would otherwise blow away
+// live content and publish the deletion. Returns "file: N → 0" descriptions.
+export function findSnapshotWipes(payloads, outDir) {
+  const wipes = [];
+  for (const [file, payload] of Object.entries(payloads)) {
+    if (snapshotRowCount(payload) > 0) continue;
+    const path = join(outDir, file);
+    if (!existsSync(path)) continue;
+    let oldCount = 0;
+    try {
+      oldCount = snapshotRowCount(JSON.parse(readFileSync(path, "utf8")));
+    } catch {
+      continue;
+    }
+    if (oldCount > 0) wipes.push(`${file}: ${oldCount} → 0`);
+  }
+  return wipes;
+}
+
 // Write all snapshot files + manifest into outDir. Returns the list of file names.
-export function writeSnapshots(entries, outDir = OUT_DIR) {
+// Refuses to wipe a currently non-empty snapshot to zero rows (e.g. from an empty
+// or partial source) unless allowEmpty is set — guarding both `build:content` and
+// `publish:content`, which both funnel through here.
+export function writeSnapshots(entries, outDir = OUT_DIR, { allowEmpty = false } = {}) {
   mkdirSync(outDir, { recursive: true });
   const writes = snapshotPayloads(entries);
+  if (!allowEmpty) {
+    const wipes = findSnapshotWipes(writes, outDir);
+    if (wipes.length) {
+      throw new Error(
+        `refusing to wipe non-empty snapshots to zero rows: ${wipes.join("; ")}. ` +
+        "The content source returned no rows (unreachable DB, wrong credentials, or a " +
+        "partial pull). Pass { allowEmpty: true } / --allow-empty if the deletion is intentional.",
+      );
+    }
+  }
   const files = {};
   for (const [file, value] of Object.entries(writes)) {
     files[file] = manifestEntry(writeJson(join(outDir, file), value), value);
@@ -145,7 +188,7 @@ async function main() {
     console.log("build-content: content source not configured; no snapshots written");
     return;
   }
-  writeSnapshots(entries, OUT_DIR);
+  writeSnapshots(entries, OUT_DIR, { allowEmpty: process.argv.includes("--allow-empty") });
 }
 
 // Run the CLI only when invoked directly — importing this module (publish-content,
