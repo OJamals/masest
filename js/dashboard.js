@@ -2,7 +2,7 @@
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
-import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast } from './util.js';
 import { initBusinessHub } from './business.js';
 
 const $ = (id) => document.getElementById(id);
@@ -372,10 +372,10 @@ async function renderOrders({ append = false } = {}) {
     b.disabled = true;
     try {
       const { lines: cartLines, issues } = await api('/api/account/order', { method: 'POST', body: { id: o.id } });
-      if (!cartLines || !cartLines.length) { alert('None of these items are available to reorder.'); b.disabled = false; return; }
+      if (!cartLines || !cartLines.length) { toast('None of these items are available to reorder.', { variant: 'error' }); b.disabled = false; return; }
       cartClear();
       cartLines.forEach((l) => cartAdd(l.sku, l.qty));
-      if (issues && issues.length) alert('Some items changed since your last order:\n' + issues.map((x) => `• ${x.name || x.sku} — ${x.reason.replace('_', ' ')}`).join('\n'));
+      if (issues && issues.length) toast('Some items changed since your last order:\n' + issues.map((x) => `• ${x.name || x.sku} — ${x.reason.replace('_', ' ')}`).join('\n'), { variant: 'warning' });
       location.href = 'cart.html';
     } catch { b.disabled = false; }
   }));
@@ -387,7 +387,7 @@ async function renderOrders({ append = false } = {}) {
         const receiptUrl = safeUrl(receipt_url);
         window.open(receiptUrl, '_blank', 'noopener,noreferrer');
       }
-      else alert('No receipt is available for this order yet.');
+      else toast('No receipt is available for this order yet.');
     } catch { /* ignore */ }
     b.disabled = false;
   }));

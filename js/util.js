@@ -122,3 +122,59 @@ export function detailDialog(html) {
   dlg.addEventListener('close', () => dlg.remove());
   dlg.showModal();
 }
+
+/* ---- Toast notifications (non-blocking alert replacement) ---- */
+
+// Non-blocking replacement for window.alert(): drops a transient message into a
+// shared aria-live region (created on first use) and auto-dismisses it. The
+// message is set via textContent — never innerHTML — so it is injection-safe;
+// embedded "\n" render as line breaks via `white-space: pre-line` on .toast-msg.
+// `variant` ('error' | 'warning' | 'success' | 'info') drives colour and announce
+// priority: 'error' is assertive (role=alert), the rest are polite (role=status).
+// Returns a dismiss() that removes the toast early (also fired by the × button,
+// auto-timeout, and paused while the pointer hovers the toast).
+let toastRegion = null;
+export const toast = (message, { variant = 'info', duration = 6000 } = {}) => {
+  if (!toastRegion) {
+    toastRegion = document.createElement('div');
+    toastRegion.className = 'toast-region';
+    toastRegion.setAttribute('aria-live', 'polite');
+    document.body.appendChild(toastRegion);
+  }
+
+  const node = document.createElement('div');
+  node.className = `toast toast-${variant}`;
+  node.setAttribute('role', variant === 'error' ? 'alert' : 'status');
+
+  const msg = document.createElement('p');
+  msg.className = 'toast-msg';
+  msg.textContent = message;
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'toast-close';
+  close.setAttribute('aria-label', 'Dismiss notification');
+  close.textContent = '×';
+
+  node.append(msg, close);
+  toastRegion.appendChild(node);
+
+  let timer = null;
+  let dismissed = false;
+  const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    clearTimeout(timer);
+    node.classList.add('is-leaving');
+    node.addEventListener('transitionend', () => node.remove(), { once: true });
+    setTimeout(() => node.remove(), 320); // fallback when no transition runs (reduced motion)
+  };
+  const arm = () => { if (duration) timer = setTimeout(dismiss, duration); };
+
+  close.addEventListener('click', dismiss);
+  node.addEventListener('mouseenter', () => clearTimeout(timer));
+  node.addEventListener('mouseleave', arm);
+  requestAnimationFrame(() => node.classList.add('is-shown'));
+  arm();
+  return dismiss;
+};

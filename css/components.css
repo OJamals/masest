@@ -452,3 +452,60 @@ body .product-detail-hero { padding-bottom: 42px; }
 .pipe-bar-fill { display: block; height: 100%; background: var(--accent, #0e7c86); border-radius: 7px; }
 .pipe-loss { display: flex; flex-wrap: wrap; gap: 8px; }
 .pipe-loss .pipe-chip { padding: 4px 10px; border: 1px solid var(--border, #e5e7eb); border-radius: 999px; font-size: .8rem; }
+
+/* Toast notifications (non-blocking alert replacement — js/util.js toast()) */
+.toast-region {
+  position: fixed;
+  z-index: 1000;
+  right: clamp(12px, 4vw, 28px);
+  bottom: clamp(12px, 4vh, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, calc(100vw - 24px));
+  pointer-events: none;
+}
+.toast {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--line, #e4e6e9);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-md, 0 18px 42px -20px rgba(16, 74, 80, .28));
+  color: var(--ink, #15171c);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .22s ease, transform .22s ease;
+}
+.toast.is-shown { opacity: 1; transform: translateY(0); }
+.toast.is-leaving { opacity: 0; transform: translateY(8px); }
+.toast-msg { margin: 0; font-size: .9rem; line-height: 1.4; white-space: pre-line; }
+.toast-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: currentColor;
+  font-size: 1.15rem;
+  line-height: 1;
+  opacity: .6;
+  cursor: pointer;
+}
+.toast-close:hover { opacity: 1; background: rgba(0, 0, 0, .06); }
+.toast-error { border-color: var(--status-danger-ink); background: var(--status-danger-bg); color: var(--status-danger-ink); }
+.toast-warning { border-color: var(--status-warning-ink); background: var(--status-warning-bg); color: var(--status-warning-ink); }
+.toast-success { border-color: var(--status-success-ink); background: var(--status-success-bg); color: var(--status-success-ink); }
+@media (prefers-reduced-motion: reduce) {
+  .toast { transition: opacity .22s ease; transform: none; }
+  .toast.is-shown, .toast.is-leaving { transform: none; }
+}
