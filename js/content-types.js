@@ -64,6 +64,21 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "summary", label: "Summary", kind: "textarea", className: "full" },
     ],
   },
+  industry_sector: {
+    label: "Industry sectors",
+    snapshot: { file: "industry-sectors.json", key: "industry_sectors" },
+    fields: [
+      { key: "icon", label: "Icon (phosphor class)", kind: "text" },
+      { key: "summary", label: "Summary", kind: "textarea", className: "full", required: true },
+      { key: "image", label: "Photo path", kind: "text" },
+      { key: "image_alt", label: "Photo alt", kind: "text" },
+      { key: "image_w", label: "Photo width", kind: "number" },
+      { key: "image_h", label: "Photo height", kind: "number" },
+      { key: "href", label: "Photo link", kind: "text" },
+      { key: "image_label", label: "Photo aria-label", kind: "text" },
+      { key: "sort_order", label: "Sort order", kind: "number" },
+    ],
+  },
   faq_block: {
     label: "FAQ blocks",
     snapshot: { file: "faqs.json", key: "faq_blocks" },
@@ -145,6 +160,10 @@ const SNAPSHOT_GROUPS = Object.freeze([
   {
     file: "industries.json",
     types: Object.freeze([Object.freeze({ type: "industry_card", key: "industry_cards" })]),
+  },
+  {
+    file: "industry-sectors.json",
+    types: Object.freeze([Object.freeze({ type: "industry_sector", key: "industry_sectors" })]),
   },
   {
     file: "faqs.json",

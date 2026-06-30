@@ -16,6 +16,7 @@ test("public content snapshot helper loads optional CMS snapshots", () => {
   assert.match(source, /faqs\.json/);
   assert.match(source, /page-sections\.json/);
   assert.match(source, /pricing\.json/);
+  assert.match(source, /industry-sectors\.json/);
 });
 
 test("service catalog tries the root CMS snapshot before legacy static services data", () => {
@@ -35,6 +36,13 @@ test("programs pricing tiers mount as a CMS-replaceable region over hardcoded fa
   assert.match(html, /data-cms-content="pricing_tiers"/, "programs.html must mount the pricing_tiers snapshot");
   assert.match(html, /data-cms-render="replace"/, "CMS tiers should replace the hardcoded fallback when present");
   assert.match(html, /class="tier-card/, "hardcoded tier cards must remain as fallback");
+});
+
+test("industries sector rows mount as a CMS-replaceable region over hardcoded fallback", () => {
+  const html = readFileSync(new URL("../industries.html", import.meta.url), "utf8");
+  assert.match(html, /data-cms-content="industry_sectors"/, "industries.html must mount the industry_sectors snapshot");
+  assert.match(html, /data-cms-render="replace"/, "CMS industry sectors should replace the hardcoded fallback when present");
+  assert.match(html, /class="row-card/, "hardcoded industry rows must remain as fallback");
 });
 
 test("public CMS renderer preserves fallback cards unless replacement is explicit", async () => {

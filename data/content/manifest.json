@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30T05:55:07.137Z",
+  "generated_at": "2026-06-30T06:27:36.869Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -57,6 +57,13 @@
         "pricing_tiers": 4
       },
       "sha256": "e09b2a2eedafc70b0ec883edd3f403ccb67cdba3f1498dbb521ee4633c5dd4fc"
+    },
+    "industry-sectors.json": {
+      "count": 11,
+      "counts": {
+        "industry_sectors": 11
+      },
+      "sha256": "d44b3871f8869f9de3f9cf0a337e7bdc9719c74d5d79c95302dcf888abf69db8"
     }
   }
 }

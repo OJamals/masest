@@ -293,6 +293,36 @@ test("public industry CMS cards render managed images", async ({ page }) => {
   await page.screenshot({ path: `${SCREENSHOT_DIR}/public-industries-cms-image-card.png`, fullPage: true });
 });
 
+test("public industry sector rows replace the hardcoded industry list", async ({ page }) => {
+  await page.route("**/data/content/industry-sectors.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      industry_sectors: [{
+        slug: "qa-sector",
+        icon: "ph-wind",
+        title: "QA sector",
+        href: "proof#qa-sector",
+        image: "img/proof/cases/ac-coil.webp",
+        image_alt: "QA sector proof image",
+        image_w: 168,
+        image_h: 104,
+        summary: "CMS-managed sector row for public industry routing.",
+      }],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/industries.html`, { waitUntil: "domcontentloaded" });
+  const grid = page.locator('[data-cms-content="industry_sectors"]');
+  await expect(grid.locator(".row-card")).toHaveCount(1);
+  await expect(grid.locator("#qa-sector")).toContainText("QA sector");
+  await expect(grid.locator("img")).toHaveAttribute("alt", "QA sector proof image");
+  await expect(grid.getByText("Oil & Gas")).toHaveCount(0);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  expect(overflow).toBe(false);
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/public-industries-cms-sector-row.png`, fullPage: true });
+});
+
 for (const pagePath of ["/services.html", "/proof.html", "/resources.html", "/industries.html"]) {
   test(`public page has no horizontal overflow: ${pagePath}`, async ({ page }) => {
     await page.goto(`${BASE_URL}${pagePath}`, { waitUntil: "domcontentloaded" });

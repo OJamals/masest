@@ -37,8 +37,8 @@ test("importing build-content.mjs is side-effect-free (exposes builders, runs no
 test("snapshotPayloads merges payload + drops drafts, keyed per snapshot file", () => {
   const out = snapshotPayloads(ENTRIES);
   assert.deepEqual(Object.keys(out).sort(), [
-    "faqs.json", "industries.json", "page-meta.json", "page-sections.json",
-    "pricing.json", "proof.json", "resources.json", "services.json",
+    "faqs.json", "industries.json", "industry-sectors.json", "page-meta.json",
+    "page-sections.json", "pricing.json", "proof.json", "resources.json", "services.json",
   ]);
   assert.equal(out["pricing.json"].pricing_tiers.length, 1); // draft excluded
   const tier = out["pricing.json"].pricing_tiers[0];

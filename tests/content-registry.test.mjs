@@ -12,6 +12,7 @@ test("CMS type registry exposes every supported non-commerce type", () => {
   assert.deepEqual(Object.keys(CONTENT_TYPE_DEFINITIONS).sort(), [
     "faq_block",
     "industry_card",
+    "industry_sector",
     "page_meta",
     "page_section",
     "pricing_tier",
@@ -93,6 +94,7 @@ test("snapshotGroups returns every public export target", () => {
     "proof.json",
     "resources.json",
     "industries.json",
+    "industry-sectors.json",
     "faqs.json",
     "page-sections.json",
     "pricing.json",

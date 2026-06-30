@@ -7,6 +7,7 @@ const SNAPSHOT_FILES = {
   faq_blocks: "faqs.json",
   page_sections: "page-sections.json",
   pricing_tiers: "pricing.json",
+  industry_sectors: "industry-sectors.json",
 };
 
 function esc(value) {
@@ -185,6 +186,23 @@ function pricingTier(tier) {
   `;
 }
 
+function industrySector(card) {
+  const fit = `industries/${esc(card.slug || "")}`;
+  const dims = `${card.image_w ? ` width="${esc(card.image_w)}"` : ""}${card.image_h ? ` height="${esc(card.image_h)}"` : ""}`;
+  const icon = card.icon || "ph-buildings";
+  const thumb = card.image && card.href
+    ? `<a class="row-thumb" href="${esc(safeContentHref(card.href, ""))}"${card.image_label ? ` aria-label="${esc(card.image_label)}"` : ""}><img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}></a>`
+    : "";
+  return `
+    <article id="${esc(card.slug || "")}" class="row-card${card.image ? " has-photo" : ""}">
+      <i class="ph ${esc(icon)}" aria-hidden="true"></i>
+      <div><h3>${esc(card.title || "Industry")}</h3><p>${esc(card.summary || "")}</p></div>
+      ${thumb}
+      <a class="btn btn-ghost btn-sm" href="${fit}">View fit</a>
+    </article>
+  `;
+}
+
 function renderMount(name, snapshot, key, renderer) {
   let rendered = false;
   document.querySelectorAll(`[data-cms-content="${name}"]`).forEach((mount) => {
@@ -210,13 +228,14 @@ function renderMount(name, snapshot, key, renderer) {
 }
 
 export async function initContentSnapshots() {
-  const [proof, resources, industries, faqs, pageSections, pricingTiers] = await Promise.all([
+  const [proof, resources, industries, faqs, pageSections, pricingTiers, industrySectors] = await Promise.all([
     loadContentSnapshot(SNAPSHOT_FILES.proof_cards),
     loadContentSnapshot(SNAPSHOT_FILES.resource_cards),
     loadContentSnapshot(SNAPSHOT_FILES.industry_cards),
     loadContentSnapshot(SNAPSHOT_FILES.faq_blocks),
     loadContentSnapshot(SNAPSHOT_FILES.page_sections),
     loadContentSnapshot(SNAPSHOT_FILES.pricing_tiers),
+    loadContentSnapshot(SNAPSHOT_FILES.industry_sectors),
   ]);
 
   const rendered = [
@@ -226,6 +245,7 @@ export async function initContentSnapshots() {
     renderMount("faq_blocks", faqs, "faq_blocks", faqBlock),
     renderMount("page_sections", pageSections, "page_sections", pageSection),
     renderMount("pricing_tiers", pricingTiers, "pricing_tiers", pricingTier),
+    renderMount("industry_sectors", industrySectors, "industry_sectors", industrySector),
   ].some(Boolean);
 
   // CMS content is injected after initReveal() ran at DOMContentLoaded, so the

@@ -86,6 +86,7 @@ export function snapshotPayloads(entries) {
     "faqs.json": typedPayload(snapshot, "faq_block", "faq_blocks"),
     "page-sections.json": typedPayload(snapshot, "page_section", "page_sections"),
     "pricing.json": typedPayload(snapshot, "pricing_tier", "pricing_tiers"),
+    "industry-sectors.json": typedPayload(snapshot, "industry_sector", "industry_sectors"),
   };
 }
 
