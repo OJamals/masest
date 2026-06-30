@@ -102,6 +102,24 @@ function check(ok, message, details = {}) {
   return { ok, message, details };
 }
 
+export function cloudflarePagesBuildFromCheckRuns(head, checkRunsPayload = {}) {
+  const runs = Array.isArray(checkRunsPayload?.check_runs) ? checkRunsPayload.check_runs : [];
+  const run = runs.find((item) => (
+    String(item?.name || "").toLowerCase() === "cloudflare pages"
+    && item?.status === "completed"
+    && item?.conclusion === "success"
+  ));
+  if (!run || !head) return null;
+  return {
+    status: "built",
+    commit: head,
+    source: "cloudflare_check_run",
+    created_at: run.started_at || null,
+    updated_at: run.completed_at || null,
+    url: run.html_url || null,
+  };
+}
+
 export function buildPreflightReport({
   env = process.env,
   git,
@@ -180,12 +198,13 @@ function collectGit() {
   };
 }
 
-function collectPagesBuild({ skipPages = false } = {}) {
+function collectPagesBuild({ skipPages = false, head = "" } = {}) {
   if (skipPages) return { skipped: true };
+  let pagesBuild = null;
   try {
     const raw = run("gh", ["api", "repos/OJamals/masest/pages/builds/latest"]);
     const parsed = JSON.parse(raw);
-    return {
+    pagesBuild = {
       status: parsed.status || "unknown",
       commit: parsed.commit || null,
       created_at: parsed.created_at || null,
@@ -195,12 +214,22 @@ function collectPagesBuild({ skipPages = false } = {}) {
       url: parsed.url || null,
     };
   } catch (error) {
-    return {
+    pagesBuild = {
       status: "unavailable",
       commit: null,
       error: error.message,
     };
   }
+  if (head && pagesBuild?.commit !== head) {
+    try {
+      const raw = run("gh", ["api", `repos/OJamals/masest/commits/${head}/check-runs`]);
+      const cloudflareBuild = cloudflarePagesBuildFromCheckRuns(head, JSON.parse(raw));
+      if (cloudflareBuild) return { ...cloudflareBuild, fallback_from: pagesBuild };
+    } catch {
+      return pagesBuild;
+    }
+  }
+  return pagesBuild;
 }
 
 function parseArgs(argv) {
@@ -227,10 +256,11 @@ function parseArgs(argv) {
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
+  const git = collectGit();
   const report = buildPreflightReport({
     env: process.env,
-    git: collectGit(),
-    pagesBuild: collectPagesBuild({ skipPages: options.skipPages }),
+    git,
+    pagesBuild: collectPagesBuild({ skipPages: options.skipPages, head: git.head }),
   });
   const json = `${JSON.stringify(report, null, 2)}\n`;
   if (options.output) {
