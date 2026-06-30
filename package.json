@@ -10,6 +10,7 @@
     "build": "node tools/cf-build.mjs",
     "verify": "npm run check && npm test && npm run build && npm run verify:site",
     "verify:site": "node tools/verify_site.mjs",
+    "acceptance:preflight": "node tools/production-acceptance-preflight.mjs",
     "serve": "python3 -m http.server 4195",
     "smoke:admin": "playwright test tools/admin-auth-gate.spec.mjs tools/admin-quote-message-flows.spec.mjs tools/admin-content-cms.spec.mjs --reporter=line",
     "smoke:cms": "playwright test tools/content-smoke.spec.mjs --reporter=line",
