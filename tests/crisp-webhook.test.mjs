@@ -86,6 +86,17 @@ test("Website Hook key is accepted even when plugin secret env also exists", asy
   assert.equal((await response.json()).ok, true);
 });
 
+test("configured Website Hook without key reports key-required, not unconfigured", async () => {
+  const { onRequestPost } = await import("../functions/api/crisp/webhook.js");
+  const response = await onRequestPost({
+    request: new Request("https://masest.co/api/crisp/webhook", { method: "POST", body: "{}" }),
+    env: { CRISP_WEBHOOK_KEY: "website-key" },
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, note: "crisp_webhook_key_required" });
+});
+
 test("handleCrispEvent writes operator replies as staff messages and buyer notifications", async () => {
   const { handleCrispEvent } = await import("../functions/api/crisp/webhook.js");
   const writes = [];
