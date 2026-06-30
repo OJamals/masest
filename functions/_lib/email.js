@@ -127,8 +127,19 @@ export async function verifySvixSignature(secret, { id, timestamp, signature }, 
     const mac = await crypto.subtle.sign("HMAC", key, data);
     const expected = btoa(String.fromCharCode(...new Uint8Array(mac)));
     const provided = signature.split(" ").map((p) => p.split(",")[1]).filter(Boolean);
-    return provided.some((sig) => sig === expected);
+    return provided.some((sig) => timingSafeEqualStr(sig, expected));
   } catch {
     return false;
   }
+}
+
+// Constant-time string compare for MAC verification — never short-circuit on the first
+// differing byte (avoids a timing oracle on the signature). MAC length is fixed/public.
+function timingSafeEqualStr(a, b) {
+  const sa = String(a);
+  const sb = String(b);
+  if (sa.length !== sb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < sa.length; i += 1) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
+  return diff === 0;
 }

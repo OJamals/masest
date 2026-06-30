@@ -1,6 +1,6 @@
 // /api/account/messages — support thread between the caller's company and MASEST staff.
 //   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer posts (+ staff notification)
-import { requireCompany, json, readBody, sendEmail, emailLayout } from '../../_lib/supabase.js';
+import { requireCompany, json, readBody, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 
 export async function onRequest({ request, env }) {
@@ -52,7 +52,7 @@ export async function onRequest({ request, env }) {
         subject: `New message from ${companyName}`,
         html: emailLayout({
           heading: 'New customer message',
-          bodyHtml: `<p>Company: ${companyName}</p><p>${text.slice(0, 500)}</p>`,
+          bodyHtml: `<p>Company: ${htmlEscape(companyName)}</p><p>${htmlEscape(text.slice(0, 500))}</p>`,
           ctaText: 'Open admin messages',
           ctaUrl: 'https://masest.co/admin.html#messages',
         }),
