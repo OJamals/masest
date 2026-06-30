@@ -190,6 +190,11 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
         renderTasks(box.querySelector('[data-crm-ws-body]'));
       } catch (err) {
         btn.disabled = false;
+        const body = box.querySelector('[data-crm-ws-body]');
+        let note = body.querySelector('[data-inbox-error]');
+        if (!note) { note = document.createElement('p'); note.className = 'adm-status'; note.dataset.inboxError = ''; body.appendChild(note); }
+        note.dataset.state = 'err';
+        note.textContent = err.data?.error || `Could not ${action} the task. Retry.`;
       }
     });
     delegate(box, 'submit', '[data-dir-form]', (event, form) => {

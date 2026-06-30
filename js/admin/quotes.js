@@ -327,6 +327,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     document.querySelector('.adm-drawer[data-quote-drawer]')?.remove();
     const dlg = document.createElement('dialog');
     dlg.className = 'adm-drawer';
+    dlg.setAttribute('aria-label', 'Quote details');
     dlg.setAttribute('data-quote-drawer', '');
     dlg.innerHTML = `<div class="adm-drawer-inner">
       <div class="adm-tools" style="justify-content:space-between;align-items:start">

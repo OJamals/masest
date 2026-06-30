@@ -43,11 +43,14 @@ one family.
   --muted: #5f656d;          /* darkened from #6b7077 for AA body contrast */
   --line: #e4e6e9;
   --line-soft: #eef0f2;
+  --line-strong: #c9ccd1;     /* stronger input border, matches .field input */
   --bg: #fafbfc;
   --surface: #ffffff;
   --surface-soft: #f7f9fa;
+  --surface-2: var(--panel); /* alias: CRM/admin component layer */
   --panel: #f1f3f4;
   --panel-cool: #eef5f5;
+  --border: var(--line);      /* alias: CRM/admin component layer */
   --accent: #0e7c86;
   --accent-ink: #0a5b62;
   --accent-soft: #e3f0f1;
@@ -370,6 +373,8 @@ one accent) ---------- */
 .btn:active { transform: scale(.97); }
 .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(10,91,98,.25), 0 8px 20px -8px rgba(14,124,134,.55); }
 .btn-primary:hover { background: var(--accent-ink); box-shadow: 0 2px 4px rgba(10,91,98,.28), 0 14px 28px -10px rgba(14,124,134,.62); transform: translateY(-1px); }
+.btn-secondary { background: var(--accent-soft); color: var(--accent-ink); border: 1.5px solid rgba(14,124,134,.18); box-shadow: var(--shadow-xs); }
+.btn-secondary:hover { border-color: rgba(14,124,134,.4); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
 .btn:disabled { cursor: not-allowed; opacity: .55; transform: none; box-shadow: none; filter: grayscale(.25); }
 .btn[hidden] { display: none !important; } /* .btn sets display:inline-flex, which otherwise overrides the hidden attr (e.g. self-gated #pBuyBtn) */
 .btn-ink {
@@ -415,7 +420,7 @@ at page end) */
   background: var(--ink); color: #fff;
   background-image:
     radial-gradient(90% 130% at 12% 0%, rgba(14,124,134,.32) 0%, transparent 55%),
-    radial-gradient(70% 120% at 100% 100%, rgba(109,40,201,.18) 0%, transparent 55%);
+    radial-gradient(70% 120% at 100% 100%, rgba(14,124,134,.16) 0%, transparent 55%);
 }
 .block-dark::before {
   content: "";
@@ -2487,7 +2492,7 @@ dark block) ───────────────── */
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 7px; border-radius: 6px;
   background: rgba(11, 18, 32, .86); color: #fff;
-  font: 700 .66rem/1 var(--sans, system-ui); letter-spacing: .05em;
+  font: 700 .66rem/1 var(--font); letter-spacing: .05em;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
 }
 .doc-badge svg { display: block; }

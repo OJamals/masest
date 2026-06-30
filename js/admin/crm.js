@@ -161,6 +161,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     document.querySelector('.adm-drawer[data-contact-drawer]')?.remove();
     const dlg = document.createElement('dialog');
     dlg.className = 'adm-drawer';
+    dlg.setAttribute('aria-label', 'Contact details');
     dlg.setAttribute('data-contact-drawer', '');
     dlg.innerHTML = `<div class="adm-drawer-inner">
       <div class="adm-tools" style="justify-content:space-between;align-items:start">

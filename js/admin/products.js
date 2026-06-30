@@ -130,10 +130,10 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         <span class="product-gallery-item">
           <img src="${esc(safeUrl(url))}" alt="">
           <span class="product-gallery-actions">
-            <button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(url)}" title="Make primary">★</button>
-            <button type="button" class="gbtn" data-gact="up" data-gidx="${index}" title="Move up">↑</button>
-            <button type="button" class="gbtn" data-gact="down" data-gidx="${index}" title="Move down">↓</button>
-            <button type="button" class="gbtn" data-gact="del" data-gurl="${esc(url)}" title="Remove">×</button>
+            <button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(url)}" title="Make primary" aria-label="Make primary photo">★</button>
+            <button type="button" class="gbtn" data-gact="up" data-gidx="${index}" title="Move up" aria-label="Move photo up">↑</button>
+            <button type="button" class="gbtn" data-gact="down" data-gidx="${index}" title="Move down" aria-label="Move photo down">↓</button>
+            <button type="button" class="gbtn" data-gact="del" data-gurl="${esc(url)}" title="Remove" aria-label="Remove photo">×</button>
           </span>
         </span>`).join('')}</div>`
       : '';

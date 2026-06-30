@@ -761,7 +761,7 @@
   transform: translateY(-8px);
 }
 .savior-ctas .btn-primary { background: var(--s-safe); color: var(--s-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(8, 121, 111, .62); }
-.savior-ctas .btn-primary:hover { background: #5fe9d6; }
+.savior-ctas .btn-primary:hover { background: #5fe9d6; color: #08222a; }
 .savior-ctas .btn-ghost { background: rgba(255, 255, 255, .04); color: #fff; border: 1.5px solid rgba(255, 255, 255, .28); }
 .savior-ctas .btn-ghost:hover { border-color: #fff; background: rgba(255, 255, 255, .1); }
 
@@ -1156,7 +1156,9 @@ font-size: .68rem;
   transform-origin: 50% 58%;
 }
 
-.story.story-ready [data-at] {
+/* Exclude the per-frame-animated pipe paths (#114): a filter on them forces a
+   re-raster every scrub frame — the Act 2 jank. Depth there is layered strokes. */
+.story.story-ready [data-at]:not(.pipe-buildup):not(.pipe-flow) {
   filter: drop-shadow(0 20px 44px rgba(0, 0, 0, .28));
 }
 
@@ -1203,7 +1205,8 @@ font-size: .68rem;
   transform: scale(1.035);
 }
 
-.story .pipe-diagram,
+/* .pipe-diagram is intentionally excluded: it contains the per-frame-animated
+   pipe paths, so a filter on the container re-rasters them every scrub frame (#114). */
 .story .hmis-rig,
 .story .savior-wrap {
   filter: drop-shadow(0 24px 48px rgba(0, 0, 0, .28));
@@ -1254,13 +1257,9 @@ font-size: .68rem;
   z-index: 1;
 }
 
-.story .pipe-flow {
-  filter: drop-shadow(0 0 10px rgba(85, 211, 196, .22));
-}
-
-.story .pipe-buildup {
-  filter: drop-shadow(0 0 8px rgba(255, 138, 108, .16));
-}
+/* No filter on .pipe-flow / .pipe-buildup: their geometry (strokeDashoffset,
+   stroke-width via --build) is rewritten every scrub frame, so any filter forces
+   a per-frame re-raster — the Act 2 jank removed in #114. Glow = layered strokes. */
 
 .story .zero-axis,
 .story .pipe-callout .chip {

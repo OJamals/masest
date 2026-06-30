@@ -93,10 +93,10 @@
   .admin-input-sm { flex: 1 1 150px; max-width: 170px; }
   .admin-input-md { flex: 1 1 170px; max-width: 210px; }
   .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px; background: var(--panel); color: var(--ink-soft); font-size: .75rem; }
-  .badge[data-s="paid"], .badge[data-s="fulfilled"], .badge[data-s="net_paid"], .badge[data-s="approved"], .badge[data-s="verified"], .badge[data-s="active"], .badge[data-s="delivered"], .badge[data-s="won"] { background: var(--status-success-bg); color: var(--status-success-ink); }
+  .badge[data-s="paid"], .badge[data-s="fulfilled"], .badge[data-s="net_paid"], .badge[data-s="approved"], .badge[data-s="verified"], .badge[data-s="active"], .badge[data-s="delivered"], .badge[data-s="won"], .badge[data-s="published"] { background: var(--status-success-bg); color: var(--status-success-ink); }
   .badge[data-s="rejected"], .badge[data-s="suspended"], .badge[data-s="cancelled"], .badge[data-s="spam"], .badge[data-s="refunded"], .badge[data-s="blocked"], .badge[data-s="lost"], .badge[data-s="urgent"] { background: var(--status-danger-soft-bg); color: var(--status-danger-soft-ink); }
   .badge[data-s="pending"], .badge[data-s="pending_payment"], .badge[data-s="net_open"], .badge[data-s="new"], .badge[data-s="high"], .badge[data-s="packing"] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
-  .badge[data-s="qualified"], .badge[data-s="sample_audit"], .badge[data-s="proposal"], .badge[data-s="contacted"], .badge[data-s="shipped"] { background: var(--accent-soft, #e3f0f1); color: var(--accent-ink, #0a5b62); }
+  .badge[data-s="qualified"], .badge[data-s="sample_audit"], .badge[data-s="proposal"], .badge[data-s="contacted"], .badge[data-s="shipped"], .badge[data-s="scheduled"] { background: var(--accent-soft, #e3f0f1); color: var(--accent-ink, #0a5b62); }
   .adm-status { min-height: 22px; color: var(--muted); }
   .adm-status[data-state="ok"] { color: var(--status-success-ink); }
   .adm-status[data-state="warn"] { color: var(--status-warning-ink); }
@@ -165,7 +165,7 @@
   .adm-content-json summary { cursor: pointer; color: var(--ink-soft); font-size: .82rem; font-weight: 800; }
   .adm-content-lockbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
   .adm-content-lock-status { flex: 1 1 220px; color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
-  .adm-content-lock-status[data-state="ok"] { color: var(--status-ok-ink); }
+  .adm-content-lock-status[data-state="ok"] { color: var(--status-success-ink); }
   .adm-content-lock-status[data-state="err"] { color: var(--status-danger-ink); }
   .adm-content-check { min-height: 44px; display: flex !important; align-items: center; gap: 8px; align-self: stretch; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 8px 10px; }
   .adm-content-check input { width: 18px; height: 18px; }
@@ -206,7 +206,7 @@
   .adm-content-revision-diff-table th, .adm-content-revision-diff-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
   .adm-content-revision-diff-table thead th { color: var(--muted); font-weight: 600; }
   .adm-content-revision-diff-table tbody th { font-weight: 600; white-space: nowrap; }
-  .adm-content-revision-diff-table tr.is-changed td, .adm-content-revision-diff-table tr.is-changed th { background: var(--warning-soft, #fff7ed); }
+  .adm-content-revision-diff-table tr.is-changed td, .adm-content-revision-diff-table tr.is-changed th { background: var(--status-warning-bg); }
   .adm-content-revision-diff-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .adm-content-workflow-row { width: 100%; display: grid; gap: 3px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); padding: 10px 12px; }
   .adm-content-workflow-row + .adm-content-workflow-row { margin-top: 8px; }
