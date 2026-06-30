@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   acceptanceEnvGroups,
   buildPreflightReport,
+  cloudflarePagesBuildFromCheckRuns,
   redactValue,
 } from "../tools/production-acceptance-preflight.mjs";
 
@@ -103,6 +104,42 @@ test("buildPreflightReport accepts a Supabase Postgres pooler source without lea
   assert.match(report.checks.env_supabase.details.values.SUPABASE_DB_URL, /^set:\d+$/);
   assert.equal(JSON.stringify(report).includes(dbUrl), false);
   assert.equal(JSON.stringify(report).includes("very-secret-password"), false);
+});
+
+test("cloudflarePagesBuildFromCheckRuns accepts a successful Cloudflare Pages check for HEAD", () => {
+  const head = "4978b9b289651c20acf3cc4bf1820c1b484bc461";
+  const pagesBuild = cloudflarePagesBuildFromCheckRuns(head, {
+    check_runs: [
+      { name: "Unit tests", status: "completed", conclusion: "success", html_url: "https://example.test/tests" },
+      {
+        name: "Cloudflare Pages",
+        status: "completed",
+        conclusion: "success",
+        started_at: "2026-06-30T09:14:53Z",
+        completed_at: "2026-06-30T09:14:53Z",
+        html_url: "https://github.com/OJamals/masest/runs/84253874395",
+      },
+    ],
+  });
+
+  assert.deepEqual(pagesBuild, {
+    status: "built",
+    commit: head,
+    source: "cloudflare_check_run",
+    created_at: "2026-06-30T09:14:53Z",
+    updated_at: "2026-06-30T09:14:53Z",
+    url: "https://github.com/OJamals/masest/runs/84253874395",
+  });
+});
+
+test("cloudflarePagesBuildFromCheckRuns ignores failed or pending Cloudflare Pages checks", () => {
+  const head = "4978b9b289651c20acf3cc4bf1820c1b484bc461";
+  assert.equal(cloudflarePagesBuildFromCheckRuns(head, {
+    check_runs: [{ name: "Cloudflare Pages", status: "completed", conclusion: "failure" }],
+  }), null);
+  assert.equal(cloudflarePagesBuildFromCheckRuns(head, {
+    check_runs: [{ name: "Cloudflare Pages", status: "in_progress", conclusion: null }],
+  }), null);
 });
 
 test("buildPreflightReport passes local gates when commit, env, and Pages build match", () => {
