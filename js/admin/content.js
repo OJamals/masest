@@ -265,16 +265,22 @@ function formTemplate() {
             </div>
           </div>
         </details>
-        <div class="adm-inline-actions adm-content-actions full">
-          <button class="btn btn-ghost btn-sm" type="button" data-content-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
-          <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
-          <button class="btn btn-primary btn-sm" type="button" data-content-action="publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish</button>
-          <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule publish</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-action="archive"><i class="ph ph-archive" aria-hidden="true"></i> Archive</button>
-          <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore draft</button>
+        <div class="adm-inline-actions adm-content-actions full" aria-label="CMS editor actions">
+          <div class="adm-content-action-group" data-content-action-group="draft-publish" aria-label="Draft and publish">
+            <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
+            <button class="btn btn-primary btn-sm" type="button" data-content-action="publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish</button>
+          </div>
+          <div class="adm-content-action-group" data-content-action-group="review" aria-label="Review workflow">
+            <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule publish</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
+          </div>
+          <div class="adm-content-action-group" data-content-action-group="manage" aria-label="Manage entry">
+            <button class="btn btn-ghost btn-sm" type="button" data-content-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-action="archive"><i class="ph ph-archive" aria-hidden="true"></i> Archive</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore draft</button>
+          </div>
         </div>
       </form>
       <p id="contentStatus" class="adm-status" role="status" aria-live="polite"></p>

@@ -7,6 +7,14 @@ function failedOrderName(order) {
   return order.companies?.name || order.id;
 }
 
+function qboErrorLabel(error) {
+  return {
+    qbo_oauth_not_configured: "OAuth not configured",
+    qbo_not_connected: "Connect QuickBooks first",
+    qbo_config_missing: "Cloudflare config missing",
+  }[error] || error || "Unknown QuickBooks error";
+}
+
 function renderFailedOrders(orders = []) {
   const root = $("qboFailedOrders");
   if (!root) return;
@@ -15,7 +23,8 @@ function renderFailedOrders(orders = []) {
     return;
   }
   root.innerHTML = `
-    <h3>Failed syncs</h3>
+    <h3>Sync follow-up</h3>
+    <p class="muted adm-qbo-help">Resolve the readiness issue, then retry affected orders from here.</p>
     <div class="adm-table-wrap">
       <table class="adm">
         <thead><tr><th>Order</th><th>Total</th><th>Attempts</th><th>Error</th><th></th></tr></thead>
@@ -25,7 +34,7 @@ function renderFailedOrders(orders = []) {
               <td>${esc(failedOrderName(order))}</td>
               <td>${money(order.total, order.currency || "USD")}</td>
               <td>${esc(order.qbo_attempts || 0)}</td>
-              <td>${esc(order.qbo_error || "Unknown QuickBooks error")}</td>
+              <td>${esc(qboErrorLabel(order.qbo_error))}</td>
               <td><button class="btn btn-ghost btn-sm" type="button" data-qbo-retry="${esc(order.id)}">Retry</button></td>
             </tr>
           `).join("")}
@@ -34,41 +43,71 @@ function renderFailedOrders(orders = []) {
     </div>`;
 }
 
+function qboConfigDetail(config = {}, info = {}) {
+  const missing = config.missing || [];
+  if (config.ready === false) {
+    if (!missing.length || missing.includes("QBO_CONNECT_KEY")) {
+      return "Add QBO_CONNECT_KEY in Cloudflare production, or set the individual QBO_CLIENT_ID, QBO_CLIENT_SECRET, QBO_REALM_ID, QBO_SYNC_SECRET, and QBO_OAUTH_STATE_SECRET variables. Secret values are never shown here.";
+    }
+    return `Missing Cloudflare production variables: ${missing.join(", ")}. Secret values are never shown here.`;
+  }
+  if (config.source === "QBO_CONNECT_KEY" || config.imported) {
+    return "QBO_CONNECT_KEY is loaded. Connect QuickBooks, then run sync when needed.";
+  }
+  return info.connected
+    ? "OAuth is connected. Manual sync is available for reconciliation follow-up."
+    : "QuickBooks runtime config is ready. Connect QuickBooks to activate sync.";
+}
+
+function qboQueueText(counts = {}) {
+  return `${counts.pending || 0} pending, ${counts.error || 0} errored, ${counts.synced || 0} synced`;
+}
+
 export async function renderQboStatus() {
   const status = $("qboStatus");
   const button = $("qboConnect");
+  const syncButton = $("qboSyncNow");
+  const detail = $("qboConfigDetail");
   const summary = $("qboSyncSummary");
   if (!status || !button) return;
-  let allowConnect = true;
+  let allowConnect = false;
+  let allowSync = false;
   status.textContent = "Checking QuickBooks...";
   status.dataset.state = "";
   button.disabled = true;
+  if (syncButton) syncButton.disabled = true;
+  if (detail) detail.textContent = "Checking Cloudflare runtime configuration.";
   try {
     const info = await api("/api/admin/qbo/status");
-    const missing = info.qbo_config?.missing || [];
-    const configReady = info.qbo_config?.ready !== false;
+    const qboConfig = info.qbo_config || {};
+    const configReady = qboConfig.ready !== false;
     allowConnect = configReady;
+    allowSync = configReady && info.connected === true;
     if (!configReady) {
-      status.textContent = `QuickBooks config missing: ${missing.join(", ")}.`;
+      status.textContent = "QuickBooks config not ready.";
       status.dataset.state = "err";
     } else {
-      status.textContent = info.connected ? `Connected${info.realm_id ? ` (${info.realm_id})` : ""}.` : "Not connected.";
+      status.textContent = info.connected ? `Connected${info.realm_id ? ` (${info.realm_id})` : ""}.` : "Ready to connect.";
       status.dataset.state = info.connected ? "ok" : "err";
     }
+    if (detail) detail.textContent = qboConfigDetail(qboConfig, info);
     button.innerHTML = info.connected ? '<i class="ph ph-plugs-connected"></i> Reconnect QuickBooks' : '<i class="ph ph-plugs-connected"></i> Connect QuickBooks';
     button.disabled = !configReady;
+    if (syncButton) syncButton.disabled = !allowSync;
     const disconnectBtn = $("qboDisconnect");
     if (disconnectBtn) disconnectBtn.hidden = !info.connected;
     if (summary) {
       const counts = info.sync_counts || {};
-      summary.textContent = `Queue: ${counts.pending || 0} pending, ${counts.error || 0} error, ${counts.synced || 0} synced.`;
+      summary.textContent = qboQueueText(counts);
     }
     renderFailedOrders(info.qbo_failed_orders || []);
   } catch (err) {
     status.textContent = err.data?.error || "QuickBooks status unavailable.";
     status.dataset.state = "err";
+    if (detail) detail.textContent = "Check the Cloudflare production environment, then retry the status check.";
   } finally {
     button.disabled = !allowConnect;
+    if (syncButton) syncButton.disabled = !allowSync;
   }
 }
 
