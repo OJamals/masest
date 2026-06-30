@@ -283,6 +283,15 @@ export function createContentRepository(sb) {
         review_note: note || null,
         updated_by: userId || null,
         updated_at: new Date().toISOString(),
+        // Persist the editor's in-progress field edits alongside the status change.
+        // The workflow buttons (Submit for review / Schedule publish / Request changes)
+        // send the full open-form entry; without this the transition wrote only status
+        // and silently dropped any unsaved payload/title/seo edits — a reviewer could then
+        // publish stale content. Guarded on `!== undefined` so a minimal transition call
+        // (identity only) never wipes existing content.
+        payload: input.payload !== undefined ? normalized.payload : undefined,
+        title: input.title !== undefined && normalized.title ? normalized.title : undefined,
+        seo: input.seo !== undefined ? normalized.seo : undefined,
       });
       const { data, error } = await sb
         .from("content_entries")
