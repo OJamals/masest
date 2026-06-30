@@ -145,10 +145,17 @@ export async function onRequest({ request, env }) {
       await sb.from('crm_notes').update({ subject_id: String(intoId) }).eq('subject_type', 'contact').eq('subject_id', String(fromId));
       await sb.from('crm_tasks').update({ subject_id: String(intoId) }).eq('subject_type', 'contact').eq('subject_id', String(fromId));
 
-      // Backfill the survivor's blank fields, then retire the duplicate.
-      const fill = mergeFields(into, from);
-      if (Object.keys(fill).length) await sb.from('crm_contacts').update(fill).eq('id', intoId);
+      // Retire the duplicate FIRST, then backfill the survivor's blank fields. The partial
+      // unique index crm_contacts(company_id, lower(email)) where deleted_at is null counts
+      // only active rows — so if we backfilled the survivor's email while the duplicate (which
+      // owns that email) was still active, the write would hit a 23505 and be swallowed,
+      // silently losing the email. Soft-deleting the loser first frees the value.
       await sb.from('crm_contacts').update({ deleted_at: new Date().toISOString() }).eq('id', fromId);
+      const fill = mergeFields(into, from);
+      if (Object.keys(fill).length) {
+        const { error: fillErr } = await sb.from('crm_contacts').update(fill).eq('id', intoId);
+        if (fillErr) return json(500, { error: fillErr.message });
+      }
 
       const { data: survivor } = await sb.from('crm_contacts').select(SELECT).eq('id', intoId).single();
       await recordAudit(sb, { user, action: 'crm.contact_merge', targetType: 'company', targetId: into.company_id, detail: { from: fromId, into: intoId } });
