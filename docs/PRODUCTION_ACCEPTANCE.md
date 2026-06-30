@@ -48,24 +48,30 @@ Run:
 
 ```bash
 npm run verify
-npm run acceptance:preflight -- --json --output audits/production-acceptance-2026-06-30/preflight.json
+npm run acceptance:preflight -- --json --cloudflare-env --cloudflare-project masest-commerce --output audits/production-acceptance-2026-06-30/preflight.json
 ```
 
 Expected:
 
 - `npm run verify` exits 0.
 - `acceptance:preflight` exits 0 only when the local tree, `origin/main`, Pages build, and required live-integration env groups are ready.
-- The preflight report contains no secret values; env values appear only as `missing` or `set:<length>`.
+- The preflight report contains no secret values; local env values appear only as
+  `missing` or `set:<length>`, and Cloudflare Pages env values appear only as
+  `missing` or `set:cloudflare-<type>`.
 
 Required env groups:
 
 - Supabase operator data source: one complete option from `SUPABASE_DB_URL`, `CONTENT_DB_URL`, or the REST/service-role trio `SUPABASE_URL` + `SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY`
-- Stripe: `APP_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`
+- Stripe: `APP_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - QuickBooks Online: `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, `QBO_OAUTH_STATE_SECRET`, `QBO_SYNC_SECRET`, `QBO_INCOME_ACCOUNT_ID`, `QBO_ENVIRONMENT`
 - Crisp: `MASEST_CRISP_ID`, `CRISP_TOKEN_ID`, `CRISP_TOKEN_KEY`, `CRISP_IDENTITY_SECRET`, plus one of `CRISP_WEBHOOK_SECRET` or `CRISP_WEBHOOK_KEY`
 - CMS publish: one of `CONTENT_PUBLISH_HOOK_URL` or `CF_PAGES_DEPLOY_HOOK_URL`
 
 The Supabase operator data source proves the local acceptance runner can read/write the production data store during the approved live pass. The live app runtime must still be verified through deployed app paths such as `/api/health`, dashboard/admin actions, and the provider flows in the checklist.
+
+For a local operator-only env check, omit `--cloudflare-env`; for production
+readiness, keep it enabled so the gate reads encrypted Pages env metadata
+instead of the current shell.
 
 ## Go/No-Go Checkpoint
 

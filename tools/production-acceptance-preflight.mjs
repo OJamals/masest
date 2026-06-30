@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -18,7 +18,7 @@ export const acceptanceEnvGroups = [
   {
     id: "stripe",
     label: "Stripe live checkout and webhook",
-    required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PUBLISHABLE_KEY"],
+    required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
   },
   {
     id: "qbo",
@@ -49,7 +49,22 @@ export const acceptanceEnvGroups = [
 
 export function redactValue(value) {
   if (value === null || value === undefined || String(value).trim() === "") return "missing";
+  if (String(value).startsWith("cloudflare:")) return `set:${String(value).replace("cloudflare:", "cloudflare-")}`;
   return `set:${String(value).length}`;
+}
+
+export function cloudflarePagesEnvPresence(projectConfig = {}, { environment = "production" } = {}) {
+  const envVars = projectConfig?.deployment_configs?.[environment]?.env_vars || projectConfig?.env_vars || {};
+  return Object.fromEntries(
+    Object.entries(envVars)
+      .filter(([, meta]) => {
+        if (!meta) return false;
+        if (meta.type === "secret_text") return true;
+        if (meta.type === "plain_text") return String(meta.value || "").trim() !== "";
+        return String(meta.value || "").trim() !== "";
+      })
+      .map(([key, meta]) => [key, `cloudflare:${meta.type || "present"}`]),
+  );
 }
 
 function checkEnvGroup(env, group) {
@@ -122,6 +137,7 @@ export function cloudflarePagesBuildFromCheckRuns(head, checkRunsPayload = {}) {
 
 export function buildPreflightReport({
   env = process.env,
+  envSource = { type: "local_process" },
   git,
   pagesBuild,
   now = new Date().toISOString(),
@@ -168,9 +184,67 @@ export function buildPreflightReport({
     generated_at: now,
     ready: blockers.length === 0,
     mode: "non_mutating_preflight",
+    env_source: envSource,
     live_mutation_boundary: "stop for explicit operator go/no-go before QA records, CMS publish, Stripe, QBO, or Crisp mutations",
     checks,
     blockers,
+  };
+}
+
+function parseEnvFile(path) {
+  if (!existsSync(path)) return {};
+  return Object.fromEntries(
+    readFileSync(path, "utf8")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"))
+      .map((line) => {
+        const index = line.indexOf("=");
+        if (index < 1) return null;
+        const key = line.slice(0, index).trim();
+        let value = line.slice(index + 1).trim();
+        if (
+          (value.startsWith('"') && value.endsWith('"'))
+          || (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1);
+        }
+        return [key, value];
+      })
+      .filter(Boolean),
+  );
+}
+
+async function collectCloudflarePagesEnv({
+  accountId,
+  projectName,
+  token,
+  environment = "production",
+  fetchImpl = fetch,
+} = {}) {
+  if (!accountId) throw new Error("Missing Cloudflare account id for --cloudflare-env.");
+  if (!projectName) throw new Error("Missing Cloudflare Pages project name for --cloudflare-env.");
+  if (!token) throw new Error("Missing Cloudflare API token for --cloudflare-env.");
+
+  const response = await fetchImpl(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${projectName}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body.success === false) {
+    const message = (body.errors || [])
+      .map((error) => error.message || error.code)
+      .filter(Boolean)
+      .join("; ");
+    throw new Error(message || `Cloudflare project lookup failed with HTTP ${response.status}`);
+  }
+  return {
+    env: cloudflarePagesEnvPresence(body.result, { environment }),
+    source: {
+      type: "cloudflare_pages",
+      project: projectName,
+      environment,
+    },
   };
 }
 
@@ -237,12 +311,32 @@ function parseArgs(argv) {
     json: false,
     output: "",
     skipPages: false,
+    cloudflareEnv: false,
+    cloudflareAccountId: "",
+    cloudflareProject: "",
+    cloudflareEnvironment: "production",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--json") options.json = true;
     else if (arg === "--skip-pages") options.skipPages = true;
-    else if (arg === "--output") {
+    else if (arg === "--cloudflare-env") options.cloudflareEnv = true;
+    else if (arg === "--cloudflare-account-id") {
+      options.cloudflareAccountId = argv[index + 1] || "";
+      index += 1;
+    } else if (arg.startsWith("--cloudflare-account-id=")) {
+      options.cloudflareAccountId = arg.slice("--cloudflare-account-id=".length);
+    } else if (arg === "--cloudflare-project") {
+      options.cloudflareProject = argv[index + 1] || "";
+      index += 1;
+    } else if (arg.startsWith("--cloudflare-project=")) {
+      options.cloudflareProject = arg.slice("--cloudflare-project=".length);
+    } else if (arg === "--cloudflare-environment") {
+      options.cloudflareEnvironment = argv[index + 1] || "production";
+      index += 1;
+    } else if (arg.startsWith("--cloudflare-environment=")) {
+      options.cloudflareEnvironment = arg.slice("--cloudflare-environment=".length) || "production";
+    } else if (arg === "--output") {
       options.output = argv[index + 1] || "";
       index += 1;
     } else if (arg.startsWith("--output=")) {
@@ -254,11 +348,33 @@ function parseArgs(argv) {
   return options;
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
   const git = collectGit();
+  let env = process.env;
+  let envSource = { type: "local_process" };
+  if (options.cloudflareEnv) {
+    const credentialEnv = {
+      ...parseEnvFile(".dev.vars"),
+      ...process.env,
+    };
+    const cloudflare = await collectCloudflarePagesEnv({
+      accountId: options.cloudflareAccountId
+        || credentialEnv.CLOUDFLARE_ACCOUNT_ID
+        || credentialEnv.CF_ACCOUNT_ID,
+      projectName: options.cloudflareProject
+        || credentialEnv.CLOUDFLARE_PAGES_PROJECT
+        || credentialEnv.CF_PAGES_PROJECT
+        || "masest-commerce",
+      token: credentialEnv.CLOUDFLARE_API_TOKEN || credentialEnv.CF_API_TOKEN,
+      environment: options.cloudflareEnvironment,
+    });
+    env = cloudflare.env;
+    envSource = cloudflare.source;
+  }
   const report = buildPreflightReport({
-    env: process.env,
+    env,
+    envSource,
     git,
     pagesBuild: collectPagesBuild({ skipPages: options.skipPages, head: git.head }),
   });
@@ -278,4 +394,9 @@ function main() {
   process.exit(report.ready ? 0 : 1);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(1);
+  });
+}
