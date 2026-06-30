@@ -29,6 +29,7 @@ This plan does not create QA customers, mutate Supabase, publish CMS entries, ch
 - Create: `tools/production-acceptance-preflight.mjs`
   - Read-only Node CLI and exportable helpers.
   - Checks Git branch, clean tree, `origin/main`, latest Pages build, and required live-integration env groups.
+  - Accepts a Supabase operator data source from `SUPABASE_DB_URL`, `CONTENT_DB_URL`, or the REST/service-role trio.
   - Redacts every env value as `missing` or `set:<length>`.
 - Create: `tests/production-acceptance-preflight.test.mjs`
   - Unit tests for redaction, gate grouping, fail-closed behavior, and passing report shape.
@@ -80,7 +81,7 @@ Create `tools/production-acceptance-preflight.mjs` with:
 
 ```js
 export const acceptanceEnvGroups = [
-  { id: "supabase", required: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"] },
+  { id: "supabase", required: [], alternatives: [["SUPABASE_DB_URL"], ["CONTENT_DB_URL"], ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]] },
   { id: "stripe", required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PUBLISHABLE_KEY"] },
   { id: "qbo", required: ["QBO_CLIENT_ID", "QBO_CLIENT_SECRET", "QBO_REDIRECT_URI", "QBO_OAUTH_STATE_SECRET", "QBO_SYNC_SECRET", "QBO_INCOME_ACCOUNT_ID", "QBO_ENVIRONMENT"] },
   { id: "crisp", required: ["MASEST_CRISP_ID", "CRISP_TOKEN_ID", "CRISP_TOKEN_KEY", "CRISP_IDENTITY_SECRET"], oneOf: [["CRISP_WEBHOOK_SECRET", "CRISP_WEBHOOK_KEY"]] },
@@ -102,7 +103,71 @@ Run:
 node --test --test-concurrency=1 --test-timeout=120000 tests/production-acceptance-preflight.test.mjs
 ```
 
-Expected GREEN: four passing tests, zero failures.
+Expected GREEN: five passing tests, zero failures.
+
+## Task 1A: Accept the Supabase Pooler URL as an Operator Source
+
+**Files:**
+
+- Modify: `tests/production-acceptance-preflight.test.mjs`
+- Modify: `tools/production-acceptance-preflight.mjs`
+- Modify: `docs/PRODUCTION_ACCEPTANCE.md`
+
+- [x] **Step 1: Write the failing test**
+
+Add a test proving a Postgres pooler URL satisfies only the Supabase operator-source gate and is never leaked:
+
+```js
+const dbUrl = "postgresql://user:very-secret-password@aws-1-us-west-2.pooler.supabase.com:5432/postgres";
+const report = buildPreflightReport({
+  env: {
+    ...completeEnv,
+    SUPABASE_URL: "",
+    SUPABASE_ANON_KEY: "",
+    SUPABASE_SERVICE_ROLE_KEY: "",
+    SUPABASE_DB_URL: dbUrl,
+  },
+  git: cleanGit,
+  pagesBuild: builtPages,
+});
+
+assert.equal(report.ready, true);
+assert.equal(report.checks.env_supabase.ok, true);
+assert.match(report.checks.env_supabase.details.values.SUPABASE_DB_URL, /^set:\d+$/);
+assert.equal(JSON.stringify(report).includes(dbUrl), false);
+```
+
+- [x] **Step 2: Run test to verify it fails**
+
+Run:
+
+```bash
+node --test --test-concurrency=1 --test-timeout=120000 tests/production-acceptance-preflight.test.mjs
+```
+
+Expected RED: the Supabase pooler source is rejected until the harness supports grouped alternatives.
+
+- [x] **Step 3: Implement grouped alternatives**
+
+Update the Supabase group to accept one complete option:
+
+```js
+alternatives: [
+  ["SUPABASE_DB_URL"],
+  ["CONTENT_DB_URL"],
+  ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
+]
+```
+
+- [x] **Step 4: Run test to verify it passes**
+
+Run:
+
+```bash
+node --test --test-concurrency=1 --test-timeout=120000 tests/production-acceptance-preflight.test.mjs
+```
+
+Expected GREEN: five passing tests, zero failures.
 
 ## Task 2: Add the Runbook
 

@@ -7,8 +7,13 @@ import { fileURLToPath } from "node:url";
 export const acceptanceEnvGroups = [
   {
     id: "supabase",
-    label: "Supabase app data",
-    required: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
+    label: "Supabase operator data source",
+    required: [],
+    alternatives: [
+      ["SUPABASE_DB_URL"],
+      ["CONTENT_DB_URL"],
+      ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
+    ],
   },
   {
     id: "stripe",
@@ -60,10 +65,22 @@ function checkEnvGroup(env, group) {
     }
   }
 
-  const ok = missing.length === 0 && missingOneOf.length === 0;
+  let matchedAlternative = null;
+  for (const options of group.alternatives || []) {
+    for (const key of options) values[key] = redactValue(env[key]);
+    if (options.every((key) => String(env[key] || "").trim())) {
+      matchedAlternative = options;
+    }
+  }
+  const missingAlternative = (group.alternatives || []).length > 0 && !matchedAlternative;
+
+  const ok = missing.length === 0 && missingOneOf.length === 0 && !missingAlternative;
   const missingParts = [];
   if (missing.length) missingParts.push(`missing ${missing.join(", ")}`);
   for (const options of missingOneOf) missingParts.push(`missing one of ${options.join(" or ")}`);
+  if (missingAlternative) {
+    missingParts.push(`missing one complete option: ${group.alternatives.map((options) => options.join(" + ")).join("; ")}`);
+  }
 
   return {
     ok,
@@ -72,8 +89,10 @@ function checkEnvGroup(env, group) {
       values,
       required: group.required,
       one_of: group.oneOf || [],
+      alternatives: group.alternatives || [],
       missing,
       missing_one_of: missingOneOf,
+      matched_alternative: matchedAlternative,
     },
     message: ok ? "configured" : missingParts.join("; "),
   };

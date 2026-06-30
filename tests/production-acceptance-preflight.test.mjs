@@ -71,8 +71,38 @@ test("buildPreflightReport fails closed and redacts missing env checks", () => {
   assert.equal(JSON.stringify(report).includes("sk_live_secret"), false);
   assert.deepEqual(report.blockers.slice(0, 2), [
     "git_clean: worktree has uncommitted or untracked files",
-    "env_supabase: missing SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY",
+    "env_supabase: missing one complete option: SUPABASE_DB_URL; CONTENT_DB_URL; SUPABASE_URL + SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY",
   ]);
+});
+
+test("buildPreflightReport accepts a Supabase Postgres pooler source without leaking it", () => {
+  const dbUrl = "postgresql://user:very-secret-password@aws-1-us-west-2.pooler.supabase.com:5432/postgres";
+  const report = buildPreflightReport({
+    env: {
+      ...completeEnv,
+      SUPABASE_URL: "",
+      SUPABASE_ANON_KEY: "",
+      SUPABASE_SERVICE_ROLE_KEY: "",
+      SUPABASE_DB_URL: dbUrl,
+    },
+    git: {
+      head: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+      branch: "main",
+      originHead: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+      dirtyFiles: [],
+    },
+    pagesBuild: {
+      status: "built",
+      commit: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+    },
+    now: "2026-06-30T00:00:00.000Z",
+  });
+
+  assert.equal(report.ready, true);
+  assert.equal(report.checks.env_supabase.ok, true);
+  assert.match(report.checks.env_supabase.details.values.SUPABASE_DB_URL, /^set:\d+$/);
+  assert.equal(JSON.stringify(report).includes(dbUrl), false);
+  assert.equal(JSON.stringify(report).includes("very-secret-password"), false);
 });
 
 test("buildPreflightReport passes local gates when commit, env, and Pages build match", () => {

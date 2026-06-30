@@ -59,11 +59,13 @@ Expected:
 
 Required env groups:
 
-- Supabase: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- Supabase operator data source: one complete option from `SUPABASE_DB_URL`, `CONTENT_DB_URL`, or the REST/service-role trio `SUPABASE_URL` + `SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY`
 - Stripe: `APP_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`
 - QuickBooks Online: `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, `QBO_OAUTH_STATE_SECRET`, `QBO_SYNC_SECRET`, `QBO_INCOME_ACCOUNT_ID`, `QBO_ENVIRONMENT`
 - Crisp: `MASEST_CRISP_ID`, `CRISP_TOKEN_ID`, `CRISP_TOKEN_KEY`, `CRISP_IDENTITY_SECRET`, plus one of `CRISP_WEBHOOK_SECRET` or `CRISP_WEBHOOK_KEY`
 - CMS publish: one of `CONTENT_PUBLISH_HOOK_URL` or `CF_PAGES_DEPLOY_HOOK_URL`
+
+The Supabase operator data source proves the local acceptance runner can read/write the production data store during the approved live pass. The live app runtime must still be verified through deployed app paths such as `/api/health`, dashboard/admin actions, and the provider flows in the checklist.
 
 ## Go/No-Go Checkpoint
 
