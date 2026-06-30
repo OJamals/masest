@@ -181,9 +181,19 @@
   .adm-content-lock-status { flex: 1 1 220px; color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
   .adm-content-lock-status[data-state="ok"] { color: var(--status-success-ink); }
   .adm-content-lock-status[data-state="err"] { color: var(--status-danger-ink); }
-  .adm-content-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 2px; }
+  .adm-content-actions { display: grid; gap: 10px; align-items: stretch; padding-top: 2px; }
+  .adm-content-action-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; padding: 8px; border: 1px solid var(--line-soft); border-radius: 8px; background: rgba(248,250,252,.72); }
+  .adm-content-action-group[data-content-action-group="draft-publish"] { border-color: rgba(14,124,134,.22); background: var(--accent-soft); }
   .adm-content-actions [data-content-action="draft"],
   .adm-content-actions [data-content-action="publish"] { min-width: 120px; justify-content: center; }
+  .adm-qbo-card { display: grid; gap: 12px; }
+  .adm-qbo-status-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .42fr); gap: 12px; align-items: stretch; }
+  .adm-qbo-readiness, .adm-qbo-queue { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--line-soft); border-radius: 8px; background: rgba(248,250,252,.72); }
+  .adm-qbo-readiness .adm-status { min-height: 0; margin: 0; font-weight: 800; }
+  .adm-qbo-detail, .adm-qbo-help { margin: 0; font-size: .84rem; line-height: 1.45; }
+  .adm-qbo-queue small { color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+  .adm-qbo-queue b { color: var(--ink); font-size: 1rem; }
+  .adm-qbo-actions { align-items: center; }
   .adm-content-check { min-height: 44px; display: flex !important; align-items: center; gap: 8px; align-self: stretch; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 8px 10px; }
   .adm-content-check input { width: 18px; height: 18px; }
   .adm-content-asset-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
@@ -296,7 +306,9 @@
     .adm-content-fields .wide { grid-column: auto; }
     .adm-content-seo { grid-template-columns: 1fr; }
     .adm-content-seo .wide { grid-column: auto; }
-    .adm-content-actions .btn { flex: 1 1 145px; justify-content: center; }
+    .adm-content-action-group .btn { flex: 1 1 145px; justify-content: center; }
+    .adm-qbo-status-grid { grid-template-columns: 1fr; }
+    .adm-qbo-actions .btn { flex: 1 1 150px; justify-content: center; }
     .adm-content-entry-row { grid-template-columns: 1fr; align-items: start; }
     .adm-content-updated { white-space: normal; }
     .adm-content-asset-control { grid-template-columns: 1fr; }
@@ -411,7 +423,7 @@
 
         <div class="adm-main">
 
- <section class="adm-panel" role="tabpanel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div><div id="admActionRail" class="adm-action-rail" aria-live="polite"></div><div id="admQbo" class="adm-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboSyncSummary" class="muted"></p><div class="adm-inline-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-arrows-clockwise"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reports &amp; exports</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" type="date" class="adm-input"></label><label class="field">To<input id="repTo" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button">Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button">Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button">Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button">Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
+ <section class="adm-panel" role="tabpanel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div><div id="admActionRail" class="adm-action-rail" aria-live="polite"></div><div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reports &amp; exports</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" type="date" class="adm-input"></label><label class="field">To<input id="repTo" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button">Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button">Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button">Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button">Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
 
       <section class="adm-panel" role="tabpanel" data-panel="orders">
         <div class="adm-tools">
