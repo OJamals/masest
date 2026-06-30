@@ -236,6 +236,9 @@
   .biz-hub-metric { min-width: 112px; display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-input); background: #fff; }
   .biz-hub-metric small { color: var(--ink-soft); font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
   .biz-hub-metric b { color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
+  .biz-workflow-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: -2px 0 16px; }
+  .biz-workflow-nav a { display: inline-flex; align-items: center; min-height: 36px; padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: rgba(255,255,255,.72); color: var(--ink-soft); font-size: .84rem; font-weight: 800; line-height: 1.15; }
+  .biz-workflow-nav a:hover { border-color: rgba(14,124,134,.28); background: var(--accent-soft); color: var(--accent-ink); }
   .biz-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: .95rem; }
   .biz-row:last-child { border-bottom: 0; }
   .biz-row span, .biz-row b, .biz-card p, .setup-step span, .setup-step small { min-width: 0; overflow-wrap: anywhere; }
@@ -339,6 +342,7 @@
     .biz-hub { grid-template-columns: 1fr; }
     .biz-hub-metrics { justify-content: flex-start; }
     .biz-hub-metric { flex: 1 1 130px; }
+    .biz-workflow-nav a { flex: 1 1 130px; justify-content: center; }
     .biz-form-create .status {
       grid-column: auto;
     }
@@ -470,6 +474,13 @@
           <div id="bizGuest" hidden></div>
           <div id="bizApp" hidden>
             <div class="biz-card biz-hub" id="bizHub"></div>
+            <nav class="biz-workflow-nav" aria-label="Business workflow">
+              <a href="#bizCompanySetup">Verification</a>
+              <a href="#bizInvoicing">Invoices</a>
+              <a href="#bizPrograms">Programs</a>
+              <a href="#bizBulk">Bulk quotes</a>
+              <a href="#bizAccountTeam">Account support</a>
+            </nav>
             <div class="biz-layout">
               <div class="biz-primary-stack">
                 <div class="biz-card" id="bizProfile"></div>
