@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
 // 401, and admin.js must keep the app hidden behind the sign-in gate. The test also asserts
 // the gated endpoint was actually requested, so a pass means "booted, tried, was refused"
 // rather than "script failed to load".
-const PORT = 4188;
+const PORT = 4288;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let server;
 
