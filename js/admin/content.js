@@ -679,9 +679,15 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
 
   function publishScheduledStatusText(result = {}) {
     const count = Number(result.count || 0);
-    if (!count) return "No due scheduled content to publish.";
+    const failed = Array.isArray(result.skipped) ? result.skipped.length : 0;
+    if (!count) {
+      return failed
+        ? `No content published — ${failed} due ${failed === 1 ? "entry" : "entries"} failed validation. Fix and retry.`
+        : "No due scheduled content to publish.";
+    }
     const noun = count === 1 ? "item" : "items";
-    const base = `Published ${count} scheduled ${noun}.`;
+    let base = `Published ${count} scheduled ${noun}.`;
+    if (failed) base += ` ${failed} could not publish (validation) — fix and retry.`;
     const hook = result.publish_hook;
     if (!hook) return base;
     if (hook.skipped) return `${base} Static rebuild hook is not configured, so public pages keep the previous export until a build runs.`;
@@ -693,6 +699,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   function publishStatusKind(result = {}) {
     const hook = result.publish_hook;
     if (hook?.ok === false) return "err";
+    if (Array.isArray(result.skipped) && result.skipped.length) return "warn";
     if (hook?.skipped) return "warn";
     return "ok";
   }

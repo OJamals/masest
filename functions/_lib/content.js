@@ -219,6 +219,11 @@ export function createContentRepository(sb) {
       if (unsafeAssetReference(storagePath)) return { ok: false, error: "storage_path_invalid" };
       if (!alt) return { ok: false, error: "alt_required" };
       const status = input.status === "archived" ? "archived" : "available";
+      // Preserve the original creator across updates. saveAsset is also the archive/restore
+      // path (it re-sends the whole row), so blindly writing created_by would overwrite the
+      // first editor's provenance with whoever last touched the asset.
+      const { data: existing } = await sb
+        .from("content_assets").select("created_by").eq("storage_path", storagePath).maybeSingle();
       const { data, error } = await sb
         .from("content_assets")
         .upsert({
@@ -232,7 +237,7 @@ export function createContentRepository(sb) {
           usage: Array.isArray(input.usage) ? input.usage : [],
           credit: input.credit || null,
           source_url: input.source_url || null,
-          created_by: userId || null,
+          created_by: existing?.created_by || userId || null,
           updated_by: userId || null,
           updated_at: new Date().toISOString(),
         }, { onConflict: "storage_path" })
@@ -341,13 +346,20 @@ export function createContentRepository(sb) {
         .limit(batchLimit);
       if (error) throw error;
 
+      // Publish each due entry independently. A single entry whose payload no longer passes
+      // validation (e.g. its content-type gained a required field after it was scheduled) must
+      // not abort the whole run — collect failures and keep publishing the rest.
       const entries = [];
+      const skipped = [];
       for (const entry of data || []) {
         const result = await this.publish(entry, userId, { force: true });
-        if (!result.ok) return result;
+        if (!result.ok) {
+          skipped.push({ type: entry.type, slug: entry.slug, error: result.error });
+          continue;
+        }
         entries.push(result.entry);
       }
-      return { ok: true, count: entries.length, entries };
+      return { ok: true, count: entries.length, entries, skipped };
     },
 
     async saveEntry(input, userId, note, options = {}) {

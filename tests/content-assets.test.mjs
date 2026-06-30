@@ -39,6 +39,12 @@ test("asset repository rejects unsafe registered asset references", () => {
   assert.match(source, /javascript\|data\|vbscript/);
 });
 
+test("saveAsset preserves the original creator across updates (archive/restore re-send the row)", () => {
+  const source = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
+  assert.match(source, /\.from\("content_assets"\)\.select\("created_by"\)\.eq\("storage_path", storagePath\)/);
+  assert.match(source, /created_by: existing\?\.created_by \|\| userId \|\| null/);
+});
+
 test("content editor has an asset picker contract", () => {
   const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
   assert.match(source, /contentAssetPicker/);

@@ -175,3 +175,26 @@ test("content repository publishes due scheduled entries and leaves future entri
   assert.equal(db.content_revisions[0].version, 5);
   assert.equal(db.content_revisions[0].note, "Published");
 });
+
+test("one invalid due entry is skipped, not allowed to abort the whole batch", async () => {
+  const db = {
+    content_entries: [
+      serviceEntry({ id: "entry_ok", slug: "ok-due" }),
+      // A due entry whose type is no longer valid (e.g. a retired content type) fails validation.
+      serviceEntry({ id: "entry_bad", slug: "bad-due", type: "retired_type" }),
+      serviceEntry({ id: "entry_ok2", slug: "ok-due-2" }),
+    ],
+    content_revisions: [],
+  };
+  const repo = createContentRepository(fakeSupabase(db));
+
+  const result = await repo.publishScheduledDue({ now: "2026-06-30T12:00:00.000Z" }, "staff_1");
+
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 2, "the two valid entries still publish");
+  assert.equal(result.skipped.length, 1, "the invalid entry is reported as skipped, not fatal");
+  assert.equal(result.skipped[0].slug, "bad-due");
+  assert.equal(db.content_entries.find((e) => e.id === "entry_ok").status, "published");
+  assert.equal(db.content_entries.find((e) => e.id === "entry_ok2").status, "published");
+  assert.equal(db.content_entries.find((e) => e.id === "entry_bad").status, "scheduled", "the invalid entry stays queued");
+});
