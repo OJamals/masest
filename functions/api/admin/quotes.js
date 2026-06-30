@@ -6,6 +6,7 @@ import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { csvResponse } from '../../_lib/reports.js';
 import { stagePatch, pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
 import { klaviyoTrack } from '../../_lib/klaviyo.js';
+import { escapeLike } from '../../_lib/crm.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -212,7 +213,9 @@ export async function onRequest({ request, env }) {
       if (!q) return json(404, { error: 'not_found' });
       let companyId = await companyIdForQuote(sb, { email: q.email });
       if (!companyId && q.company) {
-        const { data: co } = await sb.from('companies').select('id').ilike('name', String(q.company).trim()).limit(1).maybeSingle();
+        // Escape LIKE metacharacters so a company name with _ or % can't wildcard-match a
+        // different company (which would write a cross-company contact_id onto the quote).
+        const { data: co } = await sb.from('companies').select('id').ilike('name', escapeLike(String(q.company).trim())).limit(1).maybeSingle();
         companyId = co?.id || null;
       }
       if (!companyId) return json(200, { company_id: null, contacts: [] });

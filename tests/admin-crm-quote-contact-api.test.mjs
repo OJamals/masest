@@ -8,7 +8,8 @@ test('serves a buyer-contact candidate view resolved from the deal company', () 
   assert.match(src, /=== 'contacts'/);
   assert.match(src, /companyIdForQuote\(sb, \{ email: q\.email \}\)/);
   // name fallback so established accounts match even without an email→account link
-  assert.match(src, /\.ilike\('name', String\(q\.company\)\.trim\(\)\)/);
+  // (LIKE metacharacters escaped so a _ / % in the name can't wildcard-match another company)
+  assert.match(src, /\.ilike\('name', escapeLike\(String\(q\.company\)\.trim\(\)\)\)/);
   assert.match(src, /from\('crm_contacts'\)/);
   assert.match(src, /company_id: null, contacts: \[\]/);
 });
