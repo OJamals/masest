@@ -359,7 +359,8 @@ async function renderOrders({ append = false } = {}) {
     return `<details class="dash-order-card">
       <summary class="dash-order-summary">
         <span>${fmtDate(o.created_at)} · ${statusBadge(o.status)} · ${n} item${n === 1 ? '' : 's'}</span>
-        <b>${money(o.total, o.currency)}</b></summary>
+        <b>${money(o.total, o.currency)}</b>
+        <i class="ph ph-caret-down dash-order-caret" aria-hidden="true"></i></summary>
       <div class="dash-order-lines">${lines}
         ${trackingSteps(o)}
         ${o.qbo_invoice_id ? `<p class="muted">Invoice: ${esc(o.qbo_invoice_id)}</p>` : ''}

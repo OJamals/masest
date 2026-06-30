@@ -118,8 +118,11 @@
   .dash-disclosure-body { margin-top: 12px; }
   .security-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
   .dash-order-card { border-bottom: 1px solid var(--line); padding: 8px 0; }
-  .dash-order-summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; list-style: none; }
+  .dash-order-summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; list-style: none; position: relative; padding-right: 22px; }
   .dash-order-summary::-webkit-details-marker { display: none; }
+  .dash-order-caret { position: absolute; right: 0; top: 2px; color: var(--muted); font-size: 1rem; transition: transform .18s ease; }
+  .dash-order-card[open] .dash-order-caret { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: reduce) { .dash-order-caret { transition: none; } }
   .dash-order-lines { padding: 8px 0 4px; }
   .dash-order-line { padding: 7px 0; }
   .dash-reorder { margin-top: 8px; }
