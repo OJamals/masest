@@ -3444,7 +3444,7 @@ interactive matrix) ---- */
   transition: border-color .18s var(--ease-out), background .18s var(--ease-out), transform .18s var(--ease-out);
 }
 .swap-row:hover { border-color: var(--accent); background: var(--accent-tint); transform: translateX(2px); }
-.swap-row.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.swap-row.active { border-color: var(--accent); background: var(--accent-soft); }
 
 .swap-row em {
   display: none;

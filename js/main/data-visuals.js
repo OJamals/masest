@@ -62,14 +62,14 @@ function renderProofCoverage(root, cards) {
       <h3>Evidence spans ${total} field case files across ${entries.length} sectors.</h3>
       <p data-proof-coverage-note>${activeProofKind() === "all" ? "Showing the full case record." : `Filtered to ${PROOF_LABELS[activeProofKind()]}.`}</p>
     </div>
-    <div class="viz-stack" role="list" aria-label="Proof cases by sector">
+    <div class="viz-stack" role="group" aria-label="Filter proof cases by sector">
       ${entries.map(([kind], index) => `
         <button
           class="viz-segment viz-tone-${index + 1}"
           type="button"
-          role="listitem"
           style="--share:${percent(counts[kind], total)}"
           data-proof-viz-filter="${htmlEscape(kind)}"
+          aria-pressed="${kind === activeProofKind() ? "true" : "false"}"
           aria-label="${htmlEscape(PROOF_LABELS[kind])}: ${counts[kind]} case files"
         >
           <b>${counts[kind]}</b>
@@ -93,6 +93,7 @@ function renderProofCoverage(root, cards) {
         item.dataset.proofVizKey === kind
       );
       item.classList.toggle("active", selected);
+      if (item.hasAttribute("data-proof-viz-filter")) item.setAttribute("aria-pressed", String(selected));
     });
   };
 
