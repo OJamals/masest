@@ -28,6 +28,18 @@ const SEO_FIELDS = [
 ];
 const SEO_FIELD_KEYS = new Set(SEO_FIELDS.map((field) => field.key));
 const CONTENT_LOCK_TTL_MS = 30 * 60 * 1000;
+const PLACEMENT_HINTS = Object.freeze({
+  service: "Feeds the public services snapshot. Product catalog, pricing, and checkout details stay in Catalog.",
+  service_package: "Feeds service package cards used on public services and pricing surfaces.",
+  proof_card: "Feeds proof and case-study cards across the public site.",
+  resource_card: "Feeds resource cards and downloadable links.",
+  industry_card: "Feeds industry overview cards on sector pages.",
+  industry_sector: "Feeds individual industry sector pages and related cards.",
+  faq_block: "Feeds FAQ sections on public pages.",
+  page_section: "Feeds editable public page sections such as headlines, body copy, CTAs, and images.",
+  page_meta: "Feeds SEO metadata for public pages.",
+  pricing_tier: "Feeds public pricing tier copy. Transaction pricing still belongs in Catalog.",
+});
 
 function labelFor(options, value) {
   return options.find(([key]) => key === value)?.[1] || value || "";
@@ -78,6 +90,15 @@ function activeContentLock(entry = {}) {
   if (!entry.locked_by || !entry.locked_at) return false;
   const lockedAt = new Date(entry.locked_at).getTime();
   return Number.isFinite(lockedAt) && Date.now() - lockedAt <= CONTENT_LOCK_TTL_MS;
+}
+
+function placementText(type) {
+  return PLACEMENT_HINTS[type] || `${labelFor(TYPES, type)} publishes into static website snapshots.`;
+}
+
+function updatePlacementHint(type = document.getElementById("contentType")?.value || "service") {
+  const hint = document.getElementById("contentPlacementHint");
+  if (hint) hint.textContent = placementText(type);
 }
 
 function fieldValue(payload, key) {
@@ -210,43 +231,50 @@ function formTemplate() {
     <div class="adm-card adm-content-editor">
       <div class="adm-panel-header">
         <div>
-          <h2>Content editor</h2>
-          <p class="muted">Manage non-commerce public content. Product prices, variants, stock, checkout, and quote routing stay in Catalog.</p>
+          <p class="adm-eyebrow">CMS</p>
+          <h2>Edit website content</h2>
+          <p class="muted">Choose where the content appears, edit the fields people see on the site, then save or publish.</p>
         </div>
         <span id="contentEditorBadge" class="badge" data-s="draft">draft</span>
       </div>
       <form id="contentForm" class="adm-form-grid" onsubmit="return false">
-        <label>Type <select id="contentType" class="adm-select">${selectOptions(TYPES, "service")}</select></label>
-        <label>Locale <input id="contentLocale" class="adm-input" value="en" maxlength="12"></label>
+        <label>Content area <select id="contentType" class="adm-select">${selectOptions(TYPES, "service")}</select></label>
+        <label>Language <input id="contentLocale" class="adm-input" value="en" maxlength="12"></label>
+        <p id="contentPlacementHint" class="adm-content-placement full" role="note">${esc(placementText("service"))}</p>
         <label class="wide">Title <input id="contentTitle" class="adm-input" required></label>
-        <label class="wide">Slug <input id="contentSlug" class="adm-input" required></label>
-        <label class="wide">Publish at <input id="contentScheduledAt" class="adm-input" type="datetime-local"></label>
-        <label class="full">Workflow note
-          <textarea id="contentWorkflowNote" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
-        </label>
-        <div class="adm-content-lockbar full">
-          <span id="contentLockStatus" class="adm-content-lock-status" data-state="">Unlocked</span>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
-        </div>
+        <label class="wide">Page slug <input id="contentSlug" class="adm-input" required></label>
+        <label class="wide">Schedule publish <input id="contentScheduledAt" class="adm-input" type="datetime-local"></label>
         <div id="contentStructuredFields" class="adm-content-fields full"></div>
-        <label class="full">Payload JSON <textarea id="contentPayload" class="adm-textarea" spellcheck="false">{}</textarea></label>
         <fieldset id="contentSeoFields" class="adm-content-seo full"></fieldset>
         <details class="adm-content-json full">
-          <summary>SEO JSON</summary>
-          <textarea id="contentSeo" class="adm-textarea" spellcheck="false">{}</textarea>
+          <summary>Developer JSON</summary>
+          <label>Payload JSON <textarea id="contentPayload" class="adm-textarea" spellcheck="false">{}</textarea></label>
+          <label>SEO JSON <textarea id="contentSeo" class="adm-textarea" spellcheck="false">{}</textarea></label>
         </details>
-        <div class="adm-inline-actions full">
+        <details class="adm-content-disclosure full" open>
+          <summary>Review note and editor lock</summary>
+          <div class="adm-content-disclosure-body">
+            <label>Workflow note
+              <textarea id="contentWorkflowNote" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
+            </label>
+            <div class="adm-content-lockbar">
+              <span id="contentLockStatus" class="adm-content-lock-status" data-state="">Unlocked</span>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
+            </div>
+          </div>
+        </details>
+        <div class="adm-inline-actions adm-content-actions full">
           <button class="btn btn-ghost btn-sm" type="button" data-content-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
           <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
           <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
           <button class="btn btn-primary btn-sm" type="button" data-content-action="publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule publish</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
           <button class="btn btn-ghost btn-sm" type="button" data-content-action="archive"><i class="ph ph-archive" aria-hidden="true"></i> Archive</button>
           <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore draft</button>
-          <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule publish</button>
         </div>
       </form>
       <p id="contentStatus" class="adm-status" role="status" aria-live="polite"></p>
@@ -331,7 +359,7 @@ function previewTemplate() {
   return `
     <div class="adm-card adm-content-preview">
       <div class="adm-panel-header">
-        <h2>Preview</h2>
+        <h2>Website preview</h2>
         <button class="btn btn-ghost btn-sm" type="button" data-content-action="preview">
           <i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh
         </button>
@@ -341,26 +369,40 @@ function previewTemplate() {
   `;
 }
 
+function contentHubTemplate() {
+  return `
+    <div class="adm-content-hub">
+      <div>
+        <p class="adm-eyebrow">Website CMS</p>
+        <h2>Content that ships to the public site</h2>
+        <p class="muted">Edit copy, proof cards, FAQs, page metadata, pricing copy, and industry content without leaving the admin dashboard.</p>
+      </div>
+      <div id="contentHubMetrics" class="adm-content-hub-metrics" aria-label="CMS summary">
+        <span><b>0</b> loaded</span>
+        <span><b>0</b> workflow</span>
+        <span><b>0</b> scheduled</span>
+      </div>
+    </div>
+  `;
+}
+
 function listTemplate(entries, admEmpty) {
   if (!entries.length) {
     return admEmpty("ph-note-pencil", "No content entries", "Create a draft or switch the filters.");
   }
   return `
-    <table class="adm">
-      <thead><tr><th>Entry</th><th>Type</th><th>Status</th><th>Updated</th><th></th></tr></thead>
-      <tbody>${entries.map((entry) => `
-        <tr class="adm-content-row">
-          <td>
+    <div class="adm-content-entry-list">
+      ${entries.map((entry) => `
+        <button class="adm-content-entry-row" type="button" data-content-edit="${esc(entry.type)}:${esc(entry.slug)}:${esc(entry.locale || "en")}">
+          <span class="adm-content-entry-main">
             <span class="adm-content-title">${esc(entry.title)}</span>
-            <span class="adm-content-meta">${esc(entry.slug)} · ${esc(entry.locale || "en")}</span>
-          </td>
-          <td>${esc(labelFor(TYPES, entry.type))}</td>
-          <td><span class="badge" data-s="${esc(entry.status)}">${esc(entry.status)}</span></td>
-          <td>${esc(entry.updated_at ? new Date(entry.updated_at).toLocaleDateString() : "")}</td>
-          <td><button class="btn btn-ghost btn-sm" type="button" data-content-edit="${esc(entry.type)}:${esc(entry.slug)}:${esc(entry.locale || "en")}">Edit</button></td>
-        </tr>
-      `).join("")}</tbody>
-    </table>
+            <span class="adm-content-meta">${esc(labelFor(TYPES, entry.type))} · ${esc(entry.slug)} · ${esc(entry.locale || "en")}</span>
+          </span>
+          <span class="badge" data-s="${esc(entry.status)}">${esc(entry.status)}</span>
+          <span class="adm-content-updated">${esc(entry.updated_at ? new Date(entry.updated_at).toLocaleDateString() : "Not saved")}</span>
+        </button>
+      `).join("")}
+    </div>
   `;
 }
 
@@ -369,8 +411,8 @@ function workflowTemplate(admEmpty) {
     <div class="adm-card adm-content-workflow" id="contentWorkflowQueue">
       <div class="adm-panel-header">
         <div>
-          <h2>Content operations</h2>
-          <p class="muted">Review, scheduled, and change-request queues stay visible outside the status filter.</p>
+          <h2>Review queue</h2>
+          <p class="muted">Scheduled, review, and change-request items stay visible even when the list is filtered.</p>
         </div>
         <button class="btn btn-secondary btn-sm" type="button" data-content-action="publish_scheduled">
           <i class="ph ph-clock-countdown" aria-hidden="true"></i> Publish due scheduled
@@ -385,13 +427,11 @@ function workflowTemplate(admEmpty) {
 
 function exportStatusTemplate() {
   return `
-    <div class="adm-card adm-content-export">
-      <div class="adm-panel-header">
-        <h2>Static export</h2>
-      </div>
+    <details class="adm-card adm-content-export">
+      <summary class="adm-content-export-summary">Static export status</summary>
       <p id="contentExportStatus" class="adm-status" role="status">Checking static export manifest...</p>
       <div id="contentManifestRows" class="adm-content-manifest" aria-label="Static export snapshot counts"></div>
-    </div>
+    </details>
   `;
 }
 
@@ -417,33 +457,36 @@ function manifestFileRows(files = {}) {
 
 function shellTemplate(admEmpty) {
   return `
-    <div class="adm-content-layout">
-      <div class="adm-content-stack">
-        ${formTemplate()}
-        ${revisionsTemplate(admEmpty)}
-        ${assetPickerTemplate(admEmpty)}
-      </div>
-      <div class="adm-content-side">
-        <div class="adm-card adm-content-list">
-          <div class="adm-panel-header">
-            <div>
-              <h2>Published snapshots</h2>
-              <p class="muted">Rows published here are exported into static public snapshots.</p>
-            </div>
-          </div>
-          <div class="adm-tools adm-tools-flush">
-            <select id="contentTypeFilter" class="adm-select adm-select-sm" aria-label="Filter content type">
-              <option value="">All types</option>${selectOptions(TYPES)}
-            </select>
-            <select id="contentStatusFilter" class="adm-select adm-select-sm" aria-label="Filter content status">
-              ${selectOptions(STATUSES, "published")}
-            </select>
-          </div>
-          <div id="contentList" class="adm-table-wrap">${admEmpty("ph-note-pencil", "No content entries", "Create a draft or switch the filters.")}</div>
+    <div class="adm-content-shell">
+      ${contentHubTemplate()}
+      <div class="adm-content-layout">
+        <div class="adm-content-stack">
+          ${formTemplate()}
+          ${assetPickerTemplate(admEmpty)}
+          ${revisionsTemplate(admEmpty)}
         </div>
-        ${exportStatusTemplate()}
-        ${workflowTemplate(admEmpty)}
-        ${previewTemplate()}
+        <div class="adm-content-side">
+          <div class="adm-card adm-content-list">
+            <div class="adm-panel-header">
+              <div>
+                <h2>Content library</h2>
+                <p class="muted">Pick an entry to edit. Filters only change this list, not the review queue.</p>
+              </div>
+            </div>
+            <div class="adm-tools adm-tools-flush">
+              <select id="contentTypeFilter" class="adm-select adm-select-sm" aria-label="Filter content type">
+                <option value="">All types</option>${selectOptions(TYPES)}
+              </select>
+              <select id="contentStatusFilter" class="adm-select adm-select-sm" aria-label="Filter content status">
+                ${selectOptions(STATUSES, "published")}
+              </select>
+            </div>
+            <div id="contentList" class="adm-content-list-body">${admEmpty("ph-note-pencil", "No content entries", "Create a draft or switch the filters.")}</div>
+          </div>
+          ${workflowTemplate(admEmpty)}
+          ${previewTemplate()}
+          ${exportStatusTemplate()}
+        </div>
       </div>
     </div>
   `;
@@ -534,6 +577,21 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (!el) return;
     el.textContent = text;
     el.dataset.state = kind;
+  }
+
+  function renderContentHubMetrics() {
+    const box = $("contentHubMetrics");
+    if (!box) return;
+    const loaded = (state.content || []).length;
+    const workflow = (workflowEntries || []).filter((entry) => (
+      ["in_review", "changes_requested", "scheduled"].includes(entry.status)
+    )).length;
+    const scheduled = (workflowEntries || []).filter((entry) => entry.status === "scheduled").length;
+    box.innerHTML = `
+      <span><b>${esc(loaded)}</b> loaded</span>
+      <span><b>${esc(workflow)}</b> workflow</span>
+      <span><b>${esc(scheduled)}</b> scheduled</span>
+    `;
   }
 
   function selectedEntryIdentity() {
@@ -644,6 +702,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     root.innerHTML = shellTemplate(admEmpty);
     renderStructuredFields("service", {});
     renderSeoFields({});
+    updatePlacementHint("service");
+    renderContentHubMetrics();
     $("contentPreviewFrame")?.addEventListener("load", () => refreshPreview());
     void renderExportStatus();
     mounted = true;
@@ -747,6 +807,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     $("contentSeo").value = jsonText(entry.seo);
     renderStructuredFields(entry.type || "service", entry.payload || {});
     renderSeoFields(entry.seo || {});
+    updatePlacementHint(entry.type || "service");
     const badge = $("contentEditorBadge");
     if (badge) {
       badge.textContent = entry.status || "draft";
@@ -1104,6 +1165,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
     renderList();
     renderWorkflowQueue();
+    renderContentHubMetrics();
   }
 
   async function saveContent({ publish = false } = {}) {
@@ -1350,6 +1412,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     root.addEventListener("change", (event) => {
       if (event.target.matches("#contentType")) {
         renderStructuredFields(event.target.value, safePayloadJson());
+        updatePlacementHint(event.target.value);
         syncStructuredPayload();
         return;
       }

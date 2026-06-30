@@ -72,7 +72,7 @@ for (const img of ogImages) {
 {
   const sm = await get('/sitemap.xml');
   ok(sm.status === 200, `sitemap HTTP ${sm.status}`);
-  ok(/industries\/oil-gas\.html/.test(sm.body), 'sitemap missing industry subpages');
+  ok(/industries\/oil-gas(?:\.html)?/.test(sm.body), 'sitemap missing industry subpages');
   const rb = await get('/robots.txt');
   ok(rb.status === 200, `robots HTTP ${rb.status}`);
   console.log(`\nsitemap HTTP ${sm.status} (industries=${/industries\//.test(sm.body)}), robots HTTP ${rb.status}\n`);

@@ -109,7 +109,7 @@ async function renderOverview() {
   wirePanelLinks(banner);
 
   $('ovAccount').innerHTML = `
-    <h2 class="headline dash-section-title dash-section-title-sm">Account</h2>
+    <h2 class="headline dash-section-title dash-section-title-sm">Account snapshot</h2>
     <div class="dash-row"><span>Signed in as</span><b>${esc(ACCOUNT?.email || 'Not set')}</b></div>
     <div class="dash-row"><span>Business</span><b>${esc(c?.name || 'Not set up')}</b></div>
     <div class="dash-row"><span>Verification</span>${c ? statusBadge(c.status || 'pending', bizStatusLabel(c.status)) : '<span class="badge" data-s="pending">Not set up</span>'}</div>
@@ -177,7 +177,7 @@ function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
     actions.push({
       id: 'setup',
       icon: 'ph-clipboard-text',
-      label: ACCOUNT?.company ? 'Open business setup' : 'Set up business',
+      label: ACCOUNT?.company ? 'Review business tools' : 'Set up business',
       detail: `${openSteps.length} open ${openSteps.length === 1 ? 'step' : 'steps'}`,
       href: '#business',
     });
@@ -594,7 +594,7 @@ async function renderPayment() {
   const hasCompany = Boolean(ACCOUNT?.company);
   box.innerHTML = `
     <h2 class="headline dash-section-title dash-section-title-sm">Payment methods</h2>
-    <p class="muted pay-copy">Saved cards are managed securely by Stripe. We never store card details on our servers. NET invoicing is handled separately under <a href="#business">Business → QuickBooks invoicing</a>.</p>
+    <p class="muted pay-copy">Saved cards are managed securely by Stripe. We never store card details on our servers. NET invoices and credit live under <a href="#business">Business tools</a>.</p>
     ${hasCompany
       ? '<button class="btn btn-primary" id="portalBtn">Manage payment methods</button>'
       : '<p class="muted">Set up your business under <a href="#business">Business</a> to save a card on file.</p>'}

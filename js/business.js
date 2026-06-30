@@ -42,6 +42,42 @@ function optionList(pairs, selected) {
     `<option value="${esc(value)}"${sel === String(value) ? ' selected' : ''}>${esc(label)}</option>`).join('');
 }
 
+function setupMetric(data = {}) {
+  const steps = data.setup?.steps || [];
+  const total = data.setup?.total || steps.length || 0;
+  const done = data.setup?.done ?? steps.filter((step) => step.done || step.state === 'done').length;
+  return total ? `${done}/${total}` : 'Ready';
+}
+
+function netTermsText(data = {}) {
+  const c = data.company;
+  if (!c) return 'Set up';
+  if (!data.can_use_net_terms) return 'Not enabled';
+  return `NET-${c.net_terms_days || 0}`;
+}
+
+function renderBusinessHub(data = {}) {
+  const box = $('bizHub');
+  if (!box) return;
+  const c = data.company;
+  const status = c?.status || 'pending';
+  const statusText = c ? (STATUS_LABEL[status] || status) : 'Not set up';
+  const credit = data.credit;
+  const creditText = credit ? (credit.unlimited ? 'Unlimited' : money(credit.credit_available || 0, 'usd')) : (c ? 'Reviewing' : 'Set up');
+  box.innerHTML = `
+    <div>
+      <p class="biz-eyebrow">Business workspace</p>
+      <h2>${esc(c?.name || 'Set up your business')}</h2>
+      <p class="lead">Manage verification, invoices, programs, bulk quote requests, and team access from one place.</p>
+    </div>
+    <div class="biz-hub-metrics" aria-label="Business summary">
+      <span class="biz-hub-metric"><small>Status</small><b>${esc(statusText)}</b></span>
+      <span class="biz-hub-metric"><small>Setup</small><b>${esc(setupMetric(data))}</b></span>
+      <span class="biz-hub-metric"><small>Terms</small><b>${esc(netTermsText(data))}</b></span>
+      <span class="biz-hub-metric"><small>Credit</small><b>${esc(creditText)}</b></span>
+    </div>`;
+}
+
 /* ---------- business profile + verification status ---------- */
 function renderProfile(data) {
   const c = data.company;
@@ -62,14 +98,14 @@ function renderProfile(data) {
   }[status] || '';
   const tone = status === 'approved' ? 'ok' : status === 'pending' ? 'info' : 'warn';
   box.innerHTML = `
-    <h2>Your business</h2>
+    <h2>Business summary</h2>
     <div class="biz-row"><span>Business</span><b>${esc(c.name || 'Not set up')}</b></div>
     <div class="biz-row"><span>Verification</span><span class="badge" data-s="${esc(status || 'pending')}">${esc(label)}</span></div>
     <div class="biz-row"><span>NET terms</span><b>${data.can_use_net_terms ? 'NET-' + c.net_terms_days : 'Not enabled'}</b></div>
     <div class="biz-row"><span>Tax-exempt</span><b>${c.tax_exempt ? 'Yes' : 'No'}</b></div>
     ${note ? `<p class="biz-banner" data-tone="${tone}">${note}</p>` : ''}
     <div class="actions">
-      <a class="btn btn-ghost btn-sm" href="#profile">Edit contact</a>
+      <a class="btn btn-ghost btn-sm" href="#bizCompanySetup">Edit business details</a>
       <a class="btn btn-ghost btn-sm" href="#addresses">Manage addresses</a>
       ${data.can_checkout ? '<a class="btn btn-primary btn-sm" href="products.html">Browse catalog</a>' : ''}
     </div>`;
@@ -97,23 +133,29 @@ function renderSetupChecklist(data) {
 /* ---------- business registration / verification form ---------- */
 // Shared field grid for create + edit. `c` prefills when a business already exists.
 function bizFields(c = {}) {
+  const hasAdvanced = Boolean(c.dba || c.entity_type || c.tax_id || c.website || c.est_annual_volume || c.contact_name || c.contact_title || c.resale_cert_url || c.tax_exempt);
   return `
     <div class="biz-reg-grid">
       <label class="biz-reg-full"><span>Legal business name *</span><input id="companyName" type="text" value="${esc(c.name || '')}" placeholder="Gulf Coast Mechanical LLC" required></label>
-      <label><span>Doing business as (DBA)</span><input id="dba" type="text" value="${esc(c.dba || '')}" placeholder="Optional trade name"></label>
-      <label><span>Business entity type</span><select id="entityType"><option value="">Select…</option>${optionList(ENTITY_TYPES, c.entity_type)}</select></label>
-      <label><span>Federal Tax ID / EIN</span><input id="taxId" type="text" value="${esc(c.tax_id || '')}" placeholder="12-3456789"></label>
       <label><span>Industry</span><select id="industry"><option value="">Select…</option>${optionList(INDUSTRIES, c.industry)}</select></label>
       <label><span>Business phone</span><input id="bizPhone" type="tel" value="${esc(c.business_phone || '')}" placeholder="(727) 348-6519"></label>
       <label><span>Business email</span><input id="bizEmail" type="email" value="${esc(c.business_email || '')}" placeholder="ap@gulfcoastmech.com"></label>
-      <label><span>Website</span><input id="website" type="url" value="${esc(c.website || '')}" placeholder="https://"></label>
-      <label><span>Estimated annual volume</span><select id="estVolume"><option value="">Select…</option>${optionList(VOLUME_BANDS, c.est_annual_volume)}</select></label>
       <label><span>Requested payment terms</span><select id="reqNet">${optionList(NET_TERMS, c.requested_net_terms == null ? '0' : c.requested_net_terms)}</select></label>
-      <label><span>Authorized contact</span><input id="contactName" type="text" value="${esc(c.contact_name || '')}" placeholder="Marisol Vega"></label>
-      <label><span>Contact title</span><input id="contactTitle" type="text" value="${esc(c.contact_title || '')}" placeholder="Operations Manager"></label>
-      <label class="biz-reg-full"><span>Resale / tax-exempt certificate URL</span><input id="resaleCertUrl" type="url" value="${esc(c.resale_cert_url || '')}" placeholder="Link to certificate (optional)"></label>
-      <label class="biz-check-label biz-reg-full"><input id="taxExempt" type="checkbox" ${c.tax_exempt ? 'checked' : ''}> <span>We are tax-exempt and will provide a resale/exemption certificate.</span></label>
-    </div>`;
+    </div>
+    <details class="biz-detail-options"${hasAdvanced ? ' open' : ''}>
+      <summary>Verification, tax, and contact details</summary>
+      <div class="biz-reg-grid">
+        <label><span>Doing business as (DBA)</span><input id="dba" type="text" value="${esc(c.dba || '')}" placeholder="Optional trade name"></label>
+        <label><span>Business entity type</span><select id="entityType"><option value="">Select…</option>${optionList(ENTITY_TYPES, c.entity_type)}</select></label>
+        <label><span>Federal Tax ID / EIN</span><input id="taxId" type="text" value="${esc(c.tax_id || '')}" placeholder="12-3456789"></label>
+        <label><span>Website</span><input id="website" type="url" value="${esc(c.website || '')}" placeholder="https://"></label>
+        <label><span>Estimated annual volume</span><select id="estVolume"><option value="">Select…</option>${optionList(VOLUME_BANDS, c.est_annual_volume)}</select></label>
+        <label><span>Authorized contact</span><input id="contactName" type="text" value="${esc(c.contact_name || '')}" placeholder="Marisol Vega"></label>
+        <label><span>Contact title</span><input id="contactTitle" type="text" value="${esc(c.contact_title || '')}" placeholder="Operations Manager"></label>
+        <label class="biz-reg-full"><span>Resale / tax-exempt certificate URL</span><input id="resaleCertUrl" type="url" value="${esc(c.resale_cert_url || '')}" placeholder="Link to certificate (optional)"></label>
+        <label class="biz-check-label biz-reg-full"><input id="taxExempt" type="checkbox" ${c.tax_exempt ? 'checked' : ''}> <span>We are tax-exempt and will provide a resale/exemption certificate.</span></label>
+      </div>
+    </details>`;
 }
 
 function renderCompanySetupForm(data) {
@@ -122,13 +164,13 @@ function renderCompanySetupForm(data) {
   if (!box) return;
   const status = c?.status || null;
   const isCreate = !c;
-  const heading = isCreate ? 'Register your business' : status === 'approved' ? 'Business details' : 'Business verification';
+  const heading = isCreate ? 'Register your business' : status === 'approved' ? 'Business details' : 'Verification details';
   const submitText = isCreate ? 'Submit for approval' : status === 'rejected' ? 'Update & resubmit' : 'Save business details';
   const intro = isCreate
-    ? 'Tell us about your business. After you submit, MASEST verifies it (typically 1–2 business days). Once approved you unlock NET terms, QuickBooks invoicing, service programs, and wholesale pricing.'
+    ? 'Start with the essentials. Add tax and verification details only when they apply.'
     : status === 'approved'
       ? 'Your business is verified. Keep these details current for invoicing and compliance.'
-      : 'These details stay editable while we verify your business. Keep them accurate to speed up approval.';
+      : 'Keep these details current while we verify your business.';
   box.innerHTML = `
     <h2>${esc(heading)}</h2>
     <p class="lead">${esc(intro)}</p>
@@ -179,6 +221,7 @@ function wireCompanySetup() {
     try {
       const res = await api('/api/account/company', { method: 'POST', body });
       const fresh = await loadBusinessData();
+      renderBusinessHub(fresh);
       renderProfile(fresh);
       renderSetupChecklist(fresh);
       renderCompanySetupForm(fresh);
@@ -218,15 +261,15 @@ async function renderInvoicing(data) {
   if (!data.company) { box.hidden = true; return; }
   if (data.can_checkout !== true) {
     box.innerHTML = `
-      <h2>QuickBooks invoicing</h2>
+      <h2>Business invoices</h2>
       <p class="lead">NET invoicing through QuickBooks unlocks once your business is verified. Card payments are always available in <a href="#payment">Payment methods</a>.</p>`;
     return;
   }
   box.innerHTML = `
-    <h2>QuickBooks invoicing</h2>
+    <h2>Business invoices</h2>
     <p class="lead">Your NET orders are billed through QuickBooks. Track invoices and your credit here; card payments stay in <a href="#payment">Payment methods</a>.</p>
-    <div id="invSummary" class="biz-inv-summary"><div class="skeleton skeleton-block" style="height:64px"></div></div>
-    <div id="invList"><div class="skeleton skeleton-block" style="height:48px;margin-top:10px"></div></div>`;
+    <div id="invSummary" class="biz-inv-summary"><div class="skeleton skeleton-block biz-inv-summary-skeleton"></div></div>
+    <div id="invList"><div class="skeleton skeleton-block biz-inv-list-skeleton"></div></div>`;
   let out;
   try { out = await api('/api/account/invoices'); }
   catch { $('invList').innerHTML = '<p class="biz-status" data-state="err">Could not load invoices. Try again.</p>'; $('invSummary').innerHTML = ''; return; }
@@ -261,7 +304,7 @@ function renderTiers(canRequest = false) {
       <div class="tier-tag">${esc(t.tag)}</div>
       <h3>${esc(t.key)}</h3>
       <p>${esc(t.desc)}</p>
-      <button type="button" class="btn btn-primary btn-sm" data-tier="${esc(t.key)}" ${canRequest ? '' : 'disabled'}>${canRequest ? 'Request enrollment' : 'Verify business first'}</button>
+      <button type="button" class="btn btn-primary btn-sm" data-tier="${esc(t.key)}" ${canRequest ? '' : 'disabled'}>${canRequest ? 'Request' : 'Verify first'}</button>
     </div>`).join('');
   $('tierGrid').querySelectorAll('[data-tier]').forEach((b) => {
     if (!b.disabled) b.addEventListener('click', () => requestProgram(b.dataset.tier, b));
@@ -371,7 +414,7 @@ function wireBulk() {
 /* ---------- team (company admins) ---------- */
 async function loadTeam() {
   let t;
-  $('teamMembers').innerHTML = `<div class="skeleton skeleton-block" style="height:40px;margin-bottom:8px"></div>`.repeat(2);
+  $('teamMembers').innerHTML = `<div class="skeleton skeleton-block biz-team-skeleton"></div>`.repeat(2);
   try { t = await api('/api/account/team'); } catch { $('teamMembers').innerHTML = '<p class="biz-status" data-state="err">Could not load team.</p>'; return; }
   $('teamMembers').innerHTML = (t.members || []).map((m) =>
     `<div class="biz-row"><span>${esc(m.full_name || m.email || 'Member')}${m.email && m.full_name ? ` <span class="muted">· ${esc(m.email)}</span>` : ''}</span><b>${esc(m.role)}</b></div>`).join('') || `<div class="empty-state"><i class="ph ph-users empty-icon" aria-hidden="true"></i><div class="empty-title">No team members yet</div><div class="empty-body">Invite colleagues to manage orders and quotes together.</div></div>`;
@@ -450,6 +493,7 @@ export async function initBusinessHub(initialData = null) {
     return;
   }
   $('bizApp').hidden = false;
+  renderBusinessHub(data);
   renderProfile(data);
   renderSetupChecklist(data);
   renderCompanySetupForm(data);

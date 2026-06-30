@@ -19,11 +19,22 @@ const DIR_ROLES = [
 ];
 
 export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager }) {
-  const SUBTABS = [['tasks', 'Tasks'], ['contacts', 'Contacts']];
+  const SUBTABS = [['tasks', 'Follow-ups'], ['contacts', 'People']];
 
   function shell() {
     const view = state.crmView || 'tasks';
     return `<div class="crm-ws">
+      <div class="crm-ws-head">
+        <div>
+          <p class="adm-eyebrow">CRM</p>
+          <h2>Relationship workspace</h2>
+          <p class="muted">Follow up on open work, then jump straight into the account, quote, or contact that needs attention.</p>
+        </div>
+        <div class="crm-ws-shortcuts" aria-label="CRM shortcuts">
+          <button class="btn btn-secondary btn-sm" type="button" data-crm-ws-jump="tasks">Review follow-ups</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-crm-ws-jump="contacts">Find a person</button>
+        </div>
+      </div>
       <div class="crm-tabs" role="group" aria-label="CRM sections">
         ${SUBTABS.map(([v, l]) => `<button class="btn btn-ghost btn-sm${v === view ? ' is-active' : ''}" type="button" data-crm-ws-tab="${v}" aria-pressed="${v === view}">${l}</button>`).join('')}
       </div>
@@ -55,6 +66,16 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     return `<div class="crm-tabs" role="group" aria-label="Task scope">${TASK_SCOPES.map(([v, l]) => `<button class="btn btn-ghost btn-sm${v === scope ? ' is-active' : ''}" type="button" data-inbox-scope="${v}" aria-pressed="${v === scope}">${l}</button>`).join('')}</div>`;
   }
 
+  function taskStats(tasks, visible) {
+    const overdue = tasks.filter((t) => t.status !== 'done' && t.due_at && new Date(t.due_at) < new Date()).length;
+    const unassigned = tasks.filter((t) => !t.assigned_to).length;
+    return `<div class="crm-quick-stats" aria-label="Follow-up summary">
+      <span><b>${visible.length}</b> showing</span>
+      <span><b>${overdue}</b> overdue</span>
+      <span><b>${unassigned}</b> unassigned</span>
+    </div>`;
+  }
+
   // Assignee facet <select>, derived from the loaded inbox. Suppressed when there
   // is only one bucket (facets = just the "All" head) since there's nothing to narrow.
   function assigneeSelect() {
@@ -70,11 +91,18 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const scope = state.crmTaskScope || 'open';
     const toolbar = `<div class="crm-inbox-tools">${scopeButtons(scope)}${assigneeSelect()}</div>`;
     const visible = filterTasksByAssignee(inboxTasks, state.crmTaskAssignee || '');
+    const head = `<div class="crm-section-head">
+      <div>
+        <h3>Today’s follow-ups</h3>
+        <p class="muted">Complete quick tasks here, or open the linked record when more context is needed.</p>
+      </div>
+      ${taskStats(inboxTasks, visible)}
+    </div>`;
     let list;
     if (visible.length) list = `<ul class="crm-task-list">${visible.map(taskRow).join('')}</ul>`;
     else if (inboxTasks.length) list = admEmpty('ph-funnel', 'No tasks', 'No open follow-ups for this assignee.');
     else list = admEmpty('ph-check-square', 'No tasks', scope === 'overdue' ? 'Nothing overdue — you are caught up.' : 'No open follow-ups.');
-    body.innerHTML = toolbar + list;
+    body.innerHTML = head + toolbar + list;
   }
 
   // Tasks inbox — replaces plan 001 placeholder.
@@ -98,13 +126,17 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const role = c.role ? `<span class="crm-contact-role">${esc(String(c.role).replace(/_/g, ' '))}</span>` : '';
     const meta = [c.title, c.email, c.phone].filter(Boolean).map(esc).join(' · ') || '—';
     const company = c.company_name ? `<span class="muted">${esc(c.company_name)}</span>` : '';
+    const accountBtn = c.company_id
+      ? `<button class="btn btn-ghost btn-sm" type="button" data-dir-open-company="${esc(c.company_id)}" data-company-label="${esc(c.company_name || '')}">Account</button>`
+      : '';
     return `<li class="crm-contact">
       <div class="crm-contact-main">
         <div class="crm-contact-name">${esc(c.name)} ${role} ${company}</div>
         <div class="crm-feed-detail muted">${meta}</div>
       </div>
       <span class="crm-contact-actions">
-        <button class="btn btn-ghost btn-sm" type="button" data-dir-open="${esc(c.id)}">Open</button>
+        ${accountBtn}
+        <button class="btn btn-ghost btn-sm" type="button" data-dir-open="${esc(c.id)}">History</button>
       </span></li>`;
   }
 
@@ -139,13 +171,20 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const term = state.crmContactQ || '';
     const currentRole = state.crmContactRole || '';
     const roleOpts = DIR_ROLES.map(([v, l]) => `<option value="${esc(v)}"${v === currentRole ? ' selected' : ''}>${esc(l)}</option>`).join('');
-    body.innerHTML = `<form class="adm-tools" data-dir-form>
+    body.innerHTML = `<div class="crm-section-head">
+        <div>
+          <h3>Find the right buyer or operator</h3>
+          <p class="muted">Search across account contacts without leaving the admin workspace.</p>
+        </div>
+      </div>
+      <form class="adm-tools crm-contact-search" data-dir-form>
         <input class="adm-search" type="search" data-dir-q placeholder="Search contacts by name, email or phone" aria-label="Search contacts" value="${esc(term)}">
         <select class="adm-select" data-dir-role aria-label="Filter by role">${roleOpts}</select>
-        <button class="btn btn-primary btn-sm" type="submit">Search</button>
+        <button class="btn btn-primary btn-sm" type="submit">Find contact</button>
       </form>
       <div data-dir-results></div>`;
     if (term.length >= 2 || currentRole) await runContactSearch(body);
+    else await runContactSearch(body);
   }
 
   function showView(view) {
@@ -173,6 +212,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const box = $('admCrm');
     if (!box) return;
     delegate(box, 'click', '[data-crm-ws-tab]', (event, btn) => showView(btn.dataset.crmWsTab));
+    delegate(box, 'click', '[data-crm-ws-jump]', (event, btn) => showView(btn.dataset.crmWsJump));
     delegate(box, 'click', '[data-inbox-scope]', (event, btn) => {
       state.crmTaskScope = btn.dataset.inboxScope;
       renderTasks(box.querySelector('[data-crm-ws-body]'));
@@ -208,6 +248,9 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     });
     delegate(box, 'click', '[data-dir-more]', () => {
       runContactSearch(box.querySelector('[data-crm-ws-body]'), { append: true });
+    });
+    delegate(box, 'click', '[data-dir-open-company]', (event, btn) => {
+      if (openSubject) openSubject('company', btn.dataset.dirOpenCompany, btn.dataset.companyLabel);
     });
     delegate(box, 'click', '[data-dir-open]', (event, btn) => {
       const results = box.querySelector('[data-dir-results]');

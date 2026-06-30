@@ -30,7 +30,7 @@ test("account-only dashboard guides business setup instead of failing tabs", () 
   assert.match(js, /No business notifications yet/, "notifications tab should not show a load failure before business setup");
   assert.match(js, /No business profile yet/, "addresses tab should explain business setup before company-scoped addresses");
   assert.match(js, /Set up your business under .* to save a card on file/, "payment tab should name the account-only locked state");
-  assert.match(js, /ACCOUNT\?\.company \? 'Open business setup' : 'Set up business'/, "next action should promote business creation for account-only users");
+  assert.match(js, /ACCOUNT\?\.company \? 'Review business tools' : 'Set up business'/, "next action should promote business creation for account-only users");
 });
 
 test("Stripe billing portal opens outside the dashboard shell", () => {

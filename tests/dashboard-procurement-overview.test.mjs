@@ -24,7 +24,7 @@ test("buyer dashboard renders procurement actions and recent activity", () => {
 
 test("buyer dashboard action rail includes commerce and setup actions", () => {
   const js = read("js/dashboard.js");
-  assert.match(js, /Open business setup/, "pending setup should route to business hub");
+  assert.match(js, /Review business tools/, "pending setup should route to business hub");
   assert.match(js, /Review cart/, "approved buyers should have commerce CTA");
   assert.match(js, /Message MASEST/, "messages should remain one click away");
   assert.match(js, /data-buyer-action/, "actions should expose stable hooks for QA");

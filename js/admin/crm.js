@@ -14,11 +14,17 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
 
   function panelShell(subjectType, subjectId) {
     return `<div class="crm-panel" data-crm-subject-type="${esc(subjectType)}" data-crm-subject-id="${esc(subjectId)}">
+      <div class="crm-panel-head">
+        <div>
+          <p class="adm-eyebrow">CRM activity</p>
+          <h3>Customer context</h3>
+        </div>
+      </div>
       <div class="crm-tabs" role="group" aria-label="Contact activity">
-        <button class="btn btn-ghost btn-sm is-active" type="button" data-crm-tab="timeline" aria-pressed="true">Timeline</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-crm-tab="tasks" aria-pressed="false">Tasks</button>
+        <button class="btn btn-ghost btn-sm is-active" type="button" data-crm-tab="timeline" aria-pressed="true">Activity</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-crm-tab="tasks" aria-pressed="false">Follow-ups</button>
         <button class="btn btn-ghost btn-sm" type="button" data-crm-tab="notes" aria-pressed="false">Notes</button>
-        ${subjectType === 'company' ? '<button class="btn btn-ghost btn-sm" type="button" data-crm-tab="contacts" aria-pressed="false">Contacts</button>' : ''}
+        ${subjectType === 'company' ? '<button class="btn btn-ghost btn-sm" type="button" data-crm-tab="contacts" aria-pressed="false">People</button>' : ''}
       </div>
       <div class="crm-body" data-crm-body aria-live="polite">${admSkeleton(3)}</div>
     </div>`;
@@ -44,8 +50,12 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
   function renderNotes(notes, viewer) {
     const canDelete = (n) => viewer && (viewer.can_delete_any || (n.created_by && n.created_by === viewer.email));
     const composer = `<form class="crm-note-form" data-crm-note-form>
-      <select class="adm-select" data-crm-note-kind aria-label="Note type">${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
-      <textarea class="adm-input" data-crm-note-body rows="2" placeholder="Log a note, call, email or meeting…" required></textarea>
+      <label class="crm-field crm-field-wide">Note
+        <textarea class="adm-input" data-crm-note-body rows="2" placeholder="Add a useful note for the next person who opens this record." required></textarea>
+      </label>
+      <label class="crm-field">Type
+        <select class="adm-select" data-crm-note-kind aria-label="Note type">${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+      </label>
       <button class="btn btn-primary btn-sm" type="submit">Add note</button>
     </form>`;
     const list = notes.length ? `<ul class="crm-feed">${notes.map((n) => `<li class="crm-feed-item">
@@ -61,10 +71,21 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
   function renderTasks(tasks) {
     const overdue = (t) => t.due_at && new Date(t.due_at) < new Date();
     const composer = `<form class="crm-task-form" data-crm-task-form>
-      <input class="adm-input" data-crm-task-title placeholder="Follow-up task…" required>
-      <input class="adm-input" data-crm-task-due type="datetime-local" aria-label="Due date">
-      <input class="adm-input" data-crm-task-assignee placeholder="Assign to (email)" aria-label="Assignee">
-      <button class="btn btn-primary btn-sm" type="submit">Add task</button>
+      <label class="crm-field">Follow-up
+        <input class="adm-input" data-crm-task-title placeholder="Add follow-up task" required>
+      </label>
+      <button class="btn btn-primary btn-sm" type="submit">Add follow-up</button>
+      <details class="crm-mini-options crm-task-options">
+        <summary>Due date and owner</summary>
+        <div class="crm-inline-fields">
+          <label class="crm-field">Due date
+            <input class="adm-input" data-crm-task-due type="datetime-local" aria-label="Due date">
+          </label>
+          <label class="crm-field">Owner
+            <input class="adm-input" data-crm-task-assignee placeholder="Assign to (email)" aria-label="Assignee">
+          </label>
+        </div>
+      </details>
     </form>`;
     const row = (t) => `<li class="crm-task ${t.status === 'done' ? 'is-done' : ''}">
       <button class="btn btn-ghost btn-sm" type="button" data-crm-task-toggle="${esc(t.id)}" data-crm-task-status="${esc(t.status)}" aria-label="${t.status === 'done' ? 'Reopen' : 'Complete'} task">${t.status === 'done' ? '↺' : '✓'}</button>
@@ -81,13 +102,29 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
 
   function renderContacts(contacts) {
     const composer = `<form class="crm-contact-form" data-crm-contact-form>
-      <input class="adm-input" data-crm-contact-name placeholder="Contact name" aria-label="Contact name" required>
-      <select class="adm-select" data-crm-contact-role aria-label="Role">${CONTACT_ROLES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
-      <input class="adm-input" data-crm-contact-title placeholder="Job title" aria-label="Job title">
-      <input class="adm-input" data-crm-contact-email type="email" placeholder="Email" aria-label="Email">
-      <input class="adm-input" data-crm-contact-phone placeholder="Phone" aria-label="Phone">
-      <label class="crm-contact-primary-toggle"><input type="checkbox" data-crm-contact-primary> Primary</label>
+      <label class="crm-field">Name
+        <input class="adm-input" data-crm-contact-name placeholder="Contact name" aria-label="Contact name" required>
+      </label>
+      <label class="crm-field">Role
+        <select class="adm-select" data-crm-contact-role aria-label="Role">${CONTACT_ROLES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+      </label>
+      <label class="crm-field">Email
+        <input class="adm-input" data-crm-contact-email type="email" placeholder="Email" aria-label="Email">
+      </label>
       <button class="btn btn-primary btn-sm" type="submit" data-crm-contact-submit>Add contact</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-cancel hidden>Cancel</button>
+      <details class="crm-mini-options crm-contact-options">
+        <summary>More contact details</summary>
+        <div class="crm-inline-fields">
+          <label class="crm-field">Job title
+            <input class="adm-input" data-crm-contact-title placeholder="Job title" aria-label="Job title">
+          </label>
+          <label class="crm-field">Phone
+            <input class="adm-input" data-crm-contact-phone placeholder="Phone" aria-label="Phone">
+          </label>
+          <label class="crm-contact-primary-toggle"><input type="checkbox" data-crm-contact-primary> Primary contact</label>
+        </div>
+      </details>
     </form>`;
     const list = contacts.length ? `<ul class="crm-contact-list">${contacts.map((c) => `<li class="crm-contact${c.is_primary ? ' is-primary' : ''}">
       <div class="crm-contact-main">
@@ -96,15 +133,24 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       </div>
       <span class="crm-contact-actions">
         <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-history="${esc(c.id)}">History</button>
-        ${c.is_primary ? '' : `<button class="btn btn-ghost btn-sm" type="button" data-crm-contact-primary-set="${esc(c.id)}">Make primary</button>`}
         <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-edit="${esc(c.id)}">Edit</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-merge="${esc(c.id)}">Merge</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-del="${esc(c.id)}" aria-label="Delete contact">Delete</button>
+        <details class="crm-row-menu">
+          <summary class="btn btn-ghost btn-sm">More</summary>
+          <span>
+            ${c.is_primary ? '' : `<button class="btn btn-ghost btn-sm" type="button" data-crm-contact-primary-set="${esc(c.id)}">Make primary</button>`}
+            <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-merge="${esc(c.id)}">Merge</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-del="${esc(c.id)}" aria-label="Delete contact">Delete</button>
+          </span>
+        </details>
       </span></li>`).join('')}</ul>`
       : admEmpty('ph-address-book', 'No contacts', 'Add procurement, plant or maintenance contacts for this account.');
-    const importBar = `<div class="crm-contact-import">
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer">Import CSV<input type="file" accept=".csv,text/csv" data-crm-contact-import hidden></label>
-      <span class="muted" style="font-size:.78rem">columns: name, role, title, email, phone</span></div>`;
+    const importBar = `<details class="crm-contact-import">
+      <summary>Import contacts from CSV</summary>
+      <div>
+        <label class="btn btn-ghost btn-sm crm-contact-import-trigger">Choose CSV<input type="file" accept=".csv,text/csv" data-crm-contact-import hidden></label>
+        <span class="muted crm-contact-import-help">columns: name, role, title, email, phone</span>
+      </div>
+    </details>`;
     return composer + importBar + list;
   }
 
@@ -155,6 +201,16 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     });
   }
 
+  function resetContactForm(form) {
+    if (!form) return;
+    form.reset();
+    delete form.dataset.editId;
+    form.querySelector('[data-crm-contact-submit]').textContent = 'Add contact';
+    form.querySelector('[data-crm-contact-cancel]').hidden = true;
+    const options = form.querySelector('.crm-contact-options');
+    if (options) options.open = false;
+  }
+
   // A contact's own activity drawer — reuses this same panel mounted as a 'contact'
   // subject (Timeline = its linked deals + notes + tasks; no nested Contacts tab).
   function openContactDrawer(contact) {
@@ -164,9 +220,9 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     dlg.setAttribute('aria-label', 'Contact details');
     dlg.setAttribute('data-contact-drawer', '');
     dlg.innerHTML = `<div class="adm-drawer-inner">
-      <div class="adm-tools" style="justify-content:space-between;align-items:start">
-        <div><h2 style="margin:0">${esc(contact.name)}</h2>
-        <p class="muted" style="margin:2px 0 0">${esc(roleLabel(contact.role))}${contact.title ? ` · ${esc(contact.title)}` : ''}${contact.email ? ` · ${esc(contact.email)}` : ''}</p></div>
+      <div class="adm-tools crm-contact-drawer-head">
+        <div><h2 class="crm-contact-drawer-title">${esc(contact.name)}</h2>
+        <p class="muted crm-contact-drawer-meta">${esc(roleLabel(contact.role))}${contact.title ? ` · ${esc(contact.title)}` : ''}${contact.email ? ` · ${esc(contact.email)}` : ''}</p></div>
         <button class="btn btn-ghost btn-sm" data-drawer-close type="button" aria-label="Close">✕</button>
       </div>
       <div data-contact-crm></div>
@@ -241,6 +297,12 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         return;
       }
 
+      const cCancel = event.target.closest('[data-crm-contact-cancel]');
+      if (cCancel) {
+        resetContactForm(panel.querySelector('[data-crm-contact-form]'));
+        return;
+      }
+
       const cEdit = event.target.closest('[data-crm-contact-edit]');
       if (cEdit) {
         const c = (body._contacts || []).find((x) => String(x.id) === String(cEdit.dataset.crmContactEdit));
@@ -254,7 +316,11 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         form.querySelector('[data-crm-contact-primary]').checked = !!c.is_primary;
         form.dataset.editId = c.id;
         form.querySelector('[data-crm-contact-submit]').textContent = 'Save contact';
+        form.querySelector('[data-crm-contact-cancel]').hidden = false;
+        const options = form.querySelector('.crm-contact-options');
+        if (options) options.open = true;
         form.scrollIntoView({ block: 'nearest' });
+        form.querySelector('[data-crm-contact-name]')?.focus({ preventScroll: true });
         return;
       }
 

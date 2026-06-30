@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard | MASEST VertKleen</title>
-<meta name="description" content="Your MASEST VertKleen account dashboard for orders, messages, notifications, addresses and saved payment methods.">
+<meta name="description" content="Your MASEST VertKleen dashboard for orders, messages, business setup, invoices, addresses and saved payment methods.">
 <meta name="theme-color" content="#0b0d12">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex">
@@ -113,6 +113,9 @@
   .dash-card-subtitle { font-size: 1.05rem; margin-bottom: 12px; }
   .dash-card-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
   .dash-action-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .dash-disclosure { margin-top: 14px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: rgba(255,255,255,.66); padding: 12px; }
+  .dash-disclosure summary { cursor: pointer; color: var(--ink); font-weight: 800; }
+  .dash-disclosure-body { margin-top: 12px; }
   .security-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
   .dash-order-card { border-bottom: 1px solid var(--line); padding: 8px 0; }
   .dash-order-summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; list-style: none; }
@@ -219,10 +222,22 @@
   .biz-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px; margin-bottom: 18px; min-width: 0; overflow: hidden; box-shadow: var(--shadow-xs); scroll-margin-top: 92px; }
   .biz-card h2 { font-size: 1.35rem; font-weight: 800; letter-spacing: -.01em; margin-bottom: 6px; }
   .biz-card .lead { color: var(--ink-soft); font-size: .95rem; margin-bottom: 18px; line-height: 1.5; }
+  .biz-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(280px, .85fr); gap: 16px; align-items: start; }
+  .biz-primary-stack, .biz-secondary-stack { display: grid; gap: 16px; min-width: 0; }
+  .biz-layout .biz-card { margin-bottom: 0; }
+  .biz-hub { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+  .biz-eyebrow { margin: 0 0 4px; color: var(--accent-ink); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+  .biz-hub h2 { margin: 0; }
+  .biz-hub .lead { margin: 6px 0 0; max-width: 70ch; }
+  .biz-hub-metrics { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  .biz-hub-metric { min-width: 112px; display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-input); background: #fff; }
+  .biz-hub-metric small { color: var(--ink-soft); font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+  .biz-hub-metric b { color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
   .biz-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: .95rem; }
   .biz-row:last-child { border-bottom: 0; }
   .biz-row span, .biz-row b, .biz-card p, .setup-step span, .setup-step small { min-width: 0; overflow-wrap: anywhere; }
-  .biz-row b { color: var(--ink); text-align: right; }
+  .biz-row b { color: var(--ink); text-align: right; overflow-wrap: normal; word-break: normal; }
+  #bizTeam .biz-row b { white-space: nowrap; }
   .tier-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .tier { border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px; display: flex; flex-direction: column; }
   .tier h3 { font-size: 1.15rem; font-weight: 800; letter-spacing: 0; }
@@ -259,6 +274,9 @@
   .biz-reg-grid input, .biz-reg-grid select, .biz-reg-grid textarea { width: 100%; padding: 13px 15px; border-radius: var(--r-input); border: 1.5px solid var(--line-strong); font-family: var(--font); font-size: .95rem; background: #fff; color: var(--ink); transition: border-color .2s, box-shadow .2s; }
   .biz-reg-grid input:focus, .biz-reg-grid select:focus, .biz-reg-grid textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(14,124,134,.15); }
   .biz-reg-full { grid-column: 1 / -1; }
+  .biz-detail-options { margin-top: 16px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: rgba(255,255,255,.66); padding: 12px; }
+  .biz-detail-options summary { cursor: pointer; color: var(--ink); font-weight: 800; }
+  .biz-detail-options .biz-reg-grid { margin-top: 12px; }
   .biz-reg-grid .biz-check-label { padding: 4px 0 0; font-size: .9rem; color: var(--ink); }
   .biz-verify-note { display: flex; gap: 8px; align-items: flex-start; margin: 16px 0 4px; padding: 12px 14px; background: var(--accent-soft); color: var(--accent-ink); border-radius: var(--r-input, 10px); font-size: .86rem; font-weight: 600; line-height: 1.45; }
   .biz-verify-note i { font-size: 1.1rem; flex: 0 0 auto; }
@@ -267,6 +285,9 @@
   .biz-inv-stat { border: 1px solid var(--line); border-radius: var(--r-input, 10px); padding: 12px 14px; display: grid; gap: 4px; }
   .biz-inv-stat small { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
   .biz-inv-stat b { font-size: 1.1rem; font-weight: 800; }
+  .biz-inv-summary-skeleton { height: 64px; }
+  .biz-inv-list-skeleton { height: 48px; margin-top: 10px; }
+  .biz-team-skeleton { height: 40px; margin-bottom: 8px; }
   .biz-inv-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
   .biz-inv-table th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); padding: 0 10px 8px; border-bottom: 1px solid var(--line); }
   .biz-inv-table td { padding: 11px 10px; border-bottom: 1px solid var(--line-soft, var(--line)); }
@@ -306,11 +327,15 @@
       grid-template-columns: 1fr;
     }
     .tier-grid,
+    .biz-layout,
     .biz-form,
     .biz-reg-grid,
     .biz-inv-summary {
       grid-template-columns: 1fr;
     }
+    .biz-hub { grid-template-columns: 1fr; }
+    .biz-hub-metrics { justify-content: flex-start; }
+    .biz-hub-metric { flex: 1 1 130px; }
     .biz-form-create .status {
       grid-column: auto;
     }
@@ -347,7 +372,7 @@
   <section class="hero-split">
     <div class="wrap">
       <h1 class="display">Account dashboard.</h1>
-      <p class="subhead" id="dashGreeting">Orders, messages, notifications, addresses and saved payment in one place.</p>
+      <p class="subhead" id="dashGreeting">Orders, messages, business setup, invoices, addresses and saved payment in one place.</p>
     </div>
   </section>
 
@@ -367,7 +392,7 @@
           <aside class="dash-sidebar" aria-label="Account navigation">
             <div class="dash-tabs" role="tablist" aria-label="Dashboard sections">
               <div class="dash-nav-group">
-                <span>Dashboard</span>
+                <span>Workspace</span>
                 <button class="dash-tab" role="tab" data-tab="overview" aria-selected="true"><i class="ph ph-squares-four" aria-hidden="true"></i> Overview</button>
                 <button class="dash-tab" role="tab" data-tab="orders" aria-selected="false"><i class="ph ph-package" aria-hidden="true"></i> Orders</button>
                 <button class="dash-tab" role="tab" data-tab="messages" aria-selected="false"><i class="ph ph-chat-circle" aria-hidden="true"></i> Messages <span class="pill" id="badgeMessages" hidden>0</span></button>
@@ -375,7 +400,7 @@
               </div>
               <div class="dash-nav-group">
                 <span>Business</span>
-                <button class="dash-tab" role="tab" data-tab="business" aria-selected="false"><i class="ph ph-briefcase" aria-hidden="true"></i> Business</button>
+                <button class="dash-tab" role="tab" data-tab="business" aria-selected="false"><i class="ph ph-briefcase" aria-hidden="true"></i> Business tools</button>
               </div>
               <div class="dash-nav-group">
                 <span>Account</span>
@@ -423,12 +448,17 @@
               <h2 class="headline dash-section-title dash-section-title-tight">Notifications</h2>
               <button class="btn btn-ghost btn-sm" id="markAllRead" type="button">Mark all read</button>
             </div>
-            <form onsubmit="return false" id="notifPrefs" class="notif-prefs" aria-label="Email notification preferences">
-              <span class="muted">Email me about:</span>
-              <label class="notif-pref-label"><input type="checkbox" data-pref="notify_orders"> Order updates</label>
-              <label class="notif-pref-label"><input type="checkbox" data-pref="notify_messages"> Messages</label>
-              <label class="notif-pref-label"><input type="checkbox" data-pref="notify_offers"> Offers</label>
-            </form>
+            <details class="dash-disclosure">
+              <summary>Email preferences</summary>
+              <div class="dash-disclosure-body">
+                <form onsubmit="return false" id="notifPrefs" class="notif-prefs" aria-label="Email notification preferences">
+                  <span class="muted">Email me about:</span>
+                  <label class="notif-pref-label"><input type="checkbox" data-pref="notify_orders"> Order updates</label>
+                  <label class="notif-pref-label"><input type="checkbox" data-pref="notify_messages"> Messages</label>
+                  <label class="notif-pref-label"><input type="checkbox" data-pref="notify_offers"> Offers</label>
+                </form>
+              </div>
+            </details>
             <div id="notifBody"><p class="muted">Loading…</p></div>
           </div>
         </div>
@@ -436,53 +466,59 @@
         <div class="dash-panel" data-panel="business" role="tabpanel" hidden>
           <div id="bizGuest" hidden></div>
           <div id="bizApp" hidden>
-            <div class="biz-card" id="bizProfile"></div>
-            <div class="biz-card" id="bizSetup"></div>
-            <div class="biz-card" id="bizCompanySetup"></div>
-            <div class="biz-card" id="bizInvoicing" hidden></div>
-
-            <div class="biz-card" id="bizTeam" hidden>
-              <h2>Team members</h2>
-              <p class="lead">Invite teammates to your company account. Invited emails join automatically once they register and sign in.</p>
-              <div id="teamMembers"><p class="muted">Loading...</p></div>
-              <form onsubmit="return false" id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
-                <div class="biz-inline-form">
-                  <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
-                  <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
-                  <button class="btn btn-primary btn-sm" type="submit">Send invite</button>
+            <div class="biz-card biz-hub" id="bizHub"></div>
+            <div class="biz-layout">
+              <div class="biz-primary-stack">
+                <div class="biz-card" id="bizProfile"></div>
+                <div class="biz-card" id="bizSetup"></div>
+                <div class="biz-card" id="bizCompanySetup"></div>
+                <div class="biz-card" id="bizInvoicing" hidden></div>
+              </div>
+              <div class="biz-secondary-stack">
+                <div class="biz-card" id="bizTeam" hidden>
+                  <h2>Team access</h2>
+                  <p class="lead">Invite teammates to manage orders, quotes, messages, and business details with you.</p>
+                  <div id="teamMembers"><p class="muted">Loading...</p></div>
+                  <form onsubmit="return false" id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
+                    <div class="biz-inline-form">
+                      <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
+                      <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
+                      <button class="btn btn-primary btn-sm" type="submit">Send invite</button>
+                    </div>
+                    <span class="biz-status" id="inviteStatus" role="status" aria-live="polite"></span>
+                  </form>
+                  <div id="teamInvites" class="biz-invites"></div>
                 </div>
-                <span class="biz-status" id="inviteStatus" role="status" aria-live="polite"></span>
-              </form>
-              <div id="teamInvites" class="biz-invites"></div>
-            </div>
 
-            <div class="biz-card" id="bizPrograms">
-              <h2>VertKleen service programs</h2>
-              <p class="lead">Recurring treatment and maintenance programs tuned to your equipment and run hours. Request enrollment and your account team will scope a plan and pricing.</p>
-              <div class="tier-grid" id="tierGrid"></div>
-              <div class="actions"><a class="btn btn-ghost btn-sm" href="programs.html">View program details</a></div>
-              <p class="biz-status" id="programStatus" role="status" aria-live="polite"></p>
-            </div>
+                <div class="biz-card" id="bizPrograms">
+                  <h2>Service programs</h2>
+                  <p class="lead">Recurring VertKleen treatment programs tuned to your equipment and run hours.</p>
+                  <div class="tier-grid" id="tierGrid"></div>
+                  <div class="actions"><a class="btn btn-ghost btn-sm" href="programs.html">View program details</a></div>
+                  <p class="biz-status" id="programStatus" role="status" aria-live="polite"></p>
+                </div>
 
-            <div class="biz-card" id="bizBulk">
-              <h2>Bulk and standing orders</h2>
-              <p class="lead">Need volume pricing, drums, totes, or a recurring standing order? List the requirement and sales will return a scoped quote.</p>
-              <form onsubmit="return false" id="bulkForm" class="form-card biz-clean-form">
-                <div class="field"><label for="bulkItems">What do you need? *</label>
-                  <textarea id="bulkItems" rows="3" placeholder="e.g. 4x 55-gal HCR, 2x 275-gal tote Neutral, monthly" required></textarea></div>
-                <div class="field biz-field-gap"><label for="bulkNotes">Delivery / timing notes</label>
-                  <input id="bulkNotes" type="text" placeholder="Ship-to, cadence, target date (optional)"></div>
-                <button class="btn btn-primary btn-sm biz-button-gap" type="submit">Request bulk quote</button>
-                <span class="biz-status" id="bulkStatus" role="status" aria-live="polite"></span>
-              </form>
-            </div>
+                <div class="biz-card" id="bizBulk">
+                  <h2>Bulk orders</h2>
+                  <p class="lead">Request volume pricing, drums, totes, or a recurring standing order.</p>
+                  <form onsubmit="return false" id="bulkForm" class="form-card biz-clean-form">
+                    <div class="field"><label for="bulkItems">What do you need? *</label>
+                      <textarea id="bulkItems" rows="3" placeholder="e.g. 4x 55-gal HCR, 2x 275-gal tote Neutral, monthly" required></textarea></div>
+                    <div class="field biz-field-gap"><label for="bulkNotes">Delivery / timing notes</label>
+                      <input id="bulkNotes" type="text" placeholder="Ship-to, cadence, target date (optional)"></div>
+                    <button class="btn btn-primary btn-sm biz-button-gap" type="submit">Request quote</button>
+                    <span class="biz-status" id="bulkStatus" role="status" aria-live="polite"></span>
+                  </form>
+                </div>
 
-            <div class="biz-card" id="bizAccountTeam">
-              <h2>Your account team</h2>
-              <p class="lead">A direct B2B message line to MASEST: pricing, SDS/TDS files, certificate-status documents where applicable, NET terms, and order questions.</p>
-              <div class="actions">
-                <a class="btn btn-primary btn-sm" href="#messages">Open message board</a>
-                <a class="btn btn-ghost btn-sm" href="products.html">Browse catalog</a>
+                <div class="biz-card" id="bizAccountTeam">
+                  <h2>Account support</h2>
+                  <p class="lead">Ask about pricing, SDS/TDS files, certificate-status documents where applicable, NET terms, and order questions.</p>
+                  <div class="actions">
+                    <a class="btn btn-primary btn-sm" href="#messages">Message MASEST</a>
+                    <a class="btn btn-ghost btn-sm" href="products.html">Browse catalog</a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -493,23 +529,25 @@
             <h2 class="headline dash-section-title">Saved addresses</h2>
             <div id="addrList"><p class="muted">Loading…</p></div>
           </div>
-          <div class="dash-card">
-            <h3 class="dash-card-subtitle">Add an address</h3>
-            <form onsubmit="return false" id="addrForm" class="form-card dash-clean-form">
-              <div class="field-grid">
-                <div class="field"><label for="aType">Address type</label>
-                  <select id="aType"><option value="ship">Shipping</option><option value="bill">Billing</option></select></div>
-                <div class="field"><label for="aLine1">Address line 1 *</label><input id="aLine1" required></div>
-                <div class="field"><label for="aLine2">Address line 2</label><input id="aLine2"></div>
-                <div class="field"><label for="aCity">City *</label><input id="aCity" required></div>
-                <div class="field"><label for="aState">State *</label><input id="aState" maxlength="2" placeholder="FL" required></div>
-                <div class="field"><label for="aZip">ZIP *</label><input id="aZip" required></div>
-              </div>
-              <label class="checkbox-row"><input type="checkbox" id="aDefault"> Set as default for this type</label>
-              <button class="btn btn-primary btn-sm dash-button-offset" type="submit">Save address</button>
-              <span class="dash-status" id="addrStatus" role="status" aria-live="polite"></span>
-            </form>
-          </div>
+          <details class="dash-card" open>
+            <summary class="dash-card-subtitle">Add an address</summary>
+            <div class="dash-disclosure-body">
+              <form onsubmit="return false" id="addrForm" class="form-card dash-clean-form">
+                <div class="field-grid">
+                  <div class="field"><label for="aType">Address type</label>
+                    <select id="aType"><option value="ship">Shipping</option><option value="bill">Billing</option></select></div>
+                  <div class="field"><label for="aLine1">Address line 1 *</label><input id="aLine1" required></div>
+                  <div class="field"><label for="aLine2">Address line 2</label><input id="aLine2"></div>
+                  <div class="field"><label for="aCity">City *</label><input id="aCity" required></div>
+                  <div class="field"><label for="aState">State *</label><input id="aState" maxlength="2" placeholder="FL" required></div>
+                  <div class="field"><label for="aZip">ZIP *</label><input id="aZip" required></div>
+                </div>
+                <label class="checkbox-row"><input type="checkbox" id="aDefault"> Set as default for this type</label>
+                <button class="btn btn-primary btn-sm dash-button-offset" type="submit">Save address</button>
+                <span class="dash-status" id="addrStatus" role="status" aria-live="polite"></span>
+              </form>
+            </div>
+          </details>
         </div>
 
         <div class="dash-panel" data-panel="payment" role="tabpanel" hidden>
