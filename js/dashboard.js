@@ -8,6 +8,8 @@ import { initBusinessHub } from './business.js';
 const $ = (id) => document.getElementById(id);
 
 let ACCOUNT = null;            // /api/account/me snapshot
+// Order statuses that are NOT "in progress": delivered, closed/paid, refunded, or never placed.
+const TERMINAL_ORDER_STATES = ['fulfilled', 'cancelled', 'net_paid', 'refunded', 'cart'];
 const loaded = {};             // which tabs have been populated
 const pages = {                // offset-pagination state per list (#29)
   orders: { items: [], offset: 0, total: null, hasMore: false },
@@ -121,14 +123,17 @@ async function renderOverview() {
   // Quick stats: pull counts in the background.
   const stats = $('ovStats');
   stats.innerHTML = [0, 1, 2].map(() => `<div class="stat"><div class="skeleton skeleton-text w-40 dash-stat-skeleton-main"></div><div class="skeleton skeleton-text w-80"></div></div>`).join('');
-  const [ord, notif] = await Promise.all([
-    fetchOrders().catch(() => []),
+  const [ordRes, notif] = await Promise.all([
+    fetchOrders({ limit: 100 }).catch(() => ({ orders: [], total: 0 })),
     api('/api/account/notifications').catch(() => ({ notifications: [], unread: 0 })),
   ]);
+  const ord = ordRes.orders || [];
+  // True company-wide total (the endpoint count), not just the size of the fetched page.
+  const totalOrders = Number.isFinite(ordRes.total) && ordRes.total > 0 ? ordRes.total : ord.length;
   setBadge('badgeNotifs', notif.unread);
-  const openOrders = ord.filter((o) => !['fulfilled', 'cancelled', 'net_paid'].includes(o.status)).length;
+  const openOrders = ord.filter((o) => !TERMINAL_ORDER_STATES.includes(o.status)).length;
   stats.innerHTML = [
-    ['ph-package', ord.length, 'Total orders'],
+    ['ph-package', totalOrders, 'Total orders'],
     ['ph-truck', openOrders, 'In progress'],
     ['ph-bell', notif.unread, 'Unread alerts'],
   ].map(([i, n, l]) => `<div class="stat"><div class="big-fig">${n}</div><div class="lbl"><i class="ph ${i}" aria-hidden="true"></i> ${l}</div></div>`).join('');
@@ -170,7 +175,7 @@ function openSetupSteps() {
 function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
   const box = $('ovActionRail');
   if (!box) return;
-  const openOrders = orders.filter((o) => !['fulfilled', 'cancelled', 'net_paid'].includes(o.status));
+  const openOrders = orders.filter((o) => !TERMINAL_ORDER_STATES.includes(o.status));
   const openSteps = openSetupSteps();
   const actions = [];
   if (openSteps.length) {

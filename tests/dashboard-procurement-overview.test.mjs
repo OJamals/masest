@@ -19,7 +19,7 @@ test("buyer dashboard renders procurement actions and recent activity", () => {
   assert.match(js, /function renderRecentMessages/, "dashboard should render recent messages");
   assert.match(js, /function renderOverviewActivity/, "overview should coordinate recent activity fetches");
   assert.match(js, /\/api\/account\/messages/, "overview activity should reuse account messages API");
-  assert.match(js, /fetchOrders\(\)/, "overview activity should reuse account orders API");
+  assert.match(js, /fetchOrders\(\{ limit: 100 \}\)/, "overview activity should reuse account orders API");
 });
 
 test("buyer dashboard action rail includes commerce and setup actions", () => {

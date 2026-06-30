@@ -123,14 +123,21 @@ export async function me() {
   return null;
 }
 
-/* Recent orders for the signed-in account (company orders + line items), or [] if logged out. */
-export async function orders() {
+/* Recent orders for the signed-in account (company orders + line items) plus the true total
+   count, or an empty envelope if logged out. Returns { orders, total, has_more } so callers can
+   show an accurate "total orders" figure instead of just the size of the first page. */
+export async function orders({ limit } = {}) {
+  const empty = { orders: [], total: 0, has_more: false };
   const sb = requireClient();
   const { data } = await sb.auth.getSession();
   const token = data.session?.access_token;
-  if (!token) return [];
-  const r = await fetch('/api/account/orders', { headers: { Authorization: `Bearer ${token}` } });
-  return r.ok ? (await r.json()).orders : [];
+  if (!token) return empty;
+  const qs = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+  const r = await fetch(`/api/account/orders${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) return empty;
+  const body = await r.json().catch(() => null);
+  if (!body) return empty;
+  return { orders: body.orders || [], total: Number(body.total || 0), has_more: Boolean(body.has_more) };
 }
 
 /* Public catalog with mode flags (no auth needed). */
