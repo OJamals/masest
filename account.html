@@ -371,6 +371,19 @@
     } finally { resetCaptcha(); btn.disabled = false; }
   });
 
+  // Dashboard bounces here with ?expired=1 when a session lapses (js/dashboard.js).
+  // Seed a notice on the login pane and strip the param (keeping ?return=) so a
+  // reload doesn't repeat it; handleAuthRedirect() may overwrite with a more
+  // specific hash-error message, so run this first.
+  function handleExpiredParam() {
+    const params = new URLSearchParams(location.search);
+    if (params.get("expired") !== "1") return;
+    params.delete("expired");
+    const qs = params.toString();
+    history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
+    setStatus($("liStatus"), "Your session expired. Sign in again to continue.", "err");
+  }
+
   // Handle the Supabase email-confirmation redirect landing on this page.
   function handleAuthRedirect() {
     const hash = location.hash || "";
@@ -418,6 +431,7 @@
     onPasswordRecovery(() => setRecoveryMode(true));
   } catch (err) {}
 
+  handleExpiredParam();
   handleAuthRedirect();
   initTurnstile();
   refresh();
