@@ -5,6 +5,7 @@ import {
   acceptanceEnvGroups,
   buildPreflightReport,
   cloudflarePagesBuildFromCheckRuns,
+  cloudflarePagesEnvPresence,
   redactValue,
 } from "../tools/production-acceptance-preflight.mjs";
 
@@ -140,6 +141,80 @@ test("cloudflarePagesBuildFromCheckRuns ignores failed or pending Cloudflare Pag
   assert.equal(cloudflarePagesBuildFromCheckRuns(head, {
     check_runs: [{ name: "Cloudflare Pages", status: "in_progress", conclusion: null }],
   }), null);
+});
+
+test("cloudflarePagesEnvPresence converts Pages env metadata into redacted presence", () => {
+  const env = cloudflarePagesEnvPresence({
+    deployment_configs: {
+      production: {
+        env_vars: {
+          APP_URL: { type: "secret_text" },
+          STRIPE_SECRET_KEY: { type: "secret_text" },
+          STRIPE_PUBLISHABLE_KEY: { type: "plain_text", value: "pk_live_should_not_leak" },
+          EMPTY_VALUE: { type: "plain_text", value: "" },
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(env, {
+    APP_URL: "cloudflare:secret_text",
+    STRIPE_SECRET_KEY: "cloudflare:secret_text",
+    STRIPE_PUBLISHABLE_KEY: "cloudflare:plain_text",
+  });
+  assert.equal(JSON.stringify(env).includes("pk_live_should_not_leak"), false);
+});
+
+test("buildPreflightReport can use Cloudflare Pages env presence for production blockers", () => {
+  const env = cloudflarePagesEnvPresence({
+    deployment_configs: {
+      production: {
+        env_vars: Object.fromEntries([
+          "APP_URL",
+          "SUPABASE_URL",
+          "SUPABASE_ANON_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "STRIPE_SECRET_KEY",
+          "STRIPE_WEBHOOK_SECRET",
+          "MASEST_CRISP_ID",
+          "CRISP_TOKEN_ID",
+          "CRISP_TOKEN_KEY",
+          "CRISP_WEBHOOK_KEY",
+          "CRISP_IDENTITY_SECRET",
+          "CONTENT_PUBLISH_HOOK_URL",
+        ].map((key) => [key, { type: "secret_text" }])),
+      },
+    },
+  });
+  const report = buildPreflightReport({
+    env,
+    git: {
+      head: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+      branch: "main",
+      originHead: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+      dirtyFiles: [],
+    },
+    pagesBuild: {
+      status: "built",
+      commit: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+    },
+    envSource: {
+      type: "cloudflare_pages",
+      project: "masest-commerce",
+      environment: "production",
+    },
+    now: "2026-06-30T00:00:00.000Z",
+  });
+
+  assert.equal(report.ready, false);
+  assert.equal(report.env_source.type, "cloudflare_pages");
+  assert.equal(report.checks.env_supabase.ok, true);
+  assert.equal(report.checks.env_crisp.ok, true);
+  assert.equal(report.checks.env_cms_publish.ok, true);
+  assert.equal(report.checks.env_stripe.ok, true);
+  assert.equal(report.checks.env_qbo.ok, false);
+  assert.deepEqual(report.checks.env_stripe.details.missing, []);
+  assert.equal(JSON.stringify(report).includes("cloudflare:secret_text"), false);
 });
 
 test("buildPreflightReport passes local gates when commit, env, and Pages build match", () => {
