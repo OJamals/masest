@@ -1,10 +1,13 @@
+import { qboConfigEnv } from './qbo-config.js';
+
 const INTUIT_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const INTUIT_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const INTUIT_REVOKE_URL = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
 const STATE_TTL_MS = 10 * 60 * 1000;
 
 function stateSecret(env) {
-  return env.QBO_OAUTH_STATE_SECRET || env.QBO_SYNC_SECRET || env.QBO_CLIENT_SECRET;
+  const qboEnv = qboConfigEnv(env);
+  return qboEnv.QBO_OAUTH_STATE_SECRET || qboEnv.QBO_SYNC_SECRET || qboEnv.QBO_CLIENT_SECRET;
 }
 
 function base64Url(bytes) {
@@ -33,7 +36,8 @@ async function signState(payload, secret) {
 }
 
 export function qboRedirectUri(request, env) {
-  return env.QBO_REDIRECT_URI || new URL('/api/admin/qbo/callback', request.url).toString();
+  const qboEnv = qboConfigEnv(env);
+  return qboEnv.QBO_REDIRECT_URI || new URL('/api/admin/qbo/callback', request.url).toString();
 }
 
 export async function makeQboState(env, nowMs = Date.now()) {
@@ -58,26 +62,28 @@ export async function verifyQboState(env, state, nowMs = Date.now()) {
 }
 
 export function qboAuthorizationUrl(request, env, state) {
+  const qboEnv = qboConfigEnv(env);
   const params = new URLSearchParams({
-    client_id: env.QBO_CLIENT_ID || '',
+    client_id: qboEnv.QBO_CLIENT_ID || '',
     response_type: 'code',
     scope: 'com.intuit.quickbooks.accounting',
-    redirect_uri: qboRedirectUri(request, env),
+    redirect_uri: qboRedirectUri(request, qboEnv),
     state,
   });
   return `${INTUIT_AUTH_URL}?${params.toString()}`;
 }
 
 export async function exchangeQboCode(request, env, code) {
+  const qboEnv = qboConfigEnv(env);
   const body = new URLSearchParams();
   body.set('grant_type', 'authorization_code');
   body.set('code', code);
-  body.set('redirect_uri', qboRedirectUri(request, env));
+  body.set('redirect_uri', qboRedirectUri(request, qboEnv));
 
   const response = await fetch(INTUIT_TOKEN_URL, {
     method: 'POST',
     headers: {
-      authorization: `Basic ${btoa(`${env.QBO_CLIENT_ID}:${env.QBO_CLIENT_SECRET}`)}`,
+      authorization: `Basic ${btoa(`${qboEnv.QBO_CLIENT_ID}:${qboEnv.QBO_CLIENT_SECRET}`)}`,
       'content-type': 'application/x-www-form-urlencoded',
       accept: 'application/json',
     },
@@ -95,12 +101,13 @@ export async function exchangeQboCode(request, env, code) {
 // cleared locally). Pass the refresh token; revoking it invalidates the whole grant.
 export async function revokeQboToken(env, token, options = {}) {
   const fetchImpl = options.fetchImpl || fetch;
+  const qboEnv = qboConfigEnv(env);
   if (!token) return false;
-  if (!env.QBO_CLIENT_ID || !env.QBO_CLIENT_SECRET) throw new Error('qbo_oauth_not_configured');
+  if (!qboEnv.QBO_CLIENT_ID || !qboEnv.QBO_CLIENT_SECRET) throw new Error('qbo_oauth_not_configured');
   const response = await fetchImpl(INTUIT_REVOKE_URL, {
     method: 'POST',
     headers: {
-      authorization: `Basic ${btoa(`${env.QBO_CLIENT_ID}:${env.QBO_CLIENT_SECRET}`)}`,
+      authorization: `Basic ${btoa(`${qboEnv.QBO_CLIENT_ID}:${qboEnv.QBO_CLIENT_SECRET}`)}`,
       'content-type': 'application/json',
       accept: 'application/json',
     },

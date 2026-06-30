@@ -1,10 +1,13 @@
+import { qboConfigEnv } from './qbo-config.js';
+
 const OAUTH_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
 const BACKOFF_CAP_MS = 6 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
 export function qboBaseUrl(env = {}) {
-  return String(env.QBO_ENVIRONMENT || 'sandbox').toLowerCase() === 'production'
+  const qboEnv = qboConfigEnv(env);
+  return String(qboEnv.QBO_ENVIRONMENT || 'sandbox').toLowerCase() === 'production'
     ? 'https://quickbooks.api.intuit.com'
     : 'https://sandbox-quickbooks.api.intuit.com';
 }
@@ -306,7 +309,8 @@ async function qboCreate(env, accessToken, realmId, entity, body, fetchImpl = fe
 }
 
 async function resolveIncomeAccountRef(env, accessToken, realmId, fetchImpl = fetch) {
-  if (env.QBO_INCOME_ACCOUNT_ID) return env.QBO_INCOME_ACCOUNT_ID;
+  const qboEnv = qboConfigEnv(env);
+  if (qboEnv.QBO_INCOME_ACCOUNT_ID) return qboEnv.QBO_INCOME_ACCOUNT_ID;
   const found = await qboQuery(env, accessToken, realmId, "select Id from Account where AccountType = 'Income' maxresults 1", fetchImpl);
   const accountId = found.QueryResponse?.Account?.[0]?.Id;
   if (!accountId) throw new Error('qbo_income_account_not_configured');
@@ -365,6 +369,7 @@ export async function findOrCreateItem(sb, env, accessToken, realmId, item, opti
 }
 
 export async function getAccessToken(sb, env = {}, options = {}) {
+  const qboEnv = qboConfigEnv(env);
   const now = options.now || new Date();
   const fetchImpl = options.fetchImpl || fetch;
   const { data: tokenRow, error } = await sb
@@ -377,11 +382,11 @@ export async function getAccessToken(sb, env = {}, options = {}) {
   if (!tokenRow?.refresh_token && !tokenRow?.access_token) throw new Error('qbo_not_connected');
 
   if (!needsRefresh(tokenRow, now.getTime())) {
-    return { accessToken: tokenRow.access_token, realmId: tokenRow.realm_id || env.QBO_REALM_ID || '' };
+    return { accessToken: tokenRow.access_token, realmId: tokenRow.realm_id || qboEnv.QBO_REALM_ID || '' };
   }
 
   if (!tokenRow.refresh_token) throw new Error('qbo_refresh_token_missing');
-  if (!env.QBO_CLIENT_ID || !env.QBO_CLIENT_SECRET) throw new Error('qbo_oauth_not_configured');
+  if (!qboEnv.QBO_CLIENT_ID || !qboEnv.QBO_CLIENT_SECRET) throw new Error('qbo_oauth_not_configured');
 
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
@@ -390,7 +395,7 @@ export async function getAccessToken(sb, env = {}, options = {}) {
   const response = await fetchImpl(OAUTH_URL, {
     method: 'POST',
     headers: {
-      authorization: basicAuth(env.QBO_CLIENT_ID, env.QBO_CLIENT_SECRET),
+      authorization: basicAuth(qboEnv.QBO_CLIENT_ID, qboEnv.QBO_CLIENT_SECRET),
       'content-type': 'application/x-www-form-urlencoded',
       accept: 'application/json',
     },
@@ -405,7 +410,7 @@ export async function getAccessToken(sb, env = {}, options = {}) {
   const accessToken = refreshed.access_token;
   if (!accessToken) throw new Error('qbo_token_refresh_missing_access_token');
 
-  const realmId = tokenRow.realm_id || env.QBO_REALM_ID || '';
+  const realmId = tokenRow.realm_id || qboEnv.QBO_REALM_ID || '';
   const payload = {
     realm_id: realmId,
     access_token: accessToken,

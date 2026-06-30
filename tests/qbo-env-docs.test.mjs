@@ -7,6 +7,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 test(".env.example documents all QBO runtime variables", () => {
   const env = read(".env.example");
   for (const key of [
+    "QBO_CONNECT_KEY",
     "QBO_CLIENT_ID",
     "QBO_CLIENT_SECRET",
     "QBO_REDIRECT_URI",
@@ -41,5 +42,6 @@ test("Cloudflare owner docs point to schema, cron, and QBO connect steps", () =>
   assert.match(docs, /pg_net/);
   assert.match(docs, /pgcrypto/);
   assert.match(docs, /SHA-256 hash/);
+  assert.match(docs, /QBO_CONNECT_KEY/);
   assert.match(docs, /Connect QuickBooks/);
 });

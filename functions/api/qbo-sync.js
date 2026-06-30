@@ -1,6 +1,7 @@
 // POST /api/qbo-sync — cron/manual QBO sync worker entrypoint.
 import { adminClient, json, sendEmail, htmlEscape } from '../_lib/supabase.js';
 import { getAccessToken, nextSyncState, syncOrder, syncRefund } from '../_lib/qbo.js';
+import { qboConfigEnv } from '../_lib/qbo-config.js';
 
 // #26 — a doc that exhausts MAX_ATTEMPTS dead-letters to 'error' and stops retrying.
 // Email staff once per run per queue so it doesn't rot silently in the table.
@@ -48,12 +49,13 @@ function normalizeSecretHash(value) {
 }
 
 async function verifySyncSecret(request, env) {
+  const qboEnv = qboConfigEnv(env);
   const provided = request.headers.get('x-qbo-sync-secret') || '';
 
-  if (env.QBO_SYNC_SECRET) {
+  if (qboEnv.QBO_SYNC_SECRET) {
     return {
       configured: true,
-      authorized: timingSafeEqual(provided, env.QBO_SYNC_SECRET)
+      authorized: timingSafeEqual(provided, qboEnv.QBO_SYNC_SECRET)
     };
   }
 
@@ -157,6 +159,7 @@ async function requeueOne(sb, order, err, table = 'orders') {
 }
 
 export async function runQboSync({ env, batch = 10 }) {
+  const qboEnv = qboConfigEnv(env);
   const sb = adminClient(env);
   const { data: claimed, error } = await sb.rpc('claim_qbo_orders', { batch });
   if (error) return json(500, { error: error.message || 'qbo_claim_failed' });
@@ -166,7 +169,7 @@ export async function runQboSync({ env, batch = 10 }) {
 
   let credentials;
   try {
-    credentials = await getAccessToken(sb, env);
+    credentials = await getAccessToken(sb, qboEnv);
   } catch (err) {
     const message = await requeueClaimed(sb, orders, err);
     return json(503, { error: 'qbo_unavailable', detail: message, claimed: orders.length, failed: orders.length });
@@ -191,7 +194,7 @@ export async function runQboSync({ env, batch = 10 }) {
   for (const order of orders) {
     try {
       const items = await orderItems(sb, order.id);
-      const result = await syncOrder(sb, env, credentials.accessToken, credentials.realmId, order, items, companyNames, {
+      const result = await syncOrder(sb, qboEnv, credentials.accessToken, credentials.realmId, order, items, companyNames, {
         taxExempt: taxExemptIds.has(order.company_id),
       });
       await markSynced(sb, order, result);
@@ -214,6 +217,7 @@ export async function runQboSync({ env, batch = 10 }) {
 // Mirrors runQboSync (claim → token → batched lookups → per-row sync/requeue) but
 // loads each refund's parent order + items since refunds carry only an order_id.
 export async function runQboRefundSync({ env, batch = 10 }) {
+  const qboEnv = qboConfigEnv(env);
   const sb = adminClient(env);
   const { data: claimed, error } = await sb.rpc('claim_qbo_refunds', { batch });
   if (error) return json(500, { error: error.message || 'qbo_refund_claim_failed' });
@@ -223,7 +227,7 @@ export async function runQboRefundSync({ env, batch = 10 }) {
 
   let credentials;
   try {
-    credentials = await getAccessToken(sb, env);
+    credentials = await getAccessToken(sb, qboEnv);
   } catch (err) {
     const message = await requeueClaimed(sb, refunds, err, 'qbo_refunds');
     return json(503, { error: 'qbo_unavailable', detail: message, claimed: refunds.length, failed: refunds.length });
@@ -256,7 +260,7 @@ export async function runQboRefundSync({ env, batch = 10 }) {
       const order = ordersById[refund.order_id];
       if (!order) throw new Error('qbo_refund_order_missing');
       const items = await orderItems(sb, order.id);
-      const result = await syncRefund(sb, env, credentials.accessToken, credentials.realmId, refund, order, items, companyNames, {
+      const result = await syncRefund(sb, qboEnv, credentials.accessToken, credentials.realmId, refund, order, items, companyNames, {
         taxExempt: taxExemptIds.has(order.company_id),
       });
       const { error: uerr } = await sb.from('qbo_refunds').update({

@@ -15,6 +15,28 @@ test("QBO connect endpoint is staff-gated and builds Intuit consent URLs", () =>
   assert.match(src, /status:\s*302/);
 });
 
+test("QBO connect key can supply the OAuth URL inputs", async () => {
+  const { makeQboState, qboAuthorizationUrl } = await import("../functions/_lib/qbo-oauth.js");
+  const env = {
+    QBO_CONNECT_KEY: JSON.stringify({
+      client_id: "qbo-client-id",
+      client_secret: "qbo-client-secret",
+      redirect_uri: "https://masest.co/api/admin/qbo/callback",
+      oauth_state_secret: "oauth-state-secret",
+      sync_secret: "sync-secret",
+      income_account_id: "79",
+      environment: "production",
+    }),
+  };
+  const request = new Request("https://masest.co/api/admin/qbo/connect");
+  const state = await makeQboState(env, Date.parse("2026-06-30T12:00:00Z"));
+  const url = new URL(qboAuthorizationUrl(request, env, state));
+
+  assert.equal(url.searchParams.get("client_id"), "qbo-client-id");
+  assert.equal(url.searchParams.get("redirect_uri"), "https://masest.co/api/admin/qbo/callback");
+  assert.equal(url.searchParams.get("state"), state);
+});
+
 test("QBO callback verifies staff-issued state and stores OAuth tokens", () => {
   const src = read("functions/api/admin/qbo/callback.js");
   const helper = read("functions/_lib/qbo-oauth.js");

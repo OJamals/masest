@@ -1,5 +1,6 @@
 // GET /api/admin/qbo/status — staff-only QBO connection status.
 import { adminClient, json, requireStaff } from '../../../_lib/supabase.js';
+import { qboConfigStatus } from '../../../_lib/qbo-config.js';
 
 export async function onRequestGet({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
@@ -32,6 +33,7 @@ export async function onRequestGet({ request, env }) {
 
   return json(200, {
     connected: Boolean(data?.refresh_token || data?.access_token),
+    qbo_config: qboConfigStatus(env),
     realm_id: data?.realm_id || null,
     access_expires_at: data?.access_expires_at || null,
     updated_at: data?.updated_at || null,
