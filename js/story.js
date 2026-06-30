@@ -132,12 +132,9 @@ states.forEach(function (st) {
   /* ============================================================
      SCRUB-DRIVEN EXTRAS (run inside each act's timeline update)
      ============================================================ */
-  var cue = story.querySelector(".scroll-cue");
-
   function onActScrub(st) {
     if (st.i === 0) {
       updateReel(st);
-      if (cue) cue.style.opacity = Math.max(0, 1 - st.p * 8);
     }
     if (st.act === pipeAct) updateChips2(st);
     if (st.act === hmisAct) updateHmis(st);
