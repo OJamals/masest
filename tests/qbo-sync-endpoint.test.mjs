@@ -21,7 +21,9 @@ test("qbo-sync endpoint claims pending orders atomically", () => {
 });
 
 test("qbo-sync endpoint requeues claimed orders when token setup fails", () => {
-  assert.match(SRC, /getAccessToken\(sb,\s*env\)/,
+  assert.match(SRC, /qboConfigEnv\(env\)/,
+    "endpoint must resolve imported QBO config before token work");
+  assert.match(SRC, /getAccessToken\(sb,\s*qboEnv\)/,
     "endpoint must verify QBO token access before processing claimed orders");
   assert.match(SRC, /nextSyncState\(order\.qbo_attempts/,
     "endpoint must compute retry state from the current attempt count");

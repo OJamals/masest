@@ -23,14 +23,18 @@ export const acceptanceEnvGroups = [
   {
     id: "qbo",
     label: "QuickBooks Online sync",
-    required: [
-      "QBO_CLIENT_ID",
-      "QBO_CLIENT_SECRET",
-      "QBO_REDIRECT_URI",
-      "QBO_OAUTH_STATE_SECRET",
-      "QBO_SYNC_SECRET",
-      "QBO_INCOME_ACCOUNT_ID",
-      "QBO_ENVIRONMENT",
+    required: [],
+    alternatives: [
+      ["QBO_CONNECT_KEY"],
+      [
+        "QBO_CLIENT_ID",
+        "QBO_CLIENT_SECRET",
+        "QBO_REDIRECT_URI",
+        "QBO_OAUTH_STATE_SECRET",
+        "QBO_SYNC_SECRET",
+        "QBO_INCOME_ACCOUNT_ID",
+        "QBO_ENVIRONMENT",
+      ],
     ],
   },
   {

@@ -217,6 +217,47 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
   assert.equal(JSON.stringify(report).includes("cloudflare:secret_text"), false);
 });
 
+test("buildPreflightReport accepts a Cloudflare QBO connect key bundle", () => {
+  const env = cloudflarePagesEnvPresence({
+    deployment_configs: {
+      production: {
+        env_vars: {
+          APP_URL: { type: "secret_text" },
+          SUPABASE_URL: { type: "secret_text" },
+          SUPABASE_ANON_KEY: { type: "secret_text" },
+          SUPABASE_SERVICE_ROLE_KEY: { type: "secret_text" },
+          STRIPE_SECRET_KEY: { type: "secret_text" },
+          STRIPE_WEBHOOK_SECRET: { type: "secret_text" },
+          MASEST_CRISP_ID: { type: "secret_text" },
+          CRISP_TOKEN_ID: { type: "secret_text" },
+          CRISP_TOKEN_KEY: { type: "secret_text" },
+          CRISP_WEBHOOK_KEY: { type: "secret_text" },
+          CRISP_IDENTITY_SECRET: { type: "secret_text" },
+          CONTENT_PUBLISH_HOOK_URL: { type: "secret_text" },
+          QBO_CONNECT_KEY: { type: "secret_text" },
+        },
+      },
+    },
+  });
+  const report = buildPreflightReport({
+    env,
+    git: {
+      head: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+      branch: "main",
+      originHead: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+      dirtyFiles: [],
+    },
+    pagesBuild: {
+      status: "built",
+      commit: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+    },
+    now: "2026-06-30T00:00:00.000Z",
+  });
+
+  assert.equal(report.checks.env_qbo.ok, true);
+  assert.equal(report.blockers.some((blocker) => blocker.startsWith("env_qbo:")), false);
+});
+
 test("buildPreflightReport passes local gates when commit, env, and Pages build match", () => {
   const report = buildPreflightReport({
     env: completeEnv,

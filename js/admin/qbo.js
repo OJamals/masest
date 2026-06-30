@@ -39,14 +39,24 @@ export async function renderQboStatus() {
   const button = $("qboConnect");
   const summary = $("qboSyncSummary");
   if (!status || !button) return;
+  let allowConnect = true;
   status.textContent = "Checking QuickBooks...";
   status.dataset.state = "";
   button.disabled = true;
   try {
     const info = await api("/api/admin/qbo/status");
-    status.textContent = info.connected ? `Connected${info.realm_id ? ` (${info.realm_id})` : ""}.` : "Not connected.";
-    status.dataset.state = info.connected ? "ok" : "err";
+    const missing = info.qbo_config?.missing || [];
+    const configReady = info.qbo_config?.ready !== false;
+    allowConnect = configReady;
+    if (!configReady) {
+      status.textContent = `QuickBooks config missing: ${missing.join(", ")}.`;
+      status.dataset.state = "err";
+    } else {
+      status.textContent = info.connected ? `Connected${info.realm_id ? ` (${info.realm_id})` : ""}.` : "Not connected.";
+      status.dataset.state = info.connected ? "ok" : "err";
+    }
     button.innerHTML = info.connected ? '<i class="ph ph-plugs-connected"></i> Reconnect QuickBooks' : '<i class="ph ph-plugs-connected"></i> Connect QuickBooks';
+    button.disabled = !configReady;
     const disconnectBtn = $("qboDisconnect");
     if (disconnectBtn) disconnectBtn.hidden = !info.connected;
     if (summary) {
@@ -58,7 +68,7 @@ export async function renderQboStatus() {
     status.textContent = err.data?.error || "QuickBooks status unavailable.";
     status.dataset.state = "err";
   } finally {
-    button.disabled = false;
+    button.disabled = !allowConnect;
   }
 }
 
