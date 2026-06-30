@@ -1298,71 +1298,10 @@ font-size: .68rem;
     transform: none;
   }
 }
-/* Persistent chapter watermark for scrub gaps between narrated beats. */
+
+/* Scrollybook decision: scene titles live in copy, never as watermark pseudo-elements.
+   Guarded by tools/story-hmis-visual.spec.mjs ("watermarks are removed from the visual layer"). */
 .story .act::before {
-  position: sticky;
-  top: calc(50vh - 1.1rem);
-  z-index: 1;
-  display: block;
-  width: max-content;
-  height: 0;
-  margin-left: clamp(130px, 13vw, 210px);
-  pointer-events: none;
-  color: rgba(245, 248, 251, .12);
-  font-size: clamp(1.8rem, 6vw, 5.4rem);
-  font-weight: 900;
-  line-height: .9;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  text-wrap: balance;
-  text-shadow: 0 28px 90px rgba(0, 0, 0, .48);
-}
-
-.story .act[data-act="1"]::before {
-  content: "The enemy";
-}
-
-.story .act[data-act="2"]::before {
-  content: "The buildup";
-}
-
-.story .act[data-act="3"]::before {
-  content: "The score";
-}
-
-.story .act[data-act="4"]::before {
-  content: "Zero";
-  color: rgba(215, 255, 247, .16);
-}
-
-@media (max-width: 760px) {
-  .story .act::before {
-    display: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .story .act::before {
-    display: none;
-  }
-}
-
-.story .act::before {
-  opacity: 0;
-  transform: translateY(10px);
-  transition:
-    opacity .28s var(--s-ease),
-    transform .28s var(--s-ease);
-}
-
-.story .act.is-story-current::before {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Current scrollybook polish: keep all scene titles in copy, never as watermarks. */
-.story .act::before,
-.story .act.is-story-current::before {
   content: none !important;
   display: none !important;
   opacity: 0 !important;
