@@ -361,6 +361,18 @@ test("scroll reveal sections become visible on long buyer pages", async ({ page 
       label: "mobile service catalog",
     },
     {
+      pagePath: "programs.html",
+      viewport: { width: 1440, height: 1000 },
+      selector: ".program-scope-visual.reveal",
+      label: "program tier comparison",
+    },
+    {
+      pagePath: "programs.html",
+      viewport: { width: 390, height: 844 },
+      selector: ".program-map-disclosure.reveal",
+      label: "mobile program disclosure",
+    },
+    {
       pagePath: "resources.html",
       viewport: { width: 1440, height: 1000 },
       selector: ".resources-reference-disclosure .table-scroll.reveal",
