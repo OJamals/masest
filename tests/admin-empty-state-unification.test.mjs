@@ -29,7 +29,14 @@ test("tabs that render list empties are wired with admEmpty", () => {
   assert.match(threads, /createThreadsTab\(\{[^}]*\badmEmpty\b/, "threads factory should destructure admEmpty");
 });
 
-test("coupons list shows a loading skeleton like sibling tabs", () => {
+test("coupons and low-stock lists show a loading skeleton like sibling tabs", () => {
   const admin = read("js/admin.js");
   assert.match(admin, /async function renderCoupons[\s\S]*?box\.innerHTML = admSkeleton\(\)/, "renderCoupons should paint admSkeleton before awaiting the fetch");
+  assert.match(admin, /async function renderLowStock[\s\S]*?box\.innerHTML = admSkeleton\(\)/, "renderLowStock should paint admSkeleton before awaiting the fetch");
+});
+
+test("low-stock empty state uses the shared admEmpty primitive", () => {
+  const admin = read("js/admin.js");
+  assert.match(admin, /async function renderLowStock[\s\S]*?admEmpty\('ph-[a-z-]+', 'No low-stock variants'/, "renderLowStock empty should use admEmpty");
+  assert.doesNotMatch(admin, /<p class="muted">No variants at or below/, "renderLowStock should drop the hand-rolled empty");
 });
