@@ -247,6 +247,8 @@ export async function onRequestPost({ request, env }) {
     // Website Hooks are unsigned; the URL key is their shared-secret check.
   } else if (websiteKey && new URL(request.url).searchParams.has('key')) {
     return json(400, { error: 'invalid_key' });
+  } else if (websiteKey) {
+    return json(200, { ok: true, note: 'crisp_webhook_key_required' });
   } else if (secret) {
     const verified = await verifyCrispSignature(secret, {
       timestamp: request.headers.get('X-Crisp-Request-Timestamp'),
