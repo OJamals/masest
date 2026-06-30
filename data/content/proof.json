@@ -1,3 +1,255 @@
 {
-  "proof_cards": []
+  "proof_cards": [
+    {
+      "slug": "airboat-alumibrite",
+      "title": "Commercial tourist airboat aluminum restored",
+      "kind": "marine",
+      "chips": [
+        "AlumiBrite + Torque",
+        "Displaced HF / HCl"
+      ],
+      "image": "img/proof/cases/airboat-before.webp?v=20260617b",
+      "result": "AlumiBrite and Torque restored the hull and aluminum on a working tourist airboat, without the hydrofluoric or hydrochloric acid standard brighteners rely on.",
+      "source": "Source: airboat application",
+      "eyebrow": "Marine / Aluminum",
+      "image_h": 619,
+      "image_w": 682,
+      "image_alt": "Oxidized diamond-plate airboat aluminum before restoration",
+      "sort_order": 11,
+      "seo": {}
+    },
+    {
+      "slug": "brevard-farm-hvac",
+      "title": "Farm HVAC rust removed, one application",
+      "kind": "hvac",
+      "chips": [
+        "VertKleen HCR",
+        "Displaced HCl handling"
+      ],
+      "image": "img/proof/cases/farm-rust-before.webp?v=20260617b",
+      "result": "VertKleen HCR cleared heavy rust and scale on Brevard County farm HVAC and diamond-plated stainless without hydrochloric acid handling and with no pitting of the metal.",
+      "source": "Source: Brevard County farm HVAC",
+      "eyebrow": "Agriculture / HVAC",
+      "image_h": 844,
+      "image_w": 1057,
+      "image_alt": "Rust and scale on Brevard County farm diamond-plate before cleaning",
+      "sort_order": 12,
+      "seo": {}
+    },
+    {
+      "slug": "brewery-cip-trials",
+      "title": "Full CR + HCR CIP at seven Florida breweries",
+      "href": "docs/brewery-cip-trial-brewlando.pdf",
+      "kind": "food",
+      "chips": [
+        "VertKleen CR + HCR",
+        "Displaced caustic + acid"
+      ],
+      "image": "img/proof/cases/brewery.webp?v=20260617b",
+      "result": "CR alkaline wash then HCR acid wash matched or beat caustic soda plus acid blends at equal concentration and CIP time. Final sanitation requirements remain label- and site-protocol dependent.",
+      "source": "Source: brewery trials, incl. HellnBlazes (endorser)",
+      "eyebrow": "Food & Beverage",
+      "image_h": 900,
+      "image_w": 1200,
+      "image_alt": "Brewery tank and heat exchanger cleaned with VertKleen CR and HCR",
+      "sort_order": 2,
+      "seo": {}
+    },
+    {
+      "slug": "commercial-kitchen-crhd",
+      "title": "Commercial kitchen deep-degreased",
+      "kind": "food",
+      "chips": [
+        "VertKleen CRHD"
+      ],
+      "image": "img/proof/cases/kitchen-before.webp?v=20260617b",
+      "result": "CRHD cut baked-on grease from commercial kitchen equipment at high dilution, low-foam for easier rinse, without solvent or butyl odor in the space.",
+      "source": "Source: commercial kitchen cleaning",
+      "eyebrow": "Food Service",
+      "image_h": 852,
+      "image_w": 917,
+      "image_alt": "Grease buildup on commercial kitchen equipment before cleaning",
+      "sort_order": 14,
+      "seo": {}
+    },
+    {
+      "slug": "ddc-rust-test",
+      "title": "20-year rust and scale, cleared in 30 minutes",
+      "kind": "hvac",
+      "chips": [
+        "VertKleen HCR",
+        "Displaced CLR"
+      ],
+      "image": "img/proof/cases/ddc-rust.webp?v=20260617b",
+      "result": "CLR ran for 36 hours and failed. VertKleen HCR cleared the same rust and scale in half an hour, verified by DDC Engineering (David DaSilva, PE).",
+      "source": "Source: DDC Engineering rust test",
+      "eyebrow": "HVAC / Water",
+      "image_h": 579,
+      "image_w": 1200,
+      "image_alt": "Rusted HVAC component cleared with VertKleen HCR",
+      "sort_order": 1,
+      "seo": {}
+    },
+    {
+      "slug": "fire-pump-descaler",
+      "title": "Fire-pump solenoid and cavity descaled",
+      "kind": "facility",
+      "chips": [
+        "VertKleen Descaler",
+        "Displaced acid washing"
+      ],
+      "image": "img/proof/cases/fire-pump.webp?v=20260617b",
+      "result": "VertKleen Descaler cleared scale from a fire-protection pump without acid washing, on a Siemens maintenance program, with no aggressive corrosion to the assembly.",
+      "source": "Source: fire-protection maintenance",
+      "eyebrow": "Facilities / Fire",
+      "image_h": 681,
+      "image_w": 681,
+      "image_alt": "Fire-pump component descaled with VertKleen Descaler",
+      "sort_order": 9,
+      "seo": {}
+    },
+    {
+      "slug": "neatfreaks-hood-degrease",
+      "title": "Restaurant hood filters and floors degreased",
+      "kind": "food",
+      "chips": [
+        "VertKleen CR + CRHD",
+        "Displaced caustic degreasers"
+      ],
+      "image": "img/proof/cases/hood-before.webp?v=20260617b",
+      "result": "NeatFreaks crews ran VertKleen across Boca Raton restaurants. About 32 oz of CRHD mopped 2,500 square feet, replacing caustic and solvent degreasers.",
+      "source": "Source: NeatFreaks application reports",
+      "eyebrow": "Food Service",
+      "image_h": 650,
+      "image_w": 520,
+      "image_alt": "Greasy commercial kitchen hood filters before cleaning",
+      "sort_order": 8,
+      "seo": {}
+    },
+    {
+      "slug": "property-grout-moss",
+      "title": "Grout, grime, moss, and algae cleared",
+      "kind": "facility",
+      "chips": [
+        "VertKleen CR + LAM3"
+      ],
+      "image": "img/proof/cases/grout-before.webp?v=20260617b",
+      "result": "CR and LAM3 cleared biological growth and grime from grout, concrete, tile, and exterior surfaces without harsh acid or solvent cleaning.",
+      "source": "Source: property maintenance applications",
+      "eyebrow": "Property",
+      "image_h": 700,
+      "image_w": 934,
+      "image_alt": "Grime and biological growth in tile grout before cleaning",
+      "sort_order": 13,
+      "seo": {}
+    },
+    {
+      "slug": "residential-ac-coil",
+      "title": "AC coil cleaned, lower monthly bill",
+      "kind": "hvac",
+      "chips": [
+        "VertKleen Descaler"
+      ],
+      "image": "img/proof/cases/ac-coil.webp?v=20260617b",
+      "result": "A residential AC coil was cleaned and preserved with VertKleen Descaler, aluminum-fin compatible, reportedly cutting about $75 per month off the cooling bill.",
+      "source": "Source: residential AC coil report",
+      "eyebrow": "Residential / HVAC",
+      "image_h": 471,
+      "image_w": 839,
+      "image_alt": "Residential AC coil cleaned with VertKleen Descaler",
+      "sort_order": 10,
+      "seo": {}
+    },
+    {
+      "slug": "trinidad-tank-cleaning",
+      "title": "Bunker-fuel tank cleaning test",
+      "href": "docs/trinidad-tank-cleaning-test.pdf",
+      "kind": "industrial",
+      "chips": [
+        "VertKleen CR + HCR",
+        "Bunker fuel residue"
+      ],
+      "image": "img/proof/cases/trinidad-tank-cr.webp",
+      "result": "Trinidad test notes say CR removed oil residue with less product than a butoxyethanol comparator. The same report cautions that formal test procedure and environmental review should be written before scaling the method.",
+      "source": "Source: Trinidad tank cleaning test",
+      "eyebrow": "Industrial Tank Cleaning",
+      "image_h": 1200,
+      "image_w": 1600,
+      "image_alt": "Bunker-fuel tank side before and after cleaning with VertKleen CR",
+      "sort_order": 5,
+      "seo": {}
+    },
+    {
+      "slug": "uf-shands-drone-wash",
+      "title": "Occupied campus cleaned by drone at UF Shands",
+      "kind": "facility",
+      "chips": [
+        "VertKleen MultiWash"
+      ],
+      "image": "img/proof/cases/drone-before.webp?v=20260617b",
+      "result": "Clean Team USA used VertKleen MultiWash with an Apellix pressure-washing drone to clear years of scale and algae from trim, caulking, and glass, with the hospital occupied.",
+      "source": "Source: UF Shands drone wash",
+      "eyebrow": "Drone & Pressure Wash",
+      "image_h": 803,
+      "image_w": 1200,
+      "image_alt": "Dirty UF Shands campus rooftops before VertKleen drone wash",
+      "sort_order": 7,
+      "seo": {}
+    },
+    {
+      "slug": "walmart-dc-crhd",
+      "title": "Simple Green replaced across Walmart DCs",
+      "href": "docs/walmart-dc-brochure.pdf",
+      "kind": "distribution",
+      "chips": [
+        "VertKleen CRHD",
+        "Displaced Simple Green"
+      ],
+      "image": "img/proof/walmart-dc-proof-enhanced.webp?v=20260617b",
+      "result": "CRHD at about 50% active replaced Simple Green and Calci-Solve for heavy degreasing, saving an estimated $10k+ per year at one center. Crown and Plug Power supporting documents are available on request.",
+      "source": "Source: Walmart DSC program",
+      "eyebrow": "Distribution / Cold Chain",
+      "image_h": 513,
+      "image_w": 708,
+      "image_alt": "Crown lift equipment in the Walmart distribution center cleaning program",
+      "sort_order": 3,
+      "seo": {}
+    },
+    {
+      "slug": "walmart-refrigeration-results",
+      "title": "Refrigeration descaling in one maintenance window",
+      "href": "docs/walmart-refrigeration-case-study.pdf",
+      "kind": "distribution",
+      "chips": [
+        "VertKleen Descaler",
+        "Cold-chain systems"
+      ],
+      "image": "img/proof/cases/walmart-refrigeration-results.webp",
+      "result": "Walmart refrigeration material reports Descaler protocols across ammonia condenser circuits, warm-water heating, aluminum coils, copper bundles, and heat exchangers, with 4-8 hour descale windows by system.",
+      "source": "Source: Walmart refrigeration case study",
+      "eyebrow": "Distribution / Refrigeration",
+      "image_h": 1200,
+      "image_w": 1600,
+      "image_alt": "Walmart refrigeration descaling results table for VertKleen Descaler",
+      "sort_order": 4,
+      "seo": {}
+    },
+    {
+      "slug": "yellowfin-torque-wash",
+      "title": "43-foot Yellowfin washed and waxed dockside",
+      "kind": "marine",
+      "chips": [
+        "VertKleen Torque"
+      ],
+      "image": "img/proof/cases/marine.webp?v=20260617b",
+      "result": "VertKleen Torque cleaned and protected the hull and topsides in one step, within OEM finish-care requirements, with no harsh fumes around the water.",
+      "source": "Source: Yellowfin vessel wash",
+      "eyebrow": "Marine",
+      "image_h": 1125,
+      "image_w": 1175,
+      "image_alt": "43-foot Yellowfin vessel washed and waxed with VertKleen Torque",
+      "sort_order": 6,
+      "seo": {}
+    }
+  ]
 }

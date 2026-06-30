@@ -72,9 +72,23 @@ export async function loadContentSnapshot(file) {
 
 function proofCard(card) {
   const chips = Array.isArray(card.chips) ? card.chips : [];
+  const dims = `${card.image_w ? ` width="${esc(card.image_w)}"` : ""}${card.image_h ? ` height="${esc(card.image_h)}"` : ""}`;
+  const img = card.image
+    ? `<img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}>`
+    : "";
+  // A proof card image either links to a source PDF (href set → doc-link wrapper
+  // with a PDF badge, kept a direct child of .case-card for the 16:10 aspect-ratio)
+  // or sits in a plain figure. Reuses the existing `href` field as the doc link.
+  const docHref = card.href ? safeContentHref(card.href, "") : "";
+  let media = "";
+  if (img && docHref) {
+    media = `<a class="doc-link" href="${esc(docHref)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(card.title || "Proof")} (opens PDF in new tab)">${img}<span class="doc-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 2 4 4h-4V4ZM8 13h8v1.5H8V13Zm0 3h8v1.5H8V16Zm0-6h4v1.5H8V10Z"/></svg>PDF</span></a>`;
+  } else if (img) {
+    media = `<figure class="case-media">${img}</figure>`;
+  }
   return `
     <article id="${esc(card.slug || "")}" class="case-card reveal" data-proof-card data-proof-kind="${esc(card.kind || "all")}">
-      ${card.image ? `<figure class="case-media"><img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"></figure>` : ""}
+      ${media}
       <div class="case-body">
         <span class="case-eyebrow">${esc(card.eyebrow || "Proof")}</span>
         <h3>${esc(card.title || "Untitled proof")}</h3>

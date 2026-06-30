@@ -37,8 +37,11 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "source", label: "Source", kind: "text" },
       { key: "image", label: "Image path", kind: "text" },
       { key: "image_alt", label: "Image alt", kind: "text" },
-      { key: "href", label: "Link", kind: "text" },
+      { key: "image_w", label: "Image width", kind: "number" },
+      { key: "image_h", label: "Image height", kind: "number" },
+      { key: "href", label: "Doc / PDF link", kind: "text" },
       { key: "result", label: "Result", kind: "textarea", className: "full" },
+      { key: "sort_order", label: "Sort order", kind: "number" },
     ],
   },
   resource_card: {
