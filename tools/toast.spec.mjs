@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { expect, test } from "@playwright/test";
 
-const PORT = 4196;
+const PORT = 4296;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 let server;
