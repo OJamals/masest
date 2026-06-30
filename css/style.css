@@ -3681,6 +3681,8 @@ fully clickable cards) ---- */
 }
 /* Volume-variant buy control (select + add button), sits inside the z-indexed commerce slot. */
 .commerce-buy { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.commerce-buy-loading { min-height: 38px; }
+.commerce-skeleton { display: inline-block; width: 132px; height: 36px; border-radius: var(--r-input); }
 .commerce-vol {
   min-height: 34px;
   max-width: 170px;

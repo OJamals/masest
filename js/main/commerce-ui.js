@@ -165,19 +165,33 @@ export async function loadCommerceCatalog() {
 }
 
 function commerceActionHTML(id, variant = "chip") {
-  const row = commerceRowFor(id);
   const p = PRODUCTS[id];
-  if (!row?.purchasable || !row.variants.length) return "";
-  const accountPath = `account.html?return=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
-  const opts = row.variants
-    .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${String(v.label || "Pack").replace(/\s+(bottle|pail|drum|tote)$/i, "")}</option>`)
-    .join("");
-  const btnClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-add";
-  const first = row.variants[0].vsku;
-  return `<span class="commerce-buy" data-commerce-buy="${id}">`
-    + `<select class="commerce-vol" aria-label="Volume for ${p?.name || id}">${opts}</select>`
-    + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
-    + `</span>`;
+  // Quote-first SKUs never expose a buy control here (catalogCard renders quoteActionHTML).
+  if (QUOTE_FIRST_IDS.includes(String(id || "").toLowerCase())) return "";
+  // Static-only hosting suppresses commerce; the card's "View details" link is the path.
+  if (isLocalStaticCommerceSuppressed()) return "";
+  // Catalog still in flight → sized skeleton so the buy area isn't blank (and to avoid CLS
+  // when the real control swaps in). refreshCommerceActions re-renders once the load settles.
+  if (!commerceState.loaded) {
+    return `<span class="commerce-buy commerce-buy-loading" aria-hidden="true"><span class="skeleton commerce-skeleton"></span></span>`;
+  }
+  const row = commerceRowFor(id);
+  if (row?.purchasable && row.variants.length) {
+    const accountPath = `account.html?return=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
+    const opts = row.variants
+      .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${String(v.label || "Pack").replace(/\s+(bottle|pail|drum|tote)$/i, "")}</option>`)
+      .join("");
+    const btnClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-add";
+    const first = row.variants[0].vsku;
+    return `<span class="commerce-buy" data-commerce-buy="${id}">`
+      + `<select class="commerce-vol" aria-label="Volume for ${p?.name || id}">${opts}</select>`
+      + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
+      + `</span>`;
+  }
+  // Loaded, but no buyable variant — the catalog fetch failed (loadCommerceCatalog's catch
+  // leaves an empty map) or this SKU isn't sellable online. Route the buyer forward to a
+  // quote instead of leaving a dead, blank buy area (PRODUCT: route forward from every state).
+  return `<a class="btn btn-secondary btn-sm commerce-quote-fallback" href="contact?type=quote&product=${encodeURIComponent(p?.name || id)}">Request pricing</a>`;
 }
 
 function quoteActionHTML(id) {
