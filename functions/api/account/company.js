@@ -182,6 +182,18 @@ export async function onRequestPost({ request, env }) {
   if (resaleCertUrl !== undefined) patch.resale_cert_url = resaleCertUrl;
   if (!Object.keys(patch).length) return json(400, { error: 'nothing_to_update' });
 
+  // A REJECTED business that edits and resubmits (the form's button literally reads
+  // "Update & resubmit") must re-enter the verification queue. Without this the patch
+  // saved silently while status stayed 'rejected' — the banner never cleared, no staff
+  // signal fired, and the company never reappeared in the admin pending queue. Only
+  // rejected -> pending; never disturb an approved or already-pending company.
+  const { data: current } = await sb
+    .from('companies').select('status').eq('id', profile.company_id).maybeSingle();
+  if (current?.status === 'rejected') {
+    patch.status = 'pending';
+    patch.submitted_at = new Date().toISOString();
+  }
+
   let { data, error } = await sb
     .from('companies')
     .update(patch)
@@ -194,6 +206,8 @@ export async function onRequestPost({ request, env }) {
     if (patch.name !== undefined) basePatch.name = patch.name;
     if (patch.tax_exempt !== undefined) basePatch.tax_exempt = patch.tax_exempt;
     if (patch.resale_cert_url !== undefined) basePatch.resale_cert_url = patch.resale_cert_url;
+    // status is a base column — carry the rejected->pending re-entry even pre-migration.
+    if (patch.status !== undefined) basePatch.status = patch.status;
     if (!Object.keys(basePatch).length) return json(200, { ok: true, partial: true });
     ({ data, error } = await sb
       .from('companies').update(basePatch).eq('id', profile.company_id)
