@@ -85,8 +85,12 @@ function checkPathExists(file, rawUrl, source) {
 }
 
 function checkLocalRefs() {
-  const attrPattern = /\b(?:href|src|poster|action)=["']([^"']+)["']/gi;
-  const srcsetPattern = /\bsrcset=["']([^"']+)["']/gi;
+  // Negative lookbehind for a word char or hyphen so we match the real HTML
+  // attributes (href/src/poster/action) but NOT data-* attributes that merely end
+  // in one of those names (e.g. data-content-action="draft", data-src=…). \b alone
+  // treats the hyphen as a boundary and false-flags those values as local refs.
+  const attrPattern = /(?<![-\w])(?:href|src|poster|action)=["']([^"']+)["']/gi;
+  const srcsetPattern = /(?<![-\w])srcset=["']([^"']+)["']/gi;
   const cssUrlPattern = /url\(([^)]+)\)/gi;
 
   for (const file of htmlFiles) {
