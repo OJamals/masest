@@ -87,6 +87,16 @@ test('filterCompanyEmails returns [] when no company emails are known', () => {
   assert.deepEqual(filterCompanyEmails([{ id: 1, to_email: 'a@b.co' }], []), []);
 });
 
+test('filterCompanyEmails matches recipients exactly, never as a substring', () => {
+  const events = [
+    { id: 1, to_email: 'newops@acme.co' },             // superstring of the needle → must NOT match
+    { id: 2, to_email: 'ops@acme.co' },                // exact → match
+    { id: 3, to_email: 'team@acme.co, ops@acme.co' },  // joined list containing the exact addr → match
+  ];
+  const out = filterCompanyEmails(events, ['ops@acme.co']);
+  assert.deepEqual(out.map((e) => e.id), [2, 3]);
+});
+
 test('filterCompanyEmails matches a full address inside a joined recipient list', () => {
   // The needle is a whole company address; it is found as a substring of the
   // comma-joined to_email — the reason matching is substring rather than equality.

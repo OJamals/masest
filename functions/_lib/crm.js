@@ -65,18 +65,18 @@ export function taskPatch({ action, assigned_to, actor }, now) {
 }
 
 // email_events.to_email is a comma-joined recipient list (to + bcc). Keep only the events
-// addressed to one of this company's known emails (members + contacts), matched as a
-// case-insensitive substring so a joined "buyer@x, notify@masest.co" still matches the
-// buyer. Deduped by id. Pure — the handler does the querying.
+// addressed to one of this company's known emails (members + contacts). Split the joined list
+// and match each recipient EXACTLY — a substring match would wrongly pull "newops@acme.com"
+// into "ops@acme.com"'s timeline. Deduped by id. Pure — the handler does the querying.
 export function filterCompanyEmails(events, emails) {
-  const needles = [...new Set((emails || []).map((e) => String(e || '').toLowerCase().trim()).filter(Boolean))];
-  if (!needles.length) return [];
+  const needles = new Set((emails || []).map((e) => String(e || '').toLowerCase().trim()).filter(Boolean));
+  if (!needles.size) return [];
   const seen = new Set();
   const out = [];
   for (const ev of events || []) {
-    const hay = String(ev?.to_email || '').toLowerCase();
-    if (!hay || ev.id == null || seen.has(ev.id)) continue;
-    if (needles.some((n) => hay.includes(n))) { seen.add(ev.id); out.push(ev); }
+    if (ev?.id == null || seen.has(ev.id)) continue;
+    const recipients = String(ev?.to_email || '').toLowerCase().split(',').map((a) => a.trim()).filter(Boolean);
+    if (recipients.some((addr) => needles.has(addr))) { seen.add(ev.id); out.push(ev); }
   }
   return out;
 }
