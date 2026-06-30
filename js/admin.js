@@ -293,13 +293,14 @@ function couponDiscount(c) {
 async function renderCoupons() {
   const box = $('cpList');
   if (!box) return;
+  box.innerHTML = admSkeleton();
   try {
     const r = await api('/api/admin/coupons');
     const list = r.coupons || [];
     box.innerHTML = list.length
       ? `<table class="adm"><thead><tr><th>Code</th><th>Discount</th><th>Min</th><th class="num">Uses</th><th>Expires</th><th></th></tr></thead><tbody>${list.map((c) =>
           `<tr><td><b>${esc(c.code)}</b>${c.active ? '' : ' <span class="badge">inactive</span>'}</td><td>${couponDiscount(c)}</td><td>${c.minimum_amount != null ? esc(money(c.minimum_amount, c.currency)) : '—'}</td><td class="num">${esc(c.times_redeemed)}${c.max_redemptions ? `/${esc(c.max_redemptions)}` : ''}</td><td>${c.expires_at ? esc(date(c.expires_at * 1000)) : '—'}</td><td>${c.active ? `<button class="btn btn-ghost btn-sm" data-coupon-off="${esc(c.id)}" type="button">Deactivate</button>` : ''}</td></tr>`).join('')}</tbody></table>`
-      : '<p class="muted">No promo codes yet.</p>';
+      : admEmpty('ph-ticket', 'No promo codes yet', 'Create a promo code to offer discounts at checkout.');
   } catch { box.innerHTML = '<p class="adm-status" data-state="err">Could not load promo codes.</p>'; }
 }
 function wireCoupons() {
@@ -395,13 +396,13 @@ const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, 
 const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
 
 // Pricing tab extracted to ./admin/pricing.js (#36 split). Shared primitives injected.
-const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message, admSkeleton });
+const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message, admSkeleton, admEmpty });
 
 // Content tab: staff-managed CMS entries for non-commerce public content.
 const { renderContent, wireContent } = createContentTab({ $, api, state, admSkeleton, admEmpty });
 
 // Messages/threads tab extracted to ./admin/threads.js (#36 split). Shared primitives + sourceLabel injected.
-const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, sourceLabel });
+const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel });
 
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
 const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton });

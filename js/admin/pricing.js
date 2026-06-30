@@ -4,7 +4,7 @@
 import { esc, delegate } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 
-export function createPricingTab({ $, api, state, message, admSkeleton }) {
+export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty }) {
   async function renderPricing({ refetch = true } = {}) {
     const box = $('admPricing');
     const snap = captureDirty(box);
@@ -24,7 +24,7 @@ export function createPricingTab({ $, api, state, message, admSkeleton }) {
     const rows = (data.rows || []).filter((row) => JSON.stringify(row).toLowerCase().includes(q));
     const fmt = (value) => value == null ? '' : Number(value).toFixed(2);
     if (!rows.length) {
-      box.innerHTML = '<p class="muted" style="padding:14px">No variants.</p>';
+      box.innerHTML = admEmpty('ph-tag', q ? 'No matching variants' : 'No variants', q ? 'No variants match your search.' : 'Add product variants to set tier pricing.');
       return;
     }
     box.innerHTML = `<table class="adm"><thead><tr><th>Variant</th><th>VSKU</th><th>Base</th>${tiers.map((tier) => `<th>${esc(tier)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `

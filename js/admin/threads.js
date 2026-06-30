@@ -3,7 +3,7 @@
 // sourceLabel/message helpers are injected; esc/date come from the shared util.
 import { esc, dateTime as date, delegate } from '../util.js';
 
-export function createThreadsTab({ $, api, state, message, admSkeleton, sourceLabel }) {
+export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel }) {
   async function openThread(companyId) {
     const view = $('admThreadView');
     view.textContent = 'Loading...';
@@ -47,7 +47,7 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, sourceLa
     }
     state.threads = state.threads || [];
     if (!state.threads.length) {
-      box.innerHTML = '<p class="muted">No conversations.</p>';
+      box.innerHTML = admEmpty('ph-chats', 'No conversations', 'Buyer messages appear here once a company starts a thread.');
       return;
     }
     box.innerHTML = state.threads.map((thread) => `
