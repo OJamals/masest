@@ -134,7 +134,7 @@ async function renderAccountNav(actions, root = '') {
     const admin = data.can_admin === true ? `<a class="acct-admin" href="${root}admin.html"><i class="ph ph-shield-check" aria-hidden="true"></i>Admin console</a>` : '';
     mount.innerHTML = `<details class="acct-dd">
       <summary aria-haspopup="true"><span class="acct-avatar">${esc((label[0] || 'A').toUpperCase())}</span><span class="acct-name">${esc(firstName(label))}</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
-      <div class="acct-dd-menu" role="menu">
+      <div class="acct-dd-menu">
         <div class="acct-menu-section"><span class="acct-menu-label">Workspace</span>${items}</div>
         <div class="acct-menu-section"><span class="acct-menu-label">Account</span>${accountItems}</div>
         <div class="acct-menu-section">${admin}<button type="button" class="acct-signout"><i class="ph ph-sign-out" aria-hidden="true"></i>Sign out</button></div>

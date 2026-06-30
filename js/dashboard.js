@@ -759,8 +759,10 @@ document.addEventListener('masest:session-expired', () => {
   if (sessionExpiredHandled) return;
   sessionExpiredHandled = true;
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-  const next = encodeURIComponent(location.pathname + location.hash);
-  location.href = `account.html?expired=1&next=${next}`;
+  // account.html honors ?return= (a validated .html path) to send the user back
+  // after re-auth; the old ?next= param was never read there.
+  const ret = encodeURIComponent(`dashboard.html${location.hash}`);
+  location.href = `account.html?expired=1&return=${ret}`;
 });
 
 /* ---------- boot ---------- */

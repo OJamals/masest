@@ -336,11 +336,11 @@ document.addEventListener("DOMContentLoaded", () => {
           const strip = document.createElement("div");
           strip.className = "product-gallery-strip";
           strip.style.cssText = "display:flex;gap:8px;margin-top:14px;flex-wrap:wrap";
-          allImgs.forEach(u => {
+          allImgs.forEach((u, i) => {
             const button = document.createElement("button");
             button.type = "button";
             button.dataset.src = u;
-            button.setAttribute("aria-label", "View product photo");
+            button.setAttribute("aria-label", `View product photo ${i + 1} of ${allImgs.length}`);
             button.style.cssText = "width:56px;height:56px;border:1px solid var(--line,#e4e6e9);border-radius:8px;overflow:hidden;padding:0;background:#fff;cursor:pointer";
             const img = document.createElement("img");
             img.src = u;

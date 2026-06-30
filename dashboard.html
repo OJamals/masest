@@ -63,7 +63,7 @@
   .badge[data-s=pending] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .badge[data-s=approved], .badge[data-s=paid], .badge[data-s=fulfilled], .badge[data-s=net_paid] { background: var(--accent-soft); color: var(--accent-ink); }
   .badge[data-s=rejected], .badge[data-s=suspended], .badge[data-s=cancelled] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
-  .badge[data-s=net_open], .badge[data-s=pending_payment] { background: #e0e7ff; color: #3730a3; }
+  .badge[data-s=net_open], .badge[data-s=pending_payment] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .trackline { display: grid; gap: 8px; margin: 12px 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.68); }
   .trackline span { position: relative; padding-left: 22px; color: var(--muted); font-size: .86rem; }
   .trackline span::before { content: ""; position: absolute; left: 0; top: .32em; width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); }
@@ -548,8 +548,8 @@
             <h2 class="headline dash-section-title">Your profile</h2>
             <form onsubmit="return false" id="profileForm" class="form-card dash-clean-form">
               <div class="field-grid">
-                <div class="field"><label>Email</label><input id="pfEmail" disabled></div>
-                <div class="field"><label>Company</label><input id="pfCompany" disabled></div>
+                <div class="field"><label for="pfEmail">Email</label><input id="pfEmail" disabled></div>
+                <div class="field"><label for="pfCompany">Company</label><input id="pfCompany" disabled></div>
                 <div class="field"><label for="pfName">Full name</label><input id="pfName"></div>
                 <div class="field"><label for="pfPhone">Phone</label><input id="pfPhone"></div>
               </div>

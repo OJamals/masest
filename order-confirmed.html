@@ -85,7 +85,7 @@
     fetch("/api/order?session_id=" + encodeURIComponent(session))
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((o) => {
-        const money = (n) => o.currency + " " + Number(n || 0).toFixed(2);
+        const money = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: String(o.currency || "usd").toUpperCase() }).format(Number(n || 0));
         summary.textContent = o.email ? ("A confirmation was sent to " + o.email + ".") : "Your order is recorded.";
         try { if (typeof window.mtrack === "function") window.mtrack("order_confirmed"); } catch (e) { /* funnel event best-effort */ }
         if (Array.isArray(o.lines) && o.lines.length) {

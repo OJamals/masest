@@ -353,7 +353,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .crm-contact.is-primary { border-color: var(--accent, #0e7c86); background: var(--surface-2, #eef2f7); }
 .crm-contact-name { font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .crm-contact-star { color: var(--accent, #0e7c86); }
-.crm-contact-role { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--accent, #0e7c86); border: 1px solid var(--accent, #0e7c86); border-radius: 999px; padding: 1px 8px; }
+.crm-contact-role { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
 .crm-contact-actions { display: inline-flex; gap: 2px; flex-shrink: 0; }
 
 /* CRM deal pipeline (admin Quotes board + deal drawer) — slice 2 */
@@ -372,7 +372,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .pipe-card { background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: grab; display: grid; gap: 6px; }
 .pipe-card:focus-visible { outline: 2px solid var(--accent, #0e7c86); outline-offset: 1px; }
 .pipe-card.is-dragging { opacity: .5; }
-.pipe-card.is-stale { border-left: 3px solid var(--status-warning-ink); }
+.pipe-card.is-stale { border-color: var(--status-warning-ink); background: var(--status-warning-bg); }
 .pipe-card-title { font-weight: 600; }
 .pipe-card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .8rem; color: var(--muted, #6b7280); }
 .pipe-card select { font-size: .75rem; width: 100%; }

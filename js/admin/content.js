@@ -786,7 +786,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       return admEmpty("ph-clock-counter-clockwise", "No revisions", "Save a draft to create a revision.");
     }
     return revisions.map((revision) => `
-      <button class="adm-list-row adm-content-revision-row" type="button" data-content-revision="${esc(revision.version)}" aria-label="Compare version ${esc(revision.version)} with the current entry">
+      <button class="adm-list-row adm-content-revision-row" type="button" data-content-revision="${esc(revision.version)}" aria-controls="contentRevisionDiff" aria-label="Compare version ${esc(revision.version)} with the current entry">
         <b>Version ${esc(revision.version)}</b>
         <span>${esc(revision.status || "")}${revision.created_at ? ` · ${esc(new Date(revision.created_at).toLocaleString())}` : ""}</span>
         ${revision.note ? `<small>${esc(revision.note)}</small>` : ""}
