@@ -198,6 +198,16 @@
   .adm-content-revision-row { width: 100%; display: grid; gap: 3px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); padding: 10px 12px; }
   .adm-content-revision-row + .adm-content-revision-row { margin-top: 8px; }
   .adm-content-revision-row span, .adm-content-revision-row small { color: var(--muted); overflow-wrap: anywhere; }
+  .adm-content-revision-row[aria-expanded="true"], .adm-content-revision-row:hover { border-color: var(--accent, #2563eb); }
+  .adm-content-revision-diff { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--panel); }
+  .adm-content-revision-diff-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .adm-content-revision-diff-scroll { overflow-x: auto; }
+  .adm-content-revision-diff-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .adm-content-revision-diff-table th, .adm-content-revision-diff-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+  .adm-content-revision-diff-table thead th { color: var(--muted); font-weight: 600; }
+  .adm-content-revision-diff-table tbody th { font-weight: 600; white-space: nowrap; }
+  .adm-content-revision-diff-table tr.is-changed td, .adm-content-revision-diff-table tr.is-changed th { background: var(--warning-soft, #fff7ed); }
+  .adm-content-revision-diff-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .adm-content-workflow-row { width: 100%; display: grid; gap: 3px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); padding: 10px 12px; }
   .adm-content-workflow-row + .adm-content-workflow-row { margin-top: 8px; }
   .adm-content-workflow-row span { color: var(--muted); overflow-wrap: anywhere; }
