@@ -61,6 +61,31 @@ test("published proof_cards replace the hardcoded fallback on proof.html", async
   expect(overflow, "proof.html must not overflow horizontally with CMS cards").toBeFalsy();
 });
 
+test("a proof_card with image_after renders a before/after .case-ba pair", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.route("**/data/content/proof.json", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({
+      proof_cards: [{
+        slug: "ba-card", title: "Before/after card", eyebrow: "BA", kind: "facility",
+        result: "Cleared.", image: "img/proof/cases/grout-before.webp", image_alt: "Before, soiled",
+        image_w: 934, image_h: 700,
+        image_after: "img/proof/cases/grout-after.webp", image_after_alt: "After, clean",
+        image_after_w: 850, image_after_h: 882, sort_order: 1,
+      }],
+    }),
+  }));
+  await page.goto(`${BASE_URL}/proof.html`, { waitUntil: "networkidle" });
+  const card = page.locator('.case-grid[data-cms-content="proof_cards"] .case-card', { hasText: "Before/after card" });
+  // Two-figure pair, not the single doc-link/figure media.
+  await expect(card.locator(".case-ba")).toHaveCount(1);
+  await expect(card.locator(".case-ba figure")).toHaveCount(2);
+  await expect(card.locator('img[src="img/proof/cases/grout-before.webp"]')).toHaveCount(1);
+  await expect(card.locator('img[src="img/proof/cases/grout-after.webp"]')).toHaveCount(1);
+  await expect(card.locator(".case-ba")).toContainText("Before");
+  await expect(card.locator(".case-ba")).toContainText("After");
+  await expect(card.locator("a.doc-link")).toHaveCount(0);
+});
+
 test("empty proof snapshot leaves the hardcoded case cards intact", async ({ page }) => {
   await page.route("**/data/content/proof.json", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify({ proof_cards: [] }),

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30T06:27:36.869Z",
+  "generated_at": "2026-06-30T07:24:02.975Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -21,7 +21,7 @@
       "counts": {
         "proof_cards": 14
       },
-      "sha256": "d839565cf3a64b3124c597793f2fc20b71c9bc5d6670c093ba0fb12084653507"
+      "sha256": "5db3653e7c5a2d4238c82fd3dacc9843123b74628852d82c9898b7792652f58b"
     },
     "resources.json": {
       "count": 0,

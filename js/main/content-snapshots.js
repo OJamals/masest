@@ -77,12 +77,19 @@ function proofCard(card) {
   const img = card.image
     ? `<img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}>`
     : "";
-  // A proof card image either links to a source PDF (href set → doc-link wrapper
-  // with a PDF badge, kept a direct child of .case-card for the 16:10 aspect-ratio)
-  // or sits in a plain figure. Reuses the existing `href` field as the doc link.
+  const afterDims = `${card.image_after_w ? ` width="${esc(card.image_after_w)}"` : ""}${card.image_after_h ? ` height="${esc(card.image_after_h)}"` : ""}`;
+  const afterImg = card.image_after
+    ? `<img src="${esc(card.image_after)}" alt="${esc(card.image_after_alt || card.title || "")}" loading="lazy"${afterDims}>`
+    : "";
+  // A proof card renders one of three medias: a before/after pair (image +
+  // image_after → two-figure .case-ba), a source-PDF doc-link (href set → badge
+  // wrapper, kept a direct child of .case-card for the 16:10 aspect-ratio), or a
+  // plain figure. `href` doubles as the PDF doc link for single-image cards.
   const docHref = card.href ? safeContentHref(card.href, "") : "";
   let media = "";
-  if (img && docHref) {
+  if (img && afterImg) {
+    media = `<div class="case-ba"><figure>${img}<figcaption>Before</figcaption></figure><figure>${afterImg}<figcaption>After</figcaption></figure></div>`;
+  } else if (img && docHref) {
     media = `<a class="doc-link" href="${esc(docHref)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(card.title || "Proof")} (opens PDF in new tab)">${img}<span class="doc-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 2 4 4h-4V4ZM8 13h8v1.5H8V13Zm0 3h8v1.5H8V16Zm0-6h4v1.5H8V10Z"/></svg>PDF</span></a>`;
   } else if (img) {
     media = `<figure class="case-media">${img}</figure>`;
