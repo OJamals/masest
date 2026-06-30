@@ -564,6 +564,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let mounted = false;
   let assetTargetField = "image";
   let assetTargetKind = "payload";
+  let assetPickerTrigger = null; // control to refocus when the picker closes
   let assetCache = new Map();
   let currentEntry = {};
   let currentEntryKey = "";
@@ -885,6 +886,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   function closeAssetPicker() {
     const panel = $("contentAssetPicker");
     if (panel) panel.hidden = true;
+    assetPickerTrigger?.focus();
+    assetPickerTrigger = null;
   }
 
   function assetValue(asset = {}) {
@@ -981,12 +984,14 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
-  async function openAssetPicker(fieldKey, kind = "payload") {
+  async function openAssetPicker(fieldKey, kind = "payload", trigger = null) {
     const panel = $("contentAssetPicker");
     if (!panel) return;
+    assetPickerTrigger = trigger || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     assetTargetField = fieldKey || assetTargetField || "image";
     assetTargetKind = kind || "payload";
     panel.hidden = false;
+    $("contentAssetSearch")?.focus();
     await loadAssets();
   }
 
@@ -1024,8 +1029,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       }
       setStatus(message, "ok");
     }
-    const panel = $("contentAssetPicker");
-    if (panel) panel.hidden = true;
+    closeAssetPicker();
   }
 
   function assignAssetPath(button) {
@@ -1472,8 +1476,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (action === "archive") return archiveContent();
       if (action === "unarchive") return unarchiveContent();
       if (action === "preview") return refreshPreview();
-      if (action === "asset") return openAssetPicker(button.dataset.contentAssetTarget);
-      if (action === "seo_asset") return openAssetPicker(button.dataset.contentSeoAssetTarget, "seo");
+      if (action === "asset") return openAssetPicker(button.dataset.contentAssetTarget, "payload", button);
+      if (action === "seo_asset") return openAssetPicker(button.dataset.contentSeoAssetTarget, "seo", button);
       if (action === "refresh_assets") return loadAssets();
       if (action === "close_assets") return closeAssetPicker();
       if (action === "upload_asset") return uploadAsset();
