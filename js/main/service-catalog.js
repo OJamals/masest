@@ -153,6 +153,7 @@ function renderTabs(groups) {
           id="service-tab-${slugify(category)}"
           aria-selected="${selected ? "true" : "false"}"
           aria-controls="service-panel-${slugify(category)}"
+          tabindex="${selected ? "0" : "-1"}"
           data-service-tab="${htmlEscape(category)}"
         >
           ${htmlEscape(display)}
@@ -218,19 +219,43 @@ function updateSummary(catalog, items) {
   });
 }
 
+function activateServiceTab(root, tab, { focus = false } = {}) {
+  const category = tab.getAttribute("data-service-tab");
+  root.querySelectorAll("[data-service-tab]").forEach((button) => {
+    const active = button === tab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+    // Roving tabindex: only the selected tab is in the tab order (WAI-ARIA tabs pattern).
+    button.tabIndex = active ? 0 : -1;
+  });
+  root.querySelectorAll("[data-service-panel]").forEach((panel) => {
+    panel.hidden = panel.getAttribute("data-service-panel") !== category;
+  });
+  if (focus) tab.focus();
+}
+
 function bindTabs(root) {
   root.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-service-tab]");
     if (!tab || !root.contains(tab)) return;
-    const category = tab.getAttribute("data-service-tab");
-    root.querySelectorAll("[data-service-tab]").forEach((button) => {
-      const active = button === tab;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-selected", active ? "true" : "false");
-    });
-    root.querySelectorAll("[data-service-panel]").forEach((panel) => {
-      panel.hidden = panel.getAttribute("data-service-panel") !== category;
-    });
+    activateServiceTab(root, tab);
+  });
+  // Keyboard support for the horizontal tablist (WAI-ARIA APG): arrow keys move
+  // between tabs with wrap-around, Home/End jump to the ends, with automatic
+  // activation (panels are cheap, so focus follows selection).
+  root.addEventListener("keydown", (event) => {
+    const current = event.target.closest("[data-service-tab]");
+    if (!current || !root.contains(current)) return;
+    const tabs = [...root.querySelectorAll("[data-service-tab]")];
+    const i = tabs.indexOf(current);
+    let next = null;
+    if (event.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
+    else if (event.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
+    else if (event.key === "Home") next = tabs[0];
+    else if (event.key === "End") next = tabs[tabs.length - 1];
+    else return;
+    event.preventDefault();
+    activateServiceTab(root, next, { focus: true });
   });
 }
 
