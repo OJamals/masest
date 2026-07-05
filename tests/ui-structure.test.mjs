@@ -358,11 +358,12 @@ test("scrolly chapter rail is decorative progress, not hidden buttons", () => {
   assert.equal((rail.match(/class="rail-btn"/g) || []).length, 5);
 });
 
-test("scrolly story has a static summary for reduced motion and assistive tech", () => {
+test("scrolly story keeps its static summary out of the visual flow", () => {
   const index = read("index.html");
-  const summary = index.match(/<section class="story-summary"[\s\S]*?<\/section>/)?.[0] || "";
+  const summary = index.match(/<section class="story-summary sr-only"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.ok(summary, "expected static story summary");
+  assert.match(summary, /class="story-summary sr-only"/);
   assert.match(summary, /aria-labelledby="storySummaryTitle"/);
   assert.match(summary, /id="storySummaryTitle"/);
   assert.match(summary, /The dirt is obvious/);
