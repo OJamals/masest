@@ -407,7 +407,7 @@ export const PRODUCTS = {
   sar: {
     name: "VertKleen SAR",
     cat: "acid",
-    replaces: "Specialty acid replacement",
+    replaces: "Replaces specialty and blended acid products",
     hmis: "0-0-0",
     icon: "ph-wrench",
     image: "img/products/crs-studio.webp",

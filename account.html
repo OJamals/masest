@@ -9,12 +9,29 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260630a">
+<link rel="stylesheet" href="css/style.css?v=20260705a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
-  /* Full-width wrap (inherits .wrap 1180/28px gutters); the sign-in card is left-aligned with the hero copy. */
-  #acctAuth { max-width: 440px; }
+  /* Signed-out layout: auth card left, account-value panel right, so the sheet
+     doesn't read as a lone card floating in a 60%-empty viewport. */
+  #acctAuth {
+    display: grid;
+    grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+    gap: clamp(24px, 5vw, 64px);
+    align-items: start;
+  }
+  .acct-value { padding-top: 6px; }
+  .acct-value h2 { font-size: 1.1rem; margin: 0 0 14px; }
+  .acct-value ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+  .acct-value li { display: flex; gap: 12px; align-items: flex-start; }
+  .acct-value li i { flex: 0 0 auto; margin-top: 2px; font-size: 1.3rem; color: var(--accent); }
+  .acct-value li b { display: block; }
+  .acct-value li span { color: var(--muted); font-size: .92rem; line-height: 1.5; }
+  @media (max-width: 900px) {
+    #acctAuth { grid-template-columns: 1fr; }
+    .acct-value { order: 2; }
+  }
   /* Focused single-column auth: side-by-side email/password reads as an awkward wide sheet. */
   #acctAuth .field-grid { grid-template-columns: 1fr; gap: 14px; }
   #acctAuth .form-card { padding: 26px 24px; }
@@ -85,7 +102,7 @@
           <h2 class="acct-title">Sign in</h2>
           <p class="acct-sub">Access your orders, NET terms, and account dashboard.</p>
           <div class="field-grid">
-            <div class="field"><label for="liEmail">Email *</label><input id="liEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
+            <div class="field"><label for="liEmail">Email *</label><input id="liEmail" name="email" type="email" autocomplete="email" placeholder="you@company.com" required></div>
             <div class="field"><label for="liPass">Password *</label><div class="pw-wrap"><input id="liPass" name="password" type="password" autocomplete="current-password" required><button type="button" class="pw-toggle" data-target="liPass" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
           </div>
           <div class="acct-reset-row">
@@ -113,9 +130,9 @@
           <h2 class="acct-title">Create your account</h2>
           <p class="acct-sub">Your account is ready the moment you sign up — no approval needed. Set up and verify your business later from your dashboard to unlock B2B ordering, NET terms, and programs.</p>
           <div class="field-grid">
-            <div class="field"><label for="rName">Full name</label><input id="rName" name="full_name" type="text" placeholder="Marisol Vega"></div>
+            <div class="field"><label for="rName">Full name</label><input id="rName" name="full_name" type="text" placeholder="First and last name"></div>
             <div class="field"><label for="rPhone">Phone</label><input id="rPhone" name="phone" type="tel" placeholder="(727) 348-6519"></div>
-            <div class="field"><label for="rEmail">Email *</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="m.vega@gulfcoastmech.com" required></div>
+            <div class="field"><label for="rEmail">Email *</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="you@company.com" required></div>
             <div class="field"><label for="rPass">Password *</label><div class="pw-wrap"><input id="rPass" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required><button type="button" class="pw-toggle" data-target="rPass" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
             <div class="field"><label for="rPass2">Confirm password *</label><div class="pw-wrap"><input id="rPass2" name="password_confirm" type="password" autocomplete="new-password" placeholder="Re-enter password" minlength="8" required><button type="button" class="pw-toggle" data-target="rPass2" aria-label="Show password" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div></div>
           </div>
@@ -123,13 +140,22 @@
           <p class="acct-status" id="rStatus" role="status" aria-live="polite"></p>
           <p class="acct-switch">Already have an account? <button type="button" data-pane="login">Sign in</button></p>
         </form>
+
+        <aside class="acct-value" aria-label="What an account unlocks">
+          <h2>What the account unlocks</h2>
+          <ul>
+            <li><i class="ph ph-package" aria-hidden="true"></i><div><b>Order tracking &amp; one-click reorders</b><span>Every order, shipment, and receipt in one place.</span></div></li>
+            <li><i class="ph ph-invoice" aria-hidden="true"></i><div><b>NET terms &amp; business invoicing</b><span>Verify your business once and buy on approved terms.</span></div></li>
+            <li><i class="ph ph-chats-circle" aria-hidden="true"></i><div><b>Quotes that keep moving</b><span>Saved details route volume and freight quotes faster.</span></div></li>
+          </ul>
+        </aside>
       </div>
 
       <!-- Email confirmed but company/profile not yet created: finish setup -->
       <div class="form-card" id="completeCard" hidden>
         <h2 class="acct-title">Finish setting up</h2>
         <p class="acct-sub">Your email is confirmed. Add your contact details and you’re in — set up your business anytime from the dashboard.</p>
-        <div class="field"><label for="cName">Full name</label><input id="cName" type="text" placeholder="Marisol Vega"></div>
+        <div class="field"><label for="cName">Full name</label><input id="cName" type="text" placeholder="First and last name"></div>
         <div class="field u-mt-12"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="(727) 348-6519"></div>
         <button type="button" class="btn btn-primary u-block-cta" id="cBtn">Finish setup</button>
         <p class="acct-status" id="cStatus" role="status" aria-live="polite"></p>

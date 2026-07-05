@@ -7,7 +7,7 @@
   <title>Cart | MASEST</title>
   <meta name="description" content="Review VertKleen purchase-ready SKUs, start checkout, or route bulk freight requests to MASEST.">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260630a">
+  <link rel="stylesheet" href="css/style.css?v=20260705a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
   <link rel="stylesheet" href="css/components.css">
   <script src="js/config.js" defer></script>
@@ -48,7 +48,9 @@
         <p class="eyebrow">Next step</p>
         <h2>Checkout or quote.</h2>
         <div id="cartAccount" class="cart-account" hidden></div>
-        <p id="cartStatus" class="cart-status" role="status" aria-live="polite">Cart totals are confirmed at checkout by the server.</p>
+        <p id="cartStatus" class="cart-status" role="status" aria-live="polite">Final totals are confirmed at checkout.</p>
+        <p id="checkoutIdle" class="cart-status" hidden>Add products from the catalog and the checkout options open here.</p>
+        <div id="checkoutActive">
         <div class="ship-est" id="shipEst" hidden>
           <label class="field-label" for="shipZone">Estimated freight</label>
           <select id="shipZone" class="cart-input">
@@ -65,6 +67,7 @@
           <button class="btn btn-primary" id="checkoutPay" type="button">Card / ACH Checkout</button>
           <button class="btn btn-secondary" id="checkoutNet" type="button">Use NET Terms</button>
           <a class="btn btn-ghost" id="checkoutQuote" href="contact.html?type=quote">Send Quote Request</a>
+        </div>
         </div>
       </aside>
     </div>
@@ -224,8 +227,15 @@
       status.textContent = "Remove bulk freight items before checkout, or send a quote request.";
     } else if (status.dataset.state === "err" && cartItems.length) {
       status.dataset.state = "";
-      status.textContent = "Cart totals are confirmed at checkout by the server.";
+      status.textContent = "Final totals are confirmed at checkout.";
     }
+    // An empty cart shows a single next-step line instead of a full checkout
+    // module of disabled controls.
+    const checkoutActive = document.getElementById("checkoutActive");
+    const checkoutIdle = document.getElementById("checkoutIdle");
+    if (checkoutActive) checkoutActive.hidden = !cartItems.length;
+    if (checkoutIdle) checkoutIdle.hidden = !!cartItems.length;
+    if (status) status.hidden = !cartItems.length;
     if (!cartItems.length) {
       lines.innerHTML = `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
       updateSubtotal();
@@ -363,7 +373,7 @@
       const email = document.getElementById("checkoutEmail");
       if (email && !email.value) email.value = data.email || "";
     } else {
-      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Checking out as a guest. <a class="btn-sm" href="account.html?return=cart.html">Sign in or create an account</a> for NET terms and saved details. Your cart stays with you.`;
+      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Checking out as a guest. <a href="account.html?return=cart.html">Sign in or create an account</a> to use NET terms and saved details. Your cart stays with you.`;
     }
     box.hidden = false;
   }

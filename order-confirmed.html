@@ -7,7 +7,7 @@
   <title>Order Confirmed | MASEST</title>
   <meta name="description" content="VertKleen order confirmation and procurement follow-up.">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260630a">
+  <link rel="stylesheet" href="css/style.css?v=20260705a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
   <link rel="stylesheet" href="css/components.css">
   <script src="js/config.js" defer></script>
@@ -73,7 +73,12 @@
     const summary = document.getElementById("sessionSummary");
     const linesEl = document.getElementById("orderLines");
     const totalsEl = document.getElementById("orderTotals");
-    if (!session) return;
+    if (!session) {
+      // No session in the URL (bookmark or direct visit): say so instead of
+      // leaving "being verified" on screen forever.
+      summary.textContent = "No checkout session found. If you just completed payment, your email receipt confirms the order — or use the quote-support link and MASEST will verify it.";
+      return;
+    }
 
     // Confirmed return: clear the cart and badge.
     localStorage.removeItem("masest_cart");

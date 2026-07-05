@@ -143,10 +143,12 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
           .filter((card) => quoteFirst.has(card.id))
           .map((card) => ({ id: card.id, price: card.price, select: card.select, add: card.add })),
         [
-          { id: "watersafe60", price: "", select: false, add: false },
-          { id: "cr2", price: "", select: false, add: false },
-          { id: "sar", price: "", select: false, add: false },
-          { id: "eg5050", price: "", select: false, add: false },
+          // Quote-first cards carry an explicit "Quote-priced" state in the
+          // price slot (2026-07-05) so buy-vs-quote is unmistakable in the grid.
+          { id: "watersafe60", price: "Quote-priced", select: false, add: false },
+          { id: "cr2", price: "Quote-priced", select: false, add: false },
+          { id: "sar", price: "Quote-priced", select: false, add: false },
+          { id: "eg5050", price: "Quote-priced", select: false, add: false },
         ],
         "quote-first products should stay visible without add-cart controls"
       );

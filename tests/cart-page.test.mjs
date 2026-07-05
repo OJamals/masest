@@ -108,7 +108,10 @@ test("static catalog does not show cart controls without commerce metadata", asy
       assert.equal(await page.locator(".shop-card-quote").count(), 4);
 
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
-      await page.locator("#checkoutPay").waitFor();
+      // Empty cart collapses the checkout module to a single next-step line
+      // (2026-07-05); the pay button stays in the DOM, hidden and disabled.
+      await page.locator("#checkoutIdle").waitFor();
+      assert.equal(await page.locator("#checkoutPay").isVisible(), false);
       assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
     } finally {
       await browser.close();

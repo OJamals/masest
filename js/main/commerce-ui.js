@@ -196,7 +196,10 @@ function commerceActionHTML(id, variant = "chip") {
 
 function quoteActionHTML(id) {
   const name = PRODUCTS[id]?.name || id;
-  return `<a class="shop-card-quote" href="contact?type=quote&product=${encodeURIComponent(name)}"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
+  // Mirror the buyable buybar's price-line + control rhythm so quote-only cards
+  // read as a deliberate state, not a card missing its commerce block.
+  return `<span class="shop-card-price"><strong class="price-main price-main-quote">Quote-priced</strong><span class="price-note">Volume &amp; freight quoted</span></span>`
+    + `<a class="shop-card-quote" href="contact?type=quote&product=${encodeURIComponent(name)}"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
 }
 
 function bulkPriceText(id) {
@@ -251,11 +254,18 @@ function bulkPriceHTML(id) {
     + `</span>`;
 }
 
+// The brand poster is a text-heavy marketing tile; in a photo grid it reads as
+// clutter, so cards treat it as "no product photo" and fall back to the icon tile.
+function isPosterFallback(src) {
+  return /masest-poster-transparent\.png$/.test(String(src || ""));
+}
+
 function commerceMediaFor(id) {
   const row = commerceRowFor(id);
   const p = PRODUCTS[id];
+  const src = row?.image_url || p?.image || "";
   return {
-    src: row?.image_url || p?.image || "",
+    src: isPosterFallback(src) ? "" : src,
     alt: row?.photo_alt || (p ? `${p.name} product image` : "")
   };
 }

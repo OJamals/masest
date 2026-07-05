@@ -204,7 +204,9 @@ test("contact page makes quote and audit intent obvious", () => {
 });
 
 test("footer carries secondary navigation in grouped lanes", () => {
-  assert.match(chrome, /foot-kicker/);
+  // The "Procurement routes" foot-kicker was a dead label (no content under it)
+  // and was removed 2026-07-05; guard against it quietly returning.
+  assert.doesNotMatch(chrome, /foot-kicker/);
   assert.match(chrome, /foot-secondary/);
   assert.match(chrome, /Resources \+ SDS/);
   assert.match(chrome, /Product Categories/);

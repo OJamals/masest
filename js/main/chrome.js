@@ -1,7 +1,9 @@
 /* MASEST shared chrome/nav/footer rendering. */
 
 function pageName() {
-  return location.pathname.split("/").pop() || "index.html";
+  // Normalize away ".html" so the active-nav match works on raw file URLs
+  // (local preview) as well as the clean URLs production serves.
+  return (location.pathname.split("/").pop() || "index").replace(/\.html$/, "") || "index";
 }
 export function renderChrome() {
   document.querySelector(".nojs-nav")?.setAttribute("hidden", "");
@@ -186,7 +188,6 @@ export function renderChrome() {
           <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
           <div class="foot-brand">MASEST VertKleen&trade;</div>
           <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support from Florida's Space Coast.</p>
-          <div class="foot-kicker">Procurement routes</div>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Product Categories</div>

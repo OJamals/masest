@@ -809,6 +809,24 @@ no dots) ---------- */
   list-style: none;
 }
 .resource-disclosure summary::-webkit-details-marker { display: none; }
+/* The summary hid the native marker with no replacement, so the whole panel read
+   as a static heading card. Restore an explicit open/close affordance. */
+.resource-disclosure summary::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  background: var(--accent-ink);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 5l6 6 6-6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 5l6 6 6-6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform .2s var(--ease-out);
+}
+.resource-disclosure[open] summary::after { transform: rotate(180deg); }
+.resource-disclosure summary:hover strong,
+.resource-disclosure summary:focus-visible strong { color: var(--accent-ink); }
+@media (prefers-reduced-motion: reduce) {
+  .resource-disclosure summary::after { transition: none; }
+}
 .resource-disclosure summary strong {
   display: block;
   font-size: clamp(1.45rem, 2.4vw, 2.2rem);
@@ -868,6 +886,11 @@ no dots) ---------- */
 .prod-card.hero-card { padding: 44px; }
 .prod-card.hero-card h3 { font-size: 1.9rem; }
 .prod-card.hero-card .prod-top i { font-size: 3rem; }
+/* The featured card runs as tall as its stacked siblings; hand the extra height
+   to the product photo instead of a blank gap between copy and actions. */
+.prod-card.hero-card .prod-media { flex: 1; min-height: 240px; }
+.prod-card.hero-card .prod-media img { max-height: none; height: 100%; }
+.prod-card.hero-card p { flex: 0 1 auto; }
 
 .prod-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
 /* A single product in a category spans the row as a hero-card variant */
@@ -1176,7 +1199,6 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 .foot-title { color: #fff; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 16px; }
 .foot-grid a { display: block; padding: 4px 0; color: var(--ink-inverse); transition: color .2s; }
 .foot-grid a:hover { color: #fff; }
-.foot-kicker { margin-top: 22px; color: rgba(255, 255, 255, .58); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .foot-quote { display: inline-flex !important; margin-top: 10px; padding: 10px 18px !important; color: var(--ink) !important; }
 .foot-secondary { border-top: 1px solid rgba(255, 255, 255, .16); padding-top: 16px; }
 
@@ -1375,8 +1397,11 @@ so no-JS / hidden-tab renders stay visible */
   .feat-grid,
 .prod-grid,
 .contact-cards { grid-template-columns: 1fr 1fr; }
-  .stat-band .stats { grid-template-columns: 1fr 1fr; gap: 28px 0; }
-  .stat:nth-child(3) { border-left: 0; }
+  /* Column gap so neighbouring captions don't read as one run-on line. */
+  .stat-band .stats { grid-template-columns: 1fr 1fr; gap: 28px 22px; }
+  .stat { padding: 0 0 0 18px; }
+  .stat:nth-child(3) { border-left: 0; padding-left: 0; }
+  .stat:first-child { padding-left: 0; }
   .trust-cols { grid-template-columns: 1fr 1fr; }
   .trust-cols > div:nth-child(3) { border-left: 0; }
   .foot-grid { grid-template-columns: 1fr 1fr; }
@@ -2171,8 +2196,19 @@ scroll-snap gallery
   transition: transform .5s ease;
 }
 .proof-thumb:hover img { transform: scale(1.04); }
+/* Bottom scrim keeps white captions legible over light photos (document scans,
+   bright diamond plate); a text-shadow alone isn't enough there. */
+.proof-thumb::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 64px;
+  background: linear-gradient(180deg, transparent, rgba(8, 14, 20, .6));
+  pointer-events: none;
+}
 .proof-thumb span {
   position: absolute;
+  z-index: 1;
   left: 12px;
   bottom: 12px;
   color: #fff;
@@ -2325,21 +2361,16 @@ scroll-snap gallery
   }
 }
 @media (max-width: 600px) {
+  /* Keep the tier table readable and let it scroll inside its own wrap
+     (matches .table-scroll). Force-fitting five columns into a phone width
+     mid-word-broke every header and cell. */
   .program-scope-table {
-    min-width: 0;
-    table-layout: fixed;
-    font-size: .72rem;
+    font-size: .8rem;
   }
 
   .program-scope-table th,
   .program-scope-table td {
-    padding: 12px 7px;
-    overflow-wrap: anywhere;
-  }
-
-  .program-scope-table th:first-child,
-  .program-scope-table td:first-child {
-    width: 31%;
+    padding: 12px 10px;
   }
 }
 @media (max-width: 600px) { .tier-grid { grid-template-columns: 1fr; } }
@@ -2493,6 +2524,7 @@ dark block) ───────────────── */
   padding: 3px 7px; border-radius: 6px;
   background: rgba(11, 18, 32, .86); color: #fff;
   font: 700 .66rem/1 var(--font); letter-spacing: .05em;
+  white-space: nowrap;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
 }
 .doc-badge svg { display: block; }
@@ -3169,7 +3201,9 @@ body.reveal-ready .matrix-disclosure.reveal {
   list-style: none;
   color: inherit;
   font: inherit;
-  font-weight: 500;
+  /* Weight matches sibling links; only .active carries emphasis, so the
+     dropdown trigger doesn't read as permanently selected. */
+  font-weight: inherit;
 }
 
 .nav-group summary::-webkit-details-marker { display: none; }
@@ -3602,7 +3636,9 @@ fully clickable cards) ---- */
 }
 .shop-card-type { font-size: .76rem; font-weight: 700; letter-spacing: .02em; text-transform: none; color: var(--muted); }
 .shop-card-name { font-size: 1.12rem; font-weight: 800; line-height: 1.2; }
-.shop-card-replaces { font-size: .88rem; color: var(--muted); flex: 1; }
+/* Keep copy packed with the title; the card's flexible slack lands after the CTA
+   (inside the body) so quote-only cards don't open a hole mid-content. */
+.shop-card-replaces { font-size: .88rem; color: var(--muted); }
 .shop-card-cta {
   display: inline-flex;
   align-items: center;
@@ -3838,7 +3874,16 @@ fully clickable cards) ---- */
 .cart-status[data-state=err] { color: var(--status-danger-ink); }
 .cart-actions { display: grid; gap: 10px; margin-top: 18px; }
 .cart-actions .btn { width: 100%; justify-content: center; }
-.cart-actions .btn:disabled { cursor: not-allowed; }
+/* Disabled checkout paths drop to neutral gray — a washed brand-teal fill still
+   reads tappable and outranks the enabled quote link beneath it. */
+.cart-actions .btn:disabled {
+  cursor: not-allowed;
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--muted);
+  box-shadow: none;
+  transform: none;
+}
 .ship-est { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .ship-est-out { margin: 8px 0 4px; font-size: 1.05rem; font-weight: 800; color: var(--ink); }
 .ship-est-note { margin: 0; font-size: .76rem; color: var(--muted); }
@@ -4047,12 +4092,10 @@ main:has(#pMediaSection) .section-head {
     max-height: 220px;
   }
 
+  /* No inner max-height/overflow: a hidden nested scroll region cut option
+     cards mid-content with zero affordance. The matrix is short enough to flow. */
   body .swap-matrix {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-height: 620px;
-    overflow: auto;
-    overscroll-behavior: contain;
-    padding-right: 2px;
   }
 
   body .swap-row {
@@ -4407,6 +4450,21 @@ main:has(#pMediaSection) .section-head {
   text-transform: uppercase;
 }
 
+/* Quote-only cards: same slot rhythm as a price, worded as a state. */
+.price-main-quote {
+  font-size: .98rem;
+  font-weight: 800;
+  letter-spacing: .01em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* Match the Add-to-cart control height so both card states share one rhythm. */
+.shop-card-buybar .shop-card-quote {
+  min-height: 42px;
+  justify-content: center;
+}
+
 .shop-card-commerce {
   margin: 0;
   width: 100%;
@@ -4549,10 +4607,6 @@ main:has(#pMediaSection) .section-head {
 
   .swap-finder {
     padding: 12px;
-  }
-
-  body .swap-matrix {
-    max-height: 380px;
   }
 
   body .swap-row {
@@ -5036,38 +5090,6 @@ button.viz-segment {
   outline-offset: 3px;
 }
 
-.viz-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.viz-key span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 6px 10px;
-  color: var(--ink-soft);
-  font-size: .8rem;
-  font-weight: 680;
-  background: var(--surface);
-}
-
-.viz-key b {
-  color: var(--accent-ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.viz-key span.active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-}
-
 .proof-coverage-viz {
   margin: 26px 0 22px;
 }
@@ -5291,6 +5313,12 @@ button.viz-segment {
 
 .service-panels {
   padding: clamp(16px, 3vw, 28px);
+}
+
+.service-panel {
+  /* These are <section> elements inside the catalog card; without this they
+     inherit the page-level --space-section padding (~116px dead bands). */
+  padding: 0;
 }
 
 .service-panel[hidden] {
@@ -5869,7 +5897,10 @@ body.products-page .conversion-proof .proof-pill em {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
-  gap: clamp(22px, 5vw, 60px);
+  /* Column gap only: a row gap here doubles the copy's own top margin and
+     opens a dead band between the headline and its supporting line. */
+  column-gap: clamp(22px, 5vw, 60px);
+  row-gap: 0;
 }
 
 .product-job-router .headline,
@@ -5939,6 +5970,7 @@ body.products-page .conversion-proof .proof-pill em {
   .product-job-router .wrap {
     grid-template-columns: 1fr;
     justify-items: center;
+    row-gap: 22px;
   }
 
   .product-job-router .headline,
@@ -5987,8 +6019,29 @@ body.products-page .conversion-proof .proof-pill em {
 .u-mt-36 { margin-top: 36px; }
 .u-mb-22 { margin-bottom: 22px; }
 
-/* Product "uses" list grid (was inline grid/gap/measure). */
-.uses-grid { display: grid; gap: 12px; max-width: 760px; }
+/* Product "uses" list grid (was inline grid/gap/measure). Two columns on wide
+   viewports so four check rows don't run a single 760px column down the page. */
+.uses-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); }
+
+/* Legal pages: .narrow and .legal-page were referenced by privacy/terms but never
+   defined, so the prose ran the full 1180px container (~120ch lines). */
+.wrap.narrow { max-width: 760px; }
+.legal-page .lead {
+  margin-top: 14px;
+  font-size: 1.06rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.legal-page h2 {
+  margin: 44px 0 10px;
+  font-size: 1.3rem;
+}
+.legal-page p,
+.legal-page li {
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+.legal-page ul { padding-left: 22px; }
 
 /* Compact headline sizes for sub-sections (override base .headline clamp). */
 .headline--md { font-size: 1.85rem; }
@@ -6480,7 +6533,7 @@ body.product-detail-page main > section.product-static-section {
   gap: 12px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-input);
+  border-radius: var(--r-card);
   padding: 18px 20px;
 }
 .doc-lib-head b { display: block; font-size: 1rem; }
@@ -6489,7 +6542,6 @@ body.product-detail-page main > section.product-static-section {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: auto;
 }
 .doc-chip {
   display: inline-flex;
@@ -6519,6 +6571,10 @@ body.product-detail-page main > section.product-static-section {
 .doc-chip:hover::before,
 .doc-chip:focus-visible::before { opacity: 1; }
 .doc-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Download chips are the page's primary action on touch devices — meet 44px. */
+@media (pointer: coarse) {
+  .doc-chip { min-height: 44px; padding-block: 10px; }
+}
 
 /* Product detail page: controlled-documents download rows */
 .product-static-panel .product-fit-list li.doc-file {

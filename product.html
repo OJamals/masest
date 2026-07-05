@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260630a">
+<link rel="stylesheet" href="css/style.css?v=20260705a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -296,7 +296,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!relWrap || !relGrid || typeof catalogCard !== "function") return;
       const group = (typeof CATALOG_GROUPS !== "undefined") ? CATALOG_GROUPS.find(g => g.ids.includes(id)) : null;
       let ids = (group ? group.ids : []).filter(rid => rid !== id && PRODUCTS[rid]);
-      if (!ids.length && typeof CATALOG_ORDER !== "undefined") ids = CATALOG_ORDER.filter(rid => rid !== id && PRODUCTS[rid]);
+      // A one-card "grid" looks stranded; top sparse groups up to three with catalog neighbours.
+      if (ids.length < 3 && typeof CATALOG_ORDER !== "undefined") {
+        for (const rid of CATALOG_ORDER) {
+          if (ids.length >= 3) break;
+          if (rid !== id && PRODUCTS[rid] && !ids.includes(rid)) ids.push(rid);
+        }
+      }
       ids = ids.slice(0, 4);
       if (!ids.length) return;
       relGrid.innerHTML = ids.map(rid => catalogCard(rid)).join("");

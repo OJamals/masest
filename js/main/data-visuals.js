@@ -77,9 +77,6 @@ function renderProofCoverage(root, cards) {
         </button>
       `).join("")}
     </div>
-    <div class="viz-key" aria-label="Proof sector counts">
-      ${entries.map(([kind]) => `<span data-proof-viz-key="${htmlEscape(kind)}"><b>${counts[kind]}</b>${htmlEscape(PROOF_LABELS[kind])}</span>`).join("")}
-    </div>
   `;
 
   const sync = () => {
@@ -87,13 +84,10 @@ function renderProofCoverage(root, cards) {
     root.querySelector("[data-proof-coverage-note]").textContent = kind === "all"
       ? "Showing the full case record."
       : `Filtered to ${PROOF_LABELS[kind] || kind}.`;
-    root.querySelectorAll("[data-proof-viz-filter], [data-proof-viz-key]").forEach((item) => {
-      const selected = kind !== "all" && (
-        item.dataset.proofVizFilter === kind ||
-        item.dataset.proofVizKey === kind
-      );
+    root.querySelectorAll("[data-proof-viz-filter]").forEach((item) => {
+      const selected = kind !== "all" && item.dataset.proofVizFilter === kind;
       item.classList.toggle("active", selected);
-      if (item.hasAttribute("data-proof-viz-filter")) item.setAttribute("aria-pressed", String(selected));
+      item.setAttribute("aria-pressed", String(selected));
     });
   };
 
@@ -140,9 +134,6 @@ function renderServiceMix(root, catalog) {
           <span>${htmlEscape(SERVICE_LABELS[category] || category)}</span>
         </span>
       `).join("")}
-    </div>
-    <div class="viz-key" aria-label="Service category counts">
-      ${entries.map(([category, count]) => `<span><b>${count}</b>${htmlEscape(SERVICE_LABELS[category] || category)}</span>`).join("")}
     </div>
   `;
 }

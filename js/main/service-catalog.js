@@ -116,7 +116,10 @@ function countLabel(count, category = "") {
 
 function renderServiceCard(item) {
   const name = displayServiceName(item.name);
-  const unit = normalizeText(item.unit || "service").replace(/^per\s+/i, "");
+  // Keep the "per" — a bare "sample" next to a dollar figure reads as
+  // "sample price", not the billing unit.
+  const rawUnit = normalizeText(item.unit || "service").replace(/^per\s+/i, "");
+  const unit = `per ${rawUnit}`;
   const price = fmtMoney(item.public_price, item.currency || "USD");
   const sku = String(item.sku || "").trim();
   const href = `contact.html?intent=service&sku=${encodeURIComponent(sku)}`;

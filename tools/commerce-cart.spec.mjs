@@ -182,7 +182,7 @@ test("cart re-enables checkout after removing bulk freight items", async ({ page
   await page.locator('[data-remove="lam3"]').click();
 
   await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeEnabled();
-  await expect(page.locator("#cartStatus")).toContainText("Cart totals are confirmed");
+  await expect(page.locator("#cartStatus")).toContainText("totals are confirmed at checkout");
 
   const quoteHref = await page.getByRole("link", { name: "Send Quote Request" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
