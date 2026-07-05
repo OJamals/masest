@@ -1997,30 +1997,37 @@ scroll-snap gallery
   justify-content: center;
   gap: clamp(16px, 3vw, 36px) clamp(22px, 3.8vw, 48px);
 }
+/* Logos are pre-trimmed to their content box, so a shared cap-height renders
+   every mark at the same optical size; width follows each logo's own aspect
+   (wide wordmarks get width, compact marks stay compact). */
 .client-wall li {
   flex: 0 0 auto;
-  width: clamp(116px, 14vw, 152px);
-  height: 56px;
+  height: clamp(38px, 4.5vw, 48px);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .client-wall img {
-  width: 100%;
+  width: auto;
   height: 100%;
+  max-width: min(216px, 30vw);
   object-fit: contain;
   filter: grayscale(1) contrast(1.05);
   opacity: .74;
   transition: filter .25s ease, opacity .25s ease;
 }
+/* Detailed multi-part marks (script + emblem) need more area than a plain
+   wordmark to read at the same optical weight. */
+.client-wall li.mark-detailed { height: clamp(52px, 6vw, 66px); }
 .client-wall li:hover img,
 .client-wall li:focus-within img {
   filter: grayscale(0);
   opacity: 1;
 }
 @media (max-width: 640px) {
-  .client-wall { gap: 14px 22px; justify-content: space-between; }
-  .client-wall li { width: clamp(92px, 28vw, 130px); height: 42px; }
+  .client-wall { gap: 14px 22px; }
+  .client-wall li { height: 34px; }
+  .client-wall li.mark-detailed { height: 46px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .client-wall img { transition: none; }
