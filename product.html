@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260705a">
+<link rel="stylesheet" href="css/style.css?v=20260705b">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -279,7 +279,9 @@ document.addEventListener("DOMContentLoaded", () => {
       img.alt = alt;
       img.hidden = false;
     }
-    if (p.image) {
+    // The brand poster is a placeholder, not a product photo — leave the hero
+    // slot to the HMIS panel; a real image_url from the catalog still loads.
+    if (p.image && !/masest-poster-transparent/.test(p.image)) {
       setProductImage(p.image, p.name + " product container");
     }
     document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";

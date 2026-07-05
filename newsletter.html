@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260705a">
+<link rel="stylesheet" href="css/style.css?v=20260705b">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <meta property="og:title" content="Newsletter | MASEST VertKleen">
@@ -37,16 +37,25 @@
 
 <main id="main">
   <section class="hero-split">
-    <div class="wrap">
-      <h1 class="display">Field results and replacement chemistry notes.</h1>
-      <p class="subhead">Get VertKleen case updates, product notes, and industry-specific maintenance guidance. No spam. Unsubscribe anytime.</p>
-      <form onsubmit="return false" id="newsletterForm" class="newsletter-form" novalidate>
-        <label for="nlEmail" class="sr-only">Email address</label>
-        <input id="nlEmail" name="email" type="email" required placeholder="you@company.com" autocomplete="email">
-        <input type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px" hidden>
-        <button type="submit" class="btn btn-primary">Subscribe</button>
-        <p id="nlMsg" class="form-msg" role="status" aria-live="polite"></p>
-      </form>
+    <div class="wrap newsletter-grid">
+      <div>
+        <h1 class="display">Field results and replacement chemistry notes.</h1>
+        <p class="subhead">Get VertKleen case updates, product notes, and industry-specific maintenance guidance. No spam. Unsubscribe anytime.</p>
+        <form onsubmit="return false" id="newsletterForm" class="newsletter-form" novalidate>
+          <label for="nlEmail" class="sr-only">Email address</label>
+          <input id="nlEmail" name="email" type="email" required placeholder="you@company.com" autocomplete="email">
+          <input type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px" hidden>
+          <button type="submit" class="btn btn-primary">Subscribe</button>
+          <p id="nlMsg" class="form-msg" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+      <aside class="newsletter-points" aria-label="What the briefing covers">
+        <h2>In a typical issue</h2>
+        <div class="spec-item"><i class="ph ph-images" aria-hidden="true"></i><div><b>Field results &amp; case files</b><span>Before/after photos and trial notes from live sites — the proof buyers forward to procurement.</span></div></div>
+        <div class="spec-item"><i class="ph ph-file-lock" aria-hidden="true"></i><div><b>Document-gated SKU notes</b><span>When labels, SDS updates, or controlled documents unlock a product for your spec.</span></div></div>
+        <div class="spec-item"><i class="ph ph-chart-line-up" aria-hidden="true"></i><div><b>Program &amp; pricing notes</b><span>Tier changes, glycol list updates, and seasonal maintenance windows worth planning around.</span></div></div>
+        <p class="newsletter-cadence">About once a month. One click to unsubscribe.</p>
+      </aside>
     </div>
   </section>
 </main>

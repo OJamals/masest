@@ -121,7 +121,7 @@ test("cart disables direct checkout when bulk freight items are present", async 
   await expect(page.getByRole("button", { name: "Use NET Terms" })).toBeDisabled();
   await expect(page.locator("#cartStatus")).toContainText("Remove bulk freight items");
 
-  const quoteHref = await page.getByRole("link", { name: "Send Quote Request" }).getAttribute("href");
+  const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("type")).toBe("quote");
   expect(quoteUrl.searchParams.get("cart")).toBe("crhd:1,lam3:1");
@@ -151,7 +151,7 @@ test("cart quote link reflects edited quantities before blur", async ({ page }) 
   await page.locator("#checkoutEmail").fill("buyer@example.com");
   await page.locator('input[data-qty="crhd"]').fill("4");
 
-  const quoteHref = await page.getByRole("link", { name: "Send Quote Request" }).getAttribute("href");
+  const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("cart")).toBe("crhd:4");
   expect(quoteUrl.searchParams.get("email")).toBe("buyer@example.com");
@@ -184,7 +184,7 @@ test("cart re-enables checkout after removing bulk freight items", async ({ page
   await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeEnabled();
   await expect(page.locator("#cartStatus")).toContainText("totals are confirmed at checkout");
 
-  const quoteHref = await page.getByRole("link", { name: "Send Quote Request" }).getAttribute("href");
+  const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("cart")).toBe("crhd:1");
   expect(quoteUrl.searchParams.get("message")).not.toContain("LAM3");

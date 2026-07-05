@@ -667,6 +667,20 @@ no dots) ---------- */
   font-size: .88rem;
   font-weight: 600;
 }
+/* When the <b> slot carries the card's ACTION (order-confirmed) rather than a
+   description, it reads as a link, not muted metadata. */
+.route-card .route-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-ink);
+  font-weight: 800;
+}
+.route-card .route-card-cta i { transition: transform .18s var(--ease-out); }
+.route-card:hover .route-card-cta i { transform: translateX(3px); }
+@media (prefers-reduced-motion: reduce) {
+  .route-card .route-card-cta i { transition: none; }
+}
 .route-card-media-card {
   grid-template-columns: 64px 1fr;
 }
@@ -1629,6 +1643,7 @@ so no-JS / hidden-tab renders stay visible */
     border: 0 !important;
   }
   .cmp-table td::before {
+    display: block;
     color: var(--muted);
     content: "";
     font-size: .72rem;
@@ -1638,12 +1653,20 @@ so no-JS / hidden-tab renders stay visible */
     margin-bottom: 4px;
     text-transform: uppercase;
   }
-  .cmp-table td:nth-child(1)::before { content: "Function"; }
-  .cmp-table td:nth-child(2)::before { content: "Traditional"; }
-  .cmp-table td:nth-child(3)::before { content: "Traditional HMIS"; }
-  .cmp-table td:nth-child(4)::before { content: "VertKleen"; }
-.cmp-table td:nth-child(5)::before { content: "VertKleen HMIS"; }
-  .cmp-table.responsive-labels td::before { content: attr(data-label); }
+  /* Every cell's mobile label comes from its own column header (stamped as
+     data-label by initCmpTableLabels in chrome.js). The old fixed
+     Function/Traditional/HMIS set mislabeled every non-5-column table. */
+  .cmp-table td::before { content: attr(data-label); }
+  /* Jobs table: pair each chemistry with its HMIS tag on one two-column row —
+     halves the stacked card height. */
+  .cmp-jobs tr {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: start !important;
+    gap: 12px 14px !important;
+  }
+  .cmp-jobs td:nth-child(1) { grid-column: 1 / -1; }
+  .cmp-jobs td:nth-child(3),
+  .cmp-jobs td:nth-child(5) { justify-self: end; text-align: right; }
 }
 
 .home-industry-grid {
@@ -5078,12 +5101,14 @@ button.viz-segment {
   line-height: 1.18;
 }
 
+/* Data-viz sector palette: six deliberate deep tones anchored on the brand teal,
+   all tuned so the white number/label inside a segment holds ≥4.5:1. */
 .viz-tone-1 { background: #0e7c86; }
 .viz-tone-2 { background: #20455f; }
-.viz-tone-3 { background: #8a6f2a; }
-.viz-tone-4 { background: #6d5578; }
-.viz-tone-5 { background: #5f7b45; }
-.viz-tone-6 { background: #9b5538; }
+.viz-tone-3 { background: #6e5717; }
+.viz-tone-4 { background: #5e4869; }
+.viz-tone-5 { background: #4c6334; }
+.viz-tone-6 { background: #8a4a2e; }
 
 .viz-segment.active {
   outline: 3px solid rgba(14, 124, 134, .22);
@@ -6023,9 +6048,84 @@ body.products-page .conversion-proof .proof-pill em {
    viewports so four check rows don't run a single 760px column down the page. */
 .uses-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); }
 
+/* About page: procurement credentials as a compact chip strip (they are
+   identifiers, not metrics — display-stat numerals oversold them). */
+.cred-band {
+  padding: clamp(18px, 3vw, 28px) 0;
+  border-block: 1px solid var(--line-soft);
+  background: var(--panel);
+}
+.cred-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+}
+.cred-strip li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: .85rem;
+  font-weight: 600;
+}
+.cred-strip b { color: var(--ink); font-weight: 800; }
+
+/* Icon fact rows in a balanced responsive grid (about mission, reused wherever
+   a stack of spec-items would run one long column). */
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 14px 22px;
+}
+
+/* Team / contact routes: three equal columns on wide viewports. */
+.team-cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
+
+/* Services FAQ: list rhythm — each disclosure otherwise carries the standalone
+   panel's clamp() block margin and the four questions drift apart. */
+.services-faq-list { display: grid; gap: 12px; }
+.services-faq-list .resource-disclosure { margin-block: 0; }
+
+/* Newsletter: signup left, what-you-get panel fills the hero's right half. */
+.newsletter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: start;
+}
+.newsletter-points {
+  display: grid;
+  gap: 16px;
+  padding: clamp(20px, 3vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+.newsletter-points h2 { margin: 0; font-size: 1.05rem; }
+.newsletter-cadence { margin: 2px 0 0; color: var(--muted); font-size: .85rem; }
+@media (max-width: 860px) {
+  .newsletter-grid { grid-template-columns: 1fr; }
+}
+
 /* Legal pages: .narrow and .legal-page were referenced by privacy/terms but never
    defined, so the prose ran the full 1180px container (~120ch lines). */
 .wrap.narrow { max-width: 760px; }
+.legal-page .legal-updated {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: .85rem;
+  font-weight: 600;
+}
 .legal-page .lead {
   margin-top: 14px;
   font-size: 1.06rem;

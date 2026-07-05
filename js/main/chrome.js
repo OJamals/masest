@@ -5,7 +5,24 @@ function pageName() {
   // (local preview) as well as the clean URLs production serves.
   return (location.pathname.split("/").pop() || "index").replace(/\.html$/, "") || "index";
 }
+
+// Mobile card layout hides each cmp-table's thead and labels every cell via
+// CSS `content: attr(data-label)`. Stamp those labels from the table's own
+// column headers so every table — 3, 4, or 5 columns — labels correctly.
+function initCmpTableLabels() {
+  document.querySelectorAll("table.cmp-table").forEach((table) => {
+    const headers = Array.from(table.querySelectorAll("thead th"), (th) => th.textContent.trim());
+    if (!headers.length) return;
+    table.querySelectorAll("tbody tr").forEach((row) => {
+      Array.from(row.children).forEach((cell, i) => {
+        if (headers[i] && !cell.dataset.label) cell.dataset.label = headers[i];
+      });
+    });
+  });
+}
+
 export function renderChrome() {
+  initCmpTableLabels();
   document.querySelector(".nojs-nav")?.setAttribute("hidden", "");
   const page = pageName();
   // Pages under /industries/ sit one level deep; prefix chrome links with the

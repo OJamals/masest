@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30T07:24:02.975Z",
+  "generated_at": "2026-07-05T22:56:01.030Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -21,7 +21,7 @@
       "counts": {
         "proof_cards": 14
       },
-      "sha256": "5db3653e7c5a2d4238c82fd3dacc9843123b74628852d82c9898b7792652f58b"
+      "sha256": "6b55f78bef57124650ab927a643b104f53eac9d224b1f4de874d24a3c7751c88"
     },
     "resources.json": {
       "count": 0,
@@ -63,7 +63,7 @@
       "counts": {
         "industry_sectors": 11
       },
-      "sha256": "d44b3871f8869f9de3f9cf0a337e7bdc9719c74d5d79c95302dcf888abf69db8"
+      "sha256": "211a99677176606c2c8403bae7e24e701b905e80dbb861ee845d6af95ac48ee7"
     }
   }
 }

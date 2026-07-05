@@ -45,7 +45,7 @@ test("product cards use details as the only repeated card action", () => {
   const cardBlock = commerceUi.match(/function productCard[\s\S]*?const commerceState/);
 
   assert.ok(cardBlock, "expected productCard block");
-  assert.match(cardBlock[0], /View Details/);
+  assert.match(cardBlock[0], /View details/);
   assert.doesNotMatch(cardBlock[0], /contact\?product/);
   assert.doesNotMatch(cardBlock[0], /Request a Quote/);
 });
@@ -295,7 +295,9 @@ test("resources page puts dense technical tables behind disclosure", () => {
 test("about page routes buyers before service breadth", () => {
   const about = read("about.html");
   const css = read("css/style.css");
-  const statsIndex = about.indexOf('class="stat-band"');
+  // 2026-07-05: credentials render as a compact chip strip (.cred-band), not
+  // display-stat numerals.
+  const statsIndex = about.indexOf('class="cred-band"');
   const routerIndex = about.indexOf('class="about-router');
   const disclosureIndex = about.indexOf('class="resource-disclosure about-services-disclosure');
   const servicesIndex = about.indexOf("Every service has a line item and a price.");

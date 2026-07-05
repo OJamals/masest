@@ -35,7 +35,7 @@ export function productCard(id, heroCard = false, eager = false) {
       ${fitList ? `<ul class="product-fit-list">${fitList}</ul>` : ""}
       <span class="product-proof-line">${catalog.proof || "Stats, studies, and documents on the detail page"}</span>
       <div class="prod-actions">
-        <a class="btn btn-ink btn-sm" href="products/${id}">View Details</a>
+        <a class="btn btn-ink btn-sm" href="products/${id}">View details</a>
         <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button"></span>
       </div>
   </div>`;
