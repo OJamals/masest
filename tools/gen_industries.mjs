@@ -51,9 +51,9 @@ const INDUSTRIES = [
   icon: "ph-warehouse",
   h1: "Cold-chain cleaning cannot wait for shutdown.",
   sub: "Perishable distribution centers, refrigerated bays, ammonia systems, forklifts, kitchens, drains, and coils with proof from Walmart DSC materials.",
-  intro: "Cold-storage teams juggle mildew, freezer entries, ammonia coils, condenser lines, kitchen grease, forklifts, and pilot readiness without stopping the building. VertKleen covers that whole walkdown with Descaler, CRHD, MultiWash, Purgo, and CR, and gets the proof, SDS, and trial details to you before the operations window closes.",
+  intro: "Cold-storage teams juggle mildew, freezer entries, ammonia coils, condenser lines, kitchen grease, forklifts, and pilot readiness without stopping the building. VertKleen covers that whole walkdown with Descaler, CR HD, MultiWash, Purgo, and CR, and gets the proof, SDS, and trial details to you before the operations window closes.",
   products: ["descaler", "crhd", "multiwash", "purgo"],
-  proof: { img: "walmart-dc-crhd", caption: "Walmart distribution-center proof covers CRHD degreasing and Descaler refrigeration work." }
+  proof: { img: "walmart-dc-crhd", caption: "Walmart distribution-center proof covers CR HD degreasing and Descaler refrigeration work." }
 },
 {
   slug: "food-beverage",

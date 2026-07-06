@@ -37,6 +37,12 @@ test("prefill uses normalized option matching", () => {
   assert.match(engagement, /replace\(\/\[\^a-z0-9\]\+\/g, ""\)/);
 });
 
+// An unmatched ?product= (program-fit names) must land in the notes, not vanish.
+test("unmatched product param falls back to the message field", () => {
+  assert.match(engagement, /Product interest: /);
+  assert.match(engagement, /preMatched/);
+});
+
 test("industry select covers every generated industry page", () => {
   for (const sector of [
     "Oil &amp; Gas", "Marine", "Manufacturing", "Food &amp; Beverage", "Healthcare",

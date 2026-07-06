@@ -87,15 +87,16 @@ export function initQuoteForm() {
   // "… Program (DBNPA if specified)"), so fall back to a normalized prefix match.
   const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "");
   const selectOption = (sel, wanted) => {
-    if (!sel || !wanted) return;
+    if (!sel || !wanted) return false;
     const options = [...sel.options];
     const hit = options.find(o => o.value === wanted || o.text === wanted)
       || options.find(o => o.text && norm(o.text) === norm(wanted))
       || options.find(o => o.text && norm(wanted) && norm(o.text).startsWith(norm(wanted)));
     if (hit) sel.value = hit.value || hit.text;
+    return !!hit;
   };
   const pre = params.get("product");
-  if (pre) selectOption(form.querySelector('[name="product"]'), pre);
+  const preMatched = pre ? selectOption(form.querySelector('[name="product"]'), pre) : false;
   const doc = params.get("doc");
   if (doc) {
     const msg = form.querySelector('[name="message"]');
@@ -107,6 +108,14 @@ export function initQuoteForm() {
   if (messageParam) {
     const msg = form.querySelector('[name="message"]');
     if (msg && !msg.value) msg.value = messageParam;
+  }
+  // A ?product= that matches no select option ("DBNPA Tablet program fit") must
+  // still reach the request — carry it in the notes instead of dropping it.
+  if (pre && !preMatched) {
+    const msg = form.querySelector('[name="message"]');
+    if (msg && !msg.value.includes(pre)) {
+      msg.value = ("Product interest: " + pre + "." + (msg.value ? "\n" + msg.value : ""));
+    }
   }
   const emailParam = params.get("email");
   if (emailParam) {
