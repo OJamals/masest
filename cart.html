@@ -54,14 +54,14 @@
         <p id="checkoutIdle" class="cart-status" hidden>Add products from the catalog and the checkout options open here.</p>
         <div id="checkoutActive">
         <div class="ship-est" id="shipEst" hidden>
-          <label class="field-label" for="shipZone">Estimated freight</label>
+          <label class="field-label" for="shipZone">Estimated freight (billed separately)</label>
           <select id="shipZone" class="cart-input">
             <option value="east">US East</option>
             <option value="central">US Central</option>
             <option value="west">US West</option>
           </select>
           <p class="ship-est-out" id="shipEstOut"></p>
-          <p class="ship-est-note">Estimate only. Final freight is confirmed on your invoice.</p>
+          <p class="ship-est-note">Estimate only — freight is not charged at checkout. MASEST confirms it on your invoice before fulfillment.</p>
         </div>
         <label class="field-label" for="checkoutEmail">Email for receipt</label>
         <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" placeholder="buyer@company.com">
@@ -187,7 +187,18 @@
       const total = Number(err.order_total || 0).toFixed(2);
       return `This $${total} order exceeds your available credit ($${avail}). Pay now with a card, or send a quote request and MASEST will review your account terms.`;
     }
+    if (err?.code === "out_of_stock") {
+      return err.message || "Some items do not have enough stock. Adjust quantities or request a quote.";
+    }
+    if (err?.code === "mixed_currency") {
+      return err.message || "Items in your cart use different currencies. Order them separately.";
+    }
+    if (err?.code === "stripe_error" || err?.code === "server_error") {
+      return "Checkout hit a temporary error. Try again in a moment, or send a quote request and MASEST will complete the order.";
+    }
     if (err?.message === "cart_empty") return "Add at least one product before checkout.";
+    // Server error messages are written for buyers — prefer them over the generic fallback.
+    if (err?.message && err.message !== err.code) return err.message;
     return "Checkout is not available for this cart. Send a quote request and MASEST will confirm the order path.";
   }
 
@@ -356,6 +367,8 @@
       if (result.net) {
         status.dataset.state = "ok";
         status.textContent = result.message || "Order placed on account.";
+        // NET success never reaches order-confirmed.html — close the funnel here.
+        try { if (typeof window.mtrack === "function") window.mtrack("order_confirmed"); } catch (e) { /* best-effort */ }
         clear();
         render();
       }

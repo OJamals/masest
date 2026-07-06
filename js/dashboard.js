@@ -100,6 +100,9 @@ function trackingSteps(order) {
     ['shipped', 'In transit'],
     ['delivered', 'Delivered'],
   ];
+  // 'blocked' is a real admin/DB status but not a timeline step — without an explicit
+  // notice it would silently render as step 0 ("Order received") and hide the problem.
+  const blocked = status === 'blocked';
   const activeIndex = Math.max(0, steps.findIndex(([key]) => key === status));
   const meta = [
     order.carrier && `Carrier: ${esc(order.carrier)}`,
@@ -111,7 +114,8 @@ function trackingSteps(order) {
   const history = events.length ? `<ul class="ship-history">${events.map((e) =>
     `<li><b>${esc(e.status)}</b> · ${esc(fmtDT(e.created_at))}${e.note ? ` — ${esc(e.note)}` : ''}</li>`).join('')}</ul>` : '';
   return `<div class="trackline" aria-label="Order tracking timeline">
-    ${steps.map(([key, label], index) => `<span class="${index <= activeIndex ? 'done' : ''}" data-track-step="${key}">${esc(label)}</span>`).join('')}
+    ${blocked ? '<p class="track-blocked" data-track-step="blocked"><i class="ph ph-warning-circle" aria-hidden="true"></i> Shipment on hold — MASEST is resolving a carrier issue and will follow up.</p>' : ''}
+    ${steps.map(([key, label], index) => `<span class="${!blocked && index <= activeIndex ? 'done' : ''}" data-track-step="${key}">${esc(label)}</span>`).join('')}
     ${meta ? `<p class="muted">${meta}</p>` : ''}
     ${history}
     ${order.tracking_url ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl(order.tracking_url))}" target="_blank" rel="noopener noreferrer">Track shipment</a>` : ''}

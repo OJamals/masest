@@ -65,6 +65,9 @@
   .badge[data-s=approved], .badge[data-s=paid], .badge[data-s=fulfilled], .badge[data-s=net_paid] { background: var(--accent-soft); color: var(--accent-ink); }
   .badge[data-s=rejected], .badge[data-s=suspended], .badge[data-s=cancelled] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
   .badge[data-s=net_open], .badge[data-s=pending_payment] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
+  .badge[data-s=refunded] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
+  .track-blocked { display: flex; gap: 8px; align-items: baseline; padding: 8px 10px; border-radius: 8px;
+    background: var(--status-warning-bg); color: var(--status-warning-ink); font-size: .86rem; font-weight: 700; }
   .trackline { display: grid; gap: 8px; margin: 12px 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.68); }
   .trackline span { position: relative; padding-left: 22px; color: var(--muted); font-size: .86rem; }
   .trackline span::before { content: ""; position: absolute; left: 0; top: .32em; width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); }
@@ -611,6 +614,6 @@
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260619b"></script>
 <script src="js/track.js" defer></script>
-<script type="module" src="js/dashboard.js?v=20260706b"></script>
+<script type="module" src="js/dashboard.js?v=20260706d"></script>
 </body>
 </html>

@@ -416,14 +416,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const updateStock = () => {
           const chosen = variants.find(v => v.vsku === sel.value);
           stockEl.className = "badge";
+          let blocked = false;
           if (chosen && chosen.track_stock && Number.isFinite(Number(chosen.stock))) {
             const n = Number(chosen.stock);
-            if (n <= 0) { stockEl.textContent = "Out of stock"; stockEl.classList.add("badge-danger"); }
+            if (n <= 0 && chosen.allow_backorder) { stockEl.textContent = "Backordered — ships on restock"; stockEl.classList.add("badge-warning"); }
+            else if (n <= 0) { stockEl.textContent = "Out of stock"; stockEl.classList.add("badge-danger"); blocked = true; }
             else if (n <= 10) { stockEl.textContent = "Low stock: " + n + " left"; stockEl.classList.add("badge-warning"); }
             else { stockEl.textContent = "In stock"; stockEl.classList.add("badge-success"); }
           } else {
             stockEl.textContent = "In stock"; stockEl.classList.add("badge-success");
           }
+          // The server rejects out-of-stock lines at checkout anyway — don't let the
+          // buyer add one only to hit that error later.
+          buyBtn.disabled = blocked;
         };
         updateStock();
         sel.addEventListener("change", updateStock);
