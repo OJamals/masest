@@ -54,8 +54,10 @@
 }
 
 @media (max-width: 720px) {
-  body:has(.lead-action-bar) {
-    padding-bottom: 78px;
+  /* Reserve for the floating lead bar lives on the footer so the strip
+     below the last content stays the footer's dark surface, not bare body. */
+  body:has(.lead-action-bar) footer {
+    padding-bottom: 116px;
   }
 
   .nav {

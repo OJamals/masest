@@ -841,6 +841,10 @@ no dots) ---------- */
 @media (prefers-reduced-motion: reduce) {
   .resource-disclosure summary::after { transition: none; }
 }
+.quote-advanced-toggle {
+  align-self: end;
+}
+
 .resource-disclosure summary strong {
   display: block;
   font-size: clamp(1.45rem, 2.4vw, 2.2rem);
@@ -882,7 +886,13 @@ no dots) ---------- */
   .resource-disclosure summary {
     align-items: flex-start;
     flex-direction: column;
-    padding: 20px;
+    position: relative;
+    padding: 20px 52px 20px 20px;
+  }
+  .resource-disclosure summary::after {
+    position: absolute;
+    top: 22px;
+    right: 20px;
   }
   .resource-disclosure summary > span {
     display: flex;
@@ -5140,10 +5150,13 @@ button.viz-segment {
 
 .service-mix-viz .viz-stack {
   min-height: 78px;
+  flex-wrap: wrap;
 }
 
 .service-mix-viz .viz-segment {
   min-height: 78px;
+  /* 8 share-proportional segments: below this the label clips mid-glyph */
+  min-width: 96px;
 }
 
 .services-recommendation {
