@@ -122,6 +122,8 @@ test("staff edits structured CMS service fields and posts normalized payload", a
 
   const saveResponse = page.waitForResponse((response) => response.url().includes("/api/admin/content") && response.request().method() === "POST");
   await page.locator('[data-content-action="draft"]').click();
+  // Editing a PUBLISHED entry: Save draft warns that it unpublishes at the next rebuild.
+  await page.locator('.confirm-dialog button[value="confirm"]').click();
   await saveResponse;
 
   expect(saveBody.publish).toBe(false);
@@ -151,12 +153,17 @@ test("content editor auto-generates slugs while preserving manual overrides", as
   await page.locator("#contentTitle").fill("Cooling Tower & CIP: Before/After!");
   await expect(page.locator("#contentSlug")).toHaveValue("cooling-tower-and-cip-before-after");
 
+  // Manual slugs normalize on blur (change), not per keystroke — per-keystroke
+  // slugify made hyphens/spaces untypable and jumped the caret.
   await page.locator("#contentSlug").fill("Custom Case Study");
+  await page.locator("#contentSlug").blur();
   await expect(page.locator("#contentSlug")).toHaveValue("custom-case-study");
   await page.locator("#contentTitle").fill("Changed title should not replace the slug");
   await expect(page.locator("#contentSlug")).toHaveValue("custom-case-study");
 
+  // The form is dirty, so New asks before wiping the editor.
   await page.locator('[data-content-action="new"]').click();
+  await page.locator('.confirm-dialog button[value="confirm"]').click();
   await expect(page.locator("#contentSlug")).toHaveValue("");
   await page.locator("#contentTitle").fill("Raw Water Pilot Trial #2");
   await expect(page.locator("#contentSlug")).toHaveValue("raw-water-pilot-trial-2");
@@ -436,6 +443,7 @@ test("content editor sends workflow notes and surfaces review notes", async ({ p
   await page.locator("[data-content-edit]").first().click();
 
   const note = "Tighten the compliance wording before publishing.";
+  await page.locator(".adm-content-disclosure > summary").click();
   await expect(page.locator("#contentWorkflowNote")).toBeVisible();
   await page.locator("#contentWorkflowNote").fill(note);
 
@@ -489,6 +497,7 @@ test("content editor blocks writes behind active editorial locks", async ({ page
   await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator("[data-content-edit]").first().click();
+  await page.locator(".adm-content-disclosure > summary").click();
 
   await expect(page.locator("#contentLockStatus")).toContainText("Locked by another editor");
   await expect(page.locator('[data-content-action="draft"]')).toBeDisabled();

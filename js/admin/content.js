@@ -1,4 +1,5 @@
-import { esc, delegate } from "../util.js";
+import { esc, delegate, confirmDialog } from "../util.js";
+import { supabase } from "../auth.js";
 import { diffContentFields, formatFieldValue } from "./content-diff.js";
 import {
   contentPayloadFields,
@@ -251,29 +252,11 @@ function formTemplate() {
           <label>Payload JSON <textarea id="contentPayload" class="adm-textarea" spellcheck="false">{}</textarea></label>
           <label>SEO JSON <textarea id="contentSeo" class="adm-textarea" spellcheck="false">{}</textarea></label>
         </details>
-        <details class="adm-content-disclosure full" open>
-          <summary>Review note and editor lock</summary>
-          <div class="adm-content-disclosure-body">
-            <label>Workflow note
-              <textarea id="contentWorkflowNote" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
-            </label>
-            <div class="adm-content-lockbar">
-              <span id="contentLockStatus" class="adm-content-lock-status" data-state="">Unlocked</span>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
-            </div>
-          </div>
-        </details>
         <div class="adm-inline-actions adm-content-actions full" aria-label="CMS editor actions">
           <div class="adm-content-action-group" data-content-action-group="draft-publish" aria-label="Draft and publish">
             <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
             <button class="btn btn-primary btn-sm" type="button" data-content-action="publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish</button>
-          </div>
-          <div class="adm-content-action-group" data-content-action-group="review" aria-label="Review workflow">
-            <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
             <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule publish</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
           </div>
           <div class="adm-content-action-group" data-content-action-group="manage" aria-label="Manage entry">
             <button class="btn btn-ghost btn-sm" type="button" data-content-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
@@ -282,6 +265,24 @@ function formTemplate() {
             <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore draft</button>
           </div>
         </div>
+        <details class="adm-content-disclosure full">
+          <summary>Review workflow &amp; editor lock (multi-editor tools)</summary>
+          <div class="adm-content-disclosure-body">
+            <label>Workflow note
+              <textarea id="contentWorkflowNote" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
+            </label>
+            <div class="adm-content-action-group" data-content-action-group="review" aria-label="Review workflow">
+              <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
+            </div>
+            <div class="adm-content-lockbar">
+              <span id="contentLockStatus" class="adm-content-lock-status" data-state="">Unlocked</span>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
+            </div>
+          </div>
+        </details>
       </form>
       <p id="contentStatus" class="adm-status" role="status" aria-live="polite"></p>
     </div>
@@ -418,7 +419,7 @@ function workflowTemplate(admEmpty) {
       <div class="adm-panel-header">
         <div>
           <h2>Review queue</h2>
-          <p class="muted">Scheduled, review, and change-request items stay visible even when the list is filtered.</p>
+          <p class="muted">Scheduled, review, and change-request items stay visible even when the list is filtered. Scheduled entries go live when you press "Publish due scheduled" — there is no automatic timer yet.</p>
         </div>
         <button class="btn btn-secondary btn-sm" type="button" data-content-action="publish_scheduled">
           <i class="ph ph-clock-countdown" aria-hidden="true"></i> Publish due scheduled
@@ -484,7 +485,7 @@ function shellTemplate(admEmpty) {
                 <option value="">All types</option>${selectOptions(TYPES)}
               </select>
               <select id="contentStatusFilter" class="adm-select adm-select-sm" aria-label="Filter content status">
-                ${selectOptions(STATUSES, "published")}
+                ${selectOptions(STATUSES, "all")}
               </select>
             </div>
             <div id="contentList" class="adm-content-list-body">${admEmpty("ph-note-pencil", "No content entries", "Create a draft or switch the filters.")}</div>
@@ -577,6 +578,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let editorLockOwned = false;
   let workflowEntries = [];
   let slugManuallyEdited = false;
+  let contentListFailed = false;
+  let formDirty = false;
+  let ownUserId = null; // resolved once; lets a reload recognise our own editor lock
   let lastGeneratedSlug = "";
 
   function setStatus(text, kind = "") {
@@ -589,14 +593,13 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   function renderContentHubMetrics() {
     const box = $("contentHubMetrics");
     if (!box) return;
-    const loaded = (state.content || []).length;
-    const workflow = (workflowEntries || []).filter((entry) => (
-      ["in_review", "changes_requested", "scheduled"].includes(entry.status)
-    )).length;
-    const scheduled = (workflowEntries || []).filter((entry) => entry.status === "scheduled").length;
+    const all = workflowEntries || [];
+    const published = all.filter((entry) => entry.status === "published").length;
+    const drafts = all.filter((entry) => ["draft", "in_review", "changes_requested"].includes(entry.status)).length;
+    const scheduled = all.filter((entry) => entry.status === "scheduled").length;
     box.innerHTML = `
-      <span><b>${esc(loaded)}</b> loaded</span>
-      <span><b>${esc(workflow)}</b> workflow</span>
+      <span><b>${esc(published)}</b> published</span>
+      <span><b>${esc(drafts)}</b> drafts</span>
       <span><b>${esc(scheduled)}</b> scheduled</span>
     `;
   }
@@ -808,7 +811,13 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     const sameEntry = nextKey && nextKey === currentEntryKey;
     currentEntry = entry || {};
     currentEntryKey = nextKey;
-    editorLockOwned = Boolean(lockOwned || (preserveLockOwner && sameEntry && editorLockOwned && activeContentLock(entry)));
+    editorLockOwned = Boolean(
+      lockOwned
+      || (preserveLockOwner && sameEntry && editorLockOwned && activeContentLock(entry))
+      // After a reload the lock is still OURS if locked_by matches the signed-in user —
+      // without this, your own lock renders as "Locked by another editor" and blocks editing.
+      || (ownUserId && entry.locked_by === ownUserId && activeContentLock(entry)),
+    );
     $("contentType").value = entry.type || "service";
     $("contentLocale").value = entry.locale || "en";
     $("contentTitle").value = entry.title || "";
@@ -828,6 +837,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       badge.dataset.s = entry.status || "draft";
     }
     setStatus("");
+    formDirty = false;
     void loadRevisions(entry);
     updateLockUi(entry);
     refreshPreview();
@@ -1123,7 +1133,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
 
   function filters() {
     const type = $("contentTypeFilter")?.value || "";
-    const status = $("contentStatusFilter")?.value || "published";
+    const status = $("contentStatusFilter")?.value || "all";
     return { type, status };
   }
 
@@ -1138,6 +1148,11 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   function renderList() {
     const list = $("contentList");
     if (!list) return;
+    if (contentListFailed) {
+      // A server error must not masquerade as an empty library.
+      list.innerHTML = admEmpty("ph-warning", "Couldn't load content", "The list request failed. Reload or switch filters to retry.");
+      return;
+    }
     list.innerHTML = listTemplate(state.content || [], admEmpty);
   }
 
@@ -1168,7 +1183,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (list) list.innerHTML = admSkeleton(5);
       const { type, status } = filters();
       const listRequest = loadContentEntries({ type, status });
-      const workflowRequest = status === "all" ? listRequest : loadContentEntries({ type, status: "all" });
+      // The review queue + hub metrics are always the FULL set — the on-screen copy
+      // promises "Filters only change this list, not the review queue".
+      const workflowRequest = (status === "all" && !type) ? listRequest : loadContentEntries({ type: "", status: "all" });
       const [listResult, workflowResult] = await Promise.allSettled([listRequest, workflowRequest]);
       if (listResult.status === "fulfilled") {
         state.content = listResult.value;
@@ -1176,8 +1193,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       } else {
         const error = listResult.reason || {};
         state.content = [];
+        contentListFailed = true;
         setStatus(error.data?.message || error.data?.error || "Content entries unavailable.", "err");
       }
+      if (listResult.status === "fulfilled") contentListFailed = false;
       workflowEntries = workflowResult.status === "fulfilled" ? workflowResult.value : [];
     }
     renderList();
@@ -1188,6 +1207,24 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   async function saveContent({ publish = false } = {}) {
     if (stopIfLocked()) return;
     const preserveLockOwner = editorLockOwned;
+    // Saving a published entry as draft silently unpublishes it at the next site
+    // rebuild (single-row model; only published rows export) — say so first.
+    if (!publish && currentEntry.status === "published") {
+      const ok = await confirmDialog(
+        "This entry is live. Saving as a draft takes it OFF the public site at the next rebuild. Publish instead to keep it live.",
+        { confirmText: "Save draft (unpublish)", cancelText: "Cancel", danger: true },
+      );
+      if (!ok) return;
+    }
+    // Editing slug/type/locale forks a brand-new entry; the original stays live.
+    const formKey = `${$("contentType")?.value || ""}:${slugifyContentTitle($("contentSlug")?.value || "")}:${$("contentLocale")?.value.trim() || "en"}`;
+    if (currentEntryKey && formKey !== currentEntryKey) {
+      const ok = await confirmDialog(
+        "You changed the slug, type, or language — saving creates a NEW entry and the original keeps its current status. Continue?",
+        { confirmText: "Create new entry", cancelText: "Cancel" },
+      );
+      if (!ok) return;
+    }
     setStatus(publish ? "Publishing..." : "Saving draft...");
     try {
       const result = await api("/api/admin/content", {
@@ -1225,7 +1262,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       setStatus(`Workflow updated: ${action.replace(/_/g, " ")}.`, "ok");
       await renderContent({ refetch: true });
     } catch (error) {
-      setStatus(error.data?.message || error.data?.error || "Workflow update failed.", "err");
+      setStatus(error.data?.message || error.data?.error || error.message || "Workflow update failed.", "err");
     }
   }
 
@@ -1270,7 +1307,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       setStatus("Archived.", "ok");
       await renderContent({ refetch: true });
     } catch (error) {
-      setStatus(error.data?.message || error.data?.error || "Archive failed.", "err");
+      setStatus(error.data?.message || error.data?.error || error.message || "Archive failed.", "err");
     }
   }
 
@@ -1319,7 +1356,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       setStatus("Restored as draft.", "ok");
       await renderContent({ refetch: true });
     } catch (error) {
-      setStatus(error.data?.message || error.data?.error || "Restore failed.", "err");
+      setStatus(error.data?.message || error.data?.error || error.message || "Restore failed.", "err");
     }
   }
 
@@ -1328,6 +1365,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (!panel) return;
     panel.hidden = true;
     panel.innerHTML = "";
+    $("contentRevisionList")?.querySelectorAll('[aria-expanded="true"]').forEach((row) => row.setAttribute("aria-expanded", "false"));
   }
 
   // Inspect a revision: show a field-level diff against the current saved entry
@@ -1338,6 +1376,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (!list || !panel) return;
     const revision = (list._revisions || []).find((r) => String(r.version) === String(version));
     if (!revision) return;
+    list.querySelectorAll('[aria-expanded="true"]').forEach((row) => row.setAttribute("aria-expanded", "false"));
+    list.querySelector(`[data-content-revision="${CSS.escape(String(version))}"]`)?.setAttribute("aria-expanded", "true");
     const { fields, changedCount } = diffContentFields(currentEntry, revision);
     const rows = fields.map((field) => `
       <tr class="${field.changed ? "is-changed" : ""}">
@@ -1389,7 +1429,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       setStatus(`Restored version ${version} as a draft.`, "ok");
       await renderContent({ refetch: true });
     } catch (error) {
-      setStatus(error.data?.message || error.data?.error || "Restore failed.", "err");
+      setStatus(error.data?.message || error.data?.error || error.message || "Restore failed.", "err");
     }
   }
 
@@ -1415,7 +1455,13 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
-  function editEntry(key) {
+  async function confirmDiscardEdits() {
+    if (!formDirty) return true;
+    return confirmDialog("Discard unsaved edits in the editor?", { confirmText: "Discard", cancelText: "Keep editing", danger: true });
+  }
+
+  async function editEntry(key) {
+    if (!(await confirmDiscardEdits())) return;
     const [type, slug, locale] = String(key || "").split(":");
     const entry = [...(state.content || []), ...(workflowEntries || [])].find((row) => (
       row.type === type && row.slug === slug && (row.locale || "en") === (locale || "en")
@@ -1423,9 +1469,23 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (entry) populateForm(entry);
   }
 
+  let assetSearchTimer;
+  function debouncedAssetSearch() {
+    clearTimeout(assetSearchTimer);
+    assetSearchTimer = setTimeout(() => { void loadAssets(); }, 250);
+  }
+
   function wireContent() {
     const root = $("admContent");
     if (!root) return;
+    // Resolve our user id once so reloads recognise our own editor lock (best-effort).
+    supabase?.auth?.getSession?.().then((r) => { ownUserId = r?.data?.session?.user?.id || null; }).catch(() => {});
+    // Unsaved edits are otherwise silently lost on tab close / navigation.
+    window.addEventListener("beforeunload", (event) => {
+      if (!formDirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
     root.addEventListener("change", (event) => {
       if (event.target.matches("#contentType")) {
         renderStructuredFields(event.target.value, safePayloadJson());
@@ -1451,6 +1511,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
           setStatus(`Invalid JSON: ${error.message}`, "err");
         }
       }
+      if (event.target.matches("#contentSlug")) normalizeManualSlug();
       if (event.target.matches("#contentTypeFilter, #contentStatusFilter")) {
         renderContent({ refetch: true });
       }
@@ -1459,15 +1520,22 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       }
     });
     root.addEventListener("input", (event) => {
+      if (event.target.closest("#contentForm")) formDirty = true;
       if (event.target.matches("#contentTitle")) syncSlugFromTitle();
-      if (event.target.matches("#contentSlug")) normalizeManualSlug();
+      // Slug normalizes on CHANGE (blur), not per keystroke — per-keystroke slugify
+      // stripped trailing "-", made spaces/hyphens untypable and jumped the caret.
+      if (event.target.matches("#contentSlug")) slugManuallyEdited = true;
       if (event.target.matches("#contentScheduledAt")) refreshPreview();
       if (event.target.matches("[data-content-payload-field]")) syncStructuredPayload();
       if (event.target.matches("[data-content-seo-field]")) syncSeoPayload();
+      if (event.target.matches("#contentAssetSearch")) debouncedAssetSearch();
     });
     root.addEventListener("change", (event) => {
       if (event.target.matches("[data-content-payload-field]")) syncStructuredPayload();
       if (event.target.matches("[data-content-seo-field]")) syncSeoPayload();
+    });
+    root.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && $("contentAssetPicker") && !$("contentAssetPicker").hidden) closeAssetPicker();
     });
     delegate(root, "click", "[data-content-edit]", (_event, button) => editEntry(button.dataset.contentEdit));
     delegate(root, "click", "[data-content-revision]", (_event, button) => inspectRevision(button.dataset.contentRevision));
@@ -1478,7 +1546,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     delegate(root, "click", "[data-content-workflow]", (_event, button) => runWorkflow(button.dataset.contentWorkflow));
     delegate(root, "click", "[data-content-action]", (_event, button) => {
       const action = button.dataset.contentAction;
-      if (action === "new") return populateForm();
+      if (action === "new") return confirmDiscardEdits().then((ok) => { if (ok) populateForm(); });
       if (action === "duplicate") return duplicateContent();
       if (action === "lock") return updateContentLock("lock");
       if (action === "unlock") return updateContentLock("unlock");

@@ -171,8 +171,9 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(page.locator("#contentPreviewFrame")).toBeVisible();
   await expect(page.locator("#contentRevisionList")).toBeVisible();
   await expect(page.locator("#contentWorkflowQueue")).toBeVisible();
-  await expect(page.locator("#contentStatusFilter")).toHaveValue("published");
-  await expect(page.locator("#contentList")).toContainText("No content entries");
+  // Default filter is "all" so fresh drafts are never hidden from the library.
+  await expect(page.locator("#contentStatusFilter")).toHaveValue("all");
+  await expect(page.locator("#contentList")).toContainText("Brewery CIP");
   await expect(page.locator("#contentWorkflowRows")).toContainText("Brewery CIP");
   await expect(page.locator("#contentManifestRows")).toContainText("services.json");
   await expect(page.locator("#contentManifestRows")).toContainText("services: 1");
