@@ -1244,30 +1244,6 @@ font-size: .68rem;
   opacity: 0 !important;
 }
 
-/* Act 3 is a centered column: the explainer text stays put at the top, the three
-   factor cards sit below it. No absolute overlap; text stays readable throughout. */
-
-
-.story .act[data-act="3"] .act-copy.top {
-  position: static;
-  top: auto;
-  left: auto;
-  right: auto;
-}
-
-
-
-/* The category teaching cards (fade out at beat 2.25) and the conventional chemical
-   deck (first card enters beat 2.35) are never on screen together, yet stacked
-   they reserved two bands of column height — pushing the final chemical card
-   past the stage bottom (clipped by overflow:hidden) on short laptops, with a
-   dead gap above it. Overlay them in one cell so the deck claims the freed band
-   and the card stays fully framed. Story-ready only; the no-JS fallback keeps
-   its stacked layout. */
-
-
-
-
 
 
 
