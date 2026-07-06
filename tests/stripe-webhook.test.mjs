@@ -63,10 +63,15 @@ test("webhook dedups on stripe_payment_intent before inserting an order", () => 
 });
 
 // --- Contract: inventory decrement for stock-tracked SKUs ---
-test("webhook decrements variant stock via the atomic RPC after a paid order", () => {
+test("webhook decrements variant stock via the atomic RPC after a settled paid order", () => {
   assert.match(SRC, /decrement_variant_stock/, "must call the atomic decrement RPC");
-  assert.match(SRC, /if\s*\(\s*order\s*&&\s*lines\.length\s*\)\s*await\s+decrementVariantStock/,
-    "must only decrement once the order persisted and there are lines");
+  // Gated on settled: unsettled ACH orders decrement only when async_payment_succeeded lands.
+  assert.match(SRC, /if\s*\(\s*order\s*&&\s*lines\.length\s*&&\s*settled\s*\)/,
+    "must only decrement once the order persisted, there are lines, and payment settled");
+  // The RPC refuses (returns false) on insufficient stock — the buyer already paid, so
+  // staff must be alerted to the oversell instead of it vanishing into a log line.
+  assert.match(SRC, /alertStaffOversell/,
+    "a failed decrement on a paid order must alert staff");
 
   const orderInsertIdx = SRC.indexOf("orderRowFromSession(");
   const decrementIdx = SRC.indexOf("await decrementVariantStock(");

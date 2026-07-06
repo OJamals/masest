@@ -8,11 +8,33 @@ export function centsToAmount(cents) {
   return (cents ?? 0) / 100;
 }
 
-// Parse the cart JSON stashed in checkout-session metadata. Malformed / missing / non-array → [].
+// Reassemble the chunked cart metadata (cart, cart2, cart3…) written by
+// cartMetadataEntries() back into one JSON string. Single-key legacy sessions
+// (pre-chunking) pass through unchanged.
+export function assembleCartMetadata(metadata) {
+  const md = metadata || {};
+  if (md.cart == null) return "";
+  let raw = String(md.cart);
+  for (let i = 2; md[`cart${i}`] != null; i += 1) raw += String(md[`cart${i}`]);
+  return raw;
+}
+
+// Parse the cart JSON stashed in checkout-session metadata. Malformed / missing /
+// non-array → []. Accepts both the legacy full shape ({sku,name,qty,unit_price,…})
+// and the compact chunked shape ({s,ps,q,p,b}) — names are absent in the compact
+// shape and re-derived from the DB by the webhook.
 export function parseCartMetadata(raw) {
   try {
     const v = JSON.parse(raw || "[]");
-    return Array.isArray(v) ? v : [];
+    if (!Array.isArray(v)) return [];
+    return v.map((c) => ({
+      sku: c.sku ?? c.s,
+      product_sku: c.product_sku ?? c.ps ?? null,
+      name: c.name ?? null,
+      qty: c.qty ?? c.q,
+      unit_price: c.unit_price ?? c.p,
+      backordered: !!(c.backordered ?? c.b),
+    }));
   } catch {
     return [];
   }
@@ -24,11 +46,17 @@ export function parseCartMetadata(raw) {
 // stays pure (no checkout-session import).
 export function orderRowFromSession(session, customerEmail = null) {
   const s = session || {};
+  // ACH (us_bank_account) sessions complete while the debit is still processing
+  // (payment_status 'unpaid') and can fail days later — those orders start as
+  // pending_payment and are promoted/cancelled by the async_payment_* events.
+  const settled = !s.payment_status || s.payment_status === "paid";
   return {
     company_id: s.metadata?.company_id || null,
-    status: "paid",
+    status: settled ? "paid" : "pending_payment",
     payment_method: "stripe",
-    qbo_sync_status: "pending",
+    // null keeps unsettled ACH orders out of the QBO claim queue (claim_qbo_orders
+    // only takes 'pending'); async_payment_succeeded flips it to 'pending'.
+    qbo_sync_status: settled ? "pending" : null,
     subtotal: centsToAmount(s.amount_subtotal),
     tax: centsToAmount(s.total_details?.amount_tax),
     total: centsToAmount(s.amount_total),
@@ -74,11 +102,12 @@ export function stockDecrements(lines) {
     .map((l) => ({ p_vsku: l.sku, p_qty: Number(l.qty || 0) }));
 }
 
-// RPC arg objects for `increment_variant_stock` — returns refunded line items to
-// inventory on a full refund. Same shape as the decrement args (only the RPC differs).
+// RPC arg objects for `increment_variant_stock` — returns refunded/cancelled line items
+// to inventory. Mirrors stockDecrements: backordered lines were never decremented, so
+// incrementing them back would inflate stock.
 export function stockIncrements(lines) {
   return (lines || [])
-    .filter((l) => l.sku)
+    .filter((l) => l.sku && !l.backordered)
     .map((l) => ({ p_vsku: l.sku, p_qty: Number(l.qty || 0) }));
 }
 

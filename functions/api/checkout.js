@@ -51,12 +51,20 @@ function variantIsStocked(variant, qty) {
 }
 
 async function decrementVariantStock(sb, sellable, qtyBySku) {
+  const decremented = [];
   for (const line of sellable) {
     if (!line.track_stock || line.stock == null) continue;
     if (line.backordered) continue; // stock already at/below zero — don't decrement
     const qty = qtyBySku[line.sku];
     const { data, error } = await sb.rpc('decrement_variant_stock', { p_vsku: line.sku, p_qty: qty });
-    if (error || data !== true) return false;
+    if (error || data !== true) {
+      // Roll back the lines already decremented so a mid-cart failure doesn't leak stock.
+      for (const done of decremented) {
+        await sb.rpc('increment_variant_stock', done).then(() => {}, () => {});
+      }
+      return false;
+    }
+    decremented.push({ p_vsku: line.sku, p_qty: qty });
   }
   return true;
 }
@@ -221,7 +229,12 @@ export async function onRequestPost({ request, env }) {
       line_total: Number(p.price) * qtyBySku[p.sku],
       backordered: !!p.backordered,
     })));
-    if (itemsErr) return json(500, { error: 'order_items_persist_failed' });
+    if (itemsErr) {
+      // A NET order without line items would silently consume the company's credit
+      // and never email anyone — cancel it so the ledger stays honest.
+      await sb.from('orders').update({ status: 'cancelled' }).eq('id', order.id).then(() => {}, () => {});
+      return json(500, { error: 'order_items_persist_failed' });
+    }
 
     const stockOk = await decrementVariantStock(sb, sellable, qtyBySku);
     if (!stockOk) {

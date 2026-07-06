@@ -93,8 +93,20 @@
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((o) => {
         const money = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: String(o.currency || "usd").toUpperCase() }).format(Number(n || 0));
-        summary.textContent = o.email ? ("A confirmation was sent to " + o.email + ".") : "Your order is recorded.";
-        try { if (typeof window.mtrack === "function") window.mtrack("order_confirmed"); } catch (e) { /* funnel event best-effort */ }
+        // ACH debits settle days later: payment_status is 'unpaid' on this redirect, so
+        // say "processing" instead of implying the money already moved.
+        const settled = !o.payment_status || o.payment_status === "paid";
+        summary.textContent = settled
+          ? (o.email ? ("A confirmation was sent to " + o.email + ".") : "Your order is recorded.")
+          : ("Your bank payment is processing." + (o.email ? " We'll email " + o.email + " once it clears — usually within a few business days." : " We'll email you once it clears."));
+        try {
+          // Fire the funnel event once per session (a reload of this page is not a new order).
+          const dedupeKey = "mtrack_order_confirmed:" + session;
+          if (typeof window.mtrack === "function" && !sessionStorage.getItem(dedupeKey)) {
+            window.mtrack("order_confirmed");
+            sessionStorage.setItem(dedupeKey, "1");
+          }
+        } catch (e) { /* funnel event best-effort */ }
         if (Array.isArray(o.lines) && o.lines.length) {
           linesEl.innerHTML = o.lines.map((l) =>
             "<li><span>" + l.qty + "× " + esc(l.name || "Item") + "</span><b>" + money(l.amount_total) + "</b></li>").join("");

@@ -49,8 +49,12 @@ test("new NET and Stripe orders enter the QBO sync queue", () => {
   // webhook delegates to; the row must still mark the order pending QBO sync.
   assert.match(webhook, /orderRowFromSession\(/,
     "webhook should build the paid order via orderRowFromSession");
-  assert.match(orderShape, /payment_method:\s*['"]stripe['"][\s\S]*qbo_sync_status:\s*['"]pending['"]/,
-    "Stripe checkout orders should start pending QBO invoice/payment sync");
+  // Settled card orders queue immediately; unsettled ACH orders hold at null until
+  // async_payment_succeeded releases them (claim_qbo_orders only takes 'pending').
+  assert.match(orderShape, /payment_method:\s*['"]stripe['"][\s\S]*qbo_sync_status:\s*settled\s*\?\s*['"]pending['"]\s*:\s*null/,
+    "Stripe checkout orders should start pending QBO sync only once payment settled");
+  assert.match(webhook, /async_payment_succeeded[\s\S]*qbo_sync_status:\s*'pending'/,
+    "ACH settlement should release the order into the QBO sync queue");
 });
 
 test("QBO invoice auto-sync notifies the buyer company when the invoice is ready", () => {

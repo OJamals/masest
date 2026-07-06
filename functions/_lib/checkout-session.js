@@ -4,6 +4,29 @@
 // supplied (B2B account) the session binds to that Stripe Customer so tax is computed
 // against — and any tax_exempt='exempt' marking on — that customer; guests fall back
 // to customer_email.
+// Stripe caps every metadata value at 500 characters, so the cart is stored in a
+// compact shape (short keys, no display names — the webhook re-derives names from
+// product_variants) and split across cart, cart2, cart3… keys. 40 chunks × 450 chars
+// comfortably holds 300+ cart lines while staying under Stripe's 50-key limit.
+const CART_CHUNK_SIZE = 450;
+const CART_MAX_CHUNKS = 40;
+
+export function cartMetadataEntries(cart) {
+  const compact = JSON.stringify((cart || []).map((l) => ({
+    s: l.sku,
+    ps: l.product_sku || undefined,
+    q: l.qty,
+    p: l.unit_price,
+    ...(l.backordered ? { b: 1 } : {}),
+  })));
+  if (compact.length > CART_CHUNK_SIZE * CART_MAX_CHUNKS) throw new Error("cart_too_large");
+  const entries = {};
+  for (let i = 0, pos = 0; pos < compact.length; i += 1, pos += CART_CHUNK_SIZE) {
+    entries[i === 0 ? "cart" : `cart${i + 1}`] = compact.slice(pos, pos + CART_CHUNK_SIZE);
+  }
+  return entries;
+}
+
 export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sellable, qtyBySku, taxEnabled = false, customerId = null }) {
   const cleanEmail = String(email || "").trim();
   const cart = sellable.map((product) => ({
@@ -52,7 +75,7 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
     metadata: {
       company_id: companyId || "",
       buyer_email: cleanEmail,
-      cart: JSON.stringify(cart),
+      ...cartMetadataEntries(cart),
     },
   };
 

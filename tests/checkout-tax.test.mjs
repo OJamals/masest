@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildStripeCheckoutSessionParams } from "../functions/_lib/checkout-session.js";
+import { assembleCartMetadata, parseCartMetadata } from "../functions/_lib/order-shape.js";
 
 const base = {
   appUrl: "https://masest.co",
@@ -21,12 +22,12 @@ test("non-taxable product gets the non-taxable tax_code; taxable uses account de
   assert.equal(taxed.line_items[0].price_data.product_data.tax_code, undefined);
 });
 
-test("backordered flag rides along in the cart metadata", () => {
+test("backordered flag rides along in the (chunked) cart metadata", () => {
   const p = buildStripeCheckoutSessionParams({
     ...base, email: "x@y.co",
     sellable: [{ sku: "A", name: "A", price: 10, stripe_price_id: null, backordered: true }],
   });
-  assert.equal(JSON.parse(p.metadata.cart)[0].backordered, true);
+  assert.equal(parseCartMetadata(assembleCartMetadata(p.metadata))[0].backordered, true);
 });
 
 test("automatic_tax stays OFF by default, ON only when taxEnabled", () => {
