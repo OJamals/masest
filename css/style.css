@@ -1791,11 +1791,10 @@ scroll-snap gallery
   width: 100%;
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  border-radius: var(--r-input);
-  border: 1px solid var(--line);
   margin-bottom: 18px;
-  background: #fff;
-  padding: 10px;
+  /* Packshots carry real alpha; the panel surface is the backdrop. */
+  background: transparent;
+  padding: 10px 10px 0;
 }
 
 /* ---- Before / after slider ---- */
@@ -2791,7 +2790,7 @@ line-height: 1.35;
   margin: -4px -4px 18px;
   padding: 12px;
   border-radius: calc(var(--r-card) - 4px);
-  background: #fff;
+  background: transparent;
   overflow: visible;
 }
 
@@ -3037,6 +3036,7 @@ object-fit: contain;
 .product-media-card-product img {
   padding: 14px;
   object-fit: contain;
+  background: transparent;
 }
 
 .product-media-card figcaption {

@@ -366,7 +366,7 @@ function productPage(id, product) {
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260706b">
+<link rel="stylesheet" href="../css/style.css?v=20260706c">
 <link rel="stylesheet" href="../css/navigation.css?v=20260706a">
 <link rel="stylesheet" href="../css/components.css">
 <!-- seo:auto -->
