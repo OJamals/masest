@@ -124,7 +124,11 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         <div class="admin-order-meta">
           <div><span>Items</span><ul class="admin-order-items">${items || '<li class="muted">No items</li>'}</ul></div>
           <div><span>Pay</span><b>${esc(order.payment_method || '')}${netAgingBadge(order)}</b></div>
-          <label><span>Status</span><select class="adm-select" data-order-status="${id}">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></label>
+          <label><span>Status</span><select class="adm-select" data-order-status="${id}">${ORDER_STATUSES
+            // 'refunded' is only reachable via the Refund control (which actually moves the
+            // money) — the server rejects it as a bare status write. Shown only when current.
+            .filter((s) => s !== 'refunded' || order.status === 'refunded')
+            .map((s) => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}</select></label>
         </div>
         <div class="admin-order-actions">
           <button class="btn btn-ghost btn-sm" data-order-detail="${id}" type="button">Details</button>

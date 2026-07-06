@@ -20,10 +20,12 @@ test("orders persist buyer email for shipment notifications", () => {
   assert.match(ORDER_SHAPE, /customer_email:\s*customerEmail/);
 });
 
-test("tracking updates notify direct buyer email without duplicating company recipients", () => {
+test("tracking updates email buyer + company recipients once, deduplicated", () => {
+  assert.match(ADMIN_ORDERS, /function sendTrackingEmail/);
   assert.match(ADMIN_ORDERS, /function notifyBuyerTracking/);
   assert.match(ADMIN_ORDERS, /order\?\.customer_email/);
-  assert.match(ADMIN_ORDERS, /companyRecipients\s*=\s*await notifyCompany/);
-  assert.match(ADMIN_ORDERS, /await notifyBuyerTracking\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*companyRecipients\)/);
+  // The recipient union is deduplicated inside sendTrackingEmail (Set over normalized emails).
+  assert.match(ADMIN_ORDERS, /new Set\(\(recipients \|\| \[\]\)/);
+  assert.match(ADMIN_ORDERS, /await sendTrackingEmail\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*\[order\?\.customer_email,\s*\.\.\.companyRecipients\]\)/);
   assert.match(ADMIN_ORDERS, /htmlEscape/);
 });

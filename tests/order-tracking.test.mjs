@@ -42,13 +42,17 @@ test("staff orders API can update tracking metadata and notify buyers", () => {
   assert.match(ADMIN_ORDERS, /tracking_number/);
   assert.match(ADMIN_ORDERS, /tracking_url/);
   assert.match(ADMIN_ORDERS, /estimated_delivery_at/);
-  assert.match(ADMIN_ORDERS, /const notifyLabel\s*=\s*fulfilled\s*\?\s*['"]fulfilled['"]\s*:\s*['"]tracking updated['"]/);
-  assert.match(ADMIN_ORDERS, /notifyCompany\(sb,\s*env,\s*request,\s*order\?\.company_id,\s*notifyLabel/);
+  assert.match(ADMIN_ORDERS, /const notifyLabel\s*=\s*shipped\s*\?\s*['"]shipped['"]\s*:\s*['"]tracking updated['"]/);
+  // One rich tracking email goes to buyer + company recipients (sendTrackingEmail), so
+  // the clickable tracking link is never shadowed by the generic notifyCompany email.
+  assert.match(ADMIN_ORDERS, /await sendTrackingEmail\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*\[order\?\.customer_email,\s*\.\.\.companyRecipients\]\)/);
 });
 
 test("staff shipment tracking with a carrier tracking number marks orders fulfilled", () => {
   assert.match(ADMIN_ORDERS, /const update\s*=\s*\{\s*tracking_status:\s*trackingStatus/);
-  assert.match(ADMIN_ORDERS, /const fulfilled\s*=\s*\['shipped',\s*'delivered'\]\.includes\(trackingStatus\)\s*&&\s*trackingNumber/);
+  // Promotion is gated on settled payment: a shipped NET order must stay net_open so it
+  // keeps counting against the company's outstanding credit until it's actually paid.
+  assert.match(ADMIN_ORDERS, /const fulfilled\s*=\s*\['shipped',\s*'delivered'\]\.includes\(trackingStatus\)\s*&&\s*trackingNumber\s*&&\s*\['paid',\s*'net_paid'\]\.includes\(current\.status\)/);
   assert.match(
     ADMIN_ORDERS,
     /if\s*\(fulfilled\)\s*\{\s*update\.status\s*=\s*'fulfilled';\s*\}/

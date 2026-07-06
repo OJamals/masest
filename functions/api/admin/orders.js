@@ -39,11 +39,15 @@ async function notifyCompany(sb, env, request, companyId, label, extra) {
   return emails;
 }
 
-async function notifyBuyerTracking(env, request, order, label, extra, exclude = []) {
-  const email = String(order?.customer_email || '').trim();
-  if (!email) return false;
-  const normalized = email.toLowerCase();
-  if ((exclude || []).some((item) => String(item || '').trim().toLowerCase() === normalized)) return false;
+// Rich shipment email (carrier / tracking # / ETA + "Track shipment" CTA) to an explicit
+// recipient list. update_tracking sends this to the buyer AND the company's order
+// recipients so the clickable tracking link reaches everyone — the generic notifyCompany
+// email used to shadow it for company members.
+async function sendTrackingEmail(env, request, order, label, extra, recipients) {
+  const unique = [...new Set((recipients || [])
+    .map((item) => String(item || '').trim().toLowerCase())
+    .filter(Boolean))];
+  if (!unique.length) return false;
 
   const appUrl = env.APP_URL || new URL(request.url).origin;
   const details = [
@@ -53,7 +57,7 @@ async function notifyBuyerTracking(env, request, order, label, extra, exclude = 
   ].filter(Boolean).join('');
 
   return sendEmail(env, {
-    to: [email],
+    to: unique,
     subject: `Order ${label}`,
     html: emailLayout({
       heading: `Order ${label}`,
@@ -63,6 +67,14 @@ async function notifyBuyerTracking(env, request, order, label, extra, exclude = 
     }),
     category: 'order',
   });
+}
+
+async function notifyBuyerTracking(env, request, order, label, extra, exclude = []) {
+  const email = String(order?.customer_email || '').trim();
+  if (!email) return false;
+  const normalized = email.toLowerCase();
+  if ((exclude || []).some((item) => String(item || '').trim().toLowerCase() === normalized)) return false;
+  return sendTrackingEmail(env, request, order, label, extra, [email]);
 }
 
 export async function onRequest({ request, env }) {
@@ -128,7 +140,7 @@ export async function onRequest({ request, env }) {
     if (body.action === 'refund') {
       if (!staffCan(role, 'order.refund')) return json(403, { error: 'forbidden', message: 'Refunds require finance or owner access.' });
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,order_items(sku,qty)').eq('id', body.id).single();
+        .select('id,company_id,customer_email,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,order_items(sku,qty,backordered)').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       if (!ord) return json(404, { error: 'not_found' });
       if (REFUND_BLOCKING_STATUSES.has(ord.status)) {
@@ -180,7 +192,9 @@ export async function onRequest({ request, env }) {
       const refundMsg = plan.fullyRefunded
         ? 'Your MASEST order was refunded. The amount will return to your original payment method.'
         : `A partial refund of $${plan.amount.toFixed(2)} was issued to your original payment method.`;
-      await notifyCompany(sb, env, request, updated?.company_id, label, refundMsg);
+      const refundRecipients = await notifyCompany(sb, env, request, updated?.company_id, label, refundMsg);
+      // Guest orders have no company — email the buyer directly (excluded if already covered).
+      await notifyBuyerTracking(env, request, ord, label, refundMsg, refundRecipients);
       await recordAudit(sb, {
         user,
         action: plan.fullyRefunded ? 'order.refund' : 'order.refund_partial',
@@ -279,6 +293,9 @@ export async function onRequest({ request, env }) {
     if (body.action === 'update_tracking') {
       const trackingStatus = String(body.tracking_status || 'processing').trim();
       if (!TRACKING_STATUSES.includes(trackingStatus)) return json(400, { error: 'invalid_tracking_status' });
+      const { data: current, error: curErr } = await sb.from('orders')
+        .select('id,status,payment_method').eq('id', body.id).single();
+      if (curErr) return json(curErr.code === 'PGRST116' ? 404 : 500, { error: curErr.message });
       const carrier = String(body.carrier || '').trim().slice(0, 80) || null;
       const trackingNumber = String(body.tracking_number || '').trim().slice(0, 120) || null;
       const trackingUrl = String(body.tracking_url || '').trim().slice(0, 500) || null;
@@ -291,7 +308,12 @@ export async function onRequest({ request, env }) {
         : (body.shipped_at ? new Date(body.shipped_at) : null);
       if (shippedAt && Number.isNaN(shippedAt.getTime())) return json(400, { error: 'invalid_shipped_at' });
 
-      const fulfilled = ['shipped', 'delivered'].includes(trackingStatus) && trackingNumber;
+      // Promote to 'fulfilled' only for settled orders. A shipped NET order MUST stay
+      // net_open: 'fulfilled' drops it out of the company's outstanding-credit sum
+      // (credit.js counts status='net_open' only) and hides "Mark NET paid" — the
+      // receivable would silently vanish. Shipping before payment is the normal NET flow.
+      const fulfilled = ['shipped', 'delivered'].includes(trackingStatus) && trackingNumber
+        && ['paid', 'net_paid'].includes(current.status);
       const update = {
         tracking_status: trackingStatus,
         carrier,
@@ -313,22 +335,54 @@ export async function onRequest({ request, env }) {
       await sb.from('shipment_events').insert({
         order_id: body.id, status: trackingStatus, carrier, tracking_number: trackingNumber, note,
       }).then(() => {}, () => {});
-      const notifyLabel = fulfilled ? 'fulfilled' : 'tracking updated';
-      const notifyBody = fulfilled
+      const shipped = ['shipped', 'delivered'].includes(trackingStatus) && trackingNumber;
+      const notifyLabel = shipped ? 'shipped' : 'tracking updated';
+      const notifyBody = shipped
         ? `Your order has shipped. ${carrier || 'Carrier'} ${trackingNumber}`.trim()
         : `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim();
-      const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, notifyLabel, notifyBody);
-      await notifyBuyerTracking(env, request, order, notifyLabel, notifyBody, companyRecipients);
+      // One rich tracking email (carrier/number/ETA + Track-shipment link) to buyer +
+      // company order recipients; the in-app notification is inserted directly so
+      // notifyCompany's generic email doesn't shadow the tracking link.
+      if (order?.company_id) {
+        await sb.from('notifications').insert({
+          company_id: order.company_id, type: 'order', title: `Order ${notifyLabel}`,
+          body: notifyBody || `Your order is now "${notifyLabel}".`, link: '/dashboard.html#orders',
+        }).then(() => {}, () => {});
+      }
+      const companyRecipients = order?.company_id ? await companyEmails(sb, order.company_id, 'orders') : [];
+      await sendTrackingEmail(env, request, order, notifyLabel, notifyBody, [order?.customer_email, ...companyRecipients]);
       await recordAudit(sb, { user, action: 'order.update_tracking', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, update } });
       return json(200, { ok: true, order });
     }
 
     if (!ORDER_STATUSES.includes(body.status)) return json(400, { error: 'invalid_status' });
+    // Money states must go through their dedicated actions: a bare status write moves no
+    // money, returns no stock, and posts no QBO reversal. 'cart' would also hide the
+    // order from the admin list (the GET filters it out) with no way back.
+    if (body.status === 'refunded') {
+      return json(400, { error: 'use_refund_action', message: 'Use the Refund control — setting the status directly would not move any money.' });
+    }
+    if (body.status === 'cart') return json(400, { error: 'invalid_status' });
+    const { data: before, error: beforeErr } = await sb.from('orders')
+      .select('id,company_id,customer_email,status,payment_method,order_items(sku,qty,backordered)')
+      .eq('id', body.id).single();
+    if (beforeErr) return json(beforeErr.code === 'PGRST116' ? 404 : 500, { error: beforeErr.message });
     const { data: order, error } = await sb.from('orders').update({ status: body.status })
-      .eq('id', body.id).select('id,company_id,status,total,currency').single();
+      .eq('id', body.id).select('id,company_id,customer_email,status,total,currency').single();
     if (error) return json(500, { error: error.message });
-    await notifyCompany(sb, env, request, order?.company_id, body.status.replace('_', ' '));
-    await recordAudit(sb, { user, action: 'order.set_status', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, status: body.status } });
+    // Cancelling an open NET order is the sanctioned NET-cancel path (refund action
+    // rejects NET). Its stock was decremented at placement — return it exactly once,
+    // on the net_open→cancelled edge.
+    if (body.status === 'cancelled' && before.status === 'net_open' && before.payment_method === 'net') {
+      for (const args of stockIncrements(before.order_items)) {
+        await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
+      }
+    }
+    const statusLabel = body.status.replace('_', ' ');
+    const statusRecipients = await notifyCompany(sb, env, request, order?.company_id, statusLabel);
+    // Guest orders have no company — email the buyer directly (excluded if already covered).
+    await notifyBuyerTracking(env, request, order, statusLabel, null, statusRecipients);
+    await recordAudit(sb, { user, action: 'order.set_status', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, status: body.status, previous_status: before.status } });
     return json(200, { ok: true, order });
   }
 
