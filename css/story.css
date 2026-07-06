@@ -617,6 +617,16 @@
 .hmis-score em:nth-child(2) { --ax: var(--hmis-f); }
 .hmis-score em:nth-child(3) { --ax: var(--hmis-r); }
 .hmis-score.score-zero em { --ax: #34e0c8; }
+.hmis-score em.low {
+  width: auto;
+  padding: 0 14px;
+  font-size: .82rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.ledger-chem a { color: inherit; text-decoration: none; }
+.ledger-chem a:hover,
+.ledger-chem a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 .ledger-row .hmis-score { justify-self: center; }
 
 /* Mirror variant: same skeleton, safe palette */
