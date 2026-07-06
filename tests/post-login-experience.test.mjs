@@ -4,15 +4,57 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
+function extractConst(js, name) {
+  const match = js.match(new RegExp(`const ${name} = [\\s\\S]*?;\\n`));
+  assert.ok(match, `${name} should be defined`);
+  return match[0];
+}
+
+function extractFunction(js, name) {
+  const start = js.indexOf(`function ${name}`);
+  assert.notEqual(start, -1, `${name} should be defined`);
+  let depth = 0;
+  let end = -1;
+  for (let i = js.indexOf("{", start); i < js.length; i += 1) {
+    if (js[i] === "{") depth += 1;
+    if (js[i] === "}") depth -= 1;
+    if (depth === 0) { end = i + 1; break; }
+  }
+  assert.notEqual(end, -1, `${name} should parse`);
+  return js.slice(start, end);
+}
+
+function dashboardRouting(js) {
+  return new Function(`
+    ${extractConst(js, "DASH_TABS")}
+    ${extractConst(js, "DASH_TAB_ALIASES")}
+    ${extractFunction(js, "dashboardTabFromHash")}
+    return { dashboardTabFromHash };
+  `)();
+}
+
 test("dashboard notifications open same-page targets without reloading", () => {
   const js = read("js/dashboard.js");
 
   assert.match(js, /function resolveNotificationTarget/, "notifications should normalize message/order/account targets");
   assert.match(js, /data-notif-link/, "notification rows should carry their navigation target");
   assert.match(js, /function openNotification/, "notification activation should be centralized");
-  assert.match(js, /selectTab\(DASH_TABS\.includes\(hash\) \? hash : 'overview'\)/, "same-dashboard notification links should switch tabs in-page");
+  assert.match(js, /dashboardTabFromHash\(url\.hash\)/, "same-dashboard notification links should resolve through dashboard hash aliases");
+  assert.doesNotMatch(extractFunction(js, "openDashboardTarget"), /['"]overview['"]/, "notification clicks should not fall back to Overview for missing or stale hashes");
   assert.match(js, /scrollIntoView\(\{\s*block:\s*'nearest',\s*inline:\s*'center'\s*\}\)/, "overflowing mobile tab rails should reveal the active tab");
   assert.match(js, /addEventListener\('keydown'/, "keyboard activation should match click activation");
+});
+
+test("legacy business notification hashes open business tools", () => {
+  const { dashboardTabFromHash } = dashboardRouting(read("js/dashboard.js"));
+
+  assert.equal(dashboardTabFromHash("#orders"), "orders");
+  assert.equal(dashboardTabFromHash("/dashboard.html#messages"), "");
+  assert.equal(dashboardTabFromHash("#programs"), "business");
+  assert.equal(dashboardTabFromHash("bizPrograms"), "business");
+  assert.equal(dashboardTabFromHash("bizInvoicing"), "business");
+  assert.equal(dashboardTabFromHash("#unknown"), "");
+  assert.equal(dashboardTabFromHash(""), "");
 });
 
 test("message notifications default to the messages panel", () => {

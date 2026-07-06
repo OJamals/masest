@@ -20,11 +20,25 @@ let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
 
 /* ---------- tabs / routing ---------- */
-const DASH_TABS = ['orders', 'messages', 'notifications', 'business', 'addresses', 'payment', 'profile', 'security'];
+const DASH_TABS = ['overview', 'orders', 'messages', 'notifications', 'business', 'addresses', 'payment', 'profile', 'security'];
+const DASH_TAB_ALIASES = {
+  programs: 'business',
+  bizProfile: 'business',
+  bizSetup: 'business',
+  bizCompanySetup: 'business',
+  bizInvoicing: 'business',
+  bizPrograms: 'business',
+  bizBulk: 'business',
+  bizAccountTeam: 'business',
+};
+
+function dashboardTabFromHash(hash) {
+  const tab = String(hash || '').replace(/^#/, '');
+  return DASH_TABS.includes(tab) ? tab : (DASH_TAB_ALIASES[tab] || '');
+}
 
 function currentDashboardTab() {
-  const tab = location.hash.slice(1);
-  return DASH_TABS.includes(tab) ? tab : 'overview';
+  return dashboardTabFromHash(location.hash) || 'overview';
 }
 
 function selectTab(name) {
@@ -499,8 +513,8 @@ function wireNotifications() {
     const url = new URL(target, location.href);
     const norm = (p) => p.replace(/\.html$/, '');
     if (norm(url.pathname) === norm(location.pathname)) {
-      const hash = url.hash.slice(1);
-      selectTab(DASH_TABS.includes(hash) ? hash : 'overview');
+      const tab = dashboardTabFromHash(url.hash);
+      if (tab) selectTab(tab);
       return;
     }
     location.href = url.href;
