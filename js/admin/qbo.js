@@ -104,7 +104,9 @@ export async function renderQboStatus() {
   } catch (err) {
     status.textContent = err.data?.error || "QuickBooks status unavailable.";
     status.dataset.state = "err";
-    if (detail) detail.textContent = "Check the Cloudflare production environment, then retry the status check.";
+    // A transient status failure used to dead-end the card (Connect stayed
+    // disabled with nothing to click) — offer the retry right here.
+    if (detail) detail.innerHTML = 'Check the Cloudflare production environment. <button class="btn btn-ghost btn-sm" type="button" data-qbo-status-retry>Retry status check</button>';
   } finally {
     button.disabled = !allowConnect;
     if (syncButton) syncButton.disabled = !allowSync;
@@ -197,6 +199,7 @@ export async function retryQboOrder(orderId) {
 }
 
 document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-qbo-status-retry]")) { renderQboStatus(); return; }
   const button = event.target.closest("[data-qbo-retry]");
   if (!button) return;
   retryQboOrder(button.dataset.qboRetry);

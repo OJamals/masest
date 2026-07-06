@@ -240,7 +240,7 @@ function formTemplate() {
       </div>
       <form id="contentForm" class="adm-form-grid" onsubmit="return false">
         <label>Content area <select id="contentType" class="adm-select">${selectOptions(TYPES, "service")}</select></label>
-        <label>Language <input id="contentLocale" class="adm-input" value="en" maxlength="12"></label>
+        <label>Language <select id="contentLocale" class="adm-select"><option value="en">English (en)</option></select></label>
         <p id="contentPlacementHint" class="adm-content-placement full" role="note">${esc(placementText("service"))}</p>
         <label class="wide">Title <input id="contentTitle" class="adm-input" required></label>
         <label class="wide">Page slug <input id="contentSlug" class="adm-input" required></label>
@@ -366,12 +366,15 @@ function previewTemplate() {
   return `
     <div class="adm-card adm-content-preview">
       <div class="adm-panel-header">
-        <h2>Website preview</h2>
+        <div>
+          <h2>Field check</h2>
+          <p class="muted">What each field contains right now — not the styled page. Publish, then view the live page for the real layout.</p>
+        </div>
         <button class="btn btn-ghost btn-sm" type="button" data-content-action="preview">
           <i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh
         </button>
       </div>
-      <iframe id="contentPreviewFrame" title="Content preview" src="content-preview.html"></iframe>
+      <iframe id="contentPreviewFrame" title="Content field check" src="content-preview.html"></iframe>
     </div>
   `;
 }
@@ -819,7 +822,14 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       || (ownUserId && entry.locked_by === ownUserId && activeContentLock(entry)),
     );
     $("contentType").value = entry.type || "service";
-    $("contentLocale").value = entry.locale || "en";
+    // Language is a fixed select (free text forked entries on typos); existing
+    // non-en entries still open — inject their locale as an option on demand.
+    const localeSel = $("contentLocale");
+    const locale = entry.locale || "en";
+    if (localeSel && ![...localeSel.options].some((o) => o.value === locale)) {
+      localeSel.insertAdjacentHTML("beforeend", `<option value="${esc(locale)}">${esc(locale)}</option>`);
+    }
+    localeSel.value = locale;
     $("contentTitle").value = entry.title || "";
     $("contentSlug").value = entry.slug || "";
     $("contentScheduledAt").value = dateTimeLocalValue(entry.scheduled_at);
@@ -937,6 +947,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
           <button class="btn btn-secondary btn-sm" type="button" data-content-asset-kind="${esc(assetTargetKind)}" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">
             <i class="ph ph-check" aria-hidden="true"></i> Select
           </button>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-asset-alt-action data-content-asset-storage-path="${esc(storagePath)}">
+            <i class="ph ph-text-aa" aria-hidden="true"></i> Alt text
+          </button>
           <button class="btn btn-ghost btn-sm" type="button" data-content-asset-status-action data-content-asset-storage-path="${esc(storagePath)}" data-content-asset-next-status="${esc(nextStatus)}">
             <i class="ph ${esc(statusIcon)}" aria-hidden="true"></i> ${esc(statusLabel)}
           </button>
@@ -971,6 +984,60 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
+  // Alt-text editor dialog (C9): archive/restore requires alt text, so there must
+  // be a way to set it right here. Resolves to the new text, or null on cancel.
+  function promptAltText(current) {
+    return new Promise((resolve) => {
+      const dlg = document.createElement("dialog");
+      dlg.className = "confirm-dialog";
+      dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
+        <p class="confirm-dialog-msg">Describe this image for screen readers and SEO.</p>
+        <label>Alt text <input class="adm-input" data-alt-input value="${esc(current || "")}" maxlength="300"></label>
+        <menu class="confirm-dialog-actions">
+          <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Cancel</button>
+          <button value="ok" class="btn btn-primary btn-sm" type="submit">Save alt text</button>
+        </menu>
+      </form>`;
+      if (typeof dlg.showModal !== "function") { resolve(null); return; }
+      document.body.appendChild(dlg);
+      dlg.addEventListener("close", () => {
+        const next = dlg.returnValue === "ok" ? String(dlg.querySelector("[data-alt-input]")?.value || "").trim() : null;
+        dlg.remove();
+        resolve(next);
+      });
+      dlg.showModal();
+      dlg.querySelector("[data-alt-input]")?.focus();
+    });
+  }
+
+  async function editAssetAlt(button) {
+    const storagePath = button.dataset.contentAssetStoragePath || "";
+    const asset = assetCache.get(storagePath);
+    if (!storagePath || !asset) {
+      setStatus("Refresh assets before updating this asset.", "err");
+      return;
+    }
+    const alt = await promptAltText(asset.alt || "");
+    if (alt === null || alt === String(asset.alt || "").trim()) return;
+    if (!alt) { setStatus("Alt text cannot be empty.", "err"); return; }
+    button.disabled = true;
+    setStatus("Saving alt text...");
+    try {
+      const result = await api("/api/admin/content-assets", {
+        method: "POST",
+        body: { ...asset, storage_path: storagePath, alt },
+      });
+      const updated = result.asset || { ...asset, alt };
+      assetCache.set(updated.storage_path || storagePath, updated);
+      setStatus("Alt text saved.", "ok");
+      await loadAssets();
+    } catch (error) {
+      setStatus(error.data?.message || error.data?.error || error.message || "Alt text update failed.", "err");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function updateAssetStatus(button) {
     const storagePath = button.dataset.contentAssetStoragePath || "";
     const nextStatus = button.dataset.contentAssetNextStatus === "archived" ? "archived" : "available";
@@ -981,7 +1048,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
     const alt = String(asset.alt || "").trim();
     if (!alt) {
-      setStatus("Add alt text before changing this asset status.", "err");
+      setStatus("Add alt text first (Alt text button on the row), then change the status.", "err");
       return;
     }
     button.disabled = true;
@@ -1543,6 +1610,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     delegate(root, "click", "[data-content-revision-close]", () => closeRevisionDiff());
     delegate(root, "click", "[data-content-asset-path]", (_event, button) => assignAssetPath(button));
     delegate(root, "click", "[data-content-asset-status-action]", (_event, button) => updateAssetStatus(button));
+    delegate(root, "click", "[data-content-asset-alt-action]", (_event, button) => editAssetAlt(button));
     delegate(root, "click", "[data-content-workflow]", (_event, button) => runWorkflow(button.dataset.contentWorkflow));
     delegate(root, "click", "[data-content-action]", (_event, button) => {
       const action = button.dataset.contentAction;
