@@ -432,9 +432,9 @@ test("scrolly scenes 3 and 4 are mirrored hazard ledgers", () => {
   assert.match(actFour, /VertKleen HCR/);
   assert.match(actFour, /VertKleen CR/);
   assert.match(actFour, /VertKleen Neutral/);
-  assert.match(actFour, /DBNPA Tablet/);
-  // DBNPA is a low-hazard program component, not a 0-0-0 parent product - no fake zeros
-  assert.match(actFour, /<em class="low">Low<\/em>/);
+  assert.match(actFour, /VertKleen Purgo/);
+  // the zero ledger only carries HMIS 0-0-0 parent products (no DBNPA - discontinued)
+  assert.doesNotMatch(actFour, /DBNPA/);
   assert.match(actFour, /replaces HCl \/ muriatic acid/);
   assert.match(actFour, /replaces caustic soda \/ lye/);
   assert.match(actFour, /replaces glutaraldehyde dosing/);

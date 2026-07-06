@@ -276,7 +276,7 @@ test("mirror ledgers share one skeleton: conventional bill, then VertKleen zeros
   const zeros = await page.evaluate(() =>
     [...document.querySelectorAll(".act-cost .hmis-score.score-zero")]
       .map((score) => score.textContent.trim()));
-  expect(zeros).toEqual(["000", "000", "Low", "000"]);
+  expect(zeros).toEqual(["000", "000", "000", "000"]);
 });
 
 test("act four headline does not overlap its ledger", async ({ page }) => {
