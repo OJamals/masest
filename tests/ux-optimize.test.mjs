@@ -50,7 +50,8 @@ test('dashboard stops the live poller when the session expires', () => {
 test('admin defines a debounce helper and applies it to every search input', () => {
   const src = read('js/admin.js');
   assert.match(src, /function\s+debounce\s*\(/, 'must define a debounce helper');
-  for (const id of ['ordSearch', 'coSearch', 'prodSearch', 'priceSearch', 'qSearch', 'custSearch']) {
+  // custSearch retired with the Customers tab (folded into the CRM People directory).
+  for (const id of ['ordSearch', 'coSearch', 'prodSearch', 'priceSearch', 'qSearch']) {
     const re = new RegExp(`\\$\\('${id}'\\)\\.addEventListener\\(\\s*'input',\\s*debounce\\(`);
     assert.match(src, re, `${id} input must be debounced`);
   }

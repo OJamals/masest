@@ -80,7 +80,9 @@ test('[data-dir-open] handler still reads results._contacts by id (plan 007 comp
 
 test('form submit sets state.crmContactQ and calls runContactSearch with append:false', () => {
   assert.match(ws, /state\.crmContactQ = form\.querySelector\('\[data-dir-q\]'\)\.value\.trim\(\)/);
-  assert.match(ws, /runContactSearch\(box\.querySelector\('\[data-crm-ws-body\]'\), \{ append: false \}\)/);
+  // People consolidation: the submit handler refreshes both directory sections.
+  assert.match(ws, /renderPortalUsers\(body\)/);
+  assert.match(ws, /runContactSearch\(body, \{ append: false \}\)/);
 });
 
 // --- admin.js ---

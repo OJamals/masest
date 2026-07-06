@@ -10,7 +10,13 @@ const CONTACT_ROLES = [['procurement', 'Procurement'], ['plant_manager', 'Plant 
 const roleLabel = (r) => (CONTACT_ROLES.find(([v]) => v === r) || ['', r])[1] || r;
 
 export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
-  const errRow = (msg) => `<p class="adm-status" data-state="err">${esc(msg || 'Could not load. Retry.')}</p>`;
+  const errRow = (msg) => `<p class="adm-status" data-state="err" data-crm-err>${esc(msg || 'Could not load. Retry.')}</p>`;
+  // One error surface per panel body: repeated failures replace the message
+  // instead of stacking a new row under the list each time (X8).
+  const showErr = (body, msg) => {
+    body.querySelector('[data-crm-err]')?.remove();
+    body.insertAdjacentHTML('beforeend', errRow(msg));
+  };
 
   function panelShell(subjectType, subjectId) {
     return `<div class="crm-panel" data-crm-subject-type="${esc(subjectType)}" data-crm-subject-id="${esc(subjectId)}">
@@ -24,7 +30,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         <button class="btn btn-ghost btn-sm is-active" type="button" data-crm-tab="timeline" aria-pressed="true">Activity</button>
         <button class="btn btn-ghost btn-sm" type="button" data-crm-tab="tasks" aria-pressed="false">Follow-ups</button>
         <button class="btn btn-ghost btn-sm" type="button" data-crm-tab="notes" aria-pressed="false">Notes</button>
-        ${subjectType === 'company' ? '<button class="btn btn-ghost btn-sm" type="button" data-crm-tab="contacts" aria-pressed="false">People</button>' : ''}
+        ${subjectType === 'company' ? '<button class="btn btn-ghost btn-sm" type="button" data-crm-tab="contacts" aria-pressed="false">Contacts</button>' : ''}
       </div>
       <div class="crm-body" data-crm-body aria-live="polite">${admSkeleton(3)}</div>
     </div>`;
@@ -155,24 +161,32 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
   }
 
   async function load(body, subjectType, subjectId, tab) {
+    // Sub-tab clicks can overlap in flight — only the latest request may paint,
+    // otherwise a slow Timeline response overwrites the Notes tab just opened (X8).
+    const seq = (body._loadSeq = (body._loadSeq || 0) + 1);
     body.innerHTML = admSkeleton(3);
     const sid = encodeURIComponent(subjectId);
     try {
       if (tab === 'timeline') {
         const { timeline } = await api(`/api/admin/crm/timeline?subject_type=${subjectType}&subject_id=${sid}`);
+        if (seq !== body._loadSeq) return;
         body.innerHTML = renderTimeline(timeline || []);
       } else if (tab === 'notes') {
         const { notes, viewer } = await api(`/api/admin/crm/notes?subject_type=${subjectType}&subject_id=${sid}`);
+        if (seq !== body._loadSeq) return;
         body.innerHTML = renderNotes(notes || [], viewer);
       } else if (tab === 'contacts') {
         const { contacts } = await api(`/api/admin/crm/contacts?company_id=${sid}`);
+        if (seq !== body._loadSeq) return;
         body._contacts = contacts || [];
         body.innerHTML = renderContacts(contacts || []);
       } else {
         const { tasks } = await api(`/api/admin/crm/tasks?subject_type=${subjectType}&subject_id=${sid}`);
+        if (seq !== body._loadSeq) return;
         body.innerHTML = renderTasks(tasks || []);
       }
     } catch (err) {
+      if (seq !== body._loadSeq) return;
       body.innerHTML = errRow(err.data?.error);
     }
   }
@@ -264,7 +278,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         if (!(await confirmDialog('Delete this note?', { confirmText: 'Delete', danger: true }))) return;
         del.disabled = true;
         try { await api(`/api/admin/crm/notes?id=${encodeURIComponent(del.dataset.crmNoteDel)}`, { method: 'DELETE' }); load(body, subjectType, subjectId, 'notes'); }
-        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); del.disabled = false; }
+        catch (err) { showErr(body, err.data?.error); del.disabled = false; }
         return;
       }
 
@@ -272,11 +286,11 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       if (cMerge) {
         const fromId = cMerge.dataset.crmContactMerge;
         const others = (body._contacts || []).filter((x) => String(x.id) !== String(fromId));
-        if (!others.length) { body.insertAdjacentHTML('beforeend', errRow('No other contact to merge into.')); return; }
+        if (!others.length) { showErr(body, 'No other contact to merge into.'); return; }
         const intoId = await pickMergeTarget(others);
         if (!intoId) return;
         try { await api('/api/admin/crm/contacts', { method: 'POST', body: { action: 'merge', from_id: fromId, into_id: intoId } }); load(body, subjectType, subjectId, 'contacts'); }
-        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); }
+        catch (err) { showErr(body, err.data?.error); }
         return;
       }
 
@@ -285,7 +299,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         if (!(await confirmDialog('Delete this contact?', { confirmText: 'Delete', danger: true }))) return;
         cDel.disabled = true;
         try { await api(`/api/admin/crm/contacts?id=${encodeURIComponent(cDel.dataset.crmContactDel)}`, { method: 'DELETE' }); load(body, subjectType, subjectId, 'contacts'); }
-        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); cDel.disabled = false; }
+        catch (err) { showErr(body, err.data?.error); cDel.disabled = false; }
         return;
       }
 
@@ -293,7 +307,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       if (cPrim) {
         cPrim.disabled = true;
         try { await api('/api/admin/crm/contacts', { method: 'POST', body: { id: cPrim.dataset.crmContactPrimarySet, is_primary: true } }); load(body, subjectType, subjectId, 'contacts'); }
-        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); cPrim.disabled = false; }
+        catch (err) { showErr(body, err.data?.error); cPrim.disabled = false; }
         return;
       }
 
@@ -329,7 +343,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         toggle.disabled = true;
         const action = toggle.dataset.crmTaskStatus === 'done' ? 'reopen' : 'complete';
         try { await api('/api/admin/crm/tasks', { method: 'PATCH', body: { id: toggle.dataset.crmTaskToggle, action } }); load(body, subjectType, subjectId, 'tasks'); }
-        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); toggle.disabled = false; }
+        catch (err) { showErr(body, err.data?.error); toggle.disabled = false; }
       }
     });
 
@@ -344,7 +358,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         await load(body, subjectType, subjectId, 'contacts');
         body.insertAdjacentHTML('afterbegin', `<p class="adm-status" data-state="ok">Imported ${res.inserted}, skipped ${res.skipped}.</p>`);
       } catch (err) {
-        body.insertAdjacentHTML('beforeend', errRow(err.data?.error));
+        showErr(body, err.data?.error);
       }
       imp.value = '';
       imp.disabled = false;
@@ -368,14 +382,14 @@ panel.addEventListener('submit', async (event) => {
         if (!text) return;
         const kind = form.querySelector('[data-crm-note-kind]').value;
         try { await api('/api/admin/crm/notes', { method: 'POST', body: { subject_type: subjectType, subject_id: subjectId, kind, body: text } }); load(body, subjectType, subjectId, 'notes'); }
-        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); }
+        catch (err) { showErr(body, err.data?.error); }
       } else if (form.matches('[data-crm-task-form]')) {
         const title = form.querySelector('[data-crm-task-title]').value.trim();
         if (!title) return;
         const due = form.querySelector('[data-crm-task-due]').value;
         const assignee = form.querySelector('[data-crm-task-assignee]').value.trim();
         try { await api('/api/admin/crm/tasks', { method: 'POST', body: { subject_type: subjectType, subject_id: subjectId, title, due_at: due || null, assigned_to: assignee || null } }); load(body, subjectType, subjectId, 'tasks'); }
-        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); }
+        catch (err) { showErr(body, err.data?.error); }
       } else if (form.matches('[data-crm-contact-form]')) {
         const name = form.querySelector('[data-crm-contact-name]').value.trim();
         if (!name) return;
@@ -390,7 +404,7 @@ panel.addEventListener('submit', async (event) => {
         };
         if (form.dataset.editId) payload.id = form.dataset.editId;
         try { await api('/api/admin/crm/contacts', { method: 'POST', body: payload }); load(body, subjectType, subjectId, 'contacts'); }
-        catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); }
+        catch (err) { showErr(body, err.data?.error); }
       }
       } finally { if (submitBtn) submitBtn.disabled = false; }
     });

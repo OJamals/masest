@@ -363,6 +363,8 @@ body .product-detail-hero { padding-bottom: 42px; }
 .adm-tools.crm-contact-search { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(170px, .45fr) auto; align-items: end; margin-bottom: 10px; }
 .adm-tools.crm-contact-search .adm-search,
 .adm-tools.crm-contact-search .adm-select { max-width: none; }
+.crm-dir-heading { margin: 18px 0 8px; font-size: .95rem; }
+.crm-dir-heading .muted { font-weight: 400; }
 @media (max-width: 640px) {
   .crm-ws-head,
   .crm-section-head { grid-template-columns: 1fr; }

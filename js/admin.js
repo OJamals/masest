@@ -10,7 +10,6 @@ import { createOffersTab } from './admin/offers.js';
 import { createProductsTab } from './admin/products.js';
 import { createPricingTab } from './admin/pricing.js';
 import { createContentTab } from './admin/content.js';
-import { createCustomersTab } from './admin/customers.js';
 import { createCompaniesTab } from './admin/companies.js';
 import { createCrmPanel } from './admin/crm.js';
 import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js';
@@ -109,6 +108,9 @@ async function boot() {
 }
 
 function setTab(tab) {
+  // The old top-level Customers tab folded into the CRM People directory —
+  // keep #customers deep links working by landing on that sub-view.
+  if (tab === 'customers') { state.crmView = 'contacts'; tab = 'crm'; }
   state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
   // replaceState, NOT location.hash: assigning location.hash fires hashchange →
   // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
@@ -128,7 +130,6 @@ function setTab(tab) {
     overview: () => { renderStats(state.stats); runSeoAudit(); wireReports(); },
     orders: renderOrders,
     companies: renderCompanies,
-    customers: renderCustomers,
     products: (o) => { renderProducts(o); wireInventory(); },
     pricing: (o) => { renderPricing(o); wireCoupons(); },
     content: renderContent,
@@ -363,8 +364,6 @@ function admListPager(attr, loaded, total, hasMore) {
   return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
 }
 
-// Customers tab extracted to ./admin/customers.js (#36 split). statusBadge + primitives injected.
-const { renderCustomers } = createCustomersTab({ $, api, state, admSkeleton, admEmpty, statusBadge });
 // Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
 // CRM contact panel (timeline/tasks/notes) injected into the company drawer.
 const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
@@ -457,7 +456,6 @@ function wire() {
   $('qDue')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
   $('qOwner')?.addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
   $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
-  $('custSearch').addEventListener('input', debounce(() => renderCustomers({ refetch: false })));
   // #28 dirty-edit guard: track in-progress inline edits so capture/restoreDirty can
   // preserve sibling edits across a save or cache re-render.
   ['admOrders', 'admCompanies', 'admProducts', 'admPricing', 'admQuotes'].forEach((id) => {

@@ -107,6 +107,8 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     body.innerHTML = admSkeleton(4);
     try {
       const { tasks, needs_migration } = await api(`/api/admin/crm/tasks?scope=${scope}`);
+      // View or scope changed while this request was in flight — drop it (X8 race).
+      if ((state.crmView || 'tasks') !== 'tasks' || (state.crmTaskScope || 'open') !== scope) return;
       if (needs_migration) { inboxTasks = []; body.innerHTML = scopeButtons(scope) + admEmpty('ph-database', 'No CRM database yet', 'Apply supabase/schema-crm.sql to enable follow-ups.'); return; }
       inboxTasks = tasks || [];
       // Drop a stale assignee selection that no longer appears in the new scope.
@@ -118,6 +120,58 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
       body.innerHTML = scopeButtons(scope) + `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load tasks. Retry.')}</p>`;
     }
   }
+  // ---- Portal users (the old top-level Customers tab, folded in here) ----
+  // Sign-in accounts fetched once and searched client-side; CRM contacts stay a
+  // server-side search. One directory for every person tied to an account.
+  async function loadPortalUsers() {
+    if (state.customers) return state.customers;
+    try { state.customers = (await api('/api/admin/customers')).customers || []; } catch { return null; }
+    return state.customers;
+  }
+
+  function filterPortalUsers(users, q) {
+    if (!q) return users;
+    const needle = q.toLowerCase();
+    const text = (c) => [c.full_name, c.email, c.phone, c.company_name, c.role].filter(Boolean).join(' ').toLowerCase();
+    return users.filter((c) => text(c).includes(needle));
+  }
+
+  function portalRow(c) {
+    const company = c.company_name ? `<span class="muted">${esc(c.company_name)}</span>` : '';
+    const meta = [
+      c.email, c.phone,
+      c.price_tier && c.price_tier !== 'retail' ? `${c.price_tier} tier` : '',
+      c.company_status && c.company_status !== 'approved' ? `account ${String(c.company_status).replace(/_/g, ' ')}` : '',
+    ].filter(Boolean).map(esc).join(' · ') || '—';
+    const accountBtn = c.company_id
+      ? `<button class="btn btn-ghost btn-sm" type="button" data-dir-open-company="${esc(c.company_id)}" data-company-label="${esc(c.company_name || '')}">Account</button>`
+      : '';
+    const emailBtn = c.email ? `<a class="btn btn-ghost btn-sm" href="mailto:${esc(c.email)}">Email</a>` : '';
+    return `<li class="crm-contact">
+      <div class="crm-contact-main">
+        <div class="crm-contact-name">${esc(c.full_name || c.email || 'User')} <span class="crm-contact-role">${esc(c.role || 'portal user')}</span> ${company}</div>
+        <div class="crm-feed-detail muted">${meta}</div>
+      </div>
+      <span class="crm-contact-actions">${accountBtn}${emailBtn}</span></li>`;
+  }
+
+  async function renderPortalUsers(body) {
+    const boxEl = body.querySelector('[data-dir-users]');
+    if (!boxEl) return;
+    // The role facet is contact-specific — a role search shows contacts only.
+    if (state.crmContactRole) { boxEl.innerHTML = ''; return; }
+    boxEl.innerHTML = admSkeleton(2);
+    const users = await loadPortalUsers();
+    if (!boxEl.isConnected) return; // view switched while loading
+    if (users === null) { boxEl.innerHTML = '<p class="adm-status" data-state="err">Could not load portal users. Retry.</p>'; return; }
+    const q = state.crmContactQ || '';
+    const visible = filterPortalUsers(users, q);
+    const heading = `<h4 class="crm-dir-heading">Portal sign-ins <span class="muted">(${visible.length}${q ? ` of ${users.length}` : ''})</span></h4>`;
+    boxEl.innerHTML = heading + (visible.length
+      ? `<ul class="crm-contact-list">${visible.map(portalRow).join('')}</ul>`
+      : `<p class="muted">${q ? 'No portal users match that search.' : 'No portal users yet.'}</p>`);
+  }
+
   function contactRow(c) {
     const role = c.role ? `<span class="crm-contact-role">${esc(String(c.role).replace(/_/g, ' '))}</span>` : '';
     const meta = [c.title, c.email, c.phone].filter(Boolean).map(esc).join(' · ') || '—';
@@ -140,26 +194,31 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const q = state.crmContactQ || '';
     const role = state.crmContactRole || '';
     const results = body.querySelector('[data-dir-results]');
+    if (!results) return;
+    const seq = (results._seq = (results._seq || 0) + 1); // drop stale overlapping searches (X8)
+    const heading = `<h4 class="crm-dir-heading">Account contacts</h4>`;
     if (q.length < 2 && !role) {
-      results.innerHTML = admEmpty('ph-address-book', 'Search contacts', 'Enter a name, email or phone — or pick a role — to search.');
+      results.innerHTML = heading + '<p class="muted">Type at least two characters — or pick a role — to search contacts logged on accounts.</p>';
       results._contacts = [];
       return;
     }
-    if (!append) results.innerHTML = admSkeleton(3);
+    if (!append) results.innerHTML = heading + admSkeleton(3);
     try {
       const offset = append ? (results._contacts?.length || 0) : 0;
       const params = new URLSearchParams({ limit: '50', offset: String(offset) });
       if (q.length >= 2) params.set('q', q);
       if (role) params.set('role', role);
       const { contacts, needs_migration, total, has_more } = await api(`/api/admin/crm/contacts?${params}`);
-      if (needs_migration) { results.innerHTML = admEmpty('ph-database', 'No CRM database yet', 'Apply supabase/schema-crm-contacts.sql to enable the contact directory.'); return; }
+      if (!results.isConnected || seq !== results._seq) return; // view switched or a newer search landed
+      if (needs_migration) { results.innerHTML = heading + admEmpty('ph-database', 'No CRM database yet', 'Apply supabase/schema-crm-contacts.sql to enable the contact directory.'); return; }
       const next = append ? [...(results._contacts || []), ...(contacts || [])] : (contacts || []);
       results._contacts = next;
-      results.innerHTML = next.length
+      results.innerHTML = heading + (next.length
         ? `<ul class="crm-contact-list">${next.map(contactRow).join('')}</ul>${admListPager('data-dir-more', next.length, total, has_more)}`
-        : admEmpty('ph-address-book', 'No matches', 'No contacts match that search.');
+        : admEmpty('ph-address-book', 'No matches', 'No contacts match that search.'));
     } catch (err) {
-      results.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Search failed. Retry.')}</p>`;
+      if (!results.isConnected || seq !== results._seq) return;
+      results.innerHTML = heading + `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Search failed. Retry.')}</p>`;
     }
   }
 
@@ -169,16 +228,18 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const roleOpts = DIR_ROLES.map(([v, l]) => `<option value="${esc(v)}"${v === currentRole ? ' selected' : ''}>${esc(l)}</option>`).join('');
     body.innerHTML = `<div class="crm-section-head">
         <div>
-          <h3>Find the right buyer or operator</h3>
-          <p class="muted">Search across account contacts without leaving the admin workspace.</p>
+          <h3>Everyone in one place</h3>
+          <p class="muted">Portal sign-ins and account contacts share this directory — search once, then open the account or the person's history.</p>
         </div>
       </div>
       <form class="adm-tools crm-contact-search" data-dir-form>
-        <input class="adm-search" type="search" data-dir-q placeholder="Search contacts by name, email or phone" aria-label="Search contacts" value="${esc(term)}">
-        <select class="adm-select" data-dir-role aria-label="Filter by role">${roleOpts}</select>
-        <button class="btn btn-primary btn-sm" type="submit">Find contact</button>
+        <input class="adm-search" type="search" data-dir-q placeholder="Search people by name, email, phone or company" aria-label="Search people" value="${esc(term)}">
+        <select class="adm-select" data-dir-role aria-label="Filter by contact role">${roleOpts}</select>
+        <button class="btn btn-primary btn-sm" type="submit">Search</button>
       </form>
+      <div data-dir-users></div>
       <div data-dir-results></div>`;
+    renderPortalUsers(body);
     await runContactSearch(body);
   }
 
@@ -234,11 +295,15 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     delegate(box, 'submit', '[data-dir-form]', (event, form) => {
       event.preventDefault();
       state.crmContactQ = form.querySelector('[data-dir-q]').value.trim();
-      runContactSearch(box.querySelector('[data-crm-ws-body]'), { append: false });
+      const body = box.querySelector('[data-crm-ws-body]');
+      renderPortalUsers(body);
+      runContactSearch(body, { append: false });
     });
     delegate(box, 'change', '[data-dir-role]', (event, sel) => {
       state.crmContactRole = sel.value;
-      runContactSearch(box.querySelector('[data-crm-ws-body]'), { append: false });
+      const body = box.querySelector('[data-crm-ws-body]');
+      renderPortalUsers(body);
+      runContactSearch(body, { append: false });
     });
     delegate(box, 'click', '[data-dir-more]', () => {
       runContactSearch(box.querySelector('[data-crm-ws-body]'), { append: true });
