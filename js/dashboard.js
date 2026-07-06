@@ -482,12 +482,28 @@ async function renderNotifications({ append = false } = {}) {
   box.querySelector('[data-load-more-notifs]')?.addEventListener('click', () => renderNotifications({ append: true }));
 }
 
-function resolveNotificationTarget(n) {
-  if (n.link) return safeUrl(n.link);
+function defaultNotificationTarget(n) {
   if (n.type === 'message') return 'dashboard.html#messages';
   if (n.type === 'order') return 'dashboard.html#orders';
-  if (n.type === 'account') return 'dashboard.html#profile';
+  if (n.type === 'account') return 'dashboard.html#business';
   return '';
+}
+
+function dashboardTargetWithoutTab(target) {
+  try {
+    const url = new URL(target, location.href);
+    const norm = (p) => p.replace(/\.html$/, '');
+    return norm(url.pathname) === norm(location.pathname) && !dashboardTabFromHash(url.hash);
+  } catch {
+    return false;
+  }
+}
+
+function resolveNotificationTarget(n) {
+  const fallback = defaultNotificationTarget(n);
+  if (!n.link) return fallback;
+  const target = safeUrl(n.link);
+  return dashboardTargetWithoutTab(target) ? fallback : target;
 }
 // Clear one unread notification from every on-screen badge without a reload.
 // Guarded on the row's `unread` class so re-clicking a read item never over-decrements.

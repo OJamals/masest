@@ -33,6 +33,27 @@ function dashboardRouting(js) {
   `)();
 }
 
+function notificationRouting(js) {
+  return new Function(`
+    const location = { href: "https://masest.co/dashboard#notifications", pathname: "/dashboard" };
+    const safeUrl = (u) => {
+      const s = String(u ?? "").trim();
+      if (!s) return "";
+      const schemeProbe = s.replace(/[\\u0000-\\u001F\\u007F\\s]+/g, "");
+      if (/^(https?:|mailto:)/i.test(schemeProbe)) return s;
+      if (/^[a-z][a-z0-9+.-]*:/i.test(schemeProbe)) return "#";
+      return s;
+    };
+    ${extractConst(js, "DASH_TABS")}
+    ${extractConst(js, "DASH_TAB_ALIASES")}
+    ${extractFunction(js, "dashboardTabFromHash")}
+    ${extractFunction(js, "defaultNotificationTarget")}
+    ${extractFunction(js, "dashboardTargetWithoutTab")}
+    ${extractFunction(js, "resolveNotificationTarget")}
+    return { resolveNotificationTarget };
+  `)();
+}
+
 test("dashboard notifications open same-page targets without reloading", () => {
   const js = read("js/dashboard.js");
 
@@ -61,6 +82,23 @@ test("message notifications default to the messages panel", () => {
   const js = read("js/dashboard.js");
 
   assert.match(js, /n\.type === 'message'[\s\S]+dashboard\.html#messages/, "message notifications should open the messages panel even when the API omits a link");
+});
+
+test("legacy bare dashboard notification links fall back to their type target", () => {
+  const { resolveNotificationTarget } = notificationRouting(read("js/dashboard.js"));
+
+  assert.equal(resolveNotificationTarget({ type: "account", link: "/dashboard.html" }), "dashboard.html#business");
+  assert.equal(resolveNotificationTarget({ type: "message", link: "/dashboard.html" }), "dashboard.html#messages");
+  assert.equal(resolveNotificationTarget({ type: "order", link: "https://masest.co/dashboard" }), "dashboard.html#orders");
+  assert.equal(resolveNotificationTarget({ type: "account", link: "/dashboard.html#programs" }), "/dashboard.html#programs");
+  assert.equal(resolveNotificationTarget({ type: "message", link: "javascript:alert(1)" }), "dashboard.html#messages");
+});
+
+test("dashboard loads a versioned dashboard controller", () => {
+  const html = read("dashboard.html");
+
+  assert.match(html, /<script type="module" src="js\/dashboard\.js\?v=\d{8}[a-z]"><\/script>/);
+  assert.doesNotMatch(html, /<script type="module" src="js\/dashboard\.js"><\/script>/);
 });
 
 test("account-only dashboard guides business setup instead of failing tabs", () => {
