@@ -6,10 +6,12 @@
    browser's own; animations catch up over ~0.3s.
    Act 1: curated field-photo reel (canvas fumes). Act 2: SVG
    pipe - scroll-driven buildup on the walls, CSS-animated flow
-   (no canvas, no per-frame SVG filter). Act 3: HMIS factor by
-   factor. Act 4: chemicals dropped onto the hazard scale, then
-   zeroed (canvas motes). Degrades to a stacked, fully-visible
-   layout without JS, when CDN libs fail, or under reduced-motion.
+   (no canvas, no per-frame SVG filter). Act 3: the conventional
+   hazard ledger builds line by line, then the injury total counts
+   up. Act 4 mirrors the same ledger with VertKleen at 0-0-0.
+   Act 5: close + CTAs (canvas motes). Degrades to a stacked,
+   fully-visible layout without JS, when CDN libs fail, or under
+   reduced-motion.
    ============================================================ */
 (function () {
   "use strict";
@@ -110,13 +112,10 @@ states.forEach(function (st) {
     if (st.act === firstAct && el._at === 0) {        /* opening line: visible on load */
       gsap.set(el, { autoAlpha: 1, y: 0, scale: 1 });
     } else {
-      var isHmisChemical = el.classList && el.classList.contains("hmis-chemical");
-      var enterAt = isHmisChemical ? Math.max(0, el._at - BEAT_OUT) : el._at;
-      var enterDuration = isHmisChemical ? Math.max(0.36, BEAT_IN - 0.1) : BEAT_IN;
       tl.fromTo(el,
         { autoAlpha: 0, y: 30, scale: 0.985 },
-        { autoAlpha: 1, y: 0, scale: 1, duration: enterDuration },
-        enterAt);
+        { autoAlpha: 1, y: 0, scale: 1, duration: BEAT_IN },
+        el._at);
     }
       if (el._out >= 0) {
         tl.to(el, { autoAlpha: 0, y: -16, duration: BEAT_OUT, ease: "power2.in" }, Math.max(0, el._out - BEAT_OUT));
@@ -137,8 +136,7 @@ states.forEach(function (st) {
       updateReel(st);
     }
     if (st.act === pipeAct) updateChips2(st);
-    if (st.act === hmisAct) updateHmis(st);
-    if (st.act === costAct) updateCost(st);
+    if (st.act === hmisAct) updateInjuryTotal(st);
   }
 
   /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
@@ -211,84 +209,20 @@ states.forEach(function (st) {
     if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = "Photo " + (current + 1) + " of " + n; }
   }
 
-  /* ---- ACT 3: HMIS hazard diamond - cycle the four conventional chemicals ----
-     The diamond + label are driven entirely here (no [data-at] on the rig);
-     numbers count up on the first chemical, then the rig dips at each boundary
-     so the swap to the next chemical reads as a crossfade. Data + the no-JS
-     fallback both live in the .hmis-conventional list. */
+  /* ---- ACT 3: the "+ one workplace injury" total counts up as its
+     ledger strip lands (beats ~5.5 -> 6.4). Act 4's mirror ledger is
+     plain data-at reveals - no scrub extras, no pre-reveal ghosting. */
   var hmisAct = story.querySelector(".act-hmis");
-  var hmisStack = hmisAct ? hmisAct.querySelector(".hmis-stack") : null;
-  var hmisDiamond = hmisAct ? hmisAct.querySelector(".hmis-diamond") : null;
-  var dmH = hmisAct ? hmisAct.querySelector(".dm-hnum") : null;
-  var dmF = hmisAct ? hmisAct.querySelector(".dm-fnum") : null;
-  var dmR = hmisAct ? hmisAct.querySelector(".dm-rnum") : null;
-  var dmPicto = hmisAct ? hmisAct.querySelector(".dm-picto") : null;
-  var hcType = hmisAct ? hmisAct.querySelector(".hc-type") : null;
-  var hcName = hmisAct ? hmisAct.querySelector(".hc-name") : null;
-  var hcDesc = hmisAct ? hmisAct.querySelector(".hc-desc") : null;
-  var hmisDots = hmisAct ? Array.prototype.slice.call(hmisAct.querySelectorAll(".hc-dots i")) : [];
-  var lgH = hmisAct ? hmisAct.querySelector(".lg-h") : null;
-  var lgF = hmisAct ? hmisAct.querySelector(".lg-f") : null;
-  var lgR = hmisAct ? hmisAct.querySelector(".lg-r") : null;
-  var chems = hmisAct ? Array.prototype.slice.call(hmisAct.querySelectorAll(".hmis-conventional li")).map(function (li) {
-    var d = li.dataset;
-    return { h: +d.h, f: +d.f, r: +d.r, type: d.type, picto: d.picto, name: d.name, desc: d.desc };
-  }) : [];
-  var hmisCur = -1;
-  var HM_A = 0.12, HM_B = 0.9;                          /* fraction of the act's scrub spent cycling */
-  function setTxt(el, v) { if (el && el.textContent !== v) el.textContent = v; }
-
-  function updateHmis(st) {
-    if (!chems.length) return;
-    var n = chems.length;
-    var enter = smooth(clamp(0, 1, st.p / 0.07));        /* whole rig fades in as the act takes the stage */
-    var pos = clamp(0, n - 0.0001, (st.p - HM_A) / (HM_B - HM_A) * n);
-    var idx = pos | 0;
-    var local = pos - idx;                               /* 0..1 within the current chemical */
-    var c = chems[idx];
-    var ramp = idx === 0 ? smooth(clamp(0, 1, local / 0.4)) : 1;   /* first chemical counts 0->value */
-    setTxt(dmH, "" + Math.round(c.h * ramp));
-    setTxt(dmF, "" + Math.round(c.f * ramp));
-    setTxt(dmR, "" + Math.round(c.r * ramp));
-    if (idx !== hmisCur) {
-      hmisCur = idx;
-      setTxt(hcType, c.type); setTxt(hcName, c.name); setTxt(hcDesc, c.desc);
-      setTxt(lgH, "" + c.h); setTxt(lgF, "" + c.f); setTxt(lgR, "" + c.r);
-      if (dmPicto) { dmPicto.setAttribute("href", "#ico-" + c.picto); dmPicto.setAttribute("xlink:href", "#ico-" + c.picto); }
-      for (var d = 0; d < hmisDots.length; d++) hmisDots[d].classList.toggle("is-on", d === idx);
-      if (hmisDiamond) hmisDiamond.setAttribute("aria-label",
-        "Hazard diamond for " + c.name + ": health " + c.h + ", flammability " + c.f + ", reactivity " + c.r + ", " + c.type.toLowerCase());
-    }
-    /* dip at internal boundaries only - full at the first chemical's start and the last one's hold */
-    var edgeIn = idx === 0 ? 1 : smooth(clamp(0, 1, local / 0.12));
-    var edgeOut = idx === n - 1 ? 1 : smooth(clamp(0, 1, (1 - local) / 0.12));
-    if (hmisStack) hmisStack.style.opacity = (enter * Math.min(edgeIn, edgeOut)).toFixed(3);
-  }
-
-  /* ---- ACT 4: conventional cost meter counts up; VertKleen stays at zero ---- */
-  var costAct = story.querySelector(".act-cost");
-  var costNum = costAct ? costAct.querySelector(".cost-num") : null;
-  var costVert = costAct ? costAct.querySelector(".cost-vert") : null;
+  var costNum = hmisAct ? hmisAct.querySelector(".cost-num") : null;
   var COST_TARGET = costNum ? (parseInt(costNum.getAttribute("data-target"), 10) || 0) : 0;
-  /* VertKleen card starts hidden and is faded in by updateCost once the conventional
-     total has climbed. This runs only under motion (the reduced-motion / no-GSAP
-     path returns early above), so the CSS fallback still shows the card. */
-  if (costVert) gsap.set(costVert, { autoAlpha: 0, y: 18 });
+  function setTxt(el, v) { if (el && el.textContent !== v) el.textContent = v; }
   function fmtCost(n) { return Math.round(n).toLocaleString("en-US"); }
-  function updateCost(st) {
+  function updateInjuryTotal(st) {
     if (!costNum) return;
-    /* ramp the count-up across the incident reveal (beat 4.4 -> 5.0) */
-    var a = beatFrac(st, 4.4), b = beatFrac(st, 5.0);
-    var compactCost = window.innerWidth <= 760;
-    var ramp = compactCost ? 1 : smooth(clamp(0, 1, (st.p - a) / (b - a)));
+    var a = beatFrac(st, 5.5), b = beatFrac(st, 6.4);
+    var compact = window.innerWidth <= 760;
+    var ramp = compact ? 1 : smooth(clamp(0, 1, (st.p - a) / (b - a)));
     setTxt(costNum, fmtCost(COST_TARGET * ramp));
-    if (costVert) {
-      /* Foreshadow the counterpoint before the incident total peaks so the
-         split screen reads as comparison, not a one-sided warning. */
-      var reveal = Math.max(0.42, smooth(clamp(0, 1, (st.p - beatFrac(st, 2.45)) / (beatFrac(st, 4.25) - beatFrac(st, 2.45)))));
-      gsap.set(costVert, { autoAlpha: reveal, y: (1 - reveal) * 18 });
-      costVert.classList.toggle("is-on", reveal > 0.5);
-    }
   }
 
   /* ============================================================
@@ -395,7 +329,7 @@ states.forEach(function (st) {
     var dt = Math.min(deltaMS / 1000, 0.05);
     for (var i = 0; i < states.length; i++) {
       var st = states[i];
-      if (st.fx && (st.active || st.i === visibleActIndex)) st.fx.draw(st, st.fx.c, dt, time);
+      if (st.fx && (st.active || Math.abs(st.i - visibleActIndex) <= 1)) st.fx.draw(st, st.fx.c, dt, time);
     }
   });
 
@@ -464,7 +398,10 @@ states.forEach(function (st) {
     if (!force && idx === alphaIdx) return idx;
     alphaIdx = idx;
     for (var k = 0; k < states.length; k++) {
-      if (states[k].stage) gsap.set(states[k].stage, { autoAlpha: k === idx ? 1 : 0 });
+      /* Neighbors stay visible so act boundaries hand off by geometry (the
+         incoming opaque stage slides over the outgoing one) instead of a
+         hard cut into a black gap between scenes. */
+      if (states[k].stage) gsap.set(states[k].stage, { autoAlpha: Math.abs(k - idx) <= 1 ? 1 : 0 });
     }
     return idx;
   }

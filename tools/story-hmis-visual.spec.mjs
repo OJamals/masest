@@ -174,174 +174,82 @@ test("pipe callout chips and leader lines fade from the same burn state", async 
   }
 });
 
-test("HMIS story keeps copy separated from category deck on desktop", async ({ page }) => {
+test("hazard ledger sits below the copy and accumulates all four rows", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
 
-  await expect(page.locator('.story.story-ready .act[data-act="3"] .hmis-stack')).toBeHidden();
-  await expect(page.locator('.story .act[data-act="3"] .hmis-category')).toHaveCount(3);
-  await expect(page.locator('.story .act[data-act="3"] .hmis-chemical')).toHaveCount(4);
-  await expect(page.locator('.story .act[data-act="3"] .hmis-warning')).toHaveCount(4);
+  await expect(page.locator('.story .act[data-act="3"] .hazard-ledger .ledger-row')).toHaveCount(4);
   await expect(page.locator(".savior-zero-scale .zero-axis")).toHaveCount(3);
 
-  await page.evaluate(() => {
+  const layout = await page.evaluate(async () => {
     const act = document.querySelector('.story .act[data-act="3"]');
-    window.scrollTo(0, act.offsetTop + window.innerHeight * 0.42);
-  });
-  await page.waitForTimeout(300);
-
-  const layout = await page.evaluate(() => {
-    const copy = document.querySelector('.story .act[data-act="3"] .act-copy.top');
-    const rig = document.querySelector('.story .act[data-act="3"] .hmis-rig');
-    const copyBox = copy.getBoundingClientRect();
-    const rigBox = rig.getBoundingClientRect();
-    return {
-      copyBottom: copyBox.bottom,
-      rigTop: rigBox.top,
-      rigBottom: rigBox.bottom,
-      viewportHeight: window.innerHeight,
-    };
-  });
-
-  expect(layout.rigTop - layout.copyBottom).toBeGreaterThanOrEqual(28);
-  expect(layout.rigBottom).toBeLessThanOrEqual(layout.viewportHeight - 72);
-
-  const chemicalPasses = await page.evaluate(async () => {
-    const act = document.querySelector('.story .act[data-act="3"]');
-    const pauses = [0.34, 0.46, 0.58, 0.7];
-    const results = [];
-    for (const pause of pauses) {
-      window.scrollTo(0, act.offsetTop + act.offsetHeight * pause);
-      await new Promise((resolve) => setTimeout(resolve, 180));
-      const visibleCards = [...act.querySelectorAll(".hmis-chemical")]
-        .map((card) => {
-          const box = card.getBoundingClientRect();
-          const style = getComputedStyle(card);
-          return {
-            name: card.querySelector("strong")?.textContent || "",
-            opacity: Number(style.opacity),
-            top: box.top,
-            bottom: box.bottom,
-            height: box.height,
-          };
-        })
-        .filter((card) => card.opacity > 0.25);
-      results.push({ pause, visibleCards, viewportHeight: window.innerHeight });
-    }
-    return results;
+    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.72);
+    await new Promise((r) => setTimeout(r, 700));
+    const copy = act.querySelector(".act-copy.top").getBoundingClientRect();
+    const ledger = act.querySelector(".hazard-ledger").getBoundingClientRect();
+    const rows = [...act.querySelectorAll(".ledger-row")].map((row) => {
+      const box = row.getBoundingClientRect();
+      return {
+        name: row.querySelector("strong")?.textContent || "",
+        opacity: Number(getComputedStyle(row).opacity),
+        top: box.top,
+        bottom: box.bottom,
+      };
+    });
+    return { copyBottom: copy.bottom, ledgerTop: ledger.top, rows, viewportHeight: window.innerHeight };
   });
 
-  for (const pass of chemicalPasses) {
-    expect(pass.visibleCards.length, JSON.stringify(pass)).toBeGreaterThan(0);
-    for (const card of pass.visibleCards) {
-      expect(card.top, JSON.stringify(pass)).toBeGreaterThanOrEqual(0);
-      expect(card.bottom, JSON.stringify(pass)).toBeLessThanOrEqual(pass.viewportHeight - 24);
-    }
+  expect(layout.ledgerTop - layout.copyBottom).toBeGreaterThanOrEqual(12);
+  // all four rows have landed by the incident beat and stay stacked in frame
+  for (const row of layout.rows) {
+    expect(row.opacity, JSON.stringify(layout.rows)).toBeGreaterThan(0.6);
+    expect(row.top, JSON.stringify(row)).toBeGreaterThanOrEqual(0);
+    expect(row.bottom, JSON.stringify(row)).toBeLessThanOrEqual(layout.viewportHeight);
   }
 });
 
-test("final HMIS chemical card stays fully in frame on a short laptop", async ({ page }) => {
-  // Regression: on shorter viewports the faded category band still reserved
-  // column height, pushing the last chemical card (Chlorinated solvents) past
-  // the stage bottom where overflow:hidden clipped it. Cover the final beats.
+test("full conventional ledger and injury total fit a short laptop", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 768 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
   await page.waitForTimeout(300);
 
-  const passes = await page.evaluate(async () => {
+  const frame = await page.evaluate(async () => {
     const act = document.querySelector('.story .act[data-act="3"]');
-    const pauses = [0.58, 0.62, 0.72, 0.78];
-    const results = [];
-    for (const pause of pauses) {
-      window.scrollTo(0, act.offsetTop + act.offsetHeight * pause);
-      await new Promise((resolve) => setTimeout(resolve, 180));
-      const visibleCards = [...act.querySelectorAll(".hmis-chemical")]
-        .map((card) => {
-          const box = card.getBoundingClientRect();
-          return {
-            name: card.querySelector("strong")?.textContent || "",
-            opacity: Number(getComputedStyle(card).opacity),
-            top: box.top,
-            bottom: box.bottom,
-          };
-        })
-        .filter((card) => card.opacity > 0.25);
-      results.push({ pause, visibleCards, viewportHeight: window.innerHeight });
-    }
-    return results;
+    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.78);
+    await new Promise((r) => setTimeout(r, 700));
+    const ledger = act.querySelector(".hazard-ledger").getBoundingClientRect();
+    const incident = act.querySelector(".ledger-incident").getBoundingClientRect();
+    return { ledgerTop: ledger.top, ledgerBottom: ledger.bottom, incidentBottom: incident.bottom, vh: window.innerHeight };
   });
-
-  for (const pass of passes) {
-    expect(pass.visibleCards.length, JSON.stringify(pass)).toBeGreaterThan(0);
-    for (const card of pass.visibleCards) {
-      expect(card.top, JSON.stringify(pass)).toBeGreaterThanOrEqual(0);
-      expect(card.bottom, JSON.stringify(pass)).toBeLessThanOrEqual(pass.viewportHeight - 16);
-    }
-  }
+  expect(frame.ledgerTop).toBeGreaterThanOrEqual(0);
+  expect(frame.ledgerBottom).toBeLessThanOrEqual(frame.vh);
+  expect(frame.incidentBottom).toBeLessThanOrEqual(frame.vh);
 });
 
-test("HMIS category and warning cards stay inside viewport on mobile", async ({ page }) => {
+test("hazard ledger rows stay inside the viewport on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
-  const layout = await page.evaluate(async () => {
-    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    const act = document.querySelector('.story .act[data-act="3"]');
-    const cards = [...act.querySelectorAll('.hmis-category, .hmis-chemical')]
-      .map((card) => {
-        const box = card.getBoundingClientRect();
-        return {
-          left: box.left,
-          right: box.right,
-          width: box.width,
-        };
-      });
-    const chemicalFrames = [];
-    for (const pause of [0.42, 0.45, 0.48, 0.51, 0.54, 0.57, 0.6, 0.63, 0.66, 0.69, 0.72]) {
-      window.scrollTo(0, act.offsetTop + act.offsetHeight * pause);
-      await wait(180);
-      const cardsInFrame = [...act.querySelectorAll(".hmis-chemical")]
-        .map((card) => {
-          const box = card.getBoundingClientRect();
-          const style = getComputedStyle(card);
-          return {
-            name: card.querySelector("strong")?.textContent || "",
-            opacity: Number(style.opacity),
-            top: box.top,
-            bottom: box.bottom,
-            height: box.height,
-          };
-        })
-        .filter((card) => card.opacity > 0.2);
-      if (cardsInFrame.length) chemicalFrames.push({
-        pause,
-        cards: cardsInFrame,
-      });
-    }
+  const layout = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll(".hazard-ledger .ledger-row")].map((row) => {
+      const box = row.getBoundingClientRect();
+      return { left: box.left, right: box.right, width: box.width };
+    });
     return {
       viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
       overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      cards,
-      chemicalFrames,
+      rows,
     };
   });
 
   expect(layout.overflowX).toBe(0);
-  expect(layout.cards).toHaveLength(7);
-  for (const card of layout.cards) {
-    expect(card.left).toBeGreaterThanOrEqual(0);
-    expect(card.right).toBeLessThanOrEqual(layout.viewportWidth);
-    expect(card.width).toBeGreaterThan(180);
-  }
-  expect(layout.chemicalFrames.length, JSON.stringify(layout.chemicalFrames)).toBeGreaterThanOrEqual(3);
-  for (const frame of layout.chemicalFrames) {
-    for (const card of frame.cards) {
-      expect(card.top, JSON.stringify(frame)).toBeGreaterThanOrEqual(64);
-      expect(card.bottom, JSON.stringify(frame)).toBeLessThanOrEqual(layout.viewportHeight - 16);
-    }
+  expect(layout.rows).toHaveLength(8);
+  for (const row of layout.rows) {
+    expect(row.left).toBeGreaterThanOrEqual(0);
+    expect(row.right).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(row.width).toBeGreaterThan(180);
   }
 });
 
@@ -356,41 +264,22 @@ test("story renders five acts with the cost bridge and savior last", async ({ pa
   await expect(page.locator('.story .act[data-act="5"].act-savior')).toHaveCount(1);
 });
 
-test("cost act has four conventional lines, a sourced incident total, and a VertKleen column", async ({ page }) => {
+test("mirror ledgers share one skeleton: conventional bill, then VertKleen zeros", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
 
-  await expect(page.locator('.act-cost .cost-line')).toHaveCount(4);
-  await expect(page.locator('.act-cost .cost-incident')).toHaveCount(1);
-  await expect(page.locator('.act-cost .cost-vert')).toHaveCount(1);
-  await expect(page.locator('.act-cost .cost-sources')).toHaveCount(1);
-  await expect(page.locator('.act-cost .cost-num')).toHaveAttribute("data-target", "115000");
+  await expect(page.locator('.act-hmis .hazard-ledger .ledger-row')).toHaveCount(4);
+  await expect(page.locator('.act-cost .hazard-ledger.ledger-zero .ledger-row')).toHaveCount(4);
+  await expect(page.locator('.act-hmis .cost-num')).toHaveAttribute("data-target", "115000");
+  await expect(page.locator('.act-cost .cost-payoff')).toHaveCount(1);
+
+  const zeros = await page.evaluate(() =>
+    [...document.querySelectorAll(".act-cost .hmis-score.score-zero")]
+      .map((score) => score.textContent.trim()));
+  expect(zeros).toEqual(["000", "000", "000", "000"]);
 });
 
-test("cost columns sit side by side on desktop and stack on mobile", async ({ page }) => {
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
-
-  await page.setViewportSize({ width: 1440, height: 900 });
-  const desktop = await page.evaluate(() => {
-    const l = document.querySelector('.act-cost .cost-conventional').getBoundingClientRect();
-    const v = document.querySelector('.act-cost .cost-vert').getBoundingClientRect();
-    return { sameRow: Math.abs(l.top - v.top) < 24, conventionalLeftOfVert: l.right <= v.left + 1 };
-  });
-  expect(desktop.sameRow).toBe(true);
-  expect(desktop.conventionalLeftOfVert).toBe(true);
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  const mobile = await page.evaluate(() => {
-    const l = document.querySelector('.act-cost .cost-conventional').getBoundingClientRect();
-    const v = document.querySelector('.act-cost .cost-vert').getBoundingClientRect();
-    return { stacked: v.top >= l.bottom - 1, overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth };
-  });
-  expect(mobile.stacked).toBe(true);
-  expect(mobile.overflowX).toBe(0);
-});
-
-test("cost headline does not overlap the columns", async ({ page }) => {
+test("act four headline does not overlap its ledger", async ({ page }) => {
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
   for (const vp of [{ width: 1440, height: 900 }, { width: 1280, height: 768 }]) {
@@ -399,15 +288,15 @@ test("cost headline does not overlap the columns", async ({ page }) => {
       const act = document.querySelector('.story .act[data-act="4"]');
       window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.5);
       await new Promise((z) => setTimeout(z, 500));
-      const h = act.querySelector('.act-h').getBoundingClientRect();
-      const rig = act.querySelector('.cost-rig').getBoundingClientRect();
-      return { headlineBottom: h.bottom, rigTop: rig.top };
+      const h = act.querySelector(".act-h").getBoundingClientRect();
+      const ledger = act.querySelector(".hazard-ledger").getBoundingClientRect();
+      return { headlineBottom: h.bottom, ledgerTop: ledger.top };
     });
-    expect(r.rigTop, JSON.stringify({ vp, r })).toBeGreaterThanOrEqual(r.headlineBottom - 1);
+    expect(r.ledgerTop, JSON.stringify({ vp, r })).toBeGreaterThanOrEqual(r.headlineBottom - 1);
   }
 });
 
-test("cost scene fits a short laptop with the rig in frame", async ({ page }) => {
+test("act four ledger fits a short laptop in frame", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 768 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
@@ -415,61 +304,75 @@ test("cost scene fits a short laptop with the rig in frame", async ({ page }) =>
 
   const frame = await page.evaluate(async () => {
     const act = document.querySelector('.story .act[data-act="4"]');
-    // measure during the pinned phase (all beats revealed, stage held in frame)
-    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.5);
+    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.7);
     await new Promise((r) => setTimeout(r, 700));
-    const rig = act.querySelector('.cost-rig').getBoundingClientRect();
-    return { rigTop: rig.top, rigBottom: rig.bottom, vh: window.innerHeight };
+    const ledger = act.querySelector(".hazard-ledger").getBoundingClientRect();
+    return { ledgerTop: ledger.top, ledgerBottom: ledger.bottom, vh: window.innerHeight };
   });
-  expect(frame.rigTop).toBeGreaterThanOrEqual(0);
-  expect(frame.rigBottom).toBeLessThanOrEqual(frame.vh);
+  expect(frame.ledgerTop).toBeGreaterThanOrEqual(0);
+  expect(frame.ledgerBottom).toBeLessThanOrEqual(frame.vh);
 });
 
-test("conventional cost meter counts up to the incident figure by the final beat", async ({ page }) => {
+test("injury total counts up inside scene three by the incident beat", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
   await page.waitForTimeout(300);
 
   const read = async (frac) => page.evaluate(async (f) => {
-    const act = document.querySelector('.story .act[data-act="4"]');
+    const act = document.querySelector('.story .act[data-act="3"]');
     window.scrollTo(0, act.offsetTop + act.offsetHeight * f);
     await new Promise((r) => setTimeout(r, 800));
-    return Number(document.querySelector('.cost-num').textContent.replace(/[,\s]/g, ""));
+    return Number(document.querySelector(".act-hmis .cost-num").textContent.replace(/[,\s]/g, ""));
   }, frac);
 
-  const early = await read(0.3);   // before the incident beat — meter still low
+  const early = await read(0.3);   // before the incident beat - meter still low
   const end = await read(0.9);      // held at the incident figure
   expect(early).toBeLessThan(115000);
   expect(end).toBe(115000);
 });
 
-test("cost scene foreshadows VertKleen before the incident total peaks", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 720 });
+test("act four rows do not ghost in before their beats", async ({ page }) => {
+  // Regression: the old split screen pre-revealed the VertKleen column at 42%
+  // opacity from the first frame, spoiling the reveal and reading as a glitch.
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
   await page.waitForTimeout(300);
 
-  const frame = await page.evaluate(async () => {
+  const opacities = await page.evaluate(async () => {
     const act = document.querySelector('.story .act[data-act="4"]');
-    window.scrollTo(0, act.offsetTop + (act.offsetHeight - window.innerHeight) * 0.5);
+    window.scrollTo(0, act.offsetTop + 8);
     await new Promise((r) => setTimeout(r, 700));
-    const card = act.querySelector(".cost-vert");
-    const box = card.getBoundingClientRect();
-    const style = getComputedStyle(card);
+    return [...act.querySelectorAll(".ledger-row")].map((row) => Number(getComputedStyle(row).opacity));
+  });
+  for (const opacity of opacities) expect(opacity, JSON.stringify(opacities)).toBeLessThan(0.2);
+});
+
+test("scene handoff keeps the incoming stage visible - no black gap", async ({ page }) => {
+  // Regression: only the current act's stage was visible, so the slide zone
+  // between acts showed a full viewport of black before the next scene popped in.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+  await page.waitForTimeout(300);
+
+  const handoff = await page.evaluate(async () => {
+    const act3 = document.querySelector('.story .act[data-act="3"]');
+    const act4 = document.querySelector('.story .act[data-act="4"]');
+    // park mid-slide: act 3 unpinned, act 4 sliding up but not yet current
+    const y = act3.offsetTop + act3.offsetHeight - window.innerHeight * 0.6;
+    window.scrollTo(0, y);
+    await new Promise((r) => setTimeout(r, 700));
+    const s3 = getComputedStyle(act3.querySelector(".stage"));
+    const s4 = getComputedStyle(act4.querySelector(".stage"));
     return {
-      opacity: Number(style.opacity),
-      visible: style.visibility !== "hidden" && box.width > 200 && box.height > 200,
-      top: box.top,
-      bottom: box.bottom,
-      viewportHeight: window.innerHeight,
+      out: { visibility: s3.visibility, opacity: Number(s3.opacity) },
+      inc: { visibility: s4.visibility, opacity: Number(s4.opacity) },
     };
   });
-
-  expect(frame.visible, JSON.stringify(frame)).toBe(true);
-  expect(frame.opacity, JSON.stringify(frame)).toBeGreaterThanOrEqual(0.38);
-  expect(frame.top, JSON.stringify(frame)).toBeGreaterThanOrEqual(0);
-  expect(frame.bottom, JSON.stringify(frame)).toBeLessThanOrEqual(frame.viewportHeight);
+  expect(handoff.inc.visibility, JSON.stringify(handoff)).toBe("visible");
+  expect(handoff.inc.opacity, JSON.stringify(handoff)).toBeGreaterThan(0.9);
 });
 
 test("savior scene holds readable proof cards and CTAs in the payoff window", async ({ page }) => {
@@ -481,7 +384,7 @@ test("savior scene holds readable proof cards and CTAs in the payoff window", as
   const payoff = await page.evaluate(async () => {
     const act = document.querySelector('.story .act[data-act="5"]');
     const samples = [];
-    for (const frac of [0.45, 0.72]) {
+    for (const frac of [0.62, 0.85]) {
       window.scrollTo(0, act.offsetTop + (act.offsetHeight - window.innerHeight) * frac);
       await new Promise((r) => setTimeout(r, 700));
       const cards = [...act.querySelectorAll(".zero-axis")].map((card) => {
@@ -548,7 +451,7 @@ test("reduced motion story fallback stacks animated scene content without overla
     const story = document.querySelector(".story");
     const act2Copy = box(document.querySelector('.story .act[data-act="2"] .act-copy'));
     const act2Pipe = box(document.querySelector('.story .act[data-act="2"] .pipe-diagram'));
-    const chemicals = [...document.querySelectorAll('.story .act[data-act="3"] .hmis-chemical')]
+    const chemicals = [...document.querySelectorAll('.story .act[data-act="3"] .ledger-row')]
       .map((card) => ({ name: card.querySelector("strong")?.textContent || card.className, box: box(card) }))
       .filter((card) => card.box && card.box.width > 1 && card.box.height > 1);
     const hmisOverlaps = [];
@@ -577,7 +480,7 @@ test("reduced motion story fallback stacks animated scene content without overla
   await page.waitForTimeout(300);
 
   const act3Viewport = await page.evaluate(() => {
-    const cards = [...document.querySelectorAll('.story .act[data-act="3"] .hmis-category, .story .act[data-act="3"] .hmis-chemical')]
+    const cards = [...document.querySelectorAll('.story .act[data-act="3"] .ledger-row, .story .act[data-act="3"] .ledger-incident')]
       .map((card) => {
         const r = card.getBoundingClientRect();
         return {

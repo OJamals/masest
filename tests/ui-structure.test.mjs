@@ -406,22 +406,36 @@ test("scrolly story offsets chat launcher on mobile", () => {
   assert.match(storyCss, /body\.story-in-view \.crisp-client/);
 });
 
-test("scrolly HMIS scene teaches categories before chemical warnings", () => {
+test("scrolly scenes 3 and 4 are mirrored hazard ledgers", () => {
   const index = read("index.html");
   const actThree = index.match(/<section class="act act-hmis"[\s\S]*?<\/section>/)?.[0];
+  const actFour = index.match(/<section class="act act-cost"[\s\S]*?<\/section>/)?.[0];
 
   assert.ok(actThree, "expected act three scrolly section");
-  assert.match(actThree, /class="hmis-categories"/);
-  assert.match(actThree, />Health<\/span><b>0-4<\/b>/);
-  assert.match(actThree, />Flammability<\/span><b>0-4<\/b>/);
-  assert.match(actThree, />Reactivity<\/span><b>0-4<\/b>/);
-  assert.match(actThree, /class="hmis-chemical-name"/);
-  assert.match(actThree, /class="hmis-warning"/);
-  assert.match(actThree, /Toxic vapor warning/);
+  assert.ok(actFour, "expected act four scrolly section");
+  // Scene 3: conventional chemicals, hazard scores, and what each adds to the job
+  assert.match(actThree, /class="hazard-ledger"/);
+  assert.equal((actThree.match(/class="ledger-row"/g) || []).length, 4);
   assert.match(actThree, /HCl \/ muriatic acid/);
   assert.match(actThree, /Caustic soda \/ lye/);
   assert.match(actThree, /Glutaraldehyde/);
   assert.match(actThree, /Chlorinated solvent/);
+  assert.match(actThree, /What it adds to the job/);
+  assert.match(actThree, /data-target="115000"/);
+  assert.match(actThree, /class="cost-sources"/);
+  // Scene 4: the exact same skeleton, zeroed by VertKleen
+  assert.match(actFour, /class="hazard-ledger ledger-zero"/);
+  assert.equal((actFour.match(/class="ledger-row"/g) || []).length, 4);
+  assert.equal((actFour.match(/hmis-score score-zero/g) || []).length, 4);
+  assert.match(actFour, /What comes off the bill/);
+  assert.match(actFour, /replaces HCl \/ muriatic acid/);
+  assert.match(actFour, /replaces caustic soda \/ lye/);
+  assert.match(actFour, /replaces glutaraldehyde dosing/);
+  assert.match(actFour, /replaces chlorinated solvents/);
+  assert.match(actFour, /class="cost-payoff"/);
+  // The ghost-preview of the old split screen is gone for good
+  assert.doesNotMatch(actFour, /cost-vert/);
+  assert.doesNotMatch(actFour, /cost-line/);
 });
 
 test("scrolly hazard overlays avoid stripe-gradient decoration", () => {
@@ -501,8 +515,8 @@ test("scrolly Scene 2 uses a polished SVG pipe flow system", () => {
 
 test("scrolly Scene 3 HMIS intro remains readable", () => {
   const home = read("index.html");
-  const intro = home.match(/<p class="act-p" data-at="1" data-out="([^"]+)">Crews fight buildup[\s\S]*?<\/p>/);
+  const intro = home.match(/<p class="act-p" data-at="1"([^>]*)>Crews fight buildup[\s\S]*?<\/p>/);
 
   assert.ok(intro, "expected Scene 3 HMIS intro copy");
-  assert.ok(Number.parseFloat(intro[1]) >= 4, "HMIS intro should not exit before the user can read it");
+  assert.doesNotMatch(intro[1], /data-out/, "HMIS intro stays up while the ledger builds");
 });
