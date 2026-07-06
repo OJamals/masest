@@ -23,7 +23,7 @@ test("admin dashboard has production shell affordances without inline layout hac
   assert.match(html, /adm-tabs-wrap/, "admin tab rail should keep its mobile-safe scroll container class");
   assert.match(html, /class="adm-layout"/, "admin app should use a dashboard-style two-column shell");
   assert.match(html, /class="adm-sidebar adm-tabs-wrap"/, "admin sections should live in a sidebar rail");
-  assert.match(html, /class="adm-nav-group"[\s\S]*<span>Operations<\/span>/, "admin nav should group operational sections");
+  assert.match(html, /class="adm-nav-group"[\s\S]*<span aria-hidden="true">Operations<\/span>/, "admin nav should group operational sections");
   assert.match(html, /adm-panel-header/, "admin panels should expose consistent panel header utility");
   assert.match(html, /adm-inline-actions/, "admin inline action rows should use reusable classes");
   assert.doesNotMatch(html, /style="/, "admin shell should not rely on inline style polish");

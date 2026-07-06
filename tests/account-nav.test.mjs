@@ -53,7 +53,7 @@ test("dashboard organizes signed-in tools with a sidebar and account group", () 
   const dashboardJs = read("js/dashboard.js");
 
   assert.match(dashboard, /class="dash-sidebar"/, "dashboard should use a sidebar nav for signed-in tools");
-  assert.match(dashboard, /class="dash-nav-group"[^>]*>\s*<span>Account<\/span>/s, "account tools should be grouped together");
+  assert.match(dashboard, /class="dash-nav-group"[^>]*>\s*<span aria-hidden="true">Account<\/span>/s, "account tools should be grouped together");
   // Merged account IA: security lives inside the profile panel, payment inside addresses.
   assert.doesNotMatch(dashboard, /data-tab="security"/, "security must not be a standalone tab (merged into profile)");
   assert.doesNotMatch(dashboard, /data-tab="payment"/, "payment must not be a standalone tab (merged into addresses)");
