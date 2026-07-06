@@ -297,15 +297,40 @@ export async function onRequest({ request, env }) {
         const assignedTo = body.assigned_to.trim().slice(0, 160);
         Object.assign(bulk, { assigned_to: assignedTo || null, assigned_at: assignedTo ? new Date().toISOString() : null });
       }
+      // Stage moves get the same treatment as the single-id path: skip quotes
+      // already in the target stage (no stage_changed_at re-stamp) and emit the
+      // Klaviyo "Deal Stage Changed" event per quote that actually moved (Q5 —
+      // bulk used to skip the event entirely, so owner flows missed bulk moves).
+      let stagePatchRes = null;
       if (body.pipeline_stage !== undefined) {
-        const res = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
-        if (res.error) return json(400, { error: res.error });
-        Object.assign(bulk, res.patch);
+        stagePatchRes = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
+        if (stagePatchRes.error) return json(400, { error: stagePatchRes.error });
       }
-      if (!Object.keys(bulk).length) return json(400, { error: 'nothing_to_update' });
-      const { error, count } = await sb.from('quotes').update(bulk, { count: 'exact' }).in('id', ids);
-      if (error) return json(500, { error: error.message });
-      return json(200, { ok: true, updated: count ?? ids.length });
+      if (!Object.keys(bulk).length && !stagePatchRes) return json(400, { error: 'nothing_to_update' });
+
+      if (Object.keys(bulk).length) {
+        const { error } = await sb.from('quotes').update(bulk).in('id', ids);
+        if (error) return json(500, { error: error.message });
+      }
+      let moved = [];
+      if (stagePatchRes) {
+        const { data: rows, error: rErr } = await sb.from('quotes')
+          .select('id,email,pipeline_stage,deal_value,product,company,type').in('id', ids);
+        if (rErr) return json(500, { error: rErr.message });
+        moved = (rows || []).filter((q) => (q.pipeline_stage || 'new') !== body.pipeline_stage);
+        if (moved.length) {
+          const { error } = await sb.from('quotes').update(stagePatchRes.patch).in('id', moved.map((q) => q.id));
+          if (error) return json(500, { error: error.message });
+          // Best-effort, mirrors the single-id event shape — never blocks the response.
+          await Promise.allSettled(moved.filter((q) => q.email).map((q) => klaviyoTrack(env, {
+            email: q.email,
+            metric: 'Deal Stage Changed',
+            value: q.deal_value,
+            properties: { stage: body.pipeline_stage, deal_value: q.deal_value, product: q.product, company: q.company, type: q.type, source: 'pipeline_bulk' },
+          })));
+        }
+      }
+      return json(200, { ok: true, updated: ids.length, stage_moved: stagePatchRes ? moved.length : undefined });
     }
 
     if (!body.id) return json(400, { error: 'id_required' });
