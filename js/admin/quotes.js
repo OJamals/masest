@@ -471,8 +471,8 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
 
     const bulkBar = `<div class="adm-tools adm-tools-flush" style="flex-wrap:wrap">
       <label class="admin-select-all"><input type="checkbox" id="qAll" aria-label="Select all"> Select all</label>
-      <select class="adm-select" id="qBulkStage"><option value="">Set stage…</option>${STAGES.map((s) => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}</select>
-      <select class="adm-select" id="qBulkPriority"><option value="">Set priority…</option>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}">${p}</option>`).join('')}</select>
+      <select class="adm-select adm-select-sm" id="qBulkStage"><option value="">Set stage…</option>${STAGES.map((s) => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}</select>
+      <select class="adm-select adm-select-sm" id="qBulkPriority"><option value="">Set priority…</option>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}">${p}</option>`).join('')}</select>
       <input class="adm-input" id="qBulkOwner" placeholder="Assign owner" style="max-width:160px">
       <button class="btn btn-ghost btn-sm" id="qBulkApply" type="button">Apply to selected</button>
     </div>`;
@@ -502,7 +502,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
           ${meta ? `<p class="muted" style="margin:4px 0 0">${esc(meta)}</p>` : ''}
           <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" data-open-quote="${id}" type="button">Open deal</button>
-            <select class="adm-select" data-quote-stage="${id}" aria-label="Stage">
+            <select class="adm-select adm-select-sm" data-quote-stage="${id}" aria-label="Stage">
               ${STAGES.map((s) => `<option value="${s}" ${s === (quote.pipeline_stage || 'new') ? 'selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}
             </select>
             <a class="btn btn-ghost btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>
