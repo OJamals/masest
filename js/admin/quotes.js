@@ -35,7 +35,12 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   function reflectToggle() {
     const wrap = $('admQuotes')?.parentElement?.querySelector('.pipe-toggle');
     if (!wrap) return;
-    wrap.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('is-active', b.dataset.view === (state.quotesView || 'list')));
+    const view = state.quotesView || 'list';
+    wrap.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('is-active', b.dataset.view === view));
+    // The filter toolbar only drives the List view — showing live-looking dead
+    // controls over Board/Reports reads as broken filtering.
+    const tools = $('admQuotes')?.closest('[data-panel="quotes"]')?.querySelector('.adm-tools');
+    if (tools) tools.hidden = view !== 'list';
   }
   function ensureToggle() {
     const box = $('admQuotes');
@@ -263,10 +268,21 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   async function saveDrawer(dlg, quote) {
     const v = (sel) => dlg.querySelector(sel)?.value;
     const status = dlg.querySelector('[data-drawer-status]');
+    // Only send pipeline_stage when it actually changed: the server treats any stage
+    // in the payload as a stage move — re-stamping stage_changed_at (clearing the
+    // Stale badge) and firing the Klaviyo "Deal Stage Changed" event, which can run
+    // customer-facing flows off a plain note edit.
+    const newStage = v('[data-d-stage]');
+    const stageChanged = newStage && newStage !== (quote.pipeline_stage || 'new');
+    let lostReason;
+    if (stageChanged && newStage === 'lost') {
+      lostReason = await pickLostReason();
+      if (lostReason === null) { status.textContent = 'Save cancelled — pick a lost reason to move to Lost.'; status.dataset.state = 'err'; return; }
+    }
     try {
       const res = await api('/api/admin/quotes', { method: 'POST', body: {
         id: quote.id,
-        pipeline_stage: v('[data-d-stage]'),
+        ...(stageChanged ? { pipeline_stage: newStage, ...(lostReason ? { lost_reason: lostReason } : {}) } : {}),
         status: v('[data-d-status]'),
         priority: v('[data-d-priority]'),
         deal_value: v('[data-d-deal]') === '' ? null : v('[data-d-deal]'),
@@ -376,7 +392,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     const dueFilter = $('qDue')?.value || '';
     const now = Date.now();
     const quotes = state.quotes.filter((quote) => {
-      const text = JSON.stringify(quote).toLowerCase();
+      const text = [quote.name, quote.email, quote.company, quote.phone, quote.product, quote.industry, quote.location, quote.message, quote.notes, quote.next_step, quote.assigned_to].filter(Boolean).join(' ').toLowerCase();
       const ownerMatch = !ownerFilter || String(quote.assigned_to || '').toLowerCase().includes(ownerFilter);
       const dueAt = quote.due_at ? new Date(quote.due_at).getTime() : null;
       const active = !['closed', 'spam'].includes(quote.status);
@@ -446,10 +462,12 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     restoreDirty(box, snap);
   }
 
+  let quotesFetchSeq = 0;
   async function renderQuotePipeline({ append = false, refetch = true } = {}) {
     const box = $('admQuotes');
     if (!box) return;
     if (refetch) {
+      const seq = ++quotesFetchSeq; // drop stale responses when fetches overlap
       if (!append) { state.quotes = []; state.quotesOffset = 0; box.innerHTML = admSkeleton(); }
       let data;
       try {
@@ -459,6 +477,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
         return;
       }
+      if (seq !== quotesFetchSeq) return;
       state.quotes = (state.quotes || []).concat(data.quotes || []);
       state.quotesOffset = (state.quotesOffset || 0) + (data.quotes || []).length;
       state.quotesTotal = data.total;
@@ -470,7 +489,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     ensureToggle();
     ensureSavedViews();
     if (state.quotesNeedsMigration) {
-      box.innerHTML = '<p class="muted">No quote database yet. Apply supabase/schema-quotes.sql to store and triage leads here.</p>';
+      box.innerHTML = admEmpty('ph-database', 'No quote database yet', 'Apply supabase/schema-quotes.sql to store and triage leads here.');
       return;
     }
     if (!state.companies?.length) {
@@ -548,11 +567,21 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       try {
         const stageEl = box.querySelector(`[data-quote-stage="${CSS.escape(id)}"]`);
         const dealEl = box.querySelector(`[data-quote-deal="${CSS.escape(id)}"]`);
+        // Same no-op guard as saveDrawer: an unchanged stage must not reach the server
+        // (it re-stamps stage_changed_at and fires the Klaviyo stage-change event).
+        const rowQuote = (state.quotes || []).find((x) => String(x.id) === String(id));
+        const rowStage = stageEl ? stageEl.value : undefined;
+        const rowStageChanged = rowStage !== undefined && rowStage !== (rowQuote?.pipeline_stage || 'new');
+        let rowLostReason;
+        if (rowStageChanged && rowStage === 'lost') {
+          rowLostReason = await pickLostReason();
+          if (rowLostReason === null) { message('qStatus', 'Save cancelled — pick a lost reason to move to Lost.', 'err'); button.disabled = false; return; }
+        }
         await api('/api/admin/quotes', {
           method: 'POST',
           body: {
             id,
-            pipeline_stage: stageEl ? stageEl.value : undefined,
+            ...(rowStageChanged ? { pipeline_stage: rowStage, ...(rowLostReason ? { lost_reason: rowLostReason } : {}) } : {}),
             status: box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value,
             priority: box.querySelector(`[data-quote-priority="${CSS.escape(id)}"]`).value,
             assigned_to: box.querySelector(`[data-quote-owner="${CSS.escape(id)}"]`).value,

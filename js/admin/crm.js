@@ -147,7 +147,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     const importBar = `<details class="crm-contact-import">
       <summary>Import contacts from CSV</summary>
       <div>
-        <label class="btn btn-ghost btn-sm crm-contact-import-trigger">Choose CSV<input type="file" accept=".csv,text/csv" data-crm-contact-import hidden></label>
+        <button class="btn btn-ghost btn-sm crm-contact-import-trigger" type="button" data-crm-contact-import-btn>Choose CSV</button><input type="file" accept=".csv,text/csv" data-crm-contact-import hidden>
         <span class="muted crm-contact-import-help">columns: name, role, title, email, phone</span>
       </div>
     </details>`;
@@ -350,9 +350,19 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       imp.disabled = false;
     });
 
-    panel.addEventListener('submit', async (event) => {
+        panel.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-crm-contact-import-btn]');
+      if (trigger) panel.querySelector('[data-crm-contact-import]')?.click();
+    });
+
+panel.addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = event.target;
+      // In-flight guard: a double-click/double-Enter would POST the note/task/contact twice.
+      const submitBtn = form.querySelector('[type="submit"]');
+      if (submitBtn?.disabled) return;
+      if (submitBtn) submitBtn.disabled = true;
+      try {
       if (form.matches('[data-crm-note-form]')) {
         const text = form.querySelector('[data-crm-note-body]').value.trim();
         if (!text) return;
@@ -382,6 +392,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         try { await api('/api/admin/crm/contacts', { method: 'POST', body: payload }); load(body, subjectType, subjectId, 'contacts'); }
         catch (err) { body.insertAdjacentHTML('beforeend', errRow(err.data?.error)); }
       }
+      } finally { if (submitBtn) submitBtn.disabled = false; }
     });
 
     show('timeline');

@@ -413,10 +413,17 @@ export async function onRequest({ request, env }) {
     if (typeof body.notes === 'string') patch.notes = body.notes.slice(0, 4000);
     if (typeof body.next_step === 'string') patch.next_step = body.next_step.slice(0, 500);
 
+    // Belt-and-braces no-op guard: an unchanged stage must not re-stamp
+    // stage_changed_at (clears Stale tracking) or fire the Klaviyo stage event.
+    let stageActuallyChanged = false;
     if (body.pipeline_stage !== undefined) {
-      const res = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
-      if (res.error) return json(400, { error: res.error });
-      Object.assign(patch, res.patch);
+      const { data: current } = await sb.from('quotes').select('pipeline_stage').eq('id', body.id).single();
+      stageActuallyChanged = (current?.pipeline_stage || 'new') !== body.pipeline_stage;
+      if (stageActuallyChanged) {
+        const res = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
+        if (res.error) return json(400, { error: res.error });
+        Object.assign(patch, res.patch);
+      }
     }
     if (body.deal_value !== undefined) {
       if (body.deal_value === null || body.deal_value === '') patch.deal_value = null;
@@ -446,7 +453,7 @@ export async function onRequest({ request, env }) {
 
     // Stage moves emit a Klaviyo metric event so owner-built flows (templates/cadences) can
     // fire. An event does NOT itself send mail. Best-effort — never blocks the response.
-    if (body.pipeline_stage !== undefined && data?.email) {
+    if (stageActuallyChanged && data?.email) {
       await klaviyoTrack(env, {
         email: data.email,
         metric: 'Deal Stage Changed',

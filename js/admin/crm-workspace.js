@@ -30,10 +30,6 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
           <h2>Relationship workspace</h2>
           <p class="muted">Follow up on open work, then jump straight into the account, quote, or contact that needs attention.</p>
         </div>
-        <div class="crm-ws-shortcuts" aria-label="CRM shortcuts">
-          <button class="btn btn-secondary btn-sm" type="button" data-crm-ws-jump="tasks">Review follow-ups</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-crm-ws-jump="contacts">Find a person</button>
-        </div>
       </div>
       <div class="crm-tabs" role="group" aria-label="CRM sections">
         ${SUBTABS.map(([v, l]) => `<button class="btn btn-ghost btn-sm${v === view ? ' is-active' : ''}" type="button" data-crm-ws-tab="${v}" aria-pressed="${v === view}">${l}</button>`).join('')}
@@ -111,7 +107,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     body.innerHTML = admSkeleton(4);
     try {
       const { tasks, needs_migration } = await api(`/api/admin/crm/tasks?scope=${scope}`);
-      if (needs_migration) { inboxTasks = []; body.innerHTML = scopeButtons(scope) + '<p class="muted">No CRM database yet. Apply supabase/schema-crm.sql.</p>'; return; }
+      if (needs_migration) { inboxTasks = []; body.innerHTML = scopeButtons(scope) + admEmpty('ph-database', 'No CRM database yet', 'Apply supabase/schema-crm.sql to enable follow-ups.'); return; }
       inboxTasks = tasks || [];
       // Drop a stale assignee selection that no longer appears in the new scope.
       const facetValues = new Set(taskAssigneeFacets(inboxTasks).map((f) => f.value));
@@ -156,7 +152,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
       if (q.length >= 2) params.set('q', q);
       if (role) params.set('role', role);
       const { contacts, needs_migration, total, has_more } = await api(`/api/admin/crm/contacts?${params}`);
-      if (needs_migration) { results.innerHTML = '<p class="muted">No CRM database yet. Apply supabase/schema-crm-contacts.sql.</p>'; return; }
+      if (needs_migration) { results.innerHTML = admEmpty('ph-database', 'No CRM database yet', 'Apply supabase/schema-crm-contacts.sql to enable the contact directory.'); return; }
       const next = append ? [...(results._contacts || []), ...(contacts || [])] : (contacts || []);
       results._contacts = next;
       results.innerHTML = next.length
@@ -183,8 +179,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
         <button class="btn btn-primary btn-sm" type="submit">Find contact</button>
       </form>
       <div data-dir-results></div>`;
-    if (term.length >= 2 || currentRole) await runContactSearch(body);
-    else await runContactSearch(body);
+    await runContactSearch(body);
   }
 
   function showView(view) {
@@ -212,7 +207,6 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const box = $('admCrm');
     if (!box) return;
     delegate(box, 'click', '[data-crm-ws-tab]', (event, btn) => showView(btn.dataset.crmWsTab));
-    delegate(box, 'click', '[data-crm-ws-jump]', (event, btn) => showView(btn.dataset.crmWsJump));
     delegate(box, 'click', '[data-inbox-scope]', (event, btn) => {
       state.crmTaskScope = btn.dataset.inboxScope;
       renderTasks(box.querySelector('[data-crm-ws-body]'));

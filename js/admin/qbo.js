@@ -88,7 +88,7 @@ export async function renderQboStatus() {
       status.dataset.state = "err";
     } else {
       status.textContent = info.connected ? `Connected${info.realm_id ? ` (${info.realm_id})` : ""}.` : "Ready to connect.";
-      status.dataset.state = info.connected ? "ok" : "err";
+      status.dataset.state = info.connected ? "ok" : ""; // ready-to-connect is a neutral state, not an error
     }
     if (detail) detail.textContent = qboConfigDetail(qboConfig, info);
     button.innerHTML = info.connected ? '<i class="ph ph-plugs-connected"></i> Reconnect QuickBooks' : '<i class="ph ph-plugs-connected"></i> Connect QuickBooks';

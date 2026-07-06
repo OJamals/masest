@@ -190,6 +190,8 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, status } });
         await renderOrders();
+      } catch (err) {
+        message('ordStatus', (err.data && err.data.error) || 'Could not save the order status. Retry.', 'err');
       } finally {
         button.disabled = false;
       }

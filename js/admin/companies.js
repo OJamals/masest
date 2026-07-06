@@ -169,12 +169,16 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (!box) return;
     box.hidden = false;
     box.textContent = 'Loading company...';
+    // Deep links (CRM inbox → Accounts) land mid-list with the detail off-screen:
+    // bring it into view and move focus so the open is perceivable.
+    box.scrollIntoView({ block: 'start', behavior: 'auto' });
     try {
       const detail = await api(`/api/admin/company?id=${encodeURIComponent(id)}`);
       const company = detail.company || {};
       const openSteps = company.setup?.steps?.filter((step) => !step.done) || [];
       box.innerHTML = `
-        <h2>${esc(company.name || 'Company')}</h2>
+        <div class="adm-panel-header"><h2 tabindex="-1" data-company-detail-title>${esc(company.name || 'Company')}</h2>
+          <button class="btn btn-ghost btn-sm" type="button" data-company-detail-close aria-label="Close company detail">Close</button></div>
         <div class="dash-row"><span>Status</span>${statusBadge(company.status)}</div>
         <div class="dash-row"><span>Setup</span>${setupProgress(detail.company)}</div>
         <div class="dash-row"><span>Members</span><b>${(detail.members || []).length}</b></div>
@@ -195,6 +199,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;
       wireCompanyDetailActions(company);
       wireCompanyUserActions(company);
+      box.querySelector('[data-company-detail-close]')?.addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
+      box.querySelector('[data-company-detail-title]')?.focus();
       if (crm) crm.mount(box, 'company', company.id || id);
     } catch (err) {
       box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load this company. Reload to retry.')}</p>`;
@@ -221,7 +227,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     }
     const pager = admListPager('data-load-more-companies', state.companies.length, state.companiesTotal, state.companiesHasMore);
     const q = $('coSearch').value.trim().toLowerCase();
-    const companies = state.companies.filter((company) => JSON.stringify(company).toLowerCase().includes(q));
+    const coText = (c) => [c.name, c.status, c.price_tier, c.contact_email, c.contact_name, c.phone, c.industry].filter(Boolean).join(' ').toLowerCase();
+    const companies = state.companies.filter((company) => !q || coText(company).includes(q));
     if (!companies.length) {
       box.innerHTML = admEmpty('ph-buildings', q ? 'No matching accounts' : 'No accounts', q ? 'No accounts match your search.' : 'New B2B account signups appear here for approval.') + pager;
       return;
@@ -262,17 +269,24 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     delegate(box, 'click', '[data-load-more-companies]', () => renderCompanies({ append: true }));
     delegate(box, 'click', '[data-approve]', async (event, button) => {
       const id = button.dataset.approve;
-      await api('/api/admin/companies', {
-        method: 'POST',
-        body: {
-          id,
-          action: 'approve',
-          net_terms_days: Number(box.querySelector(`[data-net="${CSS.escape(id)}"]`).value || 0),
-          credit_limit: Number(box.querySelector(`[data-credit="${CSS.escape(id)}"]`).value || 0),
-          price_tier: box.querySelector(`[data-tier="${CSS.escape(id)}"]`).value,
-        },
-      });
-      renderCompanies();
+      button.disabled = true;
+      try {
+        await api('/api/admin/companies', {
+          method: 'POST',
+          body: {
+            id,
+            action: 'approve',
+            net_terms_days: Number(box.querySelector(`[data-net="${CSS.escape(id)}"]`).value || 0),
+            credit_limit: Number(box.querySelector(`[data-credit="${CSS.escape(id)}"]`).value || 0),
+            price_tier: box.querySelector(`[data-tier="${CSS.escape(id)}"]`).value,
+          },
+        });
+        renderCompanies();
+      } catch (err) {
+        // A silent failure here reads as "approved" — surface it.
+        button.disabled = false;
+        button.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${(err.data && err.data.error) || 'Could not approve. Retry.'}</p>`);
+      }
     });
     delegate(box, 'change', '#coAll', (event, coAll) => box.querySelectorAll('.co-check').forEach((c) => { c.checked = coAll.checked; }));
     delegate(box, 'click', '#bulkApprove', async (event, bulk) => {
@@ -283,6 +297,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       try {
         await api('/api/admin/companies', { method: 'POST', body: { ids, action: 'approve' } });
         await renderCompanies();
+      } catch (err) {
+        bulk.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${(err.data && err.data.error) || 'Bulk approve failed. Retry.'}</p>`);
       } finally { bulk.disabled = false; }
     });
   }

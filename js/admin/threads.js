@@ -19,12 +19,16 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
     </form>`;
       $('replyForm').addEventListener('submit', async (event) => {
         event.preventDefault();
+        const sendBtn = event.target.querySelector('[type="submit"]');
+        if (sendBtn?.disabled) return; // double-submit sends the reply twice
+        if (sendBtn) sendBtn.disabled = true;
         message('replyStatus', 'Sending...');
         try {
           await api('/api/admin/messages', { method: 'POST', body: { company_id: companyId, body: $('replyBody').value } });
           await openThread(companyId);
           await renderThreads();
         } catch (err) {
+          if (sendBtn) sendBtn.disabled = false;
           message('replyStatus', err.data?.error || 'Could not send the reply. Retry.', 'err');
         }
       });

@@ -110,7 +110,10 @@ async function boot() {
 
 function setTab(tab) {
   state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
-  if (location.hash.slice(1) !== state.tab) location.hash = state.tab;
+  // replaceState, NOT location.hash: assigning location.hash fires hashchange →
+  // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
+  // like quotes painted every row twice). Back/forward still works via hashchange.
+  if (location.hash.slice(1) !== state.tab) history.replaceState(null, '', '#' + state.tab);
   document.querySelectorAll('[data-panel]').forEach((panel) => {
     panel.dataset.active = String(panel.dataset.panel === state.tab);
   });
@@ -126,8 +129,8 @@ function setTab(tab) {
     orders: renderOrders,
     companies: renderCompanies,
     customers: renderCustomers,
-    products: () => { renderProducts(); wireInventory(); },
-    pricing: () => { renderPricing(); wireCoupons(); },
+    products: (o) => { renderProducts(o); wireInventory(); },
+    pricing: (o) => { renderPricing(o); wireCoupons(); },
     content: renderContent,
     messages: renderThreads,
     quotes: renderQuotePipeline,
@@ -169,6 +172,7 @@ function renderOpsSummary(stats = {}) {
  const groups = [
  ['Commerce', [
  ['30d revenue', money(commerce.revenue_30d || 0, 'usd')],
+ ['Orders (7d)', fmtInt(stats.commerce?.orders_7d ?? stats.orders?.total)],
  ['AOV', money(commerce.average_order_value || 0, 'usd')],
  ['Fulfillment queue', fmtInt(commerce.fulfillment_queue)],
  ['NET exposure', money(commerce.net_exposure || 0, 'usd')],
@@ -177,17 +181,18 @@ function renderOpsSummary(stats = {}) {
  ['Unread messages', fmtInt(crm.unread_messages)],
  ['New quotes', fmtInt(crm.quotes_new)],
  ['Urgent quotes', fmtInt(crm.quotes_urgent)],
- ['Overdue follow-ups', fmtInt(crm.quotes_overdue)],
+ ['Quote follow-ups due', fmtInt(stats.quotes_due?.overdue ?? crm.quotes_overdue)],
  ]],
  ['Accounts', [
  ['Pending', fmtInt(accounts.pending)],
  ['Approved', fmtInt(accounts.approved)],
  ['Suspended', fmtInt(accounts.suspended)],
- ['Setup gaps', fmtInt(crm.setup_followups)],
+ ['Setup follow-ups', fmtInt(stats.setup_followups?.companies ?? crm.setup_followups)],
  ]],
  ['Catalog + analytics', [
  ['Buy SKUs', fmtInt(catalog.buy)],
  ['Low stock', fmtInt(catalog.low_stock)],
+ ['Views (7d)', fmtInt(stats.traffic?.views_7d)],
  ['7d quote submits', fmtInt(analytics.quote_submits_7d)],
  ['Quote rate', pct(analytics.quote_conversion_rate)],
  ]],
@@ -343,21 +348,9 @@ function renderStats(stats = {}) {
  badge('aBadgeMsg', stats.messages?.unread || 0);
  badge('aBadgeQuotes', stats.quotes?.new || stats.quotes?.new_count || 0);
  badge('aBadgeCrm', stats.crm_tasks?.overdue || stats.crm?.tasks_overdue || 0);
- const items = [
- ['ph-currency-dollar', money(stats.commerce?.revenue_30d ?? stats.revenue, 'usd'), 'Revenue (30d)'],
- ['ph-package', stats.commerce?.orders_7d || stats.orders?.total || 0, 'Orders (7d)'],
- ['ph-buildings', stats.companies?.pending || 0, 'Pending accounts'],
- ['ph-check-circle', stats.companies?.approved || 0, 'Approved accounts'],
- ['ph-clipboard-text', stats.setup_followups?.companies || 0, 'Setup follow-ups'],
- ['ph-chats', stats.messages?.unread || 0, 'Unread messages'],
-    ['ph-calendar-check', stats.quotes_due?.overdue || 0, 'Quote follow-ups'],
-    ['ph-warning', stats.inventory?.low_stock || 0, 'Low stock'],
-    ['ph-flask', stats.catalog?.buy || 0, 'Buy SKUs'],
-    ['ph-eye', stats.traffic?.views_7d || 0, 'Views (7d)'],
- ];
- $('admStats').innerHTML = items.map(([icon, value, label]) => `
- <div class="adm-card adm-stat"><i class="ph ${icon}"></i><b>${esc(value)}</b><span class="muted">${esc(label)}</span></div>
- `).join('');
+ // One number, one place: the grouped ops summary is the single metrics surface.
+ // (The old 10-tile grid repeated revenue/pending/messages/low-stock a second time.)
+ if ($('admStats')) $('admStats').innerHTML = '';
  if ($('admOpsSummary')) $('admOpsSummary').innerHTML = renderOpsSummary(stats);
  if ($('admActionRail')) $('admActionRail').innerHTML = renderActionRail(stats.actions || []);
 }
@@ -406,7 +399,7 @@ const { renderContent, wireContent } = createContentTab({ $, api, state, admSkel
 const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel });
 
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
-const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton });
+const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton, admEmpty });
 
 // Traffic tab extracted to ./admin/traffic.js (#36 split). Shared primitives injected.
 const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });

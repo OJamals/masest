@@ -18,7 +18,8 @@ export function createCustomersTab({ $, api, state, admSkeleton, admEmpty, statu
     }
     const q = $('custSearch').value.trim().toLowerCase();
     state.customers = state.customers || [];
-    const rows = state.customers.filter((c) => JSON.stringify(c).toLowerCase().includes(q));
+    const custText = (c) => [c.full_name, c.name, c.email, c.phone, c.company_name, c.company?.name, c.role].filter(Boolean).join(' ').toLowerCase();
+    const rows = state.customers.filter((c) => !q || custText(c).includes(q));
     if (!rows.length) { box.innerHTML = admEmpty('ph-users', 'No customers', 'Approved customers and their companies appear here.'); return; }
     box.innerHTML = `<table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Tier</th><th>Role</th></tr></thead><tbody>${rows.map((c) => `
       <tr>

@@ -27,9 +27,11 @@ test('renderContacts renders a [data-dir-role] select element', () => {
   assert.match(ws, /<select[^>]*data-dir-role/);
 });
 
-test('renderContacts auto-runs search when role is set (state.crmContactRole)', () => {
+test('renderContacts always paints results (query, role filter, or default page)', () => {
   assert.match(ws, /state\.crmContactRole/);
-  assert.match(ws, /currentRole\) await runContactSearch/);
+  // The old `if (term || role) run(); else run();` had two identical arms — collapsed
+  // to one unconditional call, which still auto-runs when a role/query is stored.
+  assert.match(ws, /await runContactSearch\(body\);/);
 });
 
 test('runContactSearch reads state.crmContactQ and state.crmContactRole', () => {
