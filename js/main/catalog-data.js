@@ -20,7 +20,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-atom", "SynTech powered", "Patented technology matching mineral-acid performance"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates, and phosphates"],
-      ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
+      ["ph-truck", "Ships without hazmat freight", "Standard LTL, no placards or surcharges"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-hcr-sds.pdf" },
@@ -105,7 +105,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-atom", "SynClean powered", "Patented cleaning technology"],
       ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates and phosphates"],
-      ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
+      ["ph-truck", "Ships without hazmat freight", "Standard LTL, no placards or surcharges"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-multiwash-sds.pdf" },
@@ -197,14 +197,14 @@ export const PRODUCTS = {
     docs: ["Safety Data Sheet (SDS)", "Controlled Label / SDS Request"]
   },
   crhd: {
-    name: "VertKleen CRHD",
+    name: "VertKleen CR HD",
     cat: "alkaline",
     replaces: "Replaces Simple Green, Zep, and solvent degreasers",
     hmis: "0-0-0",
     icon: "ph-spray-bottle",
  image: "img/products/crhd-studio.webp",
     tag: "For grease that laughs at light-duty cleaners: floors, forklifts, parts washers, kitchens, drains, engine bays, and warehouse equipment.",
-    desc: "A high-detergency, low-foam alkaline degreaser at roughly 50% active strength. Walmart distribution-center collateral positions CRHD as a Simple Green replacement for forklifts, workshops, kitchens, floors, parts, and windows.",
+    desc: "A high-detergency, low-foam alkaline degreaser at roughly 50% active strength. Walmart distribution-center collateral positions CR HD as a Simple Green replacement for forklifts, workshops, kitchens, floors, parts, and windows.",
     uses: [
       "Warehouse and plant floors, forklifts, and engine bays",
       "Grease traps, drains, and commercial kitchen hoods",
@@ -215,7 +215,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-gauge", "About 50% active", "Higher active strength than common 15% degreasers"],
       ["ph-seal-check", "Equipment files", "Crown Forklift, Plug Power, and aerospace-spec equipment files available on request"],
-      ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
+      ["ph-truck", "Ships without hazmat freight", "Standard LTL, no placards or surcharges"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crhd-sds.pdf" },
@@ -367,8 +367,8 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/crhd-studio.webp",
-    tag: "CRHD muscle with the foam turned down for scrubbers, parts washers, and recirculating systems.",
-    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters, with the same HMIS 0-0-0 rating as CRHD.",
+    tag: "CR HD muscle with the foam turned down for scrubbers, parts washers, and recirculating systems.",
+    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters, with the same HMIS 0-0-0 rating as CR HD.",
     uses: [
       "Automatic floor scrubbers and machine wash",
       "Parts washers and recirculating wash systems",
@@ -379,7 +379,7 @@ export const PRODUCTS = {
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
       ["ph-drop", "Low-foam formula", "Built for machine wash and recirculating systems"],
       ["ph-atom", "SynTech powered", "Heavy-duty degreasing without solvent odor"],
-      ["ph-truck", "Ships without hazmat freight", "No DOT hazmat freight"]
+      ["ph-truck", "Ships without hazmat freight", "Standard LTL, no placards or surcharges"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -410,7 +410,7 @@ export const PRODUCTS = {
     replaces: "Replaces specialty and blended acid products",
     hmis: "0-0-0",
     icon: "ph-wrench",
-    image: "img/products/crs-studio.webp",
+    image: "img/products/masest-poster-transparent.png",
     tag: "A quote-reviewed specialty acid replacement for targeted descaling and water-side work.",
     desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. We quote it case by case while application sheets and final SKU guidance are confirmed.",
     uses: [
@@ -649,7 +649,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   "cr-hd-low-foam": {
     job: "Machine wash and low-foam degreasing",
-    summary: "The CRHD path for automatic scrubbers, parts washers, and recirculating systems where foam control matters.",
+    summary: "The CR HD path for automatic scrubbers, parts washers, and recirculating systems where foam control matters.",
     fits: ["floor scrubbers", "parts washers", "recirculating wash", "heavy soil"],
     proof: "Application notes on request"
   },
@@ -717,7 +717,7 @@ export const PRODUCT_GALLERY = {
   ],
   crhd: [
     ["img/proof/walmart-dc-proof-enhanced.webp", "Walmart distribution center floor and equipment degreasing", "Distribution center degreasing"],
-    ["img/proof/cases/kitchen.webp", "Commercial kitchen deep degreased with VertKleen CRHD", "Commercial kitchen cleaning"]
+    ["img/proof/cases/kitchen.webp", "Commercial kitchen deep degreased with VertKleen CR HD", "Commercial kitchen cleaning"]
   ],
   descaler: [
     ["img/proof/cases/fire-pump.webp", "Fire-pump component descaled with VertKleen Descaler", "Fire protection system"],

@@ -250,12 +250,27 @@ async function processProductFallback() {
   return 0;
 }
 
-function productDescription(id, product) {
-  const copy = PRODUCT_CATALOG_COPY[id] || {};
-  const route = QUOTE_FIRST_IDS.includes(id)
+// DBNPA is a program component with no stocked small packs; static-page route
+// copy treats it as quote-only even though runtime buy logic keys on QUOTE_FIRST_IDS.
+const QUOTE_ONLY_IDS = new Set([...QUOTE_FIRST_IDS, "dbnpa"]);
+
+function terminate(part) {
+  const trimmed = String(part).trim();
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function productRouteCopy(id) {
+  return QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
     : "Small packs ship from stock where available; drums and totes are quoted.";
-  const parts = [copy.summary, product.desc, product.replaces, route].filter(Boolean);
+}
+
+function productDescription(id, product) {
+  const copy = PRODUCT_CATALOG_COPY[id] || {};
+  // Bare `replaces` values ("50% ethylene glycol pre-mix") are spec labels, not
+  // sentences — only full "Replaces …" statements read correctly in prose.
+  const replaces = /^Replaces\b/i.test(product.replaces || "") ? product.replaces : "";
+  const parts = [copy.summary, product.desc, replaces, productRouteCopy(id)].filter(Boolean).map(terminate);
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
@@ -293,7 +308,7 @@ function productSchema(id, product) {
           {
             "@type": "PropertyValue",
             name: "Procurement",
-            value: QUOTE_FIRST_IDS.includes(id) ? "Quoted before purchase" : "Small packs in stock; bulk quoted",
+            value: QUOTE_ONLY_IDS.has(id) ? "Quoted before purchase" : "Small packs in stock; bulk quoted",
           },
         ].filter((item) => item.value),
       },
@@ -303,9 +318,21 @@ function productSchema(id, product) {
 
 function productPage(id, product) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
-  const desc = productDescription(id, product);
+  // Full catalog copy is published in the hero on purpose (see
+  // product-layout.test: static heroes are the SEO surface for desc text).
+  const heroDesc = productDescription(id, product);
   const metaDesc = productMetaDescription(id, product);
   const img = product.image ? `../${product.image}` : `../${PRODUCT_FALLBACK_IMAGE}`;
+  // The brand poster is a placeholder, not a product photo (mirrors product.html +
+  // catalog-card suppression) — swap the hero figure for the shared icon tile.
+  const hasPhoto = product.image && !/masest-poster-transparent/.test(product.image);
+  const heroMedia = hasPhoto
+    ? `<figure class="product-hero-media reveal">
+        <img src="${attr(img)}" alt="${attr(product.name)} product photo" fetchpriority="high" decoding="async">
+      </figure>`
+    : `<figure class="product-hero-media media-fallback reveal">
+        <span class="media-fallback-label">${text(product.name)}</span>
+      </figure>`;
   const uses = (product.uses || copy.fits || []).map((item) => `<li>${text(item)}</li>`).join("\n");
   const specs = (product.specs || [])
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
@@ -320,9 +347,10 @@ function productPage(id, product) {
       return `<li class="doc-file doc-request"><a href="${attr(href)}">${text(label)}<span class="doc-pill doc-pill-req">Request</span></a></li>`;
     })
     .join("\n");
-  const procurement = QUOTE_FIRST_IDS.includes(id)
+  const procurement = QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
     : "Small packs ship from stock where available; drums, totes, and program supply are quoted.";
+  const eyebrow = id === "dbnpa" ? "Program component" : "VertKleen product";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -338,7 +366,7 @@ function productPage(id, product) {
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260705c">
+<link rel="stylesheet" href="../css/style.css?v=20260706a">
 <link rel="stylesheet" href="../css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="../css/components.css">
 <!-- seo:auto -->
@@ -366,17 +394,16 @@ ${jsonLd(productSchema(id, product))}
   <section class="hero product-detail-hero">
     <div class="wrap hero-grid">
       <div class="hero-copy reveal">
-        <span class="eyebrow">VertKleen product</span>
+        <span class="eyebrow">${text(eyebrow)}</span>
         <h1 class="display">${text(product.name)}</h1>
-        <p class="subhead">${text(desc)}</p>
+        <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
-          <a class="btn" href="../contact?type=quote&product=${encodeURIComponent(product.name)}">Request quote</a>
+          <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}">Request a quote</a>${QUOTE_ONLY_IDS.has(id) ? "" : `
+          <a class="btn btn-secondary" href="../product?id=${encodeURIComponent(id)}">Buy small packs</a>`}
           <a class="btn btn-ghost" href="../products">All products</a>
         </div>
       </div>
-      <figure class="product-hero-media reveal">
-        <img src="${attr(img)}" alt="${attr(product.name)} product photo" fetchpriority="high" decoding="async">
-      </figure>
+      ${heroMedia}
     </div>
   </section>
   <section class="section product-static-section">

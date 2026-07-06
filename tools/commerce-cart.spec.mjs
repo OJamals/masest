@@ -124,8 +124,9 @@ test("cart disables direct checkout when bulk freight items are present", async 
   const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("type")).toBe("quote");
-  expect(quoteUrl.searchParams.get("cart")).toBe("crhd:1,lam3:1");
-  expect(quoteUrl.searchParams.get("message")).toContain("VertKleen CR-HD x 1");
+  // The dead ?cart= param was dropped; the message carries the lines.
+  expect(quoteUrl.searchParams.get("cart")).toBeNull();
+  expect(quoteUrl.searchParams.get("message")).toContain("VertKleen CR HD x 1");
   expect(quoteUrl.searchParams.get("message")).toContain("VertKleen LAM3 x 1");
 });
 
@@ -153,9 +154,9 @@ test("cart quote link reflects edited quantities before blur", async ({ page }) 
 
   const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
-  expect(quoteUrl.searchParams.get("cart")).toBe("crhd:4");
+  expect(quoteUrl.searchParams.get("cart")).toBeNull();
   expect(quoteUrl.searchParams.get("email")).toBe("buyer@example.com");
-  expect(quoteUrl.searchParams.get("message")).toContain("VertKleen CR-HD x 4");
+  expect(quoteUrl.searchParams.get("message")).toContain("VertKleen CR HD x 4");
 });
 
 test("cart re-enables checkout after removing bulk freight items", async ({ page }) => {
@@ -186,6 +187,6 @@ test("cart re-enables checkout after removing bulk freight items", async ({ page
 
   const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
-  expect(quoteUrl.searchParams.get("cart")).toBe("crhd:1");
+  expect(quoteUrl.searchParams.get("cart")).toBeNull();
   expect(quoteUrl.searchParams.get("message")).not.toContain("LAM3");
 });

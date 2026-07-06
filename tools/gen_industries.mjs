@@ -23,7 +23,7 @@ const INDUSTRIES = [
   sub: "Descale, derust, and degrease rigs, terminals, and pipelines without the acid fumes, solvent storage, and hazmat freight that usually come with the job.",
   intro: "Rigs, terminals, and pipelines usually get cleaned with acids and solvent degreasers that bring fumes, burns, and hazmat freight. VertKleen does the same descaling, rust removal, and degreasing at an HMIS 0-0-0 rating, so storage, handling, and shipping stay simple.",
   products: ["hcr", "descaler", "crhd", "neutral"],
-  proof: { img: "ddc-rust", caption: "20-year rust scale cleared HCR, verified by DDC Engineering." }
+  proof: { img: "ddc-rust", caption: "20-year rust scale cleared with HCR, verified by DDC Engineering." }
 },
 {
   slug: "marine",
@@ -33,7 +33,7 @@ const INDUSTRIES = [
   sub: "On cruise ships, commercial vessels, and docks, confined air and soft metals make the cleaning chemical a decision you can't shortcut.",
   intro: "Hull, aluminum, glass, and deck work often leans on hydrofluoric or hydrochloric acid brighteners and solvent washes — dangerous in confined shipboard air. VertKleen Torque and AlumiBrite restore those surfaces without the acids, and MultiWash handles drone pressure-washing on occupied vessels.",
   products: ["torque", "alumibrite", "multiwash", "crhd"],
-  proof: { img: "marine", caption: "Yellowfin vessel trim, caulking, glass cleared VertKleen." }
+  proof: { img: "marine", caption: "Yellowfin vessel trim, caulking, and glass cleared with VertKleen." }
 },
 {
   slug: "manufacturing",
@@ -43,7 +43,7 @@ const INDUSTRIES = [
   sub: "Strong cleaning for extrusion, processing, warehousing, and plant maintenance — with the documentation your technical review needs.",
   intro: "Plant maintenance runs on acid descaling, caustic CIP, and solvent degreasing, each one adding HazCom and exposure risk. VertKleen does those same jobs at an HMIS 0-0-0 rating, so there's less to handle and a cleaner package to put in front of technical review.",
   products: ["hcr", "cr", "crhd", "descaler"],
-  proof: { img: "farm-rust", caption: "Heavy industrial rust scale removed HCR, no HCl handling." }
+  proof: { img: "farm-rust", caption: "Heavy industrial rust scale removed with HCR, no HCl handling." }
 },
 {
   slug: "distribution-cold-storage",
@@ -63,7 +63,7 @@ const INDUSTRIES = [
   sub: "Breweries, distilleries, wineries, processing floors, hood filters, and drains cleaned around staff and active food spaces.",
   intro: "Tanks, heat exchangers, and CIP/SIP lines usually depend on caustic-acid sequences that are hard on staff and effluent. Brewlando trial notes say CR and HCR worked better than traditional caustic-soda and acid blends at the same concentration and CIP time; the Carib lab table adds effluent data buyers can review.",
   products: ["cr", "hcr", "crhd", "neutral"],
-  proof: { img: "brewery", caption: "Brewery tanks and CIP cleaned with CR and HCR. See lab results." }
+  proof: { img: "brewery", caption: "Brewery tanks and CIP cleaned with CR and HCR; effluent lab data on the proof page." }
 },
 {
   slug: "healthcare",
@@ -72,8 +72,8 @@ const INDUSTRIES = [
   h1: "Healthcare maintenance cannot become an event.",
   sub: "Clean, passivate, and maintain water systems while the building stays occupied and fume-event risk stays lower.",
   intro: "Hospitals and occupied campuses can't plan around fume events or long shutdowns. VertKleen cleans, passivates, and supports water-system programs at an HMIS 0-0-0 rating, so maintenance works around the patients, staff, and visitors still in the building.",
-  products: ["watersafe60", "purgo", "hcr", "cr"],
-  proof: { img: "ac-coil", caption: "Residential facility AC coils cleaned Descaler, aluminum-fin compatible." }
+  products: ["watersafe60", "purgo", "hcr", "cr", "descaler"],
+  proof: { img: "ac-coil", caption: "Residential facility AC coils cleaned with Descaler, aluminum-fin compatible." }
 },
 {
   slug: "construction",
@@ -103,7 +103,7 @@ const INDUSTRIES = [
   sub: "K-12 and university facilities cleaned and treated while students, faculty, and staff remain on site.",
   intro: "Schools and universities maintain water systems, kitchens, and exteriors while occupied, so how you document chemical handling matters. VertKleen cleans and treats at an HMIS 0-0-0 rating for campuses still in use. Brevard County Schools is the proof behind it.",
   products: ["cr", "hcr", "watersafe60", "lam3"],
-  proof: { img: "grout-moss", caption: "Occupied-campus exterior facility cleaning with VertKleen." }
+  proof: { img: "drone-action", caption: "Occupied-campus exterior facility cleaning with VertKleen." }
 },
 {
   slug: "hvac-water",
@@ -148,12 +148,12 @@ const GALLERY = {
     ["43-foot Yellowfin finished bow to transom", "Finished bow to transom"]
   ],
   "manufacturing": [
-    ["Greasy intake assembly before VertKleen CRHD degreasing", "Greasy intake, pre-degrease"],
+    ["Greasy intake assembly before VertKleen CR HD degreasing", "Greasy intake, pre-degrease"],
     ["Filter media cleared of grease with fibers intact", "Media cleared, fibers intact"],
     ["Degreased filter restored to clean media", "Restored to clean media"]
   ],
   "distribution-cold-storage": [
-    ["Walmart distribution center CRHD degreasing proof", "CRHD degreasing proof"],
+    ["Walmart distribution center CR HD degreasing proof", "CR HD degreasing proof"],
     ["Walmart perishable distribution center on-site assessment", "Perishable DSC assessment"],
     ["Walmart refrigeration descaling results table", "Refrigeration results"]
   ],
@@ -183,7 +183,7 @@ const GALLERY = {
     ["Walkway tile cleaned of grime and biological staining", "Walkway tile cleaned"]
   ],
   "hvac-water": [
-    ["Condenser unit cleaned in place during service", "Condenser cleaned in service"],
+    ["Non-corrosive coil descaler dosed at a condenser during in-place service", "Descaler dosed at the condenser"],
     ["Coil fins cleared of scale without bending the aluminum", "Fins cleared, not bent"],
     ["Aluminum condenser coil descaled on an occupied site", "Aluminum coil descaled"]
   ],
@@ -196,6 +196,7 @@ const GALLERY = {
 
 const PROOF_IMAGE_DIMS = {
   "ac-coil": [839, 471],
+  "drone-action": [520, 650],
   brewery: [1200, 900],
   "ddc-rust": [1200, 579],
   "farm-rust": [740, 967],
@@ -207,16 +208,16 @@ const PROOF_IMAGE_DIMS = {
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
 
 const INDUSTRY_DETAILS = {
-  "oil-gas": ["Chemicals replaced", "Hydrochloric acid (muriatic acid), solvent degreasers, and aggressive rust removers used on rigs, terminals, pipeline parts, and tank-farm equipment.", "Bundle: HCR for rust and passivation, Descaler for mineral scale, CRHD for oily soils, Neutral for sensitive surfaces."],
-  marine: ["Buyer objection", "Confined air, aluminum brightwork, glass, and dockside access make acid brighteners and solvent washes hard to manage.", "Bundle: Torque for wash-and-wax, AlumiBrite for aluminum, MultiWash for exterior cleaning, CRHD for machinery spaces."],
-  manufacturing: ["Common replacements", "Acid descalers, caustic CIP cleaners, and solvent degreasers used across lines, floors, parts, and maintenance bays.", "Bundle: HCR for scale and rust, CR for alkaline cleaning, CRHD for heavy grease, Descaler for mineral deposits."],
-  "distribution-cold-storage": ["Walkdown sequence", "Walmart perishable DSC materials check banana-room mildew, refrigerated hard-to-reach areas, ammonia coil scale, condenser and drain-line buildup, kitchen grease, and pilot readiness.", "Bundle: Descaler for ammonia coils and heat-transfer circuits, CRHD for fryer, hood, floor, forklift and parts degreasing, MultiWash and Purgo for spot mildew and odor-control support."],
-  "food-beverage": ["Sector proof", "Brewery and distillery work centers on CR and HCR sequences for tanks, heat exchangers, protein soil, beer stone, and hood or drain cleaning.", "Bundle: CR for alkaline wash, HCR for acid wash, CRHD for grease, Neutral where sensitive surfaces or seals matter."],
+  "oil-gas": ["Chemicals replaced", "Hydrochloric acid (muriatic acid), solvent degreasers, and aggressive rust removers used on rigs, terminals, pipeline parts, and tank-farm equipment.", "Bundle: HCR for rust and passivation, Descaler for mineral scale, CR HD for oily soils, Neutral for sensitive surfaces."],
+  marine: ["Buyer objection", "Confined air, aluminum brightwork, glass, and dockside access make acid brighteners and solvent washes hard to manage.", "Bundle: Torque for wash-and-wax, AlumiBrite for aluminum, MultiWash for exterior cleaning, CR HD for machinery spaces."],
+  manufacturing: ["Common replacements", "Acid descalers, caustic CIP cleaners, and solvent degreasers used across lines, floors, parts, and maintenance bays.", "Bundle: HCR for scale and rust, CR for alkaline cleaning, CR HD for heavy grease, Descaler for mineral deposits."],
+  "distribution-cold-storage": ["Walkdown sequence", "Walmart perishable DSC materials check banana-room mildew, refrigerated hard-to-reach areas, ammonia coil scale, condenser and drain-line buildup, kitchen grease, and pilot readiness.", "Bundle: Descaler for ammonia coils and heat-transfer circuits, CR HD for fryer, hood, floor, forklift, and parts degreasing, MultiWash and Purgo for spot mildew and odor-control support."],
+  "food-beverage": ["Sector proof", "Brewery and distillery work centers on CR and HCR sequences for tanks, heat exchangers, protein soil, beer stone, and hood or drain cleaning.", "Bundle: CR for alkaline wash, HCR for acid wash, CR HD for grease, Neutral where sensitive surfaces or seals matter."],
   healthcare: ["Buyer objection", "Occupied facilities can't trade maintenance for fume events, shutdowns, or uncontrolled chemical exposure.", "Bundle: WaterSafe60 and Purgo for water-program support, HCR for passivation, CR for pH and alkaline cleaning."],
-  construction: ["Common replacements", "Hydrochloric acid (muriatic acid), bleach, and caustic degreasers used for concrete cleanup, equipment, pavers, and exterior biological growth.", "Bundle: Descaler for concrete and calcium, HCR for rust, CRHD for equipment grease, LAM3 for exterior growth."],
-  "military-government": ["Procurement signal", "Public buyers need CAGE, NAICS, SDS, and controlled documents before they'll switch a chemistry standard.", "Bundle: HCR, Descaler, CRHD, and AlumiBrite cover rust, scale, grease, and aluminum restoration, all with documentation on file."],
+  construction: ["Common replacements", "Hydrochloric acid (muriatic acid), bleach, and caustic degreasers used for concrete cleanup, equipment, pavers, and exterior biological growth.", "Bundle: Descaler for concrete and calcium, HCR for rust, CR HD for equipment grease, LAM3 for exterior growth."],
+  "military-government": ["Procurement signal", "Public buyers need CAGE, NAICS, SDS, and controlled documents before they'll switch a chemistry standard.", "Bundle: HCR, Descaler, CR HD, and AlumiBrite cover rust, scale, grease, and aluminum restoration, all with documentation on file."],
   education: ["Sector proof", "Campus buyers need cleaning and water-treatment options that work while students, faculty, and staff remain on site.", "Bundle: CR and HCR for facility cleaning, WaterSafe60 for water systems, LAM3 for exterior biological growth."],
-  "hvac-water": ["Recommended replacements", "Cooling tower programs cover inhibitor, oxidizing antimicrobial support, non-oxidizing biocide, acid cleaning, pH adjustment, and degreasing.", "Bundle: WaterSafe60, Purgo, HCR, CR, and Neutral, with DBNPA footnoted separately when the non-oxidizing rotation is specified."],
+  "hvac-water": ["Program coverage", "Cooling tower programs cover inhibitor, oxidizing antimicrobial support, non-oxidizing biocide, acid cleaning, pH adjustment, and degreasing.", "Bundle: WaterSafe60, Purgo, HCR, CR, and Neutral, with DBNPA footnoted separately when the non-oxidizing rotation is specified."],
   plumbing: ["Buyer objection", "Water lines, fixtures, heaters, and drains need scale removal without hydrochloric acid handling inside occupied buildings.", "Bundle: Descaler for calcium and scale, HCR for heavier rust and passivation, Neutral for sensitive equipment cleaning."]
 };
 
@@ -298,14 +299,21 @@ function ctaBlock(ind) {
   </section>`;
 }
 
+const GALLERY_IMAGE_DIMS = {
+  "distribution-cold-storage": [[708, 513], [1600, 1200], [1600, 1200]],
+};
+
 function galleryBlock(ind) {
   const shots = GALLERY[ind.slug];
   if (!shots) return "";
-  const figs = shots.map(([alt, cap], i) => `
+  const figs = shots.map(([alt, cap], i) => {
+    const [w, h] = (GALLERY_IMAGE_DIMS[ind.slug] || [])[i] || [900, 675];
+    return `
         <figure class="ind-shot">
-          <img src="../img/industries/${ind.slug}/g${i + 1}.webp" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" width="900" height="675">
+          <img src="../img/industries/${ind.slug}/g${i + 1}.webp" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" width="${w}" height="${h}">
           <figcaption>${cap}</figcaption>
-        </figure>`).join("");
+        </figure>`;
+  }).join("");
   return `
   <section class="section section-slim ind-gallery-sec">
     <div class="wrap">
@@ -326,7 +334,7 @@ function proofImageDimsAttr(img) {
 
 function page(ind) {
   const nav = NAV.map(([href, label]) => {
-    if (!href) return `    <span>${label}</span>`;
+    if (href === null) return `    <span>${label}</span>`;
     const content = label === "MASEST" ? `<b>${label}</b>` : label;
     return `    <a href="../${href}"${href === "industries" ? ' aria-current="page"' : ""}>${content}</a>`;
   }).join("\n");
@@ -349,7 +357,7 @@ function page(ind) {
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260705c">
+<link rel="stylesheet" href="../css/style.css?v=20260706a">
 <link rel="stylesheet" href="../css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
@@ -365,7 +373,7 @@ ${nav}
 <main id="main">
   <section class="hero-split">
     <div class="wrap">
-      <span class="eyebrow"><a href="../industries">Industries</a> / ${ind.name}</span>
+      <span class="eyebrow"><a href="../industries">Industries</a> &rsaquo; ${ind.name}</span>
       <h1 class="display">${ind.h1}</h1>
       <p class="subhead">${ind.sub}</p>
     </div>
@@ -402,7 +410,7 @@ ${galleryBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js"></script>
+<script type="module" src="../js/main.js?v=20260619b"></script>
 </body>
 </html>
 `;

@@ -6,8 +6,10 @@
 <meta name="robots" content="noindex">
   <title>Cart | MASEST</title>
   <meta name="description" content="Review VertKleen purchase-ready SKUs, start checkout, or route bulk freight requests to MASEST.">
+  <meta name="theme-color" content="#fafbfc">
+  <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260705c">
+  <link rel="stylesheet" href="css/style.css?v=20260706a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
   <link rel="stylesheet" href="css/components.css">
   <script src="js/config.js" defer></script>
@@ -87,7 +89,7 @@
   // vsku -> { name, gallons, price, currency }, flattened from /api/products variants.
   const vmap = new Map();
   const fallbackNames = {
-    crhd: "VertKleen CR-HD",
+    crhd: "VertKleen CR HD",
     hcr: "VertKleen HCR",
   };
   function isLocalStaticPreview() {
@@ -152,15 +154,11 @@
   const checkoutNet = document.getElementById("checkoutNet");
   const checkoutQuote = document.getElementById("checkoutQuote");
 
-  // NET terms require an approved business account. Pull the Supabase session token
-  // (persisted in localStorage from a prior account.html login). Returns null if the
-  // user is logged out or the auth client/CDN is unavailable.
+  // NET terms require an approved business account. Returns null if the user is
+  // logged out or the auth client/CDN is unavailable.
   async function getAuthToken() {
     try {
-      const { supabase } = await import("./js/auth.js");
-      if (!supabase) return null;
-      const { data } = await supabase.auth.getSession();
-      return data?.session?.access_token || null;
+      return (await getToken()) || null;
     } catch (err) {
       return null;
     }
@@ -204,7 +202,6 @@
     const receiptEmail = email?.value?.trim();
     if (receiptEmail) params.set("email", receiptEmail);
     if (cartItems.length) {
-      params.set("cart", cartItems.map((item) => `${item.sku}:${item.qty}`).join(","));
       params.set("message", `Cart quote request: ${cartItems.map((item) => `${productName(item.sku)} x ${item.qty}`).join("; ")}.`);
     }
     return `contact.html?${params.toString()}`;
@@ -212,6 +209,14 @@
 
   function syncQuoteHref() {
     if (checkoutQuote) checkoutQuote.href = quoteUrl(items());
+  }
+
+  function checkoutReady() {
+    const cartItems = items();
+    return cartItems.length > 0 && !cartItems.some(item => {
+      const meta = vmap.get(item.sku);
+      return meta && !meta.purchasable;
+    });
   }
 
   function render() {
@@ -237,7 +242,7 @@
     if (checkoutIdle) checkoutIdle.hidden = !!cartItems.length;
     if (status) status.hidden = !cartItems.length;
     if (!cartItems.length) {
-      lines.innerHTML = `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse Products</a></div>`;
+      lines.innerHTML = `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse products</a></div>`;
       updateSubtotal();
       updateShipping();
       return;
@@ -300,15 +305,20 @@
     out.textContent = `${gallons} gal → est. ${money(est)}`;
   }
 
+  // A cleared qty field mid-edit is not a removal — only commit values >= 1 and
+  // let the Remove button be the sole deletion path. render() on change restores
+  // the stored qty when the field is left empty/invalid.
+  const validQty = (value) => { const n = Number(value); return Number.isFinite(n) && n >= 1; };
   lines.addEventListener("change", event => {
     const sku = event.target?.dataset?.qty;
     if (!sku) return;
-    setQty(sku, event.target.value);
+    if (validQty(event.target.value)) setQty(sku, event.target.value);
     render();
   });
   lines.addEventListener("input", event => {
     const sku = event.target?.dataset?.qty;
     if (!sku) return;
+    if (!validQty(event.target.value)) return;
     setQty(sku, event.target.value);
     syncQuoteHref();
     updateSubtotal();
@@ -337,7 +347,7 @@
       if (!token) {
         status.dataset.state = "err";
         status.textContent = "Sign in to your approved business account to use NET terms, or send a quote request.";
-        setCheckoutDisabled(items().length === 0);
+        setCheckoutDisabled(!checkoutReady());
         return;
       }
     }
@@ -352,7 +362,7 @@
     } catch (err) {
       status.dataset.state = "err";
       status.textContent = checkoutErrorMessage(err);
-      setCheckoutDisabled(items().length === 0);
+      setCheckoutDisabled(!checkoutReady());
     }
   }
 

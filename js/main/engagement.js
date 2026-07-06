@@ -22,7 +22,7 @@ export function initBeforeAfter() {
    recoverable: an Edit button returns the user to their answers. */
 const SALES_EMAIL = "matthew@masest.co";
 
-function smoothPref() {
+export function smoothPref() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 }
 
@@ -82,12 +82,20 @@ export function initQuoteForm() {
   if (!form) return;
   const params = new URLSearchParams(location.search);
 
-  // Prefill from URL params (?product=, ?doc=)
+  // Prefill from URL params (?product=, ?doc=). Links carry catalog names that can
+  // drift from option text in spacing/suffixes ("CR HD" vs "CRHD", "… Program" vs
+  // "… Program (DBNPA if specified)"), so fall back to a normalized prefix match.
+  const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const selectOption = (sel, wanted) => {
+    if (!sel || !wanted) return;
+    const options = [...sel.options];
+    const hit = options.find(o => o.value === wanted || o.text === wanted)
+      || options.find(o => o.text && norm(o.text) === norm(wanted))
+      || options.find(o => o.text && norm(wanted) && norm(o.text).startsWith(norm(wanted)));
+    if (hit) sel.value = hit.value || hit.text;
+  };
   const pre = params.get("product");
-  if (pre) {
-    const sel = form.querySelector('[name="product"]');
-    if (sel) [...sel.options].forEach(o => { if (o.value === pre || o.text === pre) sel.value = o.value || o.text; });
-  }
+  if (pre) selectOption(form.querySelector('[name="product"]'), pre);
   const doc = params.get("doc");
   if (doc) {
     const msg = form.querySelector('[name="message"]');
@@ -106,18 +114,17 @@ export function initQuoteForm() {
     if (email && !email.value) email.value = emailParam;
   }
   const indParam = params.get("industry");
-  if (indParam) {
-    const isel = form.querySelector('[name="industry"]');
-    if (isel) [...isel.options].forEach(o => { if (o.value === indParam || o.text === indParam) isel.value = o.value || o.text; });
-  }
+  if (indParam) selectOption(form.querySelector('[name="industry"]'), indParam);
 
   // ── Adaptive request type: the chooser swaps which field set is required/shown ──
   const leadMessage = form.querySelector('[name="message"]');
   if (leadMessage) leadMessage.required = true;
-  const advancedIds = ["fPhone", "fIndustry", "fLocation", "fProduct", "fVolume", "fTimeline", "fSystem", "fAuditWhen", "fShipTo", "fCompanyType", "fTerritory"];
+  // Only shared optional fields and quote extras live behind the toggle. Fields
+  // that belong to a chosen intent (audit/sample/distributor) are that intent's
+  // core ask — hiding them behind "procurement details" left those intents with
+  // an empty form (and let a sample request submit with zero products).
+  const advancedIds = ["fPhone", "fIndustry", "fLocation", "fProduct", "fVolume", "fTimeline"];
   const advancedFields = advancedIds.map(id => document.getElementById(id)?.closest(".field")).filter(Boolean);
-  const progressiveSampleGroup = form.querySelector('[data-intent-group="sample"]');
-  if (progressiveSampleGroup) advancedFields.push(progressiveSampleGroup);
   const advancedButton = document.createElement("button");
   advancedButton.type = "button";
   advancedButton.className = "btn btn-secondary quote-advanced-toggle";

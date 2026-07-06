@@ -233,7 +233,7 @@ export function renderChrome() {
           <p style="margin-top:10px;font-size:.8rem;line-height:1.7">CAGE 0B2Q3<br>NAICS 424690<br>SAM.gov registered<br>Minority-owned (self-certified)</p>
         </div>
       </div>
-      <div class="foot-news">
+      ${page === "newsletter" ? "" : `<div class="foot-news">
         <div class="foot-news-copy">
           <div class="foot-title">VertKleen Briefing</div>
           <p>Field results, document-gated SKUs, and program notes. No spam. Unsubscribe anytime.</p>
@@ -244,7 +244,7 @@ export function renderChrome() {
           <button type="submit" class="btn btn-primary" id="footNewsBtn">Subscribe</button>
           <p class="foot-news-status" id="footNewsStatus" role="status" aria-live="polite"></p>
         </form>
-      </div>
+      </div>`}
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
         <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a></span>

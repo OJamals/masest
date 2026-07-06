@@ -122,7 +122,10 @@ function renderServiceCard(item) {
   const unit = `per ${rawUnit}`;
   const price = fmtMoney(item.public_price, item.currency || "USD");
   const sku = String(item.sku || "").trim();
-  const href = `contact.html?intent=service&sku=${encodeURIComponent(sku)}`;
+  // The contact form reads ?type and ?message (not intent/sku) — carry the chosen
+  // line item into the notes field so it actually reaches the request.
+  const note = `Service request: ${name}${sku ? ` (${sku})` : ""}.`;
+  const href = `contact?type=services&message=${encodeURIComponent(note)}`;
   const description = item.description
     ? normalizeText(item.description)
     : "Final scope, schedule, and deliverables are confirmed before work begins.";

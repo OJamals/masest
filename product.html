@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260705c">
+<link rel="stylesheet" href="css/style.css?v=20260706a">
 <link rel="stylesheet" href="css/navigation.css?v=20260619a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -285,7 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setProductImage(p.image, p.name + " product container");
     }
     document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";
-    const quoteHref = "contact.html?product=" + encodeURIComponent(isProgramOnly ? `${p.name} program fit` : p.name);
+    const quoteHref = "contact?type=quote&product=" + encodeURIComponent(isProgramOnly ? `${p.name} program fit` : p.name);
     const quoteBtn = document.getElementById("pQuoteBtn");
     if (quoteBtn) quoteBtn.href = quoteHref;
     const buyBtn = document.getElementById("pBuyBtn");

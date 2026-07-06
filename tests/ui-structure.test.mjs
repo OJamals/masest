@@ -165,7 +165,7 @@ test("proof page leads with conversion proof, not internal notes", () => {
   assert.ok(heroIndex < libraryIndex, "hero should lead proof library");
   assert.doesNotMatch(proof, /proof-decision-strip/);
   assert.doesNotMatch(proof, /class="proof-decision"/);
-  assert.match(proof, /Request a Chemical Audit/);
+  assert.match(proof, /Request a chemical audit/);
   assert.match(proof, /30 min/);
   assert.match(proof, /Brewery CIP/);
   assert.doesNotMatch(proof, /broader company file/i);
