@@ -62,19 +62,14 @@ function renderBusinessHub(data = {}) {
   const c = data.company;
   const status = c?.status || 'pending';
   const statusText = c ? (STATUS_LABEL[status] || status) : 'Not set up';
-  const credit = data.credit;
-  const creditText = credit ? (credit.unlimited ? 'Unlimited' : money(credit.credit_available || 0, 'usd')) : (c ? 'Reviewing' : 'Set up');
   box.innerHTML = `
     <div>
       <p class="biz-eyebrow">Business workspace</p>
       <h2>${esc(c?.name || 'Set up your business')}</h2>
       <p class="lead">Manage verification, invoices, programs, bulk quote requests, and team access from one place.</p>
     </div>
-    <div class="biz-hub-metrics" aria-label="Business summary">
-      <span class="biz-hub-metric"><small>Status</small><b>${esc(statusText)}</b></span>
-      <span class="biz-hub-metric"><small>Setup</small><b>${esc(setupMetric(data))}</b></span>
-      <span class="biz-hub-metric"><small>Terms</small><b>${esc(netTermsText(data))}</b></span>
-      <span class="biz-hub-metric"><small>Credit</small><b>${esc(creditText)}</b></span>
+    <div class="biz-hub-metrics" aria-label="Business status">
+      <span class="badge" data-s="${esc(c ? status : 'pending')}">${esc(statusText)}</span>
     </div>`;
 }
 
@@ -174,7 +169,7 @@ function renderCompanySetupForm(data) {
   box.innerHTML = `
     <h2>${esc(heading)}</h2>
     <p class="lead">${esc(intro)}</p>
-    <form id="companySetupForm" class="biz-reg-form" novalidate>
+    <form id="companySetupForm" class="biz-reg-form" novalidate data-biz-status="${esc(status || '')}">
       ${bizFields(c || {})}
       ${isCreate ? '<p class="biz-verify-note"><i class="ph ph-shield-check" aria-hidden="true"></i> Submitting starts admin verification. Your user account stays active either way — business features turn on once approved.</p>' : ''}
       <div class="actions">
@@ -219,18 +214,33 @@ function wireCompanySetup() {
     if (status) { status.textContent = 'Saving…'; status.dataset.state = ''; }
     if (button) button.disabled = true;
     try {
+      const wasRejected = $('companySetupForm')?.dataset.bizStatus === 'rejected';
       const res = await api('/api/account/company', { method: 'POST', body });
-      const fresh = await loadBusinessData();
-      renderBusinessHub(fresh);
-      renderProfile(fresh);
-      renderSetupChecklist(fresh);
-      renderCompanySetupForm(fresh);
-      wireCompanySetup();
-      renderInvoicing(fresh);
+      const fresh = await loadBusinessData().catch(() => null);
+      if (fresh) {
+        // Full refresh: hub, profile, checklist, form, invoicing, AND programs/team —
+        // first-time registration must also unlock tiers and show the Team card.
+        renderBusinessHub(fresh);
+        renderProfile(fresh);
+        renderSetupChecklist(fresh);
+        renderCompanySetupForm(fresh);
+        wireCompanySetup();
+        renderInvoicing(fresh);
+        renderTiers(fresh.can_checkout === true, Boolean(fresh.company));
+        renderProgramStatus(fresh);
+        toggleBulkCard(fresh);
+        if (fresh.company && fresh.profile?.role === 'admin') initTeam();
+      }
       const freshStatus = $('companySetupStatus');
       if (freshStatus) {
-        freshStatus.textContent = res.created ? 'Business submitted for verification. We’ll notify you when it’s approved.' : 'Business details saved.';
+        freshStatus.textContent = res.created
+          ? 'Business submitted for verification. We’ll notify you when it’s approved.'
+          : wasRejected
+            ? 'Resubmitted for verification — we’ll notify you once it’s reviewed.'
+            : 'Business details saved.';
         freshStatus.dataset.state = 'ok';
+        freshStatus.setAttribute('tabindex', '-1');
+        freshStatus.focus();
       }
     } catch (err) {
       if (status) {
@@ -298,7 +308,12 @@ async function renderInvoicing(data) {
 }
 
 /* ---------- service programs ---------- */
-function renderTiers(canRequest = false) {
+function renderTiers(canRequest = false, hasCompany = true) {
+  if (!hasCompany) {
+    // Four disabled tiles are noise before registration — one teaser line instead.
+    $('tierGrid').innerHTML = `<p class="muted">Programs unlock once your business is registered and verified. <a href="programs.html">See the program tiers.</a></p>`;
+    return;
+  }
   $('tierGrid').innerHTML = TIERS.map((t) => `
     <div class="tier">
       <div class="tier-tag">${esc(t.tag)}</div>
@@ -357,7 +372,10 @@ async function renderProgramStatus(data) {
       $('programStatus').textContent = `Active program: ${active.tier}.`; $('programStatus').dataset.state = 'ok';
       renderProgramManage(active);
     }
-  } catch { /* none */ }
+  } catch {
+    $('programStatus').textContent = 'Could not load your program status. Reload to retry.';
+    $('programStatus').dataset.state = 'err';
+  }
   if (new URLSearchParams(location.search).get('program') === 'success') {
     $('programStatus').textContent = 'Program started - thank you. It will show as active here shortly.';
     $('programStatus').dataset.state = 'ok';
@@ -383,12 +401,29 @@ function renderProgramManage(active) {
     try {
       const r = await api('/api/account/billing-portal', { method: 'POST', body: { flow: 'cancel', subscription: active.stripe_subscription_id } });
       if (r.url) { sendReservedTab(portalTab, r.url); status.textContent = 'Billing portal opened in a new tab.'; status.dataset.state = 'ok'; btn.disabled = false; return; }
+      closeReservedTab(portalTab); status.textContent = 'Could not open the billing portal. Try again.'; status.dataset.state = 'err';
     } catch { closeReservedTab(portalTab); status.textContent = 'Could not open the billing portal. Try again.'; status.dataset.state = 'err'; }
     btn.disabled = false;
   };
 }
 
 /* ---------- bulk / standing orders ---------- */
+// The messages API rejects company-less accounts (no_company) — swap the form
+// for a registration pointer until a business exists.
+function toggleBulkCard(data) {
+  const card = $('bizBulk');
+  if (!card) return;
+  const form = $('bulkForm');
+  const note = card.querySelector('[data-bulk-locked]');
+  const locked = !data?.company;
+  if (form) form.hidden = locked;
+  if (locked && !note) {
+    form?.insertAdjacentHTML('beforebegin', '<p class="muted" data-bulk-locked>Bulk quotes unlock once your business is registered — <a href="#bizCompanySetup">register your business</a> first.</p>');
+  } else if (!locked && note) {
+    note.remove();
+  }
+}
+
 function wireBulk() {
   $('bulkForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -405,7 +440,9 @@ function wireBulk() {
       status.textContent = 'Bulk request sent - we’ll reply with a quote in your dashboard messages.';
       status.dataset.state = 'ok';
     } catch (err) {
-      status.textContent = err.status === 401 ? 'Please sign in again.' : 'Could not send. Try again.';
+      status.textContent = err.status === 401 ? 'Please sign in again.'
+        : err.data?.error === 'no_company' ? 'Register your business first — bulk quotes are tied to your business account.'
+        : 'Could not send. Try again.';
       status.dataset.state = 'err';
     }
   });
@@ -423,7 +460,11 @@ async function loadTeam() {
   $('teamInvites').querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;
     try { await api('/api/account/team', { method: 'DELETE', body: { id: b.dataset.revoke } }); loadTeam(); }
-    catch { b.disabled = false; }
+    catch {
+      b.disabled = false;
+      const st = $('inviteStatus');
+      if (st) { st.textContent = 'Could not revoke the invite. Try again.'; st.dataset.state = 'err'; }
+    }
   }));
 }
 function initTeam() {
@@ -434,7 +475,7 @@ function initTeam() {
     const email = $('inviteEmail').value.trim();
     const role = $('inviteRole').value;
     const st = $('inviteStatus');
-    if (!email) return;
+    if (!email) { st.textContent = 'Enter a teammate email first.'; st.dataset.state = 'err'; $('inviteEmail').focus(); return; }
     st.textContent = 'Sending invite…'; st.dataset.state = '';
     try {
       await api('/api/account/team', { method: 'POST', body: { email, role } });
@@ -468,7 +509,11 @@ function showBusinessGuest(message, label = 'Sign in or create an account') {
 // extended verification dossier, so merge in GET /api/account/company (degrades silently).
 async function loadBusinessData() {
   let data;
-  try { data = await me(); } catch { data = null; }
+  try { data = await me(); }
+  catch (err) {
+    if (err?.status === 401) { data = null; }
+    else throw err; // network/5xx: let callers keep current UI instead of faking signed-out
+  }
   if (data?.company) {
     try {
       const detail = await api('/api/account/company');
@@ -482,7 +527,8 @@ export async function initBusinessHub(initialData = null) {
   let data = initialData;
   if (data?.company || !data) {
     // Always hydrate the full dossier when there is (or might be) a company to prefill.
-    data = await loadBusinessData();
+    // On a transient fetch failure fall back to the session snapshot we already have.
+    data = await loadBusinessData().catch(() => initialData);
   }
   if (!data) {
     showBusinessGuest('Register and verify your business to unlock B2B ordering, programs, NET terms, and QuickBooks invoicing.');
@@ -498,13 +544,10 @@ export async function initBusinessHub(initialData = null) {
   renderSetupChecklist(data);
   renderCompanySetupForm(data);
   renderInvoicing(data);
-  renderTiers(data.can_checkout === true);
+  renderTiers(data.can_checkout === true, Boolean(data.company));
   renderProgramStatus(data);
   wireCompanySetup();
   wireBulk();
+  toggleBulkCard(data);
   if (data.company && data.profile?.role === 'admin') initTeam();
-}
-
-if (document.body?.dataset.businessPage === 'true') {
-  initBusinessHub();
 }

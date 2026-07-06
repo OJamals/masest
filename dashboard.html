@@ -471,11 +471,10 @@
           <div id="bizApp" hidden>
             <div class="biz-card biz-hub" id="bizHub"></div>
             <nav class="biz-workflow-nav" aria-label="Business workflow">
-              <a href="#bizCompanySetup">Verification</a>
-              <a href="#bizInvoicing">Invoices</a>
-              <a href="#bizPrograms">Programs</a>
-              <a href="#bizBulk">Bulk quotes</a>
-              <a href="#bizAccountTeam">Account support</a>
+              <a href="#bizCompanySetup">Business details</a>
+              <a href="#bizInvoicing">Business invoices</a>
+              <a href="#bizPrograms">Service programs</a>
+              <a href="#bizBulk">Bulk orders</a>
             </nav>
             <div class="biz-layout">
               <div class="biz-primary-stack">
@@ -488,10 +487,10 @@
                 <div class="biz-card" id="bizTeam" hidden>
                   <h2>Team access</h2>
                   <p class="lead">Invite teammates to manage orders, quotes, messages, and business details with you.</p>
-                  <div id="teamMembers"><p class="muted">Loading...</p></div>
+                  <div id="teamMembers"><div class="skeleton skeleton-block biz-team-skeleton"></div></div>
                   <form onsubmit="return false" id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
                     <div class="biz-inline-form">
-                      <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" placeholder="teammate@company.com"></div>
+                      <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" autocomplete="email" placeholder="teammate@company.com" required></div>
                       <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
                       <button class="btn btn-primary btn-sm" type="submit">Send invite</button>
                     </div>
@@ -521,14 +520,6 @@
                   </form>
                 </div>
 
-                <div class="biz-card" id="bizAccountTeam">
-                  <h2>Account support</h2>
-                  <p class="lead">Ask about pricing, SDS/TDS files, certificate-status documents where applicable, NET terms, and order questions.</p>
-                  <div class="actions">
-                    <a class="btn btn-primary btn-sm" href="#messages">Message MASEST</a>
-                    <a class="btn btn-ghost btn-sm" href="products.html">Browse catalog</a>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -546,11 +537,11 @@
                 <div class="field-grid">
                   <div class="field"><label for="aType">Address type</label>
                     <select id="aType"><option value="ship">Shipping</option><option value="bill">Billing</option></select></div>
-                  <div class="field"><label for="aLine1">Address line 1 *</label><input id="aLine1" required></div>
-                  <div class="field"><label for="aLine2">Address line 2</label><input id="aLine2"></div>
-                  <div class="field"><label for="aCity">City *</label><input id="aCity" required></div>
-                  <div class="field"><label for="aState">State *</label><input id="aState" maxlength="2" placeholder="FL" required></div>
-                  <div class="field"><label for="aZip">ZIP *</label><input id="aZip" required></div>
+                  <div class="field"><label for="aLine1">Address line 1 *</label><input id="aLine1" autocomplete="address-line1" required></div>
+                  <div class="field"><label for="aLine2">Address line 2</label><input id="aLine2" autocomplete="address-line2"></div>
+                  <div class="field"><label for="aCity">City *</label><input id="aCity" autocomplete="address-level2" required></div>
+                  <div class="field"><label for="aState">State *</label><input id="aState" maxlength="2" placeholder="FL" autocomplete="address-level1" required></div>
+                  <div class="field"><label for="aZip">ZIP *</label><input id="aZip" autocomplete="postal-code" required></div>
                 </div>
                 <label class="checkbox-row"><input type="checkbox" id="aDefault"> Set as default for this type</label>
                 <button class="btn btn-primary btn-sm dash-button-offset" type="submit">Save address</button>

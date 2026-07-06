@@ -8,15 +8,17 @@ test("business panel exposes compact workflow navigation", () => {
   const html = read("dashboard.html");
 
   assert.match(html, /<nav class="biz-workflow-nav" aria-label="Business workflow">/);
+  // Chip labels match the card headings they scroll to; the Account-support card
+  // (a duplicate of the Messages tab) was removed along with its chip.
   for (const [href, label] of [
-    ["#bizCompanySetup", "Verification"],
-    ["#bizInvoicing", "Invoices"],
-    ["#bizPrograms", "Programs"],
-    ["#bizBulk", "Bulk quotes"],
-    ["#bizAccountTeam", "Account support"],
+    ["#bizCompanySetup", "Business details"],
+    ["#bizInvoicing", "Business invoices"],
+    ["#bizPrograms", "Service programs"],
+    ["#bizBulk", "Bulk orders"],
   ]) {
     assert.match(html, new RegExp(`<a href="${href}">${label}</a>`));
   }
+  assert.doesNotMatch(html, /id="bizAccountTeam"/);
 });
 
 test("business workflow navigation wraps without card chrome", () => {

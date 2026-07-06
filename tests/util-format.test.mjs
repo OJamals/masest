@@ -9,8 +9,8 @@ test("esc escapes HTML-significant characters", () => {
   assert.equal(esc(42), "42");
 });
 
-test("money formats currency uppercase with 2 decimals", () => {
-  assert.equal(money(1234.5), "USD 1234.50");
+test("money formats currency uppercase with 2 decimals and thousands separators", () => {
+  assert.equal(money(1234.5), "USD 1,234.50");
   assert.equal(money(10, "usd"), "USD 10.00");
   assert.equal(money(null), "USD 0.00");
   assert.equal(money(5, "eur"), "EUR 5.00");
