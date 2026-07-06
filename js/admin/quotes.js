@@ -5,7 +5,7 @@
 // helpers are injected; esc/delegate/money/confirmDialog/dateTime come from util.js and
 // the dirty-edit helpers from edits.js. The CRM activity panel (Timeline/Tasks/Notes,
 // slice 1) is reused inside the drawer via createCrmPanel — no js/admin.js change needed.
-import { esc, delegate, money, confirmDialog } from '../util.js';
+import { esc, delegate, money, confirmDialog, dateTime } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 import { createCrmPanel } from './crm.js';
 import { createSavedViews } from './saved-views.js';
@@ -184,7 +184,13 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         ${cards}
       </div>`;
     }).join('');
-    box.innerHTML = forecastHtml(summary) + `<div class="pipe-board" role="list">${cols}</div>`;
+    // Past page 1 the columns only show the loaded deals — say so and offer the
+    // same "Load more" the list uses (the shared delegate appends + re-renders).
+    const pager = state.quotesHasMore
+      ? `<p class="muted" style="text-align:center;margin:8px 0 0">Board shows the ${state.quotes.length} most recent deals of ${state.quotesTotal ?? '?'} — load more to see the rest.</p>`
+        + admListPager('data-load-more-quotes', state.quotes.length, state.quotesTotal, state.quotesHasMore)
+      : '';
+    box.innerHTML = forecastHtml(summary) + `<div class="pipe-board" role="list">${cols}</div>` + pager;
   }
 
   // ---- Stage moves (drag, keyboard select, drawer) ----
@@ -251,7 +257,12 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       <label>Next step <input class="adm-input" data-d-next value="${esc(q.next_step || '')}"></label>
       <label>Follow-up due <input class="adm-input" data-d-due type="datetime-local" value="${esc(dueValue)}"></label>
       <label>Notes <textarea class="adm-textarea" data-d-notes>${esc(q.notes || '')}</textarea></label>
-      <div class="adm-tools" style="justify-content:flex-end"><button class="btn btn-primary btn-sm" data-drawer-save type="button">Save</button></div>
+      <div class="adm-tools" style="justify-content:flex-end;flex-wrap:wrap">
+        ${q.email ? `<a class="btn btn-ghost btn-sm" href="mailto:${esc(q.email)}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>` : ''}
+        <button class="btn btn-ghost btn-sm" data-drawer-snooze type="button">Snooze 2d</button>
+        <button class="btn btn-ghost btn-sm" data-drawer-followup type="button">Send follow-up</button>
+        <button class="btn btn-primary btn-sm" data-drawer-save type="button">Save</button>
+      </div>
       <hr>
       <h4 style="margin:4px 0">Convert to order</h4>
       <label>Company <select class="adm-select" data-d-co><option value="">Pick company…</option>${companyOptions()}</select></label>
@@ -325,6 +336,48 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     }
   }
 
+  // Quick actions moved here from the list rows (S3): the drawer is the single
+  // editing surface, so Snooze / Send follow-up live next to Save.
+  async function snoozeDrawer(dlg, quote, button) {
+    const status = dlg.querySelector('[data-drawer-status]');
+    button.disabled = true;
+    try {
+      const res = await api('/api/admin/quotes', { method: 'POST', body: { id: quote.id, status: 'contacted', next_step: 'Snoozed for two days', due_at: quoteDueInDays(2) } });
+      if (res.quote) Object.assign(quote, res.quote);
+      const dueEl = dlg.querySelector('[data-d-due]');
+      if (dueEl && quote.due_at) dueEl.value = new Date(quote.due_at).toISOString().slice(0, 16);
+      const nextEl = dlg.querySelector('[data-d-next]');
+      if (nextEl) nextEl.value = quote.next_step || 'Snoozed for two days';
+      const statusEl = dlg.querySelector('[data-d-status]');
+      if (statusEl) statusEl.value = quote.status || 'contacted';
+      status.textContent = 'Follow-up snoozed for two days.';
+      status.dataset.state = 'ok';
+      await renderQuotePipeline({ refetch: false });
+    } catch (err) {
+      status.textContent = err.data?.error || 'Could not snooze the follow-up. Retry.';
+      status.dataset.state = 'err';
+    } finally { button.disabled = false; }
+  }
+
+  async function followupDrawer(dlg, quote, button) {
+    const status = dlg.querySelector('[data-drawer-status]');
+    button.disabled = true;
+    try {
+      await api('/api/admin/quotes', { method: 'POST', body: {
+        id: quote.id,
+        action: 'followup',
+        next_step: dlg.querySelector('[data-d-next]')?.value,
+        due_at: dlg.querySelector('[data-d-due]')?.value,
+      } });
+      status.textContent = 'Follow-up sent.';
+      status.dataset.state = 'ok';
+      await renderQuotePipeline({ refetch: false });
+    } catch (err) {
+      status.textContent = err.data?.error || 'Could not send the follow-up. Retry.';
+      status.dataset.state = 'err';
+    } finally { button.disabled = false; }
+  }
+
   // Populate the Buyer contact picker from the deal's resolved company (server maps
   // the quote → company via account email or company name, then returns its contacts).
   async function loadDrawerContacts(dlg, quote) {
@@ -362,6 +415,10 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     dlg.addEventListener('click', async (event) => {
       if (event.target.closest('[data-drawer-close]')) { dlg.close(); return; }
       if (event.target.closest('[data-drawer-save]')) { await saveDrawer(dlg, quote); return; }
+      const snooze = event.target.closest('[data-drawer-snooze]');
+      if (snooze) { await snoozeDrawer(dlg, quote, snooze); return; }
+      const followup = event.target.closest('[data-drawer-followup]');
+      if (followup) { await followupDrawer(dlg, quote, followup); return; }
       if (event.target.closest('[data-drawer-convert]')) { await convertDrawer(dlg, quote); }
     });
     dlg.addEventListener('close', () => dlg.remove());
@@ -420,10 +477,17 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       <button class="btn btn-ghost btn-sm" id="qBulkApply" type="button">Apply to selected</button>
     </div>`;
 
+    // Rows are read-only summaries (S3): every edit happens in the deal drawer, so
+    // the row keeps just the one-click stage move and the door into the drawer —
+    // eight inline controls used to duplicate the whole drawer form here.
     box.innerHTML = bulkBar + quotes.map((quote) => {
       const id = esc(quote.id);
-      const dueValue = quote.due_at ? new Date(quote.due_at).toISOString().slice(0, 16) : '';
       const score = Number.isFinite(Number(quote.lead_score)) ? Number(quote.lead_score) : 0;
+      const meta = [
+        quote.assigned_to ? `Owner ${quote.assigned_to}` : '',
+        quote.next_step ? `Next: ${quote.next_step}` : '',
+        quote.due_at ? `Due ${dateTime(quote.due_at)}` : '',
+      ].filter(Boolean).join(' · ');
       return `
         <details class="quote-item">
           <summary>
@@ -435,27 +499,14 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
             <span class="muted">${fmtMoney(quote.deal_value)} · Score ${esc(score)}</span>
           </summary>
           <p>${esc(quote.message || '')}</p>
+          ${meta ? `<p class="muted" style="margin:4px 0 0">${esc(meta)}</p>` : ''}
           <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" data-open-quote="${id}" type="button">Open deal</button>
+            <button class="btn btn-primary btn-sm" data-open-quote="${id}" type="button">Open deal</button>
             <select class="adm-select" data-quote-stage="${id}" aria-label="Stage">
               ${STAGES.map((s) => `<option value="${s}" ${s === (quote.pipeline_stage || 'new') ? 'selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}
             </select>
-            <select class="adm-select" data-quote-status="${id}">
-              ${QUOTE_STATUSES.map((status) => `<option value="${status}" ${status === quote.status ? 'selected' : ''}>${status}</option>`).join('')}
-            </select>
-            <select class="adm-select" data-quote-priority="${id}">
-              ${['urgent', 'high', 'normal', 'low'].map((value) => `<option value="${value}" ${value === (quote.priority || 'normal') ? 'selected' : ''}>${value}</option>`).join('')}
-            </select>
-            <input class="adm-input" data-quote-deal="${id}" type="number" min="0" step="0.01" value="${quote.deal_value ?? ''}" placeholder="Deal $" style="max-width:110px">
-            <input class="adm-input" data-quote-next-step="${id}" value="${esc(quote.next_step || '')}" placeholder="Next step" style="max-width:220px">
-            <input class="adm-input" data-quote-owner="${id}" value="${esc(quote.assigned_to || '')}" placeholder="Owner" style="max-width:160px">
-            <input class="adm-input" data-quote-due-at="${id}" type="datetime-local" value="${esc(dueValue)}" aria-label="Follow-up due" style="max-width:190px">
-            <button class="btn btn-ghost btn-sm" data-save-quote="${id}" type="button">Save</button>
-            <button class="btn btn-ghost btn-sm" data-snooze-quote="${id}" type="button">Snooze 2d</button>
-            <button class="btn btn-ghost btn-sm" data-followup="${id}" type="button">Send follow-up</button>
             <a class="btn btn-ghost btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>
           </div>
-          <textarea class="adm-textarea" data-quote-notes="${id}" placeholder="Internal notes">${esc(quote.notes || '')}</textarea>
         </details>
       `;
     }).join('') + quotesPager;
@@ -556,80 +607,14 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       }
     });
 
-    // List: open drawer + the existing row controls.
+    // List: open drawer + the one remaining row control — the stage select commits
+    // immediately through moveStage (lost-reason picker + won confirm included),
+    // matching the board cards. All other edits happen in the drawer (S3).
     delegate(box, 'click', '[data-open-quote]', (event, button) => {
       const q = (state.quotes || []).find((x) => String(x.id) === button.dataset.openQuote);
       if (q) openQuoteDrawer(q);
     });
-    delegate(box, 'click', '[data-save-quote]', async (event, button) => {
-      const id = button.dataset.saveQuote;
-      button.disabled = true;
-      try {
-        const stageEl = box.querySelector(`[data-quote-stage="${CSS.escape(id)}"]`);
-        const dealEl = box.querySelector(`[data-quote-deal="${CSS.escape(id)}"]`);
-        // Same no-op guard as saveDrawer: an unchanged stage must not reach the server
-        // (it re-stamps stage_changed_at and fires the Klaviyo stage-change event).
-        const rowQuote = (state.quotes || []).find((x) => String(x.id) === String(id));
-        const rowStage = stageEl ? stageEl.value : undefined;
-        const rowStageChanged = rowStage !== undefined && rowStage !== (rowQuote?.pipeline_stage || 'new');
-        let rowLostReason;
-        if (rowStageChanged && rowStage === 'lost') {
-          rowLostReason = await pickLostReason();
-          if (rowLostReason === null) { message('qStatus', 'Save cancelled — pick a lost reason to move to Lost.', 'err'); button.disabled = false; return; }
-        }
-        await api('/api/admin/quotes', {
-          method: 'POST',
-          body: {
-            id,
-            ...(rowStageChanged ? { pipeline_stage: rowStage, ...(rowLostReason ? { lost_reason: rowLostReason } : {}) } : {}),
-            status: box.querySelector(`[data-quote-status="${CSS.escape(id)}"]`).value,
-            priority: box.querySelector(`[data-quote-priority="${CSS.escape(id)}"]`).value,
-            assigned_to: box.querySelector(`[data-quote-owner="${CSS.escape(id)}"]`).value,
-            next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
-            due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
-            notes: box.querySelector(`[data-quote-notes="${CSS.escape(id)}"]`).value,
-            deal_value: dealEl ? (dealEl.value === '' ? null : dealEl.value) : undefined,
-          },
-        });
-        message('qStatus', 'Lead saved.', 'ok');
-        await renderQuotePipeline({ refetch: false });
-      } catch (err) {
-        message('qStatus', err.data?.error || 'Could not save the lead. Retry.', 'err');
-        button.disabled = false;
-      }
-    });
-    delegate(box, 'click', '[data-snooze-quote]', async (event, button) => {
-      const id = button.dataset.snoozeQuote;
-      button.disabled = true;
-      try {
-        await api('/api/admin/quotes', { method: 'POST', body: { id, status: 'contacted', next_step: 'Snoozed for two days', due_at: quoteDueInDays(2) } });
-        message('qStatus', 'Follow-up snoozed.', 'ok');
-        await renderQuotePipeline({ refetch: false });
-      } catch (err) {
-        message('qStatus', err.data?.error || 'Could not snooze the follow-up. Retry.', 'err');
-        button.disabled = false;
-      }
-    });
-    delegate(box, 'click', '[data-followup]', async (event, button) => {
-      const id = button.dataset.followup;
-      button.disabled = true;
-      try {
-        await api('/api/admin/quotes', {
-          method: 'POST',
-          body: {
-            id,
-            action: 'followup',
-            next_step: box.querySelector(`[data-quote-next-step="${CSS.escape(id)}"]`).value,
-            due_at: box.querySelector(`[data-quote-due-at="${CSS.escape(id)}"]`).value,
-          },
-        });
-        message('qStatus', 'Follow-up sent.', 'ok');
-        await renderQuotePipeline({ refetch: false });
-      } catch (err) {
-        message('qStatus', err.data?.error || 'Could not send the follow-up. Retry.', 'err');
-        button.disabled = false;
-      }
-    });
+    delegate(box, 'change', '[data-quote-stage]', (event, sel) => moveStage(sel.dataset.quoteStage, sel.value));
   }
 
   return { renderQuotePipeline, wireQuotes, openQuoteById };

@@ -44,8 +44,9 @@ test("admin quote inbox supports lead owner assignment", () => {
   assert.match(ADMIN_HTML, /id="qOwner"/);
   assert.match(QUOTES_JS, /const ownerFilter = \$\('qOwner'\)\?\.value/);
   assert.match(QUOTES_JS, /ownerMatch/);
-  assert.match(QUOTES_JS, /data-quote-owner/);
-  assert.match(QUOTES_JS, /assigned_to:\s*box\.querySelector/);
+  // S3: owner editing moved off the list rows into the deal drawer.
+  assert.match(QUOTES_JS, /data-d-owner/);
+  assert.match(QUOTES_JS, /assigned_to:\s*v\('\[data-d-owner\]'\)/);
   assert.match(QUOTES_JS, /quote\.assigned_to/);
 });
 
@@ -84,22 +85,29 @@ test("admin quotes API sweeps stale due leads with email and notes", () => {
 test("admin quote inbox exposes pipeline controls", () => {
   assert.match(ADMIN_HTML, /id="qPriority"/);
   assert.match(ADMIN_HTML, /id="qDue"/);
-  assert.match(QUOTES_JS, /data-quote-priority/);
-  assert.match(QUOTES_JS, /data-quote-next-step/);
-  assert.match(QUOTES_JS, /data-quote-due-at/);
+  // S3: rows collapsed to summary + stage select + Open deal; the drawer is the
+  // single editing surface for priority / next step / due date / snooze / follow-up.
+  assert.match(QUOTES_JS, /data-d-priority/);
+  assert.match(QUOTES_JS, /data-d-next/);
+  assert.match(QUOTES_JS, /data-d-due/);
   assert.match(QUOTES_JS, /const dueFilter = \$\('qDue'\)\?\.value \|\| ''/);
   assert.match(QUOTES_JS, /dueFilter === 'overdue'/);
   assert.match(QUOTES_JS, /dueFilter === 'upcoming'/);
   assert.match(QUOTES_JS, /dueFilter === 'unscheduled'/);
-  assert.match(QUOTES_JS, /priority:\s*box\.querySelector/);
-  assert.match(QUOTES_JS, /next_step:\s*box\.querySelector/);
-  assert.match(QUOTES_JS, /due_at:\s*box\.querySelector/);
-  assert.match(QUOTES_JS, /data-followup/);
+  assert.match(QUOTES_JS, /priority:\s*v\('\[data-d-priority\]'\)/);
+  assert.match(QUOTES_JS, /next_step:\s*v\('\[data-d-next\]'\)/);
+  assert.match(QUOTES_JS, /due_at:\s*v\('\[data-d-due\]'\)/);
+  assert.match(QUOTES_JS, /data-drawer-followup/);
   assert.match(QUOTES_JS, /action:\s*'followup'/);
   assert.match(QUOTES_JS, /function quoteDueInDays/);
-  assert.match(QUOTES_JS, /data-snooze-quote/);
+  assert.match(QUOTES_JS, /data-drawer-snooze/);
   assert.match(QUOTES_JS, /due_at:\s*quoteDueInDays\(2\)/);
   assert.match(QUOTES_JS, /next_step:\s*'Snoozed for two days'/);
+  // List rows keep only the immediate stage move + drawer door.
+  assert.match(QUOTES_JS, /data-quote-stage/);
+  assert.match(QUOTES_JS, /data-open-quote/);
+  assert.doesNotMatch(QUOTES_JS, /data-save-quote/);
+  assert.doesNotMatch(QUOTES_JS, /data-quote-notes/);
 });
 
 test("admin overview surfaces due quote follow-ups", () => {
