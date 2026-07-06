@@ -1,6 +1,6 @@
 /* MASEST user dashboard controller. Loaded as a module by dashboard.html.
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
-import { me, logout, orders as fetchOrders, api, resetPasswordForEmail } from './auth.js';
+import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js';
 import { add as cartAdd, clear as cartClear } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast } from './util.js';
 import { initBusinessHub } from './business.js';
@@ -20,8 +20,11 @@ let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
 
 /* ---------- tabs / routing ---------- */
-const DASH_TABS = ['overview', 'orders', 'messages', 'notifications', 'business', 'addresses', 'payment', 'profile', 'security'];
+const DASH_TABS = ['overview', 'orders', 'messages', 'notifications', 'business', 'addresses', 'profile'];
 const DASH_TAB_ALIASES = {
+  // Former standalone tabs, kept routable for old links/notifications (#security, #payment).
+  payment: 'addresses',
+  security: 'profile',
   programs: 'business',
   bizProfile: 'business',
   bizSetup: 'business',
@@ -78,13 +81,16 @@ function loadTab(name) {
         if (box) box.innerHTML = '<p class="dash-status" data-state="err">Could not load business tools.</p>';
       });
   }
-  if (name === 'addresses' && !loaded.addresses) renderAddresses();
-  if (name === 'payment' && !loaded.payment) renderPayment();
+  if (name === 'addresses' && !loaded.addresses) { renderAddresses(); renderPayment(); }
   if (name === 'profile' && !loaded.profile) renderProfile();
 }
 
 /* ---------- overview ---------- */
-function statusBadge(s, label) { return `<span class="badge" data-s="${esc(s)}">${esc(label || s)}</span>`; }
+function statusBadge(s, label) { return `<span class="badge" data-s="${esc(s)}">${esc(label || orderStatusLabel(s))}</span>`; }
+// Raw enum → human label ("net_open" → "NET open"), so badges never show underscores.
+function orderStatusLabel(s) {
+  return String(s || '').split('_').map((w) => (w === 'net' ? 'NET' : w)).join(' ');
+}
 function bizStatusLabel(s) { return ({ approved: 'Verified', pending: 'Under review', rejected: 'Needs attention', suspended: 'Suspended' })[s] || s; }
 function trackingSteps(order) {
   const status = order.tracking_status || 'processing';
@@ -116,7 +122,8 @@ async function renderOverview() {
   const c = ACCOUNT?.company;
   const banner = $('approvalBanner');
   if (!c) {
-    banner.innerHTML = `<div class="banner info"><i class="ph ph-rocket-launch" aria-hidden="true"></i><span>Your account is ready. <a href="#business">Set up your business</a> to unlock B2B ordering, NET terms, QuickBooks invoicing, and service programs.</span></div>`;
+    // The "Business setup" steps card is the single setup CTA — only banner when it's absent.
+    banner.innerHTML = ACCOUNT?.setup?.steps?.length ? '' : `<div class="banner info"><i class="ph ph-rocket-launch" aria-hidden="true"></i><span>Your account is ready. <a href="#business">Set up your business</a> to unlock B2B ordering, NET terms, QuickBooks invoicing, and service programs.</span></div>`;
   } else if (c.status === 'pending') {
     banner.innerHTML = `<div class="banner info"><i class="ph ph-clock-countdown" aria-hidden="true"></i><span>We’re verifying your business — usually 1–2 business days. B2B ordering, NET terms, and programs unlock once it’s approved.</span></div>`;
   } else if (c.status === 'rejected' || c.status === 'suspended') {
@@ -192,11 +199,13 @@ function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
   const openOrders = orders.filter((o) => !TERMINAL_ORDER_STATES.includes(o.status));
   const openSteps = openSetupSteps();
   const actions = [];
-  if (openSteps.length) {
+  // No-company users already get the full "Business setup" steps card on this screen —
+  // don't repeat the same CTA in the rail (three identical CTAs read as noise).
+  if (openSteps.length && ACCOUNT?.company) {
     actions.push({
       id: 'setup',
       icon: 'ph-clipboard-text',
-      label: ACCOUNT?.company ? 'Review business tools' : 'Set up business',
+      label: 'Review business tools',
       detail: `${openSteps.length} open ${openSteps.length === 1 ? 'step' : 'steps'}`,
       href: '#business',
     });
@@ -223,7 +232,7 @@ function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
     id: 'message',
     icon: 'ph-chat-circle',
     label: 'Message MASEST',
-    detail: messages.length ? `${messages.length} thread ${messages.length === 1 ? 'message' : 'messages'}` : 'Orders, pricing, NET terms',
+    detail: messages.length ? 'Open conversation' : 'Orders, pricing, NET terms',
     href: '#messages',
   });
   box.innerHTML = `
@@ -259,11 +268,15 @@ function renderRecentOrders(orders = []) {
       <a class="btn btn-ghost btn-sm" href="#orders">View all</a>
     </div>
     <div class="activity-list">
-      ${recent.map((order) => `<a class="activity-line" href="#orders">
+      ${recent.map((order) => {
+        const items = order.order_items || [];
+        const n = items.reduce((s, it) => s + (it.qty || 0), 0);
+        return `<a class="activity-line" href="#orders">
         <i class="ph ph-package" aria-hidden="true"></i>
-        <span><b>${esc(order.id || 'Order')}</b><small>${esc(fmtDate(order.created_at))} · ${money(order.total, order.currency || 'USD')}</small></span>
+        <span><b>${esc(fmtDate(order.created_at))}${n ? ` · ${n} item${n === 1 ? '' : 's'}` : ''}</b><small>${money(order.total, order.currency || 'USD')}</small></span>
         ${statusBadge(order.status || 'processing')}
-      </a>`).join('')}
+      </a>`;
+      }).join('')}
     </div>`;
   wirePanelLinks(box);
 }
@@ -365,7 +378,12 @@ async function renderOrders({ append = false } = {}) {
   }
   let res;
   try { res = await api(`/api/account/orders?limit=25&offset=${st.offset}`); }
-  catch { if (!append) box.innerHTML = '<p class="dash-status" data-state="err">Could not load orders.</p>'; return; }
+  catch {
+    if (!append) { box.innerHTML = '<p class="dash-status" data-state="err">Could not load orders.</p>'; return; }
+    toast('Could not load more orders. Try again.', { variant: 'error' });
+    const more = box.querySelector('[data-load-more-orders]'); if (more) more.disabled = false;
+    return;
+  }
   st.items = st.items.concat(res.orders || []);
   st.offset += (res.orders || []).length;
   st.total = res.total; st.hasMore = !!res.has_more;
@@ -397,7 +415,7 @@ async function renderOrders({ append = false } = {}) {
       cartLines.forEach((l) => cartAdd(l.sku, l.qty));
       if (issues && issues.length) toast('Some items changed since your last order:\n' + issues.map((x) => `• ${x.name || x.sku} — ${x.reason.replace('_', ' ')}`).join('\n'), { variant: 'warning' });
       location.href = 'cart.html';
-    } catch { b.disabled = false; }
+    } catch { toast('Could not reorder. Try again.', { variant: 'error' }); b.disabled = false; }
   }));
   box.querySelectorAll('[data-receipt]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;
@@ -408,25 +426,27 @@ async function renderOrders({ append = false } = {}) {
         window.open(receiptUrl, '_blank', 'noopener,noreferrer');
       }
       else toast('No receipt is available for this order yet.');
-    } catch { /* ignore */ }
+    } catch { toast('Could not load the receipt. Try again.', { variant: 'error' }); }
     b.disabled = false;
   }));
-  box.querySelector('[data-load-more-orders]')?.addEventListener('click', () => renderOrders({ append: true }));
+  box.querySelector('[data-load-more-orders]')?.addEventListener('click', (e) => { e.currentTarget.disabled = true; renderOrders({ append: true }); });
 }
 
 /* ---------- messages ---------- */
 async function renderMessages() {
   loaded.messages = true;
   const thread = $('msgThread');
+  const form = $('msgForm');
   if (!ACCOUNT?.company) {
     thread.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before starting account-team message threads.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
+    if (form) form.hidden = true; // the API rejects sends without a company
     wirePanelLinks(thread);
     return;
   }
+  if (form) form.hidden = false;
   let msgs = [];
   try { msgs = (await api('/api/account/messages')).messages; } catch { thread.innerHTML = '<p class="dash-status" data-state="err">Could not load messages.</p>'; return; }
   lastMsgCount = msgs.length;
-  setBadge('badgeMessages', 0); // opening the tab marks staff msgs read server-side
   if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question about orders, pricing, NET terms, or anything else.</div></div>`; }
   else {
     thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${esc(m.body)}<time>${fmtDT(m.created_at)}</time></div>`).join('');
@@ -437,13 +457,16 @@ function wireMessageForm() {
   $('msgForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = $('msgInput'); const status = $('msgStatus');
+    const sendBtn = e.target.querySelector('[type="submit"]');
     const body = input.value.trim(); if (!body) return;
+    if (sendBtn) sendBtn.disabled = true;
     status.textContent = 'Sending…'; status.dataset.state = '';
     try {
       await api('/api/account/messages', { method: 'POST', body: { body } });
       input.value = ''; status.textContent = '';
       loaded.messages = false; await renderMessages();
     } catch { status.textContent = 'Could not send. Try again.'; status.dataset.state = 'err'; }
+    finally { if (sendBtn) sendBtn.disabled = false; }
   });
 }
 
@@ -461,7 +484,13 @@ async function renderNotifications({ append = false } = {}) {
   }
   if (!append) { st.items = []; st.offset = 0; }
   let data;
-  try { data = await api(`/api/account/notifications?limit=50&offset=${st.offset}`); } catch { if (!append) box.innerHTML = '<p class="dash-status" data-state="err">Could not load notifications.</p>'; return; }
+  try { data = await api(`/api/account/notifications?limit=50&offset=${st.offset}`); }
+  catch {
+    if (!append) { box.innerHTML = '<p class="dash-status" data-state="err">Could not load notifications.</p>'; return; }
+    toast('Could not load more notifications. Try again.', { variant: 'error' });
+    const more = box.querySelector('[data-load-more-notifs]'); if (more) more.disabled = false;
+    return;
+  }
   setBadge('badgeNotifs', data.unread);
   st.items = st.items.concat(data.notifications || []);
   st.offset += (data.notifications || []).length;
@@ -479,7 +508,7 @@ async function renderNotifications({ append = false } = {}) {
           ${target ? `<span class="muted notif-link">View →</span>` : ''}
       </div></div>`;
   }).join('') + pagerHtml('data-load-more-notifs', st);
-  box.querySelector('[data-load-more-notifs]')?.addEventListener('click', () => renderNotifications({ append: true }));
+  box.querySelector('[data-load-more-notifs]')?.addEventListener('click', (e) => { e.currentTarget.disabled = true; renderNotifications({ append: true }); });
 }
 
 function defaultNotificationTarget(n) {
@@ -521,7 +550,8 @@ function markNotifReadUI(row) {
 }
 function wireNotifications() {
   $('markAllRead').addEventListener('click', async () => {
-    try { await api('/api/account/notifications', { method: 'POST', body: { all: true } }); } catch {}
+    try { await api('/api/account/notifications', { method: 'POST', body: { all: true } }); }
+    catch { toast('Could not mark notifications read. Try again.', { variant: 'error' }); return; }
     loaded.notifications = false; await renderNotifications();
   });
   function openDashboardTarget(target) {
@@ -565,7 +595,18 @@ async function wireNotificationPrefs() {
   try {
     const prefs = await api('/api/account/notification-prefs');
     boxes.forEach((b) => { b.checked = prefs[b.dataset.pref] !== false; });
-  } catch { return; }
+  } catch {
+    // Don't leave live-looking dead checkboxes: disable them and say why.
+    boxes.forEach((b) => { b.disabled = true; });
+    const wrap = $('notifPrefs');
+    if (wrap && !wrap.querySelector('[data-prefs-error]')) {
+      const p = document.createElement('p');
+      p.className = 'dash-status'; p.dataset.state = 'err'; p.dataset.prefsError = '1';
+      p.textContent = 'Could not load email preferences. Reload to try again.';
+      wrap.appendChild(p);
+    }
+    return;
+  }
   boxes.forEach((b) => b.addEventListener('change', async () => {
     b.disabled = true;
     try { await api('/api/account/notification-prefs', { method: 'PATCH', body: { [b.dataset.pref]: b.checked } }); }
@@ -593,9 +634,11 @@ async function renderAddresses() {
       <span>${a.is_default ? '' : `<button class="btn btn-ghost btn-sm" data-set-default="${esc(a.id)}">Set default</button> `}<button class="btn btn-ghost btn-sm" data-del="${esc(a.id)}">Remove</button></span>
     </div>`).join('');
   box.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    const ok = await confirmDialog('Remove this address?', { confirmText: 'Remove', cancelText: 'Keep', danger: true });
+    if (!ok) return;
     b.disabled = true;
     try { await api('/api/account/addresses', { method: 'DELETE', body: { id: b.dataset.del } }); loaded.addresses = false; renderAddresses(); }
-    catch { b.disabled = false; }
+    catch { toast('Could not remove the address. Try again.', { variant: 'error' }); b.disabled = false; }
   }));
   box.querySelectorAll('[data-set-default]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;
@@ -665,7 +708,6 @@ async function renderPayment() {
 /* ---------- profile ---------- */
 function renderProfile() {
   loaded.profile = true;
-  $('pfEmail').value = ACCOUNT?.email || '';
   $('pfCompany').value = ACCOUNT?.company?.name || '';
   $('pfName').value = ACCOUNT?.profile?.full_name || '';
   $('pfPhone').value = ACCOUNT?.profile?.phone || '';
@@ -677,9 +719,12 @@ function wireProfileForm() {
     try {
       await api('/api/account/profile', { method: 'POST', body: { full_name: $('pfName').value.trim(), phone: $('pfPhone').value.trim() } });
       status.textContent = 'Saved.'; status.dataset.state = 'ok';
+      // Keep the in-memory snapshot and greeting in step with the saved name.
+      if (ACCOUNT?.profile) { ACCOUNT.profile.full_name = $('pfName').value.trim(); ACCOUNT.profile.phone = $('pfPhone').value.trim(); }
+      const greet = $('dashGreeting');
+      if (greet && ACCOUNT?.profile?.full_name) greet.textContent = `Welcome back, ${ACCOUNT.profile.full_name}.`;
     } catch { status.textContent = 'Could not save.'; status.dataset.state = 'err'; }
   });
-  $('pfLogout').addEventListener('click', async () => { await logout(); location.href = 'account.html'; });
 }
 
 /* ---------- live refresh ----------
@@ -735,18 +780,27 @@ function wireSecurityForm() {
     } catch { status.textContent = 'Could not delete your account. Contact support.'; status.dataset.state = 'err'; }
   });
 
-  $('secReset').addEventListener('click', async () => {
+  // Inline password change — the session is already authenticated, so no email
+  // round-trip (the old "send reset email" path also died on the CAPTCHA-gated
+  // /recover endpoint; signed-out users use "Forgot password?" on account.html).
+  $('passwordChangeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
     const status = $('secStatus');
-    const btn = $('secReset');
-    status.textContent = 'Sending…';
+    const btn = $('secPassBtn');
+    const pass = $('secNewPass').value;
+    const pass2 = $('secNewPass2').value;
+    if (pass.length < 8) { status.textContent = 'Password must be at least 8 characters.'; status.dataset.state = 'err'; return; }
+    if (pass !== pass2) { status.textContent = 'Passwords do not match.'; status.dataset.state = 'err'; return; }
+    status.textContent = 'Updating…';
     status.dataset.state = '';
     btn.disabled = true;
     try {
-      await resetPasswordForEmail(ACCOUNT?.email || '');
-      status.textContent = 'Sent. Check your email.';
+      await updatePassword(pass);
+      $('secNewPass').value = ''; $('secNewPass2').value = '';
+      status.textContent = 'Password updated.';
       status.dataset.state = 'ok';
-    } catch {
-      status.textContent = 'Could not send reset email.';
+    } catch (err) {
+      status.textContent = /same.*password/i.test(String(err?.message || '')) ? 'That is already your password.' : 'Could not update the password. Try again.';
       status.dataset.state = 'err';
     } finally {
       btn.disabled = false;
@@ -766,10 +820,18 @@ function syncNavDot(unread) {
 
 async function pollLive() {
   if (document.hidden) return;
+  if (!ACCOUNT?.company) return; // notifications/messages endpoints reject company-less accounts
   let unread = 0;
   try { unread = (await api('/api/account/notifications')).unread || 0; } catch { return; }
   setBadge('badgeNotifs', unread);
   syncNavDot(unread);
+  // With the Notifications tab open, fold in newly arrived items instead of
+  // only bumping the badge (the badge would say 3 while the list shows 0 new).
+  const notifPanel = document.querySelector('[data-panel="notifications"]');
+  if (notifPanel && !notifPanel.hidden) {
+    const shownUnread = pages.notifs.items.filter((n) => !n.read).length;
+    if (unread > shownUnread) { loaded.notifications = false; await renderNotifications(); }
+  }
   // If the Messages tab is open, fold in any new staff replies (only re-render when the
   // thread actually grew, so we don't yank the scroll position while the user is reading).
   const msgPanel = document.querySelector('[data-panel="messages"]');
@@ -807,10 +869,11 @@ async function boot() {
   if (!ACCOUNT) { $('dashGuest').hidden = false; return; }
   $('dashApp').hidden = false;
   $('dashGreeting').textContent = `Welcome back${ACCOUNT.profile?.full_name ? ', ' + ACCOUNT.profile.full_name : ''}.`;
-    wireTabs(); wireMessageForm(); wireNotifications(); wireAddressForm(); wireProfileForm(); wireSecurityForm();
-  await renderOverview();
+  wireTabs(); wireMessageForm(); wireNotifications(); wireAddressForm(); wireProfileForm(); wireSecurityForm();
+  // Route to the deep-linked tab immediately — don't make #orders wait on overview data.
   selectTab(currentDashboardTab());
   window.addEventListener('hashchange', syncTabFromHash);
+  await renderOverview();
   startPolling();
 }
 boot();

@@ -21,10 +21,8 @@ const MENU = [
 ];
 
 const ACCOUNT_MENU = [
-  ['ph-user', 'Profile', 'dashboard.html#profile'],
-  ['ph-fingerprint', 'Security', 'dashboard.html#security'],
-  ['ph-map-pin', 'Addresses', 'dashboard.html#addresses'],
-  ['ph-credit-card', 'Payment methods', 'dashboard.html#payment'],
+  ['ph-user', 'Profile & security', 'dashboard.html#profile'],
+  ['ph-map-pin', 'Addresses & payment', 'dashboard.html#addresses'],
 ];
 
 function injectStyle() {
@@ -44,7 +42,7 @@ function injectStyle() {
   .acct-dd > summary:hover { border-color:var(--ink,#15171c); }
   .nav.over-dark .acct-dd > summary { color:#fff; border-color:rgba(255,255,255,.35); }
   .acct-avatar { position:relative; width:26px; height:26px; border-radius:50%; background:var(--accent,#0e7c86); color:#fff; display:grid; place-items:center; font-size:.8rem; font-weight:800; }
-  .acct-notif-dot { position:absolute; top:-4px; right:-4px; min-width:15px; height:15px; padding:0 3px; border-radius:999px; background:#b42318; color:#fff; font-size:.58rem; font-weight:800; display:grid; place-items:center; line-height:1; box-shadow:0 0 0 2px var(--surface,#fff); }
+  .acct-notif-dot { position:absolute; top:-4px; right:-4px; min-width:15px; height:15px; padding:0 3px; border-radius:999px; background:var(--status-danger-ink,#b42318); color:#fff; font-size:.58rem; font-weight:800; display:grid; place-items:center; line-height:1; box-shadow:0 0 0 2px var(--surface,#fff); }
   .nav.over-dark .acct-notif-dot { box-shadow:0 0 0 2px #0b0d12; }
   .acct-name { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .acct-dd-menu { position:fixed; left:8px; top:56px; width:min(236px, calc(100vw - 16px)); max-width:calc(100vw - 16px); max-height:calc(100vh - 16px); overflow:auto; background:var(--surface,#fff);
@@ -57,9 +55,9 @@ function injectStyle() {
   .acct-dd-menu a:hover, .acct-dd-menu button:hover { background:var(--accent-tint,#f1f8f8); color:var(--accent-ink,#0a5b62); }
   .acct-dd-menu i { font-size:1.15rem; color:var(--ink-soft,#393d44); }
   .acct-dd-menu a.has-unread { font-weight:800; }
-  .acct-menu-count { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#b42318; color:#fff; font-size:.7rem; font-weight:800; display:inline-grid; place-items:center; line-height:1; }
+  .acct-menu-count { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--status-danger-ink,#b42318); color:#fff; font-size:.7rem; font-weight:800; display:inline-grid; place-items:center; line-height:1; }
   .acct-menu-count[hidden] { display:none; }
-  .acct-dd-menu .acct-signout { border-top:1px solid var(--line,#e4e6e9); margin-top:6px; padding-top:12px; color:#b42318; }
+  .acct-dd-menu .acct-signout { border-top:1px solid var(--line,#e4e6e9); margin-top:6px; padding-top:12px; color:var(--status-danger-ink,#b42318); }
   .acct-dd-menu .acct-admin { color:var(--accent-ink,#0a5b62); }
   /* Cart: transparent shopping-cart icon with a count bubble (replaces the "Cart" text pill) */
   .nav-cart { position:relative; display:inline-grid; place-items:center; width:42px; height:42px; border-radius:50%; background:transparent; color:var(--ink,#15171c); padding:0; }
@@ -175,11 +173,17 @@ async function renderAccountNav(actions, root = '') {
   // Close the dropdown on outside click / Escape.
   const dd = mount.querySelector('details.acct-dd');
   if (dd) {
-    const syncMenuPosition = () => { if (dd.open) requestAnimationFrame(() => positionAccountMenu(dd)); };
-    dd.addEventListener('toggle', syncMenuPosition);
-    window.addEventListener('resize', syncMenuPosition);
-    window.addEventListener('scroll', syncMenuPosition, { passive: true, capture: true });
-    document.addEventListener('click', (e) => { if (dd.open && !mount.contains(e.target)) dd.open = false; });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dd.open = false; });
+    dd.addEventListener('toggle', () => { if (dd.open) requestAnimationFrame(() => positionAccountMenu(dd)); });
+    // Document/window listeners are bound ONCE and look up the live dropdown, so
+    // auth-change re-renders don't accumulate handlers on detached nodes.
+    if (!document.documentElement.dataset.acctDdBound) {
+      document.documentElement.dataset.acctDdBound = '1';
+      const liveDd = () => document.querySelector('.nav-account details.acct-dd');
+      const syncLive = () => { const d = liveDd(); if (d?.open) requestAnimationFrame(() => positionAccountMenu(d)); };
+      window.addEventListener('resize', syncLive);
+      window.addEventListener('scroll', syncLive, { passive: true, capture: true });
+      document.addEventListener('click', (e) => { const d = liveDd(); if (d?.open && !d.closest('.nav-account').contains(e.target)) d.open = false; });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const d = liveDd(); if (d) d.open = false; } });
+    }
   }
 }

@@ -25,10 +25,12 @@ test("account nav replaces the placeholder and exposes business plus account sec
   assert.match(nav, /Dashboard/, "signed-in nav should link to dashboard");
   assert.match(nav, /Business/, "signed-in nav should link to business tools");
   assert.match(nav, /dashboard\.html#business/, "business tools should open inside the user dashboard");
-  assert.match(nav, /Profile/, "account section should include profile");
-  assert.match(nav, /Security/, "account section should include security");
-  assert.match(nav, /Addresses/, "account section should include addresses");
-  assert.match(nav, /Payment methods/, "account section should include payment methods");
+  // Merged account IA (2026-07-05): Profile & security and Addresses & payment are
+  // single entries; the old #security/#payment hashes stay routable as tab aliases.
+  assert.match(nav, /Profile & security/, "account section should include the merged profile + security entry");
+  assert.match(nav, /Addresses & payment/, "account section should include the merged addresses + payment entry");
+  assert.doesNotMatch(nav, /dashboard\.html#security/, "security is folded into the profile tab — no standalone menu link");
+  assert.doesNotMatch(nav, /dashboard\.html#payment/, "payment is folded into the addresses tab — no standalone menu link");
 });
 
 test("account nav re-renders on auth change so the header swaps Sign in after login", () => {
@@ -48,10 +50,17 @@ test("account nav re-renders on auth change so the header swaps Sign in after lo
 test("dashboard organizes signed-in tools with a sidebar and account group", () => {
   const dashboard = read("dashboard.html");
 
+  const dashboardJs = read("js/dashboard.js");
+
   assert.match(dashboard, /class="dash-sidebar"/, "dashboard should use a sidebar nav for signed-in tools");
   assert.match(dashboard, /class="dash-nav-group"[^>]*>\s*<span>Account<\/span>/s, "account tools should be grouped together");
-  assert.match(dashboard, /data-tab="security"/, "security should be a first-class account panel");
-  assert.match(dashboard, /ph-fingerprint/, "security should use a less generic account identity icon");
+  // Merged account IA: security lives inside the profile panel, payment inside addresses.
+  assert.doesNotMatch(dashboard, /data-tab="security"/, "security must not be a standalone tab (merged into profile)");
+  assert.doesNotMatch(dashboard, /data-tab="payment"/, "payment must not be a standalone tab (merged into addresses)");
+  assert.match(dashboard, /id="passwordChangeForm"/, "profile panel should carry the inline password change form");
+  assert.match(dashboard, /id="payBody"/, "addresses panel should carry the payment methods card");
+  assert.match(dashboardJs, /security:\s*'profile'/, "old #security links must alias to the profile tab");
+  assert.match(dashboardJs, /payment:\s*'addresses'/, "old #payment links must alias to the addresses tab");
   assert.match(dashboard, /class="dash-section-title"/, "dashboard panel headings should use reusable classes instead of inline style");
 });
 

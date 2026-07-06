@@ -86,6 +86,7 @@ export async function me() { return fixtures.account; }
 export async function logout() {}
 export async function login() { return { session: okSession }; }
 export async function resetPasswordForEmail() { return {}; }
+export async function updatePassword() { return {}; }
 export async function orders() { return fixtures.orders; }
 export async function catalog() { return fixtures.productsPayload.products; }
 export async function getToken() { return "stub-token"; }
@@ -236,9 +237,9 @@ test("mobile dashboard navigation shows all account sections without horizontal 
             };
           });
 
-          assert.equal(nav.tabCount, 9, "dashboard should expose all signed-in sections");
+          assert.equal(nav.tabCount, 7, "dashboard should expose all signed-in sections (7 after the profile+security / addresses+payment merges)");
           assert.ok(nav.overflow <= 2, `dashboard tab rail still overflows by ${nav.overflow}px`);
-          assert.equal(nav.visibleTabCount, 9, "all dashboard tabs should be visible at mobile width");
+          assert.equal(nav.visibleTabCount, 7, "all dashboard tabs should be visible at mobile width");
         } finally {
           await context.close();
         }

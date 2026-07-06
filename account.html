@@ -234,7 +234,14 @@
     if (!TS_SITEKEY) return undefined;
     return $(formId)?.querySelector('[name="cf-turnstile-response"]')?.value || "";
   }
-  function resetCaptcha() { try { window.turnstile?.reset(); } catch (e) {} }
+  // Turnstile tokens are single-use: reset the widget in the form that consumed one.
+  // (A bare turnstile.reset() only resets the FIRST widget on the page.)
+  function resetCaptcha(formId) {
+    try {
+      const w = formId && $(formId)?.querySelector(".cf-turnstile");
+      if (w) window.turnstile?.reset(w); else window.turnstile?.reset();
+    } catch (e) {}
+  }
 
   // --- Confirm-email ON: finish company/profile creation once a session exists ---
   async function completePendingRegistration() {
@@ -295,6 +302,9 @@
   // Finish setup for a confirmed user that has no company/profile yet.
   $("cBtn").addEventListener("click", async () => {
     const status = $("cStatus");
+    const cBtn = $("cBtn");
+    if (cBtn.disabled) return;
+    cBtn.disabled = true;
     setStatus(status, "Finishing…", "");
     try {
       await completeRegistration({
@@ -305,7 +315,7 @@
     } catch (e) {
       setStatus(status, e.message === "already_registered" ? "Already set up. Reloading..." : "Could not finish: " + (e.message || "try again"), "err");
       if (e.message === "already_registered") await refresh();
-    }
+    } finally { $("cBtn").disabled = false; }
   });
   $("cLogout").addEventListener("click", async () => { await logout(); showAuth(); });
 
@@ -322,20 +332,23 @@
     } catch (err) {
       const raw = String(err.message || "");
       setStatus(status, /captcha/i.test(raw) ? "Verification failed. Reload and complete the challenge." : "Sign in failed. Check your email and password.", "err");
-    } finally { resetCaptcha(); btn.disabled = false; }
+    } finally { resetCaptcha("loginForm"); btn.disabled = false; }
   });
 
   $("forgotPasswordBtn").addEventListener("click", async () => {
     const btn = $("forgotPasswordBtn"); const status = $("liStatus");
     const email = $("liEmail").value.trim();
     if (!email) { setStatus(status, "Enter your email above first.", "err"); $("liEmail").focus(); return; }
+    // Supabase enforces CAPTCHA on /recover — reuse the login form's Turnstile token.
+    const cap = captchaToken("loginForm");
+    if (TS_SITEKEY && !cap) { setStatus(status, "Complete the verification challenge first.", "err"); return; }
     btn.disabled = true; setStatus(status, "Sending password reset link…", "");
     try {
-      await resetPasswordForEmail(email);
+      await resetPasswordForEmail(email, cap);
       setStatus(status, "If that account exists, a reset link has been sent.", "ok");
     } catch (err) {
-      setStatus(status, "Could not send a reset link. Try again later.", "err");
-    } finally { btn.disabled = false; }
+      setStatus(status, /captcha/i.test(String(err.message || "")) ? "Verification expired. Reload the page and try again." : "Could not send a reset link. Try again later.", "err");
+    } finally { resetCaptcha("loginForm"); btn.disabled = false; }
   });
 
   $("resetPasswordForm").addEventListener("submit", async (e) => {
@@ -377,6 +390,10 @@
         // Confirm-email ON: stash the profile so we can finish it after confirm + login.
         localStorage.setItem(PENDING_KEY, JSON.stringify({ profile }));
         setStatus(status, "Account created. Check your email to confirm, then sign in.", "ok");
+        // Keep the button off until the form changes — prevents accidental double
+        // registrations that only burn the email rate-limit.
+        btn.dataset.sent = "1";
+        $("registerForm").addEventListener("input", () => { delete btn.dataset.sent; btn.disabled = false; }, { once: true });
       } else {
         setStatus(status, "Account created. You can set up your business anytime from the dashboard.", "ok");
         await refresh();
@@ -394,7 +411,7 @@
         else msg = "Could not create account (" + (detail || "unknown error") + "). Try again shortly.";
       }
       setStatus(status, msg, "err");
-    } finally { resetCaptcha(); btn.disabled = false; }
+    } finally { resetCaptcha("registerForm"); if (!btn.dataset.sent) btn.disabled = false; }
   });
 
   // Dashboard bounces here with ?expired=1 when a session lapses (js/dashboard.js).
@@ -417,8 +434,17 @@
     const params = new URLSearchParams(hash.slice(1));
     const err = params.get("error_code") || params.get("error");
     if (!err) {
-      // Success: email confirmed / signed in. supabase-js consumes the token; show a confirmation.
-      if (params.get("access_token")) { history.replaceState(null, "", location.pathname); showBanner("Email confirmed. You are signed in."); }
+      // Success: supabase-js consumes the token from the hash.
+      if (params.get("access_token")) {
+        if (params.get("type") === "recovery") {
+          // Password-recovery link: keep the reset-password marker in the query so the
+          // "Choose a new password" pane survives the hash being consumed/stripped.
+          history.replaceState(null, "", location.pathname + "?mode=reset-password");
+          return;
+        }
+        history.replaceState(null, "", location.pathname + location.search);
+        if (params.get("type") === "signup") showBanner("Email confirmed. You are signed in.");
+      }
       return;
     }
     history.replaceState(null, "", location.pathname); // clear hash so reload doesn't repeat
@@ -446,9 +472,13 @@
     $("resendBtn").addEventListener("click", async () => {
       const email = $("liEmail").value.trim();
       if (!email) { setStatus($("liStatus"), "Enter your email above first.", "err"); $("liEmail").focus(); return; }
+      // Supabase enforces CAPTCHA on /resend — reuse the login form's Turnstile token.
+      const cap = captchaToken("loginForm");
+      if (TS_SITEKEY && !cap) { setStatus($("liStatus"), "Complete the verification challenge first.", "err"); return; }
       setStatus($("liStatus"), "Resending…", "");
-      try { await resendConfirmation(email); setStatus($("liStatus"), "Sent. Open the newest link promptly (check spam).", "ok"); }
-      catch (e) { setStatus($("liStatus"), "Could not resend: " + (e.message || "try later"), "err"); }
+      try { await resendConfirmation(email, cap); setStatus($("liStatus"), "Sent. Open the newest link promptly (check spam).", "ok"); }
+      catch (e) { setStatus($("liStatus"), /captcha/i.test(String(e.message || "")) ? "Verification expired. Reload the page and try again." : "Could not resend: " + (e.message || "try later"), "err"); }
+      finally { resetCaptcha("loginForm"); }
     });
   }
 

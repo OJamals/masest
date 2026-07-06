@@ -35,8 +35,8 @@
   .dash-status[data-state=busy] { color: var(--muted); }
   .setup-list { display: grid; gap: 10px; margin-top: 14px; }
   .setup-step { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; }
-  .setup-step[data-setup-state="done"] { background: rgba(14,124,134,.05); border-color: rgba(14,124,134,.18); }
-  .setup-step[data-setup-state="open"] { background: rgba(166,58,46,.04); border-color: rgba(166,58,46,.22); }
+  .setup-step[data-setup-state="done"] { background: color-mix(in srgb, var(--accent) 5%, transparent); border-color: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .setup-step[data-setup-state="open"] { background: color-mix(in srgb, var(--danger) 4%, transparent); border-color: color-mix(in srgb, var(--danger) 22%, transparent); }
   .buyer-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-top: 14px; }
   .buyer-action { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; min-height: 74px; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; color: var(--ink); }
   .buyer-action i:first-child { width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 8px; background: var(--accent-soft); color: var(--accent-ink); font-size: 1.1rem; }
@@ -59,7 +59,8 @@
     border-radius: var(--r-card); padding: 18px; }
   .stat .big-fig { font-size: 2rem; font-weight: 900; letter-spacing: -.04em; color: var(--accent-ink); line-height: 1; }
   .stat .lbl { font-size: .82rem; color: var(--ink-soft); font-weight: 700; margin-top: 6px; }
-  .badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  /* Base .badge comes from components.css; this page only maps data-s status tints. */
+  .badge[data-s] { text-transform: uppercase; letter-spacing: .05em; font-size: .72rem; }
   .badge[data-s=pending] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .badge[data-s=approved], .badge[data-s=paid], .badge[data-s=fulfilled], .badge[data-s=net_paid] { background: var(--accent-soft); color: var(--accent-ink); }
   .badge[data-s=rejected], .badge[data-s=suspended], .badge[data-s=cancelled] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
@@ -79,9 +80,6 @@
   .notif { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .notif.unread { background: var(--accent-tint); margin: 0; padding: 14px; border-radius: var(--r-input); }
   .notif i { color: var(--accent); font-size: 1.3rem; }
-  .dash-status { margin-top: 12px; font-size: .9rem; font-weight: 600; min-height: 1em; }
-  .dash-status[data-state=ok] { color: var(--accent-ink); }
-  .dash-status[data-state=err] { color: var(--status-danger-ink); }
   .banner { border-radius: var(--r-card); padding: 16px 18px; font-size: .92rem; font-weight: 600; margin-bottom: 18px; display: flex; gap: 10px; align-items: flex-start; }
   .banner i { font-size: 1.15rem; flex: 0 0 auto; margin-top: 1px; }
   .banner.warn { background: var(--status-warning-bg); color: var(--status-warning-ink); }
@@ -402,7 +400,7 @@
                 <span>Workspace</span>
                 <button class="dash-tab" role="tab" data-tab="overview" aria-selected="true"><i class="ph ph-squares-four" aria-hidden="true"></i> Overview</button>
                 <button class="dash-tab" role="tab" data-tab="orders" aria-selected="false"><i class="ph ph-package" aria-hidden="true"></i> Orders</button>
-                <button class="dash-tab" role="tab" data-tab="messages" aria-selected="false"><i class="ph ph-chat-circle" aria-hidden="true"></i> Messages <span class="pill" id="badgeMessages" hidden>0</span></button>
+                <button class="dash-tab" role="tab" data-tab="messages" aria-selected="false"><i class="ph ph-chat-circle" aria-hidden="true"></i> Messages</button>
                 <button class="dash-tab" role="tab" data-tab="notifications" aria-selected="false"><i class="ph ph-bell" aria-hidden="true"></i> Notifications <span class="pill" id="badgeNotifs" hidden>0</span></button>
               </div>
               <div class="dash-nav-group">
@@ -411,10 +409,8 @@
               </div>
               <div class="dash-nav-group">
                 <span>Account</span>
-                <button class="dash-tab" role="tab" data-tab="profile" aria-selected="false"><i class="ph ph-user" aria-hidden="true"></i> Profile</button>
-                <button class="dash-tab" role="tab" data-tab="security" aria-selected="false"><i class="ph ph-fingerprint" aria-hidden="true"></i> Security</button>
-                <button class="dash-tab" role="tab" data-tab="addresses" aria-selected="false"><i class="ph ph-map-pin" aria-hidden="true"></i> Addresses</button>
-                <button class="dash-tab" role="tab" data-tab="payment" aria-selected="false"><i class="ph ph-credit-card" aria-hidden="true"></i> Payment methods</button>
+                <button class="dash-tab" role="tab" data-tab="profile" aria-selected="false"><i class="ph ph-user" aria-hidden="true"></i> Profile &amp; security</button>
+                <button class="dash-tab" role="tab" data-tab="addresses" aria-selected="false"><i class="ph ph-map-pin" aria-hidden="true"></i> Addresses &amp; payment</button>
               </div>
             </div>
           </aside>
@@ -562,15 +558,26 @@
               </form>
             </div>
           </details>
-        </div>
-
-        <div class="dash-panel" data-panel="payment" role="tabpanel" hidden>
           <div class="dash-card" id="payBody"><p class="muted">Loading…</p></div>
         </div>
 
-        <div class="dash-panel" data-panel="security" role="tabpanel" hidden>
+        <div class="dash-panel" data-panel="profile" role="tabpanel" hidden>
           <div class="dash-card">
-            <h2 class="dash-section-title">Security</h2>
+            <h2 class="headline dash-section-title">Your profile</h2>
+            <form onsubmit="return false" id="profileForm" class="form-card dash-clean-form">
+              <div class="field-grid">
+                <div class="field"><label for="pfCompany">Company</label><input id="pfCompany" readonly></div>
+                <div class="field"><label for="pfName">Full name</label><input id="pfName" autocomplete="name"></div>
+                <div class="field"><label for="pfPhone">Phone</label><input id="pfPhone" autocomplete="tel"></div>
+              </div>
+              <div class="dash-action-row">
+                <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                <span class="dash-status" id="pfStatus" role="status" aria-live="polite"></span>
+              </div>
+            </form>
+          </div>
+          <div class="dash-card">
+            <h2 class="dash-section-title">Sign-in &amp; security</h2>
             <div class="dash-row"><span>Account email</span><b id="secEmail">Not set</b></div>
             <form onsubmit="return false" id="emailChangeForm" class="security-email-form">
               <div class="field"><label for="secNewEmail">Change account email</label>
@@ -578,10 +585,18 @@
               <button class="btn btn-secondary btn-sm" id="secEmailBtn" type="submit">Update email</button>
               <span class="dash-status" id="secEmailStatus" role="status" aria-live="polite"></span>
             </form>
-            <div class="security-actions">
-              <button class="btn btn-primary btn-sm" id="secReset" type="button">Send password reset</button>
-              <button class="btn btn-ghost btn-sm" id="secLogout" type="button">Sign out</button>
+            <form onsubmit="return false" id="passwordChangeForm" class="security-email-form">
+              <div class="field-grid">
+                <div class="field"><label for="secNewPass">New password</label>
+                  <input id="secNewPass" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"></div>
+                <div class="field"><label for="secNewPass2">Confirm new password</label>
+                  <input id="secNewPass2" type="password" autocomplete="new-password"></div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="secPassBtn" type="submit">Update password</button>
               <span class="dash-status" id="secStatus" role="status" aria-live="polite"></span>
+            </form>
+            <div class="security-actions">
+              <button class="btn btn-ghost btn-sm" id="secLogout" type="button">Sign out</button>
             </div>
           </div>
           <div class="dash-card">
@@ -592,25 +607,6 @@
               <button class="btn btn-ghost btn-sm" id="acctDeleteBtn" type="button">Delete my account</button>
               <span class="dash-status" id="privacyStatus" role="status" aria-live="polite"></span>
             </div>
-          </div>
-        </div>
-
-        <div class="dash-panel" data-panel="profile" role="tabpanel" hidden>
-          <div class="dash-card">
-            <h2 class="headline dash-section-title">Your profile</h2>
-            <form onsubmit="return false" id="profileForm" class="form-card dash-clean-form">
-              <div class="field-grid">
-                <div class="field"><label for="pfEmail">Email</label><input id="pfEmail" disabled></div>
-                <div class="field"><label for="pfCompany">Company</label><input id="pfCompany" disabled></div>
-                <div class="field"><label for="pfName">Full name</label><input id="pfName"></div>
-                <div class="field"><label for="pfPhone">Phone</label><input id="pfPhone"></div>
-              </div>
-              <div class="dash-action-row">
-                <button class="btn btn-primary btn-sm" type="submit">Save</button>
-                <button class="btn btn-ghost btn-sm" id="pfLogout" type="button">Sign out</button>
-                <span class="dash-status" id="pfStatus" role="status" aria-live="polite"></span>
-              </div>
-            </form>
           </div>
         </div>
           </div>
@@ -624,6 +620,6 @@
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260619b"></script>
 <script src="js/track.js" defer></script>
-<script type="module" src="js/dashboard.js?v=20260706a"></script>
+<script type="module" src="js/dashboard.js?v=20260706b"></script>
 </body>
 </html>

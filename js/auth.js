@@ -62,13 +62,19 @@ export async function completeRegistration({ profile }) {
   return postRegister(token, { profile });
 }
 
-/* Resend the signup confirmation email (when the prior link expired or was consumed). */
-export async function resendConfirmation(email) {
-  return requireClient().auth.resend({
+/* Resend the signup confirmation email (when the prior link expired or was consumed).
+   Supabase enforces CAPTCHA on /resend, so the caller must pass the form's Turnstile token. */
+export async function resendConfirmation(email, captchaToken) {
+  const { data, error } = await requireClient().auth.resend({
     type: 'signup',
     email,
-    options: { emailRedirectTo: `${window.location.origin}/account.html` },
+    options: {
+      emailRedirectTo: `${window.location.origin}/account.html`,
+      ...(captchaToken ? { captchaToken } : {}),
+    },
   });
+  if (error) throw error;
+  return data;
 }
 
 export async function login({ email, password, captchaToken }) {
@@ -82,10 +88,14 @@ export async function login({ email, password, captchaToken }) {
   return data;
 }
 
-export async function resetPasswordForEmail(email) {
+/* Supabase enforces CAPTCHA on /recover, so the caller must pass the form's Turnstile token. */
+export async function resetPasswordForEmail(email, captchaToken) {
   const sb = requireClient();
   const redirectTo = new URL('account.html?mode=reset-password', window.location.href).href;
-  const { data, error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+  const { data, error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo,
+    ...(captchaToken ? { captchaToken } : {}),
+  });
   if (error) throw error;
   return data;
 }

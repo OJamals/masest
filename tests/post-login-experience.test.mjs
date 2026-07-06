@@ -110,7 +110,11 @@ test("account-only dashboard guides business setup instead of failing tabs", () 
   assert.match(js, /No business notifications yet/, "notifications tab should not show a load failure before business setup");
   assert.match(js, /No business profile yet/, "addresses tab should explain business setup before company-scoped addresses");
   assert.match(js, /Set up your business under .* to save a card on file/, "payment tab should name the account-only locked state");
-  assert.match(js, /ACCOUNT\?\.company \? 'Review business tools' : 'Set up business'/, "next action should promote business creation for account-only users");
+  // Account-only users get the full "Business setup" steps card on the overview; the
+  // action rail must NOT repeat that CTA (three identical CTAs read as noise), so the
+  // rail's setup action is company-scoped only.
+  assert.match(js, /openSteps\.length && ACCOUNT\?\.company/, "rail setup action is suppressed for account-only users (setup card is the single CTA)");
+  assert.match(js, /ACCOUNT\?\.setup\?\.steps\?\.length \? '' :/, "overview banner defers to the setup steps card when present");
 });
 
 test("Stripe billing portal opens outside the dashboard shell", () => {
