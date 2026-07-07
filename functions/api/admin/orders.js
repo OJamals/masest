@@ -63,8 +63,12 @@ async function sendTrackingEmail(env, request, order, label, extra, recipients) 
     html: emailLayout({
       heading: `Order ${label}`,
       bodyHtml: `<p>${htmlEscape(extra || `Your order is now "${label}".`)}</p>${details ? `<ul>${details}</ul>` : ''}`,
-      ctaText: order?.tracking_url ? 'Track shipment' : 'Visit MASEST',
-      ctaUrl: order?.tracking_url || appUrl,
+      // Delivered points at the dashboard (reorder + order history); in-transit
+      // states keep the carrier tracking link front and center.
+      ctaText: label === 'delivered' ? 'View order & reorder'
+        : order?.tracking_url ? 'Track shipment' : 'Visit MASEST',
+      ctaUrl: label === 'delivered' ? `${appUrl}/dashboard.html#orders`
+        : order?.tracking_url || appUrl,
     }),
     category: 'order',
   });
@@ -349,10 +353,15 @@ export async function onRequest({ request, env }) {
         order_id: body.id, status: trackingStatus, carrier, tracking_number: trackingNumber, note,
       }).then(() => {}, () => {});
       const shipped = ['shipped', 'delivered'].includes(trackingStatus) && trackingNumber;
-      const notifyLabel = shipped ? 'shipped' : 'tracking updated';
-      const notifyBody = shipped
-        ? `Your order has shipped. ${carrier || 'Carrier'} ${trackingNumber}`.trim()
-        : `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim();
+      // Delivered gets its own close-the-loop message (it used to reuse "shipped",
+      // and delivered-without-a-tracking-number fell to "tracking updated").
+      const delivered = trackingStatus === 'delivered';
+      const notifyLabel = delivered ? 'delivered' : shipped ? 'shipped' : 'tracking updated';
+      const notifyBody = delivered
+        ? 'Your order was delivered. Reorder anytime from your dashboard, and reply to this email if anything arrived short or damaged.'
+        : shipped
+          ? `Your order has shipped. ${carrier || 'Carrier'} ${trackingNumber}`.trim()
+          : `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim();
       // One rich tracking email (carrier/number/ETA + Track-shipment link) to buyer +
       // company order recipients; the in-app notification is inserted directly so
       // notifyCompany's generic email doesn't shadow the tracking link.

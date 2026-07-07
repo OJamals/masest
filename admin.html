@@ -437,7 +437,6 @@
             <div class="adm-nav-group" role="presentation">
               <span aria-hidden="true">Catalog</span>
               <button class="adm-tab" role="tab" data-tab="products" type="button"><i class="ph ph-flask" aria-hidden="true"></i> Products</button>
-              <button class="adm-tab" role="tab" data-tab="pricing" type="button"><i class="ph ph-currency-dollar" aria-hidden="true"></i> Pricing</button>
             </div>
             <div class="adm-nav-group" role="presentation">
               <span aria-hidden="true">Website</span>
@@ -447,15 +446,13 @@
               <span aria-hidden="true">Comms</span>
               <button class="adm-tab" role="tab" data-tab="messages" type="button"><i class="ph ph-chats" aria-hidden="true"></i> Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
               <button class="adm-tab" role="tab" data-tab="quotes" type="button"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
-              <button class="adm-tab" role="tab" data-tab="offers" type="button"><i class="ph ph-envelope-simple" aria-hidden="true"></i> Emails</button>
-              <button class="adm-tab" role="tab" data-tab="traffic" type="button"><i class="ph ph-chart-line-up" aria-hidden="true"></i> Traffic</button>
             </div>
           </div>
         </aside>
 
         <div class="adm-main">
 
- <section class="adm-panel" role="tabpanel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div><div id="admActionRail" class="adm-action-rail" aria-live="polite"></div><div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reports &amp; exports</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" type="date" class="adm-input"></label><label class="field">To<input id="repTo" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button">Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button">Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button">Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button">Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div></section>
+ <section class="adm-panel" role="tabpanel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div><div id="admActionRail" class="adm-action-rail" aria-live="polite"></div><div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reports &amp; exports</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" type="date" class="adm-input"></label><label class="field">To<input id="repTo" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button">Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button">Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button">Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button">Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div><div id="admTraffic" class="adm-card">Loading...</div></section>
 
       <section class="adm-panel" role="tabpanel" data-panel="orders">
         <div class="adm-tools">
@@ -511,9 +508,8 @@
         </div>
         <input id="prodSearch" class="adm-search" type="search" placeholder="Search products" aria-label="Search products">
         <div id="admProducts" class="adm-table-wrap">Loading...</div>
-      </section>
-
-      <section class="adm-panel" role="tabpanel" data-panel="pricing">
+        <!-- Pricing (promo codes + tier price search) folded in from its own tab
+             2026-07-07 — one catalog surface; #pricing deep links land here. -->
         <div class="adm-card" id="admCoupons">
           <div class="adm-panel-header"><h2>Promo codes</h2></div>
           <p class="muted">Stripe promotion codes — buyers enter them at card checkout. (NET on-account orders don't take promo codes.)</p>
@@ -560,9 +556,8 @@
 
       <section class="adm-panel" role="tabpanel" data-panel="crm">
         <div id="admCrm" class="adm-panel-list">Loading...</div>
-      </section>
-
-      <section class="adm-panel" role="tabpanel" data-panel="offers">
+        <!-- Outreach (offer/announcement blasts + send log) folded in from the
+             Emails tab 2026-07-07 — it's CRM work; #offers deep links land here. -->
         <div class="adm-card">
           <h2>Send an offer / announcement</h2>
           <form onsubmit="return false" id="offerForm" class="adm-form-grid">
@@ -578,9 +573,6 @@
         <div class="adm-card"><h2>Recent sends</h2><div id="admOffers">Loading...</div></div>
       </section>
 
-      <section class="adm-panel" role="tabpanel" data-panel="traffic">
-        <div id="admTraffic" class="adm-card">Loading...</div>
-      </section>
         </div>
       </div>
     </div>

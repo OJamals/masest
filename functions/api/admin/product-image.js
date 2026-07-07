@@ -29,6 +29,8 @@ export async function onRequest({ request, env }) {
     if (!file || typeof file === 'string') return json(400, { error: 'file_required' });
     const type = file.type || '';
     if (!type.startsWith('image/')) return json(400, { error: 'not_an_image' });
+    // Mirror the client's 8 MB cap server-side — the client check is advisory only.
+    if (Number(file.size) > 8 * 1024 * 1024) return json(400, { error: 'file_too_large', message: 'Keep product photos under 8 MB.' });
 
     const ext = (String(file.name || 'img').split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
     const path = `${sku}/${crypto.randomUUID()}.${ext}`;

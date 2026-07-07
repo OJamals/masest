@@ -109,8 +109,13 @@ async function boot() {
 
 function setTab(tab) {
   // The old top-level Customers tab folded into the CRM People directory —
-  // keep #customers deep links working by landing on that sub-view.
+  // keep #customers deep links working by landing on that sub-view. Pricing,
+  // Emails (offers), and Traffic folded into Products / CRM / Overview
+  // 2026-07-07 — their hashes land on the host tab.
   if (tab === 'customers') { state.crmView = 'contacts'; tab = 'crm'; }
+  if (tab === 'pricing') tab = 'products';
+  if (tab === 'offers') tab = 'crm';
+  if (tab === 'traffic') tab = 'overview';
   state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
   // replaceState, NOT location.hash: assigning location.hash fires hashchange →
   // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
@@ -127,17 +132,17 @@ function setTab(tab) {
   // refetching; first visit (or post-mutation re-render) fetches. offers/traffic self-cache.
   const cached = state.loaded.has(state.tab);
   const render = {
-    overview: () => { renderStats(state.stats); runSeoAudit(); wireReports(); },
+    overview: () => { renderStats(state.stats); runSeoAudit(); wireReports(); renderTraffic(); },
     orders: renderOrders,
     companies: renderCompanies,
-    products: (o) => { renderProducts(o); wireInventory(); },
-    pricing: (o) => { renderPricing(o); wireCoupons(); },
+    products: (o) => {
+      renderProducts(o); wireInventory();
+      renderPricing({ refetch: !state.loaded.has('pricing') }); wireCoupons();
+    },
     content: renderContent,
     messages: renderThreads,
     quotes: renderQuotePipeline,
-    crm: () => renderCrm(),
-    offers: () => renderOffers(),
-    traffic: () => renderTraffic(),
+    crm: () => { renderCrm(); renderOffers(); },
   }[state.tab];
   render?.({ refetch: !cached });
 }

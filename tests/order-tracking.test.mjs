@@ -42,7 +42,9 @@ test("staff orders API can update tracking metadata and notify buyers", () => {
   assert.match(ADMIN_ORDERS, /tracking_number/);
   assert.match(ADMIN_ORDERS, /tracking_url/);
   assert.match(ADMIN_ORDERS, /estimated_delivery_at/);
-  assert.match(ADMIN_ORDERS, /const notifyLabel\s*=\s*shipped\s*\?\s*['"]shipped['"]\s*:\s*['"]tracking updated['"]/);
+  // Delivered closes the loop with its own label/body; shipped and generic updates keep theirs.
+  assert.match(ADMIN_ORDERS, /const notifyLabel\s*=\s*delivered\s*\?\s*['"]delivered['"]\s*:\s*shipped\s*\?\s*['"]shipped['"]\s*:\s*['"]tracking updated['"]/);
+  assert.match(ADMIN_ORDERS, /Your order was delivered\./);
   // One rich tracking email goes to buyer + company recipients (sendTrackingEmail), so
   // the clickable tracking link is never shadowed by the generic notifyCompany email.
   assert.match(ADMIN_ORDERS, /await sendTrackingEmail\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*\[order\?\.customer_email,\s*\.\.\.companyRecipients\]\)/);

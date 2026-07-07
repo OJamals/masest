@@ -106,6 +106,16 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
   }
 
   async function uploadProductImage(sku, file, slot) {
+    // Cheap client-side guard so a wrong pick fails instantly with a clear
+    // message instead of after a doomed server round-trip.
+    if (!/^image\//.test(file.type || '')) {
+      message('prodStatus', `"${file.name}" is not an image file.`, 'err');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      message('prodStatus', `"${file.name}" is ${(file.size / 1048576).toFixed(1)} MB — keep product photos under 8 MB.`, 'err');
+      return;
+    }
     message('prodStatus', 'Uploading image...');
     try {
       const fd = new FormData();

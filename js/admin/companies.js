@@ -102,7 +102,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         button.disabled = true;
         try {
           await api('/api/admin/companies', { method: 'POST', body });
-          await renderCompanies();
+          await refreshCompany(company.id);
           await openCompanyDetail(company.id);
         } catch (err) {
           box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not apply the change. Retry.')}</p>`);
@@ -208,6 +208,18 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     }
   }
 
+  // Refresh one company in place after a mutation and re-render without a full
+  // refetch — a bare renderCompanies() resets the list to page 1 (same pattern
+  // as orders.js refreshOrder).
+  async function refreshCompany(id) {
+    try {
+      const detail = await api(`/api/admin/company?id=${encodeURIComponent(id)}`);
+      const idx = (state.companies || []).findIndex((c) => String(c.id) === String(id));
+      if (idx >= 0 && detail.company) state.companies[idx] = { ...state.companies[idx], ...detail.company };
+    } catch { /* render from current state; the next full refetch reconciles */ }
+    await renderCompanies({ refetch: false });
+  }
+
   async function renderCompanies({ append = false, refetch = true } = {}) {
     const box = $('admCompanies');
     const snap = captureDirty(box);
@@ -284,7 +296,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
             price_tier: box.querySelector(`[data-tier="${CSS.escape(id)}"]`).value,
           },
         });
-        renderCompanies();
+        refreshCompany(id);
       } catch (err) {
         // A silent failure here reads as "approved" — surface it.
         button.disabled = false;
@@ -312,7 +324,12 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         })));
         const failed = results.filter((r) => r.status === 'rejected').length;
         if (failed) bulk.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${failed} of ${ids.length} approvals failed. Reload and retry those accounts.</p>`);
-        await renderCompanies();
+        ids.forEach((id, i) => {
+          if (results[i].status !== 'fulfilled') return;
+          const row = (state.companies || []).find((c) => String(c.id) === String(id));
+          if (row) row.status = 'approved';
+        });
+        await renderCompanies({ refetch: false });
       } catch (err) {
         bulk.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${(err.data && err.data.error) || 'Bulk approve failed. Retry.'}</p>`);
       } finally { bulk.disabled = false; }
