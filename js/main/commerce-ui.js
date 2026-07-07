@@ -390,7 +390,9 @@ export function initCartButtons() {
     const select = e.target.closest(".commerce-vol");
     if (!select) return;
     const wrap = select.closest("[data-commerce-buy]");
-    const buybar = select.closest(".shop-card-buybar");
+    // Price slot lives in .shop-card-buybar on catalog cards and in
+    // .product-hero-buy on the static /products/<id> detail pages.
+    const buybar = select.closest(".shop-card-buybar, .product-hero-buy");
     const button = wrap?.querySelector("[data-cart-add]");
     const quoteLink = wrap?.querySelector(".commerce-quote-swap");
     const selected = select.selectedOptions?.[0];
