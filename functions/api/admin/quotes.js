@@ -1,5 +1,6 @@
 // /api/admin/quotes - staff view of inbound /api/quote leads.
-import { adminClient, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
+import { adminClient, companyEmails, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
+import { recordAudit } from '../../_lib/audit.js';
 import { buildConvertItems, netOrderRow } from '../../_lib/quote-convert.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
@@ -377,6 +378,37 @@ export async function onRequest({ request, env }) {
         body: 'We turned your quote request into an order. See it in your dashboard.',
         link: '/dashboard.html#orders',
       });
+      // Close the loop off-dashboard too: email the company's order recipients and
+      // the quote requester, emit the same Klaviyo won event as a stage move, and
+      // leave an audit trail (this handler previously did none of the three).
+      const { data: qRow } = await sb.from('quotes')
+        .select('email,deal_value,product,company,type').eq('id', body.id).maybeSingle();
+      const appUrl = env.APP_URL || new URL(request.url).origin;
+      const recipients = [...new Set([
+        ...(await companyEmails(sb, companyId, 'orders')),
+        String(qRow?.email || '').trim(),
+      ].map((e) => String(e || '').trim().toLowerCase()).filter(Boolean))];
+      if (recipients.length) {
+        await sendEmail(env, {
+          to: recipients,
+          subject: 'Your quote is now an order',
+          html: emailLayout({
+            heading: 'Order created from your quote',
+            bodyHtml: `<p>We turned your quote request${qRow?.product ? ` for ${htmlEscape(qRow.product)}` : ''} into a NET order. Review the details and invoice status in your dashboard.</p>`,
+            ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders`,
+          }),
+          category: 'order',
+        });
+      }
+      if (qRow?.email) {
+        await klaviyoTrack(env, {
+          email: qRow.email,
+          metric: 'Deal Stage Changed',
+          value: qRow.deal_value,
+          properties: { stage: 'won', deal_value: qRow.deal_value, product: qRow.product, company: qRow.company, type: qRow.type, source: 'quote_convert' },
+        });
+      }
+      await recordAudit(sb, { user, action: 'quote.convert', targetType: 'quote', targetId: body.id, detail: { company_id: companyId, order_id: order.id, subtotal: built.subtotal } });
 
       return json(200, { ok: true, order_id: order.id });
     }
