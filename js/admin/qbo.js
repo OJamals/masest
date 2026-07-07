@@ -202,5 +202,7 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-qbo-status-retry]")) { renderQboStatus(); return; }
   const button = event.target.closest("[data-qbo-retry]");
   if (!button) return;
-  retryQboOrder(button.dataset.qboRetry);
+  // Disable while in flight — a double-click would requeue the same order twice.
+  button.disabled = true;
+  retryQboOrder(button.dataset.qboRetry).finally(() => { button.disabled = false; });
 });

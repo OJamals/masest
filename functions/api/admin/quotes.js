@@ -248,11 +248,20 @@ export async function onRequest({ request, env }) {
       }
       return json(data ? 200 : 404, data ? { quote: data } : { error: 'not_found' });
     }
-    const { limit, offset } = parsePage(new URL(request.url).searchParams, { defaultLimit: 100, maxLimit: 300 });
-    const { data, error, count } = await sb.from('quotes')
+    const listParams = new URL(request.url).searchParams;
+    const { limit, offset } = parsePage(listParams, { defaultLimit: 100, maxLimit: 300 });
+    let listQuery = sb.from('quotes')
       .select(QUOTE_SELECT, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+    // Server-side search so results aren't limited to the loaded page. Commas and
+    // parens are stripped — they would break the PostgREST or= filter syntax.
+    const search = String(listParams.get('search') || '').trim().replace(/[,()]/g, ' ').trim();
+    if (search) {
+      const like = `%${escapeLike(search)}%`;
+      listQuery = listQuery.or(['name', 'email', 'company', 'product', 'location'].map((col) => `${col}.ilike.${like}`).join(','));
+    }
+    const { data, error, count } = await listQuery;
     if (error) {
       if (/does not exist|relation|schema cache/i.test(error.message)) {
         return json(200, { quotes: [], new_count: 0, needs_migration: true });

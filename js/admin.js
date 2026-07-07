@@ -444,18 +444,19 @@ function wire() {
   });
   wireTablist(document.querySelector('.adm-tabs[role="tablist"]'), (tab) => setTab(tab.dataset.tab));
   window.addEventListener('hashchange', syncTabFromHash);
-  // Status filter hits a server query param → must refetch. Search + the quote
-  // facet filters are client-side over cached data → re-render in memory (#28).
+  // Status filter and the search boxes hit server query params → refetch (search
+  // used to be client-side over cached rows, which silently missed anything past
+  // the loaded page). Quote facet filters stay client-side over cached data (#28).
   $('ordFilter').addEventListener('change', () => renderOrders());
-  $('ordSearch').addEventListener('input', debounce(() => renderOrders({ refetch: false })));
-  $('coSearch').addEventListener('input', debounce(() => renderCompanies({ refetch: false })));
+  $('ordSearch').addEventListener('input', debounce(() => renderOrders({ refetch: true })));
+  $('coSearch').addEventListener('input', debounce(() => renderCompanies({ refetch: true })));
   $('prodSearch').addEventListener('input', debounce(() => renderProducts({ refetch: false })));
   $('priceSearch').addEventListener('input', debounce(() => renderPricing({ refetch: false })));
   $('qFilter').addEventListener('change', () => renderQuotePipeline({ refetch: false }));
   $('qPriority')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
   $('qDue')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
   $('qOwner')?.addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
-  $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
+  $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline({ refetch: true })));
   // #28 dirty-edit guard: track in-progress inline edits so capture/restoreDirty can
   // preserve sibling edits across a save or cache re-render.
   ['admOrders', 'admCompanies', 'admProducts', 'admPricing', 'admQuotes'].forEach((id) => {

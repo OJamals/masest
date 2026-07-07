@@ -6,6 +6,7 @@ import { buildCompanySetup } from '../../_lib/setup.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { staffCan } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
+import { escapeLike } from '../../_lib/crm.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
@@ -22,6 +23,9 @@ export async function onRequest({ request, env }) {
       .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,resale_cert_url,stripe_customer_id,created_at,profiles(id,full_name,phone,role)', { count: 'exact' })
       .order('created_at', { ascending: false }).range(offset, offset + limit - 1);
     if (status) q = q.eq('status', status);
+    // Server-side name search so an account past the loaded page is still findable.
+    const search = String(params.get('search') || '').trim();
+    if (search) q = q.ilike('name', `%${escapeLike(search)}%`);
     const { data, error, count } = await q;
     if (error) return json(500, { error: error.message });
     return json(200, { companies: (data || []).map((company) => ({ ...company, setup: buildCompanySetup(company) })), ...pageEnvelope(data, { limit, offset, count }) });

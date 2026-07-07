@@ -98,6 +98,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           body.reason = box.querySelector('#rejectReason')?.value.trim() || '';
           if (!(await confirmDialog('Reject this business? The customer is notified with your reason.', { confirmText: 'Reject', danger: true }))) return;
         }
+        if (action === 'suspend' && !(await confirmDialog('Suspend this account? The customer loses ordering access immediately.', { confirmText: 'Suspend', danger: true }))) return;
         button.disabled = true;
         try {
           await api('/api/admin/companies', { method: 'POST', body });
@@ -214,6 +215,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       if (!append) { state.companies = []; state.companiesOffset = 0; box.innerHTML = admSkeleton(); }
       try {
         const params = new URLSearchParams({ limit: '100', offset: String(state.companiesOffset || 0) });
+        const searchTerm = $('coSearch')?.value.trim();
+        if (searchTerm) params.set('search', searchTerm);
         const res = await api('/api/admin/companies?' + params.toString());
         state.companies = (state.companies || []).concat(res.companies || []);
         state.companiesOffset = (state.companiesOffset || 0) + (res.companies || []).length;
@@ -295,7 +298,20 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       if (!(await confirmDialog(`Approve ${ids.length} account(s)?`, { confirmText: 'Approve' }))) return;
       bulk.disabled = true;
       try {
-        await api('/api/admin/companies', { method: 'POST', body: { ids, action: 'approve' } });
+        // Per-id approve so each row's visible NET days / credit / tier inputs are
+        // honored — the bulk endpoint would silently apply server defaults instead.
+        const results = await Promise.allSettled(ids.map((id) => api('/api/admin/companies', {
+          method: 'POST',
+          body: {
+            id,
+            action: 'approve',
+            net_terms_days: Number(box.querySelector(`[data-net="${CSS.escape(id)}"]`)?.value || 0),
+            credit_limit: Number(box.querySelector(`[data-credit="${CSS.escape(id)}"]`)?.value || 0),
+            price_tier: box.querySelector(`[data-tier="${CSS.escape(id)}"]`)?.value || 'retail',
+          },
+        })));
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        if (failed) bulk.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${failed} of ${ids.length} approvals failed. Reload and retry those accounts.</p>`);
         await renderCompanies();
       } catch (err) {
         bulk.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${(err.data && err.data.error) || 'Bulk approve failed. Retry.'}</p>`);

@@ -1364,6 +1364,15 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       setStatus("Choose an entry before archiving.", "err");
       return;
     }
+    // Archiving a live entry also unpublishes it — at least as destructive as the
+    // save-draft-on-published path, which already warns. Confirm the same way.
+    if (currentEntry.status === "published") {
+      const ok = await confirmDialog(
+        "This entry is live. Archiving takes it OFF the public site at the next rebuild and removes it from the library.",
+        { confirmText: "Archive (unpublish)", cancelText: "Cancel", danger: true },
+      );
+      if (!ok) return;
+    }
     setStatus("Archiving...");
     try {
       const result = await api("/api/admin/content", {
@@ -1505,6 +1514,14 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (!entry.type || !entry.slug) {
       setStatus("Choose a saved entry before changing the editor lock.", "err");
       return;
+    }
+    // Force-unlock clobbers another editor's active claim — confirm before firing.
+    if (action === "force_unlock") {
+      const ok = await confirmDialog(
+        "Force-unlock this entry? The editor holding the lock may lose in-progress edits.",
+        { confirmText: "Force unlock", cancelText: "Cancel", danger: true },
+      );
+      if (!ok) return;
     }
     const label = action === "lock" ? "Claiming lock..." : action === "force_unlock" ? "Force unlocking..." : "Releasing lock...";
     setStatus(label);

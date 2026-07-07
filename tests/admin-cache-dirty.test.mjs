@@ -109,11 +109,14 @@ test('admin.js imports the dirty-tracking helpers', () => {
   assert.match(admin, /restoreDirty/);
 });
 
-test('search inputs filter in memory (refetch:false), not refetch per keystroke', () => {
-  assert.match(admin, /ordSearch'\)\.addEventListener\('input', debounce\(\(\) => renderOrders\(\{ refetch: false \}\)\)\)/);
-  assert.match(admin, /coSearch'\)\.addEventListener\('input', debounce\(\(\) => renderCompanies\(\{ refetch: false \}\)\)\)/);
+test('search inputs are debounced; server-backed searches refetch, local ones filter in memory', () => {
+  // Orders / companies / quotes search hits a server ?search= param (2026-07-07 —
+  // client-only filtering silently missed anything past the loaded page), so those
+  // inputs refetch. Products / pricing search stays client-side over cached rows.
+  assert.match(admin, /ordSearch'\)\.addEventListener\('input', debounce\(\(\) => renderOrders\(\{ refetch: true \}\)\)\)/);
+  assert.match(admin, /coSearch'\)\.addEventListener\('input', debounce\(\(\) => renderCompanies\(\{ refetch: true \}\)\)\)/);
   assert.match(admin, /prodSearch'\)\.addEventListener\('input', debounce\(\(\) => renderProducts\(\{ refetch: false \}\)\)\)/);
-  assert.match(admin, /qSearch'\)\.addEventListener\('input', debounce\(\(\) => renderQuotePipeline\(\{ refetch: false \}\)\)\)/);
+  assert.match(admin, /qSearch'\)\.addEventListener\('input', debounce\(\(\) => renderQuotePipeline\(\{ refetch: true \}\)\)\)/);
 });
 
 test('list renderers gate the fetch on a refetch flag', () => {

@@ -79,6 +79,8 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       try {
         const params = new URLSearchParams();
         if (status) params.set('status', status);
+        const searchTerm = $('ordSearch')?.value.trim();
+        if (searchTerm) params.set('search', searchTerm);
         params.set('limit', '100');
         params.set('offset', String(state.ordersOffset || 0));
         const res = await api('/api/admin/orders?' + params.toString());
@@ -142,6 +144,18 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     restoreDirty(box, snap);
   }
 
+  // Refresh a single mutated order in place and re-render without refetching:
+  // a bare renderOrders() resets the list to page 1, so any order staff reached
+  // via "Load more" would vanish after acting on it (same pattern as quotes.js).
+  async function refreshOrder(id) {
+    try {
+      const res = await api('/api/admin/orders?id=' + encodeURIComponent(id));
+      const idx = (state.orders || []).findIndex((o) => String(o.id) === String(id));
+      if (idx >= 0 && res.order) state.orders[idx] = { ...state.orders[idx], ...res.order };
+    } catch { /* render from current state; the next full refetch reconciles */ }
+    await renderOrders({ refetch: false });
+  }
+
   // Row actions are delegated once on the stable #admOrders container (#36): a single
   // listener per action survives every innerHTML re-render instead of re-binding per row.
   function orderDetailHtml(order, timeline) {
@@ -193,7 +207,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       button.disabled = true;
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, status } });
-        await renderOrders();
+        await refreshOrder(id);
       } catch (err) {
         message('ordStatus', (err.data && err.data.error) || 'Could not save the order status. Retry.', 'err');
       } finally {
@@ -219,7 +233,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
           },
         });
         message('ordStatus', 'Tracking saved.', 'ok');
-        await renderOrders();
+        await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Could not update tracking. Retry.', 'err');
         button.disabled = false;
@@ -243,7 +257,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       try {
         const res = await api('/api/admin/orders', { method: 'POST', body: { id, action: 'refund', amount } });
         message('ordStatus', res.partial ? `Partial refund of $${Number(res.amount).toFixed(2)} issued.` : 'Refunded.', 'ok');
-        await renderOrders();
+        await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Refund did not go through. Refresh and check before retrying.', 'err');
         button.disabled = false;
@@ -257,7 +271,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_invoice', qbo_invoice_id: invoiceId } });
         message('ordStatus', 'Invoice recorded.', 'ok');
-        await renderOrders();
+        await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Could not update the invoice. Refresh and check before retrying.', 'err');
         button.disabled = false;
@@ -271,7 +285,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, action: 'record_qbo_payment', qbo_payment_id: paymentId } });
         message('ordStatus', 'Payment recorded.', 'ok');
-        await renderOrders();
+        await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Could not update payment status. Refresh and check before retrying.', 'err');
         button.disabled = false;
@@ -287,7 +301,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, action: 'mark_net_paid' } });
         message('ordStatus', 'NET balance marked paid.', 'ok');
-        await renderOrders();
+        await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Could not mark the NET balance paid. Retry.', 'err');
         button.disabled = false;

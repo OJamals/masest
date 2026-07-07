@@ -11,6 +11,7 @@ import { computeRefund } from '../../_lib/refund.js';
 import { stockIncrements } from '../../_lib/order-shape.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 import { planNetSettlement, netAging } from '../../_lib/credit.js';
+import { escapeLike } from '../../_lib/crm.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -112,6 +113,18 @@ export async function onRequest({ request, env }) {
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
+    // Server-side search so results aren't limited to the loaded page. Commas and
+    // parens are stripped — they would break the PostgREST or= filter syntax.
+    const search = String(params.get('search') || '').trim().replace(/[,()]/g, ' ').trim();
+    if (search) {
+      const like = `%${escapeLike(search)}%`;
+      const ors = [`customer_email.ilike.${like}`, `tracking_number.ilike.${like}`];
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search)) ors.push(`id.eq.${search}`);
+      const { data: cos } = await sb.from('companies').select('id').ilike('name', like).limit(50);
+      const coIds = (cos || []).map((c) => c.id).filter(Boolean);
+      if (coIds.length) ors.push(`company_id.in.(${coIds.join(',')})`);
+      q = q.or(ors.join(','));
+    }
     const { data, error, count } = await q;
     if (error) return json(500, { error: error.message });
 

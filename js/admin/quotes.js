@@ -81,7 +81,8 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       if ($('qDue')) $('qDue').value = f.due || '';
       state.quotesView = f.view || 'list';
       reflectToggle();
-      renderQuotePipeline({ refetch: false });
+      // Search is a server query param now — applying a saved view must refetch.
+      renderQuotePipeline({ refetch: true });
     },
   });
   function ensureSavedViews() {
@@ -523,6 +524,8 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       let data;
       try {
         const params = new URLSearchParams({ limit: '100', offset: String(state.quotesOffset || 0) });
+        const searchTerm = $('qSearch')?.value.trim();
+        if (searchTerm) params.set('search', searchTerm);
         data = await api('/api/admin/quotes?' + params.toString());
       } catch {
         if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
@@ -596,6 +599,15 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       if (priority) payload.priority = priority;
       if (owner) payload.assigned_to = owner;
       if (Object.keys(payload).length === 1) { message('qStatus', 'Pick a stage, priority or owner to apply.', 'err'); return; }
+      // Match the single-move guards: bulk "lost" still records a reason (analytics
+      // parity with pickLostReason), and bulk "won" still requires the confirm.
+      if (stage === 'lost') {
+        const reason = await pickLostReason();
+        if (reason === null) return;
+        payload.lost_reason = reason;
+      } else if (stage === 'won') {
+        if (!(await confirmDialog(`Mark ${ids.length} deal(s) Won? Use “Convert to order” in each drawer to create orders.`, { confirmText: 'Mark won' }))) return;
+      }
       button.disabled = true;
       try {
         const res = await api('/api/admin/quotes', { method: 'POST', body: payload });
