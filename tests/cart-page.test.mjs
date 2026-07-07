@@ -157,10 +157,24 @@ test("product catalog shows public list pricing and small-pack selectors", async
       await page.getByRole("link", { name: /Become a distributor/i }).waitFor();
 
       assert.equal(await hcr.locator(".shop-card-quote").count(), 0);
-      assert.equal(optionValues.includes("hcr-55"), false);
+      // Bulk drum is listed with its price, but selecting it swaps the cart
+      // button for a prefilled quote link (no direct bulk orders).
+      assert.equal(optionValues.includes("hcr-55"), true);
+
+      await hcr.locator(".commerce-vol").selectOption("hcr-55");
+      await hcr.getByText("$740.36").waitFor();
+      assert.equal(await hcr.locator("[data-cart-add]").isVisible(), false);
+      const quoteSwap = hcr.locator(".commerce-quote-swap");
+      assert.equal(await quoteSwap.isVisible(), true);
+      assert.match(
+        await quoteSwap.getAttribute("href"),
+        /^\/contact\?type=quote&product=.+&message=.+freight\+quote|^\/contact\?type=quote&product=.+&message=/,
+      );
 
       await hcr.locator(".commerce-vol").selectOption("hcr-5");
       await hcr.getByText("$86.52").waitFor();
+      assert.equal(await hcr.locator("[data-cart-add]").isVisible(), true);
+      assert.equal(await quoteSwap.isVisible(), false);
       assert.equal(await hcr.locator("[data-cart-add]").getAttribute("data-cart-add"), "hcr-5");
     } finally {
       await browser.close();

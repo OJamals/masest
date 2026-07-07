@@ -45,8 +45,15 @@
         <p class="subhead">For programs that need minimum-risk antimicrobial and odor-control support without presenting Purgo as a registered disinfectant. A FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment for occupied-site maintenance. Purgo stays within its label: it isn't a registered disinfectant and isn't sold as one. Replaces bromine and sodium hypochlorite. Small packs ship from stock where available; drums and totes are quoted.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="../contact?type=quote&product=Purgo">Request a quote</a>
-          <a class="btn btn-secondary" href="../product?id=purgo">Buy small packs</a>
           <a class="btn btn-ghost" href="../products">All products</a>
+        </div>
+        <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
+             incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
+             the "Request a quote" CTA above (data-quote-fallback="off" keeps this empty
+             when the catalog API is unavailable). -->
+        <div class="product-hero-buy" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <span class="shop-card-price" data-commerce-price="purgo" hidden></span>
+          <span class="commerce-slot" data-commerce-action="purgo" data-commerce-size="button" data-quote-fallback="off"></span>
         </div>
       </div>
       <figure class="product-hero-media reveal">

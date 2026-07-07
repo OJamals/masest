@@ -398,10 +398,17 @@ ${jsonLd(productSchema(id, product))}
         <h1 class="display">${text(product.name)}</h1>
         <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}">Request a quote</a>${QUOTE_ONLY_IDS.has(id) ? "" : `
-          <a class="btn btn-secondary" href="../product?id=${encodeURIComponent(id)}">Buy small packs</a>`}
+          <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}">Request a quote</a>
           <a class="btn btn-ghost" href="../products">All products</a>
-        </div>
+        </div>${QUOTE_ONLY_IDS.has(id) ? "" : `
+        <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
+             incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
+             the "Request a quote" CTA above (data-quote-fallback="off" keeps this empty
+             when the catalog API is unavailable). -->
+        <div class="product-hero-buy" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <span class="shop-card-price" data-commerce-price="${id}" hidden></span>
+          <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button" data-quote-fallback="off"></span>
+        </div>`}
       </div>
       ${heroMedia}
     </div>

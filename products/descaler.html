@@ -45,8 +45,15 @@
         <p class="subhead">A lower-corrosion descaling choice for aluminum fins, copper, steel, plumbing, fire pumps, and refrigeration equipment. A hydrochloric-acid-free descaler that clears calcium, rust, and scale from coils, cooling towers, plumbing, and fire pumps. Walmart refrigeration collateral reports up to 94% heat-transfer efficiency restored on plate heat exchangers. Replaces hydrochloric acid (muriatic acid) products, CLR, and Calci-Solve. Small packs ship from stock where available; drums and totes are quoted.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="../contact?type=quote&product=VertKleen%20Descaler">Request a quote</a>
-          <a class="btn btn-secondary" href="../product?id=descaler">Buy small packs</a>
           <a class="btn btn-ghost" href="../products">All products</a>
+        </div>
+        <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
+             incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
+             the "Request a quote" CTA above (data-quote-fallback="off" keeps this empty
+             when the catalog API is unavailable). -->
+        <div class="product-hero-buy" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <span class="shop-card-price" data-commerce-price="descaler" hidden></span>
+          <span class="commerce-slot" data-commerce-action="descaler" data-commerce-size="button" data-quote-fallback="off"></span>
         </div>
       </div>
       <figure class="product-hero-media reveal">

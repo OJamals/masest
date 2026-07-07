@@ -101,16 +101,23 @@ function normalizeCommerceRow(row) {
       active: row?.active,
       sort: 0,
     }];
+  const shapeVariant = (v) => ({
+    vsku: v.vsku,
+    label: v.label,
+    gallons: Number(v.gallons) || 0,
+    price: Number(v.price),
+    currency: String(v.currency || parent?.currency || row?.currency || "usd").toUpperCase()
+  });
   const variants = rawVariants
     .filter(v => v && v.active !== false && v.price != null && Number(v.price) > 0)
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-    .map(v => ({
-      vsku: v.vsku,
-      label: v.label,
-      gallons: Number(v.gallons) || 0,
-      price: Number(v.price),
-      currency: String(v.currency || parent?.currency || row?.currency || "usd").toUpperCase()
-    }));
+    .map(shapeVariant);
+  // Bulk drums/totes (55/275 gal): priced and shown, but never sold direct —
+  // the server rejects inactive variants at checkout; the UI routes them to a quote.
+  const quoteVariants = rawVariants
+    .filter(v => v && v.active === false && Number(v.gallons) >= 55 && v.price != null && Number(v.price) > 0)
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map(shapeVariant);
   return {
     sku,
     active: parent?.active !== false && row?.active !== false,
@@ -118,6 +125,7 @@ function normalizeCommerceRow(row) {
     image_url: parent?.image_url || row?.image_url || "",
     photo_alt: parent?.photo_alt || row?.photo_alt || "",
     variants,
+    quoteVariants,
     purchasable: !!(sku && parent?.active !== false && row?.active !== false && (parent?.mode || row?.mode) === "buy" && variants.length)
   };
 }
@@ -145,6 +153,8 @@ export async function loadCommerceCatalog() {
       existing.mode = existing.mode || row.mode;
       existing.variants = existing.variants.concat(row.variants)
         .sort((a, b) => (a.gallons || 0) - (b.gallons || 0));
+      existing.quoteVariants = (existing.quoteVariants || []).concat(row.quoteVariants || [])
+        .sort((a, b) => (a.gallons || 0) - (b.gallons || 0));
       if (!existing.image_url && row.image_url) existing.image_url = row.image_url;
       if (!existing.photo_alt && row.photo_alt) existing.photo_alt = row.photo_alt;
         existing.purchasable = existing.purchasable || row.purchasable;
@@ -165,7 +175,7 @@ export async function loadCommerceCatalog() {
   return commerceState.promise;
 }
 
-function commerceActionHTML(id, variant = "chip") {
+function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
   const p = PRODUCTS[id];
   // Quote-first SKUs never expose a buy control here (catalogCard renders quoteActionHTML).
   if (QUOTE_FIRST_IDS.includes(String(id || "").toLowerCase())) return "";
@@ -178,21 +188,30 @@ function commerceActionHTML(id, variant = "chip") {
   }
   const row = commerceRowFor(id);
   if (row?.purchasable && row.variants.length) {
-    const accountPath = `account.html?return=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
+    // Root-absolute paths: these controls also hydrate on /products/<id> subpages,
+    // where a relative "contact" or "account.html" would resolve under /products/.
+    const accountPath = `/account.html?return=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
+    const optLabel = (v) => String(v.label || "Pack").replace(/\s+(bottle|pail|drum|tote)$/i, "");
     const opts = row.variants
-      .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${String(v.label || "Pack").replace(/\s+(bottle|pail|drum|tote)$/i, "")}</option>`)
+      .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${optLabel(v)}</option>`)
+      .concat((row.quoteVariants || [])
+        .map((v) => `<option value="${v.vsku}" data-quote="1">${optLabel(v)} — quoted</option>`))
       .join("");
     const btnClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-add";
     const first = row.variants[0].vsku;
+    const quoteHref = `/contact?type=quote&product=${encodeURIComponent(p?.name || id)}`;
     return `<span class="commerce-buy" data-commerce-buy="${id}">`
       + `<select class="commerce-vol" aria-label="Volume for ${p?.name || id}">${opts}</select>`
       + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
+      + `<a class="${btnClass} commerce-quote-swap" hidden href="${quoteHref}" data-quote-base="${quoteHref}" aria-label="Request a bulk quote for ${p?.name || id}">Request quote</a>`
       + `</span>`;
   }
   // Loaded, but no buyable variant — the catalog fetch failed (loadCommerceCatalog's catch
   // leaves an empty map) or this SKU isn't sellable online. Route the buyer forward to a
   // quote instead of leaving a dead, blank buy area (PRODUCT: route forward from every state).
-  return `<a class="btn btn-secondary btn-sm commerce-quote-fallback" href="contact?type=quote&product=${encodeURIComponent(p?.name || id)}">Request pricing</a>`;
+  // Mounts that already sit next to a static quote CTA opt out via data-quote-fallback="off".
+  if (quoteFallback === "off") return "";
+  return `<a class="btn btn-secondary btn-sm commerce-quote-fallback" href="/contact?type=quote&product=${encodeURIComponent(p?.name || id)}">Request pricing</a>`;
 }
 
 function quoteActionHTML(id) {
@@ -200,7 +219,7 @@ function quoteActionHTML(id) {
   // Mirror the buyable buybar's price-line + control rhythm so quote-only cards
   // read as a deliberate state, not a card missing its commerce block.
   return `<span class="shop-card-price"><strong class="price-main price-main-quote">Quote-priced</strong><span class="price-note">Volume &amp; freight quoted</span></span>`
-    + `<a class="shop-card-quote" href="contact?type=quote&product=${encodeURIComponent(name)}"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
+    + `<a class="shop-card-quote" href="/contact?type=quote&product=${encodeURIComponent(name)}"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
 }
 
 function bulkPriceText(id) {
@@ -229,7 +248,8 @@ function bulkPriceNote(id) {
 
 function selectedVariantFor(id, vsku) {
   const row = commerceRowFor(id);
-  return row?.variants?.find(v => String(v.vsku) === String(vsku));
+  return row?.variants?.find(v => String(v.vsku) === String(vsku))
+    || row?.quoteVariants?.find(v => String(v.vsku) === String(vsku));
 }
 
 function bulkPerGallonText(id) {
@@ -318,7 +338,7 @@ export function refreshCommerceActions(root = document) {
   });
   root.querySelectorAll("[data-commerce-action]").forEach(slot => {
     const id = slot.dataset.commerceAction;
-    slot.innerHTML = commerceActionHTML(id, slot.dataset.commerceSize || "chip");
+    slot.innerHTML = commerceActionHTML(id, slot.dataset.commerceSize || "chip", slot.dataset.quoteFallback || "on");
   });
 }
 
@@ -372,16 +392,30 @@ export function initCartButtons() {
     const wrap = select.closest("[data-commerce-buy]");
     const buybar = select.closest(".shop-card-buybar");
     const button = wrap?.querySelector("[data-cart-add]");
+    const quoteLink = wrap?.querySelector(".commerce-quote-swap");
     const selected = select.selectedOptions?.[0];
+    const isQuote = selected?.dataset.quote === "1";
     const variant = selectedVariantFor(wrap?.dataset.commerceBuy, select.value);
     const label = variant?.label || selected?.textContent || "";
     const price = variant ? fmtMoney(variant.price, variant.currency) : "";
-    if (button) button.dataset.cartAdd = select.value;
+    // Bulk drum/tote options swap the buy control for a prefilled quote link —
+    // list price stays visible, but the order routes through freight review.
+    if (button) {
+      button.dataset.cartAdd = select.value;
+      button.hidden = !!(isQuote && quoteLink);
+    }
+    if (quoteLink) {
+      quoteLink.hidden = !isQuote;
+      if (isQuote && label) {
+        const base = quoteLink.dataset.quoteBase || quoteLink.getAttribute("href");
+        quoteLink.setAttribute("href", `${base}&message=${encodeURIComponent(`Requesting a freight quote for the ${label.trim()}.`)}`);
+      }
+    }
     if (!buybar || !price) return;
     const main = buybar.querySelector(".price-main");
     const note = buybar.querySelector(".price-note");
     if (main) main.textContent = price.trim();
-    if (note) note.textContent = label.trim();
+    if (note) note.textContent = isQuote ? `${label.trim()} — freight quoted` : label.trim();
   });
 }
 

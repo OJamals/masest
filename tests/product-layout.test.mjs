@@ -223,14 +223,6 @@ test("product detail renders HMIS panel rows from product data", async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     try {
-      await page.route("**/data/drum-pricing.json", async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: "{}",
-        });
-      });
       await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen HCR"));
       await page.waitForTimeout(300);
@@ -311,12 +303,14 @@ test("non-canonical CRS page stays quote-only and does not inherit Descaler chec
       const state = await page.evaluate(() => ({
         name: document.querySelector("#pName")?.textContent || "",
         addVisible: !document.querySelector("#pBuyBtn")?.hidden,
-        drumVisible: !document.querySelector("#pDrums")?.hidden,
+        volSelect: !!document.querySelector("#pVol"),
+        bulkQuoteBtn: !!document.querySelector("#pBulkQuoteBtn"),
         quoteText: document.querySelector("#pQuoteBtn")?.textContent || ""
       }));
       assert.equal(state.name, "VertKleen CRS");
       assert.equal(state.addVisible, false, "CRS must not borrow Descaler add-cart variants");
-      assert.equal(state.drumVisible, false, "CRS must not borrow Descaler drum pricing");
+      assert.equal(state.volSelect, false, "CRS must not borrow Descaler volume selector");
+      assert.equal(state.bulkQuoteBtn, false, "CRS must not borrow Descaler bulk quote CTA");
       assert.match(state.quoteText, /quote|Request/i);
     } finally {
       await browser.close();

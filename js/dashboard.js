@@ -69,7 +69,7 @@ function wireTabs() {
   wireTablist(document.querySelector('.dash-tabs[role="tablist"]'), (tab) => selectTab(tab.dataset.tab));
 }
 function loadTab(name) {
-  if (name === 'orders' && !loaded.orders) renderOrders();
+  if (name === 'orders' && !loaded.orders) { renderOrders(); renderQuoteRequests(); }
   if (name === 'messages' && !loaded.messages) renderMessages();
   if (name === 'notifications' && !loaded.notifications) renderNotifications();
   if (name === 'business' && !loaded.business) {
@@ -434,6 +434,23 @@ async function renderOrders({ append = false } = {}) {
     b.disabled = false;
   }));
   box.querySelector('[data-load-more-orders]')?.addEventListener('click', (e) => { e.currentTarget.disabled = true; renderOrders({ append: true }); });
+}
+
+/* ---------- quote requests ---------- */
+// Read-only mirror of the caller's quote requests (email-keyed — works with or
+// without a business profile). Hidden entirely when there are none.
+async function renderQuoteRequests() {
+  const box = $('quotesBody');
+  if (!box) return;
+  let res;
+  try { res = await api('/api/account/quotes?limit=25'); } catch { box.hidden = true; return; }
+  const quotes = res.quotes || [];
+  if (!quotes.length) { box.hidden = true; return; }
+  const stateAttr = { Received: 'pending_payment', 'In review': 'net_open', Quoted: 'paid', Closed: 'cancelled' };
+  box.innerHTML = `<h2 class="headline dash-section-title">Quote requests</h2>`
+    + quotes.map((q) => `<div class="dash-row"><span>${fmtDate(q.created_at)} · ${esc(q.product || q.type || 'Quote')}</span><span class="badge" data-s="${esc(stateAttr[q.state] || '')}">${esc(q.state)}</span></div>`).join('')
+    + `<p class="muted">Our team replies by email. Need to add details? <a href="contact?type=quote">Send another request</a>.</p>`;
+  box.hidden = false;
 }
 
 /* ---------- messages ---------- */

@@ -16,12 +16,6 @@
 <link rel="stylesheet" href="css/navigation.css?v=20260706a">
 <link rel="stylesheet" href="css/components.css">
 <style>
-  .drum-ref{margin-top:14px;max-width:300px;padding:12px 14px;border:1px solid var(--line,#e3e6ea);border-radius:12px;background:var(--surface,#fff)}
-  .drum-ref-head{font-weight:700;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#6b7280);margin-bottom:8px}
-  .drum-ref-row{display:flex;justify-content:space-between;gap:16px;padding:4px 0;font-size:.95rem}
-  .drum-ref-row span:last-child{font-variant-numeric:tabular-nums;font-weight:600}
-  .drum-ref .btn{margin-top:10px}
-  .drum-ref-note{margin:8px 0 0;font-size:.76rem;line-height:1.35;color:var(--muted,#6b7280)}
 </style>
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/product">
@@ -91,7 +85,6 @@
  <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
  </div>
       <p class="cart-feedback" id="pCartFeedback" role="status" aria-live="polite" hidden></p>
-      <div class="drum-ref" id="pDrums" hidden></div>
     </div>
     <div class="hmis-panel">
       <img id="pImage" class="product-shot" src="img/products/hvac-hcr-studio.webp" alt="" hidden loading="eager" fetchpriority="high" decoding="async" width="900" height="1200">
@@ -362,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
           heroEl.insertAdjacentElement("afterend", strip);
         }
         if (!row || row.active === false || parent.active === false || (parent.mode || row.mode) !== "buy") return;
-        const variants = (row.vsku ? [{
+        const rawVariants = (row.vsku ? [{
           vsku: row.vsku,
           label: row.label || "Each",
           price: row.price,
@@ -376,10 +369,17 @@ document.addEventListener("DOMContentLoaded", () => {
           currency: row.currency,
           active: row.active,
           sort: 0,
-        }])
+        }]);
+        const variants = rawVariants
           .filter(v => v && v.active !== false && v.price != null && Number(v.price) > 0)
           .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+        // Bulk drums/totes: listed with prices in the same selector, but selecting one
+        // swaps Add-to-cart for a quote CTA — the server rejects them at checkout anyway.
+        const bulkVariants = rawVariants
+          .filter(v => v && v.active === false && Number(v.gallons) >= 55 && v.price != null && Number(v.price) > 0)
+          .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
         if (!variants.length) return;
+        const allVariants = variants.concat(bulkVariants);
         const money = (n, c) => new Intl.NumberFormat("en-US", {
           style: "currency", currency: String(c || "usd").toUpperCase(),
           maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
@@ -396,13 +396,15 @@ document.addEventListener("DOMContentLoaded", () => {
         sel.className = "commerce-vol";
         sel.setAttribute("aria-label", "Volume for " + p.name);
         sel.innerHTML = variants.map((v, i) =>
-          `<option value="${v.vsku}"${i === selectedIndex ? " selected" : ""}>${v.label} · ${money(v.price, v.currency)}${perGallonText(v)}</option>`).join("");
+          `<option value="${v.vsku}"${i === selectedIndex ? " selected" : ""}>${v.label} · ${money(v.price, v.currency)}${perGallonText(v)}</option>`).join("")
+          + bulkVariants.map(v =>
+            `<option value="${v.vsku}" data-quote="1">${v.label} · ${money(v.price, v.currency)}${perGallonText(v)} · freight quoted</option>`).join("");
         buyBtn.parentNode.insertBefore(sel, buyBtn);
         const unit = document.createElement("span");
         unit.id = "pUnitPrice";
         unit.className = "commerce-unit-price";
         const updateUnit = () => {
-          const chosen = variants.find(v => v.vsku === sel.value);
+          const chosen = allVariants.find(v => v.vsku === sel.value);
           unit.textContent = chosen && Number(chosen.gallons) > 0
             ? `${money(Number(chosen.price) / Number(chosen.gallons), chosen.currency)}/gal`
             : "";
@@ -413,11 +415,25 @@ document.addEventListener("DOMContentLoaded", () => {
         const stockEl = document.createElement("span");
         stockEl.id = "pStock";
         stockEl.style.cssText = "margin-left:10px";
+        // Bulk sizes swap Add-to-cart for a prefilled quote CTA (freight is reviewed
+        // before release; the server rejects these vskus at checkout regardless).
+        const bulkQuoteBtn = document.createElement("a");
+        bulkQuoteBtn.id = "pBulkQuoteBtn";
+        bulkQuoteBtn.className = "btn btn-primary";
+        bulkQuoteBtn.hidden = true;
+        bulkQuoteBtn.textContent = "Request bulk quote";
+        buyBtn.insertAdjacentElement("afterend", bulkQuoteBtn);
         const updateStock = () => {
-          const chosen = variants.find(v => v.vsku === sel.value);
+          const chosenOpt = sel.selectedOptions && sel.selectedOptions[0];
+          const isBulk = !!(chosenOpt && chosenOpt.dataset.quote === "1");
+          const chosen = allVariants.find(v => v.vsku === sel.value);
           stockEl.className = "badge";
           let blocked = false;
-          if (chosen && chosen.track_stock && Number.isFinite(Number(chosen.stock))) {
+          if (isBulk) {
+            stockEl.textContent = "Ships LTL — freight quoted before release";
+            stockEl.classList.add("badge-warning");
+            bulkQuoteBtn.href = quoteHref + "&message=" + encodeURIComponent(`Requesting a freight quote for the ${chosen ? chosen.label : "bulk size"} of ${p.name}.`);
+          } else if (chosen && chosen.track_stock && Number.isFinite(Number(chosen.stock))) {
             const n = Number(chosen.stock);
             if (n <= 0 && chosen.allow_backorder) { stockEl.textContent = "Backordered — ships on restock"; stockEl.classList.add("badge-warning"); }
             else if (n <= 0) { stockEl.textContent = "Out of stock"; stockEl.classList.add("badge-danger"); blocked = true; }
@@ -429,6 +445,8 @@ document.addEventListener("DOMContentLoaded", () => {
           // The server rejects out-of-stock lines at checkout anyway — don't let the
           // buyer add one only to hit that error later.
           buyBtn.disabled = blocked;
+          buyBtn.hidden = isBulk;
+          bulkQuoteBtn.hidden = !isBulk;
         };
         updateStock();
         sel.addEventListener("change", updateStock);
@@ -470,26 +488,8 @@ document.addEventListener("DOMContentLoaded", () => {
       .catch(() => { buySkel.remove(); });
   }
 
-    // Drums & totes (55 / 275 gal): list price for reference + freight-quote CTA.
-    // Display only - these bulk sizes require freight review before release, never cart.
-    if (!quoteFirst) fetch("data/drum-pricing.json", { cache: "no-store" })
-      .then(r => (r.ok ? r.json() : {}))
-      .then(map => {
-        const drums = map[commerceId];
-        const el = document.getElementById("pDrums");
-        if (!el || !Array.isArray(drums) || !drums.length) return;
-        const drumMoney = (n, c) => new Intl.NumberFormat("en-US", {
-          style: "currency", currency: String(c || "usd").toUpperCase(), maximumFractionDigits: 0
-        }).format(Number(n));
-        const name = p ? p.name : commerceId;
-        el.innerHTML =
-          `<div class="drum-ref-head">Drums &amp; totes</div>` +
-          drums.map(d => `<div class="drum-ref-row"><span>${d.label}</span><span>${drumMoney(d.price, d.currency)}</span></div>`).join("") +
-          `<a class="btn btn-ghost btn-sm" href="contact?product=${encodeURIComponent(name)}&size=drum">Request a freight quote</a>` +
-          `<p class="drum-ref-note">Bulk reference only. 55 &amp; 275 gal ship LTL; final freight is quoted before release.</p>`;
-        el.hidden = false;
-      })
-      .catch(() => {});
+    // Drums & totes (55 / 275 gal) now render inside the volume selector above with
+    // list prices; selecting one swaps Add-to-cart for the prefilled quote CTA.
 
     // HMIS panel (real product data)
     const rows = document.getElementById("panelRows");

@@ -45,8 +45,15 @@
         <p class="subhead">Uninhibited 96% ethylene glycol concentrate for heat-transfer loop programs. An uninhibited 96% ethylene glycol concentrate for industrial heat-transfer loop programs where inhibitor strategy is handled separately. Small packs ship from stock where available; drums and totes are quoted.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="../contact?type=quote&product=EG%20uninhibited%2096%25%20concentrate">Request a quote</a>
-          <a class="btn btn-secondary" href="../product?id=egu96">Buy small packs</a>
           <a class="btn btn-ghost" href="../products">All products</a>
+        </div>
+        <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
+             incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
+             the "Request a quote" CTA above (data-quote-fallback="off" keeps this empty
+             when the catalog API is unavailable). -->
+        <div class="product-hero-buy" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <span class="shop-card-price" data-commerce-price="egu96" hidden></span>
+          <span class="commerce-slot" data-commerce-action="egu96" data-commerce-size="button" data-quote-fallback="off"></span>
         </div>
       </div>
       <figure class="product-hero-media reveal">

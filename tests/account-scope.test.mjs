@@ -15,7 +15,12 @@ const ACCOUNT_ROUTES = readdirSync(ACCOUNT_DIR).filter((f) => f.endsWith(".js"))
 // by the resolved company (requireCompany / companyForUser / .eq('company_id', ...)) or by
 // the auth user id. requireCompany resolves the caller's company from their session, so a
 // route built on it is tenant-scoped by construction.
-const SCOPE_RE = /requireCompany\(|companyForUser\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role/;
+// account/quotes.js scopes by the AUTH email instead: quote requests are submitted
+// through the public form (often before any account or company exists), so the only
+// tenant key is the email — taken from user.email, never from client input. The
+// pattern below matches exactly that shape (`escapeLike(email)` where email is the
+// auth-derived local) so a route filtering by a client-supplied email still fails.
+const SCOPE_RE = /requireCompany\(|companyForUser\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role|\.ilike\(\s*'email'\s*,\s*escapeLike\(email\)\s*\)/;
 
 test("account route discovery finds the known endpoints", () => {
   assert.ok(ACCOUNT_ROUTES.length >= 10, `expected >=10 account routes, found ${ACCOUNT_ROUTES.length}`);

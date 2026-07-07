@@ -45,8 +45,15 @@
         <p class="subhead">Ready-to-use inhibited EG for routine industrial loop maintenance and top-offs. A ready-to-use inhibited 50% ethylene glycol blend for industrial heat-transfer and freeze-protection loops. Small packs ship from stock where available; drums and totes are quoted.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="../contact?type=quote&product=EG%20inhibited%2050%25%20RTU">Request a quote</a>
-          <a class="btn btn-secondary" href="../product?id=eg50">Buy small packs</a>
           <a class="btn btn-ghost" href="../products">All products</a>
+        </div>
+        <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
+             incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
+             the "Request a quote" CTA above (data-quote-fallback="off" keeps this empty
+             when the catalog API is unavailable). -->
+        <div class="product-hero-buy" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <span class="shop-card-price" data-commerce-price="eg50" hidden></span>
+          <span class="commerce-slot" data-commerce-action="eg50" data-commerce-size="button" data-quote-fallback="off"></span>
         </div>
       </div>
       <figure class="product-hero-media reveal">

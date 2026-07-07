@@ -440,6 +440,9 @@
 
         <div class="dash-panel" data-panel="orders" role="tabpanel" hidden>
           <div class="dash-card" id="ordersBody"><p class="muted">Loading orders…</p></div>
+          <!-- Quote requests (freight/bulk + quote-first products) matched to the
+               signed-in email; stays hidden when the caller has none. -->
+          <div class="dash-card" id="quotesBody" hidden></div>
         </div>
 
         <div class="dash-panel" data-panel="messages" id="messages" role="tabpanel" hidden>
@@ -621,6 +624,6 @@
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260619b"></script>
 <script src="js/track.js" defer></script>
-<script type="module" src="js/dashboard.js?v=20260706d"></script>
+<script type="module" src="js/dashboard.js?v=20260707a"></script>
 </body>
 </html>
