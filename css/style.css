@@ -4105,7 +4105,7 @@ body .page-hero .product-shot {
   width: auto;
   min-width: min(100%, 240px);
   max-width: 260px;
-  min-height: 38px;
+  min-height: 44px;
   flex: 0 1 240px;
   padding-inline: 12px 28px;
   font-size: .82rem;
@@ -6126,7 +6126,31 @@ body.products-page .conversion-proof .proof-pill em {
 /* Services FAQ: list rhythm — each disclosure otherwise carries the standalone
    panel's clamp() block margin and the four questions drift apart. */
 .services-faq-list { display: grid; gap: 12px; }
-.services-faq-list .resource-disclosure { margin-block: 0; }
+.services-faq-list .resource-disclosure {
+  margin-block: 0;
+  overflow: hidden;
+}
+.services-faq-list .resource-disclosure summary {
+  min-height: 56px;
+  padding: 18px clamp(18px, 3vw, 30px);
+  line-height: 1.35;
+}
+.services-faq-list .resource-disclosure > p {
+  margin: 0;
+  padding: 0 clamp(18px, 3vw, 30px) 20px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 560px) {
+  .services-faq-list .resource-disclosure summary {
+    min-height: 52px;
+    padding: 16px 48px 16px 16px;
+  }
+  .services-faq-list .resource-disclosure > p {
+    padding: 0 16px 18px;
+  }
+}
 
 /* Newsletter: signup left, what-you-get panel fills the hero's right half. */
 .newsletter-grid {

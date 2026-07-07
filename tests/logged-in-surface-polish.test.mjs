@@ -48,3 +48,22 @@ test("dashboard panels protect form and notification text from clipping", () => 
   assert.doesNotMatch(html, /style="/, "dashboard shell should not rely on inline layout styles");
   assert.doesNotMatch(js, /style="/, "dashboard-rendered states should not rely on inline layout styles");
 });
+
+test("visual QA padding contracts cover disclosures and dense admin controls", () => {
+  const css = read("css/style.css");
+  const dashboard = read("dashboard.html");
+  const admin = read("admin.html");
+  const adminJs = read("js/admin.js");
+
+  assert.match(css, /\.services-faq-list \.resource-disclosure > p\s*\{[\s\S]*padding:\s*0 clamp/, "service FAQ answers should keep body padding even without a disclosure-body wrapper");
+  assert.match(dashboard, /\.dash-disclosure summary\s*\{[\s\S]*min-height:\s*44px/, "dashboard disclosure summaries should keep a touch-sized hit area");
+  assert.match(dashboard, /\.biz-detail-options summary\s*\{[\s\S]*min-height:\s*44px/, "business-detail summaries should keep a touch-sized hit area");
+  assert.match(dashboard, /\.dash-order-summary\s*\{[\s\S]*min-height:\s*44px/, "order summaries should not collapse into cramped rows");
+  assert.match(admin, /\.adm-track summary\s*\{[\s\S]*min-height:\s*44px/, "admin tracking disclosures should keep a touch-sized hit area");
+  assert.match(admin, /\.adm-content-json summary\s*\{[\s\S]*min-height:\s*44px/, "admin content disclosures should keep a touch-sized hit area");
+  assert.match(admin, /\.company-admin-head \.link-name\s*\{[\s\S]*background:\s*transparent/, "company-name buttons should not render with native button chrome");
+  assert.match(admin, /\.admin-order-actions \.admin-input-sm\s*\{[\s\S]*flex-basis:\s*220px/, "QBO and payment IDs should get enough inline width on desktop");
+  assert.match(admin, /@media \(max-width: 720px\)[\s\S]*\.adm-coupon-form\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/, "mobile coupon controls should use a bounded grid instead of cramped flex wrapping");
+  assert.match(adminJs, /invLow[\s\S]*<div class="adm-table-wrap">[\s\S]*low-stock variants/, "low-stock admin tables should scroll inside cards instead of clipping columns");
+  assert.match(adminJs, /cpList[\s\S]*<div class="adm-table-wrap">[\s\S]*promo code/, "promo-code tables should scroll inside cards instead of clipping columns");
+});

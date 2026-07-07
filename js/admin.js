@@ -267,8 +267,8 @@ async function renderLowStock() {
     const r = await api('/api/admin/inventory?view=low');
     const low = r.low_stock || [];
     box.innerHTML = low.length
-      ? `<table class="adm"><thead><tr><th>SKU</th><th>Product</th><th>Variant</th><th class="num">Stock</th><th class="num">Reorder</th></tr></thead><tbody>${low.map((v) =>
-          `<tr><td>${esc(v.vsku)}</td><td>${esc(v.products?.name || '')}</td><td>${esc(v.label)}</td><td class="num">${esc(v.stock)}</td><td class="num">${esc(v.reorder_point ?? 10)}</td></tr>`).join('')}</tbody></table>`
+      ? `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>SKU</th><th>Product</th><th>Variant</th><th class="num">Stock</th><th class="num">Reorder</th></tr></thead><tbody>${low.map((v) =>
+          `<tr><td>${esc(v.vsku)}</td><td>${esc(v.products?.name || '')}</td><td>${esc(v.label)}</td><td class="num">${esc(v.stock)}</td><td class="num">${esc(v.reorder_point ?? 10)}</td></tr>`).join('')}</tbody></table></div>`
       : admEmpty('ph-package', 'No low-stock variants', 'Variants at or below their reorder point appear here.');
   } catch { box.innerHTML = '<p class="adm-status" data-state="err">Could not load low stock.</p>'; }
 }
@@ -305,8 +305,8 @@ async function renderCoupons() {
     const r = await api('/api/admin/coupons');
     const list = r.coupons || [];
     box.innerHTML = list.length
-      ? `<table class="adm"><thead><tr><th>Code</th><th>Discount</th><th>Min</th><th class="num">Uses</th><th>Expires</th><th></th></tr></thead><tbody>${list.map((c) =>
-          `<tr><td><b>${esc(c.code)}</b>${c.active ? '' : ' <span class="badge">inactive</span>'}</td><td>${couponDiscount(c)}</td><td>${c.minimum_amount != null ? esc(money(c.minimum_amount, c.currency)) : '—'}</td><td class="num">${esc(c.times_redeemed)}${c.max_redemptions ? `/${esc(c.max_redemptions)}` : ''}</td><td>${c.expires_at ? esc(date(c.expires_at * 1000)) : '—'}</td><td>${c.active ? `<button class="btn btn-ghost btn-sm" data-coupon-off="${esc(c.id)}" type="button">Deactivate</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+      ? `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>Code</th><th>Discount</th><th>Min</th><th class="num">Uses</th><th>Expires</th><th></th></tr></thead><tbody>${list.map((c) =>
+          `<tr><td><b>${esc(c.code)}</b>${c.active ? '' : ' <span class="badge">inactive</span>'}</td><td>${couponDiscount(c)}</td><td>${c.minimum_amount != null ? esc(money(c.minimum_amount, c.currency)) : '—'}</td><td class="num">${esc(c.times_redeemed)}${c.max_redemptions ? `/${esc(c.max_redemptions)}` : ''}</td><td>${c.expires_at ? esc(date(c.expires_at * 1000)) : '—'}</td><td>${c.active ? `<button class="btn btn-ghost btn-sm" data-coupon-off="${esc(c.id)}" type="button">Deactivate</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
       : admEmpty('ph-ticket', 'No promo codes yet', 'Create a promo code to offer discounts at checkout.');
   } catch { box.innerHTML = '<p class="adm-status" data-state="err">Could not load promo codes.</p>'; }
 }
