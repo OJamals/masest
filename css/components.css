@@ -532,6 +532,38 @@ body .product-detail-hero { padding-bottom: 42px; }
 .adm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 999px; background: var(--brand, #3b2a6b); color: #fff; font-size: .82rem; line-height: 1.4; }
 .adm-chip-x { border: 0; background: transparent; color: #fff; cursor: pointer; font-size: 1.05rem; line-height: 1; padding: 0 4px; border-radius: 999px; }
 .adm-chip-x:hover { background: rgba(255,255,255,.2); }
+
+/* ----------------------------------------------------------------------------
+   Reviews — star summary, review list, write form (js/reviews.js). Full mode on
+   product.html; compact star-badge mode on the services.html line-item grid.
+---------------------------------------------------------------------------- */
+.rv-title { margin: 0 0 4px; }
+.rv-summary { display: flex; align-items: center; gap: 10px; margin: 4px 0 18px; font-size: .95rem; }
+.rv-summary.rv-empty { color: var(--muted, #5f656d); font-size: .9rem; }
+.rv-stars { color: var(--status-warning-ink); letter-spacing: 2px; font-size: 1.05rem; line-height: 1; }
+.rv-count { color: var(--muted, #5f656d); font-size: .86rem; }
+.rv-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--r-pill, 999px); background: var(--accent-soft, #e3f0f1); color: var(--accent-ink, #0a5b62); font-size: .72rem; font-weight: 700; }
+.rv-list { display: flex; flex-direction: column; }
+.rv-card { border-top: 1px solid var(--line, #e4e6e9); padding: 14px 0; }
+.rv-card:first-child { border-top: 0; padding-top: 0; }
+.rv-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.rv-card h4 { margin: 2px 0; font-size: .96rem; }
+.rv-card p { margin: 4px 0; color: var(--ink-soft, #393d44); font-size: .92rem; line-height: 1.55; }
+.rv-card footer { color: var(--muted, #5f656d); font-size: .78rem; }
+.rv-form { display: grid; gap: 12px; margin-top: 18px; max-width: 32rem; }
+.rv-field { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; font-weight: 600; color: var(--ink-soft, #393d44); }
+.rv-field input, .rv-field select, .rv-field textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--line, #e4e6e9); border-radius: var(--r-input, 10px); color: var(--ink, #15171c); background: var(--surface, #fff); }
+.rv-form button { justify-self: start; }
+.rv-msg { font-size: .84rem; color: var(--muted, #5f656d); }
+.rv-gate { color: var(--muted, #5f656d); font-size: .9rem; }
+.rv-gate a { color: var(--accent-ink, #0a5b62); font-weight: 600; }
+
+/* Compact star badge inline in the services.html catalog grid — hidden by
+   default (see js/main/service-catalog.js markup) until js/reviews.js confirms
+   the sku has at least one approved review. */
+.rv-compact { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .82rem; color: var(--muted, #5f656d); }
+.rv-compact .rv-stars { font-size: .92rem; letter-spacing: 1px; }
+.rv-compact b { color: var(--ink, #15171c); }
 .adm-chip-input { flex: 1; min-width: 120px; border: 0; outline: none; background: transparent; font: inherit; padding: 4px; color: inherit; }
 
 /* Admin: Markdown body toolbar (Insert image + syntax hint). */

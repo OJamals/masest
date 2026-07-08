@@ -137,6 +137,13 @@
   </div>
 </section>
 
+<!-- REVIEWS -->
+<section class="section-slim" id="reviewsSection" hidden>
+  <div class="wrap reveal">
+    <div data-reviews data-kind="product"></div>
+  </div>
+</section>
+
 <!-- CTA: single dark block at page end -->
 <section class="section-slim" id="relatedWrap" hidden>
   <div class="wrap">
@@ -259,6 +266,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("staticProductFallback")?.setAttribute("hidden", "");
     document.getElementById("bcName").textContent = p.name;
     setProductJsonLd(p);
+
+    // Reviews: verified-purchase ratings for this product, keyed to the same
+    // commerce SKU /api/products uses above (product-level, e.g. "cr-hd" - not
+    // the package-size vsku a variant sells under).
+    (function initReviewsSection() {
+      const section = document.getElementById("reviewsSection");
+      const mount = section?.querySelector("[data-reviews]");
+      if (!section || !mount) return;
+      mount.setAttribute("data-sku", commerceId);
+      mount.setAttribute("data-kind", "product");
+      section.hidden = false;
+      import("./js/reviews.js?v=20260708a").then((m) => m.hydrateReviewMount(mount)).catch(() => {});
+    })();
     document.getElementById("pReplaces").textContent = p.cat === "glycol"
       ? `VertKleen Glycols / ${p.replaces}`
       : p.replaces;

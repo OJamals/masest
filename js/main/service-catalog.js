@@ -135,6 +135,7 @@ function renderServiceCard(item) {
       <div class="service-card-main">
         <h3>${htmlEscape(name)}</h3>
         <p>${htmlEscape(description)}</p>
+        <div class="rv-compact" data-reviews data-compact data-sku="${htmlEscape(sku)}" data-kind="service" hidden></div>
       </div>
       <div class="service-card-meta">
         <span>${htmlEscape(unit)}</span>
@@ -295,6 +296,12 @@ function renderCatalog(root, catalog) {
     </div>
   `;
   bindTabs(root);
+
+  // Reviews: compact star badge per line item/package, hydrated once the cards
+  // above exist. Dynamic import keeps auth.js (and the Supabase SDK it pulls
+  // in) out of this file's static module graph - js/main/service-catalog.js is
+  // imported by every page via js/main.js, but only services.html needs it.
+  import("../reviews.js?v=20260708a").then((m) => m.initReviewMounts(root)).catch(() => {});
 }
 
 function hasServicesCatalog(catalog) {
