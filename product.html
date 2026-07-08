@@ -276,9 +276,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!section || !mount) return;
       mount.setAttribute("data-sku", commerceId);
       mount.setAttribute("data-kind", "product");
+      // Merge the aggregate rating INTO the page's existing Product JSON-LD node
+      // (#productDetailJsonLd) instead of emitting a second, orphan Product entity.
+      mount.setAttribute("data-jsonld-target", "productDetailJsonLd");
+      mount.setAttribute("data-name", p.name || "");
       // Reveal the section only once it actually rendered, so an API/network/import
       // failure leaves it hidden rather than showing an empty "Reviews" heading.
-      import("./js/reviews.js?v=20260708a")
+      import("./js/reviews.js?v=20260708b")
         .then((m) => m.hydrateReviewMount(mount))
         .then((ok) => { if (ok) section.hidden = false; })
         .catch(() => {});

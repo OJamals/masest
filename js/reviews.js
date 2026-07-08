@@ -34,29 +34,62 @@ function jsonLdId(kind, sku) {
   return `rv-jsonld-${kind}-${sku}`.replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
-function writeJsonLd(kind, sku, stats) {
+// Attach the aggregate rating to the page's structured data. Preferred path: MERGE
+// aggregateRating into the page's existing Product/Service node (named via the mount's
+// data-jsonld-target) so Google sees one complete entity, not an orphan rating-only
+// Product. Falls back to a standalone Product node (with a name) only when no target
+// exists. Never emits a standalone Service node — the static seo-inject build owns
+// service structured data, and a nameless Service stub would be invalid.
+function writeJsonLd(mount, kind, sku, stats) {
   const id = jsonLdId(kind, sku);
-  const existing = document.getElementById(id);
+  const standalone = document.getElementById(id);
+  const targetId = mount && mount.getAttribute("data-jsonld-target");
+  const target = targetId ? document.getElementById(targetId) : null;
+
   if (!stats || !stats.count) {
-    if (existing) existing.remove();
+    if (standalone) standalone.remove();
+    // Strip a previously-merged rating from the target so a drop to zero is reflected.
+    if (target) {
+      try {
+        const obj = JSON.parse(target.textContent || "{}");
+        if (obj && obj.aggregateRating) { delete obj.aggregateRating; target.textContent = JSON.stringify(obj); }
+      } catch { /* leave malformed target untouched */ }
+    }
     return;
   }
-  const el = existing || document.createElement("script");
+
+  const agg = {
+    "@type": "AggregateRating",
+    ratingValue: stats.avg,
+    reviewCount: stats.count,
+    bestRating: 5,
+    worstRating: 1,
+  };
+
+  if (target) {
+    try {
+      const obj = JSON.parse(target.textContent || "{}");
+      obj.aggregateRating = agg;
+      target.textContent = JSON.stringify(obj);
+      if (standalone) standalone.remove();
+      return;
+    } catch { /* target unparseable — fall through to standalone */ }
+  }
+
+  // No mergeable target. Only products get a standalone node, and only with a real name.
+  if (kind === "service") { if (standalone) standalone.remove(); return; }
+  const name = (mount && mount.getAttribute("data-name")) || document.title || sku;
+  const el = standalone || document.createElement("script");
   el.type = "application/ld+json";
   el.id = id;
   el.textContent = JSON.stringify({
     "@context": "https://schema.org",
-    "@type": kind === "service" ? "Service" : "Product",
+    "@type": "Product",
+    name,
     sku,
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: stats.avg,
-      reviewCount: stats.count,
-      bestRating: 5,
-      worstRating: 1,
-    },
+    aggregateRating: agg,
   });
-  if (!existing) document.head.appendChild(el);
+  if (!standalone) document.head.appendChild(el);
 }
 
 function summaryHtml(stats, kind) {
@@ -89,14 +122,7 @@ function listHtml(reviews) {
 // commerce links must be, per project convention) so it resolves from any page
 // depth. Loads js/auth.js on demand so the Supabase SDK it pulls in never
 // becomes part of a page's default module graph.
-async function mountWriteForm(slot, sku, kind) {
-  let token = null;
-  try {
-    const auth = await import("./auth.js");
-    token = await auth.getToken();
-  } catch {
-    token = null;
-  }
+async function mountWriteForm(slot, sku, kind, token) {
   if (!token) {
     slot.innerHTML = `<p class="rv-gate">Only verified buyers can review this ${esc(kind)}. <a href="/account.html">Sign in</a> to write one.</p>`;
     return;
@@ -150,13 +176,13 @@ async function mountWriteForm(slot, sku, kind) {
   });
 }
 
-async function renderFull(mount, sku, kind, data) {
+async function renderFull(mount, sku, kind, data, token) {
   mount.innerHTML = `
     <h3 class="rv-title">Reviews</h3>
     ${summaryHtml(data.stats, kind)}
     ${listHtml(data.reviews)}
     <div class="rv-form-slot"></div>`;
-  await mountWriteForm(mount.querySelector(".rv-form-slot"), sku, kind);
+  await mountWriteForm(mount.querySelector(".rv-form-slot"), sku, kind, token);
 }
 
 function renderCompact(mount, stats) {
@@ -187,10 +213,15 @@ export async function hydrateReviewMount(mount) {
     const res = await fetch(`/api/reviews?sku=${encodeURIComponent(sku)}&kind=${encodeURIComponent(kind)}`, { cache: "no-store" });
     const data = await res.json().catch(() => null);
     if (!data || data.ok === false) return false;
-    writeJsonLd(kind, sku, data.stats);
-    if (compact) renderCompact(mount, data.stats);
-    else await renderFull(mount, sku, kind, data);
-    return true;
+    writeJsonLd(mount, kind, sku, data.stats);
+    if (compact) { renderCompact(mount, data.stats); return data.stats.count > 0; }
+    // Full widget: resolve auth once so we can both gate the write form and decide
+    // visibility. Show the section when there are reviews OR the visitor could write
+    // one (signed in) - never a bare "No reviews yet" block for anonymous visitors.
+    let token = null;
+    try { token = await (await import("./auth.js")).getToken(); } catch { token = null; }
+    await renderFull(mount, sku, kind, data, token);
+    return data.stats.count > 0 || Boolean(token);
   } catch {
     // Network failure: leave the mount as it was rather than show a broken widget.
     mount.dataset.rvHydrated = "";

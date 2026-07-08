@@ -301,7 +301,7 @@ function renderCatalog(root, catalog) {
   // above exist. Dynamic import keeps auth.js (and the Supabase SDK it pulls
   // in) out of this file's static module graph - js/main/service-catalog.js is
   // imported by every page via js/main.js, but only services.html needs it.
-  import("../reviews.js?v=20260708a").then((m) => m.initReviewMounts(root)).catch(() => {});
+  import("../reviews.js?v=20260708b").then((m) => m.initReviewMounts(root)).catch(() => {});
 }
 
 function hasServicesCatalog(catalog) {
