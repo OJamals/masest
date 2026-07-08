@@ -64,6 +64,13 @@
         "industry_sectors": 11
       },
       "sha256": "5ab064d19a1c5a682e0f09ec55a8bb0e5dcfbbbaaf4428ab2cd23b2f52d30f5a"
+    },
+    "blog.json": {
+      "count": 3,
+      "counts": {
+        "blog_posts": 3
+      },
+      "sha256": "22fb64afc8c93be3e7e0abedc113d917b09674df4d3ed15e240fd36ebff5a17b"
     }
   }
 }

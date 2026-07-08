@@ -257,6 +257,7 @@ function verifyOptionalContentSnapshot() {
     ["data/content/page-sections.json", ["page_sections"]],
     ["data/content/pricing.json", ["pricing_tiers"]],
     ["data/content/industry-sectors.json", ["industry_sectors"]],
+    ["data/content/blog.json", ["blog_posts"]],
   ];
   for (const [relative, keys] of checks) {
     const file = path.join(projectRoot, relative);
