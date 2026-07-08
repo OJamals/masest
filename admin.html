@@ -435,7 +435,6 @@
               <button class="adm-tab" role="tab" data-tab="orders" type="button"><i class="ph ph-package" aria-hidden="true"></i> Orders</button>
               <button class="adm-tab" role="tab" data-tab="companies" type="button"><i class="ph ph-buildings" aria-hidden="true"></i> Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
               <button class="adm-tab" role="tab" data-tab="crm" type="button"><i class="ph ph-address-book" aria-hidden="true"></i> People &amp; follow-ups <span class="pill" id="aBadgeCrm" hidden>0</span></button>
-              <button class="adm-tab" role="tab" data-tab="users" type="button"><i class="ph ph-users" aria-hidden="true"></i> Users</button>
             </div>
             <div class="adm-nav-group" role="presentation">
               <span aria-hidden="true">Catalog</span>
@@ -470,9 +469,16 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="companies">
-        <input id="coSearch" class="adm-search" type="search" placeholder="Search accounts" aria-label="Search accounts">
-        <div id="admCompanies" class="adm-table-wrap">Loading...</div>
-        <div id="companyDetail" class="adm-card" hidden></div>
+        <div class="crm-tabs" id="acctToggle" role="group" aria-label="Accounts sections">
+          <button class="btn btn-ghost btn-sm is-active" type="button" data-acct-view="companies" aria-pressed="true">Companies</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-acct-view="users" aria-pressed="false">All users</button>
+        </div>
+        <div id="admAcctUsers" data-acct-panel="users" hidden></div>
+        <div data-acct-panel="companies">
+          <input id="coSearch" class="adm-search" type="search" placeholder="Search accounts" aria-label="Search accounts">
+          <div id="admCompanies" class="adm-table-wrap">Loading...</div>
+          <div id="companyDetail" class="adm-card" hidden></div>
+        </div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="products">
@@ -588,10 +594,6 @@
 
       <section class="adm-panel" role="tabpanel" data-panel="newsletter">
         <div id="admNewsletter"></div>
-      </section>
-
-      <section class="adm-panel" role="tabpanel" data-panel="users">
-        <div id="admUsers"></div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="crm">

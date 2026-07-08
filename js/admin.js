@@ -17,7 +17,6 @@ import { createQuotesTab } from './admin/quotes.js';
 import { createCrmWorkspace } from './admin/crm-workspace.js';
 import { createReviewsTab } from './admin/reviews.js';
 import { createNewsletterTab } from './admin/newsletter.js';
-import { createUsersTab } from './admin/users.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -149,7 +148,6 @@ function setTab(tab) {
     quotes: renderQuotePipeline,
     reviews: renderReviews,
     newsletter: renderNewsletter,
-    users: renderUsers,
     crm: () => { renderCrm(); renderOffers(); },
   }[state.tab];
   render?.({ refetch: !cached });
@@ -413,7 +411,6 @@ const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message
 // Reviews moderation tab (plan Task 13). Shared primitives + statusBadge/badge injected.
 const { renderReviews, wireReviews, wireReviewSeedForm, refreshReviewsBadge } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });
 const { renderNewsletter, wireNewsletter } = createNewsletterTab({ $, api, state, message, admSkeleton, admEmpty, badge });
-const { renderUsers, wireUsers } = createUsersTab({ $, api, state, message, admSkeleton, admEmpty });
 
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
 const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton, admEmpty });
@@ -534,7 +531,6 @@ function wire() {
   wireThreads();
   wireReviews();
   wireNewsletter();
-  wireUsers();
   wireReviewSeedForm();
 }
 

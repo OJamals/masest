@@ -5,6 +5,42 @@
 // come from util.js and the dirty-edit helpers from edits.js.
 import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
+import { ORDER_STATUSES } from './orders.js';
+
+// Roles an admin can assign to a company member or a standalone user (must match
+// the server ROLES set in functions/api/admin/users.js).
+const MEMBER_ROLES = [['buyer', 'Buyer'], ['admin', 'Admin'], ['moderator', 'Moderator']];
+function memberRoleOptions(current) {
+  return MEMBER_ROLES.map(([v, l]) => `<option value="${v}"${(current || 'buyer') === v ? ' selected' : ''}>${l}</option>`).join('');
+}
+
+// Small reusable prompt dialog (native <dialog>, styled via .detail-dialog) for the
+// short forms in this tab: new user, edit a companyless user, add/edit an address.
+// Resolves the submitted FormData as a plain object, or null on cancel/Esc.
+async function promptDialog({ title, bodyHtml, submitLabel = 'Save' }) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'detail-dialog';
+  dlg.innerHTML = `<h3 style="margin:0 0 14px">${esc(title)}</h3>
+    <form id="admPromptForm" class="adm-form-grid" onsubmit="return false">${bodyHtml}</form>
+    <menu style="display:flex;gap:10px;justify-content:flex-end;margin:16px 0 0;padding:0;list-style:none">
+      <button value="cancel" class="btn btn-ghost btn-sm" type="button">Cancel</button>
+      <button value="ok" class="btn btn-primary btn-sm" type="button">${esc(submitLabel)}</button>
+    </menu>`;
+  document.body.appendChild(dlg);
+  dlg.showModal();
+  dlg.querySelector('input,select,textarea')?.focus();
+  const result = await new Promise((resolve) => {
+    dlg.querySelector('menu').addEventListener('click', (event) => {
+      const value = event.target.closest('button')?.value;
+      if (!value) return;
+      resolve(value === 'ok' ? Object.fromEntries(new FormData(dlg.querySelector('#admPromptForm'))) : null);
+      dlg.close();
+    });
+    dlg.addEventListener('cancel', () => resolve(null), { once: true });
+  });
+  dlg.remove();
+  return result;
+}
 
 // Read-only "view as customer" snapshot (#100) — what the account sees, for support.
 function viewAsHtml(s) {
@@ -66,8 +102,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <span>${esc(member.email || member.full_name || member.id)} <small class="muted">${esc(member.full_name || '')}</small></span>
         <span>
           <select class="adm-select adm-select-sm" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}">
-            <option value="buyer" ${member.role === 'buyer' ? 'selected' : ''}>Buyer</option>
-            <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option>
+            ${memberRoleOptions(member.role)}
           </select>
           <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}">Save role</button>
           <button class="btn btn-ghost btn-sm" type="button" data-member-remove="${esc(member.id)}" data-member-email="${esc(member.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i></button>
@@ -80,7 +115,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           <input class="adm-input" id="cuEmail" type="email" placeholder="email@company.com" aria-label="New user email">
           <input class="adm-input" id="cuPassword" type="text" placeholder="temp password (min 8)" aria-label="Temporary password">
           <input class="adm-input" id="cuName" type="text" placeholder="Full name (optional)" aria-label="Full name">
-          <select class="adm-select adm-select-sm" id="cuRole" aria-label="Role"><option value="buyer">Buyer</option><option value="admin">Admin</option></select>
+          <select class="adm-select adm-select-sm" id="cuRole" aria-label="Role">${memberRoleOptions('buyer')}</select>
           <button class="btn btn-secondary btn-sm" type="button" data-member-add data-company-id="${esc(company.id)}"><i class="ph ph-user-plus" aria-hidden="true"></i> Create user</button>
         </div>
         <p class="muted" style="margin-top:4px;font-size:.82rem">Creates a Supabase login attached to this company. Share the temp password or have them reset it.</p>
@@ -97,6 +132,62 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           <button class="btn btn-ghost btn-sm" type="button" data-invite-revoke="${esc(invite.id)}" data-company-id="${esc(company.id)}">Revoke</button>
         </span>
       </div>`).join('')}</div>`;
+  }
+
+  const ADDR_TYPES = [['ship', 'Shipping'], ['bill', 'Billing']];
+  function addressFormFields(a = {}) {
+    return `
+      <label>Type <select class="adm-select" name="type">${ADDR_TYPES.map(([v, l]) => `<option value="${v}"${(a.type || 'ship') === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="wide">Line 1 <input class="adm-input" name="line1" required value="${esc(a.line1 || '')}"></label>
+      <label class="wide">Line 2 <input class="adm-input" name="line2" value="${esc(a.line2 || '')}"></label>
+      <label>City <input class="adm-input" name="city" required value="${esc(a.city || '')}"></label>
+      <label>State <input class="adm-input" name="state" maxlength="2" required placeholder="TX" value="${esc(a.state || '')}"></label>
+      <label>Zip <input class="adm-input" name="zip" required value="${esc(a.zip || '')}"></label>
+      <label class="full" style="display:flex;align-items:center;gap:8px;flex-direction:row">
+        <input type="checkbox" name="is_default" value="1" style="width:auto"${a.is_default ? ' checked' : ''}> <span>Set as default</span>
+      </label>`;
+  }
+
+  function renderCompanyAddresses(company, addresses = []) {
+    const rows = addresses.length ? addresses.map((a) => `
+      <div class="dash-row">
+        <span><b>${esc(a.type === 'bill' ? 'Billing' : 'Shipping')}</b> ${esc(a.line1)}${a.line2 ? ', ' + esc(a.line2) : ''}, ${esc(a.city)}, ${esc(a.state)} ${esc(a.zip)}${a.is_default ? ' <span class="badge badge-warning">default</span>' : ''}</span>
+        <span>
+          <button class="btn btn-ghost btn-sm" type="button" data-addr-edit="${esc(a.id)}">Edit</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-addr-delete="${esc(a.id)}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        </span>
+      </div>`).join('') : '<p class="muted">No addresses on file.</p>';
+    return `<div class="company-addresses"><h3>Addresses</h3>${rows}
+      <div class="adm-inline-actions" style="margin-top:10px">
+        <button class="btn btn-secondary btn-sm" type="button" data-addr-add><i class="ph ph-map-pin-plus" aria-hidden="true"></i> Add address</button>
+      </div></div>`;
+  }
+
+  function renderCompanyPayments(company, methods = []) {
+    if (!company.stripe_customer_id) return '<div class="company-payments"><h3>Payment methods</h3><p class="muted">No Stripe customer yet.</p></div>';
+    const rows = methods.length ? methods.map((m) => `
+      <div class="dash-row">
+        <span>${esc(m.brand)} &bull;&bull;&bull;&bull; ${esc(m.last4)} <small class="muted">exp ${esc(m.exp)}</small></span>
+        <button class="btn btn-ghost btn-sm" type="button" data-pm-detach="${esc(m.id)}">Detach</button>
+      </div>`).join('') : '<p class="muted">No saved cards.</p>';
+    return `<div class="company-payments"><h3>Payment methods</h3>${rows}</div>`;
+  }
+
+  function renderCompanyOrdersMini(company, orders = []) {
+    if (!orders.length) return '<div class="company-orders-mini"><h3>Orders</h3><p class="muted">No orders yet.</p></div>';
+    const rows = orders.slice(0, 20).map((o) => `
+      <div class="dash-row">
+        <span>${esc(String(o.id).slice(0, 8))} &middot; ${esc(date(o.created_at))} &middot; ${esc(money(o.total, o.currency))}</span>
+        <span>
+          <select class="adm-select adm-select-sm" data-mo-status="${esc(o.id)}">
+            ${ORDER_STATUSES.filter((s) => s !== 'refunded' || o.status === 'refunded')
+              .map((s) => `<option value="${s}"${s === o.status ? ' selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}
+          </select>
+          <button class="btn btn-ghost btn-sm" type="button" data-mo-save="${esc(o.id)}">Save</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-mo-open="${esc(o.id)}">Open in Orders</button>
+        </span>
+      </div>`).join('');
+    return `<div class="company-orders-mini"><h3>Orders</h3>${rows}</div>`;
   }
 
   function wireCompanyDetailActions(company) {
@@ -211,6 +302,107 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     });
   }
 
+  function wireCompanyAddressActions(company) {
+    const box = $('companyDetail');
+    if (!box || !company?.id) return;
+    box.querySelectorAll('[data-addr-add]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const result = await promptDialog({ title: 'Add address', bodyHtml: addressFormFields(), submitLabel: 'Add address' });
+        if (!result) return;
+        if (!result.line1 || !result.city || !result.state || !result.zip) {
+          box.insertAdjacentHTML('beforeend', '<p class="adm-status" data-state="err">Fill in line 1, city, state and zip.</p>');
+          return;
+        }
+        try {
+          await api('/api/admin/users', {
+            method: 'POST',
+            body: { action: 'add_address', company_id: company.id, address: { type: result.type, line1: result.line1, line2: result.line2, city: result.city, state: result.state, zip: result.zip, is_default: !!result.is_default } },
+          });
+          await openCompanyDetail(company.id);
+        } catch (err) {
+          box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not add the address. Retry.')}</p>`);
+        }
+      });
+    });
+    box.querySelectorAll('[data-addr-edit]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const addressId = button.dataset.addrEdit;
+        const existing = (company.addresses || []).find((a) => String(a.id) === String(addressId)) || {};
+        const result = await promptDialog({ title: 'Edit address', bodyHtml: addressFormFields(existing), submitLabel: 'Save address' });
+        if (!result) return;
+        if (!result.line1 || !result.city || !result.state || !result.zip) {
+          box.insertAdjacentHTML('beforeend', '<p class="adm-status" data-state="err">Fill in line 1, city, state and zip.</p>');
+          return;
+        }
+        try {
+          await api('/api/admin/users', {
+            method: 'POST',
+            body: { action: 'update_address', company_id: company.id, address_id: addressId, address: { type: result.type, line1: result.line1, line2: result.line2, city: result.city, state: result.state, zip: result.zip, is_default: !!result.is_default } },
+          });
+          await openCompanyDetail(company.id);
+        } catch (err) {
+          box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not save the address. Retry.')}</p>`);
+        }
+      });
+    });
+    box.querySelectorAll('[data-addr-delete]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        if (!(await confirmDialog('Delete this address?', { confirmText: 'Delete', danger: true }))) return;
+        button.disabled = true;
+        try {
+          await api('/api/admin/users', { method: 'POST', body: { action: 'delete_address', company_id: company.id, address_id: button.dataset.addrDelete } });
+          await openCompanyDetail(company.id);
+        } catch (err) {
+          box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not delete the address. Retry.')}</p>`);
+          button.disabled = false;
+        }
+      });
+    });
+  }
+
+  function wireCompanyPaymentActions(company) {
+    const box = $('companyDetail');
+    if (!box || !company?.id) return;
+    box.querySelectorAll('[data-pm-detach]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        if (!(await confirmDialog('Detach this card from the customer? They will need to re-add it at checkout.', { confirmText: 'Detach', danger: true }))) return;
+        button.disabled = true;
+        try {
+          await api('/api/admin/users', { method: 'POST', body: { action: 'detach_payment', company_id: company.id, payment_method_id: button.dataset.pmDetach } });
+          await openCompanyDetail(company.id);
+        } catch (err) {
+          box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not detach the card. Retry.')}</p>`);
+          button.disabled = false;
+        }
+      });
+    });
+  }
+
+  function wireCompanyOrderActions(company) {
+    const box = $('companyDetail');
+    if (!box || !company?.id) return;
+    box.querySelectorAll('[data-mo-save]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.dataset.moSave;
+        const status = box.querySelector(`[data-mo-status="${CSS.escape(id)}"]`)?.value;
+        button.disabled = true;
+        try {
+          await api('/api/admin/orders', { method: 'POST', body: { id, status } });
+          await openCompanyDetail(company.id);
+        } catch (err) {
+          box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not save the order status. Retry.')}</p>`);
+          button.disabled = false;
+        }
+      });
+    });
+    box.querySelectorAll('[data-mo-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if ($('ordSearch')) $('ordSearch').value = button.dataset.moOpen;
+        setTab('orders');
+      });
+    });
+  }
+
   async function openCompanyDetail(id) {
     const box = $('companyDetail');
     if (!box) return;
@@ -220,8 +412,16 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     // bring it into view and move focus so the open is perceivable.
     box.scrollIntoView({ block: 'start', behavior: 'auto' });
     try {
-      const detail = await api(`/api/admin/company?id=${encodeURIComponent(id)}`);
+      const [detail, console_] = await Promise.all([
+        api(`/api/admin/company?id=${encodeURIComponent(id)}`),
+        // Best-effort: the console call adds addresses/orders/payment_methods on top
+        // of the members/invites/dossier the company endpoint already returns.
+        api(`/api/admin/users?company=${encodeURIComponent(id)}`).catch(() => ({ addresses: [], orders: [], payment_methods: [] })),
+      ]);
       const company = detail.company || {};
+      // Stash the console's address list on the company object so the edit handler
+      // (which only receives an address id) can look up the current values.
+      company.addresses = console_.addresses || [];
       const openSteps = company.setup?.steps?.filter((step) => !step.done) || [];
       box.innerHTML = `
         <div class="adm-panel-header"><h2 tabindex="-1" data-company-detail-title>${esc(company.name || 'Company')}</h2>
@@ -243,9 +443,15 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         ${bizDossier(company)}
         ${renderCompanyMembers(company, detail.members || [])}
         ${renderCompanyInvites(company, detail.invites || [])}
+        ${renderCompanyAddresses(company, console_.addresses || [])}
+        ${renderCompanyPayments(company, console_.payment_methods || [])}
+        ${renderCompanyOrdersMini(company, console_.orders || [])}
         <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;
       wireCompanyDetailActions(company);
       wireCompanyUserActions(company);
+      wireCompanyAddressActions(company);
+      wireCompanyPaymentActions(company);
+      wireCompanyOrderActions(company);
       box.querySelector('[data-company-detail-close]')?.addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
       box.querySelector('[data-company-detail-title]')?.focus();
       if (crm) crm.mount(box, 'company', company.id || id);
@@ -324,6 +530,9 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
 
   // List actions delegated once on the stable #admCompanies container (#36).
   function wireCompanies() {
+    wireAllUsers();
+    const toggle = $('acctToggle');
+    if (toggle) delegate(toggle, 'click', '[data-acct-view]', (event, button) => showAcctView(button.dataset.acctView));
     const box = $('admCompanies');
     if (!box) return;
     delegate(box, 'click', '[data-open-company]', (event, button) => openCompanyDetail(button.dataset.openCompany));
@@ -380,6 +589,152 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         bulk.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${(err.data && err.data.error) || 'Bulk approve failed. Retry.'}</p>`);
       } finally { bulk.disabled = false; }
     });
+  }
+
+  // ---- "All users" section (consolidates the former top-level Users tab into
+  // Accounts) — a searchable directory of every Supabase-auth user, company or not.
+  function acctUserRow(u) {
+    return `<tr data-au-row="${esc(u.id)}">
+      <td>${esc(u.email || '—')}</td>
+      <td>${esc(u.full_name || '—')}</td>
+      <td>
+        <select class="adm-select adm-select-sm" data-au-role="${esc(u.id)}">${memberRoleOptions(u.role)}</select>
+        ${u.staff_role ? ` <span class="pill">${esc(u.staff_role)}</span>` : ''}
+        <button class="btn btn-ghost btn-sm" type="button" data-au-save="${esc(u.id)}">Save role</button>
+      </td>
+      <td>${u.company_id ? `<button class="link-name" type="button" data-au-open-company="${esc(u.company_id)}">${esc(u.company_name || 'Account')}</button>` : '<span class="muted">—</span>'}</td>
+      <td>${u.last_sign_in_at ? esc(date(u.last_sign_in_at)) : 'never'}</td>
+      <td class="adm-inline-actions">
+        <button class="btn btn-ghost btn-sm" type="button" data-au-manage="${esc(u.id)}">Manage</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(u.id)}" data-au-email="${esc(u.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+      </td>
+    </tr>`;
+  }
+
+  function paintAcctUsers() {
+    const box = $('admAcctUsers');
+    const list = box?.querySelector('[data-au-list]');
+    if (!list) return;
+    const q = (box.querySelector('#auSearch')?.value || '').trim().toLowerCase();
+    const users = (state.acctUsers || []).filter((u) => !q
+      || [u.email, u.full_name, u.company_name].filter(Boolean).join(' ').toLowerCase().includes(q));
+    if (!users.length) {
+      list.innerHTML = admEmpty('ph-users', 'No users', q ? 'No users match that search.' : 'Create the first user.');
+      return;
+    }
+    list.innerHTML = `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Company</th><th>Last sign-in</th><th></th></tr></thead><tbody>${users.map(acctUserRow).join('')}</tbody></table></div>`;
+  }
+
+  async function renderAllUsers({ refetch = true } = {}) {
+    const box = $('admAcctUsers');
+    if (!box) return;
+    if (!box.dataset.mounted) {
+      box.innerHTML = `<div class="adm-tools">
+        <input id="auSearch" class="adm-search" type="search" placeholder="Search email or name" aria-label="Search users">
+        <button class="btn btn-primary btn-sm" type="button" data-au-new><i class="ph ph-user-plus" aria-hidden="true"></i> New user</button>
+        <span class="adm-status" id="auStatus" role="status" aria-live="polite"></span>
+      </div>
+      <div data-au-list>${admSkeleton()}</div>`;
+      box.dataset.mounted = '1';
+    }
+    if (refetch) {
+      box.querySelector('[data-au-list]').innerHTML = admSkeleton();
+      try {
+        state.acctUsers = (await api('/api/admin/users')).users || [];
+        state.loaded.add('acctUsers');
+      } catch {
+        box.querySelector('[data-au-list]').innerHTML = '<p class="adm-status" data-state="err">Could not load users. Reload to retry.</p>';
+        return;
+      }
+    }
+    paintAcctUsers();
+  }
+
+  function auStatus(text, kind) {
+    const el = $('auStatus');
+    if (el) { el.textContent = text || ''; el.dataset.state = kind || ''; }
+  }
+
+  function userFormFields(u = {}) {
+    return `
+      <label class="wide">Email <input class="adm-input" name="email" type="email" required value="${esc(u.email || '')}"></label>
+      ${u.id ? '' : '<label>Password <input class="adm-input" name="password" type="text" minlength="8" required placeholder="min 8 chars"></label>'}
+      <label>Full name <input class="adm-input" name="full_name" type="text" value="${esc(u.full_name || '')}"></label>
+      <label>Phone <input class="adm-input" name="phone" type="text" value="${esc(u.phone || '')}"></label>
+      <label>Role <select class="adm-select" name="role">${memberRoleOptions(u.role)}</select></label>
+      <label>Company ID <input class="adm-input" name="company_id" type="text" value="${esc(u.company_id || '')}" placeholder="optional — paste from Accounts"></label>`;
+  }
+
+  // Shared by the "New user" button and the "Manage" action on a companyless row.
+  async function openUserDialog(u = {}) {
+    const result = await promptDialog({ title: u.id ? 'Edit user' : 'New user', bodyHtml: userFormFields(u), submitLabel: u.id ? 'Save' : 'Create' });
+    if (!result) return;
+    auStatus(u.id ? 'Saving…' : 'Creating…');
+    try {
+      if (u.id) await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: u.id, ...result } });
+      else await api('/api/admin/users', { method: 'POST', body: { action: 'create', ...result } });
+      auStatus(u.id ? 'User saved.' : 'User created.', 'ok');
+      await renderAllUsers({ refetch: true });
+    } catch (err) {
+      auStatus(err.data?.message || err.data?.error || 'Failed. Retry.', 'err');
+    }
+  }
+
+  function wireAllUsers() {
+    const box = $('admAcctUsers');
+    if (!box) return;
+    delegate(box, 'input', '#auSearch', () => paintAcctUsers());
+    delegate(box, 'click', '[data-au-new]', () => openUserDialog({}));
+    delegate(box, 'click', '[data-au-manage]', (event, button) => {
+      const u = (state.acctUsers || []).find((x) => String(x.id) === String(button.dataset.auManage));
+      if (!u) return;
+      if (u.company_id) { showAcctView('companies'); openCompanyDetail(u.company_id); }
+      else openUserDialog(u);
+    });
+    delegate(box, 'click', '[data-au-open-company]', (event, button) => {
+      showAcctView('companies');
+      openCompanyDetail(button.dataset.auOpenCompany);
+    });
+    delegate(box, 'click', '[data-au-save]', async (event, button) => {
+      const id = button.dataset.auSave;
+      const role = box.querySelector(`[data-au-role="${CSS.escape(id)}"]`)?.value;
+      const u = (state.acctUsers || []).find((x) => String(x.id) === String(id));
+      button.disabled = true;
+      try {
+        if (u?.company_id) await api('/api/admin/users', { method: 'POST', body: { action: 'set_role', company_id: u.company_id, profile_id: id, role } });
+        else await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: id, role } });
+        if (u) u.role = role;
+        auStatus('Role saved.', 'ok');
+      } catch (err) {
+        auStatus(err.data?.message || err.data?.error || 'Could not save the role. Retry.', 'err');
+      } finally {
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-au-delete]', async (event, button) => {
+      const email = button.dataset.auEmail || 'this user';
+      if (!(await confirmDialog(`Delete ${email}? This removes their login and profile permanently.`, { confirmText: 'Delete', danger: true }))) return;
+      button.disabled = true;
+      try {
+        await api('/api/admin/users', { method: 'POST', body: { action: 'delete_user', user_id: button.dataset.auDelete } });
+        await renderAllUsers({ refetch: true });
+      } catch (err) {
+        button.disabled = false;
+        auStatus(err.data?.message || err.data?.error || 'Delete failed.', 'err');
+      }
+    });
+  }
+
+  // Companies / All users sub-view toggle within the Accounts panel.
+  function showAcctView(view) {
+    state.acctView = view;
+    $('acctToggle')?.querySelectorAll('[data-acct-view]').forEach((b) => {
+      const on = b.dataset.acctView === view;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+    document.querySelectorAll('[data-acct-panel]').forEach((panel) => { panel.hidden = panel.dataset.acctPanel !== view; });
+    if (view === 'users') renderAllUsers({ refetch: !state.loaded.has('acctUsers') });
   }
 
   return { renderCompanies, wireCompanies, openCompanyDetail };
