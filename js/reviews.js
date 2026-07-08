@@ -180,18 +180,21 @@ export async function hydrateReviewMount(mount) {
   if (!mount || mount.dataset.rvHydrated === "1") return;
   const sku = (mount.getAttribute("data-sku") || "").trim();
   const kind = mount.getAttribute("data-kind") === "service" ? "service" : "product";
-  if (!sku) return;
+  if (!sku) return false;
   mount.dataset.rvHydrated = "1";
   const compact = mount.hasAttribute("data-compact");
   try {
     const res = await fetch(`/api/reviews?sku=${encodeURIComponent(sku)}&kind=${encodeURIComponent(kind)}`, { cache: "no-store" });
     const data = await res.json().catch(() => null);
-    if (!data || data.ok === false) return;
+    if (!data || data.ok === false) return false;
     writeJsonLd(kind, sku, data.stats);
     if (compact) renderCompact(mount, data.stats);
     else await renderFull(mount, sku, kind, data);
+    return true;
   } catch {
     // Network failure: leave the mount as it was rather than show a broken widget.
+    mount.dataset.rvHydrated = "";
+    return false;
   }
 }
 

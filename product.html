@@ -276,8 +276,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!section || !mount) return;
       mount.setAttribute("data-sku", commerceId);
       mount.setAttribute("data-kind", "product");
-      section.hidden = false;
-      import("./js/reviews.js?v=20260708a").then((m) => m.hydrateReviewMount(mount)).catch(() => {});
+      // Reveal the section only once it actually rendered, so an API/network/import
+      // failure leaves it hidden rather than showing an empty "Reviews" heading.
+      import("./js/reviews.js?v=20260708a")
+        .then((m) => m.hydrateReviewMount(mount))
+        .then((ok) => { if (ok) section.hidden = false; })
+        .catch(() => {});
     })();
     document.getElementById("pReplaces").textContent = p.cat === "glycol"
       ? `VertKleen Glycols / ${p.replaces}`
