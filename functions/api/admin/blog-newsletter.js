@@ -30,6 +30,12 @@ export async function onRequestPost({ request, env }) {
   }
 
   const sb = adminClient(env);
+  // Gated by the newsletter settings toggle — off by default so blog publishes don't
+  // auto-email until an admin opts in (Newsletter tab → Settings). Missing table/row
+  // reads as off.
+  const { data: settings } = await sb.from('newsletter_settings').select('auto_send_latest_blog').eq('id', 1).maybeSingle();
+  if (!settings?.auto_send_latest_blog) return json(200, { ok: true, sent: [], skipped: 'auto_send_disabled' });
+
   const { data: rows, error } = await sb.from('content_entries')
     .select('slug,title,payload,published_at')
     .eq('type', 'blog_post').eq('status', 'published').eq('locale', 'en')
