@@ -4,6 +4,8 @@
   <url><loc>https://masest.co/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://masest.co/contact</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/products</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://masest.co/pricing-hvac-facilities</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://masest.co/pricing-cip-food-beverage</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/services</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://masest.co/programs</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://masest.co/proof</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -22,7 +24,17 @@
   <url><loc>https://masest.co/industries/military-government</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/industries/education</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/industries/hvac-water</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/data-centers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/industries/plumbing</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/golf-courses</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/solar-panel-cleaning</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/municipalities-water-utilities</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/hotels-property-management</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/comparisons/vertkleen-hcr-vs-clr</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://masest.co/comparisons/hcr-vs-rydlyme</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://masest.co/comparisons/cr-hd-vs-simple-green</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://masest.co/comparisons/lam3-vs-wet-forget</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://masest.co/comparisons/beer-line-cleaner-cost-comparison</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/products/hcr</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/products/hcr-t16</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/products/cr</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
