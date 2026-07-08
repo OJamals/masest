@@ -27,13 +27,33 @@
       if (got.utm_source) { utm = got; sessionStorage.setItem(UKEY, JSON.stringify(utm)); }
     }
 
-    function beacon(event) {
+    function cleanPart(value, max) {
+      return String(value || '').trim().slice(0, max || 120);
+    }
+
+    function eventContext(detail) {
+      var parts = [];
+      detail = detail || {};
+      [
+        ['document', detail.document],
+        ['industry', detail.industry],
+        ['request_type', detail.request_type],
+        ['product', detail.product],
+        ['source', detail.source]
+      ].forEach(function (entry) {
+        var value = cleanPart(entry[1], 120);
+        if (value) parts.push(entry[0] + '=' + encodeURIComponent(value));
+      });
+      return parts.length ? '#' + parts.join('&') : '';
+    }
+
+    function beacon(event, detail) {
       try {
         var payload = JSON.stringify({
-          path: location.pathname + location.search,
+          path: location.pathname + location.search + eventContext(detail),
           referrer: document.referrer || '',
           visitor: vid,
-          event: event || 'pageview',
+          event: cleanPart(event || 'pageview', 40),
           utm: utm,
         });
         if (navigator.sendBeacon) {
@@ -44,7 +64,7 @@
       } catch (e) { /* never affect the page */ }
     }
 
-    window.mtrack = beacon;                          // funnel events: mtrack('quote_submit')
+    window.mtrack = beacon;                          // funnel events: mtrack('quote_submit', { industry: 'Data Centers' })
     window.masestUtm = function () { return utm; };  // forms attach attribution to submissions
     beacon('pageview');
   } catch (e) { /* never affect the page */ }

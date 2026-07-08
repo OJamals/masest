@@ -34,13 +34,27 @@ export function listIdForIndustry(env, industry) {
   return mapped || env.KLAVIYO_LIST_NURTURE || null;
 }
 
+function cleanProfileProperties(properties = {}) {
+  return Object.fromEntries(Object.entries(properties)
+    .map(([key, value]) => [String(key || '').trim().slice(0, 60), value])
+    .filter(([key, value]) => key && value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => [key, typeof value === 'boolean' ? value : String(value).trim().slice(0, 300)])
+    .slice(0, 20));
+}
+
 // Subscribe one email to a Klaviyo list. Best-effort: skips (no throw) when the private
 // key, list, or a valid email is missing. Returns { ok, skipped?, status? }.
-export async function klaviyoSubscribe(env, email, listId) {
+export async function klaviyoSubscribe(env, email, listId, properties = {}) {
   const key = env.KLAVIYO_PRIVATE_KEY;
   if (!key || !listId || !EMAIL_RE.test(String(email || ''))) {
     return { ok: false, skipped: true };
   }
+  const profileProperties = cleanProfileProperties(properties);
+  const attributes = {
+    email,
+    ...(Object.keys(profileProperties).length ? { properties: profileProperties } : {}),
+    subscriptions: { email: { marketing: { consent: 'SUBSCRIBED' } } },
+  };
   const payload = {
     data: {
       type: 'profile-subscription-bulk-create-job',
@@ -48,7 +62,7 @@ export async function klaviyoSubscribe(env, email, listId) {
         profiles: {
           data: [{
             type: 'profile',
-            attributes: { email, subscriptions: { email: { marketing: { consent: 'SUBSCRIBED' } } } },
+            attributes,
           }],
         },
       },

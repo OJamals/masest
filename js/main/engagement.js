@@ -47,7 +47,15 @@ async function submitRequest(form, data) {
       signal: ctrl.signal
     });
     if (!res.ok) throw new Error("Request failed");
-    try { if (typeof window.mtrack === "function") window.mtrack("quote_submit"); } catch (e) { /* funnel event best-effort */ }
+    try {
+      if (typeof window.mtrack === "function") {
+        window.mtrack("quote_submit", {
+          request_type: data.get("type"),
+          industry: data.get("industry"),
+          product: data.get("product"),
+        });
+      }
+    } catch (e) { /* funnel event best-effort */ }
     return { fallbackOnly: false };
   } finally {
     clearTimeout(timer);
@@ -159,7 +167,7 @@ export function initQuoteForm() {
   const typeInput = form.querySelector('[name="type"]');
   const groups = [...form.querySelectorAll("[data-intent-group]")];
   const choices = [...form.querySelectorAll(".cta-choice")];
-  const INTENTS = ["quote", "audit", "sample", "distributor"];
+  const INTENTS = ["quote", "audit", "sample", "technical", "distributor"];
   function applyIntent(intent) {
     if (!INTENTS.includes(intent)) intent = "quote";
     if (typeInput) typeInput.value = intent;

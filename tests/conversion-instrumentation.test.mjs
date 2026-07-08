@@ -26,7 +26,7 @@ test("/api/track stores event + utm columns, defaulting event to pageview", () =
 
 test("quote submit attaches UTM and fires quote_submit funnel event", () => {
   assert.match(ENG, /masestUtm\(/, "must read attribution");
-  assert.match(ENG, /mtrack\(["']quote_submit["']\)/);
+  assert.match(ENG, /mtrack\(["']quote_submit["'],\s*\{/);
 });
 
 test("cart checkout fires checkout_start", () => {

@@ -59,11 +59,11 @@
       "sha256": "e09b2a2eedafc70b0ec883edd3f403ccb67cdba3f1498dbb521ee4633c5dd4fc"
     },
     "industry-sectors.json": {
-      "count": 11,
+      "count": 16,
       "counts": {
-        "industry_sectors": 11
+        "industry_sectors": 16
       },
-      "sha256": "5ab064d19a1c5a682e0f09ec55a8bb0e5dcfbbbaaf4428ab2cd23b2f52d30f5a"
+      "sha256": "5726cf98a604d353527de0bd8aeae4f8816a4b006452708b9fbf228b0c5b996c"
     }
   }
 }

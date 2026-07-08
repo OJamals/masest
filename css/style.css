@@ -4799,6 +4799,19 @@ main:has(#pMediaSection) .section-head {
   line-height: 1;
 }
 
+.segment-volume-note {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 115, 119, .14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .78);
+  color: var(--accent-ink);
+  font-size: .92rem;
+  font-weight: 900;
+  line-height: 1.35;
+  box-shadow: var(--shadow-xs);
+}
+
 .segment-pricing-section {
   padding-top: clamp(54px, 7vw, 86px);
 }
@@ -6878,6 +6891,43 @@ body.product-detail-page main > section.product-static-section {
 }
 
 /* ---------- Document downloads (SDS / TDS / labels) ---------- */
+.doc-notify {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 320px);
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+}
+.doc-notify-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .92rem;
+  font-weight: 650;
+}
+.doc-notify-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.doc-notify input[type=email] {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1.5px solid var(--line-strong, var(--line));
+  border-radius: var(--r-input);
+  font: inherit;
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+.doc-notify-note {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  font-size: .8rem;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .doc-notify { grid-template-columns: 1fr; }
+}
 .doc-library {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

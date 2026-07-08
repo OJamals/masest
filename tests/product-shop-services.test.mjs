@@ -66,6 +66,7 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.match(productsHtml, /href="services"/, "products page should link to the services page");
     assert.doesNotMatch(productsHtml, /data-service-catalog/, "products page should not embed service catalog");
     assert.match(productsHtml, /Buyable small-pack list pricing/);
+    assert.match(productsHtml, /200\+ jugs: 5% off · 1,000\+ gallons \(drums\/totes\): 5% off\./);
     assert.match(productsHtml, /Drums and totes quoted before release/);
     assert.match(productsHtml, /USD, FOB Ex Plant Merritt Island, FL/);
     assert.match(productsHtml, /href="pricing-hvac-facilities"/);
@@ -186,10 +187,23 @@ test("segment pricing pages render isolated HVAC and CIP workbook pricing", asyn
       assert.doesNotMatch(cipText, /VertKleen Descaler/);
       assert.match(cipText, /Prices valid six months from publication/);
       assert.match(cipText, /Shipping and freight excluded — FOB Ex Plant, Merritt Island FL\./);
+      assert.match(cipText, /200\+ jugs: 5% off/);
     } finally {
       await browser.close();
     }
   });
+});
+
+test("resources page publishes corrected public pricing tables only", () => {
+  const resources = readFileSync(new URL("resources.html", root), "utf8");
+  assert.match(resources, /data-source-table="hvac-facility-pricing"[\s\S]*VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72\/gal[\s\S]*\$61\.80/);
+  assert.match(resources, /data-source-table="hvac-facility-pricing"[\s\S]*VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02\/gal[\s\S]*\$55\.05/);
+  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$21\.63\/gal[\s\S]*\$54\.08/);
+  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$19\.27\/gal[\s\S]*\$48\.17/);
+  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen CR HD[\s\S]*2\.5 gal jug[\s\S]*\$10\.61\/gal[\s\S]*\$26\.51/);
+  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$21\.49\/gal[\s\S]*\$53\.73/);
+  assert.doesNotMatch(resources, /\$43\.26|\$38\.53|\$23\.57/, "internal B2B property rates must stay off public resources");
+  assert.match(resources, /FOB Ex Plant, Merritt Island FL/);
 });
 
 test("descaler card defaults to the public 1 gal website price", async () => {

@@ -86,6 +86,18 @@ const INDUSTRIES = [
   proof: { img: "grout-moss", caption: "Exterior grout, stucco, and painted surfaces cleared with CR and LAM3." }
 },
 {
+  slug: "golf-courses",
+  name: "Golf Courses",
+  icon: "ph-flag",
+  h1: "Keep grounds, carts, irrigation, and clubhouse surfaces out of the harsh-chemical lane.",
+  sub: "Equipment, carts, irrigation scale, exterior stains, and turf-adjacent cleaning all need chemistry grounds crews can trial safely.",
+  intro: "Golf courses and sports facilities clean fleets, carts, shop floors, irrigation hardware, clubhouse exteriors, and wet areas near turf and water. VertKleen matches those jobs with Torque, LAM3, HCR, and MultiWash so grounds crews can trial one safer chemistry set across the course.",
+  products: ["torque", "lam3", "hcr", "multiwash"],
+  primaryCta: "Request grounds-crew trial",
+  primaryType: "sample",
+  proof: { img: "grout-moss", caption: "Exterior concrete, grout, and biological staining cleaned with VertKleen." }
+},
+{
   slug: "military-government",
   name: "Military / Government",
   icon: "ph-seal-check",
@@ -106,6 +118,18 @@ const INDUSTRIES = [
   proof: { img: "drone-action", caption: "Occupied-campus exterior facility cleaning with VertKleen." }
 },
 {
+  slug: "municipalities-water-utilities",
+  name: "Municipalities & Water Utilities",
+  icon: "ph-buildings",
+  h1: "Bid-ready water and facilities chemistry with the safety file already started.",
+  sub: "NSF-60 requirements, worker safety, bids, and public water review need a replacement story that survives documentation review.",
+  intro: "Municipalities and water utilities need chemistry that fits bid language, worker safety expectations, and water-system documentation. CR2, WaterSafe60, and HCR give the buyer a public-sector path for NSF-60 requirements, scale and corrosion control, and acid-replacement work.",
+  products: ["cr2", "watersafe60", "hcr"],
+  primaryCta: "Get on our bid list",
+  primaryType: "quote",
+  proof: { img: "ddc-rust", caption: "DDC Engineering proof gives public buyers a documented acid-replacement result to review." }
+},
+{
   slug: "hvac-water",
   name: "HVAC / Water Treatment",
   icon: "ph-wind",
@@ -116,6 +140,18 @@ const INDUSTRIES = [
   proof: { img: "ac-coil", caption: "HVAC coils and water systems cleaned and treated with aluminum-fin compatibility reviewed." }
 },
 {
+  slug: "data-centers",
+  name: "Data Centers",
+  icon: "ph-hard-drives",
+  h1: "Water-treatment chemistry for uptime teams under compliance pressure.",
+  sub: "Cooling tower scale, Legionella compliance, green mandates, and uptime risk put data-center water treatment under procurement review.",
+  intro: "Data centers cannot let scale, biological growth, or hazardous chemical handling become an uptime risk. WaterSafe60 covers scale and corrosion control, HCR handles acid-cleaning and passivation work, and Descaler gives facilities teams an acid-free path for coils, plumbing, and heat-transfer surfaces.",
+  products: ["watersafe60", "hcr", "descaler"],
+  primaryCta: "Schedule a water-treatment audit.",
+  primaryType: "audit",
+  proof: { img: "ac-coil", caption: "Cooling and heat-transfer surfaces cleaned with aluminum-fin compatibility reviewed." }
+},
+{
   slug: "plumbing",
   name: "Plumbing",
   icon: "ph-wrench",
@@ -124,6 +160,30 @@ const INDUSTRIES = [
   intro: "Calcium, scale, and rust in supply lines, fixtures, and water heaters are usually attacked with hydrochloric-acid products or CLR. VertKleen Descaler clears buildup without hydrochloric acid handling, with metal compatibility reviewed for occupied-building plumbing work; HCR handles heavier rust passivation.",
   products: ["descaler", "hcr", "neutral"],
   proof: { img: "ac-coil", caption: "Scale and calcium cleared from coils and water-side surfaces with Descaler." }
+},
+{
+  slug: "hotels-property-management",
+  name: "Hotels / Property Management",
+  icon: "ph-buildings",
+  h1: "One safer property-maintenance chemical set for guest-facing work.",
+  sub: "Facades, pools, restrooms, HVAC, exterior stains, and odor complaints need one supplier that does not create guest-facing fume issues.",
+  intro: "Hotels, resorts, and property managers juggle facades, pools, restrooms, HVAC coils, odor complaints, and exterior biological growth while guests remain on site. MultiWash, LAM3, Descaler, and Neutral create one property-maintenance lane with triple-zero handling across the core products.",
+  products: ["multiwash", "lam3", "descaler", "neutral"],
+  primaryCta: "Request property walkthrough",
+  primaryType: "audit",
+  proof: { img: "grout-moss", caption: "Exterior property surfaces cleared of biological staining with VertKleen." }
+},
+{
+  slug: "solar-panel-cleaning",
+  name: "Solar / Panel Cleaning",
+  icon: "ph-sun",
+  h1: "Panel cleaning at scale without making runoff the objection.",
+  sub: "Soft-wash at scale without panel damage, runoff review, and drone-site logistics need chemistry that is easy to approve.",
+  intro: "Solar farms and panel-cleaning teams need a soft-wash path that respects coatings, runoff, vegetation, and large site logistics. MultiWash and LAM3 support panel-adjacent exterior cleaning where bleach damage and plant kill concerns slow approval.",
+  products: ["multiwash", "lam3"],
+  primaryCta: "Request per-MW quote",
+  primaryType: "quote",
+  proof: { img: "drone-action", caption: "Drone exterior cleaning workflow supports large-site soft-wash programs." }
 }
 ];
 
@@ -206,6 +266,7 @@ const PROOF_IMAGE_DIMS = {
 };
 
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
+const htmlText = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const INDUSTRY_DETAILS = {
   "oil-gas": ["Chemicals replaced", "Hydrochloric acid (muriatic acid), solvent degreasers, and aggressive rust removers used on rigs, terminals, pipeline parts, and tank-farm equipment.", "Bundle: HCR for rust and passivation, Descaler for mineral scale, CR HD for oily soils, Neutral for sensitive surfaces."],
@@ -215,10 +276,15 @@ const INDUSTRY_DETAILS = {
   "food-beverage": ["Sector proof", "Brewery and distillery work centers on CR and HCR sequences for tanks, heat exchangers, protein soil, beer stone, and hood or drain cleaning.", "Bundle: CR for alkaline wash, HCR for acid wash, CR HD for grease, Neutral where sensitive surfaces or seals matter."],
   healthcare: ["Buyer objection", "Occupied facilities can't trade maintenance for fume events, shutdowns, or uncontrolled chemical exposure.", "Bundle: WaterSafe60 and Purgo for water-program support, HCR for passivation, CR for pH and alkaline cleaning."],
   construction: ["Common replacements", "Hydrochloric acid (muriatic acid), bleach, and caustic degreasers used for concrete cleanup, equipment, pavers, and exterior biological growth.", "Bundle: Descaler for concrete and calcium, HCR for rust, CR HD for equipment grease, LAM3 for exterior growth."],
+  "golf-courses": ["Trial focus", "Grounds teams need course equipment, carts, irrigation hardware, wet areas, and exterior stains cleaned without chemistry that threatens turf, water features, or member-facing spaces.", "Bundle: Torque for carts and fleet wash, LAM3 for biological staining, HCR for irrigation scale and rust, MultiWash for clubhouse and exterior cleaning."],
   "military-government": ["Procurement signal", "Public buyers need CAGE, NAICS, SDS, and controlled documents before they'll switch a chemistry standard.", "Bundle: HCR, Descaler, CR HD, and AlumiBrite cover rust, scale, grease, and aluminum restoration, all with documentation on file."],
   education: ["Sector proof", "Campus buyers need cleaning and water-treatment options that work while students, faculty, and staff remain on site.", "Bundle: CR and HCR for facility cleaning, WaterSafe60 for water systems, LAM3 for exterior biological growth."],
+  "municipalities-water-utilities": ["Bid signal", "Public water and municipal facilities need worker-safety improvements that still respect NSF-60, bid language, and documentation review.", "Bundle: CR2 for NSF-60 caustic replacement conversations, WaterSafe60 for scale and corrosion control, HCR for acid-cleaning and passivation work."],
   "hvac-water": ["Program coverage", "Cooling tower programs cover inhibitor, oxidizing antimicrobial support, non-oxidizing biocide, acid cleaning, pH adjustment, and degreasing.", "Bundle: WaterSafe60, Purgo, HCR, CR, and Neutral, with DBNPA footnoted separately when the non-oxidizing rotation is specified."],
-  plumbing: ["Buyer objection", "Water lines, fixtures, heaters, and drains need scale removal without hydrochloric acid handling inside occupied buildings.", "Bundle: Descaler for calcium and scale, HCR for heavier rust and passivation, Neutral for sensitive equipment cleaning."]
+  "data-centers": ["Program coverage", "Cooling tower scale, Legionella compliance, and green mandates all sit inside the same uptime conversation for data-center facilities teams.", "Bundle: WaterSafe60 for scale and corrosion control, HCR for passivation and heavy scale, Descaler for acid-free heat-transfer cleaning."],
+  plumbing: ["Buyer objection", "Water lines, fixtures, heaters, and drains need scale removal without hydrochloric acid handling inside occupied buildings.", "Bundle: Descaler for calcium and scale, HCR for heavier rust and passivation, Neutral for sensitive equipment cleaning."],
+  "hotels-property-management": ["Property walkthrough", "Guest-facing properties need facades, pools, restrooms, HVAC, odor, and exterior-stain work handled without fume complaints or a pile of separate suppliers.", "Bundle: MultiWash for daily property cleaning, LAM3 for biological staining, Descaler for pools, restrooms, and HVAC scale, Neutral for sensitive surfaces."],
+  "solar-panel-cleaning": ["Site review", "Solar and panel-cleaning crews need soft-wash chemistry that can be explained around coatings, vegetation, runoff, drones, and large-site access.", "Bundle: MultiWash for panel-adjacent exterior cleaning and LAM3 for moss, algae, mold, and mildew staining."],
 };
 
 function industryDetailBlock(ind) {
@@ -332,6 +398,16 @@ function proofImageDimsAttr(img) {
   return `width="${width}" height="${height}"`;
 }
 
+function primaryCtaBlock(ind) {
+  if (!ind.primaryCta) return "";
+  const href = `../contact?industry=${enc(ind.name)}&type=${enc(ind.primaryType || "quote")}`;
+  return `
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="${href}">${ind.primaryCta}</a>
+        <a class="btn btn-secondary" href="../products">View products</a>
+      </div>`;
+}
+
 function page(ind) {
   const nav = NAV.map(([href, label]) => {
     if (href === null) return `    <span>${label}</span>`;
@@ -344,11 +420,11 @@ function page(ind) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${ind.name} | MASEST VertKleen</title>
+<title>${htmlText(ind.name)} | MASEST VertKleen</title>
 <meta name="description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta name="theme-color" content="#fafbfc">
 <link rel="canonical" href="https://masest.co/industries/${ind.slug}">
-<meta property="og:title" content="${ind.name} | MASEST VertKleen">
+<meta property="og:title" content="${htmlText(ind.name)} | MASEST VertKleen">
 <meta property="og:description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
@@ -375,7 +451,7 @@ ${nav}
     <div class="wrap">
       <span class="eyebrow"><a href="../industries">Industries</a> &rsaquo; ${ind.name}</span>
       <h1 class="display">${ind.h1}</h1>
-      <p class="subhead">${ind.sub}</p>
+      <p class="subhead">${ind.sub}</p>${primaryCtaBlock(ind)}
     </div>
   </section>
 
@@ -407,6 +483,7 @@ ${industryDetailBlock(ind)}
     </div>
   </section>
 ${galleryBlock(ind)}
+<div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="industries/${ind.slug}" data-cms-region="body"></div>
 ${ctaBlock(ind)}
 </main>
 

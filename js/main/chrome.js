@@ -21,13 +21,81 @@ function initCmpTableLabels() {
   });
 }
 
+function validEmail(value) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value || "").trim());
+}
+
+function industryFromPath() {
+  if (!/\/industries\/[^/]+/.test(location.pathname)) return "";
+  return (document.title.split("|")[0] || "").trim();
+}
+
+function newsletterSourceContext(extra = {}) {
+  return {
+    source: extra.source || "footer_newsletter",
+    source_path: window.location.pathname + window.location.search,
+    source_page: pageName(),
+    page_title: document.title,
+    industry: industryFromPath(),
+    ...extra,
+  };
+}
+
+function postNewsletterCapture(payload) {
+  const body = JSON.stringify(payload);
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/newsletter", new Blob([body], { type: "application/json" }));
+      return;
+    }
+  } catch (err) { /* fall through to fetch */ }
+  fetch("/api/newsletter", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
+
+function wireDocumentRoomCapture() {
+  if (document.__masestDocumentCapture) return;
+  const docLinks = [...document.querySelectorAll("[data-document-download]")];
+  if (!docLinks.length) return;
+  document.__masestDocumentCapture = true;
+  document.addEventListener("click", (event) => {
+    const link = event.target?.closest?.("[data-document-download]");
+    if (!link) return;
+    const docName = link.dataset.documentName || link.getAttribute("aria-label") || link.textContent || "Document";
+    try {
+      if (typeof window.mtrack === "function") window.mtrack("document_download", { document: docName });
+    } catch (err) { /* analytics is best-effort */ }
+
+    const email = document.getElementById("docNotifyEmail")?.value?.trim() || "";
+    const optIn = document.getElementById("docNotifyOptIn")?.checked === true;
+    if (!optIn || !validEmail(email)) return;
+    const payload = {
+      email,
+      ...newsletterSourceContext({
+        source: "document_room",
+        document: docName,
+        document_notify: true,
+      }),
+    };
+    if (window.MASEST?.subscribeNewsletter) {
+      window.MASEST.subscribeNewsletter(email, payload).catch(() => {});
+    } else {
+      postNewsletterCapture(payload);
+    }
+  }, true);
+}
+
 export function renderChrome() {
   initCmpTableLabels();
   document.querySelector(".nojs-nav")?.setAttribute("hidden", "");
   const page = pageName();
   // Pages under /industries/ sit one level deep; prefix chrome links with the
   // right root so the shared nav/footer resolve from any directory depth.
-  const root = /\/(?:industries|products)\//.test(location.pathname) ? "../" : "";
+  const root = /\/(?:industries|products|comparisons)\//.test(location.pathname) ? "../" : "";
   const homeHref = root || "./";
   const isProductDetail = /\/products\/[^/]+(?:\.html)?$/.test(location.pathname);
   const links = [
@@ -269,7 +337,7 @@ export function renderChrome() {
       btn.disabled = true; status.dataset.state = ""; status.textContent = "Subscribing…";
       try {
         if (!window.MASEST?.subscribeNewsletter) throw new Error("unavailable");
-        await window.MASEST.subscribeNewsletter(email);
+        await window.MASEST.subscribeNewsletter(email, newsletterSourceContext());
         status.dataset.state = "ok"; status.textContent = "Check your inbox to confirm."; news.reset();
       } catch (err) {
         status.dataset.state = "err"; status.textContent = "Could not subscribe. Try again later.";
@@ -278,6 +346,7 @@ export function renderChrome() {
       }
     });
   }
+  wireDocumentRoomCapture();
 
   // Load public config + integrations (Crisp chat, newsletter helper) once per page.
   if (!window.__masestIntegrations) {
