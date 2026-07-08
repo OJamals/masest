@@ -61,18 +61,30 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   }
 
   function renderCompanyMembers(company, members = []) {
-    if (!members.length) return '<div class="company-members"><h3>Members</h3><p class="muted">No members.</p></div>';
-    return `<div class="company-members"><h3>Members</h3>${members.map((member) => `
+    const rows = members.length ? members.map((member) => `
       <div class="dash-row">
         <span>${esc(member.email || member.full_name || member.id)} <small class="muted">${esc(member.full_name || '')}</small></span>
         <span>
-          <select class="adm-select" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}">
+          <select class="adm-select adm-select-sm" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}">
             <option value="buyer" ${member.role === 'buyer' ? 'selected' : ''}>Buyer</option>
             <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option>
           </select>
-          <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}">Save</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}">Save role</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-member-remove="${esc(member.id)}" data-member-email="${esc(member.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i></button>
         </span>
-      </div>`).join('')}</div>`;
+      </div>`).join('') : '<p class="muted">No members yet.</p>';
+    return `<div class="company-members"><h3>Members</h3>${rows}
+      <div class="company-add-user" style="margin-top:12px">
+        <h4 style="margin:0 0 6px">Add a user to this company</h4>
+        <div class="adm-inline-actions">
+          <input class="adm-input" id="cuEmail" type="email" placeholder="email@company.com" aria-label="New user email">
+          <input class="adm-input" id="cuPassword" type="text" placeholder="temp password (min 8)" aria-label="Temporary password">
+          <input class="adm-input" id="cuName" type="text" placeholder="Full name (optional)" aria-label="Full name">
+          <select class="adm-select adm-select-sm" id="cuRole" aria-label="Role"><option value="buyer">Buyer</option><option value="admin">Admin</option></select>
+          <button class="btn btn-secondary btn-sm" type="button" data-member-add data-company-id="${esc(company.id)}"><i class="ph ph-user-plus" aria-hidden="true"></i> Create user</button>
+        </div>
+        <p class="muted" style="margin-top:4px;font-size:.82rem">Creates a Supabase login attached to this company. Share the temp password or have them reset it.</p>
+      </div></div>`;
   }
 
   function renderCompanyInvites(company, invites = []) {
@@ -145,6 +157,40 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           await openCompanyDetail(company.id);
         } catch (err) {
           box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not update the role. Retry.')}</p>`);
+          button.disabled = false;
+        }
+      });
+    });
+    box.querySelectorAll('[data-member-remove]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const email = button.dataset.memberEmail || 'this user';
+        if (!(await confirmDialog(`Delete ${email}? This permanently removes their login and profile.`, { confirmText: 'Delete', danger: true }))) return;
+        button.disabled = true;
+        try {
+          await api('/api/admin/users', { method: 'POST', body: { action: 'delete_user', user_id: button.dataset.memberRemove } });
+          await openCompanyDetail(company.id);
+        } catch (err) {
+          box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.message || err.data?.error || 'Could not delete the user. Retry.')}</p>`);
+          button.disabled = false;
+        }
+      });
+    });
+    box.querySelectorAll('[data-member-add]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const email = box.querySelector('#cuEmail')?.value.trim();
+        const password = box.querySelector('#cuPassword')?.value || '';
+        const full_name = box.querySelector('#cuName')?.value.trim();
+        const role = box.querySelector('#cuRole')?.value || 'buyer';
+        if (!email || password.length < 8) {
+          box.insertAdjacentHTML('beforeend', '<p class="adm-status" data-state="err">Enter an email and a temp password of at least 8 characters.</p>');
+          return;
+        }
+        button.disabled = true;
+        try {
+          await api('/api/admin/users', { method: 'POST', body: { action: 'create', email, password, full_name, role, company_id: company.id } });
+          await openCompanyDetail(company.id);
+        } catch (err) {
+          box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.message || err.data?.error || 'Could not create the user. Retry.')}</p>`);
           button.disabled = false;
         }
       });
