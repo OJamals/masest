@@ -186,13 +186,18 @@ function fieldTemplate(field, payload) {
     `;
   }
   if (field.kind === "textarea" || field.kind === "list") {
-    const preview = field.preview === "markdown"
+    const isMd = field.preview === "markdown";
+    const tools = isMd
+      ? `<div class="adm-md-tools"><button type="button" class="btn btn-ghost btn-sm" data-content-action="asset_md" data-content-asset-target="${esc(field.key)}"><i class="ph ph-image" aria-hidden="true"></i> Insert image</button><span class="adm-md-hint">Markdown: **bold**, ## heading, - list, [text](url)</span></div>`
+      : "";
+    const preview = isMd
       ? `<div class="adm-md-preview" data-md-preview-for="${esc(field.key)}" aria-live="polite"><span class="adm-md-preview-label">Preview</span><div class="adm-md-preview-body blog-body"></div></div>`
       : "";
     return `
       <label class="${esc(cls)}">${esc(field.label)}
         <textarea class="adm-textarea adm-content-field-text" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true"${required}>${esc(value)}</textarea>
       </label>
+      ${tools}
       ${preview}
     `;
   }
@@ -1169,6 +1174,23 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
 
   function assignAssetValue(fieldKey, assetPath, assetAlt = "", message = "Asset path inserted.", kind = assetTargetKind) {
     const root = $("admContent");
+    // Insert Markdown image at the caret of a body textarea (in-post images).
+    if (kind === "markdown") {
+      const ta = findPayloadField(root, fieldKey);
+      if (ta) {
+        const md = `![${assetAlt || "image"}](${assetPath || ""})`;
+        const start = Number.isInteger(ta.selectionStart) ? ta.selectionStart : ta.value.length;
+        const end = Number.isInteger(ta.selectionEnd) ? ta.selectionEnd : ta.value.length;
+        ta.value = ta.value.slice(0, start) + md + ta.value.slice(end);
+        const caret = start + md.length;
+        ta.focus();
+        ta.setSelectionRange(caret, caret);
+        syncStructuredPayload();
+        setStatus("Image inserted into body.", "ok");
+      }
+      closeAssetPicker();
+      return;
+    }
     const control = kind === "seo"
       ? findSeoField(root, fieldKey)
       : findPayloadField(root, fieldKey) || findSeoField(root, fieldKey);
@@ -1724,6 +1746,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (action === "unarchive") return unarchiveContent();
       if (action === "preview") return refreshPreview();
       if (action === "asset") return openAssetPicker(button.dataset.contentAssetTarget, "payload", button);
+      if (action === "asset_md") return openAssetPicker(button.dataset.contentAssetTarget, "markdown", button);
       if (action === "seo_asset") return openAssetPicker(button.dataset.contentSeoAssetTarget, "seo", button);
       if (action === "refresh_assets") return loadAssets();
       if (action === "close_assets") return closeAssetPicker();

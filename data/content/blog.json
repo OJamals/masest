@@ -5,7 +5,7 @@
       "title": "Descaling Heat Exchangers Without Aggressive Acid",
       "body": "## The efficiency tax of scale\n\nEven a thin scale layer drops heat-transfer efficiency and raises energy cost.\n\n## A lower-hazard descale\n\nVertKleen descaling chemistry targets carbonate and mineral scale while holding a lower HMIS profile than conventional acid blends.\n\n> Ask for a dilution guide before your next CIP cycle.\n\nRequest a [quote](/contact?type=quote) to match a product to your loop.",
       "date": "2026-06-20",
-      "hero": "",
+      "hero": "img/blog/descaling-without-acid.webp",
       "tags": [
         "descaling",
         "hvac",
@@ -14,7 +14,7 @@
       "author": "MASEST Technical Team",
       "excerpt": "Scale kills heat-transfer efficiency, but aggressive acid descalers create their own handling and disposal problems. There is a lower-hazard path.",
       "category": "marketing",
-      "hero_alt": "",
+      "hero_alt": "Close-up of an HVAC condenser coil descaled without aggressive acid",
       "sort_order": 0,
       "seo": {}
     },
@@ -23,7 +23,7 @@
       "title": "What HMIS 0-0-0 Actually Means for Your Facility",
       "body": "## The three numbers\n\nHMIS rates **Health**, **Flammability**, and **Physical hazard** from 0 to 4. A `0-0-0` product scores the lowest on all three.\n\n## Why it matters\n\nLower ratings can reduce PPE requirements, simplify storage, and ease shipping classification.\n\n- Fewer segregation rules\n- Simpler SDS routing\n- Lower handling training burden\n\nSee our [products](/products) for the full VertKleen line.",
       "date": "2026-07-01",
-      "hero": "",
+      "hero": "img/blog/hmis-000-explained.webp",
       "tags": [
         "hmis",
         "safety",
@@ -32,7 +32,7 @@
       "author": "MASEST Technical Team",
       "excerpt": "A 0-0-0 HMIS rating changes how a chemical is stored, shipped, and handled. Here is what the three zeros mean and why they lower your handling burden.",
       "category": "technical",
-      "hero_alt": "",
+      "hero_alt": "VertKleen HCR jug beside a jar of the clear, non-corrosive hydrochloric-acid replacement",
       "sort_order": 0,
       "seo": {}
     },
@@ -41,7 +41,7 @@
       "title": "Announcing the Expanded VertKleen Program",
       "body": "## What is new\n\nThe expanded program adds bulk sizes and recurring-account pricing.\n\n1. New drum and tote sizes\n2. Document-gated SKUs\n3. Program pricing tiers\n\nSee [programs & pricing](/programs) for details.",
       "date": "2026-06-10",
-      "hero": "",
+      "hero": "img/blog/vertkleen-launch.webp",
       "tags": [
         "announcement",
         "program"
@@ -49,7 +49,7 @@
       "author": "MASEST",
       "excerpt": "We have expanded the VertKleen program with new package sizes, document-gated SKUs, and program pricing for recurring accounts.",
       "category": "news",
-      "hero_alt": "",
+      "hero_alt": "VertKleen CR HD and a cup of diluted product on a commercial kitchen line",
       "sort_order": 0,
       "seo": {}
     }

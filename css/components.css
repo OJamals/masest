@@ -533,3 +533,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .adm-chip-x { border: 0; background: transparent; color: #fff; cursor: pointer; font-size: 1.05rem; line-height: 1; padding: 0 4px; border-radius: 999px; }
 .adm-chip-x:hover { background: rgba(255,255,255,.2); }
 .adm-chip-input { flex: 1; min-width: 120px; border: 0; outline: none; background: transparent; font: inherit; padding: 4px; color: inherit; }
+
+/* Admin: Markdown body toolbar (Insert image + syntax hint). */
+.adm-md-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.adm-md-hint { font-size: .78rem; color: var(--muted, #777); }
