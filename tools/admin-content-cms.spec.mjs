@@ -660,6 +660,14 @@ test("blog_post form renders all field editors + live markdown preview", async (
   await expect(chipsWidget.locator('.adm-chip[data-chip="case-study"]')).toBeVisible();
   await expect(page.locator('input[type="hidden"][data-content-payload-field="tags"]')).toHaveValue("case-study");
 
+  // In-post image control: the Insert image button opens the asset picker.
+  const insertImage = page.locator('[data-content-action="asset_md"][data-content-asset-target="body"]');
+  await expect(insertImage).toBeVisible();
+  await insertImage.click();
+  await expect(page.locator("#contentAssetPicker")).toBeVisible();
+  await page.locator('[data-content-action="close_assets"]').first().click();
+  await expect(page.locator("#contentAssetPicker")).toBeHidden();
+
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-blog-post-desktop.png` });
 });
