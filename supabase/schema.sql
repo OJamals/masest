@@ -12,8 +12,10 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create type profile_role as enum ('buyer','admin');
+  create type profile_role as enum ('buyer','admin','moderator');
 exception when duplicate_object then null; end $$;
+-- Existing installs (enum predates 'moderator'): add the value idempotently.
+alter type profile_role add value if not exists 'moderator';
 
 do $$ begin
   create type address_type as enum ('ship','bill');
