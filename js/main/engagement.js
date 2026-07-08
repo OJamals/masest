@@ -146,11 +146,11 @@ export function initQuoteForm() {
   advancedButton.type = "button";
   advancedButton.className = "btn btn-secondary quote-advanced-toggle";
   advancedButton.setAttribute("aria-expanded", "false");
-  advancedButton.textContent = "Add procurement details";
+  advancedButton.textContent = "Add product, volume & timeline";
   advancedFields[0]?.before(advancedButton);
   const setAdvancedOpen = open => {
     advancedButton.setAttribute("aria-expanded", open ? "true" : "false");
-    advancedButton.textContent = open ? "Hide procurement details" : "Add procurement details";
+    advancedButton.textContent = open ? "Hide product, volume & timeline" : "Add product, volume & timeline";
     advancedFields.forEach(field => { field.hidden = !open; });
     advancedIds.forEach(id => {
       const el = document.getElementById(id);

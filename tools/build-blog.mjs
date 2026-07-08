@@ -108,7 +108,7 @@ function postPage(post, all) {
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260706c">
+<link rel="stylesheet" href="../css/style.css?v=20260708b">
 <link rel="stylesheet" href="../css/navigation.css?v=20260706a">
 <link rel="stylesheet" href="../css/components.css">
 <link rel="stylesheet" href="../css/blog.css">
@@ -203,7 +203,7 @@ function indexPage(posts) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="alternate" type="application/rss+xml" title="MASEST VertKleen Blog" href="/blog/feed.xml">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260706c">
+<link rel="stylesheet" href="css/style.css?v=20260708b">
 <link rel="stylesheet" href="css/navigation.css?v=20260706a">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/blog.css">
@@ -244,6 +244,13 @@ function indexPage(posts) {
 ${cards}
       </div>
       <p class="blog-empty" role="status" aria-live="polite" hidden>No posts match that filter.</p>
+    </div>
+  </section>
+  <section class="block-dark on-dark cta-band">
+    <div class="wrap reveal">
+      <h2 class="headline">Ready to swap the hazard off your shelf?</h2>
+      <p class="subhead">Tell us the chemical you run today and we will match the HMIS 0-0-0 VertKleen replacement, with the documentation your safety officer can sign.</p>
+      <a class="btn btn-primary" href="products#swap">Find your replacement</a>
     </div>
   </section>
 </main>
