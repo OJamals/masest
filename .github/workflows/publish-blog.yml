@@ -1,0 +1,71 @@
+# Regenerate the committed content snapshots + static blog from published
+# Supabase CMS entries, then commit + push so Cloudflare Pages redeploys.
+#
+# Closes the "publish -> live" gap: pressing Publish in the admin only flips a
+# Supabase row to published; the public site serves committed files. This job
+# runs `publish:content` (regenerates data/content/*.json) + `build-blog`
+# (regenerates blog.html, blog/*.html, blog/feed.xml, sitemap.xml), and pushes
+# any diff to main — which triggers the normal Pages deploy.
+#
+# REQUIRED repo secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL                 https://<project>.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY    service-role key (server-side only)
+#
+# Triggers:
+#   - schedule: baseline automation (every 30 min) with no wiring needed
+#   - workflow_dispatch: run on demand from the Actions tab
+#   - repository_dispatch (type: content-published): optional — have the CMS
+#     publish action POST to the GitHub dispatch API to go live immediately
+name: Publish blog + content
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+  repository_dispatch:
+    types: [content-published]
+
+concurrency:
+  group: publish-content
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Regenerate content snapshots + static blog
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node tools/publish-content.mjs
+          node tools/build-blog.mjs
+
+      - name: Commit + push if changed
+        run: |
+          if [ -z "$(git status --porcelain data/content blog.html blog sitemap.xml)" ]; then
+            echo "No content changes to publish."
+            exit 0
+          fi
+          git config user.name "masest-content-bot"
+          git config user.email "bot@masest.co"
+          git add data/content blog.html blog sitemap.xml
+          git commit -m "content: publish CMS updates [skip ci]"
+          # Land on top of any concurrent pushes; retry once.
+          git pull --rebase origin main || true
+          git push origin HEAD:main || (git pull --rebase origin main && git push origin HEAD:main)

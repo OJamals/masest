@@ -611,3 +611,47 @@ test("mobile content editor switches to page metadata and page-section fields wi
   await page.evaluate(() => window.scrollBy(0, -88));
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-operations-mobile.png` });
 });
+
+test("blog_post form renders all field editors + live markdown preview", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/content**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(contentList()),
+  }));
+
+  await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("#contentType").selectOption("blog_post");
+
+  const categorySelect = page.locator('select[data-content-payload-field="category"]');
+  await expect(categorySelect).toBeVisible();
+  const categoryOptionValues = await categorySelect.locator("option").evaluateAll(
+    (options) => options.map((option) => option.value),
+  );
+  expect(categoryOptionValues).toEqual(expect.arrayContaining(["marketing", "technical", "news"]));
+
+  await expect(page.locator('input[type="date"][data-content-payload-field="date"]')).toBeVisible();
+  await expect(page.locator('[data-content-asset-target="hero"]')).toBeVisible();
+
+  const chipsWidget = page.locator('[data-chips-for="tags"]');
+  await expect(chipsWidget.locator("[data-chip-input]")).toBeVisible();
+
+  const bodyPreview = page.locator('[data-md-preview-for="body"]');
+  await expect(bodyPreview).toBeAttached();
+
+  await page.locator('[data-content-payload-field="body"]').fill("## Heading\n\n**bold** text");
+  const previewBody = bodyPreview.locator(".adm-md-preview-body");
+  await expect(previewBody.locator("h2")).toHaveText("Heading");
+  await expect(previewBody.locator("strong")).toHaveText("bold");
+  expect(await previewBody.innerHTML()).toContain("<h2>Heading</h2>");
+  expect(await previewBody.innerHTML()).toContain("<strong>bold</strong>");
+
+  await chipsWidget.locator("[data-chip-input]").fill("case-study");
+  await chipsWidget.locator("[data-chip-input]").press("Enter");
+  await expect(chipsWidget.locator('.adm-chip[data-chip="case-study"]')).toBeVisible();
+  await expect(page.locator('input[type="hidden"][data-content-payload-field="tags"]')).toHaveValue("case-study");
+
+  await scrollContentPanelIntoView(page);
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-blog-post-desktop.png` });
+});

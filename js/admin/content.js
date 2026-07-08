@@ -1,4 +1,5 @@
 import { esc, delegate, confirmDialog } from "../util.js";
+import { renderMarkdown } from "../md.js";
 import { supabase } from "../auth.js";
 import { diffContentFields, formatFieldValue } from "./content-diff.js";
 import {
@@ -145,15 +146,54 @@ function mergeSeoPayload(existing, values) {
   return { ...seo, ...normalizeSeoValues(values) };
 }
 
+function chipSpan(tag) {
+  return `<span class="adm-chip" data-chip="${esc(tag)}">${esc(tag)}<button type="button" class="adm-chip-x" data-chip-remove aria-label="Remove ${esc(tag)}">×</button></span>`;
+}
+
+// Rewrite the hidden list field from the current chips and notify listeners
+// (the root "input" handler re-syncs the structured payload JSON).
+function chipHiddenSync(container) {
+  const values = [...container.querySelectorAll(".adm-chip")].map((c) => c.dataset.chip);
+  const hidden = container.querySelector('input[type="hidden"][data-content-payload-field]');
+  if (!hidden) return;
+  hidden.value = values.join(", ");
+  hidden.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function addChip(container, raw) {
+  const val = String(raw || "").trim().replace(/,+$/, "").trim();
+  if (!val) return;
+  const existing = [...container.querySelectorAll(".adm-chip")].map((c) => c.dataset.chip.toLowerCase());
+  if (existing.includes(val.toLowerCase())) return;
+  container.querySelector(".adm-chips-list").insertAdjacentHTML("beforeend", chipSpan(val));
+  chipHiddenSync(container);
+}
+
 function fieldTemplate(field, payload) {
   const value = fieldValue(payload, field.key);
   const cls = field.className || "";
   const required = field.required ? " required aria-required=\"true\"" : "";
+  if (field.widget === "chips") {
+    const items = String(value || "").split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
+    return `
+      <label class="${esc(cls)}">${esc(field.label)}
+        <div class="adm-chips" data-chips-for="${esc(field.key)}">
+          <span class="adm-chips-list">${items.map(chipSpan).join("")}</span>
+          <input class="adm-chip-input" type="text" data-chip-input placeholder="Add tag, press Enter">
+          <input type="hidden" data-content-payload-field="${esc(field.key)}" data-content-field-kind="list" value="${esc(items.join(", "))}">
+        </div>
+      </label>
+    `;
+  }
   if (field.kind === "textarea" || field.kind === "list") {
+    const preview = field.preview === "markdown"
+      ? `<div class="adm-md-preview" data-md-preview-for="${esc(field.key)}" aria-live="polite"><span class="adm-md-preview-label">Preview</span><div class="adm-md-preview-body blog-body"></div></div>`
+      : "";
     return `
       <label class="${esc(cls)}">${esc(field.label)}
         <textarea class="adm-textarea adm-content-field-text" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true"${required}>${esc(value)}</textarea>
       </label>
+      ${preview}
     `;
   }
   if (field.kind === "checkbox") {
@@ -164,7 +204,18 @@ function fieldTemplate(field, payload) {
       </label>
     `;
   }
-  const input = `<input class="adm-input" type="${field.kind === "number" ? "number" : "text"}"${field.kind === "number" ? ' step="0.01"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
+  if (field.kind === "select") {
+    const opts = ["", ...(field.options || [])]
+      .map((o) => `<option value="${esc(o)}"${String(value) === o ? " selected" : ""}>${o ? esc(o) : "— select —"}</option>`)
+      .join("");
+    return `
+      <label class="${esc(cls)}">${esc(field.label)}
+        <select class="adm-select" data-content-payload-field="${esc(field.key)}" data-content-field-kind="select"${required}>${opts}</select>
+      </label>
+    `;
+  }
+  const inputType = field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text";
+  const input = `<input class="adm-input" type="${inputType}"${field.kind === "number" ? ' step="0.01"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
   if (ASSET_FIELD_KEYS.has(field.key)) {
     return `
       <div class="adm-content-asset-control ${esc(cls)}">
@@ -730,10 +781,21 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     mounted = true;
   }
 
+  function updateMarkdownPreviews() {
+    document.querySelectorAll("[data-md-preview-for]").forEach((wrap) => {
+      const key = wrap.dataset.mdPreviewFor;
+      const src = document.querySelector(`[data-content-payload-field="${key}"]`);
+      const body = wrap.querySelector(".adm-md-preview-body");
+      if (!src || !body) return;
+      body.innerHTML = renderMarkdown(src.value || "");
+    });
+  }
+
   function renderStructuredFields(type, payload = {}) {
     const box = $("contentStructuredFields");
     if (!box) return;
     box.innerHTML = structuredFieldsTemplate(type, payload);
+    updateMarkdownPreviews();
   }
 
   function updateSeoMeters() {
@@ -761,6 +823,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       const payload = mergeStructuredPayload(type, readPayloadJson(), readStructuredValues());
       $("contentPayload").value = jsonText(payload);
       setStatus("");
+      updateMarkdownPreviews();
       refreshPreview();
     } catch (error) {
       setStatus(`Invalid JSON: ${error.message}`, "err");
@@ -1621,6 +1684,23 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     });
     root.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && $("contentAssetPicker") && !$("contentAssetPicker").hidden) closeAssetPicker();
+      if (event.target.matches("[data-chip-input]") && (event.key === "Enter" || event.key === ",")) {
+        event.preventDefault();
+        addChip(event.target.closest(".adm-chips"), event.target.value);
+        event.target.value = "";
+      }
+    });
+    // Commit a half-typed tag when the chip input loses focus.
+    root.addEventListener("blur", (event) => {
+      if (event.target.matches("[data-chip-input]") && event.target.value.trim()) {
+        addChip(event.target.closest(".adm-chips"), event.target.value);
+        event.target.value = "";
+      }
+    }, true);
+    delegate(root, "click", "[data-chip-remove]", (_event, button) => {
+      const container = button.closest(".adm-chips");
+      button.closest(".adm-chip")?.remove();
+      if (container) chipHiddenSync(container);
     });
     delegate(root, "click", "[data-content-edit]", (_event, button) => editEntry(button.dataset.contentEdit));
     delegate(root, "click", "[data-content-revision]", (_event, button) => inspectRevision(button.dataset.contentRevision));
