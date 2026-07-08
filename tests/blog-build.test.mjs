@@ -84,3 +84,19 @@ test("buildBlog rejects a missing required field", () => {
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("buildBlog writes an index listing every post with filter data", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
+    const idx = readFileSync(join(out, "blog.html"), "utf8");
+    for (const p of SEED.blog_posts) {
+      assert.ok(idx.includes(`data-slug="${p.slug}"`), `${p.slug} card must render`);
+      assert.ok(idx.includes(`data-category="${p.category}"`), `${p.slug} category attr`);
+    }
+    assert.match(idx, /data-blog-filter/);
+    assert.match(idx, /canonical" href="https:\/\/masest\.co\/blog"/);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});

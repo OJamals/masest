@@ -152,6 +152,100 @@ function postPage(post, all) {
 `;
 }
 
+function postCard(post) {
+  const thumb = post.hero
+    ? `<img class="blog-card-img" src="${attr(post.hero)}" alt="${attr(post.hero_alt || post.title)}" loading="lazy" decoding="async">`
+    : `<div class="blog-card-img blog-card-img--fallback" aria-hidden="true"></div>`;
+  const tags = (post.tags || []).map((t) => attr(t)).join(" ");
+  return `<article class="blog-card" data-slug="${attr(post.slug)}" data-category="${attr(post.category)}" data-tags="${tags}">
+    <a class="blog-card-link" href="/blog/${attr(post.slug)}">
+      ${thumb}
+      <span class="blog-card-cat">${text(post.category)}</span>
+      <h2 class="blog-card-title">${text(post.title)}</h2>
+      <p class="blog-card-excerpt">${text(post.excerpt)}</p>
+      <span class="blog-card-date">${text(fmtDate(post.date))}</span>
+    </a>
+  </article>`;
+}
+
+function indexPage(posts) {
+  const cats = ["all", ...CATEGORIES];
+  const chips = cats
+    .map((c) => `<button type="button" class="blog-chip${c === "all" ? " is-active" : ""}" data-filter-cat="${c}">${c === "all" ? "All" : c[0].toUpperCase() + c.slice(1)}</button>`)
+    .join("");
+  const cards = posts.map(postCard).join("\n");
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    name: "MASEST VertKleen Blog",
+    url: `${BASE}/blog`,
+    publisher: ORG,
+  };
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog | MASEST VertKleen</title>
+<meta name="description" content="Field notes, technical guides, and program news on lower-hazard VertKleen cleaning chemistry.">
+<meta name="theme-color" content="#fafbfc">
+<link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
+<meta property="og:title" content="Blog | MASEST VertKleen">
+<meta property="og:description" content="Field notes, technical guides, and program news on VertKleen chemistry.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MASEST VertKleen">
+<link rel="alternate" type="application/rss+xml" title="MASEST VertKleen Blog" href="/blog/feed.xml">
+<link rel="stylesheet" href="vendor/phosphor/style.css">
+<link rel="stylesheet" href="css/style.css?v=20260706c">
+<link rel="stylesheet" href="css/navigation.css?v=20260706a">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/blog.css">
+<!-- seo:auto -->
+<link rel="canonical" href="${BASE}/blog">
+<meta property="og:url" content="${BASE}/blog">
+<meta property="og:image" content="${BASE}/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">${JSON.stringify(schema)}</script>
+<!-- /seo:auto -->
+</head>
+<body class="site-soft-bg blog-index-page">
+<a class="skip-link" href="#main">Skip to content</a>
+<noscript>
+<nav class="nojs-nav" aria-label="Site">
+  <a href="/"><b>MASEST</b></a>
+  <a href="products">Products</a>
+  <a href="services">Services</a>
+  <a href="industries">Industries</a>
+  <a href="resources">Resources</a>
+  <a href="blog">Blog</a>
+</nav>
+</noscript>
+<main id="main">
+  <section class="hero blog-index-hero">
+    <div class="wrap">
+      <span class="eyebrow">VertKleen Briefing</span>
+      <h1 class="display">Blog</h1>
+      <p class="subhead">Field notes, technical guides, and program news.</p>
+    </div>
+  </section>
+  <section class="section">
+    <div class="wrap" data-blog-filter>
+      <div class="blog-chips" role="group" aria-label="Filter by category">${chips}</div>
+      <div class="blog-grid">
+${cards}
+      </div>
+      <p class="blog-empty" hidden>No posts match that filter.</p>
+    </div>
+  </section>
+</main>
+<script type="module" src="js/main.js?v=20260619b"></script>
+<script type="module" src="js/blog-index.js"></script>
+<script src="js/track.js" defer></script>
+</body>
+</html>
+`;
+}
+
 export function buildBlog({ posts, outDir = ROOT, updateSitemap = true } = {}) {
   validate(posts);
   const sorted = sortPosts(posts);
@@ -163,7 +257,13 @@ export function buildBlog({ posts, outDir = ROOT, updateSitemap = true } = {}) {
     const before = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (before !== html) { writeFileSync(file, html); changed++; }
   }
-  // index + feed + sitemap are added in later tasks.
+  const idxFile = join(outDir, "blog.html");
+  const idxHtml = indexPage(sorted);
+  if ((existsSync(idxFile) ? readFileSync(idxFile, "utf8") : "") !== idxHtml) {
+    writeFileSync(idxFile, idxHtml);
+    changed++;
+  }
+  // feed + sitemap are added in later tasks.
   return { changed, posts: sorted };
 }
 
