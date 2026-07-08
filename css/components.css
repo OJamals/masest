@@ -569,3 +569,9 @@ body .product-detail-hero { padding-bottom: 42px; }
 /* Admin: Markdown body toolbar (Insert image + syntax hint). */
 .adm-md-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
 .adm-md-hint { font-size: .78rem; color: var(--muted, #777); }
+
+/* Admin newsletter: body editor + live preview side-by-side on wide screens. */
+.nl-edit-grid { display: grid; gap: 14px; }
+.nl-edit-grid > label { display: flex; flex-direction: column; }
+.nl-edit-grid .adm-md-preview { min-height: 260px; }
+@media (min-width: 900px) { .nl-edit-grid { grid-template-columns: 1fr 1fr; align-items: stretch; } }

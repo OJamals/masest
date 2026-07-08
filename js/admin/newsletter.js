@@ -141,10 +141,12 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
               <button type="button" class="btn btn-ghost btn-sm" id="nlInsertImage"><i class="ph ph-image" aria-hidden="true"></i> Insert image</button>
               <span class="adm-md-hint">Markdown + raw HTML: **bold**, ## heading, - list, [text](url), &lt;div&gt;…&lt;/div&gt;</span>
             </div>
-            <label>Body <textarea id="nlBody" class="adm-textarea adm-content-field-text" style="min-height:220px" spellcheck="true"></textarea></label>
-            <div class="adm-md-preview">
-              <span class="adm-md-preview-label">Preview</span>
-              <div id="nlPreview" class="adm-md-preview-body blog-body"></div>
+            <div class="nl-edit-grid">
+              <label>Body <textarea id="nlBody" class="adm-textarea adm-content-field-text" style="min-height:260px" spellcheck="true"></textarea></label>
+              <div class="adm-md-preview">
+                <span class="adm-md-preview-label">Live preview</span>
+                <div id="nlPreview" class="adm-md-preview-body blog-body"></div>
+              </div>
             </div>
           </div>
           <div class="full">
