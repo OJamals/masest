@@ -14,14 +14,15 @@
 <link rel="stylesheet" href="css/components.css">
 <style>
   .dash-wrap { max-width: 920px; margin: 0 auto; }
-  .dash-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
-  .dash-tab { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: var(--r-pill);
+  .dash-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; overflow: visible; }
+  .dash-tab { position: relative; overflow: visible; display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: var(--r-pill);
     border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-soft); font-weight: 700;
     font-size: .9rem; cursor: pointer; transition: border-color .2s, color .2s, background .2s; }
   .dash-tab:hover { border-color: var(--ink); color: var(--ink); }
   .dash-tab[aria-selected=true] { background: var(--accent); color: #fff; border-color: transparent; }
-  .dash-tab .pill { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--status-danger-ink);
-    color: #fff; font-size: .68rem; display: inline-grid; place-items: center; }
+  .dash-tab .pill { position: absolute; top: -7px; right: -7px; margin-left: 0; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--status-danger-ink);
+    color: #fff; font-size: .68rem; display: inline-grid; place-items: center; box-shadow: 0 0 0 2px var(--surface); }
+  .dash-tab .pill[hidden] { display: none; }
   .dash-tab[aria-selected=true] .pill { background: #fff; color: var(--accent-ink); }
   .dash-panel[hidden] { display: none; }
   .dash-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 22px; margin-bottom: 16px; }
@@ -171,9 +172,7 @@
   .dash-tab i {
     flex: 0 0 auto;
   }
-  .dash-tab .pill {
-    margin-left: auto;
-  }
+  .dash-tab .pill { margin-left: 0; }
   .buyer-action,
   .activity-line,
   .setup-step,
@@ -316,7 +315,7 @@
 .dash-nav-group > span { display: none; }
 .dash-sidebar .dash-tab { position: relative; width: 100%; min-height: 44px; justify-content: center; white-space: normal; text-align: center; padding: 9px 8px; }
 .dash-sidebar .dash-tab i { display: none; }
-.dash-sidebar .dash-tab .pill { position: absolute; top: 4px; right: 5px; min-width: 16px; min-height: 16px; padding: 0 4px; font-size: .65rem; margin-left: 0; }
+.dash-sidebar .dash-tab .pill { top: -6px; right: -6px; min-width: 18px; min-height: 18px; padding: 0 5px; font-size: .65rem; }
 .buyer-action-grid, .overview-activity-grid { grid-template-columns: 1fr; }
 }
   @media (max-width: 640px) {
@@ -527,7 +526,7 @@
                     <div class="field"><label for="bulkItems">What do you need? *</label>
                       <textarea id="bulkItems" rows="3" placeholder="e.g. 4x 55-gal HCR, 2x 275-gal tote Neutral, monthly" required></textarea></div>
                     <div class="field biz-field-gap"><label for="bulkNotes">Delivery / timing notes</label>
-                      <input id="bulkNotes" type="text" placeholder="Ship-to, cadence, target date (optional)"></div>
+                      <input id="bulkNotes" type="text" placeholder="Timing notes (optional)"></div>
                     <button class="btn btn-primary btn-sm biz-button-gap" type="submit">Request quote</button>
                     <span class="biz-status" id="bulkStatus" role="status" aria-live="polite"></span>
                   </form>

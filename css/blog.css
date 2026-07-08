@@ -15,7 +15,7 @@
 .blog-card-excerpt { margin: 10px 20px 0; color: var(--muted, #555); font-size: .92rem; line-height: 1.55; }
 .blog-card-date { display: block; margin: 12px 20px 0; font-size: .8rem; color: var(--muted, #777); }
 .blog-chips { display: flex; flex-wrap: wrap; gap: 10px; }
-.blog-chip { border: 1px solid var(--line, #e5e7eb); background: transparent; border-radius: 999px; padding: 8px 18px; font: inherit; font-size: .88rem; cursor: pointer; color: inherit; }
+.blog-chip { display: inline-flex; align-items: center; min-height: 44px; border: 1px solid var(--line, #e5e7eb); background: transparent; border-radius: 999px; padding: 8px 18px; font: inherit; font-size: .88rem; line-height: 1.2; cursor: pointer; color: inherit; }
 .blog-chip.is-active { background: var(--brand, #3b2a6b); color: #fff; border-color: transparent; }
 .blog-empty { margin-top: 24px; color: var(--muted, #777); }
 

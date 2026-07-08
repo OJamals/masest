@@ -1297,7 +1297,7 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 .foot-brand { font-weight: 900; color: #fff; font-size: 1.15rem; margin-bottom: 12px; }
 .foot-bottom { border-top: 1px solid rgba(255,255,255,.14); padding-top: 26px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: rgba(255,255,255,.75); }
 .foot-legal { display: inline-flex; gap: 14px; }
-.foot-legal a { color: rgba(255,255,255,.82); text-decoration: none; }
+.foot-legal a { display: inline-flex; align-items: center; min-height: 44px; color: rgba(255,255,255,.82); text-decoration: none; }
 .foot-legal a:hover { color: #fff; }
 
 /* Footer newsletter signup (Klaviyo) */
@@ -6778,11 +6778,34 @@ body.product-detail-page main > section.product-static-section {
 .product-static-panel {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   padding: clamp(24px, 3vw, 34px);
   border: 1px solid rgba(13, 48, 53, .1);
   border-radius: var(--r-card);
   background: #fff;
   box-shadow: 0 18px 48px rgba(9, 46, 52, .07);
+}
+
+.product-static-panel .table-scroll {
+  max-width: 100%;
+}
+
+.product-static-panel .table-scroll .cmp-table {
+  font-size: .85rem;
+  min-width: 0;
+  table-layout: auto;
+}
+
+.product-static-panel .cmp-table th,
+.product-static-panel .cmp-table td {
+  padding-inline: clamp(8px, 1.2vw, 14px);
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
+.product-static-panel .cmp-table th:last-child,
+.product-static-panel .cmp-table td:last-child {
+  white-space: nowrap;
 }
 
 .product-static-panel h2 {

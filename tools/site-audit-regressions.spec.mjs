@@ -77,6 +77,106 @@ test("newsletter signup keeps a labelled touch-sized email field", async ({ page
   }
 });
 
+test("footer legal links keep touch-sized hit areas", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/dashboard.html#orders`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle");
+
+  const legalLinks = await page.locator(".foot-legal a").evaluateAll((nodes) => nodes.map((node) => {
+    const rect = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    return {
+      text: node.textContent.trim(),
+      height: Math.round(rect.height),
+      display: style.display,
+      alignItems: style.alignItems,
+    };
+  }));
+
+  expect(legalLinks.map((link) => link.text)).toEqual(["Privacy", "Terms"]);
+  for (const link of legalLinks) {
+    expect(link.height, `${link.text} footer link height`).toBeGreaterThanOrEqual(44);
+    expect(link.display, `${link.text} footer link display`).toBe("flex");
+    expect(link.alignItems, `${link.text} footer link alignment`).toBe("center");
+  }
+});
+
+test("post-auth notification bubbles sit outside tab button corners", async ({ page }) => {
+  const measureBadge = async (selector) => page.locator(selector).evaluate((badge) => {
+    badge.hidden = false;
+    badge.textContent = "2";
+    const button = badge.closest("button");
+    const badgeRect = badge.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    const style = getComputedStyle(badge);
+    return {
+      badgeTop: Math.round(badgeRect.top),
+      badgeRight: Math.round(badgeRect.right),
+      buttonTop: Math.round(buttonRect.top),
+      buttonRight: Math.round(buttonRect.right),
+      position: style.position,
+      marginLeft: style.marginLeft,
+    };
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/dashboard.html#notifications`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    document.getElementById("dashGuest").hidden = true;
+    document.getElementById("dashApp").hidden = false;
+  });
+  await expect(page.locator("#badgeNotifs")).toBeHidden();
+  const dashboard = await measureBadge("#badgeNotifs");
+  expect(dashboard.position).toBe("absolute");
+  expect(dashboard.badgeTop, "dashboard badge top edge").toBeLessThan(dashboard.buttonTop);
+  expect(dashboard.badgeRight, "dashboard badge right edge").toBeGreaterThan(dashboard.buttonRight);
+  expect(dashboard.marginLeft, "dashboard badge should not consume label space").toBe("0px");
+
+  await page.goto(`${BASE_URL}/admin.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    document.getElementById("admGate").hidden = true;
+    document.getElementById("admApp").hidden = false;
+  });
+  await expect(page.locator("#aBadgePending")).toBeHidden();
+  await expect(page.locator("#aBadgeCrm")).toBeHidden();
+  const admin = await measureBadge("#aBadgeMsg");
+  expect(admin.position).toBe("absolute");
+  expect(admin.badgeTop, "admin badge top edge").toBeLessThan(admin.buttonTop);
+  expect(admin.badgeRight, "admin badge right edge").toBeGreaterThan(admin.buttonRight);
+  expect(admin.marginLeft, "admin badge should not consume label space").toBe("0px");
+});
+
+test("blog category chips keep touch-sized filter controls", async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 1000 },
+    { width: 820, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${BASE_URL}/blog.html`, { waitUntil: "domcontentloaded" });
+
+    const chips = await page.locator(".blog-chip").evaluateAll((nodes) => nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return {
+        text: node.textContent.trim(),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        display: style.display,
+        alignItems: style.alignItems,
+      };
+    }));
+
+    expect(chips.length, `${viewport.width} blog chip count`).toBeGreaterThanOrEqual(4);
+    for (const chip of chips) {
+      expect(chip.height, `${viewport.width} ${chip.text} chip height`).toBeGreaterThanOrEqual(44);
+      expect(chip.width, `${viewport.width} ${chip.text} chip width`).toBeGreaterThan(44);
+      expect(chip.display, `${viewport.width} ${chip.text} chip display`).toBe("flex");
+      expect(chip.alignItems, `${viewport.width} ${chip.text} chip alignment`).toBe("center");
+    }
+  }
+});
+
 test("industry thumbnails expose explicit link names", async ({ page }) => {
   await page.goto(`${BASE_URL}/industries.html`, { waitUntil: "domcontentloaded" });
 
@@ -440,4 +540,56 @@ test("cart and product static preview avoid unavailable commerce API", async ({ 
   }
 
   expect(apiRequests).toEqual([]);
+});
+
+test("comparison pages keep price tables inside their cards on tablet", async ({ page }) => {
+  const comparisonPages = [
+    "comparisons/beer-line-cleaner-cost-comparison.html",
+    "comparisons/cr-hd-vs-simple-green.html",
+    "comparisons/hcr-vs-rydlyme.html",
+    "comparisons/lam3-vs-wet-forget.html",
+    "comparisons/vertkleen-hcr-vs-clr.html",
+  ];
+
+  await page.setViewportSize({ width: 820, height: 900 });
+
+  for (const pagePath of comparisonPages) {
+    await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+
+    const layout = await page.evaluate(() => {
+      const panels = [...document.querySelectorAll(".product-static-panel")].map((panel) => {
+        const panelBox = panel.getBoundingClientRect();
+        const tables = [...panel.querySelectorAll(".table-scroll, .cmp-table")].map((node) => {
+          const box = node.getBoundingClientRect();
+          return {
+            left: Math.round(box.left),
+            right: Math.round(box.right),
+            scrollDelta: Math.round(node.scrollWidth - node.clientWidth),
+          };
+        });
+        return {
+          left: Math.round(panelBox.left),
+          right: Math.round(panelBox.right),
+          tables,
+        };
+      });
+      return {
+        viewport: document.documentElement.clientWidth,
+        pageOverflow: Math.round(document.documentElement.scrollWidth - document.documentElement.clientWidth),
+        panels,
+      };
+    });
+
+    expect(layout.pageOverflow, `${pagePath} page overflow`).toBeLessThanOrEqual(2);
+    for (const panel of layout.panels) {
+      expect(panel.left, `${pagePath} panel left`).toBeGreaterThanOrEqual(0);
+      expect(panel.right, `${pagePath} panel right`).toBeLessThanOrEqual(layout.viewport);
+      for (const table of panel.tables) {
+        expect(table.left, `${pagePath} table left`).toBeGreaterThanOrEqual(panel.left);
+        expect(table.right, `${pagePath} table right`).toBeLessThanOrEqual(panel.right);
+        expect(table.scrollDelta, `${pagePath} table internal overflow`).toBeLessThanOrEqual(2);
+      }
+    }
+  }
 });

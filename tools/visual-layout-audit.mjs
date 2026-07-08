@@ -27,8 +27,17 @@ const PUBLIC_STEPS = [
   ["programs", "/programs.html"],
   ["proof", "/proof.html"],
   ["resources", "/resources.html"],
+  ["blog", "/blog.html"],
+  ["blog-detail-descaling", "/blog/descaling-without-acid.html"],
+  ["blog-detail-hmis", "/blog/hmis-000-explained.html"],
+  ["blog-detail-launch", "/blog/vertkleen-launch.html"],
   ["industries", "/industries.html"],
   ["industry-detail", "/industries/plumbing.html"],
+  ["comparison-beer-line", "/comparisons/beer-line-cleaner-cost-comparison.html"],
+  ["comparison-crhd-simple-green", "/comparisons/cr-hd-vs-simple-green.html"],
+  ["comparison-hcr-rydlyme", "/comparisons/hcr-vs-rydlyme.html"],
+  ["comparison-lam3-wet-forget", "/comparisons/lam3-vs-wet-forget.html"],
+  ["comparison-hcr-clr", "/comparisons/vertkleen-hcr-vs-clr.html"],
   ["about", "/about.html"],
   ["contact-quote", "/contact.html?type=quote"],
   ["cart", "/cart.html"],
@@ -420,6 +429,19 @@ function auditScript() {
     return /(auto|scroll)/.test(`${style.overflow}${style.overflowX}`)
       && child.scrollWidth - child.clientWidth > 2;
   });
+  const hasCornerCounterOverflow = (el) => {
+    if (!el.matches(".dash-tab, .adm-tab")) return false;
+    const rect = el.getBoundingClientRect();
+    return [...el.querySelectorAll(":scope > .pill")].some((pill) => {
+      if (!visible(pill)) return false;
+      const pillStyle = getComputedStyle(pill);
+      if (pillStyle.position !== "absolute") return false;
+      const pillRect = pill.getBoundingClientRect();
+      const outsideCorner = pillRect.top < rect.top + 1 && pillRect.right > rect.right - 1;
+      const boundedOffset = pillRect.right - rect.right <= 12 && rect.top - pillRect.top <= 12;
+      return outsideCorner && boundedOffset;
+    });
+  };
   const labelFor = (el) => {
     const id = el.id ? `#${el.id}` : "";
     const cls = [...el.classList].slice(0, 3).map((c) => `.${c}`).join("");
@@ -456,8 +478,9 @@ function auditScript() {
     const overflowY = Math.round(el.scrollHeight - el.clientHeight);
     const inspectOverflow = !el.matches("input, select, textarea");
     const childScrollExplainsOverflow = el.matches(".adm-card, .dash-card, .biz-card, .adm-panel") && hasScrollableChild(el);
+    const cornerCounterExplainsOverflow = hasCornerCounterOverflow(el);
     const hasAllowedScroll = /(auto|scroll)/.test(`${style.overflow}${style.overflowX}${style.overflowY}`);
-    if (inspectOverflow && !childScrollExplainsOverflow && (overflowX > 2 || overflowY > 2) && !hasAllowedScroll && text) {
+    if (inspectOverflow && !childScrollExplainsOverflow && !cornerCounterExplainsOverflow && (overflowX > 2 || overflowY > 2) && !hasAllowedScroll && text) {
       issues.push({
         type: overflowX > 2 ? "text-overflow-x" : "text-overflow-y",
         selector: labelFor(el),

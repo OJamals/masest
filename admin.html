@@ -18,10 +18,12 @@
   #gateTitle { font-size: 28px; line-height: 1.12; margin: 0 0 8px; }
   .adm-shell { display: grid; gap: 18px; padding: 28px 0 72px; }
   .adm-top { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
-  .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
-  .adm-tab { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 12px; font: inherit; cursor: pointer; }
+  .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; }
+  .adm-tab { position: relative; overflow: visible; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 12px; font: inherit; cursor: pointer; }
   .adm-tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
   .pill { display: inline-grid; min-width: 20px; min-height: 20px; place-items: center; border-radius: 999px; background: var(--ink); color: white; font-size: .72rem; padding: 0 6px; }
+  .adm-tab .pill { position: absolute; top: -7px; right: -7px; margin-left: 0; box-shadow: 0 0 0 2px var(--surface); }
+  .adm-tab .pill[hidden] { display: none; }
   .adm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   .adm-card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px; }
 .adm-card h2, .adm-card h3 { margin: 0 0 12px; font-size: 1rem; }
@@ -161,7 +163,7 @@
   .product-gallery-item img { width: 34px; height: 34px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); }
   .product-gallery-actions { display: flex; gap: 1px; }
   .product-file-control { display: grid; gap: 3px; color: var(--muted); font-size: .7rem; line-height: 1.2; }
-  .product-file-control input { max-width: 128px; font-size: .7rem; }
+  .product-file-control input { width: 100%; max-width: 100%; font-size: .78rem; }
   .variant-stack { display: grid; gap: 8px; min-width: 0; }
   .variant-row { display: grid; grid-template-columns: minmax(150px, 1.35fr) minmax(90px, .55fr) minmax(90px, .65fr) minmax(90px, .55fr) auto auto auto; gap: 8px; align-items: end; }
   .variant-row .adm-input { padding: 7px 8px; font-size: .82rem; }
@@ -304,7 +306,7 @@
   .adm-sidebar .adm-tab { width: 100%; min-height: 42px; justify-content: flex-start; border-radius: var(--r-input); padding: 10px; color: var(--ink-soft); font-weight: 700; font-size: .9rem; line-height: 1.2; text-align: left; }
   .adm-sidebar .adm-tab[aria-selected="true"] { border-color: rgba(14,124,134,.24); background: var(--accent-soft); color: var(--accent-ink); }
   .adm-tab i { flex: 0 0 auto; }
-  .adm-tab .pill { margin-left: auto; }
+  .adm-tab .pill { margin-left: 0; }
   .adm-card, .adm-panel, .adm-table-wrap, .thread-layout, .quote-item { min-width: 0; }
   .adm-card { box-shadow: var(--shadow-xs); overflow: hidden; overflow-wrap: anywhere; }
   .adm-card p, .adm-card small, .adm-card label, .quote-item, .thread-list button, table.adm td { overflow-wrap: anywhere; }
@@ -376,7 +378,7 @@
   @media (max-width: 980px) {
     .adm-layout { display: block; }
     .adm-sidebar.adm-tabs-wrap { position: static; margin-bottom: 18px; }
-    .adm-sidebar .adm-tabs { flex-direction: row; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+    .adm-sidebar .adm-tabs { flex-direction: row; overflow-x: auto; padding: 8px 8px 4px 0; scroll-snap-type: x proximity; }
     .adm-nav-group { min-width: 184px; scroll-snap-align: start; }
   }
   @media (max-width: 640px) {
