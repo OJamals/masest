@@ -246,6 +246,34 @@ ${cards}
 `;
 }
 
+function xmlEscape(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+function feedXml(posts) {
+  const items = posts.slice(0, 20).map((p) => `    <item>
+      <title>${xmlEscape(p.title)}</title>
+      <link>${BASE}/blog/${p.slug}</link>
+      <guid isPermaLink="true">${BASE}/blog/${p.slug}</guid>
+      <pubDate>${new Date(`${p.date}T00:00:00Z`).toUTCString()}</pubDate>
+      <category>${xmlEscape(p.category)}</category>
+      <description>${xmlEscape(p.excerpt)}</description>
+    </item>`).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>MASEST VertKleen Blog</title>
+    <link>${BASE}/blog</link>
+    <description>Field notes, technical guides, and program news on VertKleen chemistry.</description>
+    <language>en-us</language>
+${items}
+  </channel>
+</rss>
+`;
+}
+
 export function buildBlog({ posts, outDir = ROOT, updateSitemap = true } = {}) {
   validate(posts);
   const sorted = sortPosts(posts);
@@ -263,7 +291,13 @@ export function buildBlog({ posts, outDir = ROOT, updateSitemap = true } = {}) {
     writeFileSync(idxFile, idxHtml);
     changed++;
   }
-  // feed + sitemap are added in later tasks.
+  const feedFile = join(outDir, "blog", "feed.xml");
+  const feed = feedXml(sorted);
+  if ((existsSync(feedFile) ? readFileSync(feedFile, "utf8") : "") !== feed) {
+    writeFileSync(feedFile, feed);
+    changed++;
+  }
+  // sitemap is added in a later task.
   return { changed, posts: sorted };
 }
 

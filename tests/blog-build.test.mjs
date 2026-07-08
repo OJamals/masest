@@ -100,3 +100,19 @@ test("buildBlog writes an index listing every post with filter data", () => {
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("buildBlog writes a well-formed RSS feed", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
+    const feed = readFileSync(join(out, "blog", "feed.xml"), "utf8");
+    assert.match(feed, /<rss version="2.0">/);
+    assert.match(feed, /<channel>/);
+    const items = feed.match(/<item>/g) || [];
+    assert.equal(items.length, SEED.blog_posts.length);
+    assert.match(feed, /<link>https:\/\/masest\.co\/blog\/hmis-000-explained<\/link>/);
+    assert.ok(!/<description>[^<]*<[^/]/.test(feed));
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
