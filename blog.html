@@ -49,7 +49,7 @@
   </section>
   <section class="section">
     <div class="wrap" data-blog-filter>
-      <div class="blog-chips" role="group" aria-label="Filter by category"><button type="button" class="blog-chip is-active" data-filter-cat="all">All</button><button type="button" class="blog-chip" data-filter-cat="marketing">Marketing</button><button type="button" class="blog-chip" data-filter-cat="technical">Technical</button><button type="button" class="blog-chip" data-filter-cat="news">News</button></div>
+      <div class="blog-chips" role="group" aria-label="Filter by category"><button type="button" class="blog-chip is-active" data-filter-cat="all" aria-pressed="true">All</button><button type="button" class="blog-chip" data-filter-cat="marketing" aria-pressed="false">Marketing</button><button type="button" class="blog-chip" data-filter-cat="technical" aria-pressed="false">Technical</button><button type="button" class="blog-chip" data-filter-cat="news" aria-pressed="false">News</button></div>
       <div class="blog-grid">
 <article class="blog-card" data-slug="hmis-000-explained" data-category="technical" data-tags="hmis safety handling">
     <a class="blog-card-link" href="/blog/hmis-000-explained">
@@ -79,7 +79,7 @@
     </a>
   </article>
       </div>
-      <p class="blog-empty" hidden>No posts match that filter.</p>
+      <p class="blog-empty" role="status" aria-live="polite" hidden>No posts match that filter.</p>
     </div>
   </section>
 </main>

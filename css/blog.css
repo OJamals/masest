@@ -42,7 +42,3 @@
 .blog-related-cat { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--brand, #3b2a6b); font-weight: 700; }
 .blog-cta { margin-top: 48px; padding: 32px; border-radius: 16px; background: var(--soft, #f5f4fb); }
 .blog-cta h2 { margin-top: 0; }
-@media (prefers-color-scheme: dark) {
-  .blog-card { background: var(--card, #16151f); }
-  .blog-body :not(pre) > code { background: rgba(255,255,255,.1); }
-}

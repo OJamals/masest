@@ -159,3 +159,18 @@ test("JSON-LD escapes '<' so a CMS title can't break out of the script block", (
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("index chips expose aria-pressed and the empty state is a live region", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
+    const idx = readFileSync(join(out, "blog.html"), "utf8");
+    // "All" chip starts pressed; category chips start unpressed.
+    assert.match(idx, /data-filter-cat="all" aria-pressed="true"/);
+    assert.match(idx, /data-filter-cat="technical" aria-pressed="false"/);
+    // Empty state announces to assistive tech.
+    assert.match(idx, /class="blog-empty" role="status" aria-live="polite"/);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});

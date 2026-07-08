@@ -17,7 +17,11 @@
   };
   chips.forEach((chip) => {
     chip.addEventListener("click", () => {
-      chips.forEach((c) => c.classList.toggle("is-active", c === chip));
+      chips.forEach((c) => {
+        const active = c === chip;
+        c.classList.toggle("is-active", active);
+        c.setAttribute("aria-pressed", active ? "true" : "false");
+      });
       apply(chip.dataset.filterCat);
     });
   });

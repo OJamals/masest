@@ -90,7 +90,7 @@ function postPage(post, all) {
   const related = relatedPosts(post, all);
   const relatedHtml = related.length
     ? `<aside class="blog-related"><h2>Related reading</h2><ul>${related
-        .map((r) => `<li><a href="../blog/${attr(r.slug)}"><span class="blog-related-cat">${text(r.category)}</span>${text(r.title)}</a></li>`)
+        .map((r) => `<li><a href="../blog/${attr(r.slug)}"><span class="blog-related-cat">${text(r.category)}</span> ${text(r.title)}</a></li>`)
         .join("")}</ul></aside>`
     : "";
   const ogImage = post.hero ? `${BASE}/${post.hero.replace(/^\/+/, "")}` : `${BASE}/img/og-card.png`;
@@ -178,7 +178,7 @@ function postCard(post) {
 function indexPage(posts) {
   const cats = ["all", ...CATEGORIES];
   const chips = cats
-    .map((c) => `<button type="button" class="blog-chip${c === "all" ? " is-active" : ""}" data-filter-cat="${c}">${c === "all" ? "All" : c[0].toUpperCase() + c.slice(1)}</button>`)
+    .map((c) => `<button type="button" class="blog-chip${c === "all" ? " is-active" : ""}" data-filter-cat="${c}" aria-pressed="${c === "all" ? "true" : "false"}">${c === "all" ? "All" : c[0].toUpperCase() + c.slice(1)}</button>`)
     .join("");
   const cards = posts.map(postCard).join("\n");
   const schema = {
@@ -243,7 +243,7 @@ function indexPage(posts) {
       <div class="blog-grid">
 ${cards}
       </div>
-      <p class="blog-empty" hidden>No posts match that filter.</p>
+      <p class="blog-empty" role="status" aria-live="polite" hidden>No posts match that filter.</p>
     </div>
   </section>
 </main>
