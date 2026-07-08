@@ -146,6 +146,41 @@ export async function triggerContentPublishBuild(env = {}, entry = {}, fetchImpl
   }
 }
 
+function githubDispatchConfig(env = {}) {
+  const token = String(env.GITHUB_DISPATCH_TOKEN || "").trim();
+  const repo = String(env.GITHUB_DISPATCH_REPO || "OJamals/masest").trim();
+  return token && repo ? { token, repo } : null;
+}
+
+// Blog posts render to committed static pages by tools/build-blog.mjs, which the
+// Cloudflare build does NOT run — so a CMS blog publish needs the GitHub Actions
+// "content-published" workflow (publish-blog-ci -> build-blog -> commit) to fire.
+// Best-effort: no-ops without a token; the scheduled run is the fallback.
+export async function triggerBlogPublishWorkflow(env = {}, entry = {}, fetchImpl = fetch) {
+  if (entry.type !== "blog_post") return { ok: true, skipped: true };
+  const cfg = githubDispatchConfig(env);
+  if (!cfg) return { ok: true, skipped: true };
+  try {
+    const response = await fetchImpl(`https://api.github.com/repos/${cfg.repo}/dispatches`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${cfg.token}`,
+        accept: "application/vnd.github+json",
+        "content-type": "application/json",
+        "user-agent": "masest-cms",
+      },
+      body: JSON.stringify({
+        event_type: "content-published",
+        client_payload: { slug: entry.slug || "", status: entry.status || "published" },
+      }),
+    });
+    if (response.ok || response.status === 204) return { ok: true, skipped: false, status: response.status };
+    return { ok: false, skipped: false, status: response.status, error: "github_dispatch_failed" };
+  } catch (error) {
+    return { ok: false, skipped: false, error: "github_dispatch_failed", message: String(error?.message || error) };
+  }
+}
+
 async function existingEntry(sb, { type, slug, locale }) {
   const { data, error } = await sb
     .from("content_entries")
