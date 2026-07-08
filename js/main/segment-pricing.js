@@ -19,17 +19,18 @@ function productPath(row) {
 }
 
 function rowMarkup(row) {
+  const label = `${escapeHtml(row.product)} ${escapeHtml(row.pack)}`;
   const quote = row.quote_only
-    ? `<a class="btn btn-secondary btn-sm" href="contact?type=quote&amp;sku=${encodeURIComponent(row.sku)}">Request quote</a>`
-    : `<a class="segment-buyable" href="${productPath(row)}">Buy small pack</a>`;
+    ? `<a class="btn btn-secondary btn-sm" href="contact?type=quote&amp;sku=${encodeURIComponent(row.sku)}" aria-label="Request quote for ${label}">Request quote</a>`
+    : `<a class="segment-buyable" href="${productPath(row)}" aria-label="Buy small pack of ${label}">Buy small pack</a>`;
   return `
     <tr data-segment-pricing-row>
-      <td><b>${escapeHtml(row.product)}</b><span>${escapeHtml(row.sku)}</span></td>
-      <td>${escapeHtml(row.application)}</td>
-      <td>${escapeHtml(row.pack)}</td>
-      <td><strong>${money(row.price_per_gallon, row.currency)}</strong><span>per gal</span></td>
-      <td><strong>${money(row.price_per_unit, row.currency)}</strong><span>per unit</span></td>
-      <td>${quote}</td>
+      <th scope="row" data-label="Product"><b>${escapeHtml(row.product)}</b><span>${escapeHtml(row.sku)}</span></th>
+      <td data-label="Application">${escapeHtml(row.application)}</td>
+      <td data-label="Pack">${escapeHtml(row.pack)}</td>
+      <td data-label="Price / gal"><strong>${money(row.price_per_gallon, row.currency)}</strong><span>per gal</span></td>
+      <td data-label="Unit price"><strong>${money(row.price_per_unit, row.currency)}</strong><span>per unit</span></td>
+      <td data-label="Action">${quote}</td>
     </tr>`;
 }
 
@@ -54,14 +55,15 @@ function renderSegment(root, data) {
     </div>
     <div class="segment-pricing-scroll">
       <table class="segment-pricing-table">
+        <caption class="sr-only">${escapeHtml(segment.title)} — price per product, pack, and how to buy or request a quote</caption>
         <thead>
           <tr>
-            <th>Product</th>
-            <th>Application</th>
-            <th>Pack</th>
-            <th>Price / gal</th>
-            <th>Unit price</th>
-            <th>Action</th>
+            <th scope="col">Product</th>
+            <th scope="col">Application</th>
+            <th scope="col">Pack</th>
+            <th scope="col">Price / gal</th>
+            <th scope="col">Unit price</th>
+            <th scope="col">Action</th>
           </tr>
         </thead>
         <tbody>${segment.rows.map(rowMarkup).join("")}</tbody>

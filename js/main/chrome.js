@@ -162,6 +162,7 @@ export function renderChrome() {
  "product.html",
  "services",
  "services.html",
+ "programs",
  "programs.html",
  "proof",
  "proof.html",

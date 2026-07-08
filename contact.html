@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260706c">
+<link rel="stylesheet" href="css/style.css?v=20260708b">
 <link rel="stylesheet" href="css/navigation.css?v=20260706a">
 <link rel="stylesheet" href="css/components.css">
 <!-- seo:auto -->
@@ -169,7 +169,7 @@
         </div>
 
         <div class="field-grid" data-intent-group="audit" hidden>
-          <div class="field"><label for="fSystem">System or asset to audit</label><input id="fSystem" name="system" type="text" placeholder="Cooling tower, CIP line, fleet wash bay" data-req></div>
+          <div class="field"><label for="fSystem">System or asset to audit *</label><input id="fSystem" name="system" type="text" placeholder="Cooling tower, CIP line, fleet wash bay" data-req></div>
           <div class="field">
             <label for="fAuditWhen">Preferred timeframe</label>
             <select id="fAuditWhen" name="audit_timeframe">
@@ -182,8 +182,8 @@
         </div>
 
         <div data-intent-group="sample" hidden>
-          <div class="field">
-            <label>Pick 3 to 5 products to trial *</label>
+          <fieldset class="field sample-fieldset">
+            <legend>Pick 3 to 5 products to trial *</legend>
             <div class="sample-picker">
               <label><input type="checkbox" name="samples" value="VertKleen HCR"> VertKleen HCR</label>
               <label><input type="checkbox" name="samples" value="VertKleen CR"> VertKleen CR</label>
@@ -199,13 +199,13 @@
               <label><input type="checkbox" name="samples" value="Purgo"> Purgo</label>
             </div>
             <p class="sample-hint" id="sampleHint">Select 3 to 5 products.</p>
-          </div>
-          <div class="field u-mt-14"><label for="fShipTo">Ship-to address</label><textarea id="fShipTo" name="ship_to" rows="3" placeholder="Facility name, street, city, state, ZIP" data-req></textarea></div>
+          </fieldset>
+          <div class="field u-mt-14"><label for="fShipTo">Ship-to address *</label><textarea id="fShipTo" name="ship_to" rows="3" placeholder="Facility name, street, city, state, ZIP" data-req></textarea></div>
         </div>
 
         <div class="field-grid" data-intent-group="distributor" hidden>
           <div class="field">
-            <label for="fCompanyType">Company type</label>
+            <label for="fCompanyType">Company type *</label>
             <select id="fCompanyType" name="company_type" data-req>
               <option value="">Select company type</option>
               <option>Building service contractor (BSC)</option>
@@ -214,12 +214,12 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="field"><label for="fTerritory">Territory / region</label><input id="fTerritory" name="territory" type="text" placeholder="Southeast US, Caribbean, ..." data-req></div>
+          <div class="field"><label for="fTerritory">Territory / region *</label><input id="fTerritory" name="territory" type="text" placeholder="Southeast US, Caribbean, ..." data-req></div>
         </div>
 
         <div class="field u-mt-18">
           <label for="fMessage">Current chemical / site notes *</label>
-          <textarea id="fMessage" name="message" rows="5" placeholder="e.g., We currently descale cooling tower fill with hydrochloric acid (muriatic acid) twice a year"></textarea>
+          <textarea id="fMessage" name="message" rows="5" aria-required="true" placeholder="e.g., We currently descale cooling tower fill with hydrochloric acid (muriatic acid) twice a year"></textarea>
         </div>
 
         <button class="btn btn-primary u-cta-wide" type="submit">Send Request</button>

@@ -55,6 +55,8 @@ one family.
   --accent-ink: #0a5b62;
   --accent-soft: #e3f0f1;
   --accent-tint: #f1f8f8;
+  --brand: var(--accent);       /* blog.css aliases: keep blog on the teal brand, not the purple fallback */
+  --soft: var(--accent-tint);
   --danger: #a63a2e;          /* form errors, hazard markers — AA on white (6.4:1) */
   --status-success-bg: #e7f5ed;
   --status-success-ink: #17623b;
@@ -2552,6 +2554,14 @@ dark block) ───────────────── */
 .cta-choice.active { border-color: var(--accent); background: var(--accent-tint); box-shadow: var(--shadow-xs); }
 .cta-choice.active i { color: var(--accent); }
 [data-intent-group][hidden] { display: none; }
+/* fieldset wrapper for the sample-checkbox group (a11y: legend ties the group
+   label + required state to the checkboxes). Reset UA border/padding and style
+   the legend to match .field label. */
+.sample-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.sample-fieldset legend {
+  display: block; padding: 0; font-size: .84rem; font-weight: 700;
+  margin-bottom: 7px; color: var(--ink-soft);
+}
 .sample-picker {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 8px 18px; margin-top: 8px;
@@ -4862,13 +4872,19 @@ main:has(#pMediaSection) .section-head {
   vertical-align: top;
 }
 
-.segment-pricing-table th {
+.segment-pricing-table thead th {
   background: var(--surface-soft);
   color: var(--muted);
   font-size: .76rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0;
+}
+/* Product cell is a row header (scope="row") for screen-reader association, but
+   must read as a normal data cell, not the uppercase column-header style above. */
+.segment-pricing-table th[scope="row"] {
+  font-weight: 400;
+  text-transform: none;
 }
 
 .segment-pricing-table td {
@@ -4879,13 +4895,13 @@ main:has(#pMediaSection) .section-head {
   border-bottom: 0;
 }
 
-.segment-pricing-table td b,
-.segment-pricing-table td strong {
+.segment-pricing-table :is(th, td) b,
+.segment-pricing-table :is(th, td) strong {
   display: block;
   color: var(--ink);
 }
 
-.segment-pricing-table td span {
+.segment-pricing-table :is(th, td) span {
   display: block;
   margin-top: 4px;
   color: var(--muted);
@@ -4929,6 +4945,76 @@ main:has(#pMediaSection) .section-head {
 
   .segment-pricing-table {
     min-width: 760px;
+  }
+}
+
+/* Phone: the 6-column price table can't scroll its price + buy-button columns
+   into view without a swipe most users never try. Collapse to stacked cards so
+   every product shows its price and its CTA in the flow. Labels come from each
+   cell's data-label (mirrors the .cmp-table mobile treatment). */
+@media (max-width: 760px) {
+  .segment-pricing-scroll {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .segment-pricing-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    font-size: .95rem;
+  }
+  .segment-pricing-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .segment-pricing-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+  .segment-pricing-table tr {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    background: var(--surface);
+  }
+  .segment-pricing-table th,
+  .segment-pricing-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+  .segment-pricing-table th[scope="row"] {
+    font-size: 1.05rem;
+    margin-bottom: 2px;
+  }
+  .segment-pricing-table td::before {
+    display: block;
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .segment-pricing-table td[data-label="Action"] {
+    margin-top: 4px;
+  }
+  .segment-pricing-table td[data-label="Action"]::before {
+    content: "";
+    margin: 0;
+  }
+  .segment-pricing-table :is(th, td) span {
+    display: inline;
+    margin: 0 0 0 6px;
   }
 }
 
