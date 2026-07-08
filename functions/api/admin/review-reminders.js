@@ -39,7 +39,7 @@ export async function onRequestPost({ request, env }) {
   // Delivered ≥10d ago, or fulfilled ≥10d ago with no delivery tracking, not yet
   // reminded, has an email. Mirrors isReminderDue()'s two eligibility branches.
   const { data: orders, error } = await sb.from('orders')
-    .select('id,customer_email,tracking_status,status,shipped_at,updated_at,review_reminded_at,order_items(sku,name)')
+    .select('id,customer_email,tracking_status,status,shipped_at,updated_at,review_reminded_at,order_items(sku,product_sku,name)')
     .is('review_reminded_at', null)
     .not('customer_email', 'is', null)
     .or(`and(tracking_status.eq.delivered,shipped_at.lte.${cutoffIso}),and(status.eq.fulfilled,updated_at.lte.${cutoffIso})`)
@@ -54,12 +54,16 @@ export async function onRequestPost({ request, env }) {
     const seen = new Set();
     const links = [];
     for (const it of items) {
-      if (!it?.sku || seen.has(it.sku)) continue;
-      seen.add(it.sku);
-      const tok = await reviewToken({ orderId: o.id, sku: it.sku, email }, secret);
+      // Reviews key on the base product sku; order_items.sku is the variant sku for a
+      // normal checkout. Token + link + dedupe must all use product_sku so the link
+      // the buyer clicks matches what /api/reviews verifies.
+      const psku = it?.product_sku || it?.sku;
+      if (!psku || seen.has(psku)) continue;
+      seen.add(psku);
+      const tok = await reviewToken({ orderId: o.id, sku: psku, email }, secret);
       links.push({
-        name: it.name || it.sku,
-        url: `${appUrl}/review.html?order=${enc(o.id)}&sku=${enc(it.sku)}&email=${enc(email)}&token=${tok}`,
+        name: it.name || psku,
+        url: `${appUrl}/review.html?order=${enc(o.id)}&sku=${enc(psku)}&email=${enc(email)}&token=${tok}`,
       });
     }
     // Stamp first so a send failure or suppression never re-queues this order.

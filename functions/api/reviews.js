@@ -73,7 +73,7 @@ export async function onRequestPost({ request, env }) {
     if (!user) return json(401, { error: 'unauthenticated' });
     email = String(user.email || '').toLowerCase();
     const { data: orders } = await sb.from('orders')
-      .select('id,status,tracking_status,order_items(sku)')
+      .select('id,status,tracking_status,order_items(sku,product_sku)')
       .eq('customer_email', email);
     orderId = findVerifiedOrderId(orders || [], sku);
     if (!orderId) return json(403, { error: 'not_verified_purchaser' });

@@ -68,6 +68,16 @@ test("findVerifiedOrderId returns the id of a fulfilled/delivered order containi
   assert.equal(findVerifiedOrderId([{ id: "o1", status: "paid", order_items: [{ sku: "cr" }] }], "cr"), null); // paid-only not eligible
 });
 
+test("findVerifiedOrderId matches base product_sku when line sku is a variant (normal checkout)", () => {
+  // Small-pack checkout stores the variant sku in `sku` and the base sku in `product_sku`.
+  // A review keyed on the base sku ('cr-hd') must still match.
+  const orders = [
+    { id: "o4", status: "fulfilled", order_items: [{ sku: "VK-CRHD-5G", product_sku: "cr-hd" }] },
+  ];
+  assert.equal(findVerifiedOrderId(orders, "cr-hd"), "o4");           // base sku matches via product_sku
+  assert.equal(findVerifiedOrderId(orders, "VK-CRHD-5G"), null);      // variant sku is not the review key
+});
+
 test("aggregateStats computes avg, count, distribution from approved rows", () => {
   const rows = [{ rating: 5 }, { rating: 5 }, { rating: 4 }, { rating: 3 }];
   const s = aggregateStats(rows);

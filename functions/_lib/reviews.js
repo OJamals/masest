@@ -55,8 +55,11 @@ export function findVerifiedOrderId(orders, sku) {
   for (const o of Array.isArray(orders) ? orders : []) {
     const eligible = ELIGIBLE_STATUS.has(o?.status) || ELIGIBLE_TRACKING.has(o?.tracking_status);
     if (!eligible) continue;
+    // Reviews key on the base product sku. order_items.sku holds the VARIANT sku
+    // (vsku) for a normal small-pack checkout; product_sku holds the base sku. Match
+    // product_sku first, fall back to sku (quote-converted orders set both equal).
     const items = Array.isArray(o?.order_items) ? o.order_items : [];
-    if (items.some((it) => it?.sku === sku)) return o.id;
+    if (items.some((it) => (it?.product_sku || it?.sku) === sku)) return o.id;
   }
   return null;
 }
