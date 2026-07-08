@@ -164,7 +164,18 @@ function fieldTemplate(field, payload) {
       </label>
     `;
   }
-  const input = `<input class="adm-input" type="${field.kind === "number" ? "number" : "text"}"${field.kind === "number" ? ' step="0.01"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
+  if (field.kind === "select") {
+    const opts = ["", ...(field.options || [])]
+      .map((o) => `<option value="${esc(o)}"${String(value) === o ? " selected" : ""}>${o ? esc(o) : "— select —"}</option>`)
+      .join("");
+    return `
+      <label class="${esc(cls)}">${esc(field.label)}
+        <select class="adm-select" data-content-payload-field="${esc(field.key)}" data-content-field-kind="select"${required}>${opts}</select>
+      </label>
+    `;
+  }
+  const inputType = field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text";
+  const input = `<input class="adm-input" type="${inputType}"${field.kind === "number" ? ' step="0.01"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
   if (ASSET_FIELD_KEYS.has(field.key)) {
     return `
       <div class="adm-content-asset-control ${esc(cls)}">

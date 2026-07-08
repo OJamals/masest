@@ -144,10 +144,10 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
     snapshot: { file: "blog.json", key: "blog_posts" },
     fields: [
       { key: "title", label: "Title", kind: "text", className: "wide", required: true },
-      { key: "category", label: "Category (marketing / technical / news)", kind: "text", required: true },
+      { key: "category", label: "Category", kind: "select", options: ["marketing", "technical", "news"], required: true },
       { key: "tags", label: "Tags", kind: "list" },
       { key: "author", label: "Author", kind: "text" },
-      { key: "date", label: "Publish date (YYYY-MM-DD)", kind: "text", required: true },
+      { key: "date", label: "Publish date", kind: "date", required: true },
       { key: "hero", label: "Hero image path (img/blog/…)", kind: "text" },
       { key: "hero_alt", label: "Hero image alt", kind: "text" },
       { key: "excerpt", label: "Excerpt (card + meta description)", kind: "textarea", className: "full", required: true },
@@ -269,8 +269,15 @@ export function validateStructuredPayload(type, values = {}) {
   if (!CONTENT_TYPE_DEFINITIONS[type]) return { ok: false, error: `Unsupported content type: ${type}` };
   for (const field of contentPayloadFields(type)) {
     const raw = values[field.key];
-    if (raw !== undefined && URL_FIELD_KEYS.has(field.key) && String(raw || "").trim() && !cleanUrlValue(raw)) {
+    const val = String(raw ?? "").trim();
+    if (raw !== undefined && URL_FIELD_KEYS.has(field.key) && val && !cleanUrlValue(raw)) {
       return { ok: false, error: `${field.key}_invalid_url` };
+    }
+    if (val && Array.isArray(field.options) && !field.options.includes(val)) {
+      return { ok: false, error: `${field.key}_invalid_option` };
+    }
+    if (val && field.kind === "date" && (!/^\d{4}-\d{2}-\d{2}$/.test(val) || Number.isNaN(Date.parse(`${val}T00:00:00Z`)))) {
+      return { ok: false, error: `${field.key}_invalid_date` };
     }
   }
   const payload = normalizeStructuredPayload(type, values);
