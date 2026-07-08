@@ -1,7 +1,7 @@
 // /api/admin/content - staff-managed CMS entries for non-commerce public content.
 import { adminClient, requireStaff, json, readBody } from "../../_lib/supabase.js";
 import { staffCan } from "../../_lib/authz.js";
-import { createContentRepository, triggerContentPublishBuild, triggerBlogPublishWorkflow } from "../../_lib/content.js";
+import { createContentRepository, triggerContentPublishBuild, triggerBlogPublishWorkflow, triggerSeoPublishWorkflow } from "../../_lib/content.js";
 
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
@@ -44,6 +44,8 @@ export async function onRequest({ request, env }) {
           result.publish_hook = await triggerContentPublishBuild(env, result.entries[0]);
           const blogEntry = result.entries.find((e) => e?.type === "blog_post");
           if (blogEntry) result.blog_workflow = await triggerBlogPublishWorkflow(env, blogEntry);
+          const seoEntry = result.entries.find((e) => e?.type === "page_meta");
+          if (seoEntry) result.seo_workflow = await triggerSeoPublishWorkflow(env, seoEntry);
         }
       } else if (action === "lock") {
         if (!staffCan(role, "content.write")) {
@@ -96,6 +98,7 @@ export async function onRequest({ request, env }) {
         if (result.ok) {
           result.publish_hook = await triggerContentPublishBuild(env, result.entry);
           result.blog_workflow = await triggerBlogPublishWorkflow(env, result.entry);
+          result.seo_workflow = await triggerSeoPublishWorkflow(env, result.entry);
         }
       } else {
         if (!staffCan(role, "content.write")) {

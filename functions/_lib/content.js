@@ -152,12 +152,12 @@ function githubDispatchConfig(env = {}) {
   return token && repo ? { token, repo } : null;
 }
 
-// Blog posts render to committed static pages by tools/build-blog.mjs, which the
-// Cloudflare build does NOT run — so a CMS blog publish needs the GitHub Actions
-// "content-published" workflow (publish-blog-ci -> build-blog -> commit) to fire.
-// Best-effort: no-ops without a token; the scheduled run is the fallback.
-export async function triggerBlogPublishWorkflow(env = {}, entry = {}, fetchImpl = fetch) {
-  if (entry.type !== "blog_post") return { ok: true, skipped: true };
+// Fire a GitHub Actions repository_dispatch. Some CMS content compiles to
+// COMMITTED static files (blog HTML from build-blog; SEO blocks + sitemap from
+// seo-inject) that the Cloudflare build does NOT regenerate — those need a
+// workflow to rebuild + commit. Best-effort: no-ops without a token; the
+// scheduled workflow run is the fallback.
+async function githubRepositoryDispatch(env, eventType, clientPayload = {}, fetchImpl = fetch) {
   const cfg = githubDispatchConfig(env);
   if (!cfg) return { ok: true, skipped: true };
   try {
@@ -169,16 +169,28 @@ export async function triggerBlogPublishWorkflow(env = {}, entry = {}, fetchImpl
         "content-type": "application/json",
         "user-agent": "masest-cms",
       },
-      body: JSON.stringify({
-        event_type: "content-published",
-        client_payload: { slug: entry.slug || "", status: entry.status || "published" },
-      }),
+      body: JSON.stringify({ event_type: eventType, client_payload: clientPayload }),
     });
     if (response.ok || response.status === 204) return { ok: true, skipped: false, status: response.status };
     return { ok: false, skipped: false, status: response.status, error: "github_dispatch_failed" };
   } catch (error) {
     return { ok: false, skipped: false, error: "github_dispatch_failed", message: String(error?.message || error) };
   }
+}
+
+// blog_post -> static /blog pages (tools/build-blog.mjs).
+export async function triggerBlogPublishWorkflow(env = {}, entry = {}, fetchImpl = fetch) {
+  if (entry.type !== "blog_post") return { ok: true, skipped: true };
+  return githubRepositoryDispatch(env, "content-published",
+    { slug: entry.slug || "", status: entry.status || "published" }, fetchImpl);
+}
+
+// page_meta -> committed static SEO blocks + sitemap (tools/seo-inject.mjs), which
+// the Cloudflare build does not run.
+export async function triggerSeoPublishWorkflow(env = {}, entry = {}, fetchImpl = fetch) {
+  if (entry.type !== "page_meta") return { ok: true, skipped: true };
+  return githubRepositoryDispatch(env, "seo-published",
+    { slug: entry.slug || "", status: entry.status || "published" }, fetchImpl);
 }
 
 async function existingEntry(sb, { type, slug, locale }) {
