@@ -137,6 +137,7 @@ states.forEach(function (st) {
     }
     if (st.act === pipeAct) updateChips2(st);
     if (st.act === hmisAct) updateInjuryTotal(st);
+    if (st.act === costAct) updateZeroLedger(st);
   }
 
   /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
@@ -223,6 +224,33 @@ states.forEach(function (st) {
     var compact = window.innerWidth <= 760;
     var ramp = compact ? 1 : smooth(clamp(0, 1, (st.p - a) / (b - a)));
     setTxt(costNum, fmtCost(COST_TARGET * ramp));
+  }
+
+  /* ---- ACT 4: the mirror ledger animates as it lands - each old burden
+     title gets struck off ("every hazard line gone") just after its row
+     reveals, and the documented saving counts up as the proof strip lands
+     (beats ~4.8 -> 5.6). Compact / no-JS: strikes stay 0, total shows full. */
+  var costAct = story.querySelector(".act-cost");
+  var saveNum = costAct ? costAct.querySelector(".cost-num") : null;
+  var SAVE_TARGET = saveNum ? (parseInt(saveNum.getAttribute("data-target"), 10) || 0) : 0;
+  var zeroBurdens = costAct ? gsap.utils.toArray(costAct.querySelectorAll(".ledger-zero .ledger-burden b")) : [];
+  zeroBurdens.forEach(function (b) {
+    var row = b.closest ? b.closest(".ledger-row") : null;
+    b._beat = row ? (parseFloat(row.getAttribute("data-at")) || 0) : 0;
+  });
+  function updateZeroLedger(st) {
+    var compact = window.innerWidth <= 760;
+    var win = (BEAT_IN / st.T) * 1.4;
+    for (var i = 0; i < zeroBurdens.length; i++) {
+      var b = zeroBurdens[i];
+      var s = compact ? 1 : smooth(clamp(0, 1, (st.p - beatFrac(st, b._beat + 0.25)) / win));
+      b.style.setProperty("--strike", s.toFixed(3));
+    }
+    if (saveNum) {
+      var a = beatFrac(st, 4.8), c = beatFrac(st, 5.6);
+      var ramp = compact ? 1 : smooth(clamp(0, 1, (st.p - a) / (c - a)));
+      setTxt(saveNum, fmtCost(SAVE_TARGET * ramp));
+    }
   }
 
   /* ============================================================

@@ -578,7 +578,23 @@
 .ledger-head .lh-chem { text-align: left; }
 .ledger-head .lh-burden { text-align: left; }
 .ledger-score-key { display: inline-flex; gap: 6px; justify-self: center; }
-.ledger-score-key b { width: clamp(34px, 4vw, 46px); text-align: center; font-weight: 900; }
+.ledger-score-key b {
+  width: clamp(34px, 4vw, 46px);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-weight: 900;
+}
+.ledger-score-key b span { font-size: 1rem; }
+.ledger-score-key b i {
+  margin-top: 3px;
+  font-style: normal;
+  font-size: .5rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  opacity: .7;
+}
 .lk-h { color: var(--hmis-h); }
 .lk-f { color: var(--hmis-f); }
 .lk-r { color: var(--hmis-r); }
@@ -639,6 +655,28 @@
   background:
     radial-gradient(120% 150% at 0% 30%, rgba(52, 224, 200, .1), transparent 58%),
     rgba(255, 255, 255, .035);
+}
+/* "Every hazard line gone": each old burden title gets struck off as its row
+   lands. --strike (0->1) is driven per-row by story.js (updateZeroLedger);
+   with no JS / reduced motion it stays 0 and the line simply never draws. */
+.ledger-zero .ledger-burden b {
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+}
+.ledger-zero .ledger-burden b::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 2px;
+  border-radius: 2px;
+  background: #34e0c8;
+  box-shadow: 0 0 8px rgba(52, 224, 200, .75);
+  transform: scaleX(var(--strike, 0));
+  transform-origin: left center;
+  pointer-events: none;
 }
 
 .ledger-incident { margin-top: 2px; text-align: center; }
@@ -1316,6 +1354,13 @@ font-size: .68rem;
   font-size: clamp(2rem, 4vw, 3.4rem);
   line-height: .95;
   text-shadow: 0 0 22px color-mix(in srgb, var(--ax) 45%, rgba(72, 211, 255, .6));
+}
+/* Benefits variant of the scale (scene 5 close): the big slot holds a short
+   word/rating instead of a single "0" glyph, so it needs a smaller type ramp. */
+.story .savior-zero-scale.is-benefits .zero-axis strong {
+  font-size: clamp(1.15rem, 2.4vw, 1.6rem);
+  letter-spacing: -.01em;
+  text-wrap: balance;
 }
 
 .story .zero-axis small {
