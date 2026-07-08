@@ -31,3 +31,24 @@ test("validateReviewInput caps title/body length", () => {
 test("escapeHtml neutralizes markup", () => {
   assert.equal(escapeHtml('<b>&"x"</b>'), "&lt;b&gt;&amp;&quot;x&quot;&lt;/b&gt;");
 });
+
+// append to tests/reviews-lib.test.mjs
+import { reviewToken, verifyReviewToken } from "../functions/_lib/reviews.js";
+
+test("reviewToken round-trips and is order+sku+email bound", async () => {
+  const secret = "s3cr3t";
+  const tok = await reviewToken({ orderId: "o1", sku: "cr", email: "Buyer@X.com" }, secret);
+  assert.match(tok, /^[0-9a-f]{64}$/);
+  assert.equal(await verifyReviewToken({ orderId: "o1", sku: "cr", email: "buyer@x.com" }, tok, secret), true);
+  // email lowercased in the subject, so case does not matter
+  assert.equal(await verifyReviewToken({ orderId: "o1", sku: "cr", email: "BUYER@X.COM" }, tok, secret), true);
+});
+
+test("verifyReviewToken rejects tampering + missing secret", async () => {
+  const secret = "s3cr3t";
+  const tok = await reviewToken({ orderId: "o1", sku: "cr", email: "a@x.com" }, secret);
+  assert.equal(await verifyReviewToken({ orderId: "o2", sku: "cr", email: "a@x.com" }, tok, secret), false);
+  assert.equal(await verifyReviewToken({ orderId: "o1", sku: "descaler", email: "a@x.com" }, tok, secret), false);
+  assert.equal(await verifyReviewToken({ orderId: "o1", sku: "cr", email: "a@x.com" }, "deadbeef", secret), false);
+  assert.equal(await verifyReviewToken({ orderId: "o1", sku: "cr", email: "a@x.com" }, tok, ""), false);
+});

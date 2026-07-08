@@ -22,3 +22,26 @@ export function validateReviewInput(input = {}) {
   const author_name = String(input.author_name || "").trim().slice(0, NAME_MAX);
   return { ok: true, value: { rating, sku, kind, title, body, author_name } };
 }
+
+// Subject binds a token to exactly one order+sku+email so an email link can authorize
+// a single review without login. email lowercased for stable matching.
+function tokenSubject({ orderId, sku, email }) {
+  return `${String(orderId)}:${String(sku)}:${String(email || "").toLowerCase()}`;
+}
+
+export async function reviewToken(parts, secret) {
+  if (!secret || !parts?.orderId || !parts?.sku) return "";
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(tokenSubject(parts)));
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function verifyReviewToken(parts, token, secret) {
+  if (!token || !secret) return false;
+  const expected = await reviewToken(parts, secret);
+  if (!expected || expected.length !== String(token).length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i += 1) diff |= expected.charCodeAt(i) ^ String(token).charCodeAt(i);
+  return diff === 0;
+}
