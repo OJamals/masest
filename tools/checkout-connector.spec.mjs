@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { buildStripeCheckoutSessionParams, buyerEmailFromStripeSession } from "../functions/_lib/checkout-session.js";
+import { assembleCartMetadata, parseCartMetadata } from "../functions/_lib/order-shape.js";
 
 test("checkout connector carries buyer email and cart metadata into Stripe", () => {
   const params = buildStripeCheckoutSessionParams({
@@ -20,9 +21,9 @@ test("checkout connector carries buyer email and cart metadata into Stripe", () 
   expect(params.billing_address_collection).toBe("required");
   expect(params.metadata.company_id).toBe("company_123");
   expect(params.metadata.buyer_email).toBe("buyer@example.com");
-  expect(JSON.parse(params.metadata.cart)).toEqual([
-    { sku: "crhd-5", product_sku: "crhd", name: "VertKleen CR-HD", qty: 4, unit_price: 12.5, backordered: false },
-    { sku: "hcr-1", product_sku: "hcr", name: "VertKleen HCR", qty: 2, unit_price: 10, backordered: false },
+  expect(parseCartMetadata(assembleCartMetadata(params.metadata))).toEqual([
+    { sku: "crhd-5", product_sku: "crhd", name: null, qty: 4, unit_price: 12.5, backordered: false },
+    { sku: "hcr-1", product_sku: "hcr", name: null, qty: 2, unit_price: 10, backordered: false },
   ]);
   expect(params.line_items).toEqual([
     {

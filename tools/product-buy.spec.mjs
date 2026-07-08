@@ -58,7 +58,7 @@ test("product add-to-cart resolves the crhd commerce sku", async ({ page }) => {
   await expect(page.locator("[data-cart-count]")).toHaveText("1");
 });
 
-test("buy selector defaults to the 5 gallon pail and hides bulk freight drums", async ({ page }) => {
+test("buy selector defaults to the 5 gallon pail and routes bulk freight to quote", async ({ page }) => {
   await page.route("**/api/products", async route => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -72,7 +72,7 @@ test("buy selector defaults to the 5 gallon pail and hides bulk freight drums", 
           product_variants: [
             { vsku: "VK-CRHD-1", label: "1 gal", gallons: 1, price: 8.48, currency: "usd", active: true, sort: 1 },
             { vsku: "VK-CRHD-5", label: "5 gal", gallons: 5, price: 42.42, currency: "usd", active: true, sort: 3 },
-            // 55 gal needs freight review (active:false) and must be filtered out of the buy selector.
+            // 55 gal needs freight review (active:false) and must swap the buy button for a quote CTA.
             { vsku: "VK-CRHD-55", label: "55 gal drum", gallons: 55, price: 281.82, currency: "usd", active: false, sort: 4 },
           ],
         },
@@ -83,19 +83,46 @@ test("buy selector defaults to the 5 gallon pail and hides bulk freight drums", 
   await page.goto(`${BASE_URL}/product.html?id=crhd`, { waitUntil: "networkidle" });
 
   await expect(page.locator("#pVol")).toHaveValue("VK-CRHD-5");
-  await expect(page.locator("#pVol")).not.toContainText("55 gal drum");
+  await expect(page.locator("#pVol")).toContainText("55 gal drum");
   await expect(page.locator("#pUnitPrice")).toHaveText("$8.48/gal");
+  await expect(page.locator("#pBuyBtn")).toBeVisible();
+  await expect(page.locator("#pBulkQuoteBtn")).toBeHidden();
+
+  await page.locator("#pVol").selectOption("VK-CRHD-55");
+  await expect(page.locator("#pUnitPrice")).toHaveText("$5.12/gal");
+  await expect(page.locator("#pStock")).toContainText("freight quoted");
+  await expect(page.locator("#pBuyBtn")).toBeHidden();
+  await expect(page.locator("#pBulkQuoteBtn")).toBeVisible();
+  await expect(page.locator("#pBulkQuoteBtn")).toHaveAttribute("href", /freight%20quote/);
 });
 
-test("drum & tote reference block shows freight-quote CTA from static pricing", async ({ page }) => {
+test("hcr bulk pricing shows freight-quote CTA through the commerce selector", async ({ page }) => {
   await page.route("**/api/products", route => route.fulfill({
-    status: 200, contentType: "application/json", body: JSON.stringify({ products: [] }),
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [
+        {
+          sku: "hcr",
+          name: "VertKleen HCR",
+          mode: "buy",
+          active: true,
+          product_variants: [
+            { vsku: "hcr-1", label: "1 gal bottle", gallons: 1, price: 17.3, currency: "usd", active: true, sort: 1 },
+            { vsku: "hcr-5", label: "5 gal pail", gallons: 5, price: 86.52, currency: "usd", active: true, sort: 2 },
+            { vsku: "hcr-55", label: "55 gal drum", gallons: 55, price: 740.36, currency: "usd", active: false, sort: 3 },
+          ],
+        },
+      ],
+    }),
   }));
 
   await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "networkidle" });
 
-  const drums = page.locator("#pDrums");
-  await expect(drums).toBeVisible();
-  await expect(drums).toContainText("55 gal drum");
-  await expect(drums.getByRole("link", { name: /Request a freight quote/ })).toBeVisible();
+  await expect(page.locator("#pDrums")).toHaveCount(0);
+  await expect(page.locator("#pVol")).toContainText("55 gal drum");
+  await page.locator("#pVol").selectOption("hcr-55");
+  await expect(page.locator("#pBuyBtn")).toBeHidden();
+  await expect(page.locator("#pBulkQuoteBtn")).toBeVisible();
+  await expect(page.locator("#pBulkQuoteBtn")).toHaveAttribute("href", /freight%20quote/);
 });

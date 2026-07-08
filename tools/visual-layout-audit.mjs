@@ -10,7 +10,8 @@ const ROOT = new URL("..", import.meta.url);
 const ROOT_PATH = fileURLToPath(ROOT);
 const PORT = Number(process.env.VISUAL_AUDIT_PORT || 4317);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const OUT_DIR = path.resolve(ROOT_PATH, "audits/visual-qa-2026-07-06");
+const AUDIT_LABEL = process.env.VISUAL_AUDIT_LABEL || new Date().toISOString().slice(0, 10);
+const OUT_DIR = path.resolve(ROOT_PATH, "audits", `visual-qa-${AUDIT_LABEL}`);
 
 const VIEWPORTS = {
   desktop: { width: 1440, height: 1000 },
@@ -545,7 +546,7 @@ async function main() {
 
   const issueRows = rows.flatMap((row) => row.issues.map((issue) => ({ ...row, issue })));
   const summary = [
-    "# Visual QA Audit - 2026-07-06",
+    `# Visual QA Audit - ${AUDIT_LABEL}`,
     "",
     `Captured ${rows.length} screenshots across ${Object.keys(VIEWPORTS).join(", ")} viewports.`,
     "",

@@ -507,13 +507,21 @@ test("content editor blocks writes behind active editorial locks", async ({ page
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-locks-desktop.png` });
 
   await page.locator('[data-content-action="force_unlock"]').click();
-  await expect(page.locator("#contentStatus")).toHaveText("Lock released.");
+  await expect(page.locator("dialog.confirm-dialog")).toBeVisible();
+  const forceUnlockResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('dialog.confirm-dialog button[value="confirm"]').click();
+  await forceUnlockResponse;
   expect(posts.at(-1).action).toBe("force_unlock");
   await expect(page.locator("#contentLockStatus")).toHaveText("Unlocked");
   await expect(page.locator('[data-content-action="draft"]')).toBeEnabled();
 
+  const lockResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
   await page.locator('[data-content-action="lock"]').click();
-  await expect(page.locator("#contentStatus")).toHaveText("Lock claimed.");
+  await lockResponse;
   expect(posts.at(-1).action).toBe("lock");
   await expect(page.locator("#contentLockStatus")).toContainText("Locked by you");
   await expect(page.locator('[data-content-action="unlock"]')).toBeEnabled();
