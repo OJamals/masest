@@ -1,4 +1,5 @@
 import { esc, delegate, confirmDialog } from "../util.js";
+import { renderMarkdown } from "../md.js";
 import { supabase } from "../auth.js";
 import { diffContentFields, formatFieldValue } from "./content-diff.js";
 import {
@@ -150,10 +151,14 @@ function fieldTemplate(field, payload) {
   const cls = field.className || "";
   const required = field.required ? " required aria-required=\"true\"" : "";
   if (field.kind === "textarea" || field.kind === "list") {
+    const preview = field.preview === "markdown"
+      ? `<div class="adm-md-preview" data-md-preview-for="${esc(field.key)}" aria-live="polite"><span class="adm-md-preview-label">Preview</span><div class="adm-md-preview-body blog-body"></div></div>`
+      : "";
     return `
       <label class="${esc(cls)}">${esc(field.label)}
         <textarea class="adm-textarea adm-content-field-text" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true"${required}>${esc(value)}</textarea>
       </label>
+      ${preview}
     `;
   }
   if (field.kind === "checkbox") {
@@ -741,10 +746,21 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     mounted = true;
   }
 
+  function updateMarkdownPreviews() {
+    document.querySelectorAll("[data-md-preview-for]").forEach((wrap) => {
+      const key = wrap.dataset.mdPreviewFor;
+      const src = document.querySelector(`[data-content-payload-field="${key}"]`);
+      const body = wrap.querySelector(".adm-md-preview-body");
+      if (!src || !body) return;
+      body.innerHTML = renderMarkdown(src.value || "");
+    });
+  }
+
   function renderStructuredFields(type, payload = {}) {
     const box = $("contentStructuredFields");
     if (!box) return;
     box.innerHTML = structuredFieldsTemplate(type, payload);
+    updateMarkdownPreviews();
   }
 
   function updateSeoMeters() {
@@ -772,6 +788,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       const payload = mergeStructuredPayload(type, readPayloadJson(), readStructuredValues());
       $("contentPayload").value = jsonText(payload);
       setStatus("");
+      updateMarkdownPreviews();
       refreshPreview();
     } catch (error) {
       setStatus(`Invalid JSON: ${error.message}`, "err");

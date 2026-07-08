@@ -151,7 +151,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "hero", label: "Hero image path (img/blog/…)", kind: "text" },
       { key: "hero_alt", label: "Hero image alt", kind: "text" },
       { key: "excerpt", label: "Excerpt (card + meta description)", kind: "textarea", className: "full", required: true },
-      { key: "body", label: "Body (Markdown)", kind: "textarea", className: "full", required: true },
+      { key: "body", label: "Body (Markdown)", kind: "textarea", className: "full", required: true, preview: "markdown" },
       { key: "sort_order", label: "Sort order (tiebreak)", kind: "number" },
     ],
   },
