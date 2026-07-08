@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync, rmSync, mkdtempSync } from "node:fs";
+import { readFileSync, existsSync, rmSync, mkdtempSync, writeFileSync as wf } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CONTENT_TYPE_DEFINITIONS, snapshotGroups, structuredPayloadKeys } from "../js/content-types.js";
@@ -112,6 +112,24 @@ test("buildBlog writes a well-formed RSS feed", () => {
     assert.equal(items.length, SEED.blog_posts.length);
     assert.match(feed, /<link>https:\/\/masest\.co\/blog\/hmis-000-explained<\/link>/);
     assert.ok(!/<description>[^<]*<[^/]/.test(feed));
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("mergeSitemap inserts blog urls idempotently", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    const sm = join(out, "sitemap.xml");
+    wf(sm, `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://masest.co/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n</urlset>\n`);
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: true });
+    let xml = readFileSync(sm, "utf8");
+    assert.match(xml, /https:\/\/masest\.co\/blog<\/loc>/);
+    assert.match(xml, /https:\/\/masest\.co\/blog\/hmis-000-explained<\/loc>/);
+    const firstCount = (xml.match(/\/blog\/hmis-000-explained</g) || []).length;
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: true });
+    xml = readFileSync(sm, "utf8");
+    assert.equal((xml.match(/\/blog\/hmis-000-explained</g) || []).length, firstCount);
   } finally {
     rmSync(out, { recursive: true, force: true });
   }

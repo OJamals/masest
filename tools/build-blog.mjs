@@ -274,6 +274,24 @@ ${items}
 `;
 }
 
+function mergeSitemap(posts, outDir) {
+  const smPath = join(outDir, "sitemap.xml");
+  if (!existsSync(smPath)) return 0;
+  const original = readFileSync(smPath, "utf8");
+  // Drop any existing blog url lines so re-runs stay idempotent.
+  let xml = original.replace(/^ {2}<url><loc>https:\/\/masest\.co\/blog(?:\/[^<]*)?<\/loc>[^\n]*\n/gm, "");
+  const lines = [
+    `  <url><loc>${BASE}/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`,
+    ...posts.map((p) => `  <url><loc>${BASE}/blog/${p.slug}</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>`),
+  ].join("\n");
+  const merged = xml.replace(/<\/urlset>/, `${lines}\n</urlset>`);
+  if (merged !== original) {
+    writeFileSync(smPath, merged);
+    return 1;
+  }
+  return 0;
+}
+
 export function buildBlog({ posts, outDir = ROOT, updateSitemap = true } = {}) {
   validate(posts);
   const sorted = sortPosts(posts);
@@ -297,7 +315,7 @@ export function buildBlog({ posts, outDir = ROOT, updateSitemap = true } = {}) {
     writeFileSync(feedFile, feed);
     changed++;
   }
-  // sitemap is added in a later task.
+  if (updateSitemap) changed += mergeSitemap(sorted, outDir);
   return { changed, posts: sorted };
 }
 
