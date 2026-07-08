@@ -381,8 +381,19 @@
 .pipe-flow,
 .pipe-buildup {
   fill: none;
-  stroke-linecap: round;
   stroke-linejoin: round;
+}
+/* Deposits + flow keep round caps (organic/soft). The pipe body itself uses
+   butt caps so its open ends read as a cut cross-section, not domed capsule
+   ends ("worm"). */
+.pipe-flow,
+.pipe-buildup {
+  stroke-linecap: round;
+}
+.pipe-shadow,
+.pipe-shell,
+.pipe-bore {
+  stroke-linecap: butt;
 }
 /* No SVG filters anywhere in this diagram: the flow streaks animate every frame,
    and a filter on ANY sibling (even a static one) forces the whole filter region
