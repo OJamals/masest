@@ -27,7 +27,7 @@ export function renderChrome() {
   const page = pageName();
   // Pages under /industries/ sit one level deep; prefix chrome links with the
   // right root so the shared nav/footer resolve from any directory depth.
-  const root = /\/(?:industries|products)\//.test(location.pathname) ? "../" : "";
+  const root = /\/(?:industries|products|blog)\//.test(location.pathname) ? "../" : "";
   const homeHref = root || "./";
   const isProductDetail = /\/products\/[^/]+(?:\.html)?$/.test(location.pathname);
   const links = [
@@ -41,12 +41,14 @@ export function renderChrome() {
         { href: "proof", label: "Field Results" }
       ]
     },
-    { href: "resources", label: "Resources" }
+    { href: "resources", label: "Resources" },
+    { href: "blog", label: "Blog" }
   ];
   const isActive = (href) => {
     if (page === href) return true;
     if (href === "products" && (page === "product" || isProductDetail)) return true;
     if (href === "industries" && /\/industries\//.test(location.pathname)) return true;
+    if (href === "blog" && /\/blog(\/|$)/.test(location.pathname)) return true;
     return false;
   };
   const navItem = item => {
@@ -218,6 +220,7 @@ export function renderChrome() {
           <a href="${root}resources">Resources &amp; SDS</a>
           <a href="${root}programs">Programs &amp; Pricing</a>
           <a href="${root}proof">Proof &amp; Case Studies</a>
+          <a href="${root}blog">Blog</a>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Company</div>

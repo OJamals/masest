@@ -45,4 +45,8 @@
   <url><loc>https://masest.co/products/eg50</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/products/egu96</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/products/eg5050</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://masest.co/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://masest.co/blog/hmis-000-explained</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/blog/descaling-without-acid</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/blog/vertkleen-launch</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
 </urlset>

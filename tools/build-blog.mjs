@@ -122,7 +122,9 @@ function postPage(post, all) {
   <a href="../"><b>MASEST</b></a>
   <a href="../products">Products</a>
   <a href="../services">Services</a>
+  <span>Use Cases</span>
   <a href="../industries">Industries</a>
+  <a href="../proof">Field Results</a>
   <a href="../resources">Resources</a>
   <a href="../blog">Blog</a>
 </nav>
@@ -215,7 +217,9 @@ function indexPage(posts) {
   <a href="/"><b>MASEST</b></a>
   <a href="products">Products</a>
   <a href="services">Services</a>
+  <span>Use Cases</span>
   <a href="industries">Industries</a>
+  <a href="proof">Field Results</a>
   <a href="resources">Resources</a>
   <a href="blog">Blog</a>
 </nav>

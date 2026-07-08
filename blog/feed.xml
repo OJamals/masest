@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>MASEST VertKleen Blog</title>
+    <link>https://masest.co/blog</link>
+    <description>Field notes, technical guides, and program news on VertKleen chemistry.</description>
+    <language>en-us</language>
+    <item>
+      <title>What HMIS 0-0-0 Actually Means for Your Facility</title>
+      <link>https://masest.co/blog/hmis-000-explained</link>
+      <guid isPermaLink="true">https://masest.co/blog/hmis-000-explained</guid>
+      <pubDate>Wed, 01 Jul 2026 00:00:00 GMT</pubDate>
+      <category>technical</category>
+      <description>A 0-0-0 HMIS rating changes how a chemical is stored, shipped, and handled. Here is what the three zeros mean and why they lower your handling burden.</description>
+    </item>
+    <item>
+      <title>Descaling Heat Exchangers Without Aggressive Acid</title>
+      <link>https://masest.co/blog/descaling-without-acid</link>
+      <guid isPermaLink="true">https://masest.co/blog/descaling-without-acid</guid>
+      <pubDate>Sat, 20 Jun 2026 00:00:00 GMT</pubDate>
+      <category>marketing</category>
+      <description>Scale kills heat-transfer efficiency, but aggressive acid descalers create their own handling and disposal problems. There is a lower-hazard path.</description>
+    </item>
+    <item>
+      <title>Announcing the Expanded VertKleen Program</title>
+      <link>https://masest.co/blog/vertkleen-launch</link>
+      <guid isPermaLink="true">https://masest.co/blog/vertkleen-launch</guid>
+      <pubDate>Wed, 10 Jun 2026 00:00:00 GMT</pubDate>
+      <category>news</category>
+      <description>We have expanded the VertKleen program with new package sizes, document-gated SKUs, and program pricing for recurring accounts.</description>
+    </item>
+  </channel>
+</rss>
