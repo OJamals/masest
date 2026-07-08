@@ -30,6 +30,11 @@ const NON_STAFF_GATES = {
   // Intuit OAuth redirect target — no staff session exists in the browser round-trip;
   // protected by HMAC signed-state verification (only staff can mint state via connect.js).
   "qbo/callback.js": /verifyQboState\(/,
+  // Automation-only review-reminder sweep invoked by the pg_cron job — no staff session
+  // in that context; protected by a constant-time shared-secret header check (mirrors the
+  // QUOTE_CRM_SECRET pattern in quotes.js / crm/tasks.js, but this route has no staff-facing
+  // surface at all, so it lives here rather than in PRE_GUARD_DB_GATES).
+  "review-reminders.js": /REVIEW_CRM_SECRET/,
 };
 
 // Routes allowed to touch the DB before the staff guard, ONLY inside a vetted gate.
