@@ -5,6 +5,11 @@
  * Writes canonical/OG/JSON-LD blocks into committed HTML, generates static
  * product detail pages, and regenerates sitemap.xml from final extensionless
  * public URLs. Cloudflare Pages serves these files directly.
+ *
+ * Run `npm run seo-inject` (not `node tools/seo-inject.mjs` directly) so the
+ * `preseo-inject` hook refreshes data/reviews.json first — this tool reads that
+ * tracked snapshot to bake static AggregateRating JSON-LD for product/service
+ * pages, same as it already reads data/content/page-meta.json for CMS overrides.
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
@@ -23,6 +28,13 @@ const START = "<!-- seo:auto -->";
 const END = "<!-- /seo:auto -->";
 
 const PRODUCT_IDS = Object.keys(PRODUCTS);
+
+// Editorial catalog id -> commerce/reviews sku. Reviews (and orders.order_items
+// .product_sku, and data-sku on product.html) key on the commerce sku, not the
+// editorial id — keep in sync with COMMERCE_ALIAS in product.html and
+// COMMERCE_SKU_ALIASES in js/main/commerce-ui.js.
+const COMMERCE_SKU_ALIAS = { crhd: "cr-hd" };
+const commerceSku = (id) => COMMERCE_SKU_ALIAS[id] || id;
 
 const ORG = {
   "@type": "Organization",
@@ -97,6 +109,66 @@ function loadContentPageMeta() {
     }
   }
   return out;
+}
+
+// tools/build-reviews.mjs writes this tracked snapshot from approved reviews,
+// keyed "<kind>:<sku>" -> { avg, count }. Best-effort: an absent/malformed file
+// (e.g. reviews not provisioned yet) means "no ratings to bake" — never a hard
+// build failure.
+function loadReviewsSnapshot() {
+  const file = "data/reviews.json";
+  if (!existsSync(file)) return {};
+  try {
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+// Static AggregateRating for one kind:sku, or null when there are no approved
+// reviews yet (matches the "no reviews yet" client state — inject nothing).
+function aggregateRatingNode(kind, sku, reviewsSnapshot) {
+  const entry = reviewsSnapshot?.[`${kind}:${sku}`];
+  if (!entry || !entry.count) return null;
+  return {
+    "@type": "AggregateRating",
+    ratingValue: entry.avg,
+    reviewCount: entry.count,
+    bestRating: 5,
+    worstRating: 1,
+  };
+}
+
+// Static counterpart to services.html's single page hosting dozens of SKUs:
+// one Service node per reviewed SKU, appended to the page's @graph so crawlers
+// see per-service ratings before js/main/service-catalog.js hydrates cards.
+function serviceReviewNodes(reviewsSnapshot) {
+  const file = "data/services.json";
+  if (!existsSync(file)) return [];
+  let services;
+  try {
+    services = JSON.parse(readFileSync(file, "utf8"))?.services;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(services)) return [];
+  const nodes = [];
+  for (const svc of services) {
+    const sku = String(svc?.sku || "").trim();
+    if (!sku) continue;
+    const aggregateRating = aggregateRatingNode("service", sku, reviewsSnapshot);
+    if (!aggregateRating) continue;
+    nodes.push({
+      "@type": "Service",
+      name: svc.name,
+      sku,
+      ...(svc.category ? { serviceType: svc.category } : {}),
+      provider: { "@type": "Organization", name: "MASEST Consulting LLC", url: `${BASE}/` },
+      aggregateRating,
+    });
+  }
+  return nodes;
 }
 
 function cleanPath(path) {
@@ -198,7 +270,12 @@ function buildBlock(html, meta) {
   const title = content.title || pick(html, /<title>([^<]*)<\/title>/i) || "MASEST VertKleen";
   const desc = content.description || pick(html, /<meta\s+name="description"\s+content="([^"]*)"/i) || "";
   const ogImage = absoluteAssetUrl(content.og_image) || OG_IMAGE;
-  const jsonld = content.jsonld || meta.jsonld;
+  const baseJsonld = content.jsonld || meta.jsonld;
+  // reviewJsonld is appended regardless of a CMS jsonld override, so a static
+  // rating never silently drops if page-meta.json later supplies its own jsonld.
+  const jsonld = meta.reviewJsonld?.length
+    ? [...(baseJsonld || []), ...meta.reviewJsonld]
+    : baseJsonld;
   const url = `${BASE}${meta.loc}`;
   const hasOgTitle = /property="og:title"/.test(html);
   const hasOgDesc = /property="og:description"/.test(html);
@@ -280,7 +357,8 @@ function productMetaDescription(id, product) {
   return `${sentence.slice(0, 152).replace(/\s+\S*$/, "")}...`;
 }
 
-function productSchema(id, product) {
+function productSchema(id, product, reviewsSnapshot) {
+  const aggregateRating = aggregateRatingNode("product", commerceSku(id), reviewsSnapshot);
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -311,12 +389,15 @@ function productSchema(id, product) {
             value: QUOTE_ONLY_IDS.has(id) ? "Quoted before purchase" : "Small packs in stock; bulk quoted",
           },
         ].filter((item) => item.value),
+        // No approved reviews yet -> omit entirely (matches the "no reviews yet"
+        // client state instead of asserting a fabricated rating).
+        ...(aggregateRating ? { aggregateRating } : {}),
       },
     ],
   };
 }
 
-function productPage(id, product) {
+function productPage(id, product, reviewsSnapshot) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
   // Full catalog copy is published in the hero on purpose (see
   // product-layout.test: static heroes are the SEO surface for desc text).
@@ -374,7 +455,7 @@ function productPage(id, product) {
 <meta property="og:url" content="${BASE}/products/${id}">
 <meta property="og:image" content="${product.image ? `${BASE}/${product.image}` : OG_IMAGE}">
 <meta name="twitter:card" content="summary_large_image">
-${jsonLd(productSchema(id, product))}
+${jsonLd(productSchema(id, product, reviewsSnapshot))}
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg product-detail-page">
@@ -437,12 +518,12 @@ ${jsonLd(productSchema(id, product))}
 `;
 }
 
-async function writeProductPages() {
+async function writeProductPages(reviewsSnapshot) {
   let changed = 0;
   await mkdir("products", { recursive: true });
   for (const id of PRODUCT_IDS) {
     const file = `products/${id}.html`;
-    const html = productPage(id, PRODUCTS[id]);
+    const html = productPage(id, PRODUCTS[id], reviewsSnapshot);
     const before = existsSync(file) ? await readFile(file, "utf8") : "";
     if (before !== html) {
       await mkdir(dirname(file), { recursive: true });
@@ -475,11 +556,15 @@ ${entries.map((entry) => `  <url><loc>${BASE}${entry.loc}</loc><changefreq>${ent
 
 let changed = 0;
 const contentPageMeta = loadContentPageMeta();
+const reviewsSnapshot = loadReviewsSnapshot();
+// services.html hosts all SKUs on one page (no per-service static page exists,
+// unlike products/<id>.html) — bake reviewed services in as extra @graph nodes.
+PUBLIC["services.html"].reviewJsonld = serviceReviewNodes(reviewsSnapshot);
 for (const [file, meta] of Object.entries(PUBLIC)) {
   changed += await processPage(file, applyContentPageMeta(file, meta, contentPageMeta), false);
 }
 for (const file of PRIVATE) changed += await processPage(file, null, true);
-changed += await writeProductPages();
+changed += await writeProductPages(reviewsSnapshot);
 changed += await processProductFallback();
 changed += await writeSitemap();
 
