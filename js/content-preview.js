@@ -10,6 +10,7 @@ const LABELS = {
   page_section: "Page section",
   page_meta: "Page metadata",
   pricing_tier: "Pricing tier",
+  blog_post: "Blog post",
 };
 
 function esc(value) {

@@ -9,7 +9,7 @@ import {
 } from "../content-types.js";
 
 const TYPES = contentTypeOptions();
-const ASSET_FIELD_KEYS = new Set(["image", "og_image"]);
+const ASSET_FIELD_KEYS = new Set(["image", "og_image", "hero"]);
 
 const STATUSES = [
   ["published", "Published"],
@@ -40,6 +40,7 @@ const PLACEMENT_HINTS = Object.freeze({
   page_section: "Feeds editable public page sections such as headlines, body copy, CTAs, and images.",
   page_meta: "Feeds SEO metadata for public pages.",
   pricing_tier: "Feeds public pricing tier copy. Transaction pricing still belongs in Catalog.",
+  blog_post: "Feeds the static blog. After publishing, run `npm run publish:blog` to regenerate and commit the pages.",
 });
 
 function labelFor(options, value) {

@@ -22,6 +22,11 @@ const ORG = {
 const text = (s) => escapeHtml(s);
 const attr = (s) => escapeHtml(s);
 
+// Serialize JSON-LD for embedding in an HTML <script> block. Escapes "<" so a
+// CMS-authored string containing "</script>" (title, excerpt, author) cannot
+// terminate the script element and inject markup into the reader's page.
+const ldJson = (obj) => JSON.stringify(obj).replace(/</g, "\\u003c");
+
 function validate(posts) {
   const seen = new Set();
   for (const p of posts) {
@@ -112,7 +117,7 @@ function postPage(post, all) {
 <meta property="og:url" content="${BASE}/blog/${post.slug}">
 <meta property="og:image" content="${attr(ogImage)}">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">${JSON.stringify(articleSchema(post))}</script>
+<script type="application/ld+json">${ldJson(articleSchema(post))}</script>
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg blog-post-page">
@@ -207,7 +212,7 @@ function indexPage(posts) {
 <meta property="og:url" content="${BASE}/blog">
 <meta property="og:image" content="${BASE}/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">${JSON.stringify(schema)}</script>
+<script type="application/ld+json">${ldJson(schema)}</script>
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg blog-index-page">

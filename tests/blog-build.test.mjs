@@ -134,3 +134,28 @@ test("mergeSitemap inserts blog urls idempotently", () => {
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("JSON-LD escapes '<' so a CMS title can't break out of the script block", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    const evil = "Break </script><img src=x onerror=alert(1)> Out";
+    buildBlog({
+      posts: [{ slug: "evil", title: evil, category: "news", date: "2026-01-01",
+        excerpt: "</script> in excerpt too", body: "b", author: "</script>", hero: "", hero_alt: "" }],
+      outDir: out, updateSitemap: false,
+    });
+    const html = readFileSync(join(out, "blog", "evil.html"), "utf8");
+    // The ld+json block must contain no raw "<" (all escaped to <),
+    // so the author's "</script>" cannot terminate the script element.
+    const block = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
+    assert.ok(!block.includes("<"), "JSON-LD must not contain a raw '<'");
+    assert.match(block, /\\u003c\/script/);
+    // And it round-trips: unescaping < yields valid JSON with the real title.
+    const parsed = JSON.parse(block.replace(/\\u003c/g, "<"));
+    assert.equal(parsed.headline, evil);
+    // No injected <img> leaked into raw page HTML from the title.
+    assert.ok(!html.includes("<img src=x onerror"), "no injected img from title");
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
