@@ -16,6 +16,7 @@ import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js';
 import { createQuotesTab } from './admin/quotes.js';
 import { createCrmWorkspace } from './admin/crm-workspace.js';
 import { createReviewsTab } from './admin/reviews.js';
+import { createNewsletterTab } from './admin/newsletter.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -146,6 +147,7 @@ function setTab(tab) {
     messages: renderThreads,
     quotes: renderQuotePipeline,
     reviews: renderReviews,
+    newsletter: renderNewsletter,
     crm: () => { renderCrm(); renderOffers(); },
   }[state.tab];
   render?.({ refetch: !cached });
@@ -408,6 +410,7 @@ const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message
 
 // Reviews moderation tab (plan Task 13). Shared primitives + statusBadge/badge injected.
 const { renderReviews, wireReviews, wireReviewSeedForm, refreshReviewsBadge } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });
+const { renderNewsletter, wireNewsletter } = createNewsletterTab({ $, api, state, message, admSkeleton, admEmpty, badge });
 
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
 const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton, admEmpty });
@@ -527,6 +530,7 @@ function wire() {
   wireCrm();
   wireThreads();
   wireReviews();
+  wireNewsletter();
   wireReviewSeedForm();
 }
 
