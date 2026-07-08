@@ -94,9 +94,13 @@ export async function onRequest({ request, env }) {
       const { data } = await sb.from('newsletters').select('*').eq('id', id).maybeSingle();
       return json(200, { newsletter: data || null });
     }
-    const { data } = await sb.from('newsletters').select('id,subject,source,status,schedule,recipient_count,sent_at,updated_at').order('updated_at', { ascending: false }).limit(200);
+    const { data, error } = await sb.from('newsletters').select('id,subject,source,status,schedule,recipient_count,sent_at,updated_at').order('updated_at', { ascending: false }).limit(200);
+    // A missing-relation error means the newsletter schema hasn't been applied yet —
+    // signal that so the admin UI shows a clear setup notice instead of a blank editor
+    // whose Save/Send would fail cryptically.
+    const setup_ready = !error;
     const { data: settings } = await sb.from('newsletter_settings').select('auto_send_latest_blog').eq('id', 1).maybeSingle();
-    return json(200, { newsletters: data || [], settings: settings || { auto_send_latest_blog: false } });
+    return json(200, { newsletters: data || [], settings: settings || { auto_send_latest_blog: false }, setup_ready });
   }
 
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });

@@ -227,23 +227,29 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     `;
   }
 
+  function setupBanner() {
+    if (state.nlSetupReady !== false) return '';
+    return '<p class="adm-status" data-state="warn" style="margin-bottom:12px">Newsletter storage isn’t set up yet. Apply <code>supabase/schema-newsletters.sql</code>, then reload. Composing + preview work now; saving, sending and recipients need the tables.</p>';
+  }
+
   function renderSection() {
     const body = box()?.querySelector('[data-nl-body]');
     if (!body) return;
     const section = state.nlSection || 'compose';
+    const banner = setupBanner();
     if (section === 'compose') {
-      body.innerHTML = composeTemplate();
+      body.innerHTML = banner + composeTemplate();
       populateEditor(editingCache());
       updatePreview();
       applySourceVisibility();
       applyScheduleVisibility();
     } else if (section === 'queue') {
-      body.innerHTML = queueTemplate();
+      body.innerHTML = banner + queueTemplate();
     } else if (section === 'recipients') {
-      body.innerHTML = recipientsTemplate();
+      body.innerHTML = banner + recipientsTemplate();
       loadRecipients();
     } else {
-      body.innerHTML = settingsTemplate();
+      body.innerHTML = banner + settingsTemplate();
     }
   }
 
@@ -287,7 +293,8 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
   }
 
   async function recipAction(action, payload) {
-    try { await api('/api/admin/recipients', { method: 'POST', body: JSON.stringify({ action, ...payload }) }); loadRecipients(); }
+    // api() JSON.stringifies the body itself — pass a raw object, not a string.
+    try { await api('/api/admin/recipients', { method: 'POST', body: { action, ...payload } }); loadRecipients(); }
     catch (err) { message?.(`Recipient ${action} failed: ${err.message || err}`, 'err'); }
   }
 
@@ -416,6 +423,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
         const res = await api('/api/admin/newsletters');
         state.newsletters = res.newsletters || [];
         state.nlSettings = res.settings || { auto_send_latest_blog: false };
+        state.nlSetupReady = res.setup_ready !== false;
         state.loaded.add('newsletter');
       } catch {
         root.querySelector('[data-nl-body]').innerHTML = '<p class="adm-status" data-state="err">Could not load newsletters. Reload to retry.</p>';
