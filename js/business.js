@@ -5,7 +5,7 @@
  * Program-enrollment and bulk-order requests post through the company support thread
  * (/api/account/messages) so staff see them in the admin Messages tab - no extra tables. */
 import { me, api } from './auth.js';
-import { esc, safeUrl, money, fmtDate } from './util.js';
+import { esc, safeUrl, money, fmtDate, confirmDialog } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -449,25 +449,53 @@ function wireBulk() {
 }
 
 /* ---------- team (company admins) ---------- */
+let teamSelf = {};   // { id, email } of the signed-in admin, so we never offer self role-change/remove
+function teamStatus(text, kind) { const st = $('inviteStatus'); if (st) { st.textContent = text; st.dataset.state = kind || ''; } }
+const TEAM_ROLES = [['buyer', 'Buyer'], ['admin', 'Admin']];
 async function loadTeam() {
   let t;
   $('teamMembers').innerHTML = `<div class="skeleton skeleton-block biz-team-skeleton"></div>`.repeat(2);
-  try { t = await api('/api/account/team'); } catch { $('teamMembers').innerHTML = '<p class="biz-status" data-state="err">Could not load team.</p>'; return; }
-  $('teamMembers').innerHTML = (t.members || []).map((m) =>
-    `<div class="biz-row"><span>${esc(m.full_name || m.email || 'Member')}${m.email && m.full_name ? ` <span class="muted">· ${esc(m.email)}</span>` : ''}</span><b>${esc(m.role)}</b></div>`).join('') || `<div class="empty-state"><i class="ph ph-users empty-icon" aria-hidden="true"></i><div class="empty-title">No team members yet</div><div class="empty-body">Invite colleagues to manage orders and quotes together.</div></div>`;
+  try { t = await api('/api/account/team'); } catch { $('teamMembers').innerHTML = '<p class="biz-status" data-state="err">Could not load team. <button class="btn btn-ghost btn-sm" type="button" id="teamRetry">Retry</button></p>'; $('teamRetry')?.addEventListener('click', loadTeam); return; }
+  const isSelf = (m) => (teamSelf.id && m.id === teamSelf.id) || (teamSelf.email && m.email && m.email.toLowerCase() === teamSelf.email.toLowerCase());
+  $('teamMembers').innerHTML = (t.members || []).map((m) => {
+    const name = `${esc(m.full_name || m.email || 'Member')}${m.email && m.full_name ? ` <span class="muted">· ${esc(m.email)}</span>` : ''}`;
+    if (isSelf(m)) return `<div class="biz-row"><span>${name} <span class="muted">(you)</span></span><b>${esc(m.role)}</b></div>`;
+    const opts = TEAM_ROLES.map(([v, l]) => `<option value="${v}"${m.role === v ? ' selected' : ''}>${l}</option>`).join('');
+    return `<div class="biz-row"><span>${name}</span><span class="biz-row-actions">
+      <select data-role-for="${esc(m.id)}" aria-label="Role for ${esc(m.email || m.full_name || 'member')}">${opts}</select>
+      <button class="btn btn-ghost btn-sm" type="button" data-remove-member="${esc(m.id)}" data-member-name="${esc(m.full_name || m.email || 'this member')}"><i class="ph ph-user-minus" aria-hidden="true"></i> Remove</button>
+    </span></div>`;
+  }).join('') || `<div class="empty-state"><i class="ph ph-users empty-icon" aria-hidden="true"></i><div class="empty-title">No team members yet</div><div class="empty-body">Invite colleagues to manage orders and quotes together.</div></div>`;
+  $('teamMembers').querySelectorAll('[data-role-for]').forEach((sel) => sel.addEventListener('change', async () => {
+    const prev = sel.querySelector('[selected]')?.value;
+    sel.disabled = true;
+    try { await api('/api/account/team', { method: 'PATCH', body: { profile_id: sel.dataset.roleFor, role: sel.value } }); teamStatus('Role updated.', 'ok'); loadTeam(); }
+    catch (err) {
+      sel.disabled = false;
+      if (prev) sel.value = prev;
+      teamStatus(err.data?.error === 'last_admin' ? 'Keep at least one admin on the account.' : 'Could not change the role. Try again.', 'err');
+    }
+  }));
+  $('teamMembers').querySelectorAll('[data-remove-member]').forEach((b) => b.addEventListener('click', async () => {
+    const ok = await confirmDialog(`Remove ${b.dataset.memberName} from this business? They keep their login but lose company access until re-invited.`, { confirmText: 'Remove', cancelText: 'Keep', danger: true });
+    if (!ok) return;
+    b.disabled = true;
+    try { await api('/api/account/team', { method: 'DELETE', body: { member_id: b.dataset.removeMember } }); teamStatus('Member removed.', 'ok'); loadTeam(); }
+    catch (err) {
+      b.disabled = false;
+      teamStatus(err.data?.error === 'last_admin' ? 'Keep at least one admin on the account.' : err.data?.error === 'cannot_remove_self' ? 'You can’t remove yourself.' : 'Could not remove the member. Try again.', 'err');
+    }
+  }));
   $('teamInvites').innerHTML = (t.invites || []).map((iv) =>
     `<div class="biz-row"><span>${esc(iv.email)} <span class="badge" data-s="pending">invited</span></span><button class="btn btn-ghost btn-sm" data-revoke="${esc(iv.id)}">Revoke</button></div>`).join('');
   $('teamInvites').querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;
     try { await api('/api/account/team', { method: 'DELETE', body: { id: b.dataset.revoke } }); loadTeam(); }
-    catch {
-      b.disabled = false;
-      const st = $('inviteStatus');
-      if (st) { st.textContent = 'Could not revoke the invite. Try again.'; st.dataset.state = 'err'; }
-    }
+    catch { b.disabled = false; teamStatus('Could not revoke the invite. Try again.', 'err'); }
   }));
 }
-function initTeam() {
+function initTeam(self = {}) {
+  teamSelf = { id: self.id || null, email: self.email || null };
   $('bizTeam').hidden = false;
   loadTeam();
   $('inviteForm').addEventListener('submit', async (e) => {
@@ -549,5 +577,5 @@ export async function initBusinessHub(initialData = null) {
   wireCompanySetup();
   wireBulk();
   toggleBulkCard(data);
-  if (data.company && data.profile?.role === 'admin') initTeam();
+  if (data.company && data.profile?.role === 'admin') initTeam({ id: data.profile?.id, email: data.email });
 }

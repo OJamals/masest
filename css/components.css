@@ -205,6 +205,8 @@
 }
 .detail-dialog::backdrop { background: rgba(20, 24, 32, .46); }
 .detail-dialog-actions { margin: 18px 0 0; text-align: right; }
+.detail-dialog > h3:first-child { margin: 0 0 14px; }
+.dialog-btn-row { display: flex; gap: 10px; justify-content: flex-end; margin: 16px 0 0; padding: 0; list-style: none; }
 
 .modal-backdrop {
   position: fixed;

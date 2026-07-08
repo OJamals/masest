@@ -14,6 +14,7 @@ const loaded = {};             // which tabs have been populated
 const pages = {                // offset-pagination state per list (#29)
   orders: { items: [], offset: 0, total: null, hasMore: false },
   notifs: { items: [], offset: 0, total: null, hasMore: false },
+  quotes: { items: [], offset: 0, total: null, hasMore: false },
 };
 let lastMsgCount = -1;         // messages currently rendered in the thread (for live-poll diffing)
 let pollTimer = null;          // live-refresh interval handle
@@ -32,6 +33,8 @@ const DASH_TAB_ALIASES = {
   bizInvoicing: 'business',
   bizPrograms: 'business',
   bizBulk: 'business',
+  bizTeam: 'business',
+  bizPaymentSetup: 'business',
   bizAccountTeam: 'business',
 };
 
@@ -77,8 +80,8 @@ function loadTab(name) {
     initBusinessHub(ACCOUNT)
       .then(() => wirePanelLinks(document.querySelector('[data-panel="business"]')))
       .catch(() => {
-        const box = $('bizProfile');
-        if (box) box.innerHTML = '<p class="dash-status" data-state="err">Could not load business tools.</p>';
+        loaded.business = false;
+        showLoadError($('bizProfile'), 'Could not load business tools.', () => loadTab('business'));
       });
   }
   if (name === 'addresses' && !loaded.addresses) { renderAddresses(); renderPayment(); }
@@ -366,6 +369,17 @@ function pagerHtml(attr, st) {
   return `<div class="dash-pager"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
 }
 
+// A failed first load must stay retryable: render an inline error with a Retry
+// button and re-run `retry` on click. Callers also reset their `loaded.X` flag so
+// simply switching tabs and back re-attempts — without this a single transient
+// fetch failure locked the tab into its error state until a full page reload.
+function showLoadError(box, label, retry) {
+  if (!box) return;
+  box.hidden = false;
+  box.innerHTML = `<p class="dash-status" data-state="err">${esc(label)} <button class="btn btn-ghost btn-sm" type="button" data-retry>Retry</button></p>`;
+  box.querySelector('[data-retry]')?.addEventListener('click', retry);
+}
+
 async function renderOrders({ append = false } = {}) {
   loaded.orders = true;
   const box = $('ordersBody');
@@ -383,7 +397,7 @@ async function renderOrders({ append = false } = {}) {
   let res;
   try { res = await api(`/api/account/orders?limit=25&offset=${st.offset}`); }
   catch {
-    if (!append) { box.innerHTML = '<p class="dash-status" data-state="err">Could not load orders.</p>'; return; }
+    if (!append) { loaded.orders = false; showLoadError(box, 'Could not load orders.', () => renderOrders()); return; }
     toast('Could not load more orders. Try again.', { variant: 'error' });
     const more = box.querySelector('[data-load-more-orders]'); if (more) more.disabled = false;
     return;
@@ -439,17 +453,23 @@ async function renderOrders({ append = false } = {}) {
 /* ---------- quote requests ---------- */
 // Read-only mirror of the caller's quote requests (email-keyed — works with or
 // without a business profile). Hidden entirely when there are none.
-async function renderQuoteRequests() {
+async function renderQuoteRequests({ append = false } = {}) {
   const box = $('quotesBody');
   if (!box) return;
+  const st = pages.quotes;
+  if (!append) { st.items = []; st.offset = 0; }
   let res;
-  try { res = await api('/api/account/quotes?limit=25'); } catch { box.hidden = true; return; }
-  const quotes = res.quotes || [];
-  if (!quotes.length) { box.hidden = true; return; }
+  try { res = await api(`/api/account/quotes?limit=25&offset=${st.offset}`); } catch { if (!append) box.hidden = true; return; }
+  st.items = st.items.concat(res.quotes || []);
+  st.offset += (res.quotes || []).length;
+  st.total = res.total; st.hasMore = !!res.has_more;
+  if (!st.items.length) { box.hidden = true; return; }
   const stateAttr = { Received: 'pending_payment', 'In review': 'net_open', Quoted: 'paid', Closed: 'cancelled' };
   box.innerHTML = `<h2 class="headline dash-section-title">Quote requests</h2>`
-    + quotes.map((q) => `<div class="dash-row"><span>${fmtDate(q.created_at)} · ${esc(q.product || q.type || 'Quote')}</span><span class="badge" data-s="${esc(stateAttr[q.state] || '')}">${esc(q.state)}</span></div>`).join('')
+    + st.items.map((q) => `<div class="dash-row"><span>${fmtDate(q.created_at)} · ${esc(q.product || q.type || 'Quote')}</span><span class="badge" data-s="${esc(stateAttr[q.state] || '')}">${esc(q.state)}</span></div>`).join('')
+    + pagerHtml('data-load-more-quotes', st)
     + `<p class="muted">Our team replies by email. Need to add details? <a href="contact?type=quote">Send another request</a>.</p>`;
+  box.querySelector('[data-load-more-quotes]')?.addEventListener('click', (e) => { e.currentTarget.disabled = true; renderQuoteRequests({ append: true }); });
   box.hidden = false;
 }
 
@@ -466,7 +486,7 @@ async function renderMessages() {
   }
   if (form) form.hidden = false;
   let msgs = [];
-  try { msgs = (await api('/api/account/messages')).messages; } catch { thread.innerHTML = '<p class="dash-status" data-state="err">Could not load messages.</p>'; return; }
+  try { msgs = (await api('/api/account/messages')).messages; } catch { loaded.messages = false; showLoadError(thread, 'Could not load messages.', () => renderMessages()); return; }
   lastMsgCount = msgs.length;
   if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question about orders, pricing, NET terms, or anything else.</div></div>`; }
   else {
@@ -507,7 +527,7 @@ async function renderNotifications({ append = false } = {}) {
   let data;
   try { data = await api(`/api/account/notifications?limit=50&offset=${st.offset}`); }
   catch {
-    if (!append) { box.innerHTML = '<p class="dash-status" data-state="err">Could not load notifications.</p>'; return; }
+    if (!append) { loaded.notifications = false; showLoadError(box, 'Could not load notifications.', () => renderNotifications()); return; }
     toast('Could not load more notifications. Try again.', { variant: 'error' });
     const more = box.querySelector('[data-load-more-notifs]'); if (more) more.disabled = false;
     return;
@@ -646,14 +666,18 @@ async function renderAddresses() {
     return;
   }
   let list = [];
-  try { list = (await api('/api/account/addresses')).addresses; } catch { box.innerHTML = '<p class="dash-status" data-state="err">Could not load addresses.</p>'; return; }
+  try { list = (await api('/api/account/addresses')).addresses; } catch { loaded.addresses = false; showLoadError(box, 'Could not load addresses.', () => renderAddresses()); return; }
   if (!list.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-map-pin empty-icon" aria-hidden="true"></i><div class="empty-title">No saved addresses</div><div class="empty-body">Add a billing or shipping address to speed up checkout.</div></div>`; return; }
   box.innerHTML = list.map((a) => `
     <div class="dash-row">
       <span><b>${a.type === 'bill' ? 'Billing' : 'Shipping'}</b>${a.is_default ? ' · <span class="badge" data-s="approved">default</span>' : ''}<br>
         <span class="muted">${esc(a.line1)}${a.line2 ? ', ' + esc(a.line2) : ''}, ${esc(a.city)}, ${esc(a.state)} ${esc(a.zip)}</span></span>
-      <span>${a.is_default ? '' : `<button class="btn btn-ghost btn-sm" data-set-default="${esc(a.id)}">Set default</button> `}<button class="btn btn-ghost btn-sm" data-del="${esc(a.id)}">Remove</button></span>
+      <span>${a.is_default ? '' : `<button class="btn btn-ghost btn-sm" data-set-default="${esc(a.id)}">Set default</button> `}<button class="btn btn-ghost btn-sm" data-edit="${esc(a.id)}">Edit</button> <button class="btn btn-ghost btn-sm" data-del="${esc(a.id)}">Remove</button></span>
     </div>`).join('');
+  box.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => {
+    const a = list.find((x) => String(x.id) === b.dataset.edit);
+    if (a) editAddress(a);
+  }));
   box.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     const ok = await confirmDialog('Remove this address?', { confirmText: 'Remove', cancelText: 'Keep', danger: true });
     if (!ok) return;
@@ -667,6 +691,55 @@ async function renderAddresses() {
     catch { b.disabled = false; }
   }));
 }
+// Edit an existing address in a modal, prefilled from the row. PATCHes only the
+// mutable fields; default status keeps its own "Set default" control.
+function editAddress(a) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'detail-dialog';
+  const val = (v) => esc(v == null ? '' : String(v));
+  dlg.innerHTML = `<h3>Edit address</h3>
+    <form id="addrEditForm" class="form-card biz-clean-form" onsubmit="return false">
+      <div class="field"><label>Type<select name="type">
+        <option value="ship"${a.type !== 'bill' ? ' selected' : ''}>Shipping</option>
+        <option value="bill"${a.type === 'bill' ? ' selected' : ''}>Billing</option>
+      </select></label></div>
+      <div class="field"><label>Address line 1<input name="line1" value="${val(a.line1)}" required></label></div>
+      <div class="field"><label>Address line 2<input name="line2" value="${val(a.line2)}"></label></div>
+      <div class="field"><label>City<input name="city" value="${val(a.city)}" required></label></div>
+      <div class="field"><label>State<input name="state" value="${val(a.state)}" maxlength="2" required></label></div>
+      <div class="field"><label>ZIP<input name="zip" value="${val(a.zip)}" required></label></div>
+      <span class="dash-status" id="addrEditStatus" role="status" aria-live="polite"></span>
+    </form>
+    <menu class="dialog-btn-row">
+      <button value="cancel" class="btn btn-ghost btn-sm" type="button">Cancel</button>
+      <button value="ok" class="btn btn-primary btn-sm" type="button">Save changes</button>
+    </menu>`;
+  document.body.appendChild(dlg);
+  dlg.showModal();
+  dlg.querySelector('input')?.focus();
+  const close = () => { dlg.close(); dlg.remove(); };
+  dlg.addEventListener('cancel', () => { dlg.remove(); }, { once: true });
+  dlg.querySelector('[value="cancel"]').addEventListener('click', close);
+  dlg.querySelector('[value="ok"]').addEventListener('click', async (e) => {
+    const form = dlg.querySelector('#addrEditForm');
+    const status = dlg.querySelector('#addrEditStatus');
+    const f = Object.fromEntries(new FormData(form));
+    const address = {
+      id: a.id, type: f.type, line1: String(f.line1 || '').trim(), line2: String(f.line2 || '').trim() || null,
+      city: String(f.city || '').trim(), state: String(f.state || '').trim().toUpperCase(), zip: String(f.zip || '').trim(),
+    };
+    if (!address.line1 || !address.city || !address.state || !address.zip) { status.textContent = 'Fill in all required fields.'; status.dataset.state = 'err'; return; }
+    e.target.disabled = true; status.textContent = 'Saving…'; status.dataset.state = '';
+    try {
+      await api('/api/account/addresses', { method: 'PATCH', body: { address } });
+      close(); loaded.addresses = false; renderAddresses();
+    } catch (err) {
+      status.textContent = err.data?.error === 'address_incomplete' ? 'Fill in all required fields.' : 'Could not save. Try again.';
+      status.dataset.state = 'err'; e.target.disabled = false;
+    }
+  });
+}
+
 function wireAddressForm() {
   $('addrForm').addEventListener('submit', async (e) => {
     e.preventDefault();
