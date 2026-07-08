@@ -1,9 +1,62 @@
-// /api/admin/users - staff user management for company members and pending invites.
+// /api/admin/users - staff user directory + full per-user console: profile, role,
+// business (company) + status, addresses, payment methods, orders. Also company-member
+// invites. The consolidated admin Accounts console consumes this.
+import Stripe from 'stripe';
 import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 
-const ROLES = new Set(['admin', 'buyer']);
+// Account roles selectable by an admin. 'moderator' is an elevated member role.
+const ROLES = new Set(['admin', 'buyer', 'moderator']);
+const ADDR_MAX = { line1: 160, line2: 160, city: 80, zip: 20 };
+
+function cleanText(v, max) { return String(v || '').trim().replace(/\s+/g, ' ').slice(0, max); }
+
+function normalizeAddress(input = {}) {
+  const row = {
+    type: input.type === 'bill' ? 'bill' : 'ship',
+    line1: cleanText(input.line1, ADDR_MAX.line1), line2: cleanText(input.line2, ADDR_MAX.line2),
+    city: cleanText(input.city, ADDR_MAX.city), state: String(input.state || '').trim().toUpperCase(),
+    zip: cleanText(input.zip, ADDR_MAX.zip).toUpperCase(), country: 'US',
+    is_default: input.is_default === true,
+  };
+  if (!row.line1 || !row.city || !row.state || !row.zip) return { error: 'address_incomplete' };
+  if (!/^[A-Z]{2}$/.test(row.state)) return { error: 'invalid_state' };
+  if (!/^[0-9A-Z -]{3,20}$/.test(row.zip)) return { error: 'invalid_zip' };
+  return { row };
+}
+
+// Stripe card list for a company's customer (best-effort, read-only).
+async function stripeCards(env, customerId) {
+  if (!customerId || !env.STRIPE_SECRET_KEY) return [];
+  try {
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+    const pm = await stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 20 });
+    return (pm.data || []).map((m) => ({ id: m.id, brand: m.card?.brand || 'card', last4: m.card?.last4 || '????', exp: `${m.card?.exp_month}/${m.card?.exp_year}` }));
+  } catch { return []; }
+}
+
+// Aggregate the full console for one user: profile, role, company (+status/terms/tier),
+// that company's addresses, orders, and Stripe cards.
+async function userConsole(sb, env, uid) {
+  const { data: profile } = await sb.from('profiles').select('id,full_name,phone,role,staff_role,company_id').eq('id', uid).maybeSingle();
+  if (!profile) return null;
+  let email = null;
+  try { const { data } = await sb.auth.admin.getUserById(uid); email = data?.user?.email || null; } catch { /* best-effort */ }
+  let company = null; let addresses = []; let orders = []; let payment_methods = [];
+  if (profile.company_id) {
+    const { data: c } = await sb.from('companies').select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,stripe_customer_id,created_at').eq('id', profile.company_id).maybeSingle();
+    company = c || null;
+    const [addrRes, ordRes] = await Promise.all([
+      sb.from('addresses').select('id,type,line1,line2,city,state,zip,is_default').eq('company_id', profile.company_id),
+      sb.from('orders').select('id,status,payment_method,total,currency,created_at,tracking_status').eq('company_id', profile.company_id).neq('status', 'cart').order('created_at', { ascending: false }).limit(50),
+    ]);
+    addresses = addrRes.data || [];
+    orders = ordRes.data || [];
+    payment_methods = await stripeCards(env, company?.stripe_customer_id);
+  }
+  return { profile: { ...profile, email }, company, addresses, orders, payment_methods };
+}
 
 async function getInvite(sb, inviteId, companyId) {
   let query = sb.from('company_invites')
@@ -51,6 +104,12 @@ export async function onRequest({ request, env }) {
 
   // Read-only user directory — any staff may view.
   if (request.method === 'GET') {
+    const detailId = new URL(request.url).searchParams.get('detail');
+    if (detailId) {
+      const console = await userConsole(sb, env, detailId);
+      if (!console) return json(404, { error: 'user_not_found' });
+      return json(200, console);
+    }
     return json(200, { users: await userDirectory(sb) });
   }
 
@@ -113,6 +172,47 @@ export async function onRequest({ request, env }) {
     const { error } = await sb.auth.admin.deleteUser(uid);
     if (error) return json(500, { error: error.message || 'delete_failed' });
     await recordAudit(sb, { user, action: 'user.delete', targetType: 'user', targetId: uid, detail: {} });
+    return json(200, { ok: true });
+  }
+
+  // Address book (company-scoped) — owner-gated.
+  if (action === 'add_address' || action === 'update_address' || action === 'delete_address') {
+    if (!staffCan(role, 'user.manage')) return json(403, { error: 'forbidden', message: 'Editing addresses requires owner access.' });
+    if (!companyId) return json(400, { error: 'company_id_required' });
+    if (action === 'delete_address') {
+      if (!body.address_id) return json(400, { error: 'address_id_required' });
+      const { error } = await sb.from('addresses').delete().eq('id', body.address_id).eq('company_id', companyId);
+      if (error) return json(500, { error: error.message });
+      await recordAudit(sb, { user, action: 'user.address_delete', targetType: 'company', targetId: companyId, detail: { address_id: body.address_id } });
+      return json(200, { ok: true });
+    }
+    const norm = normalizeAddress(body.address || body);
+    if (norm.error) return json(400, { error: norm.error });
+    if (action === 'add_address') {
+      if (norm.row.is_default) await sb.from('addresses').update({ is_default: false }).eq('company_id', companyId).eq('type', norm.row.type);
+      const { error } = await sb.from('addresses').insert({ company_id: companyId, ...norm.row });
+      if (error) return json(500, { error: error.message });
+      await recordAudit(sb, { user, action: 'user.address_add', targetType: 'company', targetId: companyId, detail: { type: norm.row.type } });
+      return json(200, { ok: true });
+    }
+    if (!body.address_id) return json(400, { error: 'address_id_required' });
+    if (norm.row.is_default) await sb.from('addresses').update({ is_default: false }).eq('company_id', companyId).eq('type', norm.row.type);
+    const { error } = await sb.from('addresses').update(norm.row).eq('id', body.address_id).eq('company_id', companyId);
+    if (error) return json(500, { error: error.message });
+    await recordAudit(sb, { user, action: 'user.address_update', targetType: 'company', targetId: companyId, detail: { address_id: body.address_id } });
+    return json(200, { ok: true });
+  }
+
+  // Detach a Stripe payment method from the company's customer — owner-gated.
+  if (action === 'detach_payment') {
+    if (!staffCan(role, 'user.manage')) return json(403, { error: 'forbidden', message: 'Editing payment requires owner access.' });
+    if (!body.payment_method_id) return json(400, { error: 'payment_method_id_required' });
+    if (!env.STRIPE_SECRET_KEY) return json(400, { error: 'stripe_not_configured' });
+    try {
+      const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+      await stripe.paymentMethods.detach(String(body.payment_method_id));
+    } catch (err) { return json(502, { error: 'stripe_detach_failed', message: String(err?.message || err) }); }
+    await recordAudit(sb, { user, action: 'user.payment_detach', targetType: 'company', targetId: companyId || null, detail: { pm: body.payment_method_id } });
     return json(200, { ok: true });
   }
 
