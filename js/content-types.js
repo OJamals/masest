@@ -145,7 +145,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
     fields: [
       { key: "title", label: "Title", kind: "text", className: "wide", required: true },
       { key: "category", label: "Category", kind: "select", options: ["marketing", "technical", "news"], required: true },
-      { key: "tags", label: "Tags", kind: "list" },
+      { key: "tags", label: "Tags", kind: "list", widget: "chips" },
       { key: "author", label: "Author", kind: "text" },
       { key: "date", label: "Publish date", kind: "date", required: true },
       { key: "hero", label: "Hero image path (img/blog/…)", kind: "text" },
