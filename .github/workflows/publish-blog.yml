@@ -76,3 +76,21 @@ jobs:
           # Land on top of any concurrent pushes; retry once.
           git pull --rebase origin main || true
           git push origin HEAD:main || (git pull --rebase origin main && git push origin HEAD:main)
+
+      - name: Email new posts to the newsletter list
+        # Runs after the static page is committed (deploying) so the "Read post" link
+        # resolves. Idempotent server-side (dedup table); best-effort — never fails
+        # the publish. No-ops unless BLOG_NEWSLETTER_SECRET is configured.
+        env:
+          BLOG_NEWSLETTER_SECRET: ${{ secrets.BLOG_NEWSLETTER_SECRET }}
+        run: |
+          if [ -z "$BLOG_NEWSLETTER_SECRET" ]; then
+            echo "BLOG_NEWSLETTER_SECRET not set — skipping newsletter send."
+            exit 0
+          fi
+          # Give Cloudflare Pages a moment to publish the committed page first.
+          sleep 75
+          curl -fsS -X POST "https://masest.co/api/admin/blog-newsletter" \
+            -H "x-blog-newsletter-secret: $BLOG_NEWSLETTER_SECRET" \
+            -H "content-type: application/json" \
+            -d '{"action":"sweep"}' || echo "newsletter sweep call failed (non-fatal)"
