@@ -71,3 +71,17 @@ export function aggregateStats(rows) {
   const avg = count ? Math.round((sum / count) * 10) / 10 : 0;
   return { avg, count, dist };
 }
+
+export const REMINDER_DELAY_DAYS = 10;
+
+// A single-source-of-truth predicate mirroring the SQL the sweep uses to page orders.
+// `refDate` (delivered→shipped_at, fulfilled→updated_at) must be ≥ REMINDER_DELAY_DAYS old.
+export function isReminderDue(order, nowMs) {
+  if (!order || order.review_reminded_at) return false;
+  if (!String(order.customer_email || "").trim()) return false;
+  const now = Number.isFinite(nowMs) ? nowMs : Date.parse(new Date().toISOString());
+  const cutoff = now - REMINDER_DELAY_DAYS * 86400000;
+  const delivered = order.tracking_status === "delivered" && order.shipped_at && Date.parse(order.shipped_at) <= cutoff;
+  const fulfilled = order.status === "fulfilled" && order.updated_at && Date.parse(order.updated_at) <= cutoff;
+  return Boolean(delivered || fulfilled);
+}
