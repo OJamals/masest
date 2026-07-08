@@ -83,7 +83,7 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
         };
       });
 
-      assert.equal(layout.total, 20, "expected all 20 launch product cards in the grid");
+      assert.equal(layout.total, 15, "expected all 15 confirmed price-list product cards in the grid");
       assert.ok(layout.perRow >= 4 && layout.perRow <= 5, `expected 4-5 cards/row, got ${layout.perRow}`);
       assert.ok(layout.allLink, "every card should be a clickable product link");
       assert.equal(layout.nestedInteractive, false, "cart buttons should not be nested inside links");
@@ -120,17 +120,16 @@ test("replacement checker shows the swap and filters the catalog", async () => {
       assert.deepEqual(filtered, ["hcr", "descaler"], "checker should filter to the matching swaps");
 
       await page.click("#swapClear");
-      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 20);
+      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 15);
       const restored = await page.$$eval(".shop-card", (els) => els.length);
-      assert.equal(restored, 20, "clearing should restore the full launch line");
+      assert.equal(restored, 15, "clearing should restore the confirmed July 2026 price-list line");
 
       await page.click('.shop-chip[data-group="water"]');
       const water = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
-      assert.deepEqual(water, ["watersafe60", "cr2", "sar", "purgo"], "category chip should filter the grid");
+      assert.deepEqual(water, ["cr2", "purgo", "watersafe60"], "category chip should filter the grid");
 
-      await page.click('.shop-chip[data-group="glycol"]');
-      const glycol = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
-      assert.deepEqual(glycol, ["pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"], "glycol category chip should filter the grid");
+      const glycolChip = await page.$('.shop-chip[data-group="glycol"]');
+      assert.equal(glycolChip, null, "glycol chip should be removed from the confirmed price-list catalog");
     } finally {
       await browser.close();
     }

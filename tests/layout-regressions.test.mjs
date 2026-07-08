@@ -161,6 +161,7 @@ async function newAuthedPage(browser, viewport) {
 test("admin products management keeps inline controls readable on desktop and mobile", async () => {
   await withServer(async () => {
     const browser = await chromium.launch();
+    const expectedProducts = productsPayload().products.length;
     try {
       for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
         const { context, page } = await newAuthedPage(browser, viewport);
@@ -180,7 +181,7 @@ test("admin products management keeps inline controls readable on desktop and mo
             };
           });
 
-          assert.ok(metrics.productCards >= 20, "all catalog products should render");
+          assert.equal(metrics.productCards, expectedProducts, "all catalog products should render");
           assert.ok(metrics.minProductInput >= 140, `product name controls collapsed to ${metrics.minProductInput}px`);
           assert.ok(metrics.minVariantInput >= 90, `variant controls collapsed to ${metrics.minVariantInput}px`);
           assert.equal(metrics.tableCount, 0, "product editing should not render as one over-wide admin table");

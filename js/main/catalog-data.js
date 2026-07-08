@@ -31,6 +31,32 @@ export const PRODUCTS = {
       "Cooling Tower Case Study: Brevard County Schools"
     ]
   },
+  "hcr-t16": {
+    name: "VertKleen HCR - 16+ Tote Program",
+    cat: "acid",
+    replaces: "Replaces bulk hydrochloric acid descaling programs",
+    hmis: "0-0-0",
+    icon: "ph-factory",
+    image: "img/products/hvac-hcr-studio.webp",
+    tag: "High-volume HCR procurement for accounts standardizing on 16+ tote descaling supply.",
+    desc: "A bulk HCR program for high-volume descaling and acid-replacement users that need tote-level procurement, reviewable pricing, and freight coordination before release.",
+    uses: [
+      "16+ tote descaling programs",
+      "Campus and industrial acid-replacement supply",
+      "High-volume rust, scale, and calcium removal",
+      "Contractor and distributor replenishment planning"
+    ],
+    specs: [
+      ["ph-shield-check", "HMIS 0-0-0", "Uses the HCR acid-replacement chemistry platform"],
+      ["ph-truck", "Tote freight", "Bulk orders route through quote review before release"],
+      ["ph-clipboard-text", "Program pricing", "Built for procurement teams buying at committed volume"],
+      ["ph-buildings", "Account fit", "Best for facilities, contractors, and multi-site programs"]
+    ],
+    docs: [
+      "Bulk HCR Program Profile",
+      "HCR SDS and technical package by request"
+    ]
+  },
   cr: {
     name: "VertKleen CR",
     cat: "alkaline",
@@ -534,22 +560,21 @@ pg100: {
 };
 
 export const CATALOG_ORDER = [
-  "hcr", "descaler", "cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash",
-  "watersafe60", "cr2", "sar", "purgo", "lam3", "alumibrite", "torque",
-  "pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"
+  "cr", "cr2", "hcr", "hcr-t16", "descaler", "crhd", "cr-hd-low-foam",
+  "neutral", "multiwash", "lam3", "purgo", "alumibrite", "torque", "sar",
+  "watersafe60"
 ];
 
 // Catalog UI groupings (curated, not the raw `cat` field) - drive the category
 // filter chips and grouping on the products page.
 export const CATALOG_GROUPS = [
-  { key: "descale", label: "Rust & Scale", ids: ["hcr", "descaler"] },
-  { key: "degrease", label: "Grease & Grime", ids: ["cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash"] },
-  { key: "water", label: "Water Treatment", ids: ["watersafe60", "cr2", "sar", "purgo"] },
-  { key: "exterior", label: "Exterior & Specialty", ids: ["lam3", "alumibrite", "torque"] },
-  { key: "glycol", label: "Glycols", ids: ["pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"] }
+  { key: "descale", label: "Descaling & Rust", ids: ["hcr", "hcr-t16", "descaler", "sar"] },
+  { key: "degrease", label: "Degreasers", ids: ["cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash"] },
+  { key: "water", label: "Water Treatment", ids: ["cr2", "purgo", "watersafe60"] },
+  { key: "exterior", label: "Exterior & Marine", ids: ["lam3", "alumibrite", "torque"] }
 ];
 
-export const QUOTE_FIRST_IDS = ["crs", "watersafe60", "cr2", "sar", "eg5050"];
+export const QUOTE_FIRST_IDS = ["crs"];
 
 // Automated replacement checker: the current chemical a buyer uses today, the job
 // it does, and the VertKleen product ids that replace it. Single source of truth
@@ -574,6 +599,12 @@ export const PRODUCT_CATALOG_COPY = {
     summary: "Use when rust staining, mineral scale, or passivation work needs industrial strength and documentation better than a muriatic-acid SDS.",
     fits: ["HVAC", "metal restoration", "concrete", "pipelines"],
     proof: "CLR-failed / HCR-cleared proof and cooling-tower notes"
+  },
+  "hcr-t16": {
+    job: "16+ tote descaling supply",
+    summary: "For high-volume facilities and contractors standardizing on HCR tote procurement with program pricing and freight review.",
+    fits: ["16+ totes", "contractors", "campuses", "industrial descaling"],
+    proof: "HCR field proof with program pricing"
   },
   descaler: {
     job: "Coils, towers, and heat-transfer equipment",
@@ -655,15 +686,15 @@ export const PRODUCT_CATALOG_COPY = {
   },
   cr2: {
     job: "Concentrated alkaline cleaning",
-    summary: "A higher-concentration CR-family SKU for accounts that already understand CR workflows; confirm application notes before rollout.",
+    summary: "A higher-concentration CR-family SKU for accounts that already understand CR workflows and need confirmed small-pack or bulk pricing.",
     fits: ["alkaline cleaning", "water treatment", "high-pH", "dosing"],
-    proof: "Application notes on request"
+    proof: "Application notes and pricing confirmed"
   },
   sar: {
     job: "Specialty acid replacement",
-    summary: "A tuned acid-replacement SKU for targeted descaling and water-side work; quoted case by case until application sheets are final.",
+    summary: "A tuned acid-replacement SKU for targeted descaling and water-side restoration with confirmed small-pack and bulk pricing.",
     fits: ["descaling", "water-side scale", "specialty acid", "maintenance"],
-    proof: "Application notes on request"
+    proof: "Application notes and pricing confirmed"
   }
   ,
   pg100: {

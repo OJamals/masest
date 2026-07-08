@@ -1,29 +1,51 @@
 {
-  "hcr": [
-    {
-      "label": "55 gal drum",
-      "gallons": 55,
-      "price": 740.36,
-      "currency": "usd"
-    },
-    {
-      "label": "275 gal tote",
-      "gallons": 275,
-      "price": 2754.67,
-      "currency": "usd"
-    }
-  ],
   "cr": [
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 528.41,
+      "price": 660.51,
       "currency": "usd"
     },
     {
       "label": "275 gal tote",
       "gallons": 275,
-      "price": 2234.93,
+      "price": 2793.66,
+      "currency": "usd"
+    }
+  ],
+  "cr2": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 836.65,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 3042.74,
+      "currency": "usd"
+    }
+  ],
+  "hcr": [
+    {
+      "label": "55 gal drum",
+      "gallons": 55,
+      "price": 925.44,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 3443.34,
+      "currency": "usd"
+    }
+  ],
+  "hcr-t16": [
+    {
+      "label": "275 gal tote (16+ totes)",
+      "gallons": 275,
+      "price": 5969.91,
       "currency": "usd"
     }
   ],
@@ -31,13 +53,13 @@
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 426.2,
+      "price": 532.74,
       "currency": "usd"
     },
     {
       "label": "275 gal tote",
       "gallons": 275,
-      "price": 1888.42,
+      "price": 2360.53,
       "currency": "usd"
     }
   ],
@@ -45,13 +67,13 @@
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 281.82,
+      "price": 352.28,
       "currency": "usd"
     },
     {
       "label": "275 gal tote",
       "gallons": 275,
-      "price": 1241.62,
+      "price": 1552.03,
       "currency": "usd"
     }
   ],
@@ -59,13 +81,13 @@
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 281.82,
+      "price": 352.28,
       "currency": "usd"
     },
     {
       "label": "275 gal tote",
       "gallons": 275,
-      "price": 1241.62,
+      "price": 1552.03,
       "currency": "usd"
     }
   ],
@@ -73,13 +95,13 @@
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 713.79,
+      "price": 892.24,
       "currency": "usd"
     },
     {
       "label": "275 gal tote",
       "gallons": 275,
-      "price": 3381.26,
+      "price": 4226.61,
       "currency": "usd"
     }
   ],
@@ -87,55 +109,13 @@
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 381.15,
+      "price": 476.44,
       "currency": "usd"
     },
     {
       "label": "275 gal tote",
       "gallons": 275,
-      "price": 1764.26,
-      "currency": "usd"
-    }
-  ],
-  "torque": [
-    {
-      "label": "55 gal drum",
-      "gallons": 55,
-      "price": 303.76,
-      "currency": "usd"
-    },
-    {
-      "label": "275 gal tote",
-      "gallons": 275,
-      "price": 1325.36,
-      "currency": "usd"
-    }
-  ],
-  "alumibrite": [
-    {
-      "label": "55 gal drum",
-      "gallons": 55,
-      "price": 358.63,
-      "currency": "usd"
-    },
-    {
-      "label": "275 gal tote",
-      "gallons": 275,
-      "price": 1619.89,
-      "currency": "usd"
-    }
-  ],
-  "purgo": [
-    {
-      "label": "55 gal drum",
-      "gallons": 55,
-      "price": 1042.39,
-      "currency": "usd"
-    },
-    {
-      "label": "275 gal tote",
-      "gallons": 275,
-      "price": 4729.72,
+      "price": 2205.29,
       "currency": "usd"
     }
   ],
@@ -143,53 +123,83 @@
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 907.83,
+      "price": 825.3,
       "currency": "usd"
     },
     {
       "label": "275 gal tote",
       "gallons": 275,
-      "price": 4729.72,
+      "price": 4299.75,
       "currency": "usd"
     }
   ],
-  "pg100": [
+  "purgo": [
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 1383,
+      "price": 868.66,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 3941.44,
       "currency": "usd"
     }
   ],
-  "pg50": [
+  "alumibrite": [
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 1192,
+      "price": 448.29,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 2024.89,
       "currency": "usd"
     }
   ],
-  "eg100": [
+  "torque": [
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 1375,
+      "price": 379.71,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 1656.67,
       "currency": "usd"
     }
   ],
-  "eg50": [
+  "sar": [
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 995,
+      "price": 693.65,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 2728.69,
       "currency": "usd"
     }
   ],
-  "egu96": [
+  "watersafe60": [
     {
       "label": "55 gal drum",
       "gallons": 55,
-      "price": 865,
+      "price": 773.85,
+      "currency": "usd"
+    },
+    {
+      "label": "275 gal tote",
+      "gallons": 275,
+      "price": 3468.64,
       "currency": "usd"
     }
   ]

@@ -18,16 +18,15 @@
 // can never silently drift out of sync with what the storefront actually offers.
 
 export const STEMS = [
-  'VK-HCR', 'VK-CR', 'VK-DSC', 'VK-CRHD', 'VK-CRHDLF', 'VK-NEU', 'VK-MW', 'VK-TRQ',
-  'VK-ALU', 'VK-PRG', 'VK-LAM3', 'VK-WS60', 'VK-CR2', 'VK-SAR', 'VK-PG100', 'VK-PG50',
-  'VK-EG100', 'VK-EG50', 'VK-EGU96', 'VK-EG5050',
+  'VK-CR', 'VK-CR2', 'VK-HCR', 'VK-HCR-T16', 'VK-DESC', 'VK-CRHD', 'VK-CRHD-LF',
+  'VK-NEUT', 'VK-MW', 'VK-LAM3', 'VK-PRG', 'VK-ALB', 'VK-TRQ', 'VK-SAR', 'VK-WS60',
 ];
 
 export const SDS_BY_STEM = {
   'VK-HCR': 'docs/sds/vertkleen-hcr-sds.pdf',
   'VK-CR': 'docs/sds/vertkleen-cr-sds.pdf',
-  'VK-DSC': 'docs/sds/vertkleen-descaler-sds.pdf',
-  'VK-NEU': 'docs/sds/vertkleen-neutral-sds.pdf',
+  'VK-DESC': 'docs/sds/vertkleen-descaler-sds.pdf',
+  'VK-NEUT': 'docs/sds/vertkleen-neutral-sds.pdf',
   'VK-MW': 'docs/sds/vertkleen-multiwash-sds.pdf',
   'VK-TRQ': 'docs/sds/vertkleen-torque-sds.pdf',
   'VK-PRG': 'docs/sds/vertkleen-purgo-sds.pdf',

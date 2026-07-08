@@ -17,7 +17,6 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 const here = (p) => new URL(`../${p}`, import.meta.url);
 const SMALL_PACKS = new Set([1, 2.5, 5]);
-const QUOTE_REVIEW_PRODUCTS = new Set(['watersafe60', 'cr2', 'sar', 'eg5050']);
 
 const catalog = JSON.parse(await readFile(here('data/catalog.seed.json'), 'utf8'));
 
@@ -48,7 +47,7 @@ function deriveSmallPackPrice(variant, pricedMap) {
 
 // 1) Apply product and variant policy.
 for (const product of catalog.products) {
-  product.mode = QUOTE_REVIEW_PRODUCTS.has(product.slug) ? 'quote' : 'buy';
+  product.mode = 'buy';
 }
 
 const pricedMap = pricedByProduct(catalog.product_variants);
@@ -56,9 +55,8 @@ for (const variant of catalog.product_variants) {
   const gallons = Number(variant.size_gal);
   if (SMALL_PACKS.has(gallons)) {
     variant.retail_price = deriveSmallPackPrice(variant, pricedMap);
-    const quoteReview = QUOTE_REVIEW_PRODUCTS.has(variant.product_slug);
-    variant.active = !quoteReview && variant.retail_price != null;
-    variant.requires_quote = quoteReview || !variant.active;
+    variant.active = variant.retail_price != null;
+    variant.requires_quote = !variant.active;
     continue;
   }
   if (gallons >= 55) {
@@ -76,11 +74,6 @@ const missingSmallPack = catalog.products.flatMap((product) => {
     v.product_slug === product.slug && SMALL_PACKS.has(Number(v.size_gal))
   ));
   if (!small.length) return [product.slug];
-  if (QUOTE_REVIEW_PRODUCTS.has(product.slug)) {
-    return product.mode === 'quote' && small.every((v) => v.active === false && v.requires_quote === true)
-      ? []
-      : [product.slug];
-  }
   return product.mode === 'buy'
     && small.every((v) => v.active === true && Number(v.retail_price) > 0 && v.requires_quote === false)
     ? []
@@ -188,7 +181,6 @@ function variantsSql(variants) {
 function drumPricingJson(variants) {
   const out = {};
   for (const v of variants) {
-    if (QUOTE_REVIEW_PRODUCTS.has(v.product_slug)) continue;
     if (Number(v.size_gal) >= 55 && v.retail_price != null) {
       (out[v.product_slug] ||= []).push({
         label: v.label,

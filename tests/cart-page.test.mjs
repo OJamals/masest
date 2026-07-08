@@ -74,8 +74,8 @@ function hcrProduct() {
   };
 }
 
-function quoteFirstProducts() {
-  return ["watersafe60", "cr2", "sar", "eg5050"].map((sku) => ({
+function confirmedProducts() {
+  return ["watersafe60", "cr2", "sar"].map((sku) => ({
     sku,
     active: true,
     mode: "buy",
@@ -105,7 +105,7 @@ test("static catalog does not show cart controls without commerce metadata", asy
       await page.locator(".shop-card").first().waitFor();
 
       assert.equal(await page.locator("[data-cart-add]").count(), 0);
-      assert.equal(await page.locator(".shop-card-quote").count(), 4);
+      assert.equal(await page.locator(".shop-card-quote").count(), 0);
 
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
       // Empty cart collapses the checkout module to a single next-step line
@@ -119,20 +119,21 @@ test("static catalog does not show cart controls without commerce metadata", asy
   });
 });
 
-test("quote-first catalog products keep quote CTA instead of cart controls", async () => {
+test("confirmed catalog products hydrate buy controls instead of quote-first CTAs", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage();
     try {
-      await routeProducts(page, [hcrProduct(), ...quoteFirstProducts()]);
+      await routeProducts(page, [hcrProduct(), ...confirmedProducts()]);
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
-      for (const id of ["watersafe60", "cr2", "sar", "eg5050"]) {
+      for (const id of ["watersafe60", "cr2", "sar"]) {
         const card = page.locator(`.shop-card[data-id="${id}"]`);
-        await card.locator(".shop-card-quote").waitFor();
-        assert.equal(await card.locator("[data-cart-add]").count(), 0);
-        assert.equal(await card.locator(".commerce-vol").count(), 0);
+        await card.locator("[data-cart-add]").waitFor();
+        assert.equal(await card.locator(".shop-card-quote").count(), 0);
+        assert.equal(await card.locator(".commerce-vol").count(), 1);
       }
+      assert.equal(await page.locator('.shop-card[data-id="eg5050"]').count(), 0);
     } finally {
       await browser.close();
     }
@@ -221,6 +222,25 @@ test("cart page explains bulk freight review when checkout rejects a SKU", async
       await page.locator("#checkoutPay").click();
 
       await page.getByText(/bulk freight review/i).waitFor();
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("cart and checkout surface the volume-discount policy", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage();
+    try {
+      await routeProducts(page);
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+
+      await page.getByText("200+ jugs: 5% off · 1,000+ gallons (drums/totes): 5% off.").waitFor();
+      assert.match(
+        await page.locator(".cart-volume-policy").textContent(),
+        /Prices valid six months from publication\. Shipping and freight excluded — FOB Ex Plant, Merritt Island FL\./,
+      );
     } finally {
       await browser.close();
     }

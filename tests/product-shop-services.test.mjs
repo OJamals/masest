@@ -66,8 +66,10 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.match(productsHtml, /href="services"/, "products page should link to the services page");
     assert.doesNotMatch(productsHtml, /data-service-catalog/, "products page should not embed service catalog");
     assert.match(productsHtml, /Buyable small-pack list pricing/);
-    assert.match(productsHtml, /Quoted items priced before you buy/);
-    assert.match(productsHtml, /USD, ex-plant Melbourne, FL/);
+    assert.match(productsHtml, /Drums and totes quoted before release/);
+    assert.match(productsHtml, /USD, FOB Ex Plant Merritt Island, FL/);
+    assert.match(productsHtml, /href="pricing-hvac-facilities"/);
+    assert.match(productsHtml, /href="pricing-cip-food-beverage"/);
     assert.doesNotMatch(productsHtml, /55 and 275 gal freight finalized after order/);
 
     const services = await fetch(`${BASE_URL}/services.html`);
@@ -86,6 +88,12 @@ test("products page is shop-focused and routes services to a standalone page", a
       .filter((name) => name.endsWith(".html") && name !== "services.html")
       .filter((name) => readFileSync(new URL(name, root), "utf8").includes("data-service-catalog"));
     assert.deepEqual(duplicateCatalogPages, [], "service catalog should live only on services.html");
+
+    const resourcesHtml = await fetch(`${BASE_URL}/resources.html`).then((response) => response.text());
+    assert.match(resourcesHtml, /href="pricing-hvac-facilities"/);
+    assert.match(resourcesHtml, /href="pricing-cip-food-beverage"/);
+    assert.doesNotMatch(resourcesHtml, /data-source-table="glycol-price-list"/);
+    assert.doesNotMatch(resourcesHtml, /FOB Melbourne, FL/);
   });
 });
 
@@ -118,11 +126,11 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
         href: card.querySelector(".shop-card-link")?.getAttribute("href")
       }));
 
-      assert.match(first.price, /^\$17\.30$/, "card should show the current first buyable pack price");
-      assert.equal(first.subprice, "1 gal", "card should show the selected pack size");
+      assert.match(first.price, /^\$19\.27$/, "card should show the current first buyable pack price");
+      assert.equal(first.subprice, "1 gal jug", "card should show the selected pack size");
       assert.ok(first.variantCount >= 3, "card should expose buyable pack choices");
       assert.equal(first.addLabel, "Add to cart");
-      assert.equal(first.href, "products/hcr");
+      assert.equal(first.href, "products/cr");
 
       const cardStates = await page.locator(".shop-card").evaluateAll((cards) => cards.map((card) => ({
         id: card.dataset.id,
@@ -130,29 +138,80 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
         buybar: !!card.querySelector(".shop-card-buybar"),
         select: !!card.querySelector(".commerce-vol"),
         add: !!card.querySelector("[data-cart-add]"),
+        hasOneGal: [...card.querySelectorAll(".commerce-vol option")].some((option) => /1 gal/i.test(option.textContent || "")),
       })));
       assert.ok(cardStates.length > 0);
-      const quoteFirst = new Set(["watersafe60", "cr2", "sar", "eg5050"]);
       assert.deepEqual(
-        cardStates.filter((card) => !quoteFirst.has(card.id) && (!card.price || !card.buybar || !card.select || !card.add)),
+        cardStates.filter((card) => !card.price || !card.buybar || !card.select || !card.add),
         [],
-        "buyable public product cards should expose price and buy controls"
+        "confirmed public product cards should expose price and buy controls"
       );
       assert.deepEqual(
-        cardStates
-          .filter((card) => quoteFirst.has(card.id))
-          .map((card) => ({ id: card.id, price: card.price, select: card.select, add: card.add })),
-        [
-          // Quote-first cards carry an explicit "Quote-priced" state in the
-          // price slot (2026-07-05) so buy-vs-quote is unmistakable in the grid.
-          { id: "watersafe60", price: "Quote-priced", select: false, add: false },
-          { id: "cr2", price: "Quote-priced", select: false, add: false },
-          { id: "sar", price: "Quote-priced", select: false, add: false },
-          { id: "eg5050", price: "Quote-priced", select: false, add: false },
-        ],
-        "quote-first products should stay visible without add-cart controls"
+        cardStates.filter((card) => !card.hasOneGal).map((card) => card.id),
+        [],
+        "confirmed public product cards should expose the NEW 1 gal jug option"
       );
+      assert.equal(cardStates.some((card) => card.id === "eg5050"), false, "retired glycol SKUs should not render in the confirmed catalog");
       assert.deepEqual(apiErrors, []);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("segment pricing pages render isolated HVAC and CIP workbook pricing", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    try {
+      const hvac = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+      await hvac.goto(`${BASE_URL}/pricing-hvac-facilities.html`, { waitUntil: "domcontentloaded" });
+      await hvac.waitForSelector("[data-segment-pricing-row]");
+      const hvacText = await hvac.locator("main").textContent();
+      assert.match(hvacText, /HVAC & Facilities/);
+      assert.match(hvacText, /VertKleen AlumiBrite/);
+      assert.match(hvacText, /Prices valid six months from publication/);
+      assert.match(hvacText, /Shipping and freight excluded — FOB Ex Plant, Merritt Island FL\./);
+      assert.match(hvacText, /200\+ jugs: 5% off/);
+      assert.match(hvacText, /VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72[\s\S]*\$61\.80/);
+      assert.match(hvacText, /VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02[\s\S]*\$55\.05/);
+      assert.match(hvacText, /VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$21\.49[\s\S]*\$53\.73/);
+
+      const cip = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+      await cip.goto(`${BASE_URL}/pricing-cip-food-beverage.html`, { waitUntil: "domcontentloaded" });
+      await cip.waitForSelector("[data-segment-pricing-row]");
+      const cipText = await cip.locator("main").textContent();
+      assert.match(cipText, /CIP Food & Beverage/);
+      assert.match(cipText, /VertKleen CR/);
+      assert.doesNotMatch(cipText, /VertKleen AlumiBrite/);
+      assert.doesNotMatch(cipText, /VertKleen Descaler/);
+      assert.match(cipText, /Prices valid six months from publication/);
+      assert.match(cipText, /Shipping and freight excluded — FOB Ex Plant, Merritt Island FL\./);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("descaler card defaults to the public 1 gal website price", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+    await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
+    await page.route("**/api/products", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(apiProductsPayload())
+    }));
+
+    try {
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+      const descaler = page.locator('.shop-card[data-id="descaler"]');
+      await descaler.locator(".price-main", { hasText: "$15.03" }).waitFor();
+      assert.equal(await descaler.locator(".price-note").textContent(), "1 gal jug");
+      const options = await descaler.locator(".commerce-vol").evaluate((select) =>
+        Array.from(select.options).map((option) => option.textContent.trim())
+      );
+      assert.ok(options.some((label) => /1 gal jug/.test(label)));
     } finally {
       await browser.close();
     }
@@ -173,10 +232,10 @@ test("changing a card volume updates the visible price and cart SKU", async () =
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
       const first = page.locator(".shop-card").first();
-      await first.locator(".commerce-vol").selectOption("VK-HCR-5");
-      await assert.doesNotReject(() => first.locator(".price-main", { hasText: "$86.52" }).waitFor());
-      assert.equal(await first.locator(".price-note").textContent(), "5 gal");
-      assert.equal(await first.locator("[data-cart-add]").getAttribute("data-cart-add"), "VK-HCR-5");
+      await first.locator(".commerce-vol").selectOption("VK-CR-5G");
+      await assert.doesNotReject(() => first.locator(".price-main", { hasText: "$96.34" }).waitFor());
+      assert.equal(await first.locator(".price-note").textContent(), "5 gal pail");
+      assert.equal(await first.locator("[data-cart-add]").getAttribute("data-cart-add"), "VK-CR-5G");
     } finally {
       await browser.close();
     }

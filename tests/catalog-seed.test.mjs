@@ -5,44 +5,69 @@ import test from "node:test";
 const readSite = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const catalog = () => JSON.parse(readSite("data/catalog.seed.json"));
 const drumPricing = () => JSON.parse(readSite("data/drum-pricing.json"));
-const QUOTE_REVIEW_PRODUCTS = new Set(["watersafe60", "cr2", "sar", "eg5050"]);
+const CONFIRMED_WORKBOOK_PRODUCTS = [
+  "cr",
+  "cr2",
+  "hcr",
+  "hcr-t16",
+  "descaler",
+  "cr-hd",
+  "cr-hd-low-foam",
+  "neutral",
+  "multiwash",
+  "lam3",
+  "purgo",
+  "alumibrite",
+  "torque",
+  "sar",
+  "watersafe60",
+];
 
-test("canonical catalog carries all chemical products and variants", () => {
+test("canonical catalog carries the confirmed July 2026 workbook products and variants", () => {
   const data = catalog();
-  assert.equal(data.products.length, 20);
-  assert.equal(data.product_variants.length, 100);
+  assert.equal(data.products.length, 15);
+  assert.equal(data.product_variants.length, 66);
+  assert.deepEqual(data.products.map((product) => product.slug), CONFIRMED_WORKBOOK_PRODUCTS);
 
-  const hcrTrial = data.product_variants.find((v) => v.sku === "VK-HCR-1");
+  const hcrTrial = data.product_variants.find((v) => v.sku === "VK-HCR-1G");
   assert.equal(hcrTrial.product_slug, "hcr");
-  assert.equal(hcrTrial.retail_price, "17.30");
+  assert.equal(hcrTrial.retail_price, "21.63");
   assert.equal(hcrTrial.active, true);
   assert.equal(hcrTrial.requires_quote, false);
 
-  const watersafeTrial = data.product_variants.find((v) => v.sku === "VK-WS60-1");
-  assert.equal(watersafeTrial.retail_price, "11.26");
-  assert.equal(watersafeTrial.active, false);
-  assert.equal(watersafeTrial.requires_quote, true);
+  const watersafeTrial = data.product_variants.find((v) => v.sku === "VK-WS60-1G");
+  assert.equal(watersafeTrial.retail_price, "16.88");
+  assert.equal(watersafeTrial.active, true);
+  assert.equal(watersafeTrial.requires_quote, false);
 
-  const hcrTote = data.product_variants.find((v) => v.sku === "VK-HCR-275");
-  assert.equal(hcrTote.retail_price, "2754.67");
+  const hcrTote = data.product_variants.find((v) => v.sku === "VK-HCR-275G");
+  assert.equal(hcrTote.retail_price, "3443.34");
   assert.equal(hcrTote.active, false);
   assert.equal(hcrTote.requires_quote, true);
+
+  const hcrT16Jug = data.product_variants.find((v) => v.sku === "VK-HCR-T16-1G");
+  assert.equal(hcrT16Jug.retail_price, "21.71");
+  assert.equal(hcrT16Jug.active, true);
+  assert.equal(hcrT16Jug.requires_quote, false);
+
+  const descalerTrial = data.product_variants.find((v) => v.sku === "VK-DESC-1G");
+  assert.equal(descalerTrial.retail_price, "15.03");
+  assert.equal(descalerTrial.active, true);
+  assert.equal(descalerTrial.requires_quote, false);
 });
 
-test("product catalog policy: small packs respect buyable and quote-review readiness gates", () => {
+test("product catalog policy: confirmed small packs are buyable and drums/totes quote-routed", () => {
   const data = catalog();
 
   for (const product of data.products) {
     const small = data.product_variants.filter((v) => (
       v.product_slug === product.slug && [1, 2.5, 5].includes(Number(v.size_gal))
     ));
+    const oneGal = small.find((v) => Number(v.size_gal) === 1);
+    assert.ok(oneGal, `${product.slug} should expose the NEW 1 gal jug size`);
+    assert.equal(oneGal.active, true, `${product.slug} 1 gal jug should be active`);
+    assert.equal(oneGal.requires_quote, false, `${product.slug} 1 gal jug should be buyable`);
     assert.ok(small.length > 0, `${product.slug} should have small-pack variants`);
-    if (QUOTE_REVIEW_PRODUCTS.has(product.slug)) {
-      assert.equal(product.mode, "quote", `${product.slug} should stay quote-first until proof is complete`);
-      assert.ok(small.every((v) => v.active === false), `${product.slug} small packs should not be checkout-active`);
-      assert.ok(small.every((v) => v.requires_quote === true), `${product.slug} small packs should require quote`);
-      continue;
-    }
     assert.equal(product.mode, "buy", `${product.slug} should be buyable in small packs`);
     assert.ok(small.every((v) => v.active === true), `${product.slug} small packs should be active`);
     assert.ok(small.every((v) => Number(v.retail_price) > 0), `${product.slug} small packs should be priced`);
@@ -72,27 +97,42 @@ test("canonical catalog carries quote-confirmed services and unique SKUs", () =>
 
 test("Supabase seed SQL imports buyable and quote-review variant state", () => {
   const seed = readSite("supabase/variants_seed.sql");
-  assert.match(seed, /'VK-HCR-1','hcr','1 gal',1,17\.3,true,1/);
-  assert.match(seed, /'VK-WS60-1','watersafe60','1 gal',1,11\.26,false,1/);
-  assert.match(seed, /'VK-CR2-1','cr2','1 gal',1,[\d.]+,false,1/);
-  assert.match(seed, /'VK-SAR-1','sar','1 gal',1,[\d.]+,false,1/);
-  assert.match(seed, /'VK-EG5050-5','eg5050','5 gal',5,[\d.]+,false,3/);
-  assert.match(seed, /'VK-PG100-5','pg100','5 gal',5,141,true,3/);
-  assert.match(seed, /'VK-HCR-275','hcr','275 gal tote',275,2754\.67,false,5/);
+  assert.match(seed, /'VK-HCR-1G','hcr','1 gal jug',1,21\.63,true,1/);
+  assert.match(seed, /'VK-WS60-1G','watersafe60','1 gal jug',1,16\.88,true,1/);
+  assert.match(seed, /'VK-CR2-1G','cr2','1 gal jug',1,18\.25,true,1/);
+  assert.match(seed, /'VK-SAR-1G','sar','1 gal jug',1,15\.13,true,1/);
+  assert.doesNotMatch(seed, /VK-PG100|VK-EG5050/);
+  assert.match(seed, /'VK-HCR-275G','hcr','275 gal tote',275,3443\.34,false,5/);
 });
 
-test("public drum pricing excludes quote-review products", () => {
+test("public drum pricing includes confirmed products while all bulk remains quote-routed", () => {
   const pricing = drumPricing();
-  for (const slug of QUOTE_REVIEW_PRODUCTS) {
-    assert.equal(pricing[slug], undefined, `${slug} should route bulk pricing through quote intake`);
-  }
+  assert.equal(pricing.watersafe60[0].label, "55 gal drum");
+  assert.equal(pricing.cr2[0].label, "55 gal drum");
+  assert.equal(pricing.sar[0].label, "55 gal drum");
 });
 
-test("quote-review copy avoids certification certainty", () => {
-  const watersafe = catalog().products.find((product) => product.slug === "watersafe60");
-  assert.ok(watersafe, "WaterSafe60 catalog row should exist");
-  assert.match(watersafe.description, /status reviewed by request/);
-  assert.doesNotMatch(watersafe.description, /certified|files by request/i);
+test("segment pricing uses current public workbook rows and quote footers", () => {
+  const data = JSON.parse(readSite("data/segment-pricing.json"));
+  assert.equal(
+    data.volume_discount,
+    "200+ jugs: 5% off · 1,000+ gallons (drums/totes): 5% off",
+  );
+  assert.equal(
+    data.footer_note,
+    "Prices valid six months from publication. Shipping and freight excluded — FOB Ex Plant, Merritt Island FL.",
+  );
+
+  const hvac = data.segments.find((segment) => segment.slug === "hvac-facilities");
+  const row = (sku) => hvac.rows.find((item) => item.sku === sku);
+  assert.equal(row("VK-HCR-2.5G").price_per_unit, "61.80");
+  assert.equal(row("VK-CR-2.5G").price_per_unit, "55.05");
+  assert.equal(row("VK-PRG-2.5G").price_per_unit, "53.73");
+  assert.equal(row("VK-PRG-2.5G").price_per_gallon, "21.49");
+
+  const resourcesHtml = readSite("resources.html");
+  assert.doesNotMatch(resourcesHtml, /HCR \$43\.26|CR \$38\.53|CR HD \$23\.57|\$58\.61/);
+  assert.doesNotMatch(resourcesHtml, /FOB ex-plant, Melbourne FL|FOB Melbourne, FL/);
 });
 
 test("seed script imports products, variants, and services from canonical catalog", () => {
@@ -106,9 +146,11 @@ test("seed script imports products, variants, and services from canonical catalo
 test("public catalog excludes non-canonical program aliases", () => {
   const data = catalog();
   const slugs = data.products.map((product) => product.slug);
-  assert.equal(data.products.length, 20);
+  assert.equal(data.products.length, 15);
   assert.ok(!slugs.includes("crs"), "CRS needs owner confirmation before public ecommerce listing");
   assert.ok(!slugs.includes("dbnpa"), "DBNPA stays a program component, not canonical parent SKU");
+  assert.ok(!slugs.includes("pg100"), "PG/EG glycol products are not in the confirmed July 2026 website price list");
+  assert.ok(!slugs.includes("eg5050"), "PG/EG glycol products are not in the confirmed July 2026 website price list");
 });
 
 test("site copy respects documentation claim guardrails", () => {
