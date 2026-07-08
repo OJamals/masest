@@ -47,6 +47,9 @@ const PRE_GUARD_DB_GATES = {
   "quotes.js": /QUOTE_CRM_SECRET/,
   // Automation digest invoked by the CRM task cron behind the same shared-secret check.
   "crm/tasks.js": /QUOTE_CRM_SECRET/,
+  // Newsletter cron sweep (sweep_due) sends scheduled newsletters before the staff guard,
+  // gated by a constant-time NEWSLETTER_CRON_SECRET header; staff actions still requireStaff.
+  "newsletters.js": /NEWSLETTER_CRON_SECRET/,
 };
 
 // Detects the service-role CLIENT creation itself (adminClient(env)) — not only chained
