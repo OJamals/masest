@@ -63,7 +63,7 @@ function viewAsHtml(s) {
     <table class="adm" style="width:100%"><thead><tr><th>Date</th><th>Status</th><th>Shipment</th><th>Total</th></tr></thead><tbody>${orders}</tbody></table>`;
 }
 
-export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab }) {
+export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, refreshStats }) {
   function setupProgress(company) {
     const setup = company.setup;
     if (!setup?.steps?.length) return '<span class="muted">-</span>';
@@ -470,6 +470,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       if (idx >= 0 && detail.company) state.companies[idx] = { ...state.companies[idx], ...detail.company };
     } catch { /* render from current state; the next full refetch reconciles */ }
     await renderCompanies({ refetch: false });
+    refreshStats?.(); // approve/reject/suspend changes the pending count → refresh the nav badge
   }
 
   async function renderCompanies({ append = false, refetch = true } = {}) {
@@ -585,6 +586,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           if (row) row.status = 'approved';
         });
         await renderCompanies({ refetch: false });
+        refreshStats?.();
       } catch (err) {
         bulk.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${(err.data && err.data.error) || 'Bulk approve failed. Retry.'}</p>`);
       } finally { bulk.disabled = false; }

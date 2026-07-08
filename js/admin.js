@@ -367,6 +367,15 @@ function renderStats(stats = {}) {
  if ($('admActionRail')) $('admActionRail').innerHTML = renderActionRail(stats.actions || []);
 }
 
+// Re-pull the stats snapshot and repaint the nav badges + ops summary. Tab modules
+// call this after a mutation that changes a badge count (approving an account,
+// reading a thread, completing a CRM task) so the sidebar pills never go stale
+// mid-session — the boot-time snapshot alone left Accounts/Messages/CRM frozen.
+async function refreshStats() {
+  try { const stats = await api('/api/admin/stats'); state.stats = stats; renderStats(stats); }
+  catch { /* keep the last known counts rather than blanking the badges */ }
+}
+
 // "Load more" footer for the admin orders table — appends the next server page (#29).
 // Generic "Load more" footer for an accumulated admin list (#29).
 function admListPager(attr, loaded, total, hasMore) {
@@ -378,7 +387,7 @@ function admListPager(attr, loaded, total, hasMore) {
 // Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
 // CRM contact panel (timeline/tasks/notes) injected into the company drawer.
 const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
-const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab });
+const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, refreshStats });
 // Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
 const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager });
 // Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
@@ -394,7 +403,7 @@ function openSubject(type, id, label) {
 }
 
 // CRM workspace tab: top-level home for cross-account CRM surfaces (Tasks inbox, Contact directory).
-const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager });
+const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager, refreshStats });
 
 // Products tab extracted to ./admin/products.js (#36 split). Shared primitives injected.
 const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
@@ -406,7 +415,7 @@ const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message
 const { renderContent, wireContent } = createContentTab({ $, api, state, admSkeleton, admEmpty });
 
 // Messages/threads tab extracted to ./admin/threads.js (#36 split). Shared primitives + sourceLabel injected.
-const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel });
+const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats });
 
 // Reviews moderation tab (plan Task 13). Shared primitives + statusBadge/badge injected.
 const { renderReviews, wireReviews, wireReviewSeedForm, refreshReviewsBadge } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });

@@ -18,7 +18,7 @@ const DIR_ROLES = [
   ['other', 'Other'],
 ];
 
-export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager }) {
+export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager, refreshStats }) {
   const SUBTABS = [['tasks', 'Follow-ups'], ['contacts', 'People']];
 
   function shell() {
@@ -283,6 +283,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
       try {
         await api('/api/admin/crm/tasks', { method: 'PATCH', body: { id: btn.dataset.inboxToggle, action } });
         renderTasks(box.querySelector('[data-crm-ws-body]'));
+        refreshStats?.(); // completing/reopening a task changes the overdue count → refresh the nav badge
       } catch (err) {
         btn.disabled = false;
         const body = box.querySelector('[data-crm-ws-body]');

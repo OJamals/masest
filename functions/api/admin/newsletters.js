@@ -169,7 +169,15 @@ export async function onRequest({ request, env }) {
     if (!body.id) return json(400, { error: 'id_required' });
     const { data: n } = await sb.from('newsletters').select('*').eq('id', body.id).maybeSingle();
     if (!n) return json(404, { error: 'not_found' });
-    await sb.from('newsletters').update({ status: 'sending', updated_at: new Date().toISOString() }).eq('id', n.id);
+    if (n.status === 'sent') return json(409, { error: 'already_sent' });
+    // Atomic claim: flip to 'sending' only from a not-already-in-flight state. A
+    // concurrent or double-clicked send_now then finds no row to update and 409s,
+    // so the same newsletter can never be dispatched to the audience twice.
+    const { data: claimed } = await sb.from('newsletters')
+      .update({ status: 'sending', updated_at: new Date().toISOString() })
+      .eq('id', n.id).neq('status', 'sending').neq('status', 'sent')
+      .select('id').maybeSingle();
+    if (!claimed) return json(409, { error: 'send_in_progress' });
     const r = await sendNewsletter(env, sb, n);
     await sb.from('newsletters').update({ status: 'sent', recipient_count: r.sent, sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', n.id);
     return json(200, { ok: true, ...r });

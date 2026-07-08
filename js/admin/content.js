@@ -1120,6 +1120,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       setStatus("Add alt text first (Alt text button on the row), then change the status.", "err");
       return;
     }
+    // Archiving hides an asset that pages may still reference — confirm. Restore is safe.
+    if (nextStatus === "archived" && !(await confirmDialog("Archive this asset? Pages still referencing it will lose the image until it is restored.", { confirmText: "Archive", cancelText: "Cancel", danger: true }))) return;
     button.disabled = true;
     setStatus(nextStatus === "archived" ? "Archiving asset..." : "Restoring asset...");
     try {
@@ -1456,6 +1458,12 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       const ok = await confirmDialog(
         "This entry is live. Archiving takes it OFF the public site at the next rebuild and removes it from the library.",
         { confirmText: "Archive (unpublish)", cancelText: "Cancel", danger: true },
+      );
+      if (!ok) return;
+    } else {
+      const ok = await confirmDialog(
+        "Archive this entry? It will be removed from the content library.",
+        { confirmText: "Archive", cancelText: "Cancel", danger: true },
       );
       if (!ok) return;
     }

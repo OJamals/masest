@@ -3,7 +3,7 @@
 // sourceLabel/message helpers are injected; esc/date come from the shared util.
 import { esc, dateTime as date, delegate } from '../util.js';
 
-export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel }) {
+export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats }) {
   async function openThread(companyId) {
     const view = $('admThreadView');
     view.textContent = 'Loading...';
@@ -32,6 +32,7 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
           message('replyStatus', err.data?.error || 'Could not send the reply. Retry.', 'err');
         }
       });
+      refreshStats?.(); // the GET above marked buyer messages read → refresh the unread nav badge
     } catch {
       view.innerHTML = '<p class="adm-status" data-state="err">Could not load this thread. Reload to retry.</p>';
     }

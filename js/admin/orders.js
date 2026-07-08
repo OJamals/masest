@@ -204,6 +204,9 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     delegate(box, 'click', '[data-save-order]', async (event, button) => {
       const id = button.dataset.saveOrder;
       const status = box.querySelector(`[data-order-status="${CSS.escape(id)}"]`).value;
+      // Cancelling is destructive (can trigger customer notification/credit release) —
+      // confirm, matching the refund/mark-NET-paid actions on this same tab.
+      if (status === 'cancelled' && !(await confirmDialog('Cancel this order? The customer may be notified and any reserved stock released.', { confirmText: 'Cancel order', cancelText: 'Keep', danger: true }))) return;
       button.disabled = true;
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, status } });

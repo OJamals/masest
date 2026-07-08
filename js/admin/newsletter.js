@@ -498,24 +498,35 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     }
   }
 
+  let sending = false; // re-entrancy guard so a double-click can't fire two sends
   async function sendNow() {
+    if (sending) return;
     const audience = readAudience();
     if (!audience.populations.length) { setStatus('Choose at least one audience population.', 'err'); return; }
+    // Resending an already-sent newsletter is a distinct, louder confirmation.
+    if (editorEntry?.status === 'sent' && !(await confirmDialog(
+      'This newsletter was already sent. Send it to the audience again?',
+      { confirmText: 'Send again', cancelText: 'Cancel', danger: true },
+    ))) return;
     const estimate = audience.populations.reduce((sum, pop) => sum + Number(counts[pop] || 0), 0);
     const ok = await confirmDialog(
       `Send to ${audience.populations.length} population(s) (about ${estimate.toLocaleString()} recipients)? This cannot be undone.`,
       { confirmText: 'Send now', danger: true },
     );
     if (!ok) return;
-    const id = await saveDraft();
-    if (!id) return;
-    setStatus('Sending...');
+    sending = true;
     try {
+      const id = await saveDraft();
+      if (!id) return;
+      setStatus('Sending...');
       const res = await api('/api/admin/newsletters', { method: 'POST', body: { action: 'send_now', id } });
       setStatus(`Sent to ${res.sent} of ${res.audience} recipients.`, 'ok');
       await renderNewsletter({ refetch: true });
     } catch (err) {
-      setStatus(err.data?.error || 'Could not send the newsletter. Retry.', 'err');
+      const map = { already_sent: 'This newsletter was already sent.', send_in_progress: 'A send is already in progress for this newsletter.' };
+      setStatus(map[err.data?.error] || err.data?.error || 'Could not send the newsletter. Retry.', 'err');
+    } finally {
+      sending = false;
     }
   }
 
