@@ -36,26 +36,25 @@ async function stripeCards(env, customerId) {
   } catch { return []; }
 }
 
-// Aggregate the full console for one user: profile, role, company (+status/terms/tier),
-// that company's addresses, orders, and Stripe cards.
+// Company-scoped console: the company (+status/terms/tier), its addresses, orders, cards.
+async function companyConsole(sb, env, companyId) {
+  const { data: company } = await sb.from('companies').select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,stripe_customer_id,created_at').eq('id', companyId).maybeSingle();
+  if (!company) return { company: null, addresses: [], orders: [], payment_methods: [] };
+  const [addrRes, ordRes] = await Promise.all([
+    sb.from('addresses').select('id,type,line1,line2,city,state,zip,is_default').eq('company_id', companyId),
+    sb.from('orders').select('id,status,payment_method,total,currency,created_at,tracking_status').eq('company_id', companyId).neq('status', 'cart').order('created_at', { ascending: false }).limit(50),
+  ]);
+  return { company, addresses: addrRes.data || [], orders: ordRes.data || [], payment_methods: await stripeCards(env, company.stripe_customer_id) };
+}
+
+// Aggregate the full console for one user: profile, role, and (if any) their company console.
 async function userConsole(sb, env, uid) {
   const { data: profile } = await sb.from('profiles').select('id,full_name,phone,role,staff_role,company_id').eq('id', uid).maybeSingle();
   if (!profile) return null;
   let email = null;
   try { const { data } = await sb.auth.admin.getUserById(uid); email = data?.user?.email || null; } catch { /* best-effort */ }
-  let company = null; let addresses = []; let orders = []; let payment_methods = [];
-  if (profile.company_id) {
-    const { data: c } = await sb.from('companies').select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,stripe_customer_id,created_at').eq('id', profile.company_id).maybeSingle();
-    company = c || null;
-    const [addrRes, ordRes] = await Promise.all([
-      sb.from('addresses').select('id,type,line1,line2,city,state,zip,is_default').eq('company_id', profile.company_id),
-      sb.from('orders').select('id,status,payment_method,total,currency,created_at,tracking_status').eq('company_id', profile.company_id).neq('status', 'cart').order('created_at', { ascending: false }).limit(50),
-    ]);
-    addresses = addrRes.data || [];
-    orders = ordRes.data || [];
-    payment_methods = await stripeCards(env, company?.stripe_customer_id);
-  }
-  return { profile: { ...profile, email }, company, addresses, orders, payment_methods };
+  const co = profile.company_id ? await companyConsole(sb, env, profile.company_id) : { company: null, addresses: [], orders: [], payment_methods: [] };
+  return { profile: { ...profile, email }, ...co };
 }
 
 async function getInvite(sb, inviteId, companyId) {
@@ -104,12 +103,15 @@ export async function onRequest({ request, env }) {
 
   // Read-only user directory — any staff may view.
   if (request.method === 'GET') {
-    const detailId = new URL(request.url).searchParams.get('detail');
+    const params = new URL(request.url).searchParams;
+    const detailId = params.get('detail');
     if (detailId) {
-      const console = await userConsole(sb, env, detailId);
-      if (!console) return json(404, { error: 'user_not_found' });
-      return json(200, console);
+      const consoleData = await userConsole(sb, env, detailId);
+      if (!consoleData) return json(404, { error: 'user_not_found' });
+      return json(200, consoleData);
     }
+    const companyId = params.get('company');
+    if (companyId) return json(200, await companyConsole(sb, env, companyId));
     return json(200, { users: await userDirectory(sb) });
   }
 
