@@ -49,7 +49,7 @@ export function filterSuppressed(recipients, suppressedSet) {
 
 // Categories a recipient may opt out of without losing transactional mail. Everything
 // else (order, billing, team, staff alerts, lead auto-reply) is transactional.
-export const MARKETING_CATEGORIES = new Set(['lead_followup', 'lead_followup_reminder', 'offer', 'review_request']);
+export const MARKETING_CATEGORIES = new Set(['lead_followup', 'lead_followup_reminder', 'offer', 'review_request', 'blog_newsletter']);
 
 export function categoryStream(category) {
   return MARKETING_CATEGORIES.has(String(category)) ? 'marketing' : 'transactional';

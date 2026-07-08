@@ -82,6 +82,36 @@ export async function klaviyoSubscribe(env, email, listId, properties = {}) {
   return { ok: resp.status === 202, status: resp.status };
 }
 
+// List the subscribed email addresses on a Klaviyo list. Paginates via links.next.
+// Best-effort: returns [] (no throw) when the key/list is missing or a page fails.
+// `max` caps total profiles pulled per call. fetchImpl injectable for tests.
+export async function klaviyoListProfiles(env, listId, { max = 5000, fetchImpl = globalThis.fetch } = {}) {
+  const key = env.KLAVIYO_PRIVATE_KEY;
+  if (!key || !listId) return [];
+  const emails = [];
+  const seen = new Set();
+  let url = `https://a.klaviyo.com/api/lists/${encodeURIComponent(listId)}/profiles/?page%5Bsize%5D=100`;
+  let guard = 0;
+  while (url && emails.length < max && guard < 200) {
+    guard += 1;
+    let resp;
+    try {
+      resp = await fetchImpl(url, {
+        headers: { Authorization: `Klaviyo-API-Key ${key}`, revision: REVISION, accept: 'application/json' },
+      });
+    } catch { break; }
+    if (!resp || !resp.ok) break;
+    let body;
+    try { body = await resp.json(); } catch { break; }
+    for (const row of body?.data || []) {
+      const email = String(row?.attributes?.email || '').trim().toLowerCase();
+      if (email && EMAIL_RE.test(email) && !seen.has(email)) { seen.add(email); emails.push(email); }
+    }
+    url = body?.links?.next || null;
+  }
+  return emails.slice(0, max);
+}
+
 // Subscribe a quote lead to its industry nurture list. Best-effort.
 export async function subscribeLeadByIndustry(env, { email, industry } = {}) {
   const listId = listIdForIndustry(env, industry);

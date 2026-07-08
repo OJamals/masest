@@ -35,6 +35,10 @@ const NON_STAFF_GATES = {
   // QUOTE_CRM_SECRET pattern in quotes.js / crm/tasks.js, but this route has no staff-facing
   // surface at all, so it lives here rather than in PRE_GUARD_DB_GATES).
   "review-reminders.js": /REVIEW_CRM_SECRET/,
+  // Automation-only blog-newsletter sweep invoked by the publish-blog workflow / schedule
+  // — no staff session; constant-time shared-secret header check (same pattern), and no
+  // staff-facing surface at all, so it lives here rather than in PRE_GUARD_DB_GATES.
+  "blog-newsletter.js": /BLOG_NEWSLETTER_SECRET/,
 };
 
 // Routes allowed to touch the DB before the staff guard, ONLY inside a vetted gate.
