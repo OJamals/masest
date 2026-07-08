@@ -36,3 +36,14 @@ test("account login supports Supabase password recovery", () => {
   assert.match(email, /\{\{ \.ConfirmationURL \}\}/);
   assert.match(email, /If you didn't request this/);
 });
+
+test("Supabase auth emails use the canonical apex account URL in production", () => {
+  const auth = read("js/auth.js");
+
+  assert.match(auth, /PRODUCTION_AUTH_HOSTS = new Set\(\['masest\.co', 'www\.masest\.co'\]\)/);
+  assert.match(auth, /CANONICAL_AUTH_ORIGIN = 'https:\/\/masest\.co'/);
+  assert.match(auth, /return `\$\{CANONICAL_AUTH_ORIGIN\}\/account\$\{search\}`/);
+  assert.match(auth, /emailRedirectTo: accountRedirectUrl\(\)/);
+  assert.match(auth, /const redirectTo = accountRedirectUrl\('\?mode=reset-password'\)/);
+  assert.doesNotMatch(auth, /emailRedirectTo: `\$\{window\.location\.origin\}\/account\.html`/);
+});

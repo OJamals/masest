@@ -11,6 +11,16 @@ const url = window.MASEST_SUPABASE_URL;
 const anon = window.MASEST_SUPABASE_ANON;
 export const supabase = url && anon ? createClient(url, anon) : null;
 
+const PRODUCTION_AUTH_HOSTS = new Set(['masest.co', 'www.masest.co']);
+const CANONICAL_AUTH_ORIGIN = 'https://masest.co';
+
+function accountRedirectUrl(search = '') {
+  if (PRODUCTION_AUTH_HOSTS.has(window.location.hostname)) {
+    return `${CANONICAL_AUTH_ORIGIN}/account${search}`;
+  }
+  return new URL(`account.html${search}`, window.location.href).href;
+}
+
 function requireClient() {
   if (!supabase) throw new Error('Supabase not configured: set MASEST_SUPABASE_URL / MASEST_SUPABASE_ANON');
   return supabase;
@@ -43,7 +53,7 @@ async function postRegister(token, { profile }) {
  * required when Supabase Auth CAPTCHA (Turnstile) is enabled. */
 export async function register({ email, password, profile, captchaToken }) {
   const sb = requireClient();
-  const options = { emailRedirectTo: `${window.location.origin}/account.html` };
+  const options = { emailRedirectTo: accountRedirectUrl() };
   if (captchaToken) options.captchaToken = captchaToken;
   const { data: signUp, error } = await sb.auth.signUp({ email, password, options });
   if (error) throw error;
@@ -69,7 +79,7 @@ export async function resendConfirmation(email, captchaToken) {
     type: 'signup',
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/account.html`,
+      emailRedirectTo: accountRedirectUrl(),
       ...(captchaToken ? { captchaToken } : {}),
     },
   });
@@ -91,7 +101,7 @@ export async function login({ email, password, captchaToken }) {
 /* Supabase enforces CAPTCHA on /recover, so the caller must pass the form's Turnstile token. */
 export async function resetPasswordForEmail(email, captchaToken) {
   const sb = requireClient();
-  const redirectTo = new URL('account.html?mode=reset-password', window.location.href).href;
+  const redirectTo = accountRedirectUrl('?mode=reset-password');
   const { data, error } = await sb.auth.resetPasswordForEmail(email, {
     redirectTo,
     ...(captchaToken ? { captchaToken } : {}),

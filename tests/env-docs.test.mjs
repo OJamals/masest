@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const env = readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
+const pages = readFileSync(new URL('../CLOUDFLARE_PAGES.md', import.meta.url), 'utf8');
 
 test('.env.example documents the email (Resend) feature toggles', () => {
   for (const key of ['RESEND_API_KEY', 'RESEND_FROM', 'RESEND_WEBHOOK_SECRET', 'RESEND_REPLY_TO', 'EMAIL_UNSUB_SECRET', 'ORDER_NOTIFY_EMAIL']) {
@@ -29,4 +30,11 @@ test('.env.example documents the Stripe tax + core commerce vars', () => {
   for (const key of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_TAX_ENABLED', 'APP_URL']) {
     assert.match(env, new RegExp(`^${key}=`, 'm'), `${key} missing from .env.example`);
   }
+});
+
+test('Cloudflare runbook documents Supabase Auth SMTP separately from app email', () => {
+  assert.match(pages, /Supabase Auth Email/);
+  assert.match(pages, /Authentication -> Emails -> SMTP Settings/);
+  assert.match(pages, /verified\s+`masest\.co`\s+domain/);
+  assert.match(pages, /Do not fix this by disabling email confirmation/);
 });

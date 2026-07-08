@@ -15,7 +15,7 @@ advisor-plans/
 .dev.vars
 .wrangler/
 test-results/
-output/playwright/
+output/
 playwright-report/
 blob-report/
 .playwright/

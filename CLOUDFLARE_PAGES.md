@@ -42,6 +42,25 @@ site.
 
 After env var changes, retry a production deployment so the new values bind.
 
+## Supabase Auth Email
+
+Supabase Auth confirmation, resend, invite, and password-reset emails are sent
+by Supabase Auth, not by the Pages Functions `sendEmail` helper. Configure this
+in Supabase Dashboard -> Authentication -> Emails -> SMTP Settings.
+
+Use an SMTP/API key that is allowed to send from the configured sender domain.
+For Resend, the key must either have full access or be scoped to the verified
+`masest.co` domain that matches the Supabase Auth sender email. If signup logs
+show:
+
+```text
+gomail: could not send email 1: 550 "The associated domain with your API key is not verified..."
+```
+
+the site code has already reached Supabase Auth successfully; replace the Auth
+SMTP credential with one tied to the verified sending domain, then retry signup.
+Do not fix this by disabling email confirmation.
+
 ## Verify
 
 ```bash
