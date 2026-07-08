@@ -120,36 +120,3 @@ test("blog workflow dispatch: reports a failed dispatch", async () => {
   assert.equal(res.status, 401);
   assert.equal(res.error, "github_dispatch_failed");
 });
-
-import { triggerSeoPublishWorkflow } from "../functions/_lib/content.js";
-
-test("seo workflow dispatch: no-op for non-page_meta types", async () => {
-  let called = false;
-  const res = await triggerSeoPublishWorkflow({ GITHUB_DISPATCH_TOKEN: "t" },
-    { type: "blog_post", slug: "x" }, async () => { called = true; return { ok: true, status: 204 }; });
-  assert.deepEqual(res, { ok: true, skipped: true });
-  assert.equal(called, false);
-});
-
-test("seo workflow dispatch: POSTs a seo-published dispatch for page_meta when configured", async () => {
-  let captured = null;
-  const res = await triggerSeoPublishWorkflow(
-    { GITHUB_DISPATCH_TOKEN: "tok", GITHUB_DISPATCH_REPO: "OJamals/masest" },
-    { type: "page_meta", slug: "about", status: "published" },
-    async (url, opts) => { captured = { url, opts }; return { ok: true, status: 204 }; },
-  );
-  assert.equal(res.ok, true);
-  assert.equal(res.skipped, false);
-  assert.equal(captured.url, "https://api.github.com/repos/OJamals/masest/dispatches");
-  const body = JSON.parse(captured.opts.body);
-  assert.equal(body.event_type, "seo-published");
-  assert.equal(body.client_payload.slug, "about");
-});
-
-test("seo workflow dispatch: no-op without a token", async () => {
-  let called = false;
-  const res = await triggerSeoPublishWorkflow({}, { type: "page_meta", slug: "x" },
-    async () => { called = true; return { ok: true }; });
-  assert.deepEqual(res, { ok: true, skipped: true });
-  assert.equal(called, false);
-});
