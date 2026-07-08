@@ -45,3 +45,29 @@ export async function verifyReviewToken(parts, token, secret) {
   for (let i = 0; i < expected.length; i += 1) diff |= expected.charCodeAt(i) ^ String(token).charCodeAt(i);
   return diff === 0;
 }
+
+// An order proves purchase of `sku` only once it has shipped/settled as goods delivered.
+// 'fulfilled' (settled + shipped) or tracking 'delivered' qualify; 'paid'/'cart' do not.
+const ELIGIBLE_STATUS = new Set(["fulfilled"]);
+const ELIGIBLE_TRACKING = new Set(["delivered"]);
+
+export function findVerifiedOrderId(orders, sku) {
+  for (const o of Array.isArray(orders) ? orders : []) {
+    const eligible = ELIGIBLE_STATUS.has(o?.status) || ELIGIBLE_TRACKING.has(o?.tracking_status);
+    if (!eligible) continue;
+    const items = Array.isArray(o?.order_items) ? o.order_items : [];
+    if (items.some((it) => it?.sku === sku)) return o.id;
+  }
+  return null;
+}
+
+export function aggregateStats(rows) {
+  const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let sum = 0, count = 0;
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const n = Number(r?.rating);
+    if (n >= 1 && n <= 5) { dist[n] += 1; sum += n; count += 1; }
+  }
+  const avg = count ? Math.round((sum / count) * 10) / 10 : 0;
+  return { avg, count, dist };
+}
