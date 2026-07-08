@@ -154,6 +154,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
                 <label class="adm-content-check"><input type="checkbox" id="${inputId}"> ${esc(label)} <span id="${countId}" class="pill">0</span></label>
               `).join('')}
             </div>
+            <p id="nlAudEstimate" class="adm-status" aria-live="polite" style="margin-top:6px">No populations selected — this newsletter won't send to anyone yet.</p>
           </div>
           <div class="adm-inline-actions full" aria-label="Newsletter actions">
             <button class="btn btn-secondary btn-sm" type="button" data-nl-action="save"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
@@ -243,6 +244,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       updatePreview();
       applySourceVisibility();
       applyScheduleVisibility();
+      updateAudienceEstimate();
     } else if (section === 'queue') {
       body.innerHTML = banner + queueTemplate();
     } else if (section === 'recipients') {
@@ -408,6 +410,24 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       counts = res.counts || { users: 0, leads: 0, imported: 0 };
     } catch { /* best-effort — audience picker still works without live counts */ }
     POPULATIONS.forEach(([pop, , countId]) => badge(countId, counts[pop] || 0));
+    updateAudienceEstimate();
+  }
+
+  // Live reach indicator: sum of the selected populations' counts. It's an estimate
+  // (the server dedupes overlaps + drops suppressed at send), hence the "≈".
+  function updateAudienceEstimate() {
+    const el = $('nlAudEstimate');
+    if (!el) return;
+    const selected = POPULATIONS.filter(([, inputId]) => $(inputId)?.checked);
+    if (!selected.length) {
+      el.textContent = "No populations selected — this newsletter won't send to anyone yet.";
+      el.dataset.state = 'warn';
+      return;
+    }
+    const total = selected.reduce((sum, [pop]) => sum + Number(counts[pop] || 0), 0);
+    const names = selected.map(([, , , label]) => label).join(', ');
+    el.textContent = `≈ ${total.toLocaleString()} recipient${total === 1 ? '' : 's'} across ${selected.length} population${selected.length === 1 ? '' : 's'} (${names}).`;
+    el.dataset.state = total ? 'ok' : 'warn';
   }
 
   async function renderNewsletter({ refetch = true } = {}) {
@@ -592,6 +612,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     delegate(root, 'click', '[data-nl-delete]', (event, btn) => deleteNewsletter(btn.dataset.nlDelete));
     delegate(root, 'click', '[data-nl-cancel]', (event, btn) => cancelSchedule(btn.dataset.nlCancel));
     delegate(root, 'change', '#nlAutoSend', (event, el) => saveSettings(el.checked));
+    delegate(root, 'change', '#nlAudUsers, #nlAudLeads, #nlAudImported', () => updateAudienceEstimate());
     delegate(root, 'click', '[data-nl-recip="import"]', () => {
       const ta = $('nlRecipImport');
       const csv = ta?.value.trim();
