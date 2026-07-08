@@ -10,6 +10,7 @@ import {
 
 test("CMS type registry exposes every supported non-commerce type", () => {
   assert.deepEqual(Object.keys(CONTENT_TYPE_DEFINITIONS).sort(), [
+    "blog_post",
     "faq_block",
     "industry_card",
     "industry_sector",
@@ -98,6 +99,7 @@ test("snapshotGroups returns every public export target", () => {
     "faqs.json",
     "page-sections.json",
     "pricing.json",
+    "blog.json",
   ]);
   assert.ok(contentPayloadFields("proof_card").some((field) => field.key === "result"));
 });

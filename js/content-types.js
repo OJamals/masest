@@ -139,6 +139,22 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "active", label: "Active", kind: "checkbox" },
     ],
   },
+  blog_post: {
+    label: "Blog posts",
+    snapshot: { file: "blog.json", key: "blog_posts" },
+    fields: [
+      { key: "title", label: "Title", kind: "text", className: "wide", required: true },
+      { key: "category", label: "Category (marketing / technical / news)", kind: "text", required: true },
+      { key: "tags", label: "Tags", kind: "list" },
+      { key: "author", label: "Author", kind: "text" },
+      { key: "date", label: "Publish date (YYYY-MM-DD)", kind: "text", required: true },
+      { key: "hero", label: "Hero image path (img/blog/…)", kind: "text" },
+      { key: "hero_alt", label: "Hero image alt", kind: "text" },
+      { key: "excerpt", label: "Excerpt (card + meta description)", kind: "textarea", className: "full", required: true },
+      { key: "body", label: "Body (Markdown)", kind: "textarea", className: "full", required: true },
+      { key: "sort_order", label: "Sort order (tiebreak)", kind: "number" },
+    ],
+  },
 });
 
 const SNAPSHOT_GROUPS = Object.freeze([
@@ -180,6 +196,10 @@ const SNAPSHOT_GROUPS = Object.freeze([
   {
     file: "pricing.json",
     types: Object.freeze([Object.freeze({ type: "pricing_tier", key: "pricing_tiers" })]),
+  },
+  {
+    file: "blog.json",
+    types: Object.freeze([Object.freeze({ type: "blog_post", key: "blog_posts" })]),
   },
 ]);
 

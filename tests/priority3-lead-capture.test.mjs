@@ -60,5 +60,5 @@ test("contact page exposes all five public request types", () => {
 });
 
 test("shared chrome resolves one-level-deep comparison pages", () => {
-  assert.match(chrome, /\(\?:industries\|products\|comparisons\)/);
+  assert.match(chrome, /\(\?:industries\|products\|comparisons\|blog\)/);
 });
