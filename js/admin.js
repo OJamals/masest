@@ -15,6 +15,7 @@ import { createCrmPanel } from './admin/crm.js';
 import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js';
 import { createQuotesTab } from './admin/quotes.js';
 import { createCrmWorkspace } from './admin/crm-workspace.js';
+import { createReviewsTab } from './admin/reviews.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -48,6 +49,7 @@ const state = {
   content: [],
   quotes: [],
   threads: [],
+  reviews: [],
   loaded: new Set(),
 };
 
@@ -93,6 +95,7 @@ async function boot() {
     $('admGreeting').textContent = 'Signed in as staff.';
     renderStats(stats);
     renderQboStatus();
+    refreshReviewsBadge();
     setTab(location.hash.slice(1) || 'overview');
   } catch (err) {
     $('admGate').hidden = false;
@@ -142,6 +145,7 @@ function setTab(tab) {
     content: renderContent,
     messages: renderThreads,
     quotes: renderQuotePipeline,
+    reviews: renderReviews,
     crm: () => { renderCrm(); renderOffers(); },
   }[state.tab];
   render?.({ refetch: !cached });
@@ -402,6 +406,9 @@ const { renderContent, wireContent } = createContentTab({ $, api, state, admSkel
 // Messages/threads tab extracted to ./admin/threads.js (#36 split). Shared primitives + sourceLabel injected.
 const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel });
 
+// Reviews moderation tab (plan Task 13). Shared primitives + statusBadge/badge injected.
+const { renderReviews, wireReviews, wireReviewSeedForm, refreshReviewsBadge } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });
+
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
 const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton, admEmpty });
 
@@ -462,6 +469,7 @@ function wire() {
   $('qDue')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
   $('qOwner')?.addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
   $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline({ refetch: true })));
+  $('rvFilter')?.addEventListener('change', () => renderReviews({ refetch: true }));
   // #28 dirty-edit guard: track in-progress inline edits so capture/restoreDirty can
   // preserve sibling edits across a save or cache re-render.
   ['admOrders', 'admCompanies', 'admProducts', 'admPricing', 'admQuotes'].forEach((id) => {
@@ -518,6 +526,8 @@ function wire() {
   wireQuotes();
   wireCrm();
   wireThreads();
+  wireReviews();
+  wireReviewSeedForm();
 }
 
 wire();
