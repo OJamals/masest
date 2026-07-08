@@ -13,12 +13,12 @@ test("global navigation stays focused on buyer decisions", () => {
 
   assert.ok(navBlock, "expected renderChrome nav links block");
   assert.match(navBlock[0], /products/);
-  assert.doesNotMatch(navBlock[0], /programs/);
+  assert.match(navBlock[0], /programs/);          // recurring-revenue programs + the only public price list belong in nav
   assert.match(navBlock[0], /proof/);
   assert.match(navBlock[0], /industries/);
+  assert.match(navBlock[0], /about/);             // Company (about) is a B2B vendor-vetting destination
   assert.doesNotMatch(navBlock[0], /why-vertkleen\.html/);
-  assert.doesNotMatch(navBlock[0], /about/);
-  assert.doesNotMatch(navBlock[0], /contact/);
+  assert.doesNotMatch(navBlock[0], /contact/);    // contact stays a CTA/lead-bar action, not a nav tab
 });
 
 test("global navigation exposes account sign-in and registration", () => {
@@ -34,11 +34,13 @@ test("global logo links navigate to the home page from top-level pages", () => {
 });
 
 test("global navigation groups proof and industries as use cases", () => {
+  const navBlock = chrome.match(/const links = \[[\s\S]*?\];/)?.[0] || "";
   assert.match(chrome, /useCases/);
   assert.match(chrome, /Use Cases/);
-  assert.match(chrome, /Field Results/);
   assert.match(chrome, /Resources/);
-  assert.doesNotMatch(chrome.match(/const links = \[[\s\S]*?\];/)?.[0] || "", /Proof/);
+  // Proof is the single canonical label (nav + footer + home shortcut), no longer "Field Results"
+  assert.match(navBlock, /label: "Proof"/);
+  assert.doesNotMatch(navBlock, /Field Results/);
 });
 
 test("product cards use details as the only repeated card action", () => {

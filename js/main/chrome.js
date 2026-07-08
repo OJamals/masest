@@ -101,16 +101,18 @@ export function renderChrome() {
   const links = [
     { href: "products", label: "Products" },
     { href: "services", label: "Services" },
+    { href: "programs", label: "Programs" },
     {
       key: "useCases",
       label: "Use Cases",
       children: [
         { href: "industries", label: "Industries" },
-        { href: "proof", label: "Field Results" }
+        { href: "proof", label: "Proof" }
       ]
     },
     { href: "resources", label: "Resources" },
-    { href: "blog", label: "Blog" }
+    { href: "blog", label: "Blog" },
+    { href: "about", label: "Company" }
   ];
   const isActive = (href) => {
     if (page === href) return true;
@@ -288,7 +290,7 @@ export function renderChrome() {
           <div class="foot-title">Resources + SDS</div>
           <a href="${root}resources">Resources &amp; SDS</a>
           <a href="${root}programs">Programs &amp; Pricing</a>
-          <a href="${root}proof">Proof &amp; Case Studies</a>
+          <a href="${root}proof">Proof</a>
           <a href="${root}blog">Blog</a>
         </div>
         <div class="foot-secondary">
