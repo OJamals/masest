@@ -3,6 +3,23 @@
 import { adminClient, requireStaff, json, emailsByIds } from '../../_lib/supabase.js';
 import { buildCompanySetup } from '../../_lib/setup.js';
 
+// Short-lived signed URL for a resale cert in the private 'resale-certs' bucket.
+async function signResaleCert(env, path, expiresIn = 300) {
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  const res = await fetch(`${env.SUPABASE_URL}/storage/v1/object/sign/resale-certs/${encoded}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ expiresIn }),
+  }).catch(() => null);
+  if (!res || !res.ok) return null;
+  const body = await res.json().catch(() => null);
+  return body?.signedURL ? `${env.SUPABASE_URL}/storage/v1${body.signedURL}` : null;
+}
+
 export async function onRequestGet({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
@@ -13,9 +30,15 @@ export async function onRequestGet({ request, env }) {
 
   const sb = adminClient(env);
   const { data: company } = await sb.from('companies')
-    .select('id,name,status,net_terms_days,credit_limit,tax_exempt,resale_cert_url,stripe_customer_id,created_at')
+    .select('id,name,status,net_terms_days,credit_limit,tax_exempt,resale_cert_url,resale_cert_path,stripe_customer_id,created_at')
     .eq('id', id).maybeSingle();
   if (!company) return json(404, { error: 'not_found' });
+
+  // An uploaded resale cert lives in a PRIVATE bucket — hand staff a short-lived
+  // signed URL to view it, never a public link.
+  if (company.resale_cert_path) {
+    company.resale_cert_signed_url = await signResaleCert(env, company.resale_cert_path);
+  }
 
   // Business verification dossier (schema-business-profile.sql). Selected separately and
   // defensively so the company detail still loads if that migration has not been applied.

@@ -92,7 +92,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       ['Submitted', c.submitted_at ? date(c.submitted_at) : null],
     ].filter(([, v]) => v);
     const link = (label, url) => url ? `<div class="dash-row"><span>${esc(label)}</span><a href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">View →</a></div>` : '';
-    const body = rows.map(([k, v]) => `<div class="dash-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('') + link('Website', c.website) + link('Resale certificate', c.resale_cert_url);
+    const body = rows.map(([k, v]) => `<div class="dash-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('') + link('Website', c.website) + link('Resale certificate', c.resale_cert_signed_url || c.resale_cert_url);
     return `<div class="company-dossier"><h3>Business details</h3>${body || '<p class="muted">No verification details submitted yet.</p>'}</div>`;
   }
 

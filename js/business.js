@@ -127,8 +127,8 @@ function renderSetupChecklist(data) {
 
 /* ---------- business registration / verification form ---------- */
 // Shared field grid for create + edit. `c` prefills when a business already exists.
-function bizFields(c = {}) {
-  const hasAdvanced = Boolean(c.dba || c.entity_type || c.tax_id || c.website || c.est_annual_volume || c.contact_name || c.contact_title || c.resale_cert_url || c.tax_exempt);
+function bizFields(c = {}, allowUpload = false) {
+  const hasAdvanced = Boolean(c.dba || c.entity_type || c.tax_id || c.website || c.est_annual_volume || c.contact_name || c.contact_title || c.resale_cert_url || c.resale_cert_path || c.tax_exempt);
   return `
     <div class="biz-reg-grid">
       <label class="biz-reg-full"><span>Legal business name *</span><input id="companyName" type="text" value="${esc(c.name || '')}" placeholder="Gulf Coast Mechanical LLC" required></label>
@@ -148,6 +148,15 @@ function bizFields(c = {}) {
         <label><span>Authorized contact</span><input id="contactName" type="text" value="${esc(c.contact_name || '')}" placeholder="Marisol Vega"></label>
         <label><span>Contact title</span><input id="contactTitle" type="text" value="${esc(c.contact_title || '')}" placeholder="Operations Manager"></label>
         <label class="biz-reg-full"><span>Resale / tax-exempt certificate URL</span><input id="resaleCertUrl" type="url" value="${esc(c.resale_cert_url || '')}" placeholder="Link to certificate (optional)"></label>
+        ${allowUpload ? `
+        <div class="biz-reg-full biz-cert-upload">
+          <span class="biz-cert-title">Or upload the certificate (kept private — PDF, PNG, JPG, or WEBP)</span>
+          <div class="biz-cert-row">
+            <label class="btn btn-secondary btn-sm biz-cert-pick">Choose file<input id="resaleCertFile" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" hidden></label>
+            <span id="certState" class="muted"></span>
+          </div>
+          <p class="biz-status" id="certStatus" role="status" aria-live="polite"></p>
+        </div>` : ''}
         <label class="biz-check-label biz-reg-full"><input id="taxExempt" type="checkbox" ${c.tax_exempt ? 'checked' : ''}> <span>We are tax-exempt and will provide a resale/exemption certificate.</span></label>
       </div>
     </details>`;
@@ -170,7 +179,7 @@ function renderCompanySetupForm(data) {
     <h2>${esc(heading)}</h2>
     <p class="lead">${esc(intro)}</p>
     <form id="companySetupForm" class="biz-reg-form" novalidate data-biz-status="${esc(status || '')}">
-      ${bizFields(c || {})}
+      ${bizFields(c || {}, !isCreate)}
       ${isCreate ? '<p class="biz-verify-note"><i class="ph ph-shield-check" aria-hidden="true"></i> Submitting starts admin verification. Your user account stays active either way — business features turn on once approved.</p>' : ''}
       <div class="actions">
         <button class="btn btn-primary btn-sm" type="submit">${esc(submitText)}</button>
@@ -229,7 +238,7 @@ function wireCompanySetup() {
         renderTiers(fresh.can_checkout === true, Boolean(fresh.company));
         renderProgramStatus(fresh);
         toggleBulkCard(fresh);
-        if (fresh.company && fresh.profile?.role === 'admin') initTeam();
+        if (fresh.company && fresh.profile?.role === 'admin') initTeam({ id: fresh.profile?.id, email: fresh.email });
       }
       const freshStatus = $('companySetupStatus');
       if (freshStatus) {
@@ -259,6 +268,58 @@ function wireCompanySetup() {
       }
     } finally {
       if (button) button.disabled = false;
+    }
+  });
+  wireResaleCert();
+}
+
+// Resale/tax-exempt certificate upload → the private 'resale-certs' bucket. The
+// file input sits beside the URL field; whichever is provided works.
+function wireResaleCert() {
+  const input = $('resaleCertFile');
+  if (!input) return; // only rendered once a company exists
+  const state = $('certState');
+  const status = $('certStatus');
+
+  function paintState({ uploaded, url }) {
+    if (!state) return;
+    state.innerHTML = uploaded
+      ? `<span class="badge" data-s="approved">On file</span> ${url ? `<a href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">View</a> ` : ''}<button type="button" class="btn btn-ghost btn-sm" data-cert-remove>Remove</button>`
+      : '<span class="muted">No file uploaded yet.</span>';
+    state.querySelector('[data-cert-remove]')?.addEventListener('click', removeCert);
+  }
+
+  async function removeCert() {
+    if (!(await confirmDialog('Remove the uploaded certificate?', { confirmText: 'Remove', cancelText: 'Keep', danger: true }))) return;
+    if (status) { status.textContent = 'Removing…'; status.dataset.state = ''; }
+    try {
+      const out = await api('/api/account/resale-cert', { method: 'DELETE' });
+      paintState(out);
+      if (status) { status.textContent = 'Certificate removed.'; status.dataset.state = 'ok'; }
+    } catch { if (status) { status.textContent = 'Could not remove the certificate. Try again.'; status.dataset.state = 'err'; } }
+  }
+
+  // Current state on load.
+  api('/api/account/resale-cert').then(paintState).catch(() => {});
+
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { if (status) { status.textContent = 'Keep the certificate under 10 MB.'; status.dataset.state = 'err'; } input.value = ''; return; }
+    if (status) { status.textContent = 'Uploading…'; status.dataset.state = ''; }
+    try {
+      const token = await getToken();
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch('/api/account/resale-cert', { method: 'POST', headers: token ? { Authorization: 'Bearer ' + token } : {}, body: fd });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(out.message || out.error || 'upload_failed');
+      paintState(out);
+      if (status) { status.textContent = 'Certificate uploaded.'; status.dataset.state = 'ok'; }
+    } catch (err) {
+      if (status) { status.textContent = err.message === 'unsupported_type' ? 'Upload a PDF, PNG, JPG, or WEBP.' : (err.message || 'Could not upload. Try again.'); status.dataset.state = 'err'; }
+    } finally {
+      input.value = '';
     }
   });
 }
