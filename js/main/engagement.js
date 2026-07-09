@@ -105,6 +105,15 @@ export function initQuoteForm() {
   };
   const pre = params.get("product");
   const preMatched = pre ? selectOption(form.querySelector('[name="product"]'), pre) : false;
+  const sampleProductMatch = (wanted) => {
+    if (!wanted) return null;
+    const boxes = [...form.querySelectorAll('input[name="samples"]')];
+    return boxes.find(box => box.value === wanted)
+      || boxes.find(box => norm(box.value) === norm(wanted))
+      || boxes.find(box => norm(wanted) && norm(box.value).startsWith(norm(wanted)));
+  };
+  const preSampleBox = sampleProductMatch(pre);
+  if (preSampleBox) preSampleBox.checked = true;
   const doc = params.get("doc");
   if (doc) {
     const msg = form.querySelector('[name="message"]');
@@ -220,9 +229,12 @@ export function initQuoteForm() {
     if (sampleGroup && !sampleGroup.hidden) {
       const picks = sampleGroup.querySelectorAll('input[name="samples"]:checked').length;
       const hint = document.getElementById("sampleHint");
-      const okPicks = picks >= 3 && picks <= 5;
+      const minPicks = preSampleBox ? 1 : 3;
+      const okPicks = picks >= minPicks && picks <= 5;
       if (hint) {
-        hint.textContent = okPicks ? "3 to 5 products selected." : "Select 3 to 5 products (you have " + picks + ").";
+        hint.textContent = okPicks
+          ? (preSampleBox && picks === 1 ? "Product sample selected." : "3 to 5 products selected.")
+          : (preSampleBox ? "Select 1 to 5 products (you have " + picks + ")." : "Select 3 to 5 products (you have " + picks + ").");
         hint.classList.toggle("err", !okPicks);
       }
       if (!okPicks && !firstBad) firstBad = sampleGroup.querySelector('input[name="samples"]');

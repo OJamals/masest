@@ -18,6 +18,25 @@ const integrations = read("js/integrations.js");
 const newsletter = read("functions/api/newsletter.js");
 const klaviyo = read("functions/_lib/klaviyo.js");
 const contact = read("contact.html");
+const productPage = read("product.html");
+
+const SAMPLE_PRODUCTS = [
+  "VertKleen CR",
+  "VertKleen CR2",
+  "VertKleen HCR",
+  "VertKleen HCR - 16+ Tote Program",
+  "VertKleen Descaler",
+  "VertKleen CR HD",
+  "VertKleen CR HD Low Foam",
+  "VertKleen Neutral",
+  "VertKleen MultiWash",
+  "VertKleen LAM3",
+  "Purgo",
+  "VertKleen AlumiBrite",
+  "VertKleen Torque",
+  "VertKleen SAR",
+  "WaterSafe60",
+];
 
 async function withServer(fn) {
   const server = spawn("python3", ["-m", "http.server", String(PORT)], {
@@ -91,6 +110,18 @@ test("contact page exposes all five public request types", () => {
   assert.match(contact, /<option>Data Centers<\/option>/);
 });
 
+test("product detail pages expose a product-specific free sample request CTA", () => {
+  assert.match(productPage, /id="pSampleBtn"/, "product hero should include a free sample CTA");
+  assert.match(productPage, /contact\?type=sample&product=/, "sample CTA should prefill the contact sample flow");
+  assert.match(productPage, /Request free sample/);
+});
+
+test("sample picker covers the full parent product catalog", () => {
+  for (const label of SAMPLE_PRODUCTS) {
+    assert.match(contact, new RegExp(`value="${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `${label} should be sample-requestable`);
+  }
+});
+
 test("contact form posts all five public request types to quote intake", async () => {
   const flows = [
     { intent: "quote", fill: async () => {} },
@@ -151,6 +182,50 @@ test("contact form posts all five public request types to quote intake", async (
     }
   });
 });
+
+test("product-prefilled sample requests can submit one requested product", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const requests = [];
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+      await page.route("**/api/quote", async (route) => {
+        requests.push(route.request().postData() || "");
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: true }),
+        });
+      });
+      await page.goto(`${BASE_URL}/contact.html?type=sample&product=VertKleen%20CR2`, { waitUntil: "domcontentloaded" });
+      await expectPoll(async () => page.getByLabel("VertKleen CR2", { exact: true }).isChecked());
+      await page.fill("#fName", "Sample Buyer");
+      await page.fill("#fCompany", "Sample Company");
+      await page.fill("#fEmail", "sample-product@example.com");
+      await page.fill("#fShipTo", "Sample Facility, 1 Main St, Tampa FL 33602");
+      await page.fill("#fMessage", "Testing CR2 on a closed-loop water treatment site");
+      await page.getByRole("button", { name: "Send Request" }).click();
+      await page.getByRole("heading", { name: "Request received." }).waitFor();
+      await page.close();
+    } finally {
+      await browser.close();
+    }
+
+    assert.equal(requests.length, 1);
+    assert.ok(hasMultipartField(requests[0], "type", "sample"), "request should post sample type");
+    assert.ok(hasMultipartField(requests[0], "product", "VertKleen CR2"), "request should carry product interest");
+    assert.ok(hasMultipartField(requests[0], "samples", "VertKleen CR2"), "request should carry the selected sample product");
+  });
+});
+
+async function expectPoll(fn, { timeout = 2000 } = {}) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (await fn()) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.fail("condition did not become true before timeout");
+}
 
 test("shared chrome resolves one-level-deep comparison pages", () => {
   assert.match(chrome, /\(\?:industries\|products\|comparisons\|blog\)/);

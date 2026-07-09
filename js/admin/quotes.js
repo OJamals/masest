@@ -25,6 +25,21 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   function companyOptions() {
     return (state.companies || []).map((c) => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.status || '')})</option>`).join('');
   }
+  function payloadValues(value) {
+    return (Array.isArray(value) ? value : [value])
+      .map((item) => String(item || '').trim())
+      .filter(Boolean);
+  }
+  function sampleDetailsHtml(quote) {
+    const samples = payloadValues(quote.payload?.samples);
+    const shipTo = String(quote.payload?.ship_to || '').trim();
+    if (!samples.length && !shipTo) return '';
+    const rows = [
+      samples.length ? `<span><b>Sample products</b>${esc(samples.join(', '))}</span>` : '',
+      shipTo ? `<span><b>Ship-to</b>${esc(shipTo)}</span>` : '',
+    ].filter(Boolean).join('');
+    return `<div class="quote-sample-summary">${rows}</div>`;
+  }
   function isStale(quote) {
     if (['won', 'lost'].includes(quote.pipeline_stage)) return false;
     const t = quote.stage_changed_at ? new Date(quote.stage_changed_at).getTime() : null;
@@ -248,6 +263,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     const dueValue = q.due_at ? new Date(q.due_at).toISOString().slice(0, 16) : '';
     const closeValue = q.expected_close ? String(q.expected_close).slice(0, 10) : '';
     return `<div class="drawer-details">
+      ${sampleDetailsHtml(q)}
       <label>Stage <select class="adm-select" data-d-stage>${STAGES.map((s) => `<option value="${s}"${s === (q.pipeline_stage || 'new') ? ' selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}</select></label>
       <label>Status <select class="adm-select" data-d-status>${QUOTE_STATUSES.map((s) => `<option value="${s}"${s === (q.status || 'new') ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
       <label>Priority <select class="adm-select" data-d-priority>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}"${p === (q.priority || 'normal') ? ' selected' : ''}>${p}</option>`).join('')}</select></label>
@@ -500,6 +516,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
             <span class="muted">${fmtMoney(quote.deal_value)} · Score ${esc(score)}</span>
           </summary>
           <p>${esc(quote.message || '')}</p>
+          ${sampleDetailsHtml(quote)}
           ${meta ? `<p class="muted" style="margin:4px 0 0">${esc(meta)}</p>` : ''}
           <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" data-open-quote="${id}" type="button">Open deal</button>

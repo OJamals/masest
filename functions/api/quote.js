@@ -20,10 +20,36 @@ const LABELS = {
   timeline: 'Timeline',
   system: 'System / asset',
   audit_timeframe: 'Preferred timeframe',
+  samples: 'Sample products',
   ship_to: 'Ship-to address',
   territory: 'Territory / region',
   message: 'Notes',
 };
+
+function fieldValues(value) {
+  return (Array.isArray(value) ? value : [value])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+}
+
+function normalizeRequestType(value) {
+  return String(value || 'quote').trim().toLowerCase().slice(0, 40) || 'quote';
+}
+
+function sampleProductSummary(fields) {
+  const samples = fieldValues(fields.samples);
+  if (samples.length) return samples.join(', ');
+  return String(fields.product || '').trim();
+}
+
+function pipelineStageForType(type) {
+  return type === 'sample' ? 'sample_audit' : 'new';
+}
+
+function nextStepForType(type) {
+  if (type === 'sample') return 'Confirm sample fit, ship-to address, and trial follow-up.';
+  return null;
+}
 
 function scoreLead(fields) {
   const text = Object.values(fields).join(' ').toLowerCase();
@@ -31,12 +57,14 @@ function scoreLead(fields) {
   if (fields.company) score += 10;
   if (fields.phone) score += 8;
   if (fields.product) score += 8;
+  if (fields.samples) score += 10;
   if (fields.industry) score += 6;
   if (fields.location || fields.ship_to) score += 6;
   if (fields.volume) score += /pallet|case|bulk|truck|monthly|weekly|\d{3,}/i.test(String(fields.volume)) ? 18 : 8;
   if (/urgent|asap|this week|immediate|rush|today|tomorrow/.test(text)) score += 18;
   if (/distributor|dealer|reseller|net terms|standing order|program/.test(text)) score += 14;
   if (String(fields.type || '').toLowerCase().includes('audit')) score += 8;
+  if (String(fields.type || '').toLowerCase().includes('sample')) score += 10;
   return Math.min(100, score);
 }
 
@@ -112,24 +140,29 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  const type = String(fields.type || 'quote').slice(0, 40);
+  const type = normalizeRequestType(fields.type);
   const payload = { ...fields };
   delete payload._gotcha;
   delete payload['cf-turnstile-response'];
 
   const leadScore = scoreLead(fields);
   const priority = priorityForScore(leadScore);
+  const pipelineStage = pipelineStageForType(type);
+  const nextStep = nextStepForType(type);
+  const product = type === 'sample'
+    ? (sampleProductSummary(fields) || fields.product || null)
+    : (fields.product || null);
   let saved = false;
 
   try {
     const sb = adminClient(env);
-    const { error } = await sb.from('quotes').insert({
+    const row = {
       type,
       name,
       email,
       company,
       phone: fields.phone || null,
-      product: fields.product || null,
+      product,
       industry: fields.industry || null,
       location: fields.location || fields.ship_to || null,
       message: fields.message || null,
@@ -138,7 +171,16 @@ export async function onRequestPost({ request, env }) {
       status: 'new',
       lead_score: leadScore,
       priority: priorityForScore(leadScore),
-    });
+      pipeline_stage: pipelineStage,
+      next_step: nextStep,
+    };
+    let { error } = await sb.from('quotes').insert(row);
+    if (error && /pipeline_stage|next_step|schema cache|column/i.test(error.message || '')) {
+      const fallback = { ...row };
+      delete fallback.pipeline_stage;
+      delete fallback.next_step;
+      ({ error } = await sb.from('quotes').insert(fallback));
+    }
     saved = !error;
   } catch {
     saved = false;

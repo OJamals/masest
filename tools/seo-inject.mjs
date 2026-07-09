@@ -512,6 +512,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}">Request a quote</a>
+          <a class="btn btn-secondary" href="../contact?type=sample&product=${encodeURIComponent(product.name)}">Request free sample</a>
           <a class="btn btn-ghost" href="../products">All products</a>
         </div>${QUOTE_ONLY_IDS.has(id) ? "" : `
         <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
