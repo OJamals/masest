@@ -68,6 +68,7 @@ one family.
   --status-danger-ink: #b42318;
   --status-danger-soft-bg: #fae8e6;
   --status-danger-soft-ink: #8a2d24;
+  --rating-star: #e3a008;       /* rating-star gold — NOT a status color; stars were mis-using --status-warning-ink (brown) */
   --brand-grad: linear-gradient(118deg, #13343a 0%, #0e7c86 58%, #77a8a0 100%);
   --surface-raised: linear-gradient(180deg, rgba(255,255,255,.96), rgba(246,250,249,.9));
   --surface-edge: inset 0 1px 0 rgba(255,255,255,.86), inset 0 -1px 0 rgba(15,74,80,.035);

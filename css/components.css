@@ -522,7 +522,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .adm-md-preview-body h1, .adm-md-preview-body h2, .adm-md-preview-body h3, .adm-md-preview-body h4 { margin: 14px 0 6px; line-height: 1.25; }
 .adm-md-preview-body p { margin: 10px 0; }
 .adm-md-preview-body ul, .adm-md-preview-body ol { margin: 10px 0; padding-left: 22px; }
-.adm-md-preview-body blockquote { margin: 10px 0; padding: 2px 14px; border-left: 3px solid var(--brand, #3b2a6b); color: var(--muted, #555); font-style: italic; }
+.adm-md-preview-body blockquote { margin: 10px 0; padding: 2px 16px; border-left: 4px solid var(--brand, #0e7c86); color: var(--muted, #555); font-style: italic; }
 .adm-md-preview-body pre { background: #1e1e2e; color: #e5e7eb; padding: 12px; border-radius: 8px; overflow-x: auto; }
 .adm-md-preview-body :not(pre) > code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
 .adm-md-preview-body img { max-width: 100%; height: auto; border-radius: 6px; }
@@ -542,7 +542,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .rv-title { margin: 0 0 4px; }
 .rv-summary { display: flex; align-items: center; gap: 10px; margin: 4px 0 18px; font-size: .95rem; }
 .rv-summary.rv-empty { color: var(--muted, #5f656d); font-size: .9rem; }
-.rv-stars { color: var(--status-warning-ink); letter-spacing: 2px; font-size: 1.05rem; line-height: 1; }
+.rv-stars { color: var(--rating-star, #e3a008); letter-spacing: 2px; font-size: 1.05rem; line-height: 1; }
 .rv-count { color: var(--muted, #5f656d); font-size: .86rem; }
 .rv-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--r-pill, 999px); background: var(--accent-soft, #e3f0f1); color: var(--accent-ink, #0a5b62); font-size: .72rem; font-weight: 700; }
 .rv-list { display: flex; flex-direction: column; }
@@ -551,7 +551,9 @@ body .product-detail-hero { padding-bottom: 42px; }
 .rv-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .rv-card h4 { margin: 2px 0; font-size: .96rem; }
 .rv-card p { margin: 4px 0; color: var(--ink-soft, #393d44); font-size: .92rem; line-height: 1.55; }
-.rv-card footer { color: var(--muted, #5f656d); font-size: .78rem; }
+/* Reset the global dark site-footer style (style.css `footer{background:var(--ink)…}`)
+   that otherwise bleeds into this card's inner <footer>, painting a dark band + 72px pad. */
+.rv-card footer { background: none; padding: 0; color: var(--muted, #5f656d); font-size: .78rem; }
 .rv-form { display: grid; gap: 12px; margin-top: 18px; max-width: 32rem; }
 .rv-field { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; font-weight: 600; color: var(--ink-soft, #393d44); }
 .rv-field input, .rv-field select, .rv-field textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--line, #e4e6e9); border-radius: var(--r-input, 10px); color: var(--ink, #15171c); background: var(--surface, #fff); }
