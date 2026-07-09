@@ -4,7 +4,7 @@
  * tab); QuickBooks NET invoicing lives here, in the business context.
  * Program-enrollment and bulk-order requests post through the company support thread
  * (/api/account/messages) so staff see them in the admin Messages tab - no extra tables. */
-import { me, api } from './auth.js';
+import { me, api, getToken } from './auth.js';
 import { esc, safeUrl, money, fmtDate, confirmDialog } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -295,16 +295,56 @@ async function renderInvoicing(data) {
   }
   $('invList').innerHTML = `
     <table class="biz-inv-table">
-      <thead><tr><th>Date</th><th>Invoice</th><th>Status</th><th class="biz-inv-amt">Amount</th></tr></thead>
+      <thead><tr><th>Date</th><th>Invoice</th><th>Status</th><th class="biz-inv-amt">Amount</th><th></th></tr></thead>
       <tbody>${invoices.map((inv) => `
         <tr>
           <td>${esc(fmtDate(inv.created_at))}</td>
           <td>${inv.qbo_invoice_id ? esc('#' + inv.qbo_invoice_id) : '<span class="muted">Syncing…</span>'}</td>
           <td><span class="badge" data-s="${esc(inv.paid ? 'net_paid' : 'net_open')}">${inv.paid ? 'Paid' : 'Open'}</span></td>
           <td class="biz-inv-amt">${money(inv.total, inv.currency)}</td>
+          <td class="biz-inv-dl">${inv.qbo_invoice_id ? `<button class="btn btn-ghost btn-sm" type="button" data-invoice-pdf="${esc(inv.id)}"><i class="ph ph-download-simple" aria-hidden="true"></i> PDF</button>` : ''}</td>
         </tr>`).join('')}</tbody>
     </table>
-    <p class="muted biz-inv-foot">Need a copy of an invoice or want to pay by ACH/check? <a href="#messages">Message your account team.</a></p>`;
+    <p class="biz-status" id="invDlStatus" role="status" aria-live="polite"></p>
+    <p class="muted biz-inv-foot">Prefer to pay by ACH/check, or have a billing question? <a href="#messages">Message your account team.</a></p>`;
+  $('invList').querySelectorAll('[data-invoice-pdf]').forEach((b) =>
+    b.addEventListener('click', () => downloadInvoicePdf(b.dataset.invoicePdf, b)));
+}
+
+// Fetch the QuickBooks invoice PDF with the auth header (a plain link can't attach
+// it) and hand the blob to the browser as a download.
+async function downloadInvoicePdf(orderId, btn) {
+  const status = $('invDlStatus');
+  const prev = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Preparing…';
+  if (status) { status.textContent = ''; status.dataset.state = ''; }
+  try {
+    const token = await getToken();
+    const r = await fetch(`/api/account/invoice-pdf?id=${encodeURIComponent(orderId)}`, {
+      headers: token ? { Authorization: 'Bearer ' + token } : {},
+    });
+    if (!r.ok) {
+      const msg = r.status === 503 ? 'Invoice downloads are temporarily unavailable.'
+        : r.status === 409 ? 'This invoice is still syncing — try again shortly.'
+        : 'Could not download the invoice. Try again.';
+      throw new Error(msg);
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice-${orderId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (err) {
+    if (status) { status.textContent = err.message || 'Could not download the invoice.'; status.dataset.state = 'err'; }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = prev;
+  }
 }
 
 /* ---------- service programs ---------- */
