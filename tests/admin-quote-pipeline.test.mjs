@@ -29,6 +29,15 @@ test("public quote intake assigns score and default priority", () => {
   assert.match(QUOTE_INTAKE, /priority:\s*priorityForScore\(leadScore\)/);
 });
 
+test("public sample intake defaults to the Sample / Audit CRM stage", () => {
+  assert.match(QUOTE_INTAKE, /function\s+pipelineStageForType/);
+  assert.match(QUOTE_INTAKE, /type\s*===\s*'sample'\s*\?\s*'sample_audit'\s*:\s*'new'/);
+  assert.match(QUOTE_INTAKE, /pipeline_stage:\s*pipelineStage/);
+  assert.match(QUOTE_INTAKE, /next_step:\s*nextStep/);
+  assert.match(QUOTE_INTAKE, /Confirm sample fit, ship-to address, and trial follow-up\./);
+  assert.match(QUOTE_INTAKE, /fields\.samples/, "sample choices should contribute to lead scoring and email display");
+});
+
 test("admin quotes API reads and updates pipeline fields", () => {
   assert.match(ADMIN_QUOTES, /priority,next_step,due_at,lead_score/);
   assert.match(ADMIN_QUOTES, /assigned_to,assigned_at/);
@@ -48,6 +57,17 @@ test("admin quote inbox supports lead owner assignment", () => {
   assert.match(QUOTES_JS, /data-d-owner/);
   assert.match(QUOTES_JS, /assigned_to:\s*v\('\[data-d-owner\]'\)/);
   assert.match(QUOTES_JS, /quote\.assigned_to/);
+});
+
+test("admin quote inbox and drawer surface sample request details", () => {
+  assert.match(QUOTES_JS, /function\s+sampleDetailsHtml/);
+  assert.match(QUOTES_JS, /payloadValues\(quote\.payload\?\.samples\)/);
+  assert.match(QUOTES_JS, /quote-sample-summary/);
+  assert.match(QUOTES_JS, /Sample products/);
+  assert.match(QUOTES_JS, /Ship-to/);
+  assert.match(QUOTES_JS, /sampleDetailsHtml\(quote\)/, "list rows should render sample payload details");
+  assert.match(QUOTES_JS, /sampleDetailsHtml\(q\)/, "drawer details should render sample payload details");
+  assert.match(ADMIN_HTML, /\.quote-sample-summary/, "sample summary should have explicit admin styling");
 });
 
 test("admin quotes API can send a lead follow-up email", () => {

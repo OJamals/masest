@@ -82,6 +82,7 @@
  <p class="subhead" id="pDesc"></p>
  <div class="hero-ctas u-mt-30">
  <a class="btn btn-primary" id="pQuoteBtn" href="contact">Request a quote</a>
+ <a class="btn btn-secondary" id="pSampleBtn" href="contact?type=sample">Request free sample</a>
  <button class="btn btn-secondary" id="pBuyBtn" type="button" hidden>Add to cart</button>
  </div>
       <p class="cart-feedback" id="pCartFeedback" role="status" aria-live="polite" hidden></p>
@@ -307,8 +308,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.getElementById("ctaHead").textContent = "Ready to switch to " + p.name + "?";
     const quoteHref = "contact?type=quote&product=" + encodeURIComponent(isProgramOnly ? `${p.name} program fit` : p.name);
+    const sampleHref = "contact?type=sample&product=" + encodeURIComponent(p.name);
     const quoteBtn = document.getElementById("pQuoteBtn");
     if (quoteBtn) quoteBtn.href = quoteHref;
+    const sampleBtn = document.getElementById("pSampleBtn");
+    if (sampleBtn) sampleBtn.href = sampleHref;
     const buyBtn = document.getElementById("pBuyBtn");
     const cartFeedback = document.getElementById("pCartFeedback");
 
