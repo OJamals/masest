@@ -58,6 +58,9 @@
   .adm-main .saved-views .adm-select { flex: 1 1 180px; max-width: none; }
   .adm-main .saved-views .adm-input { flex: 1 1 160px; max-width: none; }
   .adm-main input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; flex: 0 0 auto; }
+  .adm-main table.adm .link-name { appearance: none; display: inline-flex; align-items: center; min-height: 36px; padding: 7px 0; border: 0; background: transparent; color: var(--accent-ink); font: inherit; font-weight: 800; line-height: 1.25; text-align: left; cursor: pointer; }
+  .adm-main table.adm .link-name:hover,
+  .adm-main table.adm .link-name:focus-visible { color: var(--accent); outline: none; }
   .adm-search, .adm-input, .adm-select, .adm-textarea { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; padding: 10px 12px; }
   .adm-search { max-width: 320px; }
   .adm-textarea { min-height: 120px; resize: vertical; }
@@ -145,6 +148,8 @@
   .adm-status[data-state="err"] { color: var(--status-danger-ink); }
   .muted { color: var(--muted); }
   .thread-layout { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 14px; }
+  #replyForm { grid-template-columns: minmax(0, 1fr) auto; }
+  #replyForm > .btn { min-width: 120px; }
   .thread-list { display: grid; align-content: start; gap: 8px; }
   .thread-list button { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-align: left; padding: 10px; cursor: pointer; }
   .msg-thread { display: grid; gap: 8px; max-height: 420px; overflow: auto; padding: 4px; }
@@ -178,7 +183,8 @@
   .product-gallery-item img { width: 34px; height: 34px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); }
   .product-gallery-actions { display: flex; gap: 1px; }
   .product-file-control { display: grid; gap: 3px; color: var(--muted); font-size: .7rem; line-height: 1.2; }
-  .product-file-control input { width: 100%; max-width: 100%; font-size: .78rem; }
+  .product-file-control input { width: 100%; max-width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: .78rem; padding: 6px; }
+  .product-file-control input::file-selector-button { min-height: 24px; margin-right: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
   .variant-stack { display: grid; gap: 8px; min-width: 0; }
   .variant-row { display: grid; grid-template-columns: minmax(150px, 1.35fr) minmax(90px, .55fr) minmax(90px, .65fr) minmax(90px, .55fr) auto auto auto; gap: 8px; align-items: end; }
   .variant-row .adm-input { padding: 7px 8px; font-size: .82rem; }
@@ -241,6 +247,7 @@
   .adm-content-check input { width: 18px; height: 18px; }
   .adm-content-asset-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
   .adm-content-asset-control label { margin: 0; }
+  #contentLocale { min-width: 112px; }
   .adm-content-asset-tools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .45fr) auto; gap: 10px; align-items: end; margin: 0 0 12px; }
   .adm-content-asset-tools .adm-search { max-width: none; }
   .adm-content-upload, .adm-content-register { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: end; margin: 0 0 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
@@ -348,6 +355,8 @@
   .account-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .42fr); gap: 14px; align-items: start; }
   .account-detail { position: sticky; top: 96px; display: grid; gap: 12px; }
   .account-detail[hidden] { display: none; }
+  .account-detail .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .account-detail .adm-form-grid .wide { grid-column: 1 / -1; }
   .account-detail-section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
   .account-filterbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .account-filterbar .btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
@@ -369,7 +378,7 @@
   .adm-select-md { max-width: 190px; }
   .adm-layout { display: grid; grid-template-columns: minmax(200px, 240px) minmax(0, 1fr); gap: 24px; align-items: start; }
   .adm-main { min-width: 0; align-self: start; }
-  .adm-sidebar.adm-tabs-wrap { position: sticky; top: 96px; align-self: start; overflow: visible; padding: 12px; margin-bottom: 0; border: 1px solid var(--line-soft); border-radius: var(--r-card); background: rgba(255,255,255,.76); box-shadow: var(--shadow-xs); }
+  .adm-sidebar.adm-tabs-wrap { position: sticky; top: 96px; align-self: start; max-height: calc(100vh - 120px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 12px; margin-bottom: 0; border: 1px solid var(--line-soft); border-radius: var(--r-card); background: rgba(255,255,255,.76); box-shadow: var(--shadow-xs); }
   .adm-sidebar .adm-top { display: grid; gap: 10px; align-items: start; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
   .adm-sidebar .adm-top .btn { justify-content: center; width: 100%; }
   .adm-sidebar .adm-tabs { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin-top: 12px; }
@@ -405,6 +414,8 @@
     .adm-tools { align-items: stretch; }
     .adm-tools > * { width: 100%; max-width: none; }
     .adm-form-grid > .btn { width: 100%; justify-self: stretch; }
+    .account-detail .adm-form-grid,
+    #replyForm { grid-template-columns: 1fr; }
     .adm-content-hub-metrics span { flex: 1 1 120px; }
     .adm-content-fields { grid-template-columns: 1fr; }
     .adm-content-fields .wide { grid-column: auto; }
@@ -455,7 +466,7 @@
   }
   @media (max-width: 980px) {
     .adm-layout { display: block; }
-    .adm-sidebar.adm-tabs-wrap { position: static; margin-bottom: 18px; }
+    .adm-sidebar.adm-tabs-wrap { position: static; max-height: none; overflow-x: auto; overflow-y: visible; overscroll-behavior: auto; margin-bottom: 18px; }
     .adm-sidebar .adm-tabs { flex-direction: row; overflow-x: auto; padding: 8px 8px 4px 0; scroll-snap-type: x proximity; }
     .adm-nav-group { min-width: 184px; scroll-snap-align: start; }
   }

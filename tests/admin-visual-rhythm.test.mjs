@@ -1,0 +1,59 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const html = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
+
+test("admin controls keep consistent action spacing and touch rhythm", () => {
+  assert.match(
+    html,
+    /\.adm-main :where\(\.adm-tools, \.adm-inline-actions, \.company-detail-actions, \.company-user-actions, \.account-filterbar, \.crm-inbox-tools\)\s*\{[^}]*row-gap:\s*10px;[^}]*column-gap:\s*10px;/,
+    "dense admin action groups should keep usable row and column gaps",
+  );
+  assert.match(
+    html,
+    /\.adm-main :where\(\.crm-tabs, \.pipe-toggle, \.saved-views\)\s*\{[^}]*gap:\s*10px;/,
+    "admin tabs and saved-view bars should not collapse into 4px spacing",
+  );
+  assert.match(
+    html,
+    /\.adm-main table\.adm \.link-name\s*\{[^}]*min-height:\s*36px;/,
+    "link-style table buttons should still have a visible hit area",
+  );
+});
+
+test("admin detail rows and compact forms keep label/value separation", () => {
+  assert.match(
+    html,
+    /#companyDetail \.dash-row,[\s\S]*#admReviews \.dash-row\s*\{[\s\S]*display:\s*flex;[\s\S]*gap:\s*14px;/,
+    "company, account, and review detail rows should render as separated label/value rows",
+  );
+  assert.match(
+    html,
+    /\.account-detail \.adm-form-grid\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
+    "the account detail drawer should not inherit the six-column admin form grid",
+  );
+  assert.match(
+    html,
+    /@media \(max-width:\s*720px\)[\s\S]*\.account-detail \.adm-form-grid,[\s\S]*#replyForm\s*\{\s*grid-template-columns:\s*1fr;/,
+    "compact account and reply forms should collapse back to one column on mobile",
+  );
+});
+
+test("admin file, locale, and reply controls have enough intrinsic width", () => {
+  assert.match(
+    html,
+    /\.product-file-control input\s*\{[^}]*min-height:\s*36px;/,
+    "product upload controls should not render as cramped native 20px file inputs",
+  );
+  assert.match(
+    html,
+    /#contentLocale\s*\{\s*min-width:\s*112px;\s*\}/,
+    "the content locale select should fit the English locale label",
+  );
+  assert.match(
+    html,
+    /#replyForm > \.btn\s*\{\s*min-width:\s*120px;\s*\}/,
+    "the desktop message reply button should fit its label",
+  );
+});

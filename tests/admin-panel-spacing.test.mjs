@@ -109,3 +109,59 @@ test("admin panel content starts at the sidebar top without inherited section pa
     }
   });
 });
+
+test("admin sidebar scrolls independently when hovered", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch();
+    const context = await browser.newContext({ viewport: { width: 1280, height: 520 }, reducedMotion: "reduce" });
+    await context.addInitScript(() => {
+      window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
+      window.MASEST_SUPABASE_ANON = "stub-anon";
+      localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
+    });
+    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    const page = await context.newPage();
+    try {
+      await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector('.adm-panel[data-panel="overview"][data-active="true"]', { timeout: 10000 });
+      const sidebar = page.locator(".adm-sidebar");
+      await sidebar.scrollIntoViewIfNeeded();
+      await page.evaluate(() => {
+        const rail = document.querySelector(".adm-sidebar");
+        if (rail) rail.scrollTop = 0;
+      });
+
+      const before = await page.evaluate(() => {
+        const rail = document.querySelector(".adm-sidebar");
+        const style = rail ? getComputedStyle(rail) : null;
+        return {
+          canScroll: rail ? rail.scrollHeight > rail.clientHeight : false,
+          overflowY: style?.overflowY || "",
+          pageY: window.scrollY,
+          sidebarY: rail?.scrollTop || 0,
+        };
+      });
+      assert.equal(before.overflowY, "auto", "admin sidebar should own vertical wheel scrolling");
+      assert.equal(before.canScroll, true, "admin sidebar should be height-bounded on short desktop viewports");
+      assert.equal(before.sidebarY, 0, "test starts with sidebar at top");
+
+      const box = await sidebar.boundingBox();
+      assert.ok(box, "admin sidebar should be visible");
+      const x = box.x + Math.min(80, box.width / 2);
+      const y = Math.min(Math.max(box.y + 40, 20), 500);
+      await page.mouse.move(x, y);
+      await page.mouse.wheel(0, 320);
+      await page.waitForFunction(() => document.querySelector(".adm-sidebar")?.scrollTop > 0);
+
+      const after = await page.evaluate(() => ({
+        pageY: window.scrollY,
+        sidebarY: document.querySelector(".adm-sidebar")?.scrollTop || 0,
+      }));
+      assert.ok(after.sidebarY > 0, "wheel over sidebar should move the sidebar scroll position");
+      assert.equal(after.pageY, before.pageY, "wheel over sidebar should not scroll the active admin panel first");
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  });
+});
