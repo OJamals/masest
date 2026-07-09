@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("CMS asset picker manages focus on open and close", () => {
-  const js = read("js/admin/content.js");
+  const js = read("js/admin/content.js") + read("js/admin/content-assets.js");
 
   // remembers the control that opened the picker, to restore focus later
   assert.match(js, /assetPickerTrigger/, "should track the element that opened the asset picker");

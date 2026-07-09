@@ -46,7 +46,7 @@ test("saveAsset preserves the original creator across updates (archive/restore r
 });
 
 test("content editor has an asset picker contract", () => {
-  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8") + readFileSync(new URL("../js/admin/content-assets.js", import.meta.url), "utf8");
   assert.match(source, /contentAssetPicker/);
   assert.match(source, /data-content-asset-field/);
   assert.match(source, /data-content-asset-alt/);
@@ -62,7 +62,7 @@ test("content editor has an asset picker contract", () => {
 });
 
 test("content editor exposes native asset upload controls", () => {
-  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8") + readFileSync(new URL("../js/admin/content-assets.js", import.meta.url), "utf8");
   assert.match(source, /contentAssetUpload/);
   assert.match(source, /contentAssetFolder/);
   assert.match(source, /contentAssetFile/);
@@ -72,7 +72,7 @@ test("content editor exposes native asset upload controls", () => {
 });
 
 test("content editor registers existing asset paths without a file upload", () => {
-  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8") + readFileSync(new URL("../js/admin/content-assets.js", import.meta.url), "utf8");
   assert.match(source, /contentAssetRegister/);
   assert.match(source, /contentAssetPath/);
   assert.match(source, /contentAssetPathAlt/);
