@@ -52,8 +52,13 @@ async function sweepDue(env) {
   const due = dueNewsletters(data || [], Date.now());
   const results = [];
   for (const n of due) {
-    // Lock so a concurrent cron can't double-send (idempotency keys are the backstop).
-    await sb.from('newsletters').update({ status: 'sending', updated_at: new Date().toISOString() }).eq('id', n.id).eq('status', 'scheduled');
+    // Atomic claim: flip 'scheduled'→'sending' and PROCEED ONLY IF this update matched
+    // the row. A concurrent/overlapping cron sweep then finds nothing to claim and skips,
+    // so the same newsletter is never dispatched twice (idempotency keys are a second backstop).
+    const { data: claimed } = await sb.from('newsletters')
+      .update({ status: 'sending', updated_at: new Date().toISOString() })
+      .eq('id', n.id).eq('status', 'scheduled').select('id').maybeSingle();
+    if (!claimed) continue;
     const r = await sendNewsletter(env, sb, n);
     const next = nextRunAt(n.schedule, Date.now());
     if (next) {
@@ -146,14 +151,17 @@ export async function onRequest({ request, env }) {
     const schedule = mode === 'recurring'
       ? { mode, interval_days: Math.max(1, Number(s.interval_days) || 14), next_run_at: s.send_at || new Date().toISOString() }
       : { mode, send_at: s.send_at || new Date().toISOString(), next_run_at: s.send_at || new Date().toISOString() };
-    const { error } = await sb.from('newsletters').update({ status: 'scheduled', schedule, updated_at: new Date().toISOString() }).eq('id', body.id);
+    // Never re-schedule a newsletter that is mid-dispatch, or it could re-arm and re-send.
+    const { error } = await sb.from('newsletters').update({ status: 'scheduled', schedule, updated_at: new Date().toISOString() }).eq('id', body.id).neq('status', 'sending');
     if (error) return json(500, { error: error.message });
     return json(200, { ok: true, schedule });
   }
 
   if (action === 'cancel') {
     if (!body.id) return json(400, { error: 'id_required' });
-    await sb.from('newsletters').update({ status: 'draft', updated_at: new Date().toISOString() }).eq('id', body.id);
+    // Don't yank a send that is already in flight back to draft (would let a fresh
+    // send_now re-claim and dispatch it a second time).
+    await sb.from('newsletters').update({ status: 'draft', updated_at: new Date().toISOString() }).eq('id', body.id).neq('status', 'sending');
     return json(200, { ok: true });
   }
 

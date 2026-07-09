@@ -117,9 +117,17 @@ export function normalizeProduct(input) {
   for (const key of ['image_url', 'photo_alt', 'hmis', 'group_key']) {
     if (row[key] !== undefined) row[key] = nullableString(row[key]);
   }
-  // Checkboxes arrive as booleans from the row editor, but strings via the raw API.
+  // Checkboxes arrive as booleans from the row editor, but strings/numbers via the raw
+  // API. Map the common truthy/falsy forms explicitly and REJECT anything ambiguous — a
+  // silently-dropped hazmat flag is a compliance risk, so we error rather than guess.
+  const TRUTHY = new Set([true, 'true', 'on', '1', 'yes', 1]);
+  const FALSY = new Set([false, 'false', 'off', '0', 'no', '', 0]);
   for (const key of ['hazmat', 'taxable']) {
-    if (row[key] !== undefined) row[key] = row[key] === true || row[key] === 'true' || row[key] === 'on';
+    if (row[key] === undefined) continue;
+    const v = typeof row[key] === 'string' ? row[key].trim().toLowerCase() : row[key];
+    if (TRUTHY.has(v)) row[key] = true;
+    else if (FALSY.has(v)) row[key] = false;
+    else return { error: `invalid_${key}` };
   }
   return { row };
 }

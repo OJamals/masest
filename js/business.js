@@ -307,6 +307,7 @@ function wireResaleCert() {
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) { if (status) { status.textContent = 'Keep the certificate under 10 MB.'; status.dataset.state = 'err'; } input.value = ''; return; }
     if (status) { status.textContent = 'Uploading…'; status.dataset.state = ''; }
+    input.disabled = true; // lock so a rapid re-pick can't race an in-flight upload
     try {
       const token = await getToken();
       const fd = new FormData();
@@ -319,6 +320,7 @@ function wireResaleCert() {
     } catch (err) {
       if (status) { status.textContent = err.message === 'unsupported_type' ? 'Upload a PDF, PNG, JPG, or WEBP.' : (err.message || 'Could not upload. Try again.'); status.dataset.state = 'err'; }
     } finally {
+      input.disabled = false;
       input.value = '';
     }
   });
@@ -595,10 +597,16 @@ async function loadTeam() {
     catch { b.disabled = false; teamStatus('Could not revoke the invite. Try again.', 'err'); }
   }));
 }
+let inviteFormWired = false;
 function initTeam(self = {}) {
   teamSelf = { id: self.id || null, email: self.email || null };
   $('bizTeam').hidden = false;
   loadTeam();
+  // #inviteForm is static markup (only toggled hidden, never re-rendered), and initTeam
+  // runs again after every business-details save — bind its submit handler ONCE so a
+  // single invite click doesn't fire N+1 stacked POSTs.
+  if (inviteFormWired) return;
+  inviteFormWired = true;
   $('inviteForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = $('inviteEmail').value.trim();

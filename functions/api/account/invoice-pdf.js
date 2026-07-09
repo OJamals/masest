@@ -14,7 +14,8 @@ export async function onRequestGet({ request, env }) {
   const id = new URL(request.url).searchParams.get('id');
   if (!id) return json(400, { error: 'id_required' });
 
-  // Ownership + eligibility: NET order of this company with an issued invoice.
+  // Ownership + eligibility: an order of THIS company with an issued QuickBooks invoice
+  // (card orders sync as Invoice+Payment too, so both NET and card orders can qualify).
   const { data: order, error } = await sb.from('orders')
     .select('id,company_id,payment_method,qbo_invoice_id')
     .eq('id', id).eq('company_id', companyId).maybeSingle();

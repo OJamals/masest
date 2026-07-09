@@ -501,21 +501,23 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
   let sending = false; // re-entrancy guard so a double-click can't fire two sends
   async function sendNow() {
     if (sending) return;
-    const audience = readAudience();
-    if (!audience.populations.length) { setStatus('Choose at least one audience population.', 'err'); return; }
-    // Resending an already-sent newsletter is a distinct, louder confirmation.
-    if (editorEntry?.status === 'sent' && !(await confirmDialog(
-      'This newsletter was already sent. Send it to the audience again?',
-      { confirmText: 'Send again', cancelText: 'Cancel', danger: true },
-    ))) return;
-    const estimate = audience.populations.reduce((sum, pop) => sum + Number(counts[pop] || 0), 0);
-    const ok = await confirmDialog(
-      `Send to ${audience.populations.length} population(s) (about ${estimate.toLocaleString()} recipients)? This cannot be undone.`,
-      { confirmText: 'Send now', danger: true },
-    );
-    if (!ok) return;
+    // Claim the guard BEFORE the confirm dialogs so a fast double-click can't stack two
+    // dialogs (and two sends); the finally always releases it.
     sending = true;
     try {
+      const audience = readAudience();
+      if (!audience.populations.length) { setStatus('Choose at least one audience population.', 'err'); return; }
+      // Resending an already-sent newsletter is a distinct, louder confirmation.
+      if (editorEntry?.status === 'sent' && !(await confirmDialog(
+        'This newsletter was already sent. Send it to the audience again?',
+        { confirmText: 'Send again', cancelText: 'Cancel', danger: true },
+      ))) return;
+      const estimate = audience.populations.reduce((sum, pop) => sum + Number(counts[pop] || 0), 0);
+      const ok = await confirmDialog(
+        `Send to ${audience.populations.length} population(s) (about ${estimate.toLocaleString()} recipients)? This cannot be undone.`,
+        { confirmText: 'Send now', danger: true },
+      );
+      if (!ok) return;
       const id = await saveDraft();
       if (!id) return;
       setStatus('Sending...');
