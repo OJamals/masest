@@ -35,7 +35,7 @@ test("admin entrypoint wires per-tab split modules (#36)", () => {
     { mod: "quotes", factory: "createQuotesTab", inline: /async function renderQuotePipeline\s*\(/ },
   ];
   for (const { mod, factory, inline } of tabs) {
-    assert.match(admin, new RegExp(`from\\s+["']\\./admin/${mod}\\.js["']`), `admin should import ./admin/${mod}.js`);
+    assert.match(admin, new RegExp(`from\\s+["']\\./admin/${mod}\\.js(?:\\?v=\\d{8}[a-z])?["']`), `admin should import ./admin/${mod}.js`);
     assert.match(admin, new RegExp(`${factory}\\(`), `admin should wire ${factory}`);
     assert.doesNotMatch(admin, inline, `${mod} renderer should not be defined inline in admin.js`);
   }

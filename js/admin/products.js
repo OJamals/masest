@@ -234,13 +234,13 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
   }
 
   async function removeVariant(vsku) {
-    if (!(await confirmDialog(`Deactivate ${vsku}? Existing order history stays intact.`, { confirmText: 'Deactivate', danger: true }))) return;
+    if (!(await confirmDialog(`Remove ${vsku}? Existing order history stays intact.`, { confirmText: 'Remove', danger: true }))) return;
     try {
-      await api('/api/admin/products', { method: 'DELETE', body: { vsku } });
-      message('variantStatus', 'Variant deactivated.', 'ok');
+      await api('/api/admin/products', { method: 'DELETE', body: { vsku, hard: true } });
+      message('variantStatus', 'Variant removed.', 'ok');
       await renderProducts();
     } catch (err) {
-      message('variantStatus', err.data?.error || 'Could not deactivate the variant. Retry.', 'err');
+      message('variantStatus', err.data?.error || 'Could not remove the variant. Retry.', 'err');
     }
   }
 

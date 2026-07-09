@@ -83,14 +83,16 @@ async function userDirectory(sb) {
   }
   const { data: profiles } = await sb.from('profiles').select('id,full_name,phone,role,staff_role,company_id');
   const profById = new Map((profiles || []).map((p) => [p.id, p]));
-  const { data: companies } = await sb.from('companies').select('id,name');
-  const compById = new Map((companies || []).map((c) => [c.id, c.name]));
+  const { data: companies } = await sb.from('companies').select('id,name,status');
+  const compById = new Map((companies || []).map((c) => [c.id, c]));
   return users.map((u) => {
     const p = profById.get(u.id) || {};
     return {
       id: u.id, email: u.email || null, created_at: u.created_at || null, last_sign_in_at: u.last_sign_in_at || null,
       full_name: p.full_name || null, phone: p.phone || null, role: p.role || null, staff_role: p.staff_role || null,
-      company_id: p.company_id || null, company_name: p.company_id ? (compById.get(p.company_id) || null) : null,
+      company_id: p.company_id || null,
+      company_name: p.company_id ? (compById.get(p.company_id)?.name || null) : null,
+      company_status: p.company_id ? (compById.get(p.company_id)?.status || null) : null,
     };
   }).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 }

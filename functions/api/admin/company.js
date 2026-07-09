@@ -30,7 +30,7 @@ export async function onRequestGet({ request, env }) {
 
   const sb = adminClient(env);
   const { data: company } = await sb.from('companies')
-    .select('id,name,status,net_terms_days,credit_limit,tax_exempt,resale_cert_url,resale_cert_path,stripe_customer_id,created_at')
+    .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,resale_cert_url,resale_cert_path,stripe_customer_id,created_at')
     .eq('id', id).maybeSingle();
   if (!company) return json(404, { error: 'not_found' });
 

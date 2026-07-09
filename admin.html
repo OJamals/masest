@@ -47,6 +47,17 @@
   .adm-panel[data-active="true"] { display: grid; gap: 16px; align-content: start; align-items: start; }
   .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: start; max-width: 100%; }
   .adm-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .adm-main .btn-sm { min-height: 40px !important; padding: 8px 14px; justify-content: center; line-height: 1.2; }
+  .adm-main :where(.adm-tools, .adm-inline-actions, .company-detail-actions, .company-user-actions, .account-filterbar, .crm-inbox-tools) { row-gap: 10px; column-gap: 10px; }
+  .adm-main :where(.crm-tabs, .pipe-toggle, .saved-views) { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .adm-main .crm-tabs { padding: 6px; }
+  .adm-main .crm-tabs .btn,
+  .adm-main .pipe-toggle .btn,
+  .adm-main .saved-views .btn { min-height: 40px !important; padding: 8px 14px; }
+  .adm-main .saved-views { padding: 0; }
+  .adm-main .saved-views .adm-select { flex: 1 1 180px; max-width: none; }
+  .adm-main .saved-views .adm-input { flex: 1 1 160px; max-width: none; }
+  .adm-main input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; flex: 0 0 auto; }
   .adm-search, .adm-input, .adm-select, .adm-textarea { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; padding: 10px 12px; }
   .adm-search { max-width: 320px; }
   .adm-textarea { min-height: 120px; resize: vertical; }
@@ -54,6 +65,7 @@
   .adm-form-grid label { display: grid; gap: 5px; font-size: .82rem; color: var(--muted); }
   .adm-form-grid .wide { grid-column: span 2; }
   .adm-form-grid .full { grid-column: 1 / -1; }
+  .adm-form-grid > .btn { justify-self: start; max-width: 100%; }
   .adm-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
   table.adm { width: 100%; min-width: 860px; border-collapse: collapse; }
   table.adm th, table.adm td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: .9rem; }
@@ -141,7 +153,7 @@
   .quote-item { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px; }
   .product-photo { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
   .product-photo-empty { display: inline-flex; align-items: center; justify-content: center; color: var(--muted); font-size: .72rem; text-align: center; }
-  .gbtn { border: 0; background: none; cursor: pointer; font-size: .72rem; padding: 0 2px; line-height: 1.2; color: var(--ink-soft); }
+  .gbtn { width: 36px; min-width: 36px; min-height: 36px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: none; cursor: pointer; font-size: .78rem; padding: 0; line-height: 1.2; color: var(--ink-soft); }
   .gbtn:hover { color: var(--accent); }
   .product-admin-list { display: grid; gap: 14px; }
   .product-admin-card { display: grid; gap: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: clamp(14px, 2vw, 18px); box-shadow: var(--shadow-xs); }
@@ -281,6 +293,64 @@
   .adm-content-export-summary { display: flex; align-items: center; min-height: 44px; padding: 8px 0; cursor: pointer; color: var(--ink); font-size: .95rem; font-weight: 800; line-height: 1.35; }
   .company-detail-actions, .company-user-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
   .company-user-actions { margin-top: 0; justify-content: flex-end; }
+  #companyDetail .dash-row,
+  .account-detail .dash-row,
+  .company-dossier .dash-row,
+  .company-members .dash-row,
+  .company-invites .dash-row,
+  .company-addresses .dash-row,
+  .company-payments .dash-row,
+  .company-orders-mini .dash-row,
+  #admReviews .dash-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  #companyDetail .dash-row:first-of-type,
+  .account-detail .dash-row:first-of-type,
+  .company-dossier .dash-row:first-of-type,
+  .company-members .dash-row:first-of-type,
+  .company-invites .dash-row:first-of-type,
+  .company-addresses .dash-row:first-of-type,
+  .company-payments .dash-row:first-of-type,
+  .company-orders-mini .dash-row:first-of-type,
+  #admReviews .dash-row:first-of-type { border-top: 0; padding-top: 0; }
+  #companyDetail > .dash-row > span:first-child,
+  .account-detail-section > .dash-row > span:first-child,
+  .company-dossier .dash-row > span:first-child {
+    min-width: 0;
+    color: var(--muted);
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  #companyDetail .dash-row > :last-child,
+  .account-detail .dash-row > :last-child,
+  .company-dossier .dash-row > :last-child,
+  .company-members .dash-row > :last-child,
+  .company-invites .dash-row > :last-child,
+  .company-addresses .dash-row > :last-child,
+  .company-payments .dash-row > :last-child,
+  .company-orders-mini .dash-row > :last-child,
+  #admReviews .dash-row > :last-child { min-width: 0; text-align: right; }
+  #companyDetail .dash-row b,
+  .account-detail .dash-row b,
+  .company-dossier .dash-row b { font-variant-numeric: tabular-nums; }
+  .account-console { display: grid; gap: 14px; }
+  .account-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .account-metric { display: grid; gap: 3px; min-height: 78px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px; }
+  .account-metric span { color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+  .account-metric b { color: var(--ink); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .account-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .42fr); gap: 14px; align-items: start; }
+  .account-detail { position: sticky; top: 96px; display: grid; gap: 12px; }
+  .account-detail[hidden] { display: none; }
+  .account-detail-section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+  .account-filterbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .account-filterbar .btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
   @media (max-width: 920px) { .adm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thread-layout { grid-template-columns: 1fr; } }
   @media (max-width: 640px) { .adm-wrap { padding: 0 18px; } .adm-grid, .adm-form-grid { grid-template-columns: 1fr; } .adm-form-grid .wide { grid-column: auto; } }
   @media (max-width: 640px) { .adm-hero h1 { font-size: 42px; } #gateTitle { font-size: 24px; } }
@@ -334,6 +404,7 @@
     .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: stretch; }
     .adm-tools { align-items: stretch; }
     .adm-tools > * { width: 100%; max-width: none; }
+    .adm-form-grid > .btn { width: 100%; justify-self: stretch; }
     .adm-content-hub-metrics span { flex: 1 1 120px; }
     .adm-content-fields { grid-template-columns: 1fr; }
     .adm-content-fields .wide { grid-column: auto; }
@@ -355,6 +426,9 @@
     .company-admin-head,
     .admin-order-meta,
     .company-admin-fields { grid-template-columns: 1fr; }
+    .account-metrics,
+    .account-layout { grid-template-columns: 1fr; }
+    .account-detail { position: static; }
     .admin-order-actions > .btn,
     .company-admin-actions > .btn,
     .admin-input-sm,
@@ -474,11 +548,11 @@
 
       <section class="adm-panel" role="tabpanel" data-panel="companies">
         <div class="crm-tabs" id="acctToggle" role="group" aria-label="Accounts sections">
-          <button class="btn btn-ghost btn-sm is-active" type="button" data-acct-view="companies" aria-pressed="true">Companies</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-acct-view="users" aria-pressed="false">All users</button>
+          <button class="btn btn-ghost btn-sm is-active" type="button" data-acct-view="users" aria-pressed="true">Users</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-acct-view="companies" aria-pressed="false">Businesses &amp; approvals</button>
         </div>
-        <div id="admAcctUsers" data-acct-panel="users" hidden></div>
-        <div data-acct-panel="companies">
+        <div id="admAcctUsers" data-acct-panel="users"></div>
+        <div data-acct-panel="companies" hidden>
           <input id="coSearch" class="adm-search" type="search" placeholder="Search accounts" aria-label="Search accounts">
           <div id="admCompanies" class="adm-table-wrap">Loading...</div>
           <div id="companyDetail" class="adm-card" hidden></div>
@@ -629,6 +703,6 @@
 <script>window.MASEST_DISABLE_CRISP = true; /* visitor chat bubble overlays the staff console; Crisp threads surface in the Messages tab instead */</script>
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260619b"></script>
-<script type="module" src="js/admin.js"></script>
+<script type="module" src="js/admin.js?v=20260709a"></script>
 </body>
 </html>

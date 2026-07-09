@@ -7,7 +7,7 @@ import { createTrafficRenderer } from './admin/traffic.js';
 import { createSeoAudit } from './admin/seo.js';
 import { createThreadsTab } from './admin/threads.js';
 import { createOffersTab } from './admin/offers.js';
-import { createProductsTab } from './admin/products.js';
+import { createProductsTab } from './admin/products.js?v=20260709a';
 import { createPricingTab } from './admin/pricing.js';
 import { createContentTab } from './admin/content.js';
 import { createCompaniesTab } from './admin/companies.js';

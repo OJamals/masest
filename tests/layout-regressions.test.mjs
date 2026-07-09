@@ -90,10 +90,27 @@ export async function updatePassword() { return {}; }
 export async function orders() { return fixtures.orders; }
 export async function catalog() { return fixtures.productsPayload.products; }
 export async function getToken() { return "stub-token"; }
-export async function api(path) {
+export async function api(path, options = {}) {
   const url = new URL(path, window.location.origin);
   const pathname = url.pathname;
-  if (pathname.startsWith("/api/admin/products")) return fixtures.productsPayload;
+  if (pathname.startsWith("/api/admin/products")) {
+    if ((options.method || "GET").toUpperCase() === "DELETE") {
+      const vsku = String(options.body?.vsku || "");
+      const hard = Boolean(options.body?.hard);
+      if (vsku) {
+        for (const product of fixtures.productsPayload.products) {
+          const variants = product.product_variants || [];
+          const index = variants.findIndex((variant) => variant.vsku === vsku);
+          if (index < 0) continue;
+          if (hard) variants.splice(index, 1);
+          else variants[index].active = false;
+          return { ok: true, deleted: hard ? vsku : undefined, deactivated: hard ? undefined : vsku };
+        }
+      }
+      return { ok: true };
+    }
+    return fixtures.productsPayload;
+  }
   if (pathname.startsWith("/api/admin/stats")) return { orders: 1, revenue: 1840, pending_companies: 0, unread_messages: 1, new_quotes: 0, low_stock: 0, setup_followups: [], recent_orders: fixtures.orders };
   if (pathname.startsWith("/api/admin/inventory")) return { low_stock: [] };
   if (pathname.startsWith("/api/admin/orders")) return { orders: fixtures.orders, total: fixtures.orders.length, has_more: false };
@@ -190,6 +207,36 @@ test("admin products management keeps inline controls readable on desktop and mo
         }
       }
     } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("admin products remove volume variants from the Products tab without reloading", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch();
+    const { context, page } = await newAuthedPage(browser, { width: 1280, height: 900 });
+    let navigations = 0;
+    try {
+      await page.goto(`${BASE_URL}/admin.html#products`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("#admProducts [data-variant]", { timeout: 10000 });
+      page.on("framenavigated", (frame) => {
+        if (frame === page.mainFrame()) navigations += 1;
+      });
+
+      const firstVariant = page.locator("#admProducts [data-variant]").first();
+      const vsku = await firstVariant.getAttribute("data-variant");
+      assert.ok(vsku, "expected a removable variant row");
+      const beforeCount = await page.locator("#admProducts [data-variant]").count();
+      await firstVariant.locator("[data-remove-variant]").click();
+      await page.locator('dialog.confirm-dialog button[value="confirm"]').click();
+
+      await page.waitForFunction((sku) => !document.querySelector(`[data-variant="${CSS.escape(sku)}"]`), vsku, { timeout: 5000 });
+      const afterCount = await page.locator("#admProducts [data-variant]").count();
+      assert.equal(afterCount, beforeCount - 1, "variant row should disappear after Remove is confirmed");
+      assert.equal(navigations, 0, "removing a variant should not reload or navigate the admin page");
+    } finally {
+      await context.close();
       await browser.close();
     }
   });

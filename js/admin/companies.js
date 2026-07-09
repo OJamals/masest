@@ -10,8 +10,13 @@ import { ORDER_STATUSES } from './orders.js';
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
 const MEMBER_ROLES = [['buyer', 'Buyer'], ['admin', 'Admin'], ['moderator', 'Moderator']];
+const COMPANY_STATUSES = [['pending', 'Pending'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['suspended', 'Suspended']];
+const PRICE_TIERS = [['retail', 'Retail'], ['hvac', 'HVAC'], ['wholesale', 'Wholesale']];
 function memberRoleOptions(current) {
   return MEMBER_ROLES.map(([v, l]) => `<option value="${v}"${(current || 'buyer') === v ? ' selected' : ''}>${l}</option>`).join('');
+}
+function optionList(options, current) {
+  return options.map(([v, l]) => `<option value="${v}"${String(current || '') === v ? ' selected' : ''}>${l}</option>`).join('');
 }
 
 // Small reusable prompt dialog (native <dialog>, styled via .detail-dialog) for the
@@ -70,6 +75,101 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const open = setup.steps.filter((step) => !step.done);
     const firstOpen = open[0]?.label || 'Complete';
     return `<span data-setup-state="${open.length ? 'open' : 'done'}"><b>${setup.percent || 0}%</b> <small class="muted">${esc(firstOpen)}</small></span>`;
+  }
+
+  function companyOptions(current) {
+    const companies = (state.companies || []).slice()
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    return '<option value="">No business</option>' + companies.map((company) =>
+      `<option value="${esc(company.id)}"${String(current || '') === String(company.id) ? ' selected' : ''}>${esc(company.name || company.id)} (${esc(company.status || 'unknown')})</option>`).join('');
+  }
+
+  function accountMetrics(users = state.acctUsers || [], companies = state.companies || []) {
+    return {
+      users: users.length,
+      pending: companies.filter((company) => company.status === 'pending').length,
+      companyless: users.filter((user) => !user.company_id).length,
+      staff: users.filter((user) => user.staff_role || user.role === 'admin' || user.role === 'moderator').length,
+    };
+  }
+
+  function renderAccountMetrics() {
+    const metrics = accountMetrics();
+    return `<div class="account-metrics" aria-label="Account summary">
+      <div class="account-metric"><span>Registered users</span><b>${esc(metrics.users)}</b></div>
+      <div class="account-metric"><span>Pending businesses</span><b>${esc(metrics.pending)}</b></div>
+      <div class="account-metric"><span>Users without business</span><b>${esc(metrics.companyless)}</b></div>
+      <div class="account-metric"><span>Staff / elevated</span><b>${esc(metrics.staff)}</b></div>
+    </div>`;
+  }
+
+  const ACCOUNT_FILTERS = [
+    ['all', 'All users'],
+    ['companyless', 'No business'],
+    ['pending', 'Pending approval'],
+    ['approved', 'Approved'],
+    ['suspended', 'Suspended'],
+    ['staff', 'Staff'],
+  ];
+
+  function renderAccountFilters() {
+    const current = state.accountFilter || 'all';
+    return `<div class="account-filterbar" role="group" aria-label="User filters">
+      ${ACCOUNT_FILTERS.map(([value, label]) => `<button class="btn btn-ghost btn-sm" type="button" data-account-filter="${value}" aria-pressed="${String(current === value)}">${esc(label)}</button>`).join('')}
+    </div>`;
+  }
+
+  function businessFormFields(company = {}) {
+    return `
+      <label class="wide">Business name <input class="adm-input" name="name" required value="${esc(company.name || '')}"></label>
+      <label>Status <select class="adm-select" name="status">${optionList(COMPANY_STATUSES, company.status || 'pending')}</select></label>
+      <label>Price tier <select class="adm-select" name="price_tier">${optionList(PRICE_TIERS, company.price_tier || 'retail')}</select></label>
+      <label>NET days <input class="adm-input" name="net_terms_days" type="number" min="0" value="${esc(company.net_terms_days || 0)}"></label>
+      <label>Credit limit <input class="adm-input" name="credit_limit" type="number" min="0" step="0.01" value="${esc(company.credit_limit || 0)}"></label>
+      <label>Business email <input class="adm-input" name="business_email" type="email" value="${esc(company.business_email || '')}"></label>
+      <label>Phone <input class="adm-input" name="business_phone" value="${esc(company.business_phone || '')}"></label>
+      <label class="wide">Legal name <input class="adm-input" name="legal_name" value="${esc(company.legal_name || '')}"></label>
+      <label class="wide">Website <input class="adm-input" name="website" type="url" value="${esc(company.website || '')}"></label>
+      <label class="full" style="display:flex;align-items:center;gap:8px;flex-direction:row">
+        <input type="checkbox" name="tax_exempt" value="1" style="width:auto"${company.tax_exempt ? ' checked' : ''}> <span>Tax exempt</span>
+      </label>`;
+  }
+
+  async function saveBusinessDialog(company = {}) {
+    const result = await promptDialog({
+      title: company.id ? 'Edit business' : 'New business',
+      bodyHtml: businessFormFields(company),
+      submitLabel: company.id ? 'Save business' : 'Create business',
+    });
+    if (!result) return null;
+    const body = {
+      action: company.id ? 'update_company' : 'create_company',
+      id: company.id,
+      name: result.name,
+      status: result.status || 'pending',
+      price_tier: result.price_tier || 'retail',
+      net_terms_days: Number(result.net_terms_days || 0),
+      credit_limit: Number(result.credit_limit || 0),
+      business_email: result.business_email,
+      business_phone: result.business_phone,
+      legal_name: result.legal_name,
+      website: result.website,
+      tax_exempt: !!result.tax_exempt,
+    };
+    const saved = await api('/api/admin/companies', { method: 'POST', body });
+    await renderBusinessQueue({ refetch: true });
+    await renderAllUsers({ refetch: true });
+    refreshStats?.();
+    return saved.company || null;
+  }
+
+  async function deleteBusiness(company) {
+    if (!company?.id) return;
+    if (!(await confirmDialog(`Delete ${company.name || 'this business'}? Only businesses with no users or order history can be removed.`, { confirmText: 'Delete', danger: true }))) return;
+    await api('/api/admin/companies', { method: 'POST', body: { action: 'delete_company', id: company.id } });
+    await renderBusinessQueue({ refetch: true });
+    await renderAllUsers({ refetch: true });
+    refreshStats?.();
   }
 
   // Business verification dossier (schema-business-profile.sql) — what staff review to approve.
@@ -212,6 +312,23 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           button.disabled = false;
         }
       });
+    });
+    box.querySelector('[data-business-edit]')?.addEventListener('click', async () => {
+      try {
+        const saved = await saveBusinessDialog(company);
+        if (saved?.id) await openCompanyDetail(saved.id);
+      } catch (err) {
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.message || err.data?.error || 'Could not save the business. Retry.')}</p>`);
+      }
+    });
+    box.querySelector('[data-business-delete]')?.addEventListener('click', async () => {
+      try {
+        await deleteBusiness(company);
+        box.hidden = true;
+        box.innerHTML = '';
+      } catch (err) {
+        box.insertAdjacentHTML('beforeend', `<p class="adm-status" data-state="err">${esc(err.data?.message || err.data?.error || 'Could not delete the business. Retry.')}</p>`);
+      }
     });
     const viewAs = box.querySelector('[data-company-view-as]');
     if (viewAs) viewAs.addEventListener('click', async () => {
@@ -435,6 +552,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           <button class="btn btn-primary btn-sm" type="button" data-company-detail-action="approve">Approve</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="reject">Reject</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="suspend">Suspend</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-business-edit="${esc(company.id || id)}">Edit business</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-business-delete="${esc(company.id || id)}">Delete business</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="messages">Messages</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-view-as="${esc(company.id || id)}">View as customer</button>
@@ -469,11 +588,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       const idx = (state.companies || []).findIndex((c) => String(c.id) === String(id));
       if (idx >= 0 && detail.company) state.companies[idx] = { ...state.companies[idx], ...detail.company };
     } catch { /* render from current state; the next full refetch reconciles */ }
-    await renderCompanies({ refetch: false });
+    await renderBusinessQueue({ refetch: false });
     refreshStats?.(); // approve/reject/suspend changes the pending count → refresh the nav badge
   }
 
-  async function renderCompanies({ append = false, refetch = true } = {}) {
+  async function renderBusinessQueue({ append = false, refetch = true } = {}) {
     const box = $('admCompanies');
     const snap = captureDirty(box);
     if (refetch) {
@@ -537,7 +656,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const box = $('admCompanies');
     if (!box) return;
     delegate(box, 'click', '[data-open-company]', (event, button) => openCompanyDetail(button.dataset.openCompany));
-    delegate(box, 'click', '[data-load-more-companies]', () => renderCompanies({ append: true }));
+    delegate(box, 'click', '[data-load-more-companies]', () => renderBusinessQueue({ append: true }));
     delegate(box, 'click', '[data-approve]', async (event, button) => {
       const id = button.dataset.approve;
       button.disabled = true;
@@ -585,7 +704,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           const row = (state.companies || []).find((c) => String(c.id) === String(id));
           if (row) row.status = 'approved';
         });
-        await renderCompanies({ refetch: false });
+        await renderBusinessQueue({ refetch: false });
         refreshStats?.();
       } catch (err) {
         bulk.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${(err.data && err.data.error) || 'Bulk approve failed. Retry.'}</p>`);
@@ -593,22 +712,40 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     });
   }
 
-  // ---- "All users" section (consolidates the former top-level Users tab into
-  // Accounts) — a searchable directory of every Supabase-auth user, company or not.
-  function acctUserRow(u) {
-    return `<tr data-au-row="${esc(u.id)}">
-      <td>${esc(u.email || '—')}</td>
-      <td>${esc(u.full_name || '—')}</td>
+  // ---- Primary Accounts console: a user-first directory with business context.
+  function filteredAcctUsers() {
+    const box = $('admAcctUsers');
+    const q = (box?.querySelector('#auSearch')?.value || '').trim().toLowerCase();
+    const filter = state.accountFilter || 'all';
+    return (state.acctUsers || []).filter((user) => {
+      const haystack = [user.email, user.full_name, user.phone, user.company_name, user.company_status, user.staff_role, user.role].filter(Boolean).join(' ').toLowerCase();
+      if (q && !haystack.includes(q)) return false;
+      if (filter === 'companyless') return !user.company_id;
+      if (filter === 'pending') return user.company_status === 'pending';
+      if (filter === 'approved') return user.company_status === 'approved';
+      if (filter === 'suspended') return user.company_status === 'suspended';
+      if (filter === 'staff') return !!user.staff_role || user.role === 'admin' || user.role === 'moderator';
+      return true;
+    });
+  }
+
+  function acctUserRow(user) {
+    const business = user.company_id
+      ? `<button class="link-name" type="button" data-au-open-company="${esc(user.company_id)}">${esc(user.company_name || 'Business')}</button>`
+      : '<span class="muted">No business</span>';
+    return `<tr data-au-row="${esc(user.id)}" data-au-business-status="${esc(user.company_status || 'none')}">
+      <td><button class="link-name" type="button" data-au-manage="${esc(user.id)}">${esc(user.email || 'No email')}</button>
+        <small class="muted" style="display:block">${esc(user.full_name || user.phone || user.id)}</small></td>
       <td>
-        <select class="adm-select adm-select-sm" data-au-role="${esc(u.id)}">${memberRoleOptions(u.role)}</select>
-        ${u.staff_role ? ` <span class="pill">${esc(u.staff_role)}</span>` : ''}
-        <button class="btn btn-ghost btn-sm" type="button" data-au-save="${esc(u.id)}">Save role</button>
+        <select class="adm-select adm-select-sm" data-au-role="${esc(user.id)}">${memberRoleOptions(user.role)}</select>
+        ${user.staff_role ? ` <span class="pill">${esc(user.staff_role)}</span>` : ''}
       </td>
-      <td>${u.company_id ? `<button class="link-name" type="button" data-au-open-company="${esc(u.company_id)}">${esc(u.company_name || 'Account')}</button>` : '<span class="muted">—</span>'}</td>
-      <td>${u.last_sign_in_at ? esc(date(u.last_sign_in_at)) : 'never'}</td>
+      <td>${business}</td>
+      <td>${user.company_status ? statusBadge(user.company_status) : '<span class="muted">—</span>'}</td>
+      <td>${user.last_sign_in_at ? esc(date(user.last_sign_in_at)) : 'never'}</td>
       <td class="adm-inline-actions">
-        <button class="btn btn-ghost btn-sm" type="button" data-au-manage="${esc(u.id)}">Manage</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(u.id)}" data-au-email="${esc(u.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        <button class="btn btn-ghost btn-sm" type="button" data-au-save="${esc(user.id)}">Save role</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i></button>
       </td>
     </tr>`;
   }
@@ -616,40 +753,60 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   function paintAcctUsers() {
     const box = $('admAcctUsers');
     const list = box?.querySelector('[data-au-list]');
+    const metrics = box?.querySelector('[data-account-metrics]');
+    const filters = box?.querySelector('[data-account-filters]');
     if (!list) return;
-    const q = (box.querySelector('#auSearch')?.value || '').trim().toLowerCase();
-    const users = (state.acctUsers || []).filter((u) => !q
-      || [u.email, u.full_name, u.company_name].filter(Boolean).join(' ').toLowerCase().includes(q));
+    if (metrics) metrics.innerHTML = renderAccountMetrics();
+    if (filters) filters.innerHTML = renderAccountFilters();
+    const users = filteredAcctUsers();
     if (!users.length) {
-      list.innerHTML = admEmpty('ph-users', 'No users', q ? 'No users match that search.' : 'Create the first user.');
+      list.innerHTML = admEmpty('ph-users', 'No users', 'No registered users match this search or filter.');
       return;
     }
-    list.innerHTML = `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Company</th><th>Last sign-in</th><th></th></tr></thead><tbody>${users.map(acctUserRow).join('')}</tbody></table></div>`;
+    list.innerHTML = `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>User</th><th>Role</th><th>Business</th><th>Approval</th><th>Last sign-in</th><th></th></tr></thead><tbody>${users.map(acctUserRow).join('')}</tbody></table></div>`;
+  }
+
+  async function loadAccountData({ refetch = true } = {}) {
+    if (!refetch && state.loaded.has('acctUsers') && (state.companies || []).length) return;
+    const [usersRes, companiesRes] = await Promise.all([
+      refetch || !state.loaded.has('acctUsers') ? api('/api/admin/users') : Promise.resolve({ users: state.acctUsers || [] }),
+      refetch || !(state.companies || []).length ? api('/api/admin/companies?limit=500') : Promise.resolve({ companies: state.companies || [] }),
+    ]);
+    state.acctUsers = usersRes.users || [];
+    state.companies = companiesRes.companies || state.companies || [];
+    state.companiesTotal = companiesRes.total ?? state.companies.length;
+    state.companiesOffset = state.companies.length;
+    state.companiesHasMore = !!companiesRes.has_more;
+    state.loaded.add('acctUsers');
   }
 
   async function renderAllUsers({ refetch = true } = {}) {
     const box = $('admAcctUsers');
     if (!box) return;
     if (!box.dataset.mounted) {
-      box.innerHTML = `<div class="adm-tools">
-        <input id="auSearch" class="adm-search" type="search" placeholder="Search email or name" aria-label="Search users">
-        <button class="btn btn-primary btn-sm" type="button" data-au-new><i class="ph ph-user-plus" aria-hidden="true"></i> New user</button>
-        <span class="adm-status" id="auStatus" role="status" aria-live="polite"></span>
-      </div>
-      <div data-au-list>${admSkeleton()}</div>`;
+      box.innerHTML = `<div class="account-console">
+        <div data-account-metrics>${renderAccountMetrics()}</div>
+        <div class="adm-tools">
+          <input id="auSearch" class="adm-search" type="search" placeholder="Search users, businesses, roles" aria-label="Search users">
+          <button class="btn btn-primary btn-sm" type="button" data-au-new><i class="ph ph-user-plus" aria-hidden="true"></i> New user</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-business-new="root"><i class="ph ph-buildings" aria-hidden="true"></i> New business</button>
+          <span class="adm-status" id="auStatus" role="status" aria-live="polite"></span>
+        </div>
+        <div data-account-filters>${renderAccountFilters()}</div>
+        <div class="account-layout">
+          <div data-au-list>${admSkeleton()}</div>
+          <div id="accountDetail" class="adm-card account-detail" hidden></div>
+        </div>
+      </div>`;
       box.dataset.mounted = '1';
     }
-    if (refetch) {
-      box.querySelector('[data-au-list]').innerHTML = admSkeleton();
-      try {
-        state.acctUsers = (await api('/api/admin/users')).users || [];
-        state.loaded.add('acctUsers');
-      } catch {
-        box.querySelector('[data-au-list]').innerHTML = '<p class="adm-status" data-state="err">Could not load users. Reload to retry.</p>';
-        return;
-      }
+    box.querySelector('[data-au-list]').innerHTML = admSkeleton();
+    try {
+      await loadAccountData({ refetch });
+      paintAcctUsers();
+    } catch {
+      box.querySelector('[data-au-list]').innerHTML = '<p class="adm-status" data-state="err">Could not load users. Reload to retry.</p>';
     }
-    paintAcctUsers();
   }
 
   function auStatus(text, kind) {
@@ -657,28 +814,149 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (el) { el.textContent = text || ''; el.dataset.state = kind || ''; }
   }
 
-  function userFormFields(u = {}) {
+  function userFormFields(user = {}) {
     return `
-      <label class="wide">Email <input class="adm-input" name="email" type="email" required value="${esc(u.email || '')}"></label>
-      ${u.id ? '' : '<label>Password <input class="adm-input" name="password" type="text" minlength="8" required placeholder="min 8 chars"></label>'}
-      <label>Full name <input class="adm-input" name="full_name" type="text" value="${esc(u.full_name || '')}"></label>
-      <label>Phone <input class="adm-input" name="phone" type="text" value="${esc(u.phone || '')}"></label>
-      <label>Role <select class="adm-select" name="role">${memberRoleOptions(u.role)}</select></label>
-      <label>Company ID <input class="adm-input" name="company_id" type="text" value="${esc(u.company_id || '')}" placeholder="optional — paste from Accounts"></label>`;
+      <label class="wide">Email <input class="adm-input" name="email" type="email" required value="${esc(user.email || '')}"></label>
+      ${user.id ? '' : '<label>Password <input class="adm-input" name="password" type="text" minlength="8" required placeholder="min 8 chars"></label>'}
+      <label>Full name <input class="adm-input" name="full_name" type="text" value="${esc(user.full_name || '')}"></label>
+      <label>Phone <input class="adm-input" name="phone" type="text" value="${esc(user.phone || '')}"></label>
+      <label>Role <select class="adm-select" name="role">${memberRoleOptions(user.role)}</select></label>
+      <label class="wide">Business <select class="adm-select" name="company_id">${companyOptions(user.company_id)}</select></label>`;
   }
 
-  // Shared by the "New user" button and the "Manage" action on a companyless row.
-  async function openUserDialog(u = {}) {
-    const result = await promptDialog({ title: u.id ? 'Edit user' : 'New user', bodyHtml: userFormFields(u), submitLabel: u.id ? 'Save' : 'Create' });
+  async function openUserDialog(user = {}) {
+    const result = await promptDialog({ title: user.id ? 'Edit user' : 'New user', bodyHtml: userFormFields(user), submitLabel: user.id ? 'Save' : 'Create' });
     if (!result) return;
-    auStatus(u.id ? 'Saving…' : 'Creating…');
+    auStatus(user.id ? 'Saving...' : 'Creating...');
     try {
-      if (u.id) await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: u.id, ...result } });
+      if (user.id) await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: user.id, ...result } });
       else await api('/api/admin/users', { method: 'POST', body: { action: 'create', ...result } });
-      auStatus(u.id ? 'User saved.' : 'User created.', 'ok');
+      auStatus(user.id ? 'User saved.' : 'User created.', 'ok');
       await renderAllUsers({ refetch: true });
     } catch (err) {
       auStatus(err.data?.message || err.data?.error || 'Failed. Retry.', 'err');
+    }
+  }
+
+  function accountDetailBusiness(company, consoleData) {
+    if (!company?.id) {
+      return `<div class="account-detail-section">
+        <h3>Business</h3>
+        <p class="muted">This user is not attached to a business.</p>
+        <button class="btn btn-secondary btn-sm" type="button" data-business-new="attach">Create business</button>
+      </div>`;
+    }
+    return `<div class="account-detail-section">
+      <div class="adm-panel-header"><h3>${esc(company.name || 'Business')}</h3>${statusBadge(company.status)}</div>
+      <div class="dash-row"><span>Terms</span><b>NET-${esc(company.net_terms_days || 0)}</b></div>
+      <div class="dash-row"><span>Credit</span><b>${esc(money(company.credit_limit || 0))}</b></div>
+      <div class="dash-row"><span>Tier</span><b>${esc(company.price_tier || 'retail')}</b></div>
+      <div class="dash-row"><span>Addresses</span><b>${esc((consoleData.addresses || []).length)}</b></div>
+      <div class="dash-row"><span>Orders</span><b>${esc((consoleData.orders || []).length)}</b></div>
+      <div class="company-detail-actions">
+        <button class="btn btn-primary btn-sm" type="button" data-user-company-action="approve">Approve</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-user-company-action="reject">Reject</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-user-company-action="suspend">Suspend</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-business-edit="${esc(company.id)}">Edit business</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-business-delete="${esc(company.id)}">Delete business</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-au-open-company="${esc(company.id)}">Full business view</button>
+      </div>
+    </div>`;
+  }
+
+  async function openAccountUserDetail(userId) {
+    const box = $('accountDetail');
+    if (!box) return;
+    box.hidden = false;
+    box.textContent = 'Loading user...';
+    try {
+      const detail = await api(`/api/admin/users?detail=${encodeURIComponent(userId)}`);
+      const user = detail.profile || {};
+      const company = detail.company || null;
+      box.innerHTML = `<div class="adm-panel-header">
+        <h2>${esc(user.email || user.full_name || 'User')}</h2>
+        <button class="btn btn-ghost btn-sm" type="button" data-account-detail-close aria-label="Close user detail">Close</button>
+      </div>
+      <div class="account-detail-section">
+        <h3>User profile</h3>
+        <form class="adm-form-grid" id="accountUserForm" onsubmit="return false">
+          ${userFormFields(user)}
+        </form>
+        <div class="company-detail-actions">
+          <button class="btn btn-primary btn-sm" type="button" data-account-user-save="${esc(user.id)}">Save user</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i> Delete user</button>
+        </div>
+      </div>
+      ${accountDetailBusiness(company, detail)}
+      <div class="account-detail-section">
+        <h3>Activity</h3>
+        <div class="dash-row"><span>Payment methods</span><b>${esc((detail.payment_methods || []).length)}</b></div>
+        <div class="dash-row"><span>Recent orders</span><b>${esc((detail.orders || []).length)}</b></div>
+      </div>`;
+      box.querySelector('[data-account-detail-close]')?.addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
+      box.querySelector('[data-account-user-save]')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const form = box.querySelector('#accountUserForm');
+        const payload = Object.fromEntries(new FormData(form));
+        button.disabled = true;
+        try {
+          await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: user.id, ...payload } });
+          auStatus('User saved.', 'ok');
+          await renderAllUsers({ refetch: true });
+          await openAccountUserDetail(user.id);
+        } catch (err) {
+          auStatus(err.data?.message || err.data?.error || 'Could not save the user. Retry.', 'err');
+        } finally {
+          button.disabled = false;
+        }
+      });
+      box.querySelectorAll('[data-user-company-action]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          if (!company?.id) return;
+          const action = button.dataset.userCompanyAction;
+          if (action === 'suspend' && !(await confirmDialog('Suspend this business?', { confirmText: 'Suspend', danger: true }))) return;
+          button.disabled = true;
+          try {
+            await api('/api/admin/companies', { method: 'POST', body: { id: company.id, action } });
+            await renderAllUsers({ refetch: true });
+            await openAccountUserDetail(user.id);
+          } catch (err) {
+            auStatus(err.data?.message || err.data?.error || 'Could not update the business. Retry.', 'err');
+            button.disabled = false;
+          }
+        });
+      });
+      box.querySelector('[data-business-edit]')?.addEventListener('click', async () => {
+        try {
+          const saved = await saveBusinessDialog(company || {});
+          if (saved?.id) await openAccountUserDetail(user.id);
+        } catch (err) {
+          auStatus(err.data?.message || err.data?.error || 'Could not save the business. Retry.', 'err');
+        }
+      });
+      box.querySelector('[data-business-delete]')?.addEventListener('click', async () => {
+        try {
+          await deleteBusiness(company);
+          box.hidden = true;
+          box.innerHTML = '';
+        } catch (err) {
+          auStatus(err.data?.message || err.data?.error || 'Could not delete the business. Retry.', 'err');
+        }
+      });
+      box.querySelector('[data-business-new]')?.addEventListener('click', async () => {
+        try {
+          const saved = await saveBusinessDialog({});
+          if (saved?.id) {
+            await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: user.id, company_id: saved.id } });
+            await renderAllUsers({ refetch: true });
+            await openAccountUserDetail(user.id);
+          }
+        } catch (err) {
+          auStatus(err.data?.message || err.data?.error || 'Could not create the business. Retry.', 'err');
+        }
+      });
+    } catch (err) {
+      box.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load user detail. Reload to retry.')}</p>`;
     }
   }
 
@@ -686,13 +964,17 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const box = $('admAcctUsers');
     if (!box) return;
     delegate(box, 'input', '#auSearch', () => paintAcctUsers());
-    delegate(box, 'click', '[data-au-new]', () => openUserDialog({}));
-    delegate(box, 'click', '[data-au-manage]', (event, button) => {
-      const u = (state.acctUsers || []).find((x) => String(x.id) === String(button.dataset.auManage));
-      if (!u) return;
-      if (u.company_id) { showAcctView('companies'); openCompanyDetail(u.company_id); }
-      else openUserDialog(u);
+    delegate(box, 'click', '[data-account-filter]', (event, button) => {
+      state.accountFilter = button.dataset.accountFilter || 'all';
+      paintAcctUsers();
     });
+    delegate(box, 'click', '[data-au-new]', () => openUserDialog({}));
+    delegate(box, 'click', '[data-business-new]', async (event, button) => {
+      if (button.dataset.businessNew !== 'root') return;
+      try { await saveBusinessDialog({}); auStatus('Business created.', 'ok'); }
+      catch (err) { auStatus(err.data?.message || err.data?.error || 'Could not create the business. Retry.', 'err'); }
+    });
+    delegate(box, 'click', '[data-au-manage]', (event, button) => openAccountUserDetail(button.dataset.auManage));
     delegate(box, 'click', '[data-au-open-company]', (event, button) => {
       showAcctView('companies');
       openCompanyDetail(button.dataset.auOpenCompany);
@@ -700,12 +982,12 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     delegate(box, 'click', '[data-au-save]', async (event, button) => {
       const id = button.dataset.auSave;
       const role = box.querySelector(`[data-au-role="${CSS.escape(id)}"]`)?.value;
-      const u = (state.acctUsers || []).find((x) => String(x.id) === String(id));
+      const user = (state.acctUsers || []).find((x) => String(x.id) === String(id));
       button.disabled = true;
       try {
-        if (u?.company_id) await api('/api/admin/users', { method: 'POST', body: { action: 'set_role', company_id: u.company_id, profile_id: id, role } });
+        if (user?.company_id) await api('/api/admin/users', { method: 'POST', body: { action: 'set_role', company_id: user.company_id, profile_id: id, role } });
         else await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: id, role } });
-        if (u) u.role = role;
+        if (user) user.role = role;
         auStatus('Role saved.', 'ok');
       } catch (err) {
         auStatus(err.data?.message || err.data?.error || 'Could not save the role. Retry.', 'err');
@@ -719,6 +1001,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       button.disabled = true;
       try {
         await api('/api/admin/users', { method: 'POST', body: { action: 'delete_user', user_id: button.dataset.auDelete } });
+        $('accountDetail')?.setAttribute('hidden', '');
         await renderAllUsers({ refetch: true });
       } catch (err) {
         button.disabled = false;
@@ -727,16 +1010,24 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     });
   }
 
-  // Companies / All users sub-view toggle within the Accounts panel.
-  function showAcctView(view) {
+  // Companies / Users sub-view toggle within the Accounts panel.
+  function showAcctView(view = 'users') {
     state.acctView = view;
-    $('acctToggle')?.querySelectorAll('[data-acct-view]').forEach((b) => {
-      const on = b.dataset.acctView === view;
-      b.classList.toggle('is-active', on);
-      b.setAttribute('aria-pressed', String(on));
+    $('acctToggle')?.querySelectorAll('[data-acct-view]').forEach((button) => {
+      const on = button.dataset.acctView === view;
+      button.classList.toggle('is-active', on);
+      button.setAttribute('aria-pressed', String(on));
     });
     document.querySelectorAll('[data-acct-panel]').forEach((panel) => { panel.hidden = panel.dataset.acctPanel !== view; });
     if (view === 'users') renderAllUsers({ refetch: !state.loaded.has('acctUsers') });
+    if (view === 'companies') renderBusinessQueue({ refetch: !state.loaded.has('companies') });
+  }
+
+  async function renderCompanies({ append = false, refetch = true } = {}) {
+    if (!state.acctView) state.acctView = 'users';
+    if (state.acctView === 'companies') await renderBusinessQueue({ refetch, append });
+    else await renderAllUsers({ refetch });
+    state.loaded.add('companies');
   }
 
   return { renderCompanies, wireCompanies, openCompanyDetail };
