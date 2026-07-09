@@ -189,7 +189,7 @@ const INDUSTRIES = [
 
 const NAV = [
   ["", "MASEST"], ["products", "Products"], ["services", "Services"], [null, "Use Cases"],
-  ["industries", "Industries"], ["proof", "Field Results"],
+  ["industries", "Industries"], ["proof", "Proof"],
   ["resources", "Resources"]
 ];
 

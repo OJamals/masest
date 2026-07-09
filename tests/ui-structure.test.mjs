@@ -235,7 +235,7 @@ test("no-js fallback nav stays focused on primary categories", () => {
   assert.doesNotMatch(nav, /Programs/);
   assert.match(nav, /Use Cases/);
   assert.match(nav, /Industries/);
-  assert.match(nav, /Field Results/);
+  assert.match(nav, /Proof/);
   assert.match(nav, /Resources/);
   assert.doesNotMatch(nav, /Request a Quote/);
     assert.doesNotMatch(nav, />Home</);
@@ -254,17 +254,18 @@ test("industry generator keeps fallback nav off the removed Programs tab", () =>
   assert.match(navBlock[0], /Use Cases/);
 });
 
-test("no-js fallback groups industries and field results under use cases", () => {
+test("no-js fallback groups industries and proof under use cases", () => {
   const pages = ["index.html", "proof.html", "industries.html", "resources.html"];
 
   for (const page of pages) {
     const html = read(page);
     const nav = html.match(/<nav class="nojs-nav"[\s\S]*?<\/nav>/)?.[0] || "";
     assert.match(nav, /Use Cases/);
-    assert.match(nav, />Field Results</);
+    // Canonical label is "Proof" in both the JS nav and the no-js fallback now.
+    assert.match(nav, />Proof</);
     assert.match(nav, />Industries</);
     assert.match(nav, />Resources</);
-    assert.doesNotMatch(nav, />Proof</);
+    assert.doesNotMatch(nav, />Field Results</);
   }
 });
 

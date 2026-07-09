@@ -467,7 +467,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   <a href="../services">Services</a>
   <span>Use Cases</span>
   <a href="../industries">Industries</a>
-  <a href="../proof">Field Results</a>
+  <a href="../proof">Proof</a>
   <a href="../resources">Resources</a>
 </nav>
 </noscript>
