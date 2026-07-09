@@ -522,6 +522,24 @@ test("scrolly Scene 2 uses a polished SVG pipe flow system", () => {
   assert.match(storyCss, /\.pipe-diagram/);
 });
 
+test("story homepage avoids the nav-injection + fallback-reflow CLS", () => {
+  const home = read("index.html");
+  const chrome = read("js/main/chrome.js");
+  const storyJs = read("js/story.js");
+  // Reserve the nav's 59px so the late-injected sticky nav doesn't shove the
+  // full-viewport #story down on first paint (~0.16 CLS).
+  assert.match(home, /id="nav-reserve"[^>]*style="[^"]*height:\s*59px/);
+  assert.match(home, /<noscript><style>#nav-reserve\{display:none\}<\/style><\/noscript>/);
+  // Apply the scrollytelling layout pre-paint so the :not(.story-ready) fallback
+  // never flashes + reflows — but only when motion is allowed.
+  assert.match(home, /prefers-reduced-motion: reduce[\s\S]{0,140}?getElementById\(['"]story['"]\)\.classList\.add\(['"]story-ready['"]\)/);
+  // chrome.js swaps the reserve for the real nav atomically (same box, no reflow).
+  assert.match(chrome, /getElementById\("nav-reserve"\)[\s\S]{0,120}?replaceWith\(nav\)/);
+  // story.js undoes the pre-paint class when it bails (reduced-motion / libs
+  // failed to load), so the CSS fallback still shows.
+  assert.match(storyJs, /classList\.remove\("story-ready"\)/);
+});
+
 test("scrolly Scene 3 HMIS intro remains readable", () => {
   const home = read("index.html");
   const intro = home.match(/<p class="act-p" data-at="1"([^>]*)>Crews fight buildup[\s\S]*?<\/p>/);

@@ -155,7 +155,13 @@ export function renderChrome() {
           <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
         </div>
     </div>`;
-  document.body.prepend(nav);
+  // If the page ships a static nav-height reserve (#nav-reserve, e.g. the story
+  // homepage where a late-injected nav would shove the full-viewport #story down
+  // ~59px = ~0.16 CLS), swap it for the real nav atomically: same box, same
+  // height, so nothing reflows. Other pages just prepend as before.
+  const navReserve = document.getElementById("nav-reserve");
+  if (navReserve) navReserve.replaceWith(nav);
+  else document.body.prepend(nav);
   document.body.prepend(skip);
  const leadBarPages = new Set([
  "products",

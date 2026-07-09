@@ -25,6 +25,11 @@
 <!-- /seo:auto -->
 </head>
 <body>
+<!-- Reserves the nav's height so chrome.js can swap it in without shoving the
+     full-viewport story down ~59px on first paint (CLS). Dark to match the
+     story backdrop = no white flash before the real nav renders. -->
+<div id="nav-reserve" aria-hidden="true" style="height:59px;background:#0b0d12"></div>
+<noscript><style>#nav-reserve{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 
 <noscript>
@@ -46,6 +51,13 @@
      Degrades to a stacked, fully-visible layout without JS.
      ============================================================ -->
 <div class="story" id="story" role="region" aria-label="The story of conventional chemicals versus VertKleen">
+<script>/* Apply the scrollytelling layout before first paint so the static
+  :not(.story-ready) fallback never flashes and reflows when story.js loads
+  (~0.17 CLS race). Skip under reduced-motion (that path keeps the fallback).
+  No-JS users skip this entirely. story.js re-adds it before GSAP setup, and
+  removes it again if GSAP fails to load — so a missing lib still degrades. */
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+    document.getElementById('story').classList.add('story-ready');</script>
 
   <!-- Chapter rail (pins for the whole story) -->
   <div class="story-rail" aria-hidden="true">
@@ -561,7 +573,7 @@
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
 <script src="vendor/gsap/gsap.min.js" defer></script>
 <script src="vendor/gsap/ScrollTrigger.min.js" defer></script>
-<script src="js/story.js?v=20260708a" defer></script>
+<script src="js/story.js?v=20260708b" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {

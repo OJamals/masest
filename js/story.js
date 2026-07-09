@@ -19,7 +19,12 @@
   if (!story) return;
 
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce || !window.gsap || !window.ScrollTrigger) return; /* CSS fallback shows everything */
+  if (reduce || !window.gsap || !window.ScrollTrigger) {
+    /* index.html may have applied .story-ready pre-paint (CLS guard); undo it so
+       the CSS fallback layout shows when we're not driving the animation. */
+    story.classList.remove("story-ready");
+    return;
+  }
 
   gsap.registerPlugin(ScrollTrigger);
   /* Mobile URL-bar show/hide resizes the viewport vertically on scroll; without
