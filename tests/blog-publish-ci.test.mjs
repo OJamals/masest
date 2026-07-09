@@ -47,3 +47,34 @@ test("wipe guard: refuses to blank a non-empty blog.json when the source is empt
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("wipe guard: refuses a partial source that drops protected comparison posts", () => {
+  const out = mkdtempSync(join(tmpdir(), "pbci-"));
+  const protectedSlugs = [
+    "vertkleen-hcr-vs-clr",
+    "hcr-vs-rydlyme",
+    "cr-hd-vs-simple-green",
+    "lam3-vs-wet-forget",
+    "beer-line-cleaner-cost-comparison",
+  ];
+  try {
+    const previous = protectedSlugs.map((slug) => ({ slug, title: slug }));
+    writeFileSync(join(out, "blog.json"), `${JSON.stringify({ blog_posts: previous })}\n`);
+    const partial = [{
+      type: "blog_post",
+      slug: "ordinary-post",
+      title: "Ordinary post",
+      status: "published",
+      payload: { category: "news", date: "2026-01-01", excerpt: "e", body: "b" },
+      seo: {},
+    }];
+
+    assert.throws(() => run(partial, out), /protected comparison posts/);
+    assert.deepEqual(
+      JSON.parse(readFileSync(join(out, "blog.json"), "utf8")).blog_posts.map((post) => post.slug),
+      protectedSlugs,
+    );
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});

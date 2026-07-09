@@ -13,6 +13,13 @@ import { loadEntries, snapshotPayloads } from "./build-content.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUT = process.env.CONTENT_EXPORT_OUT_DIR || join(ROOT, "data/content");
+const PROTECTED_COMPARISON_SLUGS = [
+  "vertkleen-hcr-vs-clr",
+  "hcr-vs-rydlyme",
+  "cr-hd-vs-simple-green",
+  "lam3-vs-wet-forget",
+  "beer-line-cleaner-cost-comparison",
+];
 
 async function main() {
   const entries = await loadEntries();
@@ -25,14 +32,26 @@ async function main() {
   const posts = payload.blog_posts || [];
   const blogPath = join(OUT, "blog.json");
 
-  // Zero-wipe guard: never blank a non-empty committed blog.json from an empty
-  // or partial source (unreachable DB, wrong creds).
-  if (!posts.length && existsSync(blogPath)) {
+  // Publishing must not silently remove protected SEO posts. This catches both
+  // an empty source and a valid-looking partial CMS response.
+  if (existsSync(blogPath)) {
     const prev = JSON.parse(readFileSync(blogPath, "utf8")).blog_posts || [];
     if (prev.length) {
-      console.error("publish-blog-ci: refusing to wipe blog.json to 0 posts (source returned none).");
-      process.exitCode = 1;
-      return;
+      if (!posts.length) {
+        console.error("publish-blog-ci: refusing to wipe blog.json to 0 posts (source returned none).");
+        process.exitCode = 1;
+        return;
+      }
+      const previousSlugs = new Set(prev.map((post) => post.slug));
+      const nextSlugs = new Set(posts.map((post) => post.slug));
+      const missingProtected = PROTECTED_COMPARISON_SLUGS.filter(
+        (slug) => previousSlugs.has(slug) && !nextSlugs.has(slug),
+      );
+      if (missingProtected.length) {
+        console.error(`publish-blog-ci: refusing to remove protected comparison posts: ${missingProtected.join(", ")}.`);
+        process.exitCode = 1;
+        return;
+      }
     }
   }
 
