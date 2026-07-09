@@ -5,6 +5,12 @@
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
 import { esc, delegate, confirmDialog } from '../util.js';
+import {
+  createRichTextEditor,
+  referencePickerTemplate,
+  refreshRichTextEditor,
+  richEditorTemplate,
+} from './rich-editor.js';
 import { renderNewsletterBody } from '../newsletter-render.js';
 
 const SECTIONS = [
@@ -137,17 +143,19 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
           </label>
           <label class="full">Subject <input id="nlSubject" class="adm-input" maxlength="300" required></label>
           <div class="full">
-            <div class="adm-md-tools">
-              <button type="button" class="btn btn-ghost btn-sm" id="nlInsertImage"><i class="ph ph-image" aria-hidden="true"></i> Insert image</button>
-              <span class="adm-md-hint">Markdown + raw HTML: **bold**, ## heading, - list, [text](url), &lt;div&gt;…&lt;/div&gt;</span>
-            </div>
             <div class="nl-edit-grid">
-              <label>Body <textarea id="nlBody" class="adm-textarea adm-content-field-text" style="min-height:260px" spellcheck="true"></textarea></label>
+              ${richEditorTemplate({
+                key: 'newsletter-body',
+                label: 'Body',
+                textareaAttrs: 'id="nlBody" class="adm-textarea adm-content-field-text" spellcheck="true"',
+                minHeight: 300,
+              })}
               <div class="adm-md-preview">
                 <span class="adm-md-preview-label">Live preview</span>
                 <div id="nlPreview" class="adm-md-preview-body blog-body"></div>
               </div>
             </div>
+            ${referencePickerTemplate({ prefix: 'nl', admEmpty })}
           </div>
           <div class="full">
             <p class="adm-eyebrow" style="margin-top:6px">Audience</p>
@@ -243,6 +251,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     if (section === 'compose') {
       body.innerHTML = banner + composeTemplate();
       populateEditor(editingCache());
+      mountNewsletterRichEditor();
       updatePreview();
       applySourceVisibility();
       applyScheduleVisibility();
@@ -337,6 +346,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     $('nlSource').value = entry.source === 'blog_post' ? 'blog_post' : 'compose';
     $('nlSubject').value = entry.subject || '';
     $('nlBody').value = entry.body_md || '';
+    refreshRichTextEditor(box()?.querySelector('[data-rich-editor-key="newsletter-body"]'));
     writeAudience(entry.audience || {});
     const heading = $('nlEditorHeading');
     if (heading) heading.textContent = entry.id ? 'Edit newsletter' : 'New newsletter';
@@ -363,6 +373,24 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     const el = $('nlPreview');
     if (!el) return;
     el.innerHTML = renderNewsletterBody($('nlBody')?.value || '');
+  }
+
+  function mountNewsletterRichEditor() {
+    const root = box();
+    const editor = root?.querySelector('[data-rich-editor-key="newsletter-body"]');
+    if (!editor) return;
+    createRichTextEditor(editor, {
+      root,
+      api,
+      output: $('nlBody'),
+      onChange: () => updatePreview(),
+      referencePickerSelector: '#nlReferencePicker',
+      referenceRowsSelector: '#nlReferenceRows',
+      onInsertImage: async (_key, ctx) => {
+        const details = await promptImageDetails();
+        if (details) ctx.insertMarkdown(`![${details.alt || 'image'}](${details.url})`);
+      },
+    });
   }
 
   function applySourceVisibility() {
@@ -403,6 +431,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     if ($('nlBody')) {
       $('nlBody').value = `${post.excerpt || ''}\n\n[Read the full post](https://masest.co/blog/${post.slug})`;
     }
+    refreshRichTextEditor(box()?.querySelector('[data-rich-editor-key="newsletter-body"]'));
     updatePreview();
   }
 
@@ -604,19 +633,9 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     delegate(root, 'change', '#nlSchedMode', applyScheduleVisibility);
     delegate(root, 'input', '#nlBody', updatePreview);
     delegate(root, 'change', '#nlBlogPick', (event, sel) => applyBlogPrefill(sel.value));
-    delegate(root, 'click', '#nlInsertImage', async () => {
-      const ta = $('nlBody');
-      if (!ta) return;
-      const details = await promptImageDetails();
-      if (!details) return;
-      const md = `![${details.alt}](${details.url})`;
-      const start = Number.isInteger(ta.selectionStart) ? ta.selectionStart : ta.value.length;
-      const end = Number.isInteger(ta.selectionEnd) ? ta.selectionEnd : ta.value.length;
-      ta.value = ta.value.slice(0, start) + md + ta.value.slice(end);
-      const caret = start + md.length;
-      ta.focus();
-      ta.setSelectionRange(caret, caret);
-      updatePreview();
+    delegate(root, 'click', '[data-editor-action="close_reference"]', () => {
+      const picker = $('nlReferencePicker');
+      if (picker) picker.hidden = true;
     });
     delegate(root, 'click', '[data-nl-action="new"]', () => resetEditor());
     delegate(root, 'click', '[data-nl-action="save"]', () => saveDraft());

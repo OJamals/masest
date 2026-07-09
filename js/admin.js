@@ -146,6 +146,7 @@ function setTab(tab) {
       renderPricing({ refetch: !state.loaded.has('pricing') }); wireCoupons();
     },
     content: renderContent,
+    blog: renderBlog,
     messages: renderThreads,
     quotes: renderQuotePipeline,
     reviews: renderReviews,
@@ -303,7 +304,7 @@ function admListPager(attr, loaded, total, hasMore) {
 const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
 const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, refreshStats });
 // Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
-const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager });
+const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats });
 // Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
 const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager });
 // Deep-link dispatcher: jumps from a CRM inbox task row to the owning surface.
@@ -326,7 +327,7 @@ const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = creat
 const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message, admSkeleton, admEmpty });
 
 // Content tab: staff-managed CMS entries for non-commerce public content.
-const { renderContent, wireContent } = createContentTab({ $, api, state, admSkeleton, admEmpty });
+const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({ $, api, state, admSkeleton, admEmpty });
 
 // Messages/threads tab extracted to ./admin/threads.js (#36 split). Shared primitives + sourceLabel injected.
 const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats });
@@ -454,6 +455,7 @@ function wire() {
   wireProducts();
   wirePricing();
   wireContent();
+  wireBlog();
   wireQuotes();
   wireCrm();
   wireThreads();

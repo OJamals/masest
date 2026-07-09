@@ -1,3 +1,5 @@
+import { renderMarkdown } from "./md.js";
+
 const root = document.getElementById("contentPreviewRoot");
 
 const LABELS = {
@@ -45,9 +47,33 @@ function definitionRows(payload = {}) {
     `).join("");
 }
 
+export function renderBlogPreview(entry = {}, payload = objectValue(entry.payload)) {
+  const tags = Array.isArray(payload.tags) ? payload.tags : [];
+  return `
+    <div class="wrap">
+      <article class="content-preview-card blog-preview">
+        <div class="content-preview-meta">
+          <span class="content-preview-pill">Blog post</span>
+          ${payload.category ? `<span class="content-preview-pill">${esc(payload.category)}</span>` : ""}
+          ${payload.date ? `<span class="content-preview-pill">${esc(payload.date)}</span>` : ""}
+        </div>
+        <h1 class="headline">${esc(payload.title || entry.title || "Untitled draft")}</h1>
+        ${payload.excerpt ? `<p class="subhead">${esc(payload.excerpt)}</p>` : ""}
+        ${payload.hero ? `<figure class="blog-hero-media"><img src="${esc(payload.hero)}" alt="${esc(payload.hero_alt || payload.title || entry.title || "")}" loading="lazy" decoding="async"></figure>` : ""}
+        ${tags.length ? `<p class="muted">${tags.map((tag) => `#${esc(tag)}`).join(" ")}</p>` : ""}
+        <div class="blog-body">${renderMarkdown(payload.body || "")}</div>
+      </article>
+    </div>
+  `;
+}
+
 export function renderPreview(entry = {}) {
   if (!root) return;
   const payload = objectValue(entry.payload);
+  if (entry.type === "blog_post") {
+    root.innerHTML = renderBlogPreview(entry, payload);
+    return;
+  }
   const rows = definitionRows(payload);
   const summary = previewSummary(payload);
   root.innerHTML = `

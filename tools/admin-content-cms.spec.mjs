@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { once } from "node:events";
 import { test, expect } from "@playwright/test";
 
-const PORT = 4191;
+const PORT = Number(process.env.MASEST_CMS_TEST_PORT || 4100 + (process.pid % 1000));
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const SCREENSHOT_DIR = "output/playwright/cms-expansion";
 let server;
@@ -76,8 +76,12 @@ function contentList() {
 }
 
 async function scrollContentPanelIntoView(page) {
-  await page.locator("#admContent").scrollIntoViewIfNeeded();
-  await page.evaluate(() => window.scrollBy(0, -88));
+  await page.evaluate(() => {
+    const mounts = [...document.querySelectorAll("#admContent, #admBlog")];
+    const target = mounts.find((el) => el.getClientRects().length && el.offsetParent !== null) || mounts[0];
+    target?.scrollIntoView({ block: "start" });
+    window.scrollBy(0, -88);
+  });
 }
 
 test("staff edits structured CMS service fields and posts normalized payload", async ({ page }) => {
@@ -631,6 +635,10 @@ test("blog_post form renders all field editors + live markdown preview", async (
   await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator("#contentType").selectOption("blog_post");
+  const selectorWidths = await page.locator("#contentType, #contentLocale").evaluateAll((nodes) =>
+    nodes.map((node) => Math.round(node.getBoundingClientRect().width)),
+  );
+  expect(selectorWidths[0]).toBeGreaterThan(selectorWidths[1] * 1.45);
 
   const categorySelect = page.locator('select[data-content-payload-field="category"]');
   await expect(categorySelect).toBeVisible();
@@ -648,12 +656,16 @@ test("blog_post form renders all field editors + live markdown preview", async (
   const bodyPreview = page.locator('[data-md-preview-for="body"]');
   await expect(bodyPreview).toBeAttached();
 
-  await page.locator('[data-content-payload-field="body"]').fill("## Heading\n\n**bold** text");
+  const postBodyOutput = page.locator('[data-content-payload-field="body"]');
+  const postBodyEditor = page.locator('[data-rich-editor-key="body"] [data-rich-editor-surface]');
+  await postBodyEditor.evaluate((node) => {
+    node.innerHTML = "<p><strong>Bold</strong> text</p>";
+    node.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+  });
+  await expect(postBodyOutput).toHaveValue("**Bold** text");
   const previewBody = bodyPreview.locator(".adm-md-preview-body");
-  await expect(previewBody.locator("h2")).toHaveText("Heading");
-  await expect(previewBody.locator("strong")).toHaveText("bold");
-  expect(await previewBody.innerHTML()).toContain("<h2>Heading</h2>");
-  expect(await previewBody.innerHTML()).toContain("<strong>bold</strong>");
+  await expect(previewBody.locator("strong")).toHaveText("Bold");
+  expect(await previewBody.innerHTML()).toContain("<strong>Bold</strong>");
 
   await chipsWidget.locator("[data-chip-input]").fill("case-study");
   await chipsWidget.locator("[data-chip-input]").press("Enter");
@@ -661,13 +673,265 @@ test("blog_post form renders all field editors + live markdown preview", async (
   await expect(page.locator('input[type="hidden"][data-content-payload-field="tags"]')).toHaveValue("case-study");
 
   // In-post image control: the Insert image button opens the asset picker.
-  const insertImage = page.locator('[data-content-action="asset_md"][data-content-asset-target="body"]');
+  await page.route("**/api/admin/content-assets**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      assets: [{
+        storage_path: "img/blog/descaling-without-acid.webp",
+        public_url: "img/blog/descaling-without-acid.webp",
+        alt: "Blog descaling without acid preview",
+        status: "available",
+        mime_type: "image/webp",
+      }],
+    }),
+  }));
+  const insertImage = page.locator('[data-rich-editor-key="body"] [data-editor-action="insert_image"]');
   await expect(insertImage).toBeVisible();
   await insertImage.click();
   await expect(page.locator("#contentAssetPicker")).toBeVisible();
+  const assetRow = page.locator(".adm-content-asset-row").first();
+  await expect(assetRow).toBeVisible();
+  const assetMetrics = await assetRow.evaluate((row) => {
+    const info = row.querySelector(".adm-content-asset-info")?.getBoundingClientRect();
+    const actions = row.querySelector(".adm-content-asset-actions")?.getBoundingClientRect();
+    return {
+      infoWidth: Math.round(info?.width || 0),
+      infoTop: Math.round(info?.top || 0),
+      actionsTop: Math.round(actions?.top || 0),
+    };
+  });
+  expect(assetMetrics.infoWidth).toBeGreaterThan(280);
+  expect(assetMetrics.actionsTop).toBeGreaterThan(assetMetrics.infoTop);
   await page.locator('[data-content-action="close_assets"]').first().click();
   await expect(page.locator("#contentAssetPicker")).toBeHidden();
 
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-blog-post-desktop.png` });
+});
+
+test("dedicated blog tab renders scoped editor with formatting, references, preview, and current posts", async ({ page }) => {
+  await bootAsStaff(page);
+
+  const blogEntries = [{
+    type: "blog_post",
+    slug: "hmis-000-explained",
+    title: "What HMIS 0-0-0 Actually Means",
+    status: "published",
+    locale: "en",
+    payload: {
+      title: "What HMIS 0-0-0 Actually Means",
+      category: "technical",
+      tags: ["hmis", "safety"],
+      author: "MASEST Technical Team",
+      date: "2026-07-01",
+      hero: "img/blog/hmis-000-explained.webp",
+      hero_alt: "VertKleen HCR jug beside a clear sample",
+      excerpt: "A lower handling burden starts with safer chemistry.",
+      body: "## The three numbers\n\nHMIS rates **Health**, **Flammability**, and **Physical hazard**.",
+    },
+    seo: { description: "What HMIS 0-0-0 means for facilities." },
+    updated_at: "2026-07-01T12:00:00Z",
+  }];
+  const serviceEntries = [{
+    type: "service",
+    slug: "water-analysis",
+    title: "Water analysis",
+    status: "published",
+    locale: "en",
+    payload: {
+      summary: "Field-ready industrial water analysis.",
+    },
+    seo: {},
+    updated_at: "2026-07-01T12:00:00Z",
+  }];
+
+  await page.route("**/api/admin/content**", (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      const body = req.postDataJSON();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, entry: { ...body.entry, status: body.publish ? "published" : "draft" } }),
+      });
+    }
+    const url = new URL(req.url());
+    const type = url.searchParams.get("type") || "";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: type === "service" ? serviceEntries : blogEntries }),
+    });
+  });
+  await page.route("**/api/admin/products", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [{
+        sku: "hcr",
+        name: "VertKleen HCR",
+        image_url: "img/products/hvac-hcr-studio.webp",
+        photo_alt: "VertKleen HCR product bottle",
+        active: true,
+      }],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/admin.html#blog`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await expect(page.locator('[data-tab="blog"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#admBlog")).toContainText("Blog editor");
+  await expect(page.locator("#admBlog")).toContainText("Current posts");
+  await expect(page.locator("#admBlog")).toContainText("What HMIS 0-0-0 Actually Means");
+  await expect(page.locator("#contentType")).toHaveValue("blog_post");
+  await expect(page.locator("#contentTypeFilter")).toHaveCount(0);
+  await expect(page.locator('[data-content-action="draft"]')).toBeVisible();
+  await expect(page.locator('[data-content-action="publish"]')).toBeVisible();
+  await expect(page.locator("#contentRevisionList")).toBeVisible();
+
+  await page.locator("[data-content-edit]").first().click();
+  const bodyOutput = page.locator('[data-content-payload-field="body"]');
+  const bodyEditor = page.locator('#admBlog [data-rich-editor-key="body"] [data-rich-editor-surface]');
+  await expect(bodyEditor).toBeVisible();
+  await bodyEditor.evaluate((node) => {
+    node.innerHTML = "<p>Scale cleanup</p>";
+    node.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+  });
+  await expect(bodyOutput).toHaveValue("Scale cleanup");
+  await bodyEditor.evaluate((node) => {
+    const text = node.querySelector("p")?.firstChild;
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, 5);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    node.focus();
+  });
+  await page.locator('[data-editor-action="format_bold"]').click();
+  await expect(bodyOutput).toHaveValue("**Scale** cleanup");
+
+  await bodyEditor.evaluate((node) => {
+    const text = node.querySelector("p")?.childNodes[1];
+    const range = document.createRange();
+    range.setStart(text, 1);
+    range.setEnd(text, text.textContent.length);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    node.focus();
+  });
+  await page.locator('[data-editor-action="format_underline"]').click();
+  await expect(bodyOutput).toHaveValue("**Scale** ++cleanup++");
+
+  await page.locator('[data-editor-format-size]').selectOption("20");
+  await bodyEditor.evaluate((node) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    node.focus();
+  });
+  await page.locator('[data-editor-action="format_size"]').click();
+  await expect(bodyOutput).toHaveValue(/\[\[size:20\|/);
+
+  await page.locator('[data-editor-action="reference_product"]').click();
+  await expect(page.locator("#contentReferencePicker")).toBeVisible();
+  await expect(page.locator("#contentReferenceRows")).toContainText("VertKleen HCR");
+  await page.locator('[data-editor-reference-path="/products/hcr"]').click();
+  await expect(bodyOutput).toHaveValue(/\[\[card:title=VertKleen HCR\|href=\/products\/hcr\|image=img\/products\/hvac-hcr-studio\.webp/);
+
+  await page.locator('[data-editor-action="reference_service"]').click();
+  await expect(page.locator("#contentReferenceRows")).toContainText("Water analysis");
+  await page.locator('[data-editor-reference-path="/services"]').click();
+  await expect(bodyOutput).toHaveValue(/\[\[card:title=Water analysis\|href=\/services/);
+
+  await page.locator('[data-content-action="preview"]').click();
+  const frame = page.frameLocator("#contentPreviewFrame");
+  await expect(frame.locator("article.blog-preview")).toBeVisible();
+  await expect(frame.locator(".blog-body")).toContainText("Scale");
+  await expect(frame.locator('.blog-body a.md-card[href="/products/hcr"]')).toContainText("VertKleen HCR");
+  await scrollContentPanelIntoView(page);
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-blog-dedicated-desktop.png` });
+});
+
+test("newsletter compose uses the shared visual editor and markdown output", async ({ page }) => {
+  await bootAsStaff(page);
+
+  await page.route("**/api/admin/newsletters**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ newsletters: [], settings: { auto_send_latest_blog: false }, setup_ready: true }),
+  }));
+  await page.route("**/api/admin/recipients**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ recipients: [], counts: { users: 3, leads: 2, imported: 1 } }),
+  }));
+  await page.route("**/api/admin/products", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [{
+        sku: "hcr",
+        name: "VertKleen HCR",
+        image_url: "img/products/hvac-hcr-studio.webp",
+        photo_alt: "VertKleen HCR product bottle",
+        active: true,
+      }],
+    }),
+  }));
+  await page.route("**/api/admin/content**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      entries: [{
+        type: "service",
+        slug: "water-analysis",
+        title: "Water analysis",
+        status: "published",
+        locale: "en",
+        payload: { summary: "Field-ready industrial water analysis." },
+        seo: {},
+      }],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/admin.html#newsletter`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await expect(page.locator('[data-tab="newsletter"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#nlBody")).toBeAttached();
+  const editor = page.locator('#admNewsletter [data-rich-editor-key="newsletter-body"] [data-rich-editor-surface]');
+  await expect(editor).toBeVisible();
+
+  await editor.evaluate((node) => {
+    node.innerHTML = "<p>Field note</p>";
+    node.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+  });
+  await expect(page.locator("#nlBody")).toHaveValue("Field note");
+  await editor.evaluate((node) => {
+    const text = node.querySelector("p")?.firstChild;
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, 5);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    node.focus();
+  });
+  await page.locator('#admNewsletter [data-editor-action="format_bold"]').click();
+  await expect(page.locator("#nlBody")).toHaveValue("**Field** note");
+
+  await page.locator('#admNewsletter [data-editor-action="reference_product"]').click();
+  await expect(page.locator("#nlReferenceRows")).toContainText("VertKleen HCR");
+  await page.locator('#admNewsletter [data-editor-reference-path="/products/hcr"]').click();
+  await expect(page.locator("#nlBody")).toHaveValue(/\[\[card:title=VertKleen HCR\|href=\/products\/hcr/);
+
+  await page.locator('#admNewsletter [data-editor-action="reference_service"]').click();
+  await expect(page.locator("#nlReferenceRows")).toContainText("Water analysis");
+  await page.locator('#admNewsletter [data-editor-reference-path="/services"]').click();
+  await expect(page.locator("#nlBody")).toHaveValue(/\[\[card:title=Water analysis\|href=\/services/);
+  await expect(page.locator('#nlPreview .md-card[href="/products/hcr"]')).toContainText("VertKleen HCR");
 });

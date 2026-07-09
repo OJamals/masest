@@ -16,6 +16,8 @@ test('admin_order_metrics migration aggregates DB-side over the full orders tabl
   assert.match(sql, /function\s+public\.admin_order_metrics/i);
   assert.match(sql, /security\s+definer/i);
   assert.match(sql, /sum\(total\)/i, 'must sum revenue in SQL, not sample it in JS');
+  assert.match(sql, /status in \('paid','net_open','net_paid','fulfilled'\)/i, 'fulfillment queue must include NET-paid unfulfilled orders');
+  assert.match(sql, /coalesce\(tracking_status,\s*'processing'\)\s*<>\s*'delivered'/i, 'delivered orders must leave the fulfillment queue');
   assert.match(sql, /grant\s+execute[\s\S]*admin_order_metrics[\s\S]*service_role/i);
 });
 

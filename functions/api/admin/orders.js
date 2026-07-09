@@ -8,14 +8,109 @@ import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, em
 import { recordAudit } from '../../_lib/audit.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { computeRefund } from '../../_lib/refund.js';
-import { stockIncrements } from '../../_lib/order-shape.js';
+import { stockDecrements, stockIncrements } from '../../_lib/order-shape.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 import { planNetSettlement, netAging } from '../../_lib/credit.js';
 import { escapeLike } from '../../_lib/crm.js';
+import { decorateOrderLifecycle, settledOrderStatus, shouldPromoteToFulfilled } from '../../_lib/order-lifecycle.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
+const WRITABLE_ORDER_STATUSES = ORDER_STATUSES.filter((status) => status !== 'cart');
+const PAYMENT_METHODS = ['stripe', 'net'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
 const TRACKING_STATUSES = ['processing', 'packing', 'shipped', 'delivered', 'blocked'];
+
+function roundAmount(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
+function optionalText(value, max = 160) {
+  const text = String(value ?? '').trim();
+  return text ? text.slice(0, max) : null;
+}
+
+function amountOr(value, fallback) {
+  if (value == null || value === '') return fallback == null ? null : roundAmount(fallback);
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? roundAmount(n) : null;
+}
+
+function truthyFlag(value) {
+  return value === true || ['1', 'true', 'yes', 'y'].includes(String(value || '').trim().toLowerCase());
+}
+
+function normalizeOrderStatus(value, currentStatus = null) {
+  const status = String(value || currentStatus || '').trim();
+  if (!WRITABLE_ORDER_STATUSES.includes(status)) return { ok: false, error: 'invalid_status' };
+  if (status === 'refunded' && currentStatus !== 'refunded') {
+    return { ok: false, error: 'use_refund_action', message: 'Use the Refund control — setting the status directly would not move any money.' };
+  }
+  return { ok: true, status };
+}
+
+function normalizePaymentMethod(value) {
+  const method = String(value || '').trim();
+  return PAYMENT_METHODS.includes(method) ? { ok: true, method } : { ok: false, error: 'invalid_payment_method' };
+}
+
+function normalizeOrderItems(items) {
+  if (!Array.isArray(items) || !items.length) return { ok: false, error: 'order_items_required' };
+  if (items.length > 100) return { ok: false, error: 'too_many_order_items' };
+  const out = [];
+  for (const raw of items) {
+    const sku = optionalText(raw?.sku, 120);
+    const productSku = optionalText(raw?.product_sku ?? raw?.productSku, 120);
+    const name = optionalText(raw?.name, 220) || sku;
+    const qty = Math.floor(Number(raw?.qty));
+    const unitPrice = amountOr(raw?.unit_price ?? raw?.unitPrice ?? raw?.price, null);
+    if (!sku || !name || !Number.isFinite(qty) || qty <= 0 || unitPrice == null) {
+      return { ok: false, error: 'invalid_order_item' };
+    }
+    out.push({
+      sku,
+      product_sku: productSku,
+      name,
+      qty,
+      unit_price: unitPrice,
+      line_total: roundAmount(qty * unitPrice),
+      backordered: truthyFlag(raw?.backordered),
+    });
+  }
+  return { ok: true, items: out, subtotal: roundAmount(out.reduce((sum, item) => sum + item.line_total, 0)) };
+}
+
+function normalizeOrderWrite(body, currentStatus = null) {
+  const status = normalizeOrderStatus(body.status, currentStatus);
+  if (!status.ok) return status;
+  const payment = normalizePaymentMethod(body.payment_method);
+  if (!payment.ok) return payment;
+  const lines = normalizeOrderItems(body.items);
+  if (!lines.ok) return lines;
+  const tax = amountOr(body.tax, 0);
+  const subtotal = amountOr(body.subtotal, lines.subtotal);
+  const total = amountOr(body.total, subtotal + tax);
+  if (subtotal == null || tax == null || total == null) return { ok: false, error: 'invalid_order_total' };
+  return {
+    ok: true,
+    items: lines.items,
+    patch: {
+      company_id: optionalText(body.company_id, 80),
+      customer_email: optionalText(body.customer_email, 240),
+      status: status.status,
+      payment_method: payment.method,
+      subtotal,
+      tax,
+      total,
+      currency: (optionalText(body.currency, 8) || 'usd').toLowerCase(),
+    },
+  };
+}
+
+async function decrementOrderStock(sb, items) {
+  for (const args of stockDecrements(items)) {
+    await sb.rpc('decrement_variant_stock', args).then(() => {}, () => {});
+  }
+}
 
 function toCsv(rows) {
   return rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
@@ -104,7 +199,7 @@ export async function onRequest({ request, env }) {
         .eq('target_type', 'order').eq('target_id', detailId)
         .order('created_at', { ascending: false }).limit(50);
       return json(200, {
-        order: { ...order, net_aging: netAging(order, order.companies?.net_terms_days) },
+        order: decorateOrderLifecycle({ ...order, net_aging: netAging(order, order.companies?.net_terms_days) }),
         timeline: timeline || [],
       });
     }
@@ -113,7 +208,7 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
+      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
@@ -133,10 +228,11 @@ export async function onRequest({ request, env }) {
     if (error) return json(500, { error: error.message });
 
     if (isCsv) {
-      const rows = [['Order', 'Date', 'Company', 'Customer email', 'Status', 'Payment', 'QBO doc', 'QBO payment', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
+      const rows = [['Order', 'Date', 'Company', 'Customer email', 'Status', 'Lifecycle', 'Next action', 'Payment', 'QBO doc', 'QBO payment', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
       for (const o of data || []) {
+        const lifecycle = decorateOrderLifecycle(o).lifecycle;
         const items = (o.order_items || []).map((i) => `${i.qty}x ${i.name || i.sku}`).join('; ');
-        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.status, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '',
+        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.status, lifecycle.label, lifecycle.next_action, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '',
           o.tracking_status || '', o.carrier || '', o.tracking_number || '', o.estimated_delivery_at || '',
           o.subtotal ?? '', o.tax ?? '', o.total ?? '', o.currency || '', items]);
       }
@@ -145,14 +241,94 @@ export async function onRequest({ request, env }) {
         headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="masest-orders.csv"' },
       });
     }
-    const orders = (data || []).map((o) => ({ ...o, net_aging: netAging(o, o.companies?.net_terms_days) }));
+    const orders = (data || []).map((o) => decorateOrderLifecycle({ ...o, net_aging: netAging(o, o.companies?.net_terms_days) }));
     return json(200, { orders, ...pageEnvelope(data, { limit, offset, count }) });
   }
 
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await readBody(request);
+
+    if (body.action === 'create_order') {
+      if (!staffCan(role, 'order.write')) return json(403, { error: 'forbidden' });
+      const normalized = normalizeOrderWrite(body);
+      if (!normalized.ok) return json(400, { error: normalized.error, message: normalized.message });
+      const invoiceId = optionalText(body.qbo_invoice_id, 80);
+      const paymentId = optionalText(body.qbo_payment_id, 80);
+      const qboLinked = Boolean(invoiceId || paymentId);
+      const orderInsert = {
+        ...normalized.patch,
+        qbo_invoice_id: invoiceId,
+        qbo_doc_id: invoiceId,
+        qbo_doc_type: invoiceId ? 'invoice' : null,
+        qbo_payment_id: paymentId,
+        qbo_sync_status: qboLinked ? 'synced' : 'pending',
+        qbo_synced_at: qboLinked ? new Date().toISOString() : null,
+      };
+      const { data: order, error } = await sb.from('orders')
+        .insert(orderInsert)
+        .select('id,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
+        .single();
+      if (error) return json(500, { error: error.message });
+      const orderItems = normalized.items.map((item) => ({ ...item, order_id: order.id }));
+      const { error: itemsError } = await sb.from('order_items').insert(orderItems);
+      if (itemsError) {
+        await sb.from('orders').delete().eq('id', order.id).then(() => {}, () => {});
+        return json(500, { error: itemsError.message });
+      }
+      await decrementOrderStock(sb, normalized.items);
+      await recordAudit(sb, { user, action: 'order.create', targetType: 'order', targetId: order.id, detail: { company_id: order.company_id, status: order.status, payment_method: order.payment_method, item_count: normalized.items.length } });
+      return json(201, { ok: true, order });
+    }
+
     if (!body.id) return json(400, { error: 'order_id_required' });
+
+    if (body.action === 'update_order') {
+      if (!staffCan(role, 'order.write')) return json(403, { error: 'forbidden' });
+      const { data: before, error: beforeErr } = await sb.from('orders')
+        .select('id,company_id,customer_email,status,payment_method,order_items(sku,qty,backordered)')
+        .eq('id', body.id).single();
+      if (beforeErr) return json(beforeErr.code === 'PGRST116' ? 404 : 500, { error: beforeErr.message });
+      const normalized = normalizeOrderWrite(body, before.status);
+      if (!normalized.ok) return json(400, { error: normalized.error, message: normalized.message });
+
+      const { data: order, error } = await sb.from('orders')
+        .update(normalized.patch)
+        .eq('id', body.id)
+        .select('id,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
+        .single();
+      if (error) return json(500, { error: error.message });
+
+      const { error: deleteItemsError } = await sb.from('order_items').delete().eq('order_id', body.id);
+      if (deleteItemsError) return json(500, { error: deleteItemsError.message });
+      const { error: insertItemsError } = await sb.from('order_items').insert(normalized.items.map((item) => ({ ...item, order_id: body.id })));
+      if (insertItemsError) return json(500, { error: insertItemsError.message });
+
+      if (order.status === 'cancelled' && before.status === 'net_open' && before.payment_method === 'net') {
+        for (const args of stockIncrements(before.order_items)) {
+          await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
+        }
+      }
+      if (order.status !== before.status) {
+        const statusLabel = order.status.replace('_', ' ');
+        const recipients = await notifyCompany(sb, env, request, order.company_id, statusLabel);
+        await notifyBuyerTracking(env, request, order, statusLabel, null, recipients);
+      }
+      await recordAudit(sb, { user, action: 'order.update', targetType: 'order', targetId: body.id, detail: { company_id: order.company_id, status: order.status, previous_status: before.status, item_count: normalized.items.length } });
+      return json(200, { ok: true, order });
+    }
+
+    if (body.action === 'delete_order') {
+      if (!staffCan(role, 'order.delete')) return json(403, { error: 'forbidden', message: 'Only owner staff can remove orders.' });
+      const { data: order, error: readErr } = await sb.from('orders')
+        .select('id,company_id,customer_email,status,payment_method,total,currency')
+        .eq('id', body.id).single();
+      if (readErr) return json(readErr.code === 'PGRST116' ? 404 : 500, { error: readErr.message });
+      const { error } = await sb.from('orders').delete().eq('id', body.id);
+      if (error) return json(500, { error: error.message });
+      await recordAudit(sb, { user, action: 'order.delete', targetType: 'order', targetId: body.id, detail: order });
+      return json(200, { ok: true, deleted: true });
+    }
 
     if (body.action === 'refund') {
       if (!staffCan(role, 'order.refund')) return json(403, { error: 'forbidden', message: 'Refunds require finance or owner access.' });
@@ -258,7 +434,7 @@ export async function onRequest({ request, env }) {
       if (!paymentId) return json(400, { error: 'qbo_payment_id_required' });
 
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,customer_email,status,payment_method').eq('id', body.id).single();
+        .select('id,company_id,customer_email,status,payment_method,tracking_status,tracking_number').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       if (!ord) return json(404, { error: 'not_found' });
       if (ord.payment_method !== 'net') {
@@ -267,7 +443,7 @@ export async function onRequest({ request, env }) {
 
       const { data: order, error } = await sb.from('orders')
         .update({
-          status: 'net_paid',
+          status: settledOrderStatus(ord),
           qbo_payment_id: paymentId,
           qbo_error: null,
         })
@@ -287,13 +463,13 @@ export async function onRequest({ request, env }) {
     if (body.action === 'mark_net_paid') {
       if (!staffCan(role, 'company.credit')) return json(403, { error: 'forbidden' });
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,customer_email,status,payment_method').eq('id', body.id).single();
+        .select('id,company_id,customer_email,status,payment_method,tracking_status,tracking_number').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       const plan = planNetSettlement(ord, { reference: body.reference });
       if (!plan.ok) return json(400, { error: plan.error });
 
       const { data: order, error } = await sb.from('orders')
-        .update(plan.update)
+        .update({ ...plan.update, status: settledOrderStatus(ord, plan.update.status) })
         .eq('id', body.id)
         .select('id,company_id,customer_email,status,payment_method,total,currency')
         .single();
@@ -329,8 +505,9 @@ export async function onRequest({ request, env }) {
       // net_open: 'fulfilled' drops it out of the company's outstanding-credit sum
       // (credit.js counts status='net_open' only) and hides "Mark NET paid" — the
       // receivable would silently vanish. Shipping before payment is the normal NET flow.
-      const fulfilled = ['shipped', 'delivered'].includes(trackingStatus) && trackingNumber
-        && ['paid', 'net_paid'].includes(current.status);
+      // Delivered itself is enough evidence to close a settled order, including local
+      // delivery / BOL workflows that do not produce a parcel tracking number.
+      const fulfilled = shouldPromoteToFulfilled(current, trackingStatus, trackingNumber);
       const update = {
         tracking_status: trackingStatus,
         carrier,

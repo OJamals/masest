@@ -4,6 +4,7 @@
 import Stripe from 'stripe';
 import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { repriceCart } from '../../_lib/reorder.js';
+import { decorateOrderLifecycle } from '../../_lib/order-lifecycle.js';
 
 export async function onRequestGet({ request, env }) {
   const ctx = await requireCompany(request, env);
@@ -15,7 +16,7 @@ export async function onRequestGet({ request, env }) {
 
   const { data, error } = await sb
     .from('orders')
-    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,stripe_payment_intent,ship_address,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,order_items(sku,product_sku,name,qty,unit_price,line_total),shipment_events(status,note,created_at)')
+    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,qbo_invoice_id,qbo_sync_status,stripe_payment_intent,ship_address,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,order_items(sku,product_sku,name,qty,unit_price,line_total),shipment_events(status,note,created_at)')
     .eq('id', id)
     .eq('company_id', companyId)
     .maybeSingle();
@@ -36,7 +37,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   delete data.stripe_payment_intent; // internal-only; not part of the order view
-  return json(200, { order: data });
+  return json(200, { order: decorateOrderLifecycle(data) });
 }
 
 // "Buy again": re-price the order's items against the current catalog and return

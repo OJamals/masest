@@ -21,11 +21,12 @@ test('auth.orders returns a count envelope, not just the first page', () => {
 
 test('dashboard overview uses the true total and excludes terminal/refunded/cart from in-progress', () => {
   const src = read('js/dashboard.js');
-  assert.match(src, /const TERMINAL_ORDER_STATES = \[[^\]]*'refunded'[^\]]*'cart'[^\]]*\]/);
+  assert.match(src, /function orderIsActive/);
+  assert.match(src, /orderLifecycleFor\(order\)\.is_active/);
   assert.match(src, /\['ph-package', totalOrders, 'Total orders'\]/);
   assert.match(src, /fetchOrders\(\{ limit: 100 \}\)/);
   // The headline figure must no longer be the size of the capped first page.
   assert.doesNotMatch(src, /\['ph-package', ord\.length, 'Total orders'\]/);
-  // Both in-progress filters route through the shared terminal-state set.
-  assert.doesNotMatch(src, /!\['fulfilled', 'cancelled', 'net_paid'\]\.includes/);
+  // Both in-progress filters route through the shared lifecycle active check.
+  assert.doesNotMatch(src, /TERMINAL_ORDER_STATES/);
 });

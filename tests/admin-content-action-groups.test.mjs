@@ -32,3 +32,40 @@ test("content action groups have mobile-safe wrapping styles", () => {
   assert.match(html, /\.adm-content-action-group\[data-content-action-group="draft-publish"\]/);
   assert.match(html, /@media \(max-width: 720px\)[\s\S]*\.adm-content-action-group \.btn \{ flex: 1 1 145px; justify-content: center; \}/);
 });
+
+test("content selectors and asset rows keep readable widths", () => {
+  const html = read("admin.html");
+  const source = read("js/admin/content.js");
+
+  assert.match(source, /<label class="adm-content-selector">Content area/);
+  assert.doesNotMatch(source, /<label class="adm-content-selector">Language/);
+  assert.match(html, /\.adm-content-selector \{ grid-column: span 3; \}/);
+  assert.match(html, /#contentType \{ min-width: min\(100%, 224px\); \}/);
+  assert.match(html, /#contentLocale \{ min-width: 112px; \}/);
+  assert.match(html, /\.adm-content-asset-row \{[^}]*grid-template-columns: 64px minmax\(0, 1fr\)/);
+  assert.match(html, /\.adm-content-asset-actions \{ grid-column: 2;[^}]*justify-content: flex-start; \}/);
+  assert.match(html, /@media \(max-width: 720px\)[\s\S]*\.adm-content-asset-actions \{ grid-column: 1 \/ -1; justify-content: stretch; \}/);
+});
+
+test("blog editor exposes formatting and reference insertion controls", () => {
+  const editor = read("js/admin/rich-editor.js");
+  const content = read("js/admin/content.js");
+  const newsletter = read("js/admin/newsletter.js");
+
+  assert.match(editor, /data-editor-action="format_bold"/);
+  assert.match(editor, /data-editor-action="format_italic"/);
+  assert.match(editor, /data-editor-action="format_underline"/);
+  assert.match(editor, /data-editor-action="format_size"/);
+  assert.match(editor, /data-editor-action="format_color"/);
+  assert.match(editor, /data-editor-action="insert_image"/);
+  assert.match(editor, /data-editor-action="reference_product"/);
+  assert.match(editor, /data-editor-action="reference_service"/);
+  assert.match(editor, /contenteditable="true"/);
+  assert.match(editor, /htmlToMarkdown/);
+  assert.match(editor, /markdownToEditorHtml/);
+  assert.match(editor, /data-rich-editor-surface/);
+  assert.match(editor, /data-rich-editor-output/);
+  assert.match(editor, /createRichTextEditor/);
+  assert.match(content, /createRichTextEditor/);
+  assert.match(newsletter, /createRichTextEditor/);
+});

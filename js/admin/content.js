@@ -4,10 +4,17 @@ import { supabase } from "../auth.js";
 import { createContentAssets } from "./content-assets.js";
 import { createContentRevisions } from "./content-revisions.js";
 import {
+  createRichTextEditor,
+  insertMarkdownIntoRichEditor,
+  referencePickerTemplate as richReferencePickerTemplate,
+  richEditorTemplate,
+} from "./rich-editor.js";
+import {
   contentPayloadFields,
   contentTypeOptions,
   normalizeStructuredPayload,
   structuredPayloadKeys,
+  validateStructuredPayload,
 } from "../content-types.js";
 
 const TYPES = contentTypeOptions();
@@ -188,9 +195,29 @@ function fieldTemplate(field, payload) {
   }
   if (field.kind === "textarea" || field.kind === "list") {
     const isMd = field.preview === "markdown";
-    const tools = isMd
-      ? `<div class="adm-md-tools"><button type="button" class="btn btn-ghost btn-sm" data-content-action="asset_md" data-content-asset-target="${esc(field.key)}"><i class="ph ph-image" aria-hidden="true"></i> Insert image</button><span class="adm-md-hint">Markdown: **bold**, ## heading, - list, [text](url)</span></div>`
-      : "";
+    if (isMd) {
+      const textareaAttrs = [
+        'class="adm-textarea adm-content-field-text"',
+        `data-content-payload-field="${esc(field.key)}"`,
+        `data-content-field-kind="${esc(field.kind)}"`,
+        field.required ? 'data-rich-required="true"' : "",
+        'spellcheck="true"',
+      ].filter(Boolean).join(" ");
+      const editor = richEditorTemplate({
+        key: field.key,
+        label: field.label,
+        value,
+        textareaAttrs,
+        minHeight: 300,
+      });
+      const preview = `<div class="adm-md-preview" data-md-preview-for="${esc(field.key)}" aria-live="polite"><span class="adm-md-preview-label">Live preview</span><div class="adm-md-preview-body blog-body"></div></div>`;
+      return `
+        <div class="${esc(cls)}">
+          ${editor}
+        </div>
+        ${preview}
+      `;
+    }
     const preview = isMd
       ? `<div class="adm-md-preview" data-md-preview-for="${esc(field.key)}" aria-live="polite"><span class="adm-md-preview-label">Preview</span><div class="adm-md-preview-body blog-body"></div></div>`
       : "";
@@ -198,7 +225,6 @@ function fieldTemplate(field, payload) {
       <label class="${esc(cls)}">${esc(field.label)}
         <textarea class="adm-textarea adm-content-field-text" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true"${required}>${esc(value)}</textarea>
       </label>
-      ${tools}
       ${preview}
     `;
   }
@@ -285,21 +311,24 @@ function seoFieldsTemplate(seo = {}) {
   return SEO_FIELDS.map((field) => seoFieldTemplate(field, seo)).join("");
 }
 
-function formTemplate() {
+function formTemplate({ blog = false } = {}) {
+  const typeControl = blog
+    ? `<input id="contentType" type="hidden" value="blog_post"><p class="adm-content-placement full" role="note">${esc(placementText("blog_post"))}</p>`
+    : `<label class="adm-content-selector">Content area <select id="contentType" class="adm-select">${selectOptions(TYPES, "service")}</select></label>`;
   return `
     <div class="adm-card adm-content-editor">
       <div class="adm-panel-header">
         <div>
-          <p class="adm-eyebrow">CMS</p>
-          <h2>Edit website content</h2>
-          <p class="muted">Choose where the content appears, edit the fields people see on the site, then save or publish.</p>
+          <p class="adm-eyebrow">${blog ? "Blog CMS" : "CMS"}</p>
+          <h2>${blog ? "Blog editor" : "Edit website content"}</h2>
+          <p class="muted">${blog ? "Write formatted posts in a normal editor; the system saves Markdown for the static blog." : "Choose where the content appears, edit the fields people see on the site, then save or publish."}</p>
         </div>
         <span id="contentEditorBadge" class="badge" data-s="draft">draft</span>
       </div>
       <form id="contentForm" class="adm-form-grid" onsubmit="return false">
-        <label>Content area <select id="contentType" class="adm-select">${selectOptions(TYPES, "service")}</select></label>
+        ${typeControl}
         <label>Language <select id="contentLocale" class="adm-select"><option value="en">English (en)</option></select></label>
-        <p id="contentPlacementHint" class="adm-content-placement full" role="note">${esc(placementText("service"))}</p>
+        <p id="contentPlacementHint" class="adm-content-placement full" role="note"${blog ? " hidden" : ""}>${esc(placementText("service"))}</p>
         <label class="wide">Title <input id="contentTitle" class="adm-input" required></label>
         <label class="wide">Page slug <input id="contentSlug" class="adm-input" required></label>
         <label class="wide">Schedule publish <input id="contentScheduledAt" class="adm-input" type="datetime-local"></label>
@@ -531,6 +560,7 @@ function shellTemplate(admEmpty) {
         <div class="adm-content-stack">
           ${formTemplate()}
           ${assetPickerTemplate(admEmpty)}
+          ${richReferencePickerTemplate({ prefix: "content", admEmpty })}
           ${revisionsTemplate(admEmpty)}
         </div>
         <div class="adm-content-side">
@@ -550,6 +580,47 @@ function shellTemplate(admEmpty) {
               </select>
             </div>
             <div id="contentList" class="adm-content-list-body">${admEmpty("ph-note-pencil", "No content entries", "Create a draft or switch the filters.")}</div>
+          </div>
+          ${workflowTemplate(admEmpty)}
+          ${previewTemplate()}
+          ${exportStatusTemplate()}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function blogShellTemplate(admEmpty) {
+  return `
+    <div class="adm-content-shell adm-blog-shell">
+      <div class="adm-content-hub">
+        <div>
+          <p class="adm-eyebrow">Blog CMS</p>
+          <h2>Blog editor</h2>
+          <p class="muted">Draft, format, reference products or services, preview, and publish static blog posts.</p>
+        </div>
+        <div id="contentHubMetrics" class="adm-content-hub-metrics" aria-label="Blog summary">
+          <span><b>0</b> posts</span>
+          <span><b>0</b> drafts</span>
+          <span><b>0</b> scheduled</span>
+        </div>
+      </div>
+      <div class="adm-content-layout">
+        <div class="adm-content-stack">
+          ${formTemplate({ blog: true })}
+          ${assetPickerTemplate(admEmpty)}
+          ${richReferencePickerTemplate({ prefix: "content", admEmpty })}
+          ${revisionsTemplate(admEmpty)}
+        </div>
+        <div class="adm-content-side">
+          <div class="adm-card adm-content-list">
+            <div class="adm-panel-header">
+              <div>
+                <h2>Current posts</h2>
+                <p class="muted">Published posts, drafts, review items, and scheduled posts scoped to the blog.</p>
+              </div>
+            </div>
+            <div id="contentList" class="adm-content-list-body">${admEmpty("ph-note-pencil", "No blog posts", "Create a blog draft to get started.")}</div>
           </div>
           ${workflowTemplate(admEmpty)}
           ${previewTemplate()}
@@ -612,10 +683,16 @@ function selectedFormEntry({ validate = false } = {}) {
   let seo;
   try {
     const type = document.getElementById("contentType").value;
-    payload = mergeStructuredPayload(type, readPayloadJson(), readStructuredValues());
+    const structuredValues = readStructuredValues();
+    if (validate) {
+      const validation = validateStructuredPayload(type, structuredValues);
+      if (!validation.ok) throw new Error(`Complete required content fields (${validation.error || "invalid_content_payload"}).`);
+    }
+    payload = mergeStructuredPayload(type, readPayloadJson(), structuredValues);
     seo = mergeSeoPayload(readSeoJson(), readSeoValues());
   } catch (error) {
-    throw new Error(`Invalid JSON: ${error.message}`);
+    if (/content fields|_required|_invalid|invalid_content_payload/.test(error.message || "")) throw error;
+    throw new Error(error.message?.startsWith("Invalid JSON") ? error.message : `Invalid JSON: ${error.message}`);
   }
   return {
     type: document.getElementById("contentType").value,
@@ -630,6 +707,8 @@ function selectedFormEntry({ validate = false } = {}) {
 
 export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let mounted = false;
+  let mountedRootId = "";
+  let blogMode = false;
   // Asset library (picker, upload/register, alt-text, archive/restore) extracted to
   // ./content-assets.js. It owns the picker's own state; choosing an asset calls back
   // into applyChosenAsset (below) to write the value into the editor form.
@@ -648,6 +727,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let formDirty = false;
   let ownUserId = null; // resolved once; lets a reload recognise our own editor lock
   let lastGeneratedSlug = "";
+
+  function activeRoot() {
+    return $(mountedRootId) || $("admContent") || $("admBlog");
+  }
 
   function setStatus(text, kind = "") {
     const el = $("contentStatus");
@@ -672,7 +755,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
 
   function selectedEntryIdentity() {
     return {
-      type: $("contentType")?.value || "service",
+      type: $("contentType")?.value || (blogMode ? "blog_post" : "service"),
       slug: slugifyContentTitle($("contentSlug")?.value || ""),
       locale: $("contentLocale")?.value.trim() || "en",
     };
@@ -727,7 +810,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
               : "Unlocked";
       lockStatus.dataset.state = blocked ? "err" : locked ? "ok" : "";
     }
-    const root = $("admContent");
+    const root = activeRoot();
     const archived = entry.status === "archived";
     const archiveButton = root?.querySelector('[data-content-action="archive"]');
     const unarchiveButton = root?.querySelector('[data-content-action="unarchive"]');
@@ -779,17 +862,42 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     return "ok";
   }
 
-  function mount() {
-    const root = $("admContent");
-    if (!root || mounted) return;
-    root.innerHTML = shellTemplate(admEmpty);
-    renderStructuredFields("service", {});
+  function mount({ blog = false } = {}) {
+    const rootId = blog ? "admBlog" : "admContent";
+    const root = $(rootId);
+    if (!root) return;
+    if (mounted && mountedRootId === rootId) return;
+    const other = $(blog ? "admContent" : "admBlog");
+    if (other) other.innerHTML = "";
+    mounted = false;
+    mountedRootId = rootId;
+    blogMode = blog;
+    root.innerHTML = blog ? blogShellTemplate(admEmpty) : shellTemplate(admEmpty);
+    renderStructuredFields(blog ? "blog_post" : "service", {});
     renderSeoFields({});
-    updatePlacementHint("service");
+    const type = $("contentType");
+    if (type) {
+      type.value = blog ? "blog_post" : "service";
+      type.disabled = blog;
+    }
+    updatePlacementHint(blog ? "blog_post" : "service");
     renderContentHubMetrics();
     $("contentPreviewFrame")?.addEventListener("load", () => refreshPreview());
     void renderExportStatus();
     mounted = true;
+  }
+
+  function mountRichEditors(root = activeRoot()) {
+    root?.querySelectorAll("[data-rich-editor-key]").forEach((editor) => {
+      createRichTextEditor(editor, {
+        root,
+        api,
+        onChange: () => syncStructuredPayload(),
+        referencePickerSelector: "#contentReferencePicker",
+        referenceRowsSelector: "#contentReferenceRows",
+        onInsertImage: (key, ctx) => assets.openAssetPicker(key, "markdown", ctx.button),
+      });
+    });
   }
 
   function updateMarkdownPreviews() {
@@ -806,6 +914,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     const box = $("contentStructuredFields");
     if (!box) return;
     box.innerHTML = structuredFieldsTemplate(type, payload);
+    mountRichEditors();
     updateMarkdownPreviews();
   }
 
@@ -896,7 +1005,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       // without this, your own lock renders as "Locked by another editor" and blocks editing.
       || (ownUserId && entry.locked_by === ownUserId && activeContentLock(entry)),
     );
-    $("contentType").value = entry.type || "service";
+    $("contentType").value = entry.type || (blogMode ? "blog_post" : "service");
     // Language is a fixed select (free text forked entries on typos); existing
     // non-en entries still open — inject their locale as an option on demand.
     const localeSel = $("contentLocale");
@@ -913,9 +1022,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     lastGeneratedSlug = slugifyContentTitle(entry.title || "");
     $("contentPayload").value = jsonText(entry.payload);
     $("contentSeo").value = jsonText(entry.seo);
-    renderStructuredFields(entry.type || "service", entry.payload || {});
+    renderStructuredFields(entry.type || (blogMode ? "blog_post" : "service"), entry.payload || {});
     renderSeoFields(entry.seo || {});
-    updatePlacementHint(entry.type || "service");
+    updatePlacementHint(entry.type || (blogMode ? "blog_post" : "service"));
     const badge = $("contentEditorBadge");
     if (badge) {
       badge.textContent = entry.status || "draft";
@@ -973,12 +1082,17 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   // and re-sync the preview. The module owns opening/closing the picker; this only
   // touches the editor. Declared as a function so it's hoisted for createContentAssets.
   function applyChosenAsset(fieldKey, assetPath, assetAlt = "", message = "Asset path inserted.", kind = "payload") {
-    const root = $("admContent");
+    const root = activeRoot();
     // Insert Markdown image at the caret of a body textarea (in-post images).
     if (kind === "markdown") {
+      const editor = root?.querySelector(`[data-rich-editor-key="${CSS.escape(fieldKey)}"]`);
+      const md = `![${assetAlt || "image"}](${assetPath || ""})`;
+      if (editor && insertMarkdownIntoRichEditor(editor, md, () => syncStructuredPayload())) {
+        setStatus("Image inserted into body.", "ok");
+        return;
+      }
       const ta = findPayloadField(root, fieldKey);
       if (ta) {
-        const md = `![${assetAlt || "image"}](${assetPath || ""})`;
         const start = Number.isInteger(ta.selectionStart) ? ta.selectionStart : ta.value.length;
         const end = Number.isInteger(ta.selectionEnd) ? ta.selectionEnd : ta.value.length;
         ta.value = ta.value.slice(0, start) + md + ta.value.slice(end);
@@ -1007,7 +1121,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   function filters() {
-    const type = $("contentTypeFilter")?.value || "";
+    const type = blogMode ? "blog_post" : ($("contentTypeFilter")?.value || "");
     const status = $("contentStatusFilter")?.value || "all";
     return { type, status };
   }
@@ -1052,7 +1166,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   async function renderContent({ refetch = true } = {}) {
-    mount();
+    mount({ blog: false });
     if (refetch) {
       const list = $("contentList");
       if (list) list.innerHTML = admSkeleton(5);
@@ -1077,6 +1191,40 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     renderList();
     renderWorkflowQueue();
     renderContentHubMetrics();
+  }
+
+  async function renderBlog({ refetch = true } = {}) {
+    mount({ blog: true });
+    const type = $("contentType");
+    if (type) {
+      type.value = "blog_post";
+      type.disabled = true;
+    }
+    if (refetch) {
+      const list = $("contentList");
+      if (list) list.innerHTML = admSkeleton(5);
+      const listRequest = loadContentEntries({ type: "blog_post", status: "all" });
+      const [listResult] = await Promise.allSettled([listRequest]);
+      if (listResult.status === "fulfilled") {
+        state.content = listResult.value;
+        workflowEntries = listResult.value;
+        state.loaded.add("blog");
+        contentListFailed = false;
+      } else {
+        const error = listResult.reason || {};
+        state.content = [];
+        workflowEntries = [];
+        contentListFailed = true;
+        setStatus(error.data?.message || error.data?.error || "Blog posts unavailable.", "err");
+      }
+    }
+    renderList();
+    renderWorkflowQueue();
+    renderContentHubMetrics();
+  }
+
+  async function renderActiveContent({ refetch = true } = {}) {
+    return blogMode ? renderBlog({ refetch }) : renderContent({ refetch });
   }
 
   async function saveContent({ publish = false } = {}) {
@@ -1111,7 +1259,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         publish ? publishStatusText(result) : "Draft saved.",
         publish ? publishStatusKind(result) : "ok",
       );
-      await renderContent({ refetch: true });
+      await renderActiveContent({ refetch: true });
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Save failed.", "err");
     }
@@ -1135,7 +1283,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       });
       populateForm(result.entry || {}, { preserveLockOwner });
       setStatus(`Workflow updated: ${action.replace(/_/g, " ")}.`, "ok");
-      await renderContent({ refetch: true });
+      await renderActiveContent({ refetch: true });
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Workflow update failed.", "err");
     }
@@ -1152,7 +1300,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         publishScheduledStatusText(result),
         publishStatusKind(result),
       );
-      await renderContent({ refetch: true });
+      await renderActiveContent({ refetch: true });
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || "Scheduled publish failed.", "err");
     }
@@ -1195,7 +1343,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       });
       populateForm(result.entry || {}, { preserveLockOwner });
       setStatus("Archived.", "ok");
-      await renderContent({ refetch: true });
+      await renderActiveContent({ refetch: true });
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Archive failed.", "err");
     }
@@ -1244,7 +1392,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       });
       populateForm(result.entry || {}, { preserveLockOwner });
       setStatus("Restored as draft.", "ok");
-      await renderContent({ refetch: true });
+      await renderActiveContent({ refetch: true });
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Restore failed.", "err");
     }
@@ -1273,7 +1421,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       populateForm(result.entry || {}, { preserveLockOwner });
       revisions.closeRevisionDiff();
       setStatus(`Restored version ${version} as a draft.`, "ok");
-      await renderContent({ refetch: true });
+      await renderActiveContent({ refetch: true });
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Restore failed.", "err");
     }
@@ -1302,7 +1450,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       });
       populateForm(result.entry || currentEntry, { lockOwned: action === "lock" });
       setStatus(action === "lock" ? "Lock claimed." : "Lock released.", "ok");
-      await renderContent({ refetch: true });
+      await renderActiveContent({ refetch: true });
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || "Lock update failed.", "err");
       updateLockUi();
@@ -1324,9 +1472,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
 
-  function wireContent() {
-    const root = $("admContent");
-    if (!root) return;
+  function wireContentRoot(root) {
+    if (!root || root.dataset.contentWired === "1") return;
+    root.dataset.contentWired = "1";
     // Resolve our user id once so reloads recognise our own editor lock (best-effort).
     supabase?.auth?.getSession?.().then((r) => { ownUserId = r?.data?.session?.user?.id || null; }).catch(() => {});
     // Unsaved edits are otherwise silently lost on tab close / navigation.
@@ -1344,7 +1492,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       }
       if (event.target.matches("#contentPayload")) {
         try {
-          renderStructuredFields($("contentType")?.value || "service", readPayloadJson());
+          renderStructuredFields($("contentType")?.value || (blogMode ? "blog_post" : "service"), readPayloadJson());
           setStatus("");
           refreshPreview();
         } catch (error) {
@@ -1362,7 +1510,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       }
       if (event.target.matches("#contentSlug")) normalizeManualSlug();
       if (event.target.matches("#contentTypeFilter, #contentStatusFilter")) {
-        renderContent({ refetch: true });
+        renderActiveContent({ refetch: true });
       }
       if (event.target.matches("#contentAssetStatusFilter")) {
         void assets.loadAssets();
@@ -1407,6 +1555,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     delegate(root, "click", "[data-content-revision]", (_event, button) => revisions.inspectRevision(button.dataset.contentRevision));
     delegate(root, "click", "[data-content-revision-restore]", (_event, button) => restoreRevision(button.dataset.contentRevisionRestore));
     delegate(root, "click", "[data-content-revision-close]", () => revisions.closeRevisionDiff());
+    delegate(root, "click", '[data-editor-action="close_reference"]', () => {
+      const picker = $("contentReferencePicker");
+      if (picker) picker.hidden = true;
+    });
     delegate(root, "click", "[data-content-asset-path]", (_event, button) => assets.assignAssetPath(button));
     delegate(root, "click", "[data-content-asset-status-action]", (_event, button) => assets.updateAssetStatus(button));
     delegate(root, "click", "[data-content-asset-alt-action]", (_event, button) => assets.editAssetAlt(button));
@@ -1427,6 +1579,11 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (action === "asset") return assets.openAssetPicker(button.dataset.contentAssetTarget, "payload", button);
       if (action === "asset_md") return assets.openAssetPicker(button.dataset.contentAssetTarget, "markdown", button);
       if (action === "seo_asset") return assets.openAssetPicker(button.dataset.contentSeoAssetTarget, "seo", button);
+      if (action === "close_reference") {
+        const picker = $("contentReferencePicker");
+        if (picker) picker.hidden = true;
+        return null;
+      }
       if (action === "refresh_assets") return assets.loadAssets();
       if (action === "close_assets") return assets.closeAssetPicker();
       if (action === "upload_asset") return assets.uploadAsset();
@@ -1434,5 +1591,13 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     });
   }
 
-  return { renderContent, wireContent };
+  function wireContent() {
+    wireContentRoot($("admContent"));
+  }
+
+  function wireBlog() {
+    wireContentRoot($("admBlog"));
+  }
+
+  return { renderContent, renderBlog, wireContent, wireBlog };
 }

@@ -620,7 +620,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       box.innerHTML = admEmpty('ph-buildings', q ? 'No matching accounts' : 'No accounts', q ? 'No accounts match your search.' : 'New B2B account signups appear here for approval.') + pager;
       return;
     }
-    box.innerHTML = `<div class="adm-tools adm-tools-flush">
+    box.innerHTML = `<div class="adm-tools adm-tools-flush company-bulk-tools">
       <label class="admin-select-all"><input type="checkbox" id="coAll" aria-label="Select all"> Select all</label>
       <button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button>
     </div>
@@ -642,6 +642,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         </div>
         <div class="company-admin-actions">
           <button class="btn btn-ghost btn-sm" data-approve="${id}" type="button">Approve</button>
+          <button class="btn btn-ghost btn-sm" data-business-edit="${id}" type="button">Edit business</button>
+          <button class="btn btn-ghost btn-sm" data-business-delete="${id}" type="button">Delete business</button>
         </div>
       </article>`;
     }).join('')}</div>` + pager;
@@ -657,6 +659,28 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (!box) return;
     delegate(box, 'click', '[data-open-company]', (event, button) => openCompanyDetail(button.dataset.openCompany));
     delegate(box, 'click', '[data-load-more-companies]', () => renderBusinessQueue({ append: true }));
+    delegate(box, 'click', '[data-business-edit]', async (event, button) => {
+      const company = (state.companies || []).find((row) => String(row.id) === String(button.dataset.businessEdit));
+      button.disabled = true;
+      try {
+        await saveBusinessDialog(company || { id: button.dataset.businessEdit });
+      } catch (err) {
+        button.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${esc(err.data?.message || err.data?.error || 'Could not save the business. Retry.')}</p>`);
+      } finally {
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-business-delete]', async (event, button) => {
+      const company = (state.companies || []).find((row) => String(row.id) === String(button.dataset.businessDelete));
+      button.disabled = true;
+      try {
+        await deleteBusiness(company || { id: button.dataset.businessDelete });
+      } catch (err) {
+        button.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${esc(err.data?.message || err.data?.error || 'Could not delete the business. Retry.')}</p>`);
+      } finally {
+        button.disabled = false;
+      }
+    });
     delegate(box, 'click', '[data-approve]', async (event, button) => {
       const id = button.dataset.approve;
       button.disabled = true;
@@ -812,6 +836,15 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   function auStatus(text, kind) {
     const el = $('auStatus');
     if (el) { el.textContent = text || ''; el.dataset.state = kind || ''; }
+  }
+
+  function accountDeleteErrorText(err) {
+    const value = err?.data?.message || err?.data?.error || '';
+    if (typeof value === 'string') {
+      const text = value.trim();
+      if (text && text !== '{}') return text;
+    }
+    return 'Could not delete the user. Retry.';
   }
 
   function userFormFields(user = {}) {
@@ -1003,9 +1036,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         await api('/api/admin/users', { method: 'POST', body: { action: 'delete_user', user_id: button.dataset.auDelete } });
         $('accountDetail')?.setAttribute('hidden', '');
         await renderAllUsers({ refetch: true });
+        auStatus('User deleted.', 'ok');
+        refreshStats?.();
       } catch (err) {
         button.disabled = false;
-        auStatus(err.data?.message || err.data?.error || 'Delete failed.', 'err');
+        auStatus(accountDeleteErrorText(err), 'err');
       }
     });
   }

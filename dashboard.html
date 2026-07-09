@@ -63,10 +63,11 @@
   /* Base .badge comes from components.css; this page only maps data-s status tints. */
   .badge[data-s] { text-transform: uppercase; letter-spacing: .05em; font-size: .72rem; }
   .badge[data-s=pending] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
-  .badge[data-s=approved], .badge[data-s=paid], .badge[data-s=fulfilled], .badge[data-s=net_paid] { background: var(--accent-soft); color: var(--accent-ink); }
+  .badge[data-s=approved], .badge[data-s=paid], .badge[data-s=fulfilled], .badge[data-s=net_paid], .badge[data-s=complete] { background: var(--accent-soft); color: var(--accent-ink); }
   .badge[data-s=rejected], .badge[data-s=suspended], .badge[data-s=cancelled] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
-  .badge[data-s=net_open], .badge[data-s=pending_payment] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
-  .badge[data-s=refunded] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
+  .badge[data-s=net_open], .badge[data-s=pending_payment], .badge[data-s=payment_pending], .badge[data-s=unfulfilled], .badge[data-s=fulfilling], .badge[data-s=delivered_payment_due] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
+  .badge[data-s=shipped] { background: var(--accent-soft); color: var(--accent-ink); }
+  .badge[data-s=refunded], .badge[data-s=blocked] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
   .track-blocked { display: flex; gap: 8px; align-items: baseline; padding: 8px 10px; border-radius: 8px;
     background: var(--status-warning-bg); color: var(--status-warning-ink); font-size: .86rem; font-weight: 700; }
   .trackline { display: grid; gap: 8px; margin: 12px 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.68); }

@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 260,
-  "usedCount": 146,
+  "count": 264,
+  "usedCount": 150,
   "bufferCount": 114,
   "icons": [
     {
@@ -795,6 +795,11 @@
       "src": "buffer"
     },
     {
+      "name": "newspaper",
+      "cp": "E344",
+      "src": "used"
+    },
+    {
       "name": "note",
       "cp": "E348",
       "src": "used"
@@ -1122,6 +1127,21 @@
     {
       "name": "text-aa",
       "cp": "E6EE",
+      "src": "used"
+    },
+    {
+      "name": "text-b",
+      "cp": "E5BE",
+      "src": "used"
+    },
+    {
+      "name": "text-italic",
+      "cp": "E5C0",
+      "src": "used"
+    },
+    {
+      "name": "text-underline",
+      "cp": "E5C4",
       "src": "used"
     },
     {

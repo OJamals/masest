@@ -2,6 +2,7 @@
 import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
 import { buildCompanySetup, setupStepBreakdown } from '../../_lib/setup.js';
 import { cached } from '../../_lib/cache.js';
+import { orderLifecycle } from '../../_lib/order-lifecycle.js';
 
 // ~15 count queries + a 1000-row scan per load; the result is org-wide, so cache it
 // briefly (no-op until RATE_KV is bound). Staff auth runs BEFORE the cache lookup.
@@ -11,7 +12,6 @@ const since = (days) => new Date(Date.now() - days * 86400e3).toISOString();
 const action = (priority, label, value, href) => ({ priority, label, value, href });
 const sumTotals = (orders) => orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
 const withinDays = (iso, days) => iso && new Date(iso).getTime() >= Date.now() - days * 86400e3;
-const countStatus = (orders, statuses) => orders.filter((order) => statuses.includes(order.status)).length;
 
 export async function onRequestGet({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
@@ -39,7 +39,7 @@ async function computeStats(sb) {
   let recentOrders = [];
   try {
     const { data } = await sb.from('orders')
-      .select('id,status,total,currency,payment_method,created_at,company_id')
+      .select('id,status,total,currency,payment_method,created_at,company_id,tracking_status')
       .neq('status', 'cart')
       .order('created_at', { ascending: false })
       .limit(1000);
@@ -140,7 +140,7 @@ async function computeStats(sb) {
     revenue_total_sample: revenue,
     average_order_value: paidCount ? Math.round(revenueTotal / paidCount) : 0,
     orders_7d: metrics ? Number(metrics.orders_7d) : recentOrders.filter((order) => withinDays(order.created_at, 7)).length,
-    fulfillment_queue: metrics ? Number(metrics.fulfillment_queue) : countStatus(recentOrders, ['paid', 'net_open']),
+    fulfillment_queue: metrics ? Number(metrics.fulfillment_queue) : recentOrders.filter((order) => orderLifecycle(order).requires_fulfillment && order.status !== 'pending_payment').length,
     net_orders_open: metrics ? Number(metrics.net_open_count) : netOpenOrders.length,
     net_exposure: metrics ? Number(metrics.net_exposure) : sumTotals(netOpenOrders),
     by_status: byStatus,

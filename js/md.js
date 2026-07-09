@@ -32,7 +32,38 @@ function inline(src) {
   s = s.replace(/`([^`]+)`/g, (_m, c) => `<code>${c}</code>`);
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  s = s.replace(/\+\+([^+]+)\+\+/g, "<u>$1</u>");
+  s = s.replace(/\[\[size:(14|16|18|20|24|32)\|([^\]]+)\]\]/g, (_m, size, text) =>
+    `<span data-md-size="${size}" style="font-size:${size}px">${text}</span>`);
+  s = s.replace(/\[\[color:(#[0-9a-fA-F]{3,6})\|([^\]]+)\]\]/g, (_m, color, text) =>
+    `<span data-md-color="${color}" style="color:${color}">${text}</span>`);
   return s;
+}
+
+function cardAttrs(src) {
+  const raw = String(src || "").trim();
+  const match = raw.match(/^\[\[card:([\s\S]+)\]\]$/);
+  if (!match) return null;
+  const fields = {};
+  for (const part of match[1].split("|")) {
+    const index = part.indexOf("=");
+    if (index === -1) continue;
+    fields[part.slice(0, index).trim()] = part.slice(index + 1).trim();
+  }
+  const href = fields.href || "";
+  if (!fields.title || !href || !isSafeUrl(href)) return null;
+  return fields;
+}
+
+function renderCard(fields = {}) {
+  const title = escapeHtml(fields.title || "Reference");
+  const href = escapeHtml(fields.href || "#");
+  const image = fields.image && isSafeUrl(fields.image) ? escapeHtml(fields.image) : "";
+  const alt = escapeHtml(fields.alt || fields.title || "Reference");
+  return `<a class="md-card" href="${href}" data-md-card data-md-title="${title}" data-md-image="${image}" data-md-alt="${alt}">
+    ${image ? `<img src="${image}" alt="${alt}" loading="lazy" decoding="async">` : `<span class="md-card-thumb" aria-hidden="true"></span>`}
+    <span><strong>${title}</strong><small>${href}</small></span>
+  </a>`;
 }
 
 const BLOCK_START = /^(#{1,4}\s|```|\s*>|\s*[-*]\s|\s*\d+\.\s)/;
@@ -55,6 +86,8 @@ export function renderMarkdown(src) {
     }
     if (/^\s*$/.test(line)) { i++; continue; }
     if (HR.test(line)) { out.push("<hr>"); i++; continue; }
+    const card = cardAttrs(line);
+    if (card) { out.push(renderCard(card)); i++; continue; }
     const h = line.match(/^(#{1,4})\s+(.*)$/);
     if (h) { out.push(`<h${h[1].length}>${inline(h[2].trim())}</h${h[1].length}>`); i++; continue; }
     if (/^\s*>\s?/.test(line)) {

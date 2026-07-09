@@ -18,7 +18,7 @@ as $$
     'revenue_total',     (select coalesce(sum(total),0) from public.orders where status in ('paid','net_paid','fulfilled')),
     'revenue_7d',        (select coalesce(sum(total),0) from public.orders where status in ('paid','net_paid','fulfilled') and created_at >= now() - interval '7 days'),
     'revenue_30d',       (select coalesce(sum(total),0) from public.orders where status in ('paid','net_paid','fulfilled') and created_at >= now() - interval '30 days'),
-    'fulfillment_queue', (select count(*)            from public.orders where status in ('paid','net_open')),
+    'fulfillment_queue', (select count(*)            from public.orders where status in ('paid','net_open','net_paid','fulfilled') and coalesce(tracking_status, 'processing') <> 'delivered'),
     'net_open_count',    (select count(*)            from public.orders where status = 'net_open'),
     'net_exposure',      (select coalesce(sum(total),0) from public.orders where status = 'net_open')
   );

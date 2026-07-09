@@ -26,6 +26,8 @@ export const STAFF_ROLES = ["owner", "finance", "support", "read_only"];
 // capability -> roles permitted. Only the dangerous/financial mutations are gated
 // in this batch; everything else stays open to any staff (tightened in a follow-up).
 const STAFF_CAPABILITIES = {
+  "order.write": ["owner", "finance", "support"],
+  "order.delete": ["owner"],
   "order.refund": ["owner", "finance"],
   "company.credit": ["owner", "finance"],
   "company.view_as": ["owner", "finance", "support"],

@@ -45,6 +45,23 @@ test("admin invite resend only targets pending invites", () => {
   assert.match(resendBlock, /pending_invite_not_found/, "resend should use pending-invite error copy");
 });
 
+test("admin user deletion detaches retained orders before deleting auth user", () => {
+  const src = read("functions/api/admin/users.js");
+  const deleteBlock = src.slice(
+    src.indexOf("action === 'delete_user'"),
+    src.indexOf("// Address book"),
+  );
+
+  assert.match(deleteBlock, /\.from\('orders'\)[\s\S]*\.update\(\{[^}]*user_id:\s*null[^}]*customer_email:\s*anon/s,
+    "delete should detach and pseudonymize retained order history");
+  assert.match(deleteBlock, /\.eq\('user_id',\s*uid\)/,
+    "order detachment should be scoped to the deleted user");
+  assert.ok(
+    deleteBlock.indexOf(".from('orders')") < deleteBlock.indexOf("deleteUser(uid)"),
+    "orders must be detached before the auth/profile cascade runs",
+  );
+});
+
 test("admin detail action groups have wrapped spacing", () => {
   const html = read("admin.html");
   assert.match(html, /\.company-detail-actions[^{}]*\{[^}]*display:\s*flex/s, "detail actions should use a flex row");

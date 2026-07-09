@@ -20,6 +20,16 @@ test("admin controls keep consistent action spacing and touch rhythm", () => {
     /\.adm-main table\.adm \.link-name\s*\{[^}]*min-height:\s*36px;/,
     "link-style table buttons should still have a visible hit area",
   );
+  assert.match(
+    html,
+    /\.company-bulk-tools\s*\{[^}]*align-items:\s*center;[^}]*padding:\s*8px 0;/s,
+    "business approval bulk controls should sit centered in the toolbar",
+  );
+  assert.match(
+    html,
+    /\.company-bulk-tools \.admin-select-all\s*\{[^}]*min-height:\s*40px;[^}]*padding:\s*0 2px;/s,
+    "the select-all label should match the height of the adjacent approve button",
+  );
 });
 
 test("admin detail rows and compact forms keep label/value separation", () => {

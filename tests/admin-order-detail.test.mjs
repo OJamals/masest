@@ -11,7 +11,7 @@ test("detail endpoint reads ?id, joins items+timeline, exposes backordered", () 
   assert.match(API, /params\.get\('id'\)/);
   assert.match(API, /order_items\([^)]*backordered/);            // detail select
   assert.match(API, /from\('audit_log'\)[\s\S]*target_type', 'order'/); // timeline
-  assert.match(API, /order_items\(sku,name,qty,unit_price,line_total,backordered\)/); // list select too
+  assert.match(API, /order_items\(sku,product_sku,name,qty,unit_price,line_total,backordered\)/); // list select too
 });
 
 test("UI fetches detail by id and opens the modal with a backorder badge", () => {

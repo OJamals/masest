@@ -8,8 +8,6 @@ import { initBusinessHub } from './business.js';
 const $ = (id) => document.getElementById(id);
 
 let ACCOUNT = null;            // /api/account/me snapshot
-// Order statuses that are NOT "in progress": delivered, closed/paid, refunded, or never placed.
-const TERMINAL_ORDER_STATES = ['fulfilled', 'cancelled', 'net_paid', 'refunded', 'cart'];
 const loaded = {};             // which tabs have been populated
 const pages = {                // offset-pagination state per list (#29)
   orders: { items: [], offset: 0, total: null, hasMore: false },
@@ -95,6 +93,45 @@ function statusBadge(s, label) { return `<span class="badge" data-s="${esc(s)}">
 function orderStatusLabel(s) {
   return String(s || '').split('_').map((w) => (w === 'net' ? 'NET' : w)).join(' ');
 }
+const ORDER_LIFECYCLE_LABELS = {
+  cart: 'Cart',
+  payment_pending: 'Payment pending',
+  unfulfilled: 'Unfulfilled',
+  fulfilling: 'Fulfilling',
+  shipped: 'Shipped',
+  fulfilled: 'Fulfilled',
+  delivered_payment_due: 'Delivered, payment due',
+  complete: 'Complete',
+  blocked: 'Fulfillment hold',
+  cancelled: 'Cancelled',
+  refunded: 'Refunded',
+};
+function orderLifecycleFor(order = {}) {
+  if (order.lifecycle?.stage) return order.lifecycle;
+  const status = String(order.status || '').trim();
+  const tracking = String(order.tracking_status || 'processing').trim();
+  const settled = ['paid', 'net_paid', 'fulfilled'].includes(status);
+  let stage = 'unfulfilled';
+  if (status === 'cart' || status === 'cancelled' || status === 'refunded') stage = status;
+  else if (status === 'pending_payment') stage = 'payment_pending';
+  else if (tracking === 'blocked') stage = 'blocked';
+  else if (tracking === 'delivered') stage = settled ? 'complete' : 'delivered_payment_due';
+  else if (tracking === 'shipped') stage = 'shipped';
+  else if (tracking === 'packing') stage = 'fulfilling';
+  else if (status === 'fulfilled') stage = 'fulfilled';
+  return {
+    stage,
+    label: ORDER_LIFECYCLE_LABELS[stage] || orderStatusLabel(status),
+    is_active: !['cart', 'cancelled', 'refunded', 'complete'].includes(stage),
+  };
+}
+function orderIsActive(order) {
+  return orderLifecycleFor(order).is_active;
+}
+function orderLifecycleBadge(order) {
+  const lifecycle = orderLifecycleFor(order);
+  return statusBadge(lifecycle.stage || order.status, lifecycle.label || orderStatusLabel(order.status));
+}
 function bizStatusLabel(s) { return ({ approved: 'Verified', pending: 'Under review', rejected: 'Needs attention', suspended: 'Suspended' })[s] || s; }
 function trackingSteps(order) {
   const status = order.tracking_status || 'processing';
@@ -160,7 +197,7 @@ async function renderOverview() {
   // True company-wide total (the endpoint count), not just the size of the fetched page.
   const totalOrders = Number.isFinite(ordRes.total) && ordRes.total > 0 ? ordRes.total : ord.length;
   setBadge('badgeNotifs', notif.unread);
-  const openOrders = ord.filter((o) => !TERMINAL_ORDER_STATES.includes(o.status)).length;
+  const openOrders = ord.filter(orderIsActive).length;
   stats.innerHTML = [
     ['ph-package', totalOrders, 'Total orders'],
     ['ph-truck', openOrders, 'In progress'],
@@ -204,7 +241,7 @@ function openSetupSteps() {
 function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
   const box = $('ovActionRail');
   if (!box) return;
-  const openOrders = orders.filter((o) => !TERMINAL_ORDER_STATES.includes(o.status));
+  const openOrders = orders.filter(orderIsActive);
   const openSteps = openSetupSteps();
   const actions = [];
   // No-company users already get the full "Business setup" steps card on this screen —
@@ -282,7 +319,7 @@ function renderRecentOrders(orders = []) {
         return `<a class="activity-line" href="#orders">
         <i class="ph ph-package" aria-hidden="true"></i>
         <span><b>${esc(fmtDate(order.created_at))}${n ? ` · ${n} item${n === 1 ? '' : 's'}` : ''}</b><small>${money(order.total, order.currency || 'USD')}</small></span>
-        ${statusBadge(order.status || 'processing')}
+        ${orderLifecycleBadge(order)}
       </a>`;
       }).join('')}
     </div>`;
@@ -414,7 +451,7 @@ async function renderOrders({ append = false } = {}) {
     const lines = items.map((it) => `<div class="dash-row dash-order-line"><span>${esc(it.name)} × ${it.qty}</span><span>${money(it.line_total, o.currency)}</span></div>`).join('');
     return `<details class="dash-order-card">
       <summary class="dash-order-summary">
-        <span>${fmtDate(o.created_at)} · ${statusBadge(o.status)} · ${n} item${n === 1 ? '' : 's'}</span>
+        <span>${fmtDate(o.created_at)} · ${orderLifecycleBadge(o)} · ${n} item${n === 1 ? '' : 's'}</span>
         <b>${money(o.total, o.currency)}</b>
         <i class="ph ph-caret-down dash-order-caret" aria-hidden="true"></i></summary>
       <div class="dash-order-lines">${lines}

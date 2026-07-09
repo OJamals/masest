@@ -50,11 +50,12 @@ test("staff orders API can update tracking metadata and notify buyers", () => {
   assert.match(ADMIN_ORDERS, /await sendTrackingEmail\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*\[order\?\.customer_email,\s*\.\.\.companyRecipients\]\)/);
 });
 
-test("staff shipment tracking with a carrier tracking number marks orders fulfilled", () => {
+test("staff shipment tracking promotes settled orders while preserving open NET receivables", () => {
   assert.match(ADMIN_ORDERS, /const update\s*=\s*\{\s*tracking_status:\s*trackingStatus/);
-  // Promotion is gated on settled payment: a shipped NET order must stay net_open so it
-  // keeps counting against the company's outstanding credit until it's actually paid.
-  assert.match(ADMIN_ORDERS, /const fulfilled\s*=\s*\['shipped',\s*'delivered'\]\.includes\(trackingStatus\)\s*&&\s*trackingNumber\s*&&\s*\['paid',\s*'net_paid'\]\.includes\(current\.status\)/);
+  // Promotion is centralized in the lifecycle helper: shipped requires tracking,
+  // delivered can close settled local/BOL workflows without a parcel number, and
+  // open NET receivables stay net_open until payment is recorded.
+  assert.match(ADMIN_ORDERS, /const fulfilled\s*=\s*shouldPromoteToFulfilled\(current,\s*trackingStatus,\s*trackingNumber\)/);
   assert.match(
     ADMIN_ORDERS,
     /if\s*\(fulfilled\)\s*\{\s*update\.status\s*=\s*'fulfilled';\s*\}/

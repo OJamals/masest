@@ -39,6 +39,15 @@
 .blog-body code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
 .blog-body :not(pre) > code { background: rgba(0,0,0,.06); padding: 2px 6px; border-radius: 5px; }
 .blog-body img { max-width: 100%; height: auto; border-radius: 10px; }
+.blog-body .md-card,
+.md-card { display: flex; align-items: center; gap: 14px; margin: 22px 0; padding: 12px; border: 1px solid var(--line, #dbe4e6); border-radius: 10px; background: var(--surface, #fff); color: inherit; text-decoration: none; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+.blog-body .md-card:hover,
+.md-card:hover { border-color: var(--brand, #0e7c86); box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+.md-card img,
+.md-card-thumb { width: 84px; height: 64px; flex: 0 0 84px; border-radius: 8px; object-fit: cover; background: linear-gradient(135deg, rgba(14,124,134,.16), rgba(15,23,42,.08)); }
+.md-card span { min-width: 0; display: grid; gap: 3px; }
+.md-card strong { color: var(--ink, #142326); line-height: 1.25; }
+.md-card small { color: var(--muted, #667579); overflow-wrap: anywhere; }
 .blog-related { margin-top: 56px; border-top: 1px solid var(--line, #e5e7eb); padding-top: 28px; }
 .blog-related ul { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
 .blog-related a { text-decoration: none; color: inherit; }

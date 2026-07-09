@@ -86,14 +86,25 @@ test("admin shell exposes a native Content tab and panel", () => {
   assert.match(html, /id="admContent"/);
 });
 
+test("admin shell exposes a dedicated Blog tab in Comms", () => {
+  const html = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
+  assert.match(html, /data-tab="blog"/);
+  assert.match(html, /data-panel="blog"/);
+  assert.match(html, /id="admBlog"/);
+  assert.match(html, /Comms[\s\S]*data-tab="blog"[\s\S]*data-tab="newsletter"/);
+});
+
 test("admin content module is registered with lazy render and wire hooks", () => {
   const admin = readFileSync(new URL("../js/admin.js", import.meta.url), "utf8");
   const module = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
 
   assert.match(admin, /from '\.\/admin\/content\.js'/);
   assert.match(admin, /content:\s*renderContent/);
+  assert.match(admin, /blog:\s*renderBlog/);
   assert.match(admin, /wireContent\(\)/);
+  assert.match(admin, /wireBlog\(\)/);
   assert.match(module, /export function createContentTab/);
+  assert.match(module, /renderBlog/);
   assert.match(module, /\/api\/admin\/content/);
   assert.match(module, /JSON\.parse/);
   assert.match(module, /publish:\s*true/);

@@ -11,6 +11,8 @@ test("content preview shell listens for admin postMessage payloads", () => {
   assert.match(js, /addEventListener\("message"/);
   assert.match(js, /masest:content-preview/);
   assert.match(js, /renderPreview/);
+  assert.match(js, /renderBlogPreview/);
+  assert.match(js, /renderMarkdown/);
 });
 
 test("admin content editor owns a preview iframe and sends draft payloads", () => {

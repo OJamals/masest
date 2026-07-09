@@ -190,6 +190,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.locator('[data-content-action="refresh_assets"]').click();
   await expect(page.locator("#contentAssetRows")).toContainText("MASEST field team");
   await page.locator("[data-content-asset-status-action]").first().click();
+  await page.locator('.confirm-dialog button[value="confirm"]').click();
   await expect(page.locator("#contentStatus")).toHaveText("Asset archived.");
   await expect(page.locator("#contentAssetRows")).toContainText("No assets");
   await page.locator("#contentAssetStatusFilter").selectOption("archived");
