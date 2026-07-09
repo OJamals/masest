@@ -12,7 +12,7 @@ import { stockDecrements, stockIncrements } from '../../_lib/order-shape.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 import { planNetSettlement, netAging } from '../../_lib/credit.js';
 import { escapeLike } from '../../_lib/crm.js';
-import { decorateOrderLifecycle, settledOrderStatus, shouldPromoteToFulfilled } from '../../_lib/order-lifecycle.js';
+import { decorateOrderLifecycle, planOrderStatusWrite, settledOrderStatus, shouldPromoteToFulfilled } from '../../_lib/order-lifecycle.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const WRITABLE_ORDER_STATUSES = ORDER_STATUSES.filter((status) => status !== 'cart');
@@ -291,6 +291,8 @@ export async function onRequest({ request, env }) {
       if (beforeErr) return json(beforeErr.code === 'PGRST116' ? 404 : 500, { error: beforeErr.message });
       const normalized = normalizeOrderWrite(body, before.status);
       if (!normalized.ok) return json(400, { error: normalized.error, message: normalized.message });
+      const statusPlan = planOrderStatusWrite(before, normalized.patch.status);
+      if (!statusPlan.ok) return json(400, { error: statusPlan.error });
 
       const { data: order, error } = await sb.from('orders')
         .update(normalized.patch)
@@ -566,7 +568,9 @@ export async function onRequest({ request, env }) {
       .select('id,company_id,customer_email,status,payment_method,order_items(sku,qty,backordered)')
       .eq('id', body.id).single();
     if (beforeErr) return json(beforeErr.code === 'PGRST116' ? 404 : 500, { error: beforeErr.message });
-    const { data: order, error } = await sb.from('orders').update({ status: body.status })
+    const statusPlan = planOrderStatusWrite(before, body.status);
+    if (!statusPlan.ok) return json(400, { error: statusPlan.error });
+    const { data: order, error } = await sb.from('orders').update({ status: statusPlan.status })
       .eq('id', body.id).select('id,company_id,customer_email,status,total,currency').single();
     if (error) return json(500, { error: error.message });
     // Cancelling an open NET order is the sanctioned NET-cancel path (refund action

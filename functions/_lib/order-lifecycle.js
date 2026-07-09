@@ -8,6 +8,7 @@
 const CLOSED_STATUSES = new Set(["cart", "cancelled", "refunded"]);
 const SETTLED_STATUSES = new Set(["paid", "net_paid", "fulfilled"]);
 const TRACKING_STATUSES = new Set(["processing", "packing", "shipped", "delivered", "blocked"]);
+const OPEN_NET_WRITABLE_STATUSES = new Set(["net_open", "cancelled"]);
 
 const STAGE_LABELS = {
   cart: "Cart",
@@ -118,4 +119,13 @@ export function settledOrderStatus(order = {}, settledStatus = "net_paid") {
   return shouldPromoteToFulfilled(settledOrder, settledOrder.tracking_status, settledOrder.tracking_number)
     ? "fulfilled"
     : status;
+}
+
+export function planOrderStatusWrite(current = {}, nextStatus) {
+  const status = clean(nextStatus);
+  const openNet = clean(current.payment_method) === "net" && clean(current.status) === "net_open";
+  if (openNet && !OPEN_NET_WRITABLE_STATUSES.has(status)) {
+    return { ok: false, error: "use_net_settlement_action" };
+  }
+  return { ok: true, status };
 }

@@ -78,6 +78,40 @@ test("NET settlement actions preserve shipment completion when payment arrives a
   assert.match(src, /tracking_status,tracking_number/);
 });
 
+test("generic order edits cannot settle open NET receivables", () => {
+  assert.equal(typeof lifecycle.planOrderStatusWrite, "function");
+  const { planOrderStatusWrite } = lifecycle;
+  assert.deepEqual(planOrderStatusWrite({ status: "net_open", payment_method: "net" }, "fulfilled"), {
+    ok: false,
+    error: "use_net_settlement_action",
+  });
+  assert.deepEqual(planOrderStatusWrite({ status: "net_open", payment_method: "net" }, "net_paid"), {
+    ok: false,
+    error: "use_net_settlement_action",
+  });
+  assert.deepEqual(planOrderStatusWrite({ status: "net_open", payment_method: "net" }, "paid"), {
+    ok: false,
+    error: "use_net_settlement_action",
+  });
+  assert.deepEqual(planOrderStatusWrite({ status: "net_open", payment_method: "net" }, "cancelled"), {
+    ok: true,
+    status: "cancelled",
+  });
+});
+
+test("admin generic status writes use the NET receivable guard", () => {
+  const src = read("functions/api/admin/orders.js");
+  assert.match(src, /planOrderStatusWrite\(before,\s*normalized\.patch\.status\)/);
+  assert.match(src, /planOrderStatusWrite\(before,\s*body\.status\)/);
+});
+
+test("admin status dropdown narrows open NET orders to safe generic transitions", () => {
+  const src = read("js/admin/orders.js");
+  assert.match(src, /OPEN_NET_STATUS_OPTIONS/);
+  assert.match(src, /function orderStatusOptions\(selected,\s*order = \{\}\)/);
+  assert.match(src, /orderStatusOptions\(order\.status,\s*order\)/g);
+});
+
 test("dashboard in-progress counts route through lifecycle rather than raw net_paid status", () => {
   const src = read("js/dashboard.js");
   assert.match(src, /function orderIsActive/);

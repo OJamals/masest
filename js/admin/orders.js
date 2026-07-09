@@ -8,6 +8,7 @@ import { captureDirty, restoreDirty } from './edits.js';
 import { createSavedViews } from './saved-views.js';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
+const OPEN_NET_STATUS_OPTIONS = ['net_open', 'cancelled'];
 
 export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats }) {
   const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -88,8 +89,11 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     return `<div class="admin-order-lifecycle"><span>Lifecycle</span><b>${statusBadge(lifecycle.stage, lifecycle.label)}</b><small class="muted">${esc(nextActionLabel(lifecycle.next_action))}</small></div>`;
   }
 
-  function orderStatusOptions(selected) {
-    return ORDER_STATUSES
+  function orderStatusOptions(selected, order = {}) {
+    const statuses = order.payment_method === 'net' && order.status === 'net_open'
+      ? OPEN_NET_STATUS_OPTIONS
+      : ORDER_STATUSES;
+    return statuses
       .filter((status) => status !== 'refunded' || selected === 'refunded')
       .map((status) => `<option value="${status}" ${status === selected ? 'selected' : ''}>${status.replaceAll('_', ' ')}</option>`)
       .join('');
@@ -151,7 +155,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       <div class="adm-form-grid">
         <label class="wide">Customer email <input class="adm-input" data-edit-email="${id}" type="email" value="${esc(order.customer_email || '')}"></label>
         <label class="wide">Company ID <input class="adm-input" data-edit-company="${id}" value="${esc(order.company_id || '')}"></label>
-        <label>Status <select class="adm-select" data-edit-status="${id}">${orderStatusOptions(order.status)}</select></label>
+        <label>Status <select class="adm-select" data-edit-status="${id}">${orderStatusOptions(order.status, order)}</select></label>
         <label>Payment <select class="adm-select" data-edit-payment="${id}">${paymentOptions(order.payment_method || 'net')}</select></label>
         <label>Subtotal <input class="adm-input" data-edit-subtotal="${id}" type="number" min="0" step="0.01" value="${esc(order.subtotal ?? '')}"></label>
         <label>Tax <input class="adm-input" data-edit-tax="${id}" type="number" min="0" step="0.01" value="${esc(order.tax ?? 0)}"></label>
@@ -262,7 +266,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
           <div><span>Items</span><ul class="admin-order-items">${items || '<li class="muted">No items</li>'}</ul></div>
           <div><span>Pay</span><b>${esc(order.payment_method || '')}${netAgingBadge(order)}</b></div>
           ${lifecycleSummary(order)}
-          <label><span>Status</span><select class="adm-select" data-order-status="${id}">${orderStatusOptions(order.status)}</select></label>
+          <label><span>Status</span><select class="adm-select" data-order-status="${id}">${orderStatusOptions(order.status, order)}</select></label>
         </div>
         <div class="admin-order-actions">
           <button class="btn btn-ghost btn-sm" data-order-detail="${id}" type="button">Details</button>
