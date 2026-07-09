@@ -93,7 +93,7 @@ test("footer legal links keep touch-sized hit areas", async ({ page }) => {
     };
   }));
 
-  expect(legalLinks.map((link) => link.text)).toEqual(["Privacy", "Terms"]);
+  expect(legalLinks.map((link) => link.text)).toEqual(["Privacy", "Terms", "EULA"]);
   for (const link of legalLinks) {
     expect(link.height, `${link.text} footer link height`).toBeGreaterThanOrEqual(44);
     expect(link.display, `${link.text} footer link display`).toBe("flex");
