@@ -43,8 +43,8 @@
 .adm-mini-table th, .adm-mini-table td { padding: 8px 0; border-top: 1px solid var(--line-soft); text-align: left; font-size: .88rem; }
 .adm-mini-table th { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .07em; }
 .adm-mini-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-.adm-panel { display: none; }
-  .adm-panel[data-active="true"] { display: grid; gap: 16px; }
+.adm-panel { display: none; padding: 0; }
+  .adm-panel[data-active="true"] { display: grid; gap: 16px; align-content: start; align-items: start; }
   .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: start; max-width: 100%; }
   .adm-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .adm-search, .adm-input, .adm-select, .adm-textarea { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; padding: 10px 12px; }
