@@ -1062,7 +1062,6 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (!state.acctView) state.acctView = 'users';
     if (state.acctView === 'companies') await renderBusinessQueue({ refetch, append });
     else await renderAllUsers({ refetch });
-    state.loaded.add('companies');
   }
 
   return { renderCompanies, wireCompanies, openCompanyDetail };

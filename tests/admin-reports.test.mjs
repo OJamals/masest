@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { toCsv, revenueReport, parseRange } from "../functions/_lib/reports.js";
+import { onRequestGet } from "../functions/api/admin/reports.js";
 
 test("toCsv quotes fields, escapes quotes, CRLF rows", () => {
   assert.equal(toCsv([["a", 'b"c'], [1, null]]), '"a","b""c"\r\n"1",""');
@@ -33,4 +34,13 @@ test("parseRange: bare date 'to' is end-of-day inclusive; invalid -> null", () =
   assert.equal(fromIso, "2026-01-01T00:00:00.000Z");
   assert.equal(toIso, "2026-01-31T23:59:59.999Z");
   assert.deepEqual(parseRange(null, "garbage"), { fromIso: null, toIso: null });
+});
+
+test("reports endpoint rejects anonymous callers before loading orders", async () => {
+  const res = await onRequestGet({
+    request: new Request("https://masest.co/api/admin/reports?from=2026-01-01&to=2026-01-31"),
+    env: {},
+  });
+  assert.equal(res.status, 401);
+  assert.deepEqual(await res.json(), { error: "unauthenticated" });
 });

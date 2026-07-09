@@ -211,7 +211,7 @@ test("core pages keep visible heading levels sequential", async ({ page }) => {
   }
 });
 
-test("quote request starts as a short lead form and reveals procurement details progressively", async ({ page }) => {
+test("quote request starts as a short lead form and reveals product details progressively", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/contact.html?type=quote`, { waitUntil: "domcontentloaded" });
 
@@ -225,10 +225,10 @@ test("quote request starts as a short lead form and reveals procurement details 
       .map((node) => node.name));
 
   expect(visibleRequiredNames).toEqual(["name", "company", "email", "message"]);
-  await expect(page.getByRole("button", { name: /add procurement details/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /add product, volume & timeline/i })).toBeVisible();
   await expect(page.locator("#fVolume")).toBeHidden();
 
-  await page.getByRole("button", { name: /add procurement details/i }).click();
+  await page.getByRole("button", { name: /add product, volume & timeline/i }).click();
   await expect(page.locator("#fVolume")).toBeVisible();
 });
 

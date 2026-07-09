@@ -28,3 +28,13 @@ test("business workflow navigation wraps without card chrome", () => {
   assert.doesNotMatch(html, /class="biz-card biz-workflow-nav"/);
   assert.match(html, /@media \(max-width: 640px\)[\s\S]*\.biz-workflow-nav a \{ flex: 1 1 130px; justify-content: center; \}/);
 });
+
+test("business hub summarizes readiness metrics", () => {
+  const html = read("dashboard.html");
+  const js = read("js/business.js");
+
+  assert.match(html, /\.biz-hub-metric/, "business hub should style compact readiness metrics");
+  assert.match(js, /setupMetric\(data\)/, "business hub should expose setup progress");
+  assert.match(js, /netTermsText\(data\)/, "business hub should expose NET terms state");
+  assert.match(js, /aria-label="Business status"[\s\S]*Verification[\s\S]*Setup[\s\S]*Ordering[\s\S]*NET terms/, "business hub should render the key readiness markers");
+});

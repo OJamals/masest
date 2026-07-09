@@ -163,7 +163,32 @@ function trackingSteps(order) {
   </div>`;
 }
 
+function renderOverviewWorkspace() {
+  const box = $('ovWorkspace');
+  if (!box) return;
+  const c = ACCOUNT?.company;
+  const name = c?.name || ACCOUNT?.profile?.full_name || 'Your account';
+  const businessState = c ? bizStatusLabel(c.status || 'pending') : 'Not set up';
+  const orderingState = ACCOUNT?.can_checkout ? 'Enabled' : (c ? 'Pending' : 'Set up');
+  const netState = ACCOUNT?.can_use_net_terms ? `NET-${c?.net_terms_days || 0}` : 'Not enabled';
+  const body = c
+    ? 'Procurement, order tracking, account-team messages, and business readiness in one workspace.'
+    : 'Create a business profile to unlock B2B ordering, NET terms, programs, and account-team support.';
+  box.innerHTML = `
+    <div>
+      <p class="dash-eyebrow">User workspace</p>
+      <h2>${esc(name)}</h2>
+      <p class="muted">${esc(body)}</p>
+    </div>
+    <div class="dash-overview-markers" aria-label="Dashboard readiness">
+      <span class="dash-overview-marker"><small>Business</small><b>${esc(businessState)}</b></span>
+      <span class="dash-overview-marker"><small>Ordering</small><b>${esc(orderingState)}</b></span>
+      <span class="dash-overview-marker"><small>NET terms</small><b>${esc(netState)}</b></span>
+    </div>`;
+}
+
 async function renderOverview() {
+  renderOverviewWorkspace();
   const c = ACCOUNT?.company;
   const banner = $('approvalBanner');
   if (!c) {
