@@ -415,7 +415,9 @@
   .account-metric { display: grid; gap: 3px; min-height: 78px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px; }
   .account-metric span { color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
   .account-metric b { color: var(--ink); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
-  .account-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .42fr); gap: 14px; align-items: start; }
+  .account-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+  .account-layout[data-detail-open] { grid-template-columns: minmax(0, 1fr) minmax(320px, .42fr); }
+  .account-layout > [data-au-list] { min-width: 0; }
   .account-detail { position: sticky; top: 96px; display: grid; gap: 12px; }
   .account-detail[hidden] { display: none; }
   .account-detail .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -505,7 +507,8 @@
     .admin-order-meta,
     .company-admin-fields { grid-template-columns: 1fr; }
     .account-metrics,
-    .account-layout { grid-template-columns: 1fr; }
+    .account-layout,
+    .account-layout[data-detail-open] { grid-template-columns: 1fr; }
     .account-detail { position: static; }
     .admin-order-actions > .btn,
     .company-admin-actions > .btn,

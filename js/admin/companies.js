@@ -838,6 +838,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (el) { el.textContent = text || ''; el.dataset.state = kind || ''; }
   }
 
+  function setAccountDetailOpen(open) {
+    const box = $('accountDetail');
+    const layout = box?.closest('.account-layout');
+    if (box) box.hidden = !open;
+    layout?.toggleAttribute('data-detail-open', !!open);
+  }
+
   function accountDeleteErrorText(err) {
     const value = err?.data?.message || err?.data?.error || '';
     if (typeof value === 'string') {
@@ -900,7 +907,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   async function openAccountUserDetail(userId) {
     const box = $('accountDetail');
     if (!box) return;
-    box.hidden = false;
+    setAccountDetailOpen(true);
     box.textContent = 'Loading user...';
     try {
       const detail = await api(`/api/admin/users?detail=${encodeURIComponent(userId)}`);
@@ -926,7 +933,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <div class="dash-row"><span>Payment methods</span><b>${esc((detail.payment_methods || []).length)}</b></div>
         <div class="dash-row"><span>Recent orders</span><b>${esc((detail.orders || []).length)}</b></div>
       </div>`;
-      box.querySelector('[data-account-detail-close]')?.addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
+      box.querySelector('[data-account-detail-close]')?.addEventListener('click', () => { setAccountDetailOpen(false); box.innerHTML = ''; });
       box.querySelector('[data-account-user-save]')?.addEventListener('click', async (event) => {
         const button = event.currentTarget;
         const form = box.querySelector('#accountUserForm');
@@ -970,7 +977,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       box.querySelector('[data-business-delete]')?.addEventListener('click', async () => {
         try {
           await deleteBusiness(company);
-          box.hidden = true;
+          setAccountDetailOpen(false);
           box.innerHTML = '';
         } catch (err) {
           auStatus(err.data?.message || err.data?.error || 'Could not delete the business. Retry.', 'err');
@@ -1034,7 +1041,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       button.disabled = true;
       try {
         await api('/api/admin/users', { method: 'POST', body: { action: 'delete_user', user_id: button.dataset.auDelete } });
-        $('accountDetail')?.setAttribute('hidden', '');
+        setAccountDetailOpen(false);
         await renderAllUsers({ refetch: true });
         auStatus('User deleted.', 'ok');
         refreshStats?.();

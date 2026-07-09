@@ -111,6 +111,28 @@ test("account delete success removes the user and reports completion", async ({ 
   await expect(page.locator('[data-au-row="user-1"]')).toHaveCount(0);
 });
 
+test("users table spans the account summary width while detail is closed", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootAsStaff(page);
+  await page.route("**/api/admin/companies**", (route) =>
+    route.fulfill(json({ companies: [COMPANY], total: 1, has_more: false })));
+  await page.route("**/api/admin/users**", (route) => route.fulfill(json({ users: [USER] })));
+
+  await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-au-row="user-1"]')).toBeVisible();
+
+  const widths = await page.locator("#admAcctUsers").evaluate((root) => {
+    const metrics = root.querySelector(".account-metrics").getBoundingClientRect();
+    const table = root.querySelector("[data-au-list] .adm-table-wrap").getBoundingClientRect();
+    return {
+      metrics: Math.round(metrics.width),
+      table: Math.round(table.width),
+    };
+  });
+
+  expect(Math.abs(widths.table - widths.metrics)).toBeLessThanOrEqual(2);
+});
+
 test("business approval cards expose edit and delete actions with centered bulk controls", async ({ page }) => {
   await bootAsStaff(page);
   await page.route("**/api/admin/users**", (route) => route.fulfill(json({ users: [] })));
