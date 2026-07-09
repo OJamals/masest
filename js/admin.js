@@ -119,6 +119,8 @@ function setTab(tab) {
   // Emails (offers), and Traffic folded into Products / CRM / Overview
   // 2026-07-07 — their hashes land on the host tab.
   if (tab === 'customers') { state.crmView = 'contacts'; tab = 'crm'; }
+  const focusQuickBooks = tab === 'quickbooks' || tab === 'qbo';
+  if (focusQuickBooks) tab = 'overview';
   if (tab === 'pricing') tab = 'products';
   if (tab === 'offers') tab = 'crm';
   if (tab === 'traffic') tab = 'overview';
@@ -154,6 +156,9 @@ function setTab(tab) {
     crm: () => { renderCrm(); renderOffers(); },
   }[state.tab];
   render?.({ refetch: !cached });
+  if (focusQuickBooks) {
+    requestAnimationFrame(() => document.getElementById('admQbo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
 }
 
 function syncTabFromHash() {
