@@ -55,7 +55,13 @@ function apiProductsPayload() {
       mode: product.mode,
       active: product.active,
       sort: product.sort,
-      product_variants: variants.get(product.slug) || []
+      product_variants: product.slug === "cr"
+        ? [
+          ...(variants.get(product.slug) || []),
+          { vsku: "cr-1-old", label: "1 gal duplicate", gallons: 1, price: 12.02, currency: "usd", active: true, sort: 0 },
+          { vsku: "cr-55-old", label: "55 gal old drum", gallons: 55, price: 528.41, currency: "usd", active: false, sort: 0 },
+        ]
+        : variants.get(product.slug) || []
     }))
   };
 }
@@ -68,7 +74,7 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.match(productsHtml, /Buyable small-pack list pricing/);
     assert.match(productsHtml, /200\+ jugs: 5% off · 1,000\+ gallons \(drums\/totes\): 5% off\./);
     assert.match(productsHtml, /Drums and totes quoted before release/);
-    assert.match(productsHtml, /USD, FOB Ex Plant Merritt Island, FL/);
+    assert.match(productsHtml, /USD, FOB Ex Plant, Merritt Island FL/);
     assert.match(productsHtml, /href="pricing-hvac-facilities"/);
     assert.match(productsHtml, /href="pricing-cip-food-beverage"/);
     assert.doesNotMatch(productsHtml, /55 and 275 gal freight finalized after order/);
@@ -123,13 +129,17 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
         price: card.querySelector(".price-main")?.textContent.trim(),
         subprice: card.querySelector(".price-note")?.textContent.trim(),
         variantCount: card.querySelectorAll(".commerce-vol option").length,
+        optionValues: Array.from(card.querySelectorAll(".commerce-vol option")).map((option) => option.value),
         addLabel: card.querySelector("[data-cart-add]")?.textContent.trim(),
         href: card.querySelector(".shop-card-link")?.getAttribute("href")
       }));
 
       assert.match(first.price, /^\$19\.27$/, "card should show the current first buyable pack price");
       assert.equal(first.subprice, "1 gal jug", "card should show the selected pack size");
-      assert.ok(first.variantCount >= 3, "card should expose buyable pack choices");
+      assert.equal(first.variantCount, 5, "card should dedupe stale duplicate quantities while keeping quoted bulk choices");
+      assert.equal(new Set(first.optionValues).size, first.optionValues.length, "volume options should not duplicate SKUs");
+      assert.ok(!first.optionValues.includes("cr-1-old"), "stale duplicate active quantity should not be shown");
+      assert.ok(!first.optionValues.includes("cr-55-old"), "stale duplicate quote quantity should not be shown");
       assert.equal(first.addLabel, "Add to cart");
       assert.equal(first.href, "products/cr");
 

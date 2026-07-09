@@ -79,6 +79,39 @@ function fmtMoney(n, currency = "USD") {
   }).format(Number(n));
 }
 
+function variantRank(v) {
+  return /^VK-/i.test(String(v?.vsku || "")) ? 0 : 1;
+}
+
+function variantDedupeKey(v) {
+  const gallons = Number(v?.gallons);
+  return Number.isFinite(gallons) && gallons > 0
+    ? `gal:${gallons}`
+    : `sku:${String(v?.vsku || "").toLowerCase()}`;
+}
+
+function preferVariant(next, prev) {
+  if (!prev) return next;
+  const rankDelta = variantRank(next) - variantRank(prev);
+  if (rankDelta < 0) return next;
+  if (rankDelta > 0) return prev;
+  const sortDelta = Number(next?.sort ?? 0) - Number(prev?.sort ?? 0);
+  if (sortDelta < 0) return next;
+  if (sortDelta > 0) return prev;
+  return String(next?.vsku || "").localeCompare(String(prev?.vsku || "")) < 0 ? next : prev;
+}
+
+function dedupeVariants(variants = []) {
+  const byKey = new Map();
+  for (const variant of variants) {
+    if (!variant) continue;
+    const key = variantDedupeKey(variant);
+    byKey.set(key, preferVariant(variant, byKey.get(key)));
+  }
+  return [...byKey.values()]
+    .sort((a, b) => (Number(a.gallons) || 0) - (Number(b.gallons) || 0) || (Number(a.sort) || 0) - (Number(b.sort) || 0));
+}
+
 function normalizeCommerceRow(row) {
   const parent = row?.products && typeof row.products === "object" ? row.products : row;
   const sku = String(parent?.sku || row?.sku || "").trim().toLowerCase();
@@ -106,18 +139,19 @@ function normalizeCommerceRow(row) {
     label: v.label,
     gallons: Number(v.gallons) || 0,
     price: Number(v.price),
-    currency: String(v.currency || parent?.currency || row?.currency || "usd").toUpperCase()
+    currency: String(v.currency || parent?.currency || row?.currency || "usd").toUpperCase(),
+    sort: Number(v.sort || 0),
   });
-  const variants = rawVariants
+  const variants = dedupeVariants(rawVariants
     .filter(v => v && v.active !== false && v.price != null && Number(v.price) > 0)
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-    .map(shapeVariant);
+    .map(shapeVariant));
   // Bulk drums/totes (55/275 gal): priced and shown, but never sold direct —
   // the server rejects inactive variants at checkout; the UI routes them to a quote.
-  const quoteVariants = rawVariants
+  const quoteVariants = dedupeVariants(rawVariants
     .filter(v => v && v.active === false && Number(v.gallons) >= 55 && v.price != null && Number(v.price) > 0)
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-    .map(shapeVariant);
+    .map(shapeVariant));
   return {
     sku,
     active: parent?.active !== false && row?.active !== false,
@@ -151,10 +185,8 @@ export async function loadCommerceCatalog() {
           }
           existing.active = existing.active && row.active;
       existing.mode = existing.mode || row.mode;
-      existing.variants = existing.variants.concat(row.variants)
-        .sort((a, b) => (a.gallons || 0) - (b.gallons || 0));
-      existing.quoteVariants = (existing.quoteVariants || []).concat(row.quoteVariants || [])
-        .sort((a, b) => (a.gallons || 0) - (b.gallons || 0));
+      existing.variants = dedupeVariants(existing.variants.concat(row.variants));
+      existing.quoteVariants = dedupeVariants((existing.quoteVariants || []).concat(row.quoteVariants || []));
       if (!existing.image_url && row.image_url) existing.image_url = row.image_url;
       if (!existing.photo_alt && row.photo_alt) existing.photo_alt = row.photo_alt;
         existing.purchasable = existing.purchasable || row.purchasable;

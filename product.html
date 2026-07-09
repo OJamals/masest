@@ -175,9 +175,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Keep in sync with COMMERCE_SKU_ALIASES in js/main/commerce-ui.js and the drum-pricing.json keys.
     const COMMERCE_ALIAS = { crhd: "cr-hd" };
     const commerceId = COMMERCE_ALIAS[id] || id;
-    const p = PRODUCTS[id];
     const isCatalogProduct = Array.isArray(CATALOG_ORDER) && CATALOG_ORDER.includes(id);
-    const isProgramOnly = !isCatalogProduct && ["dbnpa", "crs"].includes(id);
+    const p = isCatalogProduct ? PRODUCTS[id] : null;
+    const isProgramOnly = false;
     const quoteFirst = (Array.isArray(QUOTE_FIRST_IDS) && QUOTE_FIRST_IDS.includes(id)) || isProgramOnly;
     function productCanonicalUrl() {
       return `https://masest.co/products/${encodeURIComponent(id)}`;
@@ -398,6 +398,28 @@ document.addEventListener("DOMContentLoaded", () => {
           active: row.active,
           sort: 0,
         }]);
+        const variantRank = (v) => /^VK-/i.test(String(v?.vsku || "")) ? 0 : 1;
+        const variantKey = (v) => {
+          const gallons = Number(v?.gallons);
+          return Number.isFinite(gallons) && gallons > 0
+            ? `gal:${gallons}`
+            : `sku:${String(v?.vsku || "").toLowerCase()}`;
+        };
+        const preferVariant = (next, prev) => {
+          if (!prev) return next;
+          const rankDelta = variantRank(next) - variantRank(prev);
+          if (rankDelta < 0) return next;
+          if (rankDelta > 0) return prev;
+          const sortDelta = Number(next?.sort ?? 0) - Number(prev?.sort ?? 0);
+          if (sortDelta < 0) return next;
+          if (sortDelta > 0) return prev;
+          return String(next?.vsku || "").localeCompare(String(prev?.vsku || "")) < 0 ? next : prev;
+        };
+        const dedupeVariants = (rows) => {
+          const byKey = new Map();
+          rows.forEach((v) => byKey.set(variantKey(v), preferVariant(v, byKey.get(variantKey(v)))));
+          return [...byKey.values()].sort((a, b) => (Number(a.gallons) || 0) - (Number(b.gallons) || 0) || (a.sort ?? 0) - (b.sort ?? 0));
+        };
         const variants = rawVariants
           .filter(v => v && v.active !== false && v.price != null && Number(v.price) > 0)
           .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
@@ -406,8 +428,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const bulkVariants = rawVariants
           .filter(v => v && v.active === false && Number(v.gallons) >= 55 && v.price != null && Number(v.price) > 0)
           .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
-        if (!variants.length) return;
-        const allVariants = variants.concat(bulkVariants);
+        const buyableVariants = dedupeVariants(variants);
+        const quoteVariants = dedupeVariants(bulkVariants);
+        if (!buyableVariants.length) return;
+        const allVariants = buyableVariants.concat(quoteVariants);
         const money = (n, c) => new Intl.NumberFormat("en-US", {
           style: "currency", currency: String(c || "usd").toUpperCase(),
           maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
@@ -418,14 +442,14 @@ document.addEventListener("DOMContentLoaded", () => {
           : "";
         // Default to the 5 gal pail (the common buyable pack); never default onto a
         // bulk freight drum/tote size. Falls back to the first buyable variant.
-        const selectedIndex = Math.max(0, variants.findIndex(v => Number(v.gallons) === 5));
+        const selectedIndex = Math.max(0, buyableVariants.findIndex(v => Number(v.gallons) === 5));
         const sel = document.createElement("select");
         sel.id = "pVol";
         sel.className = "commerce-vol";
         sel.setAttribute("aria-label", "Volume for " + p.name);
-        sel.innerHTML = variants.map((v, i) =>
+        sel.innerHTML = buyableVariants.map((v, i) =>
           `<option value="${v.vsku}"${i === selectedIndex ? " selected" : ""}>${v.label} · ${money(v.price, v.currency)}${perGallonText(v)}</option>`).join("")
-          + bulkVariants.map(v =>
+          + quoteVariants.map(v =>
             `<option value="${v.vsku}" data-quote="1">${v.label} · ${money(v.price, v.currency)}${perGallonText(v)} · freight quoted</option>`).join("");
         buyBtn.parentNode.insertBefore(sel, buyBtn);
         const unit = document.createElement("span");

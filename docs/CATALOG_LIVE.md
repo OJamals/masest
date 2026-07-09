@@ -29,7 +29,10 @@ catalog. It is the canonical *initial* dataset and the input to the seed scripts
 
 The seed scripts overwrite DB rows from the canonical JSON. Use only to bootstrap
 a fresh project or recover from corruption — **this clobbers live admin edits**
-to products/variants (it does NOT touch `price_tiers`, `companies`, or Storage).
+to products/variants. It also deletes stale products, variants, services, and
+price-tier cells whose variant SKU is no longer in `data/catalog.seed.json`, then
+refreshes `retail` tier cells to match the base workbook price. It does not touch
+`companies` or Storage.
 
 ```
 # 1. (re)generate catalog.seed.json + SQL seeds from the source decks

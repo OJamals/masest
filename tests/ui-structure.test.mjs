@@ -118,14 +118,15 @@ test("product details include source-backed media galleries", () => {
   assert.match(mainCatalogData, /img\/proof\/cases\/marine\.webp/);
 });
 
-test("programs page moves glycol pricing into an optional disclosure", () => {
+test("programs page keeps glycol quote handling in an optional disclosure", () => {
   const programs = read("programs.html");
-  const pricingIndex = programs.indexOf("Glycol price list");
+  const pricingIndex = programs.indexOf("Glycol quote list");
   const disclosureIndex = programs.indexOf('class="resource-disclosure');
 
-  assert.ok(pricingIndex > -1, "expected glycol pricing content to remain");
-  assert.ok(disclosureIndex > -1, "expected pricing to be inside a disclosure");
-  assert.ok(disclosureIndex < pricingIndex, "disclosure should wrap the price list");
+  assert.ok(pricingIndex > -1, "expected glycol quote content to remain");
+  assert.ok(disclosureIndex > -1, "expected quote handling to be inside a disclosure");
+  assert.ok(disclosureIndex < pricingIndex, "disclosure should wrap the quote list");
+  assert.doesNotMatch(programs, /PG inhibited 100% \(96%\)[\s\S]*\$141/, "glycol prices should not be public without workbook confirmation");
 });
 
 test("products page keeps the field proof strip between catalog and CTA", () => {

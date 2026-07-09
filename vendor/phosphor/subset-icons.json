@@ -1,8 +1,8 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 264,
-  "usedCount": 150,
-  "bufferCount": 114,
+  "count": 265,
+  "usedCount": 152,
+  "bufferCount": 113,
   "icons": [
     {
       "name": "address-book",
@@ -17,7 +17,7 @@
     {
       "name": "airplane-tilt",
       "cp": "E5D6",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "anchor",
@@ -377,6 +377,11 @@
     {
       "name": "download-simple",
       "cp": "E20C",
+      "src": "used"
+    },
+    {
+      "name": "drone",
+      "cp": "ED74",
       "src": "used"
     },
     {

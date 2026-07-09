@@ -25,3 +25,5 @@ on conflict (sku) do update set
   taxable = excluded.taxable,
   price = excluded.price,
   sort = excluded.sort;
+
+delete from public.products where sku not in ('cr','cr2','hcr','hcr-t16','descaler','cr-hd','cr-hd-low-foam','neutral','multiwash','lam3','purgo','alumibrite','torque','sar','watersafe60');

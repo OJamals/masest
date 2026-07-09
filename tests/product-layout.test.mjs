@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { chromium } from "playwright";
-import { PRODUCTS } from "../js/main/catalog-data.js";
+import { CATALOG_ORDER, PRODUCTS } from "../js/main/catalog-data.js";
 
 const PORT = 4187;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -120,7 +120,8 @@ test("products page thumbnails use the blue media stage", async () => {
 });
 
 test("static product detail heroes publish full catalog copy", () => {
-  for (const [id, product] of Object.entries(PRODUCTS)) {
+  for (const id of CATALOG_ORDER) {
+    const product = PRODUCTS[id];
     const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
     const subhead = html.match(/<p class="subhead">([^<]*)<\/p>/)?.[1] || "";
 
@@ -326,7 +327,7 @@ test("static product detail renders specs uses and docs without commerce API", a
   });
 });
 
-test("non-canonical CRS page stays quote-only and does not inherit Descaler checkout", async () => {
+test("non-canonical CRS route shows the current-catalog fallback and no checkout", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
@@ -356,15 +357,15 @@ test("non-canonical CRS page stays quote-only and does not inherit Descaler chec
         })
       }));
       await page.goto(`${BASE_URL}/product.html?id=crs`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen CRS"));
+      await page.waitForFunction(() => document.querySelector("main")?.textContent.includes("That product is not in the current catalog."));
       const state = await page.evaluate(() => ({
-        name: document.querySelector("#pName")?.textContent || "",
-        addVisible: !document.querySelector("#pBuyBtn")?.hidden,
+        main: document.querySelector("main")?.textContent || "",
+        addVisible: Boolean(document.querySelector("#pBuyBtn") && !document.querySelector("#pBuyBtn").hidden),
         volSelect: !!document.querySelector("#pVol"),
         bulkQuoteBtn: !!document.querySelector("#pBulkQuoteBtn"),
-        quoteText: document.querySelector("#pQuoteBtn")?.textContent || ""
+        quoteText: document.querySelector("main a[href*='contact?type=quote']")?.textContent || ""
       }));
-      assert.equal(state.name, "VertKleen CRS");
+      assert.match(state.main, /not in the current catalog/i);
       assert.equal(state.addVisible, false, "CRS must not borrow Descaler add-cart variants");
       assert.equal(state.volSelect, false, "CRS must not borrow Descaler volume selector");
       assert.equal(state.bulkQuoteBtn, false, "CRS must not borrow Descaler bulk quote CTA");

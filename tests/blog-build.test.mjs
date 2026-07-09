@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { CONTENT_TYPE_DEFINITIONS, snapshotGroups, structuredPayloadKeys } from "../js/content-types.js";
 import { snapshotPayloads } from "../tools/build-content.mjs";
 import { buildBlog } from "../tools/build-blog.mjs";
+import { escapeHtml } from "../tools/_md.mjs";
 
 const SEED = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
 
@@ -52,7 +53,8 @@ test("buildBlog writes a static page per post", () => {
       const file = join(out, "blog", `${p.slug}.html`);
       assert.ok(existsSync(file), `${p.slug}.html must exist`);
       const html = readFileSync(file, "utf8");
-      assert.match(html, new RegExp(`<h1[^>]*>${p.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+      const expectedTitle = escapeHtml(p.title).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      assert.match(html, new RegExp(`<h1[^>]*>${expectedTitle}`));
       assert.match(html, /"@type":"BlogPosting"/);
       assert.match(html, new RegExp(`canonical" href="https://masest.co/blog/${p.slug}"`));
     }

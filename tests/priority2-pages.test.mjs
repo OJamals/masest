@@ -14,12 +14,41 @@ const priorityIndustries = [
   ["hotels-property-management", "Hotels / Property Management", "Facades, pools, restrooms, HVAC", "multiwash lam3 descaler neutral", "Request property walkthrough"],
 ];
 
+const tab4IndustryPages = [
+  ["schools-universities", "Schools &amp; Universities", "HVAC scale, coil maintenance, and hazmat chemicals near kids", "descaler hcr multiwash", "Request district pricing"],
+  ["mechanical-contractors-water-treatment", "Mechanical Contractors &amp; Water Treatment", "Callback-driven descaling and hazmat handling costs", "hcr descaler watersafe60", "Open a contractor account"],
+  ["breweries-distilleries-wineries", "Breweries, Distilleries &amp; Wineries", "CIP acid and caustic hazards", "cr hcr cr-hd-low-foam", "Book a free CIP demo"],
+  ["restaurants-commercial-kitchens", "Restaurants &amp; Commercial Kitchens", "Grease, drains, hood filters, and equipment cleaning", "crhd purgo multiwash neutral", "Get a sample kit"],
+  ["data-centers", "Data Centers", "Cooling tower scale, Legionella compliance, green mandates", "watersafe60 hcr descaler", "Schedule a water-treatment audit."],
+  ["warehousing-distribution-centers", "Warehousing &amp; Distribution Centers", "Floor degreasing at scale", "crhd multiwash", "Request drum pricing"],
+  ["hotels-resorts-property-management", "Hotels, Resorts &amp; Property Management", "Facades, pools, restrooms, HVAC", "multiwash lam3 descaler neutral", "Request property walkthrough"],
+  ["pressure-washing-soft-wash-contractors", "Pressure-Washing &amp; Soft-Wash Contractors", "Bleach damage, plant kill, and runoff liability", "lam3 multiwash", "Distributor application"],
+  ["drone-cleaning-companies", "Drone Cleaning Companies", "safe, drone-rated chemistry", "multiwash lam3 crhd", "Book a drone-wash consult"],
+  ["marine-marinas-boatyards", "Marine, Marinas &amp; Boatyards", "Hull scale, salt, wax, and aluminum brightwork", "torque alumibrite hcr", "Get marina bulk pricing"],
+  ["aviation-fbos-mro-airports", "Aviation - FBOs, MRO, Airports", "precision degreasing without corrosion", "crhd alumibrite", "Request aviation spec sheet"],
+  ["municipalities-water-utilities", "Municipalities &amp; Water Utilities", "NSF-60 requirements, worker safety, bids", "cr2 watersafe60 hcr", "Get on our bid list"],
+  ["golf-courses-sports-facilities", "Golf Courses &amp; Sports Facilities", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash", "Request grounds-crew trial"],
+  ["healthcare-senior-living", "Healthcare &amp; Senior Living", "Cleaning near vulnerable people", "neutral multiwash descaler", "Request facilities assessment"],
+  ["fleet-trucking-car-washes", "Fleet, Trucking &amp; Car Washes", "Degreasing, wash and wax", "torque crhd alumibrite", "Fleet program pricing"],
+  ["oil-gas-industrial-plants", "Oil &amp; Gas / Industrial Plants", "Tank cleaning, scale", "hcr cr crhd", "Talk to an EHS consultant"],
+  ["food-processing-agriculture", "Food Processing &amp; Agriculture", "CIP, organic residue", "cr hcr cr-hd-low-foam", "Request plant trial"],
+  ["solar-farms-panel-cleaning", "Solar Farms &amp; Panel Cleaning", "Soft-wash at scale without panel damage", "multiwash lam3", "Request per-MW quote"],
+];
+
 const comparisonPages = [
   ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "DDC Engineering"],
   ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "DDC Engineering"],
   ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "Walmart"],
   ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Wet & Forget"],
   ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "Brewlando"],
+];
+
+const comparisonBlogPosts = [
+  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "DDC Engineering"],
+  ["blog/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "DDC Engineering"],
+  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "Walmart"],
+  ["blog/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Wet & Forget"],
+  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "Brewlando"],
 ];
 
 test("priority 2 target industry pages exist with workbook-specified products and CTAs", () => {
@@ -45,6 +74,39 @@ test("priority 2 target industry pages exist with workbook-specified products an
   }
 });
 
+test("Tab 4 industry rows each have a generated landing page", () => {
+  const sitemap = read("sitemap.xml");
+  const contact = read("contact.html");
+
+  for (const [slug, name, problem, products, cta] of tab4IndustryPages) {
+    const path = `industries/${slug}.html`;
+    assert.equal(exists(path), true, `${path} should exist`);
+
+    const html = read(path);
+    assert.match(sitemap, new RegExp(`https://masest\\.co/industries/${slug}`), `${slug} should be in sitemap`);
+    assert.match(html, new RegExp(`<title>${name} \\| MASEST VertKleen</title>`), `${slug} title should match Tab 4 row`);
+    assert.match(html, new RegExp(problem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 problem`);
+    assert.match(html, new RegExp(`data-ind-products="${products}"`), `${slug} should use the Tab 4 hero products`);
+    assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 CTA`);
+    assert.match(contact, new RegExp(`<option>${name}</option>`), `${name} should be available in the industry dropdown`);
+  }
+});
+
+test("industry page images route to industry pages, not proof or contact", () => {
+  const html = read("industries.html");
+  const sectorData = JSON.parse(read("data/content/industry-sectors.json"));
+
+  for (const match of html.matchAll(/class="(?:row-thumb|proof-thumb)" href="([^"]+)"/g)) {
+    assert.match(match[1], /^industries\//, `industry image should link to an industry page: ${match[1]}`);
+    assert.doesNotMatch(match[1], /^proof|^contact/, `industry image should not route to proof/contact: ${match[1]}`);
+  }
+
+  for (const sector of sectorData.industry_sectors) {
+    assert.match(sector.href, /^industries\//, `${sector.slug} CMS image href should route to its industry page`);
+    assert.doesNotMatch(sector.href, /^proof|^contact/, `${sector.slug} CMS image href should not route to proof/contact`);
+  }
+});
+
 test("priority 2 comparison landing pages include price math, swap row, proof point, and quote CTA", () => {
   const sitemap = read("sitemap.xml");
 
@@ -63,6 +125,27 @@ test("priority 2 comparison landing pages include price math, swap row, proof po
   }
 });
 
+test("comparison SEO pages are also generated as blog posts", () => {
+  const sitemap = read("sitemap.xml");
+  const blogData = JSON.parse(read("data/content/blog.json"));
+  const postSlugs = new Set(blogData.blog_posts.map((post) => post.slug));
+
+  for (const [path, title, vkMath, marketMath, proof] of comparisonBlogPosts) {
+    const slug = path.replace(/^blog\//, "").replace(/\.html$/, "");
+    assert.ok(postSlugs.has(slug), `${slug} should be present in data/content/blog.json`);
+    assert.equal(exists(path), true, `${path} should be generated`);
+
+    const html = read(path);
+    assert.match(sitemap, new RegExp(`https://masest\\.co/blog/${slug}`), `${slug} blog URL should be in sitemap`);
+    assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
+    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show VertKleen per-gallon math`);
+    assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show competitor per-gallon math`);
+    assert.match(html, /Swap table row/, `${title} blog post should include the swap-table row`);
+    assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should include a proof point`);
+    assert.match(html, /href="\/contact\?type=quote|href="\/contact\?type=quote&amp;industry=/, `${title} blog post should include a quote CTA`);
+  }
+});
+
 test("CIP pricing route is backed by the full Tab 3 row set", () => {
   const data = JSON.parse(read("data/segment-pricing.json"));
   const cip = data.segments.find((segment) => segment.slug === "cip-food-beverage");
@@ -70,5 +153,6 @@ test("CIP pricing route is backed by the full Tab 3 row set", () => {
   assert.equal(cip.rows.length, 31, "CIP Tab 3 has 31 public rows");
   assert.equal(cip.rows.find((row) => row.sku === "VK-CR-1G")?.price_per_unit, "22.02");
   assert.equal(cip.rows.find((row) => row.sku === "VK-HCR-2.5G")?.price_per_unit, "61.80");
+  assert.equal(cip.rows.find((row) => row.sku === "VK-CRHD-55G")?.price_per_gallon, "6.40");
   assert.equal(cip.rows.find((row) => row.sku === "VK-PRG-2.5G")?.price_per_unit, "53.73");
 });

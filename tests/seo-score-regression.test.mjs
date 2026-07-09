@@ -6,7 +6,10 @@ import { PRODUCTS } from "../js/main/catalog-data.js";
 
 const root = path.resolve(new URL("..", import.meta.url).pathname);
 const base = "https://masest.co";
-const productIds = Object.keys(PRODUCTS);
+const productIds = fs.readdirSync(path.join(root, "products"))
+  .filter((file) => file.endsWith(".html"))
+  .map((file) => file.replace(/\.html$/, ""))
+  .sort();
 
 function read(file) {
   return fs.readFileSync(path.join(root, file), "utf8");
@@ -108,6 +111,7 @@ test("product detail pages are static, crawlable, and schema-rich", () => {
   for (const id of productIds) {
     const product = PRODUCTS[id];
     const file = `products/${id}.html`;
+    assert.ok(product, `${id} static product page must map to catalog data`);
     assert.ok(fs.existsSync(path.join(root, file)), `${file} missing`);
     const html = read(file);
     assert.match(html, new RegExp(`<title>${product.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\| MASEST VertKleen<\\/title>`));

@@ -15,6 +15,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import {
+  CATALOG_ORDER,
   PRODUCT_CATALOG_COPY,
   PRODUCTS,
   QUOTE_FIRST_IDS,
@@ -27,7 +28,7 @@ const PRODUCT_FALLBACK_IMAGE_URL = `${BASE}/${PRODUCT_FALLBACK_IMAGE}`;
 const START = "<!-- seo:auto -->";
 const END = "<!-- /seo:auto -->";
 
-const PRODUCT_IDS = Object.keys(PRODUCTS);
+const PRODUCT_IDS = CATALOG_ORDER.filter((id) => PRODUCTS[id]);
 
 // Editorial catalog id -> commerce/reviews sku. Reviews (and orders.order_items
 // .product_sku, and data-sku on product.html) key on the commerce sku, not the
@@ -72,6 +73,37 @@ const PUBLIC = {
   "industries/hvac-water.html": { loc: "/industries/hvac-water", priority: "0.6", changefreq: "monthly" },
   "industries/plumbing.html": { loc: "/industries/plumbing", priority: "0.6", changefreq: "monthly" },
 };
+
+Object.assign(PUBLIC, Object.fromEntries([
+  ["pricing-hvac-facilities.html", "/pricing-hvac-facilities", "0.7"],
+  ["pricing-cip-food-beverage.html", "/pricing-cip-food-beverage", "0.7"],
+  ["industries/data-centers.html", "/industries/data-centers", "0.6"],
+  ["industries/golf-courses.html", "/industries/golf-courses", "0.6"],
+  ["industries/solar-panel-cleaning.html", "/industries/solar-panel-cleaning", "0.6"],
+  ["industries/municipalities-water-utilities.html", "/industries/municipalities-water-utilities", "0.6"],
+  ["industries/hotels-property-management.html", "/industries/hotels-property-management", "0.6"],
+  ["industries/schools-universities.html", "/industries/schools-universities", "0.6"],
+  ["industries/mechanical-contractors-water-treatment.html", "/industries/mechanical-contractors-water-treatment", "0.6"],
+  ["industries/breweries-distilleries-wineries.html", "/industries/breweries-distilleries-wineries", "0.6"],
+  ["industries/restaurants-commercial-kitchens.html", "/industries/restaurants-commercial-kitchens", "0.6"],
+  ["industries/warehousing-distribution-centers.html", "/industries/warehousing-distribution-centers", "0.6"],
+  ["industries/hotels-resorts-property-management.html", "/industries/hotels-resorts-property-management", "0.6"],
+  ["industries/pressure-washing-soft-wash-contractors.html", "/industries/pressure-washing-soft-wash-contractors", "0.6"],
+  ["industries/drone-cleaning-companies.html", "/industries/drone-cleaning-companies", "0.6"],
+  ["industries/marine-marinas-boatyards.html", "/industries/marine-marinas-boatyards", "0.6"],
+  ["industries/aviation-fbos-mro-airports.html", "/industries/aviation-fbos-mro-airports", "0.6"],
+  ["industries/golf-courses-sports-facilities.html", "/industries/golf-courses-sports-facilities", "0.6"],
+  ["industries/healthcare-senior-living.html", "/industries/healthcare-senior-living", "0.6"],
+  ["industries/fleet-trucking-car-washes.html", "/industries/fleet-trucking-car-washes", "0.6"],
+  ["industries/oil-gas-industrial-plants.html", "/industries/oil-gas-industrial-plants", "0.6"],
+  ["industries/food-processing-agriculture.html", "/industries/food-processing-agriculture", "0.6"],
+  ["industries/solar-farms-panel-cleaning.html", "/industries/solar-farms-panel-cleaning", "0.6"],
+  ["comparisons/vertkleen-hcr-vs-clr.html", "/comparisons/vertkleen-hcr-vs-clr", "0.7"],
+  ["comparisons/hcr-vs-rydlyme.html", "/comparisons/hcr-vs-rydlyme", "0.7"],
+  ["comparisons/cr-hd-vs-simple-green.html", "/comparisons/cr-hd-vs-simple-green", "0.7"],
+  ["comparisons/lam3-vs-wet-forget.html", "/comparisons/lam3-vs-wet-forget", "0.7"],
+  ["comparisons/beer-line-cleaner-cost-comparison.html", "/comparisons/beer-line-cleaner-cost-comparison", "0.7"],
+].map(([file, loc, priority]) => [file, { loc, priority, changefreq: "monthly" }])));
 
 const PRIVATE = [
   "account.html",

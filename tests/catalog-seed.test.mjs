@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const readSite = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -97,6 +97,10 @@ test("canonical catalog carries quote-confirmed services and unique SKUs", () =>
 
 test("Supabase seed SQL imports buyable and quote-review variant state", () => {
   const seed = readSite("supabase/variants_seed.sql");
+  assert.match(seed, /delete from public\.product_variants where vsku not in/, "variant seed should purge stale DB variants");
+  assert.match(seed, /delete from public\.price_tiers where vsku not in/, "variant seed should purge stale tier cells for removed variants");
+  assert.match(seed, /insert into public\.price_tiers \(vsku, tier, price, currency\)/, "variant seed should refresh retail tier prices");
+  assert.match(seed, /on conflict \(vsku, tier\) do update set/, "retail tier prices should update when workbook prices change");
   assert.match(seed, /'VK-HCR-1G','hcr','1 gal jug',1,21\.63,true,1/);
   assert.match(seed, /'VK-WS60-1G','watersafe60','1 gal jug',1,16\.88,true,1/);
   assert.match(seed, /'VK-CR2-1G','cr2','1 gal jug',1,18\.25,true,1/);
@@ -127,6 +131,8 @@ test("segment pricing uses current public workbook rows and quote footers", () =
   const row = (sku) => hvac.rows.find((item) => item.sku === sku);
   assert.equal(row("VK-HCR-2.5G").price_per_unit, "61.80");
   assert.equal(row("VK-CR-2.5G").price_per_unit, "55.05");
+  assert.equal(row("VK-CRHD-55G").price_per_gallon, "6.40");
+  assert.equal(row("VK-CRHD-55G").price_per_unit, "352.28");
   assert.equal(row("VK-PRG-2.5G").price_per_unit, "53.73");
   assert.equal(row("VK-PRG-2.5G").price_per_gallon, "21.49");
 
@@ -135,12 +141,38 @@ test("segment pricing uses current public workbook rows and quote footers", () =
   assert.doesNotMatch(resourcesHtml, /FOB ex-plant, Melbourne FL|FOB Melbourne, FL/);
 });
 
+test("public pricing surfaces avoid retired rates and stale FOB wording", () => {
+  const publicPricingPages = [
+    "products.html",
+    "product.html",
+    "cart.html",
+    "resources.html",
+    "programs.html",
+    "pricing-hvac-facilities.html",
+    "pricing-cip-food-beverage.html",
+  ];
+  const stalePublicPricing = /\$12\.02|\$43\.26|\$38\.53|\$23\.57|\$58\.61|FOB ex-plant, Melbourne FL|FOB Melbourne, FL|FOB Origin \(Cocoa \/ Melbourne\)|FOB Ex Plant Merritt Island, FL/;
+  for (const page of publicPricingPages) {
+    assert.doesNotMatch(readSite(page), stalePublicPricing, `${page} should not publish retired pricing or stale FOB text`);
+  }
+});
+
 test("seed script imports products, variants, and services from canonical catalog", () => {
   const script = readFileSync(new URL("../tools/seed-products.mjs", import.meta.url), "utf8");
   assert.match(script, /catalog\.seed\.json/);
   assert.match(script, /\['products', products, 'sku'\]/);
   assert.match(script, /\['product_variants', variants, 'vsku'\]/);
   assert.match(script, /\['services', services, 'sku'\]/);
+  assert.match(script, /deleteStaleRows\('product_variants', 'vsku', currentVariants\)/);
+  assert.match(script, /deleteStaleRows\('price_tiers', 'vsku', currentVariants, \{ optional: true \}\)/);
+  assert.match(script, /syncRetailPriceTiers\(\)/);
+});
+
+test("raw tier-pricing table is not publicly readable", () => {
+  const schema = readSite("supabase/schema-pricing.sql");
+  assert.match(schema, /price_tiers_no_public_read/);
+  assert.match(schema, /revoke all on public\.price_tiers from anon, authenticated/);
+  assert.doesNotMatch(schema, /grant select on public\.price_tiers to anon, authenticated/);
 });
 
 test("public catalog excludes non-canonical program aliases", () => {
@@ -151,6 +183,15 @@ test("public catalog excludes non-canonical program aliases", () => {
   assert.ok(!slugs.includes("dbnpa"), "DBNPA stays a program component, not canonical parent SKU");
   assert.ok(!slugs.includes("pg100"), "PG/EG glycol products are not in the confirmed July 2026 website price list");
   assert.ok(!slugs.includes("eg5050"), "PG/EG glycol products are not in the confirmed July 2026 website price list");
+});
+
+test("legacy non-workbook product routes are not published as static product pages", () => {
+  const legacy = ["crs", "dbnpa", "pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"];
+  const sitemap = readSite("sitemap.xml");
+  for (const slug of legacy) {
+    assert.equal(existsSync(new URL(`../products/${slug}.html`, import.meta.url)), false, `${slug} should not have a static product page`);
+    assert.doesNotMatch(sitemap, new RegExp(`/products/${slug}(?:<|$)`), `${slug} should not be in sitemap`);
+  }
 });
 
 test("site copy respects documentation claim guardrails", () => {

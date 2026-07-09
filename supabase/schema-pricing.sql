@@ -23,15 +23,16 @@ create index if not exists price_tiers_vsku_idx on public.price_tiers(vsku);
 alter table public.companies
   add column if not exists price_tier pricing_tier not null default 'retail';
 
--- RLS: public read. Effective prices are resolved server-side; exposing the
--- list is acceptable and lets the storefront show tier prices to logged-in users.
+-- RLS: no public raw-tier reads. Effective prices are resolved server-side by
+-- /api/products, so public clients should never see wholesale/HVAC matrices.
 alter table public.price_tiers enable row level security;
 drop policy if exists price_tiers_public_read on public.price_tiers;
-create policy price_tiers_public_read on public.price_tiers
-  for select to anon, authenticated using (true);
+drop policy if exists price_tiers_no_public_read on public.price_tiers;
+create policy price_tiers_no_public_read on public.price_tiers
+  for select to anon, authenticated using (false);
 
 -- Pooler-created tables need explicit grants or service_role writes fail 42501.
-grant select on public.price_tiers to anon, authenticated;
+revoke all on public.price_tiers from anon, authenticated;
 grant select, insert, update, delete on public.price_tiers to service_role;
 
 -- Seed the retail tier from current variant prices so the admin matrix shows a
@@ -41,4 +42,7 @@ insert into public.price_tiers (vsku, tier, price, currency)
 select vsku, 'retail', price, coalesce(currency, 'usd')
 from public.product_variants
 where price is not null
-on conflict (vsku, tier) do nothing;
+on conflict (vsku, tier) do update set
+  price = excluded.price,
+  currency = excluded.currency,
+  updated_at = now();
