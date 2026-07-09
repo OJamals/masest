@@ -1,6 +1,6 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
-import { esc, safeUrl, money, dateTime as date, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog } from './util.js';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js';
 import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js';
 import { editKey, captureDirty, restoreDirty } from './admin/edits.js';
 import { createTrafficRenderer } from './admin/traffic.js';
@@ -17,6 +17,8 @@ import { createQuotesTab } from './admin/quotes.js';
 import { createCrmWorkspace } from './admin/crm-workspace.js';
 import { createReviewsTab } from './admin/reviews.js';
 import { createNewsletterTab } from './admin/newsletter.js';
+import { createInventoryCard } from './admin/inventory.js';
+import { createCouponsCard } from './admin/coupons.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -267,94 +269,6 @@ function wireReports() {
     downloadCsv('/api/admin/quotes?export=csv', 'masest-quotes.csv', 'repResult'));
 }
 
-// Inventory card (#98): bulk stock import + low-stock reorder list. Bound once;
-// the Products tab re-renders on each visit.
-let inventoryWired = false;
-async function renderLowStock() {
-  const box = $('invLow');
-  if (!box) return;
-  box.innerHTML = admSkeleton();
-  try {
-    const r = await api('/api/admin/inventory?view=low');
-    const low = r.low_stock || [];
-    box.innerHTML = low.length
-      ? `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>SKU</th><th>Product</th><th>Variant</th><th class="num">Stock</th><th class="num">Reorder</th></tr></thead><tbody>${low.map((v) =>
-          `<tr><td>${esc(v.vsku)}</td><td>${esc(v.products?.name || '')}</td><td>${esc(v.label)}</td><td class="num">${esc(v.stock)}</td><td class="num">${esc(v.reorder_point ?? 10)}</td></tr>`).join('')}</tbody></table></div>`
-      : admEmpty('ph-package', 'No low-stock variants', 'Variants at or below their reorder point appear here.');
-  } catch { box.innerHTML = '<p class="adm-status" data-state="err">Could not load low stock.</p>'; }
-}
-function wireInventory() {
-  renderLowStock();
-  if (inventoryWired || !$('invApply')) return;
-  inventoryWired = true;
-  $('invApply').addEventListener('click', async () => {
-    const csv = $('invCsv').value.trim();
-    if (!csv) { message('invStatus', 'Paste vsku,stock rows first.', 'err'); return; }
-    message('invStatus', 'Applying...');
-    try {
-      const r = await api('/api/admin/inventory', { method: 'POST', body: { csv } });
-      message('invStatus', `Updated ${r.updated.length}${r.failed.length ? `, ${r.failed.length} failed` : ''}.`, r.failed.length ? 'err' : 'ok');
-      if (r.updated.length) { $('invCsv').value = ''; renderLowStock(); }
-    } catch (err) { message('invStatus', err.data?.error || 'Could not apply stock. Retry.', 'err'); }
-  });
-  $('invReorderCsv').addEventListener('click', () =>
-    downloadCsv('/api/admin/inventory?view=low&export=csv', 'masest-low-stock.csv', 'invStatus'));
-}
-
-// Promo codes card (#97): Stripe promotion-code management. Bound once.
-let couponsWired = false;
-function couponDiscount(c) {
-  if (c.percent_off != null) return `${esc(c.percent_off)}% off`;
-  if (c.amount_off != null) return `${esc(money(c.amount_off, c.currency))} off`;
-  return '';
-}
-async function renderCoupons() {
-  const box = $('cpList');
-  if (!box) return;
-  box.innerHTML = admSkeleton();
-  try {
-    const r = await api('/api/admin/coupons');
-    const list = r.coupons || [];
-    box.innerHTML = list.length
-      ? `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>Code</th><th>Discount</th><th>Min</th><th class="num">Uses</th><th>Expires</th><th></th></tr></thead><tbody>${list.map((c) =>
-          `<tr><td><b>${esc(c.code)}</b>${c.active ? '' : ' <span class="badge">inactive</span>'}</td><td>${couponDiscount(c)}</td><td>${c.minimum_amount != null ? esc(money(c.minimum_amount, c.currency)) : '—'}</td><td class="num">${esc(c.times_redeemed)}${c.max_redemptions ? `/${esc(c.max_redemptions)}` : ''}</td><td>${c.expires_at ? esc(date(c.expires_at * 1000)) : '—'}</td><td>${c.active ? `<button class="btn btn-ghost btn-sm" data-coupon-off="${esc(c.id)}" type="button">Deactivate</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
-      : admEmpty('ph-ticket', 'No promo codes yet', 'Create a promo code to offer discounts at checkout.');
-  } catch { box.innerHTML = '<p class="adm-status" data-state="err">Could not load promo codes.</p>'; }
-}
-function wireCoupons() {
-  renderCoupons();
-  if (couponsWired || !$('cpCreate')) return;
-  couponsWired = true;
-  $('cpCreate').addEventListener('click', async () => {
-    const body = {
-      code: $('cpCode').value.trim(),
-      percent_off: $('cpPercent').value.trim(),
-      amount_off: $('cpAmount').value.trim(),
-      minimum_amount: $('cpMin').value.trim(),
-      max_redemptions: $('cpMax').value.trim(),
-      expires_at: $('cpExpires').value,
-    };
-    if (!body.code) { message('cpStatus', 'Enter a code.', 'err'); return; }
-    message('cpStatus', 'Creating...');
-    try {
-      await api('/api/admin/coupons', { method: 'POST', body });
-      message('cpStatus', 'Code created.', 'ok');
-      ['cpCode', 'cpPercent', 'cpAmount', 'cpMin', 'cpMax', 'cpExpires'].forEach((id) => { $(id).value = ''; });
-      renderCoupons();
-    } catch (err) { message('cpStatus', err.data?.error || 'Could not create the code. Retry.', 'err'); }
-  });
-  $('cpList').addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-coupon-off]');
-    if (!btn) return;
-    if (!(await confirmDialog('Deactivate this promo code? It can no longer be redeemed.', { confirmText: 'Deactivate', danger: true }))) return;
-    btn.disabled = true;
-    try {
-      await api('/api/admin/coupons', { method: 'POST', body: { id: btn.dataset.couponOff, action: 'deactivate' } });
-      renderCoupons();
-    } catch { message('cpStatus', 'Could not deactivate. Retry.', 'err'); btn.disabled = false; }
-  });
-}
-
 function renderStats(stats = {}) {
  badge('aBadgePending', stats.companies?.pending || 0);
  badge('aBadgeMsg', stats.messages?.unread || 0);
@@ -423,6 +337,11 @@ const { renderNewsletter, wireNewsletter } = createNewsletterTab({ $, api, state
 
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
 const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton, admEmpty });
+
+// Inventory + promo-codes cards inside the Products tab (extracted from the main
+// controller to keep the per-tab #36 split consistent).
+const { wireInventory } = createInventoryCard({ $, api, message, admSkeleton, admEmpty, downloadCsv });
+const { wireCoupons } = createCouponsCard({ $, api, message, admSkeleton, admEmpty });
 
 // Traffic tab extracted to ./admin/traffic.js (#36 split). Shared primitives injected.
 const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });

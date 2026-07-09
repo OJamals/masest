@@ -72,6 +72,7 @@ function wireTabs() {
   wireTablist(document.querySelector('.dash-tabs[role="tablist"]'), (tab) => selectTab(tab.dataset.tab));
 }
 function loadTab(name) {
+  if (name === 'overview' && !loaded.overview) { loaded.overview = true; renderOverview(); }
   if (name === 'orders' && !loaded.orders) { renderOrders(); renderQuoteRequests(); }
   if (name === 'messages' && !loaded.messages) renderMessages();
   if (name === 'notifications' && !loaded.notifications) renderNotifications();
@@ -957,6 +958,16 @@ document.addEventListener('masest:session-expired', () => {
   location.href = `account.html?expired=1&return=${ret}`;
 });
 
+// Cheap notification-count fetch for the nav bell on tabs other than overview
+// (overview computes it from its own notifications call).
+async function syncNotifBadge() {
+  try {
+    const notif = await api('/api/account/notifications');
+    setBadge('badgeNotifs', notif.unread);
+    syncNavDot(notif.unread);
+  } catch { /* the live poller will retry */ }
+}
+
 /* ---------- boot ---------- */
 async function boot() {
   try { ACCOUNT = await me(); } catch { ACCOUNT = null; }
@@ -964,10 +975,15 @@ async function boot() {
   $('dashApp').hidden = false;
   $('dashGreeting').textContent = `Welcome back${ACCOUNT.profile?.full_name ? ', ' + ACCOUNT.profile.full_name : ''}.`;
   wireTabs(); wireMessageForm(); wireNotifications(); wireAddressForm(); wireProfileForm(); wireSecurityForm();
-  // Route to the deep-linked tab immediately — don't make #orders wait on overview data.
-  selectTab(currentDashboardTab());
+  // Route to the deep-linked tab immediately. Overview now lazy-loads through
+  // loadTab like every other tab, so a deep link to #orders/#business no longer
+  // fires overview's orders(100)+notifications fetches it never shows.
+  const activeTab = currentDashboardTab();
+  selectTab(activeTab);
   window.addEventListener('hashchange', syncTabFromHash);
-  await renderOverview();
+  // The nav bell still needs the unread count on every landing; overview sets it
+  // itself, so only fetch separately when we're not already rendering overview.
+  if (activeTab !== 'overview') await syncNotifBadge();
   startPolling();
 }
 boot();

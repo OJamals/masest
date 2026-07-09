@@ -13,9 +13,9 @@ test("admin list empties use the shared admEmpty primitive, not ad-hoc <p class=
   assert.match(threads, /admEmpty\('ph-[a-z-]+', 'No conversations'/, "threads should use admEmpty");
   assert.doesNotMatch(threads, /<p class="muted">No conversations/, "threads should drop the hand-rolled empty");
 
-  const admin = read("js/admin.js");
-  assert.match(admin, /admEmpty\('ph-[a-z-]+', 'No promo codes yet'/, "coupons should use admEmpty");
-  assert.doesNotMatch(admin, /<p class="muted">No promo codes/, "coupons should drop the hand-rolled empty");
+  const coupons = read("js/admin/coupons.js");
+  assert.match(coupons, /admEmpty\('ph-[a-z-]+', 'No promo codes yet'/, "coupons should use admEmpty");
+  assert.doesNotMatch(coupons, /<p class="muted">No promo codes/, "coupons should drop the hand-rolled empty");
 });
 
 test("tabs that render list empties are wired with admEmpty", () => {
@@ -30,13 +30,14 @@ test("tabs that render list empties are wired with admEmpty", () => {
 });
 
 test("coupons and low-stock lists show a loading skeleton like sibling tabs", () => {
-  const admin = read("js/admin.js");
-  assert.match(admin, /async function renderCoupons[\s\S]*?box\.innerHTML = admSkeleton\(\)/, "renderCoupons should paint admSkeleton before awaiting the fetch");
-  assert.match(admin, /async function renderLowStock[\s\S]*?box\.innerHTML = admSkeleton\(\)/, "renderLowStock should paint admSkeleton before awaiting the fetch");
+  const coupons = read("js/admin/coupons.js");
+  const inventory = read("js/admin/inventory.js");
+  assert.match(coupons, /async function renderCoupons[\s\S]*?box\.innerHTML = admSkeleton\(\)/, "renderCoupons should paint admSkeleton before awaiting the fetch");
+  assert.match(inventory, /async function renderLowStock[\s\S]*?box\.innerHTML = admSkeleton\(\)/, "renderLowStock should paint admSkeleton before awaiting the fetch");
 });
 
 test("low-stock empty state uses the shared admEmpty primitive", () => {
-  const admin = read("js/admin.js");
-  assert.match(admin, /async function renderLowStock[\s\S]*?admEmpty\('ph-[a-z-]+', 'No low-stock variants'/, "renderLowStock empty should use admEmpty");
-  assert.doesNotMatch(admin, /<p class="muted">No variants at or below/, "renderLowStock should drop the hand-rolled empty");
+  const inventory = read("js/admin/inventory.js");
+  assert.match(inventory, /async function renderLowStock[\s\S]*?admEmpty\('ph-[a-z-]+', 'No low-stock variants'/, "renderLowStock empty should use admEmpty");
+  assert.doesNotMatch(inventory, /<p class="muted">No variants at or below/, "renderLowStock should drop the hand-rolled empty");
 });

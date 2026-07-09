@@ -52,6 +52,11 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         <label>Mode <select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></label>
         <label>Price <input class="adm-input" type="number" min="0" step="0.01" value="${esc(p.price ?? '')}" data-field="price"></label>
         <label>Stock <input class="adm-input" type="number" min="0" step="1" value="${esc(p.stock ?? '')}" data-field="stock"></label>
+        <label>HMIS <input class="adm-input" value="${esc(p.hmis || '')}" data-field="hmis" placeholder="H-F-R e.g. 2-0-1"></label>
+        <label>Group key <input class="adm-input" value="${esc(p.group_key || '')}" data-field="group_key" placeholder="groups related SKUs"></label>
+        <label>Sort <input class="adm-input" type="number" step="1" value="${esc(p.sort ?? '')}" data-field="sort"></label>
+        <label class="product-flag-toggle"><input type="checkbox" ${p.hazmat ? 'checked' : ''} data-field="hazmat"> Hazmat</label>
+        <label class="product-flag-toggle"><input type="checkbox" ${p.taxable !== false ? 'checked' : ''} data-field="taxable"> Taxable</label>
         <label class="wide">Photo URL <input class="adm-input" value="${esc(p.image_url || '')}" data-field="image_url"></label>
         <label class="wide">Photo alt <input class="adm-input" value="${esc(p.photo_alt || '')}" data-field="photo_alt"></label>
       </div>

@@ -106,7 +106,21 @@ export function normalizeProduct(input) {
     row.stock = null;
   }
 
-  for (const key of ['image_url', 'photo_alt']) row[key] = nullableString(row[key]);
+  if (row.sort !== undefined) {
+    if (row.sort === '' || row.sort === null) row.sort = null;
+    else {
+      const s = Number(row.sort);
+      if (!Number.isInteger(s)) return { error: 'invalid_sort' };
+      row.sort = s;
+    }
+  }
+  for (const key of ['image_url', 'photo_alt', 'hmis', 'group_key']) {
+    if (row[key] !== undefined) row[key] = nullableString(row[key]);
+  }
+  // Checkboxes arrive as booleans from the row editor, but strings via the raw API.
+  for (const key of ['hazmat', 'taxable']) {
+    if (row[key] !== undefined) row[key] = row[key] === true || row[key] === 'true' || row[key] === 'on';
+  }
   return { row };
 }
 
