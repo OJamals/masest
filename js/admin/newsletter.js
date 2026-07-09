@@ -10,7 +10,7 @@ import {
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js';
+} from './rich-editor.js?v=20260709b';
 import { renderNewsletterBody } from '../newsletter-render.js';
 
 const SECTIONS = [

@@ -7,7 +7,7 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 
 test("admin entrypoint imports QuickBooks controls from a split module", () => {
   const admin = read("js/admin.js");
-  assert.match(admin, /from\s+["']\.\/admin\/qbo\.js["']/);
+  assert.match(admin, /from\s+["']\.\/admin\/qbo\.js(?:\?v=\d{8}[a-z])?["']/);
   assert.doesNotMatch(admin, /async function renderQboStatus\s*\(/);
   assert.doesNotMatch(admin, /async function connectQbo\s*\(/);
 
@@ -48,4 +48,20 @@ test("admin QuickBooks panel renders failed sync retry controls", () => {
   assert.match(qbo, /qbo_failed_orders/);
   assert.match(qbo, /data-qbo-retry/);
   assert.match(qbo, /\/api\/admin\/qbo\/retry/);
+});
+
+test("admin split modules used by the shell are cache-busted", () => {
+  const admin = read("js/admin.js");
+  const imports = [...admin.matchAll(/from\s+["']\.\/admin\/([^"']+?\.js)([^"']*)["']/g)];
+  assert.ok(imports.length >= 12, "expected admin shell split module imports");
+  const unversioned = imports
+    .filter(([, , suffix]) => !/^\?v=\d{8}[a-z]$/.test(suffix))
+    .map(([, mod]) => mod);
+  assert.deepEqual(unversioned, [], `admin split imports need cache-busting: ${unversioned.join(", ")}`);
+  assert.match(admin, /from\s+["']\.\/admin\/content\.js\?v=\d{8}[a-z]["']/, "blog/content tab module must be cache-busted");
+});
+
+test("rich editor imports are cache-busted from CMS entry modules", () => {
+  assert.match(read("js/admin/content.js"), /from\s+["']\.\/rich-editor\.js\?v=\d{8}[a-z]["']/, "content CMS should not reuse a stale editor module");
+  assert.match(read("js/admin/newsletter.js"), /from\s+["']\.\/rich-editor\.js\?v=\d{8}[a-z]["']/, "newsletter should not reuse a stale editor module");
 });

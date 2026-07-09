@@ -37,3 +37,10 @@ test("served Phosphor woff2 is the subset, not the full font", () => {
   const kb = statSync(`${root}/vendor/phosphor/Phosphor.woff2`).size / 1024;
   assert.ok(kb < 60, `served Phosphor.woff2 is ${kb.toFixed(0)}kb — expected the <60kb subset, not the full font`);
 });
+
+test("admin refreshes the Phosphor CSS and subset font after icon changes", () => {
+  const admin = readFileSync(`${root}/admin.html`, "utf8");
+  const css = readFileSync(`${root}/vendor/phosphor/style.css`, "utf8");
+  assert.match(admin, /vendor\/phosphor\/style\.css\?v=\d{8}[a-z]/, "admin should cache-bust the Phosphor stylesheet");
+  assert.match(css, /Phosphor\.woff2\?v=\d{8}[a-z]/, "Phosphor stylesheet should cache-bust the subset font");
+});
