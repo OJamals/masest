@@ -7,6 +7,7 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 
 test("buyer dashboard overview has procurement action and activity mounts", () => {
   const html = read("dashboard.html");
+  assert.match(html, /id="ovWorkspace"/, "overview should mount the user workspace header");
   assert.match(html, /id="ovActionRail"/, "overview should mount procurement next actions");
   assert.match(html, /id="ovRecentOrders"/, "overview should mount recent order activity");
   assert.match(html, /id="ovRecentMessages"/, "overview should mount recent message activity");
@@ -14,6 +15,8 @@ test("buyer dashboard overview has procurement action and activity mounts", () =
 
 test("buyer dashboard renders procurement actions and recent activity", () => {
   const js = read("js/dashboard.js");
+  assert.match(js, /function renderOverviewWorkspace/, "dashboard should render the workspace readiness header");
+  assert.match(js, /Dashboard readiness/, "workspace header should expose accessible readiness markers");
   assert.match(js, /function renderBuyerActionRail/, "dashboard should render next action rail");
   assert.match(js, /function renderRecentOrders/, "dashboard should render recent orders");
   assert.match(js, /function renderRecentMessages/, "dashboard should render recent messages");

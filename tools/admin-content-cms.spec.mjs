@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { once } from "node:events";
 import { test, expect } from "@playwright/test";
 
-const PORT = Number(process.env.MASEST_CMS_TEST_PORT || 4100 + (process.pid % 1000));
+const PORT = 4301;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const SCREENSHOT_DIR = "output/playwright/cms-expansion";
 let server;

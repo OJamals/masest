@@ -85,6 +85,7 @@ test("company drawer shows CRM tabs and posts a note", async ({ page }) => {
   // because admin.js boot() triggers on DOMContentLoaded + hash determines first tab.
   await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
+  await page.getByRole("button", { name: "Businesses & approvals" }).click();
 
   // Wait for the company list to render and the open-company button to appear.
   await expect(page.locator('[data-open-company="co-1"]')).toBeVisible();

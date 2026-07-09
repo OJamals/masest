@@ -327,7 +327,7 @@ export function renderChrome() {
       </div>`}
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
-        <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a></span>
+        <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">EULA</a></span>
         <span>VertKleen, SynTech and SynClean are trademarks of MASEST Consulting LLC.</span>
       </div>
     </div>`;

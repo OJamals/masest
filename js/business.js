@@ -62,6 +62,7 @@ function renderBusinessHub(data = {}) {
   const c = data.company;
   const status = c?.status || 'pending';
   const statusText = c ? (STATUS_LABEL[status] || status) : 'Not set up';
+  const orderingText = data.can_checkout ? 'Enabled' : (c ? 'Pending' : 'Register');
   box.innerHTML = `
     <div>
       <p class="biz-eyebrow">Business workspace</p>
@@ -69,7 +70,10 @@ function renderBusinessHub(data = {}) {
       <p class="lead">Manage verification, invoices, programs, bulk quote requests, and team access from one place.</p>
     </div>
     <div class="biz-hub-metrics" aria-label="Business status">
-      <span class="badge" data-s="${esc(c ? status : 'pending')}">${esc(statusText)}</span>
+      <span class="biz-hub-metric"><small>Verification</small><b><span class="badge" data-s="${esc(c ? status : 'pending')}">${esc(statusText)}</span></b></span>
+      <span class="biz-hub-metric"><small>Setup</small><b data-numeric>${esc(setupMetric(data))}</b></span>
+      <span class="biz-hub-metric"><small>Ordering</small><b>${esc(orderingText)}</b></span>
+      <span class="biz-hub-metric"><small>NET terms</small><b>${esc(netTermsText(data))}</b></span>
     </div>`;
 }
 
