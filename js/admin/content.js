@@ -1,8 +1,8 @@
 import { esc, delegate, confirmDialog } from "../util.js";
 import { renderMarkdown } from "../md.js";
 import { supabase } from "../auth.js";
-import { diffContentFields, formatFieldValue } from "./content-diff.js";
 import { createContentAssets } from "./content-assets.js";
+import { createContentRevisions } from "./content-revisions.js";
 import {
   contentPayloadFields,
   contentTypeOptions,
@@ -634,6 +634,11 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   // ./content-assets.js. It owns the picker's own state; choosing an asset calls back
   // into applyChosenAsset (below) to write the value into the editor form.
   const assets = createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, applyChosenAsset });
+  // Revision history (list + field-level diff) extracted to ./content-revisions.js. It is
+  // read-only display; the one write action (restore → populateForm + re-render) stays here
+  // and is wired to the restore button the module renders. The diff reads live editor state
+  // via getCurrentEntry.
+  const revisions = createContentRevisions({ $, api, admSkeleton, admEmpty, getCurrentEntry: () => currentEntry });
   let currentEntry = {};
   let currentEntryKey = "";
   let editorLockOwned = false;
@@ -918,7 +923,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
     setStatus("");
     formDirty = false;
-    void loadRevisions(entry);
+    void revisions.loadRevisions(entry);
     updateLockUi(entry);
     refreshPreview();
   }
@@ -944,46 +949,6 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     slugManuallyEdited = Boolean(slug.value);
     lastGeneratedSlug = slug.value;
     refreshPreview();
-  }
-
-  function renderRevisionList(revisions = []) {
-    if (!revisions.length) {
-      return admEmpty("ph-clock-counter-clockwise", "No revisions", "Save a draft to create a revision.");
-    }
-    return revisions.map((revision) => `
-      <button class="adm-list-row adm-content-revision-row" type="button" data-content-revision="${esc(revision.version)}" aria-controls="contentRevisionDiff" aria-label="Compare version ${esc(revision.version)} with the current entry">
-        <b>Version ${esc(revision.version)}</b>
-        <span>${esc(revision.status || "")}${revision.created_at ? ` · ${esc(new Date(revision.created_at).toLocaleString())}` : ""}</span>
-        ${revision.note ? `<small>${esc(revision.note)}</small>` : ""}
-      </button>
-    `).join("");
-  }
-
-  async function loadRevisions(entry = {}) {
-    const list = $("contentRevisionList");
-    if (!list) return;
-    if (!entry.type || !entry.slug) {
-      list.innerHTML = admEmpty("ph-clock-counter-clockwise", "No revisions", "Save a draft to create a revision.");
-      return;
-    }
-    list.innerHTML = admSkeleton(3);
-    closeRevisionDiff();
-    const query = new URLSearchParams({
-      type: entry.type,
-      slug: entry.slug,
-      locale: entry.locale || "en",
-    });
-    try {
-      const data = await api(`/api/admin/content-revisions?${query.toString()}`);
-      list._revisions = data.revisions || [];
-      list.innerHTML = renderRevisionList(data.revisions || []);
-    } catch (error) {
-      list.innerHTML = admEmpty(
-        "ph-warning",
-        "Revision history unavailable",
-        error.data?.message || error.data?.error || error.message || "Try again.",
-      );
-    }
   }
 
   function pairedAssetAltField(fieldKey) {
@@ -1285,50 +1250,6 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     }
   }
 
-  function closeRevisionDiff() {
-    const panel = $("contentRevisionDiff");
-    if (!panel) return;
-    panel.hidden = true;
-    panel.innerHTML = "";
-    $("contentRevisionList")?.querySelectorAll('[aria-expanded="true"]').forEach((row) => row.setAttribute("aria-expanded", "false"));
-  }
-
-  // Inspect a revision: show a field-level diff against the current saved entry
-  // so the editor sees exactly what restoring would change before committing.
-  function inspectRevision(version) {
-    const list = $("contentRevisionList");
-    const panel = $("contentRevisionDiff");
-    if (!list || !panel) return;
-    const revision = (list._revisions || []).find((r) => String(r.version) === String(version));
-    if (!revision) return;
-    list.querySelectorAll('[aria-expanded="true"]').forEach((row) => row.setAttribute("aria-expanded", "false"));
-    list.querySelector(`[data-content-revision="${CSS.escape(String(version))}"]`)?.setAttribute("aria-expanded", "true");
-    const { fields, changedCount } = diffContentFields(currentEntry, revision);
-    const rows = fields.map((field) => `
-      <tr class="${field.changed ? "is-changed" : ""}">
-        <th scope="row">${esc(field.key)}</th>
-        <td>${esc(formatFieldValue(field.from))}</td>
-        <td>${esc(formatFieldValue(field.to))}</td>
-      </tr>`).join("");
-    panel.innerHTML = `
-      <div class="adm-content-revision-diff-head">
-        <strong>Version ${esc(version)} vs current</strong>
-        <span class="muted">${changedCount} field${changedCount === 1 ? "" : "s"} differ${changedCount === 1 ? "s" : ""}</span>
-      </div>
-      <div class="adm-content-revision-diff-scroll">
-        <table class="adm-content-revision-diff-table">
-          <thead><tr><th>Field</th><th>Current</th><th>Version ${esc(version)}</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-      <div class="adm-content-revision-diff-actions">
-        <button class="btn btn-primary btn-sm" type="button" data-content-revision-restore="${esc(version)}">Restore version ${esc(version)} as draft</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-content-revision-close>Close</button>
-      </div>`;
-    panel.hidden = false;
-    panel.scrollIntoView({ block: "nearest" });
-  }
-
   async function restoreRevision(version) {
     if (stopIfLocked()) return;
     const preserveLockOwner = editorLockOwned;
@@ -1350,7 +1271,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         body: { type: entry.type, slug: entry.slug, locale: entry.locale, version },
       });
       populateForm(result.entry || {}, { preserveLockOwner });
-      closeRevisionDiff();
+      revisions.closeRevisionDiff();
       setStatus(`Restored version ${version} as a draft.`, "ok");
       await renderContent({ refetch: true });
     } catch (error) {
@@ -1483,9 +1404,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (container) chipHiddenSync(container);
     });
     delegate(root, "click", "[data-content-edit]", (_event, button) => editEntry(button.dataset.contentEdit));
-    delegate(root, "click", "[data-content-revision]", (_event, button) => inspectRevision(button.dataset.contentRevision));
+    delegate(root, "click", "[data-content-revision]", (_event, button) => revisions.inspectRevision(button.dataset.contentRevision));
     delegate(root, "click", "[data-content-revision-restore]", (_event, button) => restoreRevision(button.dataset.contentRevisionRestore));
-    delegate(root, "click", "[data-content-revision-close]", () => closeRevisionDiff());
+    delegate(root, "click", "[data-content-revision-close]", () => revisions.closeRevisionDiff());
     delegate(root, "click", "[data-content-asset-path]", (_event, button) => assets.assignAssetPath(button));
     delegate(root, "click", "[data-content-asset-status-action]", (_event, button) => assets.updateAssetStatus(button));
     delegate(root, "click", "[data-content-asset-alt-action]", (_event, button) => assets.editAssetAlt(button));

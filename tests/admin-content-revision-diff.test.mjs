@@ -49,7 +49,10 @@ test("diffContentFields tolerates missing payload/seo objects", () => {
 });
 
 // UI wiring: the admin module must inspect-then-restore, not restore on row click.
-const CONTENT = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
+// The revision list + diff render moved to ./content-revisions.js (#36 split); the restore
+// write action + its wiring stay in content.js. Read both so the guard tracks the code.
+const CONTENT = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8")
+  + readFileSync(new URL("../js/admin/content-revisions.js", import.meta.url), "utf8");
 test("content.js wires the revision diff + an explicit restore-confirm control", () => {
   assert.match(CONTENT, /diffContentFields/);
   assert.match(CONTENT, /data-content-revision-restore/);
