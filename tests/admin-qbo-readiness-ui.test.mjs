@@ -21,5 +21,8 @@ test("admin QuickBooks readiness copy uses QBO_CONNECT_KEY without exposing secr
   assert.match(source, /QBO_CONNECT_KEY/);
   assert.match(source, /Secret values are never shown here/);
   assert.match(source, /allowSync = configReady && info\.connected === true/);
+  assert.match(source, /QuickBooks setup needed\./);
+  assert.match(source, /status\.dataset\.state = "warn"/);
   assert.doesNotMatch(source, /QuickBooks config missing: `?\$\{missing\.join/, "raw missing-list status should not be the primary admin state");
+  assert.doesNotMatch(source, /Missing Cloudflare production variables:/, "overview should not render missing production variables as an error dump");
 });

@@ -69,10 +69,10 @@ function renderFailedOrders(orders = [], refunds = []) {
 function qboConfigDetail(config = {}, info = {}) {
   const missing = config.missing || [];
   if (config.ready === false) {
-    if (!missing.length || missing.includes("QBO_CONNECT_KEY")) {
-      return "Add QBO_CONNECT_KEY in Cloudflare production, or set the individual QBO_CLIENT_ID, QBO_CLIENT_SECRET, QBO_REALM_ID, QBO_SYNC_SECRET, and QBO_OAUTH_STATE_SECRET variables. Secret values are never shown here.";
+    if (config.source === "QBO_CONNECT_KEY" && missing.length) {
+      return "QBO_CONNECT_KEY is present but incomplete. Update the Cloudflare production secret with the required QuickBooks fields. Secret values are never shown here.";
     }
-    return `Missing Cloudflare production variables: ${missing.join(", ")}. Secret values are never shown here.`;
+    return "QuickBooks credentials are not configured in Cloudflare production. Add QBO_CONNECT_KEY or the equivalent individual variables. Secret values are never shown here.";
   }
   if (config.source === "QBO_CONNECT_KEY" || config.imported) {
     return "QBO_CONNECT_KEY is loaded. Connect QuickBooks, then run sync when needed.";
@@ -107,8 +107,8 @@ export async function renderQboStatus() {
     allowConnect = configReady;
     allowSync = configReady && info.connected === true;
     if (!configReady) {
-      status.textContent = "QuickBooks config not ready.";
-      status.dataset.state = "err";
+      status.textContent = "QuickBooks setup needed.";
+      status.dataset.state = "warn";
     } else {
       status.textContent = info.connected ? `Connected${info.realm_id ? ` (${info.realm_id})` : ""}.` : "Ready to connect.";
       status.dataset.state = info.connected ? "ok" : ""; // ready-to-connect is a neutral state, not an error
