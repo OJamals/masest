@@ -13,10 +13,11 @@
 <link rel="stylesheet" href="css/components.css">
 <style>
   .adm-wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  .adm-hero { padding-bottom: 36px; }
   .adm-hero h1 { font-size: 56px; line-height: .98; letter-spacing: -.035em; margin: 0; }
   .adm-hero .subhead { max-width: 62ch; font-size: 1.08rem; line-height: 1.55; }
   #gateTitle { font-size: 28px; line-height: 1.12; margin: 0 0 8px; }
-  .adm-shell { display: grid; gap: 18px; padding: 28px 0 72px; }
+  .adm-shell { display: grid; gap: 18px; padding: 16px 0 72px; }
   .adm-top { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
   .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; }
   .adm-tab { position: relative; overflow: visible; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 12px; font: inherit; cursor: pointer; }
@@ -44,6 +45,7 @@
 .adm-mini-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .adm-panel { display: none; }
   .adm-panel[data-active="true"] { display: grid; gap: 16px; }
+  .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: start; max-width: 100%; }
   .adm-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .adm-search, .adm-input, .adm-select, .adm-textarea { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; padding: 10px 12px; }
   .adm-search { max-width: 320px; }
@@ -296,7 +298,7 @@
   .adm-select-xs { max-width: 180px; }
   .adm-select-md { max-width: 190px; }
   .adm-layout { display: grid; grid-template-columns: minmax(200px, 240px) minmax(0, 1fr); gap: 24px; align-items: start; }
-  .adm-main { min-width: 0; }
+  .adm-main { min-width: 0; align-self: start; }
   .adm-sidebar.adm-tabs-wrap { position: sticky; top: 96px; align-self: start; overflow: visible; padding: 12px; margin-bottom: 0; border: 1px solid var(--line-soft); border-radius: var(--r-card); background: rgba(255,255,255,.76); box-shadow: var(--shadow-xs); }
   .adm-sidebar .adm-top { display: grid; gap: 10px; align-items: start; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
   .adm-sidebar .adm-top .btn { justify-content: center; width: 100%; }
@@ -329,6 +331,7 @@
   }
   @media (max-width: 720px) {
     .adm-wrap { padding: 0 18px; }
+    .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: stretch; }
     .adm-tools { align-items: stretch; }
     .adm-tools > * { width: 100%; max-width: none; }
     .adm-content-hub-metrics span { flex: 1 1 120px; }

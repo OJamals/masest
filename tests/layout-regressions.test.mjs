@@ -279,3 +279,44 @@ test("mobile admin overview SEO audit wraps without a hidden table", async () =>
     }
   });
 });
+
+test("admin panels start compactly without stretched empty control rails", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch();
+    const { context, page } = await newAuthedPage(browser, { width: 1440, height: 1000 });
+    try {
+      for (const hash of ["overview", "orders", "companies", "products", "messages", "quotes", "reviews", "newsletter", "crm"]) {
+        await page.goto(`${BASE_URL}/admin.html#${hash}`, { waitUntil: "domcontentloaded" });
+        await page.waitForSelector(`.adm-panel[data-panel="${hash}"][data-active="true"]`, { timeout: 10000 });
+        const metrics = await page.evaluate((panelName) => {
+          const visible = (el) => {
+            const rect = el.getBoundingClientRect();
+            const style = getComputedStyle(el);
+            return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+          };
+          const panel = document.querySelector(`.adm-panel[data-panel="${panelName}"]`);
+          const sidebar = document.querySelector(".adm-sidebar");
+          const shell = document.querySelector(".adm-shell");
+          const subhead = document.querySelector(".adm-hero .subhead");
+          const control = panel.querySelector(":scope > .crm-tabs, :scope > .adm-tools");
+          const controlRect = control?.getBoundingClientRect();
+          const childRects = control ? [...control.children].filter(visible).map((child) => child.getBoundingClientRect()) : [];
+          const childLeft = childRects.length ? Math.min(...childRects.map((rect) => rect.left)) : 0;
+          const childRight = childRects.length ? Math.max(...childRects.map((rect) => rect.right)) : 0;
+          return {
+            shellGap: Math.round(shell.getBoundingClientRect().top - subhead.getBoundingClientRect().bottom),
+            panelTopGap: Math.round(panel.getBoundingClientRect().top - sidebar.getBoundingClientRect().top),
+            controlEmptyRail: controlRect ? Math.round(controlRect.width - (childRight - childLeft)) : 0,
+          };
+        }, hash);
+
+        assert.ok(metrics.shellGap <= 64, `${hash} admin shell leaves ${metrics.shellGap}px after the hero copy`);
+        assert.ok(Math.abs(metrics.panelTopGap) <= 4, `${hash} panel starts ${metrics.panelTopGap}px away from the sidebar top`);
+        assert.ok(metrics.controlEmptyRail <= 64, `${hash} control rail leaves ${metrics.controlEmptyRail}px of empty space`);
+      }
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  });
+});
