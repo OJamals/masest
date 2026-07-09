@@ -1,0 +1,590 @@
+{
+  "generated": "run tools/subset-phosphor.mjs to refresh",
+  "count": 146,
+  "icons": [
+    {
+      "name": "address-book",
+      "cp": "E6F8"
+    },
+    {
+      "name": "anchor",
+      "cp": "E514"
+    },
+    {
+      "name": "archive",
+      "cp": "E00C"
+    },
+    {
+      "name": "arrow-counter-clockwise",
+      "cp": "E038"
+    },
+    {
+      "name": "arrow-down",
+      "cp": "E03E"
+    },
+    {
+      "name": "arrow-right",
+      "cp": "E06C"
+    },
+    {
+      "name": "arrow-square-out",
+      "cp": "E5DE"
+    },
+    {
+      "name": "arrows-clockwise",
+      "cp": "E094"
+    },
+    {
+      "name": "arrows-left-right",
+      "cp": "E0A0"
+    },
+    {
+      "name": "atom",
+      "cp": "E5E4"
+    },
+    {
+      "name": "barcode",
+      "cp": "E0B8"
+    },
+    {
+      "name": "beer-bottle",
+      "cp": "E7B0"
+    },
+    {
+      "name": "bell",
+      "cp": "E0CE"
+    },
+    {
+      "name": "boat",
+      "cp": "E786"
+    },
+    {
+      "name": "briefcase",
+      "cp": "E0EE"
+    },
+    {
+      "name": "broom",
+      "cp": "EC54"
+    },
+    {
+      "name": "buildings",
+      "cp": "E102"
+    },
+    {
+      "name": "calendar-check",
+      "cp": "E712"
+    },
+    {
+      "name": "camera",
+      "cp": "E10E"
+    },
+    {
+      "name": "car",
+      "cp": "E112"
+    },
+    {
+      "name": "caret-down",
+      "cp": "E136"
+    },
+    {
+      "name": "caret-right",
+      "cp": "E13A"
+    },
+    {
+      "name": "chart-line-up",
+      "cp": "E156"
+    },
+    {
+      "name": "chat-circle",
+      "cp": "E168"
+    },
+    {
+      "name": "chats",
+      "cp": "E17C"
+    },
+    {
+      "name": "chats-circle",
+      "cp": "E17E"
+    },
+    {
+      "name": "check",
+      "cp": "E182"
+    },
+    {
+      "name": "check-circle",
+      "cp": "E184"
+    },
+    {
+      "name": "check-square",
+      "cp": "E186"
+    },
+    {
+      "name": "check-square-offset",
+      "cp": "E188"
+    },
+    {
+      "name": "circle",
+      "cp": "E18A"
+    },
+    {
+      "name": "clipboard-text",
+      "cp": "E198"
+    },
+    {
+      "name": "clock-countdown",
+      "cp": "ED2C"
+    },
+    {
+      "name": "clock-counter-clockwise",
+      "cp": "E1A0"
+    },
+    {
+      "name": "coins",
+      "cp": "E78E"
+    },
+    {
+      "name": "compass-tool",
+      "cp": "EA0E"
+    },
+    {
+      "name": "copy",
+      "cp": "E1CA"
+    },
+    {
+      "name": "crane",
+      "cp": "ED48"
+    },
+    {
+      "name": "crane-tower",
+      "cp": "ED49"
+    },
+    {
+      "name": "cube",
+      "cp": "E1DA"
+    },
+    {
+      "name": "currency-dollar",
+      "cp": "E550"
+    },
+    {
+      "name": "database",
+      "cp": "E1DE"
+    },
+    {
+      "name": "download-simple",
+      "cp": "E20C"
+    },
+    {
+      "name": "drop",
+      "cp": "E210"
+    },
+    {
+      "name": "drop-half",
+      "cp": "E566"
+    },
+    {
+      "name": "envelope",
+      "cp": "E214"
+    },
+    {
+      "name": "envelope-simple",
+      "cp": "E218"
+    },
+    {
+      "name": "eye",
+      "cp": "E220"
+    },
+    {
+      "name": "eye-slash",
+      "cp": "E224"
+    },
+    {
+      "name": "factory",
+      "cp": "E760"
+    },
+    {
+      "name": "fan",
+      "cp": "E9F2"
+    },
+    {
+      "name": "file-lock",
+      "cp": "E95C"
+    },
+    {
+      "name": "file-pdf",
+      "cp": "E702"
+    },
+    {
+      "name": "file-text",
+      "cp": "E23A"
+    },
+    {
+      "name": "fire-simple",
+      "cp": "E620"
+    },
+    {
+      "name": "first-aid-kit",
+      "cp": "E570"
+    },
+    {
+      "name": "flag",
+      "cp": "E244"
+    },
+    {
+      "name": "flame",
+      "cp": "E624"
+    },
+    {
+      "name": "flask",
+      "cp": "E79E"
+    },
+    {
+      "name": "floppy-disk",
+      "cp": "E248"
+    },
+    {
+      "name": "fork-knife",
+      "cp": "E262"
+    },
+    {
+      "name": "funnel",
+      "cp": "E266"
+    },
+    {
+      "name": "gas-can",
+      "cp": "E8CE"
+    },
+    {
+      "name": "gauge",
+      "cp": "E628"
+    },
+    {
+      "name": "gear",
+      "cp": "E270"
+    },
+    {
+      "name": "globe-hemisphere-west",
+      "cp": "E28C"
+    },
+    {
+      "name": "graduation-cap",
+      "cp": "E62C"
+    },
+    {
+      "name": "handshake",
+      "cp": "E582"
+    },
+    {
+      "name": "hard-drives",
+      "cp": "E2A0"
+    },
+    {
+      "name": "hard-hat",
+      "cp": "ED46"
+    },
+    {
+      "name": "headset",
+      "cp": "E584"
+    },
+    {
+      "name": "heartbeat",
+      "cp": "E2AC"
+    },
+    {
+      "name": "hospital",
+      "cp": "E844"
+    },
+    {
+      "name": "house-line",
+      "cp": "E2C4"
+    },
+    {
+      "name": "image",
+      "cp": "E2CA"
+    },
+    {
+      "name": "images",
+      "cp": "E836"
+    },
+    {
+      "name": "info",
+      "cp": "E2CE"
+    },
+    {
+      "name": "invoice",
+      "cp": "EE42"
+    },
+    {
+      "name": "kanban",
+      "cp": "EB54"
+    },
+    {
+      "name": "leaf",
+      "cp": "E2DA"
+    },
+    {
+      "name": "link-simple",
+      "cp": "E2E6"
+    },
+    {
+      "name": "list-checks",
+      "cp": "EADC"
+    },
+    {
+      "name": "lock-key",
+      "cp": "E2FE"
+    },
+    {
+      "name": "lock-key-open",
+      "cp": "E300"
+    },
+    {
+      "name": "magnifying-glass",
+      "cp": "E30C"
+    },
+    {
+      "name": "map-pin",
+      "cp": "E316"
+    },
+    {
+      "name": "map-pin-plus",
+      "cp": "E314"
+    },
+    {
+      "name": "map-trifold",
+      "cp": "E31A"
+    },
+    {
+      "name": "medal-military",
+      "cp": "ECFC"
+    },
+    {
+      "name": "note",
+      "cp": "E348"
+    },
+    {
+      "name": "note-pencil",
+      "cp": "E34C"
+    },
+    {
+      "name": "number-circle-four",
+      "cp": "E35E"
+    },
+    {
+      "name": "number-circle-one",
+      "cp": "E36A"
+    },
+    {
+      "name": "number-circle-three",
+      "cp": "E37C"
+    },
+    {
+      "name": "number-circle-two",
+      "cp": "E382"
+    },
+    {
+      "name": "package",
+      "cp": "E390"
+    },
+    {
+      "name": "paper-plane-tilt",
+      "cp": "E398"
+    },
+    {
+      "name": "pencil-simple",
+      "cp": "E3B4"
+    },
+    {
+      "name": "percent",
+      "cp": "E3B6"
+    },
+    {
+      "name": "pill",
+      "cp": "E700"
+    },
+    {
+      "name": "plant",
+      "cp": "EBAE"
+    },
+    {
+      "name": "plugs",
+      "cp": "EB56"
+    },
+    {
+      "name": "plugs-connected",
+      "cp": "EB5A"
+    },
+    {
+      "name": "plus",
+      "cp": "E3D4"
+    },
+    {
+      "name": "prohibit",
+      "cp": "E3DE"
+    },
+    {
+      "name": "rocket-launch",
+      "cp": "E3FE"
+    },
+    {
+      "name": "scales",
+      "cp": "E750"
+    },
+    {
+      "name": "seal-check",
+      "cp": "E606"
+    },
+    {
+      "name": "shield",
+      "cp": "E40A"
+    },
+    {
+      "name": "shield-check",
+      "cp": "E40C"
+    },
+    {
+      "name": "shield-plus",
+      "cp": "E706"
+    },
+    {
+      "name": "shopping-cart",
+      "cp": "E41E"
+    },
+    {
+      "name": "shopping-cart-simple",
+      "cp": "E420"
+    },
+    {
+      "name": "sign-in",
+      "cp": "E428"
+    },
+    {
+      "name": "sign-out",
+      "cp": "E42A"
+    },
+    {
+      "name": "snowflake",
+      "cp": "E5AA"
+    },
+    {
+      "name": "sparkle",
+      "cp": "E6A2"
+    },
+    {
+      "name": "spray-bottle",
+      "cp": "E7E4"
+    },
+    {
+      "name": "squares-four",
+      "cp": "E464"
+    },
+    {
+      "name": "star",
+      "cp": "E46A"
+    },
+    {
+      "name": "sun",
+      "cp": "E472"
+    },
+    {
+      "name": "tag",
+      "cp": "E478"
+    },
+    {
+      "name": "test-tube",
+      "cp": "E7A0"
+    },
+    {
+      "name": "text-aa",
+      "cp": "E6EE"
+    },
+    {
+      "name": "thermometer-cold",
+      "cp": "E5C8"
+    },
+    {
+      "name": "ticket",
+      "cp": "E490"
+    },
+    {
+      "name": "timer",
+      "cp": "E492"
+    },
+    {
+      "name": "trash",
+      "cp": "E4A6"
+    },
+    {
+      "name": "trend-down",
+      "cp": "E4AC"
+    },
+    {
+      "name": "truck",
+      "cp": "E4B4"
+    },
+    {
+      "name": "upload-simple",
+      "cp": "E4C0"
+    },
+    {
+      "name": "user",
+      "cp": "E4C2"
+    },
+    {
+      "name": "user-check",
+      "cp": "EAFA"
+    },
+    {
+      "name": "user-circle",
+      "cp": "E4C4"
+    },
+    {
+      "name": "user-minus",
+      "cp": "E4CE"
+    },
+    {
+      "name": "user-plus",
+      "cp": "E4D0"
+    },
+    {
+      "name": "users",
+      "cp": "E4D6"
+    },
+    {
+      "name": "users-three",
+      "cp": "E68E"
+    },
+    {
+      "name": "warehouse",
+      "cp": "ECD4"
+    },
+    {
+      "name": "warning",
+      "cp": "E4E0"
+    },
+    {
+      "name": "warning-circle",
+      "cp": "E4E2"
+    },
+    {
+      "name": "waves",
+      "cp": "E6DE"
+    },
+    {
+      "name": "wind",
+      "cp": "E5D2"
+    },
+    {
+      "name": "wrench",
+      "cp": "E5D4"
+    },
+    {
+      "name": "x",
+      "cp": "E4F6"
+    },
+    {
+      "name": "x-circle",
+      "cp": "E4F8"
+    }
+  ]
+}
