@@ -6858,7 +6858,9 @@ body.product-detail-page main > section.product-static-section {
   display: grid;
   grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
   gap: clamp(20px, 3vw, 32px);
-  align-items: stretch;
+  /* size each card to its own content — the target-list card is usually shorter
+     than the case+documents card, and stretch left it ~400px of dead space. */
+  align-items: start;
 }
 
 .product-static-panel {

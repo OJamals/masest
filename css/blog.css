@@ -29,7 +29,10 @@
 .blog-body h2 { margin-top: 40px; }
 .blog-body h3 { margin-top: 28px; }
 .blog-body p { margin: 18px 0; }
-.blog-body ul, .blog-body ol { margin: 18px 0; padding-left: 26px; }
+/* Restore list markers: the global `ul { list-style: none }` reset (style.css)
+   otherwise strips bullets from prose lists in blog post bodies. */
+.blog-body ul { margin: 18px 0; padding-left: 26px; list-style: disc; }
+.blog-body ol { margin: 18px 0; padding-left: 26px; list-style: decimal; }
 .blog-body li { margin: 6px 0; }
 .blog-body blockquote { margin: 24px 0; padding: 4px 20px; border-left: 4px solid var(--brand, #3b2a6b); color: var(--muted, #555); font-style: italic; }
 .blog-body pre { background: #1e1e2e; color: #e5e7eb; padding: 18px; border-radius: 10px; overflow-x: auto; }
