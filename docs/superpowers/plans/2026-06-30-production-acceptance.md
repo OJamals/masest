@@ -83,7 +83,7 @@ Create `tools/production-acceptance-preflight.mjs` with:
 export const acceptanceEnvGroups = [
   { id: "supabase", required: [], alternatives: [["SUPABASE_DB_URL"], ["CONTENT_DB_URL"], ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]] },
   { id: "stripe", required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PUBLISHABLE_KEY"] },
-  { id: "qbo", required: ["QBO_CLIENT_ID", "QBO_CLIENT_SECRET", "QBO_REDIRECT_URI", "QBO_OAUTH_STATE_SECRET", "QBO_SYNC_SECRET", "QBO_INCOME_ACCOUNT_ID", "QBO_ENVIRONMENT"] },
+  { id: "qbo", required: [], alternatives: [["QBO_CONNECT_KEY"], ["QBO_CLIENT_ID", "QBO_CLIENT_SECRET", "QBO_REDIRECT_URI", "QBO_OAUTH_STATE_SECRET", "QBO_SYNC_SECRET", "QBO_ENVIRONMENT"]] },
   { id: "crisp", required: ["MASEST_CRISP_ID", "CRISP_TOKEN_ID", "CRISP_TOKEN_KEY", "CRISP_IDENTITY_SECRET"], oneOf: [["CRISP_WEBHOOK_SECRET", "CRISP_WEBHOOK_KEY"]] },
   { id: "cms_publish", required: [], oneOf: [["CONTENT_PUBLISH_HOOK_URL", "CF_PAGES_DEPLOY_HOOK_URL"]] },
 ];

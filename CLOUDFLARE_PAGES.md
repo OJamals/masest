@@ -79,7 +79,9 @@ Set QuickBooks config in Cloudflare Pages before enabling the worker. Preferred:
 
 - `QBO_CONNECT_KEY` — JSON, base64 JSON, or `KEY=value` lines containing:
   `client_id`, `client_secret`, `redirect_uri`, `oauth_state_secret`,
-  `sync_secret`, `income_account_id`, `environment`, and optionally `realm_id`.
+  `sync_secret`, `environment`, and optionally `realm_id` and
+  `income_account_id`. If `income_account_id` is omitted, sync auto-detects an
+  Income account from the connected QuickBooks company.
 
 Or set the individual secrets:
 
@@ -88,7 +90,7 @@ Or set the individual secrets:
 - `QBO_REDIRECT_URI=https://masest.co/api/admin/qbo/callback`
 - `QBO_OAUTH_STATE_SECRET`
 - `QBO_SYNC_SECRET`
-- `QBO_INCOME_ACCOUNT_ID`
+- `QBO_INCOME_ACCOUNT_ID` (optional; otherwise auto-detected after connection)
 - `QBO_ENVIRONMENT=sandbox` or `production`
 
 Connect QuickBooks from `admin.html`. The schedule triggers `POST /api/qbo-sync`; manual runs can use the same endpoint with header `x-qbo-sync-secret: $QBO_SYNC_SECRET`.

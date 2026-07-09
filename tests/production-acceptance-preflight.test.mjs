@@ -258,6 +258,28 @@ test("buildPreflightReport accepts a Cloudflare QBO connect key bundle", () => {
   assert.equal(report.blockers.some((blocker) => blocker.startsWith("env_qbo:")), false);
 });
 
+test("buildPreflightReport accepts individual QBO vars without an income account id", () => {
+  const { QBO_INCOME_ACCOUNT_ID: _incomeAccountId, QBO_CONNECT_KEY: _connectKey, ...env } = completeEnv;
+  const report = buildPreflightReport({
+    env,
+    git: {
+      head: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+      branch: "main",
+      originHead: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+      dirtyFiles: [],
+    },
+    pagesBuild: {
+      status: "built",
+      commit: "af514838dd5f10aa65a5eb83d6b2dec2a86684f4",
+    },
+    now: "2026-06-30T00:00:00.000Z",
+  });
+
+  assert.equal(report.checks.env_qbo.ok, true);
+  assert.equal(report.checks.env_qbo.details.values.QBO_INCOME_ACCOUNT_ID, undefined);
+  assert.equal(report.blockers.some((blocker) => blocker.startsWith("env_qbo:")), false);
+});
+
 test("buildPreflightReport passes local gates when commit, env, and Pages build match", () => {
   const report = buildPreflightReport({
     env: completeEnv,

@@ -65,8 +65,9 @@ Required env groups:
 - Stripe: `APP_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - QuickBooks Online: either `QBO_CONNECT_KEY` or the individual set
   `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`,
-  `QBO_OAUTH_STATE_SECRET`, `QBO_SYNC_SECRET`, `QBO_INCOME_ACCOUNT_ID`,
-  `QBO_ENVIRONMENT`
+  `QBO_OAUTH_STATE_SECRET`, `QBO_SYNC_SECRET`, `QBO_ENVIRONMENT`.
+  `QBO_INCOME_ACCOUNT_ID` is optional; sync auto-detects an Income account
+  from the connected QuickBooks company when it is omitted.
 - Crisp: `MASEST_CRISP_ID`, `CRISP_TOKEN_ID`, `CRISP_TOKEN_KEY`, `CRISP_IDENTITY_SECRET`, plus one of `CRISP_WEBHOOK_SECRET` or `CRISP_WEBHOOK_KEY`
 - CMS publish: one of `CONTENT_PUBLISH_HOOK_URL` or `CF_PAGES_DEPLOY_HOOK_URL`
 

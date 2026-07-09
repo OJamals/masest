@@ -44,6 +44,14 @@ test("QBO_CONNECT_KEY accepts base64 JSON bundles and explicit env overrides", (
   assert.deepEqual(qboConfigStatus(env).missing, []);
 });
 
+test("QBO config is ready without an explicit income account id", () => {
+  const { income_account_id: _incomeAccountId, ...payload } = connectKeyPayload;
+  const env = qboConfigEnv({ QBO_CONNECT_KEY: JSON.stringify(payload) });
+
+  assert.equal(env.QBO_INCOME_ACCOUNT_ID, undefined);
+  assert.deepEqual(qboConfigStatus(env).missing, []);
+});
+
 test("qboConfigStatus reports missing keys without leaking imported secrets", () => {
   const status = qboConfigStatus({
     QBO_CONNECT_KEY: JSON.stringify({ client_id: "qbo-client-id" }),

@@ -32,7 +32,6 @@ export const acceptanceEnvGroups = [
         "QBO_REDIRECT_URI",
         "QBO_OAUTH_STATE_SECRET",
         "QBO_SYNC_SECRET",
-        "QBO_INCOME_ACCOUNT_ID",
         "QBO_ENVIRONMENT",
       ],
     ],
