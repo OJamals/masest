@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { backoffMs, docNumber, getAccessToken, needsRefresh, nextSyncState, qboBaseUrl } from "../functions/_lib/qbo.js";
+import { intuitTidFromHeaders } from "../functions/_lib/intuit.js";
 
 function fakeQboTokenStore(row) {
   const calls = { updated: null };
@@ -29,6 +30,12 @@ test("qboBaseUrl selects sandbox unless production is explicit", () => {
   assert.equal(qboBaseUrl({ QBO_ENVIRONMENT: "sandbox" }), "https://sandbox-quickbooks.api.intuit.com");
   assert.equal(qboBaseUrl({ QBO_ENVIRONMENT: "production" }), "https://quickbooks.api.intuit.com");
   assert.equal(qboBaseUrl({}), "https://sandbox-quickbooks.api.intuit.com");
+});
+
+test("intuitTidFromHeaders accepts Intuit transaction id header variants", () => {
+  assert.equal(intuitTidFromHeaders(new Headers({ intuit_tid: "tid_123" })), "tid_123");
+  assert.equal(intuitTidFromHeaders(new Headers({ "Intuit-Tid": "tid_456" })), "tid_456");
+  assert.equal(intuitTidFromHeaders({ "x-intuit-tid": "tid_789" }), "tid_789");
 });
 
 test("needsRefresh treats missing, bad, and near-expiry tokens as refreshable", () => {
@@ -96,6 +103,7 @@ test("getAccessToken refreshes an expired stored access token and persists rotat
       request = { url, init };
       return {
         ok: true,
+        headers: new Headers({ intuit_tid: "tid_refresh_123" }),
         async json() {
           return { access_token: "access_new", refresh_token: "refresh_new", expires_in: 3600 };
         },
@@ -111,4 +119,5 @@ test("getAccessToken refreshes an expired stored access token and persists rotat
   assert.equal(calls.updated.access_token, "access_new");
   assert.equal(calls.updated.refresh_token, "refresh_new");
   assert.equal(calls.updated.realm_id, "realm_123");
+  assert.equal(calls.updated.last_intuit_tid, "tid_refresh_123");
 });

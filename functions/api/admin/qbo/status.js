@@ -9,7 +9,7 @@ export async function onRequestGet({ request, env }) {
 
   const sb = adminClient(env);
   const { data, error } = await sb.from('qbo_tokens')
-    .select('realm_id,refresh_token,access_token,access_expires_at,updated_at')
+    .select('realm_id,refresh_token,access_token,access_expires_at,last_intuit_tid,updated_at')
     .eq('id', 1)
     .maybeSingle();
   if (error) return json(500, { error: error.message || 'qbo_status_failed' });
@@ -25,6 +25,26 @@ export async function onRequestGet({ request, env }) {
     .limit(10);
   if (failedError) return json(500, { error: failedError.message || 'qbo_failed_orders_failed' });
 
+  let refund_sync_counts = {};
+  let qbo_failed_refunds = [];
+  try {
+    const { data: refundRows } = await sb.from('qbo_refunds').select('qbo_sync_status');
+    refund_sync_counts = (refundRows || []).reduce((counts, row) => {
+      const status = row.qbo_sync_status || 'none';
+      counts[status] = (counts[status] || 0) + 1;
+      return counts;
+    }, {});
+    const { data: failedRefunds } = await sb.from('qbo_refunds')
+      .select('id,order_id,amount,fully_refunded,qbo_error,qbo_attempts,qbo_next_attempt_at,created_at')
+      .eq('qbo_sync_status', 'error')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    qbo_failed_refunds = failedRefunds || [];
+  } catch {
+    refund_sync_counts = {};
+    qbo_failed_refunds = [];
+  }
+
   const sync_counts = (syncRows || []).reduce((counts, row) => {
     const status = row.qbo_sync_status || 'none';
     counts[status] = (counts[status] || 0) + 1;
@@ -36,8 +56,11 @@ export async function onRequestGet({ request, env }) {
     qbo_config: qboConfigStatus(env),
     realm_id: data?.realm_id || null,
     access_expires_at: data?.access_expires_at || null,
+    last_intuit_tid: data?.last_intuit_tid || null,
     updated_at: data?.updated_at || null,
     sync_counts,
+    refund_sync_counts,
     qbo_failed_orders: qbo_failed_orders || [],
+    qbo_failed_refunds,
   });
 }

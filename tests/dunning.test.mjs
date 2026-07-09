@@ -69,6 +69,7 @@ test('planDispute extracts charge/PI and reason for a staff alert', () => {
 test('planRefundReconcile marks an order fully refunded when the charge covers the total', () => {
   const plan = planRefundReconcile({ payment_intent: 'pi_1', amount_refunded: 10750 }, { total: 107.5, refunded_amount: 0, status: 'paid' });
   assert.equal(plan.paymentIntent, 'pi_1');
+  assert.equal(plan.amount, 107.5);
   assert.equal(plan.refundedAmount, 107.5);
   assert.equal(plan.fullyRefunded, true);
   assert.equal(plan.status, 'refunded');
@@ -76,6 +77,7 @@ test('planRefundReconcile marks an order fully refunded when the charge covers t
 
 test('planRefundReconcile keeps status on a partial refund', () => {
   const plan = planRefundReconcile({ amount_refunded: 5000 }, { total: 107.5, refunded_amount: 0, status: 'paid' });
+  assert.equal(plan.amount, 50);
   assert.equal(plan.refundedAmount, 50);
   assert.equal(plan.fullyRefunded, false);
   assert.equal(plan.status, 'paid');
@@ -83,6 +85,7 @@ test('planRefundReconcile keeps status on a partial refund', () => {
 
 test('planRefundReconcile never lowers an already-larger recorded refund (idempotent)', () => {
   const plan = planRefundReconcile({ amount_refunded: 2000 }, { total: 107.5, refunded_amount: 50, status: 'paid' });
+  assert.equal(plan.amount, 0);
   assert.equal(plan.refundedAmount, 50); // keeps the larger prior amount
   assert.equal(plan.fullyRefunded, false);
 });
@@ -96,6 +99,13 @@ test('stripe-webhook handles the four dunning/dispute/refund events', () => {
   assert.match(src, /charge\.dispute\.created/);
   assert.match(src, /charge\.refunded/);
   assert.match(src, /from '\.\.\/_lib\/dunning\.js'/);
+});
+
+test('charge.refunded events enqueue idempotent QBO refund credit memos', () => {
+  assert.match(src, /qboRefundRowsFromCharge/);
+  assert.match(src, /qboFullDocumentRefund/);
+  assert.match(src, /from\('qbo_refunds'\)/);
+  assert.match(src, /upsert\(withIds,\s*\{\s*onConflict:\s*'stripe_refund_id',\s*ignoreDuplicates:\s*true\s*\}/);
 });
 
 test('recovery email only fires when the subscription was delinquent (no renewal spam)', () => {

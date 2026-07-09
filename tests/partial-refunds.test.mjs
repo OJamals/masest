@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { computeRefund } from '../functions/_lib/refund.js';
+import { computeRefund, qboFullDocumentRefund } from '../functions/_lib/refund.js';
 import { stockIncrements } from '../functions/_lib/order-shape.js';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
@@ -67,6 +67,12 @@ test('computeRefund converts dollars to cents without float drift', () => {
   assert.equal(computeRefund({ total: 100, requestedAmount: 33.33 }).amountCents, 3333);
 });
 
+test('qboFullDocumentRefund only flags a one-shot full-order credit memo', () => {
+  assert.equal(qboFullDocumentRefund({ total: 100, refundedAmount: 0, amount: 100 }), true);
+  assert.equal(qboFullDocumentRefund({ total: 100, refundedAmount: 40, amount: 60 }), false);
+  assert.equal(qboFullDocumentRefund({ total: 100, refundedAmount: 0, amount: 25 }), false);
+});
+
 // ---- stockIncrements: RPC arg builder (mirror of stockDecrements) ----
 test('stockIncrements builds RPC args only for lines with a sku', () => {
   const args = stockIncrements([{ sku: 'VK-1', qty: 2 }, { qty: 5 }, { sku: 'VK-2', qty: 1 }]);
@@ -86,6 +92,8 @@ test('refund action accepts amount + uses computeRefund + audits partial', () =>
   assert.match(src, /order\.refund_partial/, 'must audit partial refunds distinctly');
   assert.match(src, /increment_variant_stock/, 'must re-increment stock on full refund');
   assert.match(src, /refunded_amount:\s*plan\.newRefundedAmount/, 'must persist cumulative refunded_amount');
+  assert.match(src, /qboFullDocumentRefund\(/, 'QBO full credit memo decision must be separate from cumulative order refund status');
+  assert.match(src, /stripe_refund_id:\s*stripeRefund\?\.id \|\| null/, 'QBO refund rows should carry Stripe refund ids for idempotency');
 });
 
 // ---- migration ----

@@ -31,3 +31,10 @@ export function computeRefund({ total, refundedAmount = 0, requestedAmount } = {
 
   return { ok: true, amount, amountCents: Math.round(amount * 100), newRefundedAmount, fullyRefunded };
 }
+
+export function qboFullDocumentRefund({ total, refundedAmount = 0, amount = 0 } = {}) {
+  const totalNum = round2(Number(total) || 0);
+  const already = round2(Number(refundedAmount) || 0);
+  const refundAmount = round2(Number(amount) || 0);
+  return totalNum > 0 && already <= 0 && refundAmount + 1e-9 >= totalNum;
+}

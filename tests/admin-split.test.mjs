@@ -46,7 +46,10 @@ test("admin QuickBooks panel renders failed sync retry controls", () => {
   const qbo = read("js/admin/qbo.js");
   assert.match(html, /qboFailedOrders/);
   assert.match(qbo, /qbo_failed_orders/);
+  assert.match(qbo, /qbo_failed_refunds/);
+  assert.match(qbo, /refund_sync_counts/);
   assert.match(qbo, /data-qbo-retry/);
+  assert.match(qbo, /data-qbo-retry-kind/);
   assert.match(qbo, /\/api\/admin\/qbo\/retry/);
 });
 

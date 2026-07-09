@@ -55,6 +55,14 @@ const items = [
   { sku: "sar-5", name: "SAR - 5 gal", qty: 1, unit_price: 50, line_total: 50 },
 ];
 
+function qboJson(body, intuitTid) {
+  return {
+    ok: true,
+    headers: intuitTid ? new Headers({ intuit_tid: intuitTid }) : undefined,
+    async json() { return body; },
+  };
+}
+
 test("documentPlanFor maps paid and NET orders to the right QBO document/customer", () => {
   assert.deepEqual(documentPlanFor(paidOrder, { c9: "Acme Co" }), {
     docType: "invoice_payment",
@@ -136,6 +144,36 @@ test("syncOrder reuses existing Stripe invoice/payment records on retry", async 
   assert.deepEqual(result, { docId: "inv-existing", docType: "invoice_payment", paymentId: "pay-existing" });
   assert.equal(requests.some((request) => request.url.includes("/invoice?")), false);
   assert.equal(requests.some((request) => request.url.includes("/payment?")), false);
+});
+
+test("syncOrder captures Intuit transaction ids from QBO response headers", async () => {
+  const sb = fakeSb({
+    qbo_customers: { "company:c9": { key: "company:c9", qbo_customer_id: "55" } },
+    qbo_items: {
+      "crhd-5": { sku: "crhd-5", qbo_item_id: "101" },
+      "sar-5": { sku: "sar-5", qbo_item_id: "102" },
+    },
+  });
+
+  const result = await syncOrder(sb, {}, "tok", "realm", paidOrder, items, { c9: "Acme Co" }, {
+    fetchImpl: async (url) => {
+      const decoded = decodeURIComponent(String(url));
+      if (decoded.includes("from Invoice")) return qboJson({ QueryResponse: {} }, "tid_invoice_query");
+      if (decoded.includes("from Payment")) return qboJson({ QueryResponse: {} }, "tid_payment_query");
+      if (url.includes("/invoice?")) return qboJson({ Invoice: { Id: "inv-902" } }, "tid_invoice_create");
+      if (url.includes("/payment?")) return qboJson({ Payment: { Id: "pay-902" } }, "tid_payment_create");
+      throw new Error(`unexpected QBO request: ${url}`);
+    },
+  });
+
+  assert.equal(result.intuitTid, "tid_invoice_create");
+  assert.equal(result.paymentIntuitTid, "tid_payment_create");
+  assert.deepEqual(result.intuitTids.map((entry) => entry.intuit_tid), [
+    "tid_invoice_query",
+    "tid_invoice_create",
+    "tid_payment_query",
+    "tid_payment_create",
+  ]);
 });
 
 test("syncOrder posts NET orders as invoices", async () => {

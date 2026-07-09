@@ -46,6 +46,8 @@ test("QBO callback verifies staff-issued state and stores OAuth tokens", () => {
   assert.match(src, /qbo_tokens/);
   assert.match(src, /realm_id:\s*realmId/);
   assert.match(src, /refresh_token/);
+  assert.match(helper, /intuitTidFromHeaders\(response\.headers\)/);
+  assert.match(src, /last_intuit_tid:\s*token\.intuit_tid/);
 });
 
 test("QBO status endpoint is staff-gated and reports connected state", () => {

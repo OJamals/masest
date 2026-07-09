@@ -3,10 +3,10 @@
   "notificationClickNoReload": true,
   "notificationClickUrl": "http://127.0.0.1:4195/dashboard.html#messages",
   "messagesVisible": 2,
-  "dashboardPortalPopupUrl": "http://127.0.0.1:4195/audit-post-login-qa-2026-06-24/mock-stripe-portal.html",
+  "dashboardPortalPopupUrl": null,
   "dashboardPortalKeptDashboard": true,
   "businessDashboardLink": 2,
-  "businessPaymentPopupUrl": "http://127.0.0.1:4195/audit-post-login-qa-2026-06-24/mock-stripe-portal.html",
+  "businessPaymentPopupUrl": null,
   "businessPortalKeptBusiness": true,
   "screenshotFiles": [
     "01-dashboard-overview-desktop.png",

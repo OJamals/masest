@@ -17,6 +17,8 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const parts = [];
     if (order.qbo_doc_id) parts.push(`${order.qbo_doc_type || 'qbo'} ${order.qbo_doc_id}`);
     if (order.qbo_payment_id) parts.push(`payment ${order.qbo_payment_id}`);
+    if (order.qbo_intuit_tid) parts.push(`tid ${order.qbo_intuit_tid}`);
+    if (order.qbo_payment_intuit_tid) parts.push(`payment tid ${order.qbo_payment_intuit_tid}`);
     if (!parts.length) return '';
     return `<div class="muted admin-inline-note">QBO: ${parts.map(esc).join(' / ')}</div>`;
   }

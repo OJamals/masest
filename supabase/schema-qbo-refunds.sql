@@ -9,15 +9,27 @@
 create table if not exists public.qbo_refunds (
   id                 uuid primary key default gen_random_uuid(),
   order_id           uuid not null references public.orders(id) on delete cascade,
+  stripe_refund_id   text,
   amount             numeric(12,2) not null,
   fully_refunded     boolean not null default false,
   qbo_sync_status    qbo_sync_status not null default 'pending',
   qbo_credit_memo_id text,
+  qbo_intuit_tid     text,
+  qbo_intuit_tids    jsonb not null default '[]'::jsonb,
   qbo_attempts       int not null default 0,
   qbo_next_attempt_at timestamptz,
   qbo_error          text,
   created_at         timestamptz not null default now()
 );
+
+alter table public.qbo_refunds
+  add column if not exists stripe_refund_id text,
+  add column if not exists qbo_intuit_tid text,
+  add column if not exists qbo_intuit_tids jsonb not null default '[]'::jsonb;
+
+create unique index if not exists qbo_refunds_stripe_refund_id_uniq
+  on public.qbo_refunds (stripe_refund_id)
+  where stripe_refund_id is not null;
 
 create index if not exists qbo_refunds_pending_idx
   on public.qbo_refunds (qbo_next_attempt_at)

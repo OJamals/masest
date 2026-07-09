@@ -6,7 +6,7 @@
 
 ## Decisions (locked)
 
-- **Who can review:** Verified purchasers only. Writing requires proof of a fulfilled/delivered order containing the reviewed SKU (via session or signed email token). Staff can also post seed/legacy reviews from the admin panel (marked verified).
+- **Who can review:** Verified purchasers only. Writing requires proof of a fulfilled/delivered order containing the reviewed SKU (via session or signed email token). Staff can also enter documented customer feedback from the admin panel, but manual entries are not marked verified purchases.
 - **Moderation:** Admin-approves-first. New reviews land `pending`; only `approved` rows are public and count toward aggregates.
 - **Reminder cadence:** One reminder, 10 days after delivery (fallback: 10 days after `fulfilled` when no delivery tracking). Opt-out/suppression respected. No second reminder.
 - **Scope:** Products **and** services, with JSON-LD `AggregateRating`.
@@ -30,13 +30,13 @@ create table if not exists public.product_reviews (
   title             text,
   body              text,
   verified_purchase boolean not null default false,
-  source            text not null default 'customer',     -- 'customer' | 'staff_seed'
+  source            text not null default 'customer',     -- 'customer' | 'staff_manual'
   status            text not null default 'pending',       -- 'pending' | 'approved' | 'rejected'
   staff_note        text,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
--- One customer review per SKU per order. Staff-seed rows have order_id NULL so are exempt.
+-- One customer review per SKU per order. Manual staff-entered rows have order_id NULL so are exempt.
 create unique index if not exists product_reviews_order_sku_uq
   on public.product_reviews (order_id, sku) where order_id is not null;
 create index if not exists product_reviews_public_idx
@@ -106,8 +106,8 @@ Lightweight page: reads `?order=&sku=&kind=&email=&token=`, calls the API to ren
 ### 6. Admin moderation — `functions/api/admin/reviews.js` + admin "Reviews" tab
 
 - `GET` list with `status` filter (default `pending`), search, pagination (reuse `_lib/paginate.js`).
-- `PATCH`/`POST` actions: `approve`, `reject`, `edit` (fix typo/title/body), `delete`, and `create_seed` (staff seed/legacy review: sets `source='staff_seed'`, `verified_purchase=true`, `status='approved'`, `order_id NULL`).
-- Approving/creating a seed → row public; a subsequent `publish`/build refreshes the SEO snapshot.
+- `PATCH`/`POST` actions: `approve`, `reject`, `edit` (fix typo/title/body), `delete`, and `create_manual` (requires customer name/email, sets `source='staff_manual'`, `verified_purchase=false`, `status='approved'`, `order_id NULL`).
+- Approving/creating a manual review → row public; a subsequent `publish`/build refreshes the SEO snapshot.
 - Admin UI: new "Reviews" tab (`admin.js` modular pattern, `delegate()` events, `admEmpty`/`admSkeleton` states), pending badge count.
 
 ### 7. Tests

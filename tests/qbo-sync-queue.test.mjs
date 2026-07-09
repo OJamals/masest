@@ -11,7 +11,7 @@ test("QBO schema defines token/cache tables and order sync columns", () => {
     assert.match(sql, new RegExp(`grant select, insert, update on public\\.${table} to service_role`), `${table} must be service-role writable`);
   }
   assert.match(sql, /create type qbo_sync_status as enum \('pending','processing','synced','error','skipped'\)/);
-  for (const column of ["qbo_sync_status", "qbo_doc_id", "qbo_doc_type", "qbo_payment_id", "qbo_synced_at", "qbo_error", "qbo_attempts", "qbo_next_attempt_at"]) {
+  for (const column of ["qbo_sync_status", "qbo_doc_id", "qbo_doc_type", "qbo_payment_id", "qbo_intuit_tid", "qbo_payment_intuit_tid", "qbo_intuit_tids", "qbo_synced_at", "qbo_error", "qbo_attempts", "qbo_next_attempt_at"]) {
     assert.match(sql, new RegExp(`add column if not exists ${column}`), `${column} must be added to orders`);
   }
   assert.match(sql, /orders_qbo_pending_idx/);
@@ -75,9 +75,26 @@ test("QBO sync records invoice and Stripe-linked payment ids", () => {
     "Stripe-linked QBO payment id should be stored on the order");
 });
 
+test("QBO sync stores Intuit transaction ids for support traceability", () => {
+  const schema = read("supabase/schema-qbo.sql");
+  const refunds = read("supabase/schema-qbo-refunds.sql");
+  const src = read("functions/api/qbo-sync.js");
+
+  assert.match(schema, /qbo_intuit_tid text/, "orders should store the primary Intuit transaction id");
+  assert.match(schema, /qbo_intuit_tids jsonb not null default '\[\]'::jsonb/, "orders should store all captured Intuit transaction ids");
+  assert.match(refunds, /qbo_intuit_tid\s+text/, "refund credit memos should store the primary Intuit transaction id");
+  assert.match(refunds, /qbo_intuit_tids\s+jsonb not null default '\[\]'::jsonb/, "refund credit memos should store all captured Intuit transaction ids");
+  assert.match(src, /patch\.qbo_intuit_tid = result\.intuitTid/, "order sync should persist the invoice Intuit transaction id");
+  assert.match(src, /patch\.qbo_payment_intuit_tid = result\.paymentIntuitTid/, "order sync should persist the payment Intuit transaction id");
+  assert.match(src, /patch\.qbo_intuit_tids = result\.intuitTids/, "order sync should persist the full Intuit transaction id trail");
+  assert.match(src, /qbo_intuit_tid:\s*result\.intuitTid/, "refund sync should persist the CreditMemo Intuit transaction id");
+});
+
 test("admin QBO status exposes failed orders for staff triage", () => {
   const src = readFileSync(new URL("../functions/api/admin/qbo/status.js", import.meta.url), "utf8");
   assert.match(src, /qbo_failed_orders/);
+  assert.match(src, /qbo_failed_refunds/);
+  assert.match(src, /refund_sync_counts/);
   assert.match(src, /qbo_sync_status'\s*,\s*'error'/);
   assert.match(src, /qbo_error/);
   assert.match(src, /qbo_attempts/);
@@ -87,6 +104,8 @@ test("admin QBO status exposes failed orders for staff triage", () => {
 test("admin QBO retry endpoint requeues a failed order", () => {
   const src = readFileSync(new URL("../functions/api/admin/qbo/retry.js", import.meta.url), "utf8");
   assert.match(src, /requireStaff/);
+  assert.match(src, /body\.kind === 'refund'/);
+  assert.match(src, /qbo_refunds/);
   assert.match(src, /qbo_sync_status:\s*'pending'/);
   assert.match(src, /qbo_attempts:\s*0/);
   assert.match(src, /qbo_next_attempt_at:\s*null/);

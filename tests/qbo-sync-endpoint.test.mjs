@@ -40,6 +40,8 @@ test("qbo-sync endpoint posts claimed orders and records terminal sync state", (
     "successful QBO posts must mark orders synced");
   assert.match(SRC, /qbo_doc_id:\s*result\.docId/,
     "successful QBO posts must record the QBO document id");
+  assert.match(SRC, /qbo_intuit_tid/,
+    "successful QBO posts must record Intuit transaction ids from response headers");
   assert.match(SRC, /qbo_invoice_id(?:\s*:|\s*=)\s*result\.docId/,
     "invoice syncs must preserve the existing qbo_invoice_id column");
   assert.doesNotMatch(SRC, /qbo_document_sync_not_implemented|json\(501,/,

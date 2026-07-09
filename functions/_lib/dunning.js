@@ -61,10 +61,13 @@ export function planDispute(dispute) {
 export function planRefundReconcile(charge, order) {
   const charged = centsToAmount(charge?.amount_refunded);
   const total = Number(order?.total) || 0;
-  const refundedAmount = round2(Math.max(charged, Number(order?.refunded_amount) || 0));
+  const previousRefundedAmount = Number(order?.refunded_amount) || 0;
+  const refundedAmount = round2(Math.max(charged, previousRefundedAmount));
+  const amount = round2(Math.max(0, refundedAmount - previousRefundedAmount));
   const fullyRefunded = total > 0 && refundedAmount >= total;
   return {
     paymentIntent: charge?.payment_intent || null,
+    amount,
     refundedAmount,
     fullyRefunded,
     status: fullyRefunded ? 'refunded' : (order?.status || null),

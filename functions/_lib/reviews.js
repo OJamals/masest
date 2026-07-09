@@ -9,7 +9,6 @@ const TITLE_MAX = 120;
 const BODY_MAX = 4000;
 const NAME_MAX = 80;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const RESERVED_AUTHOR_EMAILS = new Set(["seed@masest.co"]);
 
 export function validateReviewInput(input = {}) {
   const rating = Number(input.rating);
@@ -32,7 +31,6 @@ export function buildStaffReviewInsert(input = {}) {
   if (!author_name) return { ok: false, error: "missing_author_name" };
   const author_email = String(input.author_email || "").trim().toLowerCase();
   if (!author_email) return { ok: false, error: "missing_author_email" };
-  if (RESERVED_AUTHOR_EMAILS.has(author_email)) return { ok: false, error: "reserved_author_email" };
   if (!EMAIL_RE.test(author_email)) return { ok: false, error: "invalid_author_email" };
   return {
     ok: true,

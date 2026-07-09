@@ -15,6 +15,7 @@ import {
   planDispute,
   planRefundReconcile,
 } from '../_lib/dunning.js';
+import { qboFullDocumentRefund } from '../_lib/refund.js';
 import {
   centsToAmount,
   assembleCartMetadata,
@@ -187,6 +188,31 @@ async function alertStaffOversell(env, order, shortedSkus) {
     category: 'order',
     idempotencyKey: order?.id ? `oversell:${order.id}` : null,
   });
+}
+
+function qboRefundRowsFromCharge(charge, order, plan) {
+  if (!order?.id || !plan?.amount) return [];
+  const total = Number(order.total) || 0;
+  const refunds = Array.isArray(charge?.refunds?.data) ? charge.refunds.data : [];
+  const rows = refunds
+    .filter((refund) => refund?.id && Number(refund.amount || 0) > 0 && refund.status !== 'failed' && refund.status !== 'canceled')
+    .map((refund) => {
+      const amount = centsToAmount(refund.amount);
+      return {
+        order_id: order.id,
+        amount,
+        fully_refunded: qboFullDocumentRefund({ total, refundedAmount: 0, amount }),
+        stripe_refund_id: refund.id,
+      };
+    });
+  if (rows.length) return rows;
+  const syntheticId = charge?.id ? `charge:${charge.id}:refunded:${plan.refundedAmount}` : null;
+  return [{
+    order_id: order.id,
+    amount: plan.amount,
+    fully_refunded: qboFullDocumentRefund({ total, refundedAmount: order.refunded_amount, amount: plan.amount }),
+    stripe_refund_id: syntheticId,
+  }];
 }
 
 export async function onRequestPost({ request, env }) {
@@ -446,12 +472,27 @@ export async function onRequestPost({ request, env }) {
         const patch = { refunded_amount: plan.refundedAmount };
         if (plan.fullyRefunded) patch.status = 'refunded';
         await sb.from('orders').update(patch).eq('id', order.id).then(() => {}, () => {});
+        await enqueueQboRefundRows(sb, qboRefundRowsFromCharge(charge, order, plan));
       }
     }
     return json(200, { received: true });
   }
 
   return json(200, { received: true });
+}
+
+async function enqueueQboRefundRows(sb, rows) {
+  if (!rows.length) return;
+  const withIds = rows.filter((row) => row.stripe_refund_id);
+  const withoutIds = rows.filter((row) => !row.stripe_refund_id);
+  if (withIds.length) {
+    await sb.from('qbo_refunds')
+      .upsert(withIds, { onConflict: 'stripe_refund_id', ignoreDuplicates: true })
+      .then(() => {}, () => {});
+  }
+  if (withoutIds.length) {
+    await sb.from('qbo_refunds').insert(withoutIds).then(() => {}, () => {});
+  }
 }
 
 // --- Billing-event notifications (#24). Defined below onRequestPost so the first DB

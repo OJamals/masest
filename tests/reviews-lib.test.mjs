@@ -59,10 +59,9 @@ test("buildStaffReviewInsert creates explicit non-verified staff reviews", () =>
   });
 });
 
-test("buildStaffReviewInsert rejects missing identity and synthetic author emails", () => {
+test("buildStaffReviewInsert rejects missing identity and invalid author emails", () => {
   assert.equal(buildStaffReviewInsert({ rating: 5, sku: "hcr", author_email: "buyer@example.com" }).error, "missing_author_name");
   assert.equal(buildStaffReviewInsert({ rating: 5, sku: "hcr", author_name: "Buyer" }).error, "missing_author_email");
-  assert.equal(buildStaffReviewInsert({ rating: 5, sku: "hcr", author_name: "Buyer", author_email: "seed@masest.co" }).error, "reserved_author_email");
   assert.equal(buildStaffReviewInsert({ rating: 5, sku: "hcr", author_name: "Buyer", author_email: "not-an-email" }).error, "invalid_author_email");
 });
 

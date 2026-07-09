@@ -32,6 +32,7 @@ export async function onRequestGet({ request, env }) {
     access_token: token.access_token,
     refresh_token: token.refresh_token,
     access_expires_at: new Date(now.getTime() + Number(token.expires_in || 3600) * 1000).toISOString(),
+    last_intuit_tid: token.intuit_tid || null,
     updated_at: now.toISOString(),
   }, { onConflict: 'id' });
 

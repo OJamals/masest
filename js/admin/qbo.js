@@ -7,6 +7,10 @@ function failedOrderName(order) {
   return order.companies?.name || order.id;
 }
 
+function failedRefundName(refund) {
+  return `Refund ${refund.id}`;
+}
+
 function qboErrorLabel(error) {
   return {
     qbo_oauth_not_configured: "OAuth not configured",
@@ -15,27 +19,46 @@ function qboErrorLabel(error) {
   }[error] || error || "Unknown QuickBooks error";
 }
 
-function renderFailedOrders(orders = []) {
+function renderFailedOrders(orders = [], refunds = []) {
   const root = $("qboFailedOrders");
   if (!root) return;
-  if (!orders.length) {
+  if (!orders.length && !refunds.length) {
     root.innerHTML = "";
     return;
   }
+  const rows = [
+    ...orders.map((order) => ({
+      kind: "order",
+      id: order.id,
+      label: failedOrderName(order),
+      total: money(order.total, order.currency || "USD"),
+      attempts: order.qbo_attempts || 0,
+      error: qboErrorLabel(order.qbo_error),
+    })),
+    ...refunds.map((refund) => ({
+      kind: "refund",
+      id: refund.id,
+      label: failedRefundName(refund),
+      total: money(refund.amount, "USD"),
+      attempts: refund.qbo_attempts || 0,
+      error: qboErrorLabel(refund.qbo_error),
+    })),
+  ];
   root.innerHTML = `
     <h3>Sync follow-up</h3>
-    <p class="muted adm-qbo-help">Resolve the readiness issue, then retry affected orders from here.</p>
+    <p class="muted adm-qbo-help">Resolve the readiness issue, then retry affected orders or refund credit memos from here.</p>
     <div class="adm-table-wrap">
       <table class="adm">
-        <thead><tr><th>Order</th><th>Total</th><th>Attempts</th><th>Error</th><th></th></tr></thead>
+        <thead><tr><th>Type</th><th>Record</th><th>Amount</th><th>Attempts</th><th>Error</th><th></th></tr></thead>
         <tbody>
-          ${orders.map((order) => `
+          ${rows.map((row) => `
             <tr>
-              <td>${esc(failedOrderName(order))}</td>
-              <td>${money(order.total, order.currency || "USD")}</td>
-              <td>${esc(order.qbo_attempts || 0)}</td>
-              <td>${esc(qboErrorLabel(order.qbo_error))}</td>
-              <td><button class="btn btn-ghost btn-sm" type="button" data-qbo-retry="${esc(order.id)}">Retry</button></td>
+              <td>${esc(row.kind)}</td>
+              <td>${esc(row.label)}</td>
+              <td>${row.total}</td>
+              <td>${esc(row.attempts)}</td>
+              <td>${esc(row.error)}</td>
+              <td><button class="btn btn-ghost btn-sm" type="button" data-qbo-retry="${esc(row.id)}" data-qbo-retry-kind="${esc(row.kind)}">Retry</button></td>
             </tr>
           `).join("")}
         </tbody>
@@ -98,9 +121,10 @@ export async function renderQboStatus() {
     if (disconnectBtn) disconnectBtn.hidden = !info.connected;
     if (summary) {
       const counts = info.sync_counts || {};
-      summary.textContent = qboQueueText(counts);
+      const refundCounts = info.refund_sync_counts || {};
+      summary.textContent = `Orders: ${qboQueueText(counts)} · Refunds: ${qboQueueText(refundCounts)}`;
     }
-    renderFailedOrders(info.qbo_failed_orders || []);
+    renderFailedOrders(info.qbo_failed_orders || [], info.qbo_failed_refunds || []);
   } catch (err) {
     status.textContent = err.data?.error || "QuickBooks status unavailable.";
     status.dataset.state = "err";
@@ -177,16 +201,16 @@ export async function runQboSync() {
   }
 }
 
-export async function retryQboOrder(orderId) {
+export async function retryQboOrder(orderId, kind = "order") {
   const status = $("qboSyncStatus");
   if (status) {
     status.textContent = "Requeueing QuickBooks sync...";
     status.dataset.state = "";
   }
   try {
-    await api("/api/admin/qbo/retry", { method: "POST", body: { id: orderId } });
+    await api("/api/admin/qbo/retry", { method: "POST", body: { id: orderId, kind } });
     if (status) {
-      status.textContent = "Order requeued for QuickBooks sync.";
+      status.textContent = kind === "refund" ? "Refund credit memo requeued for QuickBooks sync." : "Order requeued for QuickBooks sync.";
       status.dataset.state = "ok";
     }
     await renderQboStatus();
@@ -204,5 +228,5 @@ document.addEventListener("click", (event) => {
   if (!button) return;
   // Disable while in flight — a double-click would requeue the same order twice.
   button.disabled = true;
-  retryQboOrder(button.dataset.qboRetry).finally(() => { button.disabled = false; });
+  retryQboOrder(button.dataset.qboRetry, button.dataset.qboRetryKind || "order").finally(() => { button.disabled = false; });
 });

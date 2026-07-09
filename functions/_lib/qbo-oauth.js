@@ -1,4 +1,5 @@
 import { qboConfigEnv } from './qbo-config.js';
+import { intuitTidFromHeaders, intuitTidSuffix } from './intuit.js';
 
 const INTUIT_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const INTUIT_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -89,12 +90,15 @@ export async function exchangeQboCode(request, env, code) {
     },
     body,
   });
+  const intuitTid = intuitTidFromHeaders(response.headers);
 
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
-    throw new Error(`qbo_oauth_exchange_failed:${response.status}:${detail.slice(0, 200)}`);
+    throw new Error(`qbo_oauth_exchange_failed:${response.status}${intuitTidSuffix(intuitTid)}:${detail.slice(0, 200)}`);
   }
-  return response.json();
+  const token = await response.json();
+  if (intuitTid) token.intuit_tid = intuitTid;
+  return token;
 }
 
 // #26 — revoke a token at Intuit so the grant is killed on their side too (not just

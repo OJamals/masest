@@ -14,14 +14,14 @@ create table if not exists public.product_reviews (
   title             text,
   body              text,
   verified_purchase boolean not null default false,
-  source            text not null default 'customer',  -- 'customer' | 'staff_seed'
+  source            text not null default 'customer',  -- 'customer' | 'staff_manual'
   status            text not null default 'pending',    -- 'pending' | 'approved' | 'rejected'
   staff_note        text,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
 
--- One customer review per (order, sku); staff-seed rows (order_id null) are exempt.
+-- One customer review per (order, sku); manual staff-entered rows (order_id null) are exempt.
 create unique index if not exists product_reviews_order_sku_uq
   on public.product_reviews (order_id, sku) where order_id is not null;
 create index if not exists product_reviews_public_idx

@@ -7,8 +7,12 @@ create table if not exists public.qbo_tokens (
   refresh_token text,
   access_token text,
   access_expires_at timestamptz,
+  last_intuit_tid text,
   updated_at timestamptz not null default now()
 );
+
+alter table public.qbo_tokens
+  add column if not exists last_intuit_tid text;
 
 create table if not exists public.qbo_sync_settings (
   id smallint primary key default 1 check (id = 1),
@@ -42,6 +46,9 @@ alter table public.orders
   add column if not exists qbo_doc_id text,
   add column if not exists qbo_doc_type text,
   add column if not exists qbo_payment_id text,
+  add column if not exists qbo_intuit_tid text,
+  add column if not exists qbo_payment_intuit_tid text,
+  add column if not exists qbo_intuit_tids jsonb not null default '[]'::jsonb,
   add column if not exists qbo_synced_at timestamptz,
   add column if not exists qbo_error text,
   add column if not exists qbo_attempts int not null default 0,

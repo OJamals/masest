@@ -1,9 +1,43 @@
 import { qboConfigEnv } from './qbo-config.js';
+import { intuitTidFromHeaders, intuitTidSuffix } from './intuit.js';
 
 const OAUTH_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
 const BACKOFF_CAP_MS = 6 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
+
+function qboOptions(options = {}) {
+  return typeof options === 'function' ? { fetchImpl: options } : { ...(options || {}) };
+}
+
+function recordIntuitTid(options, response, operation) {
+  const intuitTid = intuitTidFromHeaders(response?.headers);
+  if (!intuitTid) return '';
+  const entry = { operation, intuit_tid: intuitTid };
+  if (Array.isArray(options?.intuitTids)) options.intuitTids.push(entry);
+  if (typeof options?.onIntuitTid === 'function') options.onIntuitTid(entry);
+  return intuitTid;
+}
+
+function lastIntuitTid(intuitTids, operation) {
+  for (let i = intuitTids.length - 1; i >= 0; i--) {
+    if (intuitTids[i]?.operation === operation && intuitTids[i]?.intuit_tid) return intuitTids[i].intuit_tid;
+  }
+  return '';
+}
+
+function withIntuitTidResult(result, intuitTids, entity) {
+  if (!intuitTids.length) return result;
+  const out = {
+    ...result,
+    intuitTid: lastIntuitTid(intuitTids, `create:${entity}`) || lastIntuitTid(intuitTids, `query:${entity}`),
+    intuitTids: intuitTids.slice(),
+  };
+  if (entity === 'Invoice') {
+    out.paymentIntuitTid = lastIntuitTid(intuitTids, 'create:Payment') || lastIntuitTid(intuitTids, 'query:Payment');
+  }
+  return out;
+}
 
 export function qboBaseUrl(env = {}) {
   const qboEnv = qboConfigEnv(env);
@@ -191,9 +225,11 @@ export function documentPlanFor(order, companyNames = {}) {
 }
 
 export async function syncOrder(sb, env, accessToken, realmId, order, items = [], companyNames = {}, options = {}) {
+  const intuitTids = Array.isArray(options.intuitTids) ? options.intuitTids : [];
   const fetchImpl = options.fetchImpl || fetch;
+  const qboContext = { ...options, fetchImpl, intuitTids };
   const plan = documentPlanFor(order, companyNames);
-  const customerRef = await findOrCreateCustomer(sb, env, accessToken, realmId, plan.customer, { fetchImpl });
+  const customerRef = await findOrCreateCustomer(sb, env, accessToken, realmId, plan.customer, qboContext);
   const itemRefs = {};
 
   for (const item of items || []) {
@@ -203,7 +239,7 @@ export async function syncOrder(sb, env, accessToken, realmId, order, items = []
         name: item.name || item.sku,
         type: item.type,
         mode: item.mode,
-      }, { fetchImpl });
+      }, qboContext);
     }
   }
 
@@ -213,34 +249,36 @@ export async function syncOrder(sb, env, accessToken, realmId, order, items = []
   const payload = buildInvoicePayload(payloadInput);
   let docId = null;
   if (plan.entity === 'Invoice') {
-    docId = await findTransactionByField(env, accessToken, realmId, 'Invoice', 'DocNumber', payload.DocNumber, fetchImpl);
+    docId = await findTransactionByField(env, accessToken, realmId, 'Invoice', 'DocNumber', payload.DocNumber, qboContext);
   }
   if (!docId) {
-    const created = await qboCreate(env, accessToken, realmId, plan.entity, payload, fetchImpl);
+    const created = await qboCreate(env, accessToken, realmId, plan.entity, payload, qboContext);
     docId = created?.[plan.entity]?.Id;
   }
   if (!docId) throw new Error(`qbo_${plan.entity.toLowerCase()}_id_missing`);
 
   if (plan.docType === 'invoice_payment') {
     const paymentPayload = buildInvoicePaymentPayload({ order, customerRef, invoiceId: docId });
-    let paymentId = await findTransactionByField(env, accessToken, realmId, 'Payment', 'PaymentRefNum', paymentPayload.PaymentRefNum, fetchImpl);
+    let paymentId = await findTransactionByField(env, accessToken, realmId, 'Payment', 'PaymentRefNum', paymentPayload.PaymentRefNum, qboContext);
     if (!paymentId) {
-      const payment = await qboCreate(env, accessToken, realmId, 'Payment', paymentPayload, fetchImpl);
+      const payment = await qboCreate(env, accessToken, realmId, 'Payment', paymentPayload, qboContext);
       paymentId = payment?.Payment?.Id;
     }
     if (!paymentId) throw new Error('qbo_payment_id_missing');
-    return { docId, docType: plan.docType, paymentId };
+    return withIntuitTidResult({ docId, docType: plan.docType, paymentId }, intuitTids, 'Invoice');
   }
 
-  return { docId, docType: plan.docType };
+  return withIntuitTidResult({ docId, docType: plan.docType }, intuitTids, 'Invoice');
 }
 
 // #22 — post a reversing CreditMemo for one refund. Idempotent on the refund id
 // (DocNumber): a retried sync reuses the existing CreditMemo instead of double-crediting.
 export async function syncRefund(sb, env, accessToken, realmId, refund, order, items = [], companyNames = {}, options = {}) {
+  const intuitTids = Array.isArray(options.intuitTids) ? options.intuitTids : [];
   const fetchImpl = options.fetchImpl || fetch;
+  const qboContext = { ...options, fetchImpl, intuitTids };
   const plan = documentPlanFor(order, companyNames);
-  const customerRef = await findOrCreateCustomer(sb, env, accessToken, realmId, plan.customer, { fetchImpl });
+  const customerRef = await findOrCreateCustomer(sb, env, accessToken, realmId, plan.customer, qboContext);
   const itemRefs = {};
   for (const item of items || []) {
     if (!itemRefs[item.sku]) {
@@ -249,7 +287,7 @@ export async function syncRefund(sb, env, accessToken, realmId, refund, order, i
         name: item.name || item.sku,
         type: item.type,
         mode: item.mode,
-      }, { fetchImpl });
+      }, qboContext);
     }
   }
   const docNum = docNumber(refund.id);
@@ -262,13 +300,13 @@ export async function syncRefund(sb, env, accessToken, realmId, refund, order, i
     }),
     DocNumber: docNum,
   };
-  let docId = await findTransactionByField(env, accessToken, realmId, 'CreditMemo', 'DocNumber', docNum, fetchImpl);
+  let docId = await findTransactionByField(env, accessToken, realmId, 'CreditMemo', 'DocNumber', docNum, qboContext);
   if (!docId) {
-    const created = await qboCreate(env, accessToken, realmId, 'CreditMemo', payload, fetchImpl);
+    const created = await qboCreate(env, accessToken, realmId, 'CreditMemo', payload, qboContext);
     docId = created?.CreditMemo?.Id;
   }
   if (!docId) throw new Error('qbo_credit_memo_id_missing');
-  return { creditMemoId: docId };
+  return withIntuitTidResult({ creditMemoId: docId }, intuitTids, 'CreditMemo');
 }
 
 function qboHeaders(accessToken) {
@@ -283,35 +321,48 @@ function qboString(value) {
   return String(value || '').replaceAll("'", "\\'");
 }
 
-async function qboQuery(env, accessToken, realmId, query, fetchImpl = fetch) {
+async function qboQuery(env, accessToken, realmId, query, options = {}) {
+  const opts = qboOptions(options);
+  const fetchImpl = opts.fetchImpl || fetch;
   const url = `${qboBaseUrl(env)}/v3/company/${realmId}/query?query=${encodeURIComponent(query)}&minorversion=70`;
   const response = await fetchImpl(url, { headers: qboHeaders(accessToken) });
-  if (!response.ok) throw new Error(`qbo_query_failed:${response.status}`);
+  const intuitTid = recordIntuitTid(opts, response, opts.operation || 'query');
+  if (!response.ok) throw new Error(`qbo_query_failed:${response.status}${intuitTidSuffix(intuitTid)}`);
   return response.json();
 }
 
-async function findTransactionByField(env, accessToken, realmId, entity, field, value, fetchImpl = fetch) {
+async function findTransactionByField(env, accessToken, realmId, entity, field, value, options = {}) {
   if (!value) return null;
   const safeValue = qboString(value);
-  const found = await qboQuery(env, accessToken, realmId, `select Id from ${entity} where ${field} = '${safeValue}' maxresults 1`, fetchImpl);
+  const found = await qboQuery(
+    env,
+    accessToken,
+    realmId,
+    `select Id from ${entity} where ${field} = '${safeValue}' maxresults 1`,
+    { ...qboOptions(options), operation: `query:${entity}` },
+  );
   return found.QueryResponse?.[entity]?.[0]?.Id || null;
 }
 
-async function qboCreate(env, accessToken, realmId, entity, body, fetchImpl = fetch) {
+async function qboCreate(env, accessToken, realmId, entity, body, options = {}) {
+  const opts = qboOptions(options);
+  const fetchImpl = opts.fetchImpl || fetch;
   const url = `${qboBaseUrl(env)}/v3/company/${realmId}/${entity.toLowerCase()}?minorversion=70`;
   const response = await fetchImpl(url, {
     method: 'POST',
     headers: qboHeaders(accessToken),
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error(`qbo_create_${entity.toLowerCase()}_failed:${response.status}`);
+  const intuitTid = recordIntuitTid({ ...opts, operation: `create:${entity}` }, response, `create:${entity}`);
+  if (!response.ok) throw new Error(`qbo_create_${entity.toLowerCase()}_failed:${response.status}${intuitTidSuffix(intuitTid)}`);
   return response.json();
 }
 
-async function resolveIncomeAccountRef(env, accessToken, realmId, fetchImpl = fetch) {
+async function resolveIncomeAccountRef(env, accessToken, realmId, options = {}) {
+  const opts = qboOptions(options);
   const qboEnv = qboConfigEnv(env);
   if (qboEnv.QBO_INCOME_ACCOUNT_ID) return qboEnv.QBO_INCOME_ACCOUNT_ID;
-  const found = await qboQuery(env, accessToken, realmId, "select Id from Account where AccountType = 'Income' maxresults 1", fetchImpl);
+  const found = await qboQuery(env, accessToken, realmId, "select Id from Account where AccountType = 'Income' maxresults 1", { ...opts, operation: 'query:Account' });
   const accountId = found.QueryResponse?.Account?.[0]?.Id;
   if (!accountId) throw new Error('qbo_income_account_not_configured');
   return accountId;
@@ -326,12 +377,12 @@ export async function findOrCreateCustomer(sb, env, accessToken, realmId, { key,
   if (error) throw new Error(error.message || 'qbo_customer_cache_read_failed');
   if (cached?.qbo_customer_id) return cached.qbo_customer_id;
 
-  const fetchImpl = options.fetchImpl || fetch;
+  const opts = qboOptions(options);
   const safeName = qboString(displayName || key || 'MASEST Customer');
-  const found = await qboQuery(env, accessToken, realmId, `select Id from Customer where DisplayName = '${safeName}' maxresults 1`, fetchImpl);
+  const found = await qboQuery(env, accessToken, realmId, `select Id from Customer where DisplayName = '${safeName}' maxresults 1`, { ...opts, operation: 'query:Customer' });
   let customerId = found.QueryResponse?.Customer?.[0]?.Id;
   if (!customerId) {
-    const created = await qboCreate(env, accessToken, realmId, 'Customer', { DisplayName: safeName }, fetchImpl);
+    const created = await qboCreate(env, accessToken, realmId, 'Customer', { DisplayName: safeName }, opts);
     customerId = created.Customer?.Id;
   }
   if (!customerId) throw new Error('qbo_customer_id_missing');
@@ -349,18 +400,18 @@ export async function findOrCreateItem(sb, env, accessToken, realmId, item, opti
   if (error) throw new Error(error.message || 'qbo_item_cache_read_failed');
   if (cached?.qbo_item_id) return cached.qbo_item_id;
 
-  const fetchImpl = options.fetchImpl || fetch;
+  const opts = qboOptions(options);
   const safeSku = qboString(sku);
-  const found = await qboQuery(env, accessToken, realmId, `select Id from Item where Sku = '${safeSku}' maxresults 1`, fetchImpl);
+  const found = await qboQuery(env, accessToken, realmId, `select Id from Item where Sku = '${safeSku}' maxresults 1`, { ...opts, operation: 'query:Item' });
   let itemId = found.QueryResponse?.Item?.[0]?.Id;
   if (!itemId) {
-    const incomeAccountId = await resolveIncomeAccountRef(env, accessToken, realmId, fetchImpl);
+    const incomeAccountId = await resolveIncomeAccountRef(env, accessToken, realmId, opts);
     const created = await qboCreate(env, accessToken, realmId, 'Item', {
       Name: name || sku,
       Sku: sku,
       Type: qboItemType(item),
       IncomeAccountRef: { value: incomeAccountId },
-    }, fetchImpl);
+    }, opts);
     itemId = created.Item?.Id;
   }
   if (!itemId) throw new Error(`qbo_item_id_missing:${sku}`);
@@ -401,9 +452,10 @@ export async function getAccessToken(sb, env = {}, options = {}) {
     },
     body,
   });
+  const intuitTid = recordIntuitTid(options, response, 'oauth:refresh');
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
-    throw new Error(`qbo_token_refresh_failed:${response.status}:${detail.slice(0, 200)}`);
+    throw new Error(`qbo_token_refresh_failed:${response.status}${intuitTidSuffix(intuitTid)}:${detail.slice(0, 200)}`);
   }
 
   const refreshed = await response.json();
@@ -417,6 +469,7 @@ export async function getAccessToken(sb, env = {}, options = {}) {
     refresh_token: refreshed.refresh_token || tokenRow.refresh_token,
     access_expires_at: new Date(now.getTime() + Number(refreshed.expires_in || 3600) * 1000).toISOString(),
     updated_at: now.toISOString(),
+    ...(intuitTid ? { last_intuit_tid: intuitTid } : {}),
   };
   await sb.from('qbo_tokens').update(payload).eq('id', 1);
 

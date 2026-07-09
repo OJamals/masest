@@ -7,7 +7,7 @@ import Stripe from 'stripe';
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
-import { computeRefund } from '../../_lib/refund.js';
+import { computeRefund, qboFullDocumentRefund } from '../../_lib/refund.js';
 import { stockDecrements, stockIncrements } from '../../_lib/order-shape.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 import { planNetSettlement, netAging } from '../../_lib/credit.js';
@@ -208,7 +208,7 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,company_id,customer_email,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
+      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
@@ -228,11 +228,11 @@ export async function onRequest({ request, env }) {
     if (error) return json(500, { error: error.message });
 
     if (isCsv) {
-      const rows = [['Order', 'Date', 'Company', 'Customer email', 'Status', 'Lifecycle', 'Next action', 'Payment', 'QBO doc', 'QBO payment', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
+      const rows = [['Order', 'Date', 'Company', 'Customer email', 'Status', 'Lifecycle', 'Next action', 'Payment', 'QBO doc', 'QBO payment', 'QBO TID', 'QBO payment TID', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
       for (const o of data || []) {
         const lifecycle = decorateOrderLifecycle(o).lifecycle;
         const items = (o.order_items || []).map((i) => `${i.qty}x ${i.name || i.sku}`).join('; ');
-        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.status, lifecycle.label, lifecycle.next_action, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '',
+        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.status, lifecycle.label, lifecycle.next_action, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '', o.qbo_intuit_tid || '', o.qbo_payment_intuit_tid || '',
           o.tracking_status || '', o.carrier || '', o.tracking_number || '', o.estimated_delivery_at || '',
           o.subtotal ?? '', o.tax ?? '', o.total ?? '', o.currency || '', items]);
       }
@@ -350,13 +350,14 @@ export async function onRequest({ request, env }) {
       const secret = env.STRIPE_SECRET_KEY;
       if (!secret) return json(500, { error: 'stripe_not_configured' });
       const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
+      let stripeRefund;
       try {
         // Deterministic idempotency key so a retried / double-submitted refund settles
         // once at Stripe. Keyed on the order + its pre-refund state + this amount: an
         // identical retry dedupes, while a distinct later partial refund still goes
         // through (different prior refunded_amount → different key).
         const idempotencyKey = `refund:${ord.id}:${ord.refunded_amount || 0}:${plan.amountCents}`;
-        await stripe.refunds.create(
+        stripeRefund = await stripe.refunds.create(
           { payment_intent: ord.stripe_payment_intent, amount: plan.amountCents },
           { idempotencyKey },
         );
@@ -381,7 +382,8 @@ export async function onRequest({ request, env }) {
       await sb.from('qbo_refunds').insert({
         order_id: ord.id,
         amount: plan.amount,
-        fully_refunded: plan.fullyRefunded,
+        fully_refunded: qboFullDocumentRefund({ total: ord.total, refundedAmount: ord.refunded_amount, amount: plan.amount }),
+        stripe_refund_id: stripeRefund?.id || null,
       }).then(() => {}, () => {});
       const label = plan.fullyRefunded ? 'refunded' : 'partially refunded';
       const refundMsg = plan.fullyRefunded

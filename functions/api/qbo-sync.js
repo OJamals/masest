@@ -131,6 +131,9 @@ async function markSynced(sb, order, result) {
     qbo_error: null,
     qbo_next_attempt_at: null,
   };
+  if (result.intuitTid) patch.qbo_intuit_tid = result.intuitTid;
+  if (result.paymentIntuitTid) patch.qbo_payment_intuit_tid = result.paymentIntuitTid;
+  if (result.intuitTids?.length) patch.qbo_intuit_tids = result.intuitTids;
   if (result.paymentId) patch.qbo_payment_id = result.paymentId;
   if (result.docType === 'invoice' || result.docType === 'invoice_payment') patch.qbo_invoice_id = result.docId;
   const { error } = await sb.from('orders').update(patch).eq('id', order.id);
@@ -266,6 +269,8 @@ export async function runQboRefundSync({ env, batch = 10 }) {
       const { error: uerr } = await sb.from('qbo_refunds').update({
         qbo_sync_status: 'synced',
         qbo_credit_memo_id: result.creditMemoId,
+        ...(result.intuitTid ? { qbo_intuit_tid: result.intuitTid } : {}),
+        ...(result.intuitTids?.length ? { qbo_intuit_tids: result.intuitTids } : {}),
         qbo_error: null,
         qbo_next_attempt_at: null,
       }).eq('id', refund.id);

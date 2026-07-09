@@ -1,6 +1,6 @@
 // Pure CRM helpers (slice 4): contact-level records keyed to a company. No I/O —
 // route handlers pass input in and get a normalized row / patch out, so this is
-// unit-testable against fake clients. Mirrors functions/_lib/crm.js.
+// unit-testable against local test clients. Mirrors functions/_lib/crm.js.
 
 export const CONTACT_ROLES = [
   'procurement', 'plant_manager', 'maintenance', 'engineering',

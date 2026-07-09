@@ -1,6 +1,6 @@
 // Pure CRM helpers (slice 1): subject validation, row builders, task transitions,
 // and timeline merge. No I/O — route handlers pass Supabase results in and get
-// normalized data out, so this is unit-testable against fake clients. Mirrors the
+// normalized data out, so this is unit-testable against local test clients. Mirrors the
 // functions/_lib/quote-convert.js pattern.
 
 // Escape LIKE/ILIKE metacharacters so a value is matched literally (Postgres uses
