@@ -298,6 +298,60 @@ test("mobile dashboard navigation shows all account sections without horizontal 
   });
 });
 
+test("dashboard sidebar scrolls independently for user and business panels", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch();
+    try {
+      for (const hash of ["overview", "business"]) {
+        const { context, page } = await newAuthedPage(browser, { width: 1280, height: 520 });
+        try {
+          await page.goto(`${BASE_URL}/dashboard.html#${hash}`, { waitUntil: "domcontentloaded" });
+          await page.waitForSelector(`.dash-panel[data-panel="${hash}"]:not([hidden])`, { timeout: 10000 });
+          const sidebar = page.locator(".dash-sidebar");
+          await sidebar.scrollIntoViewIfNeeded();
+          await page.evaluate(() => {
+            const rail = document.querySelector(".dash-sidebar");
+            if (rail) rail.scrollTop = 0;
+          });
+
+          const before = await page.evaluate(() => {
+            const rail = document.querySelector(".dash-sidebar");
+            const style = rail ? getComputedStyle(rail) : null;
+            return {
+              canScroll: rail ? rail.scrollHeight > rail.clientHeight : false,
+              overflowY: style?.overflowY || "",
+              pageY: window.scrollY,
+              sidebarY: rail?.scrollTop || 0,
+            };
+          });
+          assert.equal(before.overflowY, "auto", `${hash} dashboard sidebar should own vertical wheel scrolling`);
+          assert.equal(before.canScroll, true, `${hash} dashboard sidebar should be height-bounded on short desktop viewports`);
+          assert.equal(before.sidebarY, 0, `${hash} dashboard sidebar test starts at the top`);
+
+          const box = await sidebar.boundingBox();
+          assert.ok(box, `${hash} dashboard sidebar should be visible`);
+          const x = box.x + Math.min(80, box.width / 2);
+          const y = Math.min(Math.max(box.y + 40, 20), 500);
+          await page.mouse.move(x, y);
+          await page.mouse.wheel(0, 320);
+          await page.waitForFunction(() => document.querySelector(".dash-sidebar")?.scrollTop > 0);
+
+          const after = await page.evaluate(() => ({
+            pageY: window.scrollY,
+            sidebarY: document.querySelector(".dash-sidebar")?.scrollTop || 0,
+          }));
+          assert.ok(after.sidebarY > 0, `${hash} wheel over sidebar should move the sidebar scroll position`);
+          assert.equal(after.pageY, before.pageY, `${hash} wheel over sidebar should not scroll dashboard content first`);
+        } finally {
+          await context.close();
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("mobile admin overview SEO audit wraps without a hidden table", async () => {
   await withServer(async () => {
     const browser = await chromium.launch();
