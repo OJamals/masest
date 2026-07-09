@@ -14,6 +14,9 @@ test("admin users endpoint manages company member roles and invites", () => {
   assert.match(src, /action === 'set_role'/, "endpoint should support role changes");
   assert.match(src, /\.from\('profiles'\)/, "role changes should update profiles");
   assert.match(src, /\.eq\('company_id', companyId\)/, "role changes should be company-scoped");
+  assert.match(src, /action === 'set_staff_role'/, "endpoint should support platform staff access changes");
+  assert.match(src, /is_staff/, "staff access changes should update the platform staff flag");
+  assert.match(src, /staff_role/, "staff access changes should update the staff role tier");
   assert.match(src, /action === 'resend_invite'/, "endpoint should resend pending invites");
   assert.match(src, /company_invites/, "invite actions should use company_invites");
   assert.match(src, /sendEmail/, "resend invite should use logged email backbone");
@@ -28,6 +31,8 @@ test("admin company detail exposes member role and invite actions", () => {
   assert.match(src, /company-members/, "detail panel should render member management");
   assert.match(src, /data-member-role/, "member role select should be stable");
   assert.match(src, /data-member-save/, "member role save action should be stable");
+  assert.match(src, /data-au-staff-role/, "accounts user rows should expose platform staff access separately");
+  assert.match(src, /set_staff_role/, "accounts user save should persist platform staff access");
   assert.match(src, /company-invites/, "detail panel should render pending invites");
   assert.match(src, /data-invite-resend/, "pending invite resend action should be stable");
   assert.match(src, /data-invite-revoke/, "pending invite revoke action should be stable");

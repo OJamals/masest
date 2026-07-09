@@ -49,6 +49,8 @@ const USER = {
   email: "buyer@example.com",
   full_name: "Buyer Example",
   role: "buyer",
+  is_staff: false,
+  staff_role: null,
   company_id: null,
   company_name: null,
   company_status: null,
@@ -109,6 +111,34 @@ test("account delete success removes the user and reports completion", async ({ 
   await expect.poll(() => captured).toMatchObject({ action: "delete_user", user_id: "user-1" });
   await expect(page.locator("#auStatus")).toHaveText("User deleted.");
   await expect(page.locator('[data-au-row="user-1"]')).toHaveCount(0);
+});
+
+test("account role save persists company role and platform staff access", async ({ page }) => {
+  await bootAsStaff(page);
+  const calls = [];
+  const user = { ...USER, company_id: "co-1", company_name: "North Plant Services", company_status: "approved" };
+  await page.route("**/api/admin/companies**", (route) =>
+    route.fulfill(json({ companies: [COMPANY], total: 1, has_more: false })));
+  await page.route("**/api/admin/users**", (route) => {
+    if (route.request().method() === "POST") {
+      calls.push(JSON.parse(route.request().postData() || "{}"));
+      return route.fulfill(json({ ok: true }));
+    }
+    return route.fulfill(json({ users: [user] }));
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-au-row="user-1"]')).toBeVisible();
+
+  await page.locator('[data-au-role="user-1"]').selectOption("admin");
+  await page.locator('[data-au-staff-role="user-1"]').selectOption("support");
+  await page.locator('[data-au-save="user-1"]').click();
+
+  await expect.poll(() => calls).toEqual([
+    { action: "set_role", company_id: "co-1", profile_id: "user-1", role: "admin" },
+    { action: "set_staff_role", user_id: "user-1", staff_role: "support" },
+  ]);
+  await expect(page.locator("#auStatus")).toHaveText("Roles saved.");
 });
 
 test("users table spans the account summary width while detail is closed", async ({ page }) => {

@@ -4,10 +4,11 @@
 import Stripe from 'stripe';
 import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
-import { staffCan, staffCanWrite } from '../../_lib/authz.js';
+import { STAFF_ROLES, staffCan, staffCanWrite } from '../../_lib/authz.js';
 
 // Account roles selectable by an admin. 'moderator' is an elevated member role.
 const ROLES = new Set(['admin', 'buyer', 'moderator']);
+const STAFF_ROLE_SET = new Set(STAFF_ROLES);
 const ADDR_MAX = { line1: 160, line2: 160, city: 80, zip: 20 };
 
 function cleanText(v, max) { return String(v || '').trim().replace(/\s+/g, ' ').slice(0, max); }
@@ -49,7 +50,7 @@ async function companyConsole(sb, env, companyId) {
 
 // Aggregate the full console for one user: profile, role, and (if any) their company console.
 async function userConsole(sb, env, uid) {
-  const { data: profile } = await sb.from('profiles').select('id,full_name,phone,role,staff_role,company_id').eq('id', uid).maybeSingle();
+  const { data: profile } = await sb.from('profiles').select('id,full_name,phone,role,is_staff,staff_role,company_id').eq('id', uid).maybeSingle();
   if (!profile) return null;
   let email = null;
   try { const { data } = await sb.auth.admin.getUserById(uid); email = data?.user?.email || null; } catch { /* best-effort */ }
@@ -81,7 +82,7 @@ async function userDirectory(sb) {
     users.push(...batch);
     if (batch.length < 1000) break;
   }
-  const { data: profiles } = await sb.from('profiles').select('id,full_name,phone,role,staff_role,company_id');
+  const { data: profiles } = await sb.from('profiles').select('id,full_name,phone,role,is_staff,staff_role,company_id');
   const profById = new Map((profiles || []).map((p) => [p.id, p]));
   const { data: companies } = await sb.from('companies').select('id,name,status');
   const compById = new Map((companies || []).map((c) => [c.id, c]));
@@ -89,7 +90,8 @@ async function userDirectory(sb) {
     const p = profById.get(u.id) || {};
     return {
       id: u.id, email: u.email || null, created_at: u.created_at || null, last_sign_in_at: u.last_sign_in_at || null,
-      full_name: p.full_name || null, phone: p.phone || null, role: p.role || null, staff_role: p.staff_role || null,
+      full_name: p.full_name || null, phone: p.phone || null, role: p.role || null,
+      is_staff: p.is_staff === true, staff_role: p.staff_role || null,
       company_id: p.company_id || null,
       company_name: p.company_id ? (compById.get(p.company_id)?.name || null) : null,
       company_status: p.company_id ? (compById.get(p.company_id)?.status || null) : null,
@@ -248,6 +250,25 @@ export async function onRequest({ request, env }) {
     if (error) return json(500, { error: error.message || 'role_update_failed' });
     if (!data) return json(404, { error: 'profile_not_found' });
     await recordAudit(sb, { user, action: 'user.set_role', targetType: 'profile', targetId: profileId, detail: { role: newRole, company_id: companyId } });
+    return json(200, { ok: true, profile: data });
+  }
+
+  if (action === 'set_staff_role') {
+    if (!staffCan(role, 'user.role')) return json(403, { error: 'forbidden', message: 'Changing staff access requires owner access.' });
+    const uid = String(body.user_id || body.profile_id || '').trim();
+    const rawStaffRole = String(body.staff_role || '').trim().toLowerCase();
+    const nextStaffRole = rawStaffRole && rawStaffRole !== 'none' ? rawStaffRole : null;
+    if (!uid) return json(400, { error: 'user_id_required' });
+    if (nextStaffRole && !STAFF_ROLE_SET.has(nextStaffRole)) return json(400, { error: 'invalid_staff_role' });
+    const patch = { is_staff: Boolean(nextStaffRole), staff_role: nextStaffRole };
+    const { data, error } = await sb.from('profiles')
+      .update(patch)
+      .eq('id', uid)
+      .select('id,is_staff,staff_role')
+      .maybeSingle();
+    if (error) return json(500, { error: error.message || 'staff_role_update_failed' });
+    if (!data) return json(404, { error: 'profile_not_found' });
+    await recordAudit(sb, { user, action: 'user.set_staff_role', targetType: 'profile', targetId: uid, detail: { staff_role: nextStaffRole } });
     return json(200, { ok: true, profile: data });
   }
 

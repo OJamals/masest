@@ -10,10 +10,19 @@ import { ORDER_STATUSES } from './orders.js';
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
 const MEMBER_ROLES = [['buyer', 'Buyer'], ['admin', 'Admin'], ['moderator', 'Moderator']];
+const STAFF_ROLES = [['', 'No admin access'], ['owner', 'Owner'], ['finance', 'Finance'], ['support', 'Support'], ['read_only', 'Read only']];
 const COMPANY_STATUSES = [['pending', 'Pending'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['suspended', 'Suspended']];
 const PRICE_TIERS = [['retail', 'Retail'], ['hvac', 'HVAC'], ['wholesale', 'Wholesale']];
 function memberRoleOptions(current) {
   return MEMBER_ROLES.map(([v, l]) => `<option value="${v}"${(current || 'buyer') === v ? ' selected' : ''}>${l}</option>`).join('');
+}
+function staffRoleValue(user = {}) {
+  if (!user.is_staff && !user.staff_role) return '';
+  return user.staff_role || 'owner';
+}
+function staffRoleOptions(user = {}) {
+  const current = staffRoleValue(user);
+  return STAFF_ROLES.map(([v, l]) => `<option value="${v}"${current === v ? ' selected' : ''}>${l}</option>`).join('');
 }
 function optionList(options, current) {
   return options.map(([v, l]) => `<option value="${v}"${String(current || '') === v ? ' selected' : ''}>${l}</option>`).join('');
@@ -89,7 +98,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       users: users.length,
       pending: companies.filter((company) => company.status === 'pending').length,
       companyless: users.filter((user) => !user.company_id).length,
-      staff: users.filter((user) => user.staff_role || user.role === 'admin' || user.role === 'moderator').length,
+      staff: users.filter((user) => user.is_staff || user.staff_role || user.role === 'admin' || user.role === 'moderator').length,
     };
   }
 
@@ -742,13 +751,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const q = (box?.querySelector('#auSearch')?.value || '').trim().toLowerCase();
     const filter = state.accountFilter || 'all';
     return (state.acctUsers || []).filter((user) => {
-      const haystack = [user.email, user.full_name, user.phone, user.company_name, user.company_status, user.staff_role, user.role].filter(Boolean).join(' ').toLowerCase();
+      const haystack = [user.email, user.full_name, user.phone, user.company_name, user.company_status, user.staff_role, user.is_staff ? 'staff admin access' : '', user.role].filter(Boolean).join(' ').toLowerCase();
       if (q && !haystack.includes(q)) return false;
       if (filter === 'companyless') return !user.company_id;
       if (filter === 'pending') return user.company_status === 'pending';
       if (filter === 'approved') return user.company_status === 'approved';
       if (filter === 'suspended') return user.company_status === 'suspended';
-      if (filter === 'staff') return !!user.staff_role || user.role === 'admin' || user.role === 'moderator';
+      if (filter === 'staff') return !!user.is_staff || !!user.staff_role || user.role === 'admin' || user.role === 'moderator';
       return true;
     });
   }
@@ -761,14 +770,16 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <td><button class="link-name" type="button" data-au-manage="${esc(user.id)}">${esc(user.email || 'No email')}</button>
         <small class="muted" style="display:block">${esc(user.full_name || user.phone || user.id)}</small></td>
       <td>
-        <select class="adm-select adm-select-sm" data-au-role="${esc(user.id)}">${memberRoleOptions(user.role)}</select>
-        ${user.staff_role ? ` <span class="pill">${esc(user.staff_role)}</span>` : ''}
+        <div class="account-role-controls">
+          <label><span class="sr-only">Company role</span><select class="adm-select adm-select-sm" data-au-role="${esc(user.id)}">${memberRoleOptions(user.role)}</select></label>
+          <label><span class="sr-only">Admin access</span><select class="adm-select adm-select-sm" data-au-staff-role="${esc(user.id)}">${staffRoleOptions(user)}</select></label>
+        </div>
       </td>
       <td>${business}</td>
       <td>${user.company_status ? statusBadge(user.company_status) : '<span class="muted">—</span>'}</td>
       <td>${user.last_sign_in_at ? esc(date(user.last_sign_in_at)) : 'never'}</td>
       <td class="adm-inline-actions">
-        <button class="btn btn-ghost btn-sm" type="button" data-au-save="${esc(user.id)}">Save role</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-au-save="${esc(user.id)}">Save roles</button>
         <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i></button>
       </td>
     </tr>`;
@@ -860,7 +871,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       ${user.id ? '' : '<label>Password <input class="adm-input" name="password" type="text" minlength="8" required placeholder="min 8 chars"></label>'}
       <label>Full name <input class="adm-input" name="full_name" type="text" value="${esc(user.full_name || '')}"></label>
       <label>Phone <input class="adm-input" name="phone" type="text" value="${esc(user.phone || '')}"></label>
-      <label>Role <select class="adm-select" name="role">${memberRoleOptions(user.role)}</select></label>
+      <label>Company role <select class="adm-select" name="role">${memberRoleOptions(user.role)}</select></label>
+      ${user.id ? `<label>Admin access <select class="adm-select" name="staff_role">${staffRoleOptions(user)}</select></label>` : ''}
       <label class="wide">Business <select class="adm-select" name="company_id">${companyOptions(user.company_id)}</select></label>`;
   }
 
@@ -869,8 +881,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (!result) return;
     auStatus(user.id ? 'Saving...' : 'Creating...');
     try {
-      if (user.id) await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: user.id, ...result } });
-      else await api('/api/admin/users', { method: 'POST', body: { action: 'create', ...result } });
+      if (user.id) {
+        const { staff_role, ...profile } = result;
+        await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: user.id, ...profile } });
+        await api('/api/admin/users', { method: 'POST', body: { action: 'set_staff_role', user_id: user.id, staff_role } });
+      } else await api('/api/admin/users', { method: 'POST', body: { action: 'create', ...result } });
       auStatus(user.id ? 'User saved.' : 'User created.', 'ok');
       await renderAllUsers({ refetch: true });
     } catch (err) {
@@ -938,9 +953,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         const button = event.currentTarget;
         const form = box.querySelector('#accountUserForm');
         const payload = Object.fromEntries(new FormData(form));
+        const { staff_role, ...profile } = payload;
         button.disabled = true;
         try {
-          await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: user.id, ...payload } });
+          await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: user.id, ...profile } });
+          await api('/api/admin/users', { method: 'POST', body: { action: 'set_staff_role', user_id: user.id, staff_role } });
           auStatus('User saved.', 'ok');
           await renderAllUsers({ refetch: true });
           await openAccountUserDetail(user.id);
@@ -1022,15 +1039,21 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     delegate(box, 'click', '[data-au-save]', async (event, button) => {
       const id = button.dataset.auSave;
       const role = box.querySelector(`[data-au-role="${CSS.escape(id)}"]`)?.value;
+      const staffRole = box.querySelector(`[data-au-staff-role="${CSS.escape(id)}"]`)?.value || '';
       const user = (state.acctUsers || []).find((x) => String(x.id) === String(id));
       button.disabled = true;
       try {
         if (user?.company_id) await api('/api/admin/users', { method: 'POST', body: { action: 'set_role', company_id: user.company_id, profile_id: id, role } });
         else await api('/api/admin/users', { method: 'POST', body: { action: 'update_user', user_id: id, role } });
-        if (user) user.role = role;
-        auStatus('Role saved.', 'ok');
+        await api('/api/admin/users', { method: 'POST', body: { action: 'set_staff_role', user_id: id, staff_role: staffRole } });
+        if (user) {
+          user.role = role;
+          user.is_staff = Boolean(staffRole);
+          user.staff_role = staffRole || null;
+        }
+        auStatus('Roles saved.', 'ok');
       } catch (err) {
-        auStatus(err.data?.message || err.data?.error || 'Could not save the role. Retry.', 'err');
+        auStatus(err.data?.message || err.data?.error || 'Could not save roles. Retry.', 'err');
       } finally {
         button.disabled = false;
       }

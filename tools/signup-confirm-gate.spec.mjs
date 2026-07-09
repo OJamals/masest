@@ -38,6 +38,7 @@ test.afterAll(async () => {
 });
 
 test("signup with email confirmation ON gates the user instead of logging in", async ({ page }) => {
+  let resendSeen = false;
   await page.addInitScript(() => {
     window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
     window.MASEST_SUPABASE_ANON = "stub-anon-key";
@@ -59,6 +60,14 @@ test("signup with email confirmation ON gates the user instead of logging in", a
       session: null,
     }),
   }));
+  await page.route("**/auth/v1/resend**", (route) => {
+    resendSeen = true;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({}),
+    });
+  });
 
   await page.goto(`${BASE_URL}/account.html`, { waitUntil: "domcontentloaded" });
 
@@ -81,4 +90,8 @@ test("signup with email confirmation ON gates the user instead of logging in", a
     return k ? localStorage.getItem(k) : null;
   });
   expect(pending).toContain("Marisol Vega");
+
+  await page.getByRole("button", { name: "Resend confirmation email" }).click();
+  await expect(page.locator("#rStatus")).toContainText("Sent. Open the newest link promptly");
+  expect(resendSeen).toBe(true);
 });

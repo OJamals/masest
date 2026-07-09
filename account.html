@@ -390,6 +390,7 @@
         // Confirm-email ON: stash the profile so we can finish it after confirm + login.
         localStorage.setItem(PENDING_KEY, JSON.stringify({ profile }));
         setStatus(status, "Account created. Check your email to confirm, then sign in.", "ok");
+        showResend({ formId: "registerForm", statusId: "rStatus", emailInputId: "rEmail" });
         // Keep the button off until the form changes — prevents accidental double
         // registrations that only burn the email rate-limit.
         btn.dataset.sent = "1";
@@ -405,7 +406,7 @@
         const detail = [err.message, err.code, err.status, err.name].filter(Boolean).join(" ").trim();
         if (/captcha/i.test(detail)) msg = "Verification failed. Reload the page, complete the challenge, then try again.";
         else if (/rate.?limit|over_email|too many/i.test(detail)) msg = "Too many attempts. Wait a few minutes, then try again.";
-        else if (/sending.*email|confirmation email|smtp|500/i.test(detail)) msg = "We couldn't send the confirmation email. Contact us at sales@masest.co to finish setup.";
+        else if (/sending.*email|confirmation email|smtp|500/i.test(detail)) msg = "We couldn't send the confirmation email. Contact us at team@masest.co to finish setup.";
         else if (/password/i.test(detail)) msg = "Password too weak. Use at least 8 characters.";
         else if (/already.*registered|user.*exists|email.*exists/i.test(detail)) msg = "This email already has an account. Sign in instead.";
         else msg = "Could not create account (" + (detail || "unknown error") + "). Try again shortly.";
@@ -463,22 +464,26 @@
     el.style.cssText = "background:var(--accent-soft);color:var(--accent-ink);border-radius:var(--r-card);padding:14px 18px;margin-bottom:18px;font-weight:600;font-size:.95rem;max-width:440px;";
     wrap.insertBefore(el, wrap.firstChild);
   }
-  function showResend() {
-    if ($("resendWrap")) return;
+  function showResend({ formId = "loginForm", statusId = "liStatus", emailInputId = "liEmail" } = {}) {
+    const form = $(formId);
+    const status = $(statusId);
+    const emailInput = $(emailInputId);
+    if (!form || !status || !emailInput) return;
+    $("resendWrap")?.remove();
     const wrap = document.createElement("p");
     wrap.id = "resendWrap"; wrap.className = "acct-switch"; wrap.style.borderTop = "0"; wrap.style.marginTop = "10px";
     wrap.innerHTML = 'Didn’t get it? <button type="button" id="resendBtn">Resend confirmation email</button>';
-    $("loginForm").appendChild(wrap);
+    form.appendChild(wrap);
     $("resendBtn").addEventListener("click", async () => {
-      const email = $("liEmail").value.trim();
-      if (!email) { setStatus($("liStatus"), "Enter your email above first.", "err"); $("liEmail").focus(); return; }
-      // Supabase enforces CAPTCHA on /resend — reuse the login form's Turnstile token.
-      const cap = captchaToken("loginForm");
-      if (TS_SITEKEY && !cap) { setStatus($("liStatus"), "Complete the verification challenge first.", "err"); return; }
-      setStatus($("liStatus"), "Resending…", "");
-      try { await resendConfirmation(email, cap); setStatus($("liStatus"), "Sent. Open the newest link promptly (check spam).", "ok"); }
-      catch (e) { setStatus($("liStatus"), /captcha/i.test(String(e.message || "")) ? "Verification expired. Reload the page and try again." : "Could not resend: " + (e.message || "try later"), "err"); }
-      finally { resetCaptcha("loginForm"); }
+      const email = emailInput.value.trim();
+      if (!email) { setStatus(status, "Enter your email above first.", "err"); emailInput.focus(); return; }
+      // Supabase enforces CAPTCHA on /resend — reuse the Turnstile token in the active auth form.
+      const cap = captchaToken(formId);
+      if (TS_SITEKEY && !cap) { setStatus(status, "Complete the verification challenge first.", "err"); return; }
+      setStatus(status, "Resending…", "");
+      try { await resendConfirmation(email, cap); setStatus(status, "Sent. Open the newest link promptly (check spam).", "ok"); }
+      catch (e) { setStatus(status, /captcha/i.test(String(e.message || "")) ? "Verification expired. Reload the page and try again." : "Could not resend: " + (e.message || "try later"), "err"); }
+      finally { resetCaptcha(formId); }
     });
   }
 

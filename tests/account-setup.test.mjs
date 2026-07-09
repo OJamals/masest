@@ -41,6 +41,12 @@ test("registration creates user accounts only — never a company / approval gat
   assert.doesNotMatch(account, /id="rCert"/, "signup form must not collect a resale certificate");
 });
 
+test("signup email-send failure tells buyers the current support address", () => {
+  const account = read("account.html");
+  assert.match(account, /We couldn't send the confirmation email\. Contact us at team@masest\.co to finish setup\./);
+  assert.doesNotMatch(account, /sales@masest\.co/, "legacy signup support address should not remain");
+});
+
 test("buyer dashboard renders business setup progress", () => {
   const html = read("dashboard.html");
   const js = read("js/dashboard.js");
