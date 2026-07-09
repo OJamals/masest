@@ -120,7 +120,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
           <div>
             <p class="adm-eyebrow">Newsletter</p>
             <h2 id="nlEditorHeading">${editingId ? 'Edit newsletter' : 'New newsletter'}</h2>
-            <p class="muted">Compose from scratch or pull in a published blog post, then save, test, schedule, or send.</p>
+            <p class="muted">Email campaign to your subscriber &amp; lead lists — compose from scratch or pull in a published blog post, then save, test, schedule, or send. To post a dashboard notification to logged-in customer accounts instead, use <a href="#offers">Offers</a>.</p>
           </div>
           <button class="btn btn-ghost btn-sm" type="button" data-nl-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
         </div>
