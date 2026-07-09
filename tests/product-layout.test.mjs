@@ -93,6 +93,32 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
   });
 });
 
+test("products page thumbnails use the blue media stage", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: "reduce" });
+    try {
+      await gotoDomReady(page, "products.html", ".shop-card-media img");
+      const cardMedia = await page.evaluate(() => {
+        const media = document.querySelector(".products-page .shop-card-media");
+        const img = media?.querySelector("img");
+        const mediaStyle = media ? getComputedStyle(media) : null;
+        return {
+          imgSrc: img?.getAttribute("src") || "",
+          backgroundColor: mediaStyle?.backgroundColor || "",
+          backgroundImage: mediaStyle?.backgroundImage || "",
+        };
+      });
+
+      assert.match(cardMedia.imgSrc, /^img\/products\//, "product cards should use product thumbnail assets");
+      assert.equal(cardMedia.backgroundColor, "rgb(227, 240, 241)", "products page thumbnails should use the blue product-card background");
+      assert.match(cardMedia.backgroundImage, /14,\s*124,\s*134/, "products page thumbnails should include the teal blue wash");
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("static product detail heroes publish full catalog copy", () => {
   for (const [id, product] of Object.entries(PRODUCTS)) {
     const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
@@ -240,6 +266,38 @@ test("product detail renders HMIS panel rows from product data", async () => {
     } catch (error) {
       await browser.close();
       throw error;
+    }
+  });
+});
+
+test("product detail related products render thumbnails on the blue media stage", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+    try {
+      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("#relatedWrap:not([hidden]) .shop-card-media img");
+      const related = await page.evaluate(() => {
+        const media = document.querySelector("#relatedWrap .shop-card-media");
+        const img = media?.querySelector("img");
+        const mediaStyle = media ? getComputedStyle(media) : null;
+        const imgRect = img?.getBoundingClientRect();
+        return {
+          imgSrc: img?.getAttribute("src") || "",
+          mediaBackgroundColor: mediaStyle?.backgroundColor || "",
+          mediaBackgroundImage: mediaStyle?.backgroundImage || "",
+          imgWidth: Math.round(imgRect?.width || 0),
+          imgHeight: Math.round(imgRect?.height || 0),
+        };
+      });
+
+      assert.match(related.imgSrc, /^img\/products\//, "related products should use product thumbnail assets");
+      assert.equal(related.mediaBackgroundColor, "rgb(227, 240, 241)", "related thumbnail stage should use the blue product-card background");
+      assert.match(related.mediaBackgroundImage, /14,\s*124,\s*134/, "related thumbnail stage should include the teal blue wash");
+      assert.ok(related.imgWidth > 100, "related product image should be visible");
+      assert.ok(related.imgHeight > 100, "related product image should be visible");
+    } finally {
+      await browser.close();
     }
   });
 });
