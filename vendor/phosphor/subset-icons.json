@@ -1,590 +1,1308 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 146,
+  "count": 260,
+  "usedCount": 146,
+  "bufferCount": 114,
   "icons": [
     {
       "name": "address-book",
-      "cp": "E6F8"
+      "cp": "E6F8",
+      "src": "used"
+    },
+    {
+      "name": "airplane",
+      "cp": "E002",
+      "src": "buffer"
+    },
+    {
+      "name": "airplane-tilt",
+      "cp": "E5D6",
+      "src": "buffer"
     },
     {
       "name": "anchor",
-      "cp": "E514"
+      "cp": "E514",
+      "src": "used"
     },
     {
       "name": "archive",
-      "cp": "E00C"
+      "cp": "E00C",
+      "src": "used"
     },
     {
       "name": "arrow-counter-clockwise",
-      "cp": "E038"
+      "cp": "E038",
+      "src": "used"
     },
     {
       "name": "arrow-down",
-      "cp": "E03E"
+      "cp": "E03E",
+      "src": "used"
     },
     {
       "name": "arrow-right",
-      "cp": "E06C"
+      "cp": "E06C",
+      "src": "used"
     },
     {
       "name": "arrow-square-out",
-      "cp": "E5DE"
+      "cp": "E5DE",
+      "src": "used"
     },
     {
       "name": "arrows-clockwise",
-      "cp": "E094"
+      "cp": "E094",
+      "src": "used"
     },
     {
       "name": "arrows-left-right",
-      "cp": "E0A0"
+      "cp": "E0A0",
+      "src": "used"
     },
     {
       "name": "atom",
-      "cp": "E5E4"
+      "cp": "E5E4",
+      "src": "used"
+    },
+    {
+      "name": "bank",
+      "cp": "E0B4",
+      "src": "buffer"
     },
     {
       "name": "barcode",
-      "cp": "E0B8"
+      "cp": "E0B8",
+      "src": "used"
+    },
+    {
+      "name": "barn",
+      "cp": "EC72",
+      "src": "buffer"
+    },
+    {
+      "name": "bathtub",
+      "cp": "E81E",
+      "src": "buffer"
+    },
+    {
+      "name": "battery-charging",
+      "cp": "E0BA",
+      "src": "buffer"
     },
     {
       "name": "beer-bottle",
-      "cp": "E7B0"
+      "cp": "E7B0",
+      "src": "used"
+    },
+    {
+      "name": "beer-stein",
+      "cp": "EB62",
+      "src": "buffer"
     },
     {
       "name": "bell",
-      "cp": "E0CE"
+      "cp": "E0CE",
+      "src": "used"
+    },
+    {
+      "name": "biohazard",
+      "cp": "E9E0",
+      "src": "buffer"
+    },
+    {
+      "name": "bird",
+      "cp": "E72C",
+      "src": "buffer"
     },
     {
       "name": "boat",
-      "cp": "E786"
+      "cp": "E786",
+      "src": "used"
+    },
+    {
+      "name": "bookmark",
+      "cp": "E0E8",
+      "src": "buffer"
     },
     {
       "name": "briefcase",
-      "cp": "E0EE"
+      "cp": "E0EE",
+      "src": "used"
     },
     {
       "name": "broom",
-      "cp": "EC54"
+      "cp": "EC54",
+      "src": "used"
+    },
+    {
+      "name": "building",
+      "cp": "E100",
+      "src": "buffer"
+    },
+    {
+      "name": "building-apartment",
+      "cp": "E0FE",
+      "src": "buffer"
+    },
+    {
+      "name": "building-office",
+      "cp": "E0FF",
+      "src": "buffer"
     },
     {
       "name": "buildings",
-      "cp": "E102"
+      "cp": "E102",
+      "src": "used"
+    },
+    {
+      "name": "bus",
+      "cp": "E106",
+      "src": "buffer"
+    },
+    {
+      "name": "calendar",
+      "cp": "E108",
+      "src": "buffer"
     },
     {
       "name": "calendar-check",
-      "cp": "E712"
+      "cp": "E712",
+      "src": "used"
     },
     {
       "name": "camera",
-      "cp": "E10E"
+      "cp": "E10E",
+      "src": "used"
     },
     {
       "name": "car",
-      "cp": "E112"
+      "cp": "E112",
+      "src": "used"
+    },
+    {
+      "name": "car-simple",
+      "cp": "E114",
+      "src": "buffer"
     },
     {
       "name": "caret-down",
-      "cp": "E136"
+      "cp": "E136",
+      "src": "used"
     },
     {
       "name": "caret-right",
-      "cp": "E13A"
+      "cp": "E13A",
+      "src": "used"
+    },
+    {
+      "name": "carrot",
+      "cp": "ED38",
+      "src": "buffer"
+    },
+    {
+      "name": "certificate",
+      "cp": "E766",
+      "src": "buffer"
+    },
+    {
+      "name": "chalkboard",
+      "cp": "E5FC",
+      "src": "buffer"
+    },
+    {
+      "name": "chart-bar",
+      "cp": "E150",
+      "src": "buffer"
     },
     {
       "name": "chart-line-up",
-      "cp": "E156"
+      "cp": "E156",
+      "src": "used"
     },
     {
       "name": "chat-circle",
-      "cp": "E168"
+      "cp": "E168",
+      "src": "used"
     },
     {
       "name": "chats",
-      "cp": "E17C"
+      "cp": "E17C",
+      "src": "used"
     },
     {
       "name": "chats-circle",
-      "cp": "E17E"
+      "cp": "E17E",
+      "src": "used"
     },
     {
       "name": "check",
-      "cp": "E182"
+      "cp": "E182",
+      "src": "used"
     },
     {
       "name": "check-circle",
-      "cp": "E184"
+      "cp": "E184",
+      "src": "used"
+    },
+    {
+      "name": "check-fat",
+      "cp": "EBA6",
+      "src": "buffer"
     },
     {
       "name": "check-square",
-      "cp": "E186"
+      "cp": "E186",
+      "src": "used"
     },
     {
       "name": "check-square-offset",
-      "cp": "E188"
+      "cp": "E188",
+      "src": "used"
     },
     {
       "name": "circle",
-      "cp": "E18A"
+      "cp": "E18A",
+      "src": "used"
     },
     {
       "name": "clipboard-text",
-      "cp": "E198"
+      "cp": "E198",
+      "src": "used"
+    },
+    {
+      "name": "clock",
+      "cp": "E19A",
+      "src": "buffer"
     },
     {
       "name": "clock-countdown",
-      "cp": "ED2C"
+      "cp": "ED2C",
+      "src": "used"
     },
     {
       "name": "clock-counter-clockwise",
-      "cp": "E1A0"
+      "cp": "E1A0",
+      "src": "used"
+    },
+    {
+      "name": "cloud",
+      "cp": "E1AA",
+      "src": "buffer"
+    },
+    {
+      "name": "cloud-arrow-up",
+      "cp": "E1AE",
+      "src": "buffer"
+    },
+    {
+      "name": "coffee",
+      "cp": "E1C2",
+      "src": "buffer"
     },
     {
       "name": "coins",
-      "cp": "E78E"
+      "cp": "E78E",
+      "src": "used"
+    },
+    {
+      "name": "compass",
+      "cp": "E1C8",
+      "src": "buffer"
     },
     {
       "name": "compass-tool",
-      "cp": "EA0E"
+      "cp": "EA0E",
+      "src": "used"
     },
     {
       "name": "copy",
-      "cp": "E1CA"
+      "cp": "E1CA",
+      "src": "used"
+    },
+    {
+      "name": "cow",
+      "cp": "EABE",
+      "src": "buffer"
+    },
+    {
+      "name": "cpu",
+      "cp": "E610",
+      "src": "buffer"
     },
     {
       "name": "crane",
-      "cp": "ED48"
+      "cp": "ED48",
+      "src": "used"
     },
     {
       "name": "crane-tower",
-      "cp": "ED49"
+      "cp": "ED49",
+      "src": "used"
+    },
+    {
+      "name": "credit-card",
+      "cp": "E1D2",
+      "src": "buffer"
+    },
+    {
+      "name": "crosshair",
+      "cp": "E1D6",
+      "src": "buffer"
+    },
+    {
+      "name": "crown",
+      "cp": "E614",
+      "src": "buffer"
     },
     {
       "name": "cube",
-      "cp": "E1DA"
+      "cp": "E1DA",
+      "src": "used"
     },
     {
       "name": "currency-dollar",
-      "cp": "E550"
+      "cp": "E550",
+      "src": "used"
     },
     {
       "name": "database",
-      "cp": "E1DE"
+      "cp": "E1DE",
+      "src": "used"
+    },
+    {
+      "name": "dog",
+      "cp": "E74A",
+      "src": "buffer"
     },
     {
       "name": "download-simple",
-      "cp": "E20C"
+      "cp": "E20C",
+      "src": "used"
     },
     {
       "name": "drop",
-      "cp": "E210"
+      "cp": "E210",
+      "src": "used"
     },
     {
       "name": "drop-half",
-      "cp": "E566"
+      "cp": "E566",
+      "src": "used"
+    },
+    {
+      "name": "engine",
+      "cp": "EA80",
+      "src": "buffer"
     },
     {
       "name": "envelope",
-      "cp": "E214"
+      "cp": "E214",
+      "src": "used"
     },
     {
       "name": "envelope-simple",
-      "cp": "E218"
+      "cp": "E218",
+      "src": "used"
+    },
+    {
+      "name": "export",
+      "cp": "EAF0",
+      "src": "buffer"
     },
     {
       "name": "eye",
-      "cp": "E220"
+      "cp": "E220",
+      "src": "used"
     },
     {
       "name": "eye-slash",
-      "cp": "E224"
+      "cp": "E224",
+      "src": "used"
     },
     {
       "name": "factory",
-      "cp": "E760"
+      "cp": "E760",
+      "src": "used"
     },
     {
       "name": "fan",
-      "cp": "E9F2"
+      "cp": "E9F2",
+      "src": "used"
+    },
+    {
+      "name": "farm",
+      "cp": "EC70",
+      "src": "buffer"
     },
     {
       "name": "file-lock",
-      "cp": "E95C"
+      "cp": "E95C",
+      "src": "used"
     },
     {
       "name": "file-pdf",
-      "cp": "E702"
+      "cp": "E702",
+      "src": "used"
     },
     {
       "name": "file-text",
-      "cp": "E23A"
+      "cp": "E23A",
+      "src": "used"
+    },
+    {
+      "name": "files",
+      "cp": "E710",
+      "src": "buffer"
+    },
+    {
+      "name": "fingerprint",
+      "cp": "E23E",
+      "src": "buffer"
+    },
+    {
+      "name": "fire",
+      "cp": "E242",
+      "src": "buffer"
     },
     {
       "name": "fire-simple",
-      "cp": "E620"
+      "cp": "E620",
+      "src": "used"
+    },
+    {
+      "name": "first-aid",
+      "cp": "E56E",
+      "src": "buffer"
     },
     {
       "name": "first-aid-kit",
-      "cp": "E570"
+      "cp": "E570",
+      "src": "used"
+    },
+    {
+      "name": "fish",
+      "cp": "E728",
+      "src": "buffer"
     },
     {
       "name": "flag",
-      "cp": "E244"
+      "cp": "E244",
+      "src": "used"
+    },
+    {
+      "name": "flag-banner",
+      "cp": "E622",
+      "src": "buffer"
     },
     {
       "name": "flame",
-      "cp": "E624"
+      "cp": "E624",
+      "src": "used"
     },
     {
       "name": "flask",
-      "cp": "E79E"
+      "cp": "E79E",
+      "src": "used"
     },
     {
       "name": "floppy-disk",
-      "cp": "E248"
+      "cp": "E248",
+      "src": "used"
+    },
+    {
+      "name": "folder",
+      "cp": "E24A",
+      "src": "buffer"
     },
     {
       "name": "fork-knife",
-      "cp": "E262"
+      "cp": "E262",
+      "src": "used"
     },
     {
       "name": "funnel",
-      "cp": "E266"
+      "cp": "E266",
+      "src": "used"
     },
     {
       "name": "gas-can",
-      "cp": "E8CE"
+      "cp": "E8CE",
+      "src": "used"
+    },
+    {
+      "name": "gas-pump",
+      "cp": "E768",
+      "src": "buffer"
     },
     {
       "name": "gauge",
-      "cp": "E628"
+      "cp": "E628",
+      "src": "used"
+    },
+    {
+      "name": "gavel",
+      "cp": "EA32",
+      "src": "buffer"
     },
     {
       "name": "gear",
-      "cp": "E270"
+      "cp": "E270",
+      "src": "used"
+    },
+    {
+      "name": "gear-fine",
+      "cp": "E87C",
+      "src": "buffer"
+    },
+    {
+      "name": "gear-six",
+      "cp": "E272",
+      "src": "buffer"
+    },
+    {
+      "name": "gift",
+      "cp": "E276",
+      "src": "buffer"
+    },
+    {
+      "name": "globe",
+      "cp": "E288",
+      "src": "buffer"
     },
     {
       "name": "globe-hemisphere-west",
-      "cp": "E28C"
+      "cp": "E28C",
+      "src": "used"
+    },
+    {
+      "name": "golf",
+      "cp": "EA3E",
+      "src": "buffer"
     },
     {
       "name": "graduation-cap",
-      "cp": "E62C"
+      "cp": "E62C",
+      "src": "used"
+    },
+    {
+      "name": "hamburger",
+      "cp": "E790",
+      "src": "buffer"
+    },
+    {
+      "name": "hammer",
+      "cp": "E80E",
+      "src": "buffer"
+    },
+    {
+      "name": "hand",
+      "cp": "E298",
+      "src": "buffer"
+    },
+    {
+      "name": "handbag",
+      "cp": "E29C",
+      "src": "buffer"
     },
     {
       "name": "handshake",
-      "cp": "E582"
+      "cp": "E582",
+      "src": "used"
     },
     {
       "name": "hard-drives",
-      "cp": "E2A0"
+      "cp": "E2A0",
+      "src": "used"
     },
     {
       "name": "hard-hat",
-      "cp": "ED46"
+      "cp": "ED46",
+      "src": "used"
     },
     {
       "name": "headset",
-      "cp": "E584"
+      "cp": "E584",
+      "src": "used"
+    },
+    {
+      "name": "heart",
+      "cp": "E2A8",
+      "src": "buffer"
     },
     {
       "name": "heartbeat",
-      "cp": "E2AC"
+      "cp": "E2AC",
+      "src": "used"
+    },
+    {
+      "name": "hoodie",
+      "cp": "ECD0",
+      "src": "buffer"
     },
     {
       "name": "hospital",
-      "cp": "E844"
+      "cp": "E844",
+      "src": "used"
+    },
+    {
+      "name": "hourglass",
+      "cp": "E2B2",
+      "src": "buffer"
     },
     {
       "name": "house-line",
-      "cp": "E2C4"
+      "cp": "E2C4",
+      "src": "used"
+    },
+    {
+      "name": "identification-card",
+      "cp": "E2C8",
+      "src": "buffer"
     },
     {
       "name": "image",
-      "cp": "E2CA"
+      "cp": "E2CA",
+      "src": "used"
     },
     {
       "name": "images",
-      "cp": "E836"
+      "cp": "E836",
+      "src": "used"
     },
     {
       "name": "info",
-      "cp": "E2CE"
+      "cp": "E2CE",
+      "src": "used"
     },
     {
       "name": "invoice",
-      "cp": "EE42"
+      "cp": "EE42",
+      "src": "used"
     },
     {
       "name": "kanban",
-      "cp": "EB54"
+      "cp": "EB54",
+      "src": "used"
+    },
+    {
+      "name": "key",
+      "cp": "E2D6",
+      "src": "buffer"
     },
     {
       "name": "leaf",
-      "cp": "E2DA"
+      "cp": "E2DA",
+      "src": "used"
+    },
+    {
+      "name": "lifebuoy",
+      "cp": "E63A",
+      "src": "buffer"
+    },
+    {
+      "name": "lightbulb",
+      "cp": "E2DC",
+      "src": "buffer"
+    },
+    {
+      "name": "lightbulb-filament",
+      "cp": "E63C",
+      "src": "buffer"
+    },
+    {
+      "name": "lightning",
+      "cp": "E2DE",
+      "src": "buffer"
+    },
+    {
+      "name": "lightning-a",
+      "cp": "EA84",
+      "src": "buffer"
     },
     {
       "name": "link-simple",
-      "cp": "E2E6"
+      "cp": "E2E6",
+      "src": "used"
     },
     {
       "name": "list-checks",
-      "cp": "EADC"
+      "cp": "EADC",
+      "src": "used"
+    },
+    {
+      "name": "lock",
+      "cp": "E2FA",
+      "src": "buffer"
     },
     {
       "name": "lock-key",
-      "cp": "E2FE"
+      "cp": "E2FE",
+      "src": "used"
     },
     {
       "name": "lock-key-open",
-      "cp": "E300"
+      "cp": "E300",
+      "src": "used"
     },
     {
       "name": "magnifying-glass",
-      "cp": "E30C"
+      "cp": "E30C",
+      "src": "used"
     },
     {
       "name": "map-pin",
-      "cp": "E316"
+      "cp": "E316",
+      "src": "used"
     },
     {
       "name": "map-pin-plus",
-      "cp": "E314"
+      "cp": "E314",
+      "src": "used"
     },
     {
       "name": "map-trifold",
-      "cp": "E31A"
+      "cp": "E31A",
+      "src": "used"
+    },
+    {
+      "name": "medal",
+      "cp": "E320",
+      "src": "buffer"
     },
     {
       "name": "medal-military",
-      "cp": "ECFC"
+      "cp": "ECFC",
+      "src": "used"
+    },
+    {
+      "name": "megaphone",
+      "cp": "E324",
+      "src": "buffer"
+    },
+    {
+      "name": "money",
+      "cp": "E588",
+      "src": "buffer"
+    },
+    {
+      "name": "motorcycle",
+      "cp": "E80A",
+      "src": "buffer"
+    },
+    {
+      "name": "mountains",
+      "cp": "E7AE",
+      "src": "buffer"
     },
     {
       "name": "note",
-      "cp": "E348"
+      "cp": "E348",
+      "src": "used"
     },
     {
       "name": "note-pencil",
-      "cp": "E34C"
+      "cp": "E34C",
+      "src": "used"
+    },
+    {
+      "name": "notebook",
+      "cp": "E34E",
+      "src": "buffer"
     },
     {
       "name": "number-circle-four",
-      "cp": "E35E"
+      "cp": "E35E",
+      "src": "used"
     },
     {
       "name": "number-circle-one",
-      "cp": "E36A"
+      "cp": "E36A",
+      "src": "used"
     },
     {
       "name": "number-circle-three",
-      "cp": "E37C"
+      "cp": "E37C",
+      "src": "used"
     },
     {
       "name": "number-circle-two",
-      "cp": "E382"
+      "cp": "E382",
+      "src": "used"
+    },
+    {
+      "name": "nut",
+      "cp": "E38C",
+      "src": "buffer"
     },
     {
       "name": "package",
-      "cp": "E390"
+      "cp": "E390",
+      "src": "used"
     },
     {
       "name": "paper-plane-tilt",
-      "cp": "E398"
+      "cp": "E398",
+      "src": "used"
+    },
+    {
+      "name": "paperclip",
+      "cp": "E39A",
+      "src": "buffer"
+    },
+    {
+      "name": "paw-print",
+      "cp": "E648",
+      "src": "buffer"
     },
     {
       "name": "pencil-simple",
-      "cp": "E3B4"
+      "cp": "E3B4",
+      "src": "used"
     },
     {
       "name": "percent",
-      "cp": "E3B6"
+      "cp": "E3B6",
+      "src": "used"
+    },
+    {
+      "name": "phone",
+      "cp": "E3B8",
+      "src": "buffer"
+    },
+    {
+      "name": "phone-call",
+      "cp": "E3BA",
+      "src": "buffer"
     },
     {
       "name": "pill",
-      "cp": "E700"
+      "cp": "E700",
+      "src": "used"
+    },
+    {
+      "name": "pipe",
+      "cp": "ED86",
+      "src": "buffer"
+    },
+    {
+      "name": "pipe-wrench",
+      "cp": "ED88",
+      "src": "buffer"
     },
     {
       "name": "plant",
-      "cp": "EBAE"
+      "cp": "EBAE",
+      "src": "used"
+    },
+    {
+      "name": "plug",
+      "cp": "E946",
+      "src": "buffer"
     },
     {
       "name": "plugs",
-      "cp": "EB56"
+      "cp": "EB56",
+      "src": "used"
     },
     {
       "name": "plugs-connected",
-      "cp": "EB5A"
+      "cp": "EB5A",
+      "src": "used"
     },
     {
       "name": "plus",
-      "cp": "E3D4"
+      "cp": "E3D4",
+      "src": "used"
+    },
+    {
+      "name": "presentation-chart",
+      "cp": "E656",
+      "src": "buffer"
+    },
+    {
+      "name": "printer",
+      "cp": "E3DC",
+      "src": "buffer"
     },
     {
       "name": "prohibit",
-      "cp": "E3DE"
+      "cp": "E3DE",
+      "src": "used"
+    },
+    {
+      "name": "question",
+      "cp": "E3E8",
+      "src": "buffer"
+    },
+    {
+      "name": "radioactive",
+      "cp": "E9DC",
+      "src": "buffer"
+    },
+    {
+      "name": "receipt",
+      "cp": "E3EC",
+      "src": "buffer"
+    },
+    {
+      "name": "recycle",
+      "cp": "E75A",
+      "src": "buffer"
+    },
+    {
+      "name": "rocket",
+      "cp": "E3FC",
+      "src": "buffer"
     },
     {
       "name": "rocket-launch",
-      "cp": "E3FE"
+      "cp": "E3FE",
+      "src": "used"
     },
     {
       "name": "scales",
-      "cp": "E750"
+      "cp": "E750",
+      "src": "used"
+    },
+    {
+      "name": "screwdriver",
+      "cp": "E86E",
+      "src": "buffer"
     },
     {
       "name": "seal-check",
-      "cp": "E606"
+      "cp": "E606",
+      "src": "used"
+    },
+    {
+      "name": "share-network",
+      "cp": "E408",
+      "src": "buffer"
     },
     {
       "name": "shield",
-      "cp": "E40A"
+      "cp": "E40A",
+      "src": "used"
     },
     {
       "name": "shield-check",
-      "cp": "E40C"
+      "cp": "E40C",
+      "src": "used"
+    },
+    {
+      "name": "shield-checkered",
+      "cp": "E708",
+      "src": "buffer"
     },
     {
       "name": "shield-plus",
-      "cp": "E706"
+      "cp": "E706",
+      "src": "used"
     },
     {
       "name": "shopping-cart",
-      "cp": "E41E"
+      "cp": "E41E",
+      "src": "used"
     },
     {
       "name": "shopping-cart-simple",
-      "cp": "E420"
+      "cp": "E420",
+      "src": "used"
+    },
+    {
+      "name": "shower",
+      "cp": "E776",
+      "src": "buffer"
     },
     {
       "name": "sign-in",
-      "cp": "E428"
+      "cp": "E428",
+      "src": "used"
     },
     {
       "name": "sign-out",
-      "cp": "E42A"
+      "cp": "E42A",
+      "src": "used"
+    },
+    {
+      "name": "sliders-horizontal",
+      "cp": "E434",
+      "src": "buffer"
+    },
+    {
+      "name": "sneaker",
+      "cp": "E80C",
+      "src": "buffer"
     },
     {
       "name": "snowflake",
-      "cp": "E5AA"
+      "cp": "E5AA",
+      "src": "used"
+    },
+    {
+      "name": "solar-panel",
+      "cp": "ED7A",
+      "src": "buffer"
     },
     {
       "name": "sparkle",
-      "cp": "E6A2"
+      "cp": "E6A2",
+      "src": "used"
     },
     {
       "name": "spray-bottle",
-      "cp": "E7E4"
+      "cp": "E7E4",
+      "src": "used"
     },
     {
       "name": "squares-four",
-      "cp": "E464"
+      "cp": "E464",
+      "src": "used"
+    },
+    {
+      "name": "stack",
+      "cp": "E466",
+      "src": "buffer"
     },
     {
       "name": "star",
-      "cp": "E46A"
+      "cp": "E46A",
+      "src": "used"
+    },
+    {
+      "name": "star-half",
+      "cp": "E70A",
+      "src": "buffer"
+    },
+    {
+      "name": "storefront",
+      "cp": "E470",
+      "src": "buffer"
+    },
+    {
+      "name": "student",
+      "cp": "E73E",
+      "src": "buffer"
+    },
+    {
+      "name": "suitcase",
+      "cp": "E5AE",
+      "src": "buffer"
     },
     {
       "name": "sun",
-      "cp": "E472"
+      "cp": "E472",
+      "src": "used"
+    },
+    {
+      "name": "sun-dim",
+      "cp": "E474",
+      "src": "buffer"
     },
     {
       "name": "tag",
-      "cp": "E478"
+      "cp": "E478",
+      "src": "used"
+    },
+    {
+      "name": "target",
+      "cp": "E47C",
+      "src": "buffer"
+    },
+    {
+      "name": "tent",
+      "cp": "E8BA",
+      "src": "buffer"
     },
     {
       "name": "test-tube",
-      "cp": "E7A0"
+      "cp": "E7A0",
+      "src": "used"
     },
     {
       "name": "text-aa",
-      "cp": "E6EE"
+      "cp": "E6EE",
+      "src": "used"
+    },
+    {
+      "name": "thermometer",
+      "cp": "E5C6",
+      "src": "buffer"
     },
     {
       "name": "thermometer-cold",
-      "cp": "E5C8"
+      "cp": "E5C8",
+      "src": "used"
+    },
+    {
+      "name": "thermometer-hot",
+      "cp": "E5CA",
+      "src": "buffer"
+    },
+    {
+      "name": "thumbs-up",
+      "cp": "E48E",
+      "src": "buffer"
     },
     {
       "name": "ticket",
-      "cp": "E490"
+      "cp": "E490",
+      "src": "used"
     },
     {
       "name": "timer",
-      "cp": "E492"
+      "cp": "E492",
+      "src": "used"
+    },
+    {
+      "name": "toolbox",
+      "cp": "ECA0",
+      "src": "buffer"
+    },
+    {
+      "name": "tractor",
+      "cp": "EC6E",
+      "src": "buffer"
+    },
+    {
+      "name": "train",
+      "cp": "E496",
+      "src": "buffer"
+    },
+    {
+      "name": "train-simple",
+      "cp": "E4A0",
+      "src": "buffer"
     },
     {
       "name": "trash",
-      "cp": "E4A6"
+      "cp": "E4A6",
+      "src": "used"
+    },
+    {
+      "name": "tree",
+      "cp": "E6DA",
+      "src": "buffer"
+    },
+    {
+      "name": "tree-evergreen",
+      "cp": "E6DC",
+      "src": "buffer"
     },
     {
       "name": "trend-down",
-      "cp": "E4AC"
+      "cp": "E4AC",
+      "src": "used"
+    },
+    {
+      "name": "trend-up",
+      "cp": "E4AE",
+      "src": "buffer"
+    },
+    {
+      "name": "trophy",
+      "cp": "E67E",
+      "src": "buffer"
     },
     {
       "name": "truck",
-      "cp": "E4B4"
+      "cp": "E4B4",
+      "src": "used"
+    },
+    {
+      "name": "truck-trailer",
+      "cp": "E4B6",
+      "src": "buffer"
     },
     {
       "name": "upload-simple",
-      "cp": "E4C0"
+      "cp": "E4C0",
+      "src": "used"
     },
     {
       "name": "user",
-      "cp": "E4C2"
+      "cp": "E4C2",
+      "src": "used"
     },
     {
       "name": "user-check",
-      "cp": "EAFA"
+      "cp": "EAFA",
+      "src": "used"
     },
     {
       "name": "user-circle",
-      "cp": "E4C4"
+      "cp": "E4C4",
+      "src": "used"
     },
     {
       "name": "user-minus",
-      "cp": "E4CE"
+      "cp": "E4CE",
+      "src": "used"
     },
     {
       "name": "user-plus",
-      "cp": "E4D0"
+      "cp": "E4D0",
+      "src": "used"
     },
     {
       "name": "users",
-      "cp": "E4D6"
+      "cp": "E4D6",
+      "src": "used"
     },
     {
       "name": "users-three",
-      "cp": "E68E"
+      "cp": "E68E",
+      "src": "used"
+    },
+    {
+      "name": "van",
+      "cp": "E826",
+      "src": "buffer"
     },
     {
       "name": "warehouse",
-      "cp": "ECD4"
+      "cp": "ECD4",
+      "src": "used"
     },
     {
       "name": "warning",
-      "cp": "E4E0"
+      "cp": "E4E0",
+      "src": "used"
     },
     {
       "name": "warning-circle",
-      "cp": "E4E2"
+      "cp": "E4E2",
+      "src": "used"
     },
     {
       "name": "waves",
-      "cp": "E6DE"
+      "cp": "E6DE",
+      "src": "used"
     },
     {
       "name": "wind",
-      "cp": "E5D2"
+      "cp": "E5D2",
+      "src": "used"
+    },
+    {
+      "name": "wine",
+      "cp": "E6B2",
+      "src": "buffer"
     },
     {
       "name": "wrench",
-      "cp": "E5D4"
+      "cp": "E5D4",
+      "src": "used"
     },
     {
       "name": "x",
-      "cp": "E4F6"
+      "cp": "E4F6",
+      "src": "used"
     },
     {
       "name": "x-circle",
-      "cp": "E4F8"
+      "cp": "E4F8",
+      "src": "used"
     }
   ]
 }

@@ -7,7 +7,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { resolveUsed } from "../tools/subset-phosphor.mjs";
+import { resolveUsed, bufferIcons } from "../tools/subset-phosphor.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const manifest = JSON.parse(readFileSync(`${root}/vendor/phosphor/subset-icons.json`, "utf8"));
@@ -23,13 +23,13 @@ test("every used Phosphor icon is covered by the subset manifest", () => {
   );
 });
 
-test("subset manifest matches the served font (regenerate if this fails)", () => {
-  // The manifest is the source of truth the font was built from; keep them in
-  // lockstep so the guard above actually reflects what ships.
-  const used = new Set(resolveUsed(root).map((u) => u.name));
+test("subset manifest holds only used or buffered icons (regenerate if this fails)", () => {
+  // Manifest = used icons ∪ the curated CMS buffer (icon-buffer.txt). Anything
+  // else means the manifest drifted from the tool — re-run it.
+  const allowed = new Set([...resolveUsed(root).map((u) => u.name), ...bufferIcons(root)]);
   const manifestNames = manifest.icons.map((i) => i.name);
-  const stale = manifestNames.filter((n) => !used.has(n));
-  assert.deepEqual(stale, [], `Manifest lists icons no longer used — re-run tools/subset-phosphor.mjs: ${stale.join(", ")}`);
+  const stray = manifestNames.filter((n) => !allowed.has(n));
+  assert.deepEqual(stray, [], `Manifest lists icons that are neither used nor buffered — re-run tools/subset-phosphor.mjs: ${stray.join(", ")}`);
   assert.equal(manifest.count, manifestNames.length, "manifest count out of sync");
 });
 

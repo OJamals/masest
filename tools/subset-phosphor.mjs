@@ -55,6 +55,17 @@ export function iconCodepoints(root = ROOT) {
   return map;
 }
 
+/** curated buffer (vendor/phosphor/icon-buffer.txt) — extra icons CMS free-text
+ *  fields may reference, so an admin's pick doesn't render blank. */
+export function bufferIcons(root = ROOT) {
+  const path = `${root}/vendor/phosphor/icon-buffer.txt`;
+  if (!existsSync(path)) return new Set();
+  return new Set(
+    readFileSync(path, "utf8").split("\n").map((l) => l.trim())
+      .filter((l) => l && !l.startsWith("#")),
+  );
+}
+
 /** used icons that actually have a glyph (Phosphor weight modifiers etc. don't). */
 export function resolveUsed(root = ROOT) {
   const cps = iconCodepoints(root);
@@ -62,21 +73,34 @@ export function resolveUsed(root = ROOT) {
   return names.map((name) => ({ name, cp: cps.get(name) }));
 }
 
+/** the full subset to ship: used ∪ buffer, each tagged, only glyphs that exist. */
+export function resolveSubset(root = ROOT) {
+  const cps = iconCodepoints(root);
+  const used = new Set(resolveUsed(root).map((u) => u.name));
+  const buffer = bufferIcons(root);
+  const names = [...new Set([...used, ...buffer])].filter((n) => cps.has(n)).sort();
+  return names.map((name) => ({ name, cp: cps.get(name), src: used.has(name) ? "used" : "buffer" }));
+}
+
 function main() {
-  const used = resolveUsed();
-  const manifest = { generated: "run tools/subset-phosphor.mjs to refresh", count: used.length, icons: used };
+  const all = resolveSubset();
+  const usedCount = all.filter((i) => i.src === "used").length;
+  const manifest = {
+    generated: "run tools/subset-phosphor.mjs to refresh",
+    count: all.length, usedCount, bufferCount: all.length - usedCount, icons: all,
+  };
   writeFileSync(`${ROOT}/${MANIFEST}`, JSON.stringify(manifest, null, 2) + "\n");
   if (!existsSync(`${ROOT}/${FULL}`)) {
     console.error(`Missing ${FULL}. Recover it: git show <pre-subset>:vendor/phosphor/Phosphor.woff2 > ${FULL}`);
     process.exit(1);
   }
-  const unicodes = used.map((u) => `U+${u.cp}`).join(",");
+  const unicodes = all.map((u) => `U+${u.cp}`).join(",");
   execFileSync("pyftsubset", [
     `${ROOT}/${FULL}`, `--unicodes=${unicodes}`, "--flavor=woff2",
     "--no-hinting", "--desubroutinize", `--output-file=${ROOT}/${OUT}`,
   ], { stdio: "inherit" });
   const kb = (statSync(`${ROOT}/${OUT}`).size / 1024).toFixed(1);
-  console.log(`subset: ${used.length} icons -> ${OUT} (${kb}kb), manifest -> ${MANIFEST}`);
+  console.log(`subset: ${usedCount} used + ${all.length - usedCount} buffer = ${all.length} icons -> ${OUT} (${kb}kb)`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main();
