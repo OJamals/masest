@@ -75,6 +75,30 @@ function contentList() {
   };
 }
 
+function blogPostEntry(overrides = {}) {
+  return {
+    type: "blog_post",
+    slug: "scheduled-blog-post",
+    title: "Scheduled blog post",
+    status: "draft",
+    locale: "en",
+    payload: {
+      title: "Scheduled blog post",
+      category: "technical",
+      tags: ["scale"],
+      author: "MASEST Technical Team",
+      date: "2026-07-01",
+      hero: "img/blog/hmis-000-explained.webp",
+      hero_alt: "VertKleen HCR jug beside a clear sample",
+      excerpt: "A scheduled post for the static blog.",
+      body: "## Scheduled\n\nThis post should publish when due.",
+    },
+    seo: { description: "Scheduled blog post." },
+    updated_at: "2026-07-01T12:00:00Z",
+    ...overrides,
+  };
+}
+
 async function scrollContentPanelIntoView(page) {
   await page.evaluate(() => {
     const mounts = [...document.querySelectorAll("#admContent, #admBlog")];
@@ -309,6 +333,84 @@ test("content editor requires a datetime before scheduling publish", async ({ pa
   await page.locator('[data-content-workflow="schedule"]').click();
   await expect(page.locator("#contentStatus")).toHaveText("Choose a publish date before scheduling.");
   expect(postCount).toBe(0);
+});
+
+test("dedicated blog tab schedules posts and publishes due posts in blog scope", async ({ page }) => {
+  await bootAsStaff(page);
+
+  let scheduleBody = null;
+  let publishScheduledBody = null;
+  let entries = [blogPostEntry()];
+  await page.route("**/api/admin/content**", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST") {
+      const body = req.postDataJSON();
+      if (body.action === "schedule") {
+        scheduleBody = body;
+        const scheduledEntry = { ...body.entry, status: "scheduled" };
+        entries = [scheduledEntry];
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: true, entry: scheduledEntry }),
+        });
+      }
+      if (body.action === "publish_scheduled") {
+        publishScheduledBody = body;
+        const publishedEntry = { ...entries[0], status: "published", scheduled_at: null };
+        entries = [publishedEntry];
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            count: 1,
+            entries: [publishedEntry],
+            skipped: [],
+            publish_hook: { ok: true, skipped: true },
+            blog_workflow: { ok: true, skipped: false, status: 204 },
+          }),
+        });
+      }
+    }
+    const url = new URL(req.url());
+    const status = url.searchParams.get("status") || "published";
+    const visible = status === "all" ? entries : entries.filter((entry) => entry.status === status);
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ entries: visible }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#blog`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("[data-content-edit]").first().click();
+
+  await page.locator("#contentScheduledAt").fill("2026-07-10T09:30");
+  const expectedScheduledAt = await page.locator("#contentScheduledAt").evaluate((input) => new Date(input.value).toISOString());
+
+  const scheduleResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('[data-content-workflow="schedule"]').click();
+  await scheduleResponse;
+
+  expect(scheduleBody.action).toBe("schedule");
+  expect(scheduleBody.entry.type).toBe("blog_post");
+  expect(scheduleBody.entry.scheduled_at).toBe(expectedScheduledAt);
+  await expect(page.locator("#contentStatus")).toHaveText("Workflow updated: schedule.");
+  await expect(page.locator("#contentWorkflowRows")).toContainText("Scheduled for");
+
+  const dueResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/admin/content") && response.request().method() === "POST"
+  ));
+  await page.locator('[data-content-action="publish_scheduled"]').click();
+  await dueResponse;
+
+  expect(publishScheduledBody).toEqual({ action: "publish_scheduled", type: "blog_post" });
+  await expect(page.locator("#contentStatus")).toContainText("Published 1 scheduled item.");
+  await expect(page.locator("#contentStatus")).toContainText("Static blog generation triggered.");
 });
 
 test("content operations publishes due scheduled entries in batch", async ({ page }) => {
@@ -789,6 +891,10 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
   await expect(page.locator('[data-content-action="draft"]')).toBeVisible();
   await expect(page.locator('[data-content-action="publish"]')).toBeVisible();
   await expect(page.locator("#contentRevisionList")).toBeVisible();
+  const localeWidth = await page.locator("#contentLocale").evaluate((node) =>
+    Math.round(node.getBoundingClientRect().width),
+  );
+  expect(localeWidth).toBeGreaterThanOrEqual(180);
 
   await page.locator("[data-content-edit]").first().click();
   const bodyOutput = page.locator('[data-content-payload-field="body"]');

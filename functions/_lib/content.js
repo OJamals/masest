@@ -366,7 +366,7 @@ export function createContentRepository(sb) {
       );
     },
 
-    async publishScheduledDue({ now = new Date().toISOString(), limit = 25, locale = "" } = {}, userId) {
+    async publishScheduledDue({ now = new Date().toISOString(), limit = 25, locale = "", type = "" } = {}, userId) {
       const timestamp = new Date(now);
       if (Number.isNaN(timestamp.getTime())) return { ok: false, error: "invalid_publish_time" };
       const batchLimit = Math.min(Math.max(Number(limit) || 25, 1), 100);
@@ -376,6 +376,7 @@ export function createContentRepository(sb) {
         .eq("status", "scheduled")
         .lte("scheduled_at", timestamp.toISOString());
       if (locale) query = query.eq("locale", locale);
+      if (type) query = query.eq("type", type);
       const { data, error } = await query
         .order("scheduled_at", { ascending: true })
         .limit(batchLimit);

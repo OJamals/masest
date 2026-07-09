@@ -327,7 +327,7 @@ function formTemplate({ blog = false } = {}) {
       </div>
       <form id="contentForm" class="adm-form-grid" onsubmit="return false">
         ${typeControl}
-        <label>Language <select id="contentLocale" class="adm-select"><option value="en">English (en)</option></select></label>
+        <label class="adm-content-locale">Language <select id="contentLocale" class="adm-select"><option value="en">English (en)</option></select></label>
         <p id="contentPlacementHint" class="adm-content-placement full" role="note"${blog ? " hidden" : ""}>${esc(placementText("service"))}</p>
         <label class="wide">Title <input id="contentTitle" class="adm-input" required></label>
         <label class="wide">Page slug <input id="contentSlug" class="adm-input" required></label>
@@ -503,13 +503,16 @@ function listTemplate(entries, admEmpty) {
   `;
 }
 
-function workflowTemplate(admEmpty) {
+function workflowTemplate(admEmpty, { blog = false } = {}) {
+  const queueCopy = blog
+    ? `Scheduled blog posts stay visible here. Press "Publish due scheduled" to publish posts whose scheduled time has arrived and trigger static blog generation.`
+    : `Scheduled, review, and change-request items stay visible even when the list is filtered. Press "Publish due scheduled" to publish entries whose scheduled time has arrived.`;
   return `
     <div class="adm-card adm-content-workflow" id="contentWorkflowQueue">
       <div class="adm-panel-header">
         <div>
           <h2>Review queue</h2>
-          <p class="muted">Scheduled, review, and change-request items stay visible even when the list is filtered. Scheduled entries go live when you press "Publish due scheduled" — there is no automatic timer yet.</p>
+          <p class="muted">${esc(queueCopy)}</p>
         </div>
         <button class="btn btn-secondary btn-sm" type="button" data-content-action="publish_scheduled">
           <i class="ph ph-clock-countdown" aria-hidden="true"></i> Publish due scheduled
@@ -622,7 +625,7 @@ function blogShellTemplate(admEmpty) {
             </div>
             <div id="contentList" class="adm-content-list-body">${admEmpty("ph-note-pencil", "No blog posts", "Create a blog draft to get started.")}</div>
           </div>
-          ${workflowTemplate(admEmpty)}
+          ${workflowTemplate(admEmpty, { blog: true })}
           ${previewTemplate()}
           ${exportStatusTemplate()}
         </div>
@@ -827,12 +830,22 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   function publishStatusText(result = {}) {
+    const blogText = blogWorkflowStatusText(result);
     const hook = result.publish_hook;
-    if (!hook) return "Published.";
-    if (hook.skipped) return "Published in CMS. Static rebuild hook is not configured, so public pages keep the previous export until a build runs.";
-    if (hook.ok) return "Published. Static rebuild triggered.";
+    if (!hook) return `Published.${blogText}`;
+    if (hook.skipped) return `Published in CMS. Static rebuild hook is not configured, so public pages keep the previous export until a build runs.${blogText}`;
+    if (hook.ok) return `Published. Static rebuild triggered.${blogText}`;
     const detail = hook.status || hook.message || hook.error || "hook failed";
-    return `Published. Static rebuild failed: ${detail}.`;
+    return `Published. Static rebuild failed: ${detail}.${blogText}`;
+  }
+
+  function blogWorkflowStatusText(result = {}) {
+    const workflow = result.blog_workflow;
+    if (!workflow) return "";
+    if (workflow.skipped) return " Static blog generation is not configured, so run `npm run publish:blog` to regenerate pages.";
+    if (workflow.ok) return " Static blog generation triggered.";
+    const detail = workflow.status || workflow.message || workflow.error || "workflow failed";
+    return ` Static blog generation failed: ${detail}.`;
   }
 
   function publishScheduledStatusText(result = {}) {
@@ -846,18 +859,21 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     const noun = count === 1 ? "item" : "items";
     let base = `Published ${count} scheduled ${noun}.`;
     if (failed) base += ` ${failed} could not publish (validation) — fix and retry.`;
+    const blogText = blogWorkflowStatusText(result);
     const hook = result.publish_hook;
-    if (!hook) return base;
-    if (hook.skipped) return `${base} Static rebuild hook is not configured, so public pages keep the previous export until a build runs.`;
-    if (hook.ok) return `${base} Static rebuild triggered.`;
+    if (!hook) return `${base}${blogText}`;
+    if (hook.skipped) return `${base} Static rebuild hook is not configured, so public pages keep the previous export until a build runs.${blogText}`;
+    if (hook.ok) return `${base} Static rebuild triggered.${blogText}`;
     const detail = hook.status || hook.message || hook.error || "hook failed";
-    return `${base} Static rebuild failed: ${detail}.`;
+    return `${base} Static rebuild failed: ${detail}.${blogText}`;
   }
 
   function publishStatusKind(result = {}) {
     const hook = result.publish_hook;
+    if (result.blog_workflow?.ok === false) return "err";
     if (hook?.ok === false) return "err";
     if (Array.isArray(result.skipped) && result.skipped.length) return "warn";
+    if (result.blog_workflow?.skipped) return "warn";
     if (hook?.skipped) return "warn";
     return "ok";
   }
@@ -1292,9 +1308,12 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   async function publishScheduledContent() {
     setStatus("Publishing due scheduled content...");
     try {
+      const body = blogMode
+        ? { action: "publish_scheduled", type: "blog_post" }
+        : { action: "publish_scheduled" };
       const result = await api("/api/admin/content", {
         method: "POST",
-        body: { action: "publish_scheduled" },
+        body,
       });
       setStatus(
         publishScheduledStatusText(result),

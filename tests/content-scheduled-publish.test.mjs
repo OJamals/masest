@@ -134,6 +134,31 @@ function serviceEntry(overrides = {}) {
   };
 }
 
+function blogEntry(overrides = {}) {
+  return {
+    id: "entry_blog_due",
+    type: "blog_post",
+    slug: "scheduled-blog-post",
+    title: "Scheduled blog post",
+    status: "scheduled",
+    locale: "en",
+    scheduled_at: "2026-06-30T10:00:00.000Z",
+    review_note: "Ready for blog launch.",
+    version: 2,
+    payload: {
+      title: "Scheduled blog post",
+      category: "technical",
+      tags: ["scale"],
+      author: "MASEST Technical Team",
+      date: "2026-06-30",
+      excerpt: "A scheduled post for the static blog.",
+      body: "## Scheduled\n\nThis post should publish when due.",
+    },
+    seo: { description: "Scheduled blog post." },
+    ...overrides,
+  };
+}
+
 test("content repository publishes due scheduled entries and leaves future entries queued", async () => {
   const db = {
     content_entries: [
@@ -174,6 +199,34 @@ test("content repository publishes due scheduled entries and leaves future entri
   assert.equal(db.content_revisions[0].status, "published");
   assert.equal(db.content_revisions[0].version, 5);
   assert.equal(db.content_revisions[0].note, "Published");
+});
+
+test("content repository can publish only due scheduled blog posts", async () => {
+  const db = {
+    content_entries: [
+      serviceEntry({ id: "entry_service_due", slug: "service-due" }),
+      blogEntry(),
+    ],
+    content_revisions: [],
+  };
+  const repo = createContentRepository(fakeSupabase(db));
+
+  const result = await repo.publishScheduledDue({
+    now: "2026-06-30T12:00:00.000Z",
+    type: "blog_post",
+  }, "staff_1");
+
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 1);
+  assert.equal(result.entries[0].type, "blog_post");
+  assert.equal(result.entries[0].status, "published");
+
+  const service = db.content_entries.find((entry) => entry.id === "entry_service_due");
+  assert.equal(service.status, "scheduled", "website content stays queued when the blog tab publishes due posts");
+
+  const blog = db.content_entries.find((entry) => entry.id === "entry_blog_due");
+  assert.equal(blog.status, "published");
+  assert.equal(blog.scheduled_at, null);
 });
 
 test("one invalid due entry is skipped, not allowed to abort the whole batch", async () => {

@@ -39,7 +39,7 @@ export async function onRequest({ request, env }) {
         if (!staffCan(role, "content.publish")) {
           return json(403, { error: "forbidden", message: "Publishing scheduled content requires owner access." });
         }
-        result = await repo.publishScheduledDue({}, user.id);
+        result = await repo.publishScheduledDue({ type: body.type || "" }, user.id);
         if (result.ok && result.count > 0) {
           result.publish_hook = await triggerContentPublishBuild(env, result.entries[0]);
           const blogEntry = result.entries.find((e) => e?.type === "blog_post");
