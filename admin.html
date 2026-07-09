@@ -26,19 +26,34 @@
   .adm-tab .pill { position: absolute; top: -7px; right: -7px; margin-left: 0; box-shadow: 0 0 0 2px var(--surface); }
   .adm-tab .pill[hidden] { display: none; }
   .adm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .adm-card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px; }
+  .adm-card { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); padding: 16px; }
 .adm-card h2, .adm-card h3 { margin: 0 0 12px; font-size: 1rem; }
 .adm-stat { display: grid; gap: 4px; min-height: 92px; }
 .adm-stat b { font-size: 1.25rem; }
+.adm-overview-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: clamp(18px, 3vw, 28px); background: var(--surface-raised); box-shadow: var(--shadow-sm), var(--surface-edge); }
+.adm-overview-head h2 { margin: 0; font-size: clamp(1.45rem, 2.6vw, 2rem); line-height: 1.12; }
+.adm-overview-head p.muted { max-width: 62ch; margin: 8px 0 0; }
+.adm-overview-marker { min-width: 156px; display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--surface); box-shadow: var(--shadow-xs); }
+.adm-overview-marker span { color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.adm-overview-marker b { color: var(--accent-ink); font-size: 1rem; line-height: 1.25; }
+.adm-overview-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .34fr); gap: 16px; align-items: start; }
+.adm-ops-summary, .adm-action-rail { min-width: 0; }
 .adm-report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
-.adm-report-card { min-height: 100%; }
+.adm-report-card { min-height: 100%; box-shadow: var(--shadow-xs); }
+.adm-report-card h2 { display: flex; align-items: center; gap: 8px; }
+.adm-report-card h2 i { color: var(--accent); font-size: 1.1rem; }
 .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 5px 0; }
 .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: right; font-variant-numeric: tabular-nums; }
 .adm-action-list { display: grid; gap: 8px; }
-.adm-action-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-soft); }
-.adm-action-item:first-child { border-top: 0; padding-top: 0; }
-.adm-action-item b, .adm-action-item small { display: block; }
+.adm-action-card { position: sticky; top: 96px; box-shadow: var(--shadow-xs); }
+.adm-action-item { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 56px; padding: 10px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--surface); color: inherit; text-decoration: none; transition: border-color .14s var(--ease-out), background-color .14s var(--ease-out), transform .14s var(--ease-out); }
+.adm-action-item:active { transform: scale(.99); }
+.adm-action-item:hover, .adm-action-item:focus-visible { border-color: var(--accent); background: var(--accent-tint); }
+.adm-action-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent-ink); font-size: 1.05rem; }
+.adm-action-item b, .adm-action-item small { display: block; min-width: 0; overflow-wrap: anywhere; }
+.adm-action-item b { line-height: 1.25; }
 .adm-action-item strong { font-variant-numeric: tabular-nums; color: var(--accent-ink); }
+.adm-skeleton-row { height: 44px; margin-bottom: 8px; }
 .adm-mini-table { width: 100%; border-collapse: collapse; }
 .adm-mini-table th, .adm-mini-table td { padding: 8px 0; border-top: 1px solid var(--line-soft); text-align: left; font-size: .88rem; }
 .adm-mini-table th { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .07em; }
@@ -61,7 +76,7 @@
   .adm-main table.adm .link-name { appearance: none; display: inline-flex; align-items: center; min-height: 36px; padding: 7px 0; border: 0; background: transparent; color: var(--accent-ink); font: inherit; font-weight: 800; line-height: 1.25; text-align: left; cursor: pointer; }
   .adm-main table.adm .link-name:hover,
   .adm-main table.adm .link-name:focus-visible { color: var(--accent); outline: none; }
-  .adm-search, .adm-input, .adm-select, .adm-textarea { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; padding: 10px 12px; }
+  .adm-search, .adm-input, .adm-select, .adm-textarea { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); color: var(--ink); font: inherit; padding: 10px 12px; }
   .adm-search { max-width: 320px; }
   .adm-textarea { min-height: 120px; resize: vertical; }
   .adm-form-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; }
@@ -447,6 +462,8 @@
     .admin-order-meta,
     .company-admin-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .product-admin-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .adm-overview-layout { grid-template-columns: 1fr; }
+    .adm-action-card { position: static; }
     .adm-content-hub { grid-template-columns: 1fr; }
     .adm-content-hub-metrics { justify-content: flex-start; }
     .adm-content-layout { grid-template-columns: 1fr; }
@@ -456,6 +473,8 @@
   @media (max-width: 720px) {
     .adm-wrap { padding: 0 18px; }
     .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: stretch; }
+    .adm-overview-head { grid-template-columns: 1fr; }
+    .adm-overview-marker { min-width: 0; }
     .adm-tools { align-items: stretch; }
     .adm-tools > * { width: 100%; max-width: none; }
     .adm-form-grid > .btn { width: 100%; justify-self: stretch; }
@@ -519,6 +538,10 @@
     .adm-top, .adm-panel-header { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: left; }
+  }
+  @media (max-width: 420px) {
+    .adm-action-item { grid-template-columns: 38px minmax(0, 1fr); }
+    .adm-action-item strong { grid-column: 2; justify-self: start; }
   }
   /* Styled confirm dialog (#31) */
   .confirm-dialog { border: 1px solid var(--line, #e5e7eb); border-radius: var(--r-lg, 22px); padding: 0; max-width: 420px; box-shadow: var(--shadow-lg); }
@@ -591,7 +614,25 @@
 
         <div class="adm-main">
 
- <section class="adm-panel" role="tabpanel" data-panel="overview"><div id="admStats" class="adm-grid"></div><div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div><div id="admActionRail" class="adm-action-rail" aria-live="polite"></div><div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reports &amp; exports</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" type="date" class="adm-input"></label><label class="field">To<input id="repTo" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button">Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button">Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button">Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button">Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div><div id="admTraffic" class="adm-card">Loading...</div></section>
+ <section class="adm-panel" role="tabpanel" data-panel="overview">
+        <div class="adm-card adm-overview-head">
+          <div>
+            <p class="adm-eyebrow">Staff console</p>
+            <h2>Work that needs attention</h2>
+            <p class="muted">Latest staff API snapshot.</p>
+          </div>
+          <div class="adm-overview-marker" aria-label="Overview source">
+            <span>Source</span>
+            <b>Admin API snapshot</b>
+          </div>
+        </div>
+        <div id="admStats" class="adm-grid" hidden></div>
+        <div class="adm-overview-layout">
+          <div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div>
+          <div id="admActionRail" class="adm-action-rail" aria-live="polite"></div>
+        </div>
+        <div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected" aria-hidden="true"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs" aria-hidden="true"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reports &amp; exports</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" type="date" class="adm-input"></label><label class="field">To<input id="repTo" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button"><i class="ph ph-chart-line-up" aria-hidden="true"></i> Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i> Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-users-three" aria-hidden="true"></i> Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div><div id="admTraffic" class="adm-card">Loading...</div>
+      </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="orders">
         <div class="adm-tools">

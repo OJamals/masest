@@ -41,7 +41,7 @@ function debounce(fn, ms = 220) {
 
 // Loading skeleton + rich empty state for admin lists (#31). Reuse the shared
 // components.css .skeleton / .empty-state styles.
-const admSkeleton = (rows = 5) => `<div class="adm-skeletons" aria-hidden="true">${'<div class="skeleton skeleton-block" style="height:44px;margin-bottom:8px"></div>'.repeat(rows)}</div>`;
+const admSkeleton = (rows = 5) => `<div class="adm-skeletons" aria-hidden="true">${'<div class="skeleton skeleton-block adm-skeleton-row"></div>'.repeat(rows)}</div>`;
 const admEmpty = (icon, title, body) => `<div class="empty-state"><i class="ph ${icon} empty-icon" aria-hidden="true"></i><div class="empty-title">${esc(title)}</div><div class="empty-body">${esc(body)}</div></div>`;
 const state = {
   tab: 'overview',
@@ -178,6 +178,30 @@ function pct(value) {
  return `${Math.round(Number(value || 0) * 1000) / 10}%`;
 }
 
+const opsGroupIcons = {
+ Commerce: 'ph-currency-dollar',
+ CRM: 'ph-address-book',
+ Accounts: 'ph-buildings',
+ 'Catalog + analytics': 'ph-chart-line-up',
+};
+
+function actionIcon(item = {}) {
+ const label = String(item.label || '').toLowerCase();
+ const href = String(item.href || '').toLowerCase();
+ if (href.includes('orders') || label.includes('order') || label.includes('fulfillment')) return 'ph-package';
+ if (href.includes('companies') || label.includes('account') || label.includes('approval')) return 'ph-buildings';
+ if (href.includes('quotes') || label.includes('quote')) return 'ph-clipboard-text';
+ if (href.includes('messages') || label.includes('message')) return 'ph-chats';
+ if (href.includes('products') || label.includes('stock') || label.includes('catalog')) return 'ph-flask';
+ if (href.includes('crm') || label.includes('follow')) return 'ph-address-book';
+ return 'ph-warning-circle';
+}
+
+function actionPriority(priority = '') {
+ const value = String(priority || 'normal').trim().toLowerCase();
+ return value || 'normal';
+}
+
 function renderOpsSummary(stats = {}) {
  const commerce = stats.commerce || {};
  const crm = stats.crm || {};
@@ -213,15 +237,15 @@ function renderOpsSummary(stats = {}) {
  ]],
  ];
  return `<div class="adm-report-grid">${groups.map(([title, rows]) => `
- <div class="adm-card adm-report-card"><h2>${esc(title)}</h2>${rows.map(([label, value]) => `
- <div class="dash-row"><span>${esc(label)}</span><b>${esc(value)}</b></div>
+ <div class="adm-card adm-report-card"><h2><i class="ph ${opsGroupIcons[title] || 'ph-chart-bar'}" aria-hidden="true"></i>${esc(title)}</h2>${rows.map(([label, value]) => `
+ <div class="dash-row"><span>${esc(label)}</span><b data-numeric>${esc(value)}</b></div>
  `).join('')}</div>`).join('')}${renderSetupFollowups(stats)}</div>`;
 }
 
 function renderActionRail(actions = []) {
- if (!actions.length) return '<div class="adm-card"><h2>Priority actions</h2><p class="muted">No urgent admin actions.</p></div>';
- return `<div class="adm-card"><h2>Priority actions</h2><div class="adm-action-list">${actions.map((item) => `
- <a class="adm-action-item" href="${esc(safeUrl(item.href || '#overview'))}"><span><b>${esc(item.label)}</b><small class="muted">Priority ${esc(item.priority || '')}</small></span><strong>${esc(item.value || 0)}</strong></a>
+ if (!actions.length) return '<div class="adm-card adm-action-card"><h2>Priority actions</h2><div class="empty-state"><i class="ph ph-check-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No urgent admin actions.</div><div class="empty-body">New orders, approvals, quote follow-ups, and message queues will appear here.</div></div></div>';
+ return `<div class="adm-card adm-action-card"><h2>Priority actions</h2><div class="adm-action-list">${actions.map((item) => `
+ <a class="adm-action-item" data-priority="${esc(actionPriority(item.priority))}" href="${esc(safeUrl(item.href || '#overview'))}"><span class="adm-action-icon"><i class="ph ${actionIcon(item)}" aria-hidden="true"></i></span><span><b>${esc(item.label)}</b><small class="muted">Priority ${esc(item.priority || 'normal')}</small></span><strong data-numeric>${esc(item.value || 0)}</strong></a>
  `).join('')}</div></div>`;
 }
 
@@ -296,7 +320,7 @@ async function refreshStats() {
 function admListPager(attr, loaded, total, hasMore) {
   if (!hasMore) return '';
   const count = total != null ? ` (${loaded} of ${total})` : '';
-  return `<div style="text-align:center;margin:12px 0"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
+  return `<div class="adm-list-pager"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
 }
 
 // Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.

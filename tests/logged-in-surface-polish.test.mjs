@@ -74,6 +74,7 @@ test("visual QA padding contracts cover disclosures and dense admin controls", (
   assert.match(admin, /\.admin-order-actions \.admin-input-sm\s*\{[\s\S]*flex-basis:\s*220px/, "QBO and payment IDs should get enough inline width on desktop");
   assert.match(admin, /\.product-file-control input\s*\{[\s\S]*width:\s*100%;[\s\S]*max-width:\s*100%/, "product image upload controls should use the available mobile card width");
   assert.match(admin, /@media \(max-width: 720px\)[\s\S]*\.adm-coupon-form\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/, "mobile coupon controls should use a bounded grid instead of cramped flex wrapping");
+  assert.match(admin, /@media \(max-width: 420px\)[\s\S]*\.adm-action-item\s*\{[\s\S]*grid-template-columns:\s*38px minmax\(0,\s*1fr\)/, "tiny mobile admin action rows should let the count wrap below long action copy");
   const inventoryJs = read("js/admin/inventory.js");
   const couponsJs = read("js/admin/coupons.js");
   assert.match(inventoryJs, /invLow[\s\S]*<div class="adm-table-wrap">[\s\S]*low-stock variants/, "low-stock admin tables should scroll inside cards instead of clipping columns");
