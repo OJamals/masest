@@ -32,7 +32,7 @@ test('crm.js renders loading/empty states and is keyboard-operable', () => {
 });
 
 test('admin.js wires the CRM panel into the companies tab', () => {
-  assert.match(ADMIN, /import \{ createCrmPanel \} from '\.\/admin\/crm\.js'/);
+  assert.match(ADMIN, /import \{ createCrmPanel \} from '\.\/admin\/crm\.js(?:\?v=\d{8}[a-z])?'/);
   assert.match(ADMIN, /const crm = createCrmPanel\(\{[^}]*\}\)/);
   assert.match(ADMIN, /createCompaniesTab\(\{[^}]*crm[^}]*\}\)/);
 });

@@ -98,7 +98,7 @@ test("admin content module is registered with lazy render and wire hooks", () =>
   const admin = readFileSync(new URL("../js/admin.js", import.meta.url), "utf8");
   const module = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
 
-  assert.match(admin, /from '\.\/admin\/content\.js'/);
+  assert.match(admin, /from '\.\/admin\/content\.js(?:\?v=\d{8}[a-z])?'/);
   assert.match(admin, /content:\s*renderContent/);
   assert.match(admin, /blog:\s*renderBlog/);
   assert.match(admin, /wireContent\(\)/);

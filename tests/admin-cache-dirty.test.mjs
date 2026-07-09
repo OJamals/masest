@@ -104,7 +104,7 @@ test('restoreDirty tolerates a missing target element', () => {
 const admin = readFileSync(join(root, 'js/admin.js'), 'utf8');
 
 test('admin.js imports the dirty-tracking helpers', () => {
-  assert.match(admin, /from '\.\/admin\/edits\.js'/);
+  assert.match(admin, /from '\.\/admin\/edits\.js(?:\?v=\d{8}[a-z])?'/);
   assert.match(admin, /captureDirty/);
   assert.match(admin, /restoreDirty/);
 });
