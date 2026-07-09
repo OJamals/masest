@@ -10,10 +10,10 @@ export async function onRequestPost({ request, env }) {
 
   const body = await readBody(request);
   const id = String(body.id || '').trim();
-  const kind = body.kind === 'refund' ? 'refund' : 'order';
-  if (!id) return json(400, { error: kind === 'refund' ? 'refund_id_required' : 'order_id_required' });
+  const kind = body.kind === 'refund' ? 'refund' : body.kind === 'subscription' ? 'subscription' : 'order';
+  if (!id) return json(400, { error: kind === 'refund' ? 'refund_id_required' : kind === 'subscription' ? 'subscription_invoice_id_required' : 'order_id_required' });
 
-  const table = kind === 'refund' ? 'qbo_refunds' : 'orders';
+  const table = kind === 'refund' ? 'qbo_refunds' : kind === 'subscription' ? 'qbo_subscription_invoices' : 'orders';
   const { data, error } = await adminClient(env).from(table)
     .update({
       qbo_sync_status: 'pending',
@@ -27,6 +27,6 @@ export async function onRequestPost({ request, env }) {
     .maybeSingle();
 
   if (error) return json(500, { error: error.message || 'qbo_retry_failed' });
-  if (!data) return json(404, { error: kind === 'refund' ? 'qbo_failed_refund_not_found' : 'qbo_failed_order_not_found' });
+  if (!data) return json(404, { error: kind === 'refund' ? 'qbo_failed_refund_not_found' : kind === 'subscription' ? 'qbo_failed_subscription_not_found' : 'qbo_failed_order_not_found' });
   return json(200, { ok: true, kind, [kind]: data });
 }

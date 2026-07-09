@@ -1,6 +1,13 @@
 // POST /api/qbo-sync — cron/manual QBO sync worker entrypoint.
 import { adminClient, json, sendEmail, htmlEscape } from '../_lib/supabase.js';
-import { getAccessToken, nextSyncState, syncOrder, syncRefund } from '../_lib/qbo.js';
+import {
+  findOrCreateCustomer,
+  getAccessToken,
+  nextSyncState,
+  syncOrder,
+  syncRefund,
+  syncSubscriptionInvoice,
+} from '../_lib/qbo.js';
 import { qboConfigEnv } from '../_lib/qbo-config.js';
 
 // #26 — a doc that exhausts MAX_ATTEMPTS dead-letters to 'error' and stops retrying.
@@ -120,6 +127,75 @@ export async function companyTaxExemptByIds(sb, ids) {
   const { data, error } = await sb.from('companies').select('id,tax_exempt').in('id', ids);
   if (error) throw new Error(error.message || 'qbo_company_read_failed');
   return new Set((data || []).filter((c) => c.tax_exempt).map((c) => c.id));
+}
+
+function preferredBillingAddress(addresses = []) {
+  return addresses.find((address) => address.type === 'bill' && address.is_default)
+    || addresses.find((address) => address.type === 'bill')
+    || addresses.find((address) => address.is_default)
+    || addresses[0]
+    || null;
+}
+
+function businessCustomerInput(company) {
+  return {
+    key: `company:${company.id}`,
+    displayName: company.legal_name || company.name || `Company ${company.id}`,
+    email: company.business_email,
+    phone: company.business_phone,
+    stripeCustomerId: company.stripe_customer_id,
+    billingAddress: preferredBillingAddress(company.addresses || []),
+  };
+}
+
+// Approved companies become QBO customers before their first document is posted.
+// This keeps Stripe's customer, the MASEST company, and the QBO customer joined by
+// the stable company UUID instead of waiting for an order to create a sparse record.
+export async function runQboBusinessSync({ env, batch = 10 }) {
+  const qboEnv = qboConfigEnv(env);
+  const sb = adminClient(env);
+  const { data: companies, error: companyError } = await sb.from('companies')
+    .select('id,name,legal_name,business_email,business_phone,stripe_customer_id,created_at,addresses(type,line1,line2,city,state,zip,country,is_default)')
+    .eq('status', 'approved')
+    .order('created_at', { ascending: true })
+    .limit(1000);
+  if (companyError) return json(500, { error: companyError.message || 'qbo_business_read_failed' });
+
+  const { data: mapped, error: mappingError } = await sb.from('qbo_customers')
+    .select('key')
+    .like('key', 'company:%');
+  if (mappingError) return json(500, { error: mappingError.message || 'qbo_business_mapping_read_failed' });
+  const mappedKeys = new Set((mapped || []).map((row) => row.key));
+  const missing = (companies || []).filter((company) => !mappedKeys.has(`company:${company.id}`)).slice(0, batch);
+  if (!missing.length) return json(200, { ok: true, eligible: (companies || []).length, claimed: 0, synced: 0, failed: 0 });
+
+  let credentials;
+  try {
+    credentials = await getAccessToken(sb, qboEnv);
+  } catch (err) {
+    return json(503, { error: 'qbo_unavailable', detail: err?.message || String(err), claimed: missing.length, failed: missing.length });
+  }
+
+  const results = [];
+  let synced = 0;
+  let failed = 0;
+  for (const company of missing) {
+    try {
+      const customerId = await findOrCreateCustomer(
+        sb,
+        qboEnv,
+        credentials.accessToken,
+        credentials.realmId,
+        businessCustomerInput(company),
+      );
+      synced += 1;
+      results.push({ id: company.id, ok: true, customer_id: customerId });
+    } catch (err) {
+      failed += 1;
+      results.push({ id: company.id, ok: false, error: err?.message || String(err) });
+    }
+  }
+  return json(200, { ok: failed === 0, eligible: (companies || []).length, claimed: missing.length, synced, failed, results });
 }
 
 async function markSynced(sb, order, result) {
@@ -289,6 +365,99 @@ export async function runQboRefundSync({ env, batch = 10 }) {
   return json(200, { ok: failed === 0, claimed: refunds.length, synced, failed, results });
 }
 
+export async function runQboSubscriptionSync({ env, batch = 10 }) {
+  const qboEnv = qboConfigEnv(env);
+  const sb = adminClient(env);
+  const { data: claimed, error } = await sb.rpc('claim_qbo_subscription_invoices', { batch });
+  if (error) return json(500, { error: error.message || 'qbo_subscription_claim_failed' });
+
+  const invoices = claimed || [];
+  if (!invoices.length) return json(200, { ok: true, claimed: 0, synced: 0, failed: 0 });
+
+  let credentials;
+  try {
+    credentials = await getAccessToken(sb, qboEnv);
+  } catch (err) {
+    const message = await requeueClaimed(sb, invoices, err, 'qbo_subscription_invoices');
+    return json(503, { error: 'qbo_unavailable', detail: message, claimed: invoices.length, failed: invoices.length });
+  }
+
+  let companyNames;
+  let taxExemptIds;
+  try {
+    const ids = uniqueCompanyIds(invoices);
+    companyNames = await companyNamesByIds(sb, ids);
+    taxExemptIds = await companyTaxExemptByIds(sb, ids);
+  } catch (err) {
+    const message = await requeueClaimed(sb, invoices, err, 'qbo_subscription_invoices');
+    return json(503, { error: 'qbo_company_lookup_failed', detail: message, claimed: invoices.length, failed: invoices.length });
+  }
+
+  const results = [];
+  const deadLetters = [];
+  let synced = 0;
+  let failed = 0;
+  for (const invoice of invoices) {
+    try {
+      const result = await syncSubscriptionInvoice(
+        sb,
+        qboEnv,
+        credentials.accessToken,
+        credentials.realmId,
+        invoice,
+        companyNames,
+        { taxExempt: taxExemptIds.has(invoice.company_id) },
+      );
+      const patch = {
+        qbo_sync_status: 'synced',
+        qbo_invoice_id: result.docId,
+        qbo_payment_id: result.paymentId,
+        qbo_synced_at: new Date().toISOString(),
+        qbo_error: null,
+        qbo_next_attempt_at: null,
+      };
+      if (result.intuitTid) patch.qbo_intuit_tid = result.intuitTid;
+      if (result.paymentIntuitTid) patch.qbo_payment_intuit_tid = result.paymentIntuitTid;
+      if (result.intuitTids?.length) patch.qbo_intuit_tids = result.intuitTids;
+      const { error: updateError } = await sb.from('qbo_subscription_invoices').update(patch).eq('id', invoice.id);
+      if (updateError) throw new Error(updateError.message || 'qbo_subscription_update_failed');
+      synced += 1;
+      results.push({ id: invoice.id, ok: true, invoice_id: result.docId, payment_id: result.paymentId });
+    } catch (err) {
+      const { message: detail, deadLettered } = await requeueOne(sb, invoice, err, 'qbo_subscription_invoices');
+      failed += 1;
+      if (deadLettered) deadLetters.push({ id: invoice.id, error: detail });
+      results.push({ id: invoice.id, ok: false, error: detail });
+    }
+  }
+  await alertDeadLetter(env, 'program invoices', deadLetters);
+  return json(200, { ok: failed === 0, claimed: invoices.length, synced, failed, results });
+}
+
+export async function runAllQboSync({ env, batch = 10 }) {
+  const businessesRes = await runQboBusinessSync({ env, batch });
+  const ordersRes = await runQboSync({ env, batch });
+  const refundsRes = await runQboRefundSync({ env, batch });
+  const subscriptionsRes = await runQboSubscriptionSync({ env, batch });
+  const businesses = await businessesRes.json().catch(() => ({}));
+  const orders = await ordersRes.json().catch(() => ({}));
+  const refunds = await refundsRes.json().catch(() => ({}));
+  const subscriptions = await subscriptionsRes.json().catch(() => ({}));
+  const responses = [businessesRes, ordersRes, refundsRes, subscriptionsRes];
+  const status = responses.find((response) => response.status !== 200)?.status || 200;
+  const synced = [businesses, orders, refunds, subscriptions].reduce((sum, result) => sum + Number(result.synced || 0), 0);
+  const failed = [businesses, orders, refunds, subscriptions].reduce((sum, result) => sum + Number(result.failed || 0), 0);
+  return json(status, {
+    ok: [businesses, orders, refunds, subscriptions].every((result) => result.ok === true),
+    synced,
+    failed,
+    businesses,
+    orders,
+    refunds,
+    subscriptions,
+  });
+}
+
 export async function onRequestPost({ request, env }) {
   let secretCheck;
   try {
@@ -300,12 +469,7 @@ export async function onRequestPost({ request, env }) {
   if (!secretCheck.authorized) {
     return json(401, { error: 'unauthorized' });
   }
-  // Drain both queues each run: order invoices then refund credit memos.
+  // Businesses are linked first, then every financial queue is drained.
   const batch = boundedBatch(request);
-  const ordersRes = await runQboSync({ env, batch });
-  const refundsRes = await runQboRefundSync({ env, batch });
-  const orders = await ordersRes.json().catch(() => ({}));
-  const refunds = await refundsRes.json().catch(() => ({}));
-  const status = ordersRes.status !== 200 ? ordersRes.status : refundsRes.status;
-  return json(status, { ok: Boolean(orders.ok) && Boolean(refunds.ok), orders, refunds });
+  return runAllQboSync({ env, batch });
 }

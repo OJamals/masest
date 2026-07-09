@@ -73,7 +73,7 @@ curl -s "https://masest.co/api/products?cb=$(date +%s)"
 
 ## QuickBooks Online
 
-Apply `supabase/schema-qbo.sql`, `supabase/schema-qbo-refunds.sql` (the refund→credit-memo queue, #22), `supabase/schema-qbo-reaper.sql` (visibility-timeout claim that reclaims stuck `processing` rows, #26), and then `supabase/schema-rpc-hardening.sql`. Apply `supabase/qbo-cron.example.sql` after replacing `<QBO_SYNC_SECRET>`. The cron template requires Supabase `pg_cron`, `pg_net`, and `pgcrypto`, and it stores a SHA-256 hash of the sync secret in Supabase as a fallback when Cloudflare Pages secret edits are unavailable.
+Apply `supabase/schema-qbo.sql`, `supabase/schema-qbo-refunds.sql` (the refund-to-credit-memo queue), `supabase/schema-qbo-subscriptions.sql` (paid Stripe program invoices), `supabase/schema-qbo-reaper.sql` (visibility-timeout claims that reclaim stuck `processing` rows), and then `supabase/schema-rpc-hardening.sql`. Apply `supabase/qbo-cron.example.sql` after replacing `<QBO_SYNC_SECRET>`. The cron template requires Supabase `pg_cron`, `pg_net`, and `pgcrypto`, and it stores a SHA-256 hash of the sync secret in Supabase as a fallback when Cloudflare Pages secret edits are unavailable.
 
 Set QuickBooks config in Cloudflare Pages before enabling the worker. Preferred:
 
@@ -96,3 +96,4 @@ Or set the individual secrets:
 Connect QuickBooks from `admin.html`. The schedule triggers `POST /api/qbo-sync`; manual runs can use the same endpoint with header `x-qbo-sync-secret: $QBO_SYNC_SECRET`.
 Generated NET invoices are created with online card and ACH payment options enabled; the connected QuickBooks Online company must have QuickBooks Payments enabled for those options to appear to buyers.
 Stripe-paid checkout orders sync to QuickBooks as an invoice plus a linked QBO payment. The QBO payment reference is the Stripe PaymentIntent id, so Stripe remains the processor while QuickBooks remains the invoice/accounting source of truth.
+Approved MASEST businesses sync to QuickBooks customers with their Stripe customer id in the customer notes. Paid Stripe program subscription invoices also sync as a QBO invoice plus linked payment, keyed by Stripe invoice id for retry-safe reconciliation. The Stripe webhook must subscribe to `invoice.paid` in addition to the documented checkout, subscription lifecycle, payment-failure, dispute, and refund events.

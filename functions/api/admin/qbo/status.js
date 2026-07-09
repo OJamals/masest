@@ -45,6 +45,41 @@ export async function onRequestGet({ request, env }) {
     qbo_failed_refunds = [];
   }
 
+  let subscription_sync_counts = {};
+  let qbo_failed_subscriptions = [];
+  try {
+    const { data: subscriptionRows } = await sb.from('qbo_subscription_invoices').select('qbo_sync_status');
+    subscription_sync_counts = (subscriptionRows || []).reduce((counts, row) => {
+      const status = row.qbo_sync_status || 'none';
+      counts[status] = (counts[status] || 0) + 1;
+      return counts;
+    }, {});
+    const { data: failedSubscriptions } = await sb.from('qbo_subscription_invoices')
+      .select('id,stripe_invoice_id,tier,total,currency,qbo_error,qbo_attempts,qbo_next_attempt_at,created_at,companies(name)')
+      .eq('qbo_sync_status', 'error')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    qbo_failed_subscriptions = failedSubscriptions || [];
+  } catch {
+    subscription_sync_counts = {};
+    qbo_failed_subscriptions = [];
+  }
+
+  let business_sync_counts = { eligible: 0, linked: 0, pending: 0 };
+  try {
+    const [{ count: eligible }, { count: linked }] = await Promise.all([
+      sb.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'approved'),
+      sb.from('qbo_customers').select('key', { count: 'exact', head: true }).like('key', 'company:%'),
+    ]);
+    business_sync_counts = {
+      eligible: eligible || 0,
+      linked: linked || 0,
+      pending: Math.max(0, (eligible || 0) - (linked || 0)),
+    };
+  } catch {
+    business_sync_counts = { eligible: 0, linked: 0, pending: 0 };
+  }
+
   const sync_counts = (syncRows || []).reduce((counts, row) => {
     const status = row.qbo_sync_status || 'none';
     counts[status] = (counts[status] || 0) + 1;
@@ -60,7 +95,10 @@ export async function onRequestGet({ request, env }) {
     updated_at: data?.updated_at || null,
     sync_counts,
     refund_sync_counts,
+    subscription_sync_counts,
+    business_sync_counts,
     qbo_failed_orders: qbo_failed_orders || [],
     qbo_failed_refunds,
+    qbo_failed_subscriptions,
   });
 }

@@ -40,6 +40,7 @@ export function netOrderRow(companyId, subtotal) {
     company_id: companyId,
     status: "net_open",
     payment_method: "net",
+    qbo_sync_status: "pending",
     subtotal,
     total: subtotal,
     currency: "usd",

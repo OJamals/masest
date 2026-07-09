@@ -11,6 +11,7 @@ import {
   stockIncrements,
   isSubscriptionCheckout,
   subscriptionRow,
+  qboSubscriptionInvoiceRow,
 } from "../functions/_lib/order-shape.js";
 import { cartMetadataEntries } from "../functions/_lib/checkout-session.js";
 
@@ -165,4 +166,38 @@ test("subscriptionRow mirrors the program_subscriptions upsert", () => {
   assert.deepEqual(subscriptionRow({}), {
     company_id: null, tier: null, stripe_subscription_id: null, stripe_customer_id: null, status: "active",
   });
+});
+
+test("qboSubscriptionInvoiceRow queues paid Stripe program invoices exactly once", () => {
+  assert.deepEqual(qboSubscriptionInvoiceRow({
+    id: "in_123",
+    subscription: "sub_123",
+    customer: "cus_123",
+    payment_intent: "pi_123",
+    customer_email: "billing@example.test",
+    currency: "usd",
+    total: 10900,
+    total_tax_amounts: [{ amount: 900 }],
+    lines: { data: [{ description: "VertKleen Gold program" }] },
+  }, { companyId: "co-1", tier: "Gold" }), {
+    company_id: "co-1",
+    stripe_invoice_id: "in_123",
+    stripe_subscription_id: "sub_123",
+    stripe_customer_id: "cus_123",
+    stripe_payment_intent: "pi_123",
+    customer_email: "billing@example.test",
+    tier: "Gold",
+    description: "VertKleen Gold program",
+    subtotal: 100,
+    tax: 9,
+    total: 109,
+    currency: "usd",
+    qbo_sync_status: "pending",
+  });
+});
+
+test("qboSubscriptionInvoiceRow records zero-dollar program invoices as skipped", () => {
+  const row = qboSubscriptionInvoiceRow({ id: "in_zero", total: 0 }, { companyId: "co-1", tier: "Silver" });
+  assert.equal(row.total, 0);
+  assert.equal(row.qbo_sync_status, "skipped");
 });

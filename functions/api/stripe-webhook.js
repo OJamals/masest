@@ -26,6 +26,7 @@ import {
   stockDecrements,
   isSubscriptionCheckout,
   subscriptionRow,
+  qboSubscriptionInvoiceRow,
 } from '../_lib/order-shape.js';
 
 export { htmlEscape as escapeHtml } from '../_lib/supabase.js';
@@ -430,8 +431,14 @@ export async function onRequestPost({ request, env }) {
   if (event.type === 'invoice.paid' && event.data.object?.subscription) {
     const sb = adminClient(env);
     const inv = event.data.object;
-    const { data: row } = await sb.from('program_subscriptions')
-      .select('status,company_id').eq('stripe_subscription_id', inv.subscription).maybeSingle();
+    const { data: row, error: subscriptionError } = await sb.from('program_subscriptions')
+      .select('status,company_id,tier').eq('stripe_subscription_id', inv.subscription).maybeSingle();
+    if (subscriptionError) return json(503, { error: 'program_subscription_lookup_failed' });
+    const qboRow = qboSubscriptionInvoiceRow(inv, { companyId: row?.company_id, tier: row?.tier });
+    if (!qboRow.company_id) return json(503, { error: 'program_subscription_not_recorded_yet' });
+    const { error: qboQueueError } = await sb.from('qbo_subscription_invoices')
+      .upsert(qboRow, { onConflict: 'stripe_invoice_id', ignoreDuplicates: true });
+    if (qboQueueError) return json(503, { error: 'qbo_subscription_queue_failed' });
     const plan = planRecoveredPayment(inv);
     if (!plan.companyId && row?.company_id) plan.companyId = row.company_id;
     await sb.from('program_subscriptions').update({ status: plan.status })

@@ -49,7 +49,9 @@ test("qbo-sync endpoint posts claimed orders and records terminal sync state", (
 });
 test("qbo-sync exposes a reusable worker for staff-triggered manual runs", () => {
   assert.match(SRC, /export async function runQboSync\(/,
-    "admin-triggered sync should call the same worker used by cron");
-  assert.match(SRC, /onRequestPost[\s\S]*runQboSync\(/,
-    "public cron endpoint should delegate to the reusable worker after secret auth");
+    "order sync should remain independently reusable");
+  assert.match(SRC, /export async function runAllQboSync\(/,
+    "admin and cron sync should share the all-financials orchestrator");
+  assert.match(SRC, /onRequestPost[\s\S]*runAllQboSync\(/,
+    "public cron endpoint should delegate to the all-financials worker after secret auth");
 });

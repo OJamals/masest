@@ -37,21 +37,22 @@ test('disconnect endpoint revokes then clears local tokens', () => {
 
 test('reaper claim reclaims stuck processing rows via a visibility-timeout lease', () => {
   const sql = read('supabase/schema-qbo-reaper.sql');
-  for (const fn of ['claim_qbo_orders', 'claim_qbo_refunds']) {
+  for (const fn of ['claim_qbo_orders', 'claim_qbo_refunds', 'claim_qbo_subscription_invoices']) {
     assert.match(sql, new RegExp(`function public\\.${fn}`));
   }
-  // both claims must now consider 'processing' (not just 'pending') and stamp a lease
+  // every claim must consider 'processing' (not just 'pending') and stamp a lease
   const inClause = sql.match(/qbo_sync_status in \('pending', 'processing'\)/g) || [];
-  assert.equal(inClause.length, 2, 'both claim fns reclaim processing');
+  assert.equal(inClause.length, 3, 'all claim fns reclaim processing');
   const lease = sql.match(/qbo_next_attempt_at = now\(\) \+ interval '15 minutes'/g) || [];
-  assert.equal(lease.length, 2, 'both claim fns stamp a lease');
+  assert.equal(lease.length, 3, 'all claim fns stamp a lease');
 });
 
-test('worker alerts staff on dead-letter for both queues', () => {
+test('worker alerts staff on dead-letter for every financial queue', () => {
   const src = read('functions/api/qbo-sync.js');
   assert.match(src, /async function alertDeadLetter/);
   assert.match(src, /sendEmail/);
   assert.match(src, /alertDeadLetter\(env, 'orders'/);
   assert.match(src, /alertDeadLetter\(env, 'refunds'/);
+  assert.match(src, /alertDeadLetter\(env, 'program invoices'/);
   assert.match(src, /deadLettered/);
 });

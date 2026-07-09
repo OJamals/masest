@@ -6,6 +6,7 @@
 revoke all on function public.admin_order_metrics() from public;
 revoke all on function public.claim_qbo_orders(int) from public;
 revoke all on function public.claim_qbo_refunds(int) from public;
+revoke all on function public.claim_qbo_subscription_invoices(int) from public;
 revoke all on function public.create_company_address(uuid, address_type, text, text, text, text, text, boolean) from public;
 revoke all on function public.decrement_variant_stock(text, integer) from public;
 revoke all on function public.increment_variant_stock(text, integer) from public;
@@ -15,6 +16,7 @@ revoke all on function public.current_company_id() from public;
 grant execute on function public.admin_order_metrics() to service_role;
 grant execute on function public.claim_qbo_orders(int) to service_role;
 grant execute on function public.claim_qbo_refunds(int) to service_role;
+grant execute on function public.claim_qbo_subscription_invoices(int) to service_role;
 grant execute on function public.create_company_address(uuid, address_type, text, text, text, text, text, boolean) to service_role;
 grant execute on function public.decrement_variant_stock(text, integer) to service_role;
 grant execute on function public.increment_variant_stock(text, integer) to service_role;

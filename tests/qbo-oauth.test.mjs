@@ -85,7 +85,7 @@ test("admin QuickBooks panel exposes a staff-triggered manual sync", () => {
 test("admin QBO sync endpoint is staff-gated and delegates to the worker", () => {
   const src = read("functions/api/admin/qbo/sync.js");
   assert.match(src, /requireStaff\(/, "manual QBO sync endpoint must require staff");
-  assert.match(src, /runQboSync\(/, "manual endpoint must reuse the QBO worker");
+  assert.match(src, /runAllQboSync\(/, "manual endpoint must reuse the all-financials QBO worker");
   assert.match(src, /json\(401,\s*\{\s*error:\s*'unauthenticated'/,
     "manual endpoint must reject unauthenticated callers");
   assert.match(src, /json\(403,\s*\{\s*error:\s*'forbidden'/,

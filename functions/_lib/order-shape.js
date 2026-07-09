@@ -128,6 +128,37 @@ export function subscriptionRow(session) {
   };
 }
 
+function stripeId(value) {
+  if (typeof value === "string") return value;
+  return value?.id || null;
+}
+
+// One paid Stripe subscription invoice becomes one idempotent QBO queue row.
+// Store the accounting total exactly as Stripe reported it; a single service line
+// carries revenue before tax so the eventual QBO invoice and payment reconcile.
+export function qboSubscriptionInvoiceRow(invoice, { companyId, tier } = {}) {
+  const inv = invoice || {};
+  const total = centsToAmount(inv.total);
+  const tax = centsToAmount((inv.total_tax_amounts || []).reduce((sum, row) => sum + Number(row?.amount || 0), 0));
+  const subtotal = Math.max(0, Number((total - tax).toFixed(2)));
+  const description = String(inv.lines?.data?.[0]?.description || `VertKleen ${tier || "Business"} program`).trim();
+  return {
+    company_id: companyId || null,
+    stripe_invoice_id: inv.id || null,
+    stripe_subscription_id: stripeId(inv.subscription),
+    stripe_customer_id: stripeId(inv.customer),
+    stripe_payment_intent: stripeId(inv.payment_intent),
+    customer_email: inv.customer_email || null,
+    tier: tier || null,
+    description,
+    subtotal,
+    tax,
+    total,
+    currency: inv.currency || "usd",
+    qbo_sync_status: total > 0 ? "pending" : "skipped",
+  };
+}
+
 // A subscription is live (bills the customer) until terminally canceled. A tier
 // change for any of these MUST swap the price on the SAME Stripe subscription —
 // creating a second one would double-bill.

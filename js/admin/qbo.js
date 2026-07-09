@@ -11,6 +11,10 @@ function failedRefundName(refund) {
   return `Refund ${refund.id}`;
 }
 
+function failedSubscriptionName(invoice) {
+  return invoice.companies?.name || invoice.tier || invoice.stripe_invoice_id || invoice.id;
+}
+
 function qboErrorLabel(error) {
   return {
     qbo_oauth_not_configured: "OAuth not configured",
@@ -19,10 +23,10 @@ function qboErrorLabel(error) {
   }[error] || error || "Unknown QuickBooks error";
 }
 
-function renderFailedOrders(orders = [], refunds = []) {
+function renderFailedOrders(orders = [], refunds = [], subscriptions = []) {
   const root = $("qboFailedOrders");
   if (!root) return;
-  if (!orders.length && !refunds.length) {
+  if (!orders.length && !refunds.length && !subscriptions.length) {
     root.innerHTML = "";
     return;
   }
@@ -43,10 +47,18 @@ function renderFailedOrders(orders = [], refunds = []) {
       attempts: refund.qbo_attempts || 0,
       error: qboErrorLabel(refund.qbo_error),
     })),
+    ...subscriptions.map((invoice) => ({
+      kind: "subscription",
+      id: invoice.id,
+      label: failedSubscriptionName(invoice),
+      total: money(invoice.total, invoice.currency || "USD"),
+      attempts: invoice.qbo_attempts || 0,
+      error: qboErrorLabel(invoice.qbo_error),
+    })),
   ];
   root.innerHTML = `
     <h3>Sync follow-up</h3>
-    <p class="muted adm-qbo-help">Resolve the readiness issue, then retry affected orders or refund credit memos from here.</p>
+    <p class="muted adm-qbo-help">Resolve the readiness issue, then retry affected orders, refunds, or program invoices from here.</p>
     <div class="adm-table-wrap">
       <table class="adm">
         <thead><tr><th>Type</th><th>Record</th><th>Amount</th><th>Attempts</th><th>Error</th><th></th></tr></thead>
@@ -122,9 +134,11 @@ export async function renderQboStatus() {
     if (summary) {
       const counts = info.sync_counts || {};
       const refundCounts = info.refund_sync_counts || {};
-      summary.textContent = `Orders: ${qboQueueText(counts)} · Refunds: ${qboQueueText(refundCounts)}`;
+      const subscriptionCounts = info.subscription_sync_counts || {};
+      const businessCounts = info.business_sync_counts || {};
+      summary.textContent = `Businesses: ${businessCounts.linked || 0}/${businessCounts.eligible || 0} linked · Orders: ${qboQueueText(counts)} · Programs: ${qboQueueText(subscriptionCounts)} · Refunds: ${qboQueueText(refundCounts)}`;
     }
-    renderFailedOrders(info.qbo_failed_orders || [], info.qbo_failed_refunds || []);
+    renderFailedOrders(info.qbo_failed_orders || [], info.qbo_failed_refunds || [], info.qbo_failed_subscriptions || []);
   } catch (err) {
     status.textContent = err.data?.error || "QuickBooks status unavailable.";
     status.dataset.state = "err";
@@ -210,7 +224,11 @@ export async function retryQboOrder(orderId, kind = "order") {
   try {
     await api("/api/admin/qbo/retry", { method: "POST", body: { id: orderId, kind } });
     if (status) {
-      status.textContent = kind === "refund" ? "Refund credit memo requeued for QuickBooks sync." : "Order requeued for QuickBooks sync.";
+      status.textContent = kind === "refund"
+        ? "Refund credit memo requeued for QuickBooks sync."
+        : kind === "subscription"
+          ? "Program invoice requeued for QuickBooks sync."
+          : "Order requeued for QuickBooks sync.";
       status.dataset.state = "ok";
     }
     await renderQboStatus();

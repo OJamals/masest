@@ -62,6 +62,7 @@ test("netOrderRow builds a NET invoice order shape", () => {
     company_id: "co-123",
     status: "net_open",
     payment_method: "net",
+    qbo_sync_status: "pending",
     subtotal: 49.99,
     total: 49.99,
     currency: "usd",

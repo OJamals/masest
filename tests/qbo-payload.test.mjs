@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { buildInvoicePayload, buildInvoicePaymentPayload, qboItemType } from "../functions/_lib/qbo.js";
+import {
+  buildInvoicePayload,
+  buildInvoicePaymentPayload,
+  qboCustomerPayload,
+  qboItemType,
+  subscriptionItemsForQbo,
+  subscriptionOrderForQbo,
+} from "../functions/_lib/qbo.js";
 
 const order = {
   id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -92,4 +99,74 @@ test("findOrCreateItem no longer hardcodes Type:'Service' + SalesReceipt stub re
   const src = readFileSync(new URL('../functions/_lib/qbo.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /buildSalesReceiptPayload/, 'dead SalesReceipt stub must be gone');
   assert.match(src, /Type:\s*qboItemType\(/, 'item type must be derived, not hardcoded Service');
+});
+
+test("business customers carry Stripe and billing identity into QuickBooks", () => {
+  assert.deepEqual(qboCustomerPayload({
+    key: "company:co-1",
+    displayName: "O'Brien Industrial",
+    email: "billing@example.test",
+    phone: "+1 313 555 0199",
+    stripeCustomerId: "cus_123",
+    billingAddress: {
+      line1: "100 Main St",
+      line2: "Suite 4",
+      city: "Detroit",
+      state: "MI",
+      zip: "48201",
+      country: "US",
+    },
+  }), {
+    DisplayName: "O'Brien Industrial",
+    CompanyName: "O'Brien Industrial",
+    PrimaryEmailAddr: { Address: "billing@example.test" },
+    PrimaryPhone: { FreeFormNumber: "+1 313 555 0199" },
+    BillAddr: {
+      Line1: "100 Main St",
+      Line2: "Suite 4",
+      City: "Detroit",
+      CountrySubDivisionCode: "MI",
+      PostalCode: "48201",
+      Country: "US",
+    },
+    Notes: "MASEST company co-1; Stripe customer cus_123",
+  });
+});
+
+test("Stripe program invoices reuse the invoice plus payment accounting path", () => {
+  const row = {
+    stripe_invoice_id: "in_123",
+    stripe_subscription_id: "sub_123",
+    stripe_customer_id: "cus_123",
+    stripe_payment_intent: "pi_123",
+    company_id: "co-1",
+    customer_email: "billing@example.test",
+    tier: "Gold",
+    description: "VertKleen Gold program",
+    subtotal: 100,
+    tax: 9,
+    total: 109,
+    currency: "usd",
+  };
+  assert.deepEqual(subscriptionOrderForQbo(row), {
+    id: "in_123",
+    company_id: "co-1",
+    customer_email: "billing@example.test",
+    payment_method: "stripe",
+    stripe_payment_intent: "pi_123",
+    subtotal: 100,
+    tax: 9,
+    total: 109,
+    currency: "usd",
+    qbo_private_note: "Stripe subscription invoice in_123 (sub_123)",
+    qbo_payment_note: "Stripe payment for subscription invoice in_123",
+  });
+  assert.deepEqual(subscriptionItemsForQbo(row), [{
+    sku: "program:gold",
+    name: "VertKleen Gold program",
+    type: "service",
+    qty: 1,
+    unit_price: 100,
+    line_total: 100,
+  }]);
 });

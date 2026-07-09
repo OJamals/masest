@@ -1,12 +1,12 @@
 -- #26 — reaper for stuck QBO sync rows.
--- claim_qbo_orders/claim_qbo_refunds flip rows to 'processing' under FOR UPDATE SKIP
+-- QBO claim functions flip rows to 'processing' under FOR UPDATE SKIP
 -- LOCKED, but if the worker dies mid-batch the row stays 'processing' forever — the old
 -- claim only looked at 'pending', so it was orphaned. Fix: treat qbo_next_attempt_at as
 -- a visibility-timeout lease (SQS-style). On claim, stamp it now()+15min; a row is
 -- claimable when its lease has expired, whether it's 'pending' (retry backoff elapsed)
 -- or 'processing' (worker died, lease elapsed). markSynced clears it on success; a
 -- handled failure resets it to a fresh backoff. No separate reaper job needed.
--- Run after schema-qbo.sql and schema-qbo-refunds.sql.
+-- Run after schema-qbo.sql, schema-qbo-refunds.sql, and schema-qbo-subscriptions.sql.
 
 create or replace function public.claim_qbo_orders(batch int)
 returns setof public.orders
@@ -56,7 +56,33 @@ begin
 end
 $$;
 
+create or replace function public.claim_qbo_subscription_invoices(batch int)
+returns setof public.qbo_subscription_invoices
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return query
+  update public.qbo_subscription_invoices i
+  set qbo_sync_status = 'processing',
+      qbo_next_attempt_at = now() + interval '15 minutes'
+  where i.id in (
+    select id
+    from public.qbo_subscription_invoices
+    where qbo_sync_status in ('pending', 'processing')
+      and (qbo_next_attempt_at is null or qbo_next_attempt_at <= now())
+    order by created_at
+    limit batch
+    for update skip locked
+  )
+  returning i.*;
+end
+$$;
+
 revoke all on function public.claim_qbo_orders(int) from public;
 revoke all on function public.claim_qbo_refunds(int) from public;
+revoke all on function public.claim_qbo_subscription_invoices(int) from public;
 grant execute on function public.claim_qbo_orders(int) to service_role;
 grant execute on function public.claim_qbo_refunds(int) to service_role;
+grant execute on function public.claim_qbo_subscription_invoices(int) to service_role;

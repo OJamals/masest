@@ -1,7 +1,7 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
 import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js';
-import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260709c';
+import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260709d';
 import { editKey, captureDirty, restoreDirty } from './admin/edits.js?v=20260709b';
 import { createTrafficRenderer } from './admin/traffic.js?v=20260709b';
 import { createSeoAudit } from './admin/seo.js?v=20260709b';

@@ -100,12 +100,44 @@ function billEmailFor(order) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? { Address: email } : null;
 }
 
+function cleanText(value, max = 100) {
+  return String(value || '').trim().slice(0, max);
+}
+
+export function qboCustomerPayload({ key, displayName, email, phone, billingAddress, stripeCustomerId } = {}) {
+  const name = cleanText(displayName || key || 'MASEST Customer');
+  const validEmail = billEmailFor({ customer_email: email });
+  const phoneValue = cleanText(phone, 30);
+  const address = billingAddress || {};
+  const billAddr = {
+    ...(cleanText(address.line1) ? { Line1: cleanText(address.line1) } : {}),
+    ...(cleanText(address.line2) ? { Line2: cleanText(address.line2) } : {}),
+    ...(cleanText(address.city) ? { City: cleanText(address.city) } : {}),
+    ...(cleanText(address.state, 20) ? { CountrySubDivisionCode: cleanText(address.state, 20) } : {}),
+    ...(cleanText(address.zip, 30) ? { PostalCode: cleanText(address.zip, 30) } : {}),
+    ...(cleanText(address.country, 3) ? { Country: cleanText(address.country, 3) } : {}),
+  };
+  const companyId = String(key || '').startsWith('company:') ? String(key).slice(8) : '';
+  const notes = [
+    companyId ? `MASEST company ${companyId}` : '',
+    stripeCustomerId ? `Stripe customer ${cleanText(stripeCustomerId, 80)}` : '',
+  ].filter(Boolean).join('; ');
+  return {
+    DisplayName: name,
+    ...(companyId ? { CompanyName: name } : {}),
+    ...(validEmail ? { PrimaryEmailAddr: validEmail } : {}),
+    ...(phoneValue ? { PrimaryPhone: { FreeFormNumber: phoneValue } } : {}),
+    ...(Object.keys(billAddr).length ? { BillAddr: billAddr } : {}),
+    ...(notes ? { Notes: notes } : {}),
+  };
+}
+
 function baseDocumentPayload({ order, items, customerRef, itemRefs, taxExempt = false }) {
   const billEmail = billEmailFor(order);
   return {
     CustomerRef: { value: customerRef },
     DocNumber: docNumber(order.id),
-    PrivateNote: `MASEST order ${order.id}`,
+    PrivateNote: order.qbo_private_note || `MASEST order ${order.id}`,
     Line: (items || []).map((item) => lineFor(item, itemRefs, taxExempt)),
     TxnTaxDetail: { TotalTax: Number(order.tax || 0) },
     ...(billEmail ? { BillEmail: billEmail } : {}),
@@ -137,7 +169,7 @@ export function buildInvoicePaymentPayload({ order, customerRef, invoiceId }) {
     CustomerRef: { value: customerRef },
     TotalAmt: total,
     PaymentRefNum: order?.stripe_payment_intent || docNumber(order?.id),
-    PrivateNote: `Stripe payment for MASEST order ${order?.id}`,
+    PrivateNote: order?.qbo_payment_note || `Stripe payment for MASEST order ${order?.id}`,
     Line: [
       {
         Amount: total,
@@ -222,6 +254,48 @@ export function documentPlanFor(order, companyNames = {}) {
     entity: 'Invoice',
     customer: { key: 'generic', displayName: GENERIC_CUSTOMER_NAME },
   };
+}
+
+export function subscriptionOrderForQbo(row = {}) {
+  return {
+    id: row.stripe_invoice_id,
+    company_id: row.company_id || null,
+    customer_email: row.customer_email || null,
+    payment_method: 'stripe',
+    stripe_payment_intent: row.stripe_payment_intent || row.stripe_invoice_id,
+    subtotal: Number(row.subtotal || 0),
+    tax: Number(row.tax || 0),
+    total: Number(row.total || 0),
+    currency: row.currency || 'usd',
+    qbo_private_note: `Stripe subscription invoice ${row.stripe_invoice_id} (${row.stripe_subscription_id || 'subscription'})`,
+    qbo_payment_note: `Stripe payment for subscription invoice ${row.stripe_invoice_id}`,
+  };
+}
+
+export function subscriptionItemsForQbo(row = {}) {
+  const tier = cleanText(row.tier || 'business', 50);
+  const amount = Number(row.subtotal || 0);
+  return [{
+    sku: `program:${tier.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    name: cleanText(row.description || `VertKleen ${tier} program`),
+    type: 'service',
+    qty: 1,
+    unit_price: amount,
+    line_total: amount,
+  }];
+}
+
+export async function syncSubscriptionInvoice(sb, env, accessToken, realmId, row, companyNames = {}, options = {}) {
+  return syncOrder(
+    sb,
+    env,
+    accessToken,
+    realmId,
+    subscriptionOrderForQbo(row),
+    subscriptionItemsForQbo(row),
+    companyNames,
+    options,
+  );
 }
 
 export async function syncOrder(sb, env, accessToken, realmId, order, items = [], companyNames = {}, options = {}) {
@@ -368,7 +442,8 @@ async function resolveIncomeAccountRef(env, accessToken, realmId, options = {}) 
   return accountId;
 }
 
-export async function findOrCreateCustomer(sb, env, accessToken, realmId, { key, displayName }, options = {}) {
+export async function findOrCreateCustomer(sb, env, accessToken, realmId, input, options = {}) {
+  const { key, displayName } = input || {};
   const { data: cached, error } = await sb
     .from('qbo_customers')
     .select('key,qbo_customer_id')
@@ -378,11 +453,12 @@ export async function findOrCreateCustomer(sb, env, accessToken, realmId, { key,
   if (cached?.qbo_customer_id) return cached.qbo_customer_id;
 
   const opts = qboOptions(options);
-  const safeName = qboString(displayName || key || 'MASEST Customer');
+  const payload = qboCustomerPayload(input);
+  const safeName = qboString(payload.DisplayName);
   const found = await qboQuery(env, accessToken, realmId, `select Id from Customer where DisplayName = '${safeName}' maxresults 1`, { ...opts, operation: 'query:Customer' });
   let customerId = found.QueryResponse?.Customer?.[0]?.Id;
   if (!customerId) {
-    const created = await qboCreate(env, accessToken, realmId, 'Customer', { DisplayName: safeName }, opts);
+    const created = await qboCreate(env, accessToken, realmId, 'Customer', payload, opts);
     customerId = created.Customer?.Id;
   }
   if (!customerId) throw new Error('qbo_customer_id_missing');
