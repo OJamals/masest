@@ -15,7 +15,7 @@ import { createCrmPanel } from './admin/crm.js?v=20260709b';
 import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js?v=20260709b';
 import { createQuotesTab } from './admin/quotes.js?v=20260709b';
 import { createCrmWorkspace } from './admin/crm-workspace.js?v=20260709b';
-import { createReviewsTab } from './admin/reviews.js?v=20260709b';
+import { createReviewsTab } from './admin/reviews.js?v=20260709c';
 import { createNewsletterTab } from './admin/newsletter.js?v=20260709b';
 import { createInventoryCard } from './admin/inventory.js?v=20260709b';
 import { createCouponsCard } from './admin/coupons.js?v=20260709b';
@@ -362,7 +362,7 @@ const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({ 
 const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats });
 
 // Reviews moderation tab (plan Task 13). Shared primitives + statusBadge/badge injected.
-const { renderReviews, wireReviews, wireReviewSeedForm, refreshReviewsBadge } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });
+const { renderReviews, wireReviews, wireManualReviewForm, refreshReviewsBadge } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });
 const { renderNewsletter, wireNewsletter } = createNewsletterTab({ $, api, state, message, admSkeleton, admEmpty, badge });
 
 // Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
@@ -489,8 +489,8 @@ function wire() {
   wireCrm();
   wireThreads();
   wireReviews();
+  wireManualReviewForm();
   wireNewsletter();
-  wireReviewSeedForm();
 }
 
 wire();

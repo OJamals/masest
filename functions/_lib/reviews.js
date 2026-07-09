@@ -8,6 +8,8 @@ export function escapeHtml(s) {
 const TITLE_MAX = 120;
 const BODY_MAX = 4000;
 const NAME_MAX = 80;
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const RESERVED_AUTHOR_EMAILS = new Set(["seed@masest.co"]);
 
 export function validateReviewInput(input = {}) {
   const rating = Number(input.rating);
@@ -21,6 +23,33 @@ export function validateReviewInput(input = {}) {
   const body = String(input.body || "").trim().slice(0, BODY_MAX);
   const author_name = String(input.author_name || "").trim().slice(0, NAME_MAX);
   return { ok: true, value: { rating, sku, kind, title, body, author_name } };
+}
+
+export function buildStaffReviewInsert(input = {}) {
+  const v = validateReviewInput(input);
+  if (!v.ok) return v;
+  const author_name = String(v.value.author_name || "").trim();
+  if (!author_name) return { ok: false, error: "missing_author_name" };
+  const author_email = String(input.author_email || "").trim().toLowerCase();
+  if (!author_email) return { ok: false, error: "missing_author_email" };
+  if (RESERVED_AUTHOR_EMAILS.has(author_email)) return { ok: false, error: "reserved_author_email" };
+  if (!EMAIL_RE.test(author_email)) return { ok: false, error: "invalid_author_email" };
+  return {
+    ok: true,
+    row: {
+      kind: v.value.kind,
+      sku: v.value.sku,
+      order_id: null,
+      author_name,
+      author_email,
+      rating: v.value.rating,
+      title: v.value.title || null,
+      body: v.value.body || null,
+      verified_purchase: false,
+      source: "staff_manual",
+      status: "approved",
+    },
+  };
 }
 
 // Subject binds a token to exactly one order+sku+email so an email link can authorize

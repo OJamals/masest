@@ -1,6 +1,6 @@
 // Admin Reviews moderation tab (#36 per-tab split pattern, plan Task 13). Lists
-// product_reviews for approve/reject/edit/delete against /api/admin/reviews, plus a
-// staff "seed" review form (action:'create_seed', auto-approved verified reviews).
+// product_reviews for approve/reject/edit/delete against /api/admin/reviews, plus
+// manual staff-entered reviews that are not purchase-verified.
 // Shared primitives ($, api, state, message, admSkeleton, admEmpty) and the
 // admin-local statusBadge / badge helpers are injected; esc/confirmDialog/delegate/
 // dateTime come from util.js — mirrors js/admin/threads.js + js/admin/orders.js.
@@ -141,37 +141,40 @@ export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty
     });
   }
 
-  // Staff seed form: a direct submit handler (not delegated — there is exactly one
-  // static form, same pattern as offers.js's wireOfferForm).
-  function wireReviewSeedForm() {
-    const form = $('rvSeedForm');
+  function wireManualReviewForm() {
+    const form = $('rvManualForm');
     if (!form) return;
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const sku = $('rvSku').value.trim();
-      if (!sku) { message('rvSeedStatus', 'Enter a SKU.', 'err'); return; }
-      message('rvSeedStatus', 'Adding...');
+      const authorName = $('rvAuthor').value.trim();
+      const authorEmail = $('rvAuthorEmail').value.trim();
+      if (!sku) { message('rvManualStatus', 'Enter a SKU.', 'err'); return; }
+      if (!authorName) { message('rvManualStatus', 'Enter the customer name.', 'err'); return; }
+      if (!authorEmail) { message('rvManualStatus', 'Enter the customer email.', 'err'); return; }
+      message('rvManualStatus', 'Adding...');
       try {
         await api('/api/admin/reviews', {
           method: 'POST',
           body: {
-            action: 'create_seed',
+            action: 'create_manual',
             kind: $('rvKind').value,
             sku,
             rating: Number($('rvRating').value),
-            author_name: $('rvAuthor').value.trim(),
+            author_name: authorName,
+            author_email: $('rvAuthorEmail').value.trim(),
             title: $('rvTitle').value.trim(),
             body: $('rvBody').value.trim(),
           },
         });
-        message('rvSeedStatus', 'Review added.', 'ok');
-        ['rvSku', 'rvAuthor', 'rvTitle', 'rvBody'].forEach((id) => { $(id).value = ''; });
+        message('rvManualStatus', 'Review added.', 'ok');
+        ['rvSku', 'rvAuthor', 'rvAuthorEmail', 'rvTitle', 'rvBody'].forEach((id) => { $(id).value = ''; });
         await renderReviews({ refetch: true });
       } catch (err) {
-        message('rvSeedStatus', err.data?.error || 'Could not add the review. Retry.', 'err');
+        message('rvManualStatus', err.data?.error || 'Could not add the review. Retry.', 'err');
       }
     });
   }
 
-  return { renderReviews, wireReviews, wireReviewSeedForm, refreshReviewsBadge };
+  return { renderReviews, wireReviews, wireManualReviewForm, refreshReviewsBadge };
 }

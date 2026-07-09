@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateReviewInput, escapeHtml } from "../functions/_lib/reviews.js";
+import { validateReviewInput, escapeHtml, buildStaffReviewInsert } from "../functions/_lib/reviews.js";
 
 test("validateReviewInput accepts a good review, clamps + trims", () => {
   const r = validateReviewInput({ rating: "5", title: "  Great  ", body: "Worked well", kind: "product", sku: "cr" });
@@ -30,6 +30,40 @@ test("validateReviewInput caps title/body length", () => {
 
 test("escapeHtml neutralizes markup", () => {
   assert.equal(escapeHtml('<b>&"x"</b>'), "&lt;b&gt;&amp;&quot;x&quot;&lt;/b&gt;");
+});
+
+test("buildStaffReviewInsert creates explicit non-verified staff reviews", () => {
+  const result = buildStaffReviewInsert({
+    kind: "product",
+    sku: " hcr ",
+    rating: "5",
+    author_name: " Buyer ",
+    author_email: " Buyer@Example.COM ",
+    title: " Field result ",
+    body: "Documented customer feedback.",
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.row, {
+    kind: "product",
+    sku: "hcr",
+    order_id: null,
+    author_name: "Buyer",
+    author_email: "buyer@example.com",
+    rating: 5,
+    title: "Field result",
+    body: "Documented customer feedback.",
+    verified_purchase: false,
+    source: "staff_manual",
+    status: "approved",
+  });
+});
+
+test("buildStaffReviewInsert rejects missing identity and synthetic author emails", () => {
+  assert.equal(buildStaffReviewInsert({ rating: 5, sku: "hcr", author_email: "buyer@example.com" }).error, "missing_author_name");
+  assert.equal(buildStaffReviewInsert({ rating: 5, sku: "hcr", author_name: "Buyer" }).error, "missing_author_email");
+  assert.equal(buildStaffReviewInsert({ rating: 5, sku: "hcr", author_name: "Buyer", author_email: "seed@masest.co" }).error, "reserved_author_email");
+  assert.equal(buildStaffReviewInsert({ rating: 5, sku: "hcr", author_name: "Buyer", author_email: "not-an-email" }).error, "invalid_author_email");
 });
 
 // append to tests/reviews-lib.test.mjs

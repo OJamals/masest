@@ -4,7 +4,7 @@
 // then staffCanWrite(role) gates mutations so read_only staff can view but never change data.
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
-import { validateReviewInput } from '../../_lib/reviews.js';
+import { buildStaffReviewInsert } from '../../_lib/reviews.js';
 
 const REVIEW_SELECT = 'id,kind,sku,rating,title,body,author_name,author_email,verified_purchase,source,status,staff_note,created_at';
 
@@ -59,16 +59,10 @@ export async function onRequestPost({ request, env }) {
     return error ? json(500, { error: 'delete_failed' }) : json(200, { ok: true });
   }
 
-  if (body.action === 'create_seed') {
-    const v = validateReviewInput(body || {});
-    if (!v.ok) return json(400, { error: v.error });
-    const { rating, sku, kind, title, body: text, author_name } = v.value;
-    const { error } = await sb.from('product_reviews').insert({
-      kind, sku, order_id: null, author_name: author_name || 'MASEST customer',
-      author_email: String(body.author_email || 'seed@masest.co').toLowerCase(),
-      rating, title: title || null, body: text || null,
-      verified_purchase: true, source: 'staff_seed', status: 'approved',
-    });
+  if (body.action === 'create_manual') {
+    const built = buildStaffReviewInsert(body || {});
+    if (!built.ok) return json(400, { error: built.error });
+    const { error } = await sb.from('product_reviews').insert(built.row);
     return error ? json(500, { error: 'save_failed' }) : json(200, { ok: true });
   }
 

@@ -781,18 +781,19 @@
         <div id="admReviews" class="adm-panel-list">Loading...</div>
         <p id="rvStatus" class="adm-status" role="status" aria-live="polite"></p>
         <div class="adm-card">
-          <h2>Add a review (staff seed)</h2>
-          <p class="muted">Adds an auto-approved, verified-purchase review — for seeding a new SKU's reviews before real orders arrive.</p>
-          <form onsubmit="return false" id="rvSeedForm" class="adm-form-grid">
+          <h2>Add a manual review</h2>
+          <p class="muted">Adds documented customer feedback. Verified-purchase badges remain tied to real fulfilled orders.</p>
+          <form onsubmit="return false" id="rvManualForm" class="adm-form-grid">
             <label>Kind <select id="rvKind" class="adm-select"><option value="product">Product</option><option value="service">Service</option></select></label>
             <label>SKU <input id="rvSku" class="adm-input" required></label>
             <label>Rating <select id="rvRating" class="adm-select"><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select></label>
-            <label>Author name <input id="rvAuthor" class="adm-input" placeholder="MASEST customer"></label>
+            <label>Author name <input id="rvAuthor" class="adm-input" required></label>
+            <label>Author email <input id="rvAuthorEmail" class="adm-input" type="email" required></label>
             <label class="wide">Title <input id="rvTitle" class="adm-input"></label>
             <label class="full">Body <textarea id="rvBody" class="adm-textarea"></textarea></label>
             <button class="btn btn-primary" type="submit">Add review</button>
           </form>
-          <p id="rvSeedStatus" class="adm-status" role="status" aria-live="polite"></p>
+          <p id="rvManualStatus" class="adm-status" role="status" aria-live="polite"></p>
         </div>
       </section>
 
