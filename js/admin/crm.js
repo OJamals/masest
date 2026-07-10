@@ -3,7 +3,7 @@
 // three from /api/admin/crm/*. Kept out of companies.js so that file stays focused
 // (#36 split rule). Skeleton/empty helpers are injected; esc/date/confirmDialog come
 // from util.js, matching the other per-tab modules.
-import { esc, dateTime as date, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260710a';
+import { esc, dateTime as date, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260710b';
 
 const KINDS = [['note', 'Note'], ['call', 'Call'], ['email', 'Email'], ['meeting', 'Meeting']];
 const CONTACT_ROLES = [['procurement', 'Procurement'], ['plant_manager', 'Plant Manager'], ['maintenance', 'Maintenance'], ['engineering', 'Engineering'], ['operations', 'Operations'], ['accounts_payable', 'Accounts Payable'], ['executive', 'Executive'], ['other', 'Other']];

@@ -74,7 +74,7 @@ test("admin panel content starts at the sidebar top without inherited section pa
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       for (const hash of ["orders", "companies", "products", "messages", "quotes", "reviews", "newsletter", "crm", "analytics", "finance", "integrations"]) {
@@ -119,7 +119,7 @@ test("admin sidebar scrolls independently when hovered", async () => {
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
@@ -175,7 +175,7 @@ test("mobile admin navigation stays collapsed until requested and closes after s
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
@@ -212,7 +212,7 @@ test("read-only staff see their role and cannot trigger mutation controls", asyn
       window.__TEST_STAFF_CONTEXT = { role: "read_only", email: "viewer@example.test", can_write: false, capabilities: [] };
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       await page.goto(`${BASE_URL}/admin.html#products`, { waitUntil: "domcontentloaded" });
@@ -242,7 +242,7 @@ test("admin dialogs return focus to their invoking control", async () => {
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
@@ -277,7 +277,7 @@ test("admin shell reflows at the 400-percent zoom equivalent", async () => {
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       for (const hash of ["overview", "analytics", "finance", "integrations", "products"]) {
@@ -302,7 +302,7 @@ test("core admin helper text meets WCAG AA text contrast", async () => {
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
@@ -353,7 +353,7 @@ test("production-shaped action density and long labels remain scannable on mobil
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
@@ -388,7 +388,7 @@ test("admin status changes are exposed through a live region", async () => {
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
       await page.goto(`${BASE_URL}/admin.html#finance`, { waitUntil: "domcontentloaded" });
@@ -416,7 +416,7 @@ test("admin boots when an older unversioned util module remains cached", async (
       window.MASEST_SUPABASE_ANON = "stub-anon";
       localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
     });
-    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     await context.route("**/js/util.js*", (route) => {
       const requestUrl = new URL(route.request().url());
       if (requestUrl.searchParams.has("v")) return route.continue();
