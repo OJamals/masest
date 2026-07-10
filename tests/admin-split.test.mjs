@@ -99,7 +99,9 @@ test("the deployed admin entry and its complete relative module graph share one 
   const mismatched = modules.flatMap((path) => {
     const imports = [...read(path).matchAll(/from\s+["'](\.\.?\/[^"']+?\.js)([^"']*)["']/g)];
     return imports
-      .filter(([, , suffix]) => suffix !== `?v=${release}`)
+      .filter(([, target, suffix]) => (
+        target.endsWith("/auth.js") ? suffix !== "" : suffix !== `?v=${release}`
+      ))
       .map(([, target, suffix]) => `${path} -> ${target}${suffix}`);
   });
   assert.deepEqual(
@@ -107,4 +109,19 @@ test("the deployed admin entry and its complete relative module graph share one 
     [],
     `admin module graph must use release ${release}: ${mismatched.join(", ")}`,
   );
+});
+
+test("admin imports auth through its canonical URL to preserve one Supabase client", () => {
+  const modules = [
+    "js/admin.js",
+    ...readdirSync(new URL("js/admin/", root))
+      .filter((name) => name.endsWith(".js"))
+      .map((name) => `js/admin/${name}`),
+  ];
+  const versioned = modules.flatMap((path) => (
+    [...read(path).matchAll(/from\s+["'](\.\.?\/auth\.js)([^"']*)["']/g)]
+      .filter(([, , suffix]) => suffix !== "")
+      .map(([, target, suffix]) => `${path} -> ${target}${suffix}`)
+  ));
+  assert.deepEqual(versioned, [], `auth.js is a stateful singleton: ${versioned.join(", ")}`);
 });

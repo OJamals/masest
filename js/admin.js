@@ -1,5 +1,5 @@
 /* MASEST staff admin console. */
-import { login, logout, api, getToken } from './auth.js?v=20260710b';
+import { login, logout, api, getToken } from './auth.js';
 import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260710b';
 import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260710b';
 import { editKey, captureDirty, restoreDirty } from './admin/edits.js?v=20260710b';
