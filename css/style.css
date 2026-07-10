@@ -6571,6 +6571,21 @@ body.products-page .conversion-proof .proof-pill em {
   border-radius: var(--r-card);
   background: var(--surface);
 }
+.newsletter-media {
+  margin: 0 0 4px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-xs);
+}
+.newsletter-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .newsletter-points h2 { margin: 0; font-size: 1.05rem; }
 .newsletter-cadence { margin: 2px 0 0; color: var(--muted); font-size: .85rem; }
 @media (max-width: 860px) {
