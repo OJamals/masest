@@ -90,7 +90,9 @@ function renderProfile(data) {
   }
   const label = STATUS_LABEL[status] || 'Not set up';
   const note = {
-    approved: 'Your business is verified. B2B ordering, NET terms, programs, and QuickBooks invoicing are unlocked.',
+    approved: data.can_use_net_terms
+      ? 'Your business is verified. B2B ordering, NET terms, programs, and QuickBooks invoicing are unlocked.'
+      : 'Your business is verified. B2B ordering, programs, and QuickBooks invoicing are unlocked. NET terms are not enabled yet.',
     pending: 'We’re verifying your business — this usually takes 1–2 business days. You’ll get a dashboard notification when it’s approved.',
     rejected: c.rejection_reason ? `We couldn’t verify this business: ${esc(c.rejection_reason)} Update the details below and resubmit.` : 'We couldn’t verify this business yet. Update the details below and resubmit.',
     suspended: 'This account is suspended. Contact your account team to restore access.',
