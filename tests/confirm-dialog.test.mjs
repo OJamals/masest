@@ -22,5 +22,5 @@ test('admin.js uses confirmDialog instead of native confirm()', () => {
     .join('\n');
   assert.doesNotMatch(all, /\bconfirm\(/, 'no native confirm() calls remain');
   assert.match(all, /await confirmDialog\(/, 'must await the styled dialog');
-  assert.match(all, /import\s*\{[^}]*confirmDialog[^}]*\}\s*from\s*['"]\.\.?\/util\.js['"]/, 'must import confirmDialog');
+  assert.match(all, /import\s*\{[^}]*confirmDialog[^}]*\}\s*from\s*['"]\.\.?\/util\.js(?:\?v=\d{8}[a-z])?['"]/, 'must import confirmDialog');
 });

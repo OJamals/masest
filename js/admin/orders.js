@@ -3,7 +3,7 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog } from '../util.js';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog } from '../util.js?v=20260710a';
 import { captureDirty, restoreDirty } from './edits.js';
 import { createSavedViews } from './saved-views.js';
 

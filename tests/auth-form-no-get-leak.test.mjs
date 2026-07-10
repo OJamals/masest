@@ -29,3 +29,16 @@ test("login password forms are guarded (account loginForm + admin gateForm)", ()
   assert.match(acct.match(/<form\b[^>]*id="loginForm"[^>]*>/)[0], /onsubmit="return false"/);
   assert.match(adm.match(/<form\b[^>]*id="gateForm"[^>]*>/)[0], /onsubmit="return false"/);
 });
+
+test("admin login exposes password-manager-compatible field semantics", () => {
+  const adm = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
+  const form = adm.match(/<form\b[^>]*id="gateForm"[^>]*>/)[0];
+  const email = adm.match(/<input\b[^>]*id="gEmail"[^>]*>/)[0];
+  const password = adm.match(/<input\b[^>]*id="gPass"[^>]*>/)[0];
+  assert.match(form, /method="post"/);
+  assert.match(form, /autocomplete="on"/);
+  assert.match(email, /name="email"/);
+  assert.match(email, /autocomplete="username"/);
+  assert.match(password, /name="password"/);
+  assert.match(password, /autocomplete="current-password"/);
+});

@@ -6,7 +6,7 @@
 // The diff compares against live editor state, read via the injected getCurrentEntry
 // getter. Shared primitives ($, api, admSkeleton, admEmpty) are injected; esc + the diff
 // helpers come from their own modules.
-import { esc } from "../util.js";
+import { esc } from "../util.js?v=20260710a";
 import { diffContentFields, formatFieldValue } from "./content-diff.js";
 
 export function createContentRevisions({ $, api, admSkeleton, admEmpty, getCurrentEntry }) {

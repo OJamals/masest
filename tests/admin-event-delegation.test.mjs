@@ -29,7 +29,7 @@ const TABS = [
 for (const { mod, wire, container } of TABS) {
   test(`admin ${mod} tab delegates row actions on #${container} (bound once via ${wire})`, () => {
     const src = read(`js/admin/${mod}.js`);
-    assert.match(src, /import \{[^}]*\bdelegate\b[^}]*\} from '\.\.\/util\.js'/, `${mod} must import delegate`);
+    assert.match(src, /import \{[^}]*\bdelegate\b[^}]*\} from '\.\.\/util\.js(?:\?v=\d{8}[a-z])?'/, `${mod} must import delegate`);
     assert.match(src, new RegExp(`function ${wire}\\s*\\(`), `${mod} must define ${wire}`);
     assert.match(src, new RegExp(`const box = \\$\\('${container}'\\)`), `${wire} must target #${container}`);
     assert.match(src, /delegate\(box,/, `${mod} must bind row actions through delegate(box, ...)`);

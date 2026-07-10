@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -67,4 +67,20 @@ test("admin split modules used by the shell are cache-busted", () => {
 test("rich editor imports are cache-busted from CMS entry modules", () => {
   assert.match(read("js/admin/content.js"), /from\s+["']\.\/rich-editor\.js\?v=\d{8}[a-z]["']/, "content CMS should not reuse a stale editor module");
   assert.match(read("js/admin/newsletter.js"), /from\s+["']\.\/rich-editor\.js\?v=\d{8}[a-z]["']/, "newsletter should not reuse a stale editor module");
+});
+
+test("admin modules cache-bust the shared util dependency", () => {
+  const modules = [
+    "js/admin.js",
+    ...readdirSync(new URL("js/admin/", root))
+      .filter((name) => name.endsWith(".js"))
+      .map((name) => `js/admin/${name}`),
+  ];
+  const unversioned = modules.flatMap((path) => {
+    const imports = [...read(path).matchAll(/from\s+["'](?:\.\.\/|\.\/)util\.js([^"']*)["']/g)];
+    return imports
+      .filter(([, suffix]) => !/^\?v=\d{8}[a-z]$/.test(suffix))
+      .map(() => path);
+  });
+  assert.deepEqual(unversioned, [], `admin util imports need cache-busting: ${unversioned.join(", ")}`);
 });
