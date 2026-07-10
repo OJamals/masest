@@ -110,7 +110,7 @@ async function renderAccountNav(actions, root = '') {
   // Only load the Supabase SDK + call me() when a session exists; otherwise render Sign in instantly.
   let logout, api, data = null;
   if (hasSession()) {
-    try { const m = await import('./auth.js'); logout = m.logout; api = m.api; data = await m.me(); } catch { data = null; }
+    try { const m = await import('./auth.js?v=20260710f'); logout = m.logout; api = m.api; data = await m.me(); } catch { data = null; }
   }
 
   const mount = document.createElement('div');

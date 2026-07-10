@@ -6,7 +6,7 @@
 // message, kind)`, which content.js implements (it writes the value into the editor form
 // and re-syncs the preview). Shared primitives ($, api, admSkeleton, admEmpty, setStatus)
 // are injected; esc/confirmDialog come from util.
-import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260710e";
+import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260710f";
 
 export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, applyChosenAsset }) {
   let assetTargetField = "image";

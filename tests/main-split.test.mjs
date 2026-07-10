@@ -72,7 +72,7 @@ test("main entrypoint imports common effects from a split module", () => {
 
 test("main entrypoint imports service catalog rendering from a split module", () => {
   const main = read("js/main.js");
-  assert.match(main, /from\s+["']\.\/main\/service-catalog\.js["']/);
+  assert.match(main, /from\s+["']\.\/main\/service-catalog\.js(?:\?v=\d{8}[a-z])?["']/);
   assert.doesNotMatch(main, /function initServiceCatalog\s*\(/);
   assert.doesNotMatch(main, /const SERVICE_CATEGORY_COPY\s*=/);
 

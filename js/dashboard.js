@@ -1,9 +1,9 @@
 /* MASEST user dashboard controller. Loaded as a module by dashboard.html.
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
-import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js';
+import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260710f';
 import { add as cartAdd, clear as cartClear } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast } from './util.js';
-import { initBusinessHub } from './business.js';
+import { initBusinessHub } from './business.js?v=20260710f';
 
 const $ = (id) => document.getElementById(id);
 
@@ -46,12 +46,7 @@ function currentDashboardTab() {
   return dashboardTabFromHash(location.hash) || 'overview';
 }
 
-function resetDashboardScroll() {
-  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-}
-
 function selectTab(name) {
-  const tabChanged = activeDashboardTab && activeDashboardTab !== name;
   activeDashboardTab = name;
   const tabs = [...document.querySelectorAll('.dash-tab')];
   tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
@@ -64,7 +59,6 @@ function selectTab(name) {
   }
   document.querySelectorAll('.dash-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
-  if (tabChanged) resetDashboardScroll();
   loadTab(name);
 }
 

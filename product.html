@@ -162,7 +162,7 @@
 </section>
 </main>
 
-<script type="module" src="js/main.js?v=20260710d"></script>
+<script type="module" src="js/main.js?v=20260710f"></script>
 <script type="module">
   const { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal } = window.MASESTMain;
   const { QUOTE_FIRST_IDS } = window.MASESTMain;
@@ -283,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
       mount.setAttribute("data-name", p.name || "");
       // Reveal the section only once it actually rendered, so an API/network/import
       // failure leaves it hidden rather than showing an empty "Reviews" heading.
-      import("./js/reviews.js?v=20260708b")
+      import("./js/reviews.js?v=20260710f")
         .then((m) => m.hydrateReviewMount(mount))
         .then((ok) => { if (ok) section.hidden = false; })
         .catch(() => {});
@@ -346,7 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (quoteFirst || (typeof isLocalStaticCommerceSuppressed === "function" && isLocalStaticCommerceSuppressed())) {
       buySkel.remove();
     } else {
-    import("./js/auth.js").then(a => a.getToken()).catch(() => null).then(token => {
+    import("./js/auth.js?v=20260710f").then(a => a.getToken()).catch(() => null).then(token => {
       const headers = { Accept: "application/json" };
       if (token) headers.Authorization = "Bearer " + token;
       return fetch("/api/products", { headers, cache: "no-store" });

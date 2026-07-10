@@ -236,7 +236,7 @@ export function renderChrome() {
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
-  import("/js/account-nav.js?v=20260710d").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
+  import("/js/account-nav.js?v=20260710f").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);
@@ -368,7 +368,7 @@ export function renderChrome() {
     cfg.onload = () => {
       const mod = document.createElement("script");
       mod.type = "module";
-      mod.src = `${root}js/integrations.js`;
+      mod.src = `${root}js/integrations.js?v=20260710f`;
       document.head.appendChild(mod);
     };
     document.head.appendChild(cfg);

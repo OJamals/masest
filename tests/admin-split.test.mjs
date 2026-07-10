@@ -99,9 +99,7 @@ test("the deployed admin entry and its complete relative module graph share one 
   const mismatched = modules.flatMap((path) => {
     const imports = [...read(path).matchAll(/from\s+["'](\.\.?\/[^"']+?\.js)([^"']*)["']/g)];
     return imports
-      .filter(([, target, suffix]) => (
-        target.endsWith("/auth.js") ? suffix !== "" : suffix !== `?v=${release}`
-      ))
+      .filter(([, , suffix]) => suffix !== `?v=${release}`)
       .map(([, target, suffix]) => `${path} -> ${target}${suffix}`);
   });
   assert.deepEqual(
@@ -111,17 +109,23 @@ test("the deployed admin entry and its complete relative module graph share one 
   );
 });
 
-test("admin imports auth through its canonical URL to preserve one Supabase client", () => {
+test("admin imports one cache-released auth URL to preserve one Supabase client", () => {
+  const html = read("admin.html");
+  const release = html.match(/src=["']js\/admin\.js\?v=(\d{8}[a-z])["']/)?.[1];
+  assert.ok(release, "admin.html must cache-bust the admin entrypoint");
   const modules = [
     "js/admin.js",
     ...readdirSync(new URL("js/admin/", root))
       .filter((name) => name.endsWith(".js"))
       .map((name) => `js/admin/${name}`),
   ];
-  const versioned = modules.flatMap((path) => (
+  const authUrls = modules.flatMap((path) => (
     [...read(path).matchAll(/from\s+["'](\.\.?\/auth\.js)([^"']*)["']/g)]
-      .filter(([, , suffix]) => suffix !== "")
-      .map(([, target, suffix]) => `${path} -> ${target}${suffix}`)
+      .map(([, target, suffix]) => new URL(`${target}${suffix}`, new URL(path, root)).href)
   ));
-  assert.deepEqual(versioned, [], `auth.js is a stateful singleton: ${versioned.join(", ")}`);
+  assert.deepEqual(
+    [...new Set(authUrls)],
+    [new URL(`js/auth.js?v=${release}`, root).href],
+    `auth.js is a stateful singleton: ${authUrls.join(", ")}`,
+  );
 });

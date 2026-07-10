@@ -33,7 +33,7 @@ test("Crisp integration captures site and quote context", () => {
 test("Crisp integration syncs buyer account and cart context", () => {
   assert.match(INTEGRATIONS, /export async function syncCrispAccountContext/);
   assert.match(INTEGRATIONS, /hasAuthSessionMarker/);
-  assert.match(INTEGRATIONS, /import\("\.\/auth\.js"\)/);
+  assert.match(INTEGRATIONS, /import\("\.\/auth\.js\?v=\d{8}[a-z]"\)/);
   assert.match(INTEGRATIONS, /account_email/);
   assert.match(INTEGRATIONS, /account_company/);
   assert.match(INTEGRATIONS, /account_staff/);

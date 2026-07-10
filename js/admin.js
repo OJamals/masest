@@ -1,25 +1,25 @@
 /* MASEST staff admin console. */
-import { login, logout, api, getToken } from './auth.js';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260710e';
-import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260710e';
-import { editKey, captureDirty, restoreDirty } from './admin/edits.js?v=20260710e';
-import { createTrafficRenderer } from './admin/traffic.js?v=20260710e';
-import { createSeoAudit } from './admin/seo.js?v=20260710e';
-import { createThreadsTab } from './admin/threads.js?v=20260710e';
-import { createOffersTab } from './admin/offers.js?v=20260710e';
-import { createProductsTab } from './admin/products.js?v=20260710e';
-import { createPricingTab } from './admin/pricing.js?v=20260710e';
-import { createContentTab } from './admin/content.js?v=20260710e';
-import { createCompaniesTab } from './admin/companies.js?v=20260710e';
-import { createCrmPanel } from './admin/crm.js?v=20260710e';
-import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js?v=20260710e';
-import { createQuotesTab } from './admin/quotes.js?v=20260710e';
-import { createCrmWorkspace } from './admin/crm-workspace.js?v=20260710e';
-import { createReviewsTab } from './admin/reviews.js?v=20260710e';
-import { createNewsletterTab } from './admin/newsletter.js?v=20260710e';
-import { createInventoryCard } from './admin/inventory.js?v=20260710e';
-import { createCouponsCard } from './admin/coupons.js?v=20260710e';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260710e';
+import { login, logout, api, getToken } from './auth.js?v=20260710f';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260710f';
+import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260710f';
+import { editKey, captureDirty, restoreDirty } from './admin/edits.js?v=20260710f';
+import { createTrafficRenderer } from './admin/traffic.js?v=20260710f';
+import { createSeoAudit } from './admin/seo.js?v=20260710f';
+import { createThreadsTab } from './admin/threads.js?v=20260710f';
+import { createOffersTab } from './admin/offers.js?v=20260710f';
+import { createProductsTab } from './admin/products.js?v=20260710f';
+import { createPricingTab } from './admin/pricing.js?v=20260710f';
+import { createContentTab } from './admin/content.js?v=20260710f';
+import { createCompaniesTab } from './admin/companies.js?v=20260710f';
+import { createCrmPanel } from './admin/crm.js?v=20260710f';
+import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js?v=20260710f';
+import { createQuotesTab } from './admin/quotes.js?v=20260710f';
+import { createCrmWorkspace } from './admin/crm-workspace.js?v=20260710f';
+import { createReviewsTab } from './admin/reviews.js?v=20260710f';
+import { createNewsletterTab } from './admin/newsletter.js?v=20260710f';
+import { createInventoryCard } from './admin/inventory.js?v=20260710f';
+import { createCouponsCard } from './admin/coupons.js?v=20260710f';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260710f';
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,11 +38,6 @@ function debounce(fn, ms = 220) {
   let t;
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
-
-function resetAdminScroll() {
-  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-}
-
 
 // Loading skeleton + rich empty state for admin lists (#31). Reuse the shared
 // components.css .skeleton / .empty-state styles.
@@ -136,7 +131,6 @@ async function boot() {
 }
 
 function setTab(tab) {
-  const previousTab = state.tab;
   // The old top-level Customers tab folded into the CRM People directory —
   // keep #customers deep links working by landing on that sub-view. Historical
   // Pricing and Emails hashes still land on their current host workspaces.
@@ -148,7 +142,6 @@ function setTab(tab) {
   if (tab === 'traffic' || tab === 'seo') tab = 'analytics';
   if (tab === 'reports' || tab === 'exports') tab = 'finance';
   state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
-  const tabChanged = previousTab && previousTab !== state.tab;
   // replaceState, NOT location.hash: assigning location.hash fires hashchange →
   // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
   // like quotes painted every row twice). Back/forward still works via hashchange.
@@ -169,7 +162,6 @@ function setTab(tab) {
     document.querySelector('.adm-sidebar')?.classList.remove('is-open');
     $('admNavToggle')?.setAttribute('aria-expanded', 'false');
   }
-  if (tabChanged) resetAdminScroll();
 
   // #28 cache: a tab already loaded re-renders from memory (refetch:false) instead of
   // refetching; first visit (or post-mutation re-render) fetches. offers/traffic self-cache.

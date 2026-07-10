@@ -135,7 +135,7 @@ export function syncCrispCartContext() {
 export async function syncCrispAccountContext() {
   if (!hasWindow() || !hasAuthSessionMarker()) return false;
   try {
-    const auth = await import("./auth.js");
+    const auth = await import("./auth.js?v=20260710f");
     const account = await auth.me();
     if (!account) return false;
 

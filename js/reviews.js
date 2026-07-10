@@ -155,7 +155,7 @@ async function mountWriteForm(slot, sku, kind, token) {
     btn.disabled = true;
     msg.textContent = "Submitting...";
     try {
-      const auth = await import("./auth.js");
+      const auth = await import("./auth.js?v=20260710f");
       await auth.api("/api/reviews", {
         method: "POST",
         body: { sku, kind, rating: form.rating.value, title: form.title.value, body: form.body.value },
@@ -219,7 +219,7 @@ export async function hydrateReviewMount(mount) {
     // visibility. Show the section when there are reviews OR the visitor could write
     // one (signed in) - never a bare "No reviews yet" block for anonymous visitors.
     let token = null;
-    try { token = await (await import("./auth.js")).getToken(); } catch { token = null; }
+    try { token = await (await import("./auth.js?v=20260710f")).getToken(); } catch { token = null; }
     await renderFull(mount, sku, kind, data, token);
     return data.stats.count > 0 || Boolean(token);
   } catch {
