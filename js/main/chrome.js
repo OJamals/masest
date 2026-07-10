@@ -21,6 +21,29 @@ function initCmpTableLabels() {
   });
 }
 
+function wireDashboardSidebarScrollRelease() {
+  document.querySelectorAll(".dash-sidebar, .adm-sidebar.adm-tabs-wrap").forEach((rail) => {
+    rail.addEventListener("wheel", (event) => {
+      if (event.defaultPrevented || event.ctrlKey || !event.deltaY) return;
+
+      const maxScrollTop = rail.scrollHeight - rail.clientHeight;
+      if (maxScrollTop <= 0) return;
+
+      const atTop = rail.scrollTop <= 1;
+      const atBottom = rail.scrollTop >= maxScrollTop - 1;
+      if (!(event.deltaY < 0 && atTop) && !(event.deltaY > 0 && atBottom)) return;
+
+      const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? parseFloat(getComputedStyle(rail).lineHeight) || 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? window.innerHeight
+          : 1;
+      event.preventDefault();
+      window.scrollBy({ top: event.deltaY * unit, behavior: "instant" });
+    }, { passive: false });
+  });
+}
+
 function validEmail(value) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value || "").trim());
 }
@@ -274,6 +297,7 @@ export function renderChrome() {
   const onScroll = () => { if (!scrollRAF) scrollRAF = requestAnimationFrame(applyScroll); };
   applyScroll();
   window.addEventListener("scroll", onScroll, { passive: true });
+  wireDashboardSidebarScrollRelease();
 
   const foot = document.createElement("footer");
   foot.className = "";

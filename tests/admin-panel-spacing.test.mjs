@@ -159,6 +159,50 @@ test("admin sidebar scrolls independently when hovered", async () => {
       }));
       assert.ok(after.sidebarY > 0, "wheel over sidebar should move the sidebar scroll position");
       assert.equal(after.pageY, before.pageY, "wheel over sidebar should not scroll the active admin panel first");
+
+      const bottomBoundary = await page.evaluate(() => {
+        const rail = document.querySelector(".adm-sidebar");
+        window.scrollTo(0, 0);
+        if (rail) rail.scrollTop = rail.scrollHeight;
+        return { pageY: window.scrollY, sidebarY: rail?.scrollTop || 0 };
+      });
+      await page.evaluate(() => {
+        document.querySelector(".adm-sidebar")?.dispatchEvent(new WheelEvent("wheel", {
+          bubbles: true,
+          cancelable: true,
+          deltaY: 320,
+        }));
+      });
+      await page.waitForTimeout(100);
+      const afterBottomBoundary = await page.evaluate(() => ({
+        pageY: window.scrollY,
+        sidebarY: document.querySelector(".adm-sidebar")?.scrollTop || 0,
+      }));
+      assert.equal(afterBottomBoundary.sidebarY, bottomBoundary.sidebarY, "admin sidebar should stay at its bottom boundary");
+      assert.ok(afterBottomBoundary.pageY > bottomBoundary.pageY, "wheel should continue into the page at the admin sidebar bottom");
+
+      const topBoundary = await page.evaluate(() => {
+        const rail = document.querySelector(".adm-sidebar");
+        const maxPageY = document.documentElement.scrollHeight - window.innerHeight;
+        window.scrollTo(0, Math.min(300, maxPageY));
+        if (rail) rail.scrollTop = 0;
+        return { pageY: window.scrollY, sidebarY: rail?.scrollTop || 0 };
+      });
+      assert.ok(topBoundary.pageY > 0, "admin dashboard should have page space above the sidebar");
+      await page.evaluate(() => {
+        document.querySelector(".adm-sidebar")?.dispatchEvent(new WheelEvent("wheel", {
+          bubbles: true,
+          cancelable: true,
+          deltaY: -320,
+        }));
+      });
+      await page.waitForTimeout(100);
+      const afterTopBoundary = await page.evaluate(() => ({
+        pageY: window.scrollY,
+        sidebarY: document.querySelector(".adm-sidebar")?.scrollTop || 0,
+      }));
+      assert.equal(afterTopBoundary.sidebarY, topBoundary.sidebarY, "admin sidebar should stay at its top boundary");
+      assert.ok(afterTopBoundary.pageY < topBoundary.pageY, "wheel should continue into the page at the admin sidebar top");
     } finally {
       await context.close();
       await browser.close();

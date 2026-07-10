@@ -342,6 +342,50 @@ test("dashboard sidebar scrolls independently for user and business panels", asy
           }));
           assert.ok(after.sidebarY > 0, `${hash} wheel over sidebar should move the sidebar scroll position`);
           assert.equal(after.pageY, before.pageY, `${hash} wheel over sidebar should not scroll dashboard content first`);
+
+          const bottomBoundary = await page.evaluate(() => {
+            const rail = document.querySelector(".dash-sidebar");
+            window.scrollTo(0, 0);
+            if (rail) rail.scrollTop = rail.scrollHeight;
+            return { pageY: window.scrollY, sidebarY: rail?.scrollTop || 0 };
+          });
+          await page.evaluate(() => {
+            document.querySelector(".dash-sidebar")?.dispatchEvent(new WheelEvent("wheel", {
+              bubbles: true,
+              cancelable: true,
+              deltaY: 320,
+            }));
+          });
+          await page.waitForTimeout(100);
+          const afterBottomBoundary = await page.evaluate(() => ({
+            pageY: window.scrollY,
+            sidebarY: document.querySelector(".dash-sidebar")?.scrollTop || 0,
+          }));
+          assert.equal(afterBottomBoundary.sidebarY, bottomBoundary.sidebarY, `${hash} sidebar should stay at its bottom boundary`);
+          assert.ok(afterBottomBoundary.pageY > bottomBoundary.pageY, `${hash} wheel should continue into the page at the sidebar bottom`);
+
+          const topBoundary = await page.evaluate(() => {
+            const rail = document.querySelector(".dash-sidebar");
+            const maxPageY = document.documentElement.scrollHeight - window.innerHeight;
+            window.scrollTo(0, Math.min(300, maxPageY));
+            if (rail) rail.scrollTop = 0;
+            return { pageY: window.scrollY, sidebarY: rail?.scrollTop || 0 };
+          });
+          assert.ok(topBoundary.pageY > 0, `${hash} dashboard should have page space above the sidebar`);
+          await page.evaluate(() => {
+            document.querySelector(".dash-sidebar")?.dispatchEvent(new WheelEvent("wheel", {
+              bubbles: true,
+              cancelable: true,
+              deltaY: -320,
+            }));
+          });
+          await page.waitForTimeout(100);
+          const afterTopBoundary = await page.evaluate(() => ({
+            pageY: window.scrollY,
+            sidebarY: document.querySelector(".dash-sidebar")?.scrollTop || 0,
+          }));
+          assert.equal(afterTopBoundary.sidebarY, topBoundary.sidebarY, `${hash} sidebar should stay at its top boundary`);
+          assert.ok(afterTopBoundary.pageY < topBoundary.pageY, `${hash} wheel should continue into the page at the sidebar top`);
         } finally {
           await context.close();
         }
