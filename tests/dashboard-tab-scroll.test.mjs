@@ -15,6 +15,14 @@ test("user and business dashboard tab changes preserve the page scroll", () => {
   );
 });
 
+test("dashboard tab changes reserve the active panel height before hiding it", () => {
+  const source = read("js/dashboard.js");
+
+  assert.match(source, /function reserveDashboardHeight\(\)/);
+  assert.match(source, /reserveDashboardHeight\(\);\s*\n\s*document\.querySelectorAll\('\.dash-panel'\)/);
+  assert.match(source, /main\.style\.minHeight/);
+});
+
 test("admin dashboard tab changes preserve the page scroll", () => {
   const source = read("js/admin.js");
 

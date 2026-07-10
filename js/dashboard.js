@@ -46,6 +46,14 @@ function currentDashboardTab() {
   return dashboardTabFromHash(location.hash) || 'overview';
 }
 
+function reserveDashboardHeight() {
+  const main = document.querySelector('.dash-main');
+  if (!main) return;
+  const current = Number.parseFloat(main.style.minHeight) || 0;
+  const visibleHeight = Math.ceil(main.getBoundingClientRect().height);
+  if (visibleHeight > current) main.style.minHeight = `${visibleHeight}px`;
+}
+
 function selectTab(name) {
   activeDashboardTab = name;
   const tabs = [...document.querySelectorAll('.dash-tab')];
@@ -57,6 +65,7 @@ function selectTab(name) {
     const left = activeTab.offsetLeft - ((rail.clientWidth - activeTab.offsetWidth) / 2);
     rail.scrollTo({ left: Math.max(0, left), behavior: 'auto' });
   }
+  reserveDashboardHeight();
   document.querySelectorAll('.dash-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
   loadTab(name);
