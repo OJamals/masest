@@ -9,6 +9,7 @@ const MAIN_RELEASE_OVERRIDES = new Map([
   ["admin.html", "20260710g"],
   ["dashboard.html", "20260710g"],
 ]);
+const DASHBOARD_RELEASE = MAIN_RELEASE_OVERRIDES.get("dashboard.html");
 
 function filesUnder(path) {
   return readdirSync(new URL(path, root), { withFileTypes: true }).flatMap((entry) => {
@@ -43,7 +44,7 @@ test("every browser auth importer uses one cache release", () => {
 
 test("auth-consuming module paths are refreshed from their page entrypoints", () => {
   assert.match(read("dashboard.html"), new RegExp(`dashboard\\.js\\?v=${RELEASE}`));
-  assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${RELEASE}`));
+  assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${DASHBOARD_RELEASE}`));
 
   assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${RELEASE}`));
   for (const module of ["content", "products", "qbo"]) {
