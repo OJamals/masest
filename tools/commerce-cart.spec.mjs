@@ -53,7 +53,7 @@ test("cart shows server catalog prices and estimated subtotal", async ({ page })
   });
   await page.reload({ waitUntil: "domcontentloaded" });
 
-  await expect(page.getByText("Estimated product subtotal")).toBeVisible();
+  await expect(page.getByText("Estimated subtotal")).toBeVisible();
   await expect(page.getByText("$35.00")).toBeVisible();
   await expect(page.getByText("$12.50 each")).toBeVisible();
   await expect(page.getByText("$10.00 each")).toBeVisible();
@@ -92,8 +92,8 @@ test("cart accepts flattened connector variant rows", async ({ page }) => {
 
   await expect(page.getByText("VertKleen CRHD - 5 gal pail")).toBeVisible();
   await expect(page.getByText("$125.00 each")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeEnabled();
-  await expect(page.locator("#shipEstOut")).toContainText("10 gal");
+  await expect(page.getByRole("button", { name: "Proceed to checkout" })).toBeEnabled();
+  await expect(page.getByText("$250.00")).toBeVisible();
 });
 
 test("cart disables direct checkout when bulk freight items are present", async ({ page }) => {
@@ -117,11 +117,11 @@ test("cart disables direct checkout when bulk freight items are present", async 
   await page.reload({ waitUntil: "domcontentloaded" });
 
   await expect(page.getByText("Quote required")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Use NET Terms" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Proceed to checkout" })).toBeDisabled();
+  await expect(page.locator("#checkoutNet")).toBeHidden();
   await expect(page.locator("#cartStatus")).toContainText("Remove bulk freight items");
 
-  const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
+  const quoteHref = await page.getByRole("link", { name: "Request a quote" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("type")).toBe("quote");
   // The dead ?cart= param was dropped; the message carries the lines.
@@ -152,7 +152,7 @@ test("cart quote link reflects edited quantities before blur", async ({ page }) 
   await page.locator("#checkoutEmail").fill("buyer@example.com");
   await page.locator('input[data-qty="crhd"]').fill("4");
 
-  const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
+  const quoteHref = await page.getByRole("link", { name: "Request a quote" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("cart")).toBeNull();
   expect(quoteUrl.searchParams.get("email")).toBe("buyer@example.com");
@@ -179,13 +179,13 @@ test("cart re-enables checkout after removing bulk freight items", async ({ page
   });
   await page.reload({ waitUntil: "domcontentloaded" });
 
-  await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Proceed to checkout" })).toBeDisabled();
   await page.locator('[data-remove="lam3"]').click();
 
-  await expect(page.getByRole("button", { name: "Card / ACH Checkout" })).toBeEnabled();
-  await expect(page.locator("#cartStatus")).toContainText("totals are confirmed at checkout");
+  await expect(page.getByRole("button", { name: "Proceed to checkout" })).toBeEnabled();
+  await expect(page.locator("#cartStatus")).toBeHidden();
 
-  const quoteHref = await page.getByRole("link", { name: "Send quote request" }).getAttribute("href");
+  const quoteHref = await page.getByRole("link", { name: "Request a quote" }).getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("cart")).toBeNull();
   expect(quoteUrl.searchParams.get("message")).not.toContain("LAM3");

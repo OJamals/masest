@@ -36,6 +36,8 @@ test("webhook verifies the Stripe signature before acting", () => {
   assert.match(SRC, /createSubtleCryptoProvider\(/, "must use the Workers SubtleCrypto provider");
   assert.match(SRC, /return\s+json\(\s*400\s*,\s*\{\s*error:\s*'invalid_signature'/,
     "must reject an invalid signature with 400 before processing");
+  assert.doesNotMatch(SRC, /invalid_signature'\s*,\s*detail\s*:/,
+    "must not reflect Stripe signature parser details to an unauthenticated caller");
 
   const verifyIdx = SRC.indexOf("constructEventAsync");
   const firstInsertIdx = SRC.indexOf(".insert(");

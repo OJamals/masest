@@ -37,21 +37,28 @@ test("catalog keeps replacement checker and product shelf within a quick scan", 
   expect(catalog.y).toBeLessThan(1700);
 });
 
-test("catalog hero media stays uniform on tablet", async ({ page }) => {
+test("catalog hero bottles retain intentional depth without page overflow on tablet", async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 900 });
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
 
-  const media = await page.locator(".catalog-hero-media .catalog-photo").evaluateAll((nodes) =>
+  const bottles = await page.locator(".catalog-hero-media .catalog-bottle").evaluateAll((nodes) =>
     nodes.map((node) => {
       const rect = node.getBoundingClientRect();
-      return { width: Math.round(rect.width), height: Math.round(rect.height) };
+      return {
+        left: Math.round(rect.left), right: Math.round(rect.right),
+        top: Math.round(rect.top), bottom: Math.round(rect.bottom),
+        width: Math.round(rect.width), height: Math.round(rect.height),
+      };
     })
   );
-  const heights = media.map((item) => item.height);
+  const heights = bottles.map((item) => item.height);
+  const horizontalOverflow = await page.evaluate(() =>
+    document.documentElement.scrollWidth - window.innerWidth
+  );
 
-  expect(media).toHaveLength(3);
-  expect(Math.max(...heights) - Math.min(...heights), `catalog hero media heights: ${JSON.stringify(media)}`).toBeLessThanOrEqual(3);
-  expect(Math.max(...heights)).toBeLessThanOrEqual(220);
+  expect(bottles).toHaveLength(3);
+  expect(Math.max(...heights) - Math.min(...heights), `catalog bottle heights: ${JSON.stringify(bottles)}`).toBeGreaterThan(60);
+  expect(horizontalOverflow).toBeLessThanOrEqual(1);
 });
 
 test("product detail shows next decision without an oversized hero", async ({ page }) => {

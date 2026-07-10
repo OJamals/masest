@@ -229,8 +229,10 @@ export async function onRequestPost({ request, env }) {
   let event;
   try {
     event = await stripe.webhooks.constructEventAsync(raw, sig, whSecret, undefined, cryptoProvider);
-  } catch (err) {
-    return json(400, { error: 'invalid_signature', detail: err.message });
+  } catch {
+    // Signature failures are unauthenticated input. Do not reflect Stripe parser
+    // details that could help an attacker distinguish configuration or payload issues.
+    return json(400, { error: 'invalid_signature' });
   }
 
   if (event.type === 'checkout.session.completed') {
