@@ -57,7 +57,8 @@ test("account login button and form submit share the same handler", () => {
 
   assert.match(account, /async function handleLoginSubmit\(e\)/);
   assert.match(account, /\$\("loginForm"\)\.addEventListener\("submit", handleLoginSubmit\)/);
-  assert.match(account, /\$\("liBtn"\)\.addEventListener\("click", handleLoginSubmit\)/);
+  assert.match(account, /function handleLoginButtonClick\(e\)[\s\S]*closest\?\.\("#liBtn"\)/);
+  assert.match(account, /document\.addEventListener\("click", handleLoginButtonClick, true\)/);
 });
 
 test("public pages and generators publish the auth cache release", () => {

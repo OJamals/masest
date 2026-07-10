@@ -336,9 +336,14 @@
     } finally { resetCaptcha("loginForm"); btn.disabled = false; }
   }
   $("loginForm").addEventListener("submit", handleLoginSubmit);
-  // Turnstile can consume the native submit event on production pages. Bind the
-  // button directly as well; preventDefault above suppresses the duplicate submit.
-  $("liBtn").addEventListener("click", handleLoginSubmit);
+  // Turnstile can consume the production submit-button click before it reaches
+  // target listeners. Capture it first; preventDefault above suppresses the
+  // duplicate native submit while Enter-key submission still uses the form.
+  function handleLoginButtonClick(e) {
+    if (!e.target.closest?.("#liBtn")) return;
+    void handleLoginSubmit(e);
+  }
+  document.addEventListener("click", handleLoginButtonClick, true);
 
   $("forgotPasswordBtn").addEventListener("click", async () => {
     const btn = $("forgotPasswordBtn"); const status = $("liStatus");
