@@ -52,6 +52,14 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("product.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
 });
 
+test("account login button and form submit share the same handler", () => {
+  const account = read("account.html");
+
+  assert.match(account, /async function handleLoginSubmit\(e\)/);
+  assert.match(account, /\$\("loginForm"\)\.addEventListener\("submit", handleLoginSubmit\)/);
+  assert.match(account, /\$\("liBtn"\)\.addEventListener\("click", handleLoginSubmit\)/);
+});
+
 test("public pages and generators publish the auth cache release", () => {
   const htmlFiles = [
     ...filesUnder("").filter((path) => path.endsWith(".html") && !path.startsWith("node_modules/")),

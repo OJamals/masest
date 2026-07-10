@@ -319,9 +319,10 @@
   });
   $("cLogout").addEventListener("click", async () => { await logout(); showAuth(); });
 
-  $("loginForm").addEventListener("submit", async (e) => {
+  async function handleLoginSubmit(e) {
     e.preventDefault();
     const btn = $("liBtn"); const status = $("liStatus");
+    if (btn.disabled) return;
     const cap = captchaToken("loginForm");
     if (TS_SITEKEY && !cap) { setStatus(status, "Complete the verification challenge.", "err"); return; }
     btn.disabled = true; setStatus(status, "Signing in…", "");
@@ -333,7 +334,11 @@
       const raw = String(err.message || "");
       setStatus(status, /captcha/i.test(raw) ? "Verification failed. Reload and complete the challenge." : "Sign in failed. Check your email and password.", "err");
     } finally { resetCaptcha("loginForm"); btn.disabled = false; }
-  });
+  }
+  $("loginForm").addEventListener("submit", handleLoginSubmit);
+  // Turnstile can consume the native submit event on production pages. Bind the
+  // button directly as well; preventDefault above suppresses the duplicate submit.
+  $("liBtn").addEventListener("click", handleLoginSubmit);
 
   $("forgotPasswordBtn").addEventListener("click", async () => {
     const btn = $("forgotPasswordBtn"); const status = $("liStatus");
