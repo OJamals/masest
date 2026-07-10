@@ -5,6 +5,10 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260710f";
+const MAIN_RELEASE_OVERRIDES = new Map([
+  ["admin.html", "20260710g"],
+  ["dashboard.html", "20260710g"],
+]);
 
 function filesUnder(path) {
   return readdirSync(new URL(path, root), { withFileTypes: true }).flatMap((entry) => {
@@ -71,7 +75,7 @@ test("public pages and generators publish the auth cache release", () => {
     const matches = [...read(path).matchAll(/main\.js\?v=(\d{8}[a-z])/g)];
     for (const match of matches) {
       entrypoints += 1;
-      assert.equal(match[1], RELEASE, path);
+      assert.equal(match[1], MAIN_RELEASE_OVERRIDES.get(path) || RELEASE, path);
     }
   }
 
@@ -81,7 +85,7 @@ test("public pages and generators publish the auth cache release", () => {
     "tools/gen_industries.mjs",
     "tools/seo-inject.mjs",
   ]) {
-    assert.doesNotMatch(read(path), /main\.js\?v=(?!20260710f)/, path);
+    assert.doesNotMatch(read(path), new RegExp(`main\\.js\\?v=(?!${RELEASE})`), path);
   }
   assert.ok(entrypoints >= 50, "expected generated and hand-authored public pages");
 });
