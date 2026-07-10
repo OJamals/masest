@@ -2,7 +2,7 @@
 // persisted per-tab in localStorage. Pure list helpers (upsert/remove/find/sanitize)
 // are exported for unit testing; createSavedViews wraps them with localStorage + a
 // small injected control, mirroring the quotes view-toggle injection (no admin.html edit).
-import { esc } from '../util.js?v=20260710c';
+import { esc } from '../util.js?v=20260710d';
 
 // ---- pure list helpers (no I/O) ----
 export function sanitizeViews(raw) {
@@ -52,6 +52,16 @@ export function createSavedViews({ key, getFilters, applyFilters }) {
   function refresh(box, selected) {
     const sel = box.querySelector('[data-sv-select]');
     if (sel) sel.innerHTML = options(read(), selected);
+    updateActions(box);
+  }
+
+  function updateActions(box) {
+    const selected = box.querySelector('[data-sv-select]')?.value || '';
+    const name = box.querySelector('[data-sv-name]')?.value.trim() || '';
+    const save = box.querySelector('[data-sv-save]');
+    const del = box.querySelector('[data-sv-del]');
+    if (save) save.disabled = !name;
+    if (del) del.disabled = !findView(read(), selected || name);
   }
 
   function mount(anchorEl) {
@@ -59,19 +69,25 @@ export function createSavedViews({ key, getFilters, applyFilters }) {
     if (anchorEl.parentElement.querySelector('.saved-views')) return; // inject once
     const box = document.createElement('div');
     box.className = 'saved-views';
-    box.innerHTML = `<select class="adm-select" data-sv-select aria-label="Saved views">${options(read(), '')}</select>
+    box.innerHTML = `<span class="saved-views-label">Saved view</span>
+      <select class="adm-select" data-sv-select aria-label="Saved views">${options(read(), '')}</select>
       <input class="adm-input" data-sv-name placeholder="Name this view" aria-label="Saved view name" maxlength="60">
-      <button class="btn btn-ghost btn-sm" type="button" data-sv-save>Save</button>
-      <button class="btn btn-ghost btn-sm" type="button" data-sv-del>Delete</button>`;
+      <button class="btn btn-ghost btn-sm" type="button" data-sv-save disabled>Save</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-sv-del disabled>Delete</button>`;
     anchorEl.parentElement.insertBefore(box, anchorEl);
 
     box.addEventListener('change', (event) => {
       if (!event.target.matches('[data-sv-select]')) return;
       const name = event.target.value;
       box.querySelector('[data-sv-name]').value = name;
+      updateActions(box);
       if (!name) return;
       const view = findView(read(), name);
       if (view) applyFilters(view.filters);
+    });
+
+    box.addEventListener('input', (event) => {
+      if (event.target.matches('[data-sv-name]')) updateActions(box);
     });
 
     box.addEventListener('click', (event) => {
@@ -92,6 +108,7 @@ export function createSavedViews({ key, getFilters, applyFilters }) {
         refresh(box, '');
       }
     });
+    updateActions(box);
   }
 
   return { mount };

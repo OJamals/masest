@@ -2,9 +2,9 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate } from '../util.js?v=20260710c';
+import { esc, safeUrl, confirmDialog, delegate } from '../util.js?v=20260710d';
 import { getToken } from '../auth.js';
-import { captureDirty, restoreDirty } from './edits.js?v=20260710c';
+import { captureDirty, restoreDirty } from './edits.js?v=20260710d';
 
 export function createProductsTab({ $, api, state, message, admSkeleton, admEmpty }) {
   async function renderProducts({ refetch = true } = {}) {
@@ -223,13 +223,13 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
   }
 
   async function saveVariantRow(vsku) {
-    message('variantStatus', 'Saving...');
+    message('prodStatus', 'Saving variant...');
     try {
       await api('/api/admin/products', { method: 'POST', body: { variant: rowVariant(vsku) } });
-      message('variantStatus', 'Variant saved.', 'ok');
+      message('prodStatus', 'Variant saved.', 'ok');
       await renderProducts();
     } catch (err) {
-      message('variantStatus', err.data?.error || 'Could not save the variant. Retry.', 'err');
+      message('prodStatus', err.data?.error || 'Could not save the variant. Retry.', 'err');
     }
   }
 
@@ -237,10 +237,10 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     if (!(await confirmDialog(`Remove ${vsku}? Existing order history stays intact.`, { confirmText: 'Remove', danger: true }))) return;
     try {
       await api('/api/admin/products', { method: 'DELETE', body: { vsku, hard: true } });
-      message('variantStatus', 'Variant removed.', 'ok');
+      message('prodStatus', 'Variant removed.', 'ok');
       await renderProducts();
     } catch (err) {
-      message('variantStatus', err.data?.error || 'Could not remove the variant. Retry.', 'err');
+      message('prodStatus', err.data?.error || 'Could not remove the variant. Retry.', 'err');
     }
   }
 
@@ -257,14 +257,14 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         photo_alt: $('npPhotoAlt').value.trim(),
         active: true,
       };
-      message('prodStatus', 'Saving...');
+      message('prodCreateStatus', 'Saving...');
       try {
         const response = await api('/api/admin/products', { method: 'POST', body: { product } });
-        message('prodStatus', response.warning || 'Saved.', response.warning ? 'err' : 'ok');
+        message('prodCreateStatus', response.warning || 'Product saved.', response.warning ? 'err' : 'ok');
         event.target.reset();
         await renderProducts();
       } catch (err) {
-        message('prodStatus', err.data?.error || 'Could not add the product. Check the fields and retry.', 'err');
+        message('prodCreateStatus', err.data?.error || 'Could not add the product. Check the fields and retry.', 'err');
       }
     });
   }
@@ -281,14 +281,14 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         track_stock: $('nvStock').value !== '',
         active: true,
       };
-      message('variantStatus', 'Saving...');
+      message('variantCreateStatus', 'Saving...');
       try {
         await api('/api/admin/products', { method: 'POST', body: { variant } });
-        message('variantStatus', 'Variant saved.', 'ok');
+        message('variantCreateStatus', 'Variant saved.', 'ok');
         event.target.reset();
         await renderProducts();
       } catch (err) {
-        message('variantStatus', err.data?.error || 'Could not add the variant. Check the fields and retry.', 'err');
+        message('variantCreateStatus', err.data?.error || 'Could not add the variant. Check the fields and retry.', 'err');
       }
     });
   }

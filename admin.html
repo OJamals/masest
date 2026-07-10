@@ -36,6 +36,16 @@
 .adm-overview-marker { min-width: 156px; display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--surface); box-shadow: var(--shadow-xs); }
 .adm-overview-marker span { color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .adm-overview-marker b { color: var(--accent-ink); font-size: 1rem; line-height: 1.25; }
+.adm-workspace-head { padding: clamp(18px, 2.4vw, 24px); }
+.adm-workspace-head .adm-overview-marker { min-width: 146px; }
+.adm-workspace-card { display: grid; gap: 14px; }
+.adm-workspace-card > .adm-tools { width: 100%; }
+.adm-workspace-card > .adm-tools .adm-search { flex: 1 1 240px; max-width: none; }
+.adm-workspace-card > .adm-tools .btn:last-child { margin-left: auto; }
+.adm-workspace-card > .adm-panel-header { margin-bottom: 0; }
+.adm-workspace-card > .adm-panel-header h2,
+.adm-workspace-card > .adm-panel-header h3 { margin: 0; }
+.adm-workspace-card > .adm-panel-header p { margin: 5px 0 0; }
 .adm-overview-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .34fr); gap: 16px; align-items: start; }
 .adm-ops-summary, .adm-action-rail { min-width: 0; }
 .adm-report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
@@ -69,7 +79,8 @@
   .adm-main .crm-tabs .btn,
   .adm-main .pipe-toggle .btn,
   .adm-main .saved-views .btn { min-height: 40px !important; padding: 8px 14px; }
-  .adm-main .saved-views { padding: 0; }
+  .adm-main .saved-views { padding: 12px 0 0; border-top: 1px solid var(--line-soft); }
+  .adm-main .saved-views-label { flex: 0 0 100%; color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
   .adm-main .saved-views .adm-select { flex: 1 1 180px; max-width: none; }
   .adm-main .saved-views .adm-input { flex: 1 1 160px; max-width: none; }
   .adm-main input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; flex: 0 0 auto; }
@@ -157,6 +168,15 @@
   .admin-order-actions .admin-input-sm { flex-basis: 220px; max-width: 260px; min-width: min(100%, 180px); }
   .adm-order-create summary,
   .adm-order-editor summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--ink); font-weight: 800; line-height: 1.35; }
+  .adm-summary-card > summary { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 58px; cursor: pointer; list-style: none; }
+  .adm-summary-card > summary::-webkit-details-marker { display: none; }
+  .adm-summary-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: var(--accent-soft); color: var(--accent-ink); font-size: 1.1rem; }
+  .adm-summary-copy { display: grid; gap: 3px; min-width: 0; }
+  .adm-summary-copy b { color: var(--ink); line-height: 1.25; }
+  .adm-summary-copy small { color: var(--muted); font-weight: 500; line-height: 1.35; }
+  .adm-summary-caret { color: var(--muted); transition: transform .16s var(--ease-out); }
+  .adm-summary-card[open] > summary .adm-summary-caret { transform: rotate(180deg); }
+  .adm-summary-card > :not(summary) { margin-top: 12px; }
   .adm-order-create .adm-form-grid,
   .adm-order-editor .adm-form-grid { margin-top: 10px; }
   .adm-order-editor { flex: 1 1 100%; min-width: 0; border-top: 1px solid var(--line-soft); padding-top: 4px; }
@@ -437,7 +457,7 @@
   .adm-panel-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
   .adm-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .adm-report-controls { align-items: end; gap: 10px; }
-  .adm-inv-subhead { margin: 18px 0 8px; font-size: .9rem; }
+  .adm-inv-subhead { margin: 24px 0 8px; padding-top: 16px; border-top: 1px solid var(--line-soft); font-size: .9rem; }
   .adm-coupon-form { gap: 8px; margin-bottom: 14px; }
   .adm-coupon-form .adm-input { max-width: 120px; }
   #invCsv { min-height: 90px; margin-bottom: 10px; }
@@ -481,6 +501,11 @@
   .adm-governance-note { border-color: rgba(14,124,134,.24); background: var(--accent-tint); }
   .adm-governance-note h2 { display: flex; align-items: center; gap: 8px; }
   .adm-governance-note p { margin: 0; }
+  .adm-governance-note-compact { display: grid; grid-template-columns: minmax(180px, .42fr) minmax(0, 1fr); gap: 18px; align-items: start; padding: 14px 16px; }
+  .adm-governance-note-compact h2 { margin: 0; }
+  .adm-catalog-browser .adm-panel-header { align-items: end; }
+  .adm-catalog-browser .adm-search { width: min(100%, 360px); max-width: none; }
+  .adm-catalog-browser #admProducts { border: 0; background: transparent; overflow: visible; }
   .adm-managed-price { display: block; min-height: 42px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--soft); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .adm-publish-contract { margin: 0; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--soft); color: var(--ink-soft); line-height: 1.45; }
   @media (max-width: 1060px) {
@@ -500,6 +525,12 @@
     .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: stretch; }
     .adm-overview-head { grid-template-columns: 1fr; }
     .adm-overview-marker { min-width: 0; }
+    .adm-workspace-card > .adm-tools .btn:last-child { margin-left: 0; }
+    .adm-governance-note-compact { grid-template-columns: 1fr; gap: 8px; }
+    .adm-catalog-browser .adm-panel-header { align-items: stretch; }
+    .adm-catalog-browser .adm-search { width: 100%; }
+    .adm-summary-card > summary { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; }
+    .adm-summary-icon { width: 38px; height: 38px; }
     .adm-tools { align-items: stretch; }
     .adm-tools > * { width: 100%; max-width: none; }
     .adm-form-grid > .btn { width: 100%; justify-self: stretch; }
@@ -703,13 +734,22 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="orders">
-        <div class="adm-tools">
-          <select id="ordFilter" class="adm-select adm-select-sm"><option value="">All statuses</option></select>
-          <input id="ordSearch" class="adm-search" type="search" placeholder="Search orders" aria-label="Search orders">
-          <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple"></i> Export CSV</button>
+        <div class="adm-card adm-overview-head adm-workspace-head">
+          <div><p class="adm-eyebrow">Commerce</p><h2>Orders &amp; fulfillment</h2><p class="muted">Find an order, move it through fulfillment, and handle payment or shipment exceptions.</p></div>
+          <div class="adm-overview-marker"><span>Primary task</span><b>Fulfillment queue</b></div>
         </div>
-        <details class="adm-card adm-order-create" data-capability="order.write" data-capability-mode="hide">
-          <summary>Create manual order</summary>
+        <div class="adm-card adm-workspace-card">
+          <div class="adm-panel-header"><div><h3>Order queue</h3><p class="muted">Filters and saved views stay scoped to this queue.</p></div></div>
+          <div class="adm-tools">
+            <select id="ordFilter" class="adm-select adm-select-sm" aria-label="Filter orders by status"><option value="">All statuses</option></select>
+            <input id="ordSearch" class="adm-search" type="search" placeholder="Search order, customer, or company" aria-label="Search orders">
+            <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i> Export CSV</button>
+          </div>
+          <div id="admOrders" class="adm-table-wrap">Loading...</div>
+          <p id="ordStatus" class="adm-status" role="status" aria-live="polite"></p>
+        </div>
+        <details class="adm-card adm-summary-card adm-order-create" data-capability="order.write" data-capability-mode="hide">
+          <summary><span class="adm-summary-icon"><i class="ph ph-plus" aria-hidden="true"></i></span><span class="adm-summary-copy"><b>Create manual order</b><small>Use for phone, invoice, or staff-assisted orders that did not originate in checkout.</small></span><i class="ph ph-caret-down adm-summary-caret" aria-hidden="true"></i></summary>
           <form onsubmit="return false" id="ordCreateForm" class="adm-form-grid">
             <label class="wide">Customer email <input id="ordCreateEmail" class="adm-input" type="email" autocomplete="off"></label>
             <label class="wide">Company ID <input id="ordCreateCompany" class="adm-input" autocomplete="off"></label>
@@ -724,11 +764,13 @@
           </form>
           <p id="ordCreateStatusText" class="adm-status" role="status" aria-live="polite"></p>
         </details>
-        <div id="admOrders" class="adm-table-wrap">Loading...</div>
-        <p id="ordStatus" class="adm-status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="companies">
+        <div class="adm-card adm-overview-head adm-workspace-head">
+          <div><p class="adm-eyebrow">Customer operations</p><h2>Accounts &amp; approvals</h2><p class="muted">Manage customer access, business onboarding, roles, credit, and approval status.</p></div>
+          <div class="adm-overview-marker"><span>Primary task</span><b>Review approvals</b></div>
+        </div>
         <div class="crm-tabs" id="acctToggle" role="group" aria-label="Accounts sections">
           <button class="btn btn-ghost btn-sm is-active" type="button" data-acct-view="users" aria-pressed="true">Users</button>
           <button class="btn btn-ghost btn-sm" type="button" data-acct-view="companies" aria-pressed="false">Businesses &amp; approvals</button>
@@ -742,9 +784,18 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="products">
-        <div class="adm-card adm-governance-note" id="catalogPriceGovernance" role="note">
+        <div class="adm-card adm-overview-head adm-workspace-head">
+          <div><p class="adm-eyebrow">Catalog</p><h2>Products &amp; inventory</h2><p class="muted">Search and edit the live catalog, monitor stock, and manage product media.</p></div>
+          <div class="adm-overview-marker"><span>Pricing control</span><b>Workbook governed</b></div>
+        </div>
+        <div class="adm-card adm-governance-note adm-governance-note-compact" id="catalogPriceGovernance" role="note">
           <h2><i class="ph ph-shield-check" aria-hidden="true"></i> Workbook-managed pricing</h2>
           <p>Product, variant, and customer-tier prices are read-only here. Reflect approved changes from <code>VertKleen_Website_Pricing_WebDev.xlsx</code> in the catalog seed data, then run <code>npm run seed</code> so the catalog, checkout, and admin stay aligned.</p>
+        </div>
+        <div class="adm-card adm-workspace-card adm-catalog-browser">
+          <div class="adm-panel-header"><div><h2>Product catalog</h2><p class="muted">Search first, then edit the matching product or variant in place.</p></div><input id="prodSearch" class="adm-search" type="search" placeholder="Search name, SKU, or variant" aria-label="Search products"></div>
+          <div id="admProducts" class="adm-table-wrap">Loading...</div>
+          <p id="prodStatus" class="adm-status" role="status" aria-live="polite"></p>
         </div>
         <div class="adm-card" id="admInventory" data-capability-scope="admin.write">
           <div class="adm-panel-header"><h2>Inventory</h2><button id="invReorderCsv" class="btn btn-ghost btn-sm" type="button">Reorder CSV</button></div>
@@ -754,8 +805,8 @@
           <h3 class="adm-inv-subhead">Low stock</h3>
           <div id="invLow" class="adm-list">Loading...</div>
         </div>
-        <div class="adm-card" data-capability="product.write" data-capability-mode="hide">
-          <h2>Add / overwrite a product</h2>
+        <details class="adm-card adm-summary-card" data-capability="product.write" data-capability-mode="hide">
+          <summary><span class="adm-summary-icon"><i class="ph ph-cube" aria-hidden="true"></i></span><span class="adm-summary-copy"><b>Add or overwrite a product</b><small>Create a new base product or replace one by SKU.</small></span><i class="ph ph-caret-down adm-summary-caret" aria-hidden="true"></i></summary>
           <form onsubmit="return false" id="prodForm" class="adm-form-grid">
             <label>SKU <input id="npSku" class="adm-input" required></label>
             <label class="wide">Name <input id="npName" class="adm-input"></label>
@@ -766,10 +817,10 @@
             <label class="wide">Photo alt <input id="npPhotoAlt" class="adm-input" placeholder="VertKleen HCR bottle"></label>
             <button class="btn btn-primary" type="submit">Save product</button>
           </form>
-          <p id="prodStatus" class="adm-status" role="status" aria-live="polite"></p>
-        </div>
-        <div class="adm-card" data-capability="product.write" data-capability-mode="hide">
-          <h2>Add / overwrite a volume variant</h2>
+          <p id="prodCreateStatus" class="adm-status" role="status" aria-live="polite"></p>
+        </details>
+        <details class="adm-card adm-summary-card" data-capability="product.write" data-capability-mode="hide">
+          <summary><span class="adm-summary-icon"><i class="ph ph-stack" aria-hidden="true"></i></span><span class="adm-summary-copy"><b>Add or overwrite a volume variant</b><small>Create packaging options beneath an existing product SKU.</small></span><i class="ph ph-caret-down adm-summary-caret" aria-hidden="true"></i></summary>
           <form onsubmit="return false" id="variantForm" class="adm-form-grid">
             <label>Product SKU <input id="nvProductSku" class="adm-input" required></label>
             <label>Variant SKU <input id="nvSku" class="adm-input" required></label>
@@ -779,10 +830,8 @@
             <label>Stock <input id="nvStock" class="adm-input" type="number" min="0" step="1"></label>
             <button class="btn btn-primary" type="submit">Save variant</button>
           </form>
-          <p id="variantStatus" class="adm-status" role="status"></p>
-        </div>
-        <input id="prodSearch" class="adm-search" type="search" placeholder="Search products" aria-label="Search products">
-        <div id="admProducts" class="adm-table-wrap">Loading...</div>
+          <p id="variantCreateStatus" class="adm-status" role="status" aria-live="polite"></p>
+        </details>
         <!-- Pricing (promo codes + tier price search) folded in from its own tab
              2026-07-07 — one catalog surface; #pricing deep links land here. -->
         <div class="adm-card" id="admCoupons" data-capability-scope="admin.write">
@@ -815,6 +864,9 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="messages">
+        <div class="adm-card adm-overview-head adm-workspace-head">
+          <div><p class="adm-eyebrow">Conversations</p><h2>Customer messages</h2><p class="muted">Review inbound conversations and keep customer replies in one focused workspace.</p></div>
+        </div>
         <div id="msgGrid" class="thread-layout">
           <div id="admThreads" class="thread-list">Loading...</div>
           <div id="admThreadView" class="adm-card">Select a conversation.</div>
@@ -822,31 +874,35 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="quotes">
-        <div class="adm-tools">
-          <select id="qFilter" class="adm-select adm-select-sm"><option value="">All quotes</option><option>new</option><option>contacted</option><option>closed</option><option>spam</option></select>
-          <select id="qPriority" class="adm-select adm-select-xs"><option value="">All priorities</option><option>urgent</option><option>high</option><option>normal</option><option>low</option></select>
-          <input id="qOwner" class="adm-search" type="search" placeholder="Owner" aria-label="Filter quotes by owner">
-          <select id="qDue" class="adm-select adm-select-md"><option value="">All follow-ups</option><option value="overdue">Overdue</option><option value="upcoming">Upcoming</option><option value="unscheduled">Unscheduled</option></select>
-          <input id="qSearch" class="adm-search" type="search" placeholder="Search quotes" aria-label="Search quotes">
+        <div class="adm-card adm-overview-head adm-workspace-head">
+          <div><p class="adm-eyebrow">Lead generation</p><h2>Quotes &amp; follow-up</h2><p class="muted">Prioritize inbound opportunities, assign ownership, and keep the next action visible.</p></div>
+          <div class="adm-overview-marker"><span>Workflow</span><b>Follow-up pipeline</b></div>
         </div>
-        <div id="admQuotes" class="adm-panel-list">Loading...</div>
-        <p id="qStatus" class="adm-status" role="status" aria-live="polite"></p>
+        <div class="adm-card adm-workspace-card">
+          <div class="adm-panel-header"><div><h3>Quote queue</h3><p class="muted">Combine filters, then save the view for repeat workflows.</p></div></div>
+          <div class="adm-tools">
+            <select id="qFilter" class="adm-select adm-select-sm" aria-label="Filter quotes by status"><option value="">All quotes</option><option>new</option><option>contacted</option><option>closed</option><option>spam</option></select>
+            <select id="qPriority" class="adm-select adm-select-xs" aria-label="Filter quotes by priority"><option value="">All priorities</option><option>urgent</option><option>high</option><option>normal</option><option>low</option></select>
+            <input id="qOwner" class="adm-search" type="search" placeholder="Owner" aria-label="Filter quotes by owner">
+            <select id="qDue" class="adm-select adm-select-md" aria-label="Filter quotes by follow-up timing"><option value="">All follow-ups</option><option value="overdue">Overdue</option><option value="upcoming">Upcoming</option><option value="unscheduled">Unscheduled</option></select>
+            <input id="qSearch" class="adm-search" type="search" placeholder="Search company, contact, or request" aria-label="Search quotes">
+          </div>
+          <div id="admQuotes" class="adm-panel-list">Loading...</div>
+          <p id="qStatus" class="adm-status" role="status" aria-live="polite"></p>
+        </div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="reviews">
-        <div class="adm-tools">
-          <select id="rvFilter" class="adm-select adm-select-sm">
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="all">All</option>
-          </select>
+        <div class="adm-card adm-overview-head adm-workspace-head">
+          <div><p class="adm-eyebrow">Trust &amp; moderation</p><h2>Customer reviews</h2><p class="muted">Moderate submitted reviews and add documented feedback without obscuring verification status.</p></div>
         </div>
-        <div id="admReviews" class="adm-panel-list">Loading...</div>
-        <p id="rvStatus" class="adm-status" role="status" aria-live="polite"></p>
-        <div class="adm-card" data-capability-scope="admin.write">
-          <h2>Add a manual review</h2>
-          <p class="muted">Adds documented customer feedback. Verified-purchase badges remain tied to real fulfilled orders.</p>
+        <div class="adm-card adm-workspace-card">
+          <div class="adm-tools"><select id="rvFilter" class="adm-select adm-select-sm" aria-label="Filter reviews by moderation status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></div>
+          <div id="admReviews" class="adm-panel-list">Loading...</div>
+          <p id="rvStatus" class="adm-status" role="status" aria-live="polite"></p>
+        </div>
+        <details class="adm-card adm-summary-card" data-capability-scope="admin.write">
+          <summary><span class="adm-summary-icon"><i class="ph ph-note-pencil" aria-hidden="true"></i></span><span class="adm-summary-copy"><b>Add a manual review</b><small>Add documented feedback; verified-purchase badges remain tied to fulfilled orders.</small></span><i class="ph ph-caret-down adm-summary-caret" aria-hidden="true"></i></summary>
           <form onsubmit="return false" id="rvManualForm" class="adm-form-grid">
             <label>Kind <select id="rvKind" class="adm-select"><option value="product">Product</option><option value="service">Service</option></select></label>
             <label>SKU <input id="rvSku" class="adm-input" required></label>
@@ -858,7 +914,7 @@
             <button class="btn btn-primary" type="submit">Add review</button>
           </form>
           <p id="rvManualStatus" class="adm-status" role="status" aria-live="polite"></p>
-        </div>
+        </details>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="newsletter">
@@ -894,6 +950,6 @@
 <script>window.MASEST_DISABLE_CRISP = true; /* visitor chat bubble overlays the staff console; Crisp threads surface in the Messages tab instead */</script>
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260619b"></script>
-<script type="module" src="js/admin.js?v=20260710c"></script>
+<script type="module" src="js/admin.js?v=20260710d"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 // Admin messages/threads tab (#36 per-tab split). Lists buyer conversations and
 // opens a thread with an inline reply form. Shared primitives + the admin-local
 // sourceLabel/message helpers are injected; esc/date come from the shared util.
-import { esc, dateTime as date, delegate } from '../util.js?v=20260710c';
+import { esc, dateTime as date, delegate } from '../util.js?v=20260710d';
 
 export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats }) {
   async function openThread(companyId) {
