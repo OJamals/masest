@@ -3,7 +3,7 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js';
+import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260710a';
 import { captureDirty, restoreDirty } from './edits.js';
 import { ORDER_STATUSES } from './orders.js';
 

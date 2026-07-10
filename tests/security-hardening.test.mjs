@@ -61,7 +61,7 @@ test('dashboard wraps DB-driven tracking_url and notification link through safeU
 test('admin wraps admin-editable image/href values through safeUrl', () => {
   const src = read('js/admin.js');
   assert.match(src, /safeUrl\(/, 'admin renderers must sanitize URLs');
-  assert.match(src, /import\s*\{[^}]*safeUrl[^}]*\}\s*from\s*['"]\.\/util\.js['"]/, 'admin.js must import safeUrl');
+  assert.match(src, /import\s*\{[^}]*safeUrl[^}]*\}\s*from\s*['"]\.\/util\.js(?:\?v=\d{8}[a-z])?['"]/, 'admin.js must import safeUrl');
 });
 
 // ---- #14: rate limiting on the email-sending account mutations ----

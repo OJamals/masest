@@ -41,7 +41,7 @@ test('util exposes wireTablist + rovingTabindex with key handling', () => {
 test('admin + dashboard wire the tablist keyboard pattern + roving tabindex', () => {
   for (const p of ['js/admin.js', 'js/dashboard.js']) {
     const src = read(p);
-    assert.match(src, /import\s*\{[^}]*wireTablist[^}]*\}\s*from\s*['"]\.\/util\.js['"]/, `${p} must import the helper`);
+    assert.match(src, /import\s*\{[^}]*wireTablist[^}]*\}\s*from\s*['"]\.\/util\.js(?:\?v=\d{8}[a-z])?['"]/, `${p} must import the helper`);
     assert.match(src, /wireTablist\(/, `${p} must wire keyboard nav`);
     assert.match(src, /rovingTabindex\(/, `${p} must apply roving tabindex on tab change`);
     assert.match(src, /linkTabsToPanels\(/, `${p} must connect tabs to their panels`);

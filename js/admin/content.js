@@ -1,4 +1,4 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260710a";
 import { renderMarkdown } from "../md.js";
 import { supabase } from "../auth.js";
 import { createContentAssets } from "./content-assets.js?v=20260709b";

@@ -600,9 +600,9 @@
     <div id="admGate" class="adm-card">
       <h2 id="gateTitle">Staff sign in</h2>
       <p id="gateMsg" class="muted">Sign in with a MASEST staff account.</p>
-      <form onsubmit="return false" id="gateForm" class="adm-form-grid">
-        <label class="wide">Email <input id="gEmail" class="adm-input" type="email" autocomplete="email" required></label>
-        <label class="wide">Password <input id="gPass" class="adm-input" type="password" autocomplete="current-password" required></label>
+      <form onsubmit="return false" id="gateForm" class="adm-form-grid" method="post" autocomplete="on">
+        <label class="wide">Email <input id="gEmail" name="email" class="adm-input" type="email" autocomplete="username" required></label>
+        <label class="wide">Password <input id="gPass" name="password" class="adm-input" type="password" autocomplete="current-password" required></label>
         <button class="btn btn-primary" type="submit">Sign in</button>
       </form>
       <p id="gateStatus" class="adm-status" role="status" aria-live="polite"></p>
@@ -894,6 +894,6 @@
 <script>window.MASEST_DISABLE_CRISP = true; /* visitor chat bubble overlays the staff console; Crisp threads surface in the Messages tab instead */</script>
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260619b"></script>
-<script type="module" src="js/admin.js?v=20260709g"></script>
+<script type="module" src="js/admin.js?v=20260710a"></script>
 </body>
 </html>

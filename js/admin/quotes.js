@@ -5,7 +5,7 @@
 // helpers are injected; esc/delegate/money/confirmDialog/dateTime come from util.js and
 // the dirty-edit helpers from edits.js. The CRM activity panel (Timeline/Tasks/Notes,
 // slice 1) is reused inside the drawer via createCrmPanel — no js/admin.js change needed.
-import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js';
+import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260710a';
 import { captureDirty, restoreDirty } from './edits.js';
 import { createCrmPanel } from './crm.js';
 import { createSavedViews } from './saved-views.js';

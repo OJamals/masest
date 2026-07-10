@@ -406,3 +406,34 @@ test("admin status changes are exposed through a live region", async () => {
     }
   });
 });
+
+test("admin boots when an older unversioned util module remains cached", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch();
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
+    await context.addInitScript(() => {
+      window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
+      window.MASEST_SUPABASE_ANON = "stub-anon";
+      localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
+    });
+    await context.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    await context.route("**/js/util.js*", (route) => {
+      const requestUrl = new URL(route.request().url());
+      if (requestUrl.searchParams.has("v")) return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: "text/javascript",
+        body: "export const esc = (value) => String(value ?? '');",
+      });
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector('.adm-panel[data-panel="overview"][data-active="true"]', { timeout: 10000 });
+      assert.equal(await page.locator("#admApp").isVisible(), true, "versioned admin dependencies should bypass a stale util.js cache entry");
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  });
+});
