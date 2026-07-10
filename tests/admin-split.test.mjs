@@ -84,3 +84,27 @@ test("admin modules cache-bust the shared util dependency", () => {
   });
   assert.deepEqual(unversioned, [], `admin util imports need cache-busting: ${unversioned.join(", ")}`);
 });
+
+test("the deployed admin entry and its complete relative module graph share one release token", () => {
+  const html = read("admin.html");
+  const entry = html.match(/src=["']js\/admin\.js\?v=(\d{8}[a-z])["']/);
+  assert.ok(entry, "admin.html must cache-bust the admin entrypoint");
+  const release = entry[1];
+  const modules = [
+    "js/admin.js",
+    ...readdirSync(new URL("js/admin/", root))
+      .filter((name) => name.endsWith(".js"))
+      .map((name) => `js/admin/${name}`),
+  ];
+  const mismatched = modules.flatMap((path) => {
+    const imports = [...read(path).matchAll(/from\s+["'](\.\.?\/[^"']+?\.js)([^"']*)["']/g)];
+    return imports
+      .filter(([, , suffix]) => suffix !== `?v=${release}`)
+      .map(([, target, suffix]) => `${path} -> ${target}${suffix}`);
+  });
+  assert.deepEqual(
+    mismatched,
+    [],
+    `admin module graph must use release ${release}: ${mismatched.join(", ")}`,
+  );
+});

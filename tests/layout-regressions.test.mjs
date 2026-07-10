@@ -171,7 +171,7 @@ async function newAuthedPage(browser, viewport) {
     localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
   });
   const page = await context.newPage();
-  await page.route("**/js/auth.js", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule() }));
+  await page.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule() }));
   return { context, page };
 }
 

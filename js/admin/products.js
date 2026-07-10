@@ -2,9 +2,9 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate } from '../util.js?v=20260710a';
-import { getToken } from '../auth.js';
-import { captureDirty, restoreDirty } from './edits.js';
+import { esc, safeUrl, confirmDialog, delegate } from '../util.js?v=20260710b';
+import { getToken } from '../auth.js?v=20260710b';
+import { captureDirty, restoreDirty } from './edits.js?v=20260710b';
 
 export function createProductsTab({ $, api, state, message, admSkeleton, admEmpty }) {
   async function renderProducts({ refetch = true } = {}) {

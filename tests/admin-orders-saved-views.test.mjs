@@ -5,7 +5,7 @@ import test from 'node:test';
 const src = readFileSync(new URL('../js/admin/orders.js', import.meta.url), 'utf8');
 
 test('orders tab reuses the saved-views helper with its own key', () => {
-  assert.match(src, /import \{ createSavedViews \} from '\.\/saved-views\.js'/);
+  assert.match(src, /import \{ createSavedViews \} from '\.\/saved-views\.js(?:\?v=\d{8}[a-z])?'/);
   assert.match(src, /createSavedViews\(\{\s*key: 'orders'/);
 });
 
