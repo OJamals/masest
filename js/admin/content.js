@@ -1,21 +1,21 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260710f";
-import { renderMarkdown } from "../md.js?v=20260710f";
-import { supabase } from "../auth.js?v=20260710f";
-import { createContentAssets } from "./content-assets.js?v=20260710f";
-import { createContentRevisions } from "./content-revisions.js?v=20260710f";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260710g";
+import { renderMarkdown } from "../md.js?v=20260710g";
+import { supabase } from "../auth.js?v=20260710g";
+import { createContentAssets } from "./content-assets.js?v=20260710g";
+import { createContentRevisions } from "./content-revisions.js?v=20260710g";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260710f";
+} from "./rich-editor.js?v=20260710g";
 import {
   contentPayloadFields,
   contentTypeOptions,
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260710f";
+} from "../content-types.js?v=20260710g";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "og_image", "hero"]);

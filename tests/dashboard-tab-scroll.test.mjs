@@ -52,3 +52,11 @@ test("dashboard sidebars release wheel scrolling to the page at their boundaries
   assert.doesNotMatch(dashboard, /\.dash-sidebar\s*\{[^}]*overscroll-behavior:\s*contain/);
   assert.doesNotMatch(admin, /\.adm-sidebar\.adm-tabs-wrap\s*\{[^}]*overscroll-behavior:\s*contain/);
 });
+
+test("Team Access rows wrap controls inside narrow business cards", () => {
+  const dashboard = read("dashboard.html");
+
+  assert.match(dashboard, /#bizTeam \.biz-row\s*\{[^}]*flex-wrap:\s*wrap/);
+  assert.match(dashboard, /#bizTeam \.biz-row-actions\s*\{[^}]*max-width:\s*100%/);
+  assert.match(dashboard, /#bizTeam \.biz-row-actions\s*\{[^}]*flex-wrap:\s*wrap/);
+});

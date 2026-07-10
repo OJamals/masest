@@ -9,7 +9,7 @@ const MAIN_RELEASE_OVERRIDES = new Map([
   ["admin.html", "20260710g"],
   ["dashboard.html", "20260710g"],
 ]);
-const DASHBOARD_RELEASE = MAIN_RELEASE_OVERRIDES.get("dashboard.html");
+const ADMIN_RELEASE = MAIN_RELEASE_OVERRIDES.get("admin.html");
 
 function filesUnder(path) {
   return readdirSync(new URL(path, root), { withFileTypes: true }).flatMap((entry) => {
@@ -35,7 +35,10 @@ test("every browser auth importer uses one cache release", () => {
     const imports = source.matchAll(/(?:from\s*|import\s*\()\s*["']([^"']*auth\.js(?:\?[^"']*)?)["']/g);
     for (const match of imports) {
       references += 1;
-      assert.match(match[1], new RegExp(`auth\\.js\\?v=${RELEASE}$`), `${path}: ${match[1]}`);
+      const release = path === "js/admin.js" || path.startsWith("js/admin/")
+        ? ADMIN_RELEASE
+        : RELEASE;
+      assert.match(match[1], new RegExp(`auth\\.js\\?v=${release}$`), `${path}: ${match[1]}`);
     }
   }
 
@@ -43,12 +46,13 @@ test("every browser auth importer uses one cache release", () => {
 });
 
 test("auth-consuming module paths are refreshed from their page entrypoints", () => {
-  assert.match(read("dashboard.html"), new RegExp(`dashboard\\.js\\?v=${DASHBOARD_RELEASE}`));
-  assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${DASHBOARD_RELEASE}`));
+  const dashboardEntry = read("dashboard.html").match(/dashboard\.js\?v=(\d{8}[a-z])/);
+  assert.ok(dashboardEntry, "dashboard.html must cache-bust the dashboard entrypoint");
+  assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${dashboardEntry[1]}`));
 
-  assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${RELEASE}`));
+  assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${ADMIN_RELEASE}`));
   for (const module of ["content", "products", "qbo"]) {
-    assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${RELEASE}`));
+    assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_RELEASE}`));
   }
 
   assert.match(read("js/main/chrome.js"), new RegExp(`account-nav\\.js\\?v=${RELEASE}`));

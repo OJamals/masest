@@ -262,6 +262,9 @@
   .biz-row b { color: var(--ink); text-align: right; overflow-wrap: normal; word-break: normal; }
   #bizTeam .biz-row b { white-space: nowrap; }
   .biz-row-actions { display: inline-flex; gap: 8px; align-items: center; }
+  #bizTeam .biz-row { flex-wrap: wrap; }
+  #bizTeam .biz-row > :first-child { flex: 1 1 170px; }
+  #bizTeam .biz-row-actions { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; justify-content: flex-end; margin-left: auto; }
   .tier-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .tier { border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px; display: flex; flex-direction: column; }
   .tier h3 { font-size: 1.15rem; font-weight: 800; letter-spacing: 0; }

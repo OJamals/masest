@@ -3,7 +3,7 @@
 import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260710f';
 import { add as cartAdd, clear as cartClear } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast } from './util.js';
-import { initBusinessHub } from './business.js?v=20260710g';
+import { initBusinessHub } from './business.js?v=20260710j';
 
 const $ = (id) => document.getElementById(id);
 
