@@ -35,6 +35,16 @@ test("admin dashboard tab changes preserve the page scroll", () => {
   assert.doesNotMatch(source, /window\.scrollTo\(/);
 });
 
+test("admin tab changes reserve panel height and opt out of scroll anchoring", () => {
+  const source = read("js/admin.js");
+  const admin = read("admin.html");
+
+  assert.match(source, /function reserveAdminHeight\(\)/);
+  assert.match(source, /reserveAdminHeight\(\);\s*\n\s*document\.querySelectorAll\('\[data-panel\]'/);
+  assert.match(source, /main\.style\.minHeight/);
+  assert.match(admin, /\.adm-main\s*\{[^}]*overflow-anchor:\s*none/);
+});
+
 test("dashboard sidebars release wheel scrolling to the page at their boundaries", () => {
   const dashboard = read("dashboard.html");
   const admin = read("admin.html");

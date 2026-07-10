@@ -130,6 +130,14 @@ async function boot() {
  }
 }
 
+function reserveAdminHeight() {
+  const main = document.querySelector('.adm-main');
+  if (!main) return;
+  const current = Number.parseFloat(main.style.minHeight) || 0;
+  const visibleHeight = Math.ceil(main.getBoundingClientRect().height);
+  if (visibleHeight > current) main.style.minHeight = `${visibleHeight}px`;
+}
+
 function setTab(tab) {
   // The old top-level Customers tab folded into the CRM People directory —
   // keep #customers deep links working by landing on that sub-view. Historical
@@ -146,6 +154,7 @@ function setTab(tab) {
   // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
   // like quotes painted every row twice). Back/forward still works via hashchange.
   if (location.hash.slice(1) !== state.tab) history.replaceState(null, '', '#' + state.tab);
+  reserveAdminHeight();
   document.querySelectorAll('[data-panel]').forEach((panel) => {
     panel.dataset.active = String(panel.dataset.panel === state.tab);
   });
