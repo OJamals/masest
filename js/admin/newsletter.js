@@ -4,13 +4,13 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog } from '../util.js';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260709b';
+} from './rich-editor.js?v=20260709c';
 import { renderNewsletterBody } from '../newsletter-render.js';
 
 const SECTIONS = [
@@ -64,6 +64,7 @@ function promptImageDetails() {
     </form>`;
     if (typeof dlg.showModal !== 'function') { resolve(null); return; }
     document.body.appendChild(dlg);
+    restoreFocusOnClose(dlg);
     dlg.addEventListener('close', () => {
       const ok = dlg.returnValue === 'ok';
       const url = dlg.querySelector('[data-nl-img-url]')?.value.trim() || '';
@@ -90,6 +91,7 @@ function promptTestEmail(defaultVal = '') {
     </form>`;
     if (typeof dlg.showModal !== 'function') { resolve(null); return; }
     document.body.appendChild(dlg);
+    restoreFocusOnClose(dlg);
     dlg.addEventListener('close', () => {
       const ok = dlg.returnValue === 'ok';
       const email = dlg.querySelector('[data-nl-test-email]')?.value.trim() || '';
@@ -128,9 +130,9 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
             <h2 id="nlEditorHeading">${editingId ? 'Edit newsletter' : 'New newsletter'}</h2>
             <p class="muted">Email campaign to your subscriber &amp; lead lists — compose from scratch or pull in a published blog post, then save, test, schedule, or send. To post a dashboard notification to logged-in customer accounts instead, use <a href="#offers">Offers</a>.</p>
           </div>
-          <button class="btn btn-ghost btn-sm" type="button" data-nl-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-nl-action="new" data-capability="admin.write"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
         </div>
-        <form id="nlForm" class="adm-form-grid" onsubmit="return false">
+        <form id="nlForm" class="adm-form-grid" onsubmit="return false" data-capability-scope="admin.write">
           <input type="hidden" id="nlId" value="${editingId ? esc(editingId) : ''}">
           <label class="wide">Source
             <select id="nlSource" class="adm-select">
@@ -207,9 +209,9 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
           <span class="muted">${esc(Number(n.recipient_count || 0).toLocaleString())} sent · ${esc(nextRunText(n))}</span>
         </div>
         <div class="adm-inline-actions">
-          <button class="btn btn-ghost btn-sm" type="button" data-nl-edit="${esc(n.id)}"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Edit</button>
-          ${canCancel ? `<button class="btn btn-ghost btn-sm" type="button" data-nl-cancel="${esc(n.id)}"><i class="ph ph-x-circle" aria-hidden="true"></i> Cancel schedule</button>` : ''}
-          <button class="btn btn-ghost btn-sm" type="button" data-nl-delete="${esc(n.id)}"><i class="ph ph-trash" aria-hidden="true"></i> Delete</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-nl-edit="${esc(n.id)}" data-capability="admin.write"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Edit</button>
+          ${canCancel ? `<button class="btn btn-ghost btn-sm" type="button" data-nl-cancel="${esc(n.id)}" data-capability="admin.write"><i class="ph ph-x-circle" aria-hidden="true"></i> Cancel schedule</button>` : ''}
+          <button class="btn btn-ghost btn-sm" type="button" data-nl-delete="${esc(n.id)}" data-capability="admin.write"><i class="ph ph-trash" aria-hidden="true"></i> Delete</button>
         </div>
       </div>
     `;
@@ -230,7 +232,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
   function settingsTemplate() {
     const auto = Boolean(state.nlSettings?.auto_send_latest_blog);
     return `
-      <div class="adm-card">
+      <div class="adm-card" data-capability-scope="admin.write">
         <h2>Settings</h2>
         <label class="adm-content-check"><input type="checkbox" id="nlAutoSend"${auto ? ' checked' : ''}> Automatically email the latest blog post to subscribers on publish</label>
         <p id="nlSettingsStatus" class="adm-status" role="status" aria-live="polite"></p>
@@ -271,13 +273,13 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       <div class="adm-card">
         <div class="adm-panel-header"><h3>Recipients</h3></div>
         <p class="adm-status" id="nlRecipCounts"></p>
-        <div class="nl-recip-import">
+        <div class="nl-recip-import" data-capability-scope="admin.write">
           <label class="full">Import emails (paste a list, CSV, or newline-separated)
             <textarea class="adm-textarea" id="nlRecipImport" rows="3" placeholder="a@x.com, b@x.com…"></textarea>
           </label>
           <button class="btn btn-secondary btn-sm" type="button" data-nl-recip="import"><i class="ph ph-upload-simple" aria-hidden="true"></i> Import</button>
         </div>
-        <div class="nl-recip-add" style="margin-top:10px">
+        <div class="nl-recip-add" data-capability-scope="admin.write" style="margin-top:10px">
           <input class="adm-input" id="nlRecipEmail" type="email" placeholder="add one: email@company.com">
           <input class="adm-input" id="nlRecipName" type="text" placeholder="Name (optional)">
           <button class="btn btn-ghost btn-sm" type="button" data-nl-recip="add"><i class="ph ph-plus" aria-hidden="true"></i> Add</button>
@@ -299,8 +301,8 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       list.innerHTML = `<table class="adm-table"><thead><tr><th>Email</th><th>Name</th><th>Source</th><th>Subscribed</th><th></th></tr></thead><tbody>${rows.map((r) => `
         <tr>
           <td>${esc(r.email)}</td><td>${esc(r.name || '')}</td><td>${esc(r.source || '')}</td>
-          <td><input type="checkbox" data-nl-recip-sub="${esc(r.email)}"${r.subscribed ? ' checked' : ''}></td>
-          <td><button class="btn btn-ghost btn-sm" type="button" data-nl-recip-remove="${esc(r.email)}"><i class="ph ph-trash" aria-hidden="true"></i></button></td>
+          <td><input type="checkbox" data-nl-recip-sub="${esc(r.email)}" data-capability="admin.write"${r.subscribed ? ' checked' : ''}></td>
+          <td><button class="btn btn-ghost btn-sm" type="button" data-nl-recip-remove="${esc(r.email)}" data-capability="admin.write"><i class="ph ph-trash" aria-hidden="true"></i></button></td>
         </tr>`).join('')}</tbody></table>`;
     } catch { const list = $('nlRecipList'); if (list) list.innerHTML = '<p class="adm-status" data-state="err">Could not load recipients.</p>'; }
   }

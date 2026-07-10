@@ -70,7 +70,7 @@ function renderFailedOrders(orders = [], refunds = [], subscriptions = []) {
               <td>${row.total}</td>
               <td>${esc(row.attempts)}</td>
               <td>${esc(row.error)}</td>
-              <td><button class="btn btn-ghost btn-sm" type="button" data-qbo-retry="${esc(row.id)}" data-qbo-retry-kind="${esc(row.kind)}">Retry</button></td>
+              <td><button class="btn btn-ghost btn-sm" type="button" data-qbo-retry="${esc(row.id)}" data-qbo-retry-kind="${esc(row.kind)}" data-capability="admin.write">Retry</button></td>
             </tr>
           `).join("")}
         </tbody>

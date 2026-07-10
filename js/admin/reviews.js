@@ -51,7 +51,7 @@ export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty
     }
     box.innerHTML = reviews.map((r) => {
       const id = esc(r.id);
-      return `<article class="quote-item" data-review-id="${id}">
+      return `<article class="quote-item" data-review-id="${id}" data-capability-scope="admin.write">
         <div class="dash-row">
           <span><b>${esc(r.kind)}:${esc(r.sku)}</b> ${stars(r.rating)} ${statusBadge(r.status)}</span>
           <span class="muted">${esc(date(r.created_at))}</span>

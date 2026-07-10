@@ -22,7 +22,6 @@ const TABS = [
   { mod: 'orders', wire: 'wireOrders', container: 'admOrders' },
   { mod: 'companies', wire: 'wireCompanies', container: 'admCompanies' },
   { mod: 'products', wire: 'wireProducts', container: 'admProducts' },
-  { mod: 'pricing', wire: 'wirePricing', container: 'admPricing' },
   { mod: 'quotes', wire: 'wireQuotes', container: 'admQuotes' },
   { mod: 'threads', wire: 'wireThreads', container: 'admThreads' },
 ];
@@ -38,9 +37,15 @@ for (const { mod, wire, container } of TABS) {
   });
 }
 
+test('admin pricing tab is a read-only verification view with no row-action listeners', () => {
+  const src = read('js/admin/pricing.js');
+  assert.match(src, /function wirePricing\(\) \{\}/);
+  assert.doesNotMatch(src, /data-price-tier|delegate\(box,/);
+});
+
 test('admin.js binds every tab\'s delegated row actions once in wire()', () => {
   const admin = read('js/admin.js');
-  for (const { wire } of TABS) {
+  for (const { wire } of [...TABS, { wire: 'wirePricing' }]) {
     assert.match(admin, new RegExp(`\\n\\s*${wire}\\(\\);`), `wire() must call ${wire}()`);
   }
 });

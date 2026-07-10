@@ -3,6 +3,7 @@ import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
 import { buildCompanySetup, setupStepBreakdown } from '../../_lib/setup.js';
 import { cached } from '../../_lib/cache.js';
 import { orderLifecycle } from '../../_lib/order-lifecycle.js';
+import { staffAccessSummary } from '../../_lib/authz.js';
 
 // ~15 count queries + a 1000-row scan per load; the result is org-wide, so cache it
 // briefly (no-op until RATE_KV is bound). Staff auth runs BEFORE the cache lookup.
@@ -14,13 +15,15 @@ const sumTotals = (orders) => orders.reduce((sum, order) => sum + Number(order.t
 const withinDays = (iso, days) => iso && new Date(iso).getTime() >= Date.now() - days * 86400e3;
 
 export async function onRequestGet({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
 
   const sb = adminClient(env);
   const payload = await cached(env, 'cache:admin:stats:v1', STATS_TTL_SEC, () => computeStats(sb));
-  return json(200, payload);
+  // Role data must be attached AFTER the org-wide cache lookup. Putting it in the
+  // cached payload could leak an owner's capabilities into another staff session.
+  return json(200, { ...payload, staff_context: staffAccessSummary(role, user.email) });
 }
 
 async function computeStats(sb) {

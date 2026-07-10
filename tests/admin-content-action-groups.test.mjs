@@ -19,6 +19,9 @@ test("content editor groups normal, review, and management actions", () => {
   // disclosure — it's owner-only under current authz, so it must not crowd the
   // main action row.
   assert.match(source, /data-content-action="draft"[\s\S]*data-content-action="publish"[\s\S]*data-content-workflow="schedule"/);
+  assert.match(source, /> Publish to CMS</);
+  assert.match(source, /Schedule CMS publish/);
+  assert.match(source, /Publication status:[\s\S]*public site changes after the static rebuild completes/);
   assert.match(source, /adm-content-disclosure[\s\S]*data-content-workflow="submit_review"[\s\S]*data-content-workflow="request_changes"/);
   assert.doesNotMatch(source, /<details class="adm-content-disclosure full" open>/, "multi-editor tools disclosure starts closed");
   assert.match(source, /data-content-action="new"[\s\S]*data-content-action="duplicate"[\s\S]*data-content-action="archive"/);
@@ -61,6 +64,8 @@ test("blog editor exposes formatting and reference insertion controls", () => {
   assert.match(editor, /data-editor-action="reference_product"/);
   assert.match(editor, /data-editor-action="reference_service"/);
   assert.match(editor, /contenteditable="true"/);
+  assert.match(editor, /data-editor-action="format_bold" aria-label="Bold" title="Bold"/);
+  assert.match(editor, /contenteditable="true" role="textbox" aria-multiline="true" aria-label=/);
   assert.match(editor, /htmlToMarkdown/);
   assert.match(editor, /markdownToEditorHtml/);
   assert.match(editor, /data-rich-editor-surface/);

@@ -58,3 +58,16 @@ test("admin Accounts exposes business lifecycle controls from the user console",
   assert.match(api, /company\.delete/,
     "company deletion should be audited");
 });
+
+test("business approval queue only offers approval for pending accounts", () => {
+  const js = read("js/admin/companies.js");
+
+  assert.match(js, /const pending = !company\.status \|\| company\.status === 'pending'/,
+    "approval availability should derive from the business lifecycle state");
+  assert.match(js, /\$\{pending \? `<button class="btn btn-primary btn-sm" data-approve=/,
+    "Approve should only render for pending businesses");
+  assert.match(js, /\.co-check:not\(:disabled\)/,
+    "bulk approval should ignore businesses that are no longer pending");
+  assert.match(js, /<details class="crm-row-menu">[\s\S]*btn-danger[\s\S]*Delete business/,
+    "destructive removal should live behind a secondary More menu");
+});

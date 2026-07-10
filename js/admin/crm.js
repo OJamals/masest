@@ -3,7 +3,7 @@
 // three from /api/admin/crm/*. Kept out of companies.js so that file stays focused
 // (#36 split rule). Skeleton/empty helpers are injected; esc/date/confirmDialog come
 // from util.js, matching the other per-tab modules.
-import { esc, dateTime as date, confirmDialog } from '../util.js';
+import { esc, dateTime as date, confirmDialog, restoreFocusOnClose } from '../util.js';
 
 const KINDS = [['note', 'Note'], ['call', 'Call'], ['email', 'Email'], ['meeting', 'Meeting']];
 const CONTACT_ROLES = [['procurement', 'Procurement'], ['plant_manager', 'Plant Manager'], ['maintenance', 'Maintenance'], ['engineering', 'Engineering'], ['operations', 'Operations'], ['accounts_payable', 'Accounts Payable'], ['executive', 'Executive'], ['other', 'Other']];
@@ -55,7 +55,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
 
   function renderNotes(notes, viewer) {
     const canDelete = (n) => viewer && (viewer.can_delete_any || (n.created_by && n.created_by === viewer.email));
-    const composer = `<form class="crm-note-form" data-crm-note-form>
+    const composer = `<form class="crm-note-form" data-crm-note-form data-capability-scope="admin.write">
       <label class="crm-field crm-field-wide">Note
         <textarea class="adm-input" data-crm-note-body rows="2" placeholder="Add a useful note for the next person who opens this record." required></textarea>
       </label>
@@ -69,14 +69,14 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       <div><div class="crm-feed-title">${esc(n.kind)} <span class="muted">· ${esc(n.created_by || '')}</span></div>
       <div class="crm-feed-detail">${esc(n.body)}</div></div>
       <span class="crm-feed-at"><time class="muted">${esc(date(n.created_at))}</time>
-      ${canDelete(n) ? `<button class="btn btn-ghost btn-sm" type="button" data-crm-note-del="${esc(n.id)}" aria-label="Delete note">Delete</button>` : ''}</span></li>`).join('')}</ul>`
+      ${canDelete(n) ? `<button class="btn btn-ghost btn-sm" type="button" data-crm-note-del="${esc(n.id)}" data-capability="admin.write" aria-label="Delete note">Delete</button>` : ''}</span></li>`).join('')}</ul>`
       : admEmpty('ph-note', 'No notes', 'Log the first call, email or meeting.');
     return composer + list;
   }
 
   function renderTasks(tasks) {
     const overdue = (t) => t.due_at && new Date(t.due_at) < new Date();
-    const composer = `<form class="crm-task-form" data-crm-task-form>
+    const composer = `<form class="crm-task-form" data-crm-task-form data-capability-scope="admin.write">
       <label class="crm-field">Follow-up
         <input class="adm-input" data-crm-task-title placeholder="Add follow-up task" required>
       </label>
@@ -94,7 +94,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       </details>
     </form>`;
     const row = (t) => `<li class="crm-task ${t.status === 'done' ? 'is-done' : ''}">
-      <button class="btn btn-ghost btn-sm" type="button" data-crm-task-toggle="${esc(t.id)}" data-crm-task-status="${esc(t.status)}" aria-label="${t.status === 'done' ? 'Reopen' : 'Complete'} task">${t.status === 'done' ? '↺' : '✓'}</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-crm-task-toggle="${esc(t.id)}" data-crm-task-status="${esc(t.status)}" data-capability="admin.write" aria-label="${t.status === 'done' ? 'Reopen' : 'Complete'} task">${t.status === 'done' ? '↺' : '✓'}</button>
       <div><div class="crm-feed-title">${esc(t.title)}</div>
       <div class="crm-feed-detail muted">${t.assigned_to ? `→ ${esc(t.assigned_to)}` : 'Unassigned'}${t.due_at ? ` · due ${esc(date(t.due_at))}` : ''}</div></div>
       ${t.status === 'open' && overdue(t) ? '<span class="badge badge-warning">Overdue</span>' : '<span></span>'}</li>`;
@@ -107,7 +107,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
   }
 
   function renderContacts(contacts) {
-    const composer = `<form class="crm-contact-form" data-crm-contact-form>
+    const composer = `<form class="crm-contact-form" data-crm-contact-form data-capability-scope="admin.write">
       <label class="crm-field">Name
         <input class="adm-input" data-crm-contact-name placeholder="Contact name" aria-label="Contact name" required>
       </label>
@@ -143,14 +143,14 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         <details class="crm-row-menu">
           <summary class="btn btn-ghost btn-sm">More</summary>
           <span>
-            ${c.is_primary ? '' : `<button class="btn btn-ghost btn-sm" type="button" data-crm-contact-primary-set="${esc(c.id)}">Make primary</button>`}
-            <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-merge="${esc(c.id)}">Merge</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-del="${esc(c.id)}" aria-label="Delete contact">Delete</button>
+            ${c.is_primary ? '' : `<button class="btn btn-ghost btn-sm" type="button" data-crm-contact-primary-set="${esc(c.id)}" data-capability="admin.write">Make primary</button>`}
+            <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-merge="${esc(c.id)}" data-capability="admin.write">Merge</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-del="${esc(c.id)}" data-capability="admin.write" aria-label="Delete contact">Delete</button>
           </span>
         </details>
       </span></li>`).join('')}</ul>`
       : admEmpty('ph-address-book', 'No contacts', 'Add procurement, plant or maintenance contacts for this account.');
-    const importBar = `<details class="crm-contact-import">
+    const importBar = `<details class="crm-contact-import" data-capability-scope="admin.write">
       <summary>Import contacts from CSV</summary>
       <div>
         <button class="btn btn-ghost btn-sm crm-contact-import-trigger" type="button" data-crm-contact-import-btn>Choose CSV</button><input type="file" accept=".csv,text/csv" data-crm-contact-import hidden>
@@ -206,6 +206,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       </form>`;
       if (typeof dlg.showModal !== 'function') { resolve(null); return; }
       document.body.appendChild(dlg);
+      restoreFocusOnClose(dlg);
       dlg.addEventListener('close', () => {
         const into = dlg.returnValue === 'ok' ? (dlg.querySelector('[data-merge-into]')?.value || null) : null;
         dlg.remove();
@@ -243,6 +244,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     </div>`;
     if (typeof dlg.showModal !== 'function') return;
     document.body.appendChild(dlg);
+    restoreFocusOnClose(dlg);
     dlg.addEventListener('click', (event) => { if (event.target.closest('[data-drawer-close]')) dlg.close(); });
     dlg.addEventListener('close', () => dlg.remove());
     dlg.showModal();

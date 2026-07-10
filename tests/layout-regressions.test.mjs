@@ -352,12 +352,12 @@ test("dashboard sidebar scrolls independently for user and business panels", asy
   });
 });
 
-test("mobile admin overview SEO audit wraps without a hidden table", async () => {
+test("mobile admin analytics SEO audit wraps without a hidden table", async () => {
   await withServer(async () => {
     const browser = await chromium.launch();
     const { context, page } = await newAuthedPage(browser, { width: 390, height: 844 });
     try {
-      await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${BASE_URL}/admin.html#analytics`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#admSeo .seo-audit-row", { timeout: 10000 });
       const metrics = await page.evaluate(() => {
         const cells = [...document.querySelectorAll("#admSeo .seo-audit-row, #admSeo .seo-audit-page, #admSeo .seo-audit-meta")];
@@ -371,7 +371,7 @@ test("mobile admin overview SEO audit wraps without a hidden table", async () =>
         };
       });
 
-      assert.equal(metrics.rowCount, 6, "admin overview should render one SEO row per audited page");
+      assert.equal(metrics.rowCount, 6, "admin analytics should render one SEO row per audited page");
       assert.equal(metrics.tableCount, 0, "mobile SEO audit should not hide columns inside an admin table");
       assert.equal(metrics.maxOverflow, 0, `SEO audit row content still overflows by ${metrics.maxOverflow}px`);
     } finally {

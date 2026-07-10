@@ -49,6 +49,11 @@ const VARIANT_WRITABLE = [
   'active',
   'sort',
 ];
+const PRICE_MANAGED_MESSAGE = 'Prices are managed by VertKleen_Website_Pricing_WebDev.xlsx. Reflect approved workbook changes in the catalog seed data and run npm run seed.';
+
+function includesManagedPrice(input) {
+  return Boolean(input && Object.prototype.hasOwnProperty.call(input, 'price'));
+}
 
 function missingMediaColumn(error) {
   return /image_url|photo_alt|schema cache|column/i.test(error?.message || '');
@@ -197,6 +202,7 @@ export async function onRequest({ request, env }) {
     if (!staffCan(role, 'product.write')) return json(403, { error: 'forbidden', message: 'Editing the catalog requires owner access.' });
     const body = await readBody(request);
     if (body.variant) {
+      if (includesManagedPrice(body.variant)) return json(409, { error: 'price_workbook_managed', message: PRICE_MANAGED_MESSAGE });
       const normalized = normalizeVariant(body);
       if (normalized.error) return json(400, { error: normalized.error });
       const { error } = await sb.from('product_variants').upsert(normalized.row, { onConflict: 'vsku' });
@@ -204,6 +210,8 @@ export async function onRequest({ request, env }) {
       return json(200, { ok: true, vsku: normalized.row.vsku });
     }
 
+    const productInput = body.product || body;
+    if (includesManagedPrice(productInput)) return json(409, { error: 'price_workbook_managed', message: PRICE_MANAGED_MESSAGE });
     const normalized = normalizeProduct(body);
     if (normalized.error) return json(400, { error: normalized.error });
 

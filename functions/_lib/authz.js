@@ -26,6 +26,7 @@ export const STAFF_ROLES = ["owner", "finance", "support", "read_only"];
 // capability -> roles permitted. Only the dangerous/financial mutations are gated
 // in this batch; everything else stays open to any staff (tightened in a follow-up).
 const STAFF_CAPABILITIES = {
+  "admin.write": ["owner", "finance", "support"],
   "order.write": ["owner", "finance", "support"],
   "order.delete": ["owner"],
   "order.refund": ["owner", "finance"],
@@ -36,6 +37,7 @@ const STAFF_CAPABILITIES = {
   "content.publish": ["owner"],
   "content.review": ["owner"],
   "content.write": ["owner"],
+  "user.manage": ["owner"],
   "user.role": ["owner"],
 };
 
@@ -57,4 +59,16 @@ export function staffCan(role, capability) {
 // checks this; fine-grained staffCan() then narrows specific dangerous actions.
 export function staffCanWrite(role) {
   return role !== "read_only";
+}
+
+// Safe client-facing access summary. API handlers remain authoritative; this only
+// lets the admin UI explain and disable unavailable actions before a 403 occurs.
+export function staffAccessSummary(role, email = "") {
+  const normalizedRole = normalizeStaffRole(role);
+  return {
+    role: normalizedRole,
+    email: String(email || "").trim().toLowerCase(),
+    can_write: staffCanWrite(normalizedRole),
+    capabilities: Object.keys(STAFF_CAPABILITIES).filter((capability) => staffCan(normalizedRole, capability)),
+  };
 }

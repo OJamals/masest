@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { htmlToMarkdown, markdownToEditorHtml } from "../js/admin/rich-editor.js";
+import { htmlToMarkdown, markdownToEditorHtml, richEditorTemplate } from "../js/admin/rich-editor.js";
 
 test("rich editor serializes visual formatting to markdown", () => {
   const html = '<p><strong>Scale</strong> <em>cleanup</em> <u>now</u></p>';
@@ -31,4 +31,13 @@ test("rich editor renders stored markdown as visual editor HTML", () => {
   assert.match(html, /<strong>Scale<\/strong>/);
   assert.match(html, /<u>cleanup<\/u>/);
   assert.match(html, /data-md-color="#0e7c86"/);
+});
+
+test("rich editor exposes names and textbox semantics to assistive technology", () => {
+  const html = richEditorTemplate({ key: "body", label: "Article body" });
+
+  assert.match(html, /aria-label="Bold" title="Bold"/);
+  assert.match(html, /aria-label="Italic" title="Italic"/);
+  assert.match(html, /aria-label="Underline" title="Underline"/);
+  assert.match(html, /contenteditable="true" role="textbox" aria-multiline="true" aria-label="Article body editor"/);
 });

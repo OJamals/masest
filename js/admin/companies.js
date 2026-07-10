@@ -3,7 +3,7 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date } from '../util.js';
+import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 import { ORDER_STATUSES } from './orders.js';
 
@@ -41,6 +41,7 @@ async function promptDialog({ title, bodyHtml, submitLabel = 'Save' }) {
       <button value="ok" class="btn btn-primary btn-sm" type="button">${esc(submitLabel)}</button>
     </menu>`;
   document.body.appendChild(dlg);
+  restoreFocusOnClose(dlg);
   dlg.showModal();
   dlg.querySelector('input,select,textarea')?.focus();
   const result = await new Promise((resolve) => {
@@ -210,11 +211,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <div class="dash-row">
         <span>${esc(member.email || member.full_name || member.id)} <small class="muted">${esc(member.full_name || '')}</small></span>
         <span>
-          <select class="adm-select adm-select-sm" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}">
+          <select class="adm-select adm-select-sm" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}" data-capability="user.role">
             ${memberRoleOptions(member.role)}
           </select>
-          <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}">Save role</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-member-remove="${esc(member.id)}" data-member-email="${esc(member.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+          <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}" data-capability="user.role">Save role</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-member-remove="${esc(member.id)}" data-member-email="${esc(member.email || '')}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
         </span>
       </div>`).join('') : '<p class="muted">No members yet.</p>';
     return `<div class="company-members"><h3>Members</h3>${rows}
@@ -225,7 +226,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           <input class="adm-input" id="cuPassword" type="text" placeholder="temp password (min 8)" aria-label="Temporary password">
           <input class="adm-input" id="cuName" type="text" placeholder="Full name (optional)" aria-label="Full name">
           <select class="adm-select adm-select-sm" id="cuRole" aria-label="Role">${memberRoleOptions('buyer')}</select>
-          <button class="btn btn-secondary btn-sm" type="button" data-member-add data-company-id="${esc(company.id)}"><i class="ph ph-user-plus" aria-hidden="true"></i> Create user</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-member-add data-company-id="${esc(company.id)}" data-capability="user.manage"><i class="ph ph-user-plus" aria-hidden="true"></i> Create user</button>
         </div>
         <p class="muted" style="margin-top:4px;font-size:.82rem">Creates a Supabase login attached to this company. Share the temp password or have them reset it.</p>
       </div></div>`;
@@ -262,13 +263,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <div class="dash-row">
         <span><b>${esc(a.type === 'bill' ? 'Billing' : 'Shipping')}</b> ${esc(a.line1)}${a.line2 ? ', ' + esc(a.line2) : ''}, ${esc(a.city)}, ${esc(a.state)} ${esc(a.zip)}${a.is_default ? ' <span class="badge badge-warning">default</span>' : ''}</span>
         <span>
-          <button class="btn btn-ghost btn-sm" type="button" data-addr-edit="${esc(a.id)}">Edit</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-addr-delete="${esc(a.id)}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+          <button class="btn btn-ghost btn-sm" type="button" data-addr-edit="${esc(a.id)}" data-capability="user.manage">Edit</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-addr-delete="${esc(a.id)}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
         </span>
       </div>`).join('') : '<p class="muted">No addresses on file.</p>';
     return `<div class="company-addresses"><h3>Addresses</h3>${rows}
       <div class="adm-inline-actions" style="margin-top:10px">
-        <button class="btn btn-secondary btn-sm" type="button" data-addr-add><i class="ph ph-map-pin-plus" aria-hidden="true"></i> Add address</button>
+        <button class="btn btn-secondary btn-sm" type="button" data-addr-add data-capability="user.manage"><i class="ph ph-map-pin-plus" aria-hidden="true"></i> Add address</button>
       </div></div>`;
   }
 
@@ -277,7 +278,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const rows = methods.length ? methods.map((m) => `
       <div class="dash-row">
         <span>${esc(m.brand)} &bull;&bull;&bull;&bull; ${esc(m.last4)} <small class="muted">exp ${esc(m.exp)}</small></span>
-        <button class="btn btn-ghost btn-sm" type="button" data-pm-detach="${esc(m.id)}">Detach</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-pm-detach="${esc(m.id)}" data-capability="user.manage">Detach</button>
       </div>`).join('') : '<p class="muted">No saved cards.</p>';
     return `<div class="company-payments"><h3>Payment methods</h3>${rows}</div>`;
   }
@@ -288,11 +289,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <div class="dash-row">
         <span>${esc(String(o.id).slice(0, 8))} &middot; ${esc(date(o.created_at))} &middot; ${esc(money(o.total, o.currency))}</span>
         <span>
-          <select class="adm-select adm-select-sm" data-mo-status="${esc(o.id)}">
+          <select class="adm-select adm-select-sm" data-mo-status="${esc(o.id)}" data-capability="order.write">
             ${ORDER_STATUSES.filter((s) => s !== 'refunded' || o.status === 'refunded')
               .map((s) => `<option value="${s}"${s === o.status ? ' selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}
           </select>
-          <button class="btn btn-ghost btn-sm" type="button" data-mo-save="${esc(o.id)}">Save</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-mo-save="${esc(o.id)}" data-capability="order.write">Save</button>
           <button class="btn btn-ghost btn-sm" type="button" data-mo-open="${esc(o.id)}">Open in Orders</button>
         </span>
       </div>`).join('');
@@ -558,16 +559,16 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <div class="dash-row"><span>Orders</span><b>${(detail.orders || []).length}</b></div>
         <div class="dash-row"><span>Messages</span><b>${detail.message_count || 0}</b></div>
         <div class="company-detail-actions" data-company-id="${esc(company.id || id)}">
-          <button class="btn btn-primary btn-sm" type="button" data-company-detail-action="approve">Approve</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="reject">Reject</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="suspend">Suspend</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-business-edit="${esc(company.id || id)}">Edit business</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-business-delete="${esc(company.id || id)}">Delete business</button>
+          <button class="btn btn-primary btn-sm" type="button" data-company-detail-action="approve" data-capability="company.credit">Approve</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="reject" data-capability="company.credit">Reject</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="suspend" data-capability="company.credit">Suspend</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-business-edit="${esc(company.id || id)}" data-capability="company.credit">Edit business</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-business-delete="${esc(company.id || id)}" data-capability="company.credit">Delete business</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="messages">Messages</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-company-view-as="${esc(company.id || id)}">View as customer</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-company-view-as="${esc(company.id || id)}" data-capability="company.view_as">View as customer</button>
         </div>
-        <input class="adm-input" id="rejectReason" type="text" placeholder="Rejection reason (shown to the customer)" style="width:100%;margin:8px 0 4px">
+        <input class="adm-input" id="rejectReason" type="text" placeholder="Rejection reason (shown to the customer)" data-capability="company.credit" style="width:100%;margin:8px 0 4px">
         ${bizDossier(company)}
         ${renderCompanyMembers(company, detail.members || [])}
         ${renderCompanyInvites(company, detail.invites || [])}
@@ -630,29 +631,33 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       return;
     }
     box.innerHTML = `<div class="adm-tools adm-tools-flush company-bulk-tools">
-      <label class="admin-select-all"><input type="checkbox" id="coAll" aria-label="Select all"> Select all</label>
-      <button class="btn btn-ghost btn-sm" id="bulkApprove" type="button">Approve selected</button>
+      <label class="admin-select-all"><input type="checkbox" id="coAll" aria-label="Select all pending accounts" data-capability="company.credit"> Select pending</label>
+      <button class="btn btn-ghost btn-sm" id="bulkApprove" type="button" data-capability="company.credit">Approve pending selected</button>
     </div>
     <div class="company-admin-list">${companies.map((company) => {
       const id = esc(company.id);
+      const pending = !company.status || company.status === 'pending';
       const members = (company.profiles || []).map((p) => p.full_name || p.role).join(', ');
       return `<article class="company-admin-card">
         <div class="company-admin-head">
-          <label class="company-admin-check"><input type="checkbox" class="co-check" value="${id}"><span>Select</span></label>
+          <label class="company-admin-check"><input type="checkbox" class="co-check" value="${id}"${pending ? '' : ' disabled'}><span>${pending ? 'Select' : esc(String(company.status || 'not pending').replaceAll('_', ' '))}</span></label>
           <button class="link-name" data-open-company="${id}" type="button">${esc(company.name)}</button>
           ${statusBadge(company.status)}
         </div>
         <div class="company-admin-fields">
           <div><span>Setup</span>${setupProgress(company)}</div>
-          <label><span>NET days</span><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${id}"></label>
-          <label><span>Credit</span><input class="adm-input" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${id}"></label>
-          <label><span>Tier</span><select class="adm-select" data-tier="${id}">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></label>
+          <label><span>NET days</span><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${id}" data-capability="company.credit"></label>
+          <label><span>Credit</span><input class="adm-input" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${id}" data-capability="company.credit"></label>
+          <label><span>Tier</span><select class="adm-select" data-tier="${id}" data-capability="company.credit">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></label>
           <div><span>Members</span><b>${esc(members || '-')}</b></div>
         </div>
         <div class="company-admin-actions">
-          <button class="btn btn-ghost btn-sm" data-approve="${id}" type="button">Approve</button>
-          <button class="btn btn-ghost btn-sm" data-business-edit="${id}" type="button">Edit business</button>
-          <button class="btn btn-ghost btn-sm" data-business-delete="${id}" type="button">Delete business</button>
+          ${pending ? `<button class="btn btn-primary btn-sm" data-approve="${id}" data-capability="company.credit" type="button">Approve</button>` : ''}
+          <button class="btn btn-ghost btn-sm" data-business-edit="${id}" data-capability="company.credit" type="button">Edit business</button>
+          <details class="crm-row-menu">
+            <summary class="btn btn-ghost btn-sm">More</summary>
+            <span><button class="btn btn-danger btn-sm" data-business-delete="${id}" data-capability="company.credit" type="button">Delete business</button></span>
+          </details>
         </div>
       </article>`;
     }).join('')}</div>` + pager;
@@ -711,7 +716,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         button.insertAdjacentHTML('afterend', `<p class="adm-status" data-state="err">${(err.data && err.data.error) || 'Could not approve. Retry.'}</p>`);
       }
     });
-    delegate(box, 'change', '#coAll', (event, coAll) => box.querySelectorAll('.co-check').forEach((c) => { c.checked = coAll.checked; }));
+    delegate(box, 'change', '#coAll', (event, coAll) => box.querySelectorAll('.co-check:not(:disabled)').forEach((c) => { c.checked = coAll.checked; }));
     delegate(box, 'click', '#bulkApprove', async (event, bulk) => {
       const ids = [...box.querySelectorAll('.co-check:checked')].map((c) => c.value);
       if (!ids.length) return;
@@ -771,16 +776,16 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <small class="muted" style="display:block">${esc(user.full_name || user.phone || user.id)}</small></td>
       <td>
         <div class="account-role-controls">
-          <label><span class="sr-only">Company role</span><select class="adm-select adm-select-sm" data-au-role="${esc(user.id)}">${memberRoleOptions(user.role)}</select></label>
-          <label><span class="sr-only">Admin access</span><select class="adm-select adm-select-sm" data-au-staff-role="${esc(user.id)}">${staffRoleOptions(user)}</select></label>
+          <label><span class="sr-only">Company role</span><select class="adm-select adm-select-sm" data-au-role="${esc(user.id)}" data-capability="user.role">${memberRoleOptions(user.role)}</select></label>
+          <label><span class="sr-only">Admin access</span><select class="adm-select adm-select-sm" data-au-staff-role="${esc(user.id)}" data-capability="user.role">${staffRoleOptions(user)}</select></label>
         </div>
       </td>
       <td>${business}</td>
       <td>${user.company_status ? statusBadge(user.company_status) : '<span class="muted">—</span>'}</td>
       <td>${user.last_sign_in_at ? esc(date(user.last_sign_in_at)) : 'never'}</td>
       <td class="adm-inline-actions">
-        <button class="btn btn-ghost btn-sm" type="button" data-au-save="${esc(user.id)}">Save roles</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        <button class="btn btn-ghost btn-sm" type="button" data-au-save="${esc(user.id)}" data-capability="user.role">Save roles</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
       </td>
     </tr>`;
   }
@@ -823,8 +828,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <div data-account-metrics>${renderAccountMetrics()}</div>
         <div class="adm-tools">
           <input id="auSearch" class="adm-search" type="search" placeholder="Search users, businesses, roles" aria-label="Search users">
-          <button class="btn btn-primary btn-sm" type="button" data-au-new><i class="ph ph-user-plus" aria-hidden="true"></i> New user</button>
-          <button class="btn btn-secondary btn-sm" type="button" data-business-new="root"><i class="ph ph-buildings" aria-hidden="true"></i> New business</button>
+          <button class="btn btn-primary btn-sm" type="button" data-au-new data-capability="user.manage"><i class="ph ph-user-plus" aria-hidden="true"></i> New user</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-business-new="root" data-capability="company.credit"><i class="ph ph-buildings" aria-hidden="true"></i> New business</button>
           <span class="adm-status" id="auStatus" role="status" aria-live="polite"></span>
         </div>
         <div data-account-filters>${renderAccountFilters()}</div>
@@ -898,7 +903,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       return `<div class="account-detail-section">
         <h3>Business</h3>
         <p class="muted">This user is not attached to a business.</p>
-        <button class="btn btn-secondary btn-sm" type="button" data-business-new="attach">Create business</button>
+        <button class="btn btn-secondary btn-sm" type="button" data-business-new="attach" data-capability="company.credit">Create business</button>
       </div>`;
     }
     return `<div class="account-detail-section">
@@ -909,11 +914,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <div class="dash-row"><span>Addresses</span><b>${esc((consoleData.addresses || []).length)}</b></div>
       <div class="dash-row"><span>Orders</span><b>${esc((consoleData.orders || []).length)}</b></div>
       <div class="company-detail-actions">
-        <button class="btn btn-primary btn-sm" type="button" data-user-company-action="approve">Approve</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-user-company-action="reject">Reject</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-user-company-action="suspend">Suspend</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-business-edit="${esc(company.id)}">Edit business</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-business-delete="${esc(company.id)}">Delete business</button>
+        <button class="btn btn-primary btn-sm" type="button" data-user-company-action="approve" data-capability="company.credit">Approve</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-user-company-action="reject" data-capability="company.credit">Reject</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-user-company-action="suspend" data-capability="company.credit">Suspend</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-business-edit="${esc(company.id)}" data-capability="company.credit">Edit business</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-business-delete="${esc(company.id)}" data-capability="company.credit">Delete business</button>
         <button class="btn btn-ghost btn-sm" type="button" data-au-open-company="${esc(company.id)}">Full business view</button>
       </div>
     </div>`;
@@ -938,8 +943,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           ${userFormFields(user)}
         </form>
         <div class="company-detail-actions">
-          <button class="btn btn-primary btn-sm" type="button" data-account-user-save="${esc(user.id)}">Save user</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}"><i class="ph ph-trash" aria-hidden="true"></i> Delete user</button>
+          <button class="btn btn-primary btn-sm" type="button" data-account-user-save="${esc(user.id)}" data-capability="user.manage">Save user</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i> Delete user</button>
         </div>
       </div>
       ${accountDetailBusiness(company, detail)}

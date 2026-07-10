@@ -163,7 +163,7 @@ test("users table spans the account summary width while detail is closed", async
   expect(Math.abs(widths.table - widths.metrics)).toBeLessThanOrEqual(2);
 });
 
-test("business approval cards expose edit and delete actions with centered bulk controls", async ({ page }) => {
+test("business approval cards expose edit and guarded delete actions with centered bulk controls", async ({ page }) => {
   await bootAsStaff(page);
   await page.route("**/api/admin/users**", (route) => route.fulfill(json({ users: [] })));
   await page.route("**/api/admin/companies**", (route) =>
@@ -175,6 +175,7 @@ test("business approval cards expose edit and delete actions with centered bulk 
   const card = page.locator(".company-admin-card", { hasText: COMPANY.name });
   await expect(card).toBeVisible();
   await expect(card.locator('[data-business-edit="co-1"]')).toBeVisible();
+  await card.locator(".crm-row-menu > summary").click();
   await expect(card.locator('[data-business-delete="co-1"]')).toBeVisible();
 
   const metrics = await page.locator(".company-bulk-tools").evaluate((bar) => {
