@@ -62,3 +62,54 @@ test("anonymous visitor is blocked behind the staff sign-in gate", async ({ page
   await expect(page.locator("#admGate")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Staff sign in" })).toBeVisible();
 });
+
+test("staff login fields stay focusable, selectable, and password-manager compatible", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
+    window.MASEST_SUPABASE_ANON = "stub-anon-key";
+  });
+  await page.route("**/*.supabase.co/**", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ session: null, data: { session: null } }),
+  }));
+  await page.route("**/api/admin/stats", (route) => route.fulfill({
+    status: 401, contentType: "application/json", body: JSON.stringify({ error: "unauthenticated" }),
+  }));
+
+  await page.goto(`${BASE_URL}/admin.html`, { waitUntil: "domcontentloaded" });
+
+  const form = page.locator("#gateForm");
+  const email = page.locator("#gEmail");
+  const password = page.locator("#gPass");
+
+  await expect(form).toHaveAttribute("method", "post");
+  await expect(form).toHaveAttribute("autocomplete", "on");
+  await expect(email).toHaveAttribute("name", "email");
+  await expect(email).toHaveAttribute("autocomplete", "username");
+  await expect(password).toHaveAttribute("name", "password");
+  await expect(password).toHaveAttribute("autocomplete", "current-password");
+
+  for (const field of [email, password]) {
+    await expect(field).toBeVisible();
+    await expect(field).toBeEnabled();
+    await expect(field).toBeEditable();
+    const hitTarget = await field.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)?.id;
+    });
+    expect(hitTarget).toBe(await field.getAttribute("id"));
+  }
+
+  await email.click();
+  await expect(email).toBeFocused();
+  await email.fill("initial@example.test");
+  await email.press("ControlOrMeta+A");
+  await email.type("replacement@example.test");
+  await expect(email).toHaveValue("replacement@example.test");
+
+  await password.click();
+  await expect(password).toBeFocused();
+  await password.fill("InitialPassword1!");
+  await password.press("ControlOrMeta+A");
+  await password.type("Replacement2!");
+  await expect(password).toHaveValue("Replacement2!");
+});
