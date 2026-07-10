@@ -371,6 +371,49 @@ test("static product detail renders specs uses and docs without commerce API", a
   });
 });
 
+test("static product detail keeps the price panel clear of the following card", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 1024, height: 900 }, reducedMotion: "reduce" });
+    try {
+      await page.addInitScript(() => {
+        window.MASEST_ENABLE_LOCAL_API = true;
+      });
+      await page.route("**/api/products", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          products: [{
+            sku: "cr",
+            name: "VertKleen CIP CR",
+            mode: "buy",
+            active: true,
+            product_variants: [{
+              vsku: "VK-CR-1G",
+              label: "1 gal jug",
+              gallons: 1,
+              price: 19.27,
+              currency: "usd",
+              active: true,
+              sort: 1
+            }]
+          }]
+        })
+      }));
+      await page.goto(`${BASE_URL}/products/cr.html`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector('[data-commerce-price="cr"]:not([hidden])');
+      const gap = await page.evaluate(() => {
+        const price = document.querySelector('.product-hero-buy .shop-card-price');
+        const nextSection = document.querySelector('.product-static-section');
+        return nextSection.getBoundingClientRect().top - price.getBoundingClientRect().bottom;
+      });
+      assert.ok(gap >= 32, `price panel should have at least 32px before the next card, got ${gap.toFixed(1)}px`);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("non-canonical CRS route shows the current-catalog fallback and no checkout", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });

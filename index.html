@@ -75,20 +75,24 @@
     <div class="stage">
       <canvas class="fx-canvas" aria-hidden="true"></canvas>
       <div class="reel" role="group" aria-label="Field photos of industrial scale, rust, grease, and grime">
+        <noscript><style>.reel-slide > img[data-reel-src] { display: none; }</style></noscript>
         <figure class="reel-slide" data-slide="0">
           <img src="img/story/scale.webp" alt="Pipe section nearly closed by calcium carbonate scale" fetchpriority="high" decoding="async" width="1200" height="1334">
           <figcaption><b>Scale</b><span>Mineral buildup narrowing the passage.</span></figcaption>
         </figure>
         <figure class="reel-slide" data-slide="1">
-          <img src="img/story/rust.webp" alt="Close-up of pitted, oxidized industrial steel" loading="eager" decoding="async" width="1200" height="1334">
+          <img data-reel-src="img/story/rust.webp" alt="Close-up of pitted, oxidized industrial steel" decoding="async" width="1200" height="1334">
+          <noscript><img src="img/story/rust.webp" alt="Close-up of pitted, oxidized industrial steel" width="1200" height="1334"></noscript>
           <figcaption><b>Rust</b><span>Oxidation eating into exposed steel.</span></figcaption>
         </figure>
         <figure class="reel-slide" data-slide="2">
-          <img src="img/story/grease.webp" alt="Greasy industrial machinery in a factory" loading="eager" decoding="async" width="1200" height="1334">
+          <img data-reel-src="img/story/grease.webp" alt="Greasy industrial machinery in a factory" decoding="async" width="1200" height="1334">
+          <noscript><img src="img/story/grease.webp" alt="Greasy industrial machinery in a factory" width="1200" height="1334"></noscript>
           <figcaption><b>Grease</b><span>Industrial residue coating hard-working equipment.</span></figcaption>
         </figure>
         <figure class="reel-slide" data-slide="3">
-          <img src="img/story/grime.webp" alt="Concrete surface stained with grime and water marks" loading="eager" decoding="async" width="1200" height="1334">
+          <img data-reel-src="img/story/grime.webp" alt="Concrete surface stained with grime and water marks" decoding="async" width="1200" height="1334">
+          <noscript><img src="img/story/grime.webp" alt="Concrete surface stained with grime and water marks" width="1200" height="1334"></noscript>
           <figcaption><b>Grime</b><span>Concrete stained by residue and water marks.</span></figcaption>
         </figure>
         <span class="reel-tag"><i class="ph ph-camera" aria-hidden="true"></i> Field photos</span>
@@ -573,7 +577,7 @@
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
 <script src="vendor/gsap/gsap.min.js" defer></script>
 <script src="vendor/gsap/ScrollTrigger.min.js" defer></script>
-<script src="js/story.js?v=20260708b" defer></script>
+<script src="js/story.js?v=20260710a" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {

@@ -6866,6 +6866,13 @@ body.product-detail-page main > section.product-static-section {
   padding-bottom: clamp(4px, 1.4vw, 16px);
 }
 
+.product-detail-page .product-hero-buy {
+  /* The two-line price panel is taller than the variant controls. Reserve a
+     full rhythm step below the whole row so it cannot visually merge with the
+     first product-detail card at the tighter desktop grid widths. */
+  margin-bottom: 40px;
+}
+
 .product-static-section {
   margin-top: clamp(-18px, -1.7vw, -8px);
   padding-top: 0;
