@@ -8,7 +8,7 @@ const exists = (path) => existsSync(new URL(path, root));
 
 const priorityIndustries = [
   ["data-centers", "Data Centers", "Cooling tower scale, Legionella compliance, green mandates", "watersafe60 hcr descaler", "Schedule a water-treatment audit."],
-  ["golf-courses", "Golf Courses", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash", "Request grounds-crew trial"],
+  ["golf-courses", "Golf Courses", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash purgo", "Request grounds-crew trial"],
   ["solar-panel-cleaning", "Solar / Panel Cleaning", "Soft-wash at scale without panel damage", "multiwash lam3", "Request per-MW quote"],
   ["municipalities-water-utilities", "Municipalities & Water Utilities", "NSF-60 requirements, worker safety, bids", "cr2 watersafe60 hcr", "Get on our bid list"],
   ["hotels-property-management", "Hotels / Property Management", "Facades, pools, restrooms, HVAC", "multiwash lam3 descaler neutral", "Request property walkthrough"],
@@ -22,14 +22,14 @@ const tab4IndustryPages = [
   ["data-centers", "Data Centers", "Cooling tower scale, Legionella compliance, green mandates", "watersafe60 hcr descaler", "Schedule a water-treatment audit."],
   ["warehousing-distribution-centers", "Warehousing &amp; Distribution Centers", "Floor degreasing at scale", "crhd multiwash", "Request drum pricing"],
   ["hotels-resorts-property-management", "Hotels, Resorts &amp; Property Management", "Facades, pools, restrooms, HVAC", "multiwash lam3 descaler neutral", "Request property walkthrough"],
-  ["pressure-washing-soft-wash-contractors", "Pressure-Washing &amp; Soft-Wash Contractors", "Bleach damage, plant kill, and runoff liability", "lam3 multiwash", "Distributor application"],
+  ["pressure-washing-soft-wash-contractors", "Pressure-Washing &amp; Soft-Wash Contractors", "Bleach damage, plant kill, and runoff liability", "lam3 multiwash crhd", "Distributor application"],
   ["drone-cleaning-companies", "Drone Cleaning Companies", "safe, drone-rated chemistry", "multiwash lam3 crhd", "Book a drone-wash consult"],
   ["marine-marinas-boatyards", "Marine, Marinas &amp; Boatyards", "Hull scale, salt, wax, and aluminum brightwork", "torque alumibrite hcr", "Get marina bulk pricing"],
   ["aviation-fbos-mro-airports", "Aviation - FBOs, MRO, Airports", "precision degreasing without corrosion", "crhd alumibrite", "Request aviation spec sheet"],
   ["municipalities-water-utilities", "Municipalities &amp; Water Utilities", "NSF-60 requirements, worker safety, bids", "cr2 watersafe60 hcr", "Get on our bid list"],
-  ["golf-courses-sports-facilities", "Golf Courses &amp; Sports Facilities", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash", "Request grounds-crew trial"],
+  ["golf-courses-sports-facilities", "Golf Courses &amp; Sports Facilities", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash purgo", "Request grounds-crew trial"],
   ["healthcare-senior-living", "Healthcare &amp; Senior Living", "Cleaning near vulnerable people", "neutral multiwash descaler", "Request facilities assessment"],
-  ["fleet-trucking-car-washes", "Fleet, Trucking &amp; Car Washes", "Degreasing, wash and wax", "torque crhd alumibrite", "Fleet program pricing"],
+  ["fleet-trucking-car-washes", "Fleet, Trucking &amp; Car Washes", "Degreasing, wash and wax", "torque crhd multiwash alumibrite", "Fleet program pricing"],
   ["oil-gas-industrial-plants", "Oil &amp; Gas / Industrial Plants", "Tank cleaning, scale", "hcr cr crhd", "Talk to an EHS consultant"],
   ["food-processing-agriculture", "Food Processing &amp; Agriculture", "CIP, organic residue", "cr hcr cr-hd-low-foam", "Request plant trial"],
   ["solar-farms-panel-cleaning", "Solar Farms &amp; Panel Cleaning", "Soft-wash at scale without panel damage", "multiwash lam3", "Request per-MW quote"],
@@ -89,6 +89,59 @@ test("Tab 4 industry rows each have a generated landing page", () => {
     assert.match(html, new RegExp(`data-ind-products="${products}"`), `${slug} should use the Tab 4 hero products`);
     assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 CTA`);
     assert.match(contact, new RegExp(`<option>${name}</option>`), `${name} should be available in the industry dropdown`);
+  }
+});
+
+test("FB, PW, and gym label variants use their source directions and segment prices", () => {
+  const pages = {
+    food: read("industries/food-beverage.html"),
+    brewery: read("industries/breweries-distilleries-wineries.html"),
+    restaurant: read("industries/restaurants-commercial-kitchens.html"),
+    pressure: read("industries/pressure-washing-soft-wash-contractors.html"),
+    drone: read("industries/drone-cleaning-companies.html"),
+    fleet: read("industries/fleet-trucking-car-washes.html"),
+    gym: read("industries/golf-courses-sports-facilities.html"),
+  };
+
+  assert.match(pages.food, /data-label-variant="fb-cip-cr"/);
+  assert.match(pages.food, /cip-hcr-studio\.webp/);
+  assert.match(pages.food, /crhd-food-beverage-studio\.webp/);
+  assert.match(pages.food, /multiwash-food-beverage-studio\.webp/);
+  assert.match(pages.brewery, /0\.5 L per 10 gal/);
+  assert.match(pages.restaurant, /Kitchen line — light grease/);
+  assert.match(pages.restaurant, /Bar tops, glass &amp; tables/);
+  assert.match(pages.restaurant, /CIP Food &amp; Beverage pricing/);
+  assert.match(pages.restaurant, /1 gal jug — \$12\.12/);
+
+  for (const html of [pages.pressure, pages.drone]) {
+    assert.match(html, /crhd-pressure-wash-studio\.webp/);
+    assert.match(html, /crs-pressure-wash-studio\.webp/);
+    assert.match(html, /multiwash-pressure-wash-studio\.webp/);
+    assert.match(html, /Apply at 1:20 via downstream injector/);
+    assert.match(html, /Rust &amp; fertilizer stains/);
+    assert.match(html, /HVAC &amp; Facilities pricing/);
+  }
+  assert.match(pages.fleet, /data-label-variant="pw-crhd"/);
+  assert.match(pages.fleet, /data-label-variant="pw-multiwash"/);
+
+  assert.match(pages.gym, /multiwash-gym-studio\.webp/);
+  assert.match(pages.gym, /purgo-gym-studio\.webp/);
+  assert.match(pages.gym, /Floors &amp; tile:<\/strong>&nbsp; Dilute 5:1/);
+  assert.match(pages.gym, /High-touch odor:<\/strong>&nbsp; Dilute 1:16/);
+  assert.match(pages.gym, /1 gal jug — \$21\.49/);
+
+  for (const asset of [
+    "cip-cr-studio.webp",
+    "cip-hcr-studio.webp",
+    "crhd-food-beverage-studio.webp",
+    "multiwash-food-beverage-studio.webp",
+    "crhd-pressure-wash-studio.webp",
+    "crs-pressure-wash-studio.webp",
+    "multiwash-pressure-wash-studio.webp",
+    "multiwash-gym-studio.webp",
+    "purgo-gym-studio.webp",
+  ]) {
+    assert.equal(exists(`img/products/${asset}`), true, `${asset} should exist`);
   }
 });
 

@@ -436,7 +436,7 @@ export const PRODUCTS = {
     replaces: "Replaces specialty and blended acid products",
     hmis: "0-0-0",
     icon: "ph-wrench",
-    image: "img/products/masest-poster-transparent.png",
+    image: "img/products/sar-studio.webp",
     tag: "A quote-reviewed specialty acid replacement for targeted descaling and water-side work.",
     desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. We quote it case by case while application sheets and final SKU guidance are confirmed.",
     uses: [

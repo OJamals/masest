@@ -6,7 +6,7 @@
 
    Run from anywhere:  node site/tools/gen_industries.mjs
 */
-import { writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -62,7 +62,7 @@ const INDUSTRIES = [
   h1: "CIP proof beats a food-safe slogan.",
   sub: "Breweries, distilleries, wineries, processing floors, hood filters, and drains cleaned around staff and active food spaces.",
   intro: "Tanks, heat exchangers, and CIP/SIP lines usually depend on caustic-acid sequences that are hard on staff and effluent. Brewlando trial notes say CR and HCR worked better than traditional caustic-soda and acid blends at the same concentration and CIP time; the Carib lab table adds effluent data buyers can review.",
-  products: ["cr", "hcr", "crhd", "neutral"],
+  products: ["cr", "hcr", "crhd", "neutral", "multiwash"],
   proof: { img: "brewery", caption: "Brewery tanks and CIP cleaned with CR and HCR; effluent lab data on the proof page." }
 },
 {
@@ -91,8 +91,8 @@ const INDUSTRIES = [
   icon: "ph-flag",
   h1: "Keep grounds, carts, irrigation, and clubhouse surfaces out of the harsh-chemical lane.",
   sub: "Equipment, carts, irrigation scale, exterior stains, and turf-adjacent cleaning all need chemistry grounds crews can trial safely.",
-  intro: "Golf courses and sports facilities clean fleets, carts, shop floors, irrigation hardware, clubhouse exteriors, and wet areas near turf and water. VertKleen matches those jobs with Torque, LAM3, HCR, and MultiWash so grounds crews can trial one safer chemistry set across the course.",
-  products: ["torque", "lam3", "hcr", "multiwash"],
+  intro: "Golf courses and sports facilities clean fleets, carts, shop floors, irrigation hardware, clubhouse exteriors, equipment, mats, and high-touch areas near turf and water. VertKleen matches those jobs with Torque, LAM3, HCR, MultiWash, and Purgo so grounds crews can trial one safer chemistry set across the property.",
+  products: ["torque", "lam3", "hcr", "multiwash", "purgo"],
   primaryCta: "Request grounds-crew trial",
   primaryType: "sample",
   proof: { img: "grout-moss", caption: "Exterior concrete, grout, and biological staining cleaned with VertKleen." }
@@ -263,8 +263,8 @@ const INDUSTRIES = [
   icon: "ph-spray-bottle",
   h1: "Soft-wash work without making bleach damage the default risk.",
   sub: "Bleach damage, plant kill, and runoff liability slow pressure-washing and soft-wash approvals.",
-  intro: "Pressure-washing and soft-wash contractors need exterior chemistry that can be explained to property owners, landscapers, and runoff reviewers. LAM3 and MultiWash support biological staining, exterior wash, and drone-adjacent work.",
-  products: ["lam3", "multiwash"],
+  intro: "Pressure-washing and soft-wash contractors need exterior chemistry that can be explained to property owners, landscapers, and runoff reviewers. LAM3 and MultiWash support biological staining and general exterior wash, while CR HD and the CRS application label cover fleet grease, concrete, rust, and mineral scale.",
+  products: ["lam3", "multiwash", "crhd"],
   primaryCta: "Distributor application",
   primaryType: "distributor",
   proof: { img: "grout-moss", caption: "LAM3 at $22.21/gal undercuts Wet & Forget at $34/gal and supports larger pack quoting." }
@@ -275,7 +275,7 @@ const INDUSTRIES = [
   icon: "ph-drone",
   h1: "Drone-rated cleaning chemistry for exterior work at height.",
   sub: "Drone cleaners need safe, drone-rated chemistry that can be explained around overspray, runoff, and vegetation.",
-  intro: "Drone cleaning companies need exterior chemistry that works with flight operations and keeps plant, coating, and runoff objections under control. MultiWash, LAM3, and CR HD cover exterior wash, biological staining, and heavier soils.",
+  intro: "Drone cleaning companies need exterior chemistry that works with flight operations and keeps plant, coating, and runoff objections under control. MultiWash, LAM3, CR HD, and the CRS application label cover exterior wash, biological staining, heavier soils, rust, and mineral scale.",
   products: ["multiwash", "lam3", "crhd"],
   primaryCta: "Book a drone-wash consult",
   primaryType: "audit",
@@ -311,8 +311,8 @@ const INDUSTRIES = [
   icon: "ph-flag",
   h1: "Grounds crews need chemistry that works near turf and water features.",
   sub: "Equipment, carts, irrigation scale, exterior stains, and sports-facility cleaning need safer trial chemistry.",
-  intro: "Golf courses and sports facilities clean carts, mowers, irrigation hardware, shop floors, clubhouses, exterior stains, and wet areas near turf and water. Torque, LAM3, HCR, and MultiWash cover the grounds-crew trial set.",
-  products: ["torque", "lam3", "hcr", "multiwash"],
+  intro: "Golf courses and sports facilities clean carts, mowers, irrigation hardware, shop floors, clubhouses, exterior stains, equipment, mats, and high-touch areas near turf and water. Torque, LAM3, HCR, MultiWash, and Purgo cover the grounds-crew trial set.",
+  products: ["torque", "lam3", "hcr", "multiwash", "purgo"],
   primaryCta: "Request grounds-crew trial",
   primaryType: "sample",
   proof: { img: "grout-moss", caption: "The grounds-crew bundle is built around turf-adjacent and water-feature work." }
@@ -335,8 +335,8 @@ const INDUSTRIES = [
   icon: "ph-truck",
   h1: "Fleet cleaning needs wash, wax, grease, and aluminum in one lane.",
   sub: "Degreasing, wash and wax, and wheel or aluminum brightening drive fleet and truck-wash chemistry needs.",
-  intro: "Fleet, trucking, and car-wash teams need recurring chemistry for exterior wash, grease, engines, wheels, and aluminum. Torque, CR HD, and AlumiBrite create the core fleet program.",
-  products: ["torque", "crhd", "alumibrite"],
+  intro: "Fleet, trucking, and car-wash teams need recurring chemistry for exterior wash, grease, engines, wheels, and aluminum. Torque, CR HD, MultiWash, and AlumiBrite create the core fleet program.",
+  products: ["torque", "crhd", "multiwash", "alumibrite"],
   primaryCta: "Fleet program pricing",
   primaryType: "quote",
   proof: { img: "marine", caption: "Torque gives wash-and-wax economics for fleet programs, with CR HD and AlumiBrite for the harder jobs." }
@@ -459,6 +459,229 @@ const PROOF_IMAGE_DIMS = {
 
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
 const htmlText = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const SEGMENT_PRICING = JSON.parse(
+  readFileSync(resolve(HERE, "..", "data", "segment-pricing.json"), "utf8"),
+);
+const PRICE_SEGMENTS = new Map(
+  SEGMENT_PRICING.segments.map((segment) => [segment.slug, segment]),
+);
+
+const LABEL_VARIANTS = {
+  "fb-cip-cr": {
+    market: "FB label",
+    name: "VertKleen CIP CR",
+    subtitle: "50% caustic soda replacement · brewery CIP",
+    image: "cip-cr-studio.webp",
+    productHref: "cr",
+    priceProductSlug: "cr",
+    priceSegmentSlug: "cip-food-beverage",
+    directions: [
+      ["Light / krausen soil", "0.5 L per 10 gal; circulate hot (>140°F), then rinse"],
+      ["Moderate soil", "1 L per 10 gal; circulate, then rinse"],
+      ["Severe soil", "1.5 L per 10 gal; circulate, then rinse with water"],
+    ],
+  },
+  "fb-cip-hcr": {
+    market: "FB label",
+    name: "VertKleen CIP HCR",
+    subtitle: "Synthetic acid · beer stone remover · brewery CIP",
+    image: "cip-hcr-studio.webp",
+    productHref: "hcr",
+    priceProductSlug: "hcr",
+    priceSegmentSlug: "cip-food-beverage",
+    directions: [
+      ["Light beer stone", "0.5 L per 10 gal; circulate, then rinse"],
+      ["Moderate", "1 L per 10 gal; circulate, then rinse"],
+      ["Severe", "1.5 L per 10 gal; circulate, then rinse with water"],
+    ],
+  },
+  "fb-crhd": {
+    market: "FB label",
+    name: "VertKleen CR HD",
+    subtitle: "Heavy-duty kitchen & bar degreaser",
+    image: "crhd-food-beverage-studio.webp",
+    productHref: "crhd",
+    priceProductSlug: "cr-hd",
+    priceSegmentSlug: "cip-food-beverage",
+    directions: [
+      ["Kitchen line — light grease", "Spray at 1:16, dwell 3–5 min, then wipe or rinse"],
+      ["Bar mats, fryers & hoods", "Apply at 1:8, agitate, then rinse"],
+      ["Stubborn / baked-on buildup", "Apply neat, dwell, then rinse"],
+    ],
+  },
+  "fb-multiwash": {
+    market: "FB label",
+    name: "VertKleen MultiWash",
+    subtitle: "Multi-surface cleaner · deodorizer · antimicrobial",
+    image: "multiwash-food-beverage-studio.webp",
+    productHref: "multiwash",
+    priceProductSlug: "multiwash",
+    priceSegmentSlug: "cip-food-beverage",
+    directions: [
+      ["Bar tops, glass & tables", "Fill a 32 oz spray bottle at 1:16; mist and wipe"],
+      ["Floors", "Dilute 1:32 in a mop bucket or auto-scrubber"],
+      ["Restrooms & fixtures", "Spray at 1:16, let stand, then wipe"],
+      ["Upholstery & booths", "Spray at 1:16, blot and air-dry"],
+    ],
+    coverage: "1 gal cleans 1,000–1,500 sq ft; 1 gal makes up to 5 gal.",
+  },
+  "pw-crhd": {
+    market: "PW label",
+    name: "VertKleen CR HD",
+    subtitle: "Heavy-duty degreaser · fleet & concrete",
+    image: "crhd-pressure-wash-studio.webp",
+    productHref: "crhd",
+    priceProductSlug: "cr-hd",
+    priceSegmentSlug: "hvac-facilities",
+    directions: [
+      ["Fleet & equipment", "Apply at 1:20 via downstream injector or foam cannon; dwell, then rinse"],
+      ["Concrete oil & grease", "Apply at 1:8, agitate and rinse"],
+      ["Heavy / baked-on buildup", "Apply neat, dwell, then rinse"],
+    ],
+  },
+  "pw-crs": {
+    market: "PW label",
+    name: "VertKleen CRS",
+    subtitle: "Calcium, rust & scale · non-corrosive",
+    image: "crs-pressure-wash-studio.webp",
+    productHref: "descaler",
+    priceProductSlug: "descaler",
+    priceSegmentSlug: "hvac-facilities",
+    directions: [
+      ["Rust & fertilizer stains", "Apply at 1:4, dwell 3–5 min, agitate, then rinse"],
+      ["Battery / deep stains", "Apply at 1:2, dwell, then rinse"],
+      ["Heavy scale & calcium", "Apply neat, dwell, then rinse"],
+    ],
+    catalogNote: "CRS currently routes through the published Descaler catalog listing.",
+  },
+  "pw-multiwash": {
+    market: "PW label",
+    name: "VertKleen MultiWash",
+    subtitle: "Bleach / sodium hypochlorite replacement",
+    image: "multiwash-pressure-wash-studio.webp",
+    productHref: "multiwash",
+    priceProductSlug: "multiwash",
+    priceSegmentSlug: "hvac-facilities",
+    directions: [
+      ["House wash / soft wash", "Apply through a downstream injector at 1:16; dwell, then low-pressure rinse"],
+      ["Concrete & flatwork", "Apply at 1:8, agitate and rinse"],
+      ["General surfaces", "Dilute 1:32, apply and rinse"],
+    ],
+    coverage: "1 gal cleans 1,000–1,500 sq ft; 1 gal makes up to 5 gal.",
+  },
+  "gym-multiwash": {
+    market: "Gym label",
+    name: "VertKleen MultiWash",
+    subtitle: "Gym · fitness · studio & clinic cleaner",
+    image: "multiwash-gym-studio.webp",
+    productHref: "multiwash",
+    priceProductSlug: "multiwash",
+    priceSegmentSlug: "hvac-facilities",
+    directions: [
+      ["Equipment, machines & mats", "Dilute 1:32; mist onto a cloth or surface and wipe. Do not soak electronics"],
+      ["Floors & tile", "Dilute 5:1 in a mop bucket or auto-scrubber"],
+      ["Glass & mirrors", "Dilute 4:1 and wipe streak-free"],
+      ["Heavy soil & grout", "Dilute 2:1; apply, let stand, agitate and rinse"],
+    ],
+    coverage: "1 gal cleans 1,000–1,500 sq ft; 1 gal makes up to 5 gal.",
+  },
+  "gym-purgo": {
+    market: "Gym label",
+    name: "VertKleen Pūrgo",
+    subtitle: "Antimicrobial · high-touch · deodorizer",
+    image: "purgo-gym-studio.webp",
+    productHref: "purgo",
+    priceProductSlug: "purgo",
+    priceSegmentSlug: "hvac-facilities",
+    directions: [
+      ["High-touch odor", "Dilute 1:16; spray onto equipment, benches and rails; let stand, then wipe"],
+      ["General surfaces", "Dilute 1:32; mist and wipe down — no rinse required"],
+      ["Heavy fouling", "Dilute 1:5; apply, allow full contact time, then wipe"],
+    ],
+    coverage: "1 gal cleans 1,000–1,500 sq ft; 1 gal makes up to 5 gal.",
+  },
+};
+
+const INDUSTRY_LABEL_VARIANTS = {
+  "food-beverage": ["fb-cip-cr", "fb-cip-hcr", "fb-crhd", "fb-multiwash"],
+  "breweries-distilleries-wineries": ["fb-cip-cr", "fb-cip-hcr"],
+  "restaurants-commercial-kitchens": ["fb-crhd", "fb-multiwash"],
+  "food-processing-agriculture": ["fb-cip-cr", "fb-cip-hcr"],
+  "pressure-washing-soft-wash-contractors": ["pw-crhd", "pw-crs", "pw-multiwash"],
+  "drone-cleaning-companies": ["pw-crhd", "pw-crs", "pw-multiwash"],
+  "fleet-trucking-car-washes": ["pw-crhd", "pw-multiwash"],
+  "golf-courses": ["gym-multiwash", "gym-purgo"],
+  "golf-courses-sports-facilities": ["gym-multiwash", "gym-purgo"],
+};
+
+const money = (value) => new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+}).format(Number(value));
+
+function variantPriceRows(variant) {
+  const segment = PRICE_SEGMENTS.get(variant.priceSegmentSlug);
+  if (!segment) throw new Error(`Missing pricing segment: ${variant.priceSegmentSlug}`);
+  const rows = segment.rows.filter((row) => row.product_slug === variant.priceProductSlug);
+  if (!rows.length) {
+    throw new Error(`Missing ${variant.priceProductSlug} prices in ${variant.priceSegmentSlug}`);
+  }
+  return { segment, rows };
+}
+
+function labelVariantCard(key) {
+  const variant = LABEL_VARIANTS[key];
+  if (!variant) throw new Error(`Missing label variant: ${key}`);
+  const { segment, rows } = variantPriceRows(variant);
+  const prices = rows.map((row) =>
+    `<li>${htmlText(row.pack)} — ${money(row.price_per_unit)}${row.quote_only ? " · quote" : ""}</li>`,
+  ).join("");
+  const directions = variant.directions.map(([use, dilution]) =>
+    `<li><strong>${htmlText(use)}:</strong>&nbsp; ${htmlText(dilution)}</li>`,
+  ).join("");
+  const note = variant.catalogNote
+    ? `        <p>${htmlText(variant.catalogNote)}</p>\n`
+    : "";
+  const coverage = variant.coverage
+    ? `        <p class="product-proof-line">${htmlText(variant.coverage)}</p>\n`
+    : "";
+
+  return `<article class="prod-card" data-label-variant="${key}">
+        <img class="product-shot" src="../img/products/${variant.image}" alt="${htmlText(variant.name)} ${variant.market} jug" loading="lazy">
+        <span class="catalog-type">${variant.market} · ${htmlText(segment.title)} pricing</span>
+        <h3>${htmlText(variant.name)}</h3>
+        <div class="replaces">${htmlText(variant.subtitle)}</div>
+        <h4>Label dilution / concentration</h4>
+        <ul class="product-fit-list" aria-label="${htmlText(variant.name)} label directions">${directions}</ul>
+${coverage}        <h4>Published pack prices</h4>
+        <ul class="product-fit-list" aria-label="${htmlText(variant.name)} ${htmlText(segment.title)} prices">${prices}</ul>
+${note}        <div class="prod-actions">
+          <a class="btn btn-secondary" href="../products/${variant.productHref}">View base product</a>
+          <a class="btn btn-primary" href="../contact?type=quote&amp;product=${enc(variant.name)}&amp;label=${enc(variant.market)}">Request this label</a>
+        </div>
+      </article>`;
+}
+
+function industryLabelVariantsBlock(ind) {
+  const keys = INDUSTRY_LABEL_VARIANTS[ind.slug];
+  if (!keys?.length) return "";
+  const cards = keys.map(labelVariantCard).join("\n      ");
+  const tiers = [...new Set(keys.map((key) => PRICE_SEGMENTS.get(LABEL_VARIANTS[key].priceSegmentSlug).title))];
+
+  return `\n<section class="section section-slim" data-industry-label-variants="${ind.slug}">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Industry label variants</span>
+        <h2 class="headline">Use the label built for this work.</h2>
+        <p class="subhead">Directions and concentration come from the pictured application label. Pack prices come from the ${htmlText(tiers.join(" and "))} workbook tier; freight is excluded and quote-marked bulk packs remain quote-routed.</p>
+      </div>
+      <div class="prod-grid prod-grid-rec">
+      ${cards}
+      </div>
+    </div>
+  </section>`;
+}
 
 const INDUSTRY_DETAILS = {
   "oil-gas": ["Chemicals replaced", "Hydrochloric acid (muriatic acid), solvent degreasers, and aggressive rust removers used on rigs, terminals, pipeline parts, and tank-farm equipment.", "Bundle: HCR for rust and passivation, Descaler for mineral scale, CR HD for oily soils, Neutral for sensitive surfaces."],
@@ -615,20 +838,22 @@ function page(ind) {
 <title>${htmlText(ind.name)} | MASEST VertKleen</title>
 <meta name="description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta name="theme-color" content="#fafbfc">
-<link rel="canonical" href="https://masest.co/industries/${ind.slug}">
 <meta property="og:title" content="${htmlText(ind.name)} | MASEST VertKleen">
 <meta property="og:description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
-<meta property="og:url" content="https://masest.co/industries/${ind.slug}">
-<meta property="og:image" content="https://masest.co/img/og-card.png">
-<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260706c">
 <link rel="stylesheet" href="../css/navigation.css?v=20260706a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
+<!-- seo:auto -->
+<link rel="canonical" href="https://masest.co/industries/${ind.slug}">
+<meta property="og:url" content="https://masest.co/industries/${ind.slug}">
+<meta property="og:image" content="https://masest.co/img/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<!-- /seo:auto -->
 </head>
 <body class="site-soft-bg">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -673,7 +898,7 @@ ${industryDetailBlock(ind)}
       </div>
       <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>
-  </section>
+  </section>${industryLabelVariantsBlock(ind)}
 ${galleryBlock(ind)}
 <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="industries/${ind.slug}" data-cms-region="body"></div>
 ${ctaBlock(ind)}
