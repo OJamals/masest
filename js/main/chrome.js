@@ -150,7 +150,7 @@ export function renderChrome() {
         ${links.map(navItem).join("")}
       </nav>
         <div class="nav-actions">
-          <a class="nav-auth-placeholder nav-signin" href="${root}account"><span>Sign in</span></a>
+          <span class="nav-auth-placeholder" aria-hidden="true" style="display:block;width:92px;height:44px;align-self:center"></span>
           <a class="nav-cart" href="${root}cart" aria-label="Open cart"><i class="ph ph-shopping-cart-simple" aria-hidden="true"></i><b class="cart-count" data-cart-count hidden>0</b></a>
           <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
         </div>
@@ -235,8 +235,8 @@ export function renderChrome() {
   window.addEventListener("storage", updateCartCount);
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
-  // Account control: login button when logged out, account dropdown when signed in.
-  import("/js/account-nav.js?v=20260623c").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
+  // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
+  import("/js/account-nav.js?v=20260710d").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);

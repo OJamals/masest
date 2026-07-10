@@ -63,6 +63,62 @@ test("anonymous visitor is blocked behind the staff sign-in gate", async ({ page
   await expect(page.getByRole("heading", { name: "Staff sign in" })).toBeVisible();
 });
 
+test("staff auth stays neutral while booting and does not flash the gate between tabs", async ({ page }) => {
+  let releaseStats;
+  const statsBlocked = new Promise((resolve) => { releaseStats = resolve; });
+
+  // Keep the test on the real admin controller while replacing only its auth boundary.
+  // The delayed stats response creates a deterministic pending-auth window that is
+  // otherwise too brief to assert reliably on a fast local machine.
+  await page.route("**/js/auth.js", (route) => route.fulfill({
+    status: 200,
+    contentType: "text/javascript",
+    body: `
+      export const supabase = {};
+      export async function getToken() { return "staff-token"; }
+      export async function login() {}
+      export async function logout() {}
+      export async function api(path, options = {}) {
+        const response = await fetch(path, options);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw Object.assign(new Error(data.error || "request_failed"), { status: response.status, data });
+        return data;
+      }
+    `,
+  }));
+  await page.route("**/api/admin/stats", async (route) => {
+    await statsBlocked;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        orders: 1,
+        revenue: 0,
+        companies: { pending: 0, approved: 1, suspended: 0 },
+        accounts: { pending: 0, approved: 1, suspended: 0 },
+        commerce: {},
+        crm: {},
+        catalog_health: {},
+        analytics: {},
+        traffic: {},
+        actions: [],
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admGate")).toBeHidden();
+  await expect(page.locator("#admApp")).toBeHidden();
+
+  releaseStats();
+  await expect(page.locator("#admApp")).toBeVisible();
+  await expect(page.locator("#admGate")).toBeHidden();
+
+  await page.locator('[data-tab="orders"]').click();
+  await expect(page.locator("#admGate")).toBeHidden();
+  await expect(page.locator("#admApp")).toBeVisible();
+});
+
 test("staff login fields stay focusable, selectable, and password-manager compatible", async ({ page }) => {
   await page.addInitScript(() => {
     window.MASEST_SUPABASE_URL = "https://stub.supabase.co";

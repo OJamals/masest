@@ -5,6 +5,7 @@ import test from "node:test";
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const mainCatalogData = read("js/main/catalog-data.js");
 const chrome = read("js/main/chrome.js");
+const accountNav = read("js/account-nav.js");
 const commerceUi = read("js/main/commerce-ui.js");
 const serviceCatalog = read("js/main/service-catalog.js");
 
@@ -22,8 +23,8 @@ test("global navigation stays focused on buyer decisions", () => {
 });
 
 test("global navigation exposes account sign-in and registration", () => {
-assert.match(chrome, /href="\$\{root\}account"/);
-  assert.match(chrome, /Sign in/);
+  assert.match(accountNav, /href="\$\{root\}account\.html"/);
+  assert.match(accountNav, /Sign in/);
 });
 
 test("global logo links navigate to the home page from top-level pages", () => {

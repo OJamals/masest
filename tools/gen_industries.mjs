@@ -904,7 +904,7 @@ ${galleryBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js?v=20260619b"></script>
+<script type="module" src="../js/main.js?v=20260710d"></script>
 </body>
 </html>
 `;
