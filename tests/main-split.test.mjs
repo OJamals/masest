@@ -31,6 +31,19 @@ test("main entrypoint imports catalog data from a split module", () => {
   }
 });
 
+test("product catalog module graph shares one cache release", () => {
+  const main = read("js/main.js");
+  const commerce = read("js/main/commerce-ui.js");
+  const media = read("js/main/media.js");
+  const release = main.match(/catalog-data\.js\?v=(\d{8}[a-z])/i)?.[1];
+  assert.ok(release, "main catalog data import must be cache-busted");
+  assert.match(main, new RegExp(`commerce-ui\\.js\\?v=${release}`));
+  assert.match(main, new RegExp(`media\\.js\\?v=${release}`));
+  assert.match(commerce, new RegExp(`catalog-data\\.js\\?v=${release}`));
+  assert.match(media, new RegExp(`catalog-data\\.js\\?v=${release}`));
+  assert.match(media, new RegExp(`commerce-ui\\.js\\?v=${release}`));
+});
+
 test("main entrypoint imports chrome rendering from a split module", () => {
   const main = read("js/main.js");
   assert.match(main, /from\s+["']\.\/main\/chrome\.js["']/);
@@ -68,7 +81,7 @@ test("main entrypoint imports service catalog rendering from a split module", ()
 
 test("main entrypoint imports product commerce UI from a split module", () => {
   const main = read("js/main.js");
-  assert.match(main, /from\s+["']\.\/main\/commerce-ui\.js["']/);
+  assert.match(main, /from\s+["']\.\/main\/commerce-ui\.js(?:\?v=\d{8}[a-z])?["']/);
   assert.doesNotMatch(main, /function productCard\s*\(/);
   assert.doesNotMatch(main, /const commerceState\s*=/);
   assert.doesNotMatch(main, /function initShop\s*\(/);
@@ -98,7 +111,7 @@ test("main entrypoint imports engagement interactions from a split module", () =
 
 test("main entrypoint imports media helpers from a split module", () => {
   const main = read("js/main.js");
-  assert.match(main, /from\s+["']\.\/main\/media\.js["']/);
+  assert.match(main, /from\s+["']\.\/main\/media\.js(?:\?v=\d{8}[a-z])?["']/);
   assert.doesNotMatch(main, /function initIndustryProducts\s*\(/);
   assert.doesNotMatch(main, /function initLightbox\s*\(/);
   assert.doesNotMatch(main, /function initImageFallbacks\s*\(/);
