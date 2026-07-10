@@ -258,6 +258,39 @@ test("cart uses a conventional order summary without catalog policy duplication"
   });
 });
 
+test("cart holds product lines until catalog names and pricing resolve", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage();
+    try {
+      await page.addInitScript(() => {
+        window.MASEST_ENABLE_LOCAL_API = true;
+        localStorage.setItem("masest_cart", JSON.stringify({ "hcr-1": 1 }));
+      });
+      await page.route("**/api/products", async route => {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ products: [hcrProduct()] }),
+        });
+      });
+
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+      await page.getByText("Loading cart details…", { exact: true }).waitFor();
+      assert.equal(await page.locator(".cart-line").count(), 0);
+      assert.equal(await page.getByText("Pending review", { exact: true }).count(), 0);
+      assert.equal(await page.getByText("hcr-1", { exact: true }).count(), 0);
+
+      await page.locator(".cart-line").waitFor();
+      assert.notEqual((await page.locator(".cart-line h2").textContent()).trim(), "hcr-1");
+      assert.equal((await page.locator(".cart-line p").textContent()).trim(), "$17.30 each");
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("cart renders untrusted SKU text without creating injected markup", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });

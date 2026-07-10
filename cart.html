@@ -77,6 +77,7 @@
 
   // vsku -> { name, price, currency }, flattened from /api/products variants.
   const vmap = new Map();
+  let catalogReady = false;
   const fallbackNames = {
     crhd: "VertKleen CR HD",
     hcr: "VertKleen HCR",
@@ -261,6 +262,14 @@
       updateSubtotal();
       return;
     }
+    if (!catalogReady) {
+      if (summary) summary.hidden = true;
+      if (shell) shell.classList.add("is-empty");
+      lines.setAttribute("aria-busy", "true");
+      lines.innerHTML = `<div class="cart-empty"><h2>Loading cart details…</h2><p>Confirming current product names and pricing.</p></div>`;
+      return;
+    }
+    lines.removeAttribute("aria-busy");
     lines.innerHTML = cartItems.map(item => {
       const meta = vmap.get(item.sku);
       const name = productName(item.sku);
@@ -433,8 +442,9 @@
     box.hidden = false;
   }
 
-  render(); // fast first paint with raw SKUs
-  if (!isLocalStaticPreview()) loadCatalog().then(render); // re-render with current product names and pricing
+  catalogReady = isLocalStaticPreview();
+  render();
+  if (!catalogReady) loadCatalog().finally(() => { catalogReady = true; render(); });
   renderCartAccount();
 </script>
 </body>
