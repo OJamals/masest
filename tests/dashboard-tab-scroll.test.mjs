@@ -20,3 +20,11 @@ test("admin dashboard tab changes preserve the page scroll", () => {
 
   assert.doesNotMatch(source, /window\.scrollTo\(/);
 });
+
+test("dashboard sidebars release wheel scrolling to the page at their boundaries", () => {
+  const dashboard = read("dashboard.html");
+  const admin = read("admin.html");
+
+  assert.doesNotMatch(dashboard, /\.dash-sidebar\s*\{[^}]*overscroll-behavior:\s*contain/);
+  assert.doesNotMatch(admin, /\.adm-sidebar\.adm-tabs-wrap\s*\{[^}]*overscroll-behavior:\s*contain/);
+});
