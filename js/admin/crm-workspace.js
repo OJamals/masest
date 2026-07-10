@@ -51,7 +51,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
       ? `<button class="btn btn-ghost btn-sm" type="button" data-inbox-open data-subj-type="${esc(t.subject_type)}" data-subj-id="${esc(t.subject_id)}" data-subj-label="${esc(t.subject_label || '')}">Open</button>`
       : '';
     return `<li class="crm-task">
-      <button class="btn btn-ghost btn-sm" type="button" data-inbox-toggle="${esc(t.id)}" data-inbox-status="${esc(t.status)}" aria-label="${t.status === 'done' ? 'Reopen' : 'Complete'} task">${t.status === 'done' ? '↺' : '✓'}</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-inbox-toggle="${esc(t.id)}" data-inbox-status="${esc(t.status)}" data-capability="admin.write" aria-label="${t.status === 'done' ? 'Reopen' : 'Complete'} task">${t.status === 'done' ? '↺' : '✓'}</button>
       <div><div class="crm-feed-title">${esc(t.title)}</div>
       <div class="crm-feed-detail muted">${subj} · ${t.assigned_to ? `→ ${esc(t.assigned_to)}` : 'Unassigned'}${t.due_at ? ` · due ${esc(date(t.due_at))}` : ''}</div></div>
       ${overdue ? '<span class="badge badge-warning">Overdue</span>' : '<span></span>'}

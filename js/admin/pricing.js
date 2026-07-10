@@ -1,13 +1,10 @@
-// Admin pricing tab (#36 per-tab split). Per-variant tier pricing grid with inline
-// row saves. Shared primitives ($, api, state, message, admSkeleton) are injected;
-// esc comes from util.js and the dirty-edit helpers from edits.js.
-import { esc, delegate } from '../util.js';
-import { captureDirty, restoreDirty } from './edits.js';
+// Admin pricing tab (#36 per-tab split). Prices are displayed from the workbook-
+// managed catalog seed so staff can verify tiers without creating pricing drift.
+import { esc } from '../util.js';
 
 export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty }) {
   async function renderPricing({ refetch = true } = {}) {
     const box = $('admPricing');
-    const snap = captureDirty(box);
     if (refetch) {
       box.innerHTML = admSkeleton();
       try {
@@ -27,37 +24,20 @@ export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty
       box.innerHTML = admEmpty('ph-tag', q ? 'No matching variants' : 'No variants', q ? 'No variants match your search.' : 'Add product variants to set tier pricing.');
       return;
     }
-    box.innerHTML = `<table class="adm"><thead><tr><th>Variant</th><th>VSKU</th><th>Base</th>${tiers.map((tier) => `<th>${esc(tier)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `
+    box.innerHTML = `<p class="muted" role="note">Verification view only. Reflect approved workbook changes in the catalog seed data, then run <code>npm run seed</code>.</p><table class="adm"><thead><tr><th>Variant</th><th>VSKU</th><th>Base</th>${tiers.map((tier) => `<th>${esc(tier)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `
       <tr data-vsku="${esc(row.vsku)}">
         <td>${esc(row.product_name)} - ${esc(row.label)}${row.mode === 'quote' ? ' <span class="badge" data-s="quote">quote</span>' : ''}</td>
         <td><code>${esc(row.vsku)}</code></td>
-        <td class="muted">${row.base_price == null ? '-' : fmt(row.base_price)}</td>
-        ${tiers.map((tier) => `<td><input class="adm-input" data-price-tier="${esc(tier)}" type="number" step="0.01" min="0" value="${esc(row.tiers?.[tier] ?? '')}" placeholder="${row.base_price == null ? '-' : fmt(row.base_price)}"></td>`).join('')}
+        <td class="muted">${row.base_price == null ? '-' : `$${fmt(row.base_price)}`}</td>
+        ${tiers.map((tier) => {
+          const price = row.tiers?.[tier];
+          return `<td><span class="adm-managed-price">${price == null ? (row.base_price == null ? '-' : `$${fmt(row.base_price)} fallback`) : `$${fmt(price)}`}</span></td>`;
+        }).join('')}
       </tr>
-    `).join('')}</tbody></table><p id="priceRowStatus" class="adm-status" role="status"></p>`;
-    restoreDirty(box, snap);
+    `).join('')}</tbody></table>`;
   }
 
-  // Per-row tier edits delegated once on the stable #admPricing container (#36).
-  function wirePricing() {
-    const box = $('admPricing');
-    if (!box) return;
-    delegate(box, 'change', '[data-price-tier]', async (event, input) => {
-      const row = input.closest('[data-vsku]');
-      input.disabled = true;
-      try {
-        await api('/api/admin/variant-pricing', {
-          method: 'POST',
-          body: { vsku: row.dataset.vsku, tier: input.dataset.priceTier, price: input.value },
-        });
-        message('priceRowStatus', `${row.dataset.vsku} ${input.dataset.priceTier} saved.`, 'ok');
-      } catch (err) {
-        message('priceRowStatus', err.data?.error || 'Could not save the price. Retry.', 'err');
-      } finally {
-        input.disabled = false;
-      }
-    });
-  }
+  function wirePricing() {}
 
   return { renderPricing, wirePricing };
 }

@@ -32,7 +32,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       return;
     }
     box.innerHTML = `<div class="product-admin-list">${products.map((p) => `
-    <article class="product-admin-card" data-product="${esc(p.sku)}">
+    <article class="product-admin-card" data-product="${esc(p.sku)}" data-capability-scope="product.write">
       <div class="product-admin-head">
         <div class="product-admin-media">
           ${productMedia(p)}
@@ -50,7 +50,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       <div class="product-admin-fields">
         <label>Name <input class="adm-input" value="${esc(p.name)}" data-field="name"></label>
         <label>Mode <select class="adm-select" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></label>
-        <label>Price <input class="adm-input" type="number" min="0" step="0.01" value="${esc(p.price ?? '')}" data-field="price"></label>
+        <label>Price <output class="adm-managed-price" aria-label="Workbook-managed product price">${p.price == null ? 'Workbook managed' : esc(`USD ${Number(p.price).toFixed(2)}`)}</output></label>
         <label>Stock <input class="adm-input" type="number" min="0" step="1" value="${esc(p.stock ?? '')}" data-field="stock"></label>
         <label>HMIS <input class="adm-input" value="${esc(p.hmis || '')}" data-field="hmis" placeholder="H-F-R e.g. 2-0-1"></label>
         <label>Group key <input class="adm-input" value="${esc(p.group_key || '')}" data-field="group_key" placeholder="groups related SKUs"></label>
@@ -167,7 +167,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     <div class="variant-row" data-variant="${esc(v.vsku)}">
       <label>Label <input class="adm-input" value="${esc(v.label || '')}" data-vfield="label" aria-label="Variant label"></label>
       <label>Gallons <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.gallons ?? '')}" data-vfield="gallons" aria-label="Gallons"></label>
-      <label>Price <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.price ?? '')}" data-vfield="price" aria-label="Variant price"></label>
+      <label>Price <output class="adm-managed-price" aria-label="Workbook-managed variant price">${v.price == null ? 'Workbook managed' : esc(`USD ${Number(v.price).toFixed(2)}`)}</output></label>
       <label>Stock <input class="adm-input" type="number" min="0" step="1" value="${esc(v.stock ?? '')}" data-vfield="stock" aria-label="Variant stock"></label>
       <label class="variant-active"><input type="checkbox" ${v.active !== false ? 'checked' : ''} data-vfield="active"> Active</label>
       <button class="btn btn-primary btn-sm" data-save-variant="${esc(v.vsku)}" type="button">Save</button>
@@ -251,7 +251,6 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         sku: $('npSku').value.trim(),
         name: $('npName').value.trim() || undefined,
         mode: $('npMode').value,
-        price: $('npPrice').value,
         stock: $('npStock').value,
         track_stock: $('npStock').value !== '',
         image_url: $('npImageUrl').value.trim(),
@@ -278,7 +277,6 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         vsku: $('nvSku').value.trim(),
         label: $('nvLabel').value.trim(),
         gallons: $('nvGallons').value,
-        price: $('nvPrice').value,
         stock: $('nvStock').value,
         track_stock: $('nvStock').value !== '',
         active: true,

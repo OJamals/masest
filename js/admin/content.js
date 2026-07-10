@@ -1,14 +1,14 @@
-import { esc, delegate, confirmDialog } from "../util.js";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js";
 import { renderMarkdown } from "../md.js";
 import { supabase } from "../auth.js";
-import { createContentAssets } from "./content-assets.js";
-import { createContentRevisions } from "./content-revisions.js";
+import { createContentAssets } from "./content-assets.js?v=20260709b";
+import { createContentRevisions } from "./content-revisions.js?v=20260709a";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260709b";
+} from "./rich-editor.js?v=20260709c";
 import {
   contentPayloadFields,
   contentTypeOptions,
@@ -49,7 +49,7 @@ const PLACEMENT_HINTS = Object.freeze({
   page_section: "Feeds editable public page sections such as headlines, body copy, CTAs, and images.",
   page_meta: "Feeds SEO metadata for public pages.",
   pricing_tier: "Feeds public pricing tier copy. Transaction pricing still belongs in Catalog.",
-  blog_post: "Feeds the static blog. After publishing, run `npm run publish:blog` to regenerate and commit the pages.",
+  blog_post: "Feeds the static blog. Publishing updates the CMS and requests a static rebuild; if automation is unavailable, run `npm run publish:blog`.",
 });
 
 function labelFor(options, value) {
@@ -268,7 +268,9 @@ function fieldTemplate(field, payload) {
 }
 
 function structuredFieldsTemplate(type, payload) {
-  const fields = contentPayloadFields(type);
+  // Blog titles use the shared Title field above. Keep payload.title synchronized
+  // in code instead of rendering a second, conflicting Title input.
+  const fields = contentPayloadFields(type).filter((field) => type !== "blog_post" || field.key !== "title");
   if (!fields.length) return "";
   return fields.map((field) => fieldTemplate(field, payload)).join("");
 }
@@ -325,13 +327,13 @@ function formTemplate({ blog = false } = {}) {
         </div>
         <span id="contentEditorBadge" class="badge" data-s="draft">draft</span>
       </div>
-      <form id="contentForm" class="adm-form-grid" onsubmit="return false">
+      <form id="contentForm" class="adm-form-grid" onsubmit="return false" data-capability-scope="content.write">
         ${typeControl}
         <label class="adm-content-locale">Language <select id="contentLocale" class="adm-select"><option value="en">English (en)</option></select></label>
         <p id="contentPlacementHint" class="adm-content-placement full" role="note"${blog ? " hidden" : ""}>${esc(placementText("service"))}</p>
         <label class="wide">Title <input id="contentTitle" class="adm-input" required></label>
         <label class="wide">Page slug <input id="contentSlug" class="adm-input" required></label>
-        <label class="wide">Schedule publish <input id="contentScheduledAt" class="adm-input" type="datetime-local"></label>
+        <label class="wide">Schedule CMS publish <input id="contentScheduledAt" class="adm-input" type="datetime-local"></label>
         <div id="contentStructuredFields" class="adm-content-fields full"></div>
         <fieldset id="contentSeoFields" class="adm-content-seo full"></fieldset>
         <details class="adm-content-json full">
@@ -341,17 +343,18 @@ function formTemplate({ blog = false } = {}) {
         </details>
         <div class="adm-inline-actions adm-content-actions full" aria-label="CMS editor actions">
           <div class="adm-content-action-group" data-content-action-group="draft-publish" aria-label="Draft and publish">
-            <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
-            <button class="btn btn-primary btn-sm" type="button" data-content-action="publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule publish</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft" data-capability="content.write"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
+            <button class="btn btn-primary btn-sm" type="button" data-content-action="publish" data-capability="content.publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish to CMS</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule" data-capability="content.publish"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule CMS publish</button>
           </div>
           <div class="adm-content-action-group" data-content-action-group="manage" aria-label="Manage entry">
-            <button class="btn btn-ghost btn-sm" type="button" data-content-action="new"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-content-action="archive"><i class="ph ph-archive" aria-hidden="true"></i> Archive</button>
-            <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore draft</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-action="new" data-capability="content.write"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate" data-capability="content.write"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-action="archive" data-capability="content.write"><i class="ph ph-archive" aria-hidden="true"></i> Archive</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" data-capability="content.write" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore draft</button>
           </div>
         </div>
+        <p class="adm-publish-contract full" role="note"><strong>Publication status:</strong> Publishing updates the CMS first. The public site changes after the static rebuild completes. If the rebuild hook is unavailable, run <code>${blog ? "npm run publish:blog" : "npm run publish:content"}</code>.</p>
         <details class="adm-content-disclosure full">
           <summary>Review workflow &amp; editor lock (multi-editor tools)</summary>
           <div class="adm-content-disclosure-body">
@@ -359,14 +362,14 @@ function formTemplate({ blog = false } = {}) {
               <textarea id="contentWorkflowNote" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
             </label>
             <div class="adm-content-action-group" data-content-action-group="review" aria-label="Review workflow">
-              <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
+              <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review" data-capability="content.write"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes" data-capability="content.review"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
             </div>
             <div class="adm-content-lockbar">
               <span id="contentLockStatus" class="adm-content-lock-status" data-state="">Unlocked</span>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock" data-capability="content.write"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock" data-capability="content.write"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock" data-capability="content.review"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
             </div>
           </div>
         </details>
@@ -426,7 +429,7 @@ function assetPickerTemplate(admEmpty) {
         <label>Alt text
           <input id="contentAssetAlt" class="adm-input" type="text" placeholder="Describe the image">
         </label>
-        <button class="btn btn-secondary btn-sm" type="button" data-content-action="upload_asset">
+        <button class="btn btn-secondary btn-sm" type="button" data-content-action="upload_asset" data-capability="content.assets">
           <i class="ph ph-upload-simple" aria-hidden="true"></i> Upload
         </button>
       </form>
@@ -440,7 +443,7 @@ function assetPickerTemplate(admEmpty) {
         <label>Credit
           <input id="contentAssetCredit" class="adm-input" type="text" placeholder="Optional">
         </label>
-        <button class="btn btn-secondary btn-sm" type="button" data-content-action="register_asset">
+        <button class="btn btn-secondary btn-sm" type="button" data-content-action="register_asset" data-capability="content.assets">
           <i class="ph ph-link-simple" aria-hidden="true"></i> Register
         </button>
       </form>
@@ -457,7 +460,7 @@ function previewTemplate() {
           <h2>Field check</h2>
           <p class="muted">What each field contains right now — not the styled page. Publish, then view the live page for the real layout.</p>
         </div>
-        <button class="btn btn-ghost btn-sm" type="button" data-content-action="preview">
+        <button class="btn btn-ghost btn-sm" type="button" data-content-action="preview" data-permission-exempt>
           <i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh
         </button>
       </div>
@@ -471,7 +474,7 @@ function contentHubTemplate() {
     <div class="adm-content-hub">
       <div>
         <p class="adm-eyebrow">Website CMS</p>
-        <h2>Content that ships to the public site</h2>
+        <h2>Content prepared for the public site</h2>
         <p class="muted">Edit copy, proof cards, FAQs, page metadata, pricing copy, and industry content without leaving the admin dashboard.</p>
       </div>
       <div id="contentHubMetrics" class="adm-content-hub-metrics" aria-label="CMS summary">
@@ -496,7 +499,7 @@ function listTemplate(entries, admEmpty) {
             <span class="adm-content-meta">${esc(labelFor(TYPES, entry.type))} · ${esc(entry.slug)} · ${esc(entry.locale || "en")}</span>
           </span>
           <span class="badge" data-s="${esc(entry.status)}">${esc(entry.status)}</span>
-          <span class="adm-content-updated">${esc(entry.updated_at ? new Date(entry.updated_at).toLocaleDateString() : "Not saved")}</span>
+          <span class="adm-content-updated">${esc(entry.updated_at ? (fmtDate(entry.updated_at) || "Date unavailable") : "Not saved")}</span>
         </button>
       `).join("")}
     </div>
@@ -505,8 +508,8 @@ function listTemplate(entries, admEmpty) {
 
 function workflowTemplate(admEmpty, { blog = false } = {}) {
   const queueCopy = blog
-    ? `Scheduled blog posts stay visible here. Press "Publish due scheduled" to publish posts whose scheduled time has arrived and trigger static blog generation.`
-    : `Scheduled, review, and change-request items stay visible even when the list is filtered. Press "Publish due scheduled" to publish entries whose scheduled time has arrived.`;
+    ? `Scheduled blog posts stay visible here. Press "Publish due to CMS" when their scheduled time arrives; the static build runs separately.`
+    : `Scheduled, review, and change-request items stay visible even when the list is filtered. Press "Publish due to CMS" when their scheduled time arrives.`;
   return `
     <div class="adm-card adm-content-workflow" id="contentWorkflowQueue">
       <div class="adm-panel-header">
@@ -514,8 +517,8 @@ function workflowTemplate(admEmpty, { blog = false } = {}) {
           <h2>Review queue</h2>
           <p class="muted">${esc(queueCopy)}</p>
         </div>
-        <button class="btn btn-secondary btn-sm" type="button" data-content-action="publish_scheduled">
-          <i class="ph ph-clock-countdown" aria-hidden="true"></i> Publish due scheduled
+        <button class="btn btn-secondary btn-sm" type="button" data-content-action="publish_scheduled" data-capability="content.publish">
+          <i class="ph ph-clock-countdown" aria-hidden="true"></i> Publish due to CMS
         </button>
       </div>
       <div id="contentWorkflowRows" class="adm-list">
@@ -659,6 +662,14 @@ function readStructuredValues() {
   return values;
 }
 
+function readStructuredValuesForType(type) {
+  const values = readStructuredValues();
+  if (type === "blog_post") {
+    values.title = document.getElementById("contentTitle")?.value.trim() || "";
+  }
+  return values;
+}
+
 function readSeoValues() {
   const values = {};
   document.querySelectorAll("[data-content-seo-field]").forEach((control) => {
@@ -686,7 +697,7 @@ function selectedFormEntry({ validate = false } = {}) {
   let seo;
   try {
     const type = document.getElementById("contentType").value;
-    const structuredValues = readStructuredValues();
+    const structuredValues = readStructuredValuesForType(type);
     if (validate) {
       const validation = validateStructuredPayload(type, structuredValues);
       if (!validation.ok) throw new Error(`Complete required content fields (${validation.error || "invalid_content_payload"}).`);
@@ -956,7 +967,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   function syncStructuredPayload() {
     try {
       const type = $("contentType")?.value || "service";
-      const payload = mergeStructuredPayload(type, readPayloadJson(), readStructuredValues());
+      const payload = mergeStructuredPayload(type, readPayloadJson(), readStructuredValuesForType(type));
       $("contentPayload").value = jsonText(payload);
       setStatus("");
       updateMarkdownPreviews();
@@ -1030,7 +1041,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       localeSel.insertAdjacentHTML("beforeend", `<option value="${esc(locale)}">${esc(locale)}</option>`);
     }
     localeSel.value = locale;
-    $("contentTitle").value = entry.title || "";
+    $("contentTitle").value = entry.title || entry.payload?.title || "";
     $("contentSlug").value = entry.slug || "";
     $("contentScheduledAt").value = dateTimeLocalValue(entry.scheduled_at);
     $("contentWorkflowNote").value = entry.review_note || "";
@@ -1537,7 +1548,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     });
     root.addEventListener("input", (event) => {
       if (event.target.closest("#contentForm")) formDirty = true;
-      if (event.target.matches("#contentTitle")) syncSlugFromTitle();
+      if (event.target.matches("#contentTitle")) {
+        syncSlugFromTitle();
+        if (blogMode) syncStructuredPayload();
+      }
       // Slug normalizes on CHANGE (blur), not per keystroke — per-keystroke slugify
       // stripped trailing "-", made spaces/hyphens untypable and jumped the caret.
       if (event.target.matches("#contentSlug")) slugManuallyEdited = true;

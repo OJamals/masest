@@ -67,9 +67,9 @@ export function richEditorTemplate({ key, label = "Body", value = "", textareaAt
     <div class="adm-rich-editor" data-rich-editor data-rich-editor-key="${safeKey}">
       <span class="adm-rich-label">${escapeHtml(label)}</span>
       <div class="adm-md-tools adm-rich-editor-toolbar" role="toolbar" aria-label="Visual editor tools">
-        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_bold"><i class="ph ph-text-b" aria-hidden="true"></i></button>
-        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_italic"><i class="ph ph-text-italic" aria-hidden="true"></i></button>
-        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_underline"><i class="ph ph-text-underline" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_bold" aria-label="Bold" title="Bold"><i class="ph ph-text-b" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_italic" aria-label="Italic" title="Italic"><i class="ph ph-text-italic" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_underline" aria-label="Underline" title="Underline"><i class="ph ph-text-underline" aria-hidden="true"></i></button>
         <select class="adm-select adm-select-sm" data-editor-format-size aria-label="Text size">
           <option value="">Size</option>
           <option value="16">16</option>
@@ -83,7 +83,7 @@ export function richEditorTemplate({ key, label = "Body", value = "", textareaAt
         <button type="button" class="btn btn-ghost btn-sm" data-editor-action="reference_product">Product</button>
         <button type="button" class="btn btn-ghost btn-sm" data-editor-action="reference_service">Service</button>
       </div>
-      <div class="adm-rich-editor-surface adm-rich-surface blog-body" data-rich-editor-surface contenteditable="true" spellcheck="true" style="min-height:${Number(minHeight) || 260}px">${markdownToEditorHtml(value)}</div>
+      <div class="adm-rich-editor-surface adm-rich-surface blog-body" data-rich-editor-surface contenteditable="true" role="textbox" aria-multiline="true" aria-label="${escapeHtml(label)} editor" spellcheck="true" style="min-height:${Number(minHeight) || 260}px">${markdownToEditorHtml(value)}</div>
       <textarea ${textareaAttrs} data-rich-editor-output="${safeKey}">${escapeHtml(value)}</textarea>
     </div>
   `;

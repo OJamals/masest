@@ -22,11 +22,26 @@ export const safeUrl = (u) => {
 
 export const money = (n, c = 'USD') => `${String(c || 'USD').toUpperCase()} ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export const fmtDate = (s) => { try { return new Date(s).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return ''; } };
+export const fmtDate = (s) => {
+  const date = new Date(s);
+  const time = date.getTime();
+  if (!Number.isFinite(time) || time <= 86400000) return '';
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
 
-export const fmtDT = (s) => { try { return new Date(s).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
+export const fmtDT = (s) => {
+  const date = new Date(s);
+  const time = date.getTime();
+  if (!Number.isFinite(time) || time <= 86400000) return '';
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
 
-export const dateTime = (s) => (s ? new Date(s).toLocaleString() : '');
+export const dateTime = (s) => {
+  if (!s) return '';
+  const date = new Date(s);
+  const time = date.getTime();
+  return Number.isFinite(time) && time > 86400000 ? date.toLocaleString() : '';
+};
 
 /* ---- WAI-ARIA tablist keyboard pattern (#33) ---- */
 
@@ -87,6 +102,22 @@ export const delegate = (container, type, selector, handler) => {
 
 /* ---- Styled confirm dialog (#31) ---- */
 
+// Native dialogs usually return focus to the invoking control, but that behavior becomes
+// unreliable when the dialog is removed inside its close handler. Register this before
+// showModal() so every close path (button, Esc, or programmatic close) restores the exact
+// trigger after the dialog has left the DOM.
+export const restoreFocusOnClose = (dialog, trigger = document.activeElement) => {
+  if (!dialog) return;
+  const target = trigger instanceof HTMLElement ? trigger : null;
+  dialog.addEventListener('close', () => {
+    requestAnimationFrame(() => {
+      if (target?.isConnected && !target.matches(':disabled, [hidden], [aria-hidden="true"]')) {
+        target.focus({ preventScroll: true });
+      }
+    });
+  }, { once: true });
+};
+
 // Accessible replacement for window.confirm(): a focus-trapped, Esc-dismissable native
 // <dialog>. Returns Promise<boolean>. The message is set via textContent (no HTML
 // injection). Falls back to window.confirm() where <dialog> is unsupported.
@@ -104,6 +135,7 @@ export const confirmDialog = (message, { confirmText = 'Confirm', cancelText = '
     dlg.querySelector('.confirm-dialog-msg').textContent = message;
     if (typeof dlg.showModal !== 'function') { resolve(window.confirm(message)); return; }
     document.body.appendChild(dlg);
+    restoreFocusOnClose(dlg);
     dlg.addEventListener('close', () => { resolve(dlg.returnValue === 'confirm'); dlg.remove(); });
     dlg.showModal();
     dlg.querySelector('button[value="confirm"]').focus();
@@ -119,6 +151,7 @@ export function detailDialog(html) {
     + `<form method="dialog" class="detail-dialog-actions"><button class="btn btn-ghost btn-sm" value="close" type="submit">Close</button></form>`;
   if (typeof dlg.showModal !== 'function') return;
   document.body.appendChild(dlg);
+  restoreFocusOnClose(dlg);
   dlg.addEventListener('close', () => dlg.remove());
   dlg.showModal();
 }

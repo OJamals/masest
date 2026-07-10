@@ -6,7 +6,7 @@
 // message, kind)`, which content.js implements (it writes the value into the editor form
 // and re-syncs the preview). Shared primitives ($, api, admSkeleton, admEmpty, setStatus)
 // are injected; esc/confirmDialog come from util.
-import { esc, confirmDialog } from "../util.js";
+import { esc, confirmDialog, restoreFocusOnClose } from "../util.js";
 
 export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, applyChosenAsset }) {
   let assetTargetField = "image";
@@ -46,10 +46,10 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
           <button class="btn btn-secondary btn-sm" type="button" data-content-asset-kind="${esc(assetTargetKind)}" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">
             <i class="ph ph-check" aria-hidden="true"></i> Select
           </button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-asset-alt-action data-content-asset-storage-path="${esc(storagePath)}">
+          <button class="btn btn-ghost btn-sm" type="button" data-content-asset-alt-action data-content-asset-storage-path="${esc(storagePath)}" data-capability="content.assets">
             <i class="ph ph-text-aa" aria-hidden="true"></i> Alt text
           </button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-asset-status-action data-content-asset-storage-path="${esc(storagePath)}" data-content-asset-next-status="${esc(nextStatus)}">
+          <button class="btn btn-ghost btn-sm" type="button" data-content-asset-status-action data-content-asset-storage-path="${esc(storagePath)}" data-content-asset-next-status="${esc(nextStatus)}" data-capability="content.assets">
             <i class="ph ${esc(statusIcon)}" aria-hidden="true"></i> ${esc(statusLabel)}
           </button>
         </span>
@@ -99,6 +99,7 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
       </form>`;
       if (typeof dlg.showModal !== "function") { resolve(null); return; }
       document.body.appendChild(dlg);
+      restoreFocusOnClose(dlg);
       dlg.addEventListener("close", () => {
         const next = dlg.returnValue === "ok" ? String(dlg.querySelector("[data-alt-input]")?.value || "").trim() : null;
         dlg.remove();

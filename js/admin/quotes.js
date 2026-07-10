@@ -5,7 +5,7 @@
 // helpers are injected; esc/delegate/money/confirmDialog/dateTime come from util.js and
 // the dirty-edit helpers from edits.js. The CRM activity panel (Timeline/Tasks/Notes,
 // slice 1) is reused inside the drawer via createCrmPanel — no js/admin.js change needed.
-import { esc, delegate, money, confirmDialog, dateTime } from '../util.js';
+import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js';
 import { captureDirty, restoreDirty } from './edits.js';
 import { createCrmPanel } from './crm.js';
 import { createSavedViews } from './saved-views.js';
@@ -224,6 +224,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       </form>`;
       if (typeof dlg.showModal !== 'function') { resolve('other'); return; }
       document.body.appendChild(dlg);
+      restoreFocusOnClose(dlg);
       dlg.addEventListener('close', () => {
         const reason = dlg.returnValue === 'ok' ? (dlg.querySelector('[data-reason]')?.value || 'other') : null;
         dlg.remove();
@@ -421,12 +422,13 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         <p class="muted" style="margin:2px 0 0">${esc(quote.type || 'quote')} · ${esc(quote.status || 'new')} · ${esc(STAGE_LABELS[quote.pipeline_stage || 'new'])}</p></div>
         <button class="btn btn-ghost btn-sm" data-drawer-close type="button" aria-label="Close">✕</button>
       </div>
-      <div data-drawer-details>${detailsHtml(quote)}</div>
+      <div data-drawer-details data-capability-scope="admin.write">${detailsHtml(quote)}</div>
       <p class="adm-status" data-drawer-status role="status" aria-live="polite"></p>
       <div data-drawer-crm></div>
     </div>`;
     if (typeof dlg.showModal !== 'function') return;
     document.body.appendChild(dlg);
+    restoreFocusOnClose(dlg);
     // Drawer-level actions only; the mounted CRM panel binds its own listeners and
     // owns the Timeline / Tasks / Notes sub-tabs (same shape as the company drawer).
     dlg.addEventListener('click', async (event) => {
@@ -486,7 +488,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       return;
     }
 
-    const bulkBar = `<div class="adm-tools adm-tools-flush" style="flex-wrap:wrap">
+    const bulkBar = `<div class="adm-tools adm-tools-flush" data-capability-scope="admin.write" style="flex-wrap:wrap">
       <label class="admin-select-all"><input type="checkbox" id="qAll" aria-label="Select all"> Select all</label>
       <select class="adm-select adm-select-sm" id="qBulkStage"><option value="">Set stage…</option>${STAGES.map((s) => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}</select>
       <select class="adm-select adm-select-sm" id="qBulkPriority"><option value="">Set priority…</option>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}">${p}</option>`).join('')}</select>
@@ -520,7 +522,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
           ${meta ? `<p class="muted" style="margin:4px 0 0">${esc(meta)}</p>` : ''}
           <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" data-open-quote="${id}" type="button">Open deal</button>
-            <select class="adm-select adm-select-sm" data-quote-stage="${id}" aria-label="Stage">
+            <select class="adm-select adm-select-sm" data-quote-stage="${id}" data-capability="admin.write" aria-label="Stage">
               ${STAGES.map((s) => `<option value="${s}" ${s === (quote.pipeline_stage || 'new') ? 'selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}
             </select>
             <a class="btn btn-ghost btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>

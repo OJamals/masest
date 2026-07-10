@@ -55,8 +55,8 @@ test("content editor surfaces workflow queues and actions", () => {
   assert.match(source, /publishScheduledContent/);
   assert.match(source, /body:\s*\{\s*action,\s*note,\s*entry\s*\}/);
   assert.match(source, /Submit for review/);
-  assert.match(source, /Schedule publish/);
-  assert.match(source, /Publish due scheduled/);
+  assert.match(source, /Schedule CMS publish/);
+  assert.match(source, /Publish due to CMS/);
   assert.match(source, /contentLockStatus/);
   assert.match(source, /data-content-action="lock"/);
   assert.match(source, /data-content-action="unlock"/);

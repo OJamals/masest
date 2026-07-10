@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { STAFF_ROLES, normalizeStaffRole, staffCan } from '../functions/_lib/authz.js';
+import { STAFF_ROLES, normalizeStaffRole, staffAccessSummary, staffCan } from '../functions/_lib/authz.js';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
@@ -58,6 +58,33 @@ test('dangerous capabilities remain denied to support/read_only', () => {
 test('unknown capability is owner-only (fail-safe)', () => {
   assert.equal(staffCan('owner', 'mystery.cap'), true);
   assert.equal(staffCan('finance', 'mystery.cap'), false);
+});
+
+test('staffAccessSummary exposes only the current role capabilities', () => {
+  const owner = staffAccessSummary('owner', 'OWNER@EXAMPLE.COM');
+  assert.equal(owner.role, 'owner');
+  assert.equal(owner.email, 'owner@example.com');
+  assert.equal(owner.can_write, true);
+  assert.ok(owner.capabilities.includes('product.write'));
+  assert.ok(owner.capabilities.includes('user.manage'));
+
+  const support = staffAccessSummary('support', 'support@example.com');
+  assert.equal(support.can_write, true);
+  assert.ok(support.capabilities.includes('order.write'));
+  assert.ok(support.capabilities.includes('company.view_as'));
+  assert.ok(!support.capabilities.includes('company.credit'));
+  assert.ok(!support.capabilities.includes('product.write'));
+
+  const readOnly = staffAccessSummary('read_only');
+  assert.equal(readOnly.can_write, false);
+  assert.deepEqual(readOnly.capabilities, []);
+});
+
+test('stats attaches per-user access context after the org-wide cache lookup', () => {
+  const src = read('functions/api/admin/stats.js');
+  const cacheIndex = src.indexOf("cached(env, 'cache:admin:stats:v1'");
+  const contextIndex = src.indexOf('staffAccessSummary(role, user.email)');
+  assert.ok(cacheIndex > -1 && contextIndex > cacheIndex, 'role context must never enter the shared cached payload');
 });
 
 // ---- requireStaff resolves a role ----

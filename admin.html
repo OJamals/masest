@@ -450,6 +450,17 @@
   .adm-sidebar.adm-tabs-wrap { position: sticky; top: 96px; align-self: start; max-height: calc(100vh - 120px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 12px; margin-bottom: 0; border: 1px solid var(--line-soft); border-radius: var(--r-card); background: rgba(255,255,255,.76); box-shadow: var(--shadow-xs); }
   .adm-sidebar .adm-top { display: grid; gap: 10px; align-items: start; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
   .adm-sidebar .adm-top .btn { justify-content: center; width: 100%; }
+  .adm-staff-context { display: grid; gap: 4px; min-width: 0; }
+  .adm-staff-context .badge { justify-self: start; text-transform: none; }
+  .adm-staff-context small { color: var(--muted); font-size: .72rem; line-height: 1.35; overflow-wrap: anywhere; }
+  [data-permission-restricted="true"] { border-color: var(--line-soft); }
+  [data-permission-disabled="true"] { cursor: not-allowed !important; }
+  .adm-nav-toggle { display: none; width: 100%; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); color: var(--ink); font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
+  .adm-nav-toggle-label { display: grid; gap: 2px; min-width: 0; }
+  .adm-nav-toggle-label small { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .adm-nav-toggle-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .adm-nav-toggle i { transition: transform .16s var(--ease-out); }
+  .adm-sidebar.is-open .adm-nav-toggle i { transform: rotate(180deg); }
   .adm-sidebar .adm-tabs { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin-top: 12px; }
   .adm-nav-group { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); }
   .adm-nav-group:first-child { border-top: 0; padding-top: 0; }
@@ -467,6 +478,11 @@
   .adm-tools > * { min-width: 0; }
   .msg { overflow-wrap: anywhere; }
   .variant-stack { min-width: 0; }
+  .adm-governance-note { border-color: rgba(14,124,134,.24); background: var(--accent-tint); }
+  .adm-governance-note h2 { display: flex; align-items: center; gap: 8px; }
+  .adm-governance-note p { margin: 0; }
+  .adm-managed-price { display: block; min-height: 42px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--soft); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .adm-publish-contract { margin: 0; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--soft); color: var(--ink-soft); line-height: 1.45; }
   @media (max-width: 1060px) {
     .admin-order-meta,
     .company-admin-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -540,11 +556,16 @@
   }
   @media (max-width: 980px) {
     .adm-layout { display: block; }
-    .adm-sidebar.adm-tabs-wrap { position: static; max-height: none; overflow-x: auto; overflow-y: visible; overscroll-behavior: auto; margin-bottom: 18px; }
+    .adm-sidebar.adm-tabs-wrap { position: static; max-height: none; overflow: visible; overscroll-behavior: auto; margin-bottom: 18px; }
+    .adm-nav-toggle { display: flex; }
+    .adm-sidebar:not(.is-open) .adm-tabs { display: none; }
     .adm-sidebar .adm-tabs { flex-direction: row; overflow-x: auto; padding: 8px 8px 4px 0; scroll-snap-type: x proximity; }
     .adm-nav-group { min-width: 184px; scroll-snap-align: start; }
   }
   @media (max-width: 640px) {
+    .adm-hero { padding-top: 24px; padding-bottom: 16px; }
+    .adm-hero h1 { font-size: 34px; }
+    .adm-hero .subhead { margin-top: 10px; font-size: .95rem; line-height: 1.45; }
     .adm-top, .adm-panel-header { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: left; }
@@ -591,11 +612,20 @@
       <div class="adm-layout">
         <aside class="adm-sidebar adm-tabs-wrap" aria-label="Admin navigation">
           <div class="adm-top">
-            <p id="admGreeting" class="muted">Signed in.</p>
+            <div class="adm-staff-context">
+              <p id="admGreeting" class="muted">Signed in.</p>
+              <span id="admRoleBadge" class="badge" data-s="draft">Checking access…</span>
+              <small id="admRoleHint">Controls match your assigned staff role.</small>
+            </div>
             <button id="admLogout" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-sign-out" aria-hidden="true"></i> Sign out</button>
           </div>
 
-          <div class="adm-tabs" role="tablist" aria-orientation="vertical" aria-label="Admin sections">
+          <button id="admNavToggle" class="adm-nav-toggle" type="button" aria-expanded="false" aria-controls="admNavTabs">
+            <span class="adm-nav-toggle-label"><small>Admin section</small><span id="admNavCurrent">Overview</span></span>
+            <i class="ph ph-caret-down" aria-hidden="true"></i>
+          </button>
+
+          <div id="admNavTabs" class="adm-tabs" role="tablist" aria-orientation="vertical" aria-label="Admin sections">
             <div class="adm-nav-group" role="presentation">
               <span aria-hidden="true">Operations</span>
               <button class="adm-tab" role="tab" data-tab="overview" type="button"><i class="ph ph-squares-four" aria-hidden="true"></i> Overview</button>
@@ -619,6 +649,12 @@
               <button class="adm-tab" role="tab" data-tab="blog" type="button"><i class="ph ph-newspaper" aria-hidden="true"></i> Blog</button>
               <button class="adm-tab" role="tab" data-tab="newsletter" type="button"><i class="ph ph-envelope-simple" aria-hidden="true"></i> Newsletter</button>
             </div>
+            <div class="adm-nav-group" role="presentation">
+              <span aria-hidden="true">Insights &amp; system</span>
+              <button class="adm-tab" role="tab" data-tab="analytics" type="button"><i class="ph ph-chart-line-up" aria-hidden="true"></i> Analytics</button>
+              <button class="adm-tab" role="tab" data-tab="finance" type="button"><i class="ph ph-receipt" aria-hidden="true"></i> Finance</button>
+              <button class="adm-tab" role="tab" data-tab="integrations" type="button"><i class="ph ph-plugs-connected" aria-hidden="true"></i> Integrations</button>
+            </div>
           </div>
         </aside>
 
@@ -641,7 +677,29 @@
           <div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div>
           <div id="admActionRail" class="adm-action-rail" aria-live="polite"></div>
         </div>
-        <div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected" aria-hidden="true"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs" aria-hidden="true"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div><div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reports &amp; exports</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" type="date" class="adm-input"></label><label class="field">To<input id="repTo" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button"><i class="ph ph-chart-line-up" aria-hidden="true"></i> Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i> Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-users-three" aria-hidden="true"></i> Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div><div id="admSeo" class="adm-card">Scanning pages...</div><div id="admTraffic" class="adm-card">Loading...</div>
+      </section>
+
+      <section class="adm-panel" role="tabpanel" data-panel="analytics">
+        <div class="adm-card adm-overview-head">
+          <div><p class="adm-eyebrow">Insights</p><h2>Analytics &amp; site health</h2><p class="muted">Traffic, conversion signals, campaigns, and public-page SEO checks.</p></div>
+          <div class="adm-overview-marker"><span>Window</span><b>Latest 14 days</b></div>
+        </div>
+        <div id="admSeo" class="adm-card">Scanning pages...</div>
+        <div id="admTraffic" class="adm-card">Loading...</div>
+      </section>
+
+      <section class="adm-panel" role="tabpanel" data-panel="finance">
+        <div class="adm-card adm-overview-head">
+          <div><p class="adm-eyebrow">Finance</p><h2>Reports &amp; exports</h2><p class="muted">Run revenue and tax summaries or export operational records.</p></div>
+        </div>
+        <div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reporting period</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" type="date" class="adm-input"></label><label class="field">To<input id="repTo" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button"><i class="ph ph-chart-line-up" aria-hidden="true"></i> Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i> Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-users-three" aria-hidden="true"></i> Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div>
+      </section>
+
+      <section class="adm-panel" role="tabpanel" data-panel="integrations">
+        <div class="adm-card adm-overview-head">
+          <div><p class="adm-eyebrow">System connections</p><h2>Integrations</h2><p class="muted">Connection readiness, sync queues, failures, and recovery controls.</p></div>
+        </div>
+        <div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks...</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected" aria-hidden="true"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs" aria-hidden="true"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="orders">
@@ -650,7 +708,7 @@
           <input id="ordSearch" class="adm-search" type="search" placeholder="Search orders" aria-label="Search orders">
           <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple"></i> Export CSV</button>
         </div>
-        <details class="adm-card adm-order-create">
+        <details class="adm-card adm-order-create" data-capability="order.write" data-capability-mode="hide">
           <summary>Create manual order</summary>
           <form onsubmit="return false" id="ordCreateForm" class="adm-form-grid">
             <label class="wide">Customer email <input id="ordCreateEmail" class="adm-input" type="email" autocomplete="off"></label>
@@ -684,7 +742,11 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="products">
-        <div class="adm-card" id="admInventory">
+        <div class="adm-card adm-governance-note" id="catalogPriceGovernance" role="note">
+          <h2><i class="ph ph-shield-check" aria-hidden="true"></i> Workbook-managed pricing</h2>
+          <p>Product, variant, and customer-tier prices are read-only here. Reflect approved changes from <code>VertKleen_Website_Pricing_WebDev.xlsx</code> in the catalog seed data, then run <code>npm run seed</code> so the catalog, checkout, and admin stay aligned.</p>
+        </div>
+        <div class="adm-card" id="admInventory" data-capability-scope="admin.write">
           <div class="adm-panel-header"><h2>Inventory</h2><button id="invReorderCsv" class="btn btn-ghost btn-sm" type="button">Reorder CSV</button></div>
           <p class="muted">Bulk-set stock: one <code>vsku,stock</code> per line (a header row is ignored).</p>
           <textarea id="invCsv" class="adm-textarea" placeholder="VK-1,120&#10;VK-2,0" aria-label="Bulk stock CSV"></textarea>
@@ -692,13 +754,13 @@
           <h3 class="adm-inv-subhead">Low stock</h3>
           <div id="invLow" class="adm-list">Loading...</div>
         </div>
-        <div class="adm-card">
+        <div class="adm-card" data-capability="product.write" data-capability-mode="hide">
           <h2>Add / overwrite a product</h2>
           <form onsubmit="return false" id="prodForm" class="adm-form-grid">
             <label>SKU <input id="npSku" class="adm-input" required></label>
             <label class="wide">Name <input id="npName" class="adm-input"></label>
             <label>Mode <select id="npMode" class="adm-select"><option value="buy">Buy</option><option value="quote">Quote</option></select></label>
-            <label>Price <input id="npPrice" class="adm-input" type="number" min="0" step="0.01"></label>
+            <label>Price <input id="npPrice" class="adm-input" value="Workbook managed" readonly aria-describedby="catalogPriceGovernance"></label>
             <label>Stock <input id="npStock" class="adm-input" type="number" min="0" step="1"></label>
             <label class="wide">Photo URL <input id="npImageUrl" class="adm-input" type="url" placeholder="img/products/example.webp"></label>
             <label class="wide">Photo alt <input id="npPhotoAlt" class="adm-input" placeholder="VertKleen HCR bottle"></label>
@@ -706,14 +768,14 @@
           </form>
           <p id="prodStatus" class="adm-status" role="status" aria-live="polite"></p>
         </div>
-        <div class="adm-card">
+        <div class="adm-card" data-capability="product.write" data-capability-mode="hide">
           <h2>Add / overwrite a volume variant</h2>
           <form onsubmit="return false" id="variantForm" class="adm-form-grid">
             <label>Product SKU <input id="nvProductSku" class="adm-input" required></label>
             <label>Variant SKU <input id="nvSku" class="adm-input" required></label>
             <label>Label <input id="nvLabel" class="adm-input" placeholder="5 gal pail" required></label>
             <label>Gallons <input id="nvGallons" class="adm-input" type="number" min="0" step="0.01"></label>
-            <label>Price <input id="nvPrice" class="adm-input" type="number" min="0" step="0.01"></label>
+            <label>Price <input id="nvPrice" class="adm-input" value="Workbook managed" readonly aria-describedby="catalogPriceGovernance"></label>
             <label>Stock <input id="nvStock" class="adm-input" type="number" min="0" step="1"></label>
             <button class="btn btn-primary" type="submit">Save variant</button>
           </form>
@@ -723,7 +785,7 @@
         <div id="admProducts" class="adm-table-wrap">Loading...</div>
         <!-- Pricing (promo codes + tier price search) folded in from its own tab
              2026-07-07 — one catalog surface; #pricing deep links land here. -->
-        <div class="adm-card" id="admCoupons">
+        <div class="adm-card" id="admCoupons" data-capability-scope="admin.write">
           <div class="adm-panel-header"><h2>Promo codes</h2></div>
           <p class="muted">Stripe promotion codes — buyers enter them at card checkout. (NET on-account orders don't take promo codes.)</p>
           <div class="adm-inline-actions adm-coupon-form">
@@ -782,7 +844,7 @@
         </div>
         <div id="admReviews" class="adm-panel-list">Loading...</div>
         <p id="rvStatus" class="adm-status" role="status" aria-live="polite"></p>
-        <div class="adm-card">
+        <div class="adm-card" data-capability-scope="admin.write">
           <h2>Add a manual review</h2>
           <p class="muted">Adds documented customer feedback. Verified-purchase badges remain tied to real fulfilled orders.</p>
           <form onsubmit="return false" id="rvManualForm" class="adm-form-grid">
@@ -810,7 +872,7 @@
         <div class="adm-card">
           <h2>Send an offer / announcement</h2>
           <p class="muted admin-inline-note">Posts a dashboard notification to matching <b>customer accounts</b> (optionally emails them too), segmented by account status. For a full email campaign to your subscriber &amp; lead lists — with scheduling and a compose editor — use <a href="#newsletter">Newsletter</a>.</p>
-          <form onsubmit="return false" id="offerForm" class="adm-form-grid">
+          <form onsubmit="return false" id="offerForm" class="adm-form-grid" data-capability-scope="admin.write">
             <label class="wide">Title <input id="ofTitle" class="adm-input" required></label>
             <label class="wide">CTA URL <input id="ofCta" class="adm-input" value="/products.html"></label>
             <label>Audience <select id="ofAud" class="adm-select"><option value="approved">Approved</option><option value="pending">Pending</option><option value="all">All</option></select></label>
@@ -832,6 +894,6 @@
 <script>window.MASEST_DISABLE_CRISP = true; /* visitor chat bubble overlays the staff console; Crisp threads surface in the Messages tab instead */</script>
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260619b"></script>
-<script type="module" src="js/admin.js?v=20260709d"></script>
+<script type="module" src="js/admin.js?v=20260709g"></script>
 </body>
 </html>

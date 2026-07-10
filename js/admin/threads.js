@@ -12,7 +12,7 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
       view.innerHTML = `<div class="msg-thread">${messages.map((m) => `
       <div class="msg" data-role="${esc(m.sender_role)}"><p>${esc(m.body)}</p><span class="muted">${sourceLabel(m)} ${esc(date(m.created_at))}</span></div>
     `).join('')}</div>
-    <form id="replyForm" class="adm-form-grid" style="margin-top:12px">
+    <form id="replyForm" class="adm-form-grid" data-capability-scope="admin.write" style="margin-top:12px">
       <label class="full">Reply <textarea id="replyBody" class="adm-textarea" required></textarea></label>
       <button class="btn btn-primary" type="submit">Send reply</button>
       <p id="replyStatus" class="adm-status"></p>

@@ -137,6 +137,7 @@ test("post-auth notification bubbles sit outside tab button corners", async ({ p
     document.getElementById("admGate").hidden = true;
     document.getElementById("admApp").hidden = false;
   });
+  await page.locator("#admNavToggle").click();
   await expect(page.locator("#aBadgePending")).toBeHidden();
   await expect(page.locator("#aBadgeCrm")).toBeHidden();
   const admin = await measureBadge("#aBadgeMsg");

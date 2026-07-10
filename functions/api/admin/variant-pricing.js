@@ -1,8 +1,7 @@
-// Admin tier-pricing matrix.
+// Admin tier-pricing verification matrix.
 // GET  /api/admin/variant-pricing → every variant + its price_tiers cells.
-// POST /api/admin/variant-pricing { vsku, tier, price } → upsert one cell.
-//   price '' or null clears the cell (resolution then falls back to base price).
-import { requireStaff, adminClient, json, readBody } from '../../_lib/supabase.js';
+// POST is intentionally rejected: the pricing workbook + seed command own writes.
+import { requireStaff, adminClient, json } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 
 const TIERS = ['retail', 'hvac', 'wholesale'];
@@ -41,24 +40,10 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
-    const body = await readBody(request);
-    const vsku = String(body.vsku || '').trim().toLowerCase();
-    const tier = String(body.tier || '').trim().toLowerCase();
-    if (!vsku) return json(400, { error: 'vsku_required' });
-    if (!TIERS.includes(tier)) return json(400, { error: 'invalid_tier' });
-
-    if (body.price === '' || body.price == null) {
-      const { error } = await sb.from('price_tiers').delete().eq('vsku', vsku).eq('tier', tier);
-      if (error) return json(500, { error: error.message });
-      return json(200, { ok: true, vsku, tier, price: null });
-    }
-    const price = Number(body.price);
-    if (!Number.isFinite(price) || price < 0) return json(400, { error: 'invalid_price' });
-    const currency = String(body.currency || 'usd').toLowerCase();
-    const { error } = await sb.from('price_tiers')
-      .upsert({ vsku, tier, price, currency, updated_at: new Date().toISOString() }, { onConflict: 'vsku,tier' });
-    if (error) return json(500, { error: error.message });
-    return json(200, { ok: true, vsku, tier, price });
+    return json(409, {
+      error: 'price_workbook_managed',
+      message: 'Prices are managed by VertKleen_Website_Pricing_WebDev.xlsx. Reflect approved workbook changes in the catalog seed data and run npm run seed.',
+    });
   }
 
   return json(405, { error: 'method_not_allowed' });

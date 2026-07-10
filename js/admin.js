@@ -1,24 +1,25 @@
 /* MASEST staff admin console. */
 import { login, logout, api, getToken } from './auth.js';
 import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js';
-import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260709d';
+import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260709e';
 import { editKey, captureDirty, restoreDirty } from './admin/edits.js?v=20260709b';
 import { createTrafficRenderer } from './admin/traffic.js?v=20260709b';
 import { createSeoAudit } from './admin/seo.js?v=20260709b';
-import { createThreadsTab } from './admin/threads.js?v=20260709b';
-import { createOffersTab } from './admin/offers.js?v=20260709b';
-import { createProductsTab } from './admin/products.js?v=20260709b';
-import { createPricingTab } from './admin/pricing.js?v=20260709b';
-import { createContentTab } from './admin/content.js?v=20260709c';
-import { createCompaniesTab } from './admin/companies.js?v=20260709b';
-import { createCrmPanel } from './admin/crm.js?v=20260709b';
-import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js?v=20260709b';
-import { createQuotesTab } from './admin/quotes.js?v=20260709b';
-import { createCrmWorkspace } from './admin/crm-workspace.js?v=20260709b';
-import { createReviewsTab } from './admin/reviews.js?v=20260709c';
-import { createNewsletterTab } from './admin/newsletter.js?v=20260709b';
+import { createThreadsTab } from './admin/threads.js?v=20260709c';
+import { createOffersTab } from './admin/offers.js?v=20260709c';
+import { createProductsTab } from './admin/products.js?v=20260709d';
+import { createPricingTab } from './admin/pricing.js?v=20260709c';
+import { createContentTab } from './admin/content.js?v=20260709e';
+import { createCompaniesTab } from './admin/companies.js?v=20260709e';
+import { createCrmPanel } from './admin/crm.js?v=20260709d';
+import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js?v=20260709c';
+import { createQuotesTab } from './admin/quotes.js?v=20260709d';
+import { createCrmWorkspace } from './admin/crm-workspace.js?v=20260709c';
+import { createReviewsTab } from './admin/reviews.js?v=20260709d';
+import { createNewsletterTab } from './admin/newsletter.js?v=20260709e';
 import { createInventoryCard } from './admin/inventory.js?v=20260709b';
 import { createCouponsCard } from './admin/coupons.js?v=20260709b';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260709a';
 
 const $ = (id) => document.getElementById(id);
 
@@ -53,8 +54,25 @@ const state = {
   quotes: [],
   threads: [],
   reviews: [],
+  staff: null,
   loaded: new Set(),
 };
+
+function applyStaffContext(value) {
+  state.staff = normalizeStaffContext(value);
+  if ($('admGreeting')) $('admGreeting').textContent = state.staff.email ? `Signed in as ${state.staff.email}.` : 'Signed in as staff.';
+  if ($('admRoleBadge')) {
+    $('admRoleBadge').textContent = `${staffRoleLabel(state.staff.role)} access`;
+    $('admRoleBadge').dataset.s = state.staff.role === 'read_only' ? 'changes_requested' : 'published';
+  }
+  if ($('admRoleHint')) {
+    $('admRoleHint').textContent = state.staff.role === 'read_only'
+      ? 'Viewing only. Mutation controls are disabled.'
+      : 'Unavailable controls are disabled for this role.';
+  }
+  ['qboConnect', 'qboSyncNow', 'qboDisconnect'].forEach((id) => $(id)?.setAttribute('data-capability', 'admin.write'));
+  applyCapabilityUi(document.body, state.staff);
+}
 
 function badge(id, count) {
   const el = $(id);
@@ -93,11 +111,11 @@ async function boot() {
  try {
  const stats = await api('/api/admin/stats');
     state.stats = stats;
+    applyStaffContext(stats.staff_context);
     $('admGate').hidden = true;
     $('admApp').hidden = false;
-    $('admGreeting').textContent = 'Signed in as staff.';
     renderStats(stats);
-    renderQboStatus();
+    void renderQboStatus().finally(() => applyCapabilityUi(document.body, state.staff));
     refreshReviewsBadge();
     setTab(location.hash.slice(1) || 'overview');
   } catch (err) {
@@ -115,15 +133,15 @@ async function boot() {
 
 function setTab(tab) {
   // The old top-level Customers tab folded into the CRM People directory —
-  // keep #customers deep links working by landing on that sub-view. Pricing,
-  // Emails (offers), and Traffic folded into Products / CRM / Overview
-  // 2026-07-07 — their hashes land on the host tab.
+  // keep #customers deep links working by landing on that sub-view. Historical
+  // Pricing and Emails hashes still land on their current host workspaces.
   if (tab === 'customers') { state.crmView = 'contacts'; tab = 'crm'; }
   const focusQuickBooks = tab === 'quickbooks' || tab === 'qbo';
-  if (focusQuickBooks) tab = 'overview';
+  if (focusQuickBooks) tab = 'integrations';
   if (tab === 'pricing') tab = 'products';
   if (tab === 'offers') tab = 'crm';
-  if (tab === 'traffic') tab = 'overview';
+  if (tab === 'traffic' || tab === 'seo') tab = 'analytics';
+  if (tab === 'reports' || tab === 'exports') tab = 'finance';
   state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
   // replaceState, NOT location.hash: assigning location.hash fires hashchange →
   // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
@@ -135,12 +153,25 @@ function setTab(tab) {
   const tabs = [...document.querySelectorAll('[data-tab]')];
   tabs.forEach((button) => button.setAttribute('aria-selected', String(button.dataset.tab === state.tab)));
   rovingTabindex(tabs, (t) => t.dataset.tab === state.tab);
+  const activeTab = tabs.find((button) => button.dataset.tab === state.tab);
+  if ($('admNavCurrent') && activeTab) {
+    const label = activeTab.cloneNode(true);
+    label.querySelectorAll('i, .pill').forEach((node) => node.remove());
+    $('admNavCurrent').textContent = label.textContent.trim();
+  }
+  if (matchMedia('(max-width: 980px)').matches) {
+    document.querySelector('.adm-sidebar')?.classList.remove('is-open');
+    $('admNavToggle')?.setAttribute('aria-expanded', 'false');
+  }
 
   // #28 cache: a tab already loaded re-renders from memory (refetch:false) instead of
   // refetching; first visit (or post-mutation re-render) fetches. offers/traffic self-cache.
   const cached = state.loaded.has(state.tab);
   const render = {
-    overview: () => { renderStats(state.stats); runSeoAudit(); wireReports(); renderTraffic(); },
+    overview: () => renderStats(state.stats),
+    analytics: () => { runSeoAudit(); renderTraffic(); },
+    finance: wireReports,
+    integrations: () => { void renderQboStatus().finally(() => applyCapabilityUi(document.body, state.staff)); },
     orders: renderOrders,
     companies: renderCompanies,
     products: (o) => {
@@ -316,7 +347,7 @@ function renderStats(stats = {}) {
 // reading a thread, completing a CRM task) so the sidebar pills never go stale
 // mid-session — the boot-time snapshot alone left Accounts/Messages/CRM frozen.
 async function refreshStats() {
-  try { const stats = await api('/api/admin/stats'); state.stats = stats; renderStats(stats); }
+  try { const stats = await api('/api/admin/stats'); state.stats = stats; applyStaffContext(stats.staff_context); renderStats(stats); }
   catch { /* keep the last known counts rather than blanking the badges */ }
 }
 
@@ -415,8 +446,14 @@ function wire() {
   document.querySelectorAll('[data-tab]').forEach((button) => {
     button.addEventListener('click', () => setTab(button.dataset.tab));
   });
+  $('admNavToggle')?.addEventListener('click', () => {
+    const sidebar = document.querySelector('.adm-sidebar');
+    const open = sidebar?.classList.toggle('is-open') || false;
+    $('admNavToggle').setAttribute('aria-expanded', String(open));
+  });
   wireTablist(document.querySelector('.adm-tabs[role="tablist"]'), (tab) => setTab(tab.dataset.tab));
   window.addEventListener('hashchange', syncTabFromHash);
+  new MutationObserver(() => applyCapabilityUi(document.body, state.staff)).observe(document.body, { childList: true, subtree: true });
   // Status filter and the search boxes hit server query params → refetch (search
   // used to be client-side over cached rows, which silently missed anything past
   // the loaded page). Quote facet filters stay client-side over cached data (#28).

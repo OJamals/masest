@@ -91,7 +91,7 @@ export function createContentRevisions({ $, api, admSkeleton, admEmpty, getCurre
         </table>
       </div>
       <div class="adm-content-revision-diff-actions">
-        <button class="btn btn-primary btn-sm" type="button" data-content-revision-restore="${esc(version)}">Restore version ${esc(version)} as draft</button>
+        <button class="btn btn-primary btn-sm" type="button" data-content-revision-restore="${esc(version)}" data-capability="content.write">Restore version ${esc(version)} as draft</button>
         <button class="btn btn-ghost btn-sm" type="button" data-content-revision-close>Close</button>
       </div>`;
     panel.hidden = false;

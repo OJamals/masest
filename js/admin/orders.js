@@ -152,7 +152,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
 
   function orderEditor(order) {
     const id = esc(order.id);
-    return `<details class="adm-order-editor">
+    return `<details class="adm-order-editor" data-capability-scope="order.write">
       <summary>Edit order</summary>
       <div class="adm-form-grid">
         <label class="wide">Customer email <input class="adm-input" data-edit-email="${id}" type="email" value="${esc(order.customer_email || '')}"></label>
@@ -165,7 +165,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         <label>Currency <input class="adm-input" data-edit-currency="${id}" value="${esc(order.currency || 'usd')}"></label>
         <label class="full">Line items <textarea class="adm-textarea adm-order-lines" data-edit-items="${id}">${esc(orderItemsText(order))}</textarea></label>
         <button class="btn btn-primary btn-sm" data-save-order-edit="${id}" type="button">Save changes</button>
-        <button class="btn btn-ghost btn-sm adm-order-danger" data-delete-order="${id}" type="button">Remove order</button>
+        <button class="btn btn-ghost btn-sm adm-order-danger" data-delete-order="${id}" data-capability="order.delete" type="button">Remove order</button>
       </div>
     </details>`;
   }
@@ -173,7 +173,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
   function trackingControls(order) {
     const id = esc(order.id);
     const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
-    return `${qboReconciliation(order)}<details class="adm-track"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
+    return `${qboReconciliation(order)}<details class="adm-track" data-capability-scope="admin.write"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
       <div class="adm-track-controls">
         <select class="adm-select" data-track-status="${id}">
           ${['processing', 'packing', 'shipped', 'delivered', 'blocked'].map((status) => `<option value="${status}" ${status === (order.tracking_status || 'processing') ? 'selected' : ''}>${status.replaceAll('_', ' ')}</option>`).join('')}
@@ -247,14 +247,14 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         .map((item) => `<li>${esc(item.qty)} x ${esc(item.name || item.sku)}</li>`)
         .join('');
       const netControls = order.payment_method === 'net' ? `
-        <input class="adm-input admin-input-sm" data-qbo-invoice-input="${id}" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${id}">
-        <button class="btn btn-ghost btn-sm" data-qbo-order="${id}" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button>
-        <input class="adm-input admin-input-sm" data-qbo-payment-input="${id}" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${id}">
-        <button class="btn btn-ghost btn-sm" data-qbo-payment-order="${id}" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>
-        ${order.status === 'net_open' ? `<button class="btn btn-primary btn-sm" data-mark-net-paid-order="${id}" type="button" aria-label="Mark NET order ${id} paid">Mark NET paid</button>` : ''}` : '';
+        <input class="adm-input admin-input-sm" data-qbo-invoice-input="${id}" data-capability="company.credit" value="${esc(order.qbo_invoice_id || '')}" placeholder="QBO invoice ID" aria-label="QuickBooks invoice ID for order ${id}">
+        <button class="btn btn-ghost btn-sm" data-qbo-order="${id}" data-capability="company.credit" type="button">${order.qbo_invoice_id ? 'Update invoice' : 'Add invoice'}</button>
+        <input class="adm-input admin-input-sm" data-qbo-payment-input="${id}" data-capability="company.credit" value="${esc(order.qbo_payment_id || '')}" placeholder="QBO payment ID" aria-label="QuickBooks payment ID for order ${id}">
+        <button class="btn btn-ghost btn-sm" data-qbo-payment-order="${id}" data-capability="company.credit" type="button">${order.qbo_payment_id ? 'Update payment' : 'Add payment'}</button>
+        ${order.status === 'net_open' ? `<button class="btn btn-primary btn-sm" data-mark-net-paid-order="${id}" data-capability="company.credit" type="button" aria-label="Mark NET order ${id} paid">Mark NET paid</button>` : ''}` : '';
       const refundControls = order.payment_method === 'stripe' && order.stripe_payment_intent && !REFUND_BLOCKING_STATUSES.has(order.status) ? `
-        <input class="adm-input admin-input-md" data-refund-amount="${id}" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${id} (leave blank to refund the full balance)">
-        <button class="btn btn-ghost btn-sm" data-refund-order="${id}" type="button">Refund</button>
+        <input class="adm-input admin-input-md" data-refund-amount="${id}" data-capability="order.refund" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${id} (leave blank to refund the full balance)">
+        <button class="btn btn-ghost btn-sm" data-refund-order="${id}" data-capability="order.refund" type="button">Refund</button>
         ${Number(order.refunded_amount) > 0 ? `<span class="muted admin-inline-note">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : '';
       return `<article class="admin-order-card">
         <div class="admin-order-head">
@@ -268,13 +268,13 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
           <div><span>Items</span><ul class="admin-order-items">${items || '<li class="muted">No items</li>'}</ul></div>
           <div><span>Pay</span><b>${esc(order.payment_method || '')}${netAgingBadge(order)}</b></div>
           ${lifecycleSummary(order)}
-          <label><span>Status</span><select class="adm-select" data-order-status="${id}">${orderStatusOptions(order.status, order)}</select></label>
+          <label><span>Status</span><select class="adm-select" data-order-status="${id}" data-capability="order.write">${orderStatusOptions(order.status, order)}</select></label>
         </div>
         <div class="admin-order-actions">
           <button class="btn btn-ghost btn-sm" data-order-detail="${id}" type="button">Details</button>
           ${orderEditor(order)}
           ${trackingControls(order)}
-          <button class="btn btn-ghost btn-sm" data-save-order="${id}" type="button">Save</button>
+          <button class="btn btn-ghost btn-sm" data-save-order="${id}" data-capability="order.write" type="button">Save</button>
           ${netControls}
           ${refundControls}
         </div>
