@@ -943,6 +943,17 @@ function wireSecurityForm() {
   // Inline password change — the session is already authenticated, so no email
   // round-trip (the old "send reset email" path also died on the CAPTCHA-gated
   // /recover endpoint; signed-out users use "Forgot password?" on account.html).
+  const clearPasswordErrorIfResolved = () => {
+    const status = $('secStatus');
+    const pass = $('secNewPass').value;
+    const pass2 = $('secNewPass2').value;
+    if (status.dataset.state === 'err' && pass.length >= 8 && pass === pass2) {
+      status.textContent = '';
+      status.dataset.state = '';
+    }
+  };
+  $('secNewPass').addEventListener('input', clearPasswordErrorIfResolved);
+  $('secNewPass2').addEventListener('input', clearPasswordErrorIfResolved);
   $('passwordChangeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const status = $('secStatus');

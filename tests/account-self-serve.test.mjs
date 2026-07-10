@@ -60,3 +60,11 @@ test('team.js removes an active member by detaching the profile', () => {
 test('dashboard address list offers a Set default control', () => {
   assert.match(read('js/dashboard.js'), /data-set-default/);
 });
+
+test('dashboard clears password validation errors after matching correction', () => {
+  const src = read('js/dashboard.js');
+  assert.match(src, /clearPasswordErrorIfResolved/);
+  assert.match(src, /pass\.length >= 8 && pass === pass2/);
+  assert.match(src, /\$\('secNewPass'\)\.addEventListener\('input', clearPasswordErrorIfResolved\)/);
+  assert.match(src, /\$\('secNewPass2'\)\.addEventListener\('input', clearPasswordErrorIfResolved\)/);
+});
