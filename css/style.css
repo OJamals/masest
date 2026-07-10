@@ -460,6 +460,43 @@ scoped to the hero */
 }
 .hero-copy .subhead { margin: 22px 0 34px; max-width: 30ch; }
 .contact-hero .subhead { margin-top: 22px; }
+.contact-hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(360px, .94fr);
+  gap: clamp(34px, 6vw, 78px);
+  align-items: center;
+}
+.contact-hero-copy { min-width: 0; }
+.contact-hero-copy .display { font-size: clamp(3rem, 5.5vw, 5rem); }
+.contact-hero-copy .subhead { max-width: 58ch; }
+.contact-hero-media {
+  margin: 0;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-sm);
+}
+.contact-hero-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (max-width: 940px) {
+  .contact-hero-grid { grid-template-columns: 1fr; }
+  .contact-hero-media { aspect-ratio: 16 / 9; }
+}
+@media (max-width: 560px) {
+  .contact-hero-copy .display { font-size: clamp(2.7rem, 13vw, 3.5rem); }
+  .contact-hero-media {
+    aspect-ratio: 4 / 3;
+    border-radius: 12px;
+  }
+}
 .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
 .cart-feedback {
   margin-top: 14px;
