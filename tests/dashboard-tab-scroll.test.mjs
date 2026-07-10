@@ -23,6 +23,12 @@ test("dashboard tab changes reserve the active panel height before hiding it", (
   assert.match(source, /main\.style\.minHeight/);
 });
 
+test("dashboard panel swaps opt out of browser scroll anchoring", () => {
+  const dashboard = read("dashboard.html");
+
+  assert.match(dashboard, /\.dash-main\s*\{[^}]*overflow-anchor:\s*none/);
+});
+
 test("admin dashboard tab changes preserve the page scroll", () => {
   const source = read("js/admin.js");
 
