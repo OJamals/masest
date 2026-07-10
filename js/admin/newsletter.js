@@ -301,8 +301,8 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       list.innerHTML = `<table class="adm-table"><thead><tr><th>Email</th><th>Name</th><th>Source</th><th>Subscribed</th><th></th></tr></thead><tbody>${rows.map((r) => `
         <tr>
           <td>${esc(r.email)}</td><td>${esc(r.name || '')}</td><td>${esc(r.source || '')}</td>
-          <td><input type="checkbox" data-nl-recip-sub="${esc(r.email)}" data-capability="admin.write"${r.subscribed ? ' checked' : ''}></td>
-          <td><button class="btn btn-ghost btn-sm" type="button" data-nl-recip-remove="${esc(r.email)}" data-capability="admin.write"><i class="ph ph-trash" aria-hidden="true"></i></button></td>
+          <td><input type="checkbox" aria-label="Include ${esc(r.email)} in newsletters" data-nl-recip-sub="${esc(r.email)}" data-capability="admin.write"${r.subscribed ? ' checked' : ''}></td>
+          <td><button class="btn btn-ghost btn-sm" type="button" aria-label="Remove ${esc(r.email)} from imported recipients" data-nl-recip-remove="${esc(r.email)}" data-capability="admin.write"><i class="ph ph-trash" aria-hidden="true"></i></button></td>
         </tr>`).join('')}</tbody></table>`;
     } catch { const list = $('nlRecipList'); if (list) list.innerHTML = '<p class="adm-status" data-state="err">Could not load recipients.</p>'; }
   }

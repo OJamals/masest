@@ -37,6 +37,16 @@ export function resolveAudience({ populations = [], users = [], leads = [], impo
   return out;
 }
 
+// Stable slice math for newsletter delivery. Large audiences continue across cron
+// runs instead of silently dropping every recipient after the worker-safe batch cap.
+export function newsletterBatchPlan(total, offset = 0, limit = 500) {
+  const count = Math.max(0, Number(total) || 0);
+  const start = Math.min(count, Math.max(0, Number(offset) || 0));
+  const size = Math.max(1, Number(limit) || 500);
+  const end = Math.min(count, start + size);
+  return { start, end, nextOffset: end, capped: end < count };
+}
+
 // Next run for a recurring schedule (interval in days). Returns ISO string or null.
 export function nextRunAt(schedule = {}, fromMs = Date.now()) {
   if (schedule.mode !== 'recurring') return null;

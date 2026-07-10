@@ -264,9 +264,11 @@ test("mobile industry detail pages keep quote and chemical-map actions", async (
 test("mobile hamburger menu centers use-case trigger and exposes child links", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/industries/plumbing.html`, { waitUntil: "domcontentloaded" });
-  await page.locator("#navBurger").click();
+  const burger = page.locator("#navBurger");
+  await burger.click();
 
   const nav = page.locator("#navLinks");
+  await expect(nav.getByRole("link", { name: "Products" })).toBeFocused();
   const topLevelColors = await page.locator("#navLinks > a, #navLinks summary").evaluateAll((nodes) =>
     nodes.map((node) => getComputedStyle(node).color)
   );
@@ -284,6 +286,10 @@ test("mobile hamburger menu centers use-case trigger and exposes child links", a
     return Math.abs((labelRect.left + labelRect.width / 2) - (nodeRect.left + nodeRect.width / 2));
   });
   expect(labelDelta).toBeLessThan(2);
+
+  await page.keyboard.press("Escape");
+  await expect(nav).not.toHaveClass(/open/);
+  await expect(burger).toBeFocused();
 });
 
 test("desktop use-case dropdown fits both labels inside the panel", async ({ page }) => {

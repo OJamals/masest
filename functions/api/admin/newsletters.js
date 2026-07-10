@@ -4,7 +4,8 @@
 // + List-Unsubscribe + logging). Audience = users + Klaviyo leads + imported recipients.
 import { adminClient, requireStaff, json, readBody, sendEmail, allUserEmails } from '../../_lib/supabase.js';
 import { klaviyoListProfiles } from '../../_lib/klaviyo.js';
-import { renderNewsletterEmail, resolveAudience, nextRunAt, dueNewsletters } from '../../_lib/newsletter.js';
+import { renderNewsletterEmail, resolveAudience, newsletterBatchPlan, nextRunAt, dueNewsletters } from '../../_lib/newsletter.js';
+import { staffCanWrite } from '../../_lib/authz.js';
 
 const MAX_PER_RUN = 500;
 
@@ -32,17 +33,32 @@ async function sendNewsletter(env, sb, n) {
     users: [...usersMap.values()],
     leads,
     imported: (importedRes.data || []).map((r) => r.email),
-  });
+  }).sort();
+  const plan = newsletterBatchPlan(audience.length, n.schedule?.delivery_offset, MAX_PER_RUN);
   const { subject, html } = renderNewsletterEmail(n);
   let sent = 0;
-  for (const email of audience.slice(0, MAX_PER_RUN)) {
+  for (const email of audience.slice(plan.start, plan.end)) {
     const ok = await sendEmail(env, {
       to: [email], subject, html, category: 'newsletter',
       idempotencyKey: `newsletter:${n.id}:${email}`,
     });
     if (ok) sent += 1;
   }
-  return { audience: audience.length, sent, capped: audience.length > MAX_PER_RUN };
+  return {
+    audience: audience.length,
+    sent,
+    processed: plan.end - plan.start,
+    capped: plan.capped,
+    next_offset: plan.nextOffset,
+  };
+}
+
+function continuationSchedule(schedule, nextOffset, nowMs = Date.now()) {
+  return {
+    ...(schedule || { mode: 'once' }),
+    delivery_offset: nextOffset,
+    next_run_at: new Date(nowMs + 60000).toISOString(),
+  };
 }
 
 async function sweepDue(env) {
@@ -60,18 +76,28 @@ async function sweepDue(env) {
       .eq('id', n.id).eq('status', 'scheduled').select('id').maybeSingle();
     if (!claimed) continue;
     const r = await sendNewsletter(env, sb, n);
-    const next = nextRunAt(n.schedule, Date.now());
-    if (next) {
+    const recipientCount = (Number(n.schedule?.delivery_offset) > 0 ? Number(n.recipient_count) || 0 : 0) + r.sent;
+    if (r.capped) {
       await sb.from('newsletters').update({
-        status: 'scheduled', recipient_count: r.sent,
-        schedule: { ...n.schedule, next_run_at: next }, updated_at: new Date().toISOString(),
+        status: 'scheduled', recipient_count: recipientCount,
+        schedule: continuationSchedule(n.schedule, r.next_offset), updated_at: new Date().toISOString(),
       }).eq('id', n.id);
     } else {
-      await sb.from('newsletters').update({
-        status: 'sent', recipient_count: r.sent, sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-      }).eq('id', n.id);
+      const completedSchedule = { ...(n.schedule || {}) };
+      delete completedSchedule.delivery_offset;
+      const next = nextRunAt(completedSchedule, Date.now());
+      if (next) {
+        await sb.from('newsletters').update({
+          status: 'scheduled', recipient_count: recipientCount,
+          schedule: { ...completedSchedule, next_run_at: next }, updated_at: new Date().toISOString(),
+        }).eq('id', n.id);
+      } else {
+        await sb.from('newsletters').update({
+          status: 'sent', recipient_count: recipientCount, sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }).eq('id', n.id);
+      }
     }
-    results.push({ id: n.id, ...r, rescheduled: !!next });
+    results.push({ id: n.id, ...r, rescheduled: r.capped || n.schedule?.mode === 'recurring' });
   }
   return json(200, { ok: true, sent: results });
 }
@@ -88,7 +114,7 @@ export async function onRequest({ request, env }) {
     return sweepDue(env);
   }
 
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
   const sb = adminClient(env);
@@ -109,6 +135,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+  if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
   const action = body.action || 'save';
 
   if (action === 'settings') {
@@ -187,6 +214,13 @@ export async function onRequest({ request, env }) {
       .select('id').maybeSingle();
     if (!claimed) return json(409, { error: 'send_in_progress' });
     const r = await sendNewsletter(env, sb, n);
+    if (r.capped) {
+      await sb.from('newsletters').update({
+        status: 'scheduled', recipient_count: r.sent,
+        schedule: continuationSchedule(n.schedule, r.next_offset), updated_at: new Date().toISOString(),
+      }).eq('id', n.id);
+      return json(200, { ok: true, queued: true, ...r });
+    }
     await sb.from('newsletters').update({ status: 'sent', recipient_count: r.sent, sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', n.id);
     return json(200, { ok: true, ...r });
   }

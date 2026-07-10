@@ -47,19 +47,20 @@ test("webhook verifies the Stripe signature before acting", () => {
     "signature must be verified before any stock decrement");
 });
 
-// --- Contract: idempotency on stripe_payment_intent (Stripe retries the same event) ---
-test("webhook dedups on stripe_payment_intent before inserting an order", () => {
-  assert.match(SRC, /\.eq\(\s*'stripe_payment_intent'\s*,\s*s\.payment_intent\s*\)/,
-    "must look up an existing order by stripe_payment_intent");
-  assert.match(SRC, /if\s*\(\s*dupe\s*\)\s*return\s+json\(\s*200\s*,[^)]*duplicate/,
-    "must short-circuit (200 duplicate) when the payment intent was already recorded");
+// --- Contract: atomic + idempotent paid-order persistence ---
+test("webhook persists the order and all line items through one atomic RPC", () => {
+  assert.match(SRC, /sb\.rpc\(\s*'persist_stripe_order'/,
+    "must persist the order header and its line items in one database transaction");
+  assert.doesNotMatch(SRC, /sb\.from\(\s*'order_items'\s*\)\.insert/,
+    "must not separately insert line items after committing the order header");
+  assert.match(SRC, /const\s+itemRows\s*=\s*orderItemRows\(lines,\s*null\)/,
+    "must prepare line-item snapshots before invoking the atomic persistence RPC");
+});
 
-  const dupeQueryIdx = SRC.indexOf("'stripe_payment_intent', s.payment_intent");
-  const dupeReturnIdx = SRC.indexOf("if (dupe)");
-  const orderInsertIdx = SRC.indexOf("orderRowFromSession(");
-  assert.ok(dupeQueryIdx > 0 && dupeReturnIdx > dupeQueryIdx, "dupe check must follow the lookup");
-  assert.ok(orderInsertIdx > dupeReturnIdx,
-    "the duplicate short-circuit must run before the order insert (no duplicate orders on retry)");
+test("webhook treats the RPC unique violation as an idempotent Stripe retry", () => {
+  assert.match(SRC, /const\s+insertOutcome\s*=\s*classifyOrderInsert\(orderErr\)/);
+  assert.match(SRC, /if\s*\(\s*insertOutcome\s*===\s*'duplicate'\s*\)\s*return\s+json\(\s*200\s*,[^)]*duplicate/,
+    "a concurrent duplicate PaymentIntent must be acknowledged with HTTP 200");
 });
 
 // --- Contract: inventory decrement for stock-tracked SKUs ---
@@ -91,7 +92,7 @@ test("order totals come from Stripe amount_* fields (cents -> dollars)", () => {
 });
 
 test("order_items line_total is unit_price * qty", () => {
-  assert.match(SRC, /orderItemRows\(lines,\s*order\.id\)/,
+  assert.match(SRC, /orderItemRows\(lines,\s*null\)/,
     "webhook must build order_items via orderItemRows");
   assert.match(SHAPE, /line_total:\s*l\.unit_price\s*\*\s*l\.qty/,
     "orderItemRows must compute each line total as unit_price * qty");

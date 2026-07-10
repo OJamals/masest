@@ -4,32 +4,49 @@
 import Stripe from 'stripe';
 import { json } from '../_lib/supabase.js';
 
+const RESPONSE_HEADERS = {
+  'cache-control': 'private, no-store',
+  'referrer-policy': 'no-referrer',
+  'x-content-type-options': 'nosniff',
+};
+
+function response(status, body) {
+  return json(status, body, RESPONSE_HEADERS);
+}
+
+export function maskEmail(email) {
+  const value = String(email || '').trim();
+  const at = value.lastIndexOf('@');
+  if (at < 1 || at === value.length - 1) return null;
+  return `${value[0]}•••@${value.slice(at + 1)}`;
+}
+
 export async function onRequestGet({ request, env }) {
   const sessionId = new URL(request.url).searchParams.get('session_id');
-  if (!sessionId) return json(400, { error: 'session_id_required' });
+  if (!sessionId) return response(400, { error: 'session_id_required' });
 
   const secret = env.STRIPE_SECRET_KEY;
-  if (!secret) return json(500, { error: 'stripe_not_configured' });
+  if (!secret) return response(500, { error: 'stripe_not_configured' });
   const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
 
   try {
     const s = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['line_items'] });
+    if (s.status !== 'complete') return response(404, { error: 'order_not_found' });
     const lines = (s.line_items?.data || []).map((li) => ({
       name: li.description,
       qty: li.quantity,
       amount_total: (li.amount_total ?? 0) / 100,
     }));
-    return json(200, {
-      email: s.customer_details?.email || s.customer_email || null,
+    return response(200, {
+      email_hint: maskEmail(s.customer_details?.email || s.customer_email),
       currency: (s.currency || 'usd').toUpperCase(),
       amount_total: (s.amount_total ?? 0) / 100,
       amount_subtotal: (s.amount_subtotal ?? 0) / 100,
       total_tax: (s.total_details?.amount_tax ?? 0) / 100,
       payment_status: s.payment_status,
       lines,
-      shipping: s.shipping_details || null,
-    }, { 'cache-control': 'no-store' });
-  } catch (err) {
-    return json(502, { error: 'stripe_error', detail: err?.message || String(err) });
+    });
+  } catch {
+    return response(404, { error: 'order_not_found' });
   }
 }

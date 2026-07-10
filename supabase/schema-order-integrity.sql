@@ -1,4 +1,4 @@
--- Order integrity: idempotency guard + atomic NET credit check.
+-- Order integrity: atomic Stripe persistence + idempotency guard + atomic NET credit check.
 -- Apply in the Supabase SQL editor (pooler/service-role). Idempotent — safe to re-run.
 --
 -- Backs issues:
@@ -14,6 +14,68 @@
 create unique index if not exists orders_stripe_payment_intent_uniq
   on public.orders (stripe_payment_intent)
   where stripe_payment_intent is not null;
+
+-- Persist a Stripe order header and every historical line-item snapshot in one
+-- transaction. Any malformed/invalid line rolls back the order header as well, so a
+-- webhook retry can safely try again instead of finding a permanently header-only order.
+-- The unique PaymentIntent index above is the concurrency/idempotency boundary.
+create or replace function public.persist_stripe_order(
+  p_order jsonb,
+  p_items jsonb
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order_id uuid;
+begin
+  insert into public.orders (
+    company_id, status, payment_method, qbo_sync_status, subtotal, tax, total,
+    currency, stripe_payment_intent, customer_email, ship_address
+  ) values (
+    nullif(p_order->>'company_id', '')::uuid,
+    coalesce(nullif(p_order->>'status', ''), 'paid')::public.order_status,
+    'stripe'::public.payment_method,
+    nullif(p_order->>'qbo_sync_status', '')::public.qbo_sync_status,
+    coalesce((p_order->>'subtotal')::numeric, 0),
+    coalesce((p_order->>'tax')::numeric, 0),
+    coalesce((p_order->>'total')::numeric, 0),
+    coalesce(nullif(p_order->>'currency', ''), 'usd'),
+    nullif(p_order->>'stripe_payment_intent', ''),
+    nullif(p_order->>'customer_email', ''),
+    p_order->'ship_address'
+  )
+  returning id into v_order_id;
+
+  insert into public.order_items (
+    order_id, sku, product_sku, name, qty, unit_price, line_total, backordered
+  )
+  select
+    v_order_id,
+    item.sku,
+    item.product_sku,
+    item.name,
+    item.qty,
+    item.unit_price,
+    item.line_total,
+    coalesce(item.backordered, false)
+  from jsonb_to_recordset(coalesce(p_items, '[]'::jsonb)) as item(
+    sku text,
+    product_sku text,
+    name text,
+    qty integer,
+    unit_price numeric,
+    line_total numeric,
+    backordered boolean
+  );
+
+  return jsonb_build_object('id', v_order_id);
+end;
+$$;
+
+revoke all on function public.persist_stripe_order(jsonb, jsonb) from public;
+grant execute on function public.persist_stripe_order(jsonb, jsonb) to service_role;
 
 -- ── #9 ─────────────────────────────────────────────────────────────────────────
 -- Atomic "place a NET order if within credit limit". Locks the company row, re-sums

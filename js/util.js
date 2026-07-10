@@ -118,15 +118,21 @@ export const restoreFocusOnClose = (dialog, trigger = document.activeElement) =>
   }, { once: true });
 };
 
+let confirmDialogId = 0;
+
 // Accessible replacement for window.confirm(): a focus-trapped, Esc-dismissable native
 // <dialog>. Returns Promise<boolean>. The message is set via textContent (no HTML
 // injection). Falls back to window.confirm() where <dialog> is unsupported.
 export const confirmDialog = (message, { confirmText = 'Confirm', cancelText = 'Cancel', danger = false } = {}) =>
   new Promise((resolve) => {
     const dlg = document.createElement('dialog');
+    const dialogId = `confirm-dialog-${++confirmDialogId}`;
     dlg.className = 'confirm-dialog';
+    dlg.setAttribute('aria-labelledby', `${dialogId}-title`);
+    dlg.setAttribute('aria-describedby', `${dialogId}-message`);
     dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
-        <p class="confirm-dialog-msg"></p>
+        <h2 class="sr-only" id="${dialogId}-title">Confirm action</h2>
+        <p class="confirm-dialog-msg" id="${dialogId}-message"></p>
         <menu class="confirm-dialog-actions">
           <button value="cancel" class="btn btn-ghost btn-sm" type="submit">${esc(cancelText)}</button>
           <button value="confirm" class="btn btn-sm${danger ? ' btn-danger' : ''}" type="submit">${esc(confirmText)}</button>

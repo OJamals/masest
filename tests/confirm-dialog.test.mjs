@@ -11,6 +11,8 @@ test('util exposes an accessible confirmDialog built on native <dialog>', () => 
   assert.match(src, /showModal/, 'must use the native modal dialog (focus-trapped, Esc-dismissable)');
   assert.match(src, /textContent\s*=\s*message/, 'message set via textContent (no HTML injection)');
   assert.match(src, /returnValue/, 'resolves from the dialog returnValue');
+  assert.match(src, /aria-labelledby/, 'dialog must expose an accessible name');
+  assert.match(src, /aria-describedby/, 'dialog must associate its confirmation message');
 });
 
 test('admin.js uses confirmDialog instead of native confirm()', () => {

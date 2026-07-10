@@ -26,6 +26,7 @@ const MUTATION_ENDPOINTS = [
   'functions/api/admin/qbo/retry.js',
   'functions/api/admin/qbo/sync.js',
   'functions/api/admin/qbo/connect.js',
+  'functions/api/admin/newsletters.js',
 ];
 
 for (const path of MUTATION_ENDPOINTS) {

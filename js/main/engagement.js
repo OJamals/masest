@@ -204,7 +204,17 @@ export function initQuoteForm() {
     const field = el.closest(".field");
     if (!field) return;
     let err = field.querySelector(".field-err");
-    if (!text) { if (err) err.remove(); el.removeAttribute("aria-invalid"); return; }
+    if (!text) {
+      const errId = err?.id;
+      if (err) err.remove();
+      el.removeAttribute("aria-invalid");
+      if (errId) {
+        const describedBy = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter((id) => id && id !== errId);
+        if (describedBy.length) el.setAttribute("aria-describedby", describedBy.join(" "));
+        else el.removeAttribute("aria-describedby");
+      }
+      return;
+    }
     if (!err) {
       err = document.createElement("span");
       err.className = "field-err";
@@ -213,7 +223,9 @@ export function initQuoteForm() {
     }
     err.textContent = text;
     el.setAttribute("aria-invalid", "true");
-    el.setAttribute("aria-describedby", err.id);
+    const describedBy = new Set((el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean));
+    describedBy.add(err.id);
+    el.setAttribute("aria-describedby", [...describedBy].join(" "));
   }
   function validate() {
     let firstBad = null;
@@ -229,8 +241,11 @@ export function initQuoteForm() {
     if (sampleGroup && !sampleGroup.hidden) {
       const picks = sampleGroup.querySelectorAll('input[name="samples"]:checked').length;
       const hint = document.getElementById("sampleHint");
+      const sampleFieldset = sampleGroup.querySelector("fieldset");
       const minPicks = preSampleBox ? 1 : 3;
       const okPicks = picks >= minPicks && picks <= 5;
+      if (okPicks) sampleFieldset.removeAttribute("aria-invalid");
+      else sampleFieldset.setAttribute("aria-invalid", "true");
       if (hint) {
         hint.textContent = okPicks
           ? (preSampleBox && picks === 1 ? "Product sample selected." : "3 to 5 products selected.")

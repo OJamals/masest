@@ -50,7 +50,9 @@
     function beacon(event, detail) {
       try {
         var payload = JSON.stringify({
-          path: location.pathname + location.search + eventContext(detail),
+          // Query strings can contain checkout capabilities, auth codes, unsubscribe
+          // tokens, or email addresses. Attribution is captured separately above.
+          path: location.pathname + eventContext(detail),
           referrer: document.referrer || '',
           visitor: vid,
           event: cleanPart(event || 'pageview', 40),

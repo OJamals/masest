@@ -9,14 +9,15 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260710e">
+  <link rel="stylesheet" href="css/style.css?v=20260710f">
 <link rel="stylesheet" href="css/navigation.css?v=20260706a">
   <link rel="stylesheet" href="css/components.css">
+  <script>window.MASEST_DISABLE_CRISP = true;</script>
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
   <script type="module" src="js/main.js?v=20260710f"></script>
 </head>
-<body class="checkout-page">
+<body>
 <a class="skip-link" href="#main">Skip to content</a>
 <noscript>
   <nav class="nojs-nav" aria-label="Site">
@@ -40,22 +41,23 @@
         <div id="cartLines" class="cart-lines" aria-live="polite"></div>
       </div>
 
-      <aside class="cart-summary" aria-labelledby="orderSummaryTitle">
+      <aside class="cart-summary" aria-labelledby="orderSummaryTitle" hidden>
         <div class="cart-summary-head">
           <p class="eyebrow">Checkout</p>
           <h2 id="orderSummaryTitle">Order summary</h2>
         </div>
-        <p id="checkoutIdle" class="cart-summary-empty" hidden>Add items to continue to checkout.</p>
         <p id="cartStatus" class="cart-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
         <div id="checkoutActive">
           <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
-          <label class="field-label" for="checkoutEmail">Receipt email</label>
-          <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" inputmode="email" aria-describedby="checkoutEmailHelp" placeholder="buyer@company.com">
-          <p id="checkoutEmailHelp" class="cart-field-help">Optional. Order confirmation is sent to this address.</p>
-          <div class="cart-actions">
-            <button class="btn btn-primary" id="checkoutPay" type="button">Proceed to checkout</button>
-            <button class="btn btn-secondary" id="checkoutNet" type="button" hidden>Place order with NET terms</button>
-          </div>
+          <form id="checkoutForm" novalidate>
+            <label class="field-label" for="checkoutEmail">Receipt email</label>
+            <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" inputmode="email" aria-describedby="checkoutEmailHelp" placeholder="buyer@company.com">
+            <p id="checkoutEmailHelp" class="cart-field-help">Optional. Order confirmation is sent to this address.</p>
+            <div class="cart-actions">
+              <button class="btn btn-primary" id="checkoutPay" type="submit">Proceed to checkout</button>
+              <button class="btn btn-secondary" id="checkoutNet" type="button" hidden>Place order with NET terms</button>
+            </div>
+          </form>
           <p class="cart-checkout-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Secure Card / ACH checkout. Freight is confirmed separately before fulfillment.</p>
           <p class="cart-quote-prompt">Need a formal quote? <a id="checkoutQuote" href="contact.html?type=quote">Request a quote</a></p>
           <div id="cartAccount" class="cart-account" hidden></div>
@@ -133,6 +135,9 @@
   const checkoutPay = document.getElementById("checkoutPay");
   const checkoutNet = document.getElementById("checkoutNet");
   const checkoutQuote = document.getElementById("checkoutQuote");
+  const checkoutForm = document.getElementById("checkoutForm");
+  const summary = document.querySelector(".cart-summary");
+  const shell = document.querySelector(".cart-shell");
   const checkoutLabels = {
     pay: checkoutPay.textContent,
     net: checkoutNet.textContent,
@@ -244,9 +249,10 @@
     // Empty carts keep only the short continuation message. Successful NET
     // orders keep their confirmation visible after the cart is cleared.
     const checkoutActive = document.getElementById("checkoutActive");
-    const checkoutIdle = document.getElementById("checkoutIdle");
+    const summaryHidden = !cartItems.length && !hasSuccess;
+    if (summary) summary.hidden = summaryHidden;
+    if (shell) shell.classList.toggle("is-empty", summaryHidden);
     if (checkoutActive) checkoutActive.hidden = !cartItems.length;
-    if (checkoutIdle) checkoutIdle.hidden = !!cartItems.length || hasSuccess;
     if (status && !cartItems.length) status.hidden = !hasSuccess;
     if (!cartItems.length) {
       lines.innerHTML = hasSuccess
@@ -396,7 +402,10 @@
     }
   }
 
-  checkoutPay.addEventListener("click", () => runCheckout("pay"));
+  checkoutForm.addEventListener("submit", event => {
+    event.preventDefault();
+    runCheckout("pay");
+  });
   checkoutNet.addEventListener("click", () => runCheckout("net"));
   email?.addEventListener("input", syncQuoteHref);
   // Account strip: guests get a sign-in/register option (returns to cart); members see their account.
@@ -407,8 +416,14 @@
     try { data = await me(); } catch {}
     if (data && !data.needs_profile) {
       const approved = data.company?.status === "approved";
-      checkoutNet.hidden = !approved;
-      box.innerHTML = `<i class="ph ph-user-circle" aria-hidden="true"></i> ${approved ? `NET terms available for <b>${esc(data.email)}</b>.` : `Signed in as <b>${esc(data.email)}</b>. NET terms pending approval.`}`;
+      const canUseNetTerms = data.can_use_net_terms === true;
+      checkoutNet.hidden = !canUseNetTerms;
+      const accountMessage = canUseNetTerms
+        ? `NET terms available for <b>${esc(data.email)}</b>.`
+        : approved
+          ? `Signed in as <b>${esc(data.email)}</b>. NET terms are not enabled for this account.`
+          : `Signed in as <b>${esc(data.email)}</b>. NET terms pending approval.`;
+      box.innerHTML = `<i class="ph ph-user-circle" aria-hidden="true"></i> ${accountMessage}`;
       const email = document.getElementById("checkoutEmail");
       if (email && !email.value) email.value = data.email || "";
     } else {

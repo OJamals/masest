@@ -1,5 +1,5 @@
 // Critical money-flow integrity (issues #7, #8, #9).
-//   #7 — Stripe webhook must not silently drop a paid order: a failed order insert
+//   #7 — Stripe webhook must not silently drop a paid order: a failed atomic persist
 //        returns a retryable 5xx (so Stripe re-delivers) instead of a 200.
 //   #8 — Duplicate orders: a unique guard on orders.stripe_payment_intent makes the
 //        webhook idempotent under concurrent Stripe delivery (insert conflict -> 200).
@@ -38,9 +38,9 @@ test('classifyOrderInsert: any other error -> error (retryable)', () => {
   assert.equal(classifyOrderInsert({ message: 'boom' }), 'error');
 });
 
-// ---- #7: webhook returns a retryable 5xx + no side effects on a failed insert ----
-test('webhook destructures the order-insert error (not just data)', () => {
-  assert.match(WEBHOOK, /error:\s*orderErr/, 'must capture the insert error');
+// ---- #7: webhook returns a retryable 5xx + no side effects on a failed persist ----
+test('webhook captures the atomic persistence error (not just data)', () => {
+  assert.match(WEBHOOK, /error:\s*persistErr/, 'must capture the RPC persistence error');
 });
 
 test('webhook classifies the insert outcome and returns a retryable 5xx on failure', () => {

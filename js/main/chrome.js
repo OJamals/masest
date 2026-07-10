@@ -267,7 +267,9 @@ export function renderChrome() {
     burger.setAttribute("aria-label", open ? "Close menu" : "Menu");
   };
   burger.addEventListener("click", () => {
-    setMenuOpen(!navLinks.classList.contains("open"));
+    const open = !navLinks.classList.contains("open");
+    setMenuOpen(open);
+    if (open) navLinks.querySelector("a[href], summary, button")?.focus();
   });
   const navGroups = Array.from(navLinks.querySelectorAll(".nav-group"));
   const closeNavGroups = () => {
@@ -282,7 +284,13 @@ export function renderChrome() {
     if (!nav.contains(e.target)) closeNavGroups();
   });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") closeMenu();
+    if (e.key !== "Escape") return;
+    const menuWasOpen = navLinks.classList.contains("open");
+    closeMenu();
+    if (menuWasOpen) {
+      e.preventDefault();
+      burger.focus();
+    }
   });
 
   // Elevate the nav once the page scrolls away from the top.

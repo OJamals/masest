@@ -457,6 +457,41 @@ const PROOF_IMAGE_DIMS = {
   "walmart-dc-crhd": [708, 513],
 };
 
+const INDUSTRY_SCENES = {
+  "oil-gas": ["Oil terminal storage tanks and pipeline valves"],
+  marine: ["Motor yacht in a boatyard lift for hull maintenance"],
+  manufacturing: ["Heavy manufacturing plant with large production machinery"],
+  "distribution-cold-storage": ["Forklift moving pallets inside a refrigerated distribution center"],
+  "food-beverage": ["Stainless steel tanks inside a beverage processing facility"],
+  healthcare: ["Healthcare campus mechanical room with water-system piping"],
+  construction: ["Construction workers pressure-washing concrete at a commercial job site"],
+  "military-government": ["Public-sector fleet maintenance bay with utility vehicles"],
+  education: ["Campus facilities courtyard with exterior mechanical equipment"],
+  "hvac-water": ["Cooling tower water-treatment equipment at a commercial facility"],
+  "data-centers": ["Server aisle and facility cooling pipes inside a data center"],
+  plumbing: ["Commercial mechanical room with water heater and plumbing lines"],
+  "golf-courses": ["Golf course maintenance equipment and carts beside a service pad"],
+  "solar-panel-cleaning": ["Solar farm panel-cleaning equipment positioned between arrays"],
+  "municipalities-water-utilities": ["Municipal water treatment plant basins and blue utility piping"],
+  "hotels-property-management": ["Resort property maintenance walkway beside a pool courtyard"],
+};
+
+const INDUSTRY_SCENE_ALIASES = {
+  "schools-universities": "education",
+  "mechanical-contractors-water-treatment": "hvac-water",
+  "breweries-distilleries-wineries": "food-beverage",
+  "restaurants-commercial-kitchens": "food-beverage",
+  "warehousing-distribution-centers": "distribution-cold-storage",
+  "hotels-resorts-property-management": "hotels-property-management",
+  "pressure-washing-soft-wash-contractors": "construction",
+  "marine-marinas-boatyards": "marine",
+  "golf-courses-sports-facilities": "golf-courses",
+  "healthcare-senior-living": "healthcare",
+  "oil-gas-industrial-plants": "oil-gas",
+  "food-processing-agriculture": "food-beverage",
+  "solar-farms-panel-cleaning": "solar-panel-cleaning",
+};
+
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
 const htmlText = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -813,6 +848,25 @@ function proofImageDimsAttr(img) {
   return `width="${width}" height="${height}"`;
 }
 
+function introMediaFor(ind) {
+  const sceneKey = INDUSTRY_SCENE_ALIASES[ind.slug] || ind.slug;
+  const scene = INDUSTRY_SCENES[sceneKey];
+  if (scene) {
+    return {
+      src: `../img/industries/samples/${sceneKey}.webp`,
+      alt: scene[0],
+      caption: `Representative ${ind.name} operating environment.`,
+      dims: 'width="840" height="520"',
+    };
+  }
+  return {
+    src: `../img/proof/cases/${ind.proof.img}.webp`,
+    alt: ind.proof.caption,
+    caption: ind.proof.caption,
+    dims: proofImageDimsAttr(ind.proof.img),
+  };
+}
+
 function primaryCtaBlock(ind) {
   if (!ind.primaryCta) return "";
   const href = `../contact?industry=${enc(ind.name)}&type=${enc(ind.primaryType || "quote")}`;
@@ -830,6 +884,7 @@ function page(ind) {
     return `    <a href="../${href}"${href === "industries" ? ' aria-current="page"' : ""}>${content}</a>`;
   }).join("\n");
   const plain = ind.h1.replace(/&amp;/g, "&").replace(/<[^>]+>/g, "");
+  const introMedia = introMediaFor(ind);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -881,8 +936,8 @@ ${nav}
         <a class="btn btn-ink" href="../proof">See the proof</a>
       </div>
       <figure class="ind-intro-photo">
-        <img src="../img/proof/cases/${ind.proof.img}.webp" alt="${ind.proof.caption.replace(/"/g, "&quot;")}" loading="lazy" ${proofImageDimsAttr(ind.proof.img)}>
-        <figcaption>${ind.proof.caption}</figcaption>
+        <img src="${introMedia.src}" alt="${introMedia.alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" ${introMedia.dims}>
+        <figcaption>${introMedia.caption}</figcaption>
       </figure>
 </div>
 </section>

@@ -207,17 +207,20 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   }
 
   function renderCompanyMembers(company, members = []) {
-    const rows = members.length ? members.map((member) => `
+    const rows = members.length ? members.map((member) => {
+      const memberLabel = esc(member.email || member.full_name || member.id);
+      return `
       <div class="dash-row">
-        <span>${esc(member.email || member.full_name || member.id)} <small class="muted">${esc(member.full_name || '')}</small></span>
+        <span>${memberLabel} <small class="muted">${esc(member.full_name || '')}</small></span>
         <span>
-          <select class="adm-select adm-select-sm" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}" data-capability="user.role">
+          <select class="adm-select adm-select-sm" aria-label="Role for ${memberLabel}" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}" data-capability="user.role">
             ${memberRoleOptions(member.role)}
           </select>
           <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}" data-capability="user.role">Save role</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-member-remove="${esc(member.id)}" data-member-email="${esc(member.email || '')}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
+          <button class="btn btn-ghost btn-sm" type="button" aria-label="Remove ${memberLabel} from company" data-member-remove="${esc(member.id)}" data-member-email="${esc(member.email || '')}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
         </span>
-      </div>`).join('') : '<p class="muted">No members yet.</p>';
+      </div>`;
+    }).join('') : '<p class="muted">No members yet.</p>';
     return `<div class="company-members"><h3>Members</h3>${rows}
       <div class="company-add-user" style="margin-top:12px">
         <h4 style="margin:0 0 6px">Add a user to this company</h4>

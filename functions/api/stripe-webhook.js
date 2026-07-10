@@ -36,7 +36,7 @@ export function isUniqueViolation(error) {
   return error?.code === '23505';
 }
 
-// Classify the paid-order insert so the webhook reacts correctly to each outcome:
+// Classify the atomic paid-order transaction so the webhook reacts correctly to each outcome:
 //   'ok'        -> persisted; proceed with items / email / stock / notify.
 //   'duplicate' -> a concurrent Stripe delivery already inserted this payment's order
 //                  (unique guard fired); treat as idempotent success (HTTP 200).
@@ -260,10 +260,6 @@ export async function onRequestPost({ request, env }) {
       return json(200, { received: true, subscription: true });
     }
 
-    // Idempotency: skip if this session already recorded.
-    const { data: dupe } = await sb.from('orders').select('id').eq('stripe_payment_intent', s.payment_intent).maybeSingle();
-    if (dupe) return json(200, { received: true, duplicate: true });
-
     const cart = parseCartMetadata(assembleCartMetadata(s.metadata));
     const subtotal = centsToAmount(s.amount_subtotal);
     const tax = centsToAmount(s.total_details?.amount_tax);
@@ -273,9 +269,17 @@ export async function onRequestPost({ request, env }) {
     // untouched, and the buyer gets a "received" email instead of a confirmation.
     const settled = !s.payment_status || s.payment_status === 'paid';
 
-    const { data: order, error: orderErr } = await sb.from('orders')
-      .insert(orderRowFromSession(s, buyerEmailFromStripeSession(s)))
-      .select('id').single();
+    // Cart keys are variant SKUs; compact metadata has no names — resolve from the DB
+    // before persistence so the header and all historical line snapshots commit together.
+    let lines = cart.length ? cartLines(cart) : [];
+    if (lines.length) await enrichLineNames(sb, lines);
+    const itemRows = orderItemRows(lines, null);
+    const { data: persisted, error: persistErr } = await sb.rpc('persist_stripe_order', {
+      p_order: orderRowFromSession(s, buyerEmailFromStripeSession(s)),
+      p_items: itemRows,
+    });
+    const order = persisted?.id ? { id: persisted.id } : null;
+    const orderErr = persistErr || (order ? null : { message: 'persist_stripe_order returned no id' });
 
     const insertOutcome = classifyOrderInsert(orderErr);
     // A concurrent Stripe delivery already inserted this payment's order: idempotent success.
@@ -285,17 +289,6 @@ export async function onRequestPost({ request, env }) {
     if (insertOutcome === 'error') {
       console.error('order_insert_failed', orderErr?.message || orderErr);
       return json(503, { error: 'order_persist_failed' });
-    }
-
-    // Cart keys are variant SKUs; compact metadata has no names — resolve from the DB.
-    let lines = [];
-    if (cart.length) {
-      lines = cartLines(cart);
-      await enrichLineNames(sb, lines);
-      if (order) {
-        const { error: itemsErr } = await sb.from('order_items').insert(orderItemRows(lines, order.id));
-        if (itemsErr) console.error('order_items_insert_failed', itemsErr.message);
-      }
     }
 
     // Branded order-confirmation email (Stripe also sends its own card receipt).

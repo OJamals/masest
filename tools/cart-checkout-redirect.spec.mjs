@@ -64,12 +64,12 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
   const payBtn = page.getByRole("button", { name: "Proceed to checkout" });
   await expect(payBtn).toBeEnabled();
   await receiptEmail.fill("not-an-email");
-  await payBtn.click();
+  await receiptEmail.press("Enter");
   await expect(page.locator("#cartStatus")).toHaveText("Enter a valid receipt email, or leave the field blank.");
   expect(checkoutBody).toBeNull();
 
   await receiptEmail.fill("buyer@example.com");
-  await payBtn.click();
+  await receiptEmail.press("Enter");
 
   await page.waitForURL("**/order-confirmed.html**");
 
@@ -108,6 +108,7 @@ test("approved business NET checkout posts the cart payload with auth and clears
     body: JSON.stringify({
       email: "buyer@example.com",
       needs_profile: false,
+      can_use_net_terms: true,
       company: { status: "approved", net_terms_days: 30 },
     }),
   }));
@@ -144,7 +145,7 @@ test("approved business NET checkout posts the cart payload with auth and clears
 
   await expect(page.locator("#cartStatus")).toContainText("Order placed on account");
   await expect(page.locator("#cartStatus")).toBeVisible();
-  await expect(page.locator("#checkoutIdle")).toBeHidden();
+  await expect(page.locator(".cart-summary")).toBeVisible();
   await expect(page.getByRole("link", { name: "View your orders" })).toBeVisible();
   expect(checkoutAuth).toBe("Bearer business-token");
   expect(checkoutBody.mode).toBe("net");

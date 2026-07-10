@@ -108,12 +108,13 @@ test("static catalog does not show cart controls without commerce metadata", asy
       assert.equal(await page.locator(".shop-card-quote").count(), 0);
 
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
-      // Empty cart keeps a conventional order-summary shell while checkout
-      // controls stay hidden and disabled.
-      await page.locator("#checkoutIdle").waitFor();
-      await page.getByRole("heading", { name: "Order summary" }).waitFor();
+      // Empty cart keeps one clear continuation path; checkout summary stays out
+      // of the visual and accessibility trees until it can be used.
+      await page.locator(".cart-empty").waitFor();
+      assert.equal(await page.locator(".cart-summary").isVisible(), false);
       assert.equal(await page.locator("#checkoutPay").isVisible(), false);
       assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
+      assert.equal(await page.evaluate(() => window.MASEST_DISABLE_CRISP), true);
     } finally {
       await browser.close();
     }

@@ -203,7 +203,7 @@
         </div>
 
         <div data-intent-group="sample" hidden>
-          <fieldset class="field sample-fieldset">
+          <fieldset class="field sample-fieldset" aria-describedby="sampleHint">
             <legend>Pick products to trial *</legend>
             <div class="sample-picker">
               <label><input type="checkbox" name="samples" value="VertKleen CR"> VertKleen CR</label>
@@ -222,7 +222,7 @@
               <label><input type="checkbox" name="samples" value="WaterSafe60"> WaterSafe60</label>
               <label><input type="checkbox" name="samples" value="Purgo"> Purgo</label>
             </div>
-            <p class="sample-hint" id="sampleHint">Select 3 to 5 products, or one product from a product page.</p>
+            <p class="sample-hint" id="sampleHint" aria-live="polite">Select 3 to 5 products, or one product from a product page.</p>
           </fieldset>
           <div class="field u-mt-14"><label for="fShipTo">Ship-to address *</label><textarea id="fShipTo" name="ship_to" rows="3" placeholder="Facility name, street, city, state, ZIP" data-req></textarea></div>
         </div>

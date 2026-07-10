@@ -262,11 +262,14 @@
 
   const completeCard = $("completeCard");
   function setRecoveryMode(on) {
+    const targetPane = document.querySelector(`.acct-pane[data-pane="${on ? "reset-password" : "login"}"]`);
+    const modeChanged = targetPane?.hidden === true;
     completeCard.hidden = true;
     authBox.hidden = false;
     document.querySelectorAll(".acct-pane").forEach((pane) => {
       pane.hidden = pane.dataset.pane !== (on ? "reset-password" : "login");
     });
+    if (modeChanged) requestAnimationFrame(() => $(on ? "newPassword" : "liEmail")?.focus());
   }
 
   function isRecoveryUrl() {
