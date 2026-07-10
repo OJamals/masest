@@ -18,11 +18,22 @@
   var story = document.getElementById("story");
   if (!story) return;
 
+  var deferredStoryImages = Array.prototype.slice.call(story.querySelectorAll("img[data-reel-src]"));
+  function loadStoryImage(img) {
+    if (!img || !img.dataset.reelSrc) return;
+    img.src = img.dataset.reelSrc;
+    delete img.dataset.reelSrc;
+  }
+  function loadAllStoryImages() {
+    deferredStoryImages.forEach(loadStoryImage);
+  }
+
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduce || !window.gsap || !window.ScrollTrigger) {
     /* index.html may have applied .story-ready pre-paint (CLS guard); undo it so
        the CSS fallback layout shows when we're not driving the animation. */
     story.classList.remove("story-ready");
+    loadAllStoryImages();
     return;
   }
 
@@ -195,6 +206,10 @@ states.forEach(function (st) {
   var reelCur = -1;
   var REEL_A = 0.10, REEL_B = 0.94;
 
+  function loadReelSlide(index) {
+    loadStoryImage(reelSlides[index]?.querySelector("img[data-reel-src]"));
+  }
+
   function updateReel(st) {
     if (!reelSlides.length) return;
     var n = reelSlides.length;
@@ -212,6 +227,9 @@ states.forEach(function (st) {
       el.style.zIndex = Math.round(o * 10);
       if (o > best) { best = o; current = i; }          /* most-visible slide wins */
     }
+    loadReelSlide(current);
+    var currentEnd = REEL_A + (current + 1) * seg;
+    if (st.p > currentEnd - fade * 2) loadReelSlide(current + 1);
     if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = "Photo " + (current + 1) + " of " + n; }
   }
 
