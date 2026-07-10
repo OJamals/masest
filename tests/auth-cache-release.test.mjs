@@ -43,7 +43,7 @@ test("every browser auth importer uses one cache release", () => {
 });
 
 test("auth-consuming module paths are refreshed from their page entrypoints", () => {
-  assert.match(read("dashboard.html"), new RegExp(`dashboard\\.js\\?v=${RELEASE}`));
+  assert.match(read("dashboard.html"), new RegExp(`dashboard\\.js\\?v=${DASHBOARD_RELEASE}`));
   assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${DASHBOARD_RELEASE}`));
 
   assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${RELEASE}`));
