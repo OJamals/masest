@@ -4,7 +4,7 @@
   "products": [
     {
       "slug": "cr",
-      "name": "VertKleen CR",
+      "name": "VertKleen CIP CR",
       "sku_stem": "VK-CR",
       "family": "cleaning_degreasing",
       "group_key": "cip_brewery",
@@ -15,12 +15,12 @@
       "active": true,
       "public_visible": true,
       "sort": 1,
-      "description": "Caustic replacement for drains, organics, pH, and CIP",
+      "description": "CIP caustic replacement for brewery lines, kegs, tanks, organics, and pH",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "cr2",
-      "name": "VertKleen CR2",
+      "name": "VertKleen HVAC CR",
       "sku_stem": "VK-CR2",
       "family": "water_treatment_specialty",
       "group_key": "water",
@@ -31,12 +31,12 @@
       "active": true,
       "public_visible": true,
       "sort": 2,
-      "description": "Higher-concentration CR formulation for quote-scoped industrial work",
+      "description": "HVAC caustic replacement for drains, grease, and organic buildup",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "hcr",
-      "name": "VertKleen HCR",
+      "name": "VertKleen CIP HCR",
       "sku_stem": "VK-HCR",
       "family": "cleaning_degreasing",
       "group_key": "descale",
@@ -47,12 +47,12 @@
       "active": true,
       "public_visible": true,
       "sort": 3,
-      "description": "Rust, scale, calcium; acid-replacement workhorse with field proof",
+      "description": "CIP synthetic-acid beer-stone remover for brewery cleaning",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "hcr-t16",
-      "name": "VertKleen HCR - 16+ Tote Program",
+      "name": "VertKleen HVAC HCR",
       "sku_stem": "VK-HCR-T16",
       "family": "cleaning_degreasing",
       "group_key": "descale",
@@ -63,7 +63,7 @@
       "active": true,
       "public_visible": true,
       "sort": 4,
-      "description": "Hyper-concentrate HCR bulk program for 16+ tote procurement and high-volume descaling supply.",
+      "description": "HVAC synthetic HCl replacement for calcium, scale, and rust",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {

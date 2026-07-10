@@ -2,19 +2,19 @@ const PRODUCT_FALLBACK_IMAGE = "img/products/masest-poster-transparent.png";
 
 export const PRODUCTS = {
   hcr: {
-    name: "VertKleen HCR",
+    name: "VertKleen CIP HCR",
     cat: "acid",
-    replaces: "Replaces hydrochloric acid (muriatic acid)",
+    replaces: "Replaces brewery CIP acid and beer-stone removers",
     hmis: "0-0-0",
     icon: "ph-flask",
- image: "img/products/hvac-hcr-studio.webp",
-    tag: "The acid-replacement route when rust, scale, calcium, passivation, or tower cleanup is still tied to hydrochloric acid.",
-    desc: "A biodegradable, SynTech-powered acid replacement for descaling, rust removal, passivation, and acid cleaning. The Brevard field test says it bluntly: CLR sat for 36 hours; HCR cleared 20-year rust in 30 minutes.",
+    image: "img/products/cip-hcr-studio.webp",
+    tag: "Synthetic-acid beer-stone removal for brewery CIP without making mineral acid the default answer.",
+    desc: "A non-fuming synthetic-acid CIP step for beer stone, brewery tanks, lines, and heat exchangers, with label directions for 316 stainless and PVC systems.",
     uses: [
-      "Cooling tower fill and heat-exchanger descaling",
-      "Rust removal: restored diamond-plated stainless steel stained for years",
-      "Acid cleaning and passivation with the building occupied",
-      "Concrete, equipment, and pipeline scale removal"
+      "Beer-stone removal in brewery CIP",
+      "Tank, keg, and line acid-wash steps",
+      "316 stainless and PVC cleaning workflows",
+      "Heat-exchanger plate descaling"
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
@@ -32,19 +32,19 @@ export const PRODUCTS = {
     ]
   },
   "hcr-t16": {
-    name: "VertKleen HCR - 16+ Tote Program",
+    name: "VertKleen HVAC HCR",
     cat: "acid",
-    replaces: "Replaces bulk hydrochloric acid descaling programs",
+    replaces: "Replaces hydrochloric acid in HVAC descaling programs",
     hmis: "0-0-0",
     icon: "ph-factory",
     image: "img/products/hvac-hcr-studio.webp",
-    tag: "High-volume HCR procurement for accounts standardizing on 16+ tote descaling supply.",
-    desc: "A bulk HCR program for high-volume descaling and acid-replacement users that need tote-level procurement, reviewable pricing, and freight coordination before release.",
+    tag: "Synthetic HCl replacement for calcium, scale, and rust in HVAC and water-side maintenance.",
+    desc: "A non-fuming synthetic HCl replacement for HVAC descaling, calcium, scale, and rust removal, with bulk procurement routed through freight review.",
     uses: [
-      "16+ tote descaling programs",
-      "Campus and industrial acid-replacement supply",
-      "High-volume rust, scale, and calcium removal",
-      "Contractor and distributor replenishment planning"
+      "HVAC coils and water-side descaling",
+      "Calcium, scale, and rust removal",
+      "Stainless and gasket-safe cleaning workflows",
+      "Bulk HVAC and facility programs"
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Uses the HCR acid-replacement chemistry platform"],
@@ -58,19 +58,19 @@ export const PRODUCTS = {
     ]
   },
   cr: {
-    name: "VertKleen CR",
+    name: "VertKleen CIP CR",
     cat: "alkaline",
-    replaces: "Replaces caustic soda and sodium hydroxide",
+    replaces: "Replaces 50% caustic soda in brewery CIP",
     hmis: "0-0-0",
     icon: "ph-drop-half",
- image: "img/products/hvac-cr-studio.webp",
-    tag: "Caustic-level work for organics, drains, hoods, floors, pH control, and CIP alkaline wash, without making sodium hydroxide the default answer.",
-    desc: "A caustic replacement and pH adjuster for high-pH alkaline work: degreasing, hood filters, floors, drains, pH control, and the CR/HCR brewery CIP sequence.",
+    image: "img/products/cip-cr-studio.webp",
+    tag: "Brewery CIP caustic replacement for lines, kegs, tanks, krausen, and organic soil.",
+    desc: "A 50% caustic-soda replacement for the alkaline step in brewery CIP, with label directions for lines, kegs, tanks, 316 stainless, and PVC systems.",
     uses: [
-      "pH adjustment in water treatment programs",
-      "Hood filters and floors at busy commercial kitchens",
-      "High-pH alkaline cleaning with lower-hazard handling",
-      "Caustic replacement across industrial CIP"
+      "Brewery lines, kegs, and tanks",
+      "Krausen and organic-soil removal",
+      "Hot-circulation alkaline wash steps",
+      "316 stainless and PVC CIP systems"
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling, broad material compatibility"],
@@ -118,7 +118,7 @@ export const PRODUCTS = {
     replaces: "Replaces general-purpose caustic cleaners",
     hmis: "0-0-0",
  icon: "ph-sparkle",
- image: "img/products/multiwash-studio.webp",
+    image: "img/products/multiwash-gym-studio.webp",
     tag: "One-bottle facility cleaner for wet zones, drains, concrete, glass, exteriors, and pressure washing while the building stays open.",
     desc: "A versatile multi-surface cleaner for facilities, drains, concrete, exterior washing, and occupied-campus maintenance.",
     uses: [
@@ -175,7 +175,7 @@ export const PRODUCTS = {
     replaces: "Replaces bromine and sodium hypochlorite",
     hmis: "0-0-0",
  icon: "ph-shield-plus",
- image: "img/products/purgo-studio.webp",
+    image: "img/products/purgo-gym-studio.webp",
     tag: "Minimum-risk antimicrobial and odor-control support where the claim needs to stay label-honest.",
     desc: "A FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment for occupied-site maintenance. Purgo stays within its label: it isn't a registered disinfectant and isn't sold as one.",
     uses: [
@@ -410,22 +410,22 @@ export const PRODUCTS = {
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
   cr2: {
-    name: "VertKleen CR2",
+    name: "VertKleen HVAC CR",
     cat: "alkaline",
-    replaces: "Higher-concentration CR formulation",
+    replaces: "Replaces caustic drain cleaners and degreasers in HVAC facilities",
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/hvac-cr-studio.webp",
-    tag: "The stronger CR-family route for accounts that already know the standard CR workflow.",
-    desc: "A higher-concentration version of VertKleen CR for demanding alkaline cleaning and water-treatment work. We quote it case by case while application notes and final SKU guidance are confirmed.",
+    tag: "Caustic replacement for grease, organic buildup, drains, coils, and facility maintenance.",
+    desc: "A non-corrosive caustic replacement for HVAC and facility work, including drains, grease, organic buildup, and alkaline cleaning.",
     uses: [
-      "Concentrated alkaline cleaning programs",
-      "Water-treatment dosing where strength matters",
-      "High-pH cleaning at an HMIS 0-0-0 rating"
+      "HVAC and facility drain cleaning",
+      "Grease and organic-buildup removal",
+      "Coils, equipment, and general maintenance"
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-drop-half", "Higher concentration", "More active cleaning per gallon than standard CR"],
+      ["ph-drop-half", "Caustic replacement", "Drain and degreasing work without harsh alkalinity"],
       ["ph-atom", "SynClean powered", "Caustic-level performance with HMIS 0-0-0 handling"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]

@@ -119,6 +119,50 @@ test("products page thumbnails use the blue media stage", async () => {
   });
 });
 
+test("commerce size labels stay readable and bulk quote actions stay centered", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: "reduce" });
+    try {
+      await gotoDomReady(page, "products.html", ".shop-card-buybar");
+      const controls = await page.evaluate(() => {
+        const buybar = document.querySelector(".shop-card-buybar");
+        buybar.innerHTML = `<span class="shop-card-commerce">
+          <span class="commerce-buy">
+            <select class="commerce-vol" aria-label="Volume">
+              <option>1 gal jug</option>
+              <option>55 gal — quoted</option>
+              <option>275 gal — quoted</option>
+            </select>
+            <a class="shop-card-add commerce-quote-swap" href="#">Request quote</a>
+          </span>
+        </span>`;
+
+        const select = buybar.querySelector(".commerce-vol");
+        const quote = buybar.querySelector(".commerce-quote-swap");
+        const selectRect = select.getBoundingClientRect();
+        const quoteRect = quote.getBoundingClientRect();
+        const quoteStyle = getComputedStyle(quote);
+        return {
+          selectWidth: selectRect.width,
+          quoteHeight: quoteRect.height,
+          quoteDisplay: quoteStyle.display,
+          quoteAlign: quoteStyle.alignItems,
+          quoteJustify: quoteStyle.justifyContent,
+        };
+      });
+
+      assert.ok(controls.selectWidth >= 180, `expected readable size selector, got ${controls.selectWidth}px`);
+      assert.ok(controls.quoteHeight >= 44, `expected 44px quote target, got ${controls.quoteHeight}px`);
+      assert.match(controls.quoteDisplay, /flex/);
+      assert.equal(controls.quoteAlign, "center");
+      assert.equal(controls.quoteJustify, "center");
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("static product detail heroes publish full catalog copy", () => {
   for (const id of CATALOG_ORDER) {
     const product = PRODUCTS[id];
@@ -250,7 +294,7 @@ test("product detail renders HMIS panel rows from product data", async () => {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     try {
       await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen HCR"));
+      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen CIP HCR"));
       await page.waitForTimeout(300);
       const rows = await page.$$eval("#panelRows .hmis-row", (els) =>
         els.map((el) => ({
@@ -309,7 +353,7 @@ test("static product detail renders specs uses and docs without commerce API", a
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     try {
       await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen HCR"));
+      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen CIP HCR"));
       await page.waitForFunction(() => document.querySelector("#pSpecs")?.textContent.includes("HMIS 0-0-0"));
       const content = await page.evaluate(() => ({
         specs: document.querySelector("#pSpecs")?.textContent || "",
@@ -318,7 +362,7 @@ test("static product detail renders specs uses and docs without commerce API", a
         mediaHidden: document.querySelector("#pMediaSection")?.hasAttribute("hidden")
       }));
       assert.match(content.specs, /SynTech|SYNTEC|Synthetic acid/i);
-      assert.match(content.uses, /Cooling tower|Rust removal|passivation/i);
+      assert.match(content.uses, /Beer-stone|brewery CIP|heat-exchanger/i);
       assert.match(content.docs, /Safety Data Sheet/);
       assert.equal(content.mediaHidden, false, "field photos section should render from static product data");
     } finally {

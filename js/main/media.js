@@ -1,6 +1,6 @@
 /* Industry product blocks, lightbox, and image fallback helpers. */
 
-import { PRODUCTS } from "./catalog-data.js";
+import { PRODUCTS } from "./catalog-data.js?v=20260710b";
 import { productCard } from "./commerce-ui.js";
 
 export function initIndustryProducts() {

@@ -5168,12 +5168,15 @@ main:has(#pMediaSection) .section-head {
 
 .shop-card-buybar .commerce-buy {
   display: grid;
-  grid-template-columns: minmax(84px, .7fr) minmax(128px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
 .shop-card-buybar .commerce-vol,
 .shop-card-buybar .shop-card-add {
+  width: 100%;
+  max-width: none;
+  margin: 0;
   min-height: 46px;
   border-radius: 12px;
   font-weight: 800;
@@ -5187,6 +5190,12 @@ main:has(#pMediaSection) .section-head {
 
 .shop-card-buybar .shop-card-add {
   box-shadow: 0 10px 24px rgba(0, 115, 119, .18);
+}
+
+.shop-card-buybar .commerce-quote-swap:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 760px) {

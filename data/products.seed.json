@@ -1,7 +1,7 @@
 [
   {
     "sku": "cr",
-    "name": "VertKleen CR",
+    "name": "VertKleen CIP CR",
     "group_key": "cip_brewery",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -12,7 +12,7 @@
   },
   {
     "sku": "cr2",
-    "name": "VertKleen CR2",
+    "name": "VertKleen HVAC CR",
     "group_key": "water",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -23,7 +23,7 @@
   },
   {
     "sku": "hcr",
-    "name": "VertKleen HCR",
+    "name": "VertKleen CIP HCR",
     "group_key": "descale",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -34,7 +34,7 @@
   },
   {
     "sku": "hcr-t16",
-    "name": "VertKleen HCR - 16+ Tote Program",
+    "name": "VertKleen HVAC HCR",
     "group_key": "descale",
     "hmis": "0-0-0",
     "mode": "buy",

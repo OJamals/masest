@@ -16,7 +16,7 @@ function htmlPages() {
 
 test("main entrypoint imports catalog data from a split module", () => {
   const main = read("js/main.js");
-  assert.match(main, /from\s+["']\.\/main\/catalog-data\.js["']/);
+  assert.match(main, /from\s+["']\.\/main\/catalog-data\.js(?:\?v=\d{8}[a-z])?["']/);
   assert.doesNotMatch(main, /^const PRODUCTS =/m);
   const data = read("js/main/catalog-data.js");
   for (const name of [

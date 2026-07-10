@@ -62,7 +62,7 @@ test("dashboard notifications open same-page targets without reloading", () => {
   assert.match(js, /function openNotification/, "notification activation should be centralized");
   assert.match(js, /dashboardTabFromHash\(url\.hash\)/, "same-dashboard notification links should resolve through dashboard hash aliases");
   assert.doesNotMatch(extractFunction(js, "openDashboardTarget"), /['"]overview['"]/, "notification clicks should not fall back to Overview for missing or stale hashes");
-  assert.match(js, /scrollIntoView\(\{\s*block:\s*'nearest',\s*inline:\s*'center'\s*\}\)/, "overflowing mobile tab rails should reveal the active tab");
+  assert.match(js, /rail\.scrollTo\(\{\s*left:\s*Math\.max\(0, left\),\s*behavior:\s*'auto'\s*\}\)/, "overflowing mobile tab rails should reveal the active tab without scrolling the page");
   assert.match(js, /addEventListener\('keydown'/, "keyboard activation should match click activation");
 });
 

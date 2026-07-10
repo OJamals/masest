@@ -17,6 +17,7 @@ const pages = {                // offset-pagination state per list (#29)
 let lastMsgCount = -1;         // messages currently rendered in the thread (for live-poll diffing)
 let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
+let activeDashboardTab = '';
 
 /* ---------- tabs / routing ---------- */
 const DASH_TABS = ['overview', 'orders', 'messages', 'notifications', 'business', 'addresses', 'profile'];
@@ -45,17 +46,25 @@ function currentDashboardTab() {
   return dashboardTabFromHash(location.hash) || 'overview';
 }
 
+function resetDashboardScroll() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+}
+
 function selectTab(name) {
+  const tabChanged = activeDashboardTab && activeDashboardTab !== name;
+  activeDashboardTab = name;
   const tabs = [...document.querySelectorAll('.dash-tab')];
   tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   rovingTabindex(tabs, (t) => t.dataset.tab === name);
   const activeTab = tabs.find((tab) => tab.dataset.tab === name);
   const rail = activeTab?.closest('.dash-tabs');
   if (activeTab && rail && rail.scrollWidth > rail.clientWidth) {
-    activeTab.scrollIntoView({ block: 'nearest', inline: 'center' });
+    const left = activeTab.offsetLeft - ((rail.clientWidth - activeTab.offsetWidth) / 2);
+    rail.scrollTo({ left: Math.max(0, left), behavior: 'auto' });
   }
   document.querySelectorAll('.dash-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+  if (tabChanged) resetDashboardScroll();
   loadTab(name);
 }
 
