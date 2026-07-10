@@ -3,7 +3,7 @@
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
 import { esc, safeUrl, confirmDialog, delegate } from '../util.js?v=20260710b';
-import { getToken } from '../auth.js?v=20260710b';
+import { getToken } from '../auth.js';
 import { captureDirty, restoreDirty } from './edits.js?v=20260710b';
 
 export function createProductsTab({ $, api, state, message, admSkeleton, admEmpty }) {

@@ -1,6 +1,6 @@
 import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260710b";
 import { renderMarkdown } from "../md.js?v=20260710b";
-import { supabase } from "../auth.js?v=20260710b";
+import { supabase } from "../auth.js";
 import { createContentAssets } from "./content-assets.js?v=20260710b";
 import { createContentRevisions } from "./content-revisions.js?v=20260710b";
 import {
