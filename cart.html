@@ -5,23 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
   <title>Cart | MASEST</title>
-  <meta name="description" content="Review VertKleen purchase-ready SKUs, start checkout, or route bulk freight requests to MASEST.">
+  <meta name="description" content="Review your VertKleen cart and continue to secure checkout.">
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260708c">
+  <link rel="stylesheet" href="css/style.css?v=20260710e">
 <link rel="stylesheet" href="css/navigation.css?v=20260706a">
   <link rel="stylesheet" href="css/components.css">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
   <script type="module" src="js/main.js?v=20260710f"></script>
-  <style>
-    .cart-account { font-size:.85rem; color:var(--ink-soft); background:var(--accent-tint); border:1px solid var(--line); border-radius:var(--r-input); padding:10px 12px; margin:0 0 14px; line-height:1.5; }
-    .cart-account a { color:var(--accent-ink); font-weight:700; }
-    .cart-account i { color:var(--accent); }
-  </style>
 </head>
-<body>
+<body class="checkout-page">
 <a class="skip-link" href="#main">Skip to content</a>
 <noscript>
   <nav class="nojs-nav" aria-label="Site">
@@ -43,37 +38,27 @@
           <h1>Your cart</h1>
         </div>
         <div id="cartLines" class="cart-lines" aria-live="polite"></div>
-        <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
       </div>
 
-      <aside class="cart-summary" aria-label="Cart checkout">
-        <p class="eyebrow">Next step</p>
-        <h2>Checkout or quote.</h2>
-        <div id="cartAccount" class="cart-account" hidden></div>
-        <p id="cartStatus" class="cart-status" role="status" aria-live="polite">Final totals are confirmed at checkout.</p>
-        <div class="cart-volume-policy" aria-label="Volume discount and freight policy">
-          <b>200+ jugs: 5% off &middot; 1,000+ gallons (drums/totes): 5% off.</b>
-          <span>Prices valid six months from publication. Shipping and freight excluded &mdash; FOB Ex Plant, Merritt Island FL.</span>
+      <aside class="cart-summary" aria-labelledby="orderSummaryTitle">
+        <div class="cart-summary-head">
+          <p class="eyebrow">Checkout</p>
+          <h2 id="orderSummaryTitle">Order summary</h2>
         </div>
-        <p id="checkoutIdle" class="cart-status" hidden>Add products from the catalog and the checkout options open here.</p>
+        <p id="checkoutIdle" class="cart-summary-empty" hidden>Add items to continue to checkout.</p>
+        <p id="cartStatus" class="cart-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
         <div id="checkoutActive">
-        <div class="ship-est" id="shipEst" hidden>
-          <label class="field-label" for="shipZone">Estimated freight (billed separately)</label>
-          <select id="shipZone" class="cart-input">
-            <option value="east">US East</option>
-            <option value="central">US Central</option>
-            <option value="west">US West</option>
-          </select>
-          <p class="ship-est-out" id="shipEstOut"></p>
-          <p class="ship-est-note">Estimate only — freight is not charged at checkout. MASEST confirms it on your invoice before fulfillment.</p>
-        </div>
-        <label class="field-label" for="checkoutEmail">Email for receipt</label>
-        <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" placeholder="buyer@company.com">
-        <div class="cart-actions">
-          <button class="btn btn-primary" id="checkoutPay" type="button">Card / ACH Checkout</button>
-          <button class="btn btn-secondary" id="checkoutNet" type="button">Use NET Terms</button>
-          <a class="btn btn-ghost" id="checkoutQuote" href="contact.html?type=quote">Send quote request</a>
-        </div>
+          <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
+          <label class="field-label" for="checkoutEmail">Receipt email</label>
+          <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" inputmode="email" aria-describedby="checkoutEmailHelp" placeholder="buyer@company.com">
+          <p id="checkoutEmailHelp" class="cart-field-help">Optional. Order confirmation is sent to this address.</p>
+          <div class="cart-actions">
+            <button class="btn btn-primary" id="checkoutPay" type="button">Proceed to checkout</button>
+            <button class="btn btn-secondary" id="checkoutNet" type="button" hidden>Place order with NET terms</button>
+          </div>
+          <p class="cart-checkout-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Secure Card / ACH checkout. Freight is confirmed separately before fulfillment.</p>
+          <p class="cart-quote-prompt">Need a formal quote? <a id="checkoutQuote" href="contact.html?type=quote">Request a quote</a></p>
+          <div id="cartAccount" class="cart-account" hidden></div>
         </div>
       </aside>
     </div>
@@ -83,14 +68,12 @@
   import { checkout, clear, items, remove, setQty } from "./js/cart.js";
   import { me, getToken } from "./js/auth.js";
 
-  const money = (n) => new Intl.NumberFormat("en-US", {
-    style: "currency", currency: "USD", maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
-  }).format(Number(n));
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
   }).format(Number(n));
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  // vsku -> { name, gallons, price, currency }, flattened from /api/products variants.
+  // vsku -> { name, price, currency }, flattened from /api/products variants.
   const vmap = new Map();
   const fallbackNames = {
     crhd: "VertKleen CR HD",
@@ -113,7 +96,6 @@
           const label = p.label || "Each";
           vmap.set(p.vsku, {
             name: `${productName} - ${label}`,
-            gallons: Number(p.gallons) || 0,
             price: p.price == null ? null : Number(p.price),
             currency: p.currency || parent.currency || "usd",
             purchasable: parent.active !== false && (parent.mode || p.mode) === "buy" && p.active !== false && p.price != null,
@@ -125,7 +107,6 @@
         if (!variants.length) {
           vmap.set(p.sku, {
             name: p.name,
-            gallons: 0,
             price: p.price == null ? null : Number(p.price),
             currency: p.currency || "usd",
             purchasable: p.active !== false && p.mode === "buy" && p.price != null,
@@ -136,19 +117,14 @@
           if (!v || !v.vsku) return;
           vmap.set(v.vsku, {
             name: `${p.name} - ${v.label}`,
-            gallons: Number(v.gallons) || 0,
             price: v.price == null ? null : Number(v.price),
             currency: v.currency || p.currency || "usd",
             purchasable: p.active !== false && p.mode === "buy" && v.active !== false && v.price != null,
           });
         });
       });
-    } catch (err) { /* offline: fall back to raw SKUs, no shipping estimate */ }
+    } catch (err) { /* offline: fall back to raw SKUs */ }
   }
-
-  // Example freight rates: per-gallon by US zone, with a handling floor. Owner tunes these.
-  const ZONE_RATE = { east: 3.50, central: 4.25, west: 5.00 };
-  const SHIP_MIN = 35;
 
   const lines = document.getElementById("cartLines");
   const estimate = document.getElementById("cartEstimate");
@@ -157,6 +133,10 @@
   const checkoutPay = document.getElementById("checkoutPay");
   const checkoutNet = document.getElementById("checkoutNet");
   const checkoutQuote = document.getElementById("checkoutQuote");
+  const checkoutLabels = {
+    pay: checkoutPay.textContent,
+    net: checkoutNet.textContent,
+  };
 
   // NET terms require an approved business account. Returns null if the user is
   // logged out or the auth client/CDN is unavailable.
@@ -171,6 +151,15 @@
   function setCheckoutDisabled(disabled) {
     checkoutPay.disabled = disabled;
     checkoutNet.disabled = disabled;
+  }
+
+  function setCheckoutPending(mode, pending) {
+    const button = mode === "net" ? checkoutNet : checkoutPay;
+    button.textContent = pending
+      ? mode === "net" ? "Checking account terms..." : "Starting checkout..."
+      : checkoutLabels[mode];
+    if (pending) button.setAttribute("aria-busy", "true");
+    else button.removeAttribute("aria-busy");
   }
 
   function checkoutErrorMessage(err) {
@@ -245,79 +234,86 @@
     if (hasBlockedLine) {
       status.dataset.state = "err";
       status.textContent = "Remove bulk freight items before checkout, or send a quote request.";
+      status.hidden = false;
     } else if (status.dataset.state === "err" && cartItems.length) {
       status.dataset.state = "";
-      status.textContent = "Final totals are confirmed at checkout.";
+      status.textContent = "";
+      status.hidden = true;
     }
-    // An empty cart shows a single next-step line instead of a full checkout
-    // module of disabled controls.
+    const hasSuccess = status.dataset.state === "ok" && Boolean(status.textContent);
+    // Empty carts keep only the short continuation message. Successful NET
+    // orders keep their confirmation visible after the cart is cleared.
     const checkoutActive = document.getElementById("checkoutActive");
     const checkoutIdle = document.getElementById("checkoutIdle");
     if (checkoutActive) checkoutActive.hidden = !cartItems.length;
-    if (checkoutIdle) checkoutIdle.hidden = !!cartItems.length;
-    if (status) status.hidden = !cartItems.length;
+    if (checkoutIdle) checkoutIdle.hidden = !!cartItems.length || hasSuccess;
+    if (status && !cartItems.length) status.hidden = !hasSuccess;
     if (!cartItems.length) {
-      lines.innerHTML = `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse products</a></div>`;
+      lines.innerHTML = hasSuccess
+        ? `<div class="cart-empty"><h2>Order submitted.</h2><p>Your cart is clear. Follow fulfillment and invoice updates from your account.</p><a class="btn btn-primary" href="dashboard.html#orders">View your orders</a></div>`
+        : `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse products</a></div>`;
       updateSubtotal();
-      updateShipping();
       return;
     }
     lines.innerHTML = cartItems.map(item => {
       const meta = vmap.get(item.sku);
       const name = productName(item.sku);
       const detail = meta?.purchasable
-        ? `${priceMoney(meta.price, meta.currency)} each · freight and tax confirmed at checkout.`
+        ? `${priceMoney(meta.price, meta.currency)} each`
         : meta
-          ? "Quote required · MASEST confirms pricing, freight, and tax."
-          : "Freight and tax confirmed at checkout.";
+          ? "Quote required"
+          : "Price confirmed at checkout";
+      const safeSku = esc(item.sku);
+      const safeName = esc(name);
+      const safeDetail = esc(detail);
       return `
       <article class="cart-line">
         <div>
-          <span class="eyebrow">${item.sku}</span>
-          <h2>${name}</h2>
-          <p>${detail}</p>
+          <span class="eyebrow">${safeSku}</span>
+          <h2>${safeName}</h2>
+          <p>${safeDetail}</p>
         </div>
         <label>
           <span>Qty</span>
-          <input type="number" min="1" step="1" value="${item.qty}" data-qty="${item.sku}" aria-label="Quantity for ${name}">
+          <input type="number" min="1" step="1" value="${item.qty}" data-qty="${safeSku}" aria-label="Quantity for ${safeName}">
         </label>
-        <button type="button" class="btn btn-ghost" data-remove="${item.sku}">Remove</button>
+        <button type="button" class="btn btn-ghost" data-remove="${safeSku}" aria-label="Remove ${safeName} from cart">Remove</button>
       </article>
     `;
     }).join("");
     updateSubtotal();
-    updateShipping();
   }
 
   function updateSubtotal() {
     if (!estimate) return;
+    const cartItems = items();
     let subtotal = 0;
-    let hasPrice = false;
-    items().forEach(item => {
+    let pricedLines = 0;
+    let itemCount = 0;
+    const currencies = new Set();
+    cartItems.forEach(item => {
+      itemCount += item.qty;
       const meta = vmap.get(item.sku);
-      if (!meta?.purchasable || meta.price == null) return;
+      if (!meta?.purchasable || meta.price == null || !Number.isFinite(Number(meta.price))) return;
       subtotal += Number(meta.price) * item.qty;
-      hasPrice = true;
+      pricedLines += 1;
+      currencies.add(String(meta.currency || "usd").toUpperCase());
     });
-    estimate.hidden = !hasPrice;
-    if (!hasPrice) return;
+    estimate.hidden = !cartItems.length;
+    if (!cartItems.length) return;
+    const canEstimate = pricedLines === cartItems.length && currencies.size === 1;
+    const subtotalText = canEstimate
+      ? priceMoney(subtotal, [...currencies][0])
+      : "Pending review";
+    const itemLabel = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
     estimate.innerHTML = `
-      <div><span>Estimated product subtotal</span><strong>${priceMoney(subtotal)}</strong></div>
-      <p>Taxes, shipping, freight, and final availability are confirmed by the server at checkout.</p>
+      <dl>
+        <div><dt>Shipping</dt><dd>Confirmed separately</dd></div>
+        <div><dt>Tax</dt><dd>Calculated at checkout</dd></div>
+        <div class="cart-total-row"><dt>Estimated subtotal <span class="cart-total-count">${itemLabel}</span></dt><dd>${subtotalText}</dd></div>
+      </dl>
+      <p>Final product pricing and discounts are confirmed at checkout.</p>
     `;
-  }
-
-  // Shipping estimate: total gallons (from variants) × per-gallon zone rate, with a handling floor.
-  function updateShipping() {
-    const box = document.getElementById("shipEst");
-    const out = document.getElementById("shipEstOut");
-    if (!box || !out) return;
-    const gallons = items().reduce((s, it) => s + (vmap.get(it.sku)?.gallons || 0) * it.qty, 0);
-    if (!gallons) { box.hidden = true; return; }
-    box.hidden = false;
-    const zone = document.getElementById("shipZone")?.value || "east";
-    const est = Math.max(SHIP_MIN, gallons * (ZONE_RATE[zone] || ZONE_RATE.east));
-    out.textContent = `${gallons} gal → est. ${money(est)}`;
   }
 
   // A cleared qty field mid-edit is not a removal — only commit values >= 1 and
@@ -337,7 +333,6 @@
     setQty(sku, event.target.value);
     syncQuoteHref();
     updateSubtotal();
-    updateShipping();
   });
   lines.addEventListener("click", event => {
     const sku = event.target?.dataset?.remove;
@@ -350,27 +345,43 @@
     if (!items().length) {
       status.dataset.state = "err";
       status.textContent = "Add at least one product before checkout.";
+      status.hidden = false;
       setCheckoutDisabled(true);
       return;
     }
+    const receiptEmail = email.value.trim();
+    if (receiptEmail && !email.checkValidity()) {
+      status.dataset.state = "err";
+      status.textContent = "Enter a valid receipt email, or leave the field blank.";
+      status.hidden = false;
+      email.focus();
+      email.reportValidity();
+      return;
+    }
     setCheckoutDisabled(true);
+    setCheckoutPending(mode, true);
     status.dataset.state = "";
     status.textContent = mode === "net" ? "Checking account terms..." : "Starting checkout...";
+    status.hidden = false;
     let token;
     if (mode === "net") {
       token = await getAuthToken();
       if (!token) {
         status.dataset.state = "err";
         status.textContent = "Sign in to your approved business account to use NET terms, or send a quote request.";
+        status.hidden = false;
+        setCheckoutPending(mode, false);
         setCheckoutDisabled(!checkoutReady());
         return;
       }
     }
     try {
-      const result = await checkout({ mode, email: email.value.trim(), token });
+      const result = await checkout({ mode, email: receiptEmail, token });
       if (result.net) {
         status.dataset.state = "ok";
         status.textContent = result.message || "Order placed on account.";
+        status.hidden = false;
+        setCheckoutPending(mode, false);
         // NET success never reaches order-confirmed.html — close the funnel here.
         try { if (typeof window.mtrack === "function") window.mtrack("order_confirmed"); } catch (e) { /* best-effort */ }
         clear();
@@ -379,6 +390,8 @@
     } catch (err) {
       status.dataset.state = "err";
       status.textContent = checkoutErrorMessage(err);
+      status.hidden = false;
+      setCheckoutPending(mode, false);
       setCheckoutDisabled(!checkoutReady());
     }
   }
@@ -386,27 +399,27 @@
   checkoutPay.addEventListener("click", () => runCheckout("pay"));
   checkoutNet.addEventListener("click", () => runCheckout("net"));
   email?.addEventListener("input", syncQuoteHref);
-  document.getElementById("shipZone")?.addEventListener("change", updateShipping);
   // Account strip: guests get a sign-in/register option (returns to cart); members see their account.
   async function renderCartAccount() {
     const box = document.getElementById("cartAccount");
     if (!box) return;
     let data = null;
     try { data = await me(); } catch {}
-    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     if (data && !data.needs_profile) {
       const approved = data.company?.status === "approved";
-      box.innerHTML = `<i class="ph ph-user-circle" aria-hidden="true"></i> Signed in as <b>${esc(data.email)}</b>${approved ? " · account approved for NET terms" : " · pending approval"}.`;
+      checkoutNet.hidden = !approved;
+      box.innerHTML = `<i class="ph ph-user-circle" aria-hidden="true"></i> ${approved ? `NET terms available for <b>${esc(data.email)}</b>.` : `Signed in as <b>${esc(data.email)}</b>. NET terms pending approval.`}`;
       const email = document.getElementById("checkoutEmail");
       if (email && !email.value) email.value = data.email || "";
     } else {
-      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Checking out as a guest. <a href="account.html?return=cart.html">Sign in or create an account</a> to use NET terms and saved details. Your cart stays with you.`;
+      checkoutNet.hidden = true;
+      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Have an account? <a href="account.html?return=cart.html">Sign in</a> for saved details and approved NET terms.`;
     }
     box.hidden = false;
   }
 
   render(); // fast first paint with raw SKUs
-  if (!isLocalStaticPreview()) loadCatalog().then(render); // re-render with variant names + shipping once catalog loads
+  if (!isLocalStaticPreview()) loadCatalog().then(render); // re-render with current product names and pricing
   renderCartAccount();
 </script>
 </body>

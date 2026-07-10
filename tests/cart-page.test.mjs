@@ -108,9 +108,10 @@ test("static catalog does not show cart controls without commerce metadata", asy
       assert.equal(await page.locator(".shop-card-quote").count(), 0);
 
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
-      // Empty cart collapses the checkout module to a single next-step line
-      // (2026-07-05); the pay button stays in the DOM, hidden and disabled.
+      // Empty cart keeps a conventional order-summary shell while checkout
+      // controls stay hidden and disabled.
       await page.locator("#checkoutIdle").waitFor();
+      await page.getByRole("heading", { name: "Order summary" }).waitFor();
       assert.equal(await page.locator("#checkoutPay").isVisible(), false);
       assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
     } finally {
@@ -228,19 +229,49 @@ test("cart page explains bulk freight review when checkout rejects a SKU", async
   });
 });
 
-test("cart and checkout surface the volume-discount policy", async () => {
+test("cart uses a conventional order summary without catalog policy duplication", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await routeProducts(page);
+      await page.addInitScript(() => {
+        localStorage.setItem("masest_cart", JSON.stringify({ "hcr-1": 2 }));
+      });
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
 
-      await page.getByText("200+ jugs: 5% off · 1,000+ gallons (drums/totes): 5% off.").waitFor();
-      assert.match(
-        await page.locator(".cart-volume-policy").textContent(),
-        /Prices valid six months from publication\. Shipping and freight excluded — FOB Ex Plant, Merritt Island FL\./,
-      );
+      await page.getByText("2 items").waitFor();
+      await page.getByText("$34.60", { exact: true }).first().waitFor();
+      await page.getByRole("button", { name: "Proceed to checkout" }).waitFor();
+      assert.equal(await page.getByRole("button", { name: "Place order with NET terms" }).isVisible(), false);
+      await page.getByRole("link", { name: "Request a quote" }).waitFor();
+      assert.equal(await page.getByText(/200\+ jugs/i).count(), 0);
+      assert.equal(await page.getByText(/Prices valid six months/i).count(), 0);
+      assert.equal(await page.locator("#shipZone").count(), 0);
+      assert.match(await page.locator(".cart-estimate").textContent(), /ShippingConfirmed separately/);
+      assert.match(await page.locator(".cart-estimate").textContent(), /TaxCalculated at checkout/);
+      assert.match(await page.locator(".cart-estimate").textContent(), /Final product pricing and discounts are confirmed at checkout/);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("cart renders untrusted SKU text without creating injected markup", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage();
+    try {
+      await page.addInitScript(() => {
+        localStorage.setItem("masest_cart", JSON.stringify({
+          '\"><img src=x data-cart-injection="true">': 1,
+        }));
+      });
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+
+      await page.locator(".cart-line").waitFor();
+      assert.equal(await page.locator("[data-cart-injection]").count(), 0);
+      assert.match(await page.locator(".cart-line").textContent(), /<img src=x/);
     } finally {
       await browser.close();
     }

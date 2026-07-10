@@ -60,9 +60,15 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
   await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ crhd: 2 })));
   await page.reload({ waitUntil: "domcontentloaded" });
 
-  await page.locator("#checkoutEmail").fill("buyer@example.com");
-  const payBtn = page.getByRole("button", { name: "Card / ACH Checkout" });
+  const receiptEmail = page.locator("#checkoutEmail");
+  const payBtn = page.getByRole("button", { name: "Proceed to checkout" });
   await expect(payBtn).toBeEnabled();
+  await receiptEmail.fill("not-an-email");
+  await payBtn.click();
+  await expect(page.locator("#cartStatus")).toHaveText("Enter a valid receipt email, or leave the field blank.");
+  expect(checkoutBody).toBeNull();
+
+  await receiptEmail.fill("buyer@example.com");
   await payBtn.click();
 
   await page.waitForURL("**/order-confirmed.html**");
@@ -132,11 +138,14 @@ test("approved business NET checkout posts the cart payload with auth and clears
   await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ crhd: 2 })));
   await page.reload({ waitUntil: "domcontentloaded" });
 
-  const netBtn = page.getByRole("button", { name: "Use NET Terms" });
+  const netBtn = page.getByRole("button", { name: "Place order with NET terms" });
   await expect(netBtn).toBeEnabled();
   await netBtn.click();
 
   await expect(page.locator("#cartStatus")).toContainText("Order placed on account");
+  await expect(page.locator("#cartStatus")).toBeVisible();
+  await expect(page.locator("#checkoutIdle")).toBeHidden();
+  await expect(page.getByRole("link", { name: "View your orders" })).toBeVisible();
   expect(checkoutAuth).toBe("Bearer business-token");
   expect(checkoutBody.mode).toBe("net");
   expect(checkoutBody.email).toBe("buyer@example.com");
