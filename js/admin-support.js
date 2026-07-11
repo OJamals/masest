@@ -16,7 +16,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/admin-support.css?v=20260711b`;
+    stylesheet.href = `${root}css/admin-support.css?v=20260711e`;
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }
@@ -37,7 +37,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
         </header>
         <div class="site-support__threads" aria-label="Open customer chats"></div>
       </div>
-      <div class="site-support__conversation"><p class="site-support__placeholder">Select a customer conversation.</p></div>
+      <div class="site-support__conversation"><header class="site-support__conversation-toolbar"><p>Customer inbox</p><a href="${root}admin.html#support-settings" aria-label="Customer support settings" title="Customer support settings"><i class="ph ph-gear-six" aria-hidden="true"></i></a></header><div class="site-support__conversation-body"><div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div></div></div>
     </section>
     <button class="site-support__launcher" type="button" aria-label="Open admin support" aria-expanded="false" aria-controls="adminSupportConsole"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H8l-4 3V5Z"/><path d="M8 9h8M8 13h5"/></svg><span>Support</span><b data-support-count hidden>0</b></button>`;
   document.body.append(shell);
@@ -52,10 +52,11 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   const launcher = shell.querySelector(".site-support__launcher");
   const close = shell.querySelector('[aria-label="Close support menu"]');
   const list = shell.querySelector(".site-support__threads");
-  const view = shell.querySelector(".site-support__conversation");
+  const view = shell.querySelector(".site-support__conversation-body");
   const summary = shell.querySelector("[data-support-summary]");
   const counter = shell.querySelector("[data-support-count]");
   let threads = [];
+  let threadsLoaded = false;
   let selected = null;
   let messages = [];
   let page = { has_more: false, next_before: null };
@@ -95,7 +96,9 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     counter.textContent = String(unanswered);
     summary.textContent = unanswered === 1 ? "1 chat needs a reply" : unanswered ? `${unanswered} chats need a reply` : "No chats need a reply";
     if (!ordered.length) {
-      list.innerHTML = '<p class="site-support__empty">No open customer conversations.</p>';
+      selected = null;
+      view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
+      list.innerHTML = '<div class="site-support__empty"><i class="ph ph-lifebuoy" aria-hidden="true"></i><div><strong>Inbox clear</strong><p>No open customer conversations.</p></div></div>';
       return;
     }
     list.innerHTML = ordered.map((thread) => `<button type="button" class="site-support__thread${thread.unanswered ? " is-unanswered" : ""}${thread.company_id === selected?.company_id ? " is-selected" : ""}" data-company-id="${escapeHtml(thread.company_id)}" aria-pressed="${thread.company_id === selected?.company_id}"><span><strong>${escapeHtml(thread.company_name || "Customer")}</strong><small>${escapeHtml((thread.last_body || "").slice(0, 90))}</small></span><span class="site-support__meta"><em>${thread.status === "escalated" ? "Escalated" : "Open"}</em>${thread.unanswered ? "<b>Needs reply</b>" : ""}</span></button>`).join("");
@@ -153,10 +156,13 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   };
 
   const loadThreads = async () => {
+    if (!threadsLoaded) list.innerHTML = '<div class="site-support__skeleton" aria-label="Loading customer conversations"><div class="skeleton skeleton-block"></div><div class="skeleton skeleton-block"></div><div class="skeleton skeleton-block"></div></div>';
     try {
       threads = (await auth.api("/api/admin/messages")).threads || [];
+      threadsLoaded = true;
       renderThreads();
     } catch {
+      threadsLoaded = true;
       list.innerHTML = '<p class="site-support__error">Could not load support.</p>';
     }
   };

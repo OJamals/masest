@@ -20,8 +20,12 @@ import { createNewsletterTab } from './admin/newsletter.js?v=20260711s';
 import { createInventoryCard } from './admin/inventory.js?v=20260711s';
 import { createCouponsCard } from './admin/coupons.js?v=20260711s';
 import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260711s';
+import { renderChrome } from './main/chrome.js?v=20260711x';
 
 const $ = (id) => document.getElementById(id);
+
+// Admin owns its staff-only runtime, but still needs shared site navigation.
+renderChrome();
 
 // #28 dirty-edit guard: flag an inline control the moment the user edits it, so a
 // later sibling save / cache re-render can snapshot and restore it (see admin/edits.js).

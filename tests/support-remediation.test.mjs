@@ -72,7 +72,7 @@ test('customer chat links to full inbox and uses expiring keepalive presence', (
   assert.match(account, /support_chat_seen_at/);
 });
 
-test('public staff accounts receive the admin support console instead of buyer chat', () => {
+test('public staff accounts receive a full support workspace instead of buyer chat', () => {
   const support = read('js/admin-support.js');
   const styles = read('css/admin-support.css');
   assert.match(support, /\/api\/admin\/messages/);
@@ -86,7 +86,20 @@ test('public staff accounts receive the admin support console instead of buyer c
   assert.match(read('js/main/chrome.js'), /site-support__launcher, \.customer-chat__toggle/);
   assert.match(read('js/account-nav.js'), /'Customer support', 'admin\.html#support-settings'/);
   assert.match(styles, /height:\s*min\(620px, calc\(100dvh - 104px\)\)/);
+  assert.match(styles, /\.site-support__drawer \{[\s\S]*padding:\s*0;/);
   assert.match(styles, /overflow-y:\s*auto/);
+  assert.match(styles, /grid-template-columns:\s*minmax\(250px, 310px\) minmax\(0, 1fr\)/);
+  assert.match(support, /site-support__empty/);
+  assert.match(support, /aria-label="Customer support settings"/);
+  assert.match(support, /site-support__conversation-toolbar/);
+  assert.match(support, /site-support__conversation-body/);
+  assert.match(support, /threadsLoaded/);
+  assert.match(support, /site-support__skeleton/);
+  assert.match(styles, /\.site-support__conversation-toolbar/);
+  assert.match(styles, /\.site-support__conversation-empty/);
+  assert.match(styles, /\.site-support__skeleton/);
+  assert.doesNotMatch(support, /is-empty/);
+  assert.doesNotMatch(styles, /\.site-support__drawer\.is-empty/);
 });
 
 test('buyer and staff inboxes page backward from the newest message', () => {

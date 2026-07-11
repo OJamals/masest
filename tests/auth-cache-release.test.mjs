@@ -8,6 +8,7 @@ const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
 const MAIN_RELEASE = "20260711x";
 const ADMIN_RELEASE = "20260711s";
+const ADMIN_PAGE_RELEASE = "20260711t";
 const CHROME_RELEASE = "20260711x";
 const ACCOUNT_NAV_RELEASE = "20260711x";
 const CUSTOMER_CHAT_RELEASE = "20260711h";
@@ -53,7 +54,7 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.ok(dashboardEntry, "dashboard.html must cache-bust the dashboard entrypoint");
   assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${dashboardEntry[1]}`));
 
-  assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${ADMIN_RELEASE}`));
+  assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${ADMIN_PAGE_RELEASE}`));
   for (const module of ["content", "products", "qbo", "companies", "threads"]) {
     assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_RELEASE}`));
   }
@@ -63,8 +64,8 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/main.js"), new RegExp(`main/chrome\\.js\\?v=${CHROME_RELEASE}`));
   assert.match(read("js/main/chrome.js"), new RegExp(`customer-chat\\.js\\?v=${CUSTOMER_CHAT_RELEASE}`));
   assert.match(read("js/customer-chat.js"), new RegExp(`customer-chat\\.css\\?v=${CUSTOMER_CHAT_STYLE_RELEASE}`));
-  assert.match(read("js/customer-chat.js"), /admin-support\.js\?v=20260711b/);
-  assert.match(read("js/admin-support.js"), /admin-support\.css\?v=20260711b/);
+  assert.match(read("js/customer-chat.js"), /admin-support\.js\?v=20260711e/);
+  assert.match(read("js/admin-support.js"), /admin-support\.css\?v=20260711e/);
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("product.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
 });

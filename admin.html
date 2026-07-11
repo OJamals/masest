@@ -207,7 +207,10 @@
   .support-thread-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
   .support-thread-head h3 { margin: 0; }
   .admin-support-launcher { position: fixed; z-index: 90; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 9px; min-height: 52px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); box-shadow: var(--shadow-lg); cursor: pointer; font: inherit; font-weight: 800; }
-  .admin-support-launcher .pill { position: static; min-width: 22px; text-align: center; }
+  .admin-support-launcher > i { font-size: 1.2rem; }
+  .admin-support-launcher__label { white-space: nowrap; }
+  .admin-support-unread { display: inline-grid; min-width: 22px; min-height: 22px; place-items: center; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--paper); font-size: .72rem; font-variant-numeric: tabular-nums; }
+  .admin-support-unread[hidden] { display: none; }
   .admin-support-drawer { position: fixed; z-index: 89; right: 20px; bottom: 84px; width: min(900px, calc(100vw - 40px)); max-height: min(720px, calc(100dvh - 112px)); display: grid; grid-template-columns: minmax(250px, 310px) minmax(0, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: var(--shadow-lg); }
   .admin-support-drawer[hidden] { display: none; }
   .admin-support-drawer__list { min-height: 0; overflow: auto; padding: 12px; background: var(--panel); }
@@ -964,7 +967,7 @@
         <div class="adm-card"><h2>Recent sends</h2><div id="admOffers">Loading...</div></div>
       </section>
 
-        <button id="adminSupportLauncher" class="admin-support-launcher" type="button" aria-controls="adminSupportDrawer" aria-expanded="false"><i class="ph ph-sidebar-simple" aria-hidden="true"></i><span>Support</span><span id="adminSupportUnread" class="pill" hidden>0</span></button>
+        <button id="adminSupportLauncher" class="admin-support-launcher" type="button" aria-label="Open customer support" aria-controls="adminSupportDrawer" aria-expanded="false"><i class="ph ph-lifebuoy" aria-hidden="true"></i><span class="admin-support-launcher__label">Customer support</span><span id="adminSupportUnread" class="admin-support-unread" hidden>0</span></button>
         <aside id="adminSupportDrawer" class="admin-support-drawer" role="dialog" aria-modal="false" aria-labelledby="adminSupportTitle" hidden>
           <div class="admin-support-drawer__list">
             <header class="admin-support-drawer__head"><div><p class="adm-eyebrow">Customer support</p><h2 id="adminSupportTitle">Open chats</h2><p id="adminSupportSummary" class="muted">Loading...</p></div><div class="adm-inline-actions"><button id="adminSupportSettings" class="gbtn" type="button" aria-label="Customer support settings"><i class="ph ph-gear-six" aria-hidden="true"></i></button><button id="adminSupportClose" class="gbtn" type="button" aria-label="Close support menu"><i class="ph ph-x" aria-hidden="true"></i></button></div></header>
@@ -980,6 +983,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260711s"></script>
+<script type="module" src="js/admin.js?v=20260711t"></script>
 </body>
 </html>
