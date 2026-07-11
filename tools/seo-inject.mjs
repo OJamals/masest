@@ -572,7 +572,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     </div>
   </section>
 </main>
-<script type="module" src="../js/main.js?v=20260711f"></script>
+<script type="module" src="../js/main.js?v=20260711g"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { esc, dateTime as date, delegate } from '../util.js?v=20260711p';
+import { esc, dateTime as date, delegate } from '../util.js?v=20260711q';
 
 const POLL_MS = 15_000;
 const PRESENCE_HEARTBEAT_MS = 30_000;
@@ -140,7 +140,10 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
     const unanswered = threads.filter((thread) => thread.unanswered).length;
     const counter = $('adminSupportUnread');
     if (counter) { counter.hidden = !unanswered; counter.textContent = unanswered; }
-    const summary = $('adminSupportSummary'); if (summary) summary.textContent = unanswered ? `${unanswered} chat${unanswered === 1 ? '' : 's'} need a reply` : 'No chats need a reply';
+    const summary = $('adminSupportSummary');
+    if (summary) summary.textContent = unanswered
+      ? unanswered === 1 ? '1 chat needs a reply' : `${unanswered} chats need a reply`
+      : 'No chats need a reply';
     if (!threads.length) { box.innerHTML = admEmpty('ph-lifebuoy', 'No conversations', 'No open customer conversations right now.'); return; }
     box.innerHTML = threads.map((thread) => `<button type="button" class="support-thread-item ${thread.unanswered ? 'is-unanswered' : ''} ${thread.company_id === state.selectedThread ? 'is-selected' : ''}" data-company-thread="${esc(thread.company_id)}" aria-pressed="${thread.company_id === state.selectedThread}"><span><b>${esc(thread.company_name || thread.company_id)}</b><small>${esc((thread.last_body || '').slice(0, 90))}</small></span><span class="support-thread-meta"><span class="badge" data-s="${thread.status === 'escalated' ? 'pending' : 'new'}">${thread.status === 'escalated' ? 'Escalated' : 'Open'}</span>${thread.unanswered ? '<span class="support-unanswered">Needs reply</span>' : ''}</span></button>`).join('');
   }
