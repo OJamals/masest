@@ -70,4 +70,5 @@ test("newsletter image dialog groups fields and can browse registered site asset
   assert.match(source, /data-nl-img-asset-url/);
   assert.match(css, /\.confirm-dialog-body\s*\{[^}]*display:\s*grid[^}]*gap:\s*16px/s);
   assert.match(css, /\.confirm-dialog-actions\s*\{[^}]*gap:\s*12px/s);
+  assert.match(css, /\.confirm-dialog-image-library\[hidden\]\s*\{\s*display:\s*none/);
 });

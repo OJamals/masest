@@ -197,6 +197,26 @@
   #replyForm > .btn { min-width: 120px; }
   .thread-list { display: grid; align-content: start; gap: 8px; }
   .thread-list button { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-align: left; padding: 10px; cursor: pointer; }
+  .support-reply-form { margin-top: 12px; grid-template-columns: minmax(0, 1fr) auto; }
+  .support-thread-item { display: flex; justify-content: space-between; gap: 10px; align-items: start; width: 100%; }
+  .support-thread-item small { display: block; margin-top: 4px; color: var(--muted); line-height: 1.35; }
+  .support-thread-item.is-unanswered { border-color: var(--accent); background: var(--accent-soft); font-weight: 800; }
+  .support-thread-meta { display: grid; justify-items: end; gap: 5px; flex: 0 0 auto; }
+  .support-unanswered { color: var(--status-warning-ink); font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
+  .support-thread-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .support-thread-head h3 { margin: 0; }
+  .admin-support-launcher { position: fixed; z-index: 90; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 9px; min-height: 52px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); box-shadow: var(--shadow-lg); cursor: pointer; font: inherit; font-weight: 800; }
+  .admin-support-launcher .pill { position: static; min-width: 22px; text-align: center; }
+  .admin-support-drawer { position: fixed; z-index: 89; right: 20px; bottom: 84px; width: min(900px, calc(100vw - 40px)); max-height: min(720px, calc(100dvh - 112px)); display: grid; grid-template-columns: minmax(250px, 310px) minmax(0, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: var(--shadow-lg); }
+  .admin-support-drawer[hidden] { display: none; }
+  .admin-support-drawer__list { min-height: 0; overflow: auto; padding: 12px; background: var(--panel); }
+  .admin-support-drawer__view { min-height: 0; overflow: auto; padding: 16px; }
+  .admin-support-drawer__head { display: flex; align-items: start; justify-content: space-between; gap: 8px; padding: 4px 4px 12px; }
+  .admin-support-drawer__head h2 { margin: 0; font-size: 1.05rem; }
+  .admin-support-drawer__head p { margin: 3px 0 0; }
+  .admin-support-settings { display: grid; gap: 12px; max-width: 680px; }
+  .admin-support-settings label { display: flex; gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  @media (max-width: 720px) { .admin-support-drawer { right: 12px; bottom: 76px; width: calc(100vw - 24px); max-height: calc(100dvh - 92px); grid-template-columns: 1fr; } .admin-support-drawer__view { max-height: 54dvh; } .admin-support-launcher { right: 12px; bottom: 12px; } }
   .msg-thread { display: grid; gap: 8px; max-height: 420px; overflow: auto; padding: 4px; }
   .msg { max-width: 76%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; background: var(--surface); }
   .msg[data-role="staff"] { justify-self: end; background: var(--accent-soft); border-color: var(--line); }
@@ -675,7 +695,7 @@
             </div>
             <div class="adm-nav-group" role="presentation">
               <span aria-hidden="true">Comms</span>
-              <button class="adm-tab" role="tab" data-tab="messages" type="button"><i class="ph ph-chats" aria-hidden="true"></i> Messages <span class="pill" id="aBadgeMsg" hidden>0</span></button>
+              <button class="adm-tab" role="tab" data-tab="support-settings" type="button"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Customer support</button>
               <button class="adm-tab" role="tab" data-tab="reviews" type="button"><i class="ph ph-star" aria-hidden="true"></i> Reviews <span class="pill" id="aBadgeReviews" hidden>0</span></button>
               <button class="adm-tab" role="tab" data-tab="blog" type="button"><i class="ph ph-newspaper" aria-hidden="true"></i> Blog</button>
               <button class="adm-tab" role="tab" data-tab="newsletter" type="button"><i class="ph ph-envelope-simple" aria-hidden="true"></i> Newsletter</button>
@@ -863,13 +883,14 @@
         <div id="admBlog">Loading...</div>
       </section>
 
-      <section class="adm-panel" role="tabpanel" data-panel="messages">
+      <section class="adm-panel" role="tabpanel" data-panel="support-settings">
         <div class="adm-card adm-overview-head adm-workspace-head">
-          <div><p class="adm-eyebrow">Conversations</p><h2>Customer messages</h2><p class="muted">Review inbound conversations and keep customer replies in one focused workspace.</p></div>
+          <div><p class="adm-eyebrow">Customer support</p><h2>Support settings</h2><p class="muted">Choose when staff receives support email alerts. Open conversations live in the support drawer.</p></div>
         </div>
-        <div id="msgGrid" class="thread-layout">
-          <div id="admThreads" class="thread-list">Loading...</div>
-          <div id="admThreadView" class="adm-card">Select a conversation.</div>
+        <div class="adm-card admin-support-settings">
+          <label><input id="adminNotifySupportRequests" type="checkbox"><span><b>New support requests</b><br><small class="muted">Email staff who enable this setting when a buyer starts or reopens a support thread.</small></span></label>
+          <label><input id="adminNotifyMessages" type="checkbox"><span><b>Closed-chat follow-up messages</b><br><small class="muted">Email staff who enable this setting when a buyer sends a follow-up after closing customer chat.</small></span></label>
+          <p id="adminSupportSettingsStatus" class="adm-status" aria-live="polite"></p>
         </div>
       </section>
 
@@ -941,6 +962,15 @@
         <div class="adm-card"><h2>Recent sends</h2><div id="admOffers">Loading...</div></div>
       </section>
 
+        <button id="adminSupportLauncher" class="admin-support-launcher" type="button" aria-controls="adminSupportDrawer" aria-expanded="false"><i class="ph ph-sidebar-simple" aria-hidden="true"></i><span>Support</span><span id="adminSupportUnread" class="pill" hidden>0</span></button>
+        <aside id="adminSupportDrawer" class="admin-support-drawer" aria-label="Customer support conversations" hidden>
+          <div class="admin-support-drawer__list">
+            <header class="admin-support-drawer__head"><div><p class="adm-eyebrow">Customer support</p><h2>Open chats</h2><p id="adminSupportSummary" class="muted">Loading...</p></div><div class="adm-inline-actions"><button id="adminSupportSettings" class="gbtn" type="button" aria-label="Customer support settings"><i class="ph ph-gear-six" aria-hidden="true"></i></button><button id="adminSupportClose" class="gbtn" type="button" aria-label="Close support menu"><i class="ph ph-x" aria-hidden="true"></i></button></div></header>
+            <div id="admThreads" class="thread-list">Loading...</div>
+          </div>
+          <div id="admThreadView" class="admin-support-drawer__view">Select a customer conversation.</div>
+        </aside>
+
         </div>
       </div>
     </div>
@@ -948,7 +978,7 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/main.js?v=20260711e"></script>
+<script type="module" src="js/main.js?v=20260711f"></script>
 <script type="module" src="js/admin.js?v=20260711g"></script>
 </body>
 </html>

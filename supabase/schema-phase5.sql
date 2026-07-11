@@ -20,6 +20,14 @@ alter table public.companies add column if not exists stripe_customer_id text;
 alter table public.profiles add column if not exists is_staff boolean not null default false;
 -- Customer chat presence: staff replies email only after the question author closes chat.
 alter table public.profiles add column if not exists support_chat_open boolean not null default false;
+-- Per-staff opt-in controls for support inbox email alerts.
+alter table public.profiles add column if not exists notify_admin_support_requests boolean not null default false;
+alter table public.profiles add column if not exists notify_admin_messages boolean not null default false;
+-- A company owns one durable support thread. Buyer activity reopens a completed thread.
+alter table public.companies add column if not exists support_thread_status text not null default 'open'
+  check (support_thread_status in ('open', 'complete'));
+alter table public.companies add column if not exists support_thread_completed_at timestamptz;
+alter table public.companies add column if not exists support_thread_completed_by uuid references public.profiles(id) on delete set null;
 
 -- ---------- enums ----------
 do $$ begin

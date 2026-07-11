@@ -26,7 +26,7 @@ export function initCustomerChat() {
   if (!document.querySelector('link[data-masest-customer-chat="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/customer-chat.css?v=20260711c`;
+    stylesheet.href = `${root}css/customer-chat.css?v=20260711d`;
     stylesheet.dataset.masestCustomerChat = "true";
     document.head.append(stylesheet);
   }
@@ -161,6 +161,16 @@ export function initCustomerChat() {
 
   toggle.addEventListener("click", () => panel.hidden ? void open() : setOpen(false));
   close.addEventListener("click", () => setOpen(false));
+  list.addEventListener("wheel", (event) => {
+    if (list.scrollHeight <= list.clientHeight) return;
+    const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? list.clientHeight : 1;
+    const before = list.scrollTop;
+    list.scrollTop += event.deltaY * scale;
+    if (list.scrollTop !== before) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, { passive: false });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !panel.hidden) setOpen(false);
   });

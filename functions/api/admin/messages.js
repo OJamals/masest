@@ -1,5 +1,5 @@
 // /api/admin/messages — staff side of company support threads.
-//   GET → thread list · GET ?company_id= → full thread (marks read) · POST { company_id, body } → reply
+//   GET → thread list · GET ?company_id= → full thread · PATCH → lifecycle · POST → reply
 import { adminClient, requireStaff, json, readBody, emailsByIds, sendEmail, htmlEscape, emailLayout } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { messageReplyAddress } from '../../_lib/message-replies.js';
@@ -21,10 +21,20 @@ export async function onRequest({ request, env }) {
       if (error) return json(500, { error: error.message });
       await sb.from('messages').update({ read_by_staff: true })
         .eq('company_id', companyId).eq('sender_role', 'buyer').eq('read_by_staff', false);
-      return json(200, { messages: data || [] });
+      const { data: company } = await sb.from('companies')
+        .select('name,support_thread_status,support_thread_completed_at').eq('id', companyId).maybeSingle();
+      return json(200, {
+        messages: data || [],
+        thread: {
+          company_id: companyId,
+          company_name: company?.name || '—',
+          status: company?.support_thread_status || 'open',
+          completed_at: company?.support_thread_completed_at || null,
+        },
+      });
     }
     const { data, error } = await sb.from('messages')
-      .select('company_id,sender_role,body,read_by_staff,created_at,source,external_thread_id,external_message_id,companies(name)')
+      .select('company_id,sender_role,body,read_by_staff,created_at,source,external_thread_id,external_message_id,companies(name,support_thread_status,support_thread_completed_at)')
       .order('created_at', { ascending: false }).limit(1000);
     if (error) return json(500, { error: error.message });
     const threads = {};
@@ -32,10 +42,28 @@ export async function onRequest({ request, env }) {
       const t = threads[m.company_id] || (threads[m.company_id] = {
         company_id: m.company_id, company_name: m.companies?.name || '—',
         last_body: m.body, last_at: m.created_at, unread: 0,
+        status: m.companies?.support_thread_status || 'open',
+        completed_at: m.companies?.support_thread_completed_at || null,
+        unanswered: m.sender_role === 'buyer' && m.companies?.support_thread_status !== 'complete',
       });
       if (m.sender_role === 'buyer' && !m.read_by_staff) t.unread += 1;
     }
     return json(200, { threads: Object.values(threads) });
+  }
+
+  if (request.method === 'PATCH') {
+    if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
+    const body = await readBody(request);
+    const companyId = body.company_id;
+    const status = body.status;
+    if (!companyId) return json(400, { error: 'company_id_required' });
+    if (!['open', 'complete'].includes(status)) return json(400, { error: 'invalid_status' });
+    const patch = status === 'complete'
+      ? { support_thread_status: 'complete', support_thread_completed_at: new Date().toISOString(), support_thread_completed_by: user.id }
+      : { support_thread_status: 'open', support_thread_completed_at: null, support_thread_completed_by: null };
+    const { error } = await sb.from('companies').update(patch).eq('id', companyId);
+    if (error) return json(500, { error: error.message });
+    return json(200, { status });
   }
 
   if (request.method === 'POST') {

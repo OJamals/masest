@@ -117,6 +117,7 @@ async function boot() {
     void renderQboStatus().finally(() => applyCapabilityUi(document.body, state.staff));
     refreshReviewsBadge();
     setTab(location.hash.slice(1) || 'overview');
+    if (state.tab !== 'support-settings') void renderThreads();
   } catch (err) {
     $('admGate').hidden = false;
     $('admApp').hidden = true;
@@ -146,6 +147,7 @@ function setTab(tab) {
   const focusQuickBooks = tab === 'quickbooks' || tab === 'qbo';
   if (focusQuickBooks) tab = 'integrations';
   if (tab === 'pricing') tab = 'products';
+  if (tab === 'messages') tab = 'support-settings';
   if (tab === 'offers') tab = 'crm';
   if (tab === 'traffic' || tab === 'seo') tab = 'analytics';
   if (tab === 'reports' || tab === 'exports') tab = 'finance';
@@ -188,7 +190,7 @@ function setTab(tab) {
     },
     content: renderContent,
     blog: renderBlog,
-    messages: renderThreads,
+    'support-settings': renderThreads,
     quotes: renderQuotePipeline,
     reviews: renderReviews,
     newsletter: renderNewsletter,

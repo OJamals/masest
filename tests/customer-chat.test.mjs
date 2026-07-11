@@ -67,11 +67,11 @@ test("customer chat posts to the authenticated message thread and receives staff
   assert.match(admin, /source === 'customer_chat'/);
 });
 
-test("customer chat records open/closed presence without emailing staff for each buyer post", () => {
+test("customer chat records open/closed presence and delegates conditional staff alerts", () => {
   assert.match(chat, /chat_presence/);
   assert.match(chat, /setChatPresence\(false\)/);
   assert.match(messages, /body\.action === 'chat_presence'/);
-  assert.doesNotMatch(messages, /sendEmail\(/);
+  assert.match(messages, /adminMessageAlertKind/);
   assert.match(adminMessages, /shouldEmailClosedChatReply/);
   assert.match(phase5, /support_chat_open boolean not null default false/);
 });
@@ -93,6 +93,22 @@ test("logged-out visitors always see chat and get a sign-up/login link", async (
       const panel = page.locator(".customer-chat__panel");
       const panelBox = await panel.boundingBox();
       assert.ok(panelBox && panelBox.height < 460, `panel height ${panelBox?.height}`);
+      const headerBox = await page.locator(".customer-chat__header").boundingBox();
+      assert.ok(panelBox && headerBox && headerBox.y - panelBox.y < 8, `header offset ${headerBox?.y - panelBox?.y}`);
+      await page.locator(".customer-chat__guest").evaluate((guest) => { guest.hidden = true; });
+      await page.locator(".customer-chat__thread").evaluate((thread) => { thread.hidden = false; });
+      const messages = page.locator(".customer-chat__messages");
+      await messages.evaluate((list) => {
+        for (let i = 0; i < 30; i += 1) {
+          const item = document.createElement("p");
+          item.textContent = `Message ${i}`;
+          list.append(item);
+        }
+      });
+      await messages.hover();
+      await page.mouse.wheel(0, 360);
+      const scrollState = await messages.evaluate((list) => ({ scrollTop: list.scrollTop, scrollHeight: list.scrollHeight, clientHeight: list.clientHeight, overflowY: getComputedStyle(list).overflowY }));
+      assert.ok(scrollState.scrollTop > 0, `message list should scroll under pointer: ${JSON.stringify(scrollState)}`);
     } finally {
       await browser.close();
     }

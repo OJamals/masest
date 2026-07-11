@@ -1,8 +1,9 @@
 // /api/account/messages — support thread between the caller's company and MASEST staff.
 //   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer post
 //   POST { action: 'chat_presence', chat_open } → authenticated buyer chat state
-import { requireCompany, json, readBody } from '../../_lib/supabase.js';
+import { requireCompany, json, readBody, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
+import { adminMessageAlertKind, adminMessageRecipients } from '../../_lib/admin-message-notifications.js';
 
 export async function onRequest({ request, env }) {
   const ctx = await requireCompany(request, env);
@@ -42,11 +43,44 @@ export async function onRequest({ request, env }) {
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
     const source = body.source === 'customer_chat' ? 'customer_chat' : 'dashboard';
+    const [{ data: previousMessage }, { data: company }, { data: profile }] = await Promise.all([
+      sb.from('messages').select('sender_role').eq('company_id', companyId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      sb.from('companies').select('name,support_thread_status').eq('id', companyId).maybeSingle(),
+      sb.from('profiles').select('support_chat_open').eq('id', user.id).maybeSingle(),
+    ]);
     const { data, error } = await sb.from('messages').insert({
       company_id: companyId, user_id: user.id, sender_role: 'buyer', body: text,
       order_id: body.order_id || null, source, read_by_user: true, read_by_staff: false,
     }).select('id,created_at').single();
     if (error) return json(500, { error: 'server_error' });
+
+    // A new buyer message reopens a completed thread.
+    await sb.from('companies').update({
+      support_thread_status: 'open', support_thread_completed_at: null, support_thread_completed_by: null,
+    }).eq('id', companyId);
+
+    const alertKind = adminMessageAlertKind({
+      previousMessage,
+      threadStatus: company?.support_thread_status,
+      chatOpen: profile?.support_chat_open,
+    });
+    if (alertKind) {
+      const recipients = await adminMessageRecipients(sb, alertKind);
+      if (recipients.length) {
+        const firstRequest = alertKind === 'support_request';
+        await sendEmail(env, {
+          to: recipients,
+          subject: firstRequest ? `New support request from ${company?.name || companyId}` : `New message from ${company?.name || companyId}`,
+          html: emailLayout({
+            heading: firstRequest ? 'New support request' : 'New customer message',
+            bodyHtml: `<p>Company: ${htmlEscape(company?.name || companyId)}</p><p>${htmlEscape(text.slice(0, 500))}</p>`,
+            ctaText: 'Open customer messages',
+            ctaUrl: `${env.APP_URL || new URL(request.url).origin}/admin.html#messages`,
+          }),
+          category: 'staff_alert',
+        });
+      }
+    }
 
     return json(201, { id: data.id, created_at: data.created_at });
   }
