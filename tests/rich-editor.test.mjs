@@ -53,22 +53,22 @@ test("rich editor uses one expandable reference picker and an actionable text-si
   assert.match(picker, /product, service, or program/);
 });
 
-test("newsletter image dialog cancel bypasses required URL validation and closes", () => {
-  const source = readFileSync(new URL("../js/admin/newsletter.js", import.meta.url), "utf8");
+test("shared image picker cancel bypasses native validation and closes", () => {
+  const source = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
 
-  assert.match(source, /data-nl-img-cancel>Cancel<\/button>/);
-  assert.match(source, /data-nl-img-cancel\]'\)\?\.addEventListener\('click', \(\) => dlg\.close\('cancel'\)\)/);
+  assert.match(source, /data-shared-image-cancel>Cancel<\/button>/);
+  assert.match(source, /\[data-shared-image-cancel\].*addEventListener\("click", \(\) => closeWith\(null\)/s);
 });
 
-test("newsletter image dialog groups fields and can browse registered site assets", () => {
-  const source = readFileSync(new URL("../js/admin/newsletter.js", import.meta.url), "utf8");
+test("shared image picker has compact field rhythm and a paged site library", () => {
+  const source = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../css/components.css", import.meta.url), "utf8");
 
-  assert.match(source, /confirm-dialog-image/);
-  assert.match(source, /data-nl-img-library-open/);
+  assert.match(source, /shared-image-picker/);
+  assert.match(source, /data-shared-image-library-open/);
   assert.match(source, /\/api\/admin\/content-assets\?status=available/);
-  assert.match(source, /data-nl-img-asset-url/);
+  assert.match(source, /PAGE_SIZE = 6/);
   assert.match(css, /\.confirm-dialog-body\s*\{[^}]*display:\s*grid[^}]*gap:\s*16px/s);
   assert.match(css, /\.confirm-dialog-actions\s*\{[^}]*gap:\s*12px/s);
-  assert.match(css, /\.confirm-dialog-image-library\[hidden\]\s*\{\s*display:\s*none/);
+  assert.match(css, /\.shared-image-library-grid\s*\{[^}]*grid-template-columns/);
 });

@@ -247,6 +247,22 @@ export function createContentRepository(sb) {
       return data || [];
     },
 
+    async getAsset(storagePath) {
+      const path = String(storagePath || "").trim();
+      if (!path) return null;
+      const { data, error } = await sb.from("content_assets").select("*").eq("storage_path", path).maybeSingle();
+      if (error) throw error;
+      return data || null;
+    },
+
+    async deleteAsset(storagePath) {
+      const path = String(storagePath || "").trim();
+      if (!path) return { ok: false, error: "storage_path_required" };
+      const { error } = await sb.from("content_assets").delete().eq("storage_path", path);
+      if (error) throw error;
+      return { ok: true };
+    },
+
     async saveAsset(input = {}, userId) {
       const storagePath = String(input.storage_path || "").trim();
       const alt = String(input.alt || "").trim();

@@ -32,6 +32,39 @@ test("asset endpoint accepts multipart upload into CMS asset storage", () => {
   assert.match(source, /saveAsset/);
 });
 
+test("uploaded content images are optimized with TinyPNG before storage", () => {
+  const source = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
+
+  assert.match(source, /TINIFY_API_KEY/);
+  assert.match(source, /https:\/\/api\.tinify\.com\/shrink/);
+  assert.match(source, /optimized_image_required/);
+  assert.match(source, /optimizeWithTinyPng/);
+});
+
+test("content asset endpoint deletes library metadata and managed storage", () => {
+  const source = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
+  const repository = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
+
+  assert.match(source, /request\.method === "DELETE"/);
+  assert.match(source, /deleteAsset/);
+  assert.match(source, /storage\/v1\/object/);
+  assert.match(repository, /async deleteAsset\(/);
+});
+
+test("Blog and Newsletter use one shared attach-and-library image picker", () => {
+  const blog = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
+  const newsletter = readFileSync(new URL("../js/admin/newsletter.js", import.meta.url), "utf8");
+  const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
+
+  assert.match(blog, /openImageLibraryPicker/);
+  assert.match(newsletter, /openImageLibraryPicker/);
+  assert.doesNotMatch(newsletter, /Image URL/);
+  assert.match(picker, /Attach image/);
+  assert.match(picker, /Browse library/);
+  assert.match(picker, /data-shared-image-delete/);
+  assert.match(picker, /PAGE_SIZE = 6/);
+});
+
 test("asset repository rejects unsafe registered asset references", () => {
   const source = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
   assert.match(source, /unsafeAssetReference/);

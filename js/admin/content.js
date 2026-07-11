@@ -1,21 +1,22 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260711h";
-import { renderMarkdown } from "../md.js?v=20260711h";
-import { supabase } from "../auth.js?v=20260711h";
-import { createContentAssets } from "./content-assets.js?v=20260711h";
-import { createContentRevisions } from "./content-revisions.js?v=20260711h";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260711i";
+import { renderMarkdown } from "../md.js?v=20260711i";
+import { supabase } from "../auth.js?v=20260711i";
+import { createContentAssets } from "./content-assets.js?v=20260711i";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260711i";
+import { createContentRevisions } from "./content-revisions.js?v=20260711i";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260711h";
+} from "./rich-editor.js?v=20260711i";
 import {
   contentPayloadFields,
   contentTypeOptions,
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260711h";
+} from "../content-types.js?v=20260711i";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "og_image", "hero"]);
@@ -922,7 +923,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         onChange: () => syncStructuredPayload(),
         referencePickerSelector: "#contentReferencePicker",
         referenceRowsSelector: "#contentReferenceRows",
-        onInsertImage: (key, ctx) => assets.openAssetPicker(key, "markdown", ctx.button),
+        onInsertImage: async (_key, ctx) => {
+          const details = await openImageLibraryPicker({ api, trigger: ctx.button, usage: "blog" });
+          if (details) ctx.insertMarkdown(`![${details.alt || "image"}](${details.url})`);
+        },
       });
     });
   }
