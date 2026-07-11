@@ -92,7 +92,7 @@ test("logged-out visitors always see chat and get a sign-up/login link", async (
       assert.equal(await toggle.locator("svg.customer-chat__icon").count(), 1);
       const panel = page.locator(".customer-chat__panel");
       const panelBox = await panel.boundingBox();
-      assert.ok(panelBox && panelBox.height < 520, `panel height ${panelBox?.height}`);
+      assert.ok(panelBox && panelBox.height < 460, `panel height ${panelBox?.height}`);
     } finally {
       await browser.close();
     }

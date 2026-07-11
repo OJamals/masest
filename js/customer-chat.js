@@ -26,7 +26,7 @@ export function initCustomerChat() {
   if (!document.querySelector('link[data-masest-customer-chat="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/customer-chat.css?v=20260711b`;
+    stylesheet.href = `${root}css/customer-chat.css?v=20260711c`;
     stylesheet.dataset.masestCustomerChat = "true";
     document.head.append(stylesheet);
   }
