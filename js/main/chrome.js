@@ -397,7 +397,7 @@ export function renderChrome() {
     window.__masestIntegrations = true;
     window.MASEST = Object.assign(window.MASEST || {}, { chatRoot: root });
     const cfg = document.createElement("script");
-    cfg.src = `${root}js/config.js`;
+    cfg.src = `${root}js/config.js?v=20260711b`;
     cfg.onload = () => {
       ["integrations.js?v=20260711a", "customer-chat.js?v=20260711a"].forEach((src) => {
         const mod = document.createElement("script");
