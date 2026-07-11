@@ -5,7 +5,6 @@ import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
 import { contactEmailKey, contactRow, contactPatch, mergeFields, parseContactsCsv, prepareContactImportRows, CONTACT_ROLES } from '../../../_lib/crm-contacts.js';
 import { parsePage, pageEnvelope } from '../../../_lib/paginate.js';
-import { upsertCrispPerson } from '../../../_lib/crisp.js';
 
 const SELECT = 'id,company_id,name,role,title,email,phone,is_primary,notes,created_by,created_at,updated_at';
 
@@ -175,11 +174,6 @@ export async function onRequest({ request, env }) {
       const { data, error } = await sb.from('crm_contacts').update(built.patch).eq('id', existing.id).select(SELECT).single();
       if (error) return json(500, { error: error.message });
       await recordAudit(sb, { user, action: 'crm.contact_update', targetType: 'company', targetId: existing.company_id, detail: { contact: existing.id } });
-      // Propagate the edit to Crisp People so the operator-facing profile stays in sync. Best-effort.
-      if (data?.email) {
-        const { data: co } = await sb.from('companies').select('name').eq('id', data.company_id).maybeSingle();
-        await upsertCrispPerson(env, { email: data.email, name: data.name, company: co?.name, phone: data.phone });
-      }
       return json(200, { ok: true, contact: data });
     }
 
@@ -191,11 +185,6 @@ export async function onRequest({ request, env }) {
     const { data, error } = await sb.from('crm_contacts').insert(built.row).select(SELECT).single();
     if (error) return json(500, { error: error.message });
     await recordAudit(sb, { user, action: 'crm.contact_add', targetType: 'company', targetId: built.row.company_id, detail: { role: built.row.role } });
-    // Seed the contact into Crisp People so operators see CRM context if they chat. Best-effort.
-    if (built.row.email) {
-      const { data: co } = await sb.from('companies').select('name').eq('id', built.row.company_id).maybeSingle();
-      await upsertCrispPerson(env, { email: built.row.email, name: built.row.name, company: co?.name, phone: built.row.phone });
-    }
     return json(200, { ok: true, contact: data });
   }
 

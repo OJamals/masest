@@ -1,6 +1,6 @@
-// functions/_lib/crisp.js — outbound Crisp REST client (the return path the webhook
-// bridge lacked). Best-effort: a missing plugin token is a no-op, never a throw.
-// Plugin token from CRISP_TOKEN_ID / CRISP_TOKEN_KEY; website from MASEST_CRISP_ID.
+// functions/_lib/crisp.js — free-tier Crisp integration. Website Hooks carry inbound
+// chat events; the workspace API token mirrors staff replies back to the conversation.
+// Best-effort: missing configuration or a provider error is a no-op, never a throw.
 const CRISP_API = 'https://api.crisp.chat/v1';
 
 export function crispConfigured(env) {
@@ -24,20 +24,9 @@ export function buildOperatorMessage(text) {
   return { type: 'text', from: 'operator', origin: 'chat', content: String(text ?? '').slice(0, 4000) };
 }
 
-// Build a Crisp People profile body from a CRM contact. Pure — unit-tested.
-export function buildPersonProfile({ email, name, company, phone } = {}) {
-  const profile = { email: String(email || '').toLowerCase() };
-  const person = {};
-  if (name) person.nickname = String(name).slice(0, 120);
-  if (phone) person.phones = [String(phone).slice(0, 40)];
-  if (Object.keys(person).length) profile.person = person;
-  if (company) profile.company = { name: String(company).slice(0, 160) };
-  return profile;
-}
-
 function authHeaders(env) {
   const basic = btoa(`${env.CRISP_TOKEN_ID}:${env.CRISP_TOKEN_KEY}`);
-  return { Authorization: `Basic ${basic}`, 'X-Crisp-Tier': 'plugin', 'content-type': 'application/json', accept: 'application/json' };
+  return { Authorization: `Basic ${basic}`, 'X-Crisp-Tier': 'website', 'content-type': 'application/json', accept: 'application/json' };
 }
 
 // Push an operator message into a Crisp conversation so the visitor sees the staff reply
@@ -50,28 +39,6 @@ export async function sendCrispMessage(env, { sessionId, text } = {}) {
       { method: 'POST', headers: authHeaders(env), body: JSON.stringify(buildOperatorMessage(text)) },
     );
     return { ok: resp.status >= 200 && resp.status < 300, status: resp.status };
-  } catch {
-    return { ok: false, error: true };
-  }
-}
-
-// Seed/refresh a CRM contact in Crisp People so operators see account context when the
-// person chats. Creates via POST; if the profile already exists (409), PATCHes it so CRM
-// edits (name / phone / company) propagate instead of going stale. People sub-routes accept
-// the email as the people_id. Best-effort: any non-2xx / network error is a no-op, never a throw.
-export async function upsertCrispPerson(env, contact = {}) {
-  if (!crispConfigured(env) || !contact.email) return { ok: false, skipped: true };
-  const base = `${CRISP_API}/website/${env.MASEST_CRISP_ID}/people/profile`;
-  const body = JSON.stringify(buildPersonProfile(contact));
-  try {
-    const resp = await fetch(base, { method: 'POST', headers: authHeaders(env), body });
-    if (resp.status === 201 || resp.status === 200) return { ok: true, status: resp.status, created: true };
-    if (resp.status === 409) {
-      const pid = encodeURIComponent(String(contact.email).toLowerCase());
-      const upd = await fetch(`${base}/${pid}`, { method: 'PATCH', headers: authHeaders(env), body });
-      return { ok: upd.status >= 200 && upd.status < 300, status: upd.status, updated: true };
-    }
-    return { ok: false, status: resp.status };
   } catch {
     return { ok: false, error: true };
   }

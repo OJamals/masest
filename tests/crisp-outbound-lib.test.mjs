@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { crispConfigured, buildOperatorMessage, sendCrispMessage } from '../functions/_lib/crisp.js';
 
-test('crispConfigured requires plugin token + website id', () => {
+test('crispConfigured requires workspace website token + website id', () => {
   assert.equal(crispConfigured({}), false);
   assert.equal(crispConfigured({ CRISP_TOKEN_ID: 'a', CRISP_TOKEN_KEY: 'b' }), false);
   assert.equal(crispConfigured({ CRISP_TOKEN_ID: 'a', CRISP_TOKEN_KEY: 'b', MASEST_CRISP_ID: 'c' }), true);
@@ -19,7 +19,7 @@ test('sendCrispMessage no-ops without config or text', async () => {
   assert.deepEqual(await sendCrispMessage(env, { sessionId: 's', text: '  ' }), { ok: false, skipped: true });
 });
 
-test('sendCrispMessage POSTs an operator message with plugin auth', async () => {
+test('sendCrispMessage POSTs an operator message with website-token auth', async () => {
   const env = { CRISP_TOKEN_ID: 'id', CRISP_TOKEN_KEY: 'key', MASEST_CRISP_ID: 'wid' };
   const calls = [];
   const orig = globalThis.fetch;
@@ -32,6 +32,6 @@ test('sendCrispMessage POSTs an operator message with plugin auth', async () => 
     assert.equal(body.from, 'operator');
     assert.equal(body.content, 'Reply text');
     assert.match(calls[0].opts.headers.Authorization, /^Basic /);
-    assert.equal(calls[0].opts.headers['X-Crisp-Tier'], 'plugin');
+    assert.equal(calls[0].opts.headers['X-Crisp-Tier'], 'website');
   } finally { globalThis.fetch = orig; }
 });
