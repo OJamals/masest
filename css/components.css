@@ -604,7 +604,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 
 /* Shared Blog + Newsletter image flow: compact, paged library, no dialog scrolling. */
 .shared-image-picker { width: min(660px, calc(100vw - 32px)); max-width: min(660px, calc(100vw - 32px)); }
-.shared-image-picker .confirm-dialog-body { align-content: start; gap: 14px; padding: 24px; }
+.shared-image-picker .confirm-dialog-body { align-content: start; grid-template-rows: repeat(5, max-content); gap: 14px; padding: 24px; }
 .shared-image-picker-head h2 { margin: 0; font-size: 1.45rem; }
 .shared-image-picker-head .adm-eyebrow { margin: 0 0 4px; }
 .shared-image-picker-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
