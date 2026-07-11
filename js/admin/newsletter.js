@@ -10,7 +10,7 @@ import {
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260710g';
+} from './rich-editor.js?v=20260710h';
 import { renderNewsletterBody } from '../newsletter-render.js?v=20260710g';
 
 const SECTIONS = [
@@ -58,13 +58,14 @@ function promptImageDetails() {
       <label>Image URL <input class="adm-input" type="url" data-nl-img-url required placeholder="https://…"></label>
       <label>Alt text <input class="adm-input" data-nl-img-alt placeholder="Describe the image"></label>
       <menu class="confirm-dialog-actions">
-        <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Cancel</button>
+        <button value="cancel" class="btn btn-ghost btn-sm" type="button" data-nl-img-cancel>Cancel</button>
         <button value="ok" class="btn btn-primary btn-sm" type="submit">Insert</button>
       </menu>
     </form>`;
     if (typeof dlg.showModal !== 'function') { resolve(null); return; }
     document.body.appendChild(dlg);
     restoreFocusOnClose(dlg);
+    dlg.querySelector('[data-nl-img-cancel]')?.addEventListener('click', () => dlg.close('cancel'));
     dlg.addEventListener('close', () => {
       const ok = dlg.returnValue === 'ok';
       const url = dlg.querySelector('[data-nl-img-url]')?.value.trim() || '';

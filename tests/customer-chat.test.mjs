@@ -8,7 +8,10 @@ import { chromium } from "playwright";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const chat = read("js/customer-chat.js");
+const css = read("css/customer-chat.css");
 const messages = read("functions/api/account/messages.js");
+const adminMessages = read("functions/api/admin/messages.js");
+const phase5 = read("supabase/schema-phase5.sql");
 const admin = read("js/admin.js");
 const PORT = 4194;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -47,6 +50,14 @@ test("customer chat is always mounted and gates sending on an auth session", () 
   assert.match(chat, /masest:session-expired/);
 });
 
+test("customer chat has its own icon and a bounded popup layout", () => {
+  assert.match(chat, /class="customer-chat__icon"/);
+  assert.match(chat, /<svg[^>]*viewBox=/);
+  assert.match(css, /\.customer-chat\s*\{[\s\S]*align-items:\s*end/);
+  assert.match(css, /\.customer-chat__panel\s*\{[\s\S]*max-block-size:/);
+  assert.match(css, /\.customer-chat__thread\s*\{[\s\S]*minmax\(0,/);
+});
+
 test("customer chat posts to the authenticated message thread and receives staff replies", () => {
   assert.match(chat, /api\("\/api\/account\/messages"/);
   assert.match(chat, /source: "customer_chat"/);
@@ -54,6 +65,15 @@ test("customer chat posts to the authenticated message thread and receives staff
   assert.match(messages, /body\.source === 'customer_chat'/);
   assert.match(messages, /source, read_by_user/);
   assert.match(admin, /source === 'customer_chat'/);
+});
+
+test("customer chat records open/closed presence without emailing staff for each buyer post", () => {
+  assert.match(chat, /chat_presence/);
+  assert.match(chat, /setChatPresence\(false\)/);
+  assert.match(messages, /body\.action === 'chat_presence'/);
+  assert.doesNotMatch(messages, /sendEmail\(/);
+  assert.match(adminMessages, /shouldEmailClosedChatReply/);
+  assert.match(phase5, /support_chat_open boolean not null default false/);
 });
 
 test("logged-out visitors always see chat and get a sign-up/login link", async () => {
@@ -69,6 +89,10 @@ test("logged-out visitors always see chat and get a sign-up/login link", async (
       const link = page.locator('.customer-chat__guest a[href="account.html"]');
       await link.waitFor();
       assert.equal(await link.textContent(), "Sign up / Log in");
+      assert.equal(await toggle.locator("svg.customer-chat__icon").count(), 1);
+      const panel = page.locator(".customer-chat__panel");
+      const panelBox = await panel.boundingBox();
+      assert.ok(panelBox && panelBox.height < 520, `panel height ${panelBox?.height}`);
     } finally {
       await browser.close();
     }

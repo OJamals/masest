@@ -2,16 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const SRC = readFileSync(new URL("../functions/api/account/messages.js", import.meta.url), "utf8");
+const ACCOUNT = readFileSync(new URL("../functions/api/account/messages.js", import.meta.url), "utf8");
+const ADMIN = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
 
-test("buyer POST emails staff via sendEmail with staff_alert category", () => {
-  assert.match(SRC, /sendEmail\(/, "must email staff on new buyer message");
-  assert.match(SRC, /ADMIN_EMAILS/, "recipients come from ADMIN_EMAILS");
-  assert.match(SRC, /category:\s*'staff_alert'/);
+test("buyer POST stays in the admin inbox and records chat presence", () => {
+  assert.doesNotMatch(ACCOUNT, /sendEmail\(/, "buyer posts must not send staff email alerts");
+  assert.match(ACCOUNT, /action === 'chat_presence'/);
+  assert.match(ACCOUNT, /support_chat_open/);
 });
 
-test("staff alert sits after the insert and before the success response", () => {
-  const send = SRC.indexOf("sendEmail(");
-  const created = SRC.indexOf("json(201");
-  assert.ok(send > 0 && created > send, "sendEmail must run before the 201 response");
+test("staff reply emails only a closed-chat user with an unanswered question", () => {
+  assert.match(ADMIN, /lastMessage/);
+  assert.match(ADMIN, /support_chat_open/);
+  assert.match(ADMIN, /shouldEmailClosedChatReply/);
+  assert.match(ADMIN, /emailsByIds/);
 });

@@ -26,7 +26,7 @@ export function initCustomerChat() {
   if (!document.querySelector('link[data-masest-customer-chat="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/customer-chat.css?v=20260711a`;
+    stylesheet.href = `${root}css/customer-chat.css?v=20260711b`;
     stylesheet.dataset.masestCustomerChat = "true";
     document.head.append(stylesheet);
   }
@@ -37,7 +37,7 @@ export function initCustomerChat() {
     <section class="customer-chat__panel" role="dialog" aria-labelledby="customerChatTitle" hidden>
       <header class="customer-chat__header">
         <div><p class="customer-chat__eyebrow">MASEST support</p><h2 id="customerChatTitle">Customer chat</h2></div>
-        <button class="customer-chat__close" type="button" aria-label="Close customer chat"><i class="ph ph-x" aria-hidden="true"></i></button>
+        <button class="customer-chat__close" type="button" aria-label="Close customer chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
       </header>
       <div class="customer-chat__guest" hidden>
         <p>Sign in or create an account to send a secure message to the MASEST team.</p>
@@ -52,7 +52,7 @@ export function initCustomerChat() {
         </form>
       </div>
     </section>
-    <button class="customer-chat__toggle" type="button" aria-label="Open customer chat" aria-expanded="false" aria-controls="customerChat"><i class="ph ph-chat-circle-dots" aria-hidden="true"></i><span>Chat</span></button>`;
+    <button class="customer-chat__toggle" type="button" aria-label="Open customer chat" aria-expanded="false" aria-controls="customerChat"><svg class="customer-chat__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.7 8.7 0 0 1-3.3-.65L4 20l1.4-4A7.4 7.4 0 0 1 4 11.5a8 8 0 0 1 16 0Z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg><span>Chat</span></button>`;
   document.body.append(shell);
 
   const panel = shell.querySelector(".customer-chat__panel");
@@ -67,6 +67,7 @@ export function initCustomerChat() {
   let authModule;
   let authenticated = false;
   let pollId = 0;
+  let chatPresenceOpen = false;
 
   const setStatus = (text = "", state = "") => {
     status.textContent = text;
@@ -76,6 +77,16 @@ export function initCustomerChat() {
     authModule ||= import("./auth.js?v=20260711a");
     return authModule;
   };
+  const setChatPresence = async (open) => {
+    if (!authenticated || chatPresenceOpen === open) return;
+    chatPresenceOpen = open;
+    try {
+      const { api } = await auth();
+      await api("/api/account/messages", { method: "POST", body: { action: "chat_presence", chat_open: open } });
+    } catch {
+      chatPresenceOpen = !open;
+    }
+  };
   const setOpen = (open) => {
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
@@ -83,10 +94,12 @@ export function initCustomerChat() {
     if (!open) {
       window.clearInterval(pollId);
       pollId = 0;
+      void setChatPresence(false);
       toggle.focus();
     }
   };
   const showGuest = () => {
+    if (authenticated) void setChatPresence(false);
     authenticated = false;
     guest.hidden = false;
     thread.hidden = true;
@@ -134,6 +147,7 @@ export function initCustomerChat() {
       if (!await getToken()) return showGuest();
       showThread();
       await loadMessages();
+      void setChatPresence(true);
       startPolling();
     } catch {
       showGuest();
@@ -152,6 +166,7 @@ export function initCustomerChat() {
   });
   document.addEventListener("masest:auth", () => { if (!panel.hidden) void refresh(); });
   document.addEventListener("masest:session-expired", () => { if (!panel.hidden) showGuest(); });
+  window.addEventListener("pagehide", () => { if (!panel.hidden) void setChatPresence(false); });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = body.value.trim();

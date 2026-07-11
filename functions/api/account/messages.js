@@ -1,6 +1,7 @@
 // /api/account/messages — support thread between the caller's company and MASEST staff.
-//   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer posts (+ staff notification)
-import { requireCompany, json, readBody, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
+//   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer post
+//   POST { action: 'chat_presence', chat_open } → authenticated buyer chat state
+import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 
 export async function onRequest({ request, env }) {
@@ -25,10 +26,18 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
-    // Throttle per author: each post fires a staff-alert email.
+    const body = await readBody(request);
+    if (body.action === 'chat_presence') {
+      if (typeof body.chat_open !== 'boolean') return json(400, { error: 'chat_open_required' });
+      const { error } = await sb.from('profiles').update({ support_chat_open: body.chat_open })
+        .eq('id', user.id);
+      if (error) return json(500, { error: 'server_error' });
+      return json(200, { support_chat_open: body.chat_open });
+    }
+
+    // Throttle customer messages. Staff receive these in the admin inbox; no email per post.
     const rl = await rateLimit(env, 'support-message', user.id || clientIp(request), { limit: 10, windowSec: 60 });
     if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
-    const body = await readBody(request);
     const text = String(body.body || '').trim();
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
@@ -38,28 +47,6 @@ export async function onRequest({ request, env }) {
       order_id: body.order_id || null, source, read_by_user: true, read_by_staff: false,
     }).select('id,created_at').single();
     if (error) return json(500, { error: 'server_error' });
-
-    // Best-effort staff email alert (rate-limited above).
-    const staffTo = (env.ADMIN_EMAILS || env.ADMIN_EMAIL || '')
-      .split(',').map((s) => s.trim()).filter(Boolean);
-    if (staffTo.length) {
-      let companyName = companyId;
-      try {
-        const { data: co } = await sb.from('companies').select('name').eq('id', companyId).maybeSingle();
-        if (co?.name) companyName = co.name;
-      } catch { /* fall back to id */ }
-      await sendEmail(env, {
-        to: staffTo,
-        subject: `New message from ${companyName}`,
-        html: emailLayout({
-          heading: 'New customer message',
-          bodyHtml: `<p>Company: ${htmlEscape(companyName)}</p><p>${htmlEscape(text.slice(0, 500))}</p>`,
-          ctaText: 'Open admin messages',
-          ctaUrl: 'https://masest.co/admin.html#messages',
-        }),
-        category: 'staff_alert',
-      });
-    }
 
     return json(201, { id: data.id, created_at: data.created_at });
   }

@@ -6,7 +6,7 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260710f";
 const CHAT_RELEASE = "20260711a";
-const MAIN_RELEASE = "20260711c";
+const MAIN_RELEASE = "20260711d";
 const ADMIN_RELEASE = "20260710g";
 const MAIN_RELEASE_OVERRIDES = new Map([
   ["admin.html", MAIN_RELEASE],

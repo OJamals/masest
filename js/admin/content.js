@@ -8,7 +8,7 @@ import {
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260710g";
+} from "./rich-editor.js?v=20260710h";
 import {
   contentPayloadFields,
   contentTypeOptions,

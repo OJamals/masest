@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { htmlToMarkdown, markdownToEditorHtml, richEditorTemplate } from "../js/admin/rich-editor.js";
+import { readFileSync } from "node:fs";
+import { htmlToMarkdown, markdownToEditorHtml, referencePickerTemplate, richEditorTemplate } from "../js/admin/rich-editor.js";
 
 test("rich editor serializes visual formatting to markdown", () => {
   const html = '<p><strong>Scale</strong> <em>cleanup</em> <u>now</u></p>';
@@ -40,4 +41,21 @@ test("rich editor exposes names and textbox semantics to assistive technology", 
   assert.match(html, /aria-label="Italic" title="Italic"/);
   assert.match(html, /aria-label="Underline" title="Underline"/);
   assert.match(html, /contenteditable="true" role="textbox" aria-multiline="true" aria-label="Article body editor"/);
+});
+
+test("rich editor uses one expandable reference picker and an actionable text-size select", () => {
+  const editor = richEditorTemplate({ key: "body" });
+  const picker = referencePickerTemplate({ prefix: "content" });
+
+  assert.match(editor, /<select[^>]+data-editor-action="format_size"[^>]+data-editor-format-size/);
+  assert.match(editor, /data-editor-action="open_reference"/);
+  assert.doesNotMatch(editor, /data-editor-action="reference_(product|service)"/);
+  assert.match(picker, /product, service, or program/);
+});
+
+test("newsletter image dialog cancel bypasses required URL validation and closes", () => {
+  const source = readFileSync(new URL("../js/admin/newsletter.js", import.meta.url), "utf8");
+
+  assert.match(source, /data-nl-img-cancel>Cancel<\/button>/);
+  assert.match(source, /data-nl-img-cancel\]'\)\?\.addEventListener\('click', \(\) => dlg\.close\('cancel'\)\)/);
 });

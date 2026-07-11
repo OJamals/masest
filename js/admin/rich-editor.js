@@ -70,18 +70,16 @@ export function richEditorTemplate({ key, label = "Body", value = "", textareaAt
         <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_bold" aria-label="Bold" title="Bold"><i class="ph ph-text-b" aria-hidden="true"></i></button>
         <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_italic" aria-label="Italic" title="Italic"><i class="ph ph-text-italic" aria-hidden="true"></i></button>
         <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_underline" aria-label="Underline" title="Underline"><i class="ph ph-text-underline" aria-hidden="true"></i></button>
-        <select class="adm-select adm-select-sm" data-editor-format-size aria-label="Text size">
+        <select class="adm-select adm-select-sm" data-editor-action="format_size" data-editor-format-size aria-label="Text size">
           <option value="">Size</option>
           <option value="16">16</option>
           <option value="20">20</option>
           <option value="24">24</option>
         </select>
-        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_size">Size</button>
         <input class="adm-input" type="color" value="#0e7c86" data-editor-format-color aria-label="Text color">
         <button type="button" class="btn btn-ghost btn-sm" data-editor-action="format_color">Color</button>
         <button type="button" class="btn btn-ghost btn-sm" data-editor-action="insert_image"><i class="ph ph-image" aria-hidden="true"></i> Image</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="reference_product">Product</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="reference_service">Service</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-editor-action="open_reference"><i class="ph ph-link-simple" aria-hidden="true"></i> Insert reference</button>
       </div>
       <div class="adm-rich-editor-surface adm-rich-surface blog-body" data-rich-editor-surface contenteditable="true" role="textbox" aria-multiline="true" aria-label="${escapeHtml(label)} editor" spellcheck="true" style="min-height:${Number(minHeight) || 260}px">${markdownToEditorHtml(value)}</div>
       <textarea ${textareaAttrs} data-rich-editor-output="${safeKey}">${escapeHtml(value)}</textarea>
@@ -96,14 +94,14 @@ export function referencePickerTemplate({ prefix, admEmpty }) {
       <div class="adm-panel-header">
         <div>
           <h2 id="${safePrefix}ReferenceTitle">Insert reference</h2>
-          <p class="muted">Choose a product or service to insert as a thumbnail link.</p>
+          <p class="muted">Choose a product, service, or program to insert as a thumbnail link.</p>
         </div>
         <button class="btn btn-ghost btn-sm" type="button" data-editor-action="close_reference">
           <i class="ph ph-x" aria-hidden="true"></i> Close
         </button>
       </div>
       <div id="${safePrefix}ReferenceRows" class="adm-list" aria-live="polite">
-        ${admEmpty ? admEmpty("ph-link-simple", "No references", "Load products or services to insert a link card.") : ""}
+        ${admEmpty ? admEmpty("ph-link-simple", "No references", "Load products, services, or programs to insert a link card.") : ""}
       </div>
     </div>
   `;
@@ -137,12 +135,20 @@ function selectedText() {
   return selection ? selection.toString() : "";
 }
 
-function wrapSelection(surface, htmlForText) {
+function selectedRange(surface, fallbackRange) {
   const selection = window.getSelection?.();
-  if (!selection || !selection.rangeCount) return;
-  const range = selection.getRangeAt(0);
-  if (!surface.contains(range.commonAncestorContainer)) return;
-  const text = selectedText();
+  if (selection?.rangeCount) {
+    const range = selection.getRangeAt(0);
+    if (surface.contains(range.commonAncestorContainer)) return range;
+  }
+  if (fallbackRange && surface.contains(fallbackRange.commonAncestorContainer)) return fallbackRange;
+  return null;
+}
+
+function wrapSelection(surface, htmlForText, fallbackRange) {
+  const range = selectedRange(surface, fallbackRange);
+  if (!range) return;
+  const text = range.toString().trim();
   if (!text) return;
   const wrapper = document.createElement("span");
   wrapper.innerHTML = htmlForText(text);
@@ -191,34 +197,76 @@ function cardMarkdown(item = {}) {
   return `[[card:title=${item.title}|href=${item.href}${item.image ? `|image=${item.image}` : ""}${item.alt ? `|alt=${item.alt}` : ""}]]`;
 }
 
-function referenceRows(items = []) {
-  return items.map((item) => `
+function referenceButton(item) {
+  return `
     <button class="adm-content-entry-row" type="button" data-editor-reference-path="${escapeHtml(item.href)}" data-editor-reference-md="${escapeHtml(cardMarkdown(item))}">
       <span class="adm-content-entry-main">
         <span class="adm-content-title">${escapeHtml(item.title)}</span>
         <span class="adm-content-meta">${escapeHtml(item.href)}</span>
       </span>
     </button>
+  `;
+}
+
+function referenceRows(groups = []) {
+  return groups.map((group) => `
+    <details class="adm-rich-reference-group" open>
+      <summary>${escapeHtml(group.title)}</summary>
+      <div class="adm-list">
+        ${(group.items || []).map((item) => item.items ? `
+          <details class="adm-rich-reference-group">
+            <summary>${escapeHtml(item.title)}</summary>
+            <div class="adm-list">${item.items.map(referenceButton).join("")}</div>
+          </details>
+        ` : referenceButton(item)).join("")}
+      </div>
+    </details>
   `).join("");
 }
 
-async function loadReferenceItems(kind, api) {
-  if (kind === "product") {
-    const data = api ? await api("/api/admin/products") : await fetch("/api/admin/products", { cache: "no-store" }).then((response) => response.ok ? response.json() : {});
-    return (data.products || []).map((product) => ({
+function productReferenceGroups(products = []) {
+  const groups = new Map();
+  products.filter((product) => product.active !== false).forEach((product) => {
+    const key = String(product.group_key || "Products").trim() || "Products";
+    const productItem = {
       title: product.name || product.title || product.sku || "Product",
       href: productPath(product),
       image: product.image_url || product.photo_url || product.image || "",
       alt: product.photo_alt || product.image_alt || product.name || "",
-    }));
-  }
-  const data = api ? await api("/api/admin/content?type=service&status=published") : await fetch("/api/admin/content?type=service&status=published", { cache: "no-store" }).then((response) => response.ok ? response.json() : {});
-  return (data.entries || []).map((entry) => ({
+    };
+    const variants = (product.product_variants || product.variants || [])
+      .filter((variant) => variant.active !== false)
+      .map((variant) => ({
+        ...productItem,
+        title: `${productItem.title} — ${variant.label || variant.vsku || "Variant"}`,
+      }));
+    const items = groups.get(key) || [];
+    items.push(variants.length ? { ...productItem, items: [productItem, ...variants] } : productItem);
+    groups.set(key, items);
+  });
+  return [...groups].map(([title, items]) => ({ title, items }));
+}
+
+function contentReferenceItems(entries = [], fallbackTitle, href) {
+  return entries.map((entry) => ({
     title: entry.title || entry.slug || "Service",
-    href: "/services",
+    href,
     image: entry.payload?.image || entry.payload?.hero || "",
     alt: entry.payload?.image_alt || entry.title || "",
   }));
+}
+
+async function loadReferenceGroups(api) {
+  const request = (path) => api ? api(path) : fetch(path, { cache: "no-store" }).then((response) => response.ok ? response.json() : {});
+  const [products, services] = await Promise.all([
+    request("/api/admin/products"),
+    request("/api/admin/content?type=service&status=published"),
+  ]);
+  return [
+    { title: "Products", items: productReferenceGroups(products.products || []) },
+    { title: "Services", items: contentReferenceItems(services.entries || [], "Service", "/services") },
+    { title: "Programs", items: [{ title: "Programs & Pricing", href: "/programs", image: "img/site/scenes/water-treatment-program.webp", alt: "Water-treatment program" }] },
+  ];
 }
 
 export function createRichTextEditor(editor, options = {}) {
@@ -234,10 +282,27 @@ export function createRichTextEditor(editor, options = {}) {
 
   const picker = options.referencePicker || root.querySelector(options.referencePickerSelector || "#contentReferencePicker");
   const rows = options.referenceRows || root.querySelector(options.referenceRowsSelector || "#contentReferenceRows");
+  let lastSelectionRange = null;
+  const rememberSelection = () => {
+    const range = selectedRange(surface);
+    lastSelectionRange = range?.cloneRange() || lastSelectionRange;
+  };
 
-  surface.addEventListener("input", () => syncOutput(surface, output, options.onChange));
+  surface.addEventListener("input", () => {
+    rememberSelection();
+    syncOutput(surface, output, options.onChange);
+  });
+  surface.addEventListener("keyup", rememberSelection);
+  surface.addEventListener("mouseup", rememberSelection);
   editor.addEventListener("mousedown", (event) => {
-    if (event.target.closest("[data-editor-action]")) event.preventDefault();
+    if (event.target.closest("button[data-editor-action]")) event.preventDefault();
+  });
+  editor.addEventListener("change", (event) => {
+    if (event.target.matches("[data-editor-format-size]")) {
+      const size = event.target.value;
+      if (size) wrapSelection(surface, (text) => `<span data-md-size="${escapeHtml(size)}">${escapeHtml(text)}</span>`, lastSelectionRange);
+      syncOutput(surface, output, options.onChange);
+    }
   });
   editor.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-editor-action]");
@@ -248,7 +313,7 @@ export function createRichTextEditor(editor, options = {}) {
     if (action === "format_underline") document.execCommand("underline");
     if (action === "format_size") {
       const size = editor.querySelector("[data-editor-format-size]")?.value || "20";
-      wrapSelection(surface, (text) => `<span data-md-size="${escapeHtml(size)}">${escapeHtml(text)}</span>`);
+      wrapSelection(surface, (text) => `<span data-md-size="${escapeHtml(size)}">${escapeHtml(text)}</span>`, lastSelectionRange);
     }
     if (action === "format_color") {
       const color = editor.querySelector("[data-editor-format-color]")?.value || "#0e7c86";
@@ -270,7 +335,11 @@ export function createRichTextEditor(editor, options = {}) {
       const url = window.prompt?.("Image URL") || "";
       if (url) insertHtmlAtSelection(surface, `<img src="${escapeHtml(url)}" alt="">`);
     }
-    if ((action === "reference_product" || action === "reference_service") && picker && rows) {
+    if (action === "close_reference" && picker) {
+      picker.hidden = true;
+      return;
+    }
+    if (action === "open_reference" && picker && rows) {
       picker.hidden = false;
       rows.innerHTML = '<p class="adm-status">Loading references...</p>';
       rows.__richEditorInsert = (markdown) => {
@@ -278,8 +347,8 @@ export function createRichTextEditor(editor, options = {}) {
         syncOutput(surface, output, options.onChange);
         picker.hidden = true;
       };
-      const items = await loadReferenceItems(action === "reference_product" ? "product" : "service", options.api).catch(() => []);
-      rows.innerHTML = items.length ? referenceRows(items) : '<p class="adm-status" data-state="warn">No references found.</p>';
+      const groups = await loadReferenceGroups(options.api).catch(() => []);
+      rows.innerHTML = groups.length ? referenceRows(groups) : '<p class="adm-status" data-state="warn">No references found.</p>';
     }
     syncOutput(surface, output, options.onChange);
   });

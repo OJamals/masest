@@ -4,14 +4,14 @@ import test from "node:test";
 import { verifySvixSignature } from "../functions/_lib/email.js";
 
 const messagesSrc = readFileSync(new URL("../functions/api/account/messages.js", import.meta.url), "utf8");
+const adminMessagesSrc = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
 const emailSrc = readFileSync(new URL("../functions/_lib/email.js", import.meta.url), "utf8");
 
-test("staff message-alert email escapes buyer-supplied company name and body", () => {
-  assert.match(messagesSrc, /import \{[^}]*htmlEscape[^}]*\} from '\.\.\/\.\.\/_lib\/supabase\.js'/);
-  assert.match(messagesSrc, /Company: \$\{htmlEscape\(companyName\)\}/);
-  assert.match(messagesSrc, /\$\{htmlEscape\(text\.slice\(0, 500\)\)\}/);
-  // No raw interpolation of the user text into the email HTML.
-  assert.doesNotMatch(messagesSrc, /<p>\$\{text\.slice/);
+test("delayed staff-reply email escapes staff-supplied body", () => {
+  assert.doesNotMatch(messagesSrc, /sendEmail\(/);
+  assert.match(adminMessagesSrc, /import \{[^}]*htmlEscape[^}]*\} from '\.\.\/\.\.\/_lib\/supabase\.js'/);
+  assert.match(adminMessagesSrc, /\$\{htmlEscape\(text\)\}/);
+  assert.doesNotMatch(adminMessagesSrc, /<blockquote[^>]*>\$\{text\}/);
 });
 
 test("Svix verifier uses a constant-time compare (no === short-circuit on the MAC)", () => {

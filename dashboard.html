@@ -125,6 +125,7 @@
   .dash-card-subtitle { display: flex; align-items: center; min-height: 44px; font-size: 1.05rem; line-height: 1.3; margin-bottom: 12px; }
   .dash-card-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
   .dash-action-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .dash-action-row--flush { margin-top: 0; }
   .dash-disclosure { margin-top: 14px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: rgba(255,255,255,.66); padding: 12px; }
   .dash-disclosure summary { display: flex; align-items: center; min-height: 44px; gap: 8px; padding: 6px 0; cursor: pointer; color: var(--ink); font-weight: 800; line-height: 1.3; }
   .dash-disclosure-body { margin-top: 12px; }
@@ -484,7 +485,7 @@
                 <h2 class="headline dash-section-title dash-section-title-tight">Messages with MASEST</h2>
                 <p class="muted">Your full company conversation with the MASEST team.</p>
               </div>
-              <div class="dash-action-row" style="margin-top:0">
+              <div class="dash-action-row dash-action-row--flush">
                 <button class="btn btn-ghost btn-sm" id="refreshMessages" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh</button>
                 <button class="btn btn-primary btn-sm" type="button" data-customer-chat-open><i class="ph ph-chat-circle-dots" aria-hidden="true"></i> Open chat</button>
               </div>
@@ -673,7 +674,7 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/main.js?v=20260711c"></script>
+<script type="module" src="js/main.js?v=20260711d"></script>
 <script src="js/track.js" defer></script>
 <script type="module" src="js/dashboard.js?v=20260710j"></script>
 </body>
