@@ -7,7 +7,7 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260710f";
 const CHAT_RELEASE = "20260711b";
 const MAIN_RELEASE = "20260711g";
-const ADMIN_RELEASE = "20260711q";
+const ADMIN_RELEASE = "20260711r";
 const CHROME_RELEASE = "20260711f";
 const CUSTOMER_CHAT_RELEASE = "20260711e";
 const MAIN_RELEASE_OVERRIDES = new Map([

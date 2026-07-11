@@ -1,4 +1,4 @@
-import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260711q";
+import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260711r";
 
 const PAGE_SIZE = 2;
 
