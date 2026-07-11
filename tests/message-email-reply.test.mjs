@@ -8,7 +8,8 @@ const env = { APP_URL: 'https://masest.co', RESEND_INBOUND_DOMAIN: 'wilaucoreu.r
 
 test('signed Reply-To address routes only to its company', async () => {
   const address = await messageReplyAddress(env, companyId);
-  assert.match(address, /^reply\+9b081f60-7410-4b04-bf1e-30f109b20b9a\.[a-f0-9]{24}@wilaucoreu\.resend\.app$/);
+  assert.ok(address.split('@')[0].length <= 64, 'Reply-To local part must satisfy RFC email length');
+  assert.match(address, /^reply\+9b081f60-7410-4b04-bf1e-30f109b20b9a\.[a-f0-9]{20}@wilaucoreu\.resend\.app$/);
   assert.equal(await companyIdFromReplyAddress(env, [address]), companyId);
   assert.equal(await companyIdFromReplyAddress(env, [address.replace(/.$/, 'x')]), null);
   assert.equal(await companyIdFromReplyAddress({ ...env, MESSAGE_REPLY_SECRET: 'other' }, [address]), null);
