@@ -20,7 +20,7 @@ import { createNewsletterTab } from './admin/newsletter.js?v=20260711s';
 import { createInventoryCard } from './admin/inventory.js?v=20260711s';
 import { createCouponsCard } from './admin/coupons.js?v=20260711s';
 import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260711s';
-import { renderChrome } from './main/chrome.js?v=20260711x';
+import { renderChrome } from './main/chrome.js?v=20260711y';
 
 const $ = (id) => document.getElementById(id);
 

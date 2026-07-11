@@ -6,12 +6,12 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260711x";
+const MAIN_RELEASE = "20260711y";
 const ADMIN_RELEASE = "20260711s";
 const ADMIN_PAGE_RELEASE = "20260711t";
-const CHROME_RELEASE = "20260711x";
+const CHROME_RELEASE = "20260711y";
 const ACCOUNT_NAV_RELEASE = "20260711x";
-const CUSTOMER_CHAT_RELEASE = "20260711h";
+const CUSTOMER_CHAT_RELEASE = "20260711i";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260711e";
 const MAIN_RELEASE_OVERRIDES = new Map();
 
