@@ -265,7 +265,16 @@ async function loadReferenceGroups(api) {
   return [
     { title: "Products", items: productReferenceGroups(products.products || []) },
     { title: "Services", items: contentReferenceItems(services.entries || [], "Service", "/services") },
-    { title: "Programs", items: [{ title: "Programs & Pricing", href: "/programs", image: "img/site/scenes/water-treatment-program.webp", alt: "Water-treatment program" }] },
+    {
+      title: "Programs",
+      items: [
+        { title: "Programs & Pricing", href: "/programs", image: "img/site/scenes/water-treatment-program.webp", alt: "Water-treatment program" },
+        { title: "Bronze — Essentials", href: "/contact?type=quote&product=Full%20Cooling%20Tower%20Program&message=Cooling%20tower%20program%20quote%20%E2%80%94%20Bronze%20tier.", image: "", alt: "" },
+        { title: "Silver — Standard", href: "/contact?type=quote&product=Full%20Cooling%20Tower%20Program&message=Cooling%20tower%20program%20quote%20%E2%80%94%20Silver%20tier.", image: "", alt: "" },
+        { title: "Gold — Premium", href: "/contact?type=quote&product=Full%20Cooling%20Tower%20Program&message=Cooling%20tower%20program%20quote%20%E2%80%94%20Gold%20tier.", image: "", alt: "" },
+        { title: "Platinum — Full Lifecycle", href: "/contact?type=quote&product=Full%20Cooling%20Tower%20Program&message=Cooling%20tower%20program%20quote%20%E2%80%94%20Platinum%20tier.", image: "", alt: "" },
+      ],
+    },
   ];
 }
 
