@@ -66,8 +66,24 @@ test('customer chat links to full inbox and uses expiring keepalive presence', (
   assert.match(chat, /dashboard\.html#messages/);
   assert.match(chat, /keepalive:\s*true/);
   assert.match(chat, /presenceRequest = presenceRequest/);
+  assert.match(chat, /account\?\.can_admin/);
+  assert.match(chat, /initAdminSupport/);
   assert.match(auth, /keepalive/);
   assert.match(account, /support_chat_seen_at/);
+});
+
+test('public staff accounts receive the admin support console instead of buyer chat', () => {
+  const support = read('js/admin-support.js');
+  const styles = read('css/admin-support.css');
+  assert.match(support, /\/api\/admin\/messages/);
+  assert.match(support, /\/api\/admin\/message-settings/);
+  assert.match(support, /presenceRequest = presenceRequest/);
+  assert.match(support, /Mark resolved/);
+  assert.match(support, /Escalate/);
+  assert.match(support, /Needs reply/);
+  assert.match(support, /admin\.html#support-settings/);
+  assert.match(styles, /height:\s*min\(620px, calc\(100dvh - 104px\)\)/);
+  assert.match(styles, /overflow-y:\s*auto/);
 });
 
 test('buyer and staff inboxes page backward from the newest message', () => {

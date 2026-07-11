@@ -4,16 +4,14 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
-const RELEASE = "20260710f";
+const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260711h";
+const MAIN_RELEASE = "20260711w";
 const ADMIN_RELEASE = "20260711s";
-const CHROME_RELEASE = "20260711g";
-const CUSTOMER_CHAT_RELEASE = "20260711f";
+const CHROME_RELEASE = "20260711w";
+const CUSTOMER_CHAT_RELEASE = "20260711g";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260711e";
-const MAIN_RELEASE_OVERRIDES = new Map([
-  ["dashboard.html", MAIN_RELEASE],
-]);
+const MAIN_RELEASE_OVERRIDES = new Map();
 
 function filesUnder(path) {
   return readdirSync(new URL(path, root), { withFileTypes: true }).flatMap((entry) => {
@@ -39,9 +37,7 @@ test("every browser auth importer uses one cache release", () => {
     const imports = source.matchAll(/(?:from\s*|import\s*\()\s*["']([^"']*auth\.js(?:\?[^"']*)?)["']/g);
     for (const match of imports) {
       references += 1;
-      const release = path === "js/customer-chat.js"
-        ? CHAT_RELEASE
-        : path === "js/admin.js" || path.startsWith("js/admin/")
+      const release = path === "js/admin.js" || path.startsWith("js/admin/")
         ? ADMIN_RELEASE
         : RELEASE;
       assert.match(match[1], new RegExp(`auth\\.js\\?v=${release}$`), `${path}: ${match[1]}`);
@@ -66,6 +62,8 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/main.js"), new RegExp(`main/chrome\\.js\\?v=${CHROME_RELEASE}`));
   assert.match(read("js/main/chrome.js"), new RegExp(`customer-chat\\.js\\?v=${CUSTOMER_CHAT_RELEASE}`));
   assert.match(read("js/customer-chat.js"), new RegExp(`customer-chat\\.css\\?v=${CUSTOMER_CHAT_STYLE_RELEASE}`));
+  assert.match(read("js/customer-chat.js"), /admin-support\.js\?v=20260711a/);
+  assert.match(read("js/admin-support.js"), /admin-support\.css\?v=20260711a/);
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("product.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
 });

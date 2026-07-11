@@ -19,10 +19,28 @@ function makeMessage(message) {
   return item;
 }
 
-export function initCustomerChat() {
+export async function initCustomerChat() {
   if (document.getElementById("customerChat")) return;
 
   const root = pageRoot();
+  let authModule;
+  const auth = async () => {
+    authModule ||= import("./auth.js?v=20260711w");
+    return authModule;
+  };
+  try {
+    const session = await auth();
+    if (await session.getToken()) {
+      const account = await session.me();
+      if (account?.can_admin) {
+        const { initAdminSupport } = await import("./admin-support.js?v=20260711a");
+        initAdminSupport({ auth: session, root, staff: account.staff });
+        return;
+      }
+    }
+  } catch {
+    // The buyer launcher remains available if account capability cannot be resolved.
+  }
   if (!document.querySelector('link[data-masest-customer-chat="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
@@ -65,7 +83,6 @@ export function initCustomerChat() {
   const form = shell.querySelector(".customer-chat__form");
   const body = shell.querySelector("#customerChatBody");
   const status = shell.querySelector(".customer-chat__status");
-  let authModule;
   let authenticated = false;
   let pollId = 0;
   let chatPresenceOpen = false;
@@ -75,10 +92,6 @@ export function initCustomerChat() {
   const setStatus = (text = "", state = "") => {
     status.textContent = text;
     status.dataset.state = state;
-  };
-  const auth = async () => {
-    authModule ||= import("./auth.js?v=20260711b");
-    return authModule;
   };
   const setChatPresence = async (open, { force = false, keepalive = false } = {}) => {
     if (!authenticated || (!force && chatPresenceOpen === open)) return;

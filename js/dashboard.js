@@ -1,9 +1,9 @@
 /* MASEST user dashboard controller. Loaded as a module by dashboard.html.
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
-import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260710f';
+import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260711w';
 import { add as cartAdd, clear as cartClear } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast } from './util.js';
-import { initBusinessHub } from './business.js?v=20260710j';
+import { initBusinessHub } from './business.js?v=20260711w';
 
 const $ = (id) => document.getElementById(id);
 
@@ -1120,7 +1120,11 @@ async function syncNotifBadge() {
 
 /* ---------- boot ---------- */
 async function boot() {
-  try { ACCOUNT = await me(); } catch { ACCOUNT = null; }
+  try { ACCOUNT = await me(); }
+  catch {
+    showLoadError($('dashGuest'), 'Could not verify your session.', boot);
+    return;
+  }
   if (!ACCOUNT) { $('dashGuest').hidden = false; return; }
   $('dashApp').hidden = false;
   $('dashGreeting').textContent = `Welcome back${ACCOUNT.profile?.full_name ? ', ' + ACCOUNT.profile.full_name : ''}.`;

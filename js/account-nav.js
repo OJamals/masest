@@ -109,9 +109,15 @@ async function renderAccountNav(actions, root = '') {
 
   // Only load the Supabase SDK + call me() when a session exists; otherwise render Sign in instantly.
   let logout, api, data = null;
+  let authResolved = true;
   if (hasSession()) {
-    try { const m = await import('./auth.js?v=20260710f'); logout = m.logout; api = m.api; data = await m.me(); } catch { data = null; }
+    try { const m = await import('./auth.js?v=20260711w'); logout = m.logout; api = m.api; data = await m.me(); }
+    catch { authResolved = false; }
   }
+
+  // Keep chrome's neutral placeholder on transient auth/API failure. Rendering Sign in
+  // here would claim a logged-in user is anonymous until another caller finishes refresh.
+  if (!authResolved) return;
 
   const mount = document.createElement('div');
   mount.className = 'nav-account';

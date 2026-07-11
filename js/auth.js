@@ -130,17 +130,21 @@ export async function logout() {
 
 /* Current account snapshot (profile + company + approval status), or null if logged out. */
 export async function me() {
-  const sb = requireClient();
-  const { data } = await sb.auth.getSession();
-  const token = data.session?.access_token;
+  const token = await getToken();
   if (!token) return null;
-  const r = await fetch('/api/account/me', { headers: { Authorization: `Bearer ${token}` } });
-  if (r.ok) return r.json();
-  // Authenticated but no company/profile yet (email confirmed before the company step ran):
-  // surface it so the page can offer a "finish setup" form instead of looking logged-out.
-  const body = await r.json().catch(() => null);
-  if (r.status === 404 && body?.error === 'no_profile') return { needs_profile: true, email: body.email, can_admin: body.can_admin === true, staff: body.staff || null };
-  return null;
+  try {
+    return await api('/api/account/me');
+  } catch (err) {
+    // Authenticated but no company/profile yet (email confirmed before the company step ran):
+    // surface it so the page can offer a "finish setup" form instead of looking logged-out.
+    if (err?.status === 404 && err.data?.error === 'no_profile') {
+      return { needs_profile: true, email: err.data.email, can_admin: err.data.can_admin === true, staff: err.data.staff || null };
+    }
+    // api() already attempted one refresh. Only a definitive 401 means signed out;
+    // network/5xx failures must remain errors so callers never flash logged-out UI.
+    if (err?.status === 401) return null;
+    throw err;
+  }
 }
 
 /* Recent orders for the signed-in account (company orders + line items) plus the true total
