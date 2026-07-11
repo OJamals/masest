@@ -591,6 +591,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .confirm-dialog-library-head { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
 .confirm-dialog-library-head p { margin: 4px 0 0; font-size: .86rem; line-height: 1.4; }
 .confirm-dialog-image-library { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; max-height: 280px; overflow: auto; padding: 4px; }
+.confirm-dialog-image-library[hidden] { display: none; }
 .confirm-dialog-image-library > p { grid-column: 1 / -1; margin: 4px 0; }
 .nl-image-library-item { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; min-height: 72px; padding: 8px; border: 1px solid var(--line, #e4e6e9); border-radius: 12px; color: inherit; background: var(--surface, #fff); font: inherit; text-align: left; cursor: pointer; }
 .nl-image-library-item:hover { border-color: var(--accent, #0e7c86); background: var(--accent-soft, #e3f0f1); }
