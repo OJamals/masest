@@ -128,7 +128,10 @@ async function renderAccountNav(actions, root = '') {
     mount.innerHTML = `<a class="nav-signin" href="${root}account.html">Finish setup</a>`;
   } else {
     const label = data.profile?.full_name || data.company?.name || data.email || 'Account';
-    const items = MENU.map(([i, l, h]) => {
+    const accountMenu = data.can_admin
+      ? MENU.map((item) => item[1] === 'Messages' ? ['ph-lifebuoy', 'Customer support', 'admin.html#support-settings'] : item)
+      : MENU;
+    const items = accountMenu.map(([i, l, h]) => {
       const isNotifications = l === 'Notifications';
       const marker = isNotifications ? ' data-account-nav-notifications' : '';
       const count = isNotifications ? '<span class="acct-menu-count" hidden>0</span>' : '';

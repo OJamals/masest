@@ -33,7 +33,7 @@ export async function initCustomerChat() {
     if (await session.getToken()) {
       const account = await session.me();
       if (account?.can_admin) {
-        const { initAdminSupport } = await import("./admin-support.js?v=20260711a");
+        const { initAdminSupport } = await import("./admin-support.js?v=20260711b");
         initAdminSupport({ auth: session, root, staff: account.staff });
         return;
       }

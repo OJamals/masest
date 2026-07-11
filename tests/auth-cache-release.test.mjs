@@ -6,10 +6,11 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260711w";
+const MAIN_RELEASE = "20260711x";
 const ADMIN_RELEASE = "20260711s";
-const CHROME_RELEASE = "20260711w";
-const CUSTOMER_CHAT_RELEASE = "20260711g";
+const CHROME_RELEASE = "20260711x";
+const ACCOUNT_NAV_RELEASE = "20260711x";
+const CUSTOMER_CHAT_RELEASE = "20260711h";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260711e";
 const MAIN_RELEASE_OVERRIDES = new Map();
 
@@ -57,13 +58,13 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
     assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_RELEASE}`));
   }
 
-  assert.match(read("js/main/chrome.js"), new RegExp(`account-nav\\.js\\?v=${RELEASE}`));
+  assert.match(read("js/main/chrome.js"), new RegExp(`account-nav\\.js\\?v=${ACCOUNT_NAV_RELEASE}`));
   assert.match(read("js/main/chrome.js"), new RegExp(`integrations\\.js\\?v=${CHAT_RELEASE}`));
   assert.match(read("js/main.js"), new RegExp(`main/chrome\\.js\\?v=${CHROME_RELEASE}`));
   assert.match(read("js/main/chrome.js"), new RegExp(`customer-chat\\.js\\?v=${CUSTOMER_CHAT_RELEASE}`));
   assert.match(read("js/customer-chat.js"), new RegExp(`customer-chat\\.css\\?v=${CUSTOMER_CHAT_STYLE_RELEASE}`));
-  assert.match(read("js/customer-chat.js"), /admin-support\.js\?v=20260711a/);
-  assert.match(read("js/admin-support.js"), /admin-support\.css\?v=20260711a/);
+  assert.match(read("js/customer-chat.js"), /admin-support\.js\?v=20260711b/);
+  assert.match(read("js/admin-support.js"), /admin-support\.css\?v=20260711b/);
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("product.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
 });

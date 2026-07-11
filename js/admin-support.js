@@ -16,7 +16,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/admin-support.css?v=20260711a`;
+    stylesheet.href = `${root}css/admin-support.css?v=20260711b`;
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }
@@ -41,6 +41,12 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     </section>
     <button class="site-support__launcher" type="button" aria-label="Open admin support" aria-expanded="false" aria-controls="adminSupportConsole"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H8l-4 3V5Z"/><path d="M8 9h8M8 13h5"/></svg><span>Support</span><b data-support-count hidden>0</b></button>`;
   document.body.append(shell);
+
+  document.querySelectorAll("[data-customer-chat-open]").forEach((link) => {
+    link.textContent = "Customer support";
+    link.setAttribute("href", "#adminSupportConsole");
+    link.setAttribute("aria-label", "Open admin support");
+  });
 
   const drawer = shell.querySelector(".site-support__drawer");
   const launcher = shell.querySelector(".site-support__launcher");

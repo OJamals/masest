@@ -82,6 +82,9 @@ test('public staff accounts receive the admin support console instead of buyer c
   assert.match(support, /Escalate/);
   assert.match(support, /Needs reply/);
   assert.match(support, /admin\.html#support-settings/);
+  assert.match(support, /link\.textContent = "Customer support"/);
+  assert.match(read('js/main/chrome.js'), /site-support__launcher, \.customer-chat__toggle/);
+  assert.match(read('js/account-nav.js'), /'Customer support', 'admin\.html#support-settings'/);
   assert.match(styles, /height:\s*min\(620px, calc\(100dvh - 104px\)\)/);
   assert.match(styles, /overflow-y:\s*auto/);
 });
