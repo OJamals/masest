@@ -610,6 +610,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .shared-image-picker-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .shared-image-picker-actions .btn { min-height: 52px; justify-content: center; }
 .shared-image-upload, .shared-image-library { display: grid; gap: 12px; }
+.shared-image-library { align-content: start; grid-template-rows: repeat(3, max-content); }
 .shared-image-upload { padding-bottom: 6px; }
 .shared-image-upload[hidden], .shared-image-library[hidden], .shared-image-library-pager[hidden] { display: none; }
 .shared-image-upload > p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
