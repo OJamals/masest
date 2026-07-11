@@ -610,9 +610,12 @@ body .product-detail-hero { padding-bottom: 42px; }
 .shared-image-picker-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .shared-image-picker-actions .btn { min-height: 52px; justify-content: center; }
 .shared-image-upload, .shared-image-library { display: grid; gap: 12px; }
+.shared-image-upload { padding-bottom: 6px; }
 .shared-image-upload[hidden], .shared-image-library[hidden], .shared-image-library-pager[hidden] { display: none; }
 .shared-image-upload > p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shared-image-upload > .btn { justify-self: start; }
+.shared-image-picker .adm-status:empty { display: none; }
+.shared-image-picker .confirm-dialog-actions { margin: 0; }
 .shared-image-library-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .shared-image-library-head span { color: var(--muted, #5f656d); font-size: .82rem; }
 .shared-image-library-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -621,7 +624,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .shared-image-library-card img { display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; object-fit: cover; background: var(--line, #e4e6e9); }
 .shared-image-library-card b, .shared-image-library-card small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shared-image-library-card small { margin-top: 3px; color: var(--muted, #5f656d); font-size: .76rem; }
-.shared-image-library-card-actions { display: flex; align-items: center; gap: 8px; }
+.shared-image-library-card-actions { display: flex; align-items: center; gap: 8px; padding-bottom: 3px; }
 .shared-image-library-card-actions .btn:first-child { flex: 1; justify-content: center; }
 .shared-image-library-card-actions .btn:last-child { min-width: 42px; padding-inline: 10px; justify-content: center; }
 .shared-image-library-pager { display: flex; align-items: center; justify-content: center; gap: 12px; }
