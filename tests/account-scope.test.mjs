@@ -21,6 +21,19 @@ const ACCOUNT_ROUTES = readdirSync(ACCOUNT_DIR).filter((f) => f.endsWith(".js"))
 // pattern below matches exactly that shape (`escapeLike(email)` where email is the
 // auth-derived local) so a route filtering by a client-supplied email still fails.
 const SCOPE_RE = /requireCompany\(|companyForUser\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role|\.ilike\(\s*'email'\s*,\s*escapeLike\(email\)\s*\)/;
+const ACCOUNT_ERASURE_IMPORT_RE = /import\s+\{\s*deleteAccountUser\s*\}\s+from\s+['"][^'"]*_lib\/account-erasure\.js['"]/;
+const ACCOUNT_ERASURE_CALL_RE = /await\s+deleteAccountUser\(\s*sb\s*,\s*user\.id\s*\)/;
+
+function executableSource(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+}
+
+function usesSelfScopedAccountErasure(src) {
+  const code = executableSource(src);
+  return ACCOUNT_ERASURE_IMPORT_RE.test(code) && ACCOUNT_ERASURE_CALL_RE.test(code);
+}
 
 test("account route discovery finds the known endpoints", () => {
   assert.ok(ACCOUNT_ROUTES.length >= 10, `expected >=10 account routes, found ${ACCOUNT_ROUTES.length}`);
@@ -49,9 +62,17 @@ test("every account route authenticates (requireCompany or userFromRequest) and 
 test("every account route scopes its queries by company or self", () => {
   for (const name of ACCOUNT_ROUTES) {
     const src = read(name);
-    assert.match(src, SCOPE_RE,
+    assert.ok(SCOPE_RE.test(src) || usesSelfScopedAccountErasure(src),
       `account/${name} must scope data access by company_id or the auth user id (IDOR risk)`);
   }
+});
+
+test("account deletion passes only the authenticated user id to the erasure helper", () => {
+  const code = executableSource(read("delete.js"));
+  assert.match(code, ACCOUNT_ERASURE_IMPORT_RE,
+    "delete.js must import the shared account-erasure helper");
+  assert.match(code, ACCOUNT_ERASURE_CALL_RE,
+    "delete.js must erase the authenticated user, not a client-supplied id");
 });
 
 test("auth guard precedes any DB access inside the handler", () => {

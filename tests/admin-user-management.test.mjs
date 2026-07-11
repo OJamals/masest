@@ -50,20 +50,28 @@ test("admin invite resend only targets pending invites", () => {
   assert.match(resendBlock, /pending_invite_not_found/, "resend should use pending-invite error copy");
 });
 
-test("admin user deletion detaches retained orders before deleting auth user", () => {
+test("admin user deletion uses failure-safe account erasure before recording success", () => {
   const src = read("functions/api/admin/users.js");
   const deleteBlock = src.slice(
     src.indexOf("action === 'delete_user'"),
     src.indexOf("// Address book"),
   );
 
-  assert.match(deleteBlock, /\.from\('orders'\)[\s\S]*\.update\(\{[^}]*user_id:\s*null[^}]*customer_email:\s*anon/s,
-    "delete should detach and pseudonymize retained order history");
-  assert.match(deleteBlock, /\.eq\('user_id',\s*uid\)/,
-    "order detachment should be scoped to the deleted user");
+  assert.match(src, /import\s+\{\s*deleteAccountUser\s*\}\s+from\s+['"]\.\.\/\.\.\/_lib\/account-erasure\.js['"]/,
+    "endpoint should import the shared account-erasure helper");
+  assert.match(deleteBlock, /staffCan\(role,\s*'user\.manage'\)/,
+    "delete should preserve the owner capability gate");
+  assert.match(deleteBlock, /uid\s*===\s*user\.id[\s\S]*cannot_delete_self/,
+    "delete should preserve self-deletion protection");
+  assert.match(deleteBlock, /await\s+deleteAccountUser\(sb,\s*uid\)/,
+    "delete should use the shared failure-safe helper");
+  assert.doesNotMatch(deleteBlock, /\.from\('orders'\)/,
+    "route should not mutate retained orders outside the auth transaction");
+  assert.match(deleteBlock, /account_erasure_not_ready[\s\S]*503/,
+    "missing migration should fail closed as unavailable");
   assert.ok(
-    deleteBlock.indexOf(".from('orders')") < deleteBlock.indexOf("deleteUser(uid)"),
-    "orders must be detached before the auth/profile cascade runs",
+    deleteBlock.indexOf("deleteAccountUser(sb, uid)") < deleteBlock.indexOf("recordAudit(sb"),
+    "audit success must be recorded only after deletion succeeds",
   );
 });
 

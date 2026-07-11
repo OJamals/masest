@@ -2,6 +2,7 @@
 // business (company) + status, addresses, payment methods, orders. Also company-member
 // invites. The consolidated admin Accounts console consumes this.
 import Stripe from 'stripe';
+import { deleteAccountUser } from '../../_lib/account-erasure.js';
 import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { STAFF_ROLES, staffCan, staffCanWrite } from '../../_lib/authz.js';
@@ -175,19 +176,13 @@ export async function onRequest({ request, env }) {
     const uid = String(body.user_id || '').trim();
     if (!uid) return json(400, { error: 'user_id_required' });
     if (uid === user.id) return json(400, { error: 'cannot_delete_self' });
-    const anon = `anon-${uid}@deleted.invalid`;
-    const { error: orderDetachError } = await sb.from('orders')
-      .update({ user_id: null, customer_email: anon })
-      .eq('user_id', uid);
-    if (orderDetachError) return json(500, {
-      error: 'order_detach_failed',
-      detail: orderDetachError.message || String(orderDetachError),
-      message: 'Could not detach retained order history before deleting this user.',
+    const result = await deleteAccountUser(sb, uid);
+    if (!result.ok && result.code === 'account_erasure_not_ready') return json(503, {
+      error: 'account_erasure_not_ready',
+      message: 'Account deletion is temporarily unavailable. Retry later.',
     });
-    const { error } = await sb.auth.admin.deleteUser(uid);
-    if (error) return json(500, {
+    if (!result.ok) return json(500, {
       error: 'delete_failed',
-      detail: error.message || String(error),
       message: 'Could not delete the user login. Retry.',
     });
     await recordAudit(sb, { user, action: 'user.delete', targetType: 'user', targetId: uid, detail: {} });
