@@ -401,14 +401,13 @@ test("scrolly buildup scene includes mobile-readable accumulation labels", () =>
   assert.match(storyCss, /@media \(max-width: 760px\)[\s\S]*\.pipe-mobile-labels/);
 });
 
-test("scrolly story offsets chat launcher on mobile", () => {
+test("scrolly story state remains available to responsive chrome", () => {
   const storyJs = read("js/story.js");
   const storyCss = read("css/story.css");
 
   assert.match(storyJs, /syncStoryPageState/);
   assert.match(storyJs, /story-in-view/);
-  assert.match(storyCss, /body\.story-in-view #crisp-chatbox/);
-  assert.match(storyCss, /body\.story-in-view \.crisp-client/);
+  assert.doesNotMatch(storyCss, /crisp-client|crisp-chatbox/);
 });
 
 test("scrolly scenes 3 and 4 are mirrored hazard ledgers", () => {

@@ -553,8 +553,10 @@ async function renderMessages() {
   loaded.messages = true;
   const thread = $('msgThread');
   const form = $('msgForm');
+  const count = $('msgCount');
   if (!ACCOUNT?.company) {
     thread.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before starting account-team message threads.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
+    if (count) count.textContent = '';
     if (form) form.hidden = true; // the API rejects sends without a company
     wirePanelLinks(thread);
     return;
@@ -563,9 +565,10 @@ async function renderMessages() {
   let msgs = [];
   try { msgs = (await api('/api/account/messages')).messages; } catch { loaded.messages = false; showLoadError(thread, 'Could not load messages.', () => renderMessages()); return; }
   lastMsgCount = msgs.length;
+  if (count) count.textContent = msgs.length ? `${msgs.length} message${msgs.length === 1 ? '' : 's'} in this conversation.` : 'No messages in this conversation yet.';
   if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question about orders, pricing, NET terms, or anything else.</div></div>`; }
   else {
-    thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${esc(m.body)}<time>${fmtDT(m.created_at)}</time></div>`).join('');
+    thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${esc(m.body)}<time>${fmtDT(m.created_at)}${m.source === 'email_reply' ? ' · <span class="msg-source">Email reply</span>' : ''}</time></div>`).join('');
     thread.scrollTop = thread.scrollHeight;
   }
 }
@@ -583,6 +586,40 @@ function wireMessageForm() {
       loaded.messages = false; await renderMessages();
     } catch { status.textContent = 'Could not send. Try again.'; status.dataset.state = 'err'; }
     finally { if (sendBtn) sendBtn.disabled = false; }
+  });
+  $('refreshMessages')?.addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    loaded.messages = false;
+    await renderMessages();
+    event.currentTarget.disabled = false;
+  });
+}
+
+async function wireMessageSettings() {
+  const box = $('msgEmailUpdates');
+  const status = $('msgEmailStatus');
+  if (!box) return;
+  try {
+    const prefs = await api('/api/account/notification-prefs');
+    box.checked = prefs.notify_messages !== false;
+  } catch {
+    box.disabled = true;
+    status.textContent = 'Could not load message email settings. Reload to retry.';
+    status.dataset.state = 'err';
+    return;
+  }
+  box.addEventListener('change', async () => {
+    box.disabled = true;
+    status.textContent = 'Saving…'; status.dataset.state = 'busy';
+    try {
+      await api('/api/account/notification-prefs', { method: 'PATCH', body: { notify_messages: box.checked } });
+      status.textContent = box.checked ? 'Email replies are on.' : 'Email replies are off.';
+      status.dataset.state = 'ok';
+    } catch {
+      box.checked = !box.checked;
+      status.textContent = 'Could not save message email settings. Try again.';
+      status.dataset.state = 'err';
+    } finally { box.disabled = false; }
   });
 }
 
@@ -1059,7 +1096,7 @@ async function boot() {
   if (!ACCOUNT) { $('dashGuest').hidden = false; return; }
   $('dashApp').hidden = false;
   $('dashGreeting').textContent = `Welcome back${ACCOUNT.profile?.full_name ? ', ' + ACCOUNT.profile.full_name : ''}.`;
-  wireTabs(); wireMessageForm(); wireNotifications(); wireAddressForm(); wireProfileForm(); wireSecurityForm();
+  wireTabs(); wireMessageForm(); wireMessageSettings(); wireNotifications(); wireAddressForm(); wireProfileForm(); wireSecurityForm();
   // Route to the deep-linked tab immediately. Overview now lazy-loads through
   // loadTab like every other tab, so a deep link to #orders/#business no longer
   // fires overview's orders(100)+notifications fetches it never shows.

@@ -7,7 +7,7 @@ does not break the live site.
 ## What shipped
 
 ### User dashboard — `dashboard.html` + `js/dashboard.js`
-Tabs: Overview · Orders (history + status + reorder) · Messages (support thread) · Notifications ·
+Tabs: Overview · Orders (history + status + reorder) · Messages (full support thread, refresh/chat controls, email setting) · Notifications ·
 Addresses (save/remove ship & bill) · Payment (Stripe Customer Portal — saved cards/ACH) ·
 Profile (edit name/phone) · Business (company setup, approval status, team, programs, bulk requests).
 Linked from `account.html` ("Open dashboard") once signed in.
@@ -43,7 +43,8 @@ New tables `messages`, `notifications`, `offers`, `page_views`; new columns
 3. **Stripe Customer Portal**: activate it once in the Stripe Dashboard (Settings → Billing → Customer portal),
    else `account/billing-portal` errors. `STRIPE_SECRET_KEY` must be set (already used by checkout).
 4. **(optional) `RESEND_API_KEY` + `RESEND_FROM`** to let admin offers also email recipients.
-5. Redeploy: push to `main` (Cloudflare Pages auto-builds it via `node tools/cf-build.mjs`).
+5. **(optional) direct email replies:** use Resend's managed `*.resend.app` receiving address for `RESEND_INBOUND_DOMAIN` (do not change the Outlook/GoDaddy MX records for `masest.co`), set `MESSAGE_REPLY_SECRET`, then configure Resend's signed `email.received` webhook for `/api/resend-webhook`. Buyer email replies are verified against their company and appear in the Messages thread.
+6. Redeploy: push to `main` (Cloudflare Pages auto-builds it via `node tools/cf-build.mjs`).
    Verify env presence at `/api/health`.
 
 ## Security notes

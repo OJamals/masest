@@ -77,11 +77,12 @@
   .trackline span.done::before { border-color: var(--accent); background: var(--accent); }
   .ship-history { list-style: none; margin: 4px 0 0; padding: 8px 0 0; border-top: 1px dashed var(--line); display: grid; gap: 4px; font-size: .82rem; color: var(--muted); }
   .ship-history b { color: var(--ink); text-transform: capitalize; }
-  .msg-thread { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; padding: 4px; }
+  .msg-thread { display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; padding: 4px; }
   .msg { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: .92rem; line-height: 1.45; }
   .msg.buyer { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
   .msg.staff { align-self: flex-start; background: var(--accent-soft); color: var(--ink); border-bottom-left-radius: 4px; }
   .msg time { display: block; font-size: .68rem; opacity: .7; margin-top: 4px; }
+  .msg-source { font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
   .notif { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .notif.unread { background: var(--accent-tint); margin: 0; padding: 14px; border-radius: var(--r-input); }
   .notif i { color: var(--accent); font-size: 1.3rem; }
@@ -478,7 +479,17 @@
 
         <div class="dash-panel" data-panel="messages" id="messages" role="tabpanel" hidden>
           <div class="dash-card">
-            <h2 class="headline dash-section-title">Messages with MASEST</h2>
+            <div class="dash-card-toolbar">
+              <div>
+                <h2 class="headline dash-section-title dash-section-title-tight">Messages with MASEST</h2>
+                <p class="muted">Your full company conversation with the MASEST team.</p>
+              </div>
+              <div class="dash-action-row" style="margin-top:0">
+                <button class="btn btn-ghost btn-sm" id="refreshMessages" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh</button>
+                <button class="btn btn-primary btn-sm" type="button" data-customer-chat-open><i class="ph ph-chat-circle-dots" aria-hidden="true"></i> Open chat</button>
+              </div>
+            </div>
+            <p class="muted" id="msgCount" aria-live="polite"></p>
             <div class="msg-thread" id="msgThread"><p class="muted">Loading…</p></div>
             <form onsubmit="return false" id="msgForm" class="dash-panel-form">
               <div class="field"><label for="msgInput" class="sr-only">Message</label>
@@ -486,6 +497,14 @@
               <button class="btn btn-primary btn-sm msg-send" type="submit">Send</button>
               <span class="dash-status" id="msgStatus" role="status" aria-live="polite"></span>
             </form>
+            <details class="dash-disclosure">
+              <summary>Message settings</summary>
+              <div class="dash-disclosure-body">
+                <label class="notif-pref-label"><input id="msgEmailUpdates" type="checkbox"> Email me when the MASEST team replies</label>
+                <p class="muted">Replies always appear here. When reply-by-email is configured, replying directly to a MASEST message email adds your response to this thread too.</p>
+                <p class="dash-status" id="msgEmailStatus" role="status" aria-live="polite"></p>
+              </div>
+            </details>
           </div>
         </div>
 

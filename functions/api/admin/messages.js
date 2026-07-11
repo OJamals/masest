@@ -2,7 +2,7 @@
 //   GET → thread list · GET ?company_id= → full thread (marks read) · POST { company_id, body } → reply
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, htmlEscape, emailLayout } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
-import { sendCrispMessage } from '../../_lib/crisp.js';
+import { messageReplyAddress } from '../../_lib/message-replies.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
@@ -49,14 +49,6 @@ export async function onRequest({ request, env }) {
       read_by_staff: true, read_by_user: false,
     }).select('id,created_at').single();
     if (error) return json(500, { error: error.message });
-    // Two-way Crisp: if this company has a live chat session, push the reply into it so
-    // the visitor sees it in the widget. Best-effort; the webhook claims the echo (no dup).
-    try {
-      const { data: sess } = await sb.from('crisp_sessions')
-        .select('session_id').eq('company_id', companyId)
-        .order('updated_at', { ascending: false }).limit(1).maybeSingle();
-      if (sess?.session_id) await sendCrispMessage(env, { sessionId: sess.session_id, text });
-    } catch { /* mirror is best-effort */ }
     await sb.from('notifications').insert({
       company_id: companyId, type: 'message', title: 'New message from MASEST',
       body: text.slice(0, 140), link: '/dashboard.html#messages',
@@ -64,12 +56,13 @@ export async function onRequest({ request, env }) {
     // Email the company (best-effort) so buyers see the reply without checking the dashboard.
     const appUrl = env.APP_URL || new URL(request.url).origin;
     const emails = await companyEmails(sb, companyId, 'messages');
+    const replyTo = await messageReplyAddress(env, companyId);
     await sendEmail(env, { to: emails, subject: 'New message from MASEST',
       html: emailLayout({
         heading: 'New message from MASEST',
         bodyHtml: `<p>You have a new message from the MASEST team:</p><blockquote style="border-left:3px solid #0e7c86;padding-left:12px;color:#334;margin:12px 0">${htmlEscape(text)}</blockquote>`,
         ctaText: 'Reply in your dashboard', ctaUrl: `${appUrl}/dashboard.html#messages`,
-      }) });
+      }), replyTo });
     return json(201, { id: data.id, created_at: data.created_at });
   }
 

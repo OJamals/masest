@@ -2,7 +2,7 @@
 
 **Purpose:** prove launch readiness for the current MASEST production surface before new feature expansion.
 
-**Current boundary:** this runbook starts with read-only preparation. No live QA records, CMS publishes, Stripe charges, QBO artifacts, Crisp messages, or provider cleanup actions happen until the operator explicitly approves the go/no-go checkpoint after preflight.
+**Current boundary:** this runbook starts with read-only preparation. No live QA records, CMS publishes, Stripe charges, QBO artifacts, or provider cleanup actions happen until the operator explicitly approves the go/no-go checkpoint after preflight.
 
 **Evidence path:** `audits/production-acceptance-2026-06-30/`
 
@@ -68,7 +68,6 @@ Required env groups:
   `QBO_OAUTH_STATE_SECRET`, `QBO_SYNC_SECRET`, `QBO_ENVIRONMENT`.
   `QBO_INCOME_ACCOUNT_ID` is optional; sync auto-detects an Income account
   from the connected QuickBooks company when it is omitted.
-- Crisp: `MASEST_CRISP_ID`, `CRISP_TOKEN_ID`, `CRISP_TOKEN_KEY`, `CRISP_IDENTITY_SECRET`, plus one of `CRISP_WEBHOOK_SECRET` or `CRISP_WEBHOOK_KEY`
 - CMS publish: one of `CONTENT_PUBLISH_HOOK_URL` or `CF_PAGES_DEPLOY_HOOK_URL`
 
 The Supabase operator data source proves the local acceptance runner can read/write the production data store during the approved live pass. The live app runtime must still be verified through deployed app paths such as `/api/health`, dashboard/admin actions, and the provider flows in the checklist.
@@ -89,7 +88,7 @@ Production acceptance checkpoint
 - QA identity:
 - Payment cap:
 - Known residue plan:
-- Requested approval: create QA account/company, CMS temporary entry, live Stripe payment/refund, QBO artifact, Crisp chat
+- Requested approval: create QA account/company, CMS temporary entry, live Stripe payment/refund, QBO artifact, customer chat message
 ```
 
 Wait for explicit operator approval.
@@ -107,10 +106,11 @@ Wait for explicit operator approval.
 - [ ] Refund or reverse the Stripe test payment and verify order/refund state.
 - [ ] Sync the QA order to QBO as invoice/payment or the correct order document.
 - [ ] Create the matching QBO refund/credit memo, void, or clearly labeled cleanup state.
-- [ ] Send one Crisp QA visitor message and one operator reply.
-- [ ] Verify Crisp webhook maps session/message state into CRM notes/messages/contacts without duplicate operator echoes.
+- [ ] Send one authenticated customer chat message and one admin reply.
+- [ ] Verify the message appears in Admin → Messages and the reply appears in the customer chat thread.
+- [ ] If Resend Receiving is configured, reply directly to the admin email and verify it appears in Admin → Messages and the buyer dashboard thread.
 - [ ] Verify anonymous, buyer, company admin, staff read-only/support/finance/owner boundaries for protected surfaces and mutations.
-- [ ] Verify controlled failure paths: invalid checkout line, CMS validation rejection, unauthorized API call, and Crisp bad-signature handling.
+- [ ] Verify controlled failure paths: invalid checkout line, CMS validation rejection, unauthorized API call, and customer-chat authentication gating.
 - [ ] Run focused accessibility/performance checks: core public pages, dashboard/admin/CMS/CRM keyboard flow, mobile overflow, and no hung dashboard/API states.
 
 ## Cleanup Checklist
@@ -119,7 +119,6 @@ Wait for explicit operator approval.
 - [ ] QA Stripe payment refunded or documented with exact residual state.
 - [ ] QBO invoice/payment/refund/void artifact cleaned up or clearly marked as QA residue.
 - [ ] QA CRM/company/contact/order records archived, labeled, or documented for retention.
-- [ ] Crisp QA session/contact labeled or archived.
 - [ ] Evidence artifact lists every live object ID needed for later cleanup.
 - [ ] Blockers are converted into issues before new feature work resumes.
 
@@ -130,7 +129,6 @@ Use harmless failures only:
 - invalid checkout quantity or SKU rejected before payment creation
 - CMS invalid payload rejected before publish
 - unauthorized buyer/admin mutation rejected
-- Crisp webhook bad signature/key rejected or ignored according to route contract
 - QBO retry/status check through existing failed-row handling only if a safe QA row exists
 
 Do not force destructive production provider failures.

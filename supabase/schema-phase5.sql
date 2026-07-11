@@ -47,23 +47,9 @@ create table if not exists public.messages (
 );
 create index if not exists messages_company_idx on public.messages(company_id, created_at);
 alter table public.messages add column if not exists source text not null default 'dashboard';
-alter table public.messages add column if not exists external_thread_id text;
 alter table public.messages add column if not exists external_message_id text;
-create index if not exists messages_external_idx on public.messages(source, external_message_id) where external_message_id is not null;
-
-create table if not exists public.crisp_sessions (
-  session_id text primary key,
-  website_id text,
-  email text,
-  nickname text,
-  phone text,
-  company_id uuid references public.companies(id) on delete set null,
-  company_name text,
-  data jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default now()
-);
-create index if not exists crisp_sessions_company_idx on public.crisp_sessions(company_id);
-
+create unique index if not exists messages_email_reply_id_idx on public.messages(external_message_id)
+  where source = 'email_reply' and external_message_id is not null;
 -- ---------- notifications: per company (optionally targeted to a user) ----------
 create table if not exists public.notifications (
   id          uuid primary key default gen_random_uuid(),
@@ -123,7 +109,7 @@ create policy notifications_company on public.notifications
 
 -- ---------- GRANTS (service-role auto-grant does not fire for new tables) ----------
 grant select on public.messages, public.notifications to authenticated;
-grant all privileges on public.messages, public.notifications, public.crisp_sessions, public.offers, public.page_views to service_role;
+grant all privileges on public.messages, public.notifications, public.offers, public.page_views to service_role;
 grant usage, select on all sequences in schema public to service_role;
 
 -- Atomic tracked-stock decrement for checkout/webhook flows.

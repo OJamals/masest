@@ -24,11 +24,6 @@ const completeEnv = {
   QBO_SYNC_SECRET: "sync_secret",
   QBO_INCOME_ACCOUNT_ID: "79",
   QBO_ENVIRONMENT: "production",
-  MASEST_CRISP_ID: "crisp-site-id",
-  CRISP_TOKEN_ID: "token-id",
-  CRISP_TOKEN_KEY: "token-key",
-  CRISP_WEBHOOK_KEY: "website-hook-key",
-  CRISP_IDENTITY_SECRET: "identity-secret",
   CONTENT_PUBLISH_HOOK_URL: "https://deploy-hook.example",
 };
 
@@ -42,7 +37,7 @@ test("redactValue reports presence without leaking secret values", () => {
 test("acceptanceEnvGroups names the live integration gates", () => {
   assert.deepEqual(
     acceptanceEnvGroups.map((group) => group.id),
-    ["supabase", "stripe", "qbo", "crisp", "cms_publish"],
+    ["supabase", "stripe", "qbo", "cms_publish"],
   );
 });
 
@@ -68,7 +63,6 @@ test("buildPreflightReport fails closed and redacts missing env checks", () => {
   assert.equal(report.checks.env_supabase.ok, false);
   assert.equal(report.checks.env_stripe.ok, false);
   assert.equal(report.checks.env_qbo.ok, false);
-  assert.equal(report.checks.env_crisp.ok, false);
   assert.equal(report.checks.env_cms_publish.ok, false);
   assert.equal(JSON.stringify(report).includes("sk_live_secret"), false);
   assert.deepEqual(report.blockers.slice(0, 2), [
@@ -176,11 +170,6 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
           "SUPABASE_SERVICE_ROLE_KEY",
           "STRIPE_SECRET_KEY",
           "STRIPE_WEBHOOK_SECRET",
-          "MASEST_CRISP_ID",
-          "CRISP_TOKEN_ID",
-          "CRISP_TOKEN_KEY",
-          "CRISP_WEBHOOK_KEY",
-          "CRISP_IDENTITY_SECRET",
           "CONTENT_PUBLISH_HOOK_URL",
         ].map((key) => [key, { type: "secret_text" }])),
       },
@@ -209,7 +198,6 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
   assert.equal(report.ready, false);
   assert.equal(report.env_source.type, "cloudflare_pages");
   assert.equal(report.checks.env_supabase.ok, true);
-  assert.equal(report.checks.env_crisp.ok, true);
   assert.equal(report.checks.env_cms_publish.ok, true);
   assert.equal(report.checks.env_stripe.ok, true);
   assert.equal(report.checks.env_qbo.ok, false);
@@ -228,11 +216,6 @@ test("buildPreflightReport accepts a Cloudflare QBO connect key bundle", () => {
           SUPABASE_SERVICE_ROLE_KEY: { type: "secret_text" },
           STRIPE_SECRET_KEY: { type: "secret_text" },
           STRIPE_WEBHOOK_SECRET: { type: "secret_text" },
-          MASEST_CRISP_ID: { type: "secret_text" },
-          CRISP_TOKEN_ID: { type: "secret_text" },
-          CRISP_TOKEN_KEY: { type: "secret_text" },
-          CRISP_WEBHOOK_KEY: { type: "secret_text" },
-          CRISP_IDENTITY_SECRET: { type: "secret_text" },
           CONTENT_PUBLISH_HOOK_URL: { type: "secret_text" },
           QBO_CONNECT_KEY: { type: "secret_text" },
         },
@@ -300,6 +283,4 @@ test("buildPreflightReport passes local gates when commit, env, and Pages build 
   assert.deepEqual(report.blockers, []);
   assert.equal(report.checks.git_branch.ok, true);
   assert.equal(report.checks.pages_commit.ok, true);
-  assert.equal(report.checks.env_crisp.details.values.CRISP_TOKEN_KEY, "set:9");
-  assert.equal(JSON.stringify(report).includes("token-key"), false);
 });

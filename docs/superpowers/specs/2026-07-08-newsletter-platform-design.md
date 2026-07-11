@@ -19,7 +19,7 @@ Supabase send stack + the blog editor components.
   auto-send-latest-blog toggle (gates the existing blog sweep). GitHub-cron drives due sends.
 
 Out of scope v1: full WYSIWYG (Markdown+HTML toolbar instead), A/B tests, open/click
-analytics beyond Resend/email_events, Crisp integration.
+analytics beyond Resend/email_events, customer-chat integration.
 
 ## Data model (Supabase — `supabase/schema-newsletters.sql`)
 - `newsletters`(id uuid pk, subject text, body_md text, source text['compose'|'blog_post'],
@@ -93,7 +93,7 @@ visibility.) Recurring intervals computed server-side from `interval_days`.
 
 ## Integrations used
 Resend (send), Klaviyo (leads/list source + existing signup), Supabase (data + auth users),
-Cloudflare (deploy + endpoints), GitHub Actions (schedule cron). Crisp: not in v1.
+Cloudflare (deploy + endpoints), GitHub Actions (schedule cron). Customer chat: not in v1.
 
 ## Owner ops (inert until done)
 - Apply `supabase/schema-newsletters.sql`.

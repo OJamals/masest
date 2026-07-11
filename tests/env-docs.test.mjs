@@ -9,15 +9,13 @@ const env = readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
 const pages = readFileSync(new URL('../CLOUDFLARE_PAGES.md', import.meta.url), 'utf8');
 
 test('.env.example documents the email (Resend) feature toggles', () => {
-  for (const key of ['RESEND_API_KEY', 'RESEND_FROM', 'RESEND_WEBHOOK_SECRET', 'RESEND_REPLY_TO', 'EMAIL_UNSUB_SECRET', 'ORDER_NOTIFY_EMAIL']) {
+  for (const key of ['RESEND_API_KEY', 'RESEND_FROM', 'RESEND_WEBHOOK_SECRET', 'RESEND_REPLY_TO', 'RESEND_INBOUND_DOMAIN', 'MESSAGE_REPLY_SECRET', 'EMAIL_UNSUB_SECRET', 'ORDER_NOTIFY_EMAIL']) {
     assert.match(env, new RegExp(`^${key}=`, 'm'), `${key} missing from .env.example`);
   }
 });
 
-test('.env.example documents the Crisp outbound + identity vars', () => {
-  for (const key of ['CRISP_WEBHOOK_SECRET', 'CRISP_TOKEN_ID', 'CRISP_TOKEN_KEY', 'CRISP_IDENTITY_SECRET', 'MASEST_CRISP_ID']) {
-    assert.match(env, new RegExp(`^${key}=`, 'm'), `${key} missing from .env.example`);
-  }
+test('.env.example has no retired Crisp credentials', () => {
+  assert.doesNotMatch(env, /CRISP_/);
 });
 
 test('.env.example documents the quote intake + sweep vars', () => {

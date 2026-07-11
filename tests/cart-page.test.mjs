@@ -114,7 +114,6 @@ test("static catalog does not show cart controls without commerce metadata", asy
       assert.equal(await page.locator(".cart-summary").isVisible(), false);
       assert.equal(await page.locator("#checkoutPay").isVisible(), false);
       assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
-      assert.equal(await page.evaluate(() => window.MASEST_DISABLE_CRISP), true);
     } finally {
       await browser.close();
     }

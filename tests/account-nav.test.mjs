@@ -92,14 +92,11 @@ test("account dropdown identifies notification badge source", () => {
 test("account dropdown only exposes admin console from explicit admin access", () => {
   const nav = read("js/account-nav.js");
   const account = read("functions/api/account/me.js");
-  const integrations = read("js/integrations.js");
 
   assert.match(account, /can_admin:/, "account/me should return a purpose-built admin menu flag");
   assert.match(account, /staff_role/, "account/me should inspect platform staff role separately from company role");
   assert.match(nav, /data\.can_admin\s*===\s*true/, "client nav must not infer admin access from broad profile fields");
   assert.doesNotMatch(nav, /data\.is_staff\s*\?/, "client nav should not show admin console from the old is_staff response shape");
-  assert.match(integrations, /account\.can_admin\s*===\s*true/, "Crisp account context should use the same explicit admin flag");
-  assert.doesNotMatch(integrations, /account\.is_staff/, "front-end integrations should not consume the old is_staff account shape");
 });
 
 test("account dropdown is viewport clamped for left edge buttons", () => {

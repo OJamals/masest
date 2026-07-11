@@ -37,12 +37,6 @@ export const acceptanceEnvGroups = [
     ],
   },
   {
-    id: "crisp",
-    label: "Crisp chat, identity, and webhook",
-    required: ["MASEST_CRISP_ID", "CRISP_TOKEN_ID", "CRISP_TOKEN_KEY", "CRISP_IDENTITY_SECRET"],
-    oneOf: [["CRISP_WEBHOOK_SECRET", "CRISP_WEBHOOK_KEY"]],
-  },
-  {
     id: "cms_publish",
     label: "CMS publish trigger",
     required: [],
@@ -188,7 +182,7 @@ export function buildPreflightReport({
     ready: blockers.length === 0,
     mode: "non_mutating_preflight",
     env_source: envSource,
-    live_mutation_boundary: "stop for explicit operator go/no-go before QA records, CMS publish, Stripe, QBO, or Crisp mutations",
+    live_mutation_boundary: "stop for explicit operator go/no-go before QA records, CMS publish, Stripe, or QBO mutations",
     checks,
     blockers,
   };

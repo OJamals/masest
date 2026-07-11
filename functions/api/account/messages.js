@@ -12,7 +12,7 @@ export async function onRequest({ request, env }) {
     const peek = new URL(request.url).searchParams.get('peek') === '1';
     const { data, error } = await sb
       .from('messages')
-      .select('id,sender_role,body,order_id,created_at')
+      .select('id,sender_role,body,order_id,source,created_at')
       .eq('company_id', companyId)
       .order('created_at', { ascending: true })
       .limit(200);
@@ -32,9 +32,10 @@ export async function onRequest({ request, env }) {
     const text = String(body.body || '').trim();
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
+    const source = body.source === 'customer_chat' ? 'customer_chat' : 'dashboard';
     const { data, error } = await sb.from('messages').insert({
       company_id: companyId, user_id: user.id, sender_role: 'buyer', body: text,
-      order_id: body.order_id || null, read_by_user: true, read_by_staff: false,
+      order_id: body.order_id || null, source, read_by_user: true, read_by_staff: false,
     }).select('id,created_at').single();
     if (error) return json(500, { error: 'server_error' });
 

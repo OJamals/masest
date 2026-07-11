@@ -19,6 +19,15 @@ test("webhook maps events and updates status + suppression", () => {
   assert.match(SRC, /recordSuppression\(/);
 });
 
+test("webhook routes verified inbound customer email replies into support threads", () => {
+  assert.match(SRC, /email\.received/);
+  assert.match(SRC, /routeInboundMessageReply/);
+  assert.match(SRC, /companyIdFromReplyAddress/);
+  assert.match(SRC, /emails\/receiving/);
+  assert.match(SRC, /sender_not_member/);
+  assert.match(SRC, /source: 'email_reply'/);
+});
+
 test("webhook no-ops (200) when secret unset and returns 200 on processing", () => {
   assert.match(SRC, /RESEND_WEBHOOK_SECRET/);
   assert.match(SRC, /json\(200/);

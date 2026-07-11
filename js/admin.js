@@ -84,7 +84,7 @@ function statusBadge(value) {
   return `<span class="badge" data-s="${esc(value)}">${esc(String(value || 'unknown').replaceAll('_', ' '))}</span>`;
 }
 function sourceLabel(message) {
-  if (message?.source === 'crisp') return '<span class="pill">Crisp chat</span>';
+  if (message?.source === 'customer_chat') return '<span class="pill">Customer chat</span>';
   return '';
 }
 

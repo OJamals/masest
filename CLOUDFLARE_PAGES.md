@@ -42,6 +42,22 @@ site.
 
 After env var changes, retry a production deployment so the new values bind.
 
+## Customer-message email replies
+
+The dashboard is the primary message inbox. To let customers reply directly to
+a MASEST message email, configure Resend Receiving and set:
+
+- `RESEND_INBOUND_DOMAIN` — use the Resend-managed `*.resend.app` receiving
+  address. This requires no DNS change and must not replace the `masest.co` MX
+  records used by Outlook/GoDaddy.
+- `MESSAGE_REPLY_SECRET` — a new random secret used to sign per-company reply addresses.
+- `RESEND_WEBHOOK_SECRET` — configure the same signed webhook at
+  `https://masest.co/api/resend-webhook` with `email.received` in addition to
+  the existing delivery events.
+
+The webhook accepts only signed MASEST reply addresses and email addresses that
+belong to that company. Valid replies enter Admin → Messages and notify staff.
+
 ## Supabase Auth Email
 
 Supabase Auth confirmation, resend, invite, and password-reset emails are sent

@@ -834,11 +834,6 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 760px) {
-  body.story-in-view #crisp-chatbox,
-  body.story-in-view .crisp-client {
-    transform: translateY(-78px) scale(.86) !important;
-    transform-origin: right bottom !important;
-  }
   .story .act { height: 198vh; }
   .story .act[data-act="1"] { height: 140vh; }
   .story .act[data-act="3"] { height: 330vh; }
@@ -1503,7 +1498,6 @@ justify-content: flex-start;
 .story:not(.story-ready) .act[data-act="2"] .act-copy {
   order: 1;
 }
-
 
 
 

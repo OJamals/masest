@@ -1,7 +1,6 @@
 -- CRM contact dedup: one active contact per (company, case-insensitive email).
--- Additive + idempotent. Kills the inbound-Crisp select-then-insert race
--- (functions/api/crisp/webhook.js syncChatLeadToCrm). The webhook's insert is
--- best-effort (try/catch), so a racing insert that loses to this index fails
+-- Additive + idempotent. Prevents inbound contact synchronization races.
+-- A best-effort insert that loses to this index fails
 -- harmlessly — the winning contact persists, no duplicate is created.
 --
 -- PRE-CHECK (run first): existing duplicates will block index creation. Find them:

@@ -341,7 +341,7 @@ export function renderChrome() {
           <div class="foot-title">Contact</div>
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
           <a href="tel:+18134063852">(813) 406-3852</a>
-          <a href="${root}contact" data-crisp-open data-crisp-message="Hi, I need help matching VertKleen to an application.">Live chat</a>
+          <a href="#customerChat" data-customer-chat-open>Customer chat</a>
           <p style="margin-top:10px;font-size:.8rem;line-height:1.7">CAGE 0B2Q3<br>NAICS 424690<br>SAM.gov registered<br>Minority-owned (self-certified)</p>
         </div>
       </div>
@@ -392,19 +392,29 @@ export function renderChrome() {
   }
   wireDocumentRoomCapture();
 
-  // Load public config + integrations (Crisp chat, newsletter helper) once per page.
+  // Load public config + first-party integrations once per page.
   if (!window.__masestIntegrations) {
     window.__masestIntegrations = true;
+    window.MASEST = Object.assign(window.MASEST || {}, { chatRoot: root });
     const cfg = document.createElement("script");
     cfg.src = `${root}js/config.js`;
     cfg.onload = () => {
-      const mod = document.createElement("script");
-      mod.type = "module";
-      mod.src = `${root}js/integrations.js?v=20260710f`;
-      document.head.appendChild(mod);
+      ["integrations.js?v=20260711a", "customer-chat.js?v=20260711a"].forEach((src) => {
+        const mod = document.createElement("script");
+        mod.type = "module";
+        mod.src = `${root}js/${src}`;
+        document.head.appendChild(mod);
+      });
     };
     document.head.appendChild(cfg);
   }
+
+  document.addEventListener("click", (event) => {
+    const opener = event.target?.closest?.("[data-customer-chat-open]");
+    if (!opener) return;
+    event.preventDefault();
+    document.querySelector(".customer-chat__toggle")?.click();
+  });
 }
 
 /* ---------- Scroll reveal (IntersectionObserver, reduced-motion safe) ---------- */
