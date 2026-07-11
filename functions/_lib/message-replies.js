@@ -15,7 +15,13 @@ async function signature(value, secret) {
 
 export function inboundDomain(env) {
   const domain = String(env?.RESEND_INBOUND_DOMAIN || '').trim().toLowerCase();
-  return DOMAIN_RE.test(domain) ? domain : '';
+  if (!DOMAIN_RE.test(domain)) return '';
+  let appDomain = '';
+  try { appDomain = new URL(String(env?.APP_URL || '')).hostname.toLowerCase(); }
+  catch { appDomain = ''; }
+  const primary = appDomain.replace(/^www\./, '');
+  if (primary && domain.replace(/^www\./, '') === primary) return '';
+  return domain;
 }
 
 export async function messageReplyAddress(env, companyId) {
