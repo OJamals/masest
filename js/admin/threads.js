@@ -1,4 +1,4 @@
-import { esc, dateTime as date, delegate } from '../util.js?v=20260711g';
+import { esc, dateTime as date, delegate } from '../util.js?v=20260711h';
 
 export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats }) {
   const prefs = ['notify_admin_support_requests', 'notify_admin_messages'];
