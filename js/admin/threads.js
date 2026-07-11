@@ -1,4 +1,4 @@
-import { esc, dateTime as date, delegate } from '../util.js?v=20260711o';
+import { esc, dateTime as date, delegate } from '../util.js?v=20260711p';
 
 const POLL_MS = 15_000;
 const PRESENCE_HEARTBEAT_MS = 30_000;
