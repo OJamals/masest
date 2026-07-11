@@ -5,11 +5,13 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260710f";
+const CHAT_RELEASE = "20260711a";
+const MAIN_RELEASE = "20260711b";
+const ADMIN_RELEASE = "20260710g";
 const MAIN_RELEASE_OVERRIDES = new Map([
-  ["admin.html", "20260710g"],
-  ["dashboard.html", "20260710g"],
+  ["admin.html", MAIN_RELEASE],
+  ["dashboard.html", MAIN_RELEASE],
 ]);
-const ADMIN_RELEASE = MAIN_RELEASE_OVERRIDES.get("admin.html");
 
 function filesUnder(path) {
   return readdirSync(new URL(path, root), { withFileTypes: true }).flatMap((entry) => {
@@ -35,7 +37,9 @@ test("every browser auth importer uses one cache release", () => {
     const imports = source.matchAll(/(?:from\s*|import\s*\()\s*["']([^"']*auth\.js(?:\?[^"']*)?)["']/g);
     for (const match of imports) {
       references += 1;
-      const release = path === "js/admin.js" || path.startsWith("js/admin/")
+      const release = path === "js/customer-chat.js"
+        ? CHAT_RELEASE
+        : path === "js/admin.js" || path.startsWith("js/admin/")
         ? ADMIN_RELEASE
         : RELEASE;
       assert.match(match[1], new RegExp(`auth\\.js\\?v=${release}$`), `${path}: ${match[1]}`);
@@ -56,7 +60,7 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   }
 
   assert.match(read("js/main/chrome.js"), new RegExp(`account-nav\\.js\\?v=${RELEASE}`));
-  assert.match(read("js/main/chrome.js"), new RegExp(`integrations\\.js\\?v=${RELEASE}`));
+  assert.match(read("js/main/chrome.js"), new RegExp(`integrations\\.js\\?v=${CHAT_RELEASE}`));
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("product.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
 });
@@ -80,7 +84,7 @@ test("public pages and generators publish the auth cache release", () => {
     const matches = [...read(path).matchAll(/main\.js\?v=(\d{8}[a-z])/g)];
     for (const match of matches) {
       entrypoints += 1;
-      assert.equal(match[1], MAIN_RELEASE_OVERRIDES.get(path) || RELEASE, path);
+      assert.equal(match[1], MAIN_RELEASE_OVERRIDES.get(path) || MAIN_RELEASE, path);
     }
   }
 
@@ -90,7 +94,7 @@ test("public pages and generators publish the auth cache release", () => {
     "tools/gen_industries.mjs",
     "tools/seo-inject.mjs",
   ]) {
-    assert.doesNotMatch(read(path), new RegExp(`main\\.js\\?v=(?!${RELEASE})`), path);
+    assert.doesNotMatch(read(path), new RegExp(`main\\.js\\?v=(?!${MAIN_RELEASE})`), path);
   }
   assert.ok(entrypoints >= 50, "expected generated and hand-authored public pages");
 });
