@@ -7,7 +7,7 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
 const MAIN_RELEASE = "20260711y";
-const ADMIN_RELEASE = "20260711s";
+const ADMIN_RELEASE = "20260711t";
 const ADMIN_PAGE_RELEASE = "20260711t";
 const CHROME_RELEASE = "20260711y";
 const ACCOUNT_NAV_RELEASE = "20260711x";
