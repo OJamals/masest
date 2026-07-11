@@ -547,7 +547,13 @@ export async function getAccessToken(sb, env = {}, options = {}) {
     updated_at: now.toISOString(),
     ...(intuitTid ? { last_intuit_tid: intuitTid } : {}),
   };
-  await sb.from('qbo_tokens').update(payload).eq('id', 1);
+  const { data: saved, error: saveError } = await sb
+    .from('qbo_tokens')
+    .update(payload)
+    .eq('id', 1)
+    .select('id')
+    .maybeSingle();
+  if (saveError || !saved) throw new Error('qbo_token_persist_failed');
 
   return { accessToken, realmId };
 }

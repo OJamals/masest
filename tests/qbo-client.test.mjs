@@ -3,7 +3,7 @@ import test from "node:test";
 import { backoffMs, docNumber, getAccessToken, needsRefresh, nextSyncState, qboBaseUrl } from "../functions/_lib/qbo.js";
 import { intuitTidFromHeaders } from "../functions/_lib/intuit.js";
 
-function fakeQboTokenStore(row) {
+function fakeQboTokenStore(row, options = {}) {
   const calls = { updated: null };
   const sb = {
     from(table) {
@@ -16,7 +16,12 @@ function fakeQboTokenStore(row) {
           calls.updated = payload;
           return {
             eq() {
-              return { async maybeSingle() { return { data: { ...row, ...payload }, error: null }; } };
+              return {
+                select() { return this; },
+                async maybeSingle() {
+                  return options.updateResult || { data: { ...row, ...payload }, error: null };
+                },
+              };
             },
           };
         },
@@ -120,4 +125,68 @@ test("getAccessToken refreshes an expired stored access token and persists rotat
   assert.equal(calls.updated.refresh_token, "refresh_new");
   assert.equal(calls.updated.realm_id, "realm_123");
   assert.equal(calls.updated.last_intuit_tid, "tid_refresh_123");
+});
+
+test("getAccessToken rejects when rotated tokens fail to persist", async () => {
+  const { sb, calls } = fakeQboTokenStore({
+    realm_id: "realm_123",
+    access_token: "access_old",
+    refresh_token: "refresh_old",
+    access_expires_at: "2026-06-18T11:00:00.000Z",
+  }, {
+    updateResult: { data: null, error: new Error("write failed") },
+  });
+
+  let refreshCalls = 0;
+  await assert.rejects(() => getAccessToken(sb, {
+    QBO_CLIENT_ID: "client_id",
+    QBO_CLIENT_SECRET: "client_secret",
+  }, {
+    now: new Date("2026-06-18T12:00:00.000Z"),
+    fetchImpl: async () => {
+      refreshCalls += 1;
+      return {
+        ok: true,
+        headers: new Headers(),
+        async json() {
+          return { access_token: "access_new", refresh_token: "refresh_new", expires_in: 3600 };
+        },
+      };
+    },
+  }), { message: "qbo_token_persist_failed" });
+
+  assert.equal(refreshCalls, 1);
+  assert.equal(calls.updated.refresh_token, "refresh_new");
+});
+
+test("getAccessToken rejects when rotated tokens update no rows", async () => {
+  const { sb, calls } = fakeQboTokenStore({
+    realm_id: "realm_123",
+    access_token: "access_old",
+    refresh_token: "refresh_old",
+    access_expires_at: "2026-06-18T11:00:00.000Z",
+  }, {
+    updateResult: { data: null, error: null },
+  });
+
+  let refreshCalls = 0;
+  await assert.rejects(() => getAccessToken(sb, {
+    QBO_CLIENT_ID: "client_id",
+    QBO_CLIENT_SECRET: "client_secret",
+  }, {
+    now: new Date("2026-06-18T12:00:00.000Z"),
+    fetchImpl: async () => {
+      refreshCalls += 1;
+      return {
+        ok: true,
+        headers: new Headers(),
+        async json() {
+          return { access_token: "access_new", refresh_token: "refresh_new", expires_in: 3600 };
+        },
+      };
+    },
+  }), { message: "qbo_token_persist_failed" });
+
+  assert.equal(refreshCalls, 1);
+  assert.equal(calls.updated.refresh_token, "refresh_new");
 });
