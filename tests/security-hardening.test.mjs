@@ -81,3 +81,27 @@ test('migration hardens profiles_self_update with a WITH CHECK against is_staff 
   assert.match(sql, /with\s+check/i);
   assert.match(sql, /is_staff/);
 });
+
+test('quote rate limits before bounded parsing and maps oversized bodies to 413', () => {
+  const src = read('functions/api/quote.js');
+  const rateLimitIndex = src.indexOf("await rateLimit(env, 'quote'");
+  const parserIndex = src.indexOf('await readBounded');
+  assert.notEqual(rateLimitIndex, -1);
+  assert.notEqual(parserIndex, -1);
+  assert.ok(rateLimitIndex < parserIndex);
+  assert.match(src, /64\s*\*\s*1024/);
+  assert.match(src, /RequestBodyTooLargeError/);
+  assert.match(src, /json\(413,\s*\{\s*error:\s*['"]request_too_large['"]/);
+});
+
+test('newsletter rate limits before bounded parsing and maps oversized bodies to 413', () => {
+  const src = read('functions/api/newsletter.js');
+  const rateLimitIndex = src.indexOf("await rateLimit(env, 'newsletter'");
+  const parserIndex = src.indexOf('await readBounded');
+  assert.notEqual(rateLimitIndex, -1);
+  assert.notEqual(parserIndex, -1);
+  assert.ok(rateLimitIndex < parserIndex);
+  assert.match(src, /16\s*\*\s*1024/);
+  assert.match(src, /RequestBodyTooLargeError/);
+  assert.match(src, /json\(413,\s*\{\s*error:\s*['"]request_too_large['"]/);
+});

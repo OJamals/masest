@@ -4,6 +4,11 @@
 import { adminClient, emailLayout, htmlEscape, json, sendEmail } from '../_lib/supabase.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { subscribeLeadByIndustry } from '../_lib/klaviyo.js';
+import {
+  RequestBodyTooLargeError,
+  readBoundedFormData,
+  readBoundedJson,
+} from '../_lib/request-body.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -94,26 +99,28 @@ function displayRows(payload) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const fields = {};
   const ct = request.headers.get('content-type') || '';
+  const rl = await rateLimit(env, 'quote', clientIp(request), { limit: 8, windowSec: 60 });
+  if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
 
+  const fields = {};
   try {
     if (ct.includes('application/json')) {
-      Object.assign(fields, await request.json());
+      Object.assign(fields, await readBoundedJson(request, 64 * 1024));
     } else {
-      const fd = await request.formData();
+      const fd = await readBoundedFormData(request, 64 * 1024);
       for (const [key, value] of fd.entries()) {
         fields[key] = key in fields ? [].concat(fields[key], value) : value;
       }
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return json(413, { error: 'request_too_large' });
+    }
     return json(400, { error: 'bad_request' });
   }
 
   if (String(fields._gotcha || '').trim()) return json(200, { ok: true });
-
-  const rl = await rateLimit(env, 'quote', clientIp(request), { limit: 8, windowSec: 60 });
-  if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
 
   const name = String(fields.name || '').trim();
   const email = String(fields.email || '').trim();
