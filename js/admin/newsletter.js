@@ -12,7 +12,7 @@ import {
   richEditorTemplate,
 } from './rich-editor.js?v=20260711i';
 import { renderNewsletterBody } from '../newsletter-render.js?v=20260711i';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260711i';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260711k';
 
 const SECTIONS = [
   ['compose', 'Compose'],

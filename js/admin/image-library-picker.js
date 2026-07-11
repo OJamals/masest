@@ -1,6 +1,6 @@
 import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260711i";
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 2;
 
 function assetUrl(asset = {}) {
   return asset.public_url || asset.storage_path || "";
@@ -41,7 +41,7 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
         <button class="btn btn-primary" type="button" data-shared-image-upload-submit>Upload and use image</button>
       </section>
       <section class="shared-image-library" data-shared-image-library hidden aria-live="polite">
-        <div class="shared-image-library-head"><strong>Site image library</strong><span data-shared-image-library-count></span></div>
+        <div class="shared-image-library-head"><div><strong>Site image library</strong><small>Newest first</small></div><span data-shared-image-library-count></span></div>
         <div class="shared-image-library-grid" data-shared-image-library-grid></div>
         <div class="shared-image-library-pager" data-shared-image-library-pager hidden>
           <button class="btn btn-ghost btn-sm" type="button" data-shared-image-page="previous">Previous</button>
