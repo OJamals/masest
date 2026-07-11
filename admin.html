@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="vendor/phosphor/style.css?v=20260709b">
 <link rel="stylesheet" href="css/style.css?v=20260708c">
 <link rel="stylesheet" href="css/navigation.css?v=20260706a">
-<link rel="stylesheet" href="css/components.css?v=20260711r">
+<link rel="stylesheet" href="css/components.css?v=20260711s">
 <style>
   .adm-wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
   .adm-hero { padding-bottom: 36px; }
@@ -201,6 +201,7 @@
   .support-thread-item { display: flex; justify-content: space-between; gap: 10px; align-items: start; width: 100%; }
   .support-thread-item small { display: block; margin-top: 4px; color: var(--muted); line-height: 1.35; }
   .support-thread-item.is-unanswered { border-color: var(--accent); background: var(--accent-soft); font-weight: 800; }
+  .support-thread-item.is-selected { outline: 2px solid var(--accent); outline-offset: -2px; }
   .support-thread-meta { display: grid; justify-items: end; gap: 5px; flex: 0 0 auto; }
   .support-unanswered { color: var(--status-warning-ink); font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
   .support-thread-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
@@ -211,6 +212,7 @@
   .admin-support-drawer[hidden] { display: none; }
   .admin-support-drawer__list { min-height: 0; overflow: auto; padding: 12px; background: var(--panel); }
   .admin-support-drawer__view { min-height: 0; overflow: auto; padding: 16px; }
+  .support-load-earlier { margin: 0 0 12px; }
   .admin-support-drawer__head { display: flex; align-items: start; justify-content: space-between; gap: 8px; padding: 4px 4px 12px; }
   .admin-support-drawer__head h2 { margin: 0; font-size: 1.05rem; }
   .admin-support-drawer__head p { margin: 3px 0 0; }
@@ -963,9 +965,9 @@
       </section>
 
         <button id="adminSupportLauncher" class="admin-support-launcher" type="button" aria-controls="adminSupportDrawer" aria-expanded="false"><i class="ph ph-sidebar-simple" aria-hidden="true"></i><span>Support</span><span id="adminSupportUnread" class="pill" hidden>0</span></button>
-        <aside id="adminSupportDrawer" class="admin-support-drawer" aria-label="Customer support conversations" hidden>
+        <aside id="adminSupportDrawer" class="admin-support-drawer" role="dialog" aria-modal="false" aria-labelledby="adminSupportTitle" hidden>
           <div class="admin-support-drawer__list">
-            <header class="admin-support-drawer__head"><div><p class="adm-eyebrow">Customer support</p><h2>Open chats</h2><p id="adminSupportSummary" class="muted">Loading...</p></div><div class="adm-inline-actions"><button id="adminSupportSettings" class="gbtn" type="button" aria-label="Customer support settings"><i class="ph ph-gear-six" aria-hidden="true"></i></button><button id="adminSupportClose" class="gbtn" type="button" aria-label="Close support menu"><i class="ph ph-x" aria-hidden="true"></i></button></div></header>
+            <header class="admin-support-drawer__head"><div><p class="adm-eyebrow">Customer support</p><h2 id="adminSupportTitle">Open chats</h2><p id="adminSupportSummary" class="muted">Loading...</p></div><div class="adm-inline-actions"><button id="adminSupportSettings" class="gbtn" type="button" aria-label="Customer support settings"><i class="ph ph-gear-six" aria-hidden="true"></i></button><button id="adminSupportClose" class="gbtn" type="button" aria-label="Close support menu"><i class="ph ph-x" aria-hidden="true"></i></button></div></header>
             <div id="admThreads" class="thread-list">Loading...</div>
           </div>
           <div id="admThreadView" class="admin-support-drawer__view">Select a customer conversation.</div>

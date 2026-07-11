@@ -74,5 +74,6 @@ test("shared image picker has compact field rhythm and a paged site library", ()
   assert.match(css, /\.shared-image-library-grid\s*\{[^}]*grid-template-columns/);
   assert.match(css, /\.shared-image-picker \.confirm-dialog-body\s*\{[^}]*grid-template-rows:\s*repeat\(5,\s*max-content\)/);
   assert.match(css, /\.shared-image-library\s*\{[^}]*align-content:\s*start[^}]*grid-template-rows:\s*repeat\(3,\s*max-content\)/);
+  assert.match(css, /\.shared-image-library\s*\{[^}]*height:\s*max-content/);
   assert.match(css, /\.shared-image-picker \.adm-status:empty\s*\{\s*display:\s*none/);
 });
