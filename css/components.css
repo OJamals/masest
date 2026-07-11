@@ -603,7 +603,7 @@ body .product-detail-hero { padding-bottom: 42px; }
 .confirm-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin: 8px 0 0; padding: 0; list-style: none; }
 
 /* Shared Blog + Newsletter image flow: compact, paged library, no dialog scrolling. */
-.shared-image-picker { width: min(660px, calc(100vw - 32px)); max-width: min(660px, calc(100vw - 32px)); }
+.shared-image-picker { width: min(660px, calc(100vw - 32px)); max-width: min(660px, calc(100vw - 32px)); height: fit-content; }
 .shared-image-picker .confirm-dialog-body { align-content: start; gap: 14px; padding: 24px; }
 .shared-image-picker-head h2 { margin: 0; font-size: 1.45rem; }
 .shared-image-picker-head .adm-eyebrow { margin: 0 0 4px; }
