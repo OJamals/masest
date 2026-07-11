@@ -155,7 +155,7 @@ test("product catalog shows public list pricing and small-pack selectors", async
         Array.from(select.options).map(option => option.value)
       );
       assert.ok(optionValues.includes("hcr-1"));
-      await page.getByRole("link", { name: /Compare programs/i }).waitFor();
+      await page.getByRole("link", { name: /Get product recommendation/i }).waitFor();
       await page.getByRole("link", { name: /Become a distributor/i }).waitFor();
 
       assert.equal(await hcr.locator(".shop-card-quote").count(), 0);

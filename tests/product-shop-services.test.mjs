@@ -71,9 +71,9 @@ test("products page is shop-focused and routes services to a standalone page", a
     const productsHtml = await fetch(`${BASE_URL}/products.html`).then((response) => response.text());
     assert.match(productsHtml, /href="services"/, "products page should link to the services page");
     assert.doesNotMatch(productsHtml, /data-service-catalog/, "products page should not embed service catalog");
-    assert.match(productsHtml, /Buyable small-pack list pricing/);
+    assert.match(productsHtml, /Small-pack list pricing/);
     assert.match(productsHtml, /200\+ jugs: 5% off · 1,000\+ gallons \(drums\/totes\): 5% off\./);
-    assert.match(productsHtml, /Drums and totes quoted before release/);
+    assert.match(productsHtml, /Request quotes for drums and totes/);
     assert.match(productsHtml, /USD, FOB Ex Plant, Merritt Island FL/);
     assert.match(productsHtml, /href="pricing-hvac-facilities"/);
     assert.match(productsHtml, /href="pricing-cip-food-beverage"/);
@@ -180,8 +180,7 @@ test("segment pricing pages render isolated HVAC and CIP workbook pricing", asyn
       const hvacText = await hvac.locator("main").textContent();
       assert.match(hvacText, /HVAC & Facilities/);
       assert.match(hvacText, /VertKleen AlumiBrite/);
-      assert.match(hvacText, /Prices valid six months from publication/);
-      assert.match(hvacText, /Shipping and freight excluded — FOB Ex Plant, Merritt Island FL\./);
+      assert.match(hvacText, /Prices exclude shipping and freight\. FOB Ex Plant, Merritt Island, FL\./);
       assert.match(hvacText, /200\+ jugs: 5% off/);
       assert.match(hvacText, /VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72[\s\S]*\$61\.80/);
       assert.match(hvacText, /VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02[\s\S]*\$55\.05/);
@@ -195,8 +194,7 @@ test("segment pricing pages render isolated HVAC and CIP workbook pricing", asyn
       assert.match(cipText, /VertKleen CR/);
       assert.doesNotMatch(cipText, /VertKleen AlumiBrite/);
       assert.doesNotMatch(cipText, /VertKleen Descaler/);
-      assert.match(cipText, /Prices valid six months from publication/);
-      assert.match(cipText, /Shipping and freight excluded — FOB Ex Plant, Merritt Island FL\./);
+      assert.match(cipText, /Prices exclude shipping and freight\. FOB Ex Plant, Merritt Island, FL\./);
       assert.match(cipText, /200\+ jugs: 5% off/);
     } finally {
       await browser.close();

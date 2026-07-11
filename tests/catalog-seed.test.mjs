@@ -124,7 +124,7 @@ test("segment pricing uses current public workbook rows and quote footers", () =
   );
   assert.equal(
     data.footer_note,
-    "Prices valid six months from publication. Shipping and freight excluded — FOB Ex Plant, Merritt Island FL.",
+    "Prices exclude shipping and freight. FOB Ex Plant, Merritt Island, FL.",
   );
 
   const hvac = data.segments.find((segment) => segment.slug === "hvac-facilities");

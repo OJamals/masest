@@ -1,7 +1,5 @@
 {
-  "generated_at": "2026-07-07",
-  "source_workbook": "/Users/omar/Desktop/masest/pricingproductservices/VertKleen_Website_Pricing_WebDev.xlsx",
-  "footer_note": "Prices valid six months from publication. Shipping and freight excluded \u2014 FOB Ex Plant, Merritt Island FL.",
+  "footer_note": "Prices exclude shipping and freight. FOB Ex Plant, Merritt Island, FL.",
   "volume_discount": "200+ jugs: 5% off \u00b7 1,000+ gallons (drums/totes): 5% off",
   "segments": [
     {
