@@ -15,6 +15,10 @@ const pages = {                // offset-pagination state per list (#29)
   quotes: { items: [], offset: 0, total: null, hasMore: false },
 };
 let lastMsgCount = -1;         // messages currently rendered in the thread (for live-poll diffing)
+let lastMsgId = null;
+let messageHistory = [];
+let messageCursor = null;
+let messageHasMore = false;
 let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
 let activeDashboardTab = '';
@@ -549,27 +553,47 @@ async function renderQuoteRequests({ append = false } = {}) {
 }
 
 /* ---------- messages ---------- */
-async function renderMessages() {
+async function renderMessages({ older = false } = {}) {
   loaded.messages = true;
   const thread = $('msgThread');
   const form = $('msgForm');
   const count = $('msgCount');
+  const earlier = $('loadEarlierMessages');
   if (!ACCOUNT?.company) {
     thread.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before starting account-team message threads.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
     if (count) count.textContent = '';
+    if (earlier) earlier.hidden = true;
     if (form) form.hidden = true; // the API rejects sends without a company
     wirePanelLinks(thread);
     return;
   }
   if (form) form.hidden = false;
-  let msgs = [];
-  try { msgs = (await api('/api/account/messages')).messages; } catch { loaded.messages = false; showLoadError(thread, 'Could not load messages.', () => renderMessages()); return; }
+  const previousHeight = older ? thread.scrollHeight : 0;
+  let result;
+  try {
+    const suffix = older && messageCursor ? `?before=${encodeURIComponent(messageCursor)}` : '';
+    result = await api(`/api/account/messages${suffix}`);
+  } catch {
+    loaded.messages = false;
+    if (earlier) earlier.disabled = false;
+    showLoadError(thread, 'Could not load messages.', () => renderMessages({ older }));
+    return;
+  }
+  const page = result.messages || [];
+  messageHistory = older
+    ? [...page, ...messageHistory.filter((message) => !page.some((olderMessage) => olderMessage.id === message.id))]
+    : page;
+  messageCursor = result.next_before || null;
+  messageHasMore = result.has_more === true;
+  const msgs = messageHistory;
   lastMsgCount = msgs.length;
-  if (count) count.textContent = msgs.length ? `${msgs.length} message${msgs.length === 1 ? '' : 's'} in this conversation.` : 'No messages in this conversation yet.';
+  lastMsgId = msgs.at(-1)?.id || null;
+  if (earlier) { earlier.hidden = !messageHasMore; earlier.disabled = false; }
+  if (count) count.textContent = msgs.length ? `${msgs.length}${messageHasMore ? '+' : ''} message${msgs.length === 1 ? '' : 's'} loaded.` : 'No messages in this conversation yet.';
   if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question about orders, pricing, NET terms, or anything else.</div></div>`; }
   else {
     thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${esc(m.body)}<time>${fmtDT(m.created_at)}${m.source === 'email_reply' ? ' · <span class="msg-source">Email reply</span>' : ''}</time></div>`).join('');
-    thread.scrollTop = thread.scrollHeight;
+    thread.scrollTop = older ? thread.scrollHeight - previousHeight : thread.scrollHeight;
   }
 }
 function wireMessageForm() {
@@ -592,6 +616,10 @@ function wireMessageForm() {
     loaded.messages = false;
     await renderMessages();
     event.currentTarget.disabled = false;
+  });
+  $('loadEarlierMessages')?.addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    await renderMessages({ older: true });
   });
 }
 
@@ -1054,8 +1082,8 @@ async function pollLive() {
   const msgPanel = document.querySelector('[data-panel="messages"]');
   if (msgPanel && !msgPanel.hidden) {
     try {
-      const msgs = (await api('/api/account/messages')).messages || [];
-      if (msgs.length > lastMsgCount) { loaded.messages = false; await renderMessages(); }
+      const msgs = (await api('/api/account/messages?peek=1')).messages || [];
+      if ((msgs.at(-1)?.id || null) !== lastMsgId) { loaded.messages = false; await renderMessages(); }
     } catch { /* keep current view */ }
   }
 }

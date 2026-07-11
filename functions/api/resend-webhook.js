@@ -4,17 +4,15 @@
 // Set RESEND_WEBHOOK_SECRET in CF env.
 // Returns 200 for accepted/duplicate/unknown events (avoid Resend retry storms),
 // 400 only on signature failure. No-op (200) if the secret is unset.
-import { adminClient, companyEmails, emailLayout, htmlEscape, json, recordSuppression, sendEmail, updateEmailStatus } from '../_lib/supabase.js';
+import { adminClient, emailsByIds, emailLayout, htmlEscape, json, recordSuppression, sendEmail, updateEmailStatus } from '../_lib/supabase.js';
 import { htmlToText, verifySvixSignature, mapResendEvent, isSuppressingEvent } from '../_lib/email.js';
 import { companyIdFromReplyAddress, inboundReplyText } from '../_lib/message-replies.js';
+import { adminMessageAlertKind, adminMessageRecipients } from '../_lib/admin-message-notifications.js';
+import { recordSupportMessage } from '../_lib/support-messages.js';
 
 function emailAddress(value) {
   const match = String(value || '').match(/<([^>]+)>/);
   return String(match?.[1] || value || '').trim().toLowerCase();
-}
-
-function staffRecipients(env) {
-  return String(env.ADMIN_EMAILS || env.ADMIN_EMAIL || '').split(',').map((email) => email.trim()).filter(Boolean);
 }
 
 async function receivedEmail(env, id) {
@@ -32,8 +30,11 @@ export async function routeInboundMessageReply(env, event) {
 
   const sb = adminClient(env);
   const sender = emailAddress(event?.data?.from);
-  const memberEmails = await companyEmails(sb, companyId);
-  if (!sender || !memberEmails.some((email) => emailAddress(email) === sender)) return { routed: false, reason: 'sender_not_member' };
+  const { data: members, error: memberError } = await sb.from('profiles').select('id').eq('company_id', companyId);
+  if (memberError) throw memberError;
+  const memberEmails = await emailsByIds(sb, (members || []).map((member) => member.id));
+  const member = (members || []).find((candidate) => emailAddress(memberEmails[candidate.id]) === sender);
+  if (!sender || !member) return { routed: false, reason: 'sender_not_member' };
 
   const existing = await sb.from('messages').select('id')
     .eq('source', 'email_reply').eq('external_message_id', emailId).maybeSingle();
@@ -44,21 +45,32 @@ export async function routeInboundMessageReply(env, event) {
   const body = inboundReplyText(content?.text || htmlToText(content?.html || ''));
   if (!body) return { routed: false, reason: 'empty_reply' };
 
-  const { error } = await sb.from('messages').insert({
-    company_id: companyId, user_id: null, sender_role: 'buyer', body,
+  const [{ data: previousMessage }, { data: company }] = await Promise.all([
+    sb.from('messages').select('sender_role').eq('company_id', companyId)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    sb.from('companies').select('name,support_thread_status').eq('id', companyId).maybeSingle(),
+  ]);
+  const { data: inserted, error } = await sb.from('messages').insert({
+    company_id: companyId, user_id: member.id, sender_role: 'buyer', body,
     source: 'email_reply', external_message_id: emailId, read_by_user: true, read_by_staff: false,
-  });
+  }).select('id,created_at').single();
   if (error?.code === '23505') return { routed: true, duplicate: true };
   if (error) throw error;
+  await recordSupportMessage(sb, {
+    companyId, senderRole: 'buyer', body, createdAt: inserted.created_at,
+  });
 
-  const staff = staffRecipients(env);
-  if (staff.length) await sendEmail(env, {
-    to: staff,
-    subject: 'New customer email reply',
+  const alertKind = adminMessageAlertKind({ previousMessage, threadStatus: company?.support_thread_status });
+  const recipients = await adminMessageRecipients(sb, alertKind, env);
+  if (recipients.length) await sendEmail(env, {
+    to: recipients,
+    subject: alertKind === 'support_request'
+      ? `New support request from ${company?.name || companyId}`
+      : `New customer email reply from ${company?.name || companyId}`,
     html: emailLayout({
       heading: 'New customer email reply',
       bodyHtml: `<p>From: ${htmlEscape(sender)}</p><blockquote style="border-left:3px solid #0e7c86;padding-left:12px;color:#334;margin:12px 0">${htmlEscape(body.slice(0, 500))}</blockquote>`,
-      ctaText: 'Open admin messages', ctaUrl: `${env.APP_URL || 'https://masest.co'}/admin.html#messages`,
+      ctaText: 'Open customer support', ctaUrl: `${env.APP_URL || 'https://masest.co'}/admin.html#support-settings`,
     }),
     category: 'staff_alert',
   });

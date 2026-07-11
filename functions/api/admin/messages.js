@@ -4,6 +4,12 @@ import { adminClient, requireStaff, json, readBody, emailsByIds, sendEmail, html
 import { staffCanWrite } from '../../_lib/authz.js';
 import { messageReplyAddress } from '../../_lib/message-replies.js';
 import { shouldEmailClosedChatReply } from '../../_lib/message-notifications.js';
+import {
+  messagePage,
+  recordSupportMessage,
+  SUPPORT_PAGE_SIZE,
+  supportThreadPatch,
+} from '../../_lib/support-messages.js';
 
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
@@ -13,18 +19,22 @@ export async function onRequest({ request, env }) {
   const sb = adminClient(env);
 
   if (request.method === 'GET') {
-    const companyId = new URL(request.url).searchParams.get('company_id');
+    const params = new URL(request.url).searchParams;
+    const companyId = params.get('company_id');
     if (companyId) {
-      const { data, error } = await sb.from('messages')
+      const before = params.get('before');
+      let query = sb.from('messages')
         .select('id,sender_role,body,order_id,created_at,read_by_staff,source,external_thread_id,external_message_id')
-        .eq('company_id', companyId).order('created_at', { ascending: true }).limit(300);
+        .eq('company_id', companyId).order('created_at', { ascending: false }).limit(SUPPORT_PAGE_SIZE + 1);
+      if (before) query = query.lt('created_at', before);
+      const { data, error } = await query;
       if (error) return json(500, { error: error.message });
       await sb.from('messages').update({ read_by_staff: true })
         .eq('company_id', companyId).eq('sender_role', 'buyer').eq('read_by_staff', false);
       const { data: company } = await sb.from('companies')
         .select('name,support_thread_status,support_thread_completed_at').eq('id', companyId).maybeSingle();
       return json(200, {
-        messages: data || [],
+        ...messagePage(data, SUPPORT_PAGE_SIZE),
         thread: {
           company_id: companyId,
           company_name: company?.name || '—',
@@ -33,22 +43,23 @@ export async function onRequest({ request, env }) {
         },
       });
     }
-    const { data, error } = await sb.from('messages')
-      .select('company_id,sender_role,body,read_by_staff,created_at,source,external_thread_id,external_message_id,companies(name,support_thread_status,support_thread_completed_at)')
-      .order('created_at', { ascending: false }).limit(1000);
+    const { data, error } = await sb.from('companies')
+      .select('id,name,support_thread_status,support_thread_completed_at,support_last_message_at,support_last_message_body,support_last_sender_role')
+      .not('support_last_message_at', 'is', null)
+      .neq('support_thread_status', 'complete')
+      .order('support_last_message_at', { ascending: false })
+      .limit(500);
     if (error) return json(500, { error: error.message });
-    const threads = {};
-    for (const m of data || []) {
-      const t = threads[m.company_id] || (threads[m.company_id] = {
-        company_id: m.company_id, company_name: m.companies?.name || '—',
-        last_body: m.body, last_at: m.created_at, unread: 0,
-        status: m.companies?.support_thread_status || 'open',
-        completed_at: m.companies?.support_thread_completed_at || null,
-        unanswered: m.sender_role === 'buyer' && m.companies?.support_thread_status !== 'complete',
-      });
-      if (m.sender_role === 'buyer' && !m.read_by_staff) t.unread += 1;
-    }
-    return json(200, { threads: Object.values(threads) });
+    const threads = (data || []).map((company) => ({
+      company_id: company.id,
+      company_name: company.name || '—',
+      last_body: company.support_last_message_body || '',
+      last_at: company.support_last_message_at,
+      status: company.support_thread_status || 'open',
+      completed_at: company.support_thread_completed_at || null,
+      unanswered: company.support_last_sender_role === 'buyer',
+    }));
+    return json(200, { threads });
   }
 
   if (request.method === 'PATCH') {
@@ -57,10 +68,8 @@ export async function onRequest({ request, env }) {
     const companyId = body.company_id;
     const status = body.status;
     if (!companyId) return json(400, { error: 'company_id_required' });
-    if (!['open', 'complete'].includes(status)) return json(400, { error: 'invalid_status' });
-    const patch = status === 'complete'
-      ? { support_thread_status: 'complete', support_thread_completed_at: new Date().toISOString(), support_thread_completed_by: user.id }
-      : { support_thread_status: 'open', support_thread_completed_at: null, support_thread_completed_by: null };
+    const patch = supportThreadPatch(status, user.id);
+    if (!patch) return json(400, { error: 'invalid_status' });
     const { error } = await sb.from('companies').update(patch).eq('id', companyId);
     if (error) return json(500, { error: error.message });
     return json(200, { status });
@@ -73,6 +82,7 @@ export async function onRequest({ request, env }) {
     const text = String(body.body || '').trim();
     if (!companyId) return json(400, { error: 'company_id_required' });
     if (!text) return json(400, { error: 'empty_message' });
+    if (text.length > 4000) return json(400, { error: 'message_too_long' });
     const { data: lastMessage } = await sb.from('messages')
       .select('sender_role,user_id').eq('company_id', companyId)
       .order('created_at', { ascending: false }).limit(1).maybeSingle();
@@ -81,6 +91,12 @@ export async function onRequest({ request, env }) {
       read_by_staff: true, read_by_user: false,
     }).select('id,created_at').single();
     if (error) return json(500, { error: error.message });
+    let summarySynced = true;
+    try {
+      await recordSupportMessage(sb, {
+        companyId, senderRole: 'staff', body: text, createdAt: data.created_at, reopen: false,
+      });
+    } catch { summarySynced = false; }
     await sb.from('notifications').insert({
       company_id: companyId, type: 'message', title: 'New message from MASEST',
       body: text.slice(0, 140), link: '/dashboard.html#messages',
@@ -88,8 +104,9 @@ export async function onRequest({ request, env }) {
     // Email only an unanswered buyer after they close chat. Live chat stays in-app.
     if (lastMessage?.user_id) {
       const { data: recipient } = await sb.from('profiles')
-        .select('id,notify_messages,support_chat_open').eq('id', lastMessage.user_id).maybeSingle();
-      const recipientEmail = recipient ? (await emailsByIds(sb, [recipient.id])).get(recipient.id) : null;
+        .select('id,notify_messages,support_chat_open,support_chat_seen_at').eq('id', lastMessage.user_id).maybeSingle();
+      const recipientEmails = recipient ? await emailsByIds(sb, [recipient.id]) : {};
+      const recipientEmail = recipient ? recipientEmails[recipient.id] : null;
       if (shouldEmailClosedChatReply(lastMessage, recipient, recipientEmail)) {
         const appUrl = env.APP_URL || new URL(request.url).origin;
         const replyTo = await messageReplyAddress(env, companyId);
@@ -101,7 +118,7 @@ export async function onRequest({ request, env }) {
           }), replyTo });
       }
     }
-    return json(201, { id: data.id, created_at: data.created_at });
+    return json(201, { id: data.id, created_at: data.created_at, summary_synced: summarySynced });
   }
 
   return json(405, { error: 'method_not_allowed' });

@@ -4,6 +4,7 @@
 import { requireCompany, json, readBody, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 import { adminMessageAlertKind, adminMessageRecipients } from '../../_lib/admin-message-notifications.js';
+import { messagePage, recordSupportMessage, SUPPORT_PAGE_SIZE } from '../../_lib/support-messages.js';
 
 export async function onRequest({ request, env }) {
   const ctx = await requireCompany(request, env);
@@ -11,29 +12,37 @@ export async function onRequest({ request, env }) {
   const { user, companyId, sb } = ctx;
 
   if (request.method === 'GET') {
-    const peek = new URL(request.url).searchParams.get('peek') === '1';
-    const { data, error } = await sb
+    const url = new URL(request.url);
+    const peek = url.searchParams.get('peek') === '1';
+    const before = url.searchParams.get('before');
+    let query = sb
       .from('messages')
       .select('id,sender_role,body,order_id,source,created_at')
       .eq('company_id', companyId)
-      .order('created_at', { ascending: true })
-      .limit(200);
+      .order('created_at', { ascending: false })
+      .limit(SUPPORT_PAGE_SIZE + 1);
+    if (before) query = query.lt('created_at', before);
+    const { data, error } = await query;
     if (error) return json(500, { error: 'server_error' });
     if (!peek) {
       await sb.from('messages').update({ read_by_user: true })
         .eq('company_id', companyId).eq('sender_role', 'staff').eq('read_by_user', false);
     }
-    return json(200, { messages: data || [] });
+    return json(200, messagePage(data, SUPPORT_PAGE_SIZE));
   }
 
   if (request.method === 'POST') {
     const body = await readBody(request);
     if (body.action === 'chat_presence') {
       if (typeof body.chat_open !== 'boolean') return json(400, { error: 'chat_open_required' });
-      const { error } = await sb.from('profiles').update({ support_chat_open: body.chat_open })
+      const seenAt = body.chat_open ? new Date().toISOString() : null;
+      const { error } = await sb.from('profiles').update({
+        support_chat_open: body.chat_open,
+        support_chat_seen_at: seenAt,
+      })
         .eq('id', user.id);
       if (error) return json(500, { error: 'server_error' });
-      return json(200, { support_chat_open: body.chat_open });
+      return json(200, { support_chat_open: body.chat_open, support_chat_seen_at: seenAt });
     }
 
     // Throttle customer messages. Staff receive these in the admin inbox; no email per post.
@@ -43,10 +52,9 @@ export async function onRequest({ request, env }) {
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
     const source = body.source === 'customer_chat' ? 'customer_chat' : 'dashboard';
-    const [{ data: previousMessage }, { data: company }, { data: profile }] = await Promise.all([
+    const [{ data: previousMessage }, { data: company }] = await Promise.all([
       sb.from('messages').select('sender_role').eq('company_id', companyId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       sb.from('companies').select('name,support_thread_status').eq('id', companyId).maybeSingle(),
-      sb.from('profiles').select('support_chat_open').eq('id', user.id).maybeSingle(),
     ]);
     const { data, error } = await sb.from('messages').insert({
       company_id: companyId, user_id: user.id, sender_role: 'buyer', body: text,
@@ -54,18 +62,19 @@ export async function onRequest({ request, env }) {
     }).select('id,created_at').single();
     if (error) return json(500, { error: 'server_error' });
 
-    // A new buyer message reopens a completed thread.
-    await sb.from('companies').update({
-      support_thread_status: 'open', support_thread_completed_at: null, support_thread_completed_by: null,
-    }).eq('id', companyId);
+    let summarySynced = true;
+    try {
+      await recordSupportMessage(sb, {
+        companyId, senderRole: 'buyer', body: text, createdAt: data.created_at,
+      });
+    } catch { summarySynced = false; }
 
     const alertKind = adminMessageAlertKind({
       previousMessage,
       threadStatus: company?.support_thread_status,
-      chatOpen: profile?.support_chat_open,
     });
     if (alertKind) {
-      const recipients = await adminMessageRecipients(sb, alertKind);
+      const recipients = await adminMessageRecipients(sb, alertKind, env);
       if (recipients.length) {
         const firstRequest = alertKind === 'support_request';
         await sendEmail(env, {
@@ -75,14 +84,14 @@ export async function onRequest({ request, env }) {
             heading: firstRequest ? 'New support request' : 'New customer message',
             bodyHtml: `<p>Company: ${htmlEscape(company?.name || companyId)}</p><p>${htmlEscape(text.slice(0, 500))}</p>`,
             ctaText: 'Open customer messages',
-            ctaUrl: `${env.APP_URL || new URL(request.url).origin}/admin.html#messages`,
+            ctaUrl: `${env.APP_URL || new URL(request.url).origin}/admin.html#support-settings`,
           }),
           category: 'staff_alert',
         });
       }
     }
 
-    return json(201, { id: data.id, created_at: data.created_at });
+    return json(201, { id: data.id, created_at: data.created_at, summary_synced: summarySynced });
   }
 
   return json(405, { error: 'method_not_allowed' });

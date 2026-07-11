@@ -5,11 +5,12 @@ import test from "node:test";
 const ACCOUNT = readFileSync(new URL("../functions/api/account/messages.js", import.meta.url), "utf8");
 const ADMIN = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
 
-test("buyer POST records chat presence and honours admin email settings", () => {
+test("buyer POST records chat presence and honors staff inbox presence", () => {
   assert.match(ACCOUNT, /adminMessageAlertKind/);
   assert.match(ACCOUNT, /adminMessageRecipients/);
   assert.match(ACCOUNT, /action === 'chat_presence'/);
   assert.match(ACCOUNT, /support_chat_open/);
+  assert.match(ACCOUNT, /adminMessageRecipients\(sb, alertKind, env\)/);
 });
 
 test("staff reply emails only a closed-chat user with an unanswered question", () => {

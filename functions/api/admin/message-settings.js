@@ -24,3 +24,18 @@ export async function onRequestPatch({ request, env }) {
   if (error) return json(500, { error: 'server_error' });
   return json(200, { ...DEFAULTS, ...(data || {}) });
 }
+
+export async function onRequestPost({ request, env }) {
+  const { user, staff } = await requireStaff(request, env);
+  if (!user) return json(401, { error: 'unauthenticated' });
+  if (!staff) return json(403, { error: 'forbidden' });
+  const body = await readBody(request);
+  if (body.action !== 'inbox_presence' || typeof body.inbox_open !== 'boolean') {
+    return json(400, { error: 'inbox_open_required' });
+  }
+  const seenAt = body.inbox_open ? new Date().toISOString() : null;
+  const { error } = await adminClient(env).from('profiles')
+    .update({ support_inbox_seen_at: seenAt }).eq('id', user.id);
+  if (error) return json(500, { error: 'server_error' });
+  return json(200, { inbox_open: body.inbox_open, support_inbox_seen_at: seenAt });
+}

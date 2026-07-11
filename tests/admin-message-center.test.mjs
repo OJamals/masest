@@ -1,19 +1,42 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
-import { adminMessageAlertKind, sanitizeAdminMessagePrefs } from '../functions/_lib/admin-message-notifications.js';
+import { adminMessageAlertKind, adminMessageRecipients, sanitizeAdminMessagePrefs } from '../functions/_lib/admin-message-notifications.js';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('admin alert kinds separate first support requests from closed-chat follow-ups', () => {
-  assert.equal(adminMessageAlertKind({ previousMessage: null, threadStatus: 'open', chatOpen: true }), 'support_request');
-  assert.equal(adminMessageAlertKind({ previousMessage: { sender_role: 'staff' }, threadStatus: 'complete', chatOpen: true }), 'support_request');
-  assert.equal(adminMessageAlertKind({ previousMessage: { sender_role: 'staff' }, threadStatus: 'open', chatOpen: false }), 'message');
-  assert.equal(adminMessageAlertKind({ previousMessage: { sender_role: 'staff' }, threadStatus: 'open', chatOpen: true }), null);
+test('admin alert kinds separate first support requests from follow-ups', () => {
+  assert.equal(adminMessageAlertKind({ previousMessage: null, threadStatus: 'open' }), 'support_request');
+  assert.equal(adminMessageAlertKind({ previousMessage: { sender_role: 'staff' }, threadStatus: 'complete' }), 'support_request');
+  assert.equal(adminMessageAlertKind({ previousMessage: { sender_role: 'staff' }, threadStatus: 'open' }), 'message');
   assert.deepEqual(sanitizeAdminMessagePrefs({ notify_admin_support_requests: true, notify_admin_messages: false, is_staff: true }), {
     notify_admin_support_requests: true,
     notify_admin_messages: false,
   });
+});
+
+test('admin message recipients exclude active inboxes and revoked staff', async () => {
+  const now = Date.parse('2026-07-11T05:00:00.000Z');
+  const profiles = [
+    { id: 'active', is_staff: true, support_inbox_seen_at: null },
+    { id: 'online', is_staff: true, support_inbox_seen_at: '2026-07-11T04:59:40.000Z' },
+    { id: 'revoked', is_staff: false, support_inbox_seen_at: null },
+    { id: 'root', is_staff: false, support_inbox_seen_at: null },
+  ];
+  const addresses = Object.fromEntries(profiles.map((profile) => [profile.id, `${profile.id}@example.com`]));
+  const sb = {
+    from: () => ({ select: () => ({ eq: async () => ({ data: profiles, error: null }) }) }),
+    auth: { admin: { getUserById: async (id) => ({ data: { user: { email: addresses[id] } } }) } },
+  };
+  assert.deepEqual(await adminMessageRecipients(sb, 'message', { ADMIN_EMAILS: 'root@example.com' }, now), [
+    'active@example.com',
+    'root@example.com',
+  ]);
+  assert.deepEqual(await adminMessageRecipients(sb, 'support_request', { ADMIN_EMAILS: 'root@example.com' }, now), [
+    'active@example.com',
+    'online@example.com',
+    'root@example.com',
+  ]);
 });
 
 test('support API persists thread lifecycle and admin message preferences', () => {
@@ -22,7 +45,7 @@ test('support API persists thread lifecycle and admin message preferences', () =
   const settings = read('functions/api/admin/message-settings.js');
   const notifications = read('functions/_lib/admin-message-notifications.js');
   const sql = read('supabase/schema-phase5.sql');
-  assert.match(account, /support_thread_status: 'open'/);
+  assert.match(account, /recordSupportMessage/);
   assert.match(admin, /request\.method === 'PATCH'/);
   assert.match(admin, /support_thread_status/);
   assert.match(settings, /ADMIN_MESSAGE_PREF_COLUMNS/);
@@ -37,8 +60,9 @@ test('admin inbox surfaces unanswered threads, lifecycle controls, and notificat
   assert.match(html, /id="adminNotifySupportRequests"/);
   assert.match(html, /id="adminNotifyMessages"/);
   assert.match(threads, /unanswered/);
-  assert.match(threads, /Mark complete/);
+  assert.match(threads, /Mark resolved/);
   assert.match(threads, /Reopen thread/);
+  assert.match(threads, /Escalate/);
   assert.match(threads, /message-settings/);
 });
 

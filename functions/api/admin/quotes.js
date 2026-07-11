@@ -8,6 +8,7 @@ import { csvResponse } from '../../_lib/reports.js';
 import { stagePatch, pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
 import { klaviyoTrack } from '../../_lib/klaviyo.js';
 import { escapeLike } from '../../_lib/crm.js';
+import { recordSupportMessage } from '../../_lib/support-messages.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -80,8 +81,15 @@ async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
     body: messageBody,
     read_by_staff: true,
     read_by_user: false,
-  }).select('id').single();
+  }).select('id,created_at').single();
   if (error) return { posted: false, company_id: resolvedCompanyId, error: error.message };
+  await recordSupportMessage(sb, {
+    companyId: resolvedCompanyId,
+    senderRole: 'staff',
+    body: messageBody,
+    createdAt: message.created_at,
+    reopen: false,
+  }).catch(() => {});
 
   await sb.from('notifications').insert({
     company_id: resolvedCompanyId,

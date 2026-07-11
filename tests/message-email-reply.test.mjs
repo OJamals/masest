@@ -26,4 +26,7 @@ test('email sends only for an unanswered buyer question after chat is closed', (
   assert.equal(shouldEmailClosedChatReply(question, { notify_messages: true, support_chat_open: true }, 'buyer@example.com'), false);
   assert.equal(shouldEmailClosedChatReply({ sender_role: 'staff', user_id: null }, { notify_messages: true, support_chat_open: false }, 'buyer@example.com'), false);
   assert.equal(shouldEmailClosedChatReply(question, { notify_messages: false, support_chat_open: false }, 'buyer@example.com'), false);
+  const now = Date.parse('2026-07-11T05:00:00.000Z');
+  assert.equal(shouldEmailClosedChatReply(question, { notify_messages: true, support_chat_open: true, support_chat_seen_at: '2026-07-11T04:58:00.000Z' }, 'buyer@example.com', now), true);
+  assert.equal(shouldEmailClosedChatReply(question, { notify_messages: true, support_chat_open: true, support_chat_seen_at: '2026-07-11T04:59:40.000Z' }, 'buyer@example.com', now), false);
 });

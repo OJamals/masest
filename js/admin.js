@@ -1,25 +1,25 @@
 /* MASEST staff admin console. */
-import { login, logout, api, getToken } from './auth.js?v=20260711i';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260711i';
-import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260711i';
-import { editKey, captureDirty, restoreDirty } from './admin/edits.js?v=20260711i';
-import { createTrafficRenderer } from './admin/traffic.js?v=20260711i';
-import { createSeoAudit } from './admin/seo.js?v=20260711i';
-import { createThreadsTab } from './admin/threads.js?v=20260711i';
-import { createOffersTab } from './admin/offers.js?v=20260711i';
-import { createProductsTab } from './admin/products.js?v=20260711i';
-import { createPricingTab } from './admin/pricing.js?v=20260711i';
-import { createContentTab } from './admin/content.js?v=20260711m';
-import { createCompaniesTab } from './admin/companies.js?v=20260711i';
-import { createCrmPanel } from './admin/crm.js?v=20260711i';
-import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js?v=20260711i';
-import { createQuotesTab } from './admin/quotes.js?v=20260711i';
-import { createCrmWorkspace } from './admin/crm-workspace.js?v=20260711i';
-import { createReviewsTab } from './admin/reviews.js?v=20260711i';
-import { createNewsletterTab } from './admin/newsletter.js?v=20260711m';
-import { createInventoryCard } from './admin/inventory.js?v=20260711i';
-import { createCouponsCard } from './admin/coupons.js?v=20260711i';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260711i';
+import { login, logout, api, getToken } from './auth.js?v=20260711o';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260711o';
+import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260711o';
+import { editKey, captureDirty, restoreDirty } from './admin/edits.js?v=20260711o';
+import { createTrafficRenderer } from './admin/traffic.js?v=20260711o';
+import { createSeoAudit } from './admin/seo.js?v=20260711o';
+import { createThreadsTab } from './admin/threads.js?v=20260711o';
+import { createOffersTab } from './admin/offers.js?v=20260711o';
+import { createProductsTab } from './admin/products.js?v=20260711o';
+import { createPricingTab } from './admin/pricing.js?v=20260711o';
+import { createContentTab } from './admin/content.js?v=20260711o';
+import { createCompaniesTab } from './admin/companies.js?v=20260711o';
+import { createCrmPanel } from './admin/crm.js?v=20260711o';
+import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js?v=20260711o';
+import { createQuotesTab } from './admin/quotes.js?v=20260711o';
+import { createCrmWorkspace } from './admin/crm-workspace.js?v=20260711o';
+import { createReviewsTab } from './admin/reviews.js?v=20260711o';
+import { createNewsletterTab } from './admin/newsletter.js?v=20260711o';
+import { createInventoryCard } from './admin/inventory.js?v=20260711o';
+import { createCouponsCard } from './admin/coupons.js?v=20260711o';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260711o';
 
 const $ = (id) => document.getElementById(id);
 

@@ -74,6 +74,7 @@ test("customer chat records open/closed presence and delegates conditional staff
   assert.match(messages, /adminMessageAlertKind/);
   assert.match(adminMessages, /shouldEmailClosedChatReply/);
   assert.match(phase5, /support_chat_open boolean not null default false/);
+  assert.match(phase5, /support_chat_seen_at timestamptz/);
 });
 
 test("logged-out visitors always see chat and get a sign-up/login link", async () => {

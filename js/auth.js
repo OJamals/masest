@@ -194,16 +194,16 @@ function emitSessionExpired() {
  * (with .status and .data) on non-2xx.
  * On a 401 it refreshes the session and retries once; if still unauthorized it emits
  * 'masest:session-expired' so the UI can recover instead of silently failing. */
-export async function api(path, { method = 'GET', body, _retried = false } = {}) {
+export async function api(path, { method = 'GET', body, keepalive = false, _retried = false } = {}) {
   const token = await getToken();
   const headers = {};
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
   const requestBody = body === undefined ? undefined : (isFormData ? body : JSON.stringify(body));
-  const r = await fetch(path, { method, headers, body: requestBody });
+  const r = await fetch(path, { method, headers, body: requestBody, keepalive });
   if (r.status === 401 && !_retried && await refreshSession()) {
-    return api(path, { method, body, _retried: true });
+    return api(path, { method, body, keepalive, _retried: true });
   }
   const out = await r.json().catch(() => ({}));
   if (!r.ok) {

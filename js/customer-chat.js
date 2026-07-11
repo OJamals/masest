@@ -49,6 +49,7 @@ export function initCustomerChat() {
           <label class="sr-only" for="customerChatBody">Message</label>
           <textarea id="customerChatBody" maxlength="4000" required placeholder="Ask about VertKleen, an order, or your account."></textarea>
           <div class="customer-chat__form-row"><p class="customer-chat__status" role="status" aria-live="polite"></p><button class="btn btn-primary" type="submit">Send</button></div>
+          <a class="customer-chat__inbox-link" href="${root}dashboard.html#messages">Open full message inbox</a>
         </form>
       </div>
     </section>
@@ -68,6 +69,7 @@ export function initCustomerChat() {
   let authenticated = false;
   let pollId = 0;
   let chatPresenceOpen = false;
+  let lastPresencePing = 0;
 
   const setStatus = (text = "", state = "") => {
     status.textContent = text;
@@ -77,14 +79,20 @@ export function initCustomerChat() {
     authModule ||= import("./auth.js?v=20260711a");
     return authModule;
   };
-  const setChatPresence = async (open) => {
-    if (!authenticated || chatPresenceOpen === open) return;
+  const setChatPresence = async (open, { force = false, keepalive = false } = {}) => {
+    if (!authenticated || (!force && chatPresenceOpen === open)) return;
+    const previous = chatPresenceOpen;
     chatPresenceOpen = open;
     try {
       const { api } = await auth();
-      await api("/api/account/messages", { method: "POST", body: { action: "chat_presence", chat_open: open } });
+      await api("/api/account/messages", {
+        method: "POST",
+        body: { action: "chat_presence", chat_open: open },
+        keepalive,
+      });
+      if (open) lastPresencePing = Date.now();
     } catch {
-      chatPresenceOpen = !open;
+      chatPresenceOpen = previous;
     }
   };
   const setOpen = (open) => {
@@ -114,7 +122,10 @@ export function initCustomerChat() {
   const startPolling = () => {
     if (pollId || panel.hidden || !authenticated) return;
     pollId = window.setInterval(() => {
-      if (!document.hidden) loadMessages({ quiet: true });
+      if (!document.hidden) {
+        loadMessages({ quiet: true });
+        if (Date.now() - lastPresencePing > 30_000) void setChatPresence(true, { force: true });
+      }
     }, POLL_MS);
   };
   const renderMessages = (messages) => {
@@ -176,7 +187,11 @@ export function initCustomerChat() {
   });
   document.addEventListener("masest:auth", () => { if (!panel.hidden) void refresh(); });
   document.addEventListener("masest:session-expired", () => { if (!panel.hidden) showGuest(); });
-  window.addEventListener("pagehide", () => { if (!panel.hidden) void setChatPresence(false); });
+  document.addEventListener("visibilitychange", () => {
+    if (panel.hidden || !authenticated) return;
+    void setChatPresence(!document.hidden, { force: true, keepalive: document.hidden });
+  });
+  window.addEventListener("pagehide", () => { if (!panel.hidden) void setChatPresence(false, { force: true, keepalive: true }); });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = body.value.trim();

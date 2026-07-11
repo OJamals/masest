@@ -7,7 +7,7 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260710f";
 const CHAT_RELEASE = "20260711a";
 const MAIN_RELEASE = "20260711f";
-const ADMIN_RELEASE = "20260711i";
+const ADMIN_RELEASE = "20260711o";
 const MAIN_RELEASE_OVERRIDES = new Map([
   ["dashboard.html", MAIN_RELEASE],
 ]);
