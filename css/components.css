@@ -579,3 +579,30 @@ body .product-detail-hero { padding-bottom: 42px; }
 .nl-edit-grid > label { display: flex; flex-direction: column; }
 .nl-edit-grid .adm-md-preview { min-height: 260px; }
 @media (min-width: 900px) { .nl-edit-grid { grid-template-columns: 1fr 1fr; align-items: stretch; } }
+
+/* Admin: shared native dialog layout and Newsletter image-library picker. */
+.confirm-dialog { width: min(560px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - 32px)); margin: auto; padding: 0; border: 0; border-radius: 24px; color: var(--ink, #15171c); background: var(--surface, #fff); box-shadow: 0 24px 80px rgba(20, 24, 32, .28); }
+.confirm-dialog::backdrop { background: rgba(20, 24, 32, .48); }
+.confirm-dialog-body { display: grid; gap: 16px; margin: 0; padding: 32px; }
+.confirm-dialog-msg { margin: 0; font-size: 1.1rem; line-height: 1.45; }
+.confirm-dialog-field { display: grid; gap: 8px; font-weight: 700; color: var(--ink, #15171c); }
+.confirm-dialog-field .adm-input { box-sizing: border-box; width: 100%; margin: 0; }
+.confirm-dialog-library { display: grid; gap: 10px; }
+.confirm-dialog-library-head { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.confirm-dialog-library-head p { margin: 4px 0 0; font-size: .86rem; line-height: 1.4; }
+.confirm-dialog-image-library { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; max-height: 280px; overflow: auto; padding: 4px; }
+.confirm-dialog-image-library > p { grid-column: 1 / -1; margin: 4px 0; }
+.nl-image-library-item { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; min-height: 72px; padding: 8px; border: 1px solid var(--line, #e4e6e9); border-radius: 12px; color: inherit; background: var(--surface, #fff); font: inherit; text-align: left; cursor: pointer; }
+.nl-image-library-item:hover { border-color: var(--accent, #0e7c86); background: var(--accent-soft, #e3f0f1); }
+.nl-image-library-item:focus-visible { outline: 3px solid var(--accent, #0e7c86); outline-offset: 2px; }
+.nl-image-library-item img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--line, #e4e6e9); }
+.nl-image-library-item span { display: grid; gap: 3px; min-width: 0; }
+.nl-image-library-item b, .nl-image-library-item small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nl-image-library-item small { color: var(--muted, #5f656d); }
+.confirm-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin: 8px 0 0; padding: 0; list-style: none; }
+@media (max-width: 560px) {
+  .confirm-dialog-body { padding: 24px; }
+  .confirm-dialog-library-head { align-items: stretch; flex-direction: column; }
+  .confirm-dialog-library-head .btn { width: 100%; justify-content: center; }
+  .confirm-dialog-actions .btn { flex: 1; justify-content: center; }
+}

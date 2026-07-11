@@ -59,3 +59,15 @@ test("newsletter image dialog cancel bypasses required URL validation and closes
   assert.match(source, /data-nl-img-cancel>Cancel<\/button>/);
   assert.match(source, /data-nl-img-cancel\]'\)\?\.addEventListener\('click', \(\) => dlg\.close\('cancel'\)\)/);
 });
+
+test("newsletter image dialog groups fields and can browse registered site assets", () => {
+  const source = readFileSync(new URL("../js/admin/newsletter.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../css/components.css", import.meta.url), "utf8");
+
+  assert.match(source, /confirm-dialog-image/);
+  assert.match(source, /data-nl-img-library-open/);
+  assert.match(source, /\/api\/admin\/content-assets\?status=available/);
+  assert.match(source, /data-nl-img-asset-url/);
+  assert.match(css, /\.confirm-dialog-body\s*\{[^}]*display:\s*grid[^}]*gap:\s*16px/s);
+  assert.match(css, /\.confirm-dialog-actions\s*\{[^}]*gap:\s*12px/s);
+});

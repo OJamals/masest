@@ -4,14 +4,14 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260711f';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260711g';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260711f';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260711f';
+} from './rich-editor.js?v=20260711g';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260711g';
 
 const SECTIONS = [
   ['compose', 'Compose'],
@@ -49,14 +49,32 @@ function nextRunText(n) {
 
 // Small styled prompt dialogs (mirrors util.js confirmDialog / content.js
 // promptAltText) so image-insert and test-send don't fall back to window.prompt.
-function promptImageDetails() {
+function newsletterAssetOption(asset = {}) {
+  const url = asset.public_url || asset.storage_path || '';
+  if (!url) return '';
+  const alt = asset.alt || '';
+  const label = asset.filename || asset.storage_path || 'Site image';
+  return `<button class="nl-image-library-item" type="button" data-nl-img-asset-url="${esc(url)}" data-nl-img-asset-alt="${esc(alt)}">
+    <img src="${esc(url)}" alt="${esc(alt)}">
+    <span><b>${esc(label)}</b><small>${alt ? esc(alt) : 'No alt text yet'}</small></span>
+  </button>`;
+}
+
+function promptImageDetails(api) {
   return new Promise((resolve) => {
     const dlg = document.createElement('dialog');
-    dlg.className = 'confirm-dialog';
+    dlg.className = 'confirm-dialog confirm-dialog-image';
     dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
       <p class="confirm-dialog-msg">Insert an image into the newsletter body.</p>
-      <label>Image URL <input class="adm-input" type="url" data-nl-img-url required placeholder="https://…"></label>
-      <label>Alt text <input class="adm-input" data-nl-img-alt placeholder="Describe the image"></label>
+      <label class="confirm-dialog-field"><span>Image URL</span><input class="adm-input" type="url" data-nl-img-url required placeholder="https://…"></label>
+      <label class="confirm-dialog-field"><span>Alt text</span><input class="adm-input" data-nl-img-alt placeholder="Describe the image"></label>
+      <section class="confirm-dialog-library" aria-label="Site image library">
+        <div class="confirm-dialog-library-head">
+          <div><strong>Site image library</strong><p class="muted">Use the same registered CMS images available in Blog.</p></div>
+          <button class="btn btn-ghost btn-sm" type="button" data-nl-img-library-open>Browse images</button>
+        </div>
+        <div class="confirm-dialog-image-library" data-nl-img-library hidden aria-live="polite"></div>
+      </section>
       <menu class="confirm-dialog-actions">
         <button value="cancel" class="btn btn-ghost btn-sm" type="button" data-nl-img-cancel>Cancel</button>
         <button value="ok" class="btn btn-primary btn-sm" type="submit">Insert</button>
@@ -65,16 +83,43 @@ function promptImageDetails() {
     if (typeof dlg.showModal !== 'function') { resolve(null); return; }
     document.body.appendChild(dlg);
     restoreFocusOnClose(dlg);
+    const urlInput = dlg.querySelector('[data-nl-img-url]');
+    const altInput = dlg.querySelector('[data-nl-img-alt]');
+    const browseButton = dlg.querySelector('[data-nl-img-library-open]');
+    const library = dlg.querySelector('[data-nl-img-library]');
     dlg.querySelector('[data-nl-img-cancel]')?.addEventListener('click', () => dlg.close('cancel'));
+    browseButton?.addEventListener('click', async () => {
+      if (!library || typeof api !== 'function') return;
+      browseButton.disabled = true;
+      library.hidden = false;
+      library.innerHTML = '<p class="muted">Loading site images…</p>';
+      try {
+        const data = await api('/api/admin/content-assets?status=available');
+        const assets = (data.assets || []).map(newsletterAssetOption).filter(Boolean);
+        library.innerHTML = assets.join('') || '<p class="muted">No registered site images are available yet.</p>';
+      } catch (error) {
+        library.innerHTML = `<p class="adm-status" data-state="err">${esc(error?.data?.error || 'Could not load site images. Try again.')}</p>`;
+      } finally {
+        browseButton.disabled = false;
+      }
+    });
+    library?.addEventListener('click', (event) => {
+      const choice = event.target instanceof Element ? event.target.closest('[data-nl-img-asset-url]') : null;
+      if (!choice || !urlInput || !altInput) return;
+      urlInput.value = choice.dataset.nlImgAssetUrl || '';
+      if (!altInput.value.trim()) altInput.value = choice.dataset.nlImgAssetAlt || '';
+      library.hidden = true;
+      urlInput.focus();
+    });
     dlg.addEventListener('close', () => {
       const ok = dlg.returnValue === 'ok';
-      const url = dlg.querySelector('[data-nl-img-url]')?.value.trim() || '';
-      const alt = dlg.querySelector('[data-nl-img-alt]')?.value.trim() || '';
+      const url = urlInput?.value.trim() || '';
+      const alt = altInput?.value.trim() || '';
       dlg.remove();
       resolve(ok && url ? { url, alt } : null);
     });
     dlg.showModal();
-    dlg.querySelector('[data-nl-img-url]')?.focus();
+    urlInput?.focus();
   });
 }
 
@@ -390,7 +435,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       referencePickerSelector: '#nlReferencePicker',
       referenceRowsSelector: '#nlReferenceRows',
       onInsertImage: async (_key, ctx) => {
-        const details = await promptImageDetails();
+        const details = await promptImageDetails(api);
         if (details) ctx.insertMarkdown(`![${details.alt || 'image'}](${details.url})`);
       },
     });
