@@ -6,6 +6,7 @@
 import Stripe from 'stripe';
 import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
 import { subscribeAction } from '../../_lib/order-shape.js';
+import { ensureCompanyStripeCustomer } from '../../_lib/stripe-customer.js';
 
 const TIERS = ['Bronze', 'Silver', 'Gold', 'Platinum'];
 
@@ -45,11 +46,11 @@ export async function onRequest({ request, env }) {
   }
 
   const stripe = new Stripe(secret);
-  let customerId = company.stripe_customer_id;
-  if (!customerId) {
-    const cu = await stripe.customers.create({ email: user.email || undefined, name: company.name || undefined, metadata: { company_id: companyId } });
-    customerId = cu.id;
-    await sb.from('companies').update({ stripe_customer_id: customerId }).eq('id', companyId);
+  let customerId;
+  try {
+    customerId = await ensureCompanyStripeCustomer({ stripe, sb, company, email: user.email });
+  } catch {
+    return json(502, { error: 'stripe_customer_setup_failed' });
   }
 
   // If the company already has a live subscription, swap the price on it in place

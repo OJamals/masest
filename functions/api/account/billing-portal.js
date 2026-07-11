@@ -6,6 +6,7 @@
 // *configuration* (one-time owner-op), not here.
 import Stripe from 'stripe';
 import { requireCompany, json, readBody } from '../../_lib/supabase.js';
+import { ensureCompanyStripeCustomer } from '../../_lib/stripe-customer.js';
 
 // flow_data for a subscription cancel/update deep-link, or null for the portal landing page.
 // Pure: the handler supplies a verified subscription id and the return url.
@@ -32,13 +33,11 @@ export async function onRequestPost({ request, env }) {
   const body = await readBody(request).catch(() => ({}));
 
   const stripe = new Stripe(secret);
-  let customerId = company.stripe_customer_id;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email || undefined, name: company.name || undefined, metadata: { company_id: companyId },
-    });
-    customerId = customer.id;
-    await sb.from('companies').update({ stripe_customer_id: customerId }).eq('id', companyId);
+  let customerId;
+  try {
+    customerId = await ensureCompanyStripeCustomer({ stripe, sb, company, email: user.email });
+  } catch {
+    return json(502, { error: 'stripe_customer_setup_failed' });
   }
 
   const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');

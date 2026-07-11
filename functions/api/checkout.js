@@ -4,6 +4,7 @@
 import Stripe from 'stripe';
 import { adminClient, userFromRequest, json, readBody, tierForRequest, tierPriceMap, sendEmail, emailLayout, htmlEscape } from '../_lib/supabase.js';
 import { buildStripeCheckoutSessionParams } from '../_lib/checkout-session.js';
+import { ensureCompanyStripeCustomer } from '../_lib/stripe-customer.js';
 import { companyCreditState, exceedsCredit, isMissingFunctionError } from '../_lib/credit.js';
 import { sdsAttachments } from '../_lib/sds-docs.js';
 import { orderItemsTableHtml, sdsNoteHtml } from '../_lib/order-email.js';
@@ -285,21 +286,19 @@ export async function onRequestPost({ request, env }) {
   let customerId = null;
   if (company) {
     try {
-      customerId = company.stripe_customer_id;
-      if (!customerId) {
-        const cu = await stripe.customers.create({
-          email: body.email || user?.email || undefined, name: company.name || undefined,
-          metadata: { company_id: company.id },
-        });
-        customerId = cu.id;
-        await sb.from('companies').update({ stripe_customer_id: customerId }).eq('id', company.id);
-      }
-      if (taxEnabled) {
+      customerId = await ensureCompanyStripeCustomer({
+        stripe, sb, company, email: body.email || user?.email,
+      });
+    } catch {
+      return json(502, { error: 'stripe_customer_setup_failed' });
+    }
+    if (taxEnabled) {
+      try {
         await stripe.customers.update(customerId, { tax_exempt: company.tax_exempt ? 'exempt' : 'none' });
+      } catch {
+        // Preserve checkout availability if the optional tax-state update fails.
+        customerId = null;
       }
-    } catch (err) {
-      // Customer setup must never block checkout — fall back to email-only (taxed normally).
-      customerId = null;
     }
   }
 
