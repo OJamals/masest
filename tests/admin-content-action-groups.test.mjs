@@ -61,8 +61,10 @@ test("blog editor exposes formatting and reference insertion controls", () => {
   assert.match(editor, /data-editor-action="format_size"/);
   assert.match(editor, /data-editor-action="format_color"/);
   assert.match(editor, /data-editor-action="insert_image"/);
-  assert.match(editor, /data-editor-action="reference_product"/);
-  assert.match(editor, /data-editor-action="reference_service"/);
+  assert.match(editor, /data-editor-action="open_reference"/);
+  assert.match(editor, /productReferenceGroups/);
+  assert.match(editor, /Choose a product, service, or program/);
+  assert.match(editor, /data-editor-reference-md/);
   assert.match(editor, /contenteditable="true"/);
   assert.match(editor, /data-editor-action="format_bold" aria-label="Bold" title="Bold"/);
   assert.match(editor, /contenteditable="true" role="textbox" aria-multiline="true" aria-label=/);

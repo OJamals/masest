@@ -77,7 +77,7 @@ test("admin panel content starts at the sidebar top without inherited section pa
     await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
-      for (const hash of ["orders", "companies", "products", "messages", "quotes", "reviews", "newsletter", "crm", "analytics", "finance", "integrations"]) {
+      for (const hash of ["orders", "companies", "products", "support-settings", "quotes", "reviews", "newsletter", "crm", "analytics", "finance", "integrations"]) {
         await page.goto(`${BASE_URL}/admin.html#${hash}`, { waitUntil: "domcontentloaded" });
         await page.waitForSelector(`.adm-panel[data-panel="${hash}"][data-active="true"]`, { timeout: 10000 });
         await page.waitForTimeout(150);

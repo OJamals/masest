@@ -78,7 +78,7 @@ function viewAsHtml(s) {
     <table class="adm" style="width:100%"><thead><tr><th>Date</th><th>Status</th><th>Shipment</th><th>Total</th></tr></thead><tbody>${orders}</tbody></table>`;
 }
 
-export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, refreshStats }) {
+export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, openSupportThread, refreshStats }) {
   function setupProgress(company) {
     const setup = company.setup;
     if (!setup?.steps?.length) return '<span class="muted">-</span>';
@@ -355,6 +355,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         viewAs.disabled = false;
       }
     });
+    box.querySelector('[data-company-support-thread]')?.addEventListener('click', () => openSupportThread?.(company.id));
     box.querySelectorAll('[data-company-detail-tab]').forEach((button) => {
       button.addEventListener('click', () => {
         const tab = button.dataset.companyDetailTab;
@@ -567,7 +568,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-action="suspend" data-capability="company.credit">Suspend</button>
           <button class="btn btn-ghost btn-sm" type="button" data-business-edit="${esc(company.id || id)}" data-capability="company.credit">Edit business</button>
           <button class="btn btn-ghost btn-sm" type="button" data-business-delete="${esc(company.id || id)}" data-capability="company.credit">Delete business</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="messages">Messages</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-company-support-thread>Open support chat</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-view-as="${esc(company.id || id)}" data-capability="company.view_as">View as customer</button>
         </div>

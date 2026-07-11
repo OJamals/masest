@@ -71,12 +71,13 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
     const counter = $('adminSupportUnread');
     if (counter) { counter.hidden = !unanswered; counter.textContent = unanswered; }
     const summary = $('adminSupportSummary'); if (summary) summary.textContent = unanswered ? `${unanswered} unresolved chat${unanswered === 1 ? '' : 's'}` : 'No unresolved chats';
-    if (!threads.length) { box.innerHTML = admEmpty('ph-lifebuoy', 'No support chats', 'New customer requests appear here.'); return; }
+    if (!threads.length) { box.innerHTML = admEmpty('ph-lifebuoy', 'No conversations', 'New customer requests appear here.'); return; }
     box.innerHTML = threads.map((thread) => `<button type="button" class="support-thread-item ${thread.unanswered ? 'is-unanswered' : ''}" data-company-thread="${esc(thread.company_id)}" aria-pressed="${thread.company_id === state.selectedThread}"><span><b>${esc(thread.company_name || thread.company_id)}</b><small>${esc((thread.last_body || '').slice(0, 90))}</small></span><span class="support-thread-meta"><span class="badge" data-s="${thread.status === 'complete' ? 'complete' : 'new'}">${thread.status === 'complete' ? 'Complete' : 'Open'}</span>${thread.unanswered ? '<span class="support-unanswered">Needs reply</span>' : ''}</span></button>`).join('');
   }
 
   function wireThreads() {
-    delegate($('admThreads'), 'click', '[data-company-thread]', (_event, button) => openThread(button.dataset.companyThread));
+    const box = $('admThreads');
+    delegate(box, 'click', '[data-company-thread]', (_event, button) => openThread(button.dataset.companyThread));
     $('adminSupportLauncher')?.addEventListener('click', () => setDrawer($('adminSupportDrawer').hidden));
     $('adminSupportClose')?.addEventListener('click', () => setDrawer(false));
     $('adminSupportSettings')?.addEventListener('click', () => document.querySelector('[data-tab="support-settings"]')?.click());
@@ -84,5 +85,5 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
     void loadPrefs();
   }
 
-  return { renderThreads, wireThreads };
+  return { renderThreads, wireThreads, openThread };
 }

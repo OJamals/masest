@@ -371,8 +371,9 @@ function admListPager(attr, loaded, total, hasMore) {
 
 // Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
 // CRM contact panel (timeline/tasks/notes) injected into the company drawer.
+const { renderThreads, wireThreads, openThread: openSupportThread } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats });
 const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
-const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, refreshStats });
+const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, openSupportThread, refreshStats });
 // Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
 const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats });
 // Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
@@ -398,9 +399,6 @@ const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message
 
 // Content tab: staff-managed CMS entries for non-commerce public content.
 const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({ $, api, state, admSkeleton, admEmpty });
-
-// Messages/threads tab extracted to ./admin/threads.js (#36 split). Shared primitives + sourceLabel injected.
-const { renderThreads, wireThreads } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats });
 
 // Reviews moderation tab (plan Task 13). Shared primitives + statusBadge/badge injected.
 const { renderReviews, wireReviews, wireManualReviewForm, refreshReviewsBadge } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });
@@ -448,7 +446,28 @@ function gateCaptchaToken() {
 }
 function resetGateCaptcha() { try { window.turnstile?.reset(); } catch (e) { /* not loaded */ } }
 
+function wireAdminSidebarScrollRelease() {
+  document.querySelectorAll('.adm-sidebar.adm-tabs-wrap').forEach((rail) => {
+    rail.addEventListener('wheel', (event) => {
+      if (event.defaultPrevented || event.ctrlKey || !event.deltaY) return;
+      const maxScrollTop = rail.scrollHeight - rail.clientHeight;
+      if (maxScrollTop <= 0) return;
+      const atTop = rail.scrollTop <= 1;
+      const atBottom = rail.scrollTop >= maxScrollTop - 1;
+      if (!(event.deltaY < 0 && atTop) && !(event.deltaY > 0 && atBottom)) return;
+      const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? parseFloat(getComputedStyle(rail).lineHeight) || 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? window.innerHeight
+          : 1;
+      event.preventDefault();
+      window.scrollBy({ top: event.deltaY * unit, behavior: 'instant' });
+    }, { passive: false });
+  });
+}
+
 function wire() {
+  wireAdminSidebarScrollRelease();
   linkTabsToPanels(document, 'adm');
   ORDER_STATUSES.forEach((status) => {
     $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${status}">${status.replaceAll('_', ' ')}</option>`);

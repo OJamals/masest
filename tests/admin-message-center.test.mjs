@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 import { adminMessageAlertKind, sanitizeAdminMessagePrefs } from '../functions/_lib/admin-message-notifications.js';
 
@@ -40,4 +40,31 @@ test('admin inbox surfaces unanswered threads, lifecycle controls, and notificat
   assert.match(threads, /Mark complete/);
   assert.match(threads, /Reopen thread/);
   assert.match(threads, /message-settings/);
+});
+
+test('admin shell does not mount buyer chat, account navigation, or user notifications', () => {
+  const html = read('admin.html');
+  const adminFiles = ['js/admin.js', ...readdirSync(new URL('../js/admin/', import.meta.url))
+    .filter((name) => name.endsWith('.js'))
+    .map((name) => `js/admin/${name}`)];
+
+  assert.doesNotMatch(html, /js\/main\.js(?:\?|\")/, 'public main.js mounts buyer-only chrome and customer chat');
+  for (const path of adminFiles) {
+    const source = read(path);
+    assert.doesNotMatch(source, /\/api\/account\//, `${path} must use staff APIs only`);
+    assert.doesNotMatch(source, /customer-chat|account-nav|dashboard\.js/, `${path} must not import buyer UI`);
+  }
+  const threads = read('js/admin/threads.js');
+  assert.match(threads, /\/api\/admin\/messages/);
+  assert.match(threads, /\/api\/admin\/message-settings/);
+});
+
+test('company message action opens its support thread instead of settings', () => {
+  const companies = read('js/admin/companies.js');
+  const threads = read('js/admin/threads.js');
+
+  assert.doesNotMatch(companies, /data-company-detail-tab="messages"/);
+  assert.match(companies, /data-company-support-thread/);
+  assert.match(companies, /openSupportThread\?\.\(company\.id\)/);
+  assert.match(threads, /return \{ renderThreads, wireThreads, openThread \}/);
 });

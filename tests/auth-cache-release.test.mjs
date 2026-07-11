@@ -7,9 +7,8 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260710f";
 const CHAT_RELEASE = "20260711a";
 const MAIN_RELEASE = "20260711f";
-const ADMIN_RELEASE = "20260711h";
+const ADMIN_RELEASE = "20260711i";
 const MAIN_RELEASE_OVERRIDES = new Map([
-  ["admin.html", MAIN_RELEASE],
   ["dashboard.html", MAIN_RELEASE],
 ]);
 
@@ -55,7 +54,7 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${dashboardEntry[1]}`));
 
   assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${ADMIN_RELEASE}`));
-  for (const module of ["content", "products", "qbo"]) {
+  for (const module of ["content", "products", "qbo", "companies", "threads"]) {
     assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_RELEASE}`));
   }
 

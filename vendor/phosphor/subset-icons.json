@@ -1,8 +1,8 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 265,
-  "usedCount": 152,
-  "bufferCount": 113,
+  "count": 267,
+  "usedCount": 161,
+  "bufferCount": 106,
   "icons": [
     {
       "name": "address-book",
@@ -212,7 +212,7 @@
     {
       "name": "chart-bar",
       "cp": "E150",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "chart-line-up",
@@ -222,6 +222,11 @@
     {
       "name": "chat-circle",
       "cp": "E168",
+      "src": "used"
+    },
+    {
+      "name": "chat-circle-dots",
+      "cp": "E16C",
       "src": "used"
     },
     {
@@ -562,7 +567,7 @@
     {
       "name": "gear-six",
       "cp": "E272",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "gift",
@@ -702,7 +707,7 @@
     {
       "name": "lifebuoy",
       "cp": "E63A",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "lightbulb",
@@ -857,7 +862,7 @@
     {
       "name": "paperclip",
       "cp": "E39A",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "paw-print",
@@ -952,7 +957,7 @@
     {
       "name": "receipt",
       "cp": "E3EC",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "recycle",
@@ -1025,6 +1030,11 @@
       "src": "buffer"
     },
     {
+      "name": "sidebar-simple",
+      "cp": "EC24",
+      "src": "used"
+    },
+    {
       "name": "sign-in",
       "cp": "E428",
       "src": "used"
@@ -1037,7 +1047,7 @@
     {
       "name": "sliders-horizontal",
       "cp": "E434",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "sneaker",
@@ -1072,7 +1082,7 @@
     {
       "name": "stack",
       "cp": "E466",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "star",

@@ -19,7 +19,7 @@ test('operational workspaces share the same page-level heading pattern', () => {
     ['orders', 'companies'],
     ['companies', 'products'],
     ['products', 'content'],
-    ['messages', 'quotes'],
+    ['support-settings', 'quotes'],
     ['quotes', 'reviews'],
     ['reviews', 'newsletter'],
   ];
