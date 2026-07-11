@@ -127,7 +127,7 @@ export async function onRequest({ request, env }) {
     const status = params.get('status');
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 500 });
     let q = sb.from('companies')
-      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,resale_cert_url,stripe_customer_id,created_at,profiles(id,full_name,phone,role)', { count: 'exact' })
+      .select('id,name,status,net_terms_days,credit_limit,tax_exempt,price_tier,resale_cert_url,stripe_customer_id,created_at,profiles!profiles_company_id_fkey(id,full_name,phone,role)', { count: 'exact' })
       .order('created_at', { ascending: false }).range(offset, offset + limit - 1);
     if (status) q = q.eq('status', status);
     // Server-side name search so an account past the loaded page is still findable.

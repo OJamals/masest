@@ -8,6 +8,8 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 test("admin companies API returns setup progress for every company", () => {
   const src = read("functions/api/admin/companies.js");
   const helper = read("functions/_lib/setup.js");
+  assert.match(src, /profiles!profiles_company_id_fkey\(id,full_name,phone,role\)/,
+    "company members embed must select the company_id relationship explicitly");
   assert.match(src, /import .*buildCompanySetup.*_lib\/setup\.js/, "setup progress should come from the shared helper");
   assert.match(src, /\.map\(\(company\) => \(\{ \.\.\.company, setup: buildCompanySetup\(company\) \}\)\)/,
     "GET response should attach setup to each company");
