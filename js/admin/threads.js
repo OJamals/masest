@@ -1,4 +1,4 @@
-import { esc, dateTime as date, delegate } from '../util.js?v=20260711r';
+import { esc, dateTime as date, delegate } from '../util.js?v=20260711s';
 
 const POLL_MS = 15_000;
 const PRESENCE_HEARTBEAT_MS = 30_000;
@@ -8,22 +8,23 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
   let pollId = 0;
   let presencePing = 0;
   let inboxOpen = false;
+  let presenceRequest = Promise.resolve();
   let threadMessages = [];
   let threadPage = { has_more: false, next_before: null };
   let currentThread = null;
 
   async function setInboxPresence(open, { force = false, keepalive = false } = {}) {
     if (!force && inboxOpen === open) return;
-    const previous = inboxOpen;
     inboxOpen = open;
-    try {
-      await api('/api/admin/message-settings', {
+    presenceRequest = presenceRequest.catch(() => {}).then(() => api('/api/admin/message-settings', {
         method: 'POST',
         body: { action: 'inbox_presence', inbox_open: open },
         keepalive,
-      });
+      })).then(() => {
       if (open) presencePing = Date.now();
-    } catch { inboxOpen = previous; }
+    });
+    try { await presenceRequest; }
+    catch { if (inboxOpen === open) inboxOpen = !open; }
   }
 
   function setDrawer(open) {

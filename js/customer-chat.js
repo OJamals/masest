@@ -70,6 +70,7 @@ export function initCustomerChat() {
   let pollId = 0;
   let chatPresenceOpen = false;
   let lastPresencePing = 0;
+  let presenceRequest = Promise.resolve();
 
   const setStatus = (text = "", state = "") => {
     status.textContent = text;
@@ -81,9 +82,8 @@ export function initCustomerChat() {
   };
   const setChatPresence = async (open, { force = false, keepalive = false } = {}) => {
     if (!authenticated || (!force && chatPresenceOpen === open)) return;
-    const previous = chatPresenceOpen;
     chatPresenceOpen = open;
-    try {
+    presenceRequest = presenceRequest.catch(() => {}).then(async () => {
       const { api } = await auth();
       await api("/api/account/messages", {
         method: "POST",
@@ -91,9 +91,9 @@ export function initCustomerChat() {
         keepalive,
       });
       if (open) lastPresencePing = Date.now();
-    } catch {
-      chatPresenceOpen = previous;
-    }
+    });
+    try { await presenceRequest; }
+    catch { if (chatPresenceOpen === open) chatPresenceOpen = !open; }
   };
   const setOpen = (open) => {
     panel.hidden = !open;

@@ -65,6 +65,7 @@ test('customer chat links to full inbox and uses expiring keepalive presence', (
   const account = read('functions/api/account/messages.js');
   assert.match(chat, /dashboard\.html#messages/);
   assert.match(chat, /keepalive:\s*true/);
+  assert.match(chat, /presenceRequest = presenceRequest/);
   assert.match(auth, /keepalive/);
   assert.match(account, /support_chat_seen_at/);
 });
