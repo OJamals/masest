@@ -137,3 +137,52 @@ test("homepage keeps a primary action visible on short mobile", async () => {
     }
   });
 });
+
+test("homepage first scene uses the compact iPad width", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const page = await browser.newPage({
+      // Playwright's iPad (gen 11) CSS width; height matches the reported crop.
+      viewport: { width: 656, height: 683 },
+      deviceScaleFactor: 2,
+      reducedMotion: "no-preference",
+    });
+
+    try {
+      await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => {
+        const copy = document.querySelector('.story .act[data-act="1"] .act-copy');
+        const reel = document.querySelector('.story .act[data-act="1"] .reel');
+        return copy?.getBoundingClientRect().width > 0 && reel?.getBoundingClientRect().width > 0;
+      });
+      const result = await page.evaluate(() => {
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return {
+            left: Math.round(box.left),
+            right: Math.round(box.right),
+            width: Math.round(box.width),
+          };
+        };
+        const copy = rect('.story .act[data-act="1"] .act-copy');
+        const reel = rect('.story .act[data-act="1"] .reel');
+        return {
+          copy,
+          reel,
+          sceneEnvelope: Math.max(copy.right, reel.right) - Math.min(copy.left, reel.left),
+          overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+        };
+      });
+
+      assert.ok(result.sceneEnvelope >= 656 * 0.75, JSON.stringify(result));
+      assert.ok(result.reel.left >= result.copy.right + 16, JSON.stringify(result));
+      assert.ok(result.copy.width >= 250, JSON.stringify(result));
+      assert.ok(result.reel.width >= 240, JSON.stringify(result));
+      assert.equal(result.overflow, false, JSON.stringify(result));
+      await browser.close();
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  });
+});

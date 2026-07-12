@@ -28,6 +28,7 @@ test("canonical catalog carries the confirmed July 2026 workbook products and va
   assert.equal(data.products.length, 15);
   assert.equal(data.product_variants.length, 66);
   assert.deepEqual(data.products.map((product) => product.slug), CONFIRMED_WORKBOOK_PRODUCTS);
+  assert.equal(data.products.find((product) => product.slug === "multiwash")?.name, "VertKleen MultiWash");
 
   const hcrTrial = data.product_variants.find((v) => v.sku === "VK-HCR-1G");
   assert.equal(hcrTrial.product_slug, "hcr");

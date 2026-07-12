@@ -132,7 +132,7 @@
     },
     {
       "slug": "multiwash",
-      "name": "VertKleen MultiWash (Fortis)",
+      "name": "VertKleen MultiWash",
       "sku_stem": "VK-MW",
       "family": "cleaning_degreasing",
       "group_key": "softwash_exterior",

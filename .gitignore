@@ -1,5 +1,7 @@
 .DS_Store
 .qa-local/
+# Homepage motion prototype: local review only; never publish.
+.qa-local/homepage-concept/
 node_modules/
 node_modules
 package-lock.json

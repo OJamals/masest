@@ -26,7 +26,6 @@ export function productCard(id, heroCard = false, eager = false) {
   const media = p.image
     ? `<a class="prod-media" href="products/${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="${mediaLoading}"${mediaPriority} ${imageDimsAttr(p.image)}></a>`
     : "";
-  const fitList = (catalog.fits || []).map((fit) => `<li>${fit}</li>`).join("");
   return `
   <div class="prod-card${heroCard ? " hero-card" : ""} reveal">
     ${media}
@@ -34,8 +33,6 @@ export function productCard(id, heroCard = false, eager = false) {
     <span class="catalog-type">${catalog.job || p.replaces}</span>
     <h3>${p.name}</h3>
       <p>${catalog.summary || p.tag}</p>
-      ${fitList ? `<ul class="product-fit-list">${fitList}</ul>` : ""}
-      <span class="product-proof-line">${catalog.proof || "Stats, studies, and documents on the detail page"}</span>
       <div class="prod-actions">
         <a class="btn btn-ink btn-sm" href="products/${id}">View details</a>
         <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button"></span>

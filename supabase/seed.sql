@@ -9,7 +9,7 @@ values
 ('cr-hd','VertKleen CRHD','degrease','0-0-0','buy',false,true,null,6),
 ('cr-hd-low-foam','VertKleen CRHD Low Foam','degrease','0-0-0','buy',false,true,null,7),
 ('neutral','VertKleen Neutral','degrease','0-0-0','buy',false,true,null,8),
-('multiwash','VertKleen MultiWash (Fortis)','softwash_exterior','0-0-0','buy',false,true,null,9),
+('multiwash','VertKleen MultiWash','softwash_exterior','0-0-0','buy',false,true,null,9),
 ('lam3','VertKleen Lam3','softwash_exterior','0-0-0','buy',false,true,null,10),
 ('purgo','VertKleen Purgo','water','0-0-0','buy',false,true,null,11),
 ('alumibrite','VertKleen AlumiBrite','marine','0-0-0','buy',false,true,null,12),

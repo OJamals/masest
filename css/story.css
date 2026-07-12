@@ -1056,6 +1056,62 @@ width: min(66vw, 260px);
 }
 }
 
+/* Compact tablets still have enough horizontal room for Act 1's split scene.
+   Keep the short-height content trim above, but use the full stage width rather
+   than the phone stack's 360px copy cap. */
+@media (min-width: 600px) and (max-width: 760px) {
+  .story .act[data-act="1"] .stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 42vw);
+    gap: clamp(16px, 3vw, 24px);
+    align-items: center;
+    justify-items: stretch;
+    padding: 0 clamp(20px, 4vw, 28px);
+  }
+
+  .story .act[data-act="1"] .act-copy.bl {
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    padding: 0;
+    align-self: center;
+    justify-self: stretch;
+    text-align: left;
+  }
+
+  .story .act[data-act="1"] .act-h {
+    font-size: clamp(2rem, 4.2vw, 2.7rem);
+  }
+
+  .story .act[data-act="1"] .reel {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    right: auto;
+    top: auto;
+    width: min(100%, 300px);
+    max-height: min(58svh, 478px);
+    margin: 0;
+    justify-self: end;
+    transform: none;
+  }
+
+  .story .act[data-act="1"] .reel-tag {
+    left: 8px;
+    gap: 5px;
+    padding: 6px 9px;
+    font-size: .58rem;
+    letter-spacing: .1em;
+  }
+
+  .story .act[data-act="1"] .reel-idx {
+    right: 8px;
+    padding: 6px 9px;
+    font-size: .68rem;
+  }
+}
+
 @media (max-width: 420px) {
 .story .reel-tag {
 left: 8px;
@@ -1498,7 +1554,6 @@ justify-content: flex-start;
 .story:not(.story-ready) .act[data-act="2"] .act-copy {
   order: 1;
 }
-
 
 
 

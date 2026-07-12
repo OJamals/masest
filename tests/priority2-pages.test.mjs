@@ -51,6 +51,32 @@ const comparisonBlogPosts = [
   ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "Brewlando"],
 ];
 
+const industryLabelPages = [
+  "food-beverage",
+  "breweries-distilleries-wineries",
+  "restaurants-commercial-kitchens",
+  "food-processing-agriculture",
+  "pressure-washing-soft-wash-contractors",
+  "drone-cleaning-companies",
+  "fleet-trucking-car-washes",
+  "golf-courses",
+  "golf-courses-sports-facilities",
+];
+
+test("product and industry listings stay concise and product-focused", () => {
+  const products = read("products.html");
+  assert.match(products, /Search by job or current chemical\./);
+  assert.doesNotMatch(products, /VertKleen covers acids, caustics, degreasers/);
+
+  for (const slug of industryLabelPages) {
+    const html = read(`industries/${slug}.html`);
+    assert.doesNotMatch(html, /Published pack prices|1400 gal tote|\(Fortis\)/i, `${slug} should not repeat catalog pricing`);
+  }
+
+  const industryCard = read("js/main/commerce-ui.js").match(/export function productCard[\s\S]*?\n}\n/)?.[0] || "";
+  assert.doesNotMatch(industryCard, /product-fit-list|product-proof-line/);
+});
+
 test("priority 2 target industry pages exist with workbook-specified products and CTAs", () => {
   const index = read("industries.html");
   const contact = read("contact.html");
@@ -92,7 +118,7 @@ test("Tab 4 industry rows each have a generated landing page", () => {
   }
 });
 
-test("FB, PW, and gym label variants use their source directions and segment prices", () => {
+test("FB, PW, and gym label variants keep source directions without catalog price duplication", () => {
   const pages = {
     food: read("industries/food-beverage.html"),
     brewery: read("industries/breweries-distilleries-wineries.html"),
@@ -110,8 +136,8 @@ test("FB, PW, and gym label variants use their source directions and segment pri
   assert.match(pages.brewery, /0\.5 L per 10 gal/);
   assert.match(pages.restaurant, /Kitchen line — light grease/);
   assert.match(pages.restaurant, /Bar tops, glass &amp; tables/);
-  assert.match(pages.restaurant, /CIP Food &amp; Beverage pricing/);
-  assert.match(pages.restaurant, /1 gal jug — \$12\.12/);
+  assert.match(pages.restaurant, /<span class="catalog-type">FB label<\/span>/);
+  assert.doesNotMatch(pages.restaurant, /Published pack prices|1 gal jug — \$12\.12/);
 
   for (const html of [pages.pressure, pages.drone]) {
     assert.match(html, /crhd-pressure-wash-studio\.webp/);
@@ -119,7 +145,8 @@ test("FB, PW, and gym label variants use their source directions and segment pri
     assert.match(html, /multiwash-pressure-wash-studio\.webp/);
     assert.match(html, /Apply at 1:20 via downstream injector/);
     assert.match(html, /Rust &amp; fertilizer stains/);
-    assert.match(html, /HVAC &amp; Facilities pricing/);
+    assert.match(html, /<span class="catalog-type">PW label<\/span>/);
+    assert.doesNotMatch(html, /Published pack prices|1400 gal tote/);
   }
   assert.match(pages.fleet, /data-label-variant="pw-crhd"/);
   assert.match(pages.fleet, /data-label-variant="pw-multiwash"/);
@@ -128,7 +155,7 @@ test("FB, PW, and gym label variants use their source directions and segment pri
   assert.match(pages.gym, /purgo-gym-studio\.webp/);
   assert.match(pages.gym, /Floors &amp; tile:<\/strong>&nbsp; Dilute 5:1/);
   assert.match(pages.gym, /High-touch odor:<\/strong>&nbsp; Dilute 1:16/);
-  assert.match(pages.gym, /1 gal jug — \$21\.49/);
+  assert.doesNotMatch(pages.gym, /Published pack prices|1 gal jug — \$21\.49/);
 
   for (const asset of [
     "cip-cr-studio.webp",

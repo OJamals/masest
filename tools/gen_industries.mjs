@@ -495,13 +495,6 @@ const INDUSTRY_SCENE_ALIASES = {
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
 const htmlText = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-const SEGMENT_PRICING = JSON.parse(
-  readFileSync(resolve(HERE, "..", "data", "segment-pricing.json"), "utf8"),
-);
-const PRICE_SEGMENTS = new Map(
-  SEGMENT_PRICING.segments.map((segment) => [segment.slug, segment]),
-);
-
 const LABEL_VARIANTS = {
   "fb-cip-cr": {
     market: "FB label",
@@ -509,8 +502,6 @@ const LABEL_VARIANTS = {
     subtitle: "50% caustic soda replacement · brewery CIP",
     image: "cip-cr-studio.webp",
     productHref: "cr",
-    priceProductSlug: "cr",
-    priceSegmentSlug: "cip-food-beverage",
     directions: [
       ["Light / krausen soil", "0.5 L per 10 gal; circulate hot (>140°F), then rinse"],
       ["Moderate soil", "1 L per 10 gal; circulate, then rinse"],
@@ -523,8 +514,6 @@ const LABEL_VARIANTS = {
     subtitle: "Synthetic acid · beer stone remover · brewery CIP",
     image: "cip-hcr-studio.webp",
     productHref: "hcr",
-    priceProductSlug: "hcr",
-    priceSegmentSlug: "cip-food-beverage",
     directions: [
       ["Light beer stone", "0.5 L per 10 gal; circulate, then rinse"],
       ["Moderate", "1 L per 10 gal; circulate, then rinse"],
@@ -537,8 +526,6 @@ const LABEL_VARIANTS = {
     subtitle: "Heavy-duty kitchen & bar degreaser",
     image: "crhd-food-beverage-studio.webp",
     productHref: "crhd",
-    priceProductSlug: "cr-hd",
-    priceSegmentSlug: "cip-food-beverage",
     directions: [
       ["Kitchen line — light grease", "Spray at 1:16, dwell 3–5 min, then wipe or rinse"],
       ["Bar mats, fryers & hoods", "Apply at 1:8, agitate, then rinse"],
@@ -551,15 +538,12 @@ const LABEL_VARIANTS = {
     subtitle: "Multi-surface cleaner · deodorizer · antimicrobial",
     image: "multiwash-food-beverage-studio.webp",
     productHref: "multiwash",
-    priceProductSlug: "multiwash",
-    priceSegmentSlug: "cip-food-beverage",
     directions: [
       ["Bar tops, glass & tables", "Fill a 32 oz spray bottle at 1:16; mist and wipe"],
       ["Floors", "Dilute 1:32 in a mop bucket or auto-scrubber"],
       ["Restrooms & fixtures", "Spray at 1:16, let stand, then wipe"],
       ["Upholstery & booths", "Spray at 1:16, blot and air-dry"],
     ],
-    coverage: "1 gal cleans 1,000–1,500 sq ft; 1 gal makes up to 5 gal.",
   },
   "pw-crhd": {
     market: "PW label",
@@ -567,8 +551,6 @@ const LABEL_VARIANTS = {
     subtitle: "Heavy-duty degreaser · fleet & concrete",
     image: "crhd-pressure-wash-studio.webp",
     productHref: "crhd",
-    priceProductSlug: "cr-hd",
-    priceSegmentSlug: "hvac-facilities",
     directions: [
       ["Fleet & equipment", "Apply at 1:20 via downstream injector or foam cannon; dwell, then rinse"],
       ["Concrete oil & grease", "Apply at 1:8, agitate and rinse"],
@@ -581,14 +563,11 @@ const LABEL_VARIANTS = {
     subtitle: "Calcium, rust & scale · non-corrosive",
     image: "crs-pressure-wash-studio.webp",
     productHref: "descaler",
-    priceProductSlug: "descaler",
-    priceSegmentSlug: "hvac-facilities",
     directions: [
       ["Rust & fertilizer stains", "Apply at 1:4, dwell 3–5 min, agitate, then rinse"],
       ["Battery / deep stains", "Apply at 1:2, dwell, then rinse"],
       ["Heavy scale & calcium", "Apply neat, dwell, then rinse"],
     ],
-    catalogNote: "CRS currently routes through the published Descaler catalog listing.",
   },
   "pw-multiwash": {
     market: "PW label",
@@ -596,14 +575,11 @@ const LABEL_VARIANTS = {
     subtitle: "Bleach / sodium hypochlorite replacement",
     image: "multiwash-pressure-wash-studio.webp",
     productHref: "multiwash",
-    priceProductSlug: "multiwash",
-    priceSegmentSlug: "hvac-facilities",
     directions: [
       ["House wash / soft wash", "Apply through a downstream injector at 1:16; dwell, then low-pressure rinse"],
       ["Concrete & flatwork", "Apply at 1:8, agitate and rinse"],
       ["General surfaces", "Dilute 1:32, apply and rinse"],
     ],
-    coverage: "1 gal cleans 1,000–1,500 sq ft; 1 gal makes up to 5 gal.",
   },
   "gym-multiwash": {
     market: "Gym label",
@@ -611,15 +587,12 @@ const LABEL_VARIANTS = {
     subtitle: "Gym · fitness · studio & clinic cleaner",
     image: "multiwash-gym-studio.webp",
     productHref: "multiwash",
-    priceProductSlug: "multiwash",
-    priceSegmentSlug: "hvac-facilities",
     directions: [
       ["Equipment, machines & mats", "Dilute 1:32; mist onto a cloth or surface and wipe. Do not soak electronics"],
       ["Floors & tile", "Dilute 5:1 in a mop bucket or auto-scrubber"],
       ["Glass & mirrors", "Dilute 4:1 and wipe streak-free"],
       ["Heavy soil & grout", "Dilute 2:1; apply, let stand, agitate and rinse"],
     ],
-    coverage: "1 gal cleans 1,000–1,500 sq ft; 1 gal makes up to 5 gal.",
   },
   "gym-purgo": {
     market: "Gym label",
@@ -627,14 +600,11 @@ const LABEL_VARIANTS = {
     subtitle: "Antimicrobial · high-touch · deodorizer",
     image: "purgo-gym-studio.webp",
     productHref: "purgo",
-    priceProductSlug: "purgo",
-    priceSegmentSlug: "hvac-facilities",
     directions: [
       ["High-touch odor", "Dilute 1:16; spray onto equipment, benches and rails; let stand, then wipe"],
       ["General surfaces", "Dilute 1:32; mist and wipe down — no rinse required"],
       ["Heavy fouling", "Dilute 1:5; apply, allow full contact time, then wipe"],
     ],
-    coverage: "1 gal cleans 1,000–1,500 sq ft; 1 gal makes up to 5 gal.",
   },
 };
 
@@ -650,48 +620,21 @@ const INDUSTRY_LABEL_VARIANTS = {
   "golf-courses-sports-facilities": ["gym-multiwash", "gym-purgo"],
 };
 
-const money = (value) => new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-}).format(Number(value));
-
-function variantPriceRows(variant) {
-  const segment = PRICE_SEGMENTS.get(variant.priceSegmentSlug);
-  if (!segment) throw new Error(`Missing pricing segment: ${variant.priceSegmentSlug}`);
-  const rows = segment.rows.filter((row) => row.product_slug === variant.priceProductSlug);
-  if (!rows.length) {
-    throw new Error(`Missing ${variant.priceProductSlug} prices in ${variant.priceSegmentSlug}`);
-  }
-  return { segment, rows };
-}
-
 function labelVariantCard(key) {
   const variant = LABEL_VARIANTS[key];
   if (!variant) throw new Error(`Missing label variant: ${key}`);
-  const { segment, rows } = variantPriceRows(variant);
-  const prices = rows.map((row) =>
-    `<li>${htmlText(row.pack)} — ${money(row.price_per_unit)}${row.quote_only ? " · quote" : ""}</li>`,
-  ).join("");
   const directions = variant.directions.map(([use, dilution]) =>
     `<li><strong>${htmlText(use)}:</strong>&nbsp; ${htmlText(dilution)}</li>`,
   ).join("");
-  const note = variant.catalogNote
-    ? `        <p>${htmlText(variant.catalogNote)}</p>\n`
-    : "";
-  const coverage = variant.coverage
-    ? `        <p class="product-proof-line">${htmlText(variant.coverage)}</p>\n`
-    : "";
 
   return `<article class="prod-card" data-label-variant="${key}">
         <img class="product-shot" src="../img/products/${variant.image}" alt="${htmlText(variant.name)} ${variant.market} jug" loading="lazy">
-        <span class="catalog-type">${variant.market} · ${htmlText(segment.title)} pricing</span>
+        <span class="catalog-type">${variant.market}</span>
         <h3>${htmlText(variant.name)}</h3>
         <div class="replaces">${htmlText(variant.subtitle)}</div>
         <h4>Label dilution / concentration</h4>
         <ul class="product-fit-list" aria-label="${htmlText(variant.name)} label directions">${directions}</ul>
-${coverage}        <h4>Published pack prices</h4>
-        <ul class="product-fit-list" aria-label="${htmlText(variant.name)} ${htmlText(segment.title)} prices">${prices}</ul>
-${note}        <div class="prod-actions">
+        <div class="prod-actions">
           <a class="btn btn-secondary" href="../products/${variant.productHref}">View base product</a>
           <a class="btn btn-primary" href="../contact?type=quote&amp;product=${enc(variant.name)}&amp;label=${enc(variant.market)}">Request this label</a>
         </div>
@@ -702,14 +645,13 @@ function industryLabelVariantsBlock(ind) {
   const keys = INDUSTRY_LABEL_VARIANTS[ind.slug];
   if (!keys?.length) return "";
   const cards = keys.map(labelVariantCard).join("\n      ");
-  const tiers = [...new Set(keys.map((key) => PRICE_SEGMENTS.get(LABEL_VARIANTS[key].priceSegmentSlug).title))];
 
   return `\n<section class="section section-slim" data-industry-label-variants="${ind.slug}">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Industry label variants</span>
         <h2 class="headline">Use the label built for this work.</h2>
-        <p class="subhead">Directions and concentration come from the pictured application label. Pack prices come from the ${htmlText(tiers.join(" and "))} workbook tier; freight is excluded and quote-marked bulk packs remain quote-routed.</p>
+        <p class="subhead">Use the application-specific directions shown on each label. Open the base product for specs, documentation, and purchasing.</p>
       </div>
       <div class="prod-grid prod-grid-rec">
       ${cards}
