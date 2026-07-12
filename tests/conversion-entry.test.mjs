@@ -15,6 +15,8 @@ test("mobile discovery keeps replacement and direct catalog paths", () => {
     /\.product-catalog-hero \.hero-actions \.btn-secondary\s*{[^}]*display:\s*none/i,
     "mobile CSS must not hide the direct catalog path",
   );
+  assert.match(products, />CIP pricing<\/a>/, "catalog facts should use the concise CIP pricing label");
+  assert.doesNotMatch(products, />CIP food pricing<\/a>/i);
 });
 
 test("request page leads into the form before process reassurance", () => {
