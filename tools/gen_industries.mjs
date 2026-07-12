@@ -842,7 +842,7 @@ function page(ind) {
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260706c">
-<link rel="stylesheet" href="../css/navigation.css?v=20260706a">
+<link rel="stylesheet" href="../css/navigation.css?v=20260712b">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 <!-- seo:auto -->

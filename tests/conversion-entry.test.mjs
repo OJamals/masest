@@ -19,6 +19,7 @@ test("mobile discovery keeps replacement and direct catalog paths", () => {
 
 test("request page leads into the form before process reassurance", () => {
   const contact = read("contact.html");
+  const css = read("css/style.css");
   const start = contact.indexOf('href="#quoteForm">Start your request');
   const form = contact.indexOf('id="quoteForm"');
   const assurance = contact.indexOf('class="quote-assurance"');
@@ -26,6 +27,17 @@ test("request page leads into the form before process reassurance", () => {
   assert.ok(start > 0, "contact hero should link directly to the request form");
   assert.ok(form > start, "request form should follow the hero CTA");
   assert.ok(assurance > form, "process reassurance should follow the form instead of blocking it");
+  assert.match(css, /#quoteForm\s*{[^}]*scroll-margin-top:\s*74px;/s, "form anchor should clear the sticky header");
+});
+
+test("mobile chat clears the persistent lead actions", () => {
+  const navigation = read("css/navigation.css");
+
+  assert.match(
+    navigation,
+    /body:has\(\.lead-action-bar\.is-visible:not\(\.is-suppressed\)\) \.customer-chat\s*{[^}]*bottom:\s*calc\(max\(12px, env\(safe-area-inset-bottom\)\) \+ 76px\);/s,
+    "chat launcher should move above the visible mobile lead bar",
+  );
 });
 
 test("static product hero exposes buying context before long copy", () => {

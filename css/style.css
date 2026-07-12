@@ -1249,6 +1249,7 @@ figure.photo figcaption {
 .field-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 56px; align-items: center; }
 /* Form rows: top-align so an inline error growing one cell never vertically
    shifts its partner. The centered base is for the content image+text layout. */
+#quoteForm { scroll-margin-top: 74px; }
 #quoteForm .field-grid { grid-template-columns: 1fr 1fr; gap: 18px 24px; align-items: start; }
 
 @media (max-width: 680px) {

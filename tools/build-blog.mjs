@@ -109,7 +109,7 @@ function postPage(post, all) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260708c">
-<link rel="stylesheet" href="../css/navigation.css?v=20260706a">
+<link rel="stylesheet" href="../css/navigation.css?v=20260712b">
 <link rel="stylesheet" href="../css/components.css">
 <link rel="stylesheet" href="../css/blog.css">
 <!-- seo:auto -->
@@ -204,7 +204,7 @@ function indexPage(posts) {
 <link rel="alternate" type="application/rss+xml" title="MASEST VertKleen Blog" href="/blog/feed.xml">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260708c">
-<link rel="stylesheet" href="css/navigation.css?v=20260706a">
+<link rel="stylesheet" href="css/navigation.css?v=20260712b">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/blog.css">
 <!-- seo:auto -->

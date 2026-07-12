@@ -139,6 +139,11 @@
     transform: translateY(0);
   }
 
+  /* Keep customer support available without covering the persistent quote action. */
+  body:has(.lead-action-bar.is-visible:not(.is-suppressed)) .customer-chat {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 76px);
+  }
+
   .lead-action-bar.is-suppressed {
     opacity: 0;
     visibility: hidden;
