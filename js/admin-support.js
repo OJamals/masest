@@ -11,7 +11,7 @@ const date = (value) => {
 };
 
 export function initAdminSupport({ auth, root = "", staff = null } = {}) {
-  if (document.getElementById("adminSupportConsole") || !auth?.api) return;
+  if (document.getElementById("adminSupportConsole") || document.getElementById("adminSupportLauncher") || !auth?.api) return;
 
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
