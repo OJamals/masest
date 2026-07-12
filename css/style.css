@@ -471,6 +471,12 @@ scoped to the hero */
 .contact-hero-copy { min-width: 0; }
 .contact-hero-copy .display { font-size: clamp(3rem, 5.5vw, 5rem); }
 .contact-hero-copy .subhead { max-width: 58ch; }
+.contact-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
 .contact-hero-media {
   margin: 0;
   aspect-ratio: 5 / 4;
@@ -4800,8 +4806,9 @@ main:has(#pMediaSection) .section-head {
     margin-top: 22px;
   }
 
-  .product-catalog-hero .hero-actions .btn-secondary {
-    display: none !important;
+  .product-catalog-hero .hero-actions .btn {
+    flex: 1 1 180px;
+    justify-content: center;
   }
 
   .product-catalog-hero .catalog-hero-media {
@@ -4848,6 +4855,23 @@ main:has(#pMediaSection) .section-head {
 }
 
 @media (max-width: 560px) {
+  body.products-page .catalog-quick-facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  body.products-page .catalog-quick-facts span {
+    min-width: 0;
+    min-height: 52px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding-inline: 4px;
+    font-size: .78rem;
+    text-align: center;
+  }
+
   body .shop-grid {
     grid-template-columns: 1fr;
   }
@@ -7127,11 +7151,45 @@ body.product-detail-page main > section.product-static-section {
   padding-bottom: clamp(4px, 1.4vw, 16px);
 }
 
+.product-detail-page .product-hero-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.product-detail-page .product-hero-facts span {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .72);
+  color: var(--ink-soft);
+  font-size: .88rem;
+  line-height: 1.25;
+}
+
+.product-detail-page .product-hero-facts b {
+  color: var(--accent-ink);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.product-detail-page .product-detail-hero .hero-copy > .subhead {
+  margin-block: 18px 24px;
+}
+
 .product-detail-page .product-hero-buy {
-  /* The two-line price panel is taller than the variant controls. Reserve a
-     full rhythm step below the whole row so it cannot visually merge with the
-     first product-detail card at the tighter desktop grid widths. */
-  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .product-static-section {

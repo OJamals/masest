@@ -101,7 +101,7 @@ test("products page wires the checker and grid from product data", () => {
   assert.match(commerceUi, /QUOTE_FIRST_IDS\.includes\(id\)/);
   assert.match(commerceUi, /shop-card-quote/);
   assert.match(commerceUi, /shop-card-bulk/);
-  assert.match(read("products.html"), /programs/);
+  assert.match(read("products.html"), /href="#catalog">Browse all products/);
   assert.match(read("products.html"), /contact\?type=distributor/);
   assert.doesNotMatch(read("products.html"), /Request a Quote/);
 });

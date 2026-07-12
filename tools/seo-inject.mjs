@@ -22,6 +22,8 @@ import {
 } from "../js/main/catalog-data.js";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
+const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
+const BLOG_POST_SLUGS = (BLOG_SNAPSHOT.blog_posts || []).map((post) => post.slug).filter(Boolean);
 
 const BASE = "https://masest.co";
 const OG_IMAGE = `${BASE}/img/og-card.png`;
@@ -82,6 +84,7 @@ const PUBLIC = {
   "programs.html": { loc: "/programs", priority: "0.8", changefreq: "monthly", jsonld: [ORG] },
   "proof.html": { loc: "/proof", priority: "0.7", changefreq: "monthly", jsonld: [ORG] },
   "resources.html": { loc: "/resources", priority: "0.6", changefreq: "monthly", jsonld: [ORG] },
+  "blog.html": { loc: "/blog", priority: "0.7", changefreq: "weekly", jsonld: [{ "@type": "Blog", name: "MASEST VertKleen Blog", url: `${BASE}/blog`, publisher: ORG }] },
   "newsletter.html": { loc: "/newsletter", priority: "0.5", changefreq: "monthly", jsonld: [ORG, { "@type": "WebPage", name: "Newsletter", url: `${BASE}/newsletter` }] },
   "privacy.html": { loc: "/privacy", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Privacy", url: `${BASE}/privacy` }] },
   "terms.html": { loc: "/terms", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Terms", url: `${BASE}/terms` }] },
@@ -491,6 +494,8 @@ function productPage(id, product, reviewsSnapshot) {
   const procurement = QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
     : "Small packs ship from stock where available; drums, totes, and program supply are quoted.";
+  const replacement = String(product.replaces || "Industrial chemistry").replace(/^Replaces\s+/i, "");
+  const supply = QUOTE_ONLY_IDS.has(id) ? "Quoted to fit" : "Small packs in stock";
   const eyebrow = id === "dbnpa" ? "Program component" : "VertKleen product";
 
   return `<!DOCTYPE html>
@@ -507,7 +512,7 @@ function productPage(id, product, reviewsSnapshot) {
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260708c">
+<link rel="stylesheet" href="../css/style.css?v=20260712a">
 <link rel="stylesheet" href="../css/navigation.css?v=20260706a">
 <link rel="stylesheet" href="../css/components.css">
 <!-- seo:auto -->
@@ -537,20 +542,25 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
       <div class="hero-copy reveal">
         <span class="eyebrow">${text(eyebrow)}</span>
         <h1 class="display">${text(product.name)}</h1>
+        <div class="product-hero-facts" aria-label="Product highlights">
+          <span><b>HMIS</b>${text(product.hmis || "0-0-0")}</span>
+          <span><b>Replaces</b>${text(replacement)}</span>
+          <span><b>Supply</b>${text(supply)}</span>
+        </div>${QUOTE_ONLY_IDS.has(id) ? "" : `
+        <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
+             incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
+             the "Request a quote" CTA below (data-quote-fallback="off" keeps this empty
+             when the catalog API is unavailable). -->
+        <div class="product-hero-buy">
+          <span class="shop-card-price" data-commerce-price="${id}" hidden></span>
+          <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button" data-quote-fallback="off"></span>
+        </div>`}
         <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}">Request a quote</a>
           <a class="btn btn-secondary" href="../contact?type=sample&product=${encodeURIComponent(product.name)}">Request free sample</a>
           <a class="btn btn-ghost" href="../products">All products</a>
-        </div>${QUOTE_ONLY_IDS.has(id) ? "" : `
-        <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
-             incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
-             the "Request a quote" CTA above (data-quote-fallback="off" keeps this empty
-             when the catalog API is unavailable). -->
-        <div class="product-hero-buy" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px">
-          <span class="shop-card-price" data-commerce-price="${id}" hidden></span>
-          <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button" data-quote-fallback="off"></span>
-        </div>`}
+        </div>
       </div>
       ${heroMedia}
     </div>
@@ -600,6 +610,7 @@ async function writeSitemap() {
   const entries = [
     ...Object.values(PUBLIC),
     ...PRODUCT_IDS.map((id) => ({ loc: `/products/${id}`, priority: "0.7", changefreq: "monthly" })),
+    ...BLOG_POST_SLUGS.map((slug) => ({ loc: `/blog/${slug}`, priority: "0.6", changefreq: "monthly" })),
   ];
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

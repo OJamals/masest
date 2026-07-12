@@ -118,6 +118,7 @@ test("homepage keeps a primary action visible on short mobile", async () => {
         });
         return {
           hasPrimary: visibleInFold("a, button", "Find your replacement"),
+          hasTrial: visibleInFold("a, button", "Request a trial"),
           visibleShortcuts: [...document.querySelectorAll(".story-shortcuts a")].filter((el) => {
             const rect = el.getBoundingClientRect();
             const style = getComputedStyle(el);
@@ -128,6 +129,7 @@ test("homepage keeps a primary action visible on short mobile", async () => {
       });
 
       assert.equal(result.hasPrimary, true, "short mobile should keep the primary product path visible");
+      assert.equal(result.hasTrial, true, "short mobile should keep the trial path visible");
       assert.equal(result.visibleShortcuts, 0, "short mobile should hide the secondary shortcut rail");
       assert.equal(result.overflow, false, "short mobile should not create horizontal overflow");
       await browser.close();
