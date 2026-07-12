@@ -114,7 +114,7 @@ const pages = [
     competitor: "Micro Matic beer-line cleaner",
     vkMath: "CR: $55.05 / 2.5 gal = $22.02/gal; HCR: $61.80 / 2.5 gal = $24.72/gal",
     marketMath: "$38.85/gal",
-    priceNote: "CR and HCR use the current CIP Food & Beverage pricing tab. Micro Matic pricing comes from the Industries & Lead Gen tab.",
+    priceNote: "CR and HCR use the current CIP pricing tab. Micro Matic pricing comes from the Industries & Lead Gen tab.",
     swapCurrent: "Caustic soda + brewing acid blends",
     swapJob: "Beer line, tank, mash tank, and heat-exchanger CIP/SIP",
     swapUse: "VertKleen CR for alkaline wash followed by VertKleen HCR for acid wash.",
@@ -160,18 +160,20 @@ function pageHtml(page) {
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260706c">
+<link rel="stylesheet" href="../css/style.css?v=20260708c">
 <link rel="stylesheet" href="../css/navigation.css?v=20260712b">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
-<link rel="canonical" href="${BASE}/comparisons/${page.slug}">
 <meta property="og:title" content="${html(page.title)} | MASEST VertKleen">
 <meta property="og:description" content="${html(page.description)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
+<script type="application/ld+json">${JSON.stringify(schema(page))}</script>
+<!-- seo:auto -->
+<link rel="canonical" href="${BASE}/comparisons/${page.slug}">
 <meta property="og:url" content="${BASE}/comparisons/${page.slug}">
 <meta property="og:image" content="${BASE}/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">${JSON.stringify(schema(page))}</script>
+<!-- /seo:auto -->
 </head>
 <body class="site-soft-bg comparison-page">
 <a class="skip-link" href="#main">Skip to content</a>

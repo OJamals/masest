@@ -229,7 +229,7 @@ test("comparison SEO pages are also generated as blog posts", () => {
 test("CIP pricing route is backed by the full Tab 3 row set", () => {
   const data = JSON.parse(read("data/segment-pricing.json"));
   const cip = data.segments.find((segment) => segment.slug === "cip-food-beverage");
-  assert.ok(cip, "CIP Food & Beverage segment should exist");
+  assert.ok(cip, "CIP pricing segment should exist");
   assert.equal(cip.rows.length, 31, "CIP Tab 3 has 31 public rows");
   assert.equal(cip.rows.find((row) => row.sku === "VK-CR-1G")?.price_per_unit, "22.02");
   assert.equal(cip.rows.find((row) => row.sku === "VK-HCR-2.5G")?.price_per_unit, "61.80");

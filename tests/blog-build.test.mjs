@@ -98,6 +98,8 @@ test("buildBlog writes an index listing every post with filter data", () => {
     }
     assert.match(idx, /data-blog-filter/);
     assert.match(idx, /canonical" href="https:\/\/masest\.co\/blog"/);
+    assert.match(idx, /"brand":"VertKleen"/);
+    assert.match(idx, /"contactPoint":\{"@type":"ContactPoint","contactType":"sales","url":"https:\/\/masest\.co\/contact"\}/);
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
@@ -123,15 +125,18 @@ test("mergeSitemap inserts blog urls idempotently", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
   try {
     const sm = join(out, "sitemap.xml");
-    wf(sm, `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://masest.co/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n</urlset>\n`);
+    wf(sm, `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://masest.co/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>https://masest.co/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>\n  <url><loc>https://masest.co/resources</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>\n</urlset>\n`);
     buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: true });
     let xml = readFileSync(sm, "utf8");
     assert.match(xml, /https:\/\/masest\.co\/blog<\/loc>/);
     assert.match(xml, /https:\/\/masest\.co\/blog\/hmis-000-explained<\/loc>/);
+    assert.ok(xml.indexOf("https://masest.co/blog</loc>") < xml.indexOf("https://masest.co/resources</loc>"));
     const firstCount = (xml.match(/\/blog\/hmis-000-explained</g) || []).length;
+    const firstXml = xml;
     buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: true });
     xml = readFileSync(sm, "utf8");
     assert.equal((xml.match(/\/blog\/hmis-000-explained</g) || []).length, firstCount);
+    assert.equal(xml, firstXml);
   } finally {
     rmSync(out, { recursive: true, force: true });
   }

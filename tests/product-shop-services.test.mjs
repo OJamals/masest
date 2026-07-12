@@ -190,7 +190,7 @@ test("segment pricing pages render isolated HVAC and CIP workbook pricing", asyn
       await cip.goto(`${BASE_URL}/pricing-cip-food-beverage.html`, { waitUntil: "domcontentloaded" });
       await cip.waitForSelector("[data-segment-pricing-row]");
       const cipText = await cip.locator("main").textContent();
-      assert.match(cipText, /CIP Food & Beverage/);
+      assert.match(cipText, /CIP pricing/);
       assert.match(cipText, /VertKleen CR/);
       assert.doesNotMatch(cipText, /VertKleen AlumiBrite/);
       assert.doesNotMatch(cipText, /VertKleen Descaler/);

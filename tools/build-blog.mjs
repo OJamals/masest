@@ -17,6 +17,14 @@ const ORG = {
   name: "MASEST Consulting LLC",
   url: `${BASE}/`,
   logo: `${BASE}/img/masest-logo.png`,
+  brand: "VertKleen",
+  description: "HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.",
+  areaServed: "United States and international commercial accounts",
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "sales",
+    url: `${BASE}/contact`,
+  },
 };
 
 const text = (s) => escapeHtml(s);
@@ -294,13 +302,16 @@ function mergeSitemap(posts, outDir) {
   const smPath = join(outDir, "sitemap.xml");
   if (!existsSync(smPath)) return 0;
   const original = readFileSync(smPath, "utf8");
-  // Drop any existing blog url lines so re-runs stay idempotent.
-  let xml = original.replace(/^ {2}<url><loc>https:\/\/masest\.co\/blog(?:\/[^<]*)?<\/loc>[^\n]*\n/gm, "");
-  const lines = [
-    `  <url><loc>${BASE}/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`,
-    ...posts.map((p) => `  <url><loc>${BASE}/blog/${p.slug}</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>`),
-  ].join("\n");
-  const merged = xml.replace(/<\/urlset>/, `${lines}\n</urlset>`);
+  const entries = [
+    { url: `${BASE}/blog`, changefreq: "weekly", priority: "0.7" },
+    ...posts.map((p) => ({ url: `${BASE}/blog/${p.slug}`, changefreq: "monthly", priority: "0.6" })),
+  ];
+  const missing = entries.filter(({ url }) => !original.includes(`<loc>${url}</loc>`));
+  if (!missing.length) return 0;
+  const lines = missing
+    .map(({ url, changefreq, priority }) => `  <url><loc>${url}</loc><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`)
+    .join("\n");
+  const merged = original.replace(/<\/urlset>/, `${lines}\n</urlset>`);
   if (merged !== original) {
     writeFileSync(smPath, merged);
     return 1;

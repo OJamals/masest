@@ -62,3 +62,27 @@ test("animated homepage copy keeps stable accessible names", () => {
   assert.match(home, /aria-label="Find your VertKleen replacement"/);
   assert.match(home, /aria-label="Request a VertKleen trial"/);
 });
+
+test("CIP pricing label stays consistent across entry, detail, and resource surfaces", () => {
+  const products = read("products.html");
+  const pricing = read("pricing-cip-food-beverage.html");
+  const resources = read("resources.html");
+  const segments = JSON.parse(read("data/segment-pricing.json"));
+  const segment = segments.segments.find((item) => item.slug === "cip-food-beverage");
+
+  assert.match(products, />CIP pricing<\/a>/);
+  assert.match(pricing, /<title>CIP Pricing \| MASEST VertKleen<\/title>/);
+  assert.match(pricing, /<h1 class="display">CIP pricing\.<\/h1>/);
+  assert.equal(segment?.title, "CIP pricing");
+  assert.match(resources, />Open CIP pricing<\/a>/);
+});
+
+test("public content generators preserve current SEO releases", () => {
+  const blogBuilder = read("tools/build-blog.mjs");
+  const comparisonBuilder = read("tools/gen_comparisons.mjs");
+
+  assert.match(blogBuilder, /brand: "VertKleen"/);
+  assert.match(blogBuilder, /if \(!missing\.length\) return 0;/);
+  assert.match(comparisonBuilder, /style\.css\?v=20260708c/);
+  assert.match(comparisonBuilder, /<!-- seo:auto -->[\s\S]*<!-- \/seo:auto -->/);
+});

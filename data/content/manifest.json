@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-10T09:34:43.000Z",
+  "generated_at": "2026-07-12T08:48:01.000Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -70,7 +70,7 @@
       "counts": {
         "blog_posts": 8
       },
-      "sha256": "e2986c23493a6d89a0ab06cae5f5e8accfae6b0615f621e560529fc341e8cb57"
+      "sha256": "e5746a318e76ff1e235f89fe2032c71dc35c3369d01a1395e5f2951491571c99"
     }
   }
 }
