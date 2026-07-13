@@ -1,4 +1,5 @@
 import { initReveal } from "./effects.js";
+import { esc } from "../util.js";
 
 const SNAPSHOT_FILES = {
   proof_cards: "proof.json",
@@ -9,16 +10,6 @@ const SNAPSHOT_FILES = {
   pricing_tiers: "pricing.json",
   industry_sectors: "industry-sectors.json",
 };
-
-function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  }[char]));
-}
 
 function normalizeCategory(value) {
   return String(value || "").trim().toLowerCase();

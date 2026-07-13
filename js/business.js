@@ -441,7 +441,7 @@ async function requestProgram(tier, btn) {
   status.textContent = `Starting ${tier}…`; status.dataset.state = '';
   try {
     const r = await api('/api/programs/subscribe', { method: 'POST', body: { tier } });
-    if (r.url) { location.href = r.url; return; } // Stripe subscription checkout
+    if (r.url) { location.href = safeUrl(r.url); return; } // Stripe subscription checkout
     if (r.swapped) { status.textContent = `Switched to the ${tier} program — your next invoice is prorated.`; status.dataset.state = 'ok'; renderProgramStatus(await loadBusinessData()); return; }
     if (r.unchanged) { status.textContent = `You're already on the ${tier} program.`; status.dataset.state = 'ok'; return; }
   } catch (e) {

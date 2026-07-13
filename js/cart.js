@@ -1,6 +1,8 @@
 /* MASEST commerce cart.
  * Browser storage is only a convenience; the checkout API re-prices every line.
  */
+import { safeUrl } from "./util.js";
+
 const KEY = "masest_cart";
 
 export class CheckoutError extends Error {
@@ -94,7 +96,7 @@ export async function checkout({ mode = "pay", email, token } = {}) {
   if (!response.ok) throw new CheckoutError(response.status, out);
 
   if (out.url) {
-    window.location.href = out.url;
+    window.location.href = safeUrl(out.url);
     return out;
   }
 

@@ -1,4 +1,5 @@
 import { renderMarkdown } from "./md.js";
+import { esc } from "./util.js";
 
 const root = document.getElementById("contentPreviewRoot");
 
@@ -14,16 +15,6 @@ const LABELS = {
   pricing_tier: "Pricing tier",
   blog_post: "Blog post",
 };
-
-function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  }[char]));
-}
 
 function objectValue(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};

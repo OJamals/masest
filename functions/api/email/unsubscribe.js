@@ -2,10 +2,8 @@
 // GET shows a confirm page (so email-scanner prefetches don't auto-unsubscribe);
 // POST (the RFC 8058 one-click action) suppresses the 'marketing' stream only, so the
 // buyer keeps order/billing receipts. Both require a valid HMAC token tied to the email.
-import { recordSuppression } from '../../_lib/supabase.js';
+import { htmlEscape, recordSuppression } from '../../_lib/supabase.js';
 import { verifyUnsubscribeToken } from '../../_lib/email.js';
-
-const esc = (s) => String(s).replace(/[<>&"]/g, '');
 
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -31,7 +29,7 @@ export async function onRequestGet({ request, env }) {
   if (!ok) return html(INVALID, 400);
   const action = `/api/email/unsubscribe?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
   return html(`<form method="POST" action="${action}">
-    <p>Unsubscribe <b>${esc(email)}</b> from MASEST marketing &amp; follow-up emails? You'll still receive order and billing notices.</p>
+    <p>Unsubscribe <b>${htmlEscape(email)}</b> from MASEST marketing &amp; follow-up emails? You'll still receive order and billing notices.</p>
     <button type="submit" style="background:#0e7c86;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:600;cursor:pointer">Unsubscribe</button></form>`);
 }
 
