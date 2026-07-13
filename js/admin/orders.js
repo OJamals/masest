@@ -3,7 +3,7 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog } from '../util.js?v=20260711t';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260711t';
 import { captureDirty, restoreDirty } from './edits.js?v=20260711t';
 import { createSavedViews } from './saved-views.js?v=20260711t';
 
@@ -236,7 +236,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       }
     }
     const q = $('ordSearch').value.trim().toLowerCase();
-    const orders = state.orders.filter((order) => JSON.stringify(order).toLowerCase().includes(q));
+    const orders = state.orders.filter((order) => rowMatchesQuery(order, q));
     if (!orders.length) {
       box.innerHTML = admEmpty('ph-package', q ? 'No matching orders' : 'No orders yet', q ? 'No orders match your search.' : 'Orders appear here once customers check out.') + admOrdersPager();
       return;

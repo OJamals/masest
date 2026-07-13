@@ -2,7 +2,7 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate } from '../util.js?v=20260711t';
+import { esc, safeUrl, confirmDialog, delegate, rowMatchesQuery } from '../util.js?v=20260711t';
 import { getToken } from '../auth.js?v=20260711t';
 import { captureDirty, restoreDirty } from './edits.js?v=20260711t';
 
@@ -26,7 +26,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     }
     state.products = state.products || [];
     const q = $('prodSearch').value.trim().toLowerCase();
-    const products = state.products.filter((product) => JSON.stringify(product).toLowerCase().includes(q));
+    const products = state.products.filter((product) => rowMatchesQuery(product, q));
     if (!products.length) {
       box.innerHTML = admEmpty('ph-cube', 'No products', 'Add catalog products to manage them here.');
       return;

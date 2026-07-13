@@ -22,6 +22,20 @@ export const safeUrl = (u) => {
 
 export const money = (n, c = 'USD') => `${String(c || 'USD').toUpperCase()} ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Full-row substring search, memoized by object identity. Admin search inputs
+// already lowercase q; API refreshes replace row objects and naturally expire cache entries.
+const rowSearchCache = new WeakMap();
+export const rowMatchesQuery = (row, q) => {
+  if (!q) return true;
+  if (row === null || typeof row !== 'object') return String(row ?? '').toLowerCase().includes(q);
+  let text = rowSearchCache.get(row);
+  if (text === undefined) {
+    text = JSON.stringify(row).toLowerCase();
+    rowSearchCache.set(row, text);
+  }
+  return text.includes(q);
+};
+
 export const fmtDate = (s) => {
   const date = new Date(s);
   const time = date.getTime();

@@ -1,6 +1,6 @@
 // Admin pricing tab (#36 per-tab split). Prices are displayed from the workbook-
 // managed catalog seed so staff can verify tiers without creating pricing drift.
-import { esc } from '../util.js?v=20260711t';
+import { esc, rowMatchesQuery } from '../util.js?v=20260711t';
 
 export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty }) {
   async function renderPricing({ refetch = true } = {}) {
@@ -18,7 +18,7 @@ export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty
     const data = state.pricing || { tiers: ['retail', 'hvac', 'wholesale'], rows: [] };
     const q = $('priceSearch').value.trim().toLowerCase();
     const tiers = data.tiers || ['retail', 'hvac', 'wholesale'];
-    const rows = (data.rows || []).filter((row) => JSON.stringify(row).toLowerCase().includes(q));
+    const rows = (data.rows || []).filter((row) => rowMatchesQuery(row, q));
     const fmt = (value) => value == null ? '' : Number(value).toFixed(2);
     if (!rows.length) {
       box.innerHTML = admEmpty('ph-tag', q ? 'No matching variants' : 'No variants', q ? 'No variants match your search.' : 'Add product variants to set tier pricing.');
