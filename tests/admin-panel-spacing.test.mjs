@@ -1,11 +1,35 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { request } from "node:http";
 import test from "node:test";
 import { chromium } from "playwright";
 
 const PORT = 4326;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+
+function serverReady() {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (ready) => {
+      if (settled) return;
+      settled = true;
+      resolve(ready);
+    };
+    const req = request(`${BASE_URL}/admin.html`, {
+      method: "GET",
+      agent: false,
+      headers: { Connection: "close" },
+    }, (response) => {
+      response.resume();
+      response.once("end", () => finish(response.statusCode >= 200 && response.statusCode < 400));
+      response.once("error", () => finish(false));
+    });
+    req.setTimeout(1000, () => req.destroy());
+    req.once("error", () => finish(false));
+    req.end();
+  });
+}
 
 const authModule = `
 const okSession = { access_token: "stub-token", user: { id: "u-1", email: "staff@example.test" } };
@@ -53,7 +77,7 @@ async function withServer(fn) {
   try {
     const deadline = Date.now() + 5000;
     while (Date.now() < deadline) {
-      if (await fetch(`${BASE_URL}/admin.html`).then((response) => response.ok).catch(() => false)) break;
+      if (await serverReady()) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     if (Date.now() >= deadline) throw new Error("server did not start");
