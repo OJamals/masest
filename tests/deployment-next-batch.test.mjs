@@ -12,7 +12,8 @@ test('pushes and pull requests run the complete verification gate', () => {
   assert.match(workflow, /push:/);
   assert.match(workflow, /pull_request:/);
   assert.match(workflow, /node-version:\s*["']?22/);
-  assert.match(workflow, /npm ci/);
+  assert.match(workflow, /npm install --no-audit --no-fund/);
+  assert.doesNotMatch(workflow, /cache:\s*npm/, 'setup-node cache requires a lockfile');
   assert.match(workflow, /playwright install --with-deps chromium/);
   assert.match(workflow, /npm run verify/);
   assert.match(workflow, /contents:\s*read/);
