@@ -84,7 +84,7 @@ test('migration hardens profiles_self_update with a WITH CHECK against is_staff 
 
 test('quote rate limits before bounded parsing and maps oversized bodies to 413', () => {
   const src = read('functions/api/quote.js');
-  const rateLimitIndex = src.indexOf("await rateLimit(env, 'quote'");
+  const rateLimitIndex = src.indexOf("await checkRateLimit(env, 'quote'");
   const parserIndex = src.indexOf('await readBounded');
   assert.notEqual(rateLimitIndex, -1);
   assert.notEqual(parserIndex, -1);

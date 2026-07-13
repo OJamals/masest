@@ -13,6 +13,7 @@ const MEMBER_ROLES = [['buyer', 'Buyer'], ['admin', 'Admin'], ['moderator', 'Mod
 const STAFF_ROLES = [['', 'No admin access'], ['owner', 'Owner'], ['finance', 'Finance'], ['support', 'Support'], ['read_only', 'Read only']];
 const COMPANY_STATUSES = [['pending', 'Pending'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['suspended', 'Suspended']];
 const PRICE_TIERS = [['retail', 'Retail'], ['hvac', 'HVAC'], ['wholesale', 'Wholesale']];
+const ACCOUNT_USER_PAGE_SIZE = 50;
 function memberRoleOptions(current) {
   return MEMBER_ROLES.map(([v, l]) => `<option value="${v}"${(current || 'buyer') === v ? ' selected' : ''}>${l}</option>`).join('');
 }
@@ -106,7 +107,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   function renderAccountMetrics() {
     const metrics = accountMetrics();
     return `<div class="account-metrics" aria-label="Account summary">
-      <div class="account-metric"><span>Registered users</span><b>${esc(metrics.users)}</b></div>
+      <div class="account-metric"><span>Registered users</span><b>${esc(state.acctUsersTotal ?? metrics.users)}</b></div>
       <div class="account-metric"><span>Pending businesses</span><b>${esc(metrics.pending)}</b></div>
       <div class="account-metric"><span>Users without business</span><b>${esc(metrics.companyless)}</b></div>
       <div class="account-metric"><span>Staff / elevated</span><b>${esc(metrics.staff)}</b></div>
@@ -803,20 +804,24 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (metrics) metrics.innerHTML = renderAccountMetrics();
     if (filters) filters.innerHTML = renderAccountFilters();
     const users = filteredAcctUsers();
+    const pager = admListPager('data-load-more-users', (state.acctUsers || []).length, state.acctUsersTotal, state.acctUsersHasMore);
     if (!users.length) {
-      list.innerHTML = admEmpty('ph-users', 'No users', 'No registered users match this search or filter.');
+      list.innerHTML = admEmpty('ph-users', 'No users', 'No loaded users match this search or filter.') + pager;
       return;
     }
-    list.innerHTML = `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>User</th><th>Role</th><th>Business</th><th>Approval</th><th>Last sign-in</th><th></th></tr></thead><tbody>${users.map(acctUserRow).join('')}</tbody></table></div>`;
+    list.innerHTML = `<div class="adm-table-wrap"><table class="adm"><thead><tr><th>User</th><th>Role</th><th>Business</th><th>Approval</th><th>Last sign-in</th><th></th></tr></thead><tbody>${users.map(acctUserRow).join('')}</tbody></table></div>${pager}`;
   }
 
-  async function loadAccountData({ refetch = true } = {}) {
+  async function loadAccountData({ refetch = true, append = false } = {}) {
     if (!refetch && state.loaded.has('acctUsers') && (state.companies || []).length) return;
+    const userOffset = append ? (state.acctUsers || []).length : 0;
     const [usersRes, companiesRes] = await Promise.all([
-      refetch || !state.loaded.has('acctUsers') ? api('/api/admin/users') : Promise.resolve({ users: state.acctUsers || [] }),
+      refetch || !state.loaded.has('acctUsers') ? api(`/api/admin/users?limit=${ACCOUNT_USER_PAGE_SIZE}&offset=${userOffset}`) : Promise.resolve({ users: state.acctUsers || [] }),
       refetch || !(state.companies || []).length ? api('/api/admin/companies?limit=500') : Promise.resolve({ companies: state.companies || [] }),
     ]);
-    state.acctUsers = usersRes.users || [];
+    state.acctUsers = append ? [...(state.acctUsers || []), ...(usersRes.users || [])] : (usersRes.users || []);
+    state.acctUsersTotal = usersRes.total ?? state.acctUsers.length;
+    state.acctUsersHasMore = !!usersRes.has_more;
     state.companies = companiesRes.companies || state.companies || [];
     state.companiesTotal = companiesRes.total ?? state.companies.length;
     state.companiesOffset = state.companies.length;
@@ -831,7 +836,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       box.innerHTML = `<div class="account-console">
         <div data-account-metrics>${renderAccountMetrics()}</div>
         <div class="adm-tools">
-          <input id="auSearch" class="adm-search" type="search" placeholder="Search users, businesses, roles" aria-label="Search users">
+          <input id="auSearch" class="adm-search" type="search" placeholder="Search loaded users, businesses, roles" aria-label="Search loaded users">
           <button class="btn btn-primary btn-sm" type="button" data-au-new data-capability="user.manage"><i class="ph ph-user-plus" aria-hidden="true"></i> New user</button>
           <button class="btn btn-secondary btn-sm" type="button" data-business-new="root" data-capability="company.credit"><i class="ph ph-buildings" aria-hidden="true"></i> New business</button>
           <span class="adm-status" id="auStatus" role="status" aria-live="polite"></span>
@@ -1030,6 +1035,16 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const box = $('admAcctUsers');
     if (!box) return;
     delegate(box, 'input', '#auSearch', () => paintAcctUsers());
+    delegate(box, 'click', '[data-load-more-users]', async (event, button) => {
+      button.disabled = true;
+      try {
+        await loadAccountData({ refetch: true, append: true });
+        paintAcctUsers();
+      } catch {
+        auStatus('Could not load more users. Retry.', 'err');
+        button.disabled = false;
+      }
+    });
     delegate(box, 'click', '[data-account-filter]', (event, button) => {
       state.accountFilter = button.dataset.accountFilter || 'all';
       paintAcctUsers();

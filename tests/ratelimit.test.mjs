@@ -27,6 +27,6 @@ test("quote + newsletter endpoints invoke the rate limiter", () => {
   // static guard: keep the wiring from being dropped in future edits
   const q = readFileSync(new URL("../functions/api/quote.js", import.meta.url), "utf8");
   const n = readFileSync(new URL("../functions/api/newsletter.js", import.meta.url), "utf8");
-  assert.match(q, /rateLimit\(env, 'quote'/);
+  assert.match(q, /checkRateLimit\(env, 'quote'/);
   assert.match(n, /rateLimit\(env, 'newsletter'/);
 });

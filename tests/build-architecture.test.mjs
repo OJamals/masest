@@ -13,8 +13,18 @@ test("package exposes one-command build and verification scripts", () => {
   assert.match(scripts.test || "", /node --test --test-concurrency=1 --test-timeout=\d+ tests\/\*\.test\.mjs/);
   assert.match(scripts.build || "", /node tools\/cf-build\.mjs/);
   assert.match(scripts.verify || "", /npm run check && npm test && npm run build/);
+  assert.match(scripts.verify || "", /npm run qa:commerce-smoke/);
   assert.match(scripts.serve || "", /python3 -m http\.server 4195/);
   assert.match(scripts["smoke:admin"] || "", /playwright test tools\/admin-auth-gate\.spec\.mjs/);
+  for (const spec of [
+    "commerce-states",
+    "product-buy",
+    "commerce-cart",
+    "cart-checkout-redirect",
+    "contact-prefill",
+  ]) {
+    assert.match(scripts["qa:commerce-smoke"] || "", new RegExp(`tools/${spec}\\.spec\\.mjs`));
+  }
 });
 
 test("Cloudflare build emits baseline security headers", () => {

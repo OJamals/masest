@@ -114,21 +114,21 @@ function check(ok, message, details = {}) {
   return { ok, message, details };
 }
 
-export function cloudflarePagesBuildFromCheckRuns(head, checkRunsPayload = {}) {
-  const runs = Array.isArray(checkRunsPayload?.check_runs) ? checkRunsPayload.check_runs : [];
-  const run = runs.find((item) => (
-    String(item?.name || "").toLowerCase() === "cloudflare pages"
-    && item?.status === "completed"
-    && item?.conclusion === "success"
-  ));
-  if (!run || !head) return null;
+export function cloudflarePagesDeploymentFromPayload(payload = {}) {
+  const deployment = Array.isArray(payload?.result) ? payload.result[0] : null;
+  if (!deployment) {
+    return { status: "unavailable", commit: null, source: "cloudflare_pages_api", error: "No production deployment found" };
+  }
+  const stageStatus = deployment?.latest_stage?.status || "unknown";
   return {
-    status: "built",
-    commit: head,
-    source: "cloudflare_check_run",
-    created_at: run.started_at || null,
-    updated_at: run.completed_at || null,
-    url: run.html_url || null,
+    status: stageStatus === "success" ? "built" : stageStatus,
+    commit: deployment?.deployment_trigger?.metadata?.commit_hash || null,
+    source: "cloudflare_pages_api",
+    deployment_id: deployment.id || null,
+    environment: deployment.environment || null,
+    created_at: deployment.created_on || null,
+    updated_at: deployment.modified_on || null,
+    url: deployment.url || null,
   };
 }
 
@@ -157,12 +157,12 @@ export function buildPreflightReport({
   const pagesSkipped = pagesBuild?.skipped === true;
   checks.pages_status = check(
     pagesSkipped || pagesBuild?.status === "built",
-    pagesSkipped ? "skipped by operator" : `Pages status is ${pagesBuild?.status || "unknown"}`,
+    pagesSkipped ? "skipped by operator" : `Cloudflare Pages status is ${pagesBuild?.status || "unknown"}`,
     pagesBuild || {},
   );
   checks.pages_commit = check(
     pagesSkipped || Boolean(git?.head && pagesBuild?.commit && pagesBuild.commit === git.head),
-    pagesSkipped ? "skipped by operator" : "latest Pages build commit matches HEAD",
+    pagesSkipped ? "skipped by operator" : "latest Cloudflare Pages production deployment matches HEAD",
     {
       head: git?.head || null,
       pages_commit: pagesBuild?.commit || null,
@@ -212,7 +212,15 @@ function parseEnvFile(path) {
   );
 }
 
-async function collectCloudflarePagesEnv({
+function cloudflareApiError(body, status, fallback) {
+  const message = (body?.errors || [])
+    .map((error) => error.message || error.code)
+    .filter(Boolean)
+    .join("; ");
+  return new Error(message || `${fallback} with HTTP ${status}`);
+}
+
+export async function collectCloudflarePagesEnv({
   accountId,
   projectName,
   token,
@@ -223,25 +231,35 @@ async function collectCloudflarePagesEnv({
   if (!projectName) throw new Error("Missing Cloudflare Pages project name for --cloudflare-env.");
   if (!token) throw new Error("Missing Cloudflare API token for --cloudflare-env.");
 
-  const response = await fetchImpl(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${projectName}`,
-    { headers: { Authorization: `Bearer ${token}` } },
+  const account = encodeURIComponent(accountId);
+  const project = encodeURIComponent(projectName);
+  const headers = { Authorization: `Bearer ${token}` };
+  const projectResponse = await fetchImpl(
+    `https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${project}`,
+    { headers },
   );
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.success === false) {
-    const message = (body.errors || [])
-      .map((error) => error.message || error.code)
-      .filter(Boolean)
-      .join("; ");
-    throw new Error(message || `Cloudflare project lookup failed with HTTP ${response.status}`);
+  const projectBody = await projectResponse.json().catch(() => ({}));
+  if (!projectResponse.ok || projectBody.success === false) {
+    throw cloudflareApiError(projectBody, projectResponse.status, "Cloudflare project lookup failed");
   }
+
+  const deploymentsResponse = await fetchImpl(
+    `https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${project}/deployments?env=${encodeURIComponent(environment)}&per_page=1`,
+    { headers },
+  );
+  const deploymentsBody = await deploymentsResponse.json().catch(() => ({}));
+  if (!deploymentsResponse.ok || deploymentsBody.success === false) {
+    throw cloudflareApiError(deploymentsBody, deploymentsResponse.status, "Cloudflare deployment lookup failed");
+  }
+
   return {
-    env: cloudflarePagesEnvPresence(body.result, { environment }),
+    env: cloudflarePagesEnvPresence(projectBody.result, { environment }),
     source: {
       type: "cloudflare_pages",
       project: projectName,
       environment,
     },
+    pagesBuild: cloudflarePagesDeploymentFromPayload(deploymentsBody),
   };
 }
 
@@ -267,40 +285,6 @@ function collectGit() {
       .map((line) => line.trim())
       .filter(Boolean),
   };
-}
-
-function collectPagesBuild({ skipPages = false, head = "" } = {}) {
-  if (skipPages) return { skipped: true };
-  let pagesBuild = null;
-  try {
-    const raw = run("gh", ["api", "repos/OJamals/masest/pages/builds/latest"]);
-    const parsed = JSON.parse(raw);
-    pagesBuild = {
-      status: parsed.status || "unknown",
-      commit: parsed.commit || null,
-      created_at: parsed.created_at || null,
-      updated_at: parsed.updated_at || null,
-      duration: parsed.duration || null,
-      error: parsed.error?.message || null,
-      url: parsed.url || null,
-    };
-  } catch (error) {
-    pagesBuild = {
-      status: "unavailable",
-      commit: null,
-      error: error.message,
-    };
-  }
-  if (head && pagesBuild?.commit !== head) {
-    try {
-      const raw = run("gh", ["api", `repos/OJamals/masest/commits/${head}/check-runs`]);
-      const cloudflareBuild = cloudflarePagesBuildFromCheckRuns(head, JSON.parse(raw));
-      if (cloudflareBuild) return { ...cloudflareBuild, fallback_from: pagesBuild };
-    } catch {
-      return pagesBuild;
-    }
-  }
-  return pagesBuild;
 }
 
 function parseArgs(argv) {
@@ -350,6 +334,14 @@ async function main() {
   const git = collectGit();
   let env = process.env;
   let envSource = { type: "local_process" };
+  let pagesBuild = options.skipPages
+    ? { skipped: true }
+    : {
+      status: "unavailable",
+      commit: null,
+      source: "cloudflare_pages_api",
+      error: "Cloudflare deployment state requires --cloudflare-env; use --skip-pages only for an explicit local-only check.",
+    };
   if (options.cloudflareEnv) {
     const credentialEnv = {
       ...parseEnvFile(".dev.vars"),
@@ -368,12 +360,13 @@ async function main() {
     });
     env = cloudflare.env;
     envSource = cloudflare.source;
+    pagesBuild = cloudflare.pagesBuild;
   }
   const report = buildPreflightReport({
     env,
     envSource,
     git,
-    pagesBuild: collectPagesBuild({ skipPages: options.skipPages, head: git.head }),
+    pagesBuild,
   });
   const json = `${JSON.stringify(report, null, 2)}\n`;
   if (options.output) {

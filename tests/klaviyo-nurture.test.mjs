@@ -18,10 +18,10 @@ test("newsletter.js subscribes via the shared helper, not an inline job payload"
 test("quote.js fires industry nurture subscribe after its emails, before returning", () => {
   const src = read("functions/api/quote.js");
   assert.match(src, /from\s+['"]\.\.\/_lib\/klaviyo\.js['"]/, "quote.js must import ../_lib/klaviyo.js");
-  assert.match(src, /subscribeLeadByIndustry\(env/, "quote.js must call subscribeLeadByIndustry");
-  const callIdx = src.indexOf("subscribeLeadByIndustry(env");
+  assert.match(src, /subscribeLead\(env/, "quote.js must call injected subscribeLeadByIndustry boundary");
+  const callIdx = src.indexOf("subscribeLead(env");
   const returnIdx = src.lastIndexOf("return json(200");
-  const lastEmailIdx = src.lastIndexOf("sendEmail(env");
+  const lastEmailIdx = src.lastIndexOf("sendMessage(env");
   assert.ok(callIdx > -1 && returnIdx > -1 && lastEmailIdx > -1, "anchors present");
   assert.ok(lastEmailIdx < callIdx && callIdx < returnIdx, "subscribe runs after emails and before the response");
 });

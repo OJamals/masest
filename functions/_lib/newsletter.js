@@ -5,6 +5,7 @@ import { emailLayout, htmlEscape } from './supabase.js';
 import { renderNewsletterBody } from '../../js/newsletter-render.js';
 
 const BASE = 'https://masest.co';
+export const NEWSLETTER_SEND_LEASE_MS = 15 * 60 * 1000;
 
 export { renderNewsletterBody };
 
@@ -61,6 +62,21 @@ export function dueNewsletters(newsletters = [], nowMs = Date.now()) {
     if (!n || n.status !== 'scheduled') return false;
     const at = n.schedule?.next_run_at || n.schedule?.send_at;
     return at && Date.parse(at) <= nowMs;
+  });
+}
+
+// Scheduled work is immediately claimable. A send left in `sending` is reclaimable
+// only after its lease expires. Provider idempotency keys make replaying that slice safe.
+export function newsletterSendCandidates(newsletters = [], nowMs = Date.now(), leaseMs = NEWSLETTER_SEND_LEASE_MS) {
+  return (newsletters || []).filter((n) => {
+    if (!n) return false;
+    if (n.status === 'scheduled') {
+      const at = n.schedule?.next_run_at || n.schedule?.send_at;
+      return Boolean(at && Date.parse(at) <= nowMs);
+    }
+    if (n.status !== 'sending' || !n.updated_at) return false;
+    const updatedAt = Date.parse(n.updated_at);
+    return Number.isFinite(updatedAt) && updatedAt <= nowMs - Math.max(1000, Number(leaseMs) || NEWSLETTER_SEND_LEASE_MS);
   });
 }
 

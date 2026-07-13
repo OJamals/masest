@@ -70,7 +70,14 @@ async function decrementVariantStock(sb, sellable, qtyBySku) {
   return true;
 }
 
-export async function onRequestPost({ request, env }) {
+export async function handleCheckout({ request, env }, dependencies = {}) {
+  const getAdminClient = dependencies.adminClient || adminClient;
+  const getUserFromRequest = dependencies.userFromRequest || userFromRequest;
+  const getTierForRequest = dependencies.tierForRequest || tierForRequest;
+  const getTierPriceMap = dependencies.tierPriceMap || tierPriceMap;
+  const getStripeCustomer = dependencies.ensureCompanyStripeCustomer || ensureCompanyStripeCustomer;
+  const createStripe = dependencies.createStripe
+    || ((secret) => new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() }));
   const body = await readBody(request);
   const mode = body.mode === 'net' ? 'net' : 'pay';
   // Cart line items. Canonical key is `cart`; `items` is accepted as a fallback so an
@@ -79,7 +86,7 @@ export async function onRequestPost({ request, env }) {
   const skus = Object.keys(qtyBySku);
   if (!skus.length) return json(400, { error: 'cart_empty' });
 
-  const sb = adminClient(env);
+  const sb = getAdminClient(env);
   const { data: variants, error } = await sb
     .from('product_variants')
     .select('vsku,product_sku,label,price,currency,stripe_price_id,active,stock,track_stock,allow_backorder,products(name,mode,active,taxable)')
@@ -141,9 +148,9 @@ export async function onRequestPost({ request, env }) {
     return json(409, { error: 'mixed_currency', message: 'Items in your cart use different currencies. Order them separately.' });
   }
 
-  const { tier } = await tierForRequest(request, env);
+  const { tier } = await getTierForRequest(request, env);
   if (tier !== 'retail') {
-    const overrides = await tierPriceMap(sb, tier);
+    const overrides = await getTierPriceMap(sb, tier);
     for (const line of sellable) {
       if (overrides.has(line.sku)) {
         line.price = overrides.get(line.sku);
@@ -153,7 +160,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (mode === 'net') {
-    const { user } = await userFromRequest(request, env);
+    const { user } = await getUserFromRequest(request, env);
     if (!user) return json(401, { error: 'auth_required_for_net' });
     const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
     const { data: company } = await sb.from('companies').select('id,status,net_terms_days,credit_limit').eq('id', profile?.company_id).maybeSingle();
@@ -262,7 +269,7 @@ export async function onRequestPost({ request, env }) {
 
   const secret = env.STRIPE_SECRET_KEY;
   if (!secret) return json(500, { error: 'stripe_not_configured' });
-  const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
+  const stripe = createStripe(secret);
   const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');
   if (!appUrl) return json(500, { error: 'app_url_not_configured' });
 
@@ -270,7 +277,7 @@ export async function onRequestPost({ request, env }) {
 
   let companyId = null;
   let company = null;
-  const { user } = await userFromRequest(request, env);
+  const { user } = await getUserFromRequest(request, env);
   if (user) {
     const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
     companyId = profile?.company_id || null;
@@ -286,7 +293,7 @@ export async function onRequestPost({ request, env }) {
   let customerId = null;
   if (company) {
     try {
-      customerId = await ensureCompanyStripeCustomer({
+      customerId = await getStripeCustomer({
         stripe, sb, company, email: body.email || user?.email,
       });
     } catch {
@@ -316,4 +323,12 @@ export async function onRequestPost({ request, env }) {
   } catch (err) {
     return json(502, { error: 'stripe_error', code: err?.code || null, detail: err?.message || String(err) });
   }
+}
+
+export function createCheckoutHandler(dependencies = {}) {
+  return (context) => handleCheckout(context, dependencies);
+}
+
+export async function onRequestPost(context) {
+  return handleCheckout(context);
 }

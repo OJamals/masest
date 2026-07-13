@@ -20,7 +20,7 @@ const CART_JS = readFileSync(new URL("../js/cart.js", import.meta.url), "utf8");
 test("checkout destructures userFromRequest (never uses the raw wrapper as the user)", () => {
   assert.doesNotMatch(SRC, /\bconst\s+user\s*=\s*await\s+userFromRequest\b/,
     "checkout.js must not assign the userFromRequest wrapper directly to `user`");
-  assert.match(SRC, /const\s*\{\s*user\s*\}\s*=\s*await\s+userFromRequest\(/,
+  assert.match(SRC, /const\s*\{\s*user\s*\}\s*=\s*await\s+getUserFromRequest\(/,
     "checkout.js must destructure { user } from userFromRequest");
 });
 
@@ -48,8 +48,8 @@ test("prices are loaded from product_variants in the database", () => {
 });
 
 test("tier discounts are applied from server-side price_tiers, not the client", () => {
-  assert.match(SRC, /tierForRequest\(\s*request\s*,\s*env\s*\)/);
-  assert.match(SRC, /tierPriceMap\(\s*sb\s*,\s*tier\s*\)/, "overrides must be loaded server-side");
+  assert.match(SRC, /getTierForRequest\(\s*request\s*,\s*env\s*\)/);
+  assert.match(SRC, /getTierPriceMap\(\s*sb\s*,\s*tier\s*\)/, "overrides must be loaded server-side");
   assert.match(SRC, /line\.price\s*=\s*overrides\.get\(\s*line\.sku\s*\)/,
     "a tier override replaces the line price from the server map");
 });

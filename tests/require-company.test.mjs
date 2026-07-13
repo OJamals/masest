@@ -34,12 +34,13 @@ for (const path of ROUTES) {
 
 test('functions/api/account/company.js authenticates users before creating or updating a business profile', () => {
   const src = read('functions/api/account/company.js');
+  const migration = read('supabase/schema-account-company.sql');
   assert.match(src, /import\s*\{[^}]*userFromRequest[^}]*\}\s*from\s*['"][^'"]*supabase\.js['"]/, 'must authenticate the user directly because company may not exist yet');
   assert.match(src, /userFromRequest\(request, env\)/, 'must call userFromRequest');
   assert.match(src, /\.from\('profiles'\)[\s\S]{0,140}\.eq\('id', user\.id\)/, 'must scope the caller profile lookup to the authenticated user');
-  assert.match(src, /\.from\('companies'\)[\s\S]{0,200}\.insert\(/, 'must create the business via a companies insert');
+  assert.match(src, /\.rpc\('create_company_for_user'/, 'must create and link the business through one transaction');
   assert.match(src, /status:\s*'pending'/, 'must create new businesses pending admin verification');
-  assert.match(src, /\.from\('profiles'\)[\s\S]{0,180}\.update\(\{ company_id: company\.id, role: 'admin' \}\)[\s\S]{0,100}\.eq\('id', user\.id\)/, 'must link only the authenticated profile to the new business');
+  assert.match(migration, /update public\.profiles[\s\S]+where id = p_user_id[\s\S]+company_id is null/, 'transaction must link only an unlinked authenticated profile');
   assert.match(src, /\.from\('companies'\)[\s\S]{0,180}\.update\(patch\)[\s\S]{0,100}\.eq\('id', profile\.company_id\)/, 'must scope existing business updates by the caller profile company');
   assert.doesNotMatch(src, /companyForUser\(/, 'must not re-derive company via older helper');
 });

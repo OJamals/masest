@@ -30,3 +30,21 @@ test("website and authenticated UI copy avoids retired positioning language", ()
   }
   assert.deepEqual(offenders, []);
 });
+
+test("public copy avoids broad hazard claims and repeated industry proof boilerplate", () => {
+  const files = ["index.html", ...walk("industries")].filter((file) => file.endsWith(".html"));
+  const banned = [
+    /Industrial cleaning power\. None of the hazard\./i,
+    /strips scale, rust, grease, and biofilm as hard as the acids and caustics/i,
+    /Replacement options for the harsh chemistry this work usually relies on first\./i,
+    />See the proof</i,
+  ];
+  const offenders = [];
+  for (const file of files) {
+    const src = readFileSync(join(root, file), "utf8");
+    for (const pattern of banned) {
+      if (pattern.test(src)) offenders.push(`${file}: ${pattern.source}`);
+    }
+  }
+  assert.deepEqual(offenders, []);
+});

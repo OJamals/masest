@@ -153,21 +153,21 @@ export async function onRequestPost({ request, env }) {
     };
     const full = { ...base, ...bizPatch, submitted_at: new Date().toISOString() };
 
-    let { data: company, error: coErr } = await sb
-      .from('companies').insert(full).select('id,name,status,tax_exempt,resale_cert_url').single();
-    if (coErr && isMissingColumn(coErr)) {
-      // Pre-migration: persist what the base schema allows; the dossier is dropped until the
-      // schema-business-profile.sql migration is applied.
-      ({ data: company, error: coErr } = await sb
-        .from('companies').insert(base).select('id,name,status,tax_exempt,resale_cert_url').single());
+    // One Postgres transaction inserts the company and links the profile. The RPC
+    // raises (rolling back the insert) if another request linked this profile first.
+    const { data: company, error: createErr } = await sb.rpc('create_company_for_user', {
+      p_user_id: user.id,
+      p_company: full,
+    });
+    if (createErr) {
+      if (createErr.message?.includes('profile_already_has_company')) {
+        return json(409, { error: 'company_already_exists' });
+      }
+      if (createErr.code === 'PGRST202' || createErr.message?.includes('create_company_for_user')) {
+        return json(503, { error: 'company_setup_unavailable' });
+      }
+      return json(500, { error: 'server_error' });
     }
-    if (coErr) return json(500, { error: 'server_error' });
-
-    const { error: linkErr } = await sb
-      .from('profiles')
-      .update({ company_id: company.id, role: 'admin' })
-      .eq('id', user.id);
-    if (linkErr) return json(500, { error: 'server_error' });
     return json(201, { ok: true, created: true, business_pending_approval: true, company });
   }
 

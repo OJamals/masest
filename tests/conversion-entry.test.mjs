@@ -58,7 +58,7 @@ test("static product hero exposes buying context before long copy", () => {
 test("animated homepage copy keeps stable accessible names", () => {
   const home = read("index.html");
 
-  assert.match(home, /aria-label="Industrial cleaning power\. None of the hazard\."/);
+  assert.match(home, /aria-label="Industrial cleaning power\. HMIS 0-0-0 formulas\."/);
   assert.match(home, /aria-label="Find your VertKleen replacement"/);
   assert.match(home, /aria-label="Request a VertKleen trial"/);
 });

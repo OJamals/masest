@@ -6,6 +6,7 @@ import { deleteAccountUser } from '../../_lib/account-erasure.js';
 import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { STAFF_ROLES, staffCan, staffCanWrite } from '../../_lib/authz.js';
+import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 
 // Account roles selectable by an admin. 'moderator' is an elevated member role.
 const ROLES = new Set(['admin', 'buyer', 'moderator']);
@@ -71,23 +72,32 @@ async function getInvite(sb, inviteId, companyId) {
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-// Full Supabase-auth user directory: auth users joined with their profile + company.
-async function userDirectory(sb) {
-  const users = [];
-  for (let page = 1; page <= 50; page += 1) {
-    let batch = [];
-    try {
-      const { data } = await sb.auth.admin.listUsers({ page, perPage: 1000 });
-      batch = data?.users || [];
-    } catch { break; }
-    users.push(...batch);
-    if (batch.length < 1000) break;
+// One bounded Supabase-auth page joined only to matching profile/company records.
+async function userDirectory(sb, { limit, offset }) {
+  const page = Math.floor(offset / limit) + 1;
+  const pageOffset = (page - 1) * limit;
+  const { data: authPage, error: authError } = await sb.auth.admin.listUsers({ page, perPage: limit });
+  if (authError) throw authError;
+  const users = authPage?.users || [];
+  const ids = users.map((user) => user.id);
+  let profiles = [];
+  if (ids.length) {
+    const { data, error } = await sb.from('profiles')
+      .select('id,full_name,phone,role,is_staff,staff_role,company_id')
+      .in('id', ids);
+    if (error) throw error;
+    profiles = data || [];
   }
-  const { data: profiles } = await sb.from('profiles').select('id,full_name,phone,role,is_staff,staff_role,company_id');
   const profById = new Map((profiles || []).map((p) => [p.id, p]));
-  const { data: companies } = await sb.from('companies').select('id,name,status');
+  const companyIds = [...new Set(profiles.map((profile) => profile.company_id).filter(Boolean))];
+  let companies = [];
+  if (companyIds.length) {
+    const { data, error } = await sb.from('companies').select('id,name,status').in('id', companyIds);
+    if (error) throw error;
+    companies = data || [];
+  }
   const compById = new Map((companies || []).map((c) => [c.id, c]));
-  return users.map((u) => {
+  const joined = users.map((u) => {
     const p = profById.get(u.id) || {};
     return {
       id: u.id, email: u.email || null, created_at: u.created_at || null, last_sign_in_at: u.last_sign_in_at || null,
@@ -98,6 +108,8 @@ async function userDirectory(sb) {
       company_status: p.company_id ? (compById.get(p.company_id)?.status || null) : null,
     };
   }).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  const total = typeof authPage?.total === 'number' ? authPage.total : null;
+  return { users: joined, total, offset: pageOffset };
 }
 
 export async function onRequest({ request, env }) {
@@ -117,7 +129,16 @@ export async function onRequest({ request, env }) {
     }
     const companyId = params.get('company');
     if (companyId) return json(200, await companyConsole(sb, env, companyId));
-    return json(200, { users: await userDirectory(sb) });
+    const { limit, offset } = parsePage(params, { defaultLimit: 50, maxLimit: 100 });
+    try {
+      const directory = await userDirectory(sb, { limit, offset });
+      return json(200, {
+        users: directory.users,
+        ...pageEnvelope(directory.users, { limit, offset: directory.offset, count: directory.total }),
+      });
+    } catch {
+      return json(503, { error: 'user_directory_unavailable' });
+    }
   }
 
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });

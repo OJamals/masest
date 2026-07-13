@@ -9,6 +9,7 @@ import {
   readBoundedFormData,
   readBoundedJson,
 } from '../_lib/request-body.js';
+import { verifyTurnstile } from '../_lib/turnstile.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -98,9 +99,14 @@ function displayRows(payload) {
     .join('');
 }
 
-export async function onRequestPost({ request, env }) {
+export async function handleQuote({ request, env }, dependencies = {}) {
+  const checkRateLimit = dependencies.rateLimit || rateLimit;
+  const verifyCaptcha = dependencies.verifyTurnstile || verifyTurnstile;
+  const getAdminClient = dependencies.adminClient || adminClient;
+  const sendMessage = dependencies.sendEmail || sendEmail;
+  const subscribeLead = dependencies.subscribeLeadByIndustry || subscribeLeadByIndustry;
   const ct = request.headers.get('content-type') || '';
-  const rl = await rateLimit(env, 'quote', clientIp(request), { limit: 8, windowSec: 60 });
+  const rl = await checkRateLimit(env, 'quote', clientIp(request), { limit: 8, windowSec: 60 });
   if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
 
   const fields = {};
@@ -129,23 +135,13 @@ export async function onRequestPost({ request, env }) {
 
   const token = fields['cf-turnstile-response'];
   const secret = env.TURNSTILE_SECRET || env.MASEST_TURNSTILE_SECRET;
-  if (token && secret) {
-    try {
-      const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          secret,
-          response: String(token),
-          remoteip: request.headers.get('cf-connecting-ip') || '',
-        }),
-      });
-      const out = await response.json();
-      if (!out.success) return json(400, { error: 'captcha_failed' });
-    } catch (error) {
-      console.warn('captcha_verify_failed', error);
-    }
-  }
+  const captcha = await verifyCaptcha({
+    secret,
+    token,
+    remoteip: request.headers.get('cf-connecting-ip') || '',
+  });
+  if (captcha.status === 'rejected') return json(400, { error: 'captcha_failed' });
+  if (captcha.status === 'unavailable') return json(503, { error: 'captcha_unavailable' });
 
   const type = normalizeRequestType(fields.type);
   const payload = { ...fields };
@@ -162,7 +158,7 @@ export async function onRequestPost({ request, env }) {
   let saved = false;
 
   try {
-    const sb = adminClient(env);
+    const sb = getAdminClient(env);
     const row = {
       type,
       name,
@@ -196,7 +192,7 @@ export async function onRequestPost({ request, env }) {
   const reqLabel = type.charAt(0).toUpperCase() + type.slice(1);
   const rows = displayRows(payload);
 
-  await sendEmail(env, {
+  await sendMessage(env, {
     to: salesRecipients(env),
     subject: `New ${priority} ${reqLabel} request - ${company || name}`,
     category: 'lead_internal',
@@ -210,7 +206,7 @@ export async function onRequestPost({ request, env }) {
     }),
   });
 
-  await sendEmail(env, {
+  await sendMessage(env, {
     to: [email],
     subject: 'We received your MASEST request',
     category: 'lead_autoreply',
@@ -223,10 +219,18 @@ export async function onRequestPost({ request, env }) {
   });
 
   try {
-    await subscribeLeadByIndustry(env, { email, industry: fields.industry });
+    await subscribeLead(env, { email, industry: fields.industry });
   } catch (error) {
     console.warn('klaviyo_quote_subscribe_failed', error);
   }
 
   return json(200, { ok: true, saved, lead_score: leadScore });
+}
+
+export function createQuoteHandler(dependencies = {}) {
+  return (context) => handleQuote(context, dependencies);
+}
+
+export async function onRequestPost(context) {
+  return handleQuote(context);
 }

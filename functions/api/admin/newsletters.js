@@ -4,7 +4,7 @@
 // + List-Unsubscribe + logging). Audience = users + Klaviyo leads + imported recipients.
 import { adminClient, requireStaff, json, readBody, sendEmail, allUserEmails } from '../../_lib/supabase.js';
 import { klaviyoListProfiles } from '../../_lib/klaviyo.js';
-import { renderNewsletterEmail, resolveAudience, newsletterBatchPlan, nextRunAt, dueNewsletters } from '../../_lib/newsletter.js';
+import { renderNewsletterEmail, resolveAudience, newsletterBatchPlan, nextRunAt, newsletterSendCandidates } from '../../_lib/newsletter.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 
 const MAX_PER_RUN = 500;
@@ -16,6 +16,16 @@ function timingSafeEqual(a, b) {
   let diff = 0;
   for (let i = 0; i < sa.length; i += 1) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
   return diff === 0;
+}
+
+async function finalizeNewsletter(sb, id, patch) {
+  const { data, error } = await sb.from('newsletters')
+    .update(patch)
+    .eq('id', id)
+    .eq('status', 'sending')
+    .select('id')
+    .maybeSingle();
+  return !error && Boolean(data);
 }
 
 // Resolve + send one newsletter. Returns { audience, sent, capped }.
@@ -63,42 +73,55 @@ function continuationSchedule(schedule, nextOffset, nowMs = Date.now()) {
 
 async function sweepDue(env) {
   const sb = adminClient(env);
-  const { data, error } = await sb.from('newsletters').select('*').eq('status', 'scheduled');
+  const { data, error } = await sb.from('newsletters').select('*').in('status', ['scheduled', 'sending']);
   if (error) return json(503, { error: 'unavailable' });
-  const due = dueNewsletters(data || [], Date.now());
+  const due = newsletterSendCandidates(data || [], Date.now());
   const results = [];
+  const failed = [];
   for (const n of due) {
     // Atomic claim: flip 'scheduled'→'sending' and PROCEED ONLY IF this update matched
     // the row. A concurrent/overlapping cron sweep then finds nothing to claim and skips,
     // so the same newsletter is never dispatched twice (idempotency keys are a second backstop).
-    const { data: claimed } = await sb.from('newsletters')
+    let claim = sb.from('newsletters')
       .update({ status: 'sending', updated_at: new Date().toISOString() })
-      .eq('id', n.id).eq('status', 'scheduled').select('id').maybeSingle();
+      .eq('id', n.id).eq('status', n.status);
+    if (n.status === 'sending') claim = claim.eq('updated_at', n.updated_at);
+    const { data: claimed, error: claimError } = await claim.select('id').maybeSingle();
+    if (claimError) {
+      failed.push({ id: n.id, error: 'newsletter_claim_failed' });
+      continue;
+    }
     if (!claimed) continue;
     const r = await sendNewsletter(env, sb, n);
     const recipientCount = (Number(n.schedule?.delivery_offset) > 0 ? Number(n.recipient_count) || 0 : 0) + r.sent;
+    let finalized = false;
     if (r.capped) {
-      await sb.from('newsletters').update({
+      finalized = await finalizeNewsletter(sb, n.id, {
         status: 'scheduled', recipient_count: recipientCount,
         schedule: continuationSchedule(n.schedule, r.next_offset), updated_at: new Date().toISOString(),
-      }).eq('id', n.id);
+      });
     } else {
       const completedSchedule = { ...(n.schedule || {}) };
       delete completedSchedule.delivery_offset;
       const next = nextRunAt(completedSchedule, Date.now());
       if (next) {
-        await sb.from('newsletters').update({
+        finalized = await finalizeNewsletter(sb, n.id, {
           status: 'scheduled', recipient_count: recipientCount,
           schedule: { ...completedSchedule, next_run_at: next }, updated_at: new Date().toISOString(),
-        }).eq('id', n.id);
+        });
       } else {
-        await sb.from('newsletters').update({
+        finalized = await finalizeNewsletter(sb, n.id, {
           status: 'sent', recipient_count: recipientCount, sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        }).eq('id', n.id);
+        });
       }
+    }
+    if (!finalized) {
+      failed.push({ id: n.id, error: 'newsletter_finalize_failed' });
+      continue;
     }
     results.push({ id: n.id, ...r, rescheduled: r.capped || n.schedule?.mode === 'recurring' });
   }
+  if (failed.length) return json(503, { error: 'newsletter_finalize_failed', retryable: true, sent: results, failed });
   return json(200, { ok: true, sent: results });
 }
 
@@ -215,13 +238,17 @@ export async function onRequest({ request, env }) {
     if (!claimed) return json(409, { error: 'send_in_progress' });
     const r = await sendNewsletter(env, sb, n);
     if (r.capped) {
-      await sb.from('newsletters').update({
+      const finalized = await finalizeNewsletter(sb, n.id, {
         status: 'scheduled', recipient_count: r.sent,
         schedule: continuationSchedule(n.schedule, r.next_offset), updated_at: new Date().toISOString(),
-      }).eq('id', n.id);
+      });
+      if (!finalized) return json(503, { error: 'newsletter_finalize_failed', retryable: true });
       return json(200, { ok: true, queued: true, ...r });
     }
-    await sb.from('newsletters').update({ status: 'sent', recipient_count: r.sent, sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', n.id);
+    const finalized = await finalizeNewsletter(sb, n.id, {
+      status: 'sent', recipient_count: r.sent, sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    });
+    if (!finalized) return json(503, { error: 'newsletter_finalize_failed', retryable: true });
     return json(200, { ok: true, ...r });
   }
 

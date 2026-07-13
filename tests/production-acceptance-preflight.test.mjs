@@ -4,8 +4,9 @@ import test from "node:test";
 import {
   acceptanceEnvGroups,
   buildPreflightReport,
-  cloudflarePagesBuildFromCheckRuns,
+  cloudflarePagesDeploymentFromPayload,
   cloudflarePagesEnvPresence,
+  collectCloudflarePagesEnv,
   redactValue,
 } from "../tools/production-acceptance-preflight.mjs";
 
@@ -101,40 +102,79 @@ test("buildPreflightReport accepts a Supabase Postgres pooler source without lea
   assert.equal(JSON.stringify(report).includes("very-secret-password"), false);
 });
 
-test("cloudflarePagesBuildFromCheckRuns accepts a successful Cloudflare Pages check for HEAD", () => {
+test("cloudflarePagesDeploymentFromPayload parses authoritative production deployment", () => {
   const head = "4978b9b289651c20acf3cc4bf1820c1b484bc461";
-  const pagesBuild = cloudflarePagesBuildFromCheckRuns(head, {
-    check_runs: [
-      { name: "Unit tests", status: "completed", conclusion: "success", html_url: "https://example.test/tests" },
-      {
-        name: "Cloudflare Pages",
-        status: "completed",
-        conclusion: "success",
-        started_at: "2026-06-30T09:14:53Z",
-        completed_at: "2026-06-30T09:14:53Z",
-        html_url: "https://github.com/OJamals/masest/runs/84253874395",
-      },
-    ],
+  const pagesBuild = cloudflarePagesDeploymentFromPayload({
+    result: [{
+      id: "deployment-1",
+      environment: "production",
+      url: "https://deployment-1.masest-commerce.pages.dev",
+      created_on: "2026-06-30T09:14:53Z",
+      modified_on: "2026-06-30T09:15:53Z",
+      latest_stage: { name: "deploy", status: "success" },
+      deployment_trigger: { metadata: { commit_hash: head } },
+    }],
   });
 
   assert.deepEqual(pagesBuild, {
     status: "built",
     commit: head,
-    source: "cloudflare_check_run",
+    source: "cloudflare_pages_api",
+    deployment_id: "deployment-1",
+    environment: "production",
     created_at: "2026-06-30T09:14:53Z",
-    updated_at: "2026-06-30T09:14:53Z",
-    url: "https://github.com/OJamals/masest/runs/84253874395",
+    updated_at: "2026-06-30T09:15:53Z",
+    url: "https://deployment-1.masest-commerce.pages.dev",
   });
 });
 
-test("cloudflarePagesBuildFromCheckRuns ignores failed or pending Cloudflare Pages checks", () => {
-  const head = "4978b9b289651c20acf3cc4bf1820c1b484bc461";
-  assert.equal(cloudflarePagesBuildFromCheckRuns(head, {
-    check_runs: [{ name: "Cloudflare Pages", status: "completed", conclusion: "failure" }],
-  }), null);
-  assert.equal(cloudflarePagesBuildFromCheckRuns(head, {
-    check_runs: [{ name: "Cloudflare Pages", status: "in_progress", conclusion: null }],
-  }), null);
+test("cloudflarePagesDeploymentFromPayload fails closed for failed or missing deployments", () => {
+  assert.equal(cloudflarePagesDeploymentFromPayload({
+    result: [{ latest_stage: { status: "failure" }, deployment_trigger: { metadata: { commit_hash: "abc" } } }],
+  }).status, "failure");
+  assert.equal(cloudflarePagesDeploymentFromPayload({ result: [] }).status, "unavailable");
+});
+
+test("collectCloudflarePagesEnv reads config and deployment without leaking token", async () => {
+  const urls = [];
+  const token = "top-secret-token";
+  const fetchImpl = async (url, options) => {
+    urls.push(String(url));
+    assert.equal(options.headers.Authorization, `Bearer ${token}`);
+    if (String(url).includes("/deployments?")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          result: [{
+            id: "deployment-1",
+            environment: "production",
+            latest_stage: { status: "success" },
+            deployment_trigger: { metadata: { commit_hash: "abc123" } },
+          }],
+        }),
+      };
+    }
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        result: { deployment_configs: { production: { env_vars: { APP_URL: { type: "secret_text" } } } } },
+      }),
+    };
+  };
+  const result = await collectCloudflarePagesEnv({
+    accountId: "account",
+    projectName: "masest-commerce",
+    token,
+    fetchImpl,
+  });
+  assert.equal(urls.length, 2);
+  assert.equal(result.env.APP_URL, "cloudflare:secret_text");
+  assert.equal(result.pagesBuild.commit, "abc123");
+  assert.equal(JSON.stringify(result).includes(token), false);
 });
 
 test("cloudflarePagesEnvPresence converts Pages env metadata into redacted presence", () => {

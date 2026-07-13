@@ -38,7 +38,7 @@ Never record:
 
 - Stop before live mutation until the operator gives explicit go/no-go.
 - Stop if the worktree is dirty with unexplained changes.
-- Stop if `origin/main`, local `HEAD`, and GitHub Pages latest build do not point at the same accepted commit.
+- Stop if `origin/main`, local `HEAD`, and the latest Cloudflare Pages production deployment do not point at the same accepted commit.
 - Stop if required live-integration config is missing.
 - Stop if any provider test creates an artifact that cannot be cleaned up, refunded, voided, archived, or clearly labeled as intentional residue.
 
@@ -54,7 +54,7 @@ npm run acceptance:preflight -- --json --cloudflare-env --cloudflare-project mas
 Expected:
 
 - `npm run verify` exits 0.
-- `acceptance:preflight` exits 0 only when the local tree, `origin/main`, Pages build, and required live-integration env groups are ready.
+- `acceptance:preflight` exits 0 only when the local tree, `origin/main`, Cloudflare Pages production deployment, and required live-integration env groups are ready.
 - The preflight report contains no secret values; local env values appear only as
   `missing` or `set:<length>`, and Cloudflare Pages env values appear only as
   `missing` or `set:cloudflare-<type>`.
@@ -72,9 +72,9 @@ Required env groups:
 
 The Supabase operator data source proves the local acceptance runner can read/write the production data store during the approved live pass. The live app runtime must still be verified through deployed app paths such as `/api/health`, dashboard/admin actions, and the provider flows in the checklist.
 
-For a local operator-only env check, omit `--cloudflare-env`; for production
-readiness, keep it enabled so the gate reads encrypted Pages env metadata
-instead of the current shell.
+For a local operator-only env check, use `--skip-pages` explicitly. Production
+readiness requires `--cloudflare-env`; it reads encrypted Pages env metadata and
+the latest production deployment directly from Cloudflare.
 
 ## Go/No-Go Checkpoint
 
@@ -96,6 +96,7 @@ Wait for explicit operator approval.
 ## Live Acceptance Checklist
 
 - [ ] Freeze commit: `HEAD`, `origin/main`, and Pages build match.
+- [ ] Apply `supabase/schema-business-profile.sql`, then `supabase/schema-account-company.sql`; verify `create_company_for_user(uuid, jsonb)` exists before deploying the matching Function.
 - [ ] Create disposable QA account/company only.
 - [ ] Verify Supabase mutations through app paths, not direct SQL only.
 - [ ] Verify buyer dashboard overview, orders, messages, notifications, addresses, payment portal, and team/profile state.

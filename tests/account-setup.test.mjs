@@ -74,7 +74,7 @@ test("account company setup endpoint lets buyers update tax setup fields", () =>
   assert.match(src, /\.select\('id,company_id,role'\)/, "endpoint should read the caller profile before company writes");
   assert.match(src, /status:\s*'pending'/, "new business profiles must start pending admin approval");
   assert.match(src, /company_name_required/, "creating a business should require a company name");
-  assert.match(src, /\.update\(\{ company_id: company\.id, role: 'admin' \}\)/, "business creator should become company admin");
+  assert.match(src, /\.rpc\('create_company_for_user'/, "business creation and creator-admin linking should share one transaction");
   assert.match(src, /resale_cert_url/, "endpoint should update resale certificate URL");
   assert.match(src, /tax_exempt/, "endpoint should update tax-exempt status");
   assert.match(src, /body\.tax_exempt !== undefined/, "endpoint should only update tax_exempt when submitted");

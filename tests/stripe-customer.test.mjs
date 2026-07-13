@@ -148,6 +148,11 @@ test("all company billing routes use the shared customer helper", async () => {
   for (const route of routes) {
     const source = await readFile(new URL(`../${route}`, import.meta.url), "utf8");
     assert.match(source, /import \{ ensureCompanyStripeCustomer \} from ['"][^'"]+stripe-customer\.js['"]/);
-    assert.equal(source.match(/ensureCompanyStripeCustomer\s*\(/g)?.length, 1, route);
+    if (route.endsWith('/checkout.js')) {
+      assert.match(source, /dependencies\.ensureCompanyStripeCustomer\s*\|\|\s*ensureCompanyStripeCustomer/);
+      assert.equal(source.match(/getStripeCustomer\s*\(/g)?.length, 1, route);
+    } else {
+      assert.equal(source.match(/ensureCompanyStripeCustomer\s*\(/g)?.length, 1, route);
+    }
   }
 });

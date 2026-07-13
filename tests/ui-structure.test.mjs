@@ -382,8 +382,8 @@ test("scrolly opener states the replacement promise early", () => {
   const actOne = index.match(/<section class="act" data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actOne, /class="story-promise"/);
-  assert.match(actOne, /VertKleen strips scale, rust, grease/);
-  assert.match(actOne, /HMIS 0-0-0 safety rating/);
+  assert.match(actOne, /Built for the scale, rust, grease, and biofilm jobs/);
+  assert.match(actOne, /typical HMIS health, flammability, and reactivity ratings of 0-0-0/);
   assert.match(storyCss, /\.story-promise/);
 });
 

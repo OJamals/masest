@@ -216,19 +216,23 @@ function qboRefundRowsFromCharge(charge, order, plan) {
   }];
 }
 
-export async function onRequestPost({ request, env }) {
+export async function handleStripeWebhook({ request, env }, dependencies = {}) {
+  const getAdminClient = dependencies.adminClient || adminClient;
+  const constructEvent = dependencies.constructEvent || (async ({ raw, sig, whSecret }) => {
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+    const cryptoProvider = Stripe.createSubtleCryptoProvider();
+    return stripe.webhooks.constructEventAsync(raw, sig, whSecret, undefined, cryptoProvider);
+  });
   const secret = env.STRIPE_SECRET_KEY;
   const whSecret = env.STRIPE_WEBHOOK_SECRET;
   if (!secret || !whSecret) return json(500, { error: 'stripe_not_configured' });
 
-  const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
-  const cryptoProvider = Stripe.createSubtleCryptoProvider();
   const sig = request.headers.get('stripe-signature');
   const raw = await request.text(); // raw body required for signature verification
 
   let event;
   try {
-    event = await stripe.webhooks.constructEventAsync(raw, sig, whSecret, undefined, cryptoProvider);
+    event = await constructEvent({ raw, sig, whSecret });
   } catch {
     // Signature failures are unauthenticated input. Do not reflect Stripe parser
     // details that could help an attacker distinguish configuration or payload issues.
@@ -237,7 +241,7 @@ export async function onRequestPost({ request, env }) {
 
   if (event.type === 'checkout.session.completed') {
     const s = event.data.object;
-    const sb = adminClient(env);
+    const sb = getAdminClient(env);
 
     // Program subscription checkout (mode=subscription): record enrollment, skip the order path.
     if (isSubscriptionCheckout(s)) {
@@ -245,11 +249,14 @@ export async function onRequestPost({ request, env }) {
         const row = subscriptionRow(s);
         // Promote the checkout placeholder inserted at session creation (matched by
         // checkout session id). Falls back to upsert for sessions predating the placeholder.
-        const { data: promoted } = await sb.from('program_subscriptions')
+        const { data: promoted, error: promoteError } = await sb.from('program_subscriptions')
           .update({ status: row.status, stripe_subscription_id: row.stripe_subscription_id, stripe_customer_id: row.stripe_customer_id, tier: row.tier })
           .eq('stripe_checkout_session_id', s.id).select('id');
+        if (promoteError) return json(503, { error: 'program_subscription_persist_failed' });
         if (!promoted?.length) {
-          await sb.from('program_subscriptions').upsert(row, { onConflict: 'stripe_subscription_id' });
+          const { error: upsertError } = await sb.from('program_subscriptions')
+            .upsert(row, { onConflict: 'stripe_subscription_id' });
+          if (upsertError) return json(503, { error: 'program_subscription_persist_failed' });
         }
         if (s.metadata?.company_id) {
           await sb.from('notifications').insert({
@@ -258,7 +265,10 @@ export async function onRequestPost({ request, env }) {
             body: 'Your VertKleen service program is now active.', link: '/dashboard.html#business',
           }).then(() => {}, () => {});
         }
-      } catch (e) { console.error('program_sub_record_failed', e?.message || e); }
+      } catch (e) {
+        console.error('program_sub_record_failed', e?.message || e);
+        return json(503, { error: 'program_subscription_persist_failed' });
+      }
       return json(200, { received: true, subscription: true });
     }
 
@@ -320,7 +330,7 @@ export async function onRequestPost({ request, env }) {
   // order to paid, decrement stock, and send the real confirmation.
   if (event.type === 'checkout.session.async_payment_succeeded') {
     const s = event.data.object;
-    const sb = adminClient(env);
+    const sb = getAdminClient(env);
     if (isSubscriptionCheckout(s) || !s.payment_intent) return json(200, { received: true });
     const { data: order } = await sb.from('orders')
       .select('id,status,company_id')
@@ -331,28 +341,33 @@ export async function onRequestPost({ request, env }) {
 
     // qbo_sync_status was held at null while the debit processed; 'pending' releases
     // the order to the QBO invoice+payment worker now the money actually landed.
-    const { error: updErr } = await sb.from('orders')
-      .update({ status: 'paid', qbo_sync_status: 'pending' }).eq('id', order.id);
+    const { data: claimedOrder, error: updErr } = await sb.from('orders')
+      .update({ status: 'paid', qbo_sync_status: 'pending' })
+      .eq('id', order.id)
+      .eq('status', 'pending_payment')
+      .select('id,status,company_id')
+      .maybeSingle();
     if (updErr) return json(503, { error: 'order_update_failed' });
+    if (!claimedOrder) return json(200, { received: true, duplicate: true });
 
     const lines = cartLines(parseCartMetadata(assembleCartMetadata(s.metadata)));
     await enrichLineNames(sb, lines);
     if (lines.length) {
       const shorted = await decrementVariantStock(sb, lines);
       if (shorted.length) {
-        try { await alertStaffOversell(env, order, shorted); }
+        try { await alertStaffOversell(env, claimedOrder, shorted); }
         catch (e) { console.error('oversell_alert_failed', e?.message || e); }
       }
     }
     await sendOrderConfirmation({
-      env, session: s, order, lines,
+      env, session: s, order: claimedOrder, lines,
       subtotal: centsToAmount(s.amount_subtotal),
       tax: centsToAmount(s.total_details?.amount_tax),
       total: centsToAmount(s.amount_total),
     });
-    if (order.company_id) {
+    if (claimedOrder.company_id) {
       await sb.from('notifications').insert({
-        company_id: order.company_id, type: 'order', title: 'Payment cleared',
+        company_id: claimedOrder.company_id, type: 'order', title: 'Payment cleared',
         body: 'Your bank payment cleared and the order is confirmed.', link: '/dashboard.html#orders',
       }).then(() => {}, () => {});
     }
@@ -363,7 +378,7 @@ export async function onRequestPost({ request, env }) {
   // never decremented) and tell the buyer their order did not go through.
   if (event.type === 'checkout.session.async_payment_failed') {
     const s = event.data.object;
-    const sb = adminClient(env);
+    const sb = getAdminClient(env);
     if (isSubscriptionCheckout(s) || !s.payment_intent) return json(200, { received: true });
     const { data: order } = await sb.from('orders')
       .select('id,status,company_id')
@@ -371,26 +386,33 @@ export async function onRequestPost({ request, env }) {
     if (!order) return json(503, { error: 'order_not_recorded_yet' });
     if (order.status !== 'pending_payment') return json(200, { received: true, duplicate: true });
 
-    await sb.from('orders').update({ status: 'cancelled' }).eq('id', order.id).then(() => {}, () => {});
+    const { data: claimedOrder, error: cancelError } = await sb.from('orders')
+      .update({ status: 'cancelled' })
+      .eq('id', order.id)
+      .eq('status', 'pending_payment')
+      .select('id,status,company_id')
+      .maybeSingle();
+    if (cancelError) return json(503, { error: 'order_update_failed' });
+    if (!claimedOrder) return json(200, { received: true, duplicate: true });
     const to = buyerEmailFromStripeSession(s);
     if (to) {
       try {
         await sendEmail(env, {
           to: [to],
           bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
-          subject: `Your MASEST order #${order.id} could not be completed`,
+          subject: `Your MASEST order #${claimedOrder.id} could not be completed`,
           html: billingEmailHtml(env, 'Your bank payment didn’t go through', [
-            `The bank (ACH) payment for order <b>${htmlEscape(order.id)}</b> failed, so the order was cancelled and nothing will ship.`,
+            `The bank (ACH) payment for order <b>${htmlEscape(claimedOrder.id)}</b> failed, so the order was cancelled and nothing will ship.`,
             'No products were charged to you beyond the failed debit. To reorder, return to the cart and pay by card, or reply to this email for help.',
           ], { url: `${env.APP_URL || 'https://masest.co'}/cart.html`, text: 'Return to cart' }),
           category: 'order',
-          idempotencyKey: `order-achfail:${order.id}`,
+          idempotencyKey: `order-achfail:${claimedOrder.id}`,
         });
       } catch (e) { console.error('ach_fail_email', e?.message || e); }
     }
-    if (order.company_id) {
+    if (claimedOrder.company_id) {
       await sb.from('notifications').insert({
-        company_id: order.company_id, type: 'order', title: 'Payment failed',
+        company_id: claimedOrder.company_id, type: 'order', title: 'Payment failed',
         body: 'A bank payment for your order failed, so the order was cancelled.', link: '/dashboard.html#orders',
       }).then(() => {}, () => {});
     }
@@ -402,19 +424,24 @@ export async function onRequestPost({ request, env }) {
     const sub = event.data.object;
     const status = event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status;
     try {
-      await adminClient(env).from('program_subscriptions')
+      const { error: updateError } = await getAdminClient(env).from('program_subscriptions')
         .update({ status }).eq('stripe_subscription_id', sub.id);
-    } catch (e) { console.error('sub_status_update_failed', e?.message || e); }
+      if (updateError) return json(503, { error: 'program_subscription_update_failed' });
+    } catch (e) {
+      console.error('sub_status_update_failed', e?.message || e);
+      return json(503, { error: 'program_subscription_update_failed' });
+    }
     return json(200, { received: true });
   }
 
   // Failed subscription payment → mark past_due + send a dunning notice (#24).
   if (event.type === 'invoice.payment_failed') {
-    const sb = adminClient(env);
+    const sb = getAdminClient(env);
     const plan = planFailedPayment(event.data.object);
     if (plan.subscriptionId) {
-      await sb.from('program_subscriptions').update({ status: plan.status })
-        .eq('stripe_subscription_id', plan.subscriptionId).then(() => {}, () => {});
+      const { error: updateError } = await sb.from('program_subscriptions')
+        .update({ status: plan.status }).eq('stripe_subscription_id', plan.subscriptionId);
+      if (updateError) return json(503, { error: 'program_subscription_update_failed' });
     }
     try { await notifyBillingFailure(env, sb, plan); }
     catch (e) { console.error('dunning_failure_notice', e?.message || e); }
@@ -424,7 +451,7 @@ export async function onRequestPost({ request, env }) {
   // Subscription invoice paid → clear delinquency; email a recovery notice only if the
   // subscription was actually past_due, so ordinary renewals never trigger an email.
   if (event.type === 'invoice.paid' && event.data.object?.subscription) {
-    const sb = adminClient(env);
+    const sb = getAdminClient(env);
     const inv = event.data.object;
     const { data: row, error: subscriptionError } = await sb.from('program_subscriptions')
       .select('status,company_id,tier').eq('stripe_subscription_id', inv.subscription).maybeSingle();
@@ -436,8 +463,9 @@ export async function onRequestPost({ request, env }) {
     if (qboQueueError) return json(503, { error: 'qbo_subscription_queue_failed' });
     const plan = planRecoveredPayment(inv);
     if (!plan.companyId && row?.company_id) plan.companyId = row.company_id;
-    await sb.from('program_subscriptions').update({ status: plan.status })
-      .eq('stripe_subscription_id', inv.subscription).then(() => {}, () => {});
+    const { error: updateError } = await sb.from('program_subscriptions')
+      .update({ status: plan.status }).eq('stripe_subscription_id', inv.subscription);
+    if (updateError) return json(503, { error: 'program_subscription_update_failed' });
     if (isDelinquentStatus(row?.status)) {
       try { await notifyBillingRecovered(env, sb, plan); }
       catch (e) { console.error('dunning_recovery_notice', e?.message || e); }
@@ -447,7 +475,7 @@ export async function onRequestPost({ request, env }) {
 
   // Card dispute opened → alert staff with the linked order for evidence gathering.
   if (event.type === 'charge.dispute.created') {
-    const sb = adminClient(env);
+    const sb = getAdminClient(env);
     const plan = planDispute(event.data.object);
     let orderId = null;
     if (plan.paymentIntent) {
@@ -463,7 +491,7 @@ export async function onRequestPost({ request, env }) {
   // Refund issued outside the admin flow (e.g. Stripe dashboard) → reconcile the order's
   // refunded_amount/status so the two never drift (idempotent via planRefundReconcile).
   if (event.type === 'charge.refunded') {
-    const sb = adminClient(env);
+    const sb = getAdminClient(env);
     const charge = event.data.object;
     if (charge.payment_intent) {
       const { data: order } = await sb.from('orders')
@@ -473,8 +501,12 @@ export async function onRequestPost({ request, env }) {
         const plan = planRefundReconcile(charge, order);
         const patch = { refunded_amount: plan.refundedAmount };
         if (plan.fullyRefunded) patch.status = 'refunded';
-        await sb.from('orders').update(patch).eq('id', order.id).then(() => {}, () => {});
-        await enqueueQboRefundRows(sb, qboRefundRowsFromCharge(charge, order, plan));
+        // Queue accounting first. Stripe refund ids make this upsert idempotent, so if
+        // the order patch fails a retry can safely replay the queue before reconciling.
+        const qboQueueError = await enqueueQboRefundRows(sb, qboRefundRowsFromCharge(charge, order, plan));
+        if (qboQueueError) return json(503, { error: 'qbo_refund_queue_failed' });
+        const { error: refundUpdateError } = await sb.from('orders').update(patch).eq('id', order.id);
+        if (refundUpdateError) return json(503, { error: 'refund_reconcile_failed' });
       }
     }
     return json(200, { received: true });
@@ -483,18 +515,32 @@ export async function onRequestPost({ request, env }) {
   return json(200, { received: true });
 }
 
+export function createStripeWebhookHandler(dependencies = {}) {
+  return (context) => handleStripeWebhook(context, dependencies);
+}
+
+export async function onRequestPost(context) {
+  return handleStripeWebhook(context);
+}
+
 async function enqueueQboRefundRows(sb, rows) {
-  if (!rows.length) return;
+  if (!rows.length) return null;
   const withIds = rows.filter((row) => row.stripe_refund_id);
   const withoutIds = rows.filter((row) => !row.stripe_refund_id);
-  if (withIds.length) {
-    await sb.from('qbo_refunds')
-      .upsert(withIds, { onConflict: 'stripe_refund_id', ignoreDuplicates: true })
-      .then(() => {}, () => {});
+  try {
+    if (withIds.length) {
+      const { error } = await sb.from('qbo_refunds')
+        .upsert(withIds, { onConflict: 'stripe_refund_id', ignoreDuplicates: true });
+      if (error) return error;
+    }
+    if (withoutIds.length) {
+      const { error } = await sb.from('qbo_refunds').insert(withoutIds);
+      if (error) return error;
+    }
+  } catch (error) {
+    return error;
   }
-  if (withoutIds.length) {
-    await sb.from('qbo_refunds').insert(withoutIds).then(() => {}, () => {});
-  }
+  return null;
 }
 
 // --- Billing-event notifications (#24). Defined below onRequestPost so the first DB
