@@ -22,7 +22,7 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const FULL = "vendor/phosphor/Phosphor.full.woff2";
 const OUT = "vendor/phosphor/Phosphor.woff2";
 const MANIFEST = "vendor/phosphor/subset-icons.json";
-const IGNORE = /(^|\/)(node_modules|\.git|vendor|_local|\.claude|\.backup_site)(\/|$)/;
+const IGNORE = /(^|\/)(node_modules|\.git|vendor|dist|backups|_local|\.claude|\.backup_site)(\/|$)/;
 const SCAN_EXT = /\.(html|js|mjs|json)$/;
 
 /** Every `ph-<name>` token in the site's source (excluding build/backup dirs). */

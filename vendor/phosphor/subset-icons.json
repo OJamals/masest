@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 267,
-  "usedCount": 161,
+  "count": 265,
+  "usedCount": 159,
   "bufferCount": 106,
   "icons": [
     {
@@ -510,11 +510,6 @@
       "src": "buffer"
     },
     {
-      "name": "flame",
-      "cp": "E624",
-      "src": "used"
-    },
-    {
       "name": "flask",
       "cp": "E79E",
       "src": "used"
@@ -643,11 +638,6 @@
       "name": "heart",
       "cp": "E2A8",
       "src": "buffer"
-    },
-    {
-      "name": "heartbeat",
-      "cp": "E2AC",
-      "src": "used"
     },
     {
       "name": "hoodie",

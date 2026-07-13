@@ -159,11 +159,14 @@ test("contact form posts all five public request types to quote intake", async (
             body: JSON.stringify({ ok: true }),
           });
         });
-        await page.goto(`${BASE_URL}/contact.html?type=${flow.intent}&industry=Data%20Centers`, { waitUntil: "domcontentloaded" });
+        await page.goto(`${BASE_URL}/contact.html?type=${flow.intent}&industry=Data%20Centers`, { waitUntil: "load" });
         await page.fill("#fName", "QA Buyer");
         await page.fill("#fCompany", "QA Company");
         await page.fill("#fEmail", `${flow.intent}@example.com`);
         await page.fill("#fMessage", `${flow.intent} request smoke test`);
+        if (flow.intent === "sample") {
+          await page.locator('[data-intent-group="sample"]').waitFor({ state: "visible" });
+        }
         await flow.fill(page);
         await page.getByRole("button", { name: "Send Request" }).click();
         await page.getByRole("heading", { name: "Request received." }).waitFor();

@@ -5,9 +5,11 @@
 // (and therefore in the served font).
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, statSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveUsed, bufferIcons } from "../tools/subset-phosphor.mjs";
+import { collectUsedIcons, resolveUsed, bufferIcons } from "../tools/subset-phosphor.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const manifest = JSON.parse(readFileSync(`${root}/vendor/phosphor/subset-icons.json`, "utf8"));
@@ -31,6 +33,20 @@ test("subset manifest holds only used or buffered icons (regenerate if this fail
   const stray = manifestNames.filter((n) => !allowed.has(n));
   assert.deepEqual(stray, [], `Manifest lists icons that are neither used nor buffered — re-run tools/subset-phosphor.mjs: ${stray.join(", ")}`);
   assert.equal(manifest.count, manifestNames.length, "manifest count out of sync");
+});
+
+test("icon discovery ignores generated builds and backups", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "phosphor-scan-"));
+  try {
+    mkdirSync(join(fixture, "dist"));
+    mkdirSync(join(fixture, "backups"));
+    writeFileSync(join(fixture, "source.html"), `<i class="${"ph-" + "check"}"></i>`);
+    writeFileSync(join(fixture, "dist", "stale.html"), `<i class="${"ph-" + "flame"}"></i>`);
+    writeFileSync(join(fixture, "backups", "stale.html"), `<i class="${"ph-" + "heartbeat"}"></i>`);
+    assert.deepEqual([...collectUsedIcons(fixture)], ["check"]);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
 });
 
 test("served Phosphor woff2 is the subset, not the full font", () => {
