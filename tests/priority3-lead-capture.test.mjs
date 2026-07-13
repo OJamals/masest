@@ -130,7 +130,9 @@ test("contact form posts all five public request types to quote intake", async (
       intent: "sample",
       fill: async (page) => {
         for (const label of ["VertKleen HCR", "VertKleen CR", "VertKleen Descaler"]) {
-          await page.getByLabel(label, { exact: true }).check();
+          const checkbox = page.getByLabel(label, { exact: true });
+          await checkbox.evaluate(input => input.click());
+          assert.equal(await checkbox.isChecked(), true, `${label} should be selected`);
         }
         await page.fill("#fShipTo", "Test Facility, 1 Main St, Tampa FL 33602");
       },
