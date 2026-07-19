@@ -20,16 +20,25 @@
   .adm-shell { display: grid; gap: 18px; padding: 16px 0 72px; }
   .adm-top { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
   .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; }
-  .adm-tab { position: relative; overflow: visible; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 12px; font: inherit; cursor: pointer; }
+  .adm-tab { position: relative; overflow: visible; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 12px; font: inherit; cursor: pointer; transition: transform .15s var(--ease-out), border-color .18s var(--ease-out), background-color .18s var(--ease-out), color .18s var(--ease-out); }
+  .adm-tab:active { transform: scale(.96); }
   .adm-tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
   .pill { display: inline-grid; min-width: 20px; min-height: 20px; place-items: center; border-radius: 999px; background: var(--ink); color: white; font-size: .72rem; padding: 0 6px; }
   .adm-tab .pill { position: absolute; top: -7px; right: -7px; margin-left: 0; box-shadow: 0 0 0 2px var(--surface); }
   .adm-tab .pill[hidden] { display: none; }
   .adm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .adm-card { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); padding: 16px; }
+  .adm-card { border: 1px solid transparent; border-radius: var(--r-card); background: var(--surface); padding: 16px; box-shadow: var(--surface-edge), var(--shadow-xs); }
 .adm-card h2, .adm-card h3 { margin: 0 0 12px; font-size: 1rem; }
+.adm-card :where(h2, h3) { text-wrap: balance; }
+.adm-card :where(p, li, small) { text-wrap: pretty; }
 .adm-stat { display: grid; gap: 4px; min-height: 92px; }
 .adm-stat b { font-size: 1.25rem; }
+.adm-stat b,
+.adm-overview-marker b,
+.pill,
+.adm-mini-table .num {
+  font-variant-numeric: tabular-nums;
+}
 .adm-overview-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: clamp(18px, 3vw, 28px); background: var(--surface-raised); box-shadow: var(--shadow-sm), var(--surface-edge); }
 .adm-overview-head h2 { margin: 0; font-size: clamp(1.45rem, 2.6vw, 2rem); line-height: 1.12; }
 .adm-overview-head p.muted { max-width: 62ch; margin: 8px 0 0; }
@@ -56,9 +65,9 @@
 .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: right; font-variant-numeric: tabular-nums; }
 .adm-action-list { display: grid; gap: 8px; }
 .adm-action-card { position: sticky; top: 96px; box-shadow: var(--shadow-xs); }
-.adm-action-item { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 56px; padding: 10px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--surface); color: inherit; text-decoration: none; transition: border-color .14s var(--ease-out), background-color .14s var(--ease-out), transform .14s var(--ease-out); }
-.adm-action-item:active { transform: scale(.99); }
-.adm-action-item:hover, .adm-action-item:focus-visible { border-color: var(--accent); background: var(--accent-tint); }
+.adm-action-item { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 56px; padding: 10px; border: 1px solid transparent; border-radius: var(--r-input); background: var(--surface); color: inherit; text-decoration: none; box-shadow: var(--surface-edge), var(--shadow-xs); transition: transform .14s var(--ease-out), border-color .14s var(--ease-out), background-color .14s var(--ease-out), box-shadow .14s var(--ease-out); }
+.adm-action-item:active { transform: scale(.96); }
+.adm-action-item:hover, .adm-action-item:focus-visible { border-color: var(--accent); background: var(--accent-tint); box-shadow: var(--surface-edge), var(--shadow-sm); }
 .adm-action-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent-ink); font-size: 1.05rem; }
 .adm-action-item b, .adm-action-item small { display: block; min-width: 0; overflow-wrap: anywhere; }
 .adm-action-item b { line-height: 1.25; }
@@ -91,7 +100,7 @@
   .adm-search { max-width: 320px; }
   .adm-textarea { min-height: 120px; resize: vertical; }
   .adm-form-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; }
-  .adm-form-grid label { display: grid; gap: 5px; font-size: .82rem; color: var(--muted); }
+  .adm-form-grid label { display: grid; gap: 5px; color: var(--ink-soft); font-size: .82rem; font-weight: 700; }
   .adm-form-grid .wide { grid-column: span 2; }
   .adm-form-grid .full { grid-column: 1 / -1; }
   .adm-form-grid > .btn { justify-self: start; max-width: 100%; }
@@ -231,8 +240,9 @@
   .quote-sample-summary b { color: var(--ink); font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; }
   .product-photo { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
   .product-photo-empty { display: inline-flex; align-items: center; justify-content: center; color: var(--muted); font-size: .72rem; text-align: center; }
-  .gbtn { width: 36px; min-width: 36px; min-height: 36px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: none; cursor: pointer; font-size: .78rem; padding: 0; line-height: 1.2; color: var(--ink-soft); }
+  .gbtn { width: 40px; min-width: 40px; min-height: 40px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: none; cursor: pointer; font-size: .78rem; padding: 0; line-height: 1.2; color: var(--ink-soft); transition: transform .15s var(--ease-out), background-color .15s var(--ease-out), color .15s var(--ease-out); }
   .gbtn:hover { color: var(--accent); }
+  .gbtn:active { transform: scale(.96); }
   .product-admin-list { display: grid; gap: 14px; }
   .product-admin-card { display: grid; gap: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: clamp(14px, 2vw, 18px); box-shadow: var(--shadow-xs); }
   .product-admin-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; }
@@ -515,7 +525,7 @@
   .adm-tab i { flex: 0 0 auto; }
   .adm-tab .pill { margin-left: 0; }
   .adm-card, .adm-panel, .adm-table-wrap, .thread-layout, .quote-item { min-width: 0; }
-  .adm-card { box-shadow: var(--shadow-xs); overflow: hidden; overflow-wrap: anywhere; }
+  .adm-card { box-shadow: var(--surface-edge), var(--shadow-xs); overflow: hidden; overflow-wrap: anywhere; }
   .adm-card p, .adm-card small, .adm-card label, .quote-item, .thread-list button, table.adm td { overflow-wrap: anywhere; }
   .quote-item > summary { display: flex; align-items: center; min-height: 44px; padding: 8px 0; line-height: 1.35; }
   .adm-report-card .dash-row span, .adm-card[data-setup-followups] .dash-row span, .adm-traffic-report .dash-row span { min-width: 0; overflow-wrap: anywhere; }
@@ -638,6 +648,11 @@
   .confirm-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin: 0; padding: 0; }
   .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
   .btn-danger:hover { background: var(--status-danger-soft-ink); border-color: var(--status-danger-soft-ink); }
+  @media (prefers-reduced-motion: reduce) {
+    .adm-tab:active,
+    .adm-action-item:active,
+    .gbtn:active { transform: none; }
+  }
 </style>
 </head>
 <body class="site-soft-bg">

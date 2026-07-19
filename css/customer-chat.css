@@ -37,7 +37,7 @@
 }
 
 .customer-chat__icon { width: 1.35rem; height: 1.35rem; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
-.customer-chat__toggle:active { transform: scale(.97); }
+.customer-chat__toggle:active { transform: scale(.96); }
 .customer-chat__toggle:focus-visible,
 .customer-chat__close:focus-visible,
 .customer-chat a:focus-visible,
@@ -98,7 +98,8 @@
   .customer-chat { right: 12px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--customer-chat-avoid, 0px)); }
   .customer-chat__panel { width: min(100vw - 24px, 392px); max-block-size: min(440px, calc(100dvh - 80px)); }
   .customer-chat__thread { grid-template-rows: minmax(0, min(200px, 28dvh)) auto; }
-  .customer-chat__toggle { min-width: 52px; min-height: 52px; padding: 0 15px; }
+  .customer-chat__toggle { width: 52px; min-width: 52px; min-height: 52px; padding: 0; }
+  .customer-chat__toggle span { display: none; }
 }
 
 @media (max-height: 480px) {
@@ -144,5 +145,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .customer-chat__toggle { transition-duration: .01ms; }
+  .customer-chat__toggle {
+    transition-duration: .01ms;
+    transform: none;
+  }
 }

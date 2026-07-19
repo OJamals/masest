@@ -27,14 +27,18 @@
   .acct-value li { display: flex; gap: 12px; align-items: flex-start; }
   .acct-value li i { flex: 0 0 auto; margin-top: 2px; font-size: 1.3rem; color: var(--accent); }
   .acct-value li b { display: block; }
-  .acct-value li span { color: var(--muted); font-size: .92rem; line-height: 1.5; }
+  .acct-value li span { color: var(--muted); font-size: .92rem; line-height: 1.5; text-wrap: pretty; }
   @media (max-width: 900px) {
     #acctAuth { grid-template-columns: 1fr; }
     .acct-value { order: 2; }
   }
   /* Focused single-column auth: side-by-side email/password reads as an awkward wide sheet. */
   #acctAuth .field-grid { grid-template-columns: 1fr; gap: 14px; }
-  #acctAuth .form-card { padding: 26px 24px; }
+  #acctAuth .form-card {
+    padding: 26px 24px;
+    border-color: transparent;
+    box-shadow: var(--surface-edge), var(--shadow-sm);
+  }
   /* Cloudflare Turnstile renders a flexible-width iframe; keep it inside the card and tidy. */
   .acct-pane .cf-turnstile { max-width: 100%; overflow: hidden; border-radius: var(--r-input); }
   .acct-pane[hidden] { display: none; }
@@ -50,22 +54,30 @@
   .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; font-size: .9rem; }
   .checkbox-row input { width: auto; margin-top: 3px; accent-color: var(--accent); }
   .acct-foot-note { margin-top: 16px; font-size: .82rem; color: var(--ink-soft); }
-  .acct-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
-  .acct-sub { font-size: .9rem; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.45; }
+  .acct-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; text-wrap: balance; }
+  .acct-sub { font-size: .9rem; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.45; text-wrap: pretty; }
   .acct-switch { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); font-size: .9rem; color: var(--ink-soft); text-align: center; }
-  .acct-switch button { min-height: 44px; display: inline-flex; align-items: center; background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--accent-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .acct-switch button { min-height: 44px; display: inline-flex; align-items: center; background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--accent-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; transition: transform .15s var(--ease-out), color .15s var(--ease-out); }
   .acct-switch button:hover { color: var(--accent); }
   .acct-reset-row { display: flex; justify-content: flex-end; margin-top: 10px; }
-  .password-reset-link { min-height: 44px; display: inline-flex; align-items: center; border: 0; padding: 0; background: transparent; color: var(--accent-ink); font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+  .password-reset-link { min-height: 44px; display: inline-flex; align-items: center; border: 0; padding: 0; background: transparent; color: var(--accent-ink); font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; transition: transform .15s var(--ease-out), color .15s var(--ease-out); }
   .password-reset-link:hover { color: var(--accent); }
   .password-reset-link:focus-visible { color: var(--accent); outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
   .acct-reset-copy { margin: 0 0 18px; color: var(--muted); font-size: .96rem; line-height: 1.55; }
   .acct-secondary-action { margin-top: 14px; text-align: center; }
   .pw-wrap { position: relative; }
   .pw-wrap input { padding-right: 44px; }
-  .pw-toggle { position: absolute; right: 2px; top: 50%; width: 44px; height: 44px; transform: translateY(-50%); background: none; border: 0; cursor: pointer; color: var(--ink-soft); padding: 0; display: grid; place-items: center; border-radius: 8px; }
+  .pw-toggle { position: absolute; right: 2px; top: 50%; width: 44px; height: 44px; transform: translateY(-50%); background: none; border: 0; cursor: pointer; color: var(--ink-soft); padding: 0; display: grid; place-items: center; border-radius: 8px; transition: transform .15s var(--ease-out), color .15s var(--ease-out); }
   .pw-toggle:hover { color: var(--accent); }
+  .acct-switch button:active,
+  .password-reset-link:active { transform: scale(.96); }
+  .pw-toggle:active { transform: translateY(-50%) scale(.96); }
   .pw-toggle i { font-size: 1.15rem; }
+  @media (prefers-reduced-motion: reduce) {
+    .acct-switch button:active,
+    .password-reset-link:active { transform: none; }
+    .pw-toggle:active { transform: translateY(-50%); }
+  }
 </style>
 </head>
 <body class="site-soft-bg">
