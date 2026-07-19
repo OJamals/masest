@@ -1201,9 +1201,9 @@ font-size: .68rem;
   transform-origin: 50% 58%;
 }
 
-/* Exclude the per-frame-animated pipe paths (#114): a filter on them forces a
-   re-raster every scrub frame — the Act 2 jank. Depth there is layered strokes. */
-.story.story-ready [data-at]:not(.pipe-buildup):not(.pipe-flow) {
+/* Exclude per-frame pipe paths and ledger cells: filters force re-rastering on
+   every scrub frame. Their surrounding scene surfaces already provide depth. */
+.story.story-ready [data-at]:not(.pipe-buildup):not(.pipe-flow):not([data-ledger-step]) {
   filter: drop-shadow(0 20px 44px rgba(0, 0, 0, .28));
 }
 

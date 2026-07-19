@@ -96,6 +96,8 @@ var BEAT_IN = 0.64, BEAT_OUT = 0.26, HOLD = 1.35;
   }
 
 states.forEach(function (st) {
+  /* Dense table reveals must track the scrollbar 1:1; smoothing reads as lag. */
+  var directScrub = st.act.classList.contains("act-ledger");
   var tl = gsap.timeline({
     defaults: { ease: "power2.out" },
     scrollTrigger: {
@@ -106,7 +108,7 @@ states.forEach(function (st) {
            (The opener is already at the page top on load; same start applies.) */
         start: storyStart,
         end: "bottom bottom",
-        scrub: 0.42,
+        scrub: directScrub || 0.42,
         invalidateOnRefresh: true,        /* re-record tween endpoints at the new size */
         onToggle: function (self) {
           st.active = self.isActive;
@@ -152,7 +154,7 @@ states.forEach(function (st) {
       var fromReplacementSide = Number(stepKey) > 4;
       tl.fromTo(cells,
         { autoAlpha: 0, x: fromReplacementSide ? -32 : 0, y: fromReplacementSide ? 0 : 30, scale: 1 },
-        { autoAlpha: 1, x: 0, y: 0, scale: 1, duration: BEAT_IN, ease: "power3.out" },
+        { autoAlpha: 1, x: 0, y: 0, scale: 1, duration: BEAT_IN, ease: "none" },
         cells[0]._at);
     });
     tl.set({}, {}, st.T);                               /* endcap: hold before unpin */

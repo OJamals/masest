@@ -241,13 +241,13 @@ test("operational Replacement Ledger and qualifications fit the desktop frame", 
 test("Replacement Ledger reveals 1-4, then slides 5-8 in from the left", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
 
-  const motion = await page.evaluate(() => {
+  const motion = await page.evaluate(async () => {
     const act = document.querySelector('.story .act[data-act="3"]');
     const trigger = window.ScrollTrigger.getAll().find((item) => item.trigger === act);
     const tweens = trigger.animation.getChildren(false, true, false);
-
-    return Array.from({ length: 8 }, (_, index) => {
+    const groups = Array.from({ length: 8 }, (_, index) => {
       const step = index + 1;
       const cells = [...act.querySelectorAll(`[data-ledger-step="${step}"]`)];
       const groupTween = tweens.find((tween) => {
@@ -261,16 +261,32 @@ test("Replacement Ledger reveals 1-4, then slides 5-8 in from the left", async (
         start: groupTween?.startTime() ?? null,
         fromX: groupTween?.vars?.startAt?.x ?? 0,
         fromY: groupTween?.vars?.startAt?.y ?? 0,
+        ease: groupTween?.vars?.ease ?? null,
+        filters: cells.map((cell) => getComputedStyle(cell).filter),
       };
     });
+
+    window.scrollTo(0, trigger.start + (trigger.end - trigger.start) * 0.62);
+    window.ScrollTrigger.update();
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    return {
+      groups,
+      scrub: trigger.vars.scrub,
+      progressGap: Math.abs(trigger.progress - trigger.animation.totalProgress()),
+    };
   });
 
-  expect(motion.map(({ cellCount }) => cellCount)).toEqual(Array(8).fill(3));
-  expect(motion.map(({ start }) => start)).toEqual([1.2, 1.7, 2.2, 2.7, 3.2, 3.7, 4.2, 4.7]);
-  expect(motion.slice(0, 4).map(({ fromX }) => fromX)).toEqual([0, 0, 0, 0]);
-  expect(motion.slice(0, 4).map(({ fromY }) => fromY)).toEqual([30, 30, 30, 30]);
-  expect(motion.slice(4).map(({ fromX }) => fromX)).toEqual([-32, -32, -32, -32]);
-  expect(motion.slice(4).map(({ fromY }) => fromY)).toEqual([0, 0, 0, 0]);
+  expect(motion.groups.map(({ cellCount }) => cellCount)).toEqual(Array(8).fill(3));
+  expect(motion.groups.map(({ start }) => start)).toEqual([1.2, 1.7, 2.2, 2.7, 3.2, 3.7, 4.2, 4.7]);
+  expect(motion.groups.slice(0, 4).map(({ fromX }) => fromX)).toEqual([0, 0, 0, 0]);
+  expect(motion.groups.slice(0, 4).map(({ fromY }) => fromY)).toEqual([30, 30, 30, 30]);
+  expect(motion.groups.slice(4).map(({ fromX }) => fromX)).toEqual([-32, -32, -32, -32]);
+  expect(motion.groups.slice(4).map(({ fromY }) => fromY)).toEqual([0, 0, 0, 0]);
+  expect(motion.groups.map(({ ease }) => ease)).toEqual(Array(8).fill("none"));
+  expect(motion.groups.flatMap(({ filters }) => filters)).toEqual(Array(24).fill("none"));
+  expect(motion.scrub).toBe(true);
+  expect(motion.progressGap).toBeLessThan(0.03);
 });
 
 test("mobile ledger owns horizontal overflow and remains keyboard scrollable", async ({ page }) => {
