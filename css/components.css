@@ -170,8 +170,8 @@
 }
 .pagination button {
   appearance: none;
-  min-width: 38px;
-  height: 38px;
+  min-width: 40px;
+  height: 40px;
   padding: 0 10px;
   border: 1px solid var(--line, #e4e6e9);
   border-radius: var(--r-input, 10px);
@@ -180,7 +180,7 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color .16s var(--ease-out, ease), background .16s var(--ease-out, ease);
+  transition: transform .15s var(--ease-out, ease), border-color .16s var(--ease-out, ease), background .16s var(--ease-out, ease);
 }
 .pagination button:hover:not(:disabled) { border-color: var(--accent, #0e7c86); }
 .pagination button[aria-current="page"] {
@@ -653,4 +653,166 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
   .shared-image-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .shared-image-library-card:only-child { grid-template-columns: 112px minmax(0, 1fr); }
   .shared-image-library-card:only-child img { height: 100px; }
+}
+
+/* ----------------------------------------------------------------------------
+   Interface feel — shared finishing details for every storefront surface.
+   Keep these contracts here so public pages, generated pages, and workspace
+   shells inherit the same press, media-edge, and numeric behavior.
+---------------------------------------------------------------------------- */
+:where(
+  .shop-card p,
+  .case-card p,
+  .route-card p,
+  .resource-card p,
+  .service-card p,
+  .tier-card p,
+  .program-card p,
+  .empty-state p,
+  .rv-card p
+) {
+  text-wrap: pretty;
+}
+
+:where(
+  .shop-card h2,
+  .shop-card h3,
+  .case-card h2,
+  .case-card h3,
+  .route-card h2,
+  .route-card h3,
+  .resource-card h2,
+  .resource-card h3,
+  .service-card h2,
+  .service-card h3,
+  .tier-card h2,
+  .tier-card h3,
+  .program-card h2,
+  .program-card h3,
+  .modal-title,
+  .empty-title
+) {
+  text-wrap: balance;
+}
+
+:where(
+  .price-main,
+  .tier-price,
+  .cart-count,
+  .badge,
+  .net-age,
+  .pagination,
+  .order-lines,
+  .order-totals,
+  .rv-count,
+  [data-service-count],
+  [data-package-count],
+  [data-category-count]
+) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Text + icon buttons need two fewer pixels on the icon side for optical,
+   rather than merely geometric, centering. */
+.btn:has(> i:first-child) { padding-left: 24px; }
+.btn:has(> i:last-child) { padding-right: 24px; }
+.btn-sm:has(> i:first-child) { padding-left: 16px; }
+.btn-sm:has(> i:last-child) { padding-right: 16px; }
+
+:where(
+  .btn,
+  .btn-sm,
+  .btn-island,
+  .shop-chip,
+  .shop-card-add,
+  .shop-card-quote,
+  .tab,
+  .pagination button,
+  .doc-chip,
+  .proof-filter,
+  .cta-choice
+) {
+  transition-property: transform, background-color, border-color, box-shadow, color;
+}
+
+.btn:active,
+.btn-sm:active,
+.btn-island:active,
+.shop-chip:active,
+.shop-card-add:active,
+.shop-card-quote:active {
+  transform: scale(.96);
+}
+
+.tab:active,
+.pagination button:active,
+.doc-chip:active,
+.proof-filter:active,
+.cta-choice:active {
+  transform: scale(.96);
+}
+
+.btn:disabled:active,
+.pagination button:disabled:active {
+  transform: none;
+}
+
+/* Photography gets an inset, untinted edge. Transparent product packshots and
+   brand marks keep their existing stage treatment. */
+:where(
+  .contact-hero-media img,
+  .route-card-media img,
+  .cms-page-section-media img,
+  .page-hero-scene-media img,
+  .row-thumb img,
+  figure.photo img,
+  .prod-photo img,
+  .hmis-panel .panel-photo img,
+  .proof-card img,
+  .ba img,
+  .case-card img,
+  .case-ba img,
+  .proof-thumb img,
+  .ind-intro-photo img,
+  .ind-shot img,
+  .doc-link img,
+  .catalog-photo img,
+  .product-media-card img,
+  .segment-pricing-media img,
+  .services-hero-media img,
+  .services-proof-image img,
+  .newsletter-media img,
+  .blog-card-img,
+  .blog-hero-media img,
+  .blog-body img,
+  .md-card img,
+  .adm-md-preview-body img,
+  .nl-image-library-item img,
+  .shared-image-library-card img
+) {
+  outline: 1px solid rgba(0, 0, 0, .1);
+  outline-offset: -1px;
+}
+
+.story .reel-slide img {
+  outline: 1px solid rgba(255, 255, 255, .1);
+  outline-offset: -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    .btn,
+    .btn-sm,
+    .btn-island,
+    .shop-chip,
+    .shop-card-add,
+    .shop-card-quote,
+    .tab,
+    .pagination button,
+    .doc-chip,
+    .proof-filter,
+    .cta-choice
+  ):active {
+    transform: none;
+  }
 }
