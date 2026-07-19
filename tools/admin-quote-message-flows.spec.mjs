@@ -149,6 +149,9 @@ test("staff replies to a support thread with the expected payload", async ({ pag
   await expect(thread).toBeAttached();
   await page.locator("#adminSupportLauncher").evaluate((launcher) => launcher.click());
   await expect(page.locator("#adminSupportDrawer")).toBeVisible();
+  await expect(page.locator("#adminSupportLauncher")).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(page.locator("#adminSupportDrawer")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(page.locator("#admThreadView")).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await thread.click();
   await expect(page.locator("#replyForm")).toBeVisible();
   await page.locator("#replyBody").fill("Ships Friday via LTL freight.");
