@@ -123,18 +123,37 @@ states.forEach(function (st) {
     });
     st.tl = tl;
 
+    var ledgerGroups = {};
     st.els.forEach(function (el) {
-    if (st.act === firstAct && el._at === 0) {        /* opening line: visible on load */
-      gsap.set(el, { autoAlpha: 1, y: 0, scale: 1 });
-    } else {
-      tl.fromTo(el,
-        { autoAlpha: 0, y: 30, scale: 0.985 },
-        { autoAlpha: 1, y: 0, scale: 1, duration: BEAT_IN },
-        el._at);
-    }
+      var ledgerStep = parseInt(el.getAttribute("data-ledger-step"), 10);
+      if (ledgerStep) {
+        if (!ledgerGroups[ledgerStep]) ledgerGroups[ledgerStep] = [];
+        ledgerGroups[ledgerStep].push(el);
+        return;
+      }
+      if (st.act === firstAct && el._at === 0) {      /* opening line: visible on load */
+        gsap.set(el, { autoAlpha: 1, y: 0, scale: 1 });
+      } else {
+        tl.fromTo(el,
+          { autoAlpha: 0, y: 30, scale: 0.985 },
+          { autoAlpha: 1, y: 0, scale: 1, duration: BEAT_IN },
+          el._at);
+      }
       if (el._out >= 0) {
         tl.to(el, { autoAlpha: 0, y: -16, duration: BEAT_OUT, ease: "power2.in" }, Math.max(0, el._out - BEAT_OUT));
       }
+    });
+
+    /* Act 3 is one eight-beat comparison, not four table-row reveals.
+       Conventional cells land 1-4; replacement cells then enter 5-8
+       from the left so each side owns a distinct chapter of the ledger. */
+    Object.keys(ledgerGroups).sort(function (a, b) { return Number(a) - Number(b); }).forEach(function (stepKey) {
+      var cells = ledgerGroups[stepKey];
+      var fromReplacementSide = Number(stepKey) > 4;
+      tl.fromTo(cells,
+        { autoAlpha: 0, x: fromReplacementSide ? -32 : 0, y: fromReplacementSide ? 0 : 30, scale: 1 },
+        { autoAlpha: 1, x: 0, y: 0, scale: 1, duration: BEAT_IN, ease: "power3.out" },
+        cells[0]._at);
     });
     tl.set({}, {}, st.T);                               /* endcap: hold before unpin */
   });
