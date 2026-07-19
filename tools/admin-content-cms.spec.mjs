@@ -774,7 +774,7 @@ test("blog_post form renders all field editors + live markdown preview", async (
   await expect(chipsWidget.locator('.adm-chip[data-chip="case-study"]')).toBeVisible();
   await expect(page.locator('input[type="hidden"][data-content-payload-field="tags"]')).toHaveValue("case-study");
 
-  // In-post image control: the Insert image button opens the asset picker.
+  // In-post image control: the Insert image button opens the shared library picker.
   await page.route("**/api/admin/content-assets**", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -791,22 +791,14 @@ test("blog_post form renders all field editors + live markdown preview", async (
   const insertImage = page.locator('[data-rich-editor-key="body"] [data-editor-action="insert_image"]');
   await expect(insertImage).toBeVisible();
   await insertImage.click();
-  await expect(page.locator("#contentAssetPicker")).toBeVisible();
-  const assetRow = page.locator(".adm-content-asset-row").first();
-  await expect(assetRow).toBeVisible();
-  const assetMetrics = await assetRow.evaluate((row) => {
-    const info = row.querySelector(".adm-content-asset-info")?.getBoundingClientRect();
-    const actions = row.querySelector(".adm-content-asset-actions")?.getBoundingClientRect();
-    return {
-      infoWidth: Math.round(info?.width || 0),
-      infoTop: Math.round(info?.top || 0),
-      actionsTop: Math.round(actions?.top || 0),
-    };
-  });
-  expect(assetMetrics.infoWidth).toBeGreaterThan(280);
-  expect(assetMetrics.actionsTop).toBeGreaterThan(assetMetrics.infoTop);
-  await page.locator('[data-content-action="close_assets"]').first().click();
-  await expect(page.locator("#contentAssetPicker")).toBeHidden();
+  const imagePicker = page.locator("dialog.shared-image-picker");
+  await expect(imagePicker).toBeVisible();
+  await imagePicker.locator("[data-shared-image-library-open]").click();
+  const assetRow = imagePicker.locator(".shared-image-library-card").first();
+  await expect(assetRow).toContainText("Blog descaling without acid preview");
+  await assetRow.locator("[data-shared-image-select]").click();
+  await expect(imagePicker).toHaveCount(0);
+  await expect(postBodyOutput).toHaveValue(/!\[Blog descaling without acid preview\]\(img\/blog\/descaling-without-acid\.webp\)/);
 
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-blog-post-desktop.png` });
@@ -931,7 +923,6 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
   await page.locator('[data-editor-action="format_underline"]').click();
   await expect(bodyOutput).toHaveValue("**Scale** ++cleanup++");
 
-  await page.locator('[data-editor-format-size]').selectOption("20");
   await bodyEditor.evaluate((node) => {
     const range = document.createRange();
     range.selectNodeContents(node);
@@ -939,17 +930,24 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
     selection.removeAllRanges();
     selection.addRange(range);
     node.focus();
+    node.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
   });
-  await page.locator('[data-editor-action="format_size"]').click();
+  await page.locator('[data-editor-format-size]').selectOption("20");
   await expect(bodyOutput).toHaveValue(/\[\[size:20\|/);
 
-  await page.locator('[data-editor-action="reference_product"]').click();
+  await page.locator('[data-editor-action="open_reference"]').click();
   await expect(page.locator("#contentReferencePicker")).toBeVisible();
   await expect(page.locator("#contentReferenceRows")).toContainText("VertKleen HCR");
-  await page.locator('[data-editor-reference-path="/products/hcr"]').click();
+  const blogProductReference = page.locator('[data-editor-reference-path="/products/hcr"]');
+  await blogProductReference.evaluate((button) => {
+    for (let details = button.closest("details"); details; details = details.parentElement?.closest("details")) {
+      details.open = true;
+    }
+  });
+  await blogProductReference.click();
   await expect(bodyOutput).toHaveValue(/\[\[card:title=VertKleen HCR\|href=\/products\/hcr\|image=img\/products\/hvac-hcr-studio\.webp/);
 
-  await page.locator('[data-editor-action="reference_service"]').click();
+  await page.locator('[data-editor-action="open_reference"]').click();
   await expect(page.locator("#contentReferenceRows")).toContainText("Water analysis");
   await page.locator('[data-editor-reference-path="/services"]').click();
   await expect(bodyOutput).toHaveValue(/\[\[card:title=Water analysis\|href=\/services/);
@@ -1030,12 +1028,18 @@ test("newsletter compose uses the shared visual editor and markdown output", asy
   await page.locator('#admNewsletter [data-editor-action="format_bold"]').click();
   await expect(page.locator("#nlBody")).toHaveValue("**Field** note");
 
-  await page.locator('#admNewsletter [data-editor-action="reference_product"]').click();
+  await page.locator('#admNewsletter [data-editor-action="open_reference"]').click();
   await expect(page.locator("#nlReferenceRows")).toContainText("VertKleen HCR");
-  await page.locator('#admNewsletter [data-editor-reference-path="/products/hcr"]').click();
+  const newsletterProductReference = page.locator('#admNewsletter [data-editor-reference-path="/products/hcr"]');
+  await newsletterProductReference.evaluate((button) => {
+    for (let details = button.closest("details"); details; details = details.parentElement?.closest("details")) {
+      details.open = true;
+    }
+  });
+  await newsletterProductReference.click();
   await expect(page.locator("#nlBody")).toHaveValue(/\[\[card:title=VertKleen HCR\|href=\/products\/hcr/);
 
-  await page.locator('#admNewsletter [data-editor-action="reference_service"]').click();
+  await page.locator('#admNewsletter [data-editor-action="open_reference"]').click();
   await expect(page.locator("#nlReferenceRows")).toContainText("Water analysis");
   await page.locator('#admNewsletter [data-editor-reference-path="/services"]').click();
   await expect(page.locator("#nlBody")).toHaveValue(/\[\[card:title=Water analysis\|href=\/services/);

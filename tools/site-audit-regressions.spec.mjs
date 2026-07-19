@@ -6,6 +6,7 @@ const PORT = 4218;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let server;
 
+test.use({ channel: "chrome" });
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
@@ -140,7 +141,7 @@ test("post-auth notification bubbles sit outside tab button corners", async ({ p
   await page.locator("#admNavToggle").click();
   await expect(page.locator("#aBadgePending")).toBeHidden();
   await expect(page.locator("#aBadgeCrm")).toBeHidden();
-  const admin = await measureBadge("#aBadgeMsg");
+  const admin = await measureBadge("#aBadgeQuotes");
   expect(admin.position).toBe("absolute");
   expect(admin.badgeTop, "admin badge top edge").toBeLessThan(admin.buttonTop);
   expect(admin.badgeRight, "admin badge right edge").toBeGreaterThan(admin.buttonRight);
@@ -249,6 +250,106 @@ test("mobile pages expose persistent quote and chemical-map actions", async ({ p
   expect((quoteBox?.y || 0) + (quoteBox?.height || 0), "quote action bottom edge").toBeLessThanOrEqual(844);
 });
 
+test("mobile customer chat follows registered lead-bar obstruction state", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__testIntersectionObservers = [];
+    window.IntersectionObserver = class {
+      constructor(callback, options) {
+        this.callback = callback;
+        this.options = options;
+        this.targets = [];
+        window.__testIntersectionObservers.push(this);
+      }
+
+      observe(target) {
+        this.targets.push(target);
+      }
+
+      disconnect() {}
+      unobserve() {}
+    };
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+
+  const bar = page.locator(".lead-action-bar");
+  const chat = page.locator(".customer-chat");
+  const launcher = page.locator(".customer-chat__toggle");
+  await launcher.waitFor();
+  await expect(bar).toHaveAttribute("data-customer-chat-obstruction", "");
+  await expect(bar).toHaveAttribute("data-customer-chat-obstruction-active", "false");
+  await expect.poll(() => chat.evaluate((node) => node.style.getPropertyValue("--customer-chat-avoid"))).toBe("0px");
+
+  const activation = await page.evaluate(async () => {
+    const sentinel = document.querySelector(".lead-action-sentinel");
+    const observer = window.__testIntersectionObservers.find(({ targets }) => targets.includes(sentinel));
+    const originalFrame = window.requestAnimationFrame;
+    let events = 0;
+    let frames = 0;
+    const onChange = () => { events += 1; };
+    document.addEventListener("masest:customer-chat-obstruction-change", onChange);
+    window.requestAnimationFrame = (callback) => {
+      frames += 1;
+      return originalFrame.call(window, callback);
+    };
+    observer.callback([{ target: sentinel, isIntersecting: false }]);
+    observer.callback([{ target: sentinel, isIntersecting: false }]);
+    await new Promise((resolve) => originalFrame.call(window, () => originalFrame.call(window, resolve)));
+    window.requestAnimationFrame = originalFrame;
+    document.removeEventListener("masest:customer-chat-obstruction-change", onChange);
+    return { events, frames };
+  });
+
+  expect(activation).toEqual({ events: 1, frames: 1 });
+  await expect(bar).toHaveAttribute("data-customer-chat-obstruction-active", "true");
+  await expect(bar).toBeVisible();
+
+  const expectNoLauncherOverlap = async (state) => {
+    const [barBox, launcherBox] = await Promise.all([bar.boundingBox(), launcher.boundingBox()]);
+    expect(barBox, `${state} lead bar box`).not.toBeNull();
+    expect(launcherBox, `${state} launcher box`).not.toBeNull();
+    expect(
+      launcherBox.y + launcherBox.height <= barBox.y || launcherBox.y >= barBox.y + barBox.height,
+      `${state} launcher must not overlap lead bar`,
+    ).toBe(true);
+  };
+
+  await expectNoLauncherOverlap("closed");
+  await bar.evaluate((node) => { node.style.height = "160px"; });
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(new Event("resize"));
+  });
+  await expect.poll(() => chat.evaluate((node) => Number.parseFloat(node.style.getPropertyValue("--customer-chat-avoid")))).toBeGreaterThan(0);
+  await expectNoLauncherOverlap("resized");
+  await bar.evaluate((node) => { node.style.removeProperty("height"); });
+  await page.evaluate(() => window.dispatchEvent(new Event("resize")));
+  await expect.poll(() => chat.evaluate((node) => node.style.getPropertyValue("--customer-chat-avoid"))).toBe("0px");
+
+  await launcher.click();
+  await expect(page.locator(".customer-chat__panel")).toBeVisible();
+  await expectNoLauncherOverlap("open");
+
+  await page.evaluate(() => {
+    const shop = document.querySelector("#shopGrid");
+    const observer = window.__testIntersectionObservers.find(({ targets }) => targets.includes(shop));
+    observer.callback([{ target: shop, isIntersecting: true }]);
+  });
+  await expect(bar).toHaveAttribute("data-customer-chat-obstruction-active", "false");
+  await expect(bar).toBeHidden();
+  await expect.poll(() => chat.evaluate((node) => node.style.getPropertyValue("--customer-chat-avoid"))).toBe("0px");
+});
+
+test("customer chat keeps zero lift without a registered obstruction", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/contact.html`, { waitUntil: "domcontentloaded" });
+
+  const chat = page.locator(".customer-chat");
+  await page.locator(".customer-chat__toggle").waitFor();
+  await expect(page.locator("[data-customer-chat-obstruction]")).toHaveCount(0);
+  await expect.poll(() => chat.evaluate((node) => node.style.getPropertyValue("--customer-chat-avoid"))).toBe("0px");
+});
+
 test("mobile industry detail pages keep quote and chemical-map actions", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/industries/plumbing.html`, { waitUntil: "domcontentloaded" });
@@ -348,13 +449,14 @@ test("mobile home hamburger drawer keeps all top-level rows readable", async ({ 
   expect(topLevelColors).not.toContain("rgb(255, 255, 255)");
 });
 
-test("proof image sets use uniform media slots", async ({ page }) => {
+test("proof image sets use stable media slots", async ({ page }) => {
   const sets = [
     {
       pagePath: "index.html",
       viewport: { width: 1440, height: 900 },
       selector: ".proof-grid .proof-card > figure",
       expectedCount: 3,
+      expectedAspectRatio: 16 / 10,
       label: "home proof cards",
     },
     {
@@ -393,7 +495,16 @@ test("proof image sets use uniform media slots", async ({ page }) => {
 
     const expectedCount = set.countSelector ? await page.locator(set.countSelector).count() : set.expectedCount;
     expect(result.boxes, `${set.label} media count`).toHaveLength(expectedCount);
-    expect(result.max - result.min, `${set.label} media heights: ${JSON.stringify(result.boxes)}`).toBeLessThanOrEqual(3);
+    if (set.expectedAspectRatio) {
+      for (const box of result.boxes) {
+        expect(
+          Math.abs((box.width / box.height) - set.expectedAspectRatio),
+          `${set.label} media ratio: ${JSON.stringify(box)}`,
+        ).toBeLessThanOrEqual(0.03);
+      }
+    } else {
+      expect(result.max - result.min, `${set.label} media heights: ${JSON.stringify(result.boxes)}`).toBeLessThanOrEqual(3);
+    }
   }
 });
 
@@ -446,8 +557,8 @@ test("scroll reveal sections become visible on long buyer pages", async ({ page 
     {
       pagePath: "products.html",
       viewport: { width: 1440, height: 1000 },
-      selector: ".swap-finder.reveal",
-      label: "product replacement checker",
+      selector: ".shop-toolbar.reveal",
+      label: "product catalog toolbar",
     },
     {
       pagePath: "product.html?id=hcr",

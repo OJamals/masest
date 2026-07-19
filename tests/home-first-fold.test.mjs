@@ -31,7 +31,7 @@ async function withServer(fn) {
   }
 }
 
-test("homepage first fold shows product path and quote path without scroll cue", async () => {
+test("homepage first fold prioritizes replacement and trial without duplicate shortcuts", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({
@@ -79,12 +79,7 @@ test("homepage first fold shows product path and quote path without scroll cue",
       assert.equal(result.hasScrollCue, false, "first fold should not include a decorative scroll cue");
       assert.ok(result.ctas.some((cta) => cta.text === "Find your replacement"), "product CTA should be visible in the first fold");
       assert.ok(result.ctas.some((cta) => cta.text === "Request a trial"), "quote CTA should be visible in the first fold");
-      assert.deepEqual(
-        result.shortcuts.map((shortcut) => shortcut.href),
-        ["products#swap", "proof", "account"],
-        "first fold should expose product, proof, and buyer-account fast paths",
-      );
-      assert.ok(result.shortcuts.every((shortcut) => shortcut.bottom <= 1000), "fast paths should remain in the first fold");
+      assert.deepEqual(result.shortcuts, [], "first fold should not repeat replacement actions in a shortcut rail");
       await browser.close();
     } catch (error) {
       await browser.close();
@@ -140,7 +135,7 @@ test("homepage keeps a primary action visible on short mobile", async () => {
   });
 });
 
-test("homepage first scene uses the compact iPad width", async () => {
+test("homepage first scene uses the compact stacked iPad fallback", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({
@@ -163,6 +158,8 @@ test("homepage first scene uses the compact iPad width", async () => {
           return {
             left: Math.round(box.left),
             right: Math.round(box.right),
+            top: Math.round(box.top),
+            bottom: Math.round(box.bottom),
             width: Math.round(box.width),
           };
         };
@@ -177,9 +174,10 @@ test("homepage first scene uses the compact iPad width", async () => {
       });
 
       assert.ok(result.sceneEnvelope >= 656 * 0.75, JSON.stringify(result));
-      assert.ok(result.reel.left >= result.copy.right + 16, JSON.stringify(result));
+      assert.ok(result.reel.top >= result.copy.bottom + 16, JSON.stringify(result));
       assert.ok(result.copy.width >= 250, JSON.stringify(result));
       assert.ok(result.reel.width >= 240, JSON.stringify(result));
+      assert.ok(result.reel.right <= 656, JSON.stringify(result));
       assert.equal(result.overflow, false, JSON.stringify(result));
       await browser.close();
     } catch (error) {

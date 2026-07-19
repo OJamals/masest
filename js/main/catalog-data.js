@@ -576,35 +576,18 @@ export const CATALOG_GROUPS = [
 
 export const QUOTE_FIRST_IDS = ["crs"];
 
-// Automated replacement checker: the current chemical a buyer uses today, the job
-// it does, and the VertKleen product ids that replace it. Single source of truth
-// for the compact top-of-page matrix and the live catalog filter.
-export const REPLACEMENT_MAP = [
-  { current: "Muriatic / hydrochloric acid", job: "Rust, scale & passivation", ids: ["hcr", "descaler"] },
-  { current: "Caustic soda / sodium hydroxide", job: "pH adjustment & caustic cleaning", ids: ["cr"] },
-  { current: "Simple Green / Zep / butyl degreasers", job: "Heavy-duty degreasing", ids: ["crhd"] },
-  { current: "Caustic & solvent degreasers", job: "Degreasing sensitive surfaces", ids: ["neutral"] },
-  { current: "CLR / Calci-Solve", job: "Coil & heat-transfer descaling", ids: ["descaler"] },
-  { current: "General-purpose caustic cleaners", job: "Everyday facility washing", ids: ["multiwash"] },
-  { current: "Phosphate / zinc / molybdate blends", job: "Scale & corrosion control", ids: ["watersafe60"] },
-  { current: "Stabilized bromine / bleach", job: "Oxidizing biocide", ids: ["purgo"] },
-  { current: "Wet & Forget / bleach roof cleaners", job: "Exterior moss, algae & mold", ids: ["lam3"] },
-  { current: "Hydrofluoric / HCl brighteners", job: "Aluminum brightening", ids: ["alumibrite"] },
-  { current: "Separate wash, wax & bug removers", job: "Vehicle wash & wax", ids: ["torque"] }
-];
-
 export const PRODUCT_CATALOG_COPY = {
   hcr: {
     job: "Rust, scale, and heavy deposits",
     summary: "Use when rust staining, mineral scale, or passivation work needs industrial strength and documentation better than a muriatic-acid SDS.",
     fits: ["HVAC", "metal restoration", "concrete", "pipelines"],
-    proof: "CLR-failed / HCR-cleared proof and cooling-tower notes"
+    proof: "Pool-filter field note and cooling-tower case study"
   },
   "hcr-t16": {
     job: "16+ tote descaling supply",
     summary: "For high-volume facilities and contractors standardizing on HCR tote procurement with program pricing and freight review.",
     fits: ["16+ totes", "contractors", "campuses", "industrial descaling"],
-    proof: "HCR field proof with program pricing"
+    proof: "Program pricing and Bulk HCR Program Profile"
   },
   descaler: {
     job: "Coils, towers, and heat-transfer equipment",
@@ -622,7 +605,7 @@ export const PRODUCT_CATALOG_COPY = {
     job: "High-pH cleaning and water-treatment support",
     summary: "For teams that need caustic-level cleaning, pH adjustment, or the alkaline step in a CR then HCR process.",
     fits: ["hoods", "floors", "CIP", "water treatment"],
-    proof: "Controlled documentation and brewery trial notes"
+    proof: "Controlled docs and brewery CIP directions"
   },
   crhd: {
     job: "Heavy grease and industrial soil",
@@ -640,7 +623,7 @@ export const PRODUCT_CATALOG_COPY = {
     job: "Everyday facility washing",
     summary: "A versatile cleaner for occupied buildings, concrete, drains, pressure washing, and routine maintenance work that touches the public.",
     fits: ["campuses", "concrete", "drains", "pressure washing"],
-    proof: "Exterior wash photos and application notes"
+    proof: "Technical Data Sheet and Product Label"
   },
   watersafe60: {
     job: "Scale and corrosion control",
@@ -664,13 +647,13 @@ export const PRODUCT_CATALOG_COPY = {
     job: "Moss, algae, mold, and mildew",
     summary: "Spray and walk away on roofs, pavers, siding, stucco, concrete, ponds, and exterior walls; let the dwell time do the slow work.",
     fits: ["roofs", "pavers", "siding", "stucco"],
-    proof: "Before-and-after exterior photos"
+    proof: "Field-proven mildew clearing and Technical Data Sheet"
   },
   alumibrite: {
     job: "Aluminum brightening",
     summary: "Restore wheels, trim, RV, fleet, and marine aluminum without bringing HF/HCl brighteners into the bay.",
     fits: ["wheels", "trim", "RV", "marine"],
-    proof: "Brightening index and field photo"
+    proof: "Brightening Index 90.1 and commercial-airboat field use"
   },
   torque: {
     job: "Vehicle, fleet, RV, and marine wash",

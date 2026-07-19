@@ -513,7 +513,7 @@ function productPage(id, product, reviewsSnapshot) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260712a">
-<link rel="stylesheet" href="../css/navigation.css?v=20260712b">
+<link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css">
 <!-- seo:auto -->
 <link rel="canonical" href="${BASE}/products/${id}">
@@ -568,13 +568,11 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   <section class="section product-static-section">
     <div class="wrap product-static-grid">
       <article class="product-static-panel">
-        <span class="eyebrow">Replacement target</span>
         <h2>${text(product.replaces || "Industrial chemistry replacement")}</h2>
         <p>${text(procurement)}</p>
         <ul class="product-fit-list">${uses}</ul>
       </article>
       <article class="product-static-panel">
-        <span class="eyebrow">The case for it</span>
         <h2>Why it survives review.</h2>
         <ul class="spec-list">${specs}</ul>
         ${docs ? `<h3>Documents</h3><ul class="product-fit-list">${docs}</ul>` : ""}
@@ -582,7 +580,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     </div>
   </section>
 </main>
-<script type="module" src="../js/main.js?v=20260711y"></script>
+<script type="module" src="../js/main.js?v=20260719c"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

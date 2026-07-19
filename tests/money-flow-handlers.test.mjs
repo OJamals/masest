@@ -3,6 +3,8 @@ import test from 'node:test';
 import { createCheckoutHandler } from '../functions/api/checkout.js';
 import { createStripeWebhookHandler } from '../functions/api/stripe-webhook.js';
 
+const encoder = new TextEncoder();
+
 const variant = {
   vsku: 'VK-1',
   product_sku: 'VK',
@@ -22,6 +24,14 @@ function jsonRequest(url, body, headers = {}) {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(body),
+  });
+}
+
+function rawRequest(body, headers = {}) {
+  return new Request('https://masest.test/api/checkout', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body,
   });
 }
 
@@ -54,20 +64,65 @@ function checkoutDb(calls) {
           },
         };
       }
-      if (table === 'order_items') {
-        return {
-          async insert(rows) { calls.push(['order_items.insert', rows]); return { error: null }; },
-        };
-      }
       throw new Error(`unexpected checkout table: ${table}`);
     },
     async rpc(name, args) {
       calls.push([`rpc.${name}`, args]);
-      if (name === 'place_net_order') return { data: { order_id: 'order-1' }, error: null };
-      if (name === 'decrement_variant_stock') return { data: true, error: null };
+      if (name === 'place_net_order_v2') {
+        if (args.p_probe) {
+          return { data: { duplicate: false, probe: true, rejected: false }, error: null };
+        }
+        return { data: { order_id: 'order-1', duplicate: false, rejected: false }, error: null };
+      }
       throw new Error(`unexpected checkout RPC: ${name}`);
     },
   };
+}
+
+function checkoutDbForRequestedSkus(calls) {
+  return {
+    from(table) {
+      assert.equal(table, 'product_variants');
+      return {
+        select() { return this; },
+        async in(column, skus) {
+          assert.equal(column, 'vsku');
+          calls.push('variants.read');
+          return {
+            data: skus.map((sku) => ({ ...variant, vsku: sku, stock: 2000 })),
+            error: null,
+          };
+        },
+      };
+    },
+  };
+}
+
+function boundaryCheckoutHandler(calls = []) {
+  return createCheckoutHandler({
+    adminClient: () => checkoutDbForRequestedSkus(calls),
+    tierForRequest: async () => ({ tier: 'retail' }),
+    userFromRequest: async () => ({ user: null }),
+    createStripe: () => ({
+      checkout: {
+        sessions: {
+          async create() {
+            calls.push('stripe.session.create');
+            return { url: 'https://checkout.stripe.test/session' };
+          },
+        },
+      },
+    }),
+  });
+}
+
+function checkoutJsonWithByteLength(byteLength) {
+  const body = { cart: [{ sku: 'VK-1', qty: 1 }], padding: '' };
+  const empty = JSON.stringify(body);
+  body.padding = 'x'.repeat(byteLength - encoder.encode(empty).byteLength);
+  const source = JSON.stringify(body);
+  assert.equal(encoder.encode(source).byteLength, byteLength);
+  return source;
 }
 
 test('paid checkout executes Request/env handler and creates Stripe session', async () => {
@@ -100,9 +155,127 @@ test('paid checkout executes Request/env handler and creates Stripe session', as
   assert.deepEqual(calls, ['variants.read', 'stripe.session.create']);
 });
 
-test('NET checkout persists header then items then decrements stock', async () => {
+test('NET checkout delegates the complete ledger mutation to place_net_order_v2', async () => {
+  const calls = [];
+  const emails = [];
+  const db = checkoutDb(calls);
+  const handler = createCheckoutHandler({
+    adminClient: () => db,
+    tierForRequest: async () => ({ tier: 'retail' }),
+    userFromRequest: async () => ({ user: { id: 'user-1', email: 'buyer@example.com' } }),
+    sendNetOrderConfirmation: async (payload) => { emails.push(payload); },
+  });
+
+  const result = await responseJson(await handler({
+    request: jsonRequest('https://masest.test/api/checkout', {
+      mode: 'net',
+      request_key: 'request-1',
+      cart: [{ sku: 'VK-1', qty: 2 }],
+    }),
+    env: {},
+  }));
+
+  assert.equal(result.status, 201);
+  assert.equal(result.body.order_id, 'order-1');
+  assert.equal(result.body.duplicate, false);
+  const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
+  assert.deepEqual(labels, ['rpc.place_net_order_v2', 'variants.read', 'rpc.place_net_order_v2']);
+  const rpcCalls = calls.filter((call) => Array.isArray(call) && call[0] === 'rpc.place_net_order_v2');
+  assert.equal(rpcCalls[0][1].p_probe, true);
+  const rpcArgs = rpcCalls[1][1];
+  assert.equal(rpcArgs.p_probe, false);
+  assert.equal(rpcArgs.p_request_key, 'request-1');
+  assert.deepEqual(rpcArgs.p_items, [{
+    sku: 'VK-1',
+    product_sku: 'VK',
+    name: 'VertKleen - 1 gal',
+    qty: 2,
+    unit_price: 25,
+    line_total: 50,
+  }]);
+  assert.equal(emails.length, 1);
+});
+
+test('response-loss retry returns the original NET order before depleted-stock validation', async () => {
+  const calls = [];
+  const emails = [];
+  const db = checkoutDb(calls);
+  const originalFrom = db.from;
+  db.from = (table) => {
+    if (table === 'product_variants') throw new Error('duplicate retry must not re-read catalog stock');
+    return originalFrom(table);
+  };
+  db.rpc = async (name, args) => {
+    calls.push([`rpc.${name}`, args]);
+    assert.equal(args.p_probe, true);
+    return { data: { order_id: 'order-1', duplicate: true, rejected: false }, error: null };
+  };
+  const handler = createCheckoutHandler({
+    adminClient: () => db,
+    tierForRequest: async () => { throw new Error('duplicate retry must not reprice'); },
+    userFromRequest: async () => ({ user: { id: 'user-1', email: 'buyer@example.com' } }),
+    sendNetOrderConfirmation: async (payload) => { emails.push(payload); },
+  });
+
+  const result = await responseJson(await handler({
+    request: jsonRequest('https://masest.test/api/checkout', {
+      mode: 'net',
+      request_key: 'request-1',
+      cart: [{ sku: 'VK-1', qty: 2 }],
+    }),
+    env: {},
+  }));
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.order_id, 'order-1');
+  assert.equal(result.body.duplicate, true);
+  assert.equal(emails.length, 0);
+  assert.deepEqual(calls.map((call) => call[0]), ['rpc.place_net_order_v2']);
+});
+
+test('duplicate NET response returns the original order without another email', async () => {
+  const calls = [];
+  const emails = [];
+  const db = checkoutDb(calls);
+  db.rpc = async (name, args) => {
+    calls.push([`rpc.${name}`, args]);
+    return { data: { order_id: 'order-1', duplicate: true, rejected: false }, error: null };
+  };
+  const handler = createCheckoutHandler({
+    adminClient: () => db,
+    tierForRequest: async () => ({ tier: 'retail' }),
+    userFromRequest: async () => ({ user: { id: 'user-1', email: 'buyer@example.com' } }),
+    sendNetOrderConfirmation: async (payload) => { emails.push(payload); },
+  });
+
+  const result = await responseJson(await handler({
+    request: jsonRequest('https://masest.test/api/checkout', {
+      mode: 'net',
+      request_key: 'request-1',
+      cart: [{ sku: 'VK-1', qty: 2 }],
+    }),
+    env: {},
+  }));
+
+  assert.deepEqual(result, {
+    status: 200,
+    body: {
+      net: true,
+      order_id: 'order-1',
+      duplicate: true,
+      message: 'Order placed on account. A QuickBooks invoice will follow (NET terms).',
+    },
+  });
+  assert.equal(emails.length, 0);
+});
+
+test('missing place_net_order_v2 fails closed with no v1 call', async () => {
   const calls = [];
   const db = checkoutDb(calls);
+  db.rpc = async (name, args) => {
+    calls.push([`rpc.${name}`, args]);
+    return { data: null, error: { code: 'PGRST202' } };
+  };
   const handler = createCheckoutHandler({
     adminClient: () => db,
     tierForRequest: async () => ({ tier: 'retail' }),
@@ -110,15 +283,18 @@ test('NET checkout persists header then items then decrements stock', async () =
   });
 
   const result = await responseJson(await handler({
-    request: jsonRequest('https://masest.test/api/checkout', { mode: 'net', cart: [{ sku: 'VK-1', qty: 2 }] }),
+    request: jsonRequest('https://masest.test/api/checkout', {
+      mode: 'net',
+      request_key: 'request-1',
+      cart: [{ sku: 'VK-1', qty: 2 }],
+    }),
     env: {},
   }));
 
-  assert.equal(result.status, 201);
-  assert.equal(result.body.order_id, 'order-1');
-  const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
-  assert.ok(labels.indexOf('rpc.place_net_order') < labels.indexOf('order_items.insert'));
-  assert.ok(labels.indexOf('order_items.insert') < labels.indexOf('rpc.decrement_variant_stock'));
+  assert.deepEqual(result, { status: 503, body: { error: 'net_order_unavailable' } });
+  assert.deepEqual(calls.map((call) => Array.isArray(call) ? call[0] : call), [
+    'rpc.place_net_order_v2',
+  ]);
 });
 
 test('checkout rejects empty cart before DB or provider calls', async () => {
@@ -131,6 +307,198 @@ test('checkout rejects empty cart before DB or provider calls', async () => {
     env: {},
   }));
   assert.deepEqual(result, { status: 400, body: { error: 'cart_empty' } });
+});
+
+test('checkout accepts a JSON body exactly at 64 KiB', async () => {
+  const result = await responseJson(await boundaryCheckoutHandler()({
+    request: rawRequest(checkoutJsonWithByteLength(64 * 1024), { 'content-length': String(64 * 1024) }),
+    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+  }));
+
+  assert.deepEqual(result, { status: 200, body: { url: 'https://checkout.stripe.test/session' } });
+});
+
+test('checkout rejects one byte over 64 KiB before DB access', async () => {
+  const handler = createCheckoutHandler({
+    adminClient: () => { throw new Error('DB must not run'); },
+  });
+  const result = await responseJson(await handler({
+    request: rawRequest(
+      checkoutJsonWithByteLength((64 * 1024) + 1),
+      { 'content-length': String((64 * 1024) + 1) },
+    ),
+    env: {},
+  }));
+
+  assert.deepEqual(result, { status: 413, body: { error: 'request_too_large' } });
+});
+
+test('checkout streamed cap rejects false and missing content-length values', async () => {
+  for (const contentLength of ['1', null]) {
+    const headers = contentLength === null ? {} : { 'content-length': contentLength };
+    const handler = createCheckoutHandler({
+      adminClient: () => { throw new Error('DB must not run'); },
+    });
+    const result = await responseJson(await handler({
+      request: rawRequest(checkoutJsonWithByteLength((64 * 1024) + 1), headers),
+      env: {},
+    }));
+
+    assert.deepEqual(result, { status: 413, body: { error: 'request_too_large' } });
+  }
+});
+
+test('checkout returns bad_request for invalid JSON and malformed body shape', async () => {
+  for (const source of ['{"cart":', '[]']) {
+    const handler = createCheckoutHandler({
+      adminClient: () => { throw new Error('DB must not run'); },
+    });
+    const result = await responseJson(await handler({ request: rawRequest(source), env: {} }));
+    assert.deepEqual(result, { status: 400, body: { error: 'bad_request' } });
+  }
+});
+
+test('checkout preserves the legacy items cart and missing RATE_KV fail-open behavior', async () => {
+  const result = await responseJson(await boundaryCheckoutHandler()({
+    request: jsonRequest('https://masest.test/api/checkout', { items: [{ sku: 'VK-1', qty: 1 }] }),
+    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+  }));
+
+  assert.deepEqual(result, { status: 200, body: { url: 'https://checkout.stripe.test/session' } });
+});
+
+test('checkout accepts 50 distinct lines and rejects 51 before DB access', async () => {
+  const fifty = Array.from({ length: 50 }, (_, index) => ({ sku: `VK-${index}`, qty: 1 }));
+  const accepted = await responseJson(await boundaryCheckoutHandler()({
+    request: jsonRequest('https://masest.test/api/checkout', { cart: fifty }),
+    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+  }));
+  assert.equal(accepted.status, 200);
+
+  const rejected = await responseJson(await createCheckoutHandler({
+    adminClient: () => { throw new Error('DB must not run'); },
+  })({
+    request: jsonRequest('https://masest.test/api/checkout', {
+      cart: [...fifty, { sku: 'VK-50', qty: 1 }],
+    }),
+    env: {},
+  }));
+  assert.deepEqual(rejected, { status: 400, body: { error: 'bad_request' } });
+});
+
+test('checkout validates SKU type, trimmed length, and non-empty value', async () => {
+  const acceptedSku = ` ${'S'.repeat(80)} `;
+  const accepted = await responseJson(await boundaryCheckoutHandler()({
+    request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku: acceptedSku, qty: 1 }] }),
+    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+  }));
+  assert.equal(accepted.status, 200);
+
+  for (const sku of ['', '   ', 'S'.repeat(81), 123]) {
+    const result = await responseJson(await createCheckoutHandler({
+      adminClient: () => { throw new Error('DB must not run'); },
+    })({
+      request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku, qty: 1 }] }),
+      env: {},
+    }));
+    assert.deepEqual(result, { status: 400, body: { error: 'bad_request' } });
+  }
+});
+
+test('checkout accepts integer quantities 1 through 999 only', async () => {
+  for (const qty of [1, 999]) {
+    const result = await responseJson(await boundaryCheckoutHandler()({
+      request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku: 'VK-1', qty }] }),
+      env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+    }));
+    assert.equal(result.status, 200);
+  }
+
+  for (const qty of [0, 1000, 1.5, '1', null]) {
+    const result = await responseJson(await createCheckoutHandler({
+      adminClient: () => { throw new Error('DB must not run'); },
+    })({
+      request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku: 'VK-1', qty }] }),
+      env: {},
+    }));
+    assert.deepEqual(result, { status: 400, body: { error: 'bad_request' } });
+  }
+});
+
+test('checkout rejects duplicate-SKU quantities whose normalized total exceeds 999', async () => {
+  const handler = createCheckoutHandler({
+    adminClient: () => { throw new Error('DB must not run'); },
+  });
+  const result = await responseJson(await handler({
+    request: jsonRequest('https://masest.test/api/checkout', {
+      cart: [{ sku: 'VK-1', qty: 500 }, { sku: 'VK-1', qty: 500 }],
+    }),
+    env: {},
+  }));
+
+  assert.deepEqual(result, { status: 400, body: { error: 'bad_request' } });
+});
+
+test('checkout allows 20 attempts per IP per 60 seconds and denies the 21st', async () => {
+  const store = new Map();
+  const env = {
+    RATE_KV: {
+      async get(key) { return store.get(key); },
+      async put(key, value) { store.set(key, value); },
+    },
+  };
+  const handler = createCheckoutHandler();
+
+  for (let attempt = 1; attempt <= 20; attempt += 1) {
+    const result = await responseJson(await handler({
+      request: jsonRequest(
+        'https://masest.test/api/checkout',
+        { cart: [] },
+        { 'cf-connecting-ip': '203.0.113.10' },
+      ),
+      env,
+    }));
+    assert.deepEqual(result, { status: 400, body: { error: 'cart_empty' } });
+  }
+
+  const denied = await responseJson(await handler({
+    request: jsonRequest(
+      'https://masest.test/api/checkout',
+      { cart: [] },
+      { 'cf-connecting-ip': '203.0.113.10' },
+    ),
+    env,
+  }));
+  assert.deepEqual(denied, { status: 429, body: { error: 'rate_limited' } });
+});
+
+test('checkout rate denial precedes body parsing, DB access, and Stripe calls', async () => {
+  const calls = [];
+  const handler = createCheckoutHandler({
+    rateLimit: async () => {
+      calls.push('rate');
+      return { ok: false, retryAfter: 60 };
+    },
+    readBoundedJson: async () => {
+      calls.push('body');
+      return { cart: [{ sku: 'VK-1', qty: 1 }] };
+    },
+    adminClient: () => {
+      calls.push('db');
+      throw new Error('DB must not run');
+    },
+    createStripe: () => {
+      calls.push('stripe');
+      throw new Error('Stripe must not run');
+    },
+  });
+  const request = rawRequest('{"cart":[{"sku":"VK-1","qty":1}]}');
+
+  const result = await responseJson(await handler({ request, env: {} }));
+
+  assert.deepEqual(result, { status: 429, body: { error: 'rate_limited' } });
+  assert.deepEqual(calls, ['rate']);
+  assert.equal(request.body.locked, false);
 });
 
 function paidSession() {
@@ -148,12 +516,11 @@ function paidSession() {
   };
 }
 
-function webhookDb(calls, persistResults) {
+function webhookDb(calls, persistResults, effectResults = []) {
   return {
     async rpc(name, args) {
       calls.push([`rpc.${name}`, args]);
       if (name === 'persist_stripe_order') return persistResults.shift();
-      if (name === 'decrement_variant_stock') return { data: true, error: null };
       throw new Error(`unexpected webhook RPC: ${name}`);
     },
     from(table) {
@@ -166,9 +533,22 @@ function webhookDb(calls, persistResults) {
           },
         };
       }
-      if (table === 'notifications') {
+      if (table === 'orders') {
         return {
-          async insert(row) { calls.push(['notifications.insert', row]); return { data: null, error: null }; },
+          select() { return this; },
+          eq() { return this; },
+          async maybeSingle() {
+            calls.push('orders.effect-recovery');
+            return { data: { id: 'order-1', company_id: null }, error: null };
+          },
+        };
+      }
+      if (table === 'stripe_webhook_effects') {
+        return {
+          async upsert(rows, options) {
+            calls.push(['effects.upsert', rows, options]);
+            return effectResults.shift() || { data: null, error: null };
+          },
         };
       }
       throw new Error(`unexpected webhook table: ${table}`);
@@ -191,46 +571,70 @@ test('webhook rejects invalid signature before DB access', async () => {
   assert.deepEqual(result, { status: 400, body: { error: 'invalid_signature' } });
 });
 
-test('duplicate webhook delivery returns 200 without stock side effects', async () => {
+test('duplicate webhook delivery recovers and enqueues the same effects before 200', async () => {
   const calls = [];
   const handler = createStripeWebhookHandler({
-    constructEvent: async () => ({ type: 'checkout.session.completed', data: { object: paidSession() } }),
+    constructEvent: async () => ({ id: 'evt_checkout', type: 'checkout.session.completed', data: { object: paidSession() } }),
     adminClient: () => webhookDb(calls, [{ data: null, error: { code: '23505' } }]),
   });
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.deepEqual(result, { status: 200, body: { received: true, duplicate: true } });
-  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'rpc.decrement_variant_stock'), false);
+  assert.equal(calls.includes('orders.effect-recovery'), true);
+  const enqueue = calls.find((call) => Array.isArray(call) && call[0] === 'effects.upsert');
+  assert.ok(enqueue);
+  assert.deepEqual(enqueue[2], {
+    onConflict: 'stripe_event_id,effect_key',
+    ignoreDuplicates: true,
+  });
 });
 
-test('webhook persistence failure retries; stock runs only after durable order', async () => {
+test('webhook persistence failure retries; effects enqueue only after durable order', async () => {
   const calls = [];
   const persistResults = [
     { data: null, error: { code: '08006', message: 'connection failure' } },
     { data: { id: 'order-1' }, error: null },
   ];
   const handler = createStripeWebhookHandler({
-    constructEvent: async () => ({ type: 'checkout.session.completed', data: { object: paidSession() } }),
+    constructEvent: async () => ({ id: 'evt_checkout', type: 'checkout.session.completed', data: { object: paidSession() } }),
     adminClient: () => webhookDb(calls, persistResults),
   });
 
   const first = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.deepEqual(first, { status: 503, body: { error: 'order_persist_failed' } });
-  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'rpc.decrement_variant_stock'), false);
+  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.upsert'), false);
 
   const second = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.equal(second.status, 200);
   const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
   const successfulPersist = labels.lastIndexOf('rpc.persist_stripe_order');
-  const stock = labels.indexOf('rpc.decrement_variant_stock');
-  assert.ok(successfulPersist < stock);
-  assert.equal(labels.filter((label) => label === 'rpc.decrement_variant_stock').length, 1);
+  const enqueue = labels.indexOf('effects.upsert');
+  assert.ok(successfulPersist < enqueue);
+  assert.equal(labels.filter((label) => label === 'effects.upsert').length, 1);
+});
+
+test('webhook enqueue failure prevents acknowledgement after order persistence', async () => {
+  const calls = [];
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_checkout',
+      type: 'checkout.session.completed',
+      data: { object: paidSession() },
+    }),
+    adminClient: () => webhookDb(
+      calls,
+      [{ data: { id: 'order-1' }, error: null }],
+      [{ data: null, error: { code: 'effects_unavailable' } }],
+    ),
+  });
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.deepEqual(result, { status: 503, body: { error: 'stripe_effect_enqueue_failed' } });
 });
 
 function achDb(calls, claimResults) {
+  let orderReads = 0;
   return {
     async rpc(name, args) {
       calls.push([`rpc.${name}`, args]);
-      if (name === 'decrement_variant_stock') return { data: true, error: null };
       throw new Error(`unexpected ACH RPC: ${name}`);
     },
     from(table) {
@@ -242,18 +646,18 @@ function achDb(calls, claimResults) {
           eq() { return this; },
           async maybeSingle() {
             if (operation === 'select') {
-              return { data: { id: 'order-1', status: 'pending_payment', company_id: null }, error: null };
+              const status = orderReads++ === 0 ? 'pending_payment' : 'paid';
+              return { data: { id: 'order-1', status, company_id: null }, error: null };
             }
             return claimResults.shift();
           },
         };
       }
-      if (table === 'product_variants') {
+      if (table === 'stripe_webhook_effects') {
         return {
-          select() { return this; },
-          async in() {
-            calls.push('variants.enrich');
-            return { data: [{ vsku: 'VK-1', label: '1 gal', products: { name: 'VertKleen' } }], error: null };
+          async upsert(rows, options) {
+            calls.push(['effects.upsert', rows, options]);
+            return { data: null, error: null };
           },
         };
       }
@@ -262,14 +666,18 @@ function achDb(calls, claimResults) {
   };
 }
 
-test('concurrent ACH success deliveries have one claim and one stock decrement', async () => {
+test('concurrent ACH success deliveries have one claim and duplicate-safe effect enqueue', async () => {
   const calls = [];
   const db = achDb(calls, [
     { data: { id: 'order-1', status: 'paid', company_id: null }, error: null },
     { data: null, error: null },
   ]);
   const handler = createStripeWebhookHandler({
-    constructEvent: async () => ({ type: 'checkout.session.async_payment_succeeded', data: { object: paidSession() } }),
+    constructEvent: async () => ({
+      id: 'evt_ach_success',
+      type: 'checkout.session.async_payment_succeeded',
+      data: { object: paidSession() },
+    }),
     adminClient: () => db,
   });
 
@@ -279,20 +687,26 @@ test('concurrent ACH success deliveries have one claim and one stock decrement',
   assert.equal(first.status, 200);
   assert.deepEqual(second, { status: 200, body: { received: true, duplicate: true } });
   const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
-  assert.equal(labels.filter((label) => label === 'orders.claim').length, 2);
-  assert.equal(labels.filter((label) => label === 'rpc.decrement_variant_stock').length, 1);
+  assert.equal(labels.filter((label) => label === 'orders.claim').length, 1);
+  assert.equal(labels.filter((label) => label === 'effects.upsert').length, 2);
+  const enqueues = calls.filter((call) => Array.isArray(call) && call[0] === 'effects.upsert');
+  assert.deepEqual(enqueues[0][1], enqueues[1][1]);
 });
 
 test('ACH claim failure returns retryable 503 before stock decrement', async () => {
   const calls = [];
   const handler = createStripeWebhookHandler({
-    constructEvent: async () => ({ type: 'checkout.session.async_payment_succeeded', data: { object: paidSession() } }),
+    constructEvent: async () => ({
+      id: 'evt_ach_success',
+      type: 'checkout.session.async_payment_succeeded',
+      data: { object: paidSession() },
+    }),
     adminClient: () => achDb(calls, [{ data: null, error: { message: 'DB unavailable' } }]),
   });
 
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.deepEqual(result, { status: 503, body: { error: 'order_update_failed' } });
-  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'rpc.decrement_variant_stock'), false);
+  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.upsert'), false);
 });
 
 test('subscription status persistence failure returns retryable 503', async () => {

@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260712b">
-<link rel="stylesheet" href="css/navigation.css?v=20260712b">
+<link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/contact">
@@ -55,6 +55,8 @@
     <div class="wrap contact-layout">
       <form onsubmit="return false" class="form-card" id="quoteForm" data-endpoint="/api/quote">
         <input type="hidden" name="type" id="fType" value="quote">
+        <input type="hidden" name="source" id="fSource" disabled>
+        <p class="form-note" id="quoteContextSummary" role="status" hidden><strong>Context carried from customer chat.</strong> Product, cart volume, and notes are prefilled below. Review or edit them before sending.</p>
         <div aria-hidden="true" class="sr-only">
           <label for="fGotcha">Leave this field empty</label>
           <input id="fGotcha" name="_gotcha" type="text" tabindex="-1" autocomplete="off">
@@ -289,7 +291,7 @@
 <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="contact" data-cms-region="body"></div>
 </main>
 
-<script type="module" src="js/main.js?v=20260711y"></script>
+<script type="module" src="js/main.js?v=20260719c"></script>
 <script src="js/track.js" defer></script>
 </body>
 </html>

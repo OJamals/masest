@@ -4,8 +4,18 @@
 create table if not exists public.blog_newsletter_sends (
   slug text primary key,
   sent_at timestamptz not null default now(),
-  recipient_count int not null default 0
+  recipient_count int not null default 0,
+  delivery_source_id text,
+  delivery_total int not null default 0,
+  suppressed_count int not null default 0,
+  dead_count int not null default 0
 );
+
+alter table public.blog_newsletter_sends
+  add column if not exists delivery_source_id text,
+  add column if not exists delivery_total int not null default 0,
+  add column if not exists suppressed_count int not null default 0,
+  add column if not exists dead_count int not null default 0;
 
 grant select, insert, update on public.blog_newsletter_sends to service_role;
 

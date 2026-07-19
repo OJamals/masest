@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, REPLACEMENT_MAP } from "./catalog-data.js?v=20260710f";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260719c";
 import { smoothPref } from "./engagement.js";
 
 const IMAGE_DIMS = {
@@ -40,7 +40,7 @@ export function productCard(id, heroCard = false, eager = false) {
   </div>`;
 }
 
-/* ---------- Products shop: e-commerce grid + replacement checker ---------- */
+/* ---------- Products shop: e-commerce grid ---------- */
 // Whole-card link, e-commerce style. Used by the unified products grid.
 const commerceState = {
   loaded: false,
@@ -372,6 +372,34 @@ export function refreshCommerceActions(root = document) {
   });
 }
 
+export function catalogDecisionHTML(id, copy) {
+  const fits = Array.isArray(copy?.fits)
+    ? copy.fits.filter((fit) => typeof fit === "string" && fit.trim()).slice(0, 3)
+    : [];
+  const proof = typeof copy?.proof === "string" ? copy.proof.trim() : "";
+  if (!fits.length && !proof) return "";
+
+  const fitRow = fits.length
+    ? `<div class="shop-card-decision-row">
+        <span class="shop-card-decision-label" aria-hidden="true">Fits</span>
+        <ul class="shop-card-fit-list" aria-label="Best fit">
+          ${fits.map((fit) => `<li class="shop-card-fit">${fit}</li>`).join("")}
+        </ul>
+      </div>`
+    : "";
+  const proofRow = proof
+    ? `<p class="shop-card-decision-row shop-card-proof">
+        <span class="shop-card-decision-label" aria-hidden="true">Proof</span>
+        <span class="shop-card-proof-copy">
+          <span class="shop-card-proof-cue">${proof}</span>
+          <a class="shop-card-proof-link" href="products/${id}" aria-label="Review proof for ${PRODUCTS[id]?.name || id}">Review proof</a>
+        </span>
+      </p>`
+    : "";
+
+  return `<div class="shop-card-decision">${fitRow}${proofRow}</div>`;
+}
+
 export function catalogCard(id, eager = false) {
   const p = PRODUCTS[id];
   if (!p) return "";
@@ -389,6 +417,7 @@ export function catalogCard(id, eager = false) {
   const buybar = quoteFirst
     ? quoteActionHTML(id)
     : `${bulkPriceHTML(id)}<span class="shop-card-commerce" data-commerce-action="${id}"></span>`;
+  const decision = CATALOG_ORDER.includes(id) ? catalogDecisionHTML(id, copy) : "";
   return `
     <article class="shop-card" data-id="${id}">
       <div class="shop-card-core">
@@ -403,6 +432,7 @@ export function catalogCard(id, eager = false) {
         </a>
         <div class="shop-card-buybar">
           ${buybar}
+          ${decision}
         </div>
       </div>
     </article>`;
@@ -451,28 +481,14 @@ export function initCartButtons() {
   });
 }
 
-function swapRow(row, i) {
-  const names = row.ids.map((id) => PRODUCTS[id]?.name).filter(Boolean).join(", ");
-  return `
-    <button type="button" class="swap-row" data-row="${i}" aria-label="Show VertKleen replacement for ${row.current}">
-      <span class="swap-current"><em>Replace</em>${row.current}</span>
-      <span class="swap-job"><em>For</em>${row.job}</span>
-      <span class="swap-arrow" aria-hidden="true"><i class="ph ph-arrow-right"></i></span>
-      <span class="swap-vk"><em>Use</em>${names}</span>
-    </button>`;
-}
-
 export function initShop() {
   const grid = document.getElementById("shopGrid");
   if (!grid) return;
-  const matrix = document.getElementById("swapMatrix");
-  const result = document.getElementById("swapResult");
   const chipsBox = document.getElementById("shopChips");
   const sortSel = document.getElementById("shopSort");
   const countEl = document.getElementById("shopCount");
   const emptyEl = document.getElementById("shopEmpty");
   const searchEl = document.getElementById("shopSearch");
-
   grid.addEventListener("click", e => {
     const button = e.target.closest("[data-cart-add]");
     if (!button) return;
@@ -482,18 +498,12 @@ export function initShop() {
   });
 
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
-  const state = { group: "all", match: null, sort: "featured", search: "" };
+  const state = { group: "all", sort: "featured", search: "" };
 
   const chips = [{ key: "all", label: "All products" }, ...CATALOG_GROUPS.map((g) => ({ key: g.key, label: g.label }))];
   chipsBox.innerHTML = chips
     .map((c) => `<button type="button" class="shop-chip${c.key === "all" ? " active" : ""}" data-group="${c.key}" aria-pressed="${c.key === "all"}">${c.label}</button>`)
     .join("");
-
-  if (matrix) {
-    matrix.innerHTML =
-      `<div class="swap-head" aria-hidden="true"><span>Replace this</span><span>For this job</span><span></span><span>Use this VertKleen</span></div>` +
-      REPLACEMENT_MAP.map(swapRow).join("");
-  }
 
   const syncChips = () => {
     chipsBox.querySelectorAll(".shop-chip").forEach((b) => {
@@ -508,7 +518,6 @@ export function initShop() {
       ? [...CATALOG_ORDER].sort((a, b) => PRODUCTS[a].name.localeCompare(PRODUCTS[b].name))
       : [...CATALOG_ORDER];
     if (state.group !== "all") ids = ids.filter((id) => groupOf(id) === state.group);
-    if (state.match) ids = ids.filter((id) => state.match.includes(id));
     if (state.search) {
       const q = state.search;
       ids = ids.filter((id) => {
@@ -529,13 +538,10 @@ export function initShop() {
 
   const reset = () => {
     state.group = "all";
-    state.match = null;
     state.search = "";
     if (searchEl) searchEl.value = "";
     state.sort = "featured";
     if (sortSel) sortSel.value = "featured";
-    if (result) result.hidden = true;
-    matrix?.querySelectorAll(".swap-row.active").forEach((r) => r.classList.remove("active"));
     syncChips();
     apply();
   };
@@ -570,31 +576,6 @@ export function initShop() {
     });
   }
 
-  if (matrix && result) {
-    matrix.addEventListener("click", (e) => {
-      const row = e.target.closest(".swap-row");
-      if (!row) return;
-      const data = REPLACEMENT_MAP[+row.dataset.row];
-      state.match = data.ids;
-      state.group = "all";
-      matrix.querySelectorAll(".swap-row").forEach((r) => r.classList.toggle("active", r === row));
-      syncChips();
-      const links = data.ids.map((id) => `<a href="products/${id}">${PRODUCTS[id].name}</a>`).join(" · ");
-      result.innerHTML =
-        `<span class="swap-result-q"><em>Replace</em>${data.current}</span>` +
-        `<i class="ph ph-arrow-right" aria-hidden="true"></i>` +
-        `<span class="swap-result-a"><em>Switch to</em>${links}</span>` +
-        `<button type="button" class="swap-clear" id="swapClear">Clear</button>`;
-      result.hidden = false;
-      apply();
-      document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
-    });
-  }
-
-  result?.addEventListener("click", (e) => {
-    if (e.target.closest("#swapClear")) reset();
-  });
-
   emptyEl?.addEventListener("click", (e) => {
     if (e.target.tagName === "BUTTON") reset();
   });
@@ -607,7 +588,9 @@ export function initShop() {
   }
 
   apply();
-  if (!isLocalStaticCommerceSuppressed()) loadCommerceCatalog().then(apply);
+  if (!isLocalStaticCommerceSuppressed()) {
+    loadCommerceCatalog().then(apply);
+  }
 
   if (catHash) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
 }

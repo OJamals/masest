@@ -1,9 +1,65 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
+import { onRequestPost as updateBuyerCompany } from "../functions/api/account/company.js";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
+const companyApiEnv = {
+  SUPABASE_URL: "https://supabase.test",
+  SUPABASE_ANON_KEY: "anon-key",
+  SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+};
+
+function supabaseJson(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+async function callBuyerCompany(body, { companyId = null, companyStatus = "pending" } = {}) {
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    const method = String(init.method || input.method || "GET").toUpperCase();
+    const requestBody = init.body ? JSON.parse(init.body) : null;
+    calls.push({ method, path: url.pathname, body: requestBody });
+
+    if (url.pathname === "/auth/v1/user") {
+      return supabaseJson({ id: "buyer-1", email: "buyer@example.com" });
+    }
+    if (url.pathname === "/rest/v1/profiles") {
+      return supabaseJson([{ id: "buyer-1", company_id: companyId, role: "admin" }]);
+    }
+    if (url.pathname === "/rest/v1/rpc/create_company_for_user") {
+      return supabaseJson({ id: "company-new", ...requestBody.p_company });
+    }
+    if (url.pathname === "/rest/v1/companies" && method === "GET") {
+      return supabaseJson([{ status: companyStatus }]);
+    }
+    if (url.pathname === "/rest/v1/companies" && method === "PATCH") {
+      return supabaseJson({ id: companyId, tax_exempt: false, ...requestBody });
+    }
+    return supabaseJson({ message: `unexpected ${method} ${url.pathname}` }, 500);
+  };
+
+  try {
+    const request = new Request("https://masest.test/api/account/company", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer buyer-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    const response = await updateBuyerCompany({ request, env: companyApiEnv });
+    return { response, payload: await response.json(), calls };
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
 
 test("account/me returns buyer setup progress for dashboards", () => {
   const src = read("functions/api/account/me.js");
@@ -65,7 +121,7 @@ test("dashboard business panel shows the same account setup checklist", () => {
   assert.match(html, /data-tab="business"/, "dashboard should expose business as a first-class panel");
 });
 
-test("account company setup endpoint lets buyers update tax setup fields", () => {
+test("account company setup endpoint keeps buyer setup fields separate from staff-owned tax status", () => {
   const endpoint = new URL("functions/api/account/company.js", root);
   assert.equal(existsSync(endpoint), true, "account company setup endpoint should exist");
   const src = readFileSync(endpoint, "utf8");
@@ -76,8 +132,8 @@ test("account company setup endpoint lets buyers update tax setup fields", () =>
   assert.match(src, /company_name_required/, "creating a business should require a company name");
   assert.match(src, /\.rpc\('create_company_for_user'/, "business creation and creator-admin linking should share one transaction");
   assert.match(src, /resale_cert_url/, "endpoint should update resale certificate URL");
-  assert.match(src, /tax_exempt/, "endpoint should update tax-exempt status");
-  assert.match(src, /body\.tax_exempt !== undefined/, "endpoint should only update tax_exempt when submitted");
+  assert.doesNotMatch(src, /Boolean\(body\.tax_exempt\)/, "buyer input must never grant tax exemption");
+  assert.doesNotMatch(src, /patch\.tax_exempt\s*=/, "buyer updates must never mutate stored tax exemption");
   assert.match(src, /invalid_resale_cert_url/, "endpoint should reject invalid resale certificate URLs");
   assert.match(src, /\.eq\('id', profile\.company_id\)/, "company update must be id-scoped");
   // Auth result must be handled safely: via the requireCompany wrapper, or by
@@ -89,6 +145,61 @@ test("account company setup endpoint lets buyers update tax setup fields", () =>
     "endpoint must not assign the userFromRequest wrapper directly to user");
   assert.ok(usesWrapper || destructuresUser,
     "endpoint must resolve auth via requireCompany or destructured userFromRequest");
+});
+
+test("malicious buyer create remains non-exempt and keeps resale-certificate evidence", async () => {
+  const resaleCertUrl = "https://files.example.com/resale-cert.pdf";
+  const { response, calls } = await callBuyerCompany({
+    name: "Buyer Company",
+    tax_exempt: true,
+    resale_cert_url: resaleCertUrl,
+  });
+
+  assert.equal(response.status, 201);
+  const rpc = calls.find((call) => call.path === "/rest/v1/rpc/create_company_for_user");
+  assert.ok(rpc, "company creation RPC should run");
+  assert.equal(rpc.body.p_company.tax_exempt, false);
+  assert.equal(rpc.body.p_company.resale_cert_url, resaleCertUrl);
+});
+
+test("malicious buyer update containing only tax_exempt performs no company write", async () => {
+  const { response, payload, calls } = await callBuyerCompany(
+    { tax_exempt: true },
+    { companyId: "company-1" },
+  );
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.error, "nothing_to_update");
+  assert.equal(calls.some((call) => call.path === "/rest/v1/companies"), false);
+});
+
+test("buyer certificate resubmission updates evidence without mutating tax exemption", async () => {
+  const resaleCertUrl = "https://files.example.com/replacement-cert.pdf";
+  const { response, calls } = await callBuyerCompany(
+    { tax_exempt: true, resale_cert_url: resaleCertUrl },
+    { companyId: "company-1", companyStatus: "rejected" },
+  );
+
+  assert.equal(response.status, 200);
+  const update = calls.find((call) => call.path === "/rest/v1/companies" && call.method === "PATCH");
+  assert.ok(update, "certificate resubmission should update the company");
+  assert.equal(Object.hasOwn(update.body, "tax_exempt"), false);
+  assert.equal(update.body.resale_cert_url, resaleCertUrl);
+  assert.equal(update.body.status, "pending");
+});
+
+test("checkout maps only stored Company tax status to Stripe Customer exemption", () => {
+  const checkout = read("functions/api/checkout.js");
+  assert.match(
+    checkout,
+    /\.from\('companies'\)[\s\S]+?\.select\('id,name,tax_exempt,stripe_customer_id'\)[\s\S]+?company = data \|\| null/,
+    "checkout should read tax_exempt from the authenticated buyer's stored Company",
+  );
+  assert.match(
+    checkout,
+    /stripe\.customers\.update\(customerId,\s*\{\s*tax_exempt:\s*company\.tax_exempt\s*\?\s*'exempt'\s*:\s*'none'\s*\}\)/,
+    "checkout should map stored Company tax status unchanged",
+  );
 });
 
 test("dashboard business panel renders and submits company setup form", () => {

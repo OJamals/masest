@@ -8,7 +8,7 @@ const readRoot = (path) => readFileSync(new URL(`../${path.replace(/^site\//, ""
 test("admin catalog can manage product photos and remove products", () => {
   const html = read("admin.html");
   // Products tab split into its own module in #36.
-  assert.match(read("js/admin.js"), /from\s+["']\.\/admin\/products\.js(?:\?v=\d{8}[a-z])?["']/, "admin should import the products module");
+  assert.match(read("js/admin.js"), /import\(\s*["']\.\/admin\/products\.js\?v=\d{8}[a-z]["']\s*\)/, "admin should lazy-import the products module");
   const admin = read("js/admin/products.js");
 
   assert.match(html, /id="npImageUrl"/, "product form should collect a public image URL");

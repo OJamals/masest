@@ -1,26 +1,10 @@
 /* MASEST staff admin console. */
-import { login, logout, api, getToken } from './auth.js?v=20260711t';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260711t';
-import { connectQbo, disconnectQbo, renderQboStatus, runQboSync } from './admin/qbo.js?v=20260711t';
-import { editKey, captureDirty, restoreDirty } from './admin/edits.js?v=20260711t';
-import { createTrafficRenderer } from './admin/traffic.js?v=20260711t';
-import { createSeoAudit } from './admin/seo.js?v=20260711t';
-import { createThreadsTab } from './admin/threads.js?v=20260711t';
-import { createOffersTab } from './admin/offers.js?v=20260711t';
-import { createProductsTab } from './admin/products.js?v=20260711t';
-import { createPricingTab } from './admin/pricing.js?v=20260711t';
-import { createContentTab } from './admin/content.js?v=20260711t';
-import { createCompaniesTab } from './admin/companies.js?v=20260711t';
-import { createCrmPanel } from './admin/crm.js?v=20260711t';
-import { ORDER_STATUSES, createOrdersTab } from './admin/orders.js?v=20260711t';
-import { createQuotesTab } from './admin/quotes.js?v=20260711t';
-import { createCrmWorkspace } from './admin/crm-workspace.js?v=20260711t';
-import { createReviewsTab } from './admin/reviews.js?v=20260711t';
-import { createNewsletterTab } from './admin/newsletter.js?v=20260711t';
-import { createInventoryCard } from './admin/inventory.js?v=20260711t';
-import { createCouponsCard } from './admin/coupons.js?v=20260711t';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260711t';
-import { renderChrome } from './main/chrome.js?v=20260711t';
+import { login, logout, api, getToken } from './auth.js?v=20260719a';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260719a';
+import { editKey } from './admin/edits.js?v=20260719a';
+import { createFeatureLoader } from './admin/feature-loader.js?v=20260719a';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260719a';
+import { renderChrome } from './main/chrome.js?v=20260719a';
 
 const $ = (id) => document.getElementById(id);
 
@@ -118,10 +102,7 @@ async function boot() {
     $('admGate').hidden = true;
     $('admApp').hidden = false;
     renderStats(stats);
-    void renderQboStatus().finally(() => applyCapabilityUi(document.body, state.staff));
-    refreshReviewsBadge();
     setTab(location.hash.slice(1) || 'overview');
-    if (state.tab !== 'support-settings') void renderThreads();
   } catch (err) {
     $('admGate').hidden = false;
     $('admApp').hidden = true;
@@ -143,7 +124,119 @@ function reserveAdminHeight() {
   if (visibleHeight > current) main.style.minHeight = `${visibleHeight}px`;
 }
 
-function setTab(tab) {
+const FEATURE_GROUP_BY_TAB = {
+  analytics: 'analytics',
+  integrations: 'integrations',
+  orders: 'orders',
+  companies: 'companies',
+  products: 'products',
+  content: 'content',
+  blog: 'content',
+  'support-settings': 'support',
+  quotes: 'quotes',
+  reviews: 'reviews',
+  newsletter: 'newsletter',
+  crm: 'crm',
+};
+const FEATURE_LABEL_BY_TAB = {
+  analytics: 'Analytics',
+  integrations: 'Integrations',
+  orders: 'Orders',
+  companies: 'Accounts',
+  products: 'Products',
+  content: 'Content',
+  blog: 'Blog',
+  'support-settings': 'Support',
+  quotes: 'Quotes',
+  reviews: 'Reviews',
+  newsletter: 'Newsletter',
+  crm: 'CRM',
+};
+let renderToken = 0;
+let featureRenderTail = Promise.resolve();
+let invalidatePendingFeatureLoad = () => {};
+
+function beginFeatureNavigation() {
+  invalidatePendingFeatureLoad();
+  let invalidate;
+  const invalidated = new Promise((resolve) => {
+    invalidate = () => resolve({ stale: true });
+  });
+  invalidatePendingFeatureLoad = invalidate;
+  return invalidated;
+}
+
+function featurePanel(tab) {
+  return document.querySelector(`[data-panel="${tab}"]`);
+}
+
+function clearFeatureLoadError(tab) {
+  featurePanel(tab)?.querySelector('[data-feature-load-error]')?.remove();
+}
+
+function showFeatureLoadError(tab) {
+  const panel = featurePanel(tab);
+  if (!panel) return;
+  clearFeatureLoadError(tab);
+  const error = document.createElement('p');
+  error.className = 'adm-status';
+  error.dataset.state = 'err';
+  error.dataset.featureLoadError = '';
+  error.append(`Could not load ${FEATURE_LABEL_BY_TAB[tab] || 'workspace'}. `);
+  const retry = document.createElement('button');
+  retry.className = 'btn btn-ghost btn-sm';
+  retry.type = 'button';
+  retry.textContent = 'Retry';
+  // Browsers retain a failed module record for this document. Reloading preserves
+  // the hash while creating a fresh module map; adding a one-off query would break
+  // the release-coupled admin module graph.
+  retry.addEventListener('click', () => location.reload(), { once: true });
+  error.append(retry);
+  panel.prepend(error);
+}
+
+function isCurrentRender(tab, token) {
+  return state.tab === tab && renderToken === token;
+}
+
+function renderFeatureTab(tab, token, options, invalidated) {
+  const panel = featurePanel(tab);
+  if (panel) {
+    panel.dataset.featureRenderToken = String(token);
+    panel.setAttribute('aria-busy', 'true');
+  }
+  const loaded = Promise.race([
+    featureLoader.load(FEATURE_GROUP_BY_TAB[tab]).then(
+      (feature) => ({ feature }),
+      (error) => ({ error }),
+    ),
+    invalidated,
+  ]);
+  const task = featureRenderTail.then(async () => {
+    try {
+      const result = await loaded;
+      if (result.stale || !isCurrentRender(tab, token)) return;
+      if ('error' in result) throw result.error;
+      await result.feature.wire();
+      if (!isCurrentRender(tab, token)) return;
+      await result.feature.render(options);
+      if (!isCurrentRender(tab, token)) return;
+      clearFeatureLoadError(tab);
+      applyCapabilityUi(panel || document.body, state.staff);
+    } catch {
+      if (isCurrentRender(tab, token)) showFeatureLoadError(tab);
+    } finally {
+      if (panel?.dataset.featureRenderToken === String(token)) {
+        panel.removeAttribute('aria-busy');
+        delete panel.dataset.featureRenderToken;
+      }
+    }
+  });
+  featureRenderTail = task.catch(() => {});
+  return task;
+}
+
+function setTab(tab, context = {}) {
   // The old top-level Customers tab folded into the CRM People directory —
   // keep #customers deep links working by landing on that sub-view. Historical
   // Pricing and Emails hashes still land on their current host workspaces.
@@ -178,32 +271,23 @@ function setTab(tab) {
     $('admNavToggle')?.setAttribute('aria-expanded', 'false');
   }
 
-  // #28 cache: a tab already loaded re-renders from memory (refetch:false) instead of
-  // refetching; first visit (or post-mutation re-render) fetches. offers/traffic self-cache.
+  const invalidated = beginFeatureNavigation();
+  const token = ++renderToken;
+  clearFeatureLoadError(state.tab);
   const cached = state.loaded.has(state.tab);
-  const render = {
-    overview: () => renderStats(state.stats),
-    analytics: () => { runSeoAudit(); renderTraffic(); },
-    finance: wireReports,
-    integrations: () => { void renderQboStatus().finally(() => applyCapabilityUi(document.body, state.staff)); },
-    orders: renderOrders,
-    companies: renderCompanies,
-    products: (o) => {
-      renderProducts(o); wireInventory();
-      renderPricing({ refetch: !state.loaded.has('pricing') }); wireCoupons();
-    },
-    content: renderContent,
-    blog: renderBlog,
-    'support-settings': renderThreads,
-    quotes: renderQuotePipeline,
-    reviews: renderReviews,
-    newsletter: renderNewsletter,
-    crm: () => { renderCrm(); renderOffers(); },
-  }[state.tab];
-  render?.({ refetch: !cached });
-  if (focusQuickBooks) {
-    requestAnimationFrame(() => document.getElementById('admQbo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  let task = Promise.resolve();
+  if (state.tab === 'overview') renderStats(state.stats);
+  else if (state.tab === 'finance') wireReports();
+  else if (FEATURE_GROUP_BY_TAB[state.tab]) {
+    task = renderFeatureTab(state.tab, token, { ...context, tab: state.tab, refetch: !cached }, invalidated);
   }
+  if (focusQuickBooks) {
+    void task.then(() => {
+      if (!isCurrentRender('integrations', token)) return;
+      requestAnimationFrame(() => document.getElementById('admQbo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    });
+  }
+  return task;
 }
 
 function syncTabFromHash() {
@@ -346,7 +430,14 @@ function wireReports() {
 
 function renderStats(stats = {}) {
  badge('aBadgePending', stats.companies?.pending || 0);
- badge('aBadgeMsg', stats.messages?.unread || 0);
+ const unreadMessages = stats.messages?.unread || stats.crm?.unread_messages || 0;
+ badge('aBadgeMsg', unreadMessages);
+ badge('adminSupportUnread', unreadMessages);
+ if ($('adminSupportSummary')) {
+   $('adminSupportSummary').textContent = unreadMessages
+     ? unreadMessages === 1 ? '1 chat needs a reply' : `${unreadMessages} chats need a reply`
+     : 'No chats need a reply';
+ }
  badge('aBadgeQuotes', stats.quotes?.new || stats.quotes?.new_count || 0);
  badge('aBadgeCrm', stats.crm_tasks?.overdue || stats.crm?.tasks_overdue || 0);
  // One number, one place: the grouped ops summary is the single metrics surface.
@@ -373,54 +464,261 @@ function admListPager(attr, loaded, total, hasMore) {
   return `<div class="adm-list-pager"><button class="btn btn-ghost btn-sm" ${attr} type="button">Load more${count}</button></div>`;
 }
 
-// Companies tab extracted to ./admin/companies.js (#36 split). statusBadge + admListPager + primitives injected.
-// CRM contact panel (timeline/tasks/notes) injected into the company drawer.
-const { renderThreads, wireThreads, openThread: openSupportThread } = createThreadsTab({ $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats });
-const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
-const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, openSupportThread, refreshStats });
-// Orders tab extracted to ./admin/orders.js (#36 split). statusBadge + admListPager + primitives injected.
-const { renderOrders, wireOrders } = createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats });
-// Quotes pipeline tab extracted to ./admin/quotes.js (#36 split). statusBadge + badge + admListPager + primitives injected.
-const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager });
-// Deep-link dispatcher: jumps from a CRM inbox task row to the owning surface.
-// Declared as a hoisted function so it is in scope when passed to createCrmWorkspace;
-// references openCompanyDetail, openQuoteById and crm (all initialized above this line).
-function openSubject(type, id, label) {
-  if (type === 'company') { setTab('companies'); openCompanyDetail(id); }
-  else if (type === 'quote') { setTab('quotes'); openQuoteById(id); }
-  else if (type === 'contact') { crm.openContactDrawer({ id, name: label || ('Contact ' + id) }); }
-  else { setTab('crm'); }
+function wireDirtyControls(ids) {
+  ids.forEach((id) => {
+    $(id)?.addEventListener('input', markDirty);
+    $(id)?.addEventListener('change', markDirty);
+  });
 }
 
-// CRM workspace tab: top-level home for cross-account CRM surfaces (Tasks inbox, Contact directory).
-const { renderCrm, wireCrm } = createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager, refreshStats });
+let supportReady = false;
+const featureLoader = createFeatureLoader({
+  analytics: async () => {
+    const [{ createTrafficRenderer }, { createSeoAudit }] = await Promise.all([
+      import('./admin/traffic.js?v=20260719a'),
+      import('./admin/seo.js?v=20260719a'),
+    ]);
+    const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
+    const runSeoAudit = createSeoAudit({ $, state });
+    return {
+      wire() {},
+      render: () => Promise.all([runSeoAudit(), renderTraffic()]),
+    };
+  },
+  integrations: async () => {
+    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260719a');
+    return {
+      wire() {
+        $('qboConnect')?.addEventListener('click', connectQbo);
+        $('qboSyncNow')?.addEventListener('click', runQboSync);
+        $('qboDisconnect')?.addEventListener('click', disconnectQbo);
+      },
+      async render() {
+        try { await renderQboStatus(); }
+        finally { applyCapabilityUi(document.body, state.staff); }
+      },
+    };
+  },
+  orders: async () => {
+    const { ORDER_STATUSES, createOrdersTab } = await import('./admin/orders.js?v=20260719a');
+    const { renderOrders, wireOrders } = createOrdersTab({
+      $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
+    });
+    return {
+      wire() {
+        ORDER_STATUSES.forEach((status) => {
+          $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${status}">${status.replaceAll('_', ' ')}</option>`);
+        });
+        $('ordFilter').addEventListener('change', () => renderOrders());
+        $('ordSearch').addEventListener('input', debounce(() => renderOrders({ refetch: true })));
+        $('ordExport').addEventListener('click', () => {
+          const status = $('ordFilter').value;
+          const url = '/api/admin/orders?export=csv' + (status ? `&status=${encodeURIComponent(status)}` : '');
+          downloadCsv(url, 'masest-orders.csv', 'ordStatus');
+        });
+        wireDirtyControls(['admOrders']);
+        wireOrders();
+      },
+      render: (options) => renderOrders(options),
+    };
+  },
+  companies: async () => {
+    const [{ createCompaniesTab }, { createCrmPanel }] = await Promise.all([
+      import('./admin/companies.js?v=20260719a'),
+      import('./admin/crm.js?v=20260719a'),
+    ]);
+    const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
+    const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({
+      $,
+      api,
+      state,
+      admSkeleton,
+      admEmpty,
+      statusBadge,
+      admListPager,
+      crm,
+      setTab,
+      openSupportThread: (id) => setTab('support-settings', { openCompanyId: id }),
+      refreshStats,
+    });
+    return {
+      wire() {
+        $('coSearch').addEventListener('input', debounce(() => renderCompanies({ refetch: true })));
+        wireDirtyControls(['admCompanies']);
+        wireCompanies();
+      },
+      async render(options) {
+        await renderCompanies(options);
+        if (options.openCompanyId) await openCompanyDetail(options.openCompanyId);
+      },
+    };
+  },
+  products: async () => {
+    const [
+      { createProductsTab },
+      { createPricingTab },
+      { createInventoryCard },
+      { createCouponsCard },
+    ] = await Promise.all([
+      import('./admin/products.js?v=20260719a'),
+      import('./admin/pricing.js?v=20260719a'),
+      import('./admin/inventory.js?v=20260719a'),
+      import('./admin/coupons.js?v=20260719a'),
+    ]);
+    const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({
+      $, api, state, message, admSkeleton, admEmpty,
+    });
+    const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message, admSkeleton, admEmpty });
+    const { renderLowStock, wireInventory } = createInventoryCard({
+      $, api, message, admSkeleton, admEmpty, downloadCsv,
+    });
+    const { renderCoupons, wireCoupons } = createCouponsCard({ $, api, message, admSkeleton, admEmpty });
+    let auxiliaryRenderedByWire = true;
+    return {
+      wire() {
+        $('prodSearch').addEventListener('input', debounce(() => renderProducts({ refetch: false })));
+        $('priceSearch').addEventListener('input', debounce(() => renderPricing({ refetch: false })));
+        wireDirtyControls(['admProducts', 'admPricing']);
+        wireProductForm();
+        wireVariantForm();
+        wireProducts();
+        wirePricing();
+        wireInventory();
+        wireCoupons();
+      },
+      async render(options) {
+        const renders = [
+          renderProducts(options),
+          renderPricing({ refetch: !state.loaded.has('pricing') }),
+        ];
+        if (auxiliaryRenderedByWire) auxiliaryRenderedByWire = false;
+        else renders.push(renderLowStock(), renderCoupons());
+        await Promise.all(renders);
+      },
+    };
+  },
+  content: async () => {
+    const { createContentTab } = await import('./admin/content.js?v=20260719a');
+    const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({
+      $, api, state, admSkeleton, admEmpty,
+    });
+    return {
+      wire() {
+        wireContent();
+        wireBlog();
+      },
+      render: (options) => options.tab === 'blog' ? renderBlog(options) : renderContent(options),
+    };
+  },
+  support: async () => {
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260719a');
+    const { renderThreads, wireThreads, openThread } = createThreadsTab({
+      $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats,
+    });
+    return {
+      wire() {
+        wireThreads();
+        supportReady = true;
+      },
+      async render(options) {
+        await renderThreads(options);
+        if (options.openCompanyId) await openThread(options.openCompanyId);
+      },
+    };
+  },
+  quotes: async () => {
+    const { createQuotesTab } = await import('./admin/quotes.js?v=20260719a');
+    const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({
+      $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager,
+    });
+    return {
+      wire() {
+        $('qFilter').addEventListener('change', () => renderQuotePipeline({ refetch: false }));
+        $('qPriority')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
+        $('qDue')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
+        $('qOwner')?.addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
+        $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline({ refetch: true })));
+        wireDirtyControls(['admQuotes']);
+        wireQuotes();
+      },
+      async render(options) {
+        await renderQuotePipeline(options);
+        if (options.openQuoteId) await openQuoteById(options.openQuoteId);
+      },
+    };
+  },
+  reviews: async () => {
+    const { createReviewsTab } = await import('./admin/reviews.js?v=20260719a');
+    const {
+      renderReviews,
+      wireReviews,
+      wireManualReviewForm,
+      refreshReviewsBadge,
+    } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });
+    return {
+      wire() {
+        $('rvFilter')?.addEventListener('change', () => renderReviews({ refetch: true }));
+        wireReviews();
+        wireManualReviewForm();
+      },
+      async render(options) {
+        await Promise.all([renderReviews(options), refreshReviewsBadge()]);
+      },
+    };
+  },
+  newsletter: async () => {
+    const { createNewsletterTab } = await import('./admin/newsletter.js?v=20260719a');
+    const { renderNewsletter, wireNewsletter } = createNewsletterTab({
+      $, api, state, message, admSkeleton, admEmpty, badge,
+    });
+    return {
+      wire: wireNewsletter,
+      render: (options) => renderNewsletter(options),
+    };
+  },
+  crm: async () => {
+    const [{ createCrmWorkspace }, { createOffersTab }, { createCrmPanel }] = await Promise.all([
+      import('./admin/crm-workspace.js?v=20260719a'),
+      import('./admin/offers.js?v=20260719a'),
+      import('./admin/crm.js?v=20260719a'),
+    ]);
+    const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
+    const openSubject = (type, id, label) => {
+      if (type === 'company') return setTab('companies', { openCompanyId: id });
+      if (type === 'quote') return setTab('quotes', { openQuoteId: id });
+      if (type === 'contact') return crm.openContactDrawer({ id, name: label || ('Contact ' + id) });
+      return setTab('crm');
+    };
+    const { renderCrm, wireCrm } = createCrmWorkspace({
+      $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager, refreshStats,
+    });
+    const { renderOffers, wireOfferForm } = createOffersTab({
+      $, api, state, message, admSkeleton, admEmpty,
+    });
+    return {
+      wire() {
+        wireCrm();
+        wireOfferForm();
+      },
+      render: (options) => Promise.all([renderCrm(options), renderOffers(options)]),
+    };
+  },
+});
 
-// Products tab extracted to ./admin/products.js (#36 split). Shared primitives injected.
-const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({ $, api, state, message, admSkeleton, admEmpty });
-
-// Pricing tab extracted to ./admin/pricing.js (#36 split). Shared primitives injected.
-const { renderPricing, wirePricing } = createPricingTab({ $, api, state, message, admSkeleton, admEmpty });
-
-// Content tab: staff-managed CMS entries for non-commerce public content.
-const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({ $, api, state, admSkeleton, admEmpty });
-
-// Reviews moderation tab (plan Task 13). Shared primitives + statusBadge/badge injected.
-const { renderReviews, wireReviews, wireManualReviewForm, refreshReviewsBadge } = createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge });
-const { renderNewsletter, wireNewsletter } = createNewsletterTab({ $, api, state, message, admSkeleton, admEmpty, badge });
-
-// Offers tab extracted to ./admin/offers.js (#36 split). Shared primitives injected.
-const { renderOffers, wireOfferForm } = createOffersTab({ $, api, state, message, admSkeleton, admEmpty });
-
-// Inventory + promo-codes cards inside the Products tab (extracted from the main
-// controller to keep the per-tab #36 split consistent).
-const { wireInventory } = createInventoryCard({ $, api, message, admSkeleton, admEmpty, downloadCsv });
-const { wireCoupons } = createCouponsCard({ $, api, message, admSkeleton, admEmpty });
-
-// Traffic tab extracted to ./admin/traffic.js (#36 split). Shared primitives injected.
-const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
-
-// SEO-audit tab extracted to ./admin/seo.js (#36 split). Shared state/lookup injected.
-const runSeoAudit = createSeoAudit({ $, state });
+let supportLauncherPending = false;
+async function loadSupportFromLauncher() {
+  if (supportReady || supportLauncherPending) return;
+  supportLauncherPending = true;
+  try {
+    const support = await featureLoader.load('support');
+    await support.wire();
+    $('adminSupportLauncher')?.click();
+  } catch {
+    setTab('support-settings');
+  } finally {
+    supportLauncherPending = false;
+  }
+}
 
 // --- Cloudflare Turnstile on the staff gate (mirrors account.html sign-in) ---
 // Supabase Auth CAPTCHA is enabled, so signInWithPassword needs a captchaToken.
@@ -473,9 +771,6 @@ function wireAdminSidebarScrollRelease() {
 function wire() {
   wireAdminSidebarScrollRelease();
   linkTabsToPanels(document, 'adm');
-  ORDER_STATUSES.forEach((status) => {
-    $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${status}">${status.replaceAll('_', ' ')}</option>`);
-  });
   document.querySelectorAll('[data-tab]').forEach((button) => {
     button.addEventListener('click', () => setTab(button.dataset.tab));
   });
@@ -487,46 +782,7 @@ function wire() {
   wireTablist(document.querySelector('.adm-tabs[role="tablist"]'), (tab) => setTab(tab.dataset.tab));
   window.addEventListener('hashchange', syncTabFromHash);
   new MutationObserver(() => applyCapabilityUi(document.body, state.staff)).observe(document.body, { childList: true, subtree: true });
-  // Status filter and the search boxes hit server query params → refetch (search
-  // used to be client-side over cached rows, which silently missed anything past
-  // the loaded page). Quote facet filters stay client-side over cached data (#28).
-  $('ordFilter').addEventListener('change', () => renderOrders());
-  $('ordSearch').addEventListener('input', debounce(() => renderOrders({ refetch: true })));
-  $('coSearch').addEventListener('input', debounce(() => renderCompanies({ refetch: true })));
-  $('prodSearch').addEventListener('input', debounce(() => renderProducts({ refetch: false })));
-  $('priceSearch').addEventListener('input', debounce(() => renderPricing({ refetch: false })));
-  $('qFilter').addEventListener('change', () => renderQuotePipeline({ refetch: false }));
-  $('qPriority')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
-  $('qDue')?.addEventListener('change', () => renderQuotePipeline({ refetch: false }));
-  $('qOwner')?.addEventListener('input', debounce(() => renderQuotePipeline({ refetch: false })));
-  $('qSearch').addEventListener('input', debounce(() => renderQuotePipeline({ refetch: true })));
-  $('rvFilter')?.addEventListener('change', () => renderReviews({ refetch: true }));
-  // #28 dirty-edit guard: track in-progress inline edits so capture/restoreDirty can
-  // preserve sibling edits across a save or cache re-render.
-  ['admOrders', 'admCompanies', 'admProducts', 'admPricing', 'admQuotes'].forEach((id) => {
-    $(id)?.addEventListener('input', markDirty);
-    $(id)?.addEventListener('change', markDirty);
-  });
-  $('qboConnect')?.addEventListener('click', connectQbo);
-  $('qboSyncNow')?.addEventListener('click', runQboSync);
-  $('qboDisconnect')?.addEventListener('click', disconnectQbo);
-  $('ordExport').addEventListener('click', async () => {
-    message('ordStatus', 'Preparing export...');
-    try {
-      const token = await getToken();
-      const status = $('ordFilter').value;
-      const url = '/api/admin/orders?export=csv' + (status ? `&status=${encodeURIComponent(status)}` : '');
-      const r = await fetch(url, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
-      if (!r.ok) throw new Error('export_failed');
-      const blob = await r.blob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'masest-orders.csv';
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(a.href);
-      message('ordStatus', 'Exported.', 'ok');
-    } catch { message('ordStatus', 'Could not export the CSV. Retry.', 'err'); }
-  });
+  $('adminSupportLauncher')?.addEventListener('click', loadSupportFromLauncher);
   $('admLogout').addEventListener('click', async () => { await logout(); location.reload(); });
   $('gateForm').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -545,22 +801,6 @@ function wire() {
     }
   });
   initGateTurnstile();
-  wireProductForm();
-  wireVariantForm();
-  wireOfferForm();
-  // Delegated row actions, bound once on each tab's table container (#36).
-  wireOrders();
-  wireCompanies();
-  wireProducts();
-  wirePricing();
-  wireContent();
-  wireBlog();
-  wireQuotes();
-  wireCrm();
-  wireThreads();
-  wireReviews();
-  wireManualReviewForm();
-  wireNewsletter();
 }
 
 wire();

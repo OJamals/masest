@@ -4,6 +4,7 @@
 import { safeUrl } from "./util.js";
 
 const KEY = "masest_cart";
+const NET_REQUEST_KEY = "masest_net_request_v1";
 
 export class CheckoutError extends Error {
   constructor(status, payload = {}) {
@@ -36,7 +37,46 @@ function safeReadCart() {
   }
 }
 
+function cartSignature(lines) {
+  return JSON.stringify(
+    lines
+      .map(({ sku, qty }) => ({ sku: String(sku), qty: normalizeQty(qty) }))
+      .sort((a, b) => a.sku.localeCompare(b.sku))
+  );
+}
+
+function newRequestKey() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function netRequestKey(lines) {
+  const cart = cartSignature(lines);
+  try {
+    const stored = JSON.parse(localStorage.getItem(NET_REQUEST_KEY) || "null");
+    if (
+      stored
+      && typeof stored === "object"
+      && typeof stored.key === "string"
+      && stored.key.length > 0
+      && stored.key.length <= 128
+      && stored.cart === cart
+    ) {
+      return stored.key;
+    }
+  } catch {
+    // Replace malformed convenience storage below.
+  }
+
+  const key = newRequestKey();
+  localStorage.setItem(NET_REQUEST_KEY, JSON.stringify({ key, cart }));
+  return key;
+}
+
 function write(cart) {
+  localStorage.removeItem(NET_REQUEST_KEY);
   localStorage.setItem(KEY, JSON.stringify(cart));
   const detail = { count: count(), items: items() };
   document.dispatchEvent(new CustomEvent("cart:updated", { detail }));
@@ -86,11 +126,13 @@ export async function checkout({ mode = "pay", email, token } = {}) {
 
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
+  const payload = { mode, email, cart: line };
+  if (mode === "net") payload.request_key = netRequestKey(line);
 
   const response = await fetch("/api/checkout", {
     method: "POST",
     headers,
-    body: JSON.stringify({ mode, email, cart: line }),
+    body: JSON.stringify(payload),
   });
   const out = await response.json().catch(() => ({}));
   if (!response.ok) throw new CheckoutError(response.status, out);

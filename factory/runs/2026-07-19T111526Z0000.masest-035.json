@@ -1,0 +1,16 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-035.implement.codex.md)"
+  ],
+  "created_at": "2026-07-19T11:15:26+00:00",
+  "id": "masest-035",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-035.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-035.md",
+  "spec_sha256": "691cf52cf7c94d1337a5d4d876955582e0e976ef9c4837ea0cfd02a383d2fab8",
+  "status": "dispatched",
+  "title": "Carry page and cart context from chat into quote handoff",
+  "updated_at": "2026-07-19T11:40:32+00:00"
+}

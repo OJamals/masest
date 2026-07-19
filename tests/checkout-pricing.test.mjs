@@ -33,8 +33,9 @@ test("client cart payload key matches what the checkout API reads", () => {
 
 test("the client cart is normalized to {sku, qty} only — no client price is read", () => {
   // normalizeCart only ever extracts sku + qty from each cart item.
-  assert.match(SRC, /const\s+sku\s*=\s*String\(\s*item\.sku/);
-  assert.match(SRC, /const\s+qty\s*=\s*Math\.max\(\s*0\s*,\s*Math\.floor\(\s*Number\(\s*item\.qty/);
+  assert.match(SRC, /typeof\s+item\.sku\s*!==\s*'string'/);
+  assert.match(SRC, /Number\.isInteger\(\s*item\.qty\s*\)/);
+  assert.match(SRC, /item\.qty\s*<\s*1\s*\|\|\s*item\.qty\s*>\s*CHECKOUT_MAX_QUANTITY/);
   // The body must never feed a price into the charge.
   assert.doesNotMatch(SRC, /item\.price/, "checkout must not read a price off a client cart item");
   assert.doesNotMatch(SRC, /body\.price/, "checkout must not read a price off the request body");
@@ -64,7 +65,8 @@ test("Stripe line amounts are computed from the server price", () => {
 });
 
 test("NET account orders persist the server price and matching line totals", () => {
-  assert.match(SRC, /unit_price:\s*p\.price/, "NET order line unit_price must be the server price");
+  assert.match(SRC, /unit_price:\s*Number\(\s*p\.price\s*\)/,
+    "NET order line unit_price must be the numeric server price");
   assert.match(SRC, /line_total:\s*Number\(\s*p\.price\s*\)\s*\*\s*qtyBySku\[p\.sku\]/,
     "NET line_total must be server price * server-normalized qty");
   assert.match(SRC, /subtotal\s*=\s*sellable\.reduce\([\s\S]*?Number\(p\.price\)\s*\*\s*qtyBySku\[p\.sku\]/,

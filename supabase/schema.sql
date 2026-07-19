@@ -51,10 +51,13 @@ create table if not exists public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
   company_id  uuid references public.companies(id) on delete set null,
   role        profile_role not null default 'buyer',
+  is_staff    boolean not null default false,
   full_name   text,
   phone       text,
   created_at  timestamptz not null default now()
 );
+alter table public.profiles
+  add column if not exists is_staff boolean not null default false;
 create index if not exists profiles_company_idx on public.profiles(company_id);
 
 create table if not exists public.addresses (

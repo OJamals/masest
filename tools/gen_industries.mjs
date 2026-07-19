@@ -682,11 +682,10 @@ const INDUSTRY_DETAILS = {
 function industryDetailBlock(ind) {
   const detail = INDUSTRY_DETAILS[ind.slug];
   if (!detail) return "";
-  const [label, body, bundle] = detail;
+  const [, body, bundle] = detail;
   return `<section class="section section-slim">
     <div class="wrap ind-specific">
       <div class="section-head">
-        <span class="eyebrow">${label}</span>
         <h2 class="headline">What ${ind.name} buyers need documented first.</h2>
       </div>
       <div class="proof-callout">
@@ -842,7 +841,7 @@ function page(ind) {
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260706c">
-<link rel="stylesheet" href="../css/navigation.css?v=20260712b">
+<link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 <!-- seo:auto -->
@@ -875,7 +874,7 @@ ${nav}
         <span class="ind-icon"><i class="ph ${ind.icon}" aria-hidden="true"></i></span>
         <h2 class="headline">Why VertKleen fits ${ind.name}.</h2>
         <p>${ind.intro}</p>
-        <a class="btn btn-ink" href="../proof">See the proof</a>
+        <a class="btn btn-ink" href="../proof">Review field evidence</a>
       </div>
       <figure class="ind-intro-photo">
         <img src="${introMedia.src}" alt="${introMedia.alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" ${introMedia.dims}>
@@ -891,7 +890,7 @@ ${industryDetailBlock(ind)}
       <div class="section-head">
         <span class="eyebrow">Recommended</span>
         <h2 class="headline">VertKleen products for ${ind.name}.</h2>
-        <p class="subhead">Replacement options for the harsh chemistry this work usually relies on first.</p>
+          <p class="subhead">VertKleen options for ${ind.name} workflows.</p>
       </div>
       <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>
@@ -901,7 +900,7 @@ ${galleryBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js?v=20260711y"></script>
+<script type="module" src="../js/main.js?v=20260719c"></script>
 </body>
 </html>
 `;

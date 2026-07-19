@@ -103,10 +103,12 @@ test('restoreDirty tolerates a missing target element', () => {
 // ---- source-contract wiring in admin.js ----
 const admin = readFileSync(join(root, 'js/admin.js'), 'utf8');
 
-test('admin.js imports the dirty-tracking helpers', () => {
-  assert.match(admin, /from '\.\/admin\/edits\.js(?:\?v=\d{8}[a-z])?'/);
-  assert.match(admin, /captureDirty/);
-  assert.match(admin, /restoreDirty/);
+test('admin shell keeps dirty marking eager while lazy workspaces own capture and restore', () => {
+  assert.match(admin, /import \{ editKey \} from '\.\/admin\/edits\.js\?v=\d{8}[a-z]'/);
+  for (const workspace of ['orders', 'companies', 'products', 'quotes']) {
+    const source = readFileSync(join(root, `js/admin/${workspace}.js`), 'utf8');
+    assert.match(source, /import \{ captureDirty, restoreDirty \} from '\.\/edits\.js\?v=\d{8}[a-z]'/);
+  }
 });
 
 test('search inputs are debounced; server-backed searches refetch, local ones filter in memory', () => {

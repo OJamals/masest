@@ -85,9 +85,16 @@ export async function klaviyoSubscribe(env, email, listId, properties = {}) {
 // List the subscribed email addresses on a Klaviyo list. Paginates via links.next.
 // Best-effort: returns [] (no throw) when the key/list is missing or a page fails.
 // `max` caps total profiles pulled per call. fetchImpl injectable for tests.
-export async function klaviyoListProfiles(env, listId, { max = 5000, fetchImpl = globalThis.fetch } = {}) {
+export async function klaviyoListProfiles(
+  env,
+  listId,
+  { max = 5000, fetchImpl = globalThis.fetch, strict = false } = {},
+) {
   const key = env.KLAVIYO_PRIVATE_KEY;
-  if (!key || !listId) return [];
+  if (!key || !listId) {
+    if (strict) throw new Error('klaviyo_profiles_not_configured');
+    return [];
+  }
   const emails = [];
   const seen = new Set();
   let url = `https://a.klaviyo.com/api/lists/${encodeURIComponent(listId)}/profiles/?page%5Bsize%5D=100`;
@@ -99,16 +106,28 @@ export async function klaviyoListProfiles(env, listId, { max = 5000, fetchImpl =
       resp = await fetchImpl(url, {
         headers: { Authorization: `Klaviyo-API-Key ${key}`, revision: REVISION, accept: 'application/json' },
       });
-    } catch { break; }
-    if (!resp || !resp.ok) break;
+    } catch (error) {
+      if (strict) throw new Error('klaviyo_profiles_network_failure', { cause: error });
+      break;
+    }
+    if (!resp || !resp.ok) {
+      if (strict) throw new Error(`klaviyo_profiles_http_${resp?.status || 'unknown'}`);
+      break;
+    }
     let body;
-    try { body = await resp.json(); } catch { break; }
+    try {
+      body = await resp.json();
+    } catch (error) {
+      if (strict) throw new Error('klaviyo_profiles_invalid_response', { cause: error });
+      break;
+    }
     for (const row of body?.data || []) {
       const email = String(row?.attributes?.email || '').trim().toLowerCase();
       if (email && EMAIL_RE.test(email) && !seen.has(email)) { seen.add(email); emails.push(email); }
     }
     url = body?.links?.next || null;
   }
+  if (strict && url) throw new Error('klaviyo_profiles_truncated');
   return emails.slice(0, max);
 }
 

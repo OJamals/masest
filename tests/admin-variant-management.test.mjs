@@ -9,7 +9,7 @@ test("admin UI can add, edit, and remove purchasable volume variants", () => {
   const html = read("admin.html");
   // Products tab (incl. variant CRUD) split into its own module in #36.
   assert.match(html, /<script type="module" src="js\/admin\.js\?v=\d{8}[a-z]"><\/script>/, "admin entry module should be cache-busted");
-  assert.match(read("js/admin.js"), /from\s+["']\.\/admin\/products\.js\?v=\d{8}[a-z]["']/, "admin should import a cache-busted products module");
+  assert.match(read("js/admin.js"), /import\(\s*["']\.\/admin\/products\.js\?v=\d{8}[a-z]["']\s*\)/, "admin should lazy-import a cache-busted products module");
   const admin = read("js/admin/products.js");
 
   for (const id of ["variantForm", "nvProductSku", "nvSku", "nvLabel", "nvGallons", "nvPrice", "nvStock"]) {

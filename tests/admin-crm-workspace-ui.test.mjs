@@ -31,9 +31,9 @@ test('admin.html declares the CRM tab + panel', () => {
 });
 
 test('admin.js wires the workspace tab', () => {
-  assert.match(ADMIN, /import \{ createCrmWorkspace \}/);
+  assert.match(ADMIN, /import\(\s*'\.\/admin\/crm-workspace\.js\?v=\d{8}[a-z]'\s*\)/);
   // 2026-07-07: the Emails (offers) tab folded into CRM — its renderer rides along.
-  assert.match(ADMIN, /crm: \(\) => \{ renderCrm\(\); renderOffers\(\); \}/);
+  assert.match(ADMIN, /render:\s*\(options\)\s*=>\s*Promise\.all\(\[renderCrm\(options\),\s*renderOffers\(options\)\]\)/);
   assert.match(ADMIN, /wireCrm\(\)/);
 });
 

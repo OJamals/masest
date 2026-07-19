@@ -4,15 +4,15 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260711t';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260719a';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260711t';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260711t';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260711t';
+} from './rich-editor.js?v=20260719a';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260719a';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260719a';
 
 const SECTIONS = [
   ['compose', 'Compose'],
@@ -522,9 +522,9 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       if (!ok) return;
       const id = await saveDraft();
       if (!id) return;
-      setStatus('Sending...');
+      setStatus('Queueing delivery...');
       const res = await api('/api/admin/newsletters', { method: 'POST', body: { action: 'send_now', id } });
-      setStatus(`Sent to ${res.sent} of ${res.audience} recipients.`, 'ok');
+      setStatus(`Queued ${Number(res.total || 0).toLocaleString()} recipients for delivery.`, 'ok');
       await renderNewsletter({ refetch: true });
     } catch (err) {
       const map = { already_sent: 'This newsletter was already sent.', send_in_progress: 'A send is already in progress for this newsletter.' };

@@ -4,12 +4,12 @@ import { readFileSync } from "node:fs";
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
-test("mobile discovery keeps replacement and direct catalog paths", () => {
+test("mobile discovery keeps the direct catalog path without the retired replacement checker", () => {
   const products = read("products.html");
   const css = read("css/style.css");
 
-  assert.match(products, /href="#swap"[\s\S]*?>[\s\S]*?Find replacement/);
   assert.match(products, /href="#catalog">Browse all products<\/a>/);
+  assert.doesNotMatch(products, /href="#swap"|id="swap"|id="replacementRouter"|id="swapMatrix"/);
   assert.doesNotMatch(
     css,
     /\.product-catalog-hero \.hero-actions \.btn-secondary\s*{[^}]*display:\s*none/i,
@@ -37,7 +37,7 @@ test("mobile chat clears the persistent lead actions", () => {
 
   assert.match(
     navigation,
-    /body:has\(\.lead-action-bar\.is-visible:not\(\.is-suppressed\)\) \.customer-chat\s*{[^}]*bottom:\s*calc\(max\(12px, env\(safe-area-inset-bottom\)\) \+ 76px\);/s,
+    /body:has\(\.lead-action-bar\.is-visible:not\(\.is-suppressed\)\) \.customer-chat\s*{[^}]*bottom:\s*calc\(max\(12px, env\(safe-area-inset-bottom\)\) \+ 76px \+ var\(--customer-chat-avoid, 0px\)\);/s,
     "chat launcher should move above the visible mobile lead bar",
   );
 });

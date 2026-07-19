@@ -8,12 +8,38 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 test("package exposes one-command build and verification scripts", () => {
   const pkg = JSON.parse(read("package.json"));
   const scripts = pkg.scripts || {};
+  const criticalUiSpecs = [
+    "tools/focus-visible-a11y.spec.mjs",
+    "tools/service-tabs-a11y.spec.mjs",
+    "tools/site-audit-regressions.spec.mjs",
+    "tools/story-hmis-visual.spec.mjs",
+  ];
 
   assert.match(scripts.check || "", /node tools\/check-js\.mjs/);
   assert.match(scripts.test || "", /node --test --test-concurrency=1 --test-timeout=\d+ tests\/\*\.test\.mjs/);
   assert.match(scripts.build || "", /node tools\/cf-build\.mjs/);
   assert.match(scripts.verify || "", /npm run check && npm test && npm run build/);
   assert.match(scripts.verify || "", /npm run qa:commerce-smoke/);
+  assert.equal(
+    scripts["qa:ui-critical"],
+    `playwright test ${criticalUiSpecs.join(" ")} --reporter=line`,
+  );
+  assert.doesNotMatch(scripts["qa:ui-critical"], /tools\/\*\.spec/);
+  assert.ok(
+    scripts.verify.indexOf("npm run build")
+      < scripts.verify.indexOf("npm run verify:site"),
+    "built-site validation must follow the build",
+  );
+  assert.ok(
+    scripts.verify.indexOf("npm run verify:site")
+      < scripts.verify.indexOf("npm run qa:commerce-smoke"),
+    "commerce smoke must follow built-site validation",
+  );
+  assert.ok(
+    scripts.verify.indexOf("npm run qa:commerce-smoke")
+      < scripts.verify.indexOf("npm run qa:ui-critical"),
+    "critical UI gate must follow built-site and commerce validation",
+  );
   assert.match(scripts.serve || "", /python3 -m http\.server 4195/);
   assert.match(scripts["smoke:admin"] || "", /playwright test tools\/admin-auth-gate\.spec\.mjs/);
   for (const spec of [
@@ -45,6 +71,12 @@ test("Cloudflare build emits baseline security headers", () => {
 test("Cloudflare build excludes local audit capture artifacts", () => {
   const build = read("tools/cf-build.mjs");
 
+  assert.match(
+    build,
+    /git ls-files --cached --others --exclude-standard/,
+    "local builds must exercise unignored new site files before commit",
+  );
+  assert.match(build, /\^factory\\\//, "Loop Factory run artifacts must not publish");
   assert.match(build, /\^audit-\[\^\/\]\+\\\/\//, "dated audit capture folders must not publish");
   assert.match(build, /\^audits\?\\\/\//, "generic audit capture folders must not publish");
   assert.match(build, /\^masest\\\.co-audit\\\//, "downloaded site audit captures must not publish");

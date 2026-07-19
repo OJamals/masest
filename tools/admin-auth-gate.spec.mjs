@@ -10,6 +10,41 @@ const PORT = 4288;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let server;
 
+async function stubStaffBoot(page) {
+  await page.route("**/js/auth.js", (route) => route.fulfill({
+    status: 200,
+    contentType: "text/javascript",
+    body: `
+      export const supabase = {};
+      export async function getToken() { return "staff-token"; }
+      export async function login() {}
+      export async function logout() {}
+      export async function api(path, options = {}) {
+        const response = await fetch(path, options);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw Object.assign(new Error(data.error || "request_failed"), { status: response.status, data });
+        return data;
+      }
+    `,
+  }));
+  await page.route("**/api/admin/stats", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      orders: { total: 1 },
+      companies: { pending: 0, approved: 1, suspended: 0 },
+      messages: { unread: 0 },
+      accounts: { pending: 0, approved: 1, suspended: 0 },
+      commerce: {},
+      crm: {},
+      catalog_health: {},
+      analytics: {},
+      traffic: {},
+      actions: [],
+    }),
+  }));
+}
+
 test.beforeAll(async () => {
   server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], {
     cwd: new URL("..", import.meta.url).pathname,
@@ -117,6 +152,116 @@ test("staff auth stays neutral while booting and does not flash the gate between
   await page.locator('[data-tab="orders"]').click();
   await expect(page.locator("#admGate")).toBeHidden();
   await expect(page.locator("#admApp")).toBeVisible();
+});
+
+test("overview requests no lazy feature and a stale module load cannot dispatch its render", async ({ page }) => {
+  await stubStaffBoot(page);
+  const lazyModules = [
+    "traffic.js", "seo.js", "qbo.js", "orders.js", "companies.js", "products.js",
+    "pricing.js", "inventory.js", "coupons.js", "content.js", "threads.js", "quotes.js",
+    "reviews.js", "newsletter.js", "crm-workspace.js", "offers.js", "crm.js",
+  ];
+  const requestedModules = [];
+  let orderApiRequests = 0;
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/js/admin/")) requestedModules.push(url.pathname.split("/").at(-1));
+    if (url.pathname === "/api/admin/orders") orderApiRequests += 1;
+  });
+
+  let releaseOrdersModule;
+  const ordersModuleBlocked = new Promise((resolve) => { releaseOrdersModule = resolve; });
+  let markOrdersRequested;
+  const ordersRequested = new Promise((resolve) => { markOrdersRequested = resolve; });
+  await page.route("**/js/admin/orders.js*", async (route) => {
+    markOrdersRequested();
+    await ordersModuleBlocked;
+    await route.continue();
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  expect(requestedModules.filter((name) => lazyModules.includes(name))).toEqual([]);
+
+  await page.locator('[data-tab="orders"]').click();
+  await ordersRequested;
+  await page.locator('[data-tab="products"]').click();
+  releaseOrdersModule();
+
+  await expect(page.locator('[data-panel="products"]')).toHaveAttribute("data-active", "true");
+  await expect.poll(() => requestedModules.includes("products.js")).toBe(true);
+  await page.waitForTimeout(100);
+  expect(orderApiRequests).toBe(0);
+});
+
+test("failed lazy import shows a retry that recovers deterministically", async ({ page }) => {
+  await stubStaffBoot(page);
+  let attempts = 0;
+  await page.route("**/js/admin/orders.js*", async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await route.fulfill({ status: 503, contentType: "text/javascript", body: "export {};" });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator('[data-tab="orders"]').click();
+
+  const error = page.locator('[data-panel="orders"] [data-feature-load-error]');
+  await expect(error).toContainText("Could not load Orders");
+  const reloaded = page.waitForNavigation({ waitUntil: "domcontentloaded" });
+  await error.getByRole("button", { name: "Retry" }).click();
+  await reloaded;
+  await expect.poll(() => attempts).toBe(2);
+  await expect(error).toHaveCount(0);
+});
+
+test("a render already in flight cannot finish after the newer workspace render", async ({ page }) => {
+  await stubStaffBoot(page);
+  let releaseContentRender;
+  const contentRenderBlocked = new Promise((resolve) => { releaseContentRender = resolve; });
+  let markContentRenderStarted;
+  const contentRenderStarted = new Promise((resolve) => { markContentRenderStarted = resolve; });
+
+  await page.route("**/js/admin/content.js*", (route) => route.fulfill({
+    status: 200,
+    contentType: "text/javascript",
+    body: `
+      export function createContentTab() {
+        return {
+          wireContent() {},
+          wireBlog() {},
+          async renderContent() {
+            await fetch("/api/test-content-render");
+            document.body.dataset.featureRenderWinner = "content";
+            document.body.dataset.contentRenderComplete = "true";
+          },
+          renderBlog() {
+            document.body.dataset.featureRenderWinner = "blog";
+          },
+        };
+      }
+    `,
+  }));
+  await page.route("**/api/test-content-render", async (route) => {
+    markContentRenderStarted();
+    await contentRenderBlocked;
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator('[data-tab="content"]').click();
+  await contentRenderStarted;
+  await page.locator('[data-tab="blog"]').click();
+  releaseContentRender();
+
+  await expect(page.locator('[data-panel="blog"]')).toHaveAttribute("data-active", "true");
+  await expect.poll(() => page.locator("body").getAttribute("data-content-render-complete")).toBe("true");
+  await expect(page.locator("body")).toHaveAttribute("data-feature-render-winner", "blog");
 });
 
 test("staff login fields stay focusable, selectable, and password-manager compatible", async ({ page }) => {

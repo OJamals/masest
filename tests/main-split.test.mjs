@@ -23,7 +23,6 @@ test("main entrypoint imports catalog data from a split module", () => {
     "PRODUCTS",
     "CATALOG_ORDER",
     "CATALOG_GROUPS",
-    "REPLACEMENT_MAP",
     "PRODUCT_CATALOG_COPY",
     "PRODUCT_GALLERY",
   ]) {
@@ -96,7 +95,7 @@ test("main entrypoint imports product commerce UI from a split module", () => {
 
 test("main entrypoint imports engagement interactions from a split module", () => {
   const main = read("js/main.js");
-  assert.match(main, /from\s+["']\.\/main\/engagement\.js["']/);
+  assert.match(main, /from\s+["']\.\/main\/engagement\.js\?v=\d{8}[a-z]["']/);
   assert.doesNotMatch(main, /function initQuoteForm\s*\(/);
   assert.doesNotMatch(main, /function initProofFilters\s*\(/);
   assert.doesNotMatch(main, /function initBeforeAfter\s*\(/);

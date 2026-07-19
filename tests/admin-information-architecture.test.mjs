@@ -42,8 +42,11 @@ test('admin tab renderer preserves historical deep links in the new information 
   assert.match(admin, /focusQuickBooks\) tab = 'integrations'/);
   assert.match(admin, /tab === 'traffic' \|\| tab === 'seo'\) tab = 'analytics'/);
   assert.match(admin, /tab === 'reports' \|\| tab === 'exports'\) tab = 'finance'/);
-  assert.match(admin, /overview: \(\) => renderStats\(state\.stats\)/);
-  assert.match(admin, /analytics: \(\) => \{ runSeoAudit\(\); renderTraffic\(\); \}/);
-  assert.match(admin, /finance: wireReports/);
-  assert.match(admin, /integrations: \(\) =>/);
+  assert.match(admin, /state\.tab === 'overview'\) renderStats\(state\.stats\)/);
+  assert.match(admin, /state\.tab === 'finance'\) wireReports\(\)/);
+  assert.match(admin, /analytics: 'analytics'/);
+  assert.match(admin, /integrations: 'integrations'/);
+  assert.match(admin, /import\('\.\/admin\/traffic\.js\?v=\d{8}[a-z]'\)/);
+  assert.match(admin, /import\('\.\/admin\/seo\.js\?v=\d{8}[a-z]'\)/);
+  assert.match(admin, /import\('\.\/admin\/qbo\.js\?v=\d{8}[a-z]'\)/);
 });

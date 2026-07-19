@@ -13,9 +13,9 @@
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260708c">
-<link rel="stylesheet" href="css/navigation.css?v=20260712b">
+<link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css?v=20260618d">
-<link rel="stylesheet" href="css/story.css?v=20260712a">
+<link rel="stylesheet" href="css/story.css?v=20260719a">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/">
 <meta property="og:url" content="https://masest.co/">
@@ -46,7 +46,7 @@
 
 <main id="main">
 <!-- ============================================================
-     STORY: scrollytelling opener v5 (GSAP ScrollTrigger, native
+     STORY: four-act Replacement Ledger (GSAP ScrollTrigger, native
      browser scroll). Frame scrub, particle physics, chapter rail.
      Degrades to a stacked, fully-visible layout without JS.
      ============================================================ -->
@@ -56,22 +56,22 @@
   (~0.17 CLS race). Skip under reduced-motion (that path keeps the fallback).
   No-JS users skip this entirely. story.js re-adds it before GSAP setup, and
   removes it again if GSAP fails to load — so a missing lib still degrades. */
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches &&
+      matchMedia('(min-width: 761px)').matches)
     document.getElementById('story').classList.add('story-ready');</script>
 
   <!-- Chapter rail (pins for the whole story) -->
   <div class="story-rail" aria-hidden="true">
     <div class="rail-inner">
-      <span class="rail-btn"><b>1</b><span>The enemy</span></span>
+      <span class="rail-btn"><b>1</b><span>The field</span></span>
       <span class="rail-btn"><b>2</b><span>The buildup</span></span>
-      <span class="rail-btn"><b>3</b><span>The bill</span></span>
-      <span class="rail-btn"><b>4</b><span>The zero</span></span>
-      <span class="rail-btn"><b>5</b><span>The switch</span></span>
+      <span class="rail-btn"><b>3</b><span>The ledger</span></span>
+      <span class="rail-btn"><b>4</b><span>The proof</span></span>
     </div>
   </div>
 
   <!-- ACT 1: THE ENEMY (curated reel of real field photos) -->
-  <section class="act" data-act="1" data-fx="fumes">
+  <section class="act" data-act="1" data-fx="fumes" aria-labelledby="storyAct1Title">
     <div class="stage">
       <canvas class="fx-canvas" aria-hidden="true"></canvas>
       <div class="reel" role="group" aria-label="Field photos of industrial scale, rust, grease, and grime">
@@ -99,24 +99,19 @@
         <span class="reel-idx">Photo 1 of 4</span>
       </div>
       <div class="act-copy bl">
-        <h1 class="act-h" data-at="0" aria-label="Industrial cleaning power. HMIS 0-0-0 formulas.">Industrial cleaning power. HMIS 0-0-0 formulas.</h1>
+        <h1 class="act-h" id="storyAct1Title" data-at="0" aria-label="Industrial cleaning power. HMIS 0-0-0 formulas.">Industrial cleaning power. HMIS 0&#8209;0&#8209;0 formulas.</h1>
         <p class="story-promise" data-at="0">Built for the scale, rust, grease, and biofilm jobs now handled with acids and caustics, with typical HMIS health, flammability, and reactivity ratings of 0-0-0.</p>
         <p class="act-p" data-at="0">Scale chokes heat transfer. Rust eats steel. Grease feeds fires. The chemistry that removes them shouldn't send a tech to the eyewash station.</p>
         <div class="story-ctas" data-at="0">
-          <a class="btn btn-primary" href="products#swap" aria-label="Find your VertKleen replacement">Find your replacement</a>
+          <a class="btn btn-primary" href="products#catalog" aria-label="Find your VertKleen replacement">Find your replacement</a>
           <a class="btn btn-ghost" href="contact?type=sample" aria-label="Request a VertKleen trial">Request a trial</a>
         </div>
-        <nav class="story-shortcuts" aria-label="Homepage fast paths">
-          <a href="products#swap"><i class="ph ph-arrows-left-right" aria-hidden="true"></i><span>Find match</span><small>Current chemical</small></a>
-          <a href="proof"><i class="ph ph-file-text" aria-hidden="true"></i><span>Proof</span><small>Results + documents</small></a>
-          <a href="account"><i class="ph ph-briefcase" aria-hidden="true"></i><span>Account</span><small>Orders + approvals</small></a>
-        </nav>
       </div>
     </div>
   </section>
 
   <!-- ACT 2: THE BUILDUP (ambient debris accumulating inside a pipe) -->
-  <section class="act" data-act="2">
+  <section class="act" data-act="2" aria-labelledby="storyAct2Title">
     <div class="stage">
       <svg class="pipe-diagram" viewBox="0 0 1200 650" role="img" aria-label="Industrial piping showing scale, rust, grease, and biofilm buildup restricting flow">
         <defs>
@@ -170,7 +165,7 @@
       </svg>
       <div class="act-copy top onscrim" data-at="0">
         <span class="kicker danger" data-at="0">How it builds</span>
-        <h2 class="act-h" data-at="0" aria-label="Buildup never takes a day off.">Buildup never takes a day off.</h2>
+        <h2 class="act-h" id="storyAct2Title" data-at="0" aria-label="Buildup never takes a day off.">Buildup never takes a day off.</h2>
         <p class="act-p" data-at="1">Minerals crystallize into scale. Steel oxidizes into rust. Grease films harden. Biofilm spreads into the warm, wet layer where Legionella lives. Every layer steals heat transfer, capacity, and the time of whoever gets sent in to clean it.</p>
       </div>
       <div class="pipe-mobile-labels" aria-hidden="true">
@@ -179,114 +174,107 @@
         <span><i></i>Grease</span>
         <span><i></i>Biofilm</span>
       </div>
+      <div class="pipe-cost-chain" data-at="4" aria-label="Buildup becomes operating cost">
+        <span><b>Buildup</b><small>Scale, rust, grease, biofilm</small></span>
+        <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        <span><b>PPE &amp; training</b><small>Handling burden</small></span>
+        <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        <span><b>Downtime</b><small>Capacity and crew time</small></span>
+        <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        <span><b>Hazmat handling</b><small>Freight and disposal</small></span>
+      </div>
     </div>
   </section>
 
-  <!-- ACT 3: THE BILL (conventional chemicals: hazard scores + what each adds to the job) -->
-  <section class="act act-hmis" id="hmis" data-act="3">
+  <!-- ACT 3: THE REPLACEMENT LEDGER (one operational comparison) -->
+  <section class="act act-ledger" id="hmis" data-act="3" aria-labelledby="storyAct3Title">
     <div class="stage">
-      <div class="act-copy top" data-at="0">
-        <span class="kicker danger" data-at="0">The conventional answer</span>
-        <h2 class="act-h" data-at="0" aria-label="HMIS gives the danger a number.">HMIS gives the danger a number.</h2>
-        <p class="act-p" data-at="1">Crews fight buildup with acids, caustics, and biocides. Each carries a hazard score: Health, Flammability, Reactivity, 0 to 4. Every point lands on the job as gear, downtime, and fees.</p>
-      </div>
-      <div class="hazard-ledger" aria-label="Conventional chemicals: hazard scores and what each adds to the job">
-        <div class="ledger-head" data-at="1.4">
-          <span class="lh-chem">Chemical</span>
-          <span class="ledger-score-key" aria-label="Health, Flammability, Reactivity, each scored 0 to 4"><b class="lk-h"><span>H</span><i>Health</i></b><b class="lk-f"><span>F</span><i>Flamm</i></b><b class="lk-r"><span>R</span><i>React</i></b></span>
-          <span class="lh-burden">What it adds to the job</span>
-        </div>
-        <div class="ledger-row" data-at="2.2">
-          <div class="ledger-chem"><strong>HCl / muriatic acid</strong><small>Corrosive &middot; rust and mineral-scale shortcut</small></div>
-          <span class="hmis-score" aria-label="health 3, flammability 0, reactivity 1"><em>3</em><em>0</em><em>1</em></span>
-          <div class="ledger-burden"><b>PPE &amp; training</b><small>$1,000s / yr &middot; burns and acid fumes drive gear and ventilation</small></div>
-        </div>
-        <div class="ledger-row" data-at="3.1">
-          <div class="ledger-chem"><strong>Caustic soda / lye</strong><small>Corrosive &middot; grease, oils, and fats</small></div>
-          <span class="hmis-score" aria-label="health 3, flammability 0, reactivity 1"><em>3</em><em>0</em><em>1</em></span>
-          <div class="ledger-burden"><b>Vacate &amp; ventilate</b><small>downtime / job &middot; severe-burn risk clears the room first</small></div>
-        </div>
-        <div class="ledger-row" data-at="4">
-          <div class="ledger-chem"><strong>Glutaraldehyde</strong><small>Toxic &middot; biocide for biofilm and water systems</small></div>
-          <span class="hmis-score" aria-label="health 3, flammability 1, reactivity 0"><em>3</em><em>1</em><em>0</em></span>
-          <div class="ledger-burden"><b>Exposure controls</b><small>OSHA up to $16,550 / violation &middot; trained handling required</small></div>
-        </div>
-        <div class="ledger-row" data-at="4.9">
-          <div class="ledger-chem"><strong>Chlorinated solvents</strong><small>Toxic vapor &middot; oil, carbon, and adhesive stripping</small></div>
-          <span class="hmis-score" aria-label="health 2, flammability 0, reactivity 0"><em>2</em><em>0</em><em>0</em></span>
-          <div class="ledger-burden"><b>Hazmat ship, store, dispose</b><small>$135&ndash;$395 / drum &middot; DOT freight and waste paperwork</small></div>
-        </div>
-        <div class="ledger-incident" data-at="5.9">
+      <div class="ledger-intro" data-at="0">
+        <span class="kicker danger">The operational comparison</span>
+        <h2 class="act-h" id="storyAct3Title">The Replacement Ledger.</h2>
+        <p class="act-p" data-at="1">Crews fight buildup with acids, caustics, solvents, and biocides. Compare that conventional burden with the qualified VertKleen state, row for row.</p>
+        <div class="ledger-incident" data-at="3.2">
           <span class="ledger-incident-label">+ one workplace injury</span>
           <b class="cost-total"><span class="cost-cur">$</span><span class="cost-num" data-target="115000">115,000</span></b>
           <small>one lost-time injury &mdash; average cost, direct + indirect</small>
         </div>
-        <p class="cost-sources" data-at="5.9">Sources: OSHA / NoCry &middot; MCF Environmental &middot; OSHA 2026 penalty schedule &middot; OSHA Safety Pays; Liberty Mutual 2025 Workplace Safety Index</p>
+      </div>
+      <div class="replacement-ledger-shell">
+        <div class="replacement-ledger-scroll" tabindex="0" role="region" aria-label="Replacement Ledger, scroll horizontally on small screens">
+          <table class="replacement-ledger">
+            <caption class="sr-only">Conventional chemical burden compared with qualified VertKleen replacements</caption>
+            <thead>
+              <tr>
+                <th scope="col">Job</th>
+                <th scope="col">Conventional chemical</th>
+                <th scope="col">Typical HMIS H-F-R</th>
+                <th scope="col">VertKleen replacement</th>
+                <th scope="col">Typical HMIS H-F-R</th>
+                <th scope="col">Operational shift</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="ledger-row">
+                <th scope="row" data-ledger-step="1" data-at="1.2">Scale &amp; rust</th>
+                <td data-ledger-step="1" data-at="1.2"><strong>HCl / muriatic acid</strong><small>Corrosive &middot; rust and mineral-scale shortcut</small></td>
+                <td data-ledger-step="1" data-at="1.2"><span class="hmis-chip is-danger" aria-label="health 3, flammability 0, reactivity 1">3&#8209;0&#8209;1</span></td>
+                <td data-ledger-step="5" data-at="3.2"><a href="products/hcr"><strong>VertKleen HCR</strong></a><small>Scale &amp; rust removal</small></td>
+                <td data-ledger-step="5" data-at="3.2"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
+                <td data-ledger-step="5" data-at="3.2"><strong>PPE &amp; training</strong><small>no respirator program, no eyewash drills</small></td>
+              </tr>
+              <tr class="ledger-row">
+                <th scope="row" data-ledger-step="2" data-at="1.7">Grease &amp; caustic cleanup</th>
+                <td data-ledger-step="2" data-at="1.7"><strong>Caustic soda / lye</strong><small>Corrosive &middot; grease, oils, and fats</small></td>
+                <td data-ledger-step="2" data-at="1.7"><span class="hmis-chip is-danger" aria-label="health 3, flammability 0, reactivity 1">3&#8209;0&#8209;1</span></td>
+                <td data-ledger-step="6" data-at="3.7"><a href="products/cr"><strong>VertKleen CR</strong></a><small>Caustic replacement</small></td>
+                <td data-ledger-step="6" data-at="3.7"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
+                <td data-ledger-step="6" data-at="3.7"><strong>Vacate &amp; ventilate</strong><small>crews keep working while it cleans</small></td>
+              </tr>
+              <tr class="ledger-row">
+                <th scope="row" data-ledger-step="3" data-at="2.2">Biofilm support</th>
+                <td data-ledger-step="3" data-at="2.2"><strong>Glutaraldehyde</strong><small>Toxic &middot; biocide for biofilm and water systems</small></td>
+                <td data-ledger-step="3" data-at="2.2"><span class="hmis-chip is-danger" aria-label="health 3, flammability 1, reactivity 0">3&#8209;1&#8209;0</span></td>
+                <td data-ledger-step="7" data-at="4.2"><a href="products/purgo"><strong>VertKleen Purgo</strong></a><small>Antimicrobial &amp; biofilm support</small></td>
+                <td data-ledger-step="7" data-at="4.2"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
+                <td data-ledger-step="7" data-at="4.2"><strong>Exposure controls</strong><small>no strict-handling plan to write or audit</small></td>
+              </tr>
+              <tr class="ledger-row">
+                <th scope="row" data-ledger-step="4" data-at="2.7">Oil &amp; carbon degreasing</th>
+                <td data-ledger-step="4" data-at="2.7"><strong>Chlorinated solvents</strong><small>Toxic vapor &middot; oil, carbon, and adhesive stripping</small></td>
+                <td data-ledger-step="4" data-at="2.7"><span class="hmis-chip is-danger" aria-label="health 2, flammability 0, reactivity 0">2&#8209;0&#8209;0</span></td>
+                <td data-ledger-step="8" data-at="4.7"><a href="products/neutral"><strong>VertKleen Neutral</strong></a><small>Oil &amp; carbon degreasing</small></td>
+                <td data-ledger-step="8" data-at="4.7"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
+                <td data-ledger-step="8" data-at="4.7"><strong>Hazmat ship, store, dispose</strong><small>no DOT freight, no disposal fees</small></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="ledger-qualification" data-at="3.2">HMIS scores run 0 (none) to 4 (severe) across health, flammability, and reactivity. Ratings vary by manufacturer and concentration; typical SDS values are shown. VertKleen HCR, CR, Purgo, and Neutral are parent products with typical HMIS 0&#8209;0&#8209;0 ratings.</p>
+        <p class="cost-sources" data-at="3.2">Sources for conventional burden and incident context: OSHA / NoCry &middot; MCF Environmental &middot; OSHA 2026 penalty schedule &middot; OSHA Safety Pays; Liberty Mutual 2025 Workplace Safety Index</p>
       </div>
     </div>
   </section>
 
-  <!-- ACT 4: THE ZERO (the same bill, mirrored: VertKleen zeros every hazard line) -->
-  <section class="act act-cost" data-act="4">
-    <div class="stage">
-      <div class="act-copy top">
-        <span class="kicker safe" data-at="0">Enter VertKleen</span>
-        <h2 class="act-h" data-at="0" aria-label="Same bill. Every hazard line gone.">Same bill. Every hazard line gone.</h2>
-        <p class="act-p" data-at="0">VertKleen swaps each harsh chemical for an HMIS 0-0-0 version that cleans just as hard &mdash; so every gear, downtime, and disposal line above drops off the bill. One documented switch shows what a single line is worth.</p>
-      </div>
-      <div class="hazard-ledger ledger-zero" aria-label="VertKleen replacements: zero hazard scores and the costs that disappear">
-        <div class="ledger-head" data-at="1">
-          <span class="lh-chem">VertKleen replacement</span>
-          <span class="ledger-score-key" aria-label="Health, Flammability, Reactivity, each scored 0 to 4"><b class="lk-h"><span>H</span><i>Health</i></b><b class="lk-f"><span>F</span><i>Flamm</i></b><b class="lk-r"><span>R</span><i>React</i></b></span>
-          <span class="lh-burden">What comes off the bill</span>
-        </div>
-        <div class="ledger-row" data-at="1.8">
-          <div class="ledger-chem"><strong><a href="products/hcr">VertKleen HCR</a></strong><small>Scale &amp; rust removal &middot; replaces HCl / muriatic acid</small></div>
-          <span class="hmis-score score-zero" aria-label="health 0, flammability 0, reactivity 0"><em>0</em><em>0</em><em>0</em></span>
-          <div class="ledger-burden"><b>PPE &amp; training</b><small>no respirator program, no eyewash drills</small></div>
-        </div>
-        <div class="ledger-row" data-at="2.6">
-          <div class="ledger-chem"><strong><a href="products/cr">VertKleen CR</a></strong><small>Grease &amp; caustic cleanup &middot; replaces caustic soda / lye</small></div>
-          <span class="hmis-score score-zero" aria-label="health 0, flammability 0, reactivity 0"><em>0</em><em>0</em><em>0</em></span>
-          <div class="ledger-burden"><b>Vacate &amp; ventilate</b><small>crews keep working while it cleans</small></div>
-        </div>
-        <div class="ledger-row" data-at="3.4">
-          <div class="ledger-chem"><strong><a href="products/purgo">VertKleen Purgo</a></strong><small>Antimicrobial &amp; biofilm support &middot; replaces glutaraldehyde dosing</small></div>
-          <span class="hmis-score score-zero" aria-label="health 0, flammability 0, reactivity 0"><em>0</em><em>0</em><em>0</em></span>
-          <div class="ledger-burden"><b>Exposure controls</b><small>no strict-handling plan to write or audit</small></div>
-        </div>
-        <div class="ledger-row" data-at="4.2">
-          <div class="ledger-chem"><strong><a href="products/neutral">VertKleen Neutral</a></strong><small>Oil &amp; carbon degreasing &middot; replaces chlorinated solvents</small></div>
-          <span class="hmis-score score-zero" aria-label="health 0, flammability 0, reactivity 0"><em>0</em><em>0</em><em>0</em></span>
-          <div class="ledger-burden"><b>Hazmat ship, store, dispose</b><small>no DOT freight, no disposal fees</small></div>
-        </div>
-        <div class="ledger-incident ledger-proof" data-at="5.2">
-          <span class="ledger-incident-label">One documented switch</span>
-          <b class="cost-total"><span class="cost-cur">$</span><span class="cost-num" data-target="10000">10,000</span><span class="cost-per">/ yr saved</span></b>
-          <small>one degreaser swap at a single Walmart distribution center &mdash; just one line of the bill</small>
-        </div>
-        <p class="cost-payoff" data-at="5.2">On the old invoice, the drum is the cheapest line. On ours, it is the only line.</p>
-        <p class="cost-sources" data-at="5.2">Source: MASEST Walmart DSC program (DC-8851, Calci-Solve replacement)</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ACT 5: THE SWITCH (close + CTAs) -->
-  <section class="act act-savior" data-act="5" data-fx="motes">
+  <!-- ACT 4: ASYMMETRIC PROOF + ACTION CLOSE -->
+  <section class="act act-savior act-proof-close" data-act="4" data-fx="motes" aria-labelledby="storyAct4Title">
     <div class="stage">
       <canvas class="fx-canvas" aria-hidden="true"></canvas>
-      <div class="savior-wrap">
-        <span class="savior-badge" data-at="0"><i class="ph ph-shield-check" aria-hidden="true"></i> Make the switch</span>
-        <h2 data-at="0">Industrial muscle. <span class="accent">0-0-0</span> rating.</h2>
-        <p class="lede" data-at="0.6">Name the chemical on your shelf. We match the VertKleen replacement and send trial documentation your safety officer can sign.</p>
-        <div class="savior-zero-scale is-benefits" data-at="1" aria-label="Why the switch is safe to make">
-          <div class="zero-axis"><span>Cleans</span><strong>As&nbsp;hard</strong><small>Same removal power as the acid or caustic it replaces</small></div>
-          <div class="zero-axis"><span>HMIS</span><strong>0&middot;0&middot;0</strong><small>Zero health, flammability, reactivity</small></div>
-          <div class="zero-axis"><span>Approval</span><strong>Signed</strong><small>SDS + trial docs your safety officer approves</small></div>
-        </div>
-        <div class="savior-ctas" data-at="1.6">
-          <a class="btn btn-primary" href="products#swap" aria-label="Find your VertKleen replacement">Find your replacement</a>
-          <a class="btn btn-ghost" href="contact?type=sample" aria-label="Request a VertKleen trial">Request a trial</a>
+      <div class="proof-close">
+        <article class="proof-panel" data-at="0">
+          <span class="proof-label">One documented switch</span>
+          <p class="proof-value"><span class="cost-cur">$</span><span class="cost-num" data-target="10000">10,000</span><span class="cost-per">/ yr saved</span></p>
+          <p>One degreaser swap at a single Walmart distribution center &mdash; one line from the Replacement Ledger.</p>
+          <p class="proof-source">Source: MASEST Walmart DSC program (DC-8851, Calci-Solve replacement)</p>
+        </article>
+        <div class="close-action">
+          <span class="savior-badge" data-at="0"><i class="ph ph-shield-check" aria-hidden="true"></i> Make the switch</span>
+          <h2 id="storyAct4Title" data-at="0">Industrial muscle. <span class="accent">0&#8209;0&#8209;0</span> formulas.</h2>
+          <p class="lede" data-at="0.6">Name the chemical on your shelf. We match the VertKleen replacement and send trial documentation for review.</p>
+          <div class="savior-ctas" data-at="1.1">
+            <a class="btn btn-primary" href="products#catalog" aria-label="Find your VertKleen replacement">Find your replacement</a>
+            <a class="btn btn-ghost" href="contact?type=sample" aria-label="Request a VertKleen trial">Request a trial</a>
+          </div>
+          <p class="close-qualification" data-at="1.1">Typical HMIS health, flammability, and reactivity ratings of 0&#8209;0&#8209;0 for the parent products shown.</p>
         </div>
       </div>
     </div>
@@ -298,11 +286,10 @@
   <div class="wrap">
     <h2 id="storySummaryTitle">The VertKleen replacement story</h2>
     <ol>
-      <li><b>The dirt is obvious.</b> Scale, rust, grease, and grime pile up long before anyone opens a drum.</li>
-      <li><b>Buildup never takes a day off.</b> Mineral, rust, grease, and biofilm layers steal heat transfer, capacity, and crew time.</li>
-      <li><b>HMIS gives the danger a number.</b> Harsh acids, caustics, solvents, and biocides run 2s and 3s, and every point adds PPE, downtime, hazmat freight, disposal, and exposure risk to the bill.</li>
-      <li><b>Same bill, every hazard line gone.</b> VertKleen replaces each chemical at HMIS 0-0-0 and takes those cost lines off the invoice.</li>
-      <li><b>Industrial muscle, rated 0-0-0.</b> Name the chemical on your shelf; MASEST matches the replacement and sends trial documentation.</li>
+      <li><b>The field problem.</b> Scale, rust, grease, and grime demand industrial cleaning, while the first action opens the guided replacement flow.</li>
+      <li><b>Buildup becomes operating cost.</b> Mineral, rust, grease, and biofilm layers steal capacity and add handling, downtime, freight, and disposal burden.</li>
+      <li><b>The Replacement Ledger.</b> Four conventional chemicals, their typical HMIS ratings, qualified VertKleen replacements, and the operational shift appear in one comparison.</li>
+      <li><b>One documented switch.</b> A Walmart distribution-center program recorded $10,000 per year saved; buyers can find a replacement or request a quieter trial handoff.</li>
     </ol>
   </div>
 </section>
@@ -572,12 +559,12 @@
 </section>
 </main>
 
-<script type="module" src="js/main.js?v=20260711y"></script>
+<script type="module" src="js/main.js?v=20260719c"></script>
 <script src="js/track.js" defer></script>
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
 <script src="vendor/gsap/gsap.min.js" defer></script>
 <script src="vendor/gsap/ScrollTrigger.min.js" defer></script>
-<script src="js/story.js?v=20260710a" defer></script>
+<script src="js/story.js?v=20260719a" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {
@@ -626,9 +613,8 @@ document.addEventListener("DOMContentLoaded", () => {
     var checks=[
       function(){out.a1={h:op('.act[data-act="1"] .act-h'),reel:document.querySelector('.reel-idx').textContent,slideVis:op('.reel-slide[data-slide="1"]'),fx:cvPix(1)};},
       function(){out.a2={h:op('.act[data-act="2"] .act-h'),chip:op('.chip.c-rust'),fx:cvPix(2)};},
-      function(){out.a3={h:op('.act[data-act="3"] .act-h'),total:(document.querySelector('.cost-num')||{}).textContent||'',rows:document.querySelectorAll('.act-hmis .ledger-row').length};},
-      function(){out.a4={h:op('.act[data-act="4"] .act-h'),rows:document.querySelectorAll('.act-cost .ledger-row').length,payoff:op('.cost-payoff')};},
-      function(){out.a5={h:op('.act-savior h2'),z:op('.savior-zero-scale'),fx:cvPix(5),rail:document.querySelectorAll('.rail-btn.is-on').length};}
+      function(){out.a3={h:op('.act[data-act="3"] .act-h'),total:(document.querySelector('.act-ledger .cost-num')||{}).textContent||'',rows:document.querySelectorAll('.act-ledger .ledger-row').length};},
+      function(){out.a4={h:op('.act[data-act="4"] h2'),proof:(document.querySelector('.proof-panel .cost-num')||{}).textContent||'',cta:op('.act-proof-close .btn-primary'),fx:cvPix(4),rail:document.querySelectorAll('.rail-btn.is-on').length};}
     ];
     scrolling=true;
     setTimeout(function nxt(){

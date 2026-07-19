@@ -1,0 +1,16 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-034.implement.codex.md)"
+  ],
+  "created_at": "2026-07-19T10:32:44+00:00",
+  "id": "masest-034",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-034.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-034.md",
+  "spec_sha256": "f47ad1a6bbef2f9ebf5a31250a7e9a4b6503a135c16d9b37d70f4c21b87ba4ce",
+  "status": "dispatched",
+  "title": "Put proof and fit beside catalog purchase decisions",
+  "updated_at": "2026-07-19T10:55:15+00:00"
+}

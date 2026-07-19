@@ -10,19 +10,15 @@ test("checkout imports credit helper at the correct depth", () => {
   assert.match(src, /from\s+['"]\.\.\/_lib\/credit\.js['"]/, "checkout.js must import ../_lib/credit.js");
 });
 
-test("checkout net branch enforces credit before inserting the order", () => {
+test("checkout NET branch delegates credit and ledger writes to place_net_order_v2", () => {
   const src = read("functions/api/checkout.js");
-  assert.match(src, /companyCreditState\(/, "must compute credit state");
-  assert.match(src, /exceedsCredit\(/, "must test the over-limit predicate");
+  assert.match(src, /\.rpc\(\s*['"]place_net_order_v2['"]/, "must call the complete NET ledger RPC");
   assert.match(src, /credit_limit_exceeded/, "must return the credit_limit_exceeded error");
-  assert.match(src, /credit_check_unavailable/, "must 503 on a credit query error");
+  assert.match(src, /net_order_unavailable/, "must 503 when the v2 RPC is unavailable");
   // company select must load credit_limit
   assert.match(src, /select\('id,status,net_terms_days,credit_limit'\)/, "net company select must include credit_limit");
-  // enforcement must run BEFORE the order insert
-  const checkIdx = src.indexOf("credit_limit_exceeded");
-  const insertIdx = src.indexOf("from('orders').insert");
-  assert.ok(checkIdx > -1 && insertIdx > -1 && checkIdx < insertIdx,
-    "credit check must precede the order insert");
+  assert.doesNotMatch(src, /from\(['"]orders['"]\)\.insert/, "Worker must not insert NET order headers");
+  assert.doesNotMatch(src, /from\(['"]order_items['"]\)\.insert/, "Worker must not insert NET order items");
 });
 
 test("account/me imports credit helper at the correct depth and returns a credit block", () => {

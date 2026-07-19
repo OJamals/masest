@@ -8,7 +8,10 @@ MASEST is a static Cloudflare Pages commerce site with Pages Functions for serve
 - Commerce pages: `products.html`, `product.html`, `cart.html`, `js/cart.js`, and account/order APIs.
 - Admin console: `admin.html`, `js/admin.js`, split modules under `js/admin/*`, and guarded `/api/admin/*` functions.
 - Buyer dashboard: `dashboard.html`, `js/dashboard.js`, and `/api/account/*` functions.
-- Quote CRM: `/api/quote`, `/api/admin/quotes`, admin quote inbox, buyer message handoff, and quote schema fields in `supabase/schema-quotes.sql`.
+- CMS: `js/admin/content.js` with asset/revision modules, guarded `/api/admin/content*` functions,
+  Supabase content/storage tables, and build-time snapshots consumed by static public pages.
+- Quote CRM: `/api/quote`, `/api/admin/quotes`, `/api/admin/crm/*`, the quote pipeline, contacts/tasks/timeline
+  workspaces, buyer message handoff, and bounded server pagination for large admin directories.
 - External services: Stripe for checkout/payment portal, Resend for transactional email, QuickBooks via QBO sync functions, and Supabase for auth/data.
 
 ## Target Structure
@@ -24,13 +27,19 @@ MASEST is a static Cloudflare Pages commerce site with Pages Functions for serve
 - `npm run check`: syntax-checks JavaScript entrypoints and tools.
 - `npm test`: runs Node contract tests sequentially to avoid port collisions.
 - `npm run build`: runs the Cloudflare Pages build script.
-- `npm run verify`: runs check, tests, then build.
+- `npm run verify:site`: checks generated/static site structure, references, and required routes.
+- `npm run qa:commerce-smoke`: runs the focused Playwright commerce-state and checkout gate.
+- `npm run qa:ui-critical`: runs the focused critical UI/accessibility/visual gate.
+- `npm run verify`: runs `npm run check && npm test && npm run build && npm run verify:site && npm run qa:commerce-smoke && npm run qa:ui-critical`, in that order.
 - `npm run serve`: starts the long-lived local static server on port 4195.
 - `npm run smoke:admin`: optional Playwright smoke for admin auth and quote/message flows.
+- `npm run smoke:cms`: optional focused Playwright content smoke.
+- `npm run qa:admin-assurance`: optional focused Node and Playwright admin assurance gate.
+- `npm run qa:remediation`: optional full Playwright remediation suite.
 
 ## Feature Priorities
 
-- Convert quote CRM into a disciplined pipeline: score, priority, owner, due date, follow-up, automation, and buyer handoff.
+- Keep the existing quote/CRM pipeline coherent across score, priority, owner, due date, follow-up, tasks, timeline, and buyer handoff.
 - Keep commerce state clear: buyable, quote-only, not purchasable, stock, payment, order tracking, and invoice sync.
 - Keep buyer dashboard operational: orders, messages, notifications, payment portal, profile, addresses, and team.
 - Keep lead generation conversion-safe: contact/resources CTAs should route to quote/audit/sample flows without unsupported claims.

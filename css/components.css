@@ -310,14 +310,24 @@
    consistent 80px (.display) and left-aligned, so only top spacing needs it.
 ---------------------------------------------------------------------------- */
 body .page-hero,
-body .hero-split { padding-top: 116px; }
+body .hero-split {
+  padding-top: 84px;
+  padding-bottom: 112px;
+}
 
 body:has(#pMediaSection) .page-hero { padding-top: 72px; }
 body .product-detail-hero { padding-bottom: 42px; }
+body:has(#pMediaSection) .product-detail-hero { padding-bottom: 112px; }
+body:has(.about-router) .page-hero { padding-bottom: 112px; }
 @media (max-width: 680px) {
   body .page-hero,
-  body .hero-split { padding-top: 88px; }
+  body .hero-split {
+    padding-top: 72px;
+    padding-bottom: 96px;
+  }
   body:has(#pMediaSection) .page-hero { padding-top: 82px; }
+  body:has(#pMediaSection) .product-detail-hero { padding-bottom: 108px; }
+  body:has(.about-router) .page-hero { padding-bottom: 96px; }
 }
 
 /* Programs pricing: the cadence label sits on its own line so the widest tier

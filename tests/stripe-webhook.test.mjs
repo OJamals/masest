@@ -1,6 +1,6 @@
 // Contract + unit tests for the Stripe webhook (revenue-critical: payment -> order
 // persistence). Covers signature verification ordering, idempotency (no duplicate
-// orders on Stripe retries), inventory decrement, and the pure escapeHtml helper.
+// orders/effects on Stripe retries), durable inventory dispatch, and escapeHtml.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -11,6 +11,8 @@ const SRC = readFileSync(new URL("../functions/api/stripe-webhook.js", import.me
 // tests/stripe-webhook-shape.test.mjs); some contract checks below assert delegation
 // to it and pin the money math at its source of truth.
 const SHAPE = readFileSync(new URL("../functions/_lib/order-shape.js", import.meta.url), "utf8");
+const EFFECTS = readFileSync(new URL("../functions/_lib/stripe-effects.js", import.meta.url), "utf8");
+const EFFECT_SQL = readFileSync(new URL("../supabase/schema-stripe-effects.sql", import.meta.url), "utf8");
 
 // --- Unit: escapeHtml (imported, executed for real) ---
 test("escapeHtml escapes all five HTML-significant characters", () => {
@@ -41,12 +43,12 @@ test("webhook verifies the Stripe signature before acting", () => {
 
   const verifyIdx = SRC.indexOf("constructEventAsync");
   const firstInsertIdx = SRC.indexOf(".insert(");
-  const decrementIdx = SRC.indexOf("await decrementVariantStock("); // call site, not the fn definition
+  const enqueueIdx = SRC.indexOf("await enqueueRequiredEffects(", SRC.indexOf("export async function handleStripeWebhook"));
   assert.ok(verifyIdx > 0, "signature verification must exist");
   assert.ok(verifyIdx < firstInsertIdx,
     "signature must be verified before any DB insert");
-  assert.ok(verifyIdx < decrementIdx,
-    "signature must be verified before any stock decrement");
+  assert.ok(verifyIdx < enqueueIdx,
+    "signature must be verified before any durable effect enqueue");
 });
 
 // --- Contract: atomic + idempotent paid-order persistence ---
@@ -61,25 +63,30 @@ test("webhook persists the order and all line items through one atomic RPC", () 
 
 test("webhook treats the RPC unique violation as an idempotent Stripe retry", () => {
   assert.match(SRC, /const\s+insertOutcome\s*=\s*classifyOrderInsert\(orderErr\)/);
-  assert.match(SRC, /if\s*\(\s*insertOutcome\s*===\s*'duplicate'\s*\)\s*return\s+json\(\s*200\s*,[^)]*duplicate/,
-    "a concurrent duplicate PaymentIntent must be acknowledged with HTTP 200");
+  assert.match(SRC,
+    /if\s*\(\s*insertOutcome\s*===\s*'duplicate'\s*\)[\s\S]*order_effect_recovery_failed[\s\S]*await\s+enqueueRequiredEffects\(/,
+    "a duplicate PaymentIntent must recover the order and enqueue missing effects");
+  assert.match(SRC, /insertOutcome\s*===\s*'duplicate'\s*\?\s*\{\s*duplicate:\s*true\s*\}/,
+    "a recovered duplicate must be acknowledged with HTTP 200 duplicate=true");
 });
 
-// --- Contract: inventory decrement for stock-tracked SKUs ---
-test("webhook decrements variant stock via the atomic RPC after a settled paid order", () => {
-  assert.match(SRC, /decrement_variant_stock/, "must call the atomic decrement RPC");
-  // Gated on settled: unsettled ACH orders decrement only when async_payment_succeeded lands.
-  assert.match(SRC, /if\s*\(\s*order\s*&&\s*lines\.length\s*&&\s*settled\s*\)/,
-    "must only decrement once the order persisted, there are lines, and payment settled");
-  // The RPC refuses (returns false) on insufficient stock — the buyer already paid, so
-  // staff must be alerted to the oversell instead of it vanishing into a log line.
-  assert.match(SRC, /alertStaffOversell/,
-    "a failed decrement on a paid order must alert staff");
-
+// --- Contract: inventory decrement is a durable, idempotent provider effect ---
+test("webhook durably enqueues stock after persistence; worker applies it atomically", () => {
+  assert.match(SRC, /stage:\s*settled\s*\?\s*'card'\s*:\s*'ach_pending'/,
+    "settled card orders must plan stock while pending ACH must defer it");
+  assert.match(EFFECTS, /effect\(\s*'stock-decrement'\s*,\s*'stock_decrement'/,
+    "settled order plans must include stock decrement");
+  assert.match(EFFECTS, /'oversell-alert'[\s\S]*'stock-decrement'/,
+    "oversell alert must depend on completed stock result");
+  assert.match(EFFECT_SQL, /create\s+or\s+replace\s+function\s+public\.apply_stripe_stock_effect/i);
+  assert.match(EFFECT_SQL, /select\s+public\.decrement_variant_stock/i,
+    "stock provider RPC must reuse the atomic decrement primitive");
+  assert.match(EFFECT_SQL, /provider_succeeded_at\s*=\s*now\(\)/i,
+    "stock mutation and provider success marker must share the SQL transaction");
   const orderInsertIdx = SRC.indexOf("orderRowFromSession(");
-  const decrementIdx = SRC.indexOf("await decrementVariantStock(");
-  assert.ok(orderInsertIdx > 0 && orderInsertIdx < decrementIdx,
-    "stock decrement must happen after the order is recorded");
+  const enqueueIdx = SRC.indexOf("await enqueueRequiredEffects(", orderInsertIdx);
+  assert.ok(orderInsertIdx > 0 && orderInsertIdx < enqueueIdx,
+    "effect enqueue must happen after the order is recorded");
 });
 
 // --- Contract: monetary math is derived, not trusted from arbitrary fields ---

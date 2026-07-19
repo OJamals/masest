@@ -1,4 +1,4 @@
-import { escapeHtml, renderMarkdown } from "../md.js?v=20260711t";
+import { escapeHtml, renderMarkdown } from "../md.js?v=20260719a";
 
 function decodeEntities(value) {
   return String(value || "")
@@ -154,7 +154,7 @@ function wrapSelection(surface, htmlForText, fallbackRange) {
   wrapper.innerHTML = htmlForText(text);
   range.deleteContents();
   range.insertNode(wrapper.firstElementChild || document.createTextNode(text));
-  selection.removeAllRanges();
+  window.getSelection?.()?.removeAllRanges();
 }
 
 function insertHtmlAtSelection(surface, html) {

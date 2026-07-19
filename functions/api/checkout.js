@@ -2,12 +2,19 @@
 // mode 'pay' -> Stripe-hosted Checkout Session.
 // mode 'net' -> approved B2B account order.
 import Stripe from 'stripe';
-import { adminClient, userFromRequest, json, readBody, tierForRequest, tierPriceMap, sendEmail, emailLayout, htmlEscape } from '../_lib/supabase.js';
+import { adminClient, userFromRequest, json, tierForRequest, tierPriceMap, sendEmail, emailLayout, htmlEscape } from '../_lib/supabase.js';
 import { buildStripeCheckoutSessionParams } from '../_lib/checkout-session.js';
 import { ensureCompanyStripeCustomer } from '../_lib/stripe-customer.js';
-import { companyCreditState, exceedsCredit, isMissingFunctionError } from '../_lib/credit.js';
+import { isMissingFunctionError } from '../_lib/credit.js';
 import { sdsAttachments } from '../_lib/sds-docs.js';
 import { orderItemsTableHtml, sdsNoteHtml } from '../_lib/order-email.js';
+import { clientIp, rateLimit } from '../_lib/ratelimit.js';
+import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
+
+const CHECKOUT_BODY_MAX_BYTES = 64 * 1024;
+const CHECKOUT_MAX_CART_LINES = 50;
+const CHECKOUT_MAX_SKU_LENGTH = 80;
+const CHECKOUT_MAX_QUANTITY = 999;
 
 // Branded confirmation for a NET (on-account) order. Stripe orders are confirmed by the
 // webhook; NET orders had no email at all. Best-effort: the order is already placed and
@@ -38,11 +45,25 @@ async function sendNetOrderConfirmation({ env, order, lines, toEmail }) {
 }
 
 function normalizeCart(cart) {
-  const qtyBySku = {};
-  for (const item of Array.isArray(cart) ? cart : []) {
-    const sku = String(item.sku || '').trim();
-    const qty = Math.max(0, Math.floor(Number(item.qty || 0)));
-    if (sku && qty > 0) qtyBySku[sku] = (qtyBySku[sku] || 0) + qty;
+  if (!Array.isArray(cart)) return Object.create(null);
+
+  const qtyBySku = Object.create(null);
+  let distinctLines = 0;
+  for (const item of cart) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+    if (typeof item.sku !== 'string') return null;
+    const sku = item.sku.trim();
+    if (!sku || sku.length > CHECKOUT_MAX_SKU_LENGTH) return null;
+    if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > CHECKOUT_MAX_QUANTITY) return null;
+
+    if (qtyBySku[sku] === undefined) {
+      distinctLines += 1;
+      if (distinctLines > CHECKOUT_MAX_CART_LINES) return null;
+      qtyBySku[sku] = 0;
+    }
+    const qty = qtyBySku[sku] + item.qty;
+    if (qty > CHECKOUT_MAX_QUANTITY) return null;
+    qtyBySku[sku] = qty;
   }
   return qtyBySku;
 }
@@ -51,42 +72,97 @@ function variantIsStocked(variant, qty) {
   return !(variant.track_stock && variant.stock != null && Number(variant.stock) < qty);
 }
 
-async function decrementVariantStock(sb, sellable, qtyBySku) {
-  const decremented = [];
-  for (const line of sellable) {
-    if (!line.track_stock || line.stock == null) continue;
-    if (line.backordered) continue; // stock already at/below zero — don't decrement
-    const qty = qtyBySku[line.sku];
-    const { data, error } = await sb.rpc('decrement_variant_stock', { p_vsku: line.sku, p_qty: qty });
-    if (error || data !== true) {
-      // Roll back the lines already decremented so a mid-cart failure doesn't leak stock.
-      for (const done of decremented) {
-        await sb.rpc('increment_variant_stock', done).then(() => {}, () => {});
-      }
-      return false;
-    }
-    decremented.push({ p_vsku: line.sku, p_qty: qty });
-  }
-  return true;
-}
-
 export async function handleCheckout({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
   const getUserFromRequest = dependencies.userFromRequest || userFromRequest;
   const getTierForRequest = dependencies.tierForRequest || tierForRequest;
   const getTierPriceMap = dependencies.tierPriceMap || tierPriceMap;
   const getStripeCustomer = dependencies.ensureCompanyStripeCustomer || ensureCompanyStripeCustomer;
+  const checkRateLimit = dependencies.rateLimit || rateLimit;
+  const parseBody = dependencies.readBoundedJson || readBoundedJson;
+  const sendNetConfirmation = dependencies.sendNetOrderConfirmation || sendNetOrderConfirmation;
   const createStripe = dependencies.createStripe
     || ((secret) => new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() }));
-  const body = await readBody(request);
+
+  const rl = await checkRateLimit(env, 'checkout', clientIp(request), { limit: 20, windowSec: 60 });
+  if (!rl.ok) {
+    return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
+  }
+
+  let body;
+  try {
+    body = await parseBody(request, CHECKOUT_BODY_MAX_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return json(413, { error: 'request_too_large' });
+    }
+    return json(400, { error: 'bad_request' });
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return json(400, { error: 'bad_request' });
+  }
+
   const mode = body.mode === 'net' ? 'net' : 'pay';
+  const requestKey = typeof body.request_key === 'string' ? body.request_key.trim() : '';
+  if (mode === 'net' && (!requestKey || requestKey.length > 128)) {
+    return json(400, { error: 'bad_request' });
+  }
   // Cart line items. Canonical key is `cart`; `items` is accepted as a fallback so an
   // in-flight/cached client build (js/cart.js historically posted `items`) still checks out.
   const qtyBySku = normalizeCart(body.cart ?? body.items);
+  if (!qtyBySku) return json(400, { error: 'bad_request' });
   const skus = Object.keys(qtyBySku);
   if (!skus.length) return json(400, { error: 'cart_empty' });
 
   const sb = getAdminClient(env);
+  let netContext = null;
+  if (mode === 'net') {
+    const { user } = await getUserFromRequest(request, env);
+    if (!user) return json(401, { error: 'auth_required_for_net' });
+    const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
+    const { data: company } = await sb.from('companies').select('id,status,net_terms_days,credit_limit').eq('id', profile?.company_id).maybeSingle();
+    if (!company) return json(403, { error: 'net_terms_unavailable' });
+
+    // Probe request-key identity before catalog/stock validation. A response-loss retry
+    // must return its original order even when the first attempt consumed the last stock.
+    const { data: probe, error: probeErr } = await sb.rpc('place_net_order_v2', {
+      p_company_id: company.id,
+      p_user_id: user.id,
+      p_email: user.email || null,
+      p_request_key: requestKey,
+      p_items: Object.entries(qtyBySku).map(([sku, qty]) => ({ sku, qty })),
+      p_subtotal: 0,
+      p_currency: '',
+      p_probe: true,
+    });
+    if (probeErr && isMissingFunctionError(probeErr)) {
+      return json(503, { error: 'net_order_unavailable' });
+    }
+    if (probeErr || !probe || typeof probe !== 'object') {
+      return json(503, { error: 'net_order_unavailable' });
+    }
+    if (probe.rejected && probe.reason === 'request_key_conflict') {
+      return json(409, { error: 'request_key_conflict' });
+    }
+    if (probe.rejected) {
+      return json(409, { error: probe.reason || 'net_order_rejected' });
+    }
+    if (probe.duplicate) {
+      return json(200, {
+        net: true,
+        order_id: probe.order_id,
+        duplicate: true,
+        message: 'Order placed on account. A QuickBooks invoice will follow (NET terms).',
+      });
+    }
+    if (!probe.probe) return json(503, { error: 'net_order_unavailable' });
+
+    if (company.status !== 'approved' || (company.net_terms_days || 0) <= 0) {
+      return json(403, { error: 'net_terms_unavailable' });
+    }
+    netContext = { user, company };
+  }
+
   const { data: variants, error } = await sb
     .from('product_variants')
     .select('vsku,product_sku,label,price,currency,stripe_price_id,active,stock,track_stock,allow_backorder,products(name,mode,active,taxable)')
@@ -160,62 +236,38 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   }
 
   if (mode === 'net') {
-    const { user } = await getUserFromRequest(request, env);
-    if (!user) return json(401, { error: 'auth_required_for_net' });
-    const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
-    const { data: company } = await sb.from('companies').select('id,status,net_terms_days,credit_limit').eq('id', profile?.company_id).maybeSingle();
-    if (!company || company.status !== 'approved' || (company.net_terms_days || 0) <= 0) {
-      return json(403, { error: 'net_terms_unavailable' });
-    }
+    const { user, company } = netContext;
 
     const subtotal = sellable.reduce((s, p) => s + Number(p.price) * qtyBySku[p.sku], 0);
 
-    // Credit enforcement + order insert. Prefer the atomic place_net_order RPC, which
-    // re-checks the limit while holding a row lock on the company — closing the
-    // check-then-insert race where two concurrent NET orders could jointly exceed the
-    // limit. Fall back to the in-app check when the RPC isn't deployed yet, so NET
-    // checkout never hard-breaks before the migration is applied.
-    let order;
-    const { data: placed, error: placeErr } = await sb.rpc('place_net_order', {
+    const rpcItems = sellable.map((p) => ({
+      sku: p.sku,
+      product_sku: p.product_sku,
+      name: p.name,
+      qty: qtyBySku[p.sku],
+      unit_price: Number(p.price),
+      line_total: Number(p.price) * qtyBySku[p.sku],
+    }));
+
+    // The v2 RPC owns the entire NET ledger transaction: credit, order, items, stock,
+    // and request-key idempotency. Missing v2 fails closed; v1 remains migration-only.
+    const { data: placed, error: placeErr } = await sb.rpc('place_net_order_v2', {
       p_company_id: company.id,
       p_user_id: user.id,
       p_email: user.email || null,
+      p_request_key: requestKey,
+      p_items: rpcItems,
       p_subtotal: subtotal,
       p_currency: sellable[0].currency || 'usd',
+      p_probe: false,
     });
     if (placeErr && isMissingFunctionError(placeErr)) {
-      // Pre-migration fallback: non-atomic check, then insert.
-      let creditState;
-      try {
-        creditState = await companyCreditState(sb, company.id, company.credit_limit);
-      } catch (err) {
-        return json(503, { error: 'credit_check_unavailable' });
-      }
-      if (exceedsCredit(creditState, subtotal)) {
-        return json(403, {
-          error: 'credit_limit_exceeded',
-          credit_limit: creditState.credit_limit,
-          outstanding: creditState.outstanding,
-          available: creditState.available,
-          order_total: subtotal,
-        });
-      }
-      const { data: fallbackOrder, error: orderErr } = await sb.from('orders').insert({
-        company_id: company.id,
-        user_id: user.id,
-        customer_email: user.email || null,
-        status: 'net_open',
-        payment_method: 'net',
-        qbo_sync_status: 'pending',
-        subtotal,
-        total: subtotal,
-        currency: sellable[0].currency || 'usd',
-      }).select('id').single();
-      if (orderErr) return json(500, { error: 'order_persist_failed' });
-      order = fallbackOrder;
-    } else if (placeErr) {
-      return json(503, { error: 'credit_check_unavailable' });
-    } else if (placed?.rejected) {
+      return json(503, { error: 'net_order_unavailable' });
+    }
+    if (placeErr || !placed || typeof placed !== 'object') {
+      return json(503, { error: 'net_order_unavailable' });
+    }
+    if (placed.rejected && placed.reason === 'credit_limit_exceeded') {
       return json(403, {
         error: 'credit_limit_exceeded',
         credit_limit: placed.credit_limit,
@@ -223,46 +275,42 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
         available: placed.available,
         order_total: subtotal,
       });
-    } else {
-      order = { id: placed.order_id };
     }
-
-    const { error: itemsErr } = await sb.from('order_items').insert(sellable.map((p) => ({
-      order_id: order.id,
-      sku: p.sku,
-      product_sku: p.product_sku,
-      name: p.name,
-      qty: qtyBySku[p.sku],
-      unit_price: p.price,
-      line_total: Number(p.price) * qtyBySku[p.sku],
-      backordered: !!p.backordered,
-    })));
-    if (itemsErr) {
-      // A NET order without line items would silently consume the company's credit
-      // and never email anyone — cancel it so the ledger stays honest.
-      await sb.from('orders').update({ status: 'cancelled' }).eq('id', order.id).then(() => {}, () => {});
-      return json(500, { error: 'order_items_persist_failed' });
-    }
-
-    const stockOk = await decrementVariantStock(sb, sellable, qtyBySku);
-    if (!stockOk) {
-      await sb.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
+    if (placed.rejected && placed.reason === 'out_of_stock') {
       return json(409, {
         error: 'out_of_stock',
+        skus: placed.skus || [],
         message: 'Stock changed before the order could be placed. Review the cart and try again.',
       });
     }
+    if (placed.rejected && placed.reason === 'currency_mismatch') {
+      return json(409, {
+        error: 'mixed_currency',
+        message: 'Items in your cart use different currencies. Order them separately.',
+      });
+    }
+    if (placed.rejected && placed.reason === 'request_key_conflict') {
+      return json(409, { error: 'request_key_conflict' });
+    }
+    if (placed.rejected) {
+      return json(409, { error: placed.reason || 'net_order_rejected' });
+    }
 
-    await sendNetOrderConfirmation({
-      env,
-      order,
-      lines: sellable.map((p) => ({ name: p.name, sku: p.sku, qty: qtyBySku[p.sku], unit_price: p.price, currency: p.currency })),
-      toEmail: user.email,
-    });
+    const order = { id: placed.order_id };
 
-    return json(201, {
+    if (!placed.duplicate) {
+      await sendNetConfirmation({
+        env,
+        order,
+        lines: sellable.map((p) => ({ name: p.name, sku: p.sku, qty: qtyBySku[p.sku], unit_price: p.price, currency: p.currency })),
+        toEmail: user.email,
+      });
+    }
+
+    return json(placed.duplicate ? 200 : 201, {
       net: true,
       order_id: order.id,
+      duplicate: !!placed.duplicate,
       message: 'Order placed on account. A QuickBooks invoice will follow (NET terms).',
     });
   }

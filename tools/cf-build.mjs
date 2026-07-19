@@ -1,6 +1,7 @@
 // Cloudflare Pages build step. Assembles a clean static publish dir (dist/) from the
-// repo's tracked site files, excluding backend/build artifacts. Pages compiles functions/
-// into the Worker separately (from the repo root), so functions are NOT copied here.
+// repo's tracked site files plus unignored working-tree additions, excluding backend/build
+// artifacts. Including additions keeps local verification honest before files are committed.
+// Pages compiles functions/ into the Worker separately, so functions are NOT copied here.
 // Run by Pages as the build command: `node tools/cf-build.mjs`.
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
@@ -10,7 +11,7 @@ const OUT = 'dist';
 
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
-  /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^node_modules(\/|$)/,
+  /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^factory\//, /^node_modules(\/|$)/,
   /^dist\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
   /^\.github\//, /^\.vscode\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
@@ -21,7 +22,9 @@ const DENY = [
 
 rmSync(OUT, { recursive: true, force: true });
 
-const files = execSync('git ls-files', { encoding: 'utf8' }).split('\n').filter(Boolean);
+const files = execSync('git ls-files --cached --others --exclude-standard', { encoding: 'utf8' })
+  .split('\n')
+  .filter(Boolean);
 let n = 0;
 for (const f of files) {
   if (DENY.some((r) => r.test(f))) continue;

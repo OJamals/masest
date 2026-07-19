@@ -69,9 +69,10 @@ programs (Stripe subscription checkout with request-enrollment fallback), and bu
 30s visibility-aware polling syncs badges + new staff replies. `business.html` is a private compatibility
 redirect into the dashboard business tab.
 
-**Admin console** (`admin.html`/`js/admin.js`): overview/stats, orders (status change + buyer email),
-companies + company detail view, products (add/remove/stock), messages (reply + buyer email + notification),
-**quotes** (lead inbox: search/filter, status, notes, email reply), offers (Resend blast), traffic, live search.
+**Admin console** (`admin.html`/`js/admin.js`): role-aware workspaces for orders, companies/accounts,
+products and variants, messages, offers, traffic, CMS content/assets/revisions/newsletters, and CRM.
+The CRM includes quote list/board views, contacts, portal users, tasks, notes/timeline, ownership and
+follow-up controls, plus server-paginated company, quote, contact, and account directories.
 
 **Commerce:** catalog (`/api/products`), cart (guest + transfer to account), Stripe Checkout
 (`/api/checkout`, `_lib/checkout-session.js`), webhook (records order, decrements stock, "order received"
@@ -118,8 +119,12 @@ schema-quotes.sql, grants.sql, seed.sql, variants_seed.sql.
 - [ ] **Inventory.** Low-stock alerts to staff, backorder handling, optional multi-location stock.
 
 ### 2C. Hardening (do alongside features)
-- [ ] **Tests** — there is no test suite. Add unit tests for `_lib` helpers and integration smoke tests for
-      each `/api/*` (auth gating, happy path, validation). Add a CI check on push.
+- [x] **Local test and verification baseline** — `npm test` runs the sequential Node contract suite;
+      `npm run verify:site` checks the generated/static site; `npm run qa:commerce-smoke` and
+      `npm run qa:ui-critical` run the focused Playwright gates. `npm run verify` runs syntax checks,
+      Node tests, the Cloudflare Pages build, site verification, then both focused browser gates.
+- [ ] **Coverage expansion** — add behavioral handler coverage for remaining support/admin routes and
+      consolidate the broader Playwright suite around one shared server lifecycle.
 - [ ] **Error tracking & logging** — Sentry (or CF-native) on functions + client; structured logs on webhook/payment paths.
 - [ ] **Rate limiting & abuse** — limit `/api/quote`, `/api/newsletter`, auth endpoints (CF rules or KV counter).
 - [ ] **RLS audit** — review every table's policies; confirm anon/authenticated cannot read others' orders/quotes/messages.
@@ -130,29 +135,38 @@ schema-quotes.sql, grants.sql, seed.sql, variants_seed.sql.
 
 ## 3. CMS FEATURES
 
-Today, marketing content is hand-authored HTML and only **products** are editable (via admin). Build a
-lightweight, Supabase-backed CMS so non-developers can manage content.
+The repository has a native Supabase-backed CMS inside the existing static Pages architecture. These
+checked foundations are current repository capability; unchecked items are the remaining CMS backlog.
 
-- [ ] **Media library** — upload images/PDFs to **Cloudflare R2** or **Supabase Storage**; reusable picker
-      in admin; used by products, blog, case studies, SDS/TDS docs.
-- [ ] **Product content CMS** — extend admin products beyond price/stock: rich description, image gallery
-      upload, attached documents, category/tag, per-product SEO meta. Render dynamically on `product.html`.
-- [ ] **Resources / blog / news** — `content` table (slug, title, body markdown/HTML, hero, author, status,
-      published_at, SEO). Admin editor + public list/detail pages; replaces static `resources.html` content.
+- [x] **Structured content and publishing** — the admin Content workspace and
+      `/api/admin/content` manage services, service packages, proof/resource/industry cards, industry
+      sectors, FAQ blocks, page sections, page metadata, pricing tiers, and blog posts.
+- [x] **Media library** — `/api/admin/content-assets` and `js/admin/content-assets.js` provide
+      Supabase Storage upload, metadata, lifecycle controls, and reusable selection. Product images also
+      support primary/gallery upload and ordering in the Products workspace.
+- [x] **Resources / blog / news** — `blog_post` entries support Markdown, draft/publish scheduling,
+      generated public blog pages, RSS, and sitemap output.
+- [x] **Preview, draft, and revision workflow** — content has in-admin preview, draft/published states,
+      scheduled publishing, and revision inspection through `/api/admin/content-revisions`.
+- [x] **Structured industry content** — `industry_card`, `industry_sector`, and `page_section` entries
+      drive editable industry and page content.
+- [ ] **Product content CMS completion** — add rich descriptions, attached SDS/TDS documents,
+      category/tag editing, and per-product SEO metadata beyond the existing image/gallery controls.
 - [ ] **Case studies** — structured entries (industry, problem, result, metrics, downloadable PDF) feeding
       `proof.html` from the DB instead of hardcoded markup. (Existing PDFs in `docs/` become seed content.)
-- [ ] **Industries CMS** — editable industry landing content + per-industry product recommendations.
+- [ ] **Industry recommendations** — connect managed industry content to per-industry product recommendations.
 - [ ] **Site settings** — announcement/banner bar, nav/footer links, global contact details, feature flags.
-- [ ] **SEO management** — editable meta title/description/OG per page, auto **sitemap.xml**, **robots** rules,
-      **JSON-LD** structured data (Organization, Product, BreadcrumbList, FAQ), canonical tags, 301 redirect manager.
+- [ ] **SEO management completion** — extend current `page_meta` and generated sitemap support with editable
+      titles, robots rules, broader JSON-LD, canonical controls, and a redirect manager.
 - [ ] **Roles** — distinguish "content editor" from full admin (extend `requireStaff` with a role/permission column).
-- [ ] **Preview/draft** — draft vs published states with a preview link before going live.
 
 ---
 
 ## 4. LEAD GENERATOR
 
-`/api/quote` + admin Quotes is the seed of a CRM. Expand into a full top-of-funnel lead engine.
+`/api/quote` feeds an existing admin CRM across `js/admin/quotes.js`, `js/admin/crm.js`, and
+`js/admin/crm-workspace.js`. CRM routes cover contacts, tasks, notes, and timelines; list APIs use
+bounded server pagination. The unchecked items below remain top-of-funnel work.
 
 - [ ] **Intent-specific flows** — the contact form already branches quote/audit/sample/distributor. Build the
       back half of each: **sample request** fulfillment + tracking; **distributor application** review/approval;
@@ -166,8 +180,8 @@ lightweight, Supabase-backed CMS so non-developers can manage content.
 - [ ] **Newsletter capture** — footer signup, exit-intent and scroll popups, post-purchase opt-in (Klaviyo lists).
 - [x] **Customer chat** — first-party authenticated chat with direct handoff to the
       admin Messages thread; logged-out visitors are sent to sign up or log in.
-- [ ] **Mini-CRM in admin** — promote Quotes into a Leads pipeline: lifecycle stages (new→contacted→qualified
-      →quoted→won/lost), owner assignment + routing rules, activity log, follow-up reminders, CSV export.
+- [x] **Admin CRM foundation** — quote lifecycle stages and board, owner/due-date follow-up, task inbox,
+      notes/timeline, contacts and portal-user views, reporting/export helpers, and server-paginated search.
 - [ ] **CRM sync (optional)** — HubSpot/Salesforce/Pipedrive connector if sales already uses one.
 - [ ] **Attribution** — capture UTM/referrer/landing page on every lead (extend `/api/track` + quote payload) for source ROI.
 
@@ -220,8 +234,8 @@ Turn traffic and leads into orders and repeat revenue.
 ## 7. Suggested execution order
 
 1. **Unblock selling:** §2A owner config + §2B tax + shipping → real checkout works end-to-end.
-2. **Close the lead loop:** §2B Quote→Order, §4 mini-CRM pipeline + booking → sales can transact on leads.
-3. **Feed the funnel:** §3 CMS (resources/case studies/SEO) + §5 event analytics + lifecycle emails.
+2. **Close the lead loop:** §2B Quote→Order + remaining §4 intent flows and booking → sales can transact on leads.
+3. **Feed the funnel:** remaining §3 CMS work (case studies/product depth/SEO) + §5 event analytics + lifecycle emails.
 4. **Optimize:** §5 on-site conversion, A/B, personalization.
 5. **Scale:** §6 as the business demands.
 

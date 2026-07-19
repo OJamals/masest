@@ -1,0 +1,16 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-025.implement.codex.md)"
+  ],
+  "created_at": "2026-07-19T03:54:04+00:00",
+  "id": "masest-025",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-025.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-025.md",
+  "spec_sha256": "297f577b01f7f728f0a3f65c1ba7f537726e25b23009c758e67c971d349763d7",
+  "status": "dispatched",
+  "title": "Make newsletter rendering safe for every staff role",
+  "updated_at": "2026-07-19T04:12:40+00:00"
+}

@@ -1,0 +1,16 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-030.implement.codex.md)"
+  ],
+  "created_at": "2026-07-19T07:30:07+00:00",
+  "id": "masest-030",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-030.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-030.md",
+  "spec_sha256": "4fe7bc2e82b08328b7eedf07a0513e336ea4fe9ded564c9fe15aaedfa37303cf",
+  "status": "dispatched",
+  "title": "Queue newsletter delivery with a durable recipient ledger",
+  "updated_at": "2026-07-19T08:22:48+00:00"
+}

@@ -161,7 +161,7 @@ function pageHtml(page) {
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260708c">
-<link rel="stylesheet" href="../css/navigation.css?v=20260712b">
+<link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <meta property="og:title" content="${html(page.title)} | MASEST VertKleen">
 <meta property="og:description" content="${html(page.description)}">
@@ -210,7 +210,6 @@ function pageHtml(page) {
   <section class="section section-slim">
     <div class="wrap product-static-grid">
       <article class="product-static-panel">
-        <span class="eyebrow">Per-gallon price math</span>
         <h2>${html(page.product)} vs ${html(page.competitor)}</h2>
         <div class="table-scroll">
           <table class="cmp-table">
@@ -225,7 +224,6 @@ function pageHtml(page) {
       </article>
 
       <article class="product-static-panel">
-        <span class="eyebrow">Proof point</span>
         <h2>${html(page.proofTitle)}</h2>
         <p>${html(page.proof)}</p>
         <a class="btn btn-ink" href="../proof">See proof library</a>
@@ -236,7 +234,6 @@ function pageHtml(page) {
   <section class="section section-slim">
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">Swap table row</span>
         <h2 class="headline">How this maps inside the product finder.</h2>
       </div>
       <div class="table-scroll">
@@ -255,7 +252,6 @@ function pageHtml(page) {
   <section class="block-dark">
     <div class="wrap">
       <div class="section-head center">
-        <span class="eyebrow">Quote next</span>
         <h2 class="headline">Send the incumbent product and volume.</h2>
         <p class="subhead">MASEST will confirm the replacement, current pack pricing, freight path, and proof file before release.</p>
         <a class="btn btn-light" href="${quoteHref}">Request quote</a>
@@ -264,7 +260,7 @@ function pageHtml(page) {
   </section>
 </main>
 
-<script type="module" src="../js/main.js?v=20260711y"></script>
+<script type="module" src="../js/main.js?v=20260719c"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

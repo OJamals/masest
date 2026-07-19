@@ -1,0 +1,16 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-033.implement.codex.md)"
+  ],
+  "created_at": "2026-07-19T09:53:01+00:00",
+  "id": "masest-033",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-033.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-033.md",
+  "spec_sha256": "462e998b17e897025e538aaab10ac416ccb33704a22c36b607f55afde002eb2b",
+  "status": "dispatched",
+  "title": "Guide buyers from current job to a VertKleen action",
+  "updated_at": "2026-07-19T10:18:54+00:00"
+}

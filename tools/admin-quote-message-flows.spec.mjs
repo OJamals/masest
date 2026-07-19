@@ -145,7 +145,11 @@ test("staff replies to a support thread with the expected payload", async ({ pag
   await page.goto(`${BASE_URL}/admin.html#messages`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
 
-  await page.locator('[data-company-thread="co-1"]').click();
+  const thread = page.locator('[data-company-thread="co-1"]');
+  await expect(thread).toBeAttached();
+  await page.locator("#adminSupportLauncher").evaluate((launcher) => launcher.click());
+  await expect(page.locator("#adminSupportDrawer")).toBeVisible();
+  await thread.click();
   await expect(page.locator("#replyForm")).toBeVisible();
   await page.locator("#replyBody").fill("Ships Friday via LTL freight.");
 

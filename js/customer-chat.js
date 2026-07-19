@@ -2,6 +2,8 @@
  * company support thread, so they appear in Admin → Messages without a vendor bridge. */
 
 const POLL_MS = 30_000;
+const OBSTRUCTION_EVENT = "masest:customer-chat-obstruction-change";
+const OBSTRUCTION_SELECTOR = "[data-customer-chat-obstruction]";
 
 function pageRoot() {
   return window.MASEST?.chatRoot || "";
@@ -41,10 +43,15 @@ export async function initCustomerChat() {
   } catch {
     // The buyer launcher remains available if account capability cannot be resolved.
   }
+  let stylesheetReady = Promise.resolve();
   if (!document.querySelector('link[data-masest-customer-chat="true"]')) {
     const stylesheet = document.createElement("link");
+    stylesheetReady = new Promise((resolve) => {
+      stylesheet.addEventListener("load", resolve, { once: true });
+      stylesheet.addEventListener("error", resolve, { once: true });
+    });
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/customer-chat.css?v=20260711e`;
+    stylesheet.href = `${root}css/customer-chat.css?v=20260719c`;
     stylesheet.dataset.masestCustomerChat = "true";
     document.head.append(stylesheet);
   }
@@ -60,6 +67,7 @@ export async function initCustomerChat() {
       <div class="customer-chat__guest" hidden>
         <p>Sign in or create an account to send a secure message to the MASEST team.</p>
         <a class="btn btn-primary" href="${root}account.html">Sign up / Log in</a>
+        <a class="customer-chat__quote-link" href="${root}contact.html">Request a quote with this context</a>
       </div>
       <div class="customer-chat__thread" hidden>
         <div class="customer-chat__messages" aria-live="polite" aria-label="Messages"></div>
@@ -68,6 +76,7 @@ export async function initCustomerChat() {
           <textarea id="customerChatBody" maxlength="4000" required placeholder="Ask about VertKleen, an order, or your account."></textarea>
           <div class="customer-chat__form-row"><p class="customer-chat__status" role="status" aria-live="polite"></p><button class="btn btn-primary" type="submit">Send</button></div>
           <a class="customer-chat__inbox-link" href="${root}dashboard.html#messages">Open full message inbox</a>
+          <a class="customer-chat__quote-link" href="${root}contact.html">Request a quote with this context</a>
         </form>
       </div>
     </section>
@@ -78,16 +87,69 @@ export async function initCustomerChat() {
   const toggle = shell.querySelector(".customer-chat__toggle");
   const close = shell.querySelector(".customer-chat__close");
   const guest = shell.querySelector(".customer-chat__guest");
+  const guestAction = guest.querySelector(".btn-primary");
   const thread = shell.querySelector(".customer-chat__thread");
   const list = shell.querySelector(".customer-chat__messages");
   const form = shell.querySelector(".customer-chat__form");
   const body = shell.querySelector("#customerChatBody");
   const status = shell.querySelector(".customer-chat__status");
+  const quoteActions = [...shell.querySelectorAll(".customer-chat__quote-link")];
   let authenticated = false;
   let pollId = 0;
   let chatPresenceOpen = false;
   let lastPresencePing = 0;
   let presenceRequest = Promise.resolve();
+  let dockFrame = 0;
+  let requestContextModule;
+  let cartModule;
+
+  const updateQuoteHref = async () => {
+    try {
+      [requestContextModule, cartModule] = await Promise.all([
+        requestContextModule || import("./request-context.js?v=20260719c"),
+        cartModule || import("./cart.js?v=20260719c"),
+      ]);
+      const href = requestContextModule.buildRequestContextHref({
+        pageUrl: location.href,
+        product: document.body.dataset.productSku || "",
+        cartItems: cartModule.items(),
+        quoteUrl: `${root}contact.html`,
+      });
+      if (href) quoteActions.forEach((action) => { action.href = href; });
+    } catch {
+      quoteActions.forEach((action) => { action.href = `${root}contact.html`; });
+    }
+  };
+
+  const updateDockAvoidance = () => {
+    dockFrame = 0;
+    shell.style.setProperty("--customer-chat-avoid", "0px");
+    const launcher = toggle.getBoundingClientRect();
+    let lift = 0;
+    const obstructionRects = [...document.querySelectorAll(OBSTRUCTION_SELECTOR)].flatMap((obstruction) => {
+      if (obstruction.dataset.customerChatObstructionActive === "false") return [];
+      const style = getComputedStyle(obstruction);
+      if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return [];
+      const rect = obstruction.getBoundingClientRect();
+      return rect.width < 1 || rect.height < 1 ? [] : [rect];
+    });
+    for (let pass = 0; pass < 12; pass++) {
+      const docked = { left: launcher.left, right: launcher.right, top: launcher.top - lift, bottom: launcher.bottom - lift };
+      const collided = obstructionRects.filter((rect) => (
+        docked.left < rect.right && docked.right > rect.left
+          && docked.top < rect.bottom && docked.bottom > rect.top
+      ));
+      if (!collided.length) break;
+      const nextLift = Math.max(...collided.map((rect) => launcher.bottom - rect.top + 12));
+      if (nextLift <= lift) break;
+      lift = nextLift;
+    }
+    const maxLift = Math.max(0, window.innerHeight - launcher.height - 24);
+    shell.style.setProperty("--customer-chat-avoid", `${Math.min(Math.ceil(lift), maxLift)}px`);
+  };
+  const scheduleDockAvoidance = () => {
+    if (!dockFrame) dockFrame = requestAnimationFrame(updateDockAvoidance);
+  };
 
   const setStatus = (text = "", state = "") => {
     status.textContent = text;
@@ -112,6 +174,7 @@ export async function initCustomerChat() {
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
     toggle.setAttribute("aria-label", open ? "Close customer chat" : "Open customer chat");
+    scheduleDockAvoidance();
     if (!open) {
       window.clearInterval(pollId);
       pollId = 0;
@@ -179,8 +242,9 @@ export async function initCustomerChat() {
   };
   const open = async () => {
     setOpen(true);
+    void updateQuoteHref();
     await refresh();
-    if (authenticated) body.focus();
+    (authenticated ? body : guestAction).focus();
   };
 
   toggle.addEventListener("click", () => panel.hidden ? void open() : setOpen(false));
@@ -200,6 +264,9 @@ export async function initCustomerChat() {
   });
   document.addEventListener("masest:auth", () => { if (!panel.hidden) void refresh(); });
   document.addEventListener("masest:session-expired", () => { if (!panel.hidden) showGuest(); });
+  document.addEventListener("cart:updated", () => { if (!panel.hidden) void updateQuoteHref(); });
+  document.addEventListener(OBSTRUCTION_EVENT, scheduleDockAvoidance);
+  window.addEventListener("resize", scheduleDockAvoidance, { passive: true });
   document.addEventListener("visibilitychange", () => {
     if (panel.hidden || !authenticated) return;
     void setChatPresence(!document.hidden, { force: true, keepalive: document.hidden });
@@ -230,6 +297,8 @@ export async function initCustomerChat() {
       send.disabled = false;
     }
   });
+  scheduleDockAvoidance();
+  void stylesheetReady.then(scheduleDockAvoidance);
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initCustomerChat, { once: true });

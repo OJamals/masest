@@ -24,6 +24,19 @@ test('internal security-definer RPCs revoke default PUBLIC execute', () => {
   }
 });
 
+test('place_net_order_v2 remains service-role only in its additive migration', () => {
+  const sql = read('supabase/schema-order-integrity.sql');
+  const signature = 'place_net_order_v2\\(uuid, uuid, text, text, jsonb, numeric, text, boolean\\)';
+  assert.match(sql,
+    new RegExp(`revoke\\s+all\\s+on\\s+function\\s+public\\.${signature}\\s+from\\s+public`, 'i'));
+  assert.match(sql,
+    new RegExp(`revoke\\s+execute\\s+on\\s+function\\s+public\\.${signature}\\s+from\\s+anon,\\s*authenticated`, 'i'));
+  assert.match(sql,
+    new RegExp(`grant\\s+execute\\s+on\\s+function\\s+public\\.${signature}\\s+to\\s+service_role`, 'i'));
+  assert.doesNotMatch(sql,
+    new RegExp(`grant\\s+execute\\s+on\\s+function\\s+public\\.${signature}\\s+to\\s+(anon|authenticated)`, 'i'));
+});
+
 test('quote leads stay service-role only at the table layer', () => {
   const sql = read('supabase/schema-rpc-hardening.sql') + '\n' + read('supabase/schema-quotes.sql');
   assert.match(sql, /revoke\s+all\s+on\s+table\s+public\.quotes\s+from\s+anon,\s*authenticated/i);

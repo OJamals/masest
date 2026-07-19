@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { deleteAccountUser } from "../functions/_lib/account-erasure.js";
+import { companyAdminErasureGuard } from "../functions/api/account/delete.js";
 
 function fakeClient({ ready = true, rpcError = null, deleteError = null } = {}) {
   const calls = [];
@@ -22,6 +23,143 @@ function fakeClient({ ready = true, rpcError = null, deleteError = null } = {}) 
     },
   };
 }
+
+function fakeRouteClient({
+  profile = { company_id: null, role: "buyer" },
+  profileError = null,
+  members = [],
+  memberError = null,
+  ready = true,
+  rpcError = null,
+  deleteError = null,
+} = {}) {
+  const sb = fakeClient({ ready, rpcError, deleteError });
+  sb.from = (table) => {
+    assert.equal(table, "profiles");
+    sb.calls.push(["from", table]);
+    const filters = [];
+    const query = {
+      select(columns) {
+        sb.calls.push(["select", columns]);
+        return query;
+      },
+      eq(column, value) {
+        filters.push([column, value]);
+        sb.calls.push(["eq", column, value]);
+        return query;
+      },
+      async maybeSingle() {
+        sb.calls.push(["maybeSingle"]);
+        return { data: profile, error: profileError };
+      },
+      then(resolve, reject) {
+        sb.calls.push(["execute"]);
+        return Promise.resolve({ data: members, error: memberError }).then(
+          resolve,
+          reject,
+        );
+      },
+    };
+    return query;
+  };
+  return sb;
+}
+
+async function responseResult(response) {
+  return { status: response.status, body: await response.json() };
+}
+
+test("user without a Company can erase the account", async () => {
+  const sb = fakeRouteClient();
+
+  assert.equal(await companyAdminErasureGuard(sb, "user-1"), null);
+  assert.equal(sb.calls.some(([name]) => name === "rpc"), false);
+  assert.equal(sb.calls.some(([name]) => name === "deleteUser"), false);
+});
+
+test("buyer-role Company member can erase the account", async () => {
+  const sb = fakeRouteClient({
+    profile: { company_id: "company-1", role: "buyer" },
+  });
+
+  assert.equal(await companyAdminErasureGuard(sb, "user-1"), null);
+  assert.equal(sb.calls.some(([name]) => name === "execute"), false);
+});
+
+test("Company admin can erase the account when another admin remains", async () => {
+  const sb = fakeRouteClient({
+    profile: { company_id: "company-1", role: "admin" },
+    members: [
+      { id: "user-1", role: "admin" },
+      { id: "user-2", role: "admin" },
+    ],
+  });
+
+  assert.equal(await companyAdminErasureGuard(sb, "user-1"), null);
+  assert.equal(sb.calls.some(([name]) => name === "execute"), true);
+});
+
+test("sole Company admin receives guidance before any erasure side effect", async () => {
+  const sb = fakeRouteClient({
+    profile: { company_id: "company-1", role: "admin" },
+    members: [{ id: "user-1", role: "admin" }],
+  });
+
+  assert.deepEqual(await responseResult(
+    await companyAdminErasureGuard(sb, "user-1"),
+  ), {
+    status: 409,
+    body: {
+      error: "last_company_admin",
+      message: "Transfer ownership through Team settings before deleting your account.",
+    },
+  });
+  assert.deepEqual(sb.calls, [
+    ["from", "profiles"],
+    ["select", "company_id,role"],
+    ["eq", "id", "user-1"],
+    ["maybeSingle"],
+    ["from", "profiles"],
+    ["select", "id,role"],
+    ["eq", "company_id", "company-1"],
+    ["execute"],
+  ]);
+});
+
+test("profile query failure fails closed before any erasure side effect", async () => {
+  const sb = fakeRouteClient({
+    profileError: new Error("profile query failed"),
+  });
+
+  assert.deepEqual(await responseResult(
+    await companyAdminErasureGuard(sb, "user-1"),
+  ), {
+    status: 500,
+    body: { error: "server_error" },
+  });
+  assert.deepEqual(sb.calls, [
+    ["from", "profiles"],
+    ["select", "company_id,role"],
+    ["eq", "id", "user-1"],
+    ["maybeSingle"],
+  ]);
+});
+
+test("member query failure fails closed before any erasure side effect", async () => {
+  const sb = fakeRouteClient({
+    profile: { company_id: "company-1", role: "admin" },
+    memberError: new Error("member query failed"),
+  });
+
+  assert.deepEqual(await responseResult(
+    await companyAdminErasureGuard(sb, "user-1"),
+  ), {
+    status: 500,
+    body: { error: "server_error" },
+  });
+  assert.equal(sb.calls.some(([name]) => name === "rpc"), false);
+  assert.equal(sb.calls.some(([name]) => name === "deleteUser"), false);
+});
 
 test("account erasure fails closed before auth deletion when readiness cannot be proven", async () => {
   const sb = fakeClient({ rpcError: new Error("migration missing") });
@@ -81,7 +219,7 @@ test("account erasure migration moves pseudonymization into the auth delete tran
   assert.match(sql, /grant\s+execute\s+on\s+function\s+public\.account_erasure_ready\s*\(\s*\)\s+to\s+service_role/i);
 });
 
-test("self-service deletion is authenticated but not company-gated and fails closed", () => {
+test("self-service deletion authenticates, confirms, and guards Company ownership", () => {
   const route = readFileSync(
     new URL("../functions/api/account/delete.js", import.meta.url),
     "utf8",
@@ -91,7 +229,16 @@ test("self-service deletion is authenticated but not company-gated and fails clo
   assert.match(route, /adminClient\(env\)/);
   assert.doesNotMatch(route, /requireCompany/);
   assert.match(route, /confirm\s*!==\s*'DELETE'/);
+  assert.match(route, /await\s+companyAdminErasureGuard\(sb,\s*user\.id\)/);
   assert.match(route, /await\s+deleteAccountUser\(sb,\s*user\.id\)/);
+  assert.match(route, /\.from\('profiles'\)[\s\S]*select\('company_id,role'\)/);
+  assert.match(route, /isLastAdmin\(memberResult\.data,\s*userId\)/);
+  assert.match(route, /last_company_admin[\s\S]*Team settings/);
+  assert.ok(
+    route.indexOf("await companyAdminErasureGuard(sb, user.id)")
+      < route.indexOf("await deleteAccountUser(sb, user.id)"),
+    "Company-admin guard must run before readiness RPC and Auth deletion",
+  );
   assert.match(route, /account_erasure_not_ready[\s\S]*503/);
   assert.match(route, /json\(500[\s\S]*delete_failed/);
   assert.doesNotMatch(route, /\.from\('orders'\)|deleteUser\(|\bdetail\s*:/);

@@ -1,0 +1,16 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-031.implement.codex.md)"
+  ],
+  "created_at": "2026-07-19T08:27:39+00:00",
+  "id": "masest-031",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-031.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-031.md",
+  "spec_sha256": "4228e80d58d465986f8a6b8ad83678648ee8bfa2fd4850ff67dc8242b8a1403e",
+  "status": "dispatched",
+  "title": "Lazy-load staff admin feature modules by workspace",
+  "updated_at": "2026-07-19T09:20:33+00:00"
+}

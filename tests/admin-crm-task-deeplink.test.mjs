@@ -85,16 +85,16 @@ test('admin.js: destructures openQuoteById from createQuotesTab', () => {
   assert.match(ADMIN, /openQuoteById\s*\}.*createQuotesTab|createQuotesTab[\s\S]{0,300}openQuoteById/);
 });
 
-test('admin.js: openSubject function is defined at module scope', () => {
-  assert.match(ADMIN, /function openSubject\(type,\s*id,\s*label\)/);
+test('admin.js: openSubject is constructed with the lazy CRM workspace', () => {
+  assert.match(ADMIN, /const openSubject = \(type,\s*id,\s*label\) =>/);
 });
 
-test('admin.js: openSubject maps company → setTab(companies) + openCompanyDetail', () => {
-  assert.match(ADMIN, /setTab\('companies'\).*openCompanyDetail\(id\)|openCompanyDetail.*setTab\('companies'\)/s);
+test('admin.js: openSubject maps company → lazy companies route context', () => {
+  assert.match(ADMIN, /setTab\('companies',\s*\{\s*openCompanyId:\s*id\s*\}\)/);
 });
 
-test('admin.js: openSubject maps quote → setTab(quotes) + openQuoteById', () => {
-  assert.match(ADMIN, /setTab\('quotes'\).*openQuoteById\(id\)|openQuoteById.*setTab\('quotes'\)/s);
+test('admin.js: openSubject maps quote → lazy quotes route context', () => {
+  assert.match(ADMIN, /setTab\('quotes',\s*\{\s*openQuoteId:\s*id\s*\}\)/);
 });
 
 test('admin.js: openSubject maps contact → crm.openContactDrawer (no tab switch)', () => {

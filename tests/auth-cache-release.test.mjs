@@ -6,14 +6,16 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260711y";
-const ADMIN_RELEASE = "20260711t";
-const ADMIN_PAGE_RELEASE = "20260711t";
-const CHROME_RELEASE = "20260711y";
+const MAIN_RELEASE = "20260719c";
+const ADMIN_RELEASE = "20260719a";
+const ADMIN_PAGE_RELEASE = "20260719a";
+const CHROME_RELEASE = "20260719c";
 const ACCOUNT_NAV_RELEASE = "20260711x";
-const CUSTOMER_CHAT_RELEASE = "20260711i";
-const CUSTOMER_CHAT_STYLE_RELEASE = "20260711e";
-const MAIN_RELEASE_OVERRIDES = new Map();
+const CUSTOMER_CHAT_RELEASE = "20260719c";
+const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
+const MAIN_RELEASE_OVERRIDES = new Map([
+  ["products.html", "20260719d"],
+]);
 
 function filesUnder(path) {
   return readdirSync(new URL(path, root), { withFileTypes: true }).flatMap((entry) => {

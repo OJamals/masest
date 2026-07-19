@@ -1,0 +1,15 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-021.implement.codex.md)"
+  ],
+  "created_at": "2026-07-19T02:39:00+00:00",
+  "id": "masest-021",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-021.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-021.md",
+  "spec_sha256": "00ecea7bd6c76057014bbb77ed7e2492ce5560c06caacd0e15ee531c7b837db4",
+  "status": "planned",
+  "title": "Enforce write authorization for newsletter recipients"
+}

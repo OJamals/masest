@@ -2,7 +2,7 @@
   position: fixed;
   z-index: 90;
   right: max(16px, env(safe-area-inset-right));
-  bottom: max(16px, env(safe-area-inset-bottom));
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--customer-chat-avoid, 0px));
   display: grid;
   align-items: end;
   justify-items: end;
@@ -58,6 +58,11 @@
 }
 
 .customer-chat__panel[hidden] { display: none; }
+.customer-chat__panel:has(.customer-chat__thread:not([hidden])) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: min(440px, calc(100dvh - 96px)) !important;
+}
 .customer-chat__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px 16px; background: var(--ink); color: var(--paper, #fff); }
 .customer-chat__header h2 { margin: 2px 0 0; font-size: 1.14rem; letter-spacing: -.01em; }
 .customer-chat__eyebrow { margin: 0; color: var(--accent); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
@@ -65,7 +70,7 @@
 .customer-chat__guest { padding: 24px 20px; }
 .customer-chat__guest p { margin: 0 0 18px; color: var(--ink-soft); line-height: 1.55; }
 .customer-chat__guest .btn { min-height: 44px; }
-.customer-chat__thread { display: grid; min-block-size: 0; grid-template-rows: minmax(0, min(190px, 26dvh)) auto; }
+.customer-chat__thread { display: grid; min-block-size: 0; grid-template-rows: minmax(72px, 1fr) auto; }
 .customer-chat__messages { display: grid; min-block-size: 0; align-content: start; gap: 10px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 16px; background: var(--paper-soft, #f6f7f8); }
 .customer-chat__message { max-width: 86%; padding: 10px 12px; border-radius: 14px; background: var(--paper, #fff); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 10%, transparent); }
 .customer-chat__message--buyer { justify-self: end; border-bottom-right-radius: 4px; background: var(--accent); color: var(--white, #fff); }
@@ -81,6 +86,8 @@
 .customer-chat__status[data-state="err"] { color: var(--status-danger-ink); }
 .customer-chat__status[data-state="ok"] { color: var(--accent-ink); }
 .customer-chat__inbox-link { justify-self: start; min-height: 44px; display: inline-flex; align-items: center; color: var(--accent-ink); font-size: .82rem; font-weight: 800; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.customer-chat__quote-link { display: inline-flex; min-height: 44px; align-items: center; color: var(--ink-soft); font-size: .78rem; font-weight: 750; line-height: 1.35; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.customer-chat__guest .customer-chat__quote-link { margin-top: 10px; }
 
 @media (hover: hover) and (pointer: fine) {
   .customer-chat__toggle:hover { transform: translateY(-2px); box-shadow: 0 12px 28px color-mix(in srgb, var(--ink) 28%, transparent), 0 3px 8px color-mix(in srgb, var(--ink) 16%, transparent); }
@@ -88,10 +95,52 @@
 }
 
 @media (max-width: 480px) {
-  .customer-chat { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .customer-chat { right: 12px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--customer-chat-avoid, 0px)); }
   .customer-chat__panel { width: min(100vw - 24px, 392px); max-block-size: min(440px, calc(100dvh - 80px)); }
   .customer-chat__thread { grid-template-rows: minmax(0, min(200px, 28dvh)) auto; }
   .customer-chat__toggle { min-width: 52px; min-height: 52px; padding: 0 15px; }
+}
+
+@media (max-height: 480px) {
+  .customer-chat:has(.customer-chat__panel:not([hidden])) {
+    max-block-size: calc(100dvh - 24px);
+  }
+  .customer-chat:has(.customer-chat__panel:not([hidden])) .customer-chat__toggle {
+    display: none;
+  }
+  .customer-chat__panel:has(.customer-chat__thread:not([hidden])) {
+    block-size: calc(100dvh - 24px) !important;
+    max-block-size: calc(100dvh - 24px);
+  }
+  .customer-chat__header {
+    align-items: center;
+    padding: 8px 12px;
+  }
+  .customer-chat__header h2 { margin: 0; }
+  .customer-chat__eyebrow { display: none; }
+  .customer-chat__thread { grid-template-rows: minmax(44px, 1fr) auto; }
+  .customer-chat__messages { padding: 8px 12px; }
+  .customer-chat__form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px 8px;
+    padding: 8px 12px;
+  }
+  .customer-chat__form textarea,
+  .customer-chat__form-row {
+    grid-column: 1 / -1;
+  }
+  .customer-chat__form textarea {
+    min-height: 44px;
+    max-height: 52px;
+    padding: 8px;
+    resize: none;
+  }
+  .customer-chat__inbox-link,
+  .customer-chat__quote-link {
+    justify-content: center;
+    justify-self: stretch;
+    text-align: center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

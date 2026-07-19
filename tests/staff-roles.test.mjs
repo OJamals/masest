@@ -110,6 +110,19 @@ for (const [path, cap] of [
   });
 }
 
+test('finance/owner company tax mutation remains capability-gated and audited', () => {
+  assert.equal(staffCan('finance', 'company.credit'), true);
+  assert.equal(staffCan('owner', 'company.credit'), true);
+
+  const src = read('functions/api/admin/companies.js');
+  const gate = src.indexOf("staffCan(role, 'company.credit')");
+  const assignment = src.indexOf('patch.tax_exempt = Boolean(body.tax_exempt)', gate);
+  const audit = src.indexOf('await recordAudit', assignment);
+  assert.ok(gate > -1, 'staff route must require company.credit');
+  assert.ok(assignment > gate, 'staff-owned tax assignment must remain behind the capability gate');
+  assert.ok(audit > assignment, 'staff-owned tax mutation must remain audited');
+});
+
 // ---- migration ----
 test('schema-staff-roles.sql adds staff_role with a value constraint', () => {
   const sql = read('supabase/schema-staff-roles.sql');

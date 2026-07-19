@@ -17,7 +17,8 @@ test('admin boot consumes uncached staff context and reapplies permissions to dy
   const source = read('js/admin.js');
   assert.match(source, /applyStaffContext\(stats\.staff_context\)/);
   assert.match(source, /MutationObserver\([\s\S]*applyCapabilityUi/);
-  assert.match(source, /renderQboStatus\(\)\.finally\(\(\) => applyCapabilityUi\(document\.body/);
+  assert.match(source, /renderQboStatus\(\);[\s\S]*finally \{ applyCapabilityUi\(document\.body, state\.staff\); \}/);
+  assert.match(source, /await result\.feature\.render\(options\);[\s\S]*applyCapabilityUi\(panel \|\| document\.body, state\.staff\)/);
 });
 
 test('high-risk admin controls declare the same capabilities as their APIs', () => {

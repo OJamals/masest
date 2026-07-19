@@ -117,7 +117,7 @@ function postPage(post, all) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=20260708c">
-<link rel="stylesheet" href="../css/navigation.css?v=20260712b">
+<link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css">
 <link rel="stylesheet" href="../css/blog.css">
 <!-- seo:auto -->
@@ -160,7 +160,7 @@ function postPage(post, all) {
     </aside>
   </article>
 </main>
-<script type="module" src="../js/main.js?v=20260711y"></script>
+<script type="module" src="../js/main.js?v=20260719c"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
@@ -212,7 +212,7 @@ function indexPage(posts) {
 <link rel="alternate" type="application/rss+xml" title="MASEST VertKleen Blog" href="/blog/feed.xml">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260708c">
-<link rel="stylesheet" href="css/navigation.css?v=20260712b">
+<link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/blog.css">
 <!-- seo:auto -->
@@ -258,11 +258,11 @@ ${cards}
     <div class="wrap reveal">
       <h2 class="headline">Ready to swap the hazard off your shelf?</h2>
       <p class="subhead">Tell us the chemical you run today and we will match the HMIS 0-0-0 VertKleen replacement, with the documentation your safety officer can sign.</p>
-      <a class="btn btn-primary" href="products#swap">Find your replacement</a>
+      <a class="btn btn-primary" href="products#catalog">Find your replacement</a>
     </div>
   </section>
 </main>
-<script type="module" src="js/main.js?v=20260711y"></script>
+<script type="module" src="js/main.js?v=20260719c"></script>
 <script type="module" src="js/blog-index.js"></script>
 <script src="js/track.js" defer></script>
 </body>

@@ -12,18 +12,21 @@ test("Cloudflare Supabase helper imports the v2 named createClient export", () =
 
 test("NET checkout does not acknowledge orders before persistence succeeds", () => {
   const checkout = readRepo("functions/api/checkout.js");
-  // Order persistence (atomic place_net_order RPC, or the pre-migration fallback insert) must
-  // be error-checked before any success ack, and must NOT leak the raw DB message.
-  assert.match(checkout, /error:\s*orderErr/);
-  assert.match(checkout, /if\s*\(orderErr\s*\)\s*return\s+json\(500,\s*\{\s*error:\s*'order_persist_failed'/);
-  assert.doesNotMatch(checkout, /error:\s*orderErr\.message/, "must not return the raw DB error to the client");
-  // Item insert errors must be handled (masked) before returning 201 — and the order
-  // cancelled so an empty NET order doesn't silently consume the company's credit.
-  assert.match(checkout, /error:\s*itemsErr/);
-  assert.match(checkout, /if\s*\(itemsErr\)\s*\{[\s\S]*?status:\s*'cancelled'[\s\S]*?return\s+json\(500,\s*\{\s*error:\s*'order_items_persist_failed'/);
+  const migration = readRepo("supabase/schema-order-integrity.sql");
+  // v2 owns header, item, and stock persistence. Worker must error-check the RPC before
+  // acknowledging success, fail closed when absent, and never leak the raw DB message.
+  assert.match(checkout, /data:\s*placed,\s*error:\s*placeErr/);
+  assert.match(checkout, /if\s*\(placeErr\s*&&\s*isMissingFunctionError\(placeErr\)\)[\s\S]*net_order_unavailable/);
+  assert.match(checkout, /if\s*\(placeErr\s*\|\|[\s\S]*net_order_unavailable/);
+  assert.doesNotMatch(checkout, /placeErr\.message/, "must not return the raw DB error to the client");
+  assert.doesNotMatch(checkout, /from\(['"]orders['"]\)\.insert/);
+  assert.doesNotMatch(checkout, /from\(['"]order_items['"]\)\.insert/);
+  assert.match(migration, /function\s+public\.place_net_order_v2/i);
+  assert.match(migration, /insert\s+into\s+public\.orders/i);
+  assert.match(migration, /insert\s+into\s+public\.order_items/i);
   assert.ok(
-    checkout.indexOf("if (itemsErr)") < checkout.indexOf("return json(201"),
-    "item insert errors must be handled before returning 201"
+    checkout.indexOf("if (placeErr ||") < checkout.indexOf("return json(placed.duplicate ? 200 : 201"),
+    "RPC errors must be handled before acknowledging NET success"
   );
 });
 

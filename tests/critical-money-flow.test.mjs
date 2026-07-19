@@ -3,9 +3,8 @@
 //        returns a retryable 5xx (so Stripe re-delivers) instead of a 200.
 //   #8 — Duplicate orders: a unique guard on orders.stripe_payment_intent makes the
 //        webhook idempotent under concurrent Stripe delivery (insert conflict -> 200).
-//   #9 — Credit-limit race: NET orders are placed via an atomic locking RPC
-//        (place_net_order) that re-checks the limit under a row lock; the app falls
-//        back to the pre-migration check when the RPC isn't deployed yet.
+//   #9 — Credit-limit race: NET orders are placed via the complete atomic locking RPC
+//        (place_net_order_v2); missing v2 fails closed with no non-atomic fallback.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -52,7 +51,7 @@ test('webhook short-circuits 200 on a duplicate insert (concurrent delivery race
   assert.match(WEBHOOK, /'duplicate'/, 'must handle the duplicate outcome as idempotent success');
 });
 
-// ---- #9: checkout uses the atomic locking RPC with a safe fallback ----
+// ---- #9: checkout uses the complete atomic locking RPC and fails closed ----
 test('isMissingFunctionError is true only for undefined-function error codes', () => {
   assert.equal(isMissingFunctionError({ code: '42883' }), true);    // Postgres undefined_function
   assert.equal(isMissingFunctionError({ code: 'PGRST202' }), true); // PostgREST function-not-found
@@ -61,12 +60,17 @@ test('isMissingFunctionError is true only for undefined-function error codes', (
   assert.equal(isMissingFunctionError(undefined), false);
 });
 
-test('checkout places NET orders via the atomic place_net_order RPC', () => {
-  assert.match(CHECKOUT, /\.rpc\(\s*'place_net_order'/, 'must call the locking RPC');
+test('checkout places NET orders via place_net_order_v2 only', () => {
+  assert.match(CHECKOUT, /\.rpc\(\s*'place_net_order_v2'/, 'must call the complete ledger RPC');
+  assert.doesNotMatch(CHECKOUT, /\.rpc\(\s*'place_net_order'/, 'must never call v1 from the Worker');
 });
 
-test('checkout falls back to the pre-migration credit check when the RPC is absent', () => {
-  assert.match(CHECKOUT, /isMissingFunctionError\(/, 'must detect a missing RPC and fall back');
+test('checkout has no app-side NET ledger mutation fallback', () => {
+  assert.match(CHECKOUT, /isMissingFunctionError\(/, 'must detect a missing v2 RPC');
+  assert.match(CHECKOUT, /net_order_unavailable/, 'missing v2 must fail closed');
+  assert.doesNotMatch(CHECKOUT, /from\(['"]orders['"]\)\.insert/, 'Worker must not insert NET order headers');
+  assert.doesNotMatch(CHECKOUT, /from\(['"]order_items['"]\)\.insert/, 'Worker must not insert NET order items');
+  assert.doesNotMatch(CHECKOUT, /decrement_variant_stock/, 'Worker must not mutate NET stock');
 });
 
 test('checkout no longer leaks the raw order-insert error message', () => {
@@ -79,9 +83,24 @@ test('migration adds a unique guard on orders.stripe_payment_intent', () => {
   assert.match(MIGRATION, /stripe_payment_intent/);
 });
 
-test('migration defines a SECURITY DEFINER place_net_order that locks the company row and grants service_role', () => {
+test('migration retains v1 and adds service-role-only place_net_order_v2', () => {
   assert.match(MIGRATION, /function\s+public\.place_net_order/i);
+  assert.match(MIGRATION, /function\s+public\.place_net_order_v2/i);
   assert.match(MIGRATION, /security\s+definer/i);
-  assert.match(MIGRATION, /for\s+update/i, 'must lock the company row to serialize concurrent NET checkouts');
-  assert.match(MIGRATION, /grant\s+execute[\s\S]*place_net_order[\s\S]*service_role/i, 'service_role must be able to call it');
+  assert.match(MIGRATION, /grant\s+execute[\s\S]*place_net_order_v2[\s\S]*service_role/i, 'service_role must call v2');
+});
+
+test('place_net_order_v2 owns item persistence and stock mutation with deterministic locks', () => {
+  assert.match(MIGRATION, /net_request_key/i, 'must persist a per-Company request key');
+  assert.match(MIGRATION, /unique\s+index[\s\S]*company_id[\s\S]*net_request_key/i,
+    'must enforce per-Company request-key uniqueness');
+  assert.match(MIGRATION, /net_request_cart\s+jsonb/i, 'must retain the canonical cart for conflict detection');
+  assert.match(MIGRATION, /jsonb_agg\([\s\S]*order\s+by\s+(?:btrim\()?item\.sku/i,
+    'must canonicalize cart identity independent of input order');
+  assert.match(MIGRATION, /array_agg\([\s\S]*order\s+by\s+(?:btrim\()?item\.sku/i,
+    'must build sorted SKU lock order');
+  assert.match(MIGRATION, /foreach\s+v_sku[\s\S]*for\s+update/i,
+    'must lock each variant in sorted SKU order');
+  assert.match(MIGRATION, /insert\s+into\s+public\.order_items/i, 'RPC must insert every order item');
+  assert.match(MIGRATION, /update\s+public\.product_variants/i, 'RPC must own stock decrement');
 });

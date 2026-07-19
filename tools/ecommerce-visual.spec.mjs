@@ -27,14 +27,12 @@ test.afterAll(async () => {
   await once(server, "exit").catch(() => {});
 });
 
-test("catalog keeps replacement checker and product shelf within a quick scan", async ({ page }) => {
+test("catalog keeps the product shelf within a quick scan", async ({ page }) => {
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
 
-  const swap = await page.locator("#swap").boundingBox();
   const catalog = await page.locator("#catalog").boundingBox();
 
-  expect(swap.height).toBeLessThan(880);
-  expect(catalog.y).toBeLessThan(1700);
+  expect(catalog.y).toBeLessThan(1100);
 });
 
 test("catalog hero bottles retain intentional depth without page overflow on tablet", async ({ page }) => {

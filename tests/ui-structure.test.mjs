@@ -53,18 +53,15 @@ test("product cards use details as the only repeated card action", () => {
   assert.doesNotMatch(cardBlock[0], /Request a Quote/);
 });
 
-test("products page leads with a replacement checker before the catalog", () => {
+test("products page omits the retired replacement checker and keeps the catalog before proof", () => {
   const products = read("products.html");
-  const checkerIndex = products.indexOf('id="swapMatrix"');
   const catalogIndex = products.indexOf('id="shopGrid"');
   const proofIndex = products.indexOf('class="conversion-proof');
 
-  assert.ok(checkerIndex > -1, "expected replacement checker on products page");
   assert.ok(catalogIndex > -1, "expected product grid on products page");
-  assert.ok(checkerIndex < catalogIndex, "checker should lead the catalog grid");
   assert.ok(catalogIndex < proofIndex, "catalog should come before proof details");
-  assert.match(products, /Replacement checker/);
-  assert.match(products, /Find replacement/);
+  assert.doesNotMatch(products, /Replacement checker|Find replacement/);
+  assert.doesNotMatch(products, /id="swap"|id="replacementRouter"|id="swapMatrix"|id="swapResult"/);
 });
 
 test("about page exposes latest quote-service catalog from seed data", () => {
@@ -87,10 +84,9 @@ test("products grid offers category chips, sorting, and clickable cards", () => 
   assert.match(products, /id="shopCount"/);
 });
 
-test("products page wires the checker and grid from product data", () => {
+test("products page wires the catalog grid from product data", () => {
   assert.match(mainCatalogData, /export const CATALOG_ORDER/);
   assert.match(mainCatalogData, /export const CATALOG_GROUPS/);
-  assert.match(mainCatalogData, /export const REPLACEMENT_MAP/);
   assert.match(commerceUi, /function catalogCard/);
   assert.match(commerceUi, /function initShop/);
   assert.match(read("js/main.js"), /initShop\(\);/);
@@ -325,14 +321,16 @@ test("about page routes buyers before service breadth", () => {
   assert.match(css, /\.about-services-disclosure summary b[\s\S]*white-space: normal/);
 });
 
-test("scrolly savior scene does not stretch proof images under zero score", () => {
+test("scrolly close uses one asymmetric proof panel instead of equal cards", () => {
   const home = read("index.html");
   const story = read("js/story.js");
-  const saviorAct = home.match(/<section class="act act-savior"[\s\S]*?<\/section>/)?.[0] || "";
+  const saviorAct = home.match(/<section class="act act-savior act-proof-close"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.ok(saviorAct, "expected savior scrolly section");
-  assert.doesNotMatch(saviorAct, /class="savior-proof"/);
-  assert.doesNotMatch(saviorAct, /class="proof-pair"/);
+  assert.match(saviorAct, /class="proof-panel"/);
+  assert.match(saviorAct, /class="close-action"/);
+  assert.doesNotMatch(saviorAct, /class="zero-axis"/);
+  assert.doesNotMatch(saviorAct, /class="savior-zero-scale"/);
   assert.doesNotMatch(saviorAct, /story-deferred-img/);
   assert.doesNotMatch(saviorAct, /data-story-src/);
   assert.doesNotMatch(home, /<link rel="preload" as="image" href="img\/field\//);
@@ -340,16 +338,16 @@ test("scrolly savior scene does not stretch proof images under zero score", () =
   assert.doesNotMatch(story, /data-story-src/);
 });
 
-test("scrolly chemical burden scene is removed", () => {
+test("scrolly story is the four-act Replacement Ledger", () => {
   const index = read("index.html");
 
   assert.doesNotMatch(index, /<section class="act act-chems"[\s\S]*?<\/section>/);
   assert.doesNotMatch(index, /The chemicals/);
   assert.doesNotMatch(index, /loadout/);
-  // scene 4 "The Cost" was inserted before the savior, so savior is now act 5
-  assert.match(index, /<section class="act act-cost" data-act="4">/);
-  assert.match(index, /<section class="act act-savior" data-act="5" data-fx="motes">/);
-  assert.equal((index.match(/class="rail-btn"/g) || []).length, 5);
+  assert.match(index, /<section class="act act-ledger" id="hmis" data-act="3"/);
+  assert.match(index, /<section class="act act-savior act-proof-close" data-act="4" data-fx="motes"/);
+  assert.doesNotMatch(index, /data-act="5"/);
+  assert.equal((index.match(/class="rail-btn"/g) || []).length, 4);
 });
 
 test("scrolly chapter rail is decorative progress, not hidden buttons", () => {
@@ -360,7 +358,7 @@ test("scrolly chapter rail is decorative progress, not hidden buttons", () => {
   assert.match(rail, /aria-hidden="true"/);
   assert.doesNotMatch(rail, /<button class="rail-btn"/);
   assert.doesNotMatch(rail, /tabindex="-1"/);
-  assert.equal((rail.match(/class="rail-btn"/g) || []).length, 5);
+  assert.equal((rail.match(/class="rail-btn"/g) || []).length, 4);
 });
 
 test("scrolly story keeps its static summary out of the visual flow", () => {
@@ -371,9 +369,9 @@ test("scrolly story keeps its static summary out of the visual flow", () => {
   assert.match(summary, /class="story-summary sr-only"/);
   assert.match(summary, /aria-labelledby="storySummaryTitle"/);
   assert.match(summary, /id="storySummaryTitle"/);
-  assert.match(summary, /The dirt is obvious/);
-  assert.match(summary, /HMIS gives the danger a number/);
-  assert.match(summary, /Industrial muscle, rated 0-0-0/);
+  assert.match(summary, /The field problem/);
+  assert.match(summary, /The Replacement Ledger/);
+  assert.match(summary, /One documented switch/);
 });
 
 test("scrolly opener states the replacement promise early", () => {
@@ -410,43 +408,30 @@ test("scrolly story state remains available to responsive chrome", () => {
   assert.doesNotMatch(storyCss, /crisp-client|crisp-chatbox/);
 });
 
-test("scrolly scenes 3 and 4 are mirrored hazard ledgers", () => {
+test("scrolly act 3 combines conventional burden and qualified VertKleen state", () => {
   const index = read("index.html");
-  const actThree = index.match(/<section class="act act-hmis"[\s\S]*?<\/section>/)?.[0];
-  const actFour = index.match(/<section class="act act-cost"[\s\S]*?<\/section>/)?.[0];
+  const actThree = index.match(/<section class="act act-ledger"[\s\S]*?<\/section>/)?.[0];
+  const actFour = index.match(/<section class="act act-savior act-proof-close"[\s\S]*?<\/section>/)?.[0];
 
   assert.ok(actThree, "expected act three scrolly section");
   assert.ok(actFour, "expected act four scrolly section");
-  // Scene 3: conventional chemicals, hazard scores, and what each adds to the job
-  assert.match(actThree, /class="hazard-ledger"/);
+  assert.match(actThree, /class="replacement-ledger"/);
   assert.equal((actThree.match(/class="ledger-row"/g) || []).length, 4);
   assert.match(actThree, /HCl \/ muriatic acid/);
   assert.match(actThree, /Caustic soda \/ lye/);
   assert.match(actThree, /Glutaraldehyde/);
   assert.match(actThree, /Chlorinated solvent/);
-  assert.match(actThree, /What it adds to the job/);
+  assert.match(actThree, /Operational shift/);
   assert.match(actThree, /data-target="115000"/);
   assert.match(actThree, /class="cost-sources"/);
-  // Scene 4: the exact same skeleton, zeroed by VertKleen
-  assert.match(actFour, /class="hazard-ledger ledger-zero"/);
-  assert.equal((actFour.match(/class="ledger-row"/g) || []).length, 4);
-  assert.equal((actFour.match(/hmis-score score-zero/g) || []).length, 4);
-  assert.match(actFour, /What comes off the bill/);
-  // rows name the actual VertKleen products (same mapping as the cmp-table)
-  assert.match(actFour, /VertKleen HCR/);
-  assert.match(actFour, /VertKleen CR/);
-  assert.match(actFour, /VertKleen Neutral/);
-  assert.match(actFour, /VertKleen Purgo/);
-  // the zero ledger only carries HMIS 0-0-0 parent products (no DBNPA - discontinued)
-  assert.doesNotMatch(actFour, /DBNPA/);
-  assert.match(actFour, /replaces HCl \/ muriatic acid/);
-  assert.match(actFour, /replaces caustic soda \/ lye/);
-  assert.match(actFour, /replaces glutaraldehyde dosing/);
-  assert.match(actFour, /replaces chlorinated solvents/);
-  assert.match(actFour, /class="cost-payoff"/);
-  // The ghost-preview of the old split screen is gone for good
-  assert.doesNotMatch(actFour, /cost-vert/);
-  assert.doesNotMatch(actFour, /cost-line/);
+  for (const product of ["VertKleen HCR", "VertKleen CR", "VertKleen Neutral", "VertKleen Purgo"]) {
+    assert.match(actThree, new RegExp(product));
+  }
+  assert.equal((actThree.match(/class="hmis-chip is-safe"/g) || []).length, 4);
+  assert.doesNotMatch(actThree, /DBNPA/);
+  assert.match(actFour, /class="proof-panel"/);
+  assert.match(actFour, /data-target="10000"/);
+  assert.doesNotMatch(actFour, /class="ledger-row"/);
 });
 
 test("scrolly hazard overlays avoid stripe-gradient decoration", () => {

@@ -115,17 +115,26 @@ export async function emailsByIds(sb, ids) {
 
 // Full id→email map for admin directories. Pages through listUsers so it never
 // truncates past a single page. Best-effort (stops on error).
-export async function allUserEmails(sb, { pageSize = 1000, maxPages = 100 } = {}) {
+export async function allUserEmails(sb, { pageSize = 1000, maxPages = 100, strict = false } = {}) {
   const out = new Map();
+  let complete = false;
   for (let page = 1; page <= maxPages; page++) {
     let users;
     try {
-      const { data } = await sb.auth.admin.listUsers({ page, perPage: pageSize });
+      const { data, error } = await sb.auth.admin.listUsers({ page, perPage: pageSize });
+      if (error) throw error;
       users = data?.users || [];
-    } catch { break; }
+    } catch (error) {
+      if (strict) throw error;
+      break;
+    }
     for (const u of users) out.set(u.id, u.email);
-    if (users.length < pageSize) break;
+    if (users.length < pageSize) {
+      complete = true;
+      break;
+    }
   }
+  if (strict && !complete) throw new Error('user_directory_truncated');
   return out;
 }
 
@@ -211,12 +220,36 @@ export async function recordSuppression(env, email, reason, stream = 'all') {
   } catch { /* advisory */ }
 }
 
-export async function sendEmail(env, { to, bcc = [], subject, html, text = null, category = null, idempotencyKey = null, replyTo = null, attachments = [] }) {
+async function providerIdempotencyHeader(value) {
+  const raw = String(value);
+  if (raw.length <= 256 && /^[\x20-\x7e]+$/.test(raw)) return raw;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  const hex = [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return `sha256:${hex}`;
+}
+
+export async function sendEmailResult(env, {
+  to,
+  bcc = [],
+  subject,
+  html,
+  text = null,
+  category = null,
+  idempotencyKey = null,
+  replyTo = null,
+  attachments = [],
+  fetchImpl = globalThis.fetch,
+  suppressionLoader = loadSuppressed,
+}) {
   const allTo = Array.isArray(to) ? to : [];
   const allBcc = Array.isArray(bcc) ? bcc : [];
-  if (!env.RESEND_API_KEY || (!allTo.length && !allBcc.length)) return false;
+  if (!env.RESEND_API_KEY || (!allTo.length && !allBcc.length)) {
+    return { ok: false, retryable: false, error: 'email_not_configured' };
+  }
   const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
-  const suppressed = await loadSuppressed(env, [...allTo, ...allBcc]);
+  const suppressed = await suppressionLoader(env, [...allTo, ...allBcc]);
   // Per-stream: a marketing opt-out blocks only marketing categories; hard blocks ('all')
   // block everything. Transactional receipts survive a marketing unsubscribe.
   const toR = filterByStream(allTo, category, suppressed).slice(0, 50);
@@ -224,7 +257,7 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
   const logTo = [...allTo, ...allBcc].join(', ');
   if (!toR.length && !bccR.length) {
     await logEmailEvent(env, { to_email: logTo, category, subject, status: 'failed', error: 'all_recipients_suppressed' });
-    return false;
+    return { ok: false, suppressed: true, retryable: false, error: 'all_recipients_suppressed' };
   }
   // Resend requires a `to`; if only bcc recipients survive, use `from` as the visible to.
   const payloadTo = toR.length ? toR : [from];
@@ -236,7 +269,7 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
   // text/plain improves spam scoring and serves plain-text clients + screen readers.
   const bodyText = text || htmlToText(html) || null;
   const headers = { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' };
-  if (idempotencyKey) headers['Idempotency-Key'] = String(idempotencyKey).slice(0, 256);
+  if (idempotencyKey) headers['Idempotency-Key'] = await providerIdempotencyHeader(idempotencyKey);
   // Marketing categories carry a one-click List-Unsubscribe (token-signed, single recipient)
   // → suppresses only the 'marketing' stream, so the buyer keeps order/billing receipts.
   if (categoryStream(category) === 'marketing' && env.EMAIL_UNSUB_SECRET && toR.length === 1) {
@@ -247,7 +280,7 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
     headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
   }
   try {
-    const r = await fetch('https://api.resend.com/emails', {
+    const r = await fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -264,11 +297,22 @@ export async function sendEmail(env, { to, bcc = [], subject, html, text = null,
       resend_id: resendId, to_email: sentTo, category, subject,
       status: r.ok ? 'sent' : 'failed', error: r.ok ? null : `resend_${r.status}`,
     });
-    return r.ok;
+    return {
+      ok: r.ok,
+      resendId,
+      status: r.status,
+      retryable: r.status === 429 || r.status >= 500,
+      error: r.ok ? null : `resend_${r.status}`,
+    };
   } catch (err) {
-    await logEmailEvent(env, { to_email: sentTo, category, subject, status: 'failed', error: String(err).slice(0, 200) });
-    return false;
+    const error = String(err).slice(0, 200);
+    await logEmailEvent(env, { to_email: sentTo, category, subject, status: 'failed', error });
+    return { ok: false, network: true, retryable: true, error };
   }
+}
+
+export async function sendEmail(env, options) {
+  return (await sendEmailResult(env, options)).ok;
 }
 
 // Shared branded email shell. Callers pass already-escaped/safe heading + bodyHtml

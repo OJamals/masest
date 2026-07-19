@@ -27,6 +27,7 @@ const MUTATION_ENDPOINTS = [
   'functions/api/admin/qbo/sync.js',
   'functions/api/admin/qbo/connect.js',
   'functions/api/admin/newsletters.js',
+  'functions/api/admin/recipients.js',
 ];
 
 for (const path of MUTATION_ENDPOINTS) {
@@ -36,3 +37,16 @@ for (const path of MUTATION_ENDPOINTS) {
     assert.match(src, /staffCanWrite\(\s*role\s*\)/, 'must check staffCanWrite(role)');
   });
 }
+
+test('recipients uses one shared write gate before body parsing', () => {
+  const src = read('functions/api/admin/recipients.js');
+  const writeGate = "if (request.method !== 'POST')";
+  const methodIndex = src.indexOf(writeGate);
+  const guardIndex = src.indexOf('staffCanWrite(role)', methodIndex);
+  const parserIndex = src.indexOf('readBody(request)', methodIndex);
+
+  assert.ok(methodIndex >= 0, 'must preserve the POST method boundary');
+  assert.ok(guardIndex > methodIndex, 'write gate must follow the POST method boundary');
+  assert.ok(parserIndex > guardIndex, 'write gate must run before body parsing');
+  assert.equal(src.match(/staffCanWrite\(\s*role\s*\)/g)?.length, 1, 'all recipient writes must share one gate');
+});

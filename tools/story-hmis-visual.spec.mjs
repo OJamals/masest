@@ -5,6 +5,8 @@ import { expect, test } from "@playwright/test";
 const PORT = 4194;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
+test.use({ channel: "chrome" });
+
 let server;
 
 test.beforeAll(async () => {
@@ -174,260 +176,294 @@ test("pipe callout chips and leader lines fade from the same burn state", async 
   }
 });
 
-test("hazard ledger sits below the copy and accumulates all four rows", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+test("four-act story meets measured desktop and mobile height budgets", async ({ page }) => {
+  const measure = () => page.evaluate(() => {
+    const story = document.querySelector(".story");
+    return {
+      acts: story.querySelectorAll(":scope > .act").length,
+      railStops: story.querySelectorAll(".rail-btn").length,
+      ready: story.classList.contains("story-ready"),
+      height: story.offsetHeight,
+      viewportHeight: window.innerHeight,
+      viewports: story.offsetHeight / window.innerHeight,
+    };
+  });
 
-  await expect(page.locator('.story .act[data-act="3"] .hazard-ledger .ledger-row')).toHaveCount(4);
-  await expect(page.locator(".savior-zero-scale .zero-axis")).toHaveCount(3);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  const desktop = await measure();
+  expect(desktop.acts).toBe(4);
+  expect(desktop.railStops).toBe(4);
+  expect(desktop.ready).toBe(true);
+  expect(desktop.viewports, JSON.stringify(desktop)).toBeGreaterThanOrEqual(6);
+  expect(desktop.viewports, JSON.stringify(desktop)).toBeLessThanOrEqual(7);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  const mobile = await measure();
+  expect(mobile.acts).toBe(4);
+  expect(mobile.ready).toBe(false);
+  expect(mobile.viewports, JSON.stringify(mobile)).toBeLessThanOrEqual(6.5);
+});
+
+test("operational Replacement Ledger and qualifications fit the desktop frame", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
 
   const layout = await page.evaluate(async () => {
     const act = document.querySelector('.story .act[data-act="3"]');
-    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.72);
-    await new Promise((r) => setTimeout(r, 700));
-    const copy = act.querySelector(".act-copy.top").getBoundingClientRect();
-    const ledger = act.querySelector(".hazard-ledger").getBoundingClientRect();
-    const rows = [...act.querySelectorAll(".ledger-row")].map((row) => {
-      const box = row.getBoundingClientRect();
+    window.scrollTo(0, act.offsetTop + act.offsetHeight - window.innerHeight - 50);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    const box = (selector) => {
+      const rect = act.querySelector(selector).getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right };
+    };
+    return {
+      table: box(".replacement-ledger"),
+      qualification: box(".ledger-qualification"),
+      sources: box(".cost-sources"),
+      rows: act.querySelectorAll(".replacement-ledger tbody tr").length,
+      safeRatings: [...act.querySelectorAll(".hmis-chip.is-safe")]
+        .map((node) => node.textContent.trim().replaceAll("\u2011", "-")),
+      viewportHeight: window.innerHeight,
+    };
+  });
+
+  expect(layout.rows).toBe(4);
+  expect(layout.safeRatings).toEqual(["0-0-0", "0-0-0", "0-0-0", "0-0-0"]);
+  for (const item of [layout.table, layout.qualification, layout.sources]) {
+    expect(item.top, JSON.stringify(layout)).toBeGreaterThanOrEqual(0);
+    expect(item.bottom, JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewportHeight);
+  }
+});
+
+test("mobile ledger owns horizontal overflow and remains keyboard scrollable", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+
+  const region = page.locator(".replacement-ledger-scroll");
+  await region.scrollIntoViewIfNeeded();
+  const before = await region.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  }));
+  expect(before.pageOverflow).toBe(0);
+  expect(before.scrollWidth).toBeGreaterThan(before.clientWidth);
+
+  await region.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(150);
+  expect(await region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+});
+
+test("asymmetric proof close keeps the dominant CTA clear of chat", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+
+  const close = await page.evaluate(async () => {
+    const act = document.querySelector('.story .act[data-act="4"]');
+    window.scrollTo(0, act.offsetTop + act.offsetHeight - window.innerHeight - 30);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const proof = act.querySelector(".proof-panel").getBoundingClientRect();
+    const action = act.querySelector(".close-action").getBoundingClientRect();
+    return {
+      proofWidth: proof.width,
+      actionWidth: action.width,
+      zeroAxes: act.querySelectorAll(".zero-axis").length,
+      ctas: act.querySelectorAll(".proof-close .btn").length,
+    };
+  });
+  expect(Math.abs(close.proofWidth - close.actionWidth), JSON.stringify(close)).toBeGreaterThan(80);
+  expect(close.zeroAxes).toBe(0);
+  expect(close.ctas).toBe(2);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  const collision = await page.evaluate(() => {
+    const cta = document.querySelector('.story .act[data-act="1"] .btn-primary');
+    const chat = document.querySelector(".customer-chat__toggle");
+    const a = cta.getBoundingClientRect();
+    const b = chat.getBoundingClientRect();
+    return {
+      href: cta.getAttribute("href"),
+      ctaBottom: a.bottom,
+      viewportHeight: window.innerHeight,
+      overlaps: a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top,
+    };
+  });
+  expect(collision.href).toBe("products#catalog");
+  expect(collision.ctaBottom).toBeLessThanOrEqual(collision.viewportHeight);
+  expect(collision.overlaps, JSON.stringify(collision)).toBe(false);
+});
+
+test("injury and savings proof counters reach their sourced totals", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+
+  const readAtEnd = async (actNumber) => page.evaluate(async (number) => {
+    const act = document.querySelector('.story .act[data-act="' + number + '"]');
+    window.scrollTo(0, act.offsetTop + act.offsetHeight - window.innerHeight - 30);
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    const counter = act.querySelector(".cost-num");
+    return {
+      target: Number(counter.dataset.target),
+      value: Number(counter.textContent.replace(/[,\s]/g, "")),
+    };
+  }, actNumber);
+
+  expect(await readAtEnd(3)).toEqual({ target: 115000, value: 115000 });
+  expect(await readAtEnd(4)).toEqual({ target: 10000, value: 10000 });
+});
+
+test("rail and chat release before light content in both scroll directions", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+
+  const sample = async (direction) => {
+    const positions = await page.evaluate(() => {
+      const story = document.querySelector(".story");
+      const bottom = story.offsetTop + story.offsetHeight;
+      return { before: bottom - window.innerHeight - 100, target: bottom - window.innerHeight + 120, after: bottom + 300 };
+    });
+    await page.evaluate((y) => window.scrollTo(0, y), direction === "forward" ? positions.before : positions.after);
+    await page.waitForTimeout(120);
+    await page.evaluate((y) => window.scrollTo(0, y), positions.target);
+    await page.waitForTimeout(350);
+    return page.evaluate(() => {
+      const rail = document.querySelector(".story-rail");
+      const light = document.querySelector(".trust-strip").getBoundingClientRect();
+      const style = getComputedStyle(rail);
       return {
-        name: row.querySelector("strong")?.textContent || "",
-        opacity: Number(getComputedStyle(row).opacity),
-        top: box.top,
-        bottom: box.bottom,
+        storyInView: document.body.classList.contains("story-in-view"),
+        railOpacity: Number(style.opacity),
+        railVisibility: style.visibility,
+        lightTop: light.top,
+        viewportHeight: window.innerHeight,
+        chatUsesStoryTheme: document.querySelector(".customer-chat").classList.contains("customer-chat--story"),
       };
     });
-    return { copyBottom: copy.bottom, ledgerTop: ledger.top, rows, viewportHeight: window.innerHeight };
-  });
+  };
 
-  expect(layout.ledgerTop - layout.copyBottom).toBeGreaterThanOrEqual(12);
-  // all four rows have landed by the incident beat and stay stacked in frame
-  for (const row of layout.rows) {
-    expect(row.opacity, JSON.stringify(layout.rows)).toBeGreaterThan(0.6);
-    expect(row.top, JSON.stringify(row)).toBeGreaterThanOrEqual(0);
-    expect(row.bottom, JSON.stringify(row)).toBeLessThanOrEqual(layout.viewportHeight);
+  for (const direction of ["forward", "reverse"]) {
+    const state = await sample(direction);
+    expect(state.storyInView, JSON.stringify({ direction, state })).toBe(false);
+    expect(state.railOpacity, JSON.stringify({ direction, state })).toBeLessThanOrEqual(0.05);
+    expect(state.railVisibility, JSON.stringify({ direction, state })).toBe("hidden");
+    expect(state.lightTop).toBeGreaterThan(0);
+    expect(state.lightTop).toBeLessThan(state.viewportHeight);
+    expect(state.chatUsesStoryTheme).toBe(false);
   }
 });
 
-test("full conventional ledger and injury total fit a short laptop", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 768 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
-  await page.waitForTimeout(300);
+test("focus treatment and primary CTA contrast remain accessible", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
 
-  const frame = await page.evaluate(async () => {
+  const initial = await page.evaluate(() => ({
+    primaryTabIndex: document.querySelector('.story .act[data-act="1"] .btn-primary').tabIndex,
+    ledgerLinkTabIndex: document.querySelector('.story .act[data-act="3"] a').tabIndex,
+  }));
+  expect(initial.primaryTabIndex).toBe(0);
+  expect(initial.ledgerLinkTabIndex).toBe(-1);
+
+  const region = page.locator(".replacement-ledger-scroll");
+  await page.evaluate(() => {
     const act = document.querySelector('.story .act[data-act="3"]');
-    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.78);
-    await new Promise((r) => setTimeout(r, 700));
-    const ledger = act.querySelector(".hazard-ledger").getBoundingClientRect();
-    const incident = act.querySelector(".ledger-incident").getBoundingClientRect();
-    return { ledgerTop: ledger.top, ledgerBottom: ledger.bottom, incidentBottom: incident.bottom, vh: window.innerHeight };
+    window.scrollTo(0, act.offsetTop + act.offsetHeight - window.innerHeight - 50);
   });
-  expect(frame.ledgerTop).toBeGreaterThanOrEqual(0);
-  expect(frame.ledgerBottom).toBeLessThanOrEqual(frame.vh);
-  expect(frame.incidentBottom).toBeLessThanOrEqual(frame.vh);
-});
-
-test("hazard ledger rows stay inside the viewport on mobile", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 700 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-
-  const layout = await page.evaluate(() => {
-    const rows = [...document.querySelectorAll(".hazard-ledger .ledger-row")].map((row) => {
-      const box = row.getBoundingClientRect();
-      return { left: box.left, right: box.right, width: box.width };
-    });
+  await page.waitForTimeout(500);
+  await region.focus();
+  const focus = await region.evaluate((element) => {
+    const style = getComputedStyle(element);
     return {
-      viewportWidth: window.innerWidth,
-      overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      rows,
+      active: document.activeElement === element,
+      outlineStyle: style.outlineStyle,
+      outlineWidth: parseFloat(style.outlineWidth),
     };
   });
+  expect(focus.active).toBe(true);
+  expect(focus.outlineStyle).not.toBe("none");
+  expect(focus.outlineWidth).toBeGreaterThanOrEqual(2);
 
-  expect(layout.overflowX).toBe(0);
-  expect(layout.rows).toHaveLength(8);
-  for (const row of layout.rows) {
-    expect(row.left).toBeGreaterThanOrEqual(0);
-    expect(row.right).toBeLessThanOrEqual(layout.viewportWidth);
-    expect(row.width).toBeGreaterThan(180);
-  }
-});
-
-test("story renders five acts with the cost bridge and savior last", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-
-  await expect(page.locator(".act-chems")).toHaveCount(0);
-  await expect(page.locator(".story .act")).toHaveCount(5);
-  await expect(page.locator(".story .rail-btn")).toHaveCount(5);
-  await expect(page.locator('.story .act[data-act="4"].act-cost')).toHaveCount(1);
-  await expect(page.locator('.story .act[data-act="5"].act-savior')).toHaveCount(1);
-});
-
-test("mirror ledgers share one skeleton: conventional bill, then VertKleen zeros", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-
-  await expect(page.locator('.act-hmis .hazard-ledger .ledger-row')).toHaveCount(4);
-  await expect(page.locator('.act-cost .hazard-ledger.ledger-zero .ledger-row')).toHaveCount(4);
-  await expect(page.locator('.act-hmis .cost-num')).toHaveAttribute("data-target", "115000");
-  await expect(page.locator('.act-cost .cost-payoff')).toHaveCount(1);
-
-  const zeros = await page.evaluate(() =>
-    [...document.querySelectorAll(".act-cost .hmis-score.score-zero")]
-      .map((score) => score.textContent.trim()));
-  expect(zeros).toEqual(["000", "000", "000", "000"]);
-});
-
-test("act four headline does not overlap its ledger", async ({ page }) => {
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
-  for (const vp of [{ width: 1440, height: 900 }, { width: 1280, height: 768 }]) {
-    await page.setViewportSize(vp);
-    const r = await page.evaluate(async () => {
-      const act = document.querySelector('.story .act[data-act="4"]');
-      window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.5);
-      await new Promise((z) => setTimeout(z, 500));
-      const h = act.querySelector(".act-h").getBoundingClientRect();
-      const ledger = act.querySelector(".hazard-ledger").getBoundingClientRect();
-      return { headlineBottom: h.bottom, ledgerTop: ledger.top };
-    });
-    expect(r.ledgerTop, JSON.stringify({ vp, r })).toBeGreaterThanOrEqual(r.headlineBottom - 1);
-  }
-});
-
-test("act four ledger fits a short laptop in frame", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 768 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
-  await page.waitForTimeout(300);
-
-  const frame = await page.evaluate(async () => {
-    const act = document.querySelector('.story .act[data-act="4"]');
-    window.scrollTo(0, act.offsetTop + act.offsetHeight * 0.7);
-    await new Promise((r) => setTimeout(r, 700));
-    const ledger = act.querySelector(".hazard-ledger").getBoundingClientRect();
-    return { ledgerTop: ledger.top, ledgerBottom: ledger.bottom, vh: window.innerHeight };
+  const contrast = await page.locator('.story .act[data-act="1"] .btn-primary').evaluate((element) => {
+    const parse = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number);
+    const luminance = (rgb) => rgb
+      .map((value) => {
+        const channel = value / 255;
+        return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      })
+      .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+    const style = getComputedStyle(element);
+    const foreground = luminance(parse(style.color));
+    const background = luminance(parse(style.backgroundColor));
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
   });
-  expect(frame.ledgerTop).toBeGreaterThanOrEqual(0);
-  expect(frame.ledgerBottom).toBeLessThanOrEqual(frame.vh);
+  expect(contrast).toBeGreaterThanOrEqual(4.5);
 });
 
-test("injury total counts up inside scene three by the incident beat", async ({ page }) => {
+test("missing GSAP falls back to the complete static four-act story", async ({ page }) => {
+  await page.route("**/vendor/gsap/**", (route) => route.abort());
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
-  await page.waitForTimeout(300);
+  await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
 
-  const read = async (frac) => page.evaluate(async (f) => {
-    const act = document.querySelector('.story .act[data-act="3"]');
-    window.scrollTo(0, act.offsetTop + act.offsetHeight * f);
-    await new Promise((r) => setTimeout(r, 800));
-    return Number(document.querySelector(".act-hmis .cost-num").textContent.replace(/[,\s]/g, ""));
-  }, frac);
-
-  const early = await read(0.3);   // before the incident beat - meter still low
-  const end = await read(0.9);      // held at the incident figure
-  expect(early).toBeLessThan(115000);
-  expect(end).toBe(115000);
-});
-
-test("act four rows do not ghost in before their beats", async ({ page }) => {
-  // Regression: the old split screen pre-revealed the VertKleen column at 42%
-  // opacity from the first frame, spoiling the reveal and reading as a glitch.
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
-  await page.waitForTimeout(300);
-
-  const opacities = await page.evaluate(async () => {
-    const act = document.querySelector('.story .act[data-act="4"]');
-    window.scrollTo(0, act.offsetTop + 8);
-    await new Promise((r) => setTimeout(r, 700));
-    return [...act.querySelectorAll(".ledger-row")].map((row) => Number(getComputedStyle(row).opacity));
-  });
-  for (const opacity of opacities) expect(opacity, JSON.stringify(opacities)).toBeLessThan(0.2);
-});
-
-test("scene handoff keeps the incoming stage visible - no black gap", async ({ page }) => {
-  // Regression: only the current act's stage was visible, so the slide zone
-  // between acts showed a full viewport of black before the next scene popped in.
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
-  await page.waitForTimeout(300);
-
-  const handoff = await page.evaluate(async () => {
-    const act3 = document.querySelector('.story .act[data-act="3"]');
-    const act4 = document.querySelector('.story .act[data-act="4"]');
-    // park mid-slide: act 3 unpinned, act 4 sliding up but not yet current
-    const y = act3.offsetTop + act3.offsetHeight - window.innerHeight * 0.6;
-    window.scrollTo(0, y);
-    await new Promise((r) => setTimeout(r, 700));
-    const s3 = getComputedStyle(act3.querySelector(".stage"));
-    const s4 = getComputedStyle(act4.querySelector(".stage"));
+  const fallback = await page.evaluate(() => {
+    const story = document.querySelector(".story");
     return {
-      out: { visibility: s3.visibility, opacity: Number(s3.opacity) },
-      inc: { visibility: s4.visibility, opacity: Number(s4.opacity) },
+      ready: story.classList.contains("story-ready"),
+      acts: [...story.querySelectorAll(":scope > .act")].map((act) => ({
+        display: getComputedStyle(act).display,
+        textLength: act.innerText.trim().length,
+      })),
+      href: story.querySelector('.act[data-act="1"] .btn-primary').getAttribute("href"),
     };
   });
-  expect(handoff.inc.visibility, JSON.stringify(handoff)).toBe("visible");
-  expect(handoff.inc.opacity, JSON.stringify(handoff)).toBeGreaterThan(0.9);
+  expect(fallback.ready).toBe(false);
+  expect(fallback.acts).toHaveLength(4);
+  expect(fallback.href).toBe("products#catalog");
+  for (const act of fallback.acts) {
+    expect(act.display).not.toBe("none");
+    expect(act.textLength).toBeGreaterThan(100);
+  }
 });
 
-test("savior scene holds readable proof cards and CTAs in the payoff window", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
-  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
-  await page.waitForTimeout(300);
-
-  const payoff = await page.evaluate(async () => {
-    const act = document.querySelector('.story .act[data-act="5"]');
-    const samples = [];
-    for (const frac of [0.62, 0.85]) {
-      window.scrollTo(0, act.offsetTop + (act.offsetHeight - window.innerHeight) * frac);
-      await new Promise((r) => setTimeout(r, 700));
-      const cards = [...act.querySelectorAll(".zero-axis")].map((card) => {
-        const box = card.getBoundingClientRect();
-        const style = getComputedStyle(card);
-        return {
-          text: card.textContent.trim().replace(/\s+/g, " "),
-          opacity: Number(style.opacity),
-          top: box.top,
-          bottom: box.bottom,
-          width: box.width,
-        };
-      });
-      const ctas = [...act.querySelectorAll(".savior-ctas .btn")].map((btn) => {
-        const box = btn.getBoundingClientRect();
-        const style = getComputedStyle(btn);
-        return {
-          text: btn.textContent.trim(),
-          opacity: Number(style.opacity),
-          visible: style.visibility !== "hidden" && box.width > 80 && box.height > 32,
-          top: box.top,
-          bottom: box.bottom,
-        };
-      });
-      samples.push({ frac, cards, ctas });
-    }
-    return { samples, viewportHeight: window.innerHeight };
+test("no-JS mode exposes the same complete accessible story", async ({ browser }) => {
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: { width: 390, height: 844 },
   });
-
-  for (const sample of payoff.samples) {
-    expect(sample.cards).toHaveLength(3);
-    for (const card of sample.cards) {
-      expect(card.opacity, JSON.stringify(payoff)).toBeGreaterThanOrEqual(0.72);
-      expect(card.width, JSON.stringify(payoff)).toBeGreaterThan(150);
-      expect(card.top, JSON.stringify(payoff)).toBeGreaterThanOrEqual(0);
-      expect(card.bottom, JSON.stringify(payoff)).toBeLessThanOrEqual(payoff.viewportHeight);
+  const page = await context.newPage();
+  try {
+    await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
+    const staticStory = await page.evaluate(() => {
+      const story = document.querySelector(".story");
+      return {
+        acts: [...story.querySelectorAll(":scope > .act")].map((act) => ({
+          heading: act.querySelector("h1, h2, h3")?.textContent.trim(),
+          display: getComputedStyle(act).display,
+          visibility: getComputedStyle(act).visibility,
+        })),
+        href: story.querySelector('.act[data-act="1"] .btn-primary').getAttribute("href"),
+        ready: story.classList.contains("story-ready"),
+        viewports: story.offsetHeight / window.innerHeight,
+      };
+    });
+    expect(staticStory.ready).toBe(false);
+    expect(staticStory.acts).toHaveLength(4);
+    expect(staticStory.href).toBe("products#catalog");
+    expect(staticStory.viewports).toBeLessThanOrEqual(6.5);
+    for (const act of staticStory.acts) {
+      expect(act.heading).toBeTruthy();
+      expect(act.display).not.toBe("none");
+      expect(act.visibility).toBe("visible");
     }
-    expect(sample.ctas).toHaveLength(2);
-    for (const cta of sample.ctas) {
-      expect(cta.visible, JSON.stringify(payoff)).toBe(true);
-      expect(cta.opacity, JSON.stringify(payoff)).toBeGreaterThanOrEqual(0.72);
-      expect(cta.bottom, JSON.stringify(payoff)).toBeLessThanOrEqual(payoff.viewportHeight);
-    }
+  } finally {
+    await context.close();
   }
 });
 
@@ -498,4 +534,44 @@ test("reduced motion story fallback stacks animated scene content without overla
   });
 
   expect(act3Viewport.cutRows, JSON.stringify(act3Viewport)).toEqual([]);
+});
+
+test("reduced motion disables meaningful global and blog movement while keeping CTAs visible", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+
+  const cta = page.locator(".btn.btn-primary").first();
+  await expect(cta).toBeVisible();
+  await cta.hover();
+  expect(await cta.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      animationDuration: style.animationDuration,
+      transform: style.transform,
+      transitionDuration: style.transitionDuration,
+    };
+  })).toEqual({
+    animationDuration: "0s",
+    transform: "none",
+    transitionDuration: "0s",
+  });
+
+  await page.goto(`${BASE_URL}/blog.html`, { waitUntil: "networkidle" });
+  const blogCard = page.locator(".blog-card").first();
+  await expect(blogCard).toBeVisible();
+  await blogCard.hover();
+  expect(await blogCard.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      animationDuration: style.animationDuration,
+      boxShadow: style.boxShadow,
+      transform: style.transform,
+      transitionDuration: style.transitionDuration,
+    };
+  })).toEqual({
+    animationDuration: "0s",
+    boxShadow: "none",
+    transform: "none",
+    transitionDuration: "0s",
+  });
 });

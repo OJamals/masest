@@ -1,5 +1,7 @@
 /* MASEST shared chrome/nav/footer rendering. */
 
+const CUSTOMER_CHAT_OBSTRUCTION_EVENT = "masest:customer-chat-obstruction-change";
+
 function pageName() {
   // Normalize away ".html" so the active-nav match works on raw file URLs
   // (local preview) as well as the clean URLs production serves.
@@ -209,6 +211,7 @@ export function renderChrome() {
   if (leadBarPages.has(page) || isIndustryDetail || isProductDetail) {
     const leadBar = document.createElement("div");
     leadBar.className = "lead-action-bar";
+    leadBar.setAttribute("data-customer-chat-obstruction", "");
     leadBar.setAttribute("role", "group");
     leadBar.setAttribute("aria-label", "Primary request actions");
     leadBar.innerHTML = `
@@ -220,7 +223,29 @@ export function renderChrome() {
     leadSentinel.className = "lead-action-sentinel";
     leadSentinel.setAttribute("aria-hidden", "true");
     document.body.append(leadSentinel);
-    const setLeadVisible = visible => leadBar.classList.toggle("is-visible", visible);
+    let leadVisible = false;
+    let leadSuppressed = false;
+    let leadObstructionState = "";
+    const announceLeadObstruction = () => {
+      const nextState = `${leadVisible ? "visible" : "hidden"}:${leadSuppressed ? "suppressed" : "available"}`;
+      if (leadObstructionState === nextState) return;
+      leadObstructionState = nextState;
+      leadBar.dataset.customerChatObstructionActive = String(leadVisible && !leadSuppressed);
+      leadBar.dispatchEvent(new CustomEvent(CUSTOMER_CHAT_OBSTRUCTION_EVENT, {
+        bubbles: true,
+        detail: { visible: leadVisible, suppressed: leadSuppressed },
+      }));
+    };
+    const setLeadVisible = (visible) => {
+      leadVisible = Boolean(visible);
+      leadBar.classList.toggle("is-visible", leadVisible);
+      announceLeadObstruction();
+    };
+    const setLeadSuppressed = (suppressed) => {
+      leadSuppressed = Boolean(suppressed);
+      leadBar.classList.toggle("is-suppressed", leadSuppressed);
+      announceLeadObstruction();
+    };
     if ("IntersectionObserver" in window) {
       setLeadVisible(false);
       const leadObserver = new IntersectionObserver(entries => {
@@ -230,7 +255,7 @@ export function renderChrome() {
       const shopGrid = document.getElementById("shopGrid");
       if (shopGrid) {
         const shopObserver = new IntersectionObserver(entries => {
-          leadBar.classList.toggle("is-suppressed", entries.some(entry => entry.isIntersecting));
+          setLeadSuppressed(entries.some(entry => entry.isIntersecting));
         }, { rootMargin: "0px 0px -96px 0px", threshold: 0.01 });
         shopObserver.observe(shopGrid);
       }
@@ -399,7 +424,7 @@ export function renderChrome() {
     const cfg = document.createElement("script");
     cfg.src = `${root}js/config.js?v=20260711b`;
     cfg.onload = () => {
-      ["integrations.js?v=20260711b", "customer-chat.js?v=20260711i"].forEach((src) => {
+      ["integrations.js?v=20260711b", "customer-chat.js?v=20260719c"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;

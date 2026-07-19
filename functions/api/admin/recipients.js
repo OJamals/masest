@@ -3,6 +3,7 @@
 // resolved live at send time; this table holds imports/manual adds + per-recipient prefs.
 import { adminClient, requireStaff, json, readBody, allUserEmails } from '../../_lib/supabase.js';
 import { klaviyoListProfiles } from '../../_lib/klaviyo.js';
+import { staffCanWrite } from '../../_lib/authz.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -21,7 +22,7 @@ export function parseImportEmails({ emails = [], csv = '' } = {}) {
 }
 
 export async function onRequest({ request, env }) {
-  const { user, staff } = await requireStaff(request, env);
+  const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
   const sb = adminClient(env);
@@ -39,6 +40,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+  if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
   const body = await readBody(request);
   const action = body.action || 'add';
 

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { test, expect } from "@playwright/test";
+import { PRODUCT_CATALOG_COPY } from "../js/main/catalog-data.js";
 
 const PORT = 4184;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -27,8 +28,8 @@ test.afterAll(async () => {
   await once(server, "exit").catch(() => {});
 });
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => {
     window.MASEST_ENABLE_LOCAL_API = true;
   });
 });
@@ -125,4 +126,58 @@ test("hcr bulk pricing shows freight-quote CTA through the commerce selector", a
   await expect(page.locator("#pBuyBtn")).toBeHidden();
   await expect(page.locator("#pBulkQuoteBtn")).toBeVisible();
   await expect(page.locator("#pBulkQuoteBtn")).toHaveAttribute("href", /freight%20quote/);
+});
+
+test("catalog decision cues stay compact and actionable at 390px", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.route("**/api/products", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [{
+        sku: "hcr",
+        name: "VertKleen CIP HCR",
+        mode: "buy",
+        active: true,
+        product_variants: [
+          { vsku: "hcr-1", label: "1 gal bottle", gallons: 1, price: 17.3, currency: "usd", active: true, sort: 1 },
+        ],
+      }],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+  const card = page.locator('.shop-card[data-id="hcr"]');
+  const proofLink = card.getByRole("link", { name: "Review proof for VertKleen CIP HCR" });
+
+  await expect(card.locator(".shop-card-fit")).toHaveCount(3);
+  await expect(card.locator(".shop-card-proof-cue")).toHaveText(PRODUCT_CATALOG_COPY.hcr.proof);
+  await expect(proofLink).toHaveAttribute("href", "products/hcr");
+  await expect(card.locator("[data-cart-add]")).toBeVisible();
+
+  const layout = await card.evaluate((element) => {
+    const action = element.querySelector("[data-cart-add]");
+    const decision = element.querySelector(".shop-card-decision");
+    const actionRect = action?.getBoundingClientRect();
+    const decisionRect = decision?.getBoundingClientRect();
+    const cardRect = element.getBoundingClientRect();
+    return {
+      viewportWidth: innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      cardRight: cardRect.right,
+      actionVisible: Boolean(actionRect?.width && actionRect?.height),
+      decisionInsideCard: Boolean(
+        decisionRect
+        && decisionRect.left >= cardRect.left
+        && decisionRect.right <= cardRect.right,
+      ),
+      actionBeforeDecision: Boolean(action?.compareDocumentPosition(decision) & Node.DOCUMENT_POSITION_FOLLOWING),
+    };
+  });
+
+  expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.cardRight).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.actionVisible).toBe(true);
+  expect(layout.decisionInsideCard).toBe(true);
+  expect(layout.actionBeforeDecision).toBe(true);
 });

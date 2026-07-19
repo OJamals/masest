@@ -52,6 +52,7 @@ test("commerce controls ship a valid :focus-visible ring", async ({ page }) => {
   expect(ringFor(".shop-card-add:focus-visible"), "shop-card-add needs a focus ring").toBeTruthy();
   expect(ringFor(".shop-card-quote:focus-visible"), "shop-card-quote needs a focus ring").toBeTruthy();
   expect(ringFor(".commerce-vol:focus-visible"), "commerce-vol needs a focus ring").toBeTruthy();
+  expect(ringFor(".shop-card-proof-link:focus-visible"), "proof link needs a focus ring").toBeTruthy();
 
   // Baseline global focus-visible (outline) is still present.
   const globalRule = rules.find((r) => r.selector.trim() === ":focus-visible" && r.outline);

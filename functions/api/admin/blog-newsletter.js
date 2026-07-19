@@ -1,10 +1,10 @@
-// functions/api/admin/blog-newsletter.js — secret-guarded sweep that emails the
-// newsletter list any published blog post not yet sent. Called by the publish-blog
-// workflow (after the static page is committed) and/or a schedule. Automation-only:
-// secret header, no staff auth — same pattern as admin/review-reminders.js.
-import { adminClient, json, readBody, sendEmail } from '../../_lib/supabase.js';
+// functions/api/admin/blog-newsletter.js — secret-guarded composition/materialization
+// for published blog posts. Transport is handled by the shared leased worker invoked
+// from the newsletter cron, never by this publish-triggered request.
+import { adminClient, json, readBody } from '../../_lib/supabase.js';
 import { klaviyoListProfiles } from '../../_lib/klaviyo.js';
 import { postFromEntry, unsentPosts, renderBlogEmail } from '../../_lib/blog-newsletter.js';
+import { createSupabaseDeliveryStore, materializeDeliverySource } from '../../_lib/newsletter-delivery.js';
 
 function timingSafeEqual(a, b) {
   const sa = String(a || '');
@@ -15,10 +15,6 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
-// Hard cap on emails per invocation — a CF Worker request can't fan out unbounded.
-// For larger lists the workflow/schedule re-invokes; Resend idempotency keys make
-// re-sends within 24h no-ops.
-const MAX_EMAILS_PER_RUN = 200;
 const MAX_POSTS_PER_RUN = 5;
 
 export async function onRequestPost({ request, env }) {
@@ -52,32 +48,61 @@ export async function onRequestPost({ request, env }) {
   const todo = unsentPosts(posts, sentSlugs).slice(0, MAX_POSTS_PER_RUN);
   if (!todo.length) return json(200, { ok: true, sent: [], skipped: 'nothing_unsent' });
 
-  const listId = env.KLAVIYO_LIST_ID;
-  const subscribers = await klaviyoListProfiles(env, listId);
-  if (!subscribers.length) return json(200, { ok: true, sent: [], skipped: 'no_subscribers' });
-
-  const results = [];
-  let budget = MAX_EMAILS_PER_RUN;
-  for (const post of todo) {
-    if (budget <= 0) break;
-    const { subject, html } = renderBlogEmail(post);
-    const recipients = subscribers.slice(0, budget);
-    let ok = 0;
-    for (const email of recipients) {
-      const sent = await sendEmail(env, {
-        to: [email], subject, html, category: 'blog_newsletter',
-        idempotencyKey: `blog-newsletter:${post.slug}:${email}`,
-      });
-      if (sent) ok += 1;
+  const sourceIds = todo.map((post) => post.slug);
+  const { data: existingRows, error: deliveryLedgerError } = await sb
+    .from('newsletter_delivery_sources')
+    .select('source_id,total_count')
+    .eq('source_type', 'blog_post')
+    .in('source_id', sourceIds);
+  if (deliveryLedgerError) return json(503, { error: 'delivery_ledger_unavailable' });
+  const existing = new Map((existingRows || []).map((row) => [row.source_id, row]));
+  const unqueued = todo.filter((post) => !existing.has(post.slug));
+  let subscribers = [];
+  if (unqueued.length) {
+    try {
+      subscribers = await klaviyoListProfiles(env, env.KLAVIYO_LIST_ID, { strict: true });
+    } catch {
+      return json(503, { error: 'audience_unavailable', retryable: true });
     }
-    budget -= recipients.length;
-    // Record the send so re-runs skip it. Only mark complete when the whole list
-    // was covered this run; a truncated run leaves it unrecorded to finish next time.
-    if (recipients.length >= subscribers.length) {
-      await sb.from('blog_newsletter_sends')
-        .upsert({ slug: post.slug, recipient_count: ok, sent_at: new Date().toISOString() }, { onConflict: 'slug' });
-    }
-    results.push({ slug: post.slug, recipients: recipients.length, delivered: ok, recorded: recipients.length >= subscribers.length });
   }
-  return json(200, { ok: true, sent: results });
+
+  const queued = [];
+  for (const post of todo) {
+    const prior = existing.get(post.slug);
+    if (prior) {
+      try {
+        await createSupabaseDeliveryStore(sb).reconcile('blog_post', post.slug);
+      } catch {
+        return json(503, { error: 'delivery_reconcile_failed', retryable: true });
+      }
+      queued.push({ slug: post.slug, created: false, total: Number(prior.total_count) || 0 });
+      continue;
+    }
+    const { subject, html } = renderBlogEmail(post);
+    const materialized = await materializeDeliverySource(sb, {
+      sourceType: 'blog_post',
+      sourceId: post.slug,
+      parentId: post.slug,
+      subject,
+      html,
+      category: 'blog_newsletter',
+      metadata: {},
+      emails: subscribers,
+    });
+    if (materialized.error) return json(503, { error: 'delivery_materialization_failed', retryable: true });
+    if (materialized.total === 0) {
+      await sb.from('blog_newsletter_sends')
+        .upsert({
+          slug: post.slug,
+          recipient_count: 0,
+          delivery_source_id: post.slug,
+          delivery_total: 0,
+          suppressed_count: 0,
+          dead_count: 0,
+          sent_at: new Date().toISOString(),
+        }, { onConflict: 'slug' });
+    }
+    queued.push({ slug: post.slug, created: materialized.created, total: materialized.total });
+  }
+  return json(202, { ok: true, queued });
 }

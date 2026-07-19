@@ -1,0 +1,16 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-019.implement.codex.md)"
+  ],
+  "created_at": "2026-07-19T02:03:20+00:00",
+  "id": "masest-019",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-019.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-019.md",
+  "spec_sha256": "bbc07335d565f5729c9652341c747d2c1a20746f43c1a601b737281c1bae13a4",
+  "status": "dispatched",
+  "title": "Restore the full local verification baseline",
+  "updated_at": "2026-07-19T02:13:28+00:00"
+}

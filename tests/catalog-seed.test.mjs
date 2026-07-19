@@ -204,7 +204,6 @@ test("site copy respects documentation claim guardrails", () => {
   const aboutHtml = readSite("about.html");
   const chromeJs = readSite("js/main/chrome.js");
 
-  assert.doesNotMatch(catalogJs, /ids:\s*\[[^\]]*"crs"/, "CRS should not be in public replacement checker");
   assert.doesNotMatch(productHtml, /crs:\s*"descaler"/, "CRS should not inherit Descaler commerce pricing");
   assert.doesNotMatch(productsHtml, /Every product in purchasable catalog HMIS 0-0-0/);
   assert.doesNotMatch(resourcesHtml, /Boeing\/Airbus certified degreaser/);

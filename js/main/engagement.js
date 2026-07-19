@@ -1,5 +1,11 @@
 /* Before/after sliders, proof filters, and quote form handling. */
 
+import {
+  parseRequestContext,
+  requestContextNotes,
+  requestContextVolume,
+} from "../request-context.js?v=20260719c";
+
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {
     const range = ba.querySelector(".ba-range");
@@ -89,6 +95,8 @@ export function initQuoteForm() {
   const form = document.getElementById("quoteForm");
   if (!form) return;
   const params = new URLSearchParams(location.search);
+  const customerChatAttempt = params.getAll("source").includes("customer_chat");
+  const requestContext = customerChatAttempt ? parseRequestContext(params) : null;
 
   // Prefill from URL params (?product=, ?doc=). Links carry catalog names that can
   // drift from option text in spacing/suffixes ("CR HD" vs "CRHD", "… Program" vs
@@ -103,8 +111,21 @@ export function initQuoteForm() {
     if (hit) sel.value = hit.value || hit.text;
     return !!hit;
   };
-  const pre = params.get("product");
-  const preMatched = pre ? selectOption(form.querySelector('[name="product"]'), pre) : false;
+  const appendContextOption = (select, value, label) => {
+    if (!select || !value) return false;
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.append(option);
+    select.value = value;
+    return true;
+  };
+  const pre = requestContext?.product || (customerChatAttempt ? "" : params.get("product"));
+  const productSelect = form.querySelector('[name="product"]');
+  let preMatched = pre ? selectOption(productSelect, pre) : false;
+  if (requestContext?.product && !preMatched) {
+    preMatched = appendContextOption(productSelect, requestContext.product, `Product / SKU: ${requestContext.product}`);
+  }
   const sampleProductMatch = (wanted) => {
     if (!wanted) return null;
     const boxes = [...form.querySelectorAll('input[name="samples"]')];
@@ -114,14 +135,16 @@ export function initQuoteForm() {
   };
   const preSampleBox = sampleProductMatch(pre);
   if (preSampleBox) preSampleBox.checked = true;
-  const doc = params.get("doc");
+  const doc = customerChatAttempt ? "" : params.get("doc");
   if (doc) {
     const msg = form.querySelector('[name="message"]');
     const type = form.querySelector('[name="type"]');
     if (msg && !msg.value) msg.value = "Please send the " + doc + (pre ? " for " + pre : "") + ".";
     if (type) type.value = "technical";
   }
-  const messageParam = params.get("message");
+  const messageParam = requestContext
+    ? requestContextNotes(requestContext)
+    : (customerChatAttempt ? "" : params.get("message"));
   if (messageParam) {
     const msg = form.querySelector('[name="message"]');
     if (msg && !msg.value) msg.value = messageParam;
@@ -134,13 +157,27 @@ export function initQuoteForm() {
       msg.value = ("Product interest: " + pre + "." + (msg.value ? "\n" + msg.value : ""));
     }
   }
-  const emailParam = params.get("email");
+  const emailParam = customerChatAttempt ? "" : params.get("email");
   if (emailParam) {
     const email = form.querySelector('#fEmail[name="email"]');
     if (email && !email.value) email.value = emailParam;
   }
-  const indParam = params.get("industry");
+  const indParam = customerChatAttempt ? "" : params.get("industry");
   if (indParam) selectOption(form.querySelector('[name="industry"]'), indParam);
+  const volumeParam = requestContextVolume(requestContext);
+  if (volumeParam) {
+    const volumeSelect = form.querySelector('[name="volume"]');
+    if (!selectOption(volumeSelect, volumeParam)) appendContextOption(volumeSelect, volumeParam, volumeParam);
+  }
+  const sourceInput = document.getElementById("fSource");
+  const contextSummary = document.getElementById("quoteContextSummary");
+  if (requestContext) {
+    if (sourceInput) {
+      sourceInput.value = requestContext.source;
+      sourceInput.disabled = false;
+    }
+    if (contextSummary) contextSummary.hidden = false;
+  }
 
   // ── Adaptive request type: the chooser swaps which field set is required/shown ──
   const leadMessage = form.querySelector('[name="message"]');
@@ -171,6 +208,7 @@ export function initQuoteForm() {
   if (advancedFields.length) {
     setAdvancedOpen(false);
     advancedButton.addEventListener("click", () => setAdvancedOpen(advancedButton.getAttribute("aria-expanded") !== "true"));
+    if (requestContext) setAdvancedOpen(true);
   }
 
   const typeInput = form.querySelector('[name="type"]');
@@ -269,7 +307,7 @@ export function initQuoteForm() {
       product: "Product", industry: "Industry", volume: "Volume", location: "Location",
       timeline: "Timeline", system: "System / asset", audit_timeframe: "Preferred timeframe",
       samples: "Sample products", ship_to: "Ship-to address", company_type: "Company type",
-      territory: "Territory / region", message: "Notes"
+      territory: "Territory / region", message: "Notes", source: "Source"
     };
     const lines = [];
     for (const [k, v] of data.entries()) if (String(v).trim()) lines.push((labels[k] || k) + ": " + v);

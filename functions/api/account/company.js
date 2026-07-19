@@ -148,7 +148,7 @@ export async function onRequestPost({ request, env }) {
     const base = {
       name,
       status: 'pending',
-      tax_exempt: Boolean(body.tax_exempt),
+      tax_exempt: false,
       resale_cert_url: resaleCertUrl === undefined ? null : resaleCertUrl,
     };
     const full = { ...base, ...bizPatch, submitted_at: new Date().toISOString() };
@@ -178,7 +178,6 @@ export async function onRequestPost({ request, env }) {
     if (name.length < 2) return json(400, { error: 'company_name_required' });
     patch.name = name;
   }
-  if (body.tax_exempt !== undefined) patch.tax_exempt = Boolean(body.tax_exempt);
   if (resaleCertUrl !== undefined) patch.resale_cert_url = resaleCertUrl;
   if (!Object.keys(patch).length) return json(400, { error: 'nothing_to_update' });
 

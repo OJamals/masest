@@ -41,7 +41,7 @@ test("admin overview renders operations summary and action rail", () => {
 test("admin traffic page renders funnel campaigns and daily report", () => {
   // Traffic tab is split into its own module (#36); the admin entrypoint wires it in.
   const admin = read("js/admin.js");
-  assert.match(admin, /from\s+["']\.\/admin\/traffic\.js(?:\?v=\d{8}[a-z])?["']/, "admin should import the traffic module");
+  assert.match(admin, /import\(\s*["']\.\/admin\/traffic\.js\?v=\d{8}[a-z]["']\s*\)/, "admin should lazy-import the traffic module");
   assert.match(admin, /createTrafficRenderer\(/, "admin should wire the traffic renderer");
 
   const js = read("js/admin/traffic.js");

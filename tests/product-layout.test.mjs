@@ -4,7 +4,12 @@ import { once } from "node:events";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { chromium } from "playwright";
-import { CATALOG_ORDER, PRODUCTS } from "../js/main/catalog-data.js";
+import {
+  CATALOG_ORDER,
+  PRODUCT_CATALOG_COPY,
+  PRODUCTS,
+} from "../js/main/catalog-data.js";
+import { catalogCard, catalogDecisionHTML } from "../js/main/commerce-ui.js";
 
 const PORT = 4187;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -22,6 +27,58 @@ function htmlText(value) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
+
+test("catalog cards derive compact proof and fit cues from catalog data", () => {
+  for (const id of CATALOG_ORDER) {
+    const html = catalogCard(id);
+    const source = PRODUCT_CATALOG_COPY[id];
+    const renderedFits = [...html.matchAll(/<li class="shop-card-fit">([^<]+)<\/li>/g)]
+      .map((match) => match[1]);
+
+    assert.deepEqual(renderedFits, source.fits.slice(0, 3), `${id} should render only source fit data`);
+    assert.equal(renderedFits.length, Math.min(source.fits.length, 3));
+    assert.ok(
+      html.includes(`<span class="shop-card-proof-cue">${source.proof}</span>`),
+      `${id} should render its source proof verbatim`,
+    );
+    assert.ok(
+      html.includes(
+        `class="shop-card-proof-link" href="products/${id}" aria-label="Review proof for ${PRODUCTS[id].name}"`,
+      ),
+      `${id} should route proof review to its detail page`,
+    );
+  }
+});
+
+test("catalog decision cues omit missing rows without empty chrome", () => {
+  assert.equal(catalogDecisionHTML("hcr", {}), "");
+
+  const fitOnly = catalogDecisionHTML("hcr", { fits: ["HVAC"] });
+  assert.match(fitOnly, /shop-card-fit-list/);
+  assert.doesNotMatch(fitOnly, /shop-card-proof/);
+
+  const proofOnly = catalogDecisionHTML("hcr", { proof: PRODUCT_CATALOG_COPY.hcr.proof });
+  assert.match(proofOnly, /shop-card-proof-cue/);
+  assert.doesNotMatch(proofOnly, /shop-card-fit-list/);
+});
+
+test("catalog decision cues preserve existing buyable and quote-first actions", () => {
+  for (const [id, actionMarker, expectsDecision] of [
+    ["hcr", 'data-commerce-action="hcr"', true],
+    ["crs", "shop-card-quote", false],
+  ]) {
+    const html = catalogCard(id);
+    assert.ok(html.includes(actionMarker), `${id} should retain its existing commerce action`);
+    if (expectsDecision) {
+      assert.ok(
+        html.indexOf(actionMarker) < html.indexOf("shop-card-decision"),
+        `${id} commerce action should remain before supporting decision cues`,
+      );
+    } else {
+      assert.doesNotMatch(html, /shop-card-decision/, `${id} has no supported proof-detail route`);
+    }
+  }
+});
 
 async function gotoDomReady(page, path, selector) {
   await page.goto(`${BASE_URL}/${path}`, { waitUntil: "load" });
@@ -178,22 +235,12 @@ test("static product detail heroes publish full catalog copy", () => {
   }
 });
 
-test("replacement checker shows the swap and filters the catalog", async () => {
+test("catalog category controls filter the product grid", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await gotoDomReady(page, "products.html", ".shop-card");
-
-      await page.click('.swap-row[data-row="0"]');
-      await page.waitForSelector("#swapResult:not([hidden])");
-      const filtered = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
-      assert.deepEqual(filtered, ["hcr", "descaler"], "checker should filter to the matching swaps");
-
-      await page.click("#swapClear");
-      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 15);
-      const restored = await page.$$eval(".shop-card", (els) => els.length);
-      assert.equal(restored, 15, "clearing should restore the confirmed July 2026 price-list line");
 
       await page.click('.shop-chip[data-group="water"]');
       const water = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));

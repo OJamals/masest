@@ -31,15 +31,18 @@ test('business creation is one guarded database transaction', () => {
   assert.match(migration, /grant execute on function public\.create_company_for_user\(uuid, jsonb\) to service_role/i);
 });
 
-test('newsletter sends recover expired leases and fail when finalization is not durable', () => {
+test('newsletter deliveries recover expired leases and derive durable completion from ledger state', () => {
   const endpoint = read('functions/api/admin/newsletters.js');
-  const helper = read('functions/_lib/newsletter.js');
-  assert.match(helper, /NEWSLETTER_SEND_LEASE_MS/);
-  assert.match(helper, /newsletterSendCandidates/);
-  assert.match(endpoint, /\.in\('status',\s*\['scheduled',\s*'sending'\]\)/);
-  assert.match(endpoint, /\.eq\('updated_at',\s*n\.updated_at\)/);
-  assert.match(endpoint, /finalizeNewsletter/);
-  assert.match(endpoint, /newsletter_finalize_failed/);
+  const helper = read('functions/_lib/newsletter-delivery.js');
+  const schema = read('supabase/schema-newsletters.sql');
+  assert.match(helper, /DELIVERY_LEASE_SECONDS/);
+  assert.match(helper, /runSupabaseDeliveryWorker/);
+  assert.match(endpoint, /materializeDeliverySource/);
+  assert.match(endpoint, /return json\(202/);
+  assert.match(schema, /state = 'processing' and delivery\.lease_expires_at <= now\(\)/);
+  assert.match(schema, /for update skip locked/i);
+  assert.match(schema, /newsletter_delivery_summary/);
+  assert.match(schema, /count\(\*\) = count\(\*\) filter \(where state in \('sent', 'suppressed', 'dead'\)\)/);
   assert.match(endpoint, /json\(503/);
 });
 

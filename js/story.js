@@ -1,17 +1,15 @@
 /* ============================================================
-   MASEST / VertKleen - Scrollytelling engine v5
+   MASEST / VertKleen - Four-act Replacement Ledger engine
    NATIVE browser scroll. One GSAP timeline per act, driven by
    ScrollTrigger scrub (the single smoothing layer - no Lenis,
    no wheel multipliers, no custom damping). Wheel feel is the
    browser's own; animations catch up over ~0.3s.
-   Act 1: curated field-photo reel (canvas fumes). Act 2: SVG
-   pipe - scroll-driven buildup on the walls, CSS-animated flow
-   (no canvas, no per-frame SVG filter). Act 3: the conventional
-   hazard ledger builds line by line, then the injury total counts
-   up. Act 4 mirrors the same ledger with VertKleen at 0-0-0.
-   Act 5: close + CTAs (canvas motes). Degrades to a stacked,
-   fully-visible layout without JS, when CDN libs fail, or under
-   reduced-motion.
+   Act 1: field problem + guided route. Act 2: one continuous
+   buildup-cost pipe. Act 3: one operational comparison ledger.
+   Act 4: asymmetric proof + action close (canvas motes).
+   Mobile uses the shorter in-flow narrative. All acts degrade to
+   a fully visible layout without JS, when libs fail, or under
+   reduced motion.
    ============================================================ */
 (function () {
   "use strict";
@@ -29,7 +27,8 @@
   }
 
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce || !window.gsap || !window.ScrollTrigger) {
+  var compact = window.matchMedia("(max-width: 760px)").matches;
+  if (reduce || compact || !window.gsap || !window.ScrollTrigger) {
     /* index.html may have applied .story-ready pre-paint (CLS guard); undo it so
        the CSS fallback layout shows when we're not driving the animation. */
     story.classList.remove("story-ready");
@@ -152,8 +151,8 @@ states.forEach(function (st) {
       updateReel(st);
     }
     if (st.act === pipeAct) updateChips2(st);
-    if (st.act === hmisAct) updateInjuryTotal(st);
-    if (st.act === costAct) updateZeroLedger(st);
+    if (st.act === ledgerAct) updateIncidentTotal(st);
+    if (st.act === closeAct) updateSavingTotal(st);
   }
 
   /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
@@ -233,45 +232,27 @@ states.forEach(function (st) {
     if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = "Photo " + (current + 1) + " of " + n; }
   }
 
-  /* ---- ACT 3: the "+ one workplace injury" total counts up as its
-     ledger strip lands (beats ~5.5 -> 6.4). Act 4's mirror ledger is
-     plain data-at reveals - no scrub extras, no pre-reveal ghosting. */
-  var hmisAct = story.querySelector(".act-hmis");
-  var costNum = hmisAct ? hmisAct.querySelector(".cost-num") : null;
-  var COST_TARGET = costNum ? (parseInt(costNum.getAttribute("data-target"), 10) || 0) : 0;
+  /* ---- ACT 3/4: count the existing sourced incident and savings figures
+     only when their proof blocks land. Static modes keep full values. */
+  var ledgerAct = story.querySelector(".act-ledger");
+  var incidentNum = ledgerAct ? ledgerAct.querySelector(".cost-num") : null;
+  var INCIDENT_TARGET = incidentNum ? (parseInt(incidentNum.getAttribute("data-target"), 10) || 0) : 0;
   function setTxt(el, v) { if (el && el.textContent !== v) el.textContent = v; }
   function fmtCost(n) { return Math.round(n).toLocaleString("en-US"); }
-  function updateInjuryTotal(st) {
-    if (!costNum) return;
-    var a = beatFrac(st, 5.5), b = beatFrac(st, 6.4);
-    var compact = window.innerWidth <= 760;
-    var ramp = compact ? 1 : smooth(clamp(0, 1, (st.p - a) / (b - a)));
-    setTxt(costNum, fmtCost(COST_TARGET * ramp));
+  function updateIncidentTotal(st) {
+    if (!incidentNum) return;
+    var a = beatFrac(st, 2.8), b = beatFrac(st, 3.2);
+    var ramp = smooth(clamp(0, 1, (st.p - a) / (b - a)));
+    setTxt(incidentNum, fmtCost(INCIDENT_TARGET * ramp));
   }
 
-  /* ---- ACT 4: the mirror ledger animates as it lands - each old burden
-     title gets struck off ("every hazard line gone") just after its row
-     reveals, and the documented saving counts up as the proof strip lands
-     (beats ~4.8 -> 5.6). Compact / no-JS: strikes stay 0, total shows full. */
-  var costAct = story.querySelector(".act-cost");
-  var saveNum = costAct ? costAct.querySelector(".cost-num") : null;
+  var closeAct = story.querySelector(".act-proof-close");
+  var saveNum = closeAct ? closeAct.querySelector(".cost-num") : null;
   var SAVE_TARGET = saveNum ? (parseInt(saveNum.getAttribute("data-target"), 10) || 0) : 0;
-  var zeroBurdens = costAct ? gsap.utils.toArray(costAct.querySelectorAll(".ledger-zero .ledger-burden b")) : [];
-  zeroBurdens.forEach(function (b) {
-    var row = b.closest ? b.closest(".ledger-row") : null;
-    b._beat = row ? (parseFloat(row.getAttribute("data-at")) || 0) : 0;
-  });
-  function updateZeroLedger(st) {
-    var compact = window.innerWidth <= 760;
-    var win = (BEAT_IN / st.T) * 1.4;
-    for (var i = 0; i < zeroBurdens.length; i++) {
-      var b = zeroBurdens[i];
-      var s = compact ? 1 : smooth(clamp(0, 1, (st.p - beatFrac(st, b._beat + 0.25)) / win));
-      b.style.setProperty("--strike", s.toFixed(3));
-    }
+  function updateSavingTotal(st) {
     if (saveNum) {
-      var a = beatFrac(st, 4.8), c = beatFrac(st, 5.6);
-      var ramp = compact ? 1 : smooth(clamp(0, 1, (st.p - a) / (c - a)));
+      var a = beatFrac(st, 0.2), c = beatFrac(st, 0.9);
+      var ramp = smooth(clamp(0, 1, (st.p - a) / (c - a)));
       setTxt(saveNum, fmtCost(SAVE_TARGET * ramp));
     }
   }
@@ -392,7 +373,9 @@ states.forEach(function (st) {
   var railTicking = false;
   function syncStoryPageState() {
     var rect = story.getBoundingClientRect();
-    var inView = rect.bottom > stickyOffset() && rect.top < window.innerHeight;
+    /* Light content begins exactly at story.bottom. Release rail/nav/chat state
+       before any light content enters the viewport, in either direction. */
+    var inView = rect.bottom >= window.innerHeight && rect.top < window.innerHeight;
     document.body.classList.toggle("story-in-view", inView);
   }
   function nearestRailIndex() {
