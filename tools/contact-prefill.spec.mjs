@@ -47,6 +47,27 @@ test("contact form pre-fills quote message from cart handoff", async ({ page }) 
   await expect(page.locator('[name="message"]')).toHaveValue(message);
 });
 
+test("product quote handoff lands on the visible prefilled product", async ({ page }) => {
+  await page.goto(`${BASE_URL}/products/descaler.html`, { waitUntil: "networkidle" });
+  await expect(page.getByRole("link", { name: "Request a quote" })).toHaveAttribute("href", /#quoteForm$/);
+  await expect(page.getByRole("link", { name: "Request free sample" })).toHaveAttribute("href", /#quoteForm$/);
+
+  await page.goto(
+    `${BASE_URL}/contact.html?type=quote&product=VertKleen%20Descaler#quoteForm`,
+    { waitUntil: "networkidle" },
+  );
+
+  await expect(page.locator("#fProduct")).toBeVisible();
+  await expect(page.locator("#fProduct")).toHaveValue("VertKleen Descaler");
+  await expect(page.locator(".quote-advanced-toggle")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#quoteContextSummary")).toBeVisible();
+  await expect(page.locator("#quoteContextSummary")).toContainText("Quote request for VertKleen Descaler.");
+
+  const formTop = await page.locator("#quoteForm").evaluate((form) => form.getBoundingClientRect().top);
+  expect(formTop).toBeGreaterThanOrEqual(0);
+  expect(formTop).toBeLessThan(900);
+});
+
 test("customer chat context stays visible, editable, and submits only its allowed source", async ({ page }) => {
   let submittedBody = "";
   await page.route("**/api/quote", async (route) => {

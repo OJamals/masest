@@ -177,6 +177,19 @@ export function initQuoteForm() {
       sourceInput.disabled = false;
     }
     if (contextSummary) contextSummary.hidden = false;
+  } else if (pre && contextSummary) {
+    const requestLabel = {
+      audit: "Chemical audit request",
+      sample: "Sample request",
+      technical: "Document request",
+    }[params.get("type")] || "Quote request";
+    const strong = document.createElement("strong");
+    strong.textContent = `${requestLabel} for ${String(pre).slice(0, 120)}.`;
+    contextSummary.replaceChildren(
+      strong,
+      document.createTextNode(" The product is preselected below. Review or edit it before sending."),
+    );
+    contextSummary.hidden = false;
   }
 
   // ── Adaptive request type: the chooser swaps which field set is required/shown ──
@@ -208,7 +221,8 @@ export function initQuoteForm() {
   if (advancedFields.length) {
     setAdvancedOpen(false);
     advancedButton.addEventListener("click", () => setAdvancedOpen(advancedButton.getAttribute("aria-expanded") !== "true"));
-    if (requestContext) setAdvancedOpen(true);
+    const productQuoteAttempt = Boolean(pre) && (params.get("type") || "quote") === "quote";
+    if (requestContext || productQuoteAttempt || volumeParam) setAdvancedOpen(true);
   }
 
   const typeInput = form.querySelector('[name="type"]');

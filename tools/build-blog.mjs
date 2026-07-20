@@ -160,7 +160,7 @@ function postPage(post, all) {
     </aside>
   </article>
 </main>
-<script type="module" src="../js/main.js?v=20260719c"></script>
+<script type="module" src="../js/main.js?v=20260720a"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
@@ -262,7 +262,7 @@ ${cards}
     </div>
   </section>
 </main>
-<script type="module" src="js/main.js?v=20260719c"></script>
+<script type="module" src="js/main.js?v=20260720a"></script>
 <script type="module" src="js/blog-index.js"></script>
 <script src="js/track.js" defer></script>
 </body>

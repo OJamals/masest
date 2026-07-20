@@ -51,11 +51,31 @@ test("products grid shows a skeleton while loading, then a quote fallback on cat
   // After the failed load settles, the buy area routes to a quote instead of staying blank.
   const fallback = page.locator(".shop-card .commerce-quote-fallback");
   await expect(fallback.first()).toBeVisible({ timeout: 5000 });
-  await expect(fallback.first()).toHaveAttribute("href", /contact\?type=quote/);
+  await expect(fallback.first()).toHaveAttribute("href", /contact\?type=quote.*#quoteForm$/);
   // No real add-to-cart control rendered when the catalog is unavailable.
   await expect(page.locator(".shop-card [data-commerce-buy]")).toHaveCount(0);
   // The skeletons are gone once the state resolves.
   await expect(page.locator(".shop-card .commerce-skeleton")).toHaveCount(0);
+});
+
+test("zero-result product search offers a contextual chemical-audit handoff", async ({ page }) => {
+  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+  await page.locator("#shopSearch").fill("acetone");
+
+  await expect(page.locator("#shopEmpty")).toBeVisible();
+  await expect(page.locator("#shopCount")).toHaveText("Showing 0 of 15");
+
+  const handoff = page.locator("#shopEmptyContact");
+  await expect(handoff).toBeVisible();
+  await expect(handoff).toHaveText("Tell us what you're replacing");
+  await expect(handoff).toHaveAttribute(
+    "href",
+    /contact\?type=audit&message=.*acetone.*#quoteForm$/,
+  );
+
+  const handoffBox = await handoff.boundingBox();
+  const resetBox = await page.locator("#shopEmpty button").boundingBox();
+  expect(handoffBox?.y).toBeLessThan(resetBox?.y);
 });
 
 // The success path (real add-to-cart controls when /api/products returns a purchasable

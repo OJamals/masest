@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260719c">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
-<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/components.css?v=20260719a">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/products">
 <meta property="og:url" content="https://masest.co/products">
@@ -89,7 +89,7 @@
       <div class="shop-toolbar reveal">
         <label class="search-field" for="shopSearch">
           <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-          <input type="search" id="shopSearch" placeholder="Search products…" aria-label="Search products" autocomplete="off">
+          <input type="search" id="shopSearch" placeholder="Search product or current chemical…" aria-label="Search by product or current chemical" autocomplete="off">
         </label>
         <div class="shop-chips" id="shopChips" role="group" aria-label="Filter by category"></div>
         <div class="shop-sort">
@@ -106,7 +106,8 @@
       <div class="empty-state shop-empty" id="shopEmpty" hidden>
         <i class="ph ph-package empty-icon" aria-hidden="true"></i>
         <p class="empty-title">No products match</p>
-        <p class="empty-body">Try a different search term or category, or clear your filters to see the full line.</p>
+        <p class="empty-body">Clear the filters to see the full line, or send us the chemical or job you need to replace.</p>
+        <a class="btn btn-secondary btn-sm" id="shopEmptyContact" href="contact?type=audit#quoteForm">Tell us what you're replacing</a>
         <button type="button" class="btn btn-ghost btn-sm">Reset filters</button>
       </div>
     </div>
@@ -141,7 +142,7 @@
   </section>
 </main>
 
-<script type="module" src="js/main.js?v=20260719d"></script>
+<script type="module" src="js/main.js?v=20260720a"></script>
 <script src="js/track.js" defer></script>
 </body>
 </html>

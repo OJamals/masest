@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260719c";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260720a";
 import { smoothPref } from "./engagement.js";
 
 const IMAGE_DIMS = {
@@ -233,7 +233,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
     return `<span class="commerce-buy" data-commerce-buy="${id}">`
       + `<select class="commerce-vol" aria-label="Volume for ${p?.name || id}">${opts}</select>`
       + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
-      + `<a class="${btnClass} commerce-quote-swap" hidden href="${quoteHref}" data-quote-base="${quoteHref}" aria-label="Request a bulk quote for ${p?.name || id}">Request quote</a>`
+      + `<a class="${btnClass} commerce-quote-swap" hidden href="${quoteHref}#quoteForm" data-quote-base="${quoteHref}" aria-label="Request a bulk quote for ${p?.name || id}">Request quote</a>`
       + `</span>`;
   }
   // Loaded, but no buyable variant — the catalog fetch failed (loadCommerceCatalog's catch
@@ -241,7 +241,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
   // quote instead of leaving a dead, blank buy area (PRODUCT: route forward from every state).
   // Mounts that already sit next to a static quote CTA opt out via data-quote-fallback="off".
   if (quoteFallback === "off") return "";
-  return `<a class="btn btn-secondary btn-sm commerce-quote-fallback" href="/contact?type=quote&product=${encodeURIComponent(p?.name || id)}">Request pricing</a>`;
+  return `<a class="btn btn-secondary btn-sm commerce-quote-fallback" href="/contact?type=quote&product=${encodeURIComponent(p?.name || id)}#quoteForm">Request pricing</a>`;
 }
 
 function quoteActionHTML(id) {
@@ -249,7 +249,7 @@ function quoteActionHTML(id) {
   // Mirror the buyable buybar's price-line + control rhythm so quote-only cards
   // read as a deliberate state, not a card missing its commerce block.
   return `<span class="shop-card-price"><strong class="price-main price-main-quote">Quote-priced</strong><span class="price-note">Volume &amp; freight quoted</span></span>`
-    + `<a class="shop-card-quote" href="/contact?type=quote&product=${encodeURIComponent(name)}"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
+    + `<a class="shop-card-quote" href="/contact?type=quote&product=${encodeURIComponent(name)}#quoteForm"><i class="ph ph-tag" aria-hidden="true"></i>Request quote</a>`;
 }
 
 function bulkPriceText(id) {
@@ -470,7 +470,7 @@ export function initCartButtons() {
       quoteLink.hidden = !isQuote;
       if (isQuote && label) {
         const base = quoteLink.dataset.quoteBase || quoteLink.getAttribute("href");
-        quoteLink.setAttribute("href", `${base}&message=${encodeURIComponent(`Requesting a freight quote for the ${label.trim()}.`)}`);
+        quoteLink.setAttribute("href", `${base}&message=${encodeURIComponent(`Requesting a freight quote for the ${label.trim()}.`)}#quoteForm`);
       }
     }
     if (!buybar || !price) return;
@@ -488,6 +488,7 @@ export function initShop() {
   const sortSel = document.getElementById("shopSort");
   const countEl = document.getElementById("shopCount");
   const emptyEl = document.getElementById("shopEmpty");
+  const emptyContact = document.getElementById("shopEmptyContact");
   const searchEl = document.getElementById("shopSearch");
   grid.addEventListener("click", e => {
     const button = e.target.closest("[data-cart-add]");
@@ -534,6 +535,13 @@ export function initShop() {
     refreshCommerceActions(grid);
     if (countEl) countEl.textContent = `Showing ${ids.length} of ${CATALOG_ORDER.length}`;
     if (emptyEl) emptyEl.hidden = ids.length > 0;
+    if (emptyContact) {
+      const query = searchEl?.value.trim() || "";
+      const message = query
+        ? `I need to replace or clean: ${query}. Please recommend the closest VertKleen fit.`
+        : "Please recommend a VertKleen product for my current chemical or cleaning job.";
+      emptyContact.href = `/contact?type=audit&message=${encodeURIComponent(message)}#quoteForm`;
+    }
   };
 
   const reset = () => {

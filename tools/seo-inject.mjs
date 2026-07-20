@@ -557,8 +557,8 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         </div>`}
         <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}">Request a quote</a>
-          <a class="btn btn-secondary" href="../contact?type=sample&product=${encodeURIComponent(product.name)}">Request free sample</a>
+          <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}#quoteForm">Request a quote</a>
+          <a class="btn btn-secondary" href="../contact?type=sample&product=${encodeURIComponent(product.name)}#quoteForm">Request free sample</a>
           <a class="btn btn-ghost" href="../products">All products</a>
         </div>
       </div>
@@ -580,7 +580,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     </div>
   </section>
 </main>
-<script type="module" src="../js/main.js?v=20260719c"></script>
+<script type="module" src="../js/main.js?v=20260720a"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

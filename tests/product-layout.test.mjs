@@ -78,6 +78,12 @@ test("catalog decision cues preserve existing buyable and quote-first actions", 
       assert.doesNotMatch(html, /shop-card-decision/, `${id} has no supported proof-detail route`);
     }
   }
+
+  assert.match(
+    catalogCard("crs"),
+    /contact\?type=quote&product=[^"]+#quoteForm/,
+    "quote-first cards should land buyers at the contextual request form",
+  );
 });
 
 async function gotoDomReady(page, path, selector) {
