@@ -628,7 +628,7 @@ function labelVariantCard(key) {
   ).join("");
 
   return `<article class="prod-card" data-label-variant="${key}">
-        <img class="product-shot" src="../img/products/${variant.image}" alt="${htmlText(variant.name)} ${variant.market} jug" loading="lazy">
+        <img class="product-shot" src="../img/products/${variant.image}" alt="${htmlText(variant.name)} ${variant.market} jug" width="900" height="1200" loading="lazy">
         <span class="catalog-type">${variant.market}</span>
         <h3>${htmlText(variant.name)}</h3>
         <div class="replaces">${htmlText(variant.subtitle)}</div>

@@ -347,7 +347,7 @@ async function addToCartFromButton(button) {
   if (!vsku) return;
   const label = button.textContent;
   button.disabled = true;
-  button.textContent = "Adding...";
+  button.textContent = "Adding…";
   try {
     const cart = await import("../cart.js");
     cart.add(vsku, 1);

@@ -73,7 +73,7 @@ export async function initCustomerChat() {
         <div class="customer-chat__messages" aria-live="polite" aria-label="Messages"></div>
         <form class="customer-chat__form">
           <label class="sr-only" for="customerChatBody">Message</label>
-          <textarea id="customerChatBody" maxlength="4000" required placeholder="Ask about VertKleen, an order, or your account."></textarea>
+          <textarea id="customerChatBody" name="chat_message" autocomplete="off" maxlength="4000" required placeholder="Ask about VertKleen, an order, or your account…"></textarea>
           <div class="customer-chat__form-row"><p class="customer-chat__status" role="status" aria-live="polite"></p><button class="btn btn-primary" type="submit">Send</button></div>
           <a class="customer-chat__inbox-link" href="${root}dashboard.html#messages">Open full message inbox</a>
           <a class="customer-chat__quote-link" href="${root}contact.html">Request a quote with this context</a>

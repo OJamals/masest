@@ -20,6 +20,29 @@ const DIR_ROLES = [
 
 export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager, refreshStats }) {
   const SUBTABS = [['tasks', 'Follow-ups'], ['contacts', 'People']];
+  const TASK_SCOPES = [['open', 'All open'], ['mine', 'Assigned to me'], ['overdue', 'Overdue']];
+  const initialParams = new URLSearchParams(location.search);
+  const initialView = initialParams.get('crm_view');
+  const initialTaskScope = initialParams.get('crm_task_scope');
+  if (SUBTABS.some(([value]) => value === initialView)) state.crmView = initialView;
+  if (TASK_SCOPES.some(([value]) => value === initialTaskScope)) state.crmTaskScope = initialTaskScope;
+  state.crmTaskAssignee ||= initialParams.get('crm_task_assignee') || '';
+  state.crmContactQ ||= initialParams.get('crm_q') || '';
+  state.crmContactRole ||= initialParams.get('crm_role') || '';
+
+  function syncWorkspaceUrl() {
+    const params = new URLSearchParams(location.search);
+    const values = {
+      crm_view: state.crmView === 'contacts' ? 'contacts' : '',
+      crm_task_scope: state.crmTaskScope && state.crmTaskScope !== 'open' ? state.crmTaskScope : '',
+      crm_task_assignee: state.crmTaskAssignee || '',
+      crm_q: state.crmContactQ || '',
+      crm_role: state.crmContactRole || '',
+    };
+    Object.entries(values).forEach(([key, value]) => value ? params.set(key, value) : params.delete(key));
+    const query = params.toString();
+    history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
+  }
 
   function shell() {
     const view = state.crmView || 'tasks';
@@ -38,7 +61,6 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     </div>`;
   }
 
-  const TASK_SCOPES = [['open', 'All open'], ['mine', 'Assigned to me'], ['overdue', 'Overdue']];
   // The currently loaded inbox tasks for the active scope. The assignee filter
   // narrows this in-memory (no refetch), so it persists across assignee changes.
   let inboxTasks = [];
@@ -79,7 +101,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     if (facets.length <= 2) return '';
     const current = state.crmTaskAssignee || '';
     const opts = facets.map((f) => `<option value="${esc(f.value)}"${f.value === current ? ' selected' : ''}>${esc(f.label)} (${f.count})</option>`).join('');
-    return `<select class="adm-select adm-select-sm" data-inbox-assignee aria-label="Filter tasks by assignee">${opts}</select>`;
+    return `<select class="adm-select adm-select-sm" name="task_assignee" data-inbox-assignee aria-label="Filter tasks by assignee">${opts}</select>`;
   }
 
   // Render the toolbar + the assignee-filtered list from the already-loaded inboxTasks.
@@ -233,8 +255,8 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
         </div>
       </div>
       <form class="adm-tools crm-contact-search" data-dir-form>
-        <input class="adm-search" type="search" data-dir-q placeholder="Search people by name, email, phone or company" aria-label="Search people" value="${esc(term)}">
-        <select class="adm-select" data-dir-role aria-label="Filter by contact role">${roleOpts}</select>
+        <input class="adm-search" name="contact_search" type="search" autocomplete="off" data-dir-q placeholder="Try “Acme” or buyer@example.com…" aria-label="Search people" value="${esc(term)}">
+        <select class="adm-select" name="contact_role" data-dir-role aria-label="Filter by contact role">${roleOpts}</select>
         <button class="btn btn-primary btn-sm" type="submit">Search</button>
       </form>
       <div data-dir-users></div>
@@ -245,6 +267,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
 
   function showView(view) {
     state.crmView = view;
+    syncWorkspaceUrl();
     const box = $('admCrm');
     box.querySelectorAll('[data-crm-ws-tab]').forEach((b) => {
       const on = b.dataset.crmWsTab === view;
@@ -270,11 +293,13 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     delegate(box, 'click', '[data-crm-ws-tab]', (event, btn) => showView(btn.dataset.crmWsTab));
     delegate(box, 'click', '[data-inbox-scope]', (event, btn) => {
       state.crmTaskScope = btn.dataset.inboxScope;
+      syncWorkspaceUrl();
       renderTasks(box.querySelector('[data-crm-ws-body]'));
     });
     delegate(box, 'change', '[data-inbox-assignee]', (event, sel) => {
       // Re-filter the loaded inbox in place — no refetch.
       state.crmTaskAssignee = sel.value;
+      syncWorkspaceUrl();
       paintInbox(box.querySelector('[data-crm-ws-body]'));
     });
     delegate(box, 'click', '[data-inbox-toggle]', async (event, btn) => {
@@ -296,12 +321,14 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     delegate(box, 'submit', '[data-dir-form]', (event, form) => {
       event.preventDefault();
       state.crmContactQ = form.querySelector('[data-dir-q]').value.trim();
+      syncWorkspaceUrl();
       const body = box.querySelector('[data-crm-ws-body]');
       renderPortalUsers(body);
       runContactSearch(body, { append: false });
     });
     delegate(box, 'change', '[data-dir-role]', (event, sel) => {
       state.crmContactRole = sel.value;
+      syncWorkspaceUrl();
       const body = box.querySelector('[data-crm-ws-body]');
       renderPortalUsers(body);
       runContactSearch(body, { append: false });

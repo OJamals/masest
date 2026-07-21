@@ -107,7 +107,7 @@ export async function renderQboStatus() {
   if (!status || !button) return;
   let allowConnect = false;
   let allowSync = false;
-  status.textContent = "Checking QuickBooks...";
+  status.textContent = "Checking QuickBooks…";
   status.dataset.state = "";
   button.disabled = true;
   if (syncButton) syncButton.disabled = true;
@@ -157,7 +157,7 @@ export async function connectQbo() {
   try {
     if (button) button.disabled = true;
     if (status) {
-      status.textContent = "Opening QuickBooks...";
+      status.textContent = "Opening QuickBooks…";
       status.dataset.state = "";
     }
     const { url } = await api("/api/admin/qbo/connect?format=json");
@@ -196,7 +196,7 @@ export async function runQboSync() {
   try {
     if (button) button.disabled = true;
     if (status) {
-      status.textContent = "Running QuickBooks sync...";
+      status.textContent = "Running QuickBooks sync…";
       status.dataset.state = "";
     }
     const result = await api("/api/admin/qbo/sync", { method: "POST" });
@@ -218,7 +218,7 @@ export async function runQboSync() {
 export async function retryQboOrder(orderId, kind = "order") {
   const status = $("qboSyncStatus");
   if (status) {
-    status.textContent = "Requeueing QuickBooks sync...";
+    status.textContent = "Requeueing QuickBooks sync…";
     status.dataset.state = "";
   }
   try {

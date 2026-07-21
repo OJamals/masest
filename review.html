@@ -110,7 +110,7 @@
     e.preventDefault();
     const btn = form.querySelector("button");
     btn.disabled = true;
-    status.textContent = "Submitting...";
+    status.textContent = "Submitting…";
     try {
       const res = await fetch("/api/reviews", {
         method: "POST",

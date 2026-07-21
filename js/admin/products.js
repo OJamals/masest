@@ -121,7 +121,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       message('prodStatus', `"${file.name}" is ${(file.size / 1048576).toFixed(1)} MB — keep product photos under 8 MB.`, 'err');
       return;
     }
-    message('prodStatus', 'Uploading image...');
+    message('prodStatus', 'Uploading image…');
     try {
       const fd = new FormData();
       fd.append('sku', sku); fd.append('slot', slot); fd.append('file', file);
@@ -138,12 +138,12 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
 
   function productMedia(product) {
     const primary = product.image_url
-      ? `<img class="product-photo" src="${esc(safeUrl(product.image_url))}" alt="${esc(product.photo_alt || product.name || '')}">`
+      ? `<img class="product-photo" src="${esc(safeUrl(product.image_url))}" alt="${esc(product.photo_alt || product.name || '')}" width="1200" height="1200">`
       : '<span class="product-photo product-photo-empty">No photo</span>';
     const gallery = Array.isArray(product.gallery) && product.gallery.length
       ? `<div class="product-gallery">${product.gallery.map((url, index) => `
         <span class="product-gallery-item">
-          <img src="${esc(safeUrl(url))}" alt="">
+          <img src="${esc(safeUrl(url))}" alt="" width="1200" height="1200" loading="lazy">
           <span class="product-gallery-actions">
             <button type="button" class="gbtn" data-gact="primary" data-gurl="${esc(url)}" title="Make primary" aria-label="Make primary photo">★</button>
             <button type="button" class="gbtn" data-gact="up" data-gidx="${index}" title="Move up" aria-label="Move photo up">↑</button>
@@ -190,7 +190,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
   }
 
   async function saveProductRow(sku) {
-    message('prodStatus', 'Saving...');
+    message('prodStatus', 'Saving…');
     try {
       const response = await api('/api/admin/products', { method: 'POST', body: { product: rowProduct(sku) } });
       message('prodStatus', response.warning || 'Saved.', response.warning ? 'err' : 'ok');
@@ -223,7 +223,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
   }
 
   async function saveVariantRow(vsku) {
-    message('prodStatus', 'Saving variant...');
+    message('prodStatus', 'Saving variant…');
     try {
       await api('/api/admin/products', { method: 'POST', body: { variant: rowVariant(vsku) } });
       message('prodStatus', 'Variant saved.', 'ok');
@@ -257,7 +257,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         photo_alt: $('npPhotoAlt').value.trim(),
         active: true,
       };
-      message('prodCreateStatus', 'Saving...');
+      message('prodCreateStatus', 'Saving…');
       try {
         const response = await api('/api/admin/products', { method: 'POST', body: { product } });
         message('prodCreateStatus', response.warning || 'Product saved.', response.warning ? 'err' : 'ok');
@@ -281,7 +281,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         track_stock: $('nvStock').value !== '',
         active: true,
       };
-      message('variantCreateStatus', 'Saving...');
+      message('variantCreateStatus', 'Saving…');
       try {
         await api('/api/admin/products', { method: 'POST', body: { variant } });
         message('variantCreateStatus', 'Variant saved.', 'ok');

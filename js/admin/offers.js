@@ -26,7 +26,7 @@ export function createOffersTab({ $, api, state, message, admSkeleton, admEmpty 
       const withEmail = $('ofEmail').checked;
       // Mass, irreversible send — the only bulk outbound action in the admin; confirm like refunds do.
       if (!(await confirmDialog(`Send this offer to ${audience || 'all'} accounts${withEmail ? ' and email them' : ''}?`, { confirmText: 'Send offer' }))) return;
-      message('offerStatus', 'Sending...');
+      message('offerStatus', 'Sending…');
       try {
         const response = await api('/api/admin/offers', {
           method: 'POST',

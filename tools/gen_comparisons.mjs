@@ -126,6 +126,14 @@ const pages = [
   }
 ];
 
+const IMAGE_DIMENSIONS = {
+  "../img/proof/cases/ddc-rust.webp": [1200, 579],
+  "../img/proof/cases/farm-rust.webp": [740, 967],
+  "../img/proof/cases/walmart-dc-crhd.webp": [708, 513],
+  "../img/proof/cases/grout-moss.webp": [919, 690],
+  "../img/proof/cases/brewery.webp": [1200, 900],
+};
+
 function schema(page) {
   return {
     "@context": "https://schema.org",
@@ -149,6 +157,7 @@ function schema(page) {
 }
 
 function pageHtml(page) {
+  const [imageWidth, imageHeight] = IMAGE_DIMENSIONS[page.image] || [1200, 900];
   const quoteHref = `../contact?type=quote&product=${encodeURIComponent(page.ctaProduct)}`;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -202,7 +211,7 @@ function pageHtml(page) {
         </div>
       </div>
       <figure class="product-hero-media reveal">
-        <img src="${page.image}" alt="${html(page.imageAlt)}" fetchpriority="high" decoding="async">
+        <img src="${page.image}" alt="${html(page.imageAlt)}" width="${imageWidth}" height="${imageHeight}" fetchpriority="high" decoding="async">
       </figure>
     </div>
   </section>

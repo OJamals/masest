@@ -71,10 +71,10 @@
         </div>
 
         <div class="field-grid">
-          <div class="field"><label for="fName">Full Name *</label><input id="fName" name="name" type="text" placeholder="First and last name" required></div>
-          <div class="field"><label for="fCompany">Company *</label><input id="fCompany" name="company" type="text" placeholder="Company name" required></div>
-          <div class="field"><label for="fEmail">Email *</label><input id="fEmail" name="email" type="email" placeholder="you@company.com" required></div>
-          <div class="field"><label for="fPhone">Phone</label><input id="fPhone" name="phone" type="tel" placeholder="(813) 555-0123"></div>
+          <div class="field"><label for="fName">Full Name *</label><input id="fName" name="name" type="text" autocomplete="name" placeholder="First and last name" required></div>
+          <div class="field"><label for="fCompany">Company *</label><input id="fCompany" name="company" type="text" autocomplete="organization" placeholder="Company name" required></div>
+          <div class="field"><label for="fEmail">Email *</label><input id="fEmail" name="email" type="email" autocomplete="email" spellcheck="false" placeholder="you@company.com" required></div>
+          <div class="field"><label for="fPhone">Phone</label><input id="fPhone" name="phone" type="tel" autocomplete="tel" placeholder="(813) 555-0123"></div>
 
           <div class="field">
             <label for="fIndustry">Industry</label>
@@ -115,7 +115,7 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="field"><label for="fLocation">Location</label><input id="fLocation" name="location" type="text" placeholder="Tampa, USA"></div>
+          <div class="field"><label for="fLocation">Location</label><input id="fLocation" name="location" type="text" autocomplete="address-level2" placeholder="Tampa, USA"></div>
         </div>
 
         <div class="field-grid" data-intent-group="quote">
@@ -173,7 +173,7 @@
         </div>
 
         <div class="field-grid" data-intent-group="audit" hidden>
-          <div class="field"><label for="fSystem">System or asset to audit *</label><input id="fSystem" name="system" type="text" placeholder="Cooling tower, CIP line, fleet wash bay" data-req></div>
+          <div class="field"><label for="fSystem">System or asset to audit *</label><input id="fSystem" name="system" type="text" autocomplete="off" placeholder="Cooling tower, CIP line, fleet wash bay" data-req></div>
           <div class="field">
             <label for="fAuditWhen">Preferred timeframe</label>
             <select id="fAuditWhen" name="audit_timeframe">
@@ -221,7 +221,7 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="field"><label for="fTerritory">Territory / region *</label><input id="fTerritory" name="territory" type="text" placeholder="Southeast US, Caribbean, ..." data-req></div>
+          <div class="field"><label for="fTerritory">Territory / region *</label><input id="fTerritory" name="territory" type="text" autocomplete="off" placeholder="Southeast US, Caribbean…" data-req></div>
         </div>
 
         <div class="field u-mt-18">

@@ -339,7 +339,7 @@ export function renderChrome() {
       <div class="foot-grid">
         <div>
           <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
-          <div class="foot-brand">MASEST VertKleen&trade;</div>
+          <div class="foot-brand" translate="no">MASEST VertKleen&trade;</div>
           <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support from Florida's Space Coast.</p>
         </div>
         <div class="foot-secondary">
@@ -376,7 +376,7 @@ export function renderChrome() {
           <p>Field results, document-gated SKUs, and program notes. No spam. Unsubscribe anytime.</p>
         </div>
         <form class="foot-news-form" id="footNews" novalidate>
-          <input type="email" name="email" id="footNewsEmail" placeholder="you@company.com" aria-label="Email address" autocomplete="email" required>
+          <input type="email" name="email" id="footNewsEmail" autocomplete="email" spellcheck="false" placeholder="you@company.com…" aria-label="Email address" required>
           <input type="text" name="company" class="foot-news-gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
           <button type="submit" class="btn btn-primary" id="footNewsBtn">Subscribe</button>
           <p class="foot-news-status" id="footNewsStatus" role="status" aria-live="polite"></p>
@@ -385,7 +385,7 @@ export function renderChrome() {
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
         <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">EULA</a></span>
-        <span>VertKleen, SynTech and SynClean are trademarks of MASEST Consulting LLC.</span>
+        <span translate="no">VertKleen, SynTech and SynClean are trademarks of MASEST Consulting LLC.</span>
       </div>
     </div>`;
   document.body.append(foot);

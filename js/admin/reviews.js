@@ -152,7 +152,7 @@ export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty
       if (!sku) { message('rvManualStatus', 'Enter a SKU.', 'err'); return; }
       if (!authorName) { message('rvManualStatus', 'Enter the customer name.', 'err'); return; }
       if (!authorEmail) { message('rvManualStatus', 'Enter the customer email.', 'err'); return; }
-      message('rvManualStatus', 'Adding...');
+      message('rvManualStatus', 'Adding…');
       try {
         await api('/api/admin/reviews', {
           method: 'POST',

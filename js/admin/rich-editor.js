@@ -342,7 +342,7 @@ export function createRichTextEditor(editor, options = {}) {
         return;
       }
       const url = window.prompt?.("Image URL") || "";
-      if (url) insertHtmlAtSelection(surface, `<img src="${escapeHtml(url)}" alt="">`);
+      if (url) insertHtmlAtSelection(surface, `<img src="${escapeHtml(url)}" alt="" width="1200" height="675" loading="lazy">`);
     }
     if (action === "close_reference" && picker) {
       picker.hidden = true;
@@ -350,7 +350,7 @@ export function createRichTextEditor(editor, options = {}) {
     }
     if (action === "open_reference" && picker && rows) {
       picker.hidden = false;
-      rows.innerHTML = '<p class="adm-status">Loading references...</p>';
+      rows.innerHTML = '<p class="adm-status">Loading references…</p>';
       rows.__richEditorInsert = (markdown) => {
         appendMarkdownBlock(surface, markdown);
         syncOutput(surface, output, options.onChange);

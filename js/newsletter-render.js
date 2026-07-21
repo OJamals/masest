@@ -101,7 +101,7 @@ function renderCard(fields) {
   const alt = escapeHtml(fields.alt || fields.title);
   const imageValue = image?.value || '';
   return `<a class="md-card" href="${href.value}"${href.rel} data-md-card data-md-title="${title}" data-md-image="${imageValue}" data-md-alt="${alt}" style="display:flex;gap:12px;align-items:center;text-decoration:none;border:1px solid #d9e2e4;border-radius:10px;padding:10px;margin:12px 0;color:inherit">
-    ${image ? `<img src="${image.value}" alt="${alt}" style="width:72px;height:54px;object-fit:cover;border-radius:8px">` : '<span style="width:72px;height:54px;border-radius:8px;background:#eef5f6;display:inline-block"></span>'}
+    ${image ? `<img src="${image.value}" alt="${alt}" width="72" height="54" style="width:72px;height:54px;object-fit:cover;border-radius:8px">` : '<span style="width:72px;height:54px;border-radius:8px;background:#eef5f6;display:inline-block"></span>'}
     <span><strong>${title}</strong><br><small>${href.value}</small></span>
   </a>`;
 }
@@ -140,7 +140,7 @@ function renderInline(value, depth = 0, allowUrls = true) {
       if (target) {
         const src = urlAttrs(target.url, IMAGE_SCHEMES);
         if (src) {
-          html += `<img src="${src.value}" alt="${escapeHtml(target.label)}" style="max-width:100%;height:auto">`;
+          html += `<img src="${src.value}" alt="${escapeHtml(target.label)}" width="1200" height="675" style="max-width:100%;height:auto">`;
         } else {
           html += escapeHtml(source.slice(index, target.end));
         }

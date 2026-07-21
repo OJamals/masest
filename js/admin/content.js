@@ -188,7 +188,7 @@ function fieldTemplate(field, payload) {
       <label class="${esc(cls)}">${esc(field.label)}
         <div class="adm-chips" data-chips-for="${esc(field.key)}">
           <span class="adm-chips-list">${items.map(chipSpan).join("")}</span>
-          <input class="adm-chip-input" type="text" data-chip-input placeholder="Add tag, press Enter">
+          <input class="adm-chip-input" name="${esc(field.key)}_entry" type="text" autocomplete="off" data-chip-input placeholder="Add tag, press Enter">
           <input type="hidden" data-content-payload-field="${esc(field.key)}" data-content-field-kind="list" value="${esc(items.join(", "))}">
         </div>
       </label>
@@ -317,7 +317,7 @@ function seoFieldsTemplate(seo = {}) {
 function formTemplate({ blog = false } = {}) {
   const typeControl = blog
     ? `<input id="contentType" type="hidden" value="blog_post"><p class="adm-content-placement full" role="note">${esc(placementText("blog_post"))}</p>`
-    : `<label class="adm-content-selector">Content area <select id="contentType" class="adm-select">${selectOptions(TYPES, "service")}</select></label>`;
+    : `<label class="adm-content-selector">Content area <select id="contentType" name="content_type" class="adm-select">${selectOptions(TYPES, "service")}</select></label>`;
   return `
     <div class="adm-card adm-content-editor">
       <div class="adm-panel-header">
@@ -330,29 +330,29 @@ function formTemplate({ blog = false } = {}) {
       </div>
       <form id="contentForm" class="adm-form-grid" onsubmit="return false" data-capability-scope="content.write">
         ${typeControl}
-        <label class="adm-content-locale">Language <select id="contentLocale" class="adm-select"><option value="en">English (en)</option></select></label>
+        <label class="adm-content-locale">Language <select id="contentLocale" name="content_locale" class="adm-select"><option value="en">English (en)</option></select></label>
         <p id="contentPlacementHint" class="adm-content-placement full" role="note"${blog ? " hidden" : ""}>${esc(placementText("service"))}</p>
-        <label class="wide">Title <input id="contentTitle" class="adm-input" required></label>
-        <label class="wide">Page slug <input id="contentSlug" class="adm-input" required></label>
-        <label class="wide">Schedule CMS publish <input id="contentScheduledAt" class="adm-input" type="datetime-local"></label>
+        <label class="wide">Title <input id="contentTitle" name="content_title" autocomplete="off" class="adm-input" required></label>
+        <label class="wide">Page slug <input id="contentSlug" name="content_slug" autocomplete="off" class="adm-input" required></label>
+        <label class="wide">Schedule CMS publish <input id="contentScheduledAt" name="content_scheduled_at" class="adm-input" type="datetime-local"></label>
         <div id="contentStructuredFields" class="adm-content-fields full"></div>
         <fieldset id="contentSeoFields" class="adm-content-seo full"></fieldset>
         <details class="adm-content-json full">
           <summary>Developer JSON</summary>
-          <label>Payload JSON <textarea id="contentPayload" class="adm-textarea" spellcheck="false">{}</textarea></label>
-          <label>SEO JSON <textarea id="contentSeo" class="adm-textarea" spellcheck="false">{}</textarea></label>
+          <label>Payload JSON <textarea id="contentPayload" name="content_payload" class="adm-textarea" spellcheck="false">{}</textarea></label>
+          <label>SEO JSON <textarea id="contentSeo" name="content_seo" class="adm-textarea" spellcheck="false">{}</textarea></label>
         </details>
         <div class="adm-inline-actions adm-content-actions full" aria-label="CMS editor actions">
           <div class="adm-content-action-group" data-content-action-group="draft-publish" aria-label="Draft and publish">
-            <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft" data-capability="content.write"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save draft</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft" data-capability="content.write"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save Draft</button>
             <button class="btn btn-primary btn-sm" type="button" data-content-action="publish" data-capability="content.publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish to CMS</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule" data-capability="content.publish"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule CMS publish</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule" data-capability="content.publish"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule CMS Publish</button>
           </div>
           <div class="adm-content-action-group" data-content-action-group="manage" aria-label="Manage entry">
             <button class="btn btn-ghost btn-sm" type="button" data-content-action="new" data-capability="content.write"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
             <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate" data-capability="content.write"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
             <button class="btn btn-ghost btn-sm" type="button" data-content-action="archive" data-capability="content.write"><i class="ph ph-archive" aria-hidden="true"></i> Archive</button>
-            <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" data-capability="content.write" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore draft</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" data-capability="content.write" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore Draft</button>
           </div>
         </div>
         <p class="adm-publish-contract full" role="note"><strong>Publication status:</strong> Publishing updates the CMS first. The public site changes after the static rebuild completes. If the rebuild hook is unavailable, run <code>${blog ? "npm run publish:blog" : "npm run publish:content"}</code>.</p>
@@ -360,7 +360,7 @@ function formTemplate({ blog = false } = {}) {
           <summary>Review workflow &amp; editor lock (multi-editor tools)</summary>
           <div class="adm-content-disclosure-body">
             <label>Workflow note
-              <textarea id="contentWorkflowNote" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
+              <textarea id="contentWorkflowNote" name="workflow_note" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
             </label>
             <div class="adm-content-action-group" data-content-action-group="review" aria-label="Review workflow">
               <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review" data-capability="content.write"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
@@ -410,8 +410,8 @@ function assetPickerTemplate(admEmpty) {
         </button>
       </div>
       <div class="adm-content-asset-tools">
-        <input id="contentAssetSearch" class="adm-search" type="search" placeholder="Search asset paths" aria-label="Search CMS assets">
-        <select id="contentAssetStatusFilter" class="adm-select" aria-label="Filter CMS asset status">
+        <input id="contentAssetSearch" name="asset_search" class="adm-search" type="search" autocomplete="off" placeholder="Search asset paths" aria-label="Search CMS assets">
+        <select id="contentAssetStatusFilter" name="asset_status" class="adm-select" aria-label="Filter CMS asset status">
           <option value="available">Available assets</option>
           <option value="archived">Archived assets</option>
           <option value="all">All assets</option>
@@ -422,13 +422,13 @@ function assetPickerTemplate(admEmpty) {
       </div>
       <form id="contentAssetUpload" class="adm-content-upload" onsubmit="return false">
         <label>Folder
-          <input id="contentAssetFolder" class="adm-input" type="text" value="cms" maxlength="64">
+          <input id="contentAssetFolder" name="asset_folder" autocomplete="off" class="adm-input" type="text" value="cms" maxlength="64">
         </label>
         <label>Image file
-          <input id="contentAssetFile" class="adm-input" type="file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp">
+          <input id="contentAssetFile" name="asset_file" class="adm-input" type="file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp">
         </label>
         <label>Alt text
-          <input id="contentAssetAlt" class="adm-input" type="text" placeholder="Describe the image">
+          <input id="contentAssetAlt" name="asset_alt" autocomplete="off" class="adm-input" type="text" placeholder="e.g. Technician cleaning a stainless tank…">
         </label>
         <button class="btn btn-secondary btn-sm" type="button" data-content-action="upload_asset" data-capability="content.assets">
           <i class="ph ph-upload-simple" aria-hidden="true"></i> Upload
@@ -436,13 +436,13 @@ function assetPickerTemplate(admEmpty) {
       </form>
       <form id="contentAssetRegister" class="adm-content-register" onsubmit="return false">
         <label>Existing path or URL
-          <input id="contentAssetPath" class="adm-input" type="text" placeholder="img/proof/cases/example.webp">
+          <input id="contentAssetPath" name="asset_path" autocomplete="off" class="adm-input" type="text" placeholder="e.g. img/proof/cases/tank.webp…">
         </label>
         <label>Alt text
-          <input id="contentAssetPathAlt" class="adm-input" type="text" placeholder="Describe the image">
+          <input id="contentAssetPathAlt" name="asset_alt" autocomplete="off" class="adm-input" type="text" placeholder="e.g. Technician cleaning a stainless tank…">
         </label>
         <label>Credit
-          <input id="contentAssetCredit" class="adm-input" type="text" placeholder="Optional">
+          <input id="contentAssetCredit" name="asset_credit" autocomplete="off" class="adm-input" type="text" placeholder="e.g. MASEST field team…">
         </label>
         <button class="btn btn-secondary btn-sm" type="button" data-content-action="register_asset" data-capability="content.assets">
           <i class="ph ph-link-simple" aria-hidden="true"></i> Register
@@ -1279,7 +1279,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       );
       if (!ok) return;
     }
-    setStatus(publish ? "Publishing..." : "Saving draft...");
+    setStatus(publish ? "Publishing…" : "Saving draft…");
     try {
       const result = await api("/api/admin/content", {
         method: "POST",
@@ -1307,7 +1307,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         return;
       }
       const note = $("contentWorkflowNote")?.value.trim() || "";
-      setStatus(`Updating workflow: ${action.replace(/_/g, " ")}...`);
+      setStatus(`Updating workflow: ${action.replace(/_/g, " ")}…`);
       const result = await api("/api/admin/content", {
         method: "POST",
         body: { action, note, entry },
@@ -1321,7 +1321,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   async function publishScheduledContent() {
-    setStatus("Publishing due scheduled content...");
+    setStatus("Publishing due scheduled content…");
     try {
       const body = blogMode
         ? { action: "publish_scheduled", type: "blog_post" }
@@ -1369,7 +1369,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       );
       if (!ok) return;
     }
-    setStatus("Archiving...");
+    setStatus("Archiving…");
     try {
       const result = await api("/api/admin/content", {
         method: "DELETE",
@@ -1418,7 +1418,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       setStatus("Choose an archived entry before restoring.", "err");
       return;
     }
-    setStatus("Restoring archived entry...");
+    setStatus("Restoring archived entry…");
     try {
       const result = await api("/api/admin/content", {
         method: "POST",
@@ -1446,7 +1446,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       setStatus("Choose an entry before restoring a revision.", "err");
       return;
     }
-    setStatus(`Restoring version ${version}...`);
+    setStatus(`Restoring version ${version}…`);
     try {
       const result = await api("/api/admin/content-revisions", {
         method: "POST",
@@ -1475,7 +1475,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       );
       if (!ok) return;
     }
-    const label = action === "lock" ? "Claiming lock..." : action === "force_unlock" ? "Force unlocking..." : "Releasing lock...";
+    const label = action === "lock" ? "Claiming lock…" : action === "force_unlock" ? "Force unlocking…" : "Releasing lock…";
     setStatus(label);
     try {
       const result = await api("/api/admin/content", {

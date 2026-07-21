@@ -18,6 +18,40 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   const STALE_DAYS = 7;
   const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
   let dragId = null;
+  let urlFiltersInitialized = false;
+
+  function initializeUrlFilters() {
+    if (urlFiltersInitialized) return;
+    urlFiltersInitialized = true;
+    const params = new URLSearchParams(location.search);
+    const fields = [
+      ['qSearch', 'quote_q'],
+      ['qFilter', 'quote_status'],
+      ['qPriority', 'quote_priority'],
+      ['qOwner', 'quote_owner'],
+      ['qDue', 'quote_due'],
+    ];
+    fields.forEach(([id, key]) => {
+      const value = params.get(key);
+      if (value != null && $(id)) $(id).value = value;
+    });
+    state.quotesView = params.get('quote_view') || state.quotesView || 'list';
+  }
+
+  function syncUrlFilters() {
+    const params = new URLSearchParams(location.search);
+    const filters = {
+      quote_q: $('qSearch')?.value.trim() || '',
+      quote_status: $('qFilter')?.value || '',
+      quote_priority: $('qPriority')?.value || '',
+      quote_owner: $('qOwner')?.value.trim() || '',
+      quote_due: $('qDue')?.value || '',
+      quote_view: state.quotesView === 'list' ? '' : state.quotesView,
+    };
+    Object.entries(filters).forEach(([key, value]) => value ? params.set(key, value) : params.delete(key));
+    const query = params.toString();
+    history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
+  }
 
   function quoteDueInDays(days) { return new Date(Date.now() + days * 86400e3).toISOString(); }
   function fmtMoney(v) { return (v == null || v === '') ? '—' : money(v, 'usd'); }
@@ -71,6 +105,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       const b = event.target.closest('[data-view]');
       if (!b) return;
       state.quotesView = b.dataset.view;
+      syncUrlFilters();
       reflectToggle();
       renderQuotePipeline({ refetch: false });
     });
@@ -95,6 +130,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       if ($('qOwner')) $('qOwner').value = f.owner || '';
       if ($('qDue')) $('qDue').value = f.due || '';
       state.quotesView = f.view || 'list';
+      syncUrlFilters();
       reflectToggle();
       // Search is a server query param now — applying a saved view must refetch.
       renderQuotePipeline({ refetch: true });
@@ -216,7 +252,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       dlg.className = 'confirm-dialog';
       dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
         <p class="confirm-dialog-msg">Why was this deal lost?</p>
-        <label>Reason <select class="adm-select" data-reason>${LOST_REASONS.map((r) => `<option value="${r}">${r.replace(/_/g, ' ')}</option>`).join('')}</select></label>
+        <label>Reason <select class="adm-select" name="lost_reason" data-reason>${LOST_REASONS.map((r) => `<option value="${r}">${r.replace(/_/g, ' ')}</option>`).join('')}</select></label>
         <menu class="confirm-dialog-actions">
           <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Cancel</button>
           <button value="ok" class="btn btn-danger btn-sm" type="submit">Mark lost</button>
@@ -537,6 +573,8 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   async function renderQuotePipeline({ append = false, refetch = true } = {}) {
     const box = $('admQuotes');
     if (!box) return;
+    initializeUrlFilters();
+    if (!append) syncUrlFilters();
     if (refetch) {
       const seq = ++quotesFetchSeq; // drop stale responses when fetches overlap
       if (!append) { state.quotes = []; state.quotesOffset = 0; box.innerHTML = admSkeleton(); }

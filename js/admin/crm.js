@@ -57,10 +57,10 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     const canDelete = (n) => viewer && (viewer.can_delete_any || (n.created_by && n.created_by === viewer.email));
     const composer = `<form class="crm-note-form" data-crm-note-form data-capability-scope="admin.write">
       <label class="crm-field crm-field-wide">Note
-        <textarea class="adm-input" data-crm-note-body rows="2" placeholder="Add a useful note for the next person who opens this record." required></textarea>
+        <textarea class="adm-input" name="note_body" data-crm-note-body rows="2" placeholder="Add a useful note for the next person who opens this record." required></textarea>
       </label>
       <label class="crm-field">Type
-        <select class="adm-select" data-crm-note-kind aria-label="Note type">${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+        <select class="adm-select" name="note_kind" data-crm-note-kind aria-label="Note type">${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
       </label>
       <button class="btn btn-primary btn-sm" type="submit">Add note</button>
     </form>`;
@@ -78,17 +78,17 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     const overdue = (t) => t.due_at && new Date(t.due_at) < new Date();
     const composer = `<form class="crm-task-form" data-crm-task-form data-capability-scope="admin.write">
       <label class="crm-field">Follow-up
-        <input class="adm-input" data-crm-task-title placeholder="Add follow-up task" required>
+        <input class="adm-input" name="task_title" autocomplete="off" data-crm-task-title placeholder="Add follow-up task" required>
       </label>
       <button class="btn btn-primary btn-sm" type="submit">Add follow-up</button>
       <details class="crm-mini-options crm-task-options">
         <summary>Due date and owner</summary>
         <div class="crm-inline-fields">
           <label class="crm-field">Due date
-            <input class="adm-input" data-crm-task-due type="datetime-local" aria-label="Due date">
+            <input class="adm-input" name="task_due_at" data-crm-task-due type="datetime-local" aria-label="Due date">
           </label>
           <label class="crm-field">Owner
-            <input class="adm-input" data-crm-task-assignee placeholder="Assign to (email)" aria-label="Assignee">
+            <input class="adm-input" name="task_assignee" type="email" autocomplete="email" data-crm-task-assignee placeholder="Assign to (email)" aria-label="Assignee">
           </label>
         </div>
       </details>
@@ -109,13 +109,13 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
   function renderContacts(contacts) {
     const composer = `<form class="crm-contact-form" data-crm-contact-form data-capability-scope="admin.write">
       <label class="crm-field">Name
-        <input class="adm-input" data-crm-contact-name placeholder="Contact name" aria-label="Contact name" required>
+        <input class="adm-input" name="contact_name" autocomplete="name" data-crm-contact-name placeholder="Contact name" aria-label="Contact name" required>
       </label>
       <label class="crm-field">Role
-        <select class="adm-select" data-crm-contact-role aria-label="Role">${CONTACT_ROLES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+        <select class="adm-select" name="contact_role" data-crm-contact-role aria-label="Role">${CONTACT_ROLES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
       </label>
       <label class="crm-field">Email
-        <input class="adm-input" data-crm-contact-email type="email" placeholder="Email" aria-label="Email">
+        <input class="adm-input" name="contact_email" data-crm-contact-email type="email" autocomplete="email" placeholder="Email" aria-label="Email">
       </label>
       <button class="btn btn-primary btn-sm" type="submit" data-crm-contact-submit>Add contact</button>
       <button class="btn btn-ghost btn-sm" type="button" data-crm-contact-cancel hidden>Cancel</button>
@@ -123,12 +123,12 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         <summary>More contact details</summary>
         <div class="crm-inline-fields">
           <label class="crm-field">Job title
-            <input class="adm-input" data-crm-contact-title placeholder="Job title" aria-label="Job title">
+            <input class="adm-input" name="contact_title" autocomplete="organization-title" data-crm-contact-title placeholder="Job title" aria-label="Job title">
           </label>
           <label class="crm-field">Phone
-            <input class="adm-input" data-crm-contact-phone placeholder="Phone" aria-label="Phone">
+            <input class="adm-input" name="contact_phone" type="tel" autocomplete="tel" data-crm-contact-phone placeholder="Phone" aria-label="Phone">
           </label>
-          <label class="crm-contact-primary-toggle"><input type="checkbox" data-crm-contact-primary> Primary contact</label>
+          <label class="crm-contact-primary-toggle"><input type="checkbox" name="contact_is_primary" data-crm-contact-primary> Primary contact</label>
         </div>
       </details>
     </form>`;
@@ -198,7 +198,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       dlg.className = 'confirm-dialog';
       dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
         <p class="confirm-dialog-msg">Merge into which contact? The duplicate is removed; its deals, notes and tasks move to the survivor.</p>
-        <label>Survivor <select class="adm-select" data-merge-into>${others.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}${c.title ? ` · ${esc(c.title)}` : ''}</option>`).join('')}</select></label>
+        <label>Survivor <select class="adm-select" name="merge_into" data-merge-into>${others.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}${c.title ? ` · ${esc(c.title)}` : ''}</option>`).join('')}</select></label>
         <menu class="confirm-dialog-actions">
           <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Cancel</button>
           <button value="ok" class="btn btn-danger btn-sm" type="submit">Merge</button>

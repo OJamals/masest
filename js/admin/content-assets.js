@@ -36,7 +36,7 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
     const statusIcon = archived ? "ph-arrow-counter-clockwise" : "ph-archive";
     return `
       <div class="adm-list-row adm-content-asset-row" data-content-asset-status="${esc(status)}">
-        <span class="adm-content-asset-thumb" aria-hidden="true">${value ? `<img src="${esc(value)}" alt="" loading="lazy">` : `<i class="ph ph-image"></i>`}</span>
+        <span class="adm-content-asset-thumb" aria-hidden="true">${value ? `<img src="${esc(value)}" alt="" width="160" height="120" loading="lazy">` : `<i class="ph ph-image"></i>`}</span>
         <span class="adm-content-asset-info">
           <b>${esc(asset.storage_path || value)}</b>
           <span>${esc(asset.alt || "No alt text")}</span>
@@ -91,7 +91,7 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
       dlg.className = "confirm-dialog";
       dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
         <p class="confirm-dialog-msg">Describe this image for screen readers and SEO.</p>
-        <label>Alt text <input class="adm-input" data-alt-input value="${esc(current || "")}" maxlength="300"></label>
+        <label>Alt text <input class="adm-input" name="alt_text" autocomplete="off" data-alt-input value="${esc(current || "")}" maxlength="300"></label>
         <menu class="confirm-dialog-actions">
           <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Cancel</button>
           <button value="ok" class="btn btn-primary btn-sm" type="submit">Save alt text</button>
@@ -121,7 +121,7 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
     if (alt === null || alt === String(asset.alt || "").trim()) return;
     if (!alt) { setStatus("Alt text cannot be empty.", "err"); return; }
     button.disabled = true;
-    setStatus("Saving alt text...");
+    setStatus("Saving alt text…");
     try {
       const result = await api("/api/admin/content-assets", {
         method: "POST",
@@ -154,7 +154,7 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
     // Archiving hides an asset that pages may still reference — confirm. Restore is safe.
     if (nextStatus === "archived" && !(await confirmDialog("Archive this asset? Pages still referencing it will lose the image until it is restored.", { confirmText: "Archive", cancelText: "Cancel", danger: true }))) return;
     button.disabled = true;
-    setStatus(nextStatus === "archived" ? "Archiving asset..." : "Restoring asset...");
+    setStatus(nextStatus === "archived" ? "Archiving asset…" : "Restoring asset…");
     try {
       const result = await api("/api/admin/content-assets", {
         method: "POST",
@@ -217,7 +217,7 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
     form.append("alt", alt);
     form.append("usage", assetTargetField || "image");
     form.append("folder", folderInput?.value.trim() || "cms");
-    setStatus("Uploading asset...");
+    setStatus("Uploading asset…");
     try {
       const result = await api("/api/admin/content-assets", { method: "POST", body: form });
       const assetPath = result.asset?.public_url || result.asset?.storage_path || "";
@@ -245,7 +245,7 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
       setStatus("Add alt text before registering an asset.", "err");
       return;
     }
-    setStatus("Registering asset...");
+    setStatus("Registering asset…");
     try {
       const result = await api("/api/admin/content-assets", {
         method: "POST",

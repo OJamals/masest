@@ -579,6 +579,7 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
 .rv-compact .rv-stars { font-size: .92rem; letter-spacing: 1px; }
 .rv-compact b { color: var(--ink, #15171c); }
 .adm-chip-input { flex: 1; min-width: 120px; border: 0; outline: none; background: transparent; font: inherit; padding: 4px; color: inherit; }
+.adm-chip-input:focus-visible { outline: 2px solid var(--accent, #0e7c86); outline-offset: 2px; }
 
 /* Admin: Markdown body toolbar (Insert image + syntax hint). */
 .adm-md-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
@@ -732,7 +733,13 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
   .proof-filter,
   .cta-choice
 ) {
-  transition-property: transform, background-color, border-color, box-shadow, color;
+  transition-property: transform, opacity;
+}
+
+/* Long, progressively loaded lead lists can skip off-screen layout and paint. */
+.quote-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 10rem;
 }
 
 .btn:active,

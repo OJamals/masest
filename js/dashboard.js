@@ -386,7 +386,7 @@ function renderRecentMessages(messages = []) {
     <div class="activity-list">
       ${recent.map((message) => `<a class="activity-line" href="#messages">
         <i class="ph ${message.sender_role === 'staff' ? 'ph-headset' : 'ph-user'}" aria-hidden="true"></i>
-        <span><b>${message.sender_role === 'staff' ? 'MASEST' : 'You'}</b><small>${esc(message.body || '').slice(0, 86)}${(message.body || '').length > 86 ? '...' : ''}</small></span>
+        <span><b>${message.sender_role === 'staff' ? 'MASEST' : 'You'}</b><small>${esc(message.body || '').slice(0, 86)}${(message.body || '').length > 86 ? '…' : ''}</small></span>
         <time>${fmtDT(message.created_at)}</time>
       </a>`).join('')}
     </div>`;
@@ -919,8 +919,8 @@ async function renderPayment() {
     const status = $('payStatus');
     const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Opening Stripe...';
-    status.textContent = 'Opening Stripe payment portal...';
+    btn.textContent = 'Opening Stripe…';
+    status.textContent = 'Opening Stripe payment portal…';
     status.dataset.state = 'busy';
     try {
       const { url } = await api('/api/account/billing-portal', { method: 'POST' });

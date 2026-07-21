@@ -20,6 +20,7 @@ import {
   PRODUCTS,
   QUOTE_FIRST_IDS,
 } from "../js/main/catalog-data.js";
+import { imageSize } from "./_image-size.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
@@ -415,7 +416,7 @@ function productDescription(id, product) {
 function productMetaDescription(id, product) {
   const sentence = productDescription(id, product);
   if (sentence.length <= 155) return sentence;
-  return `${sentence.slice(0, 152).replace(/\s+\S*$/, "")}...`;
+  return `${sentence.slice(0, 152).replace(/\s+\S*$/, "")}…`;
 }
 
 function productSchema(id, product, reviewsSnapshot) {
@@ -470,9 +471,10 @@ function productPage(id, product, reviewsSnapshot) {
   // The brand poster is a placeholder, not a product photo (mirrors product.html +
   // catalog-card suppression) — swap the hero figure for the shared icon tile.
   const hasPhoto = product.image && !/masest-poster-transparent/.test(product.image);
+  const heroSize = hasPhoto ? imageSize(new URL(`../${product.image}`, import.meta.url)) : null;
   const heroMedia = hasPhoto
     ? `<figure class="product-hero-media reveal">
-        <img src="${attr(img)}" alt="${attr(product.name)} product photo" fetchpriority="high" decoding="async">
+        <img src="${attr(img)}" alt="${attr(product.name)} product photo" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async">
       </figure>`
     : `<figure class="product-hero-media media-fallback reveal">
         <span class="media-fallback-label">${text(product.name)}</span>

@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
+import { imageSize } from "./_image-size.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = "https://masest.co";
@@ -92,8 +93,9 @@ function articleSchema(post) {
 function postPage(post, all) {
   const rt = readingTime(post.body);
   const bodyHtml = renderMarkdown(post.body);
+  const heroSize = post.hero ? imageSize(join(ROOT, post.hero)) : null;
   const heroImg = post.hero
-    ? `<figure class="blog-hero-media"><img src="../${attr(post.hero)}" alt="${attr(post.hero_alt || post.title)}" fetchpriority="high" decoding="async"></figure>`
+    ? `<figure class="blog-hero-media"><img src="../${attr(post.hero)}" alt="${attr(post.hero_alt || post.title)}" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async"></figure>`
     : "";
   const related = relatedPosts(post, all);
   const relatedHtml = related.length
@@ -168,8 +170,9 @@ function postPage(post, all) {
 }
 
 function postCard(post) {
+  const heroSize = post.hero ? imageSize(join(ROOT, post.hero)) : null;
   const thumb = post.hero
-    ? `<img class="blog-card-img" src="${attr(post.hero)}" alt="${attr(post.hero_alt || post.title)}" loading="lazy" decoding="async">`
+    ? `<img class="blog-card-img" src="${attr(post.hero)}" alt="${attr(post.hero_alt || post.title)}" width="${heroSize.width}" height="${heroSize.height}" loading="lazy" decoding="async">`
     : `<div class="blog-card-img blog-card-img--fallback" aria-hidden="true"></div>`;
   const tags = (post.tags || []).map((t) => attr(t)).join(" ");
   return `<article class="blog-card" data-slug="${attr(post.slug)}" data-category="${attr(post.category)}" data-tags="${tags}">

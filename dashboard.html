@@ -515,7 +515,7 @@
             <div class="msg-thread" id="msgThread"><p class="muted">Loading…</p></div>
             <form onsubmit="return false" id="msgForm" class="dash-panel-form">
               <div class="field"><label for="msgInput" class="sr-only">Message</label>
-                <textarea id="msgInput" rows="3" placeholder="Type a message to the MASEST team…" required></textarea></div>
+                <textarea id="msgInput" name="message" rows="3" placeholder="Type a message to the MASEST team…" required></textarea></div>
               <button class="btn btn-primary btn-sm msg-send" type="submit">Send</button>
               <span class="dash-status" id="msgStatus" role="status" aria-live="polite"></span>
             </form>
@@ -576,8 +576,8 @@
                   <div id="teamMembers"><div class="skeleton skeleton-block biz-team-skeleton"></div></div>
                   <form onsubmit="return false" id="inviteForm" class="form-card biz-clean-form biz-clean-form-spaced">
                     <div class="biz-inline-form">
-                      <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" type="email" autocomplete="email" placeholder="teammate@company.com" required></div>
-                      <div class="field"><label for="inviteRole">Role</label><select id="inviteRole"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
+                      <div class="field biz-inline-grow"><label for="inviteEmail">Invite by email</label><input id="inviteEmail" name="email" type="email" autocomplete="email" spellcheck="false" placeholder="teammate@company.com" required></div>
+                      <div class="field"><label for="inviteRole">Role</label><select id="inviteRole" name="role"><option value="buyer">Buyer</option><option value="admin">Admin</option></select></div>
                       <button class="btn btn-primary btn-sm" type="submit">Send invite</button>
                     </div>
                     <span class="biz-status" id="inviteStatus" role="status" aria-live="polite"></span>
@@ -598,9 +598,9 @@
                   <p class="lead">Request volume pricing, drums, totes, or a recurring standing order.</p>
                   <form onsubmit="return false" id="bulkForm" class="form-card biz-clean-form">
                     <div class="field"><label for="bulkItems">What do you need? *</label>
-                      <textarea id="bulkItems" rows="3" placeholder="e.g. 4x 55-gal HCR, 2x 275-gal tote Neutral, monthly" required></textarea></div>
+                      <textarea id="bulkItems" name="items" rows="3" placeholder="e.g. 4x 55-gal HCR, 2x 275-gal tote Neutral, monthly" required></textarea></div>
                     <div class="field biz-field-gap"><label for="bulkNotes">Delivery / timing notes</label>
-                      <input id="bulkNotes" type="text" placeholder="Timing notes (optional)"></div>
+                      <input id="bulkNotes" name="notes" type="text" autocomplete="off" placeholder="Timing notes (optional)"></div>
                     <button class="btn btn-primary btn-sm biz-button-gap" type="submit">Request quote</button>
                     <span class="biz-status" id="bulkStatus" role="status" aria-live="polite"></span>
                   </form>
@@ -622,12 +622,12 @@
               <form onsubmit="return false" id="addrForm" class="form-card dash-clean-form">
                 <div class="field-grid">
                   <div class="field"><label for="aType">Address type</label>
-                    <select id="aType"><option value="ship">Shipping</option><option value="bill">Billing</option></select></div>
-                  <div class="field"><label for="aLine1">Address line 1 *</label><input id="aLine1" autocomplete="address-line1" required></div>
-                  <div class="field"><label for="aLine2">Address line 2</label><input id="aLine2" autocomplete="address-line2"></div>
-                  <div class="field"><label for="aCity">City *</label><input id="aCity" autocomplete="address-level2" required></div>
-                  <div class="field"><label for="aState">State *</label><input id="aState" maxlength="2" placeholder="FL" autocomplete="address-level1" required></div>
-                  <div class="field"><label for="aZip">ZIP *</label><input id="aZip" autocomplete="postal-code" required></div>
+                    <select id="aType" name="address_type"><option value="ship">Shipping</option><option value="bill">Billing</option></select></div>
+                  <div class="field"><label for="aLine1">Address line 1 *</label><input id="aLine1" name="address_line1" autocomplete="address-line1" required></div>
+                  <div class="field"><label for="aLine2">Address line 2</label><input id="aLine2" name="address_line2" autocomplete="address-line2"></div>
+                  <div class="field"><label for="aCity">City *</label><input id="aCity" name="city" autocomplete="address-level2" required></div>
+                  <div class="field"><label for="aState">State *</label><input id="aState" name="state" maxlength="2" placeholder="FL" autocomplete="address-level1" required></div>
+                  <div class="field"><label for="aZip">ZIP *</label><input id="aZip" name="postal_code" autocomplete="postal-code" required></div>
                 </div>
                 <label class="checkbox-row"><input type="checkbox" id="aDefault"> Set as default for this type</label>
                 <button class="btn btn-primary btn-sm dash-button-offset" type="submit">Save address</button>
@@ -643,9 +643,9 @@
             <h2 class="headline dash-section-title">Your profile</h2>
             <form onsubmit="return false" id="profileForm" class="form-card dash-clean-form">
               <div class="field-grid">
-                <div class="field"><label for="pfCompany">Company</label><input id="pfCompany" readonly></div>
-                <div class="field"><label for="pfName">Full name</label><input id="pfName" autocomplete="name"></div>
-                <div class="field"><label for="pfPhone">Phone</label><input id="pfPhone" autocomplete="tel"></div>
+                <div class="field"><label for="pfCompany">Company</label><input id="pfCompany" name="company" autocomplete="organization" readonly></div>
+                <div class="field"><label for="pfName">Full name</label><input id="pfName" name="full_name" autocomplete="name"></div>
+                <div class="field"><label for="pfPhone">Phone</label><input id="pfPhone" name="phone" autocomplete="tel"></div>
               </div>
               <div class="dash-action-row">
                 <button class="btn btn-primary btn-sm" type="submit">Save</button>
@@ -658,16 +658,16 @@
             <div class="dash-row"><span>Account email</span><b id="secEmail">Not set</b></div>
             <form onsubmit="return false" id="emailChangeForm" class="security-email-form">
               <div class="field"><label for="secNewEmail">Change account email</label>
-                <input id="secNewEmail" type="email" autocomplete="email" placeholder="new@email.com"></div>
+                <input id="secNewEmail" name="email" type="email" autocomplete="email" spellcheck="false" placeholder="new@email.com"></div>
               <button class="btn btn-secondary btn-sm" id="secEmailBtn" type="submit">Update email</button>
               <span class="dash-status" id="secEmailStatus" role="status" aria-live="polite"></span>
             </form>
             <form onsubmit="return false" id="passwordChangeForm" class="security-email-form">
               <div class="field-grid">
                 <div class="field"><label for="secNewPass">New password</label>
-                  <input id="secNewPass" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"></div>
+                  <input id="secNewPass" name="new_password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"></div>
                 <div class="field"><label for="secNewPass2">Confirm new password</label>
-                  <input id="secNewPass2" type="password" autocomplete="new-password"></div>
+                  <input id="secNewPass2" name="new_password_confirm" type="password" autocomplete="new-password"></div>
               </div>
               <button class="btn btn-secondary btn-sm" id="secPassBtn" type="submit">Update password</button>
               <span class="dash-status" id="secStatus" role="status" aria-live="polite"></span>

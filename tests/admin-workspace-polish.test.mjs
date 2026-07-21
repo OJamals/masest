@@ -58,9 +58,9 @@ test('saved-view actions expose valid disabled states', () => {
 });
 
 test('catalog row actions and create disclosures report status where the action occurred', () => {
-  assert.match(products, /saveVariantRow[\s\S]*message\('prodStatus', 'Saving variant\.\.\.'/);
-  assert.match(products, /wireProductForm[\s\S]*message\('prodCreateStatus', 'Saving\.\.\.'/);
-  assert.match(products, /wireVariantForm[\s\S]*message\('variantCreateStatus', 'Saving\.\.\.'/);
+  assert.match(products, /saveVariantRow[\s\S]*message\('prodStatus', 'Saving variant…'/);
+  assert.match(products, /wireProductForm[\s\S]*message\('prodCreateStatus', 'Saving…'/);
+  assert.match(products, /wireVariantForm[\s\S]*message\('variantCreateStatus', 'Saving…'/);
   const productPanel = panel('products', 'content');
   assert.match(productPanel, /id="prodCreateStatus"[^>]*aria-live="polite"/);
   assert.match(productPanel, /id="variantCreateStatus"[^>]*aria-live="polite"/);

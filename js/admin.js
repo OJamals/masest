@@ -386,7 +386,7 @@ function renderActionRail(actions = []) {
 // Authenticated CSV download (Bearer) — fetch then blob-save, since a plain link
 // can't attach the auth header. Mirrors the orders export above.
 async function downloadCsv(url, filename, statusId) {
-  message(statusId, 'Preparing export...');
+  message(statusId, 'Preparing export…');
   try {
     const token = await getToken();
     const r = await fetch(url, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
@@ -413,7 +413,7 @@ function wireReports() {
     return qs.toString();
   };
   $('repRun').addEventListener('click', async () => {
-    message('repResult', 'Running report...');
+    message('repResult', 'Running report…');
     try {
       const r = await api('/api/admin/reports' + (range() ? '?' + range() : ''));
       $('repResult').dataset.state = 'ok';
@@ -788,7 +788,7 @@ function wire() {
     event.preventDefault();
     const cap = gateCaptchaToken();
     if (TS_SITEKEY && !cap) { message('gateStatus', 'Complete the verification challenge.', 'err'); return; }
-    message('gateStatus', 'Signing in...');
+    message('gateStatus', 'Signing in…');
     try {
       await login({ email: $('gEmail').value.trim(), password: $('gPass').value, captchaToken: cap });
       message('gateStatus', '');

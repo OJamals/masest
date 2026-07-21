@@ -26,7 +26,7 @@ function inline(src) {
   let s = escapeHtml(src);
   // URL char class allows one level of balanced parens (e.g. javascript:alert(1)).
   s = s.replace(/!\[([^\]]*)\]\(((?:[^()\s]|\([^()]*\))+)\)/g, (_m, alt, url) =>
-    isSafeUrl(url) ? `<img src="${url.trim()}" alt="${alt}" loading="lazy" decoding="async">` : alt);
+    isSafeUrl(url) ? `<img src="${url.trim()}" alt="${alt}" width="1200" height="675" loading="lazy" decoding="async">` : alt);
   s = s.replace(/\[([^\]]+)\]\(((?:[^()\s]|\([^()]*\))+)\)/g, (_m, txt, url) =>
     isSafeUrl(url) ? `<a href="${url.trim()}">${txt}</a>` : txt);
   s = s.replace(/`([^`]+)`/g, (_m, c) => `<code>${c}</code>`);
@@ -61,7 +61,7 @@ function renderCard(fields = {}) {
   const image = fields.image && isSafeUrl(fields.image) ? escapeHtml(fields.image) : "";
   const alt = escapeHtml(fields.alt || fields.title || "Reference");
   return `<a class="md-card" href="${href}" data-md-card data-md-title="${title}" data-md-image="${image}" data-md-alt="${alt}">
-    ${image ? `<img src="${image}" alt="${alt}" loading="lazy" decoding="async">` : `<span class="md-card-thumb" aria-hidden="true"></span>`}
+    ${image ? `<img src="${image}" alt="${alt}" width="1200" height="675" loading="lazy" decoding="async">` : `<span class="md-card-thumb" aria-hidden="true"></span>`}
     <span><strong>${title}</strong><small>${href}</small></span>
   </a>`;
 }

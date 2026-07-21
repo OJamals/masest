@@ -12,7 +12,7 @@ function assetCard(asset = {}) {
   const storagePath = asset.storage_path || url;
   const label = asset.filename || storagePath.split("/").pop() || "Image";
   return `<article class="shared-image-library-card">
-    <img src="${esc(url)}" alt="${esc(asset.alt || "")}" loading="lazy">
+    <img src="${esc(url)}" alt="${esc(asset.alt || "")}" width="320" height="240" loading="lazy">
     <div><b>${esc(label)}</b><small>${esc(asset.alt || "No alt text")}</small></div>
     <div class="shared-image-library-card-actions">
       <button class="btn btn-secondary btn-sm" type="button" data-shared-image-select data-shared-image-url="${esc(url)}" data-shared-image-alt="${esc(asset.alt || "")}">Use image</button>
@@ -30,14 +30,14 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
     dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
       <div class="shared-image-picker-head"><div><p class="adm-eyebrow">Image</p><h2>Choose an image</h2></div></div>
       <p class="confirm-dialog-msg">Attach a new file or choose one already in the site library.</p>
-      <input type="file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp" data-shared-image-file hidden>
+      <input type="file" name="image_file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp" data-shared-image-file hidden>
       <div class="shared-image-picker-actions">
         <button class="btn btn-primary" type="button" data-shared-image-attach><i class="ph ph-paperclip" aria-hidden="true"></i> Attach image</button>
         <button class="btn btn-secondary" type="button" data-shared-image-library-open><i class="ph ph-images" aria-hidden="true"></i> Browse library</button>
       </div>
       <section class="shared-image-upload" data-shared-image-upload hidden>
         <p data-shared-image-file-name class="muted"></p>
-        <label class="confirm-dialog-field"><span>Alt text</span><input class="adm-input" data-shared-image-alt maxlength="300" placeholder="Describe the image"></label>
+        <label class="confirm-dialog-field"><span>Alt text</span><input class="adm-input" name="image_alt" autocomplete="off" data-shared-image-alt maxlength="300" placeholder="Describe the image"></label>
         <button class="btn btn-primary" type="button" data-shared-image-upload-submit>Upload and use image</button>
       </section>
       <section class="shared-image-library" data-shared-image-library hidden aria-live="polite">

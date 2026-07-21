@@ -80,6 +80,19 @@ function viewAsHtml(s) {
 }
 
 export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statusBadge, admListPager, crm, setTab, openSupportThread, refreshStats }) {
+  const accountFilterParam = new URLSearchParams(location.search).get('account_filter');
+  if (accountFilterParam && ACCOUNT_FILTERS.some(([value]) => value === accountFilterParam)) {
+    state.accountFilter = accountFilterParam;
+  }
+
+  function syncAccountFilterUrl() {
+    const params = new URLSearchParams(location.search);
+    const accountFilter = state.accountFilter || 'all';
+    if (accountFilter === 'all') params.delete('account_filter');
+    else params.set('account_filter', accountFilter);
+    const query = params.toString();
+    history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
+  }
   function setupProgress(company) {
     const setup = company.setup;
     if (!setup?.steps?.length) return '<span class="muted">-</span>';
@@ -214,7 +227,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <div class="dash-row">
         <span>${memberLabel} <small class="muted">${esc(member.full_name || '')}</small></span>
         <span>
-          <select class="adm-select adm-select-sm" aria-label="Role for ${memberLabel}" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}" data-capability="user.role">
+          <select class="adm-select adm-select-sm" name="member_role" aria-label="Role for ${memberLabel}" data-member-role="${esc(member.id)}" data-company-id="${esc(company.id)}" data-capability="user.role">
             ${memberRoleOptions(member.role)}
           </select>
           <button class="btn btn-ghost btn-sm" type="button" data-member-save="${esc(member.id)}" data-company-id="${esc(company.id)}" data-capability="user.role">Save role</button>
@@ -539,7 +552,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const box = $('companyDetail');
     if (!box) return;
     box.hidden = false;
-    box.textContent = 'Loading company...';
+    box.textContent = 'Loading company…';
     // Deep links (CRM inbox → Accounts) land mid-list with the detail off-screen:
     // bring it into view and move focus so the open is perceivable.
     box.scrollIntoView({ block: 'start', behavior: 'auto' });
@@ -881,10 +894,10 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
 
   function userFormFields(user = {}) {
     return `
-      <label class="wide">Email <input class="adm-input" name="email" type="email" required value="${esc(user.email || '')}"></label>
-      ${user.id ? '' : '<label>Password <input class="adm-input" name="password" type="text" minlength="8" required placeholder="min 8 chars"></label>'}
-      <label>Full name <input class="adm-input" name="full_name" type="text" value="${esc(user.full_name || '')}"></label>
-      <label>Phone <input class="adm-input" name="phone" type="text" value="${esc(user.phone || '')}"></label>
+      <label class="wide">Email <input class="adm-input" name="email" type="email" autocomplete="off" spellcheck="false" required value="${esc(user.email || '')}"></label>
+      ${user.id ? '' : '<label>Password <input class="adm-input" name="password" type="text" autocomplete="new-password" minlength="8" required placeholder="min 8 chars"></label>'}
+      <label>Full name <input class="adm-input" name="full_name" type="text" autocomplete="off" value="${esc(user.full_name || '')}"></label>
+      <label>Phone <input class="adm-input" name="phone" type="text" autocomplete="off" value="${esc(user.phone || '')}"></label>
       <label>Company role <select class="adm-select" name="role">${memberRoleOptions(user.role)}</select></label>
       ${user.id ? `<label>Admin access <select class="adm-select" name="staff_role">${staffRoleOptions(user)}</select></label>` : ''}
       <label class="wide">Business <select class="adm-select" name="company_id">${companyOptions(user.company_id)}</select></label>`;
@@ -893,7 +906,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   async function openUserDialog(user = {}) {
     const result = await promptDialog({ title: user.id ? 'Edit user' : 'New user', bodyHtml: userFormFields(user), submitLabel: user.id ? 'Save' : 'Create' });
     if (!result) return;
-    auStatus(user.id ? 'Saving...' : 'Creating...');
+    auStatus(user.id ? 'Saving…' : 'Creating…');
     try {
       if (user.id) {
         const { staff_role, ...profile } = result;
@@ -937,7 +950,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const box = $('accountDetail');
     if (!box) return;
     setAccountDetailOpen(true);
-    box.textContent = 'Loading user...';
+    box.textContent = 'Loading user…';
     try {
       const detail = await api(`/api/admin/users?detail=${encodeURIComponent(userId)}`);
       const user = detail.profile || {};
@@ -1047,6 +1060,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     });
     delegate(box, 'click', '[data-account-filter]', (event, button) => {
       state.accountFilter = button.dataset.accountFilter || 'all';
+      syncAccountFilterUrl();
       paintAcctUsers();
     });
     delegate(box, 'click', '[data-au-new]', () => openUserDialog({}));

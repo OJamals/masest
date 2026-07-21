@@ -50,7 +50,7 @@
           <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
           <form id="checkoutForm" novalidate>
             <label class="field-label" for="checkoutEmail">Receipt email</label>
-            <input id="checkoutEmail" class="cart-input" type="email" autocomplete="email" inputmode="email" aria-describedby="checkoutEmailHelp" placeholder="buyer@company.com">
+            <input id="checkoutEmail" name="email" class="cart-input" type="email" autocomplete="email" spellcheck="false" inputmode="email" aria-describedby="checkoutEmailHelp" placeholder="buyer@company.com">
             <p id="checkoutEmailHelp" class="cart-field-help">Optional. Order confirmation is sent to this address.</p>
             <div class="cart-actions">
               <button class="btn btn-primary" id="checkoutPay" type="submit">Proceed to checkout</button>
@@ -161,7 +161,7 @@
   function setCheckoutPending(mode, pending) {
     const button = mode === "net" ? checkoutNet : checkoutPay;
     button.textContent = pending
-      ? mode === "net" ? "Checking account terms..." : "Starting checkout..."
+      ? mode === "net" ? "Checking account terms…" : "Starting checkout…"
       : checkoutLabels[mode];
     if (pending) button.setAttribute("aria-busy", "true");
     else button.removeAttribute("aria-busy");
@@ -289,7 +289,7 @@
         </div>
         <label>
           <span>Qty</span>
-          <input type="number" min="1" step="1" value="${item.qty}" data-qty="${safeSku}" aria-label="Quantity for ${safeName}">
+      <input type="number" name="quantity" min="1" step="1" value="${item.qty}" data-qty="${safeSku}" aria-label="Quantity for ${safeName}">
         </label>
         <button type="button" class="btn btn-ghost" data-remove="${safeSku}" aria-label="Remove ${safeName} from cart">Remove</button>
       </article>
@@ -375,7 +375,7 @@
     setCheckoutDisabled(true);
     setCheckoutPending(mode, true);
     status.dataset.state = "";
-    status.textContent = mode === "net" ? "Checking account terms..." : "Starting checkout...";
+    status.textContent = mode === "net" ? "Checking account terms…" : "Starting checkout…";
     status.hidden = false;
     let token;
     if (mode === "net") {

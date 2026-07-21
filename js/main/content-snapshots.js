@@ -64,11 +64,11 @@ export async function loadContentSnapshot(file) {
 
 function proofCard(card) {
   const chips = Array.isArray(card.chips) ? card.chips : [];
-  const dims = `${card.image_w ? ` width="${esc(card.image_w)}"` : ""}${card.image_h ? ` height="${esc(card.image_h)}"` : ""}`;
+  const dims = ` width="${esc(card.image_w || 1600)}" height="${esc(card.image_h || 900)}"`;
   const img = card.image
     ? `<img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}>`
     : "";
-  const afterDims = `${card.image_after_w ? ` width="${esc(card.image_after_w)}"` : ""}${card.image_after_h ? ` height="${esc(card.image_after_h)}"` : ""}`;
+  const afterDims = ` width="${esc(card.image_after_w || 1600)}" height="${esc(card.image_after_h || 900)}"`;
   const afterImg = card.image_after
     ? `<img src="${esc(card.image_after)}" alt="${esc(card.image_after_alt || card.title || "")}" loading="lazy"${afterDims}>`
     : "";
@@ -116,7 +116,7 @@ function industryCard(card) {
     return `
       <a class="route-card route-card-media-card" href="${esc(href)}">
         <figure class="route-card-media">
-          <img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy">
+          <img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" width="${esc(card.image_w || 1600)}" height="${esc(card.image_h || 900)}" loading="lazy">
         </figure>
         <span class="route-card-kicker">${esc(card.category || "Industry")}</span>
         <strong>${esc(card.title || "Untitled industry")}</strong>
@@ -155,7 +155,7 @@ function pageSection(row) {
         </div>
         ${row.image ? `
           <figure class="cms-page-section-media">
-            <img src="${esc(row.image)}" alt="${esc(row.image_alt || row.headline || row.title || "")}" loading="lazy">
+            <img src="${esc(row.image)}" alt="${esc(row.image_alt || row.headline || row.title || "")}" width="${esc(row.image_w || 1600)}" height="${esc(row.image_h || 900)}" loading="lazy">
           </figure>
         ` : ""}
       </div>

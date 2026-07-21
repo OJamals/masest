@@ -29,7 +29,7 @@ export function initLightbox() {
   dlg.id = "lightbox";
   dlg.innerHTML =
     '<button type="button" class="lb-close" aria-label="Close">×</button>' +
-    '<figure class="lb-fig"><img class="lb-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt=""><figcaption class="lb-cap"></figcaption></figure>';
+    '<figure class="lb-fig"><img class="lb-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" width="1" height="1"><figcaption class="lb-cap"></figcaption></figure>';
   document.body.appendChild(dlg);
   const lbImg = dlg.querySelector(".lb-img");
   const lbCap = dlg.querySelector(".lb-cap");

@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
         product.hmis ? `HMIS ${product.hmis}.` : "",
         procurementRoute
       ].filter(Boolean).join(" ");
-      const description = rawDescription.length > 160 ? `${rawDescription.slice(0, 157).trimEnd()}...` : rawDescription;
+      const description = rawDescription.length > 160 ? `${rawDescription.slice(0, 157).trimEnd()}…` : rawDescription;
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) canonical.href = canonicalUrl;
       document.title = title;
@@ -522,7 +522,7 @@ document.addEventListener("DOMContentLoaded", () => {
         buyBtn.addEventListener("click", async () => {
           const original = buyBtn.textContent;
           buyBtn.disabled = true;
-          buyBtn.textContent = "Adding...";
+          buyBtn.textContent = "Adding…";
           try {
             const cart = await import("./js/cart.js");
             cart.add(sel.value, 1);

@@ -27,7 +27,7 @@ export function createInventoryCard({ $, api, message, admSkeleton, admEmpty, do
     $('invApply').addEventListener('click', async () => {
       const csv = $('invCsv').value.trim();
       if (!csv) { message('invStatus', 'Paste vsku,stock rows first.', 'err'); return; }
-      message('invStatus', 'Applying...');
+      message('invStatus', 'Applying…');
       try {
         const r = await api('/api/admin/inventory', { method: 'POST', body: { csv } });
         message('invStatus', `Updated ${r.updated.length}${r.failed.length ? `, ${r.failed.length} failed` : ''}.`, r.failed.length ? 'err' : 'ok');

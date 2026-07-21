@@ -54,7 +54,7 @@ function promptTestEmail(defaultVal = '') {
     dlg.className = 'confirm-dialog';
     dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
       <p class="confirm-dialog-msg">Send a test email to:</p>
-      <label>Email <input class="adm-input" type="email" data-nl-test-email value="${esc(defaultVal)}" placeholder="you@masest.co"></label>
+      <label>Email <input class="adm-input" name="test_email" type="email" autocomplete="email" data-nl-test-email value="${esc(defaultVal)}" placeholder="you@masest.co"></label>
       <menu class="confirm-dialog-actions">
         <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Cancel</button>
         <button value="ok" class="btn btn-primary btn-sm" type="submit">Send test</button>
@@ -104,23 +104,23 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
           <button class="btn btn-ghost btn-sm" type="button" data-nl-action="new" data-capability="admin.write"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
         </div>
         <form id="nlForm" class="adm-form-grid" onsubmit="return false" data-capability-scope="admin.write">
-          <input type="hidden" id="nlId" value="${editingId ? esc(editingId) : ''}">
+          <input type="hidden" id="nlId" name="newsletter_id" value="${editingId ? esc(editingId) : ''}">
           <label class="wide">Source
-            <select id="nlSource" class="adm-select">
+            <select id="nlSource" name="newsletter_source" class="adm-select">
               <option value="compose">Compose</option>
               <option value="blog_post">From blog post</option>
             </select>
           </label>
           <label class="wide" id="nlBlogPickWrap" hidden>Blog post
-            <select id="nlBlogPick" class="adm-select"><option value="">Choose a post…</option></select>
+            <select id="nlBlogPick" name="blog_post" class="adm-select"><option value="">Choose a post…</option></select>
           </label>
-          <label class="full">Subject <input id="nlSubject" class="adm-input" maxlength="300" required></label>
+          <label class="full">Subject <input id="nlSubject" name="subject" autocomplete="off" class="adm-input" maxlength="300" required></label>
           <div class="full">
             <div class="nl-edit-grid">
               ${richEditorTemplate({
                 key: 'newsletter-body',
                 label: 'Body',
-                textareaAttrs: 'id="nlBody" class="adm-textarea adm-content-field-text" spellcheck="true"',
+                textareaAttrs: 'id="nlBody" name="body" class="adm-textarea adm-content-field-text" spellcheck="true"',
                 minHeight: 300,
               })}
               <div class="adm-md-preview">
@@ -134,7 +134,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
             <p class="adm-eyebrow" style="margin-top:6px">Audience</p>
             <div class="adm-inline-actions">
               ${POPULATIONS.map(([, inputId, countId, label]) => `
-                <label class="adm-content-check"><input type="checkbox" id="${inputId}"> ${esc(label)} <span id="${countId}" class="pill">0</span></label>
+                <label class="adm-content-check"><input type="checkbox" id="${inputId}" name="audience"> ${esc(label)} <span id="${countId}" class="pill">0</span></label>
               `).join('')}
             </div>
             <p id="nlAudEstimate" class="adm-status" aria-live="polite" style="margin-top:6px">No populations selected — this newsletter won't send to anyone yet.</p>
@@ -148,14 +148,14 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
             <summary>Schedule</summary>
             <div class="adm-form-grid" style="margin-top:8px">
               <label>Mode
-                <select id="nlSchedMode" class="adm-select">
+                <select id="nlSchedMode" name="schedule_mode" class="adm-select">
                   <option value="once">Once</option>
                   <option value="recurring">Recurring</option>
                 </select>
               </label>
-              <label id="nlSchedAtWrap">Send at <input id="nlSchedAt" class="adm-input" type="datetime-local"></label>
+              <label id="nlSchedAtWrap">Send at <input id="nlSchedAt" name="scheduled_at" class="adm-input" type="datetime-local"></label>
               <label id="nlSchedIntervalWrap" class="wide" hidden>Repeat every
-                <select id="nlSchedInterval" class="adm-select">
+                <select id="nlSchedInterval" name="schedule_interval" class="adm-select">
                   <option value="14">14 days</option>
                   <option value="30">30 days</option>
                   <option value="90">90 days</option>
@@ -470,7 +470,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       blog_slug: $('nlSource').value === 'blog_post' ? ($('nlBlogPick')?.value || '') : '',
       audience: readAudience(),
     };
-    setStatus('Saving...');
+    setStatus('Saving…');
     try {
       const res = await api('/api/admin/newsletters', { method: 'POST', body });
       editingId = res.id;
@@ -491,7 +491,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     if (!subject) { setStatus('Enter a subject before sending a test.', 'err'); return; }
     const to = await promptTestEmail();
     if (to === null) return;
-    setStatus('Sending test...');
+    setStatus('Sending test…');
     try {
       await api('/api/admin/newsletters', { method: 'POST', body: { action: 'test_send', to: to || undefined, subject, body_md: bodyMd } });
       setStatus('Test email sent.', 'ok');
@@ -522,7 +522,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       if (!ok) return;
       const id = await saveDraft();
       if (!id) return;
-      setStatus('Queueing delivery...');
+      setStatus('Queueing delivery…');
       const res = await api('/api/admin/newsletters', { method: 'POST', body: { action: 'send_now', id } });
       setStatus(`Queued ${Number(res.total || 0).toLocaleString()} recipients for delivery.`, 'ok');
       await renderNewsletter({ refetch: true });
@@ -546,7 +546,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
         ? { mode, interval_days: Number($('nlSchedInterval').value) || 14, send_at: sendAt }
         : { mode, send_at: sendAt },
     };
-    setStatus('Scheduling...');
+    setStatus('Scheduling…');
     try {
       await api('/api/admin/newsletters', { method: 'POST', body });
       setStatus('Newsletter scheduled.', 'ok');
@@ -559,7 +559,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
   async function editNewsletter(id) {
     state.nlSection = 'compose';
     showSection('compose');
-    setStatus('Loading...');
+    setStatus('Loading…');
     try {
       const res = await api(`/api/admin/newsletters?id=${encodeURIComponent(id)}`);
       if (!res.newsletter) { setStatus('That newsletter could not be found.', 'err'); return; }

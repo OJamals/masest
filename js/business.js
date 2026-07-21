@@ -137,23 +137,23 @@ function bizFields(c = {}, allowUpload = false) {
   const hasAdvanced = Boolean(c.dba || c.entity_type || c.tax_id || c.website || c.est_annual_volume || c.contact_name || c.contact_title || c.resale_cert_url || c.resale_cert_path || c.tax_exempt);
   return `
     <div class="biz-reg-grid">
-      <label class="biz-reg-full"><span>Legal business name *</span><input id="companyName" type="text" value="${esc(c.name || '')}" placeholder="Gulf Coast Mechanical LLC" required></label>
-      <label><span>Industry</span><select id="industry"><option value="">Select…</option>${optionList(INDUSTRIES, c.industry)}</select></label>
-      <label><span>Business phone</span><input id="bizPhone" type="tel" value="${esc(c.business_phone || '')}" placeholder="(727) 348-6519"></label>
-      <label><span>Business email</span><input id="bizEmail" type="email" value="${esc(c.business_email || '')}" placeholder="ap@gulfcoastmech.com"></label>
-      <label><span>Requested payment terms</span><select id="reqNet">${optionList(NET_TERMS, c.requested_net_terms == null ? '0' : c.requested_net_terms)}</select></label>
+      <label class="biz-reg-full"><span>Legal business name *</span><input id="companyName" name="company_name" type="text" autocomplete="organization" value="${esc(c.name || '')}" placeholder="Gulf Coast Mechanical LLC" required></label>
+      <label><span>Industry</span><select id="industry" name="industry"><option value="">Select…</option>${optionList(INDUSTRIES, c.industry)}</select></label>
+      <label><span>Business phone</span><input id="bizPhone" name="business_phone" type="tel" autocomplete="tel" value="${esc(c.business_phone || '')}" placeholder="(727) 348-6519"></label>
+      <label><span>Business email</span><input id="bizEmail" name="business_email" type="email" autocomplete="email" spellcheck="false" value="${esc(c.business_email || '')}" placeholder="ap@gulfcoastmech.com"></label>
+      <label><span>Requested payment terms</span><select id="reqNet" name="requested_net_terms">${optionList(NET_TERMS, c.requested_net_terms == null ? '0' : c.requested_net_terms)}</select></label>
     </div>
     <details class="biz-detail-options"${hasAdvanced ? ' open' : ''}>
       <summary>Verification, tax, and contact details</summary>
       <div class="biz-reg-grid">
-        <label><span>Doing business as (DBA)</span><input id="dba" type="text" value="${esc(c.dba || '')}" placeholder="Optional trade name"></label>
-        <label><span>Business entity type</span><select id="entityType"><option value="">Select…</option>${optionList(ENTITY_TYPES, c.entity_type)}</select></label>
-        <label><span>Federal Tax ID / EIN</span><input id="taxId" type="text" value="${esc(c.tax_id || '')}" placeholder="12-3456789"></label>
-        <label><span>Website</span><input id="website" type="url" value="${esc(c.website || '')}" placeholder="https://"></label>
-        <label><span>Estimated annual volume</span><select id="estVolume"><option value="">Select…</option>${optionList(VOLUME_BANDS, c.est_annual_volume)}</select></label>
-        <label><span>Authorized contact</span><input id="contactName" type="text" value="${esc(c.contact_name || '')}" placeholder="Marisol Vega"></label>
-        <label><span>Contact title</span><input id="contactTitle" type="text" value="${esc(c.contact_title || '')}" placeholder="Operations Manager"></label>
-        <label class="biz-reg-full"><span>Resale / tax-exempt certificate URL</span><input id="resaleCertUrl" type="url" value="${esc(c.resale_cert_url || '')}" placeholder="Link to certificate (optional)"></label>
+        <label><span>Doing business as (DBA)</span><input id="dba" name="dba" type="text" autocomplete="organization" value="${esc(c.dba || '')}" placeholder="Optional trade name"></label>
+        <label><span>Business entity type</span><select id="entityType" name="entity_type"><option value="">Select…</option>${optionList(ENTITY_TYPES, c.entity_type)}</select></label>
+        <label><span>Federal Tax ID / EIN</span><input id="taxId" name="tax_id" type="text" autocomplete="off" spellcheck="false" value="${esc(c.tax_id || '')}" placeholder="12-3456789"></label>
+        <label><span>Website</span><input id="website" name="website" type="url" autocomplete="url" spellcheck="false" value="${esc(c.website || '')}" placeholder="https://"></label>
+        <label><span>Estimated annual volume</span><select id="estVolume" name="estimated_annual_volume"><option value="">Select…</option>${optionList(VOLUME_BANDS, c.est_annual_volume)}</select></label>
+        <label><span>Authorized contact</span><input id="contactName" name="contact_name" type="text" autocomplete="name" value="${esc(c.contact_name || '')}" placeholder="Marisol Vega"></label>
+        <label><span>Contact title</span><input id="contactTitle" name="contact_title" type="text" autocomplete="organization-title" value="${esc(c.contact_title || '')}" placeholder="Operations Manager"></label>
+        <label class="biz-reg-full"><span>Resale / tax-exempt certificate URL</span><input id="resaleCertUrl" name="resale_cert_url" type="url" autocomplete="off" spellcheck="false" value="${esc(c.resale_cert_url || '')}" placeholder="Link to certificate (optional)"></label>
         ${allowUpload ? `
         <div class="biz-reg-full biz-cert-upload">
           <span class="biz-cert-title">Or upload the certificate (kept private — PDF, PNG, JPG, or WEBP)</span>

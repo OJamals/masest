@@ -86,7 +86,7 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
     const resolved = status === 'complete';
     const secondaryStatus = status === 'escalated' ? 'open' : 'escalated';
     const secondaryLabel = status === 'escalated' ? 'Return to open' : 'Escalate';
-    view.innerHTML = `<header class="support-thread-head"><div><p class="adm-eyebrow">${meta.eyebrow}</p><h3>${esc(thread?.company_name || 'Customer')}</h3></div><div class="adm-inline-actions"><span class="badge" data-s="${meta.badge}">${meta.label}</span>${resolved ? '<button class="btn btn-ghost btn-sm" type="button" data-thread-status="open" data-capability="admin.write">Reopen thread</button>' : `<button class="btn btn-ghost btn-sm" type="button" data-thread-status="complete" data-capability="admin.write">Mark resolved</button><button class="btn btn-ghost btn-sm" type="button" data-thread-status="${secondaryStatus}" data-capability="admin.write">${secondaryLabel}</button>`}</div></header>${threadPage.has_more ? '<button class="btn btn-ghost btn-sm support-load-earlier" type="button" data-thread-load-older>Load earlier messages</button>' : ''}<div class="msg-thread">${threadMessages.map((m) => `<div class="msg" data-role="${esc(m.sender_role)}"><p>${esc(m.body)}</p><span class="muted">${sourceLabel(m)} ${esc(date(m.created_at))}</span></div>`).join('')}</div>${resolved ? '<p class="adm-status">Reopen this conversation before replying.</p>' : '<form id="replyForm" class="adm-form-grid support-reply-form" data-capability-scope="admin.write"><label class="full">Reply <textarea id="replyBody" class="adm-textarea" maxlength="4000" required></textarea></label><button class="btn btn-primary" type="submit">Send reply</button><p id="replyStatus" class="adm-status" role="status" aria-live="polite"></p></form>'}`;
+    view.innerHTML = `<header class="support-thread-head"><div><p class="adm-eyebrow">${meta.eyebrow}</p><h3>${esc(thread?.company_name || 'Customer')}</h3></div><div class="adm-inline-actions"><span class="badge" data-s="${meta.badge}">${meta.label}</span>${resolved ? '<button class="btn btn-ghost btn-sm" type="button" data-thread-status="open" data-capability="admin.write">Reopen thread</button>' : `<button class="btn btn-ghost btn-sm" type="button" data-thread-status="complete" data-capability="admin.write">Mark resolved</button><button class="btn btn-ghost btn-sm" type="button" data-thread-status="${secondaryStatus}" data-capability="admin.write">${secondaryLabel}</button>`}</div></header>${threadPage.has_more ? '<button class="btn btn-ghost btn-sm support-load-earlier" type="button" data-thread-load-older>Load earlier messages</button>' : ''}<div class="msg-thread">${threadMessages.map((m) => `<div class="msg" data-role="${esc(m.sender_role)}"><p>${esc(m.body)}</p><span class="muted">${sourceLabel(m)} ${esc(date(m.created_at))}</span></div>`).join('')}</div>${resolved ? '<p class="adm-status">Reopen this conversation before replying.</p>' : '<form id="replyForm" class="adm-form-grid support-reply-form" data-capability-scope="admin.write"><label class="full">Reply <textarea id="replyBody" name="reply_message" autocomplete="off" class="adm-textarea" maxlength="4000" required></textarea></label><button class="btn btn-primary" type="submit">Send reply</button><p id="replyStatus" class="adm-status" role="status" aria-live="polite"></p></form>'}`;
     view.querySelectorAll('[data-thread-status]').forEach((button) => button.addEventListener('click', async (event) => {
       event.currentTarget.disabled = true;
       try { await setThreadStatus(thread.company_id, event.currentTarget.dataset.threadStatus); }
@@ -100,7 +100,7 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
       event.preventDefault();
       const send = event.target.querySelector('[type="submit"]');
       if (send.disabled) return;
-      send.disabled = true; message('replyStatus', 'Sending...');
+      send.disabled = true; message('replyStatus', 'Sending…');
       try {
         await api('/api/admin/messages', { method: 'POST', body: { company_id: thread.company_id, body: $('replyBody').value } });
         await openThread(thread.company_id);
@@ -114,7 +114,7 @@ export function createThreadsTab({ $, api, state, message, admSkeleton, admEmpty
 
   async function openThread(companyId, { before = null, older = false } = {}) {
     const view = $('admThreadView');
-    if (!older) view.textContent = 'Loading...';
+    if (!older) view.textContent = 'Loading…';
     setDrawer(true);
     try {
       const suffix = before ? `&before=${encodeURIComponent(before)}` : '';

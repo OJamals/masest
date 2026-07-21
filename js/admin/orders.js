@@ -376,7 +376,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
           return;
         }
         button.disabled = true;
-        message('ordCreateStatusText', 'Creating order...');
+        message('ordCreateStatusText', 'Creating order…');
         try {
           await api('/api/admin/orders', { method: 'POST', body });
           message('ordCreateStatusText', 'Order created.', 'ok');
@@ -499,7 +499,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         : 'Refund the full remaining balance via Stripe?';
       if (!(await confirmDialog(prompt, { confirmText: 'Refund', danger: true }))) return;
       button.disabled = true;
-      message('ordStatus', 'Refunding...');
+      message('ordStatus', 'Refunding…');
       try {
         const res = await api('/api/admin/orders', { method: 'POST', body: { id, action: 'refund', amount } });
         message('ordStatus', res.partial ? `Partial refund of $${Number(res.amount).toFixed(2)} issued.` : 'Refunded.', 'ok');
@@ -543,7 +543,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       const id = button.dataset.markNetPaidOrder;
       if (!(await confirmDialog('Mark this NET balance as paid? This settles the order and frees the company\'s credit.', { confirmText: 'Mark paid' }))) return;
       button.disabled = true;
-      message('ordStatus', 'Marking paid...');
+      message('ordStatus', 'Marking paid…');
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, action: 'mark_net_paid' } });
         message('ordStatus', 'NET balance marked paid.', 'ok');

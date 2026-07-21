@@ -50,7 +50,7 @@ export function renderBlogPreview(entry = {}, payload = objectValue(entry.payloa
         </div>
         <h1 class="headline">${esc(payload.title || entry.title || "Untitled draft")}</h1>
         ${payload.excerpt ? `<p class="subhead">${esc(payload.excerpt)}</p>` : ""}
-        ${payload.hero ? `<figure class="blog-hero-media"><img src="${esc(payload.hero)}" alt="${esc(payload.hero_alt || payload.title || entry.title || "")}" loading="lazy" decoding="async"></figure>` : ""}
+        ${payload.hero ? `<figure class="blog-hero-media"><img src="${esc(payload.hero)}" alt="${esc(payload.hero_alt || payload.title || entry.title || "")}" width="1600" height="900" loading="lazy" decoding="async"></figure>` : ""}
         ${tags.length ? `<p class="muted">${tags.map((tag) => `#${esc(tag)}`).join(" ")}</p>` : ""}
         <div class="blog-body">${renderMarkdown(payload.body || "")}</div>
       </article>

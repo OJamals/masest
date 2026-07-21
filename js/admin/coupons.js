@@ -40,7 +40,7 @@ export function createCouponsCard({ $, api, message, admSkeleton, admEmpty }) {
         expires_at: $('cpExpires').value,
       };
       if (!body.code) { message('cpStatus', 'Enter a code.', 'err'); return; }
-      message('cpStatus', 'Creating...');
+      message('cpStatus', 'Creating…');
       try {
         await api('/api/admin/coupons', { method: 'POST', body });
         message('cpStatus', 'Code created.', 'ok');

@@ -1,7 +1,7 @@
 /* js/reviews.js - storefront review widget: star summary, review list, verified
  * write form, and per-item AggregateRating JSON-LD.
  *
- * Mount shape: <div data-reviews data-sku="..." data-kind="product|service"
+ * Mount shape: <div data-reviews data-sku="…" data-kind="product|service"
  * [data-compact]></div>.
  *   - Full mode (default, used on product.html): summary + review list + a
  *     write form gated to a signed-in verified buyer.
@@ -153,7 +153,7 @@ async function mountWriteForm(slot, sku, kind, token) {
     e.preventDefault();
     const btn = form.querySelector("button");
     btn.disabled = true;
-    msg.textContent = "Submitting...";
+    msg.textContent = "Submitting…";
     try {
       const auth = await import("./auth.js?v=20260711w");
       await auth.api("/api/reviews", {
