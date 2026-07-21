@@ -16,7 +16,15 @@ function fakeSb(db) {
         select() { return q; },
         eq(column, value) { q._filters.push([column, value]); return q; },
         update(patch) { q._update = patch; return q; },
-        insert(row) { db[table].push({ ...row }); return Promise.resolve({ error: null }); },
+        insert(row) {
+          if (table === "content_revisions" && db[table].some((revision) => (
+            revision.entry_id === row.entry_id && revision.version === row.version
+          ))) {
+            return Promise.resolve({ error: { message: "duplicate revision version" } });
+          }
+          db[table].push({ ...row });
+          return Promise.resolve({ error: null });
+        },
         _match(row) { return q._filters.every(([c, v]) => row[c] === v); },
         async maybeSingle() { return { data: db[table].find((r) => q._match(r)) || null, error: null }; },
         async single() {
@@ -88,4 +96,30 @@ test("minimal transition (identity only, no payload) never wipes existing conten
   assert.equal(row.status, "changes_requested");
   assert.equal(row.payload.sku, "KEEP", "minimal transition must not wipe payload");
   assert.equal(row.seo.description, "keep seo", "minimal transition must not wipe seo");
+});
+
+test("status-only content mutations advance the revision version", async () => {
+  const db = {
+    content_entries: [seedEntry({ status: "published" })],
+    content_revisions: [{ entry_id: "e1", version: 3, status: "published" }],
+  };
+  const repo = createContentRepository(fakeSb(db));
+
+  const archived = await repo.archive({ type: "service", slug: "water-analysis", locale: "en" }, "staff_9");
+  assert.equal(archived.ok, true);
+  assert.equal(archived.entry.version, 4);
+
+  const restored = await repo.unarchive({ type: "service", slug: "water-analysis", locale: "en" }, "staff_9");
+  assert.equal(restored.ok, true);
+  assert.equal(restored.entry.version, 5);
+
+  const transitioned = await repo.transition(
+    { type: "service", slug: "water-analysis", locale: "en" },
+    "staff_9",
+    "in_review",
+    "Ready for review",
+  );
+  assert.equal(transitioned.ok, true);
+  assert.equal(transitioned.entry.version, 6);
+  assert.deepEqual(db.content_revisions.map((revision) => revision.version), [3, 4, 5, 6]);
 });

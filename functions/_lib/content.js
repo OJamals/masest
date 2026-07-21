@@ -335,6 +335,7 @@ export function createContentRepository(sb) {
       if (conflict) return conflict;
       const patch = compactRow({
         status: nextStatus,
+        version: Number(prior.version || 0) + 1,
         scheduled_at: input.scheduled_at || null,
         review_note: note || null,
         updated_by: userId || null,
@@ -484,7 +485,12 @@ export function createContentRepository(sb) {
       if (conflict) return conflict;
       const { data, error } = await sb
         .from("content_entries")
-        .update({ status: "archived", updated_by: userId || null, updated_at: new Date().toISOString() })
+        .update({
+          status: "archived",
+          version: Number(prior.version || 0) + 1,
+          updated_by: userId || null,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", prior.id)
         .select("*")
         .single();
@@ -502,6 +508,7 @@ export function createContentRepository(sb) {
         .from("content_entries")
         .update({
           status: "draft",
+          version: Number(prior.version || 0) + 1,
           scheduled_at: null,
           published_at: null,
           review_note: null,
