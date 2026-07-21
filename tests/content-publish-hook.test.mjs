@@ -77,6 +77,15 @@ test("content publish API and editor surface static rebuild hook state", () => {
   assert.match(env, /CONTENT_PUBLISH_HOOK_URL/);
 });
 
+test("content archive triggers the static rebuild hook", () => {
+  const api = readFileSync(new URL("../functions/api/admin/content.js", import.meta.url), "utf8");
+  const deleteBranch = api
+    .split('if (request.method === "DELETE")')[1]
+    ?.split("return json(405")[0] || "";
+
+  assert.match(deleteBranch, /result\.publish_hook\s*=\s*await triggerContentPublishBuild\(env, result\.entry\)/);
+});
+
 import { triggerBlogPublishWorkflow } from "../functions/_lib/content.js";
 
 const blogEntry = { type: "blog_post", slug: "hello", status: "published" };

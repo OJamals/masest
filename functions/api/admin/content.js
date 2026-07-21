@@ -118,6 +118,7 @@ export async function onRequest({ request, env }) {
     try {
       const result = await repo.archive(body, user.id);
       if (!result.ok) return json(result.error === "content_locked" ? 409 : 400, result);
+      result.publish_hook = await triggerContentPublishBuild(env, result.entry);
       return json(200, result);
     } catch (error) {
       return json(500, { error: error.message });
