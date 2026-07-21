@@ -801,6 +801,11 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
   outline-offset: -1px;
 }
 
+/* Transparent hero cutouts should not inherit the framed-photo treatment. */
+.proof-led-catalog .catalog-bottle img {
+  outline: none;
+}
+
 .story .reel-slide img {
   outline: 1px solid rgba(255, 255, 255, .1);
   outline-offset: -1px;

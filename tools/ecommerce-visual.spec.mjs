@@ -42,10 +42,12 @@ test("catalog hero bottles retain intentional depth without page overflow on tab
   const bottles = await page.locator(".catalog-hero-media .catalog-bottle").evaluateAll((nodes) =>
     nodes.map((node) => {
       const rect = node.getBoundingClientRect();
+      const imageStyle = getComputedStyle(node.querySelector("img"));
       return {
         left: Math.round(rect.left), right: Math.round(rect.right),
         top: Math.round(rect.top), bottom: Math.round(rect.bottom),
         width: Math.round(rect.width), height: Math.round(rect.height),
+        outlineStyle: imageStyle.outlineStyle,
       };
     })
   );
@@ -56,6 +58,10 @@ test("catalog hero bottles retain intentional depth without page overflow on tab
 
   expect(bottles).toHaveLength(3);
   expect(Math.max(...heights) - Math.min(...heights), `catalog bottle heights: ${JSON.stringify(bottles)}`).toBeGreaterThan(60);
+  expect(
+    bottles.map((item) => item.outlineStyle),
+    `catalog bottle image outlines: ${JSON.stringify(bottles)}`
+  ).toEqual(["none", "none", "none"]);
   expect(horizontalOverflow).toBeLessThanOrEqual(1);
 });
 
