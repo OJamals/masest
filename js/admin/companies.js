@@ -3,9 +3,9 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260719a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260719a';
-import { ORDER_STATUSES } from './orders.js?v=20260719a';
+import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260721a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260721a';
+import { ORDER_STATUSES } from './orders.js?v=20260721a';
 
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
@@ -620,22 +620,27 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     refreshStats?.(); // approve/reject/suspend changes the pending count → refresh the nav badge
   }
 
+  let businessQueueRequestId = 0;
+
   async function renderBusinessQueue({ append = false, refetch = true } = {}) {
     const box = $('admCompanies');
     const snap = captureDirty(box);
     if (refetch) {
+      const requestId = ++businessQueueRequestId;
       if (!append) { state.companies = []; state.companiesOffset = 0; box.innerHTML = admSkeleton(); }
       try {
         const params = new URLSearchParams({ limit: '100', offset: String(state.companiesOffset || 0) });
         const searchTerm = $('coSearch')?.value.trim();
         if (searchTerm) params.set('search', searchTerm);
         const res = await api('/api/admin/companies?' + params.toString());
+        if (requestId !== businessQueueRequestId) return;
         state.companies = (state.companies || []).concat(res.companies || []);
         state.companiesOffset = (state.companiesOffset || 0) + (res.companies || []).length;
         state.companiesTotal = res.total;
         state.companiesHasMore = !!res.has_more;
         state.loaded.add('companies');
       } catch {
+        if (requestId !== businessQueueRequestId) return;
         if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load accounts. Reload to retry.</p>';
         return;
       }

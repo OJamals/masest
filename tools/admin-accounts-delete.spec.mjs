@@ -192,3 +192,34 @@ test("business approval cards expose edit and guarded delete actions with center
   expect(metrics.centerDelta).toBeLessThanOrEqual(3);
   expect(Math.abs(metrics.buttonTopGap - metrics.buttonBottomGap)).toBeLessThanOrEqual(3);
 });
+
+test("business approval queue ignores stale overlapping view loads", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/users**", (route) => route.fulfill(json({ users: [] })));
+
+  const pendingCompanyRoutes = [];
+  await page.route("**/api/admin/companies**", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    if (!requestUrl.searchParams.has("offset")) {
+      return route.fulfill(json({ companies: [], total: 0, has_more: false }));
+    }
+    pendingCompanyRoutes.push(route);
+    if (pendingCompanyRoutes.length !== 2) return;
+
+    await pendingCompanyRoutes[1].fulfill(json({ companies: [COMPANY], total: 1, has_more: false }));
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    await pendingCompanyRoutes[0].fulfill(json({ companies: [COMPANY], total: 1, has_more: false }));
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
+  const businesses = page.getByRole("button", { name: "Businesses & approvals" });
+  const users = page.getByRole("button", { name: "Users", exact: true });
+
+  await businesses.click();
+  await expect.poll(() => pendingCompanyRoutes.length).toBe(1);
+  await users.click();
+  await businesses.click();
+  await expect.poll(() => pendingCompanyRoutes.length).toBe(2);
+
+  await expect(page.locator(".company-admin-card", { hasText: COMPANY.name })).toHaveCount(1);
+});
