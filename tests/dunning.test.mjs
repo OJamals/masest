@@ -105,7 +105,9 @@ test('charge.refunded events enqueue idempotent QBO refund credit memos', () => 
   assert.match(src, /qboRefundRowsFromCharge/);
   assert.match(src, /qboFullDocumentRefund/);
   assert.match(src, /from\('qbo_refunds'\)/);
-  assert.match(src, /upsert\(withIds,\s*\{\s*onConflict:\s*'stripe_refund_id',\s*ignoreDuplicates:\s*true\s*\}/);
+  assert.match(src, /for \(const row of withIds\)/);
+  assert.match(src, /from\('qbo_refunds'\)\.insert\(row\)/);
+  assert.match(src, /error\.code !== '23505'/);
 });
 
 test('recovery email only fires when the subscription was delinquent (no renewal spam)', () => {

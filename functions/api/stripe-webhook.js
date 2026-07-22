@@ -447,10 +447,9 @@ async function enqueueQboRefundRows(sb, rows) {
   const withIds = rows.filter((row) => row.stripe_refund_id);
   const withoutIds = rows.filter((row) => !row.stripe_refund_id);
   try {
-    if (withIds.length) {
-      const { error } = await sb.from('qbo_refunds')
-        .upsert(withIds, { onConflict: 'stripe_refund_id', ignoreDuplicates: true });
-      if (error) return error;
+    for (const row of withIds) {
+      const { error } = await sb.from('qbo_refunds').insert(row);
+      if (error && error.code !== '23505') return error;
     }
     if (withoutIds.length) {
       const { error } = await sb.from('qbo_refunds').insert(withoutIds);

@@ -773,11 +773,11 @@ test('subscription status persistence failure returns retryable 503', async () =
   assert.deepEqual(result, { status: 503, body: { error: 'program_subscription_update_failed' } });
 });
 
-test('refund queue failure retries before order reconciliation', async () => {
+test('refund queue retries before order reconciliation and accepts duplicate replay', async () => {
   const calls = [];
   const queueResults = [
     { data: null, error: { message: 'QBO queue unavailable' } },
-    { data: null, error: null },
+    { data: null, error: { code: '23505', message: 'duplicate refund id' } },
   ];
   const db = {
     from(table) {
@@ -801,7 +801,7 @@ test('refund queue failure retries before order reconciliation', async () => {
       }
       if (table === 'qbo_refunds') {
         return {
-          async upsert(rows) { calls.push(['qbo_refunds.upsert', rows]); return queueResults.shift(); },
+          async insert(row) { calls.push(['qbo_refunds.insert', row]); return queueResults.shift(); },
         };
       }
       throw new Error(`unexpected refund table: ${table}`);
@@ -825,7 +825,7 @@ test('refund queue failure retries before order reconciliation', async () => {
   const second = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.equal(second.status, 200);
   const labels = calls.map((call) => call[0]);
-  assert.equal(labels.filter((label) => label === 'qbo_refunds.upsert').length, 2);
+  assert.equal(labels.filter((label) => label === 'qbo_refunds.insert').length, 2);
   assert.equal(labels.filter((label) => label === 'orders.update').length, 1);
-  assert.ok(labels.lastIndexOf('qbo_refunds.upsert') < labels.indexOf('orders.update'));
+  assert.ok(labels.lastIndexOf('qbo_refunds.insert') < labels.indexOf('orders.update'));
 });
