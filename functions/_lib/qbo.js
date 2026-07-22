@@ -168,7 +168,7 @@ export function buildInvoicePaymentPayload({ order, customerRef, invoiceId }) {
   return {
     CustomerRef: { value: customerRef },
     TotalAmt: total,
-    PaymentRefNum: order?.stripe_payment_intent || docNumber(order?.id),
+    PaymentRefNum: docNumber(order?.stripe_payment_intent || order?.id),
     PrivateNote: order?.qbo_payment_note || `Stripe payment for MASEST order ${order?.id}`,
     Line: [
       {

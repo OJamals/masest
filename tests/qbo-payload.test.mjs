@@ -72,6 +72,18 @@ test("invoice payment payload links Stripe payment to the QuickBooks invoice", (
   assert.equal(payload.Line[0].LinkedTxn[0].TxnType, "Invoice");
 });
 
+test("invoice payment reference fits QuickBooks' 21-character limit", () => {
+  const stripePaymentIntent = "pi_3TvoHQHfKF76gAoJ12345678";
+  const payload = buildInvoicePaymentPayload({
+    order: { ...order, stripe_payment_intent: stripePaymentIntent },
+    customerRef: "55",
+    invoiceId: "inv-900",
+  });
+
+  assert.equal(payload.PaymentRefNum, stripePaymentIntent.slice(0, 21));
+  assert.equal(payload.PaymentRefNum.length, 21);
+});
+
 test("payload builder fails clearly when an item ref is missing", () => {
   assert.throws(
     () => buildInvoicePayload({ order, items, customerRef: "55", itemRefs: { crhd: "101" } }),
