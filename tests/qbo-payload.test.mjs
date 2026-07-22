@@ -49,6 +49,25 @@ test("invoice payload shares document structure and carries balance due", () => 
   assert.equal(payload.Balance, 107.5);
 });
 
+test("invoice payload records the Stripe promotion as a fixed discount line", () => {
+  const discountedOrder = { ...order, tax: 0, total: 3.85 };
+  const discountedItems = [
+    { sku: "crhd", name: "CR-HD - 1 gal", qty: 1, unit_price: 19.27, line_total: 19.27 },
+  ];
+  const payload = buildInvoicePayload({
+    order: discountedOrder,
+    items: discountedItems,
+    customerRef: "55",
+    itemRefs,
+  });
+
+  assert.equal(payload.Line.length, 2);
+  assert.equal(payload.Line[1].DetailType, "DiscountLineDetail");
+  assert.equal(payload.Line[1].Amount, 15.42);
+  assert.equal(payload.Line[1].DiscountLineDetail.PercentBased, false);
+  assert.equal(Number((payload.Line[0].Amount - payload.Line[1].Amount + payload.TxnTaxDetail.TotalTax).toFixed(2)), 3.85);
+});
+
 test("invoice payload enables QuickBooks online card and ACH payments", () => {
   const payload = buildInvoicePayload({ order, items, customerRef: "55", itemRefs });
 

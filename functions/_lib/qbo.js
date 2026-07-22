@@ -95,6 +95,22 @@ function lineFor(item, itemRefs, taxExempt = false) {
   };
 }
 
+function documentLines({ order, items, itemRefs, taxExempt = false }) {
+  const lines = (items || []).map((item) => lineFor(item, itemRefs, taxExempt));
+  const total = Number(order?.total);
+  if (!Number.isFinite(total)) return lines;
+  const tax = Number(order?.tax || 0);
+  const merchandiseTotal = lines.reduce((sum, line) => sum + Number(line.Amount || 0), 0);
+  const discount = Math.round(Math.max(0, merchandiseTotal + tax - total) * 100) / 100;
+  if (!discount) return lines;
+  return [...lines, {
+    DetailType: 'DiscountLineDetail',
+    Amount: discount,
+    Description: 'Order discount',
+    DiscountLineDetail: { PercentBased: false },
+  }];
+}
+
 function billEmailFor(order) {
   const email = String(order?.customer_email || '').trim();
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? { Address: email } : null;
@@ -138,7 +154,7 @@ function baseDocumentPayload({ order, items, customerRef, itemRefs, taxExempt = 
     CustomerRef: { value: customerRef },
     DocNumber: docNumber(order.id),
     PrivateNote: order.qbo_private_note || `MASEST order ${order.id}`,
-    Line: (items || []).map((item) => lineFor(item, itemRefs, taxExempt)),
+    Line: documentLines({ order, items, itemRefs, taxExempt }),
     TxnTaxDetail: { TotalTax: Number(order.tax || 0) },
     ...(billEmail ? { BillEmail: billEmail } : {}),
   };
@@ -193,7 +209,7 @@ export function buildInvoicePaymentPayload({ order, customerRef, invoiceId }) {
 export function buildCreditMemoPayload({ order, items = [], customerRef, itemRefs, taxExempt = false, amount, fullyRefunded = false }) {
   let lines;
   if (fullyRefunded) {
-    lines = items.map((item) => lineFor(item, itemRefs, taxExempt));
+    lines = documentLines({ order, items, itemRefs, taxExempt });
   } else {
     const refundAmount = Number(amount || 0);
     const first = items[0];

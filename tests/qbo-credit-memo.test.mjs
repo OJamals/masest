@@ -55,6 +55,26 @@ test('full refund credit memo reverses every invoice line + carries tax', () => 
   assert.equal(p.BillEmail.Address, 'a@b.com');
 });
 
+test('full refund credit memo reverses the original Stripe discount', () => {
+  const discountedOrder = { ...order, tax: 0, total: 3.85 };
+  const discountedItems = [
+    { sku: 'VK-1', name: 'A', qty: 1, unit_price: 19.27, line_total: 19.27 },
+  ];
+  const p = buildCreditMemoPayload({
+    order: discountedOrder,
+    items: discountedItems,
+    customerRef: '9',
+    itemRefs,
+    amount: 3.85,
+    fullyRefunded: true,
+  });
+
+  assert.equal(p.Line.length, 2);
+  assert.equal(p.Line[1].DetailType, 'DiscountLineDetail');
+  assert.equal(p.Line[1].Amount, 15.42);
+  assert.equal(Number((p.Line[0].Amount - p.Line[1].Amount).toFixed(2)), 3.85);
+});
+
 test('partial refund posts a single dollar line, untaxed', () => {
   const p = buildCreditMemoPayload({ order, items, customerRef: '9', itemRefs, amount: 12.5, fullyRefunded: false });
   assert.equal(p.Line.length, 1);
