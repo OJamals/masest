@@ -113,6 +113,10 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const secret = env.STRIPE_SECRET_KEY;
   const whSecret = env.STRIPE_WEBHOOK_SECRET;
   if (!secret || !whSecret) return json(500, { error: 'stripe_not_configured' });
+  const retrieveCheckoutSession = dependencies.retrieveCheckoutSession || (async (id) => {
+    const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
+    return stripe.checkout.sessions.retrieve(id);
+  });
 
   const sig = request.headers.get('stripe-signature');
   const raw = await request.text(); // raw body required for signature verification
@@ -127,7 +131,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   }
 
   if (event.type === 'checkout.session.completed') {
-    const s = event.data.object;
+    let s = event.data.object;
     const sb = getAdminClient(env);
 
     // Program subscription checkout (mode=subscription): record enrollment, skip the order path.
@@ -161,7 +165,23 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       return json(200, { received: true, subscription: true });
     }
 
-    const cart = parseCartMetadata(assembleCartMetadata(s.metadata));
+    // Some Stripe event destinations can deliver a reduced Checkout Session snapshot.
+    // Hydrate from Stripe before persistence whenever the cart or buyer identity is
+    // absent; acknowledging the reduced event would create an unfulfillable paid order.
+    let cart = parseCartMetadata(assembleCartMetadata(s.metadata));
+    if (!cart.length || !buyerEmailFromStripeSession(s)) {
+      try {
+        s = await retrieveCheckoutSession(s.id);
+        cart = parseCartMetadata(assembleCartMetadata(s.metadata));
+      } catch (error) {
+        console.error('checkout_session_hydrate_failed', error?.code || error?.name || 'unknown');
+        return json(503, { error: 'checkout_session_hydrate_failed' });
+      }
+    }
+    if (!cart.length) {
+      console.error('checkout_session_cart_missing', s?.id || 'unknown');
+      return json(503, { error: 'checkout_session_incomplete' });
+    }
     const subtotal = centsToAmount(s.amount_subtotal);
     const tax = centsToAmount(s.total_details?.amount_tax);
     const total = centsToAmount(s.amount_total);

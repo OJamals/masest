@@ -377,17 +377,16 @@
     status.dataset.state = "";
     status.textContent = mode === "net" ? "Checking account terms…" : "Starting checkout…";
     status.hidden = false;
-    let token;
-    if (mode === "net") {
-      token = await getAuthToken();
-      if (!token) {
-        status.dataset.state = "err";
-        status.textContent = "Sign in to your approved business account to use NET terms, or send a quote request.";
-        status.hidden = false;
-        setCheckoutPending(mode, false);
-        setCheckoutDisabled(!checkoutReady());
-        return;
-      }
+    // Card checkout remains available to guests, but an authenticated buyer must carry
+    // their token so the resulting Stripe order stays attached to the business account.
+    let token = await getAuthToken();
+    if (mode === "net" && !token) {
+      status.dataset.state = "err";
+      status.textContent = "Sign in to your approved business account to use NET terms, or send a quote request.";
+      status.hidden = false;
+      setCheckoutPending(mode, false);
+      setCheckoutDisabled(!checkoutReady());
+      return;
     }
     try {
       const result = await checkout({ mode, email: receiptEmail, token });

@@ -571,6 +571,48 @@ test('webhook rejects invalid signature before DB access', async () => {
   assert.deepEqual(result, { status: 400, body: { error: 'invalid_signature' } });
 });
 
+test('webhook hydrates an incomplete checkout event before persisting the paid order', async () => {
+  const calls = [];
+  const complete = paidSession();
+  complete.metadata.company_id = 'company-1';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_checkout',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          ...complete,
+          metadata: {},
+          customer_details: null,
+        },
+      },
+    }),
+    retrieveCheckoutSession: async (id) => {
+      calls.push(['stripe.session.retrieve', id]);
+      return complete;
+    },
+    adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+
+  assert.deepEqual(result, { status: 200, body: { received: true } });
+  assert.deepEqual(calls[0], ['stripe.session.retrieve', 'cs_1']);
+  const persist = calls.find((call) => Array.isArray(call) && call[0] === 'rpc.persist_stripe_order');
+  assert.equal(persist[1].p_order.company_id, 'company-1');
+  assert.equal(persist[1].p_order.customer_email, 'buyer@example.com');
+  assert.deepEqual(persist[1].p_items, [{
+    order_id: null,
+    sku: 'VK-1',
+    product_sku: 'VK',
+    name: 'VertKleen - 1 gal',
+    qty: 1,
+    unit_price: 25,
+    line_total: 25,
+    backordered: false,
+  }]);
+});
+
 test('duplicate webhook delivery recovers and enqueues the same effects before 200', async () => {
   const calls = [];
   const handler = createStripeWebhookHandler({
