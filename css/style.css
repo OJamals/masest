@@ -7274,6 +7274,39 @@ body.product-detail-page main > section.product-static-section {
 }
 
 /* ---------- Document downloads (SDS / TDS / labels) ---------- */
+.doc-governance {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 18px;
+  overflow: hidden;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+}
+.doc-governance div,
+.doc-governance p {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--surface);
+}
+.doc-governance span,
+.doc-governance strong { display: block; }
+.doc-governance span {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.doc-governance strong { font-size: .9rem; }
+.doc-governance p {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.5;
+}
 .doc-notify {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(220px, 320px);
@@ -7309,6 +7342,7 @@ body.product-detail-page main > section.product-static-section {
   color: var(--muted);
 }
 @media (max-width: 720px) {
+  .doc-governance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .doc-notify { grid-template-columns: 1fr; }
 }
 .doc-library {
@@ -7360,6 +7394,34 @@ body.product-detail-page main > section.product-static-section {
 .doc-chip:hover::before,
 .doc-chip:focus-visible::before { opacity: 1; }
 .doc-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.doc-lib-links .doc-chip[data-document-id] { flex: 1 1 100%; }
+.doc-chip[data-document-id] {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 2px;
+  text-align: left;
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+.doc-chip[data-document-id]::before { grid-row: 1 / span 2; }
+.doc-chip .doc-title { grid-column: 2; }
+.doc-control {
+  display: block;
+  color: var(--muted);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .025em;
+  line-height: 1.35;
+}
+.doc-chip .doc-control { grid-column: 2; }
+.doc-chip:hover .doc-control,
+.doc-chip:focus-visible .doc-control,
+.product-static-panel .product-fit-list li.doc-file a:hover .doc-control,
+.product-static-panel .product-fit-list li.doc-file a:focus-visible .doc-control {
+  color: currentColor;
+  opacity: .84;
+}
 /* Download chips are the page's primary action on touch devices — meet 44px. */
 @media (pointer: coarse) {
   .doc-chip { min-height: 44px; padding-block: 10px; }
@@ -7393,6 +7455,12 @@ body.product-detail-page main > section.product-static-section {
 .product-static-panel .product-fit-list li.doc-file a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+.doc-file-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
 }
 .doc-pill {
   flex: 0 0 auto;

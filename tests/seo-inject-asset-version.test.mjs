@@ -11,9 +11,10 @@ const read = (rel) => readFileSync(fileURLToPath(new URL(`../${rel}`, import.met
 const styleVersion = (html) => html.match(/css\/style\.css\?v=([0-9a-z]+)/i)?.[1] || null;
 
 test("seo-inject product template carries a style.css cache-bust", () => {
-  const tool = styleVersion(read("tools/seo-inject.mjs"));
-  assert.ok(tool, "seo-inject.mjs product template must carry a versioned style.css");
-  assert.match(tool, /^[0-9]{8}[a-z]?$/i, "seo-inject.mjs style.css cache-bust should be date-like");
+  const source = read("tools/seo-inject.mjs");
+  const tool = source.match(/const STYLE_VERSION = "([0-9a-z]+)"/i)?.[1] || null;
+  assert.match(source, /css\/style\.css\?v=\$\{STYLE_VERSION\}/);
+  assert.match(tool || "", /^[0-9]{8}[a-z]?$/i, "seo-inject.mjs style.css cache-bust should be date-like");
 });
 
 test("regenerated product pages carry a style.css cache-bust", () => {

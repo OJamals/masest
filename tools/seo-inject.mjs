@@ -25,6 +25,24 @@ import { imageSize } from "./_image-size.mjs";
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
 const BLOG_POST_SLUGS = (BLOG_SNAPSHOT.blog_posts || []).map((post) => post.slug).filter(Boolean);
+const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document-review.json", import.meta.url), "utf8"));
+const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
+const DOCUMENT_REVISION = DOCUMENT_REVIEW.document_control.revision;
+const STYLE_VERSION = "20260724a";
+const DOCUMENT_SKU_LABELS = new Map([
+  ["VK-HCR", "VertKleen CIP HCR"],
+  ["VK-CR", "VertKleen CIP CR"],
+  ["VK-CRHD", "VertKleen CR HD"],
+  ["VK-CRS", "VertKleen CRS"],
+  ["VK-DESC", "VertKleen Descaler"],
+  ["VK-NEUT", "VertKleen Neutral"],
+  ["VK-MW", "VertKleen MultiWash"],
+  ["VK-WS60", "WaterSafe60"],
+  ["VK-PRG", "Purgo"],
+  ["VK-LAM3", "VertKleen LAM3"],
+  ["VK-SAR", "VertKleen SAR"],
+  ["VK-TRQ", "VertKleen Torque"],
+]);
 
 const BASE = "https://masest.co";
 const OG_IMAGE = `${BASE}/img/og-card.png`;
@@ -155,6 +173,82 @@ const text = (value) => String(value ?? "")
   .replace(/&/g, "&amp;")
   .replace(/</g, "&lt;")
   .replace(/>/g, "&gt;");
+
+function currentDocument(path) {
+  const document = DOCUMENTS.get(path);
+  if (!document || document.status === "restricted") {
+    throw new Error(`Public page references unavailable document: ${path}`);
+  }
+  return document;
+}
+
+function documentControl(document) {
+  const claimStatus = document.status === "claim_review_required"
+    ? "Review required"
+    : "No automated flags";
+  return `${document.document_id} · Rev ${DOCUMENT_REVISION} · Distribution: Current · Claims: ${claimStatus} · SKUs: ${document.skus.join(", ")}`;
+}
+
+function documentAnalyticsName(document) {
+  return document.title
+    .replace("Safety Data Sheet", "SDS")
+    .replace("Technical Data Sheet", "TDS");
+}
+
+function documentGovernance() {
+  const control = DOCUMENT_REVIEW.document_control;
+  const effectiveDate = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${control.effective_date}T00:00:00Z`));
+  return `    <div class="doc-governance reveal" aria-label="Document control status">
+      <div><span>Owner</span><strong>${text(control.owner)}</strong></div>
+      <div><span>Distribution revision</span><strong>${text(control.revision)}</strong></div>
+      <div><span>Effective</span><strong>${text(effectiveDate)}</strong></div>
+      <div><span>Status</span><strong>Current · ${text(control.approval)}</strong></div>
+      <p>${text(control.approval_scope)} Technical, legal, regulatory, safety, performance, and customer-specific claims still require the applicable review.</p>
+    </div>`;
+}
+
+function documentLibrary() {
+  const groups = new Map([...DOCUMENT_SKU_LABELS].map(([sku, label]) => [sku, { label, documents: [] }]));
+  for (const document of DOCUMENT_REVIEW.documents.filter((entry) => entry.status !== "restricted")) {
+    const group = groups.get(document.skus[0]);
+    if (!group) throw new Error(`Unknown primary document SKU: ${document.skus[0]}`);
+    group.documents.push(document);
+  }
+
+  return [...groups.entries()].map(([sku, group]) => {
+    const documents = group.documents
+      .sort((left, right) => left.title.localeCompare(right.title))
+      .map((document) => `          <a class="doc-chip" href="${attr(document.path)}" data-document-id="${attr(document.document_id)}" data-document-revision="${attr(DOCUMENT_REVISION)}" data-document-skus="${attr(document.skus.join(" "))}" data-document-download data-document-name="${attr(documentAnalyticsName(document))}" target="_blank" rel="noopener" download aria-label="Download ${attr(document.title)} (PDF)"><span class="doc-title">${text(document.title)}</span><span class="doc-control">${text(documentControl(document))}</span></a>`)
+      .join("\n");
+    return `        <div class="doc-lib-item" data-document-sku="${attr(sku)}">
+          <div class="doc-lib-head"><b>${text(group.label)}</b><span>${attr(sku)} · ${group.documents.length} current ${group.documents.length === 1 ? "file" : "files"}</span></div>
+          <div class="doc-lib-links">
+${documents}
+          </div>
+        </div>`;
+  }).join("\n");
+}
+
+function injectDocumentLibrary(html) {
+  const blocks = [
+    ["doc-control", documentGovernance()],
+    ["doclib", documentLibrary()],
+  ];
+  for (const [name, content] of blocks) {
+    const start = `<!-- ${name}:auto -->`;
+    const end = `<!-- /${name}:auto -->`;
+    const from = html.indexOf(start);
+    const to = html.indexOf(end, from);
+    if (from === -1 || to === -1) throw new Error(`resources.html: ${name} markers missing`);
+    html = `${html.slice(0, from)}${start}\n${content}\n      ${html.slice(to)}`;
+  }
+  return html;
+}
 
 const pick = (html, re) => html.match(re)?.[1]?.trim() || "";
 
@@ -361,7 +455,9 @@ function buildBlock(html, meta) {
 async function processPage(file, meta, isPrivate = false) {
   let html = await readFile(file, "utf8");
   const before = html;
+  html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
   html = stripOld(html);
+  if (file === "resources.html") html = injectDocumentLibrary(html);
   if (isPrivate) {
     if (!/name="robots"/.test(html)) {
       html = html.replace(/(<meta name="viewport"[^>]*>)/i, '$1\n<meta name="robots" content="noindex">');
@@ -381,6 +477,7 @@ async function processPage(file, meta, isPrivate = false) {
 async function processProductFallback() {
   let html = await readFile(PRODUCT_FALLBACK, "utf8");
   const before = html;
+  html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
   html = normalizePublicUrls(html);
   if (html !== before) {
     await writeFile(PRODUCT_FALLBACK, html);
@@ -486,7 +583,8 @@ function productPage(id, product, reviewsSnapshot) {
   const docs = (product.docs || [])
     .map((doc) => {
       if (doc && typeof doc === "object" && doc.file) {
-        return `<li class="doc-file"><a href="../${attr(doc.file)}" target="_blank" rel="noopener" download>${text(doc.label)}<span class="doc-pill">PDF</span></a></li>`;
+        const document = currentDocument(doc.file);
+        return `<li class="doc-file"><a href="../${attr(doc.file)}" data-document-id="${attr(document.document_id)}" data-document-revision="${attr(DOCUMENT_REVISION)}" data-document-skus="${attr(document.skus.join(" "))}" target="_blank" rel="noopener" download><span class="doc-file-copy">${text(doc.label)}<span class="doc-control">${text(documentControl(document))}</span></span><span class="doc-pill">PDF</span></a></li>`;
       }
       const label = doc && typeof doc === "object" ? doc.label : doc;
       const href = `../contact?type=technical&product=${encodeURIComponent(product.name)}&doc=${encodeURIComponent(label)}`;
@@ -514,7 +612,7 @@ function productPage(id, product, reviewsSnapshot) {
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260712a">
+<link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css">
 <!-- seo:auto -->

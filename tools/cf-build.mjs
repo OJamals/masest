@@ -15,7 +15,7 @@ const restrictedPublicPaths = validatePublicDocumentReview();
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
   /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^factory\//, /^node_modules(\/|$)/,
-  /^dist\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
+  /^dist\//, /^tmp\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
   /^\.github\//, /^\.vscode\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,

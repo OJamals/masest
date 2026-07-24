@@ -6,6 +6,9 @@ import { PRODUCTS } from "../js/main/catalog-data.js";
 const root = new URL("../", import.meta.url);
 const registryPath = new URL("data/industry-applications.json", root);
 const reviewPath = new URL("data/public-document-review.json", root);
+const documentReview = JSON.parse(readFileSync(reviewPath, "utf8"));
+const documentRevision = documentReview.document_control.revision;
+const styleVersion = "20260724a";
 
 const escapeHtml = (value) => String(value)
   .replaceAll("&", "&amp;")
@@ -105,7 +108,10 @@ function resolveDocuments(industry, reviewByPath) {
       throw new Error(`${industry.slug}: missing document ${document.file}`);
     }
   }
-  return selected;
+  return selected.map((document) => ({
+    ...document,
+    control: reviewByPath.get(document.file),
+  }));
 }
 
 function renderProducts(industry) {
@@ -127,7 +133,7 @@ function renderApplications(industry, allIndustries, documents) {
     ? `\n        <p class="ind-related">Broader program: <a href="./${escapeHtml(parent.slug)}">${escapeHtml(parent.label)}</a></p>`
     : "";
   const documentLinks = documents.map((document) => (
-    `<a class="doc-chip" href="../${escapeHtml(document.file)}">${escapeHtml(document.label)}</a>`
+    `<a class="doc-chip" href="../${escapeHtml(document.file)}" data-document-id="${escapeHtml(document.control.document_id)}" data-document-revision="${escapeHtml(documentRevision)}" data-document-skus="${escapeHtml(document.control.skus.join(" "))}"><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-control">${escapeHtml(document.control.document_id)} · Rev ${escapeHtml(documentRevision)} · Distribution: Current · Claims: ${document.control.status === "claim_review_required" ? "Review required" : "No automated flags"} · SKUs: ${escapeHtml(document.control.skus.join(", "))}</span></a>`
   )).join("\n            ");
 
   return `<section class="section section-slim ind-applications" id="applications-and-proof" data-industry-applications-proof>
@@ -200,6 +206,7 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
   );
   const cta = renderCta(industry);
 
+  html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${styleVersion}`);
   let output = replaceMarker(html, "hero-facts", hero);
   if (output === null) {
     const heroSubhead = /(<section class="hero-split">[\s\S]*?<p class="subhead">[\s\S]*?<\/p>)/;
@@ -228,8 +235,7 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
 
 export function buildIndustryPages() {
   const industries = JSON.parse(readFileSync(registryPath, "utf8"));
-  const review = JSON.parse(readFileSync(reviewPath, "utf8"));
-  const reviewByPath = new Map(review.documents.map((document) => [document.path, document]));
+  const reviewByPath = new Map(documentReview.documents.map((document) => [document.path, document]));
 
   for (const industry of industries) {
     const file = new URL(`industries/${industry.slug}.html`, root);

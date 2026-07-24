@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const REVIEW_PATH = "data/public-document-review.json";
 const VALID_STATUSES = new Set([
@@ -8,6 +10,8 @@ const VALID_STATUSES = new Set([
   "claim_review_required",
   "restricted",
 ]);
+const DOCUMENT_ID_PATTERN = /^MAS-[A-Z0-9-]+$/;
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
 function pdfPaths(root, dir = join(root, "docs"), paths = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -24,26 +28,30 @@ function fileSha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
-export function validatePublicDocumentReview(root = process.cwd()) {
+export function validatePublicDocumentReview(
+  root = process.cwd(),
+  { sourceRoot = null, requireSources = false } = {},
+) {
   const review = JSON.parse(readFileSync(join(root, REVIEW_PATH), "utf8"));
   if (!Array.isArray(review.documents) || review.documents.length === 0) {
     throw new Error(`${REVIEW_PATH}: documents must be a non-empty array`);
   }
 
-  const recorded = [];
+  const recorded = new Set();
+  const documentIds = new Set();
   const restricted = new Set();
   for (const document of review.documents) {
     const path = String(document?.path || "");
     if (!/^docs\/(?!.*(?:^|\/)\.\.(?:\/|$)).+\.pdf$/i.test(path) || path.includes("\\")) {
       throw new Error(`${REVIEW_PATH}: invalid document path ${path || "(empty)"}`);
     }
-    if (recorded.includes(path)) {
+    if (recorded.has(path)) {
       throw new Error(`${REVIEW_PATH}: duplicate document path ${path}`);
     }
     if (!VALID_STATUSES.has(document.status)) {
       throw new Error(`${REVIEW_PATH}: invalid status for ${path}`);
     }
-    if (!/^[a-f0-9]{64}$/.test(document.sha256 || "")) {
+    if (!SHA256_PATTERN.test(document.sha256 || "")) {
       throw new Error(`${REVIEW_PATH}: invalid SHA-256 for ${path}`);
     }
     if (!Array.isArray(document.flags)) {
@@ -54,7 +62,37 @@ export function validatePublicDocumentReview(root = process.cwd()) {
     if (actualHash !== document.sha256) {
       throw new Error(`${path} changed after review; update ${REVIEW_PATH} before publishing`);
     }
-    recorded.push(path);
+    if (!DOCUMENT_ID_PATTERN.test(document.document_id || "") || documentIds.has(document.document_id)) {
+      throw new Error(`${REVIEW_PATH}: invalid or duplicate document ID for ${path}`);
+    }
+    const source = String(document.source || "");
+    if (
+      typeof document.title !== "string"
+      || !document.title.trim()
+      || !Array.isArray(document.skus)
+      || document.skus.length === 0
+      || !document.skus.every((sku) => typeof sku === "string" && /^[A-Z0-9-]+$/.test(sku))
+      || !source
+      || source.startsWith("/")
+      || source.includes("\\")
+      || source.split("/").includes("..")
+      || !SHA256_PATTERN.test(document.source_sha256 || "")
+      || document.superseded_status !== (document.status === "restricted" ? "restricted" : "current")
+    ) {
+      throw new Error(`${REVIEW_PATH}: incomplete document control for ${path}`);
+    }
+    if (sourceRoot || requireSources) {
+      if (!sourceRoot) throw new Error(`${REVIEW_PATH}: document source root is required`);
+      const sourcePath = join(sourceRoot, source);
+      if (!existsSync(sourcePath)) {
+        throw new Error(`${source}: reviewed source is missing`);
+      }
+      if (fileSha256(sourcePath) !== document.source_sha256) {
+        throw new Error(`${source}: source changed after review`);
+      }
+    }
+    recorded.add(path);
+    documentIds.add(document.document_id);
     if (document.status === "restricted") restricted.add(path);
   }
 
@@ -63,5 +101,38 @@ export function validatePublicDocumentReview(root = process.cwd()) {
   if (JSON.stringify(onDisk) !== JSON.stringify(reviewed)) {
     throw new Error(`${REVIEW_PATH}: PDF inventory changed; review every file before publishing`);
   }
+
+  const control = review.document_control || {};
+  if (
+    control.owner !== "MASEST Consulting LLC"
+    || !/^\d+\.\d+$/.test(control.revision || "")
+    || !/^\d{4}-\d{2}-\d{2}$/.test(control.effective_date || "")
+    || !/customer review/i.test(control.approval || "")
+    || !/distribution/i.test(control.approval_scope || "")
+  ) {
+    throw new Error(`${REVIEW_PATH}: incomplete document-control release`);
+  }
+
+  for (const document of review.documents) {
+    if (document.status === "restricted") continue;
+    const marker = [
+      "% MASEST-CONTROL",
+      `ID=${document.document_id}`,
+      `REV=${control.revision}`,
+      `EFFECTIVE=${control.effective_date}`,
+      "STATUS=CURRENT",
+      "APPROVAL=CUSTOMER-REVIEW",
+      "OWNER=MASEST-CONSULTING-LLC",
+    ].join(" ");
+    if (!readFileSync(join(root, document.path), "latin1").includes(marker)) {
+      throw new Error(`${document.path}: embedded document control is missing or stale`);
+    }
+  }
   return restricted;
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  const sourceRoot = process.env.MASEST_DOCUMENT_SOURCE_ROOT || join(homedir(), "Desktop", "masest");
+  validatePublicDocumentReview(process.cwd(), { sourceRoot, requireSources: true });
+  console.log(`public-document-policy: verified reviewed source bytes under ${sourceRoot}`);
 }
