@@ -68,6 +68,11 @@ function tinifyAuthorization(apiKey) {
   return `Basic ${btoa(`api:${apiKey}`)}`;
 }
 
+async function sha256Hex(body) {
+  const digest = await crypto.subtle.digest("SHA-256", body);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 async function optimizeWithTinyPng(file, env) {
   const apiKey = String(env.TINIFY_API_KEY || "").trim();
   if (!apiKey) return { ok: false, status: 503, error: "optimized_image_required" };
@@ -133,6 +138,22 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
   }
   const optimized = await optimizeWithTinyPng(file, env);
   if (!optimized.ok) return { status: optimized.status, body: { error: optimized.error } };
+  const sha256 = await sha256Hex(optimized.body);
+  const duplicate = await repo.findAssetBySha256(sha256);
+  if (duplicate) {
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        asset: { ...withPublicUrl(env, duplicate), alt },
+        deduplicated: true,
+        original_bytes: size,
+        stored_bytes: 0,
+        optimized_bytes_saved: optimized.bytesSaved,
+        duplicate_bytes_avoided: optimized.body.byteLength,
+      },
+    };
+  }
 
   const fileName = String(file.name || "asset");
   const rawExt = cleanFilePart(fileName.split(".").pop(), ALLOWED_IMAGE_TYPES.get(type));
@@ -166,11 +187,26 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
     storage_path: storagePath,
     alt,
     mime_type: type,
+    byte_size: optimized.body.byteLength,
+    sha256: sha256,
     usage: parseUsage(form),
     source_url: publicUrl,
   }, userId);
-  if (!result.ok) return { status: 400, body: { error: result.error } };
-  return { status: 200, body: { ...result, asset: withPublicUrl(env, result.asset), optimized_bytes_saved: optimized.bytesSaved } };
+  if (!result.ok) {
+    await deleteStoredAsset(env, storagePath);
+    return { status: 400, body: { error: result.error } };
+  }
+  return {
+    status: 200,
+    body: {
+      ...result,
+      asset: withPublicUrl(env, result.asset),
+      deduplicated: false,
+      original_bytes: size,
+      stored_bytes: optimized.body.byteLength,
+      optimized_bytes_saved: optimized.bytesSaved,
+    },
+  };
 }
 
 export async function onRequest({ request, env }) {

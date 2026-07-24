@@ -65,6 +65,8 @@ create table if not exists public.content_assets (
   status asset_status not null default 'available',
   alt text not null,
   mime_type text,
+  byte_size bigint,
+  sha256 text,
   width int,
   height int,
   focal_point jsonb not null default '{}'::jsonb,
@@ -79,6 +81,8 @@ create table if not exists public.content_assets (
 
 alter table public.content_assets
   add column if not exists status asset_status not null default 'available',
+  add column if not exists byte_size bigint,
+  add column if not exists sha256 text,
   add column if not exists credit text,
   add column if not exists source_url text,
   add column if not exists updated_by uuid references auth.users(id) on delete set null,
@@ -86,6 +90,10 @@ alter table public.content_assets
 
 create index if not exists content_assets_status_created_idx
   on public.content_assets (status, created_at desc);
+
+create index if not exists content_assets_sha256_idx
+  on public.content_assets (sha256)
+  where sha256 is not null;
 
 alter table public.content_entries enable row level security;
 alter table public.content_revisions enable row level security;

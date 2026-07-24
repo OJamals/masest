@@ -1,9 +1,10 @@
 import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260721a";
 import {
   assetUrl,
+  formatAssetBytes,
   loadSiteImageAssets,
   mergeSiteImageAssets,
-} from "./site-image-library.js?v=20260724a";
+} from "./site-image-library.js?v=20260724b";
 
 const PAGE_SIZE = 4;
 
@@ -15,7 +16,10 @@ function assetCard(asset = {}) {
   const isSiteAsset = asset.source === "site";
   return `<article class="shared-image-library-card">
     <img src="${esc(url)}" alt="${esc(asset.alt || "")}" width="320" height="240" loading="lazy">
-    <div><b>${esc(label)}</b><small>${esc(asset.alt || "No alt text")}</small></div>
+    <div>
+      <b>${esc(label)}</b>
+      <small>${esc([asset.alt || "No alt text", formatAssetBytes(asset.byte_size)].filter(Boolean).join(" · "))}</small>
+    </div>
     <div class="shared-image-library-card-actions">
       <button class="btn btn-secondary btn-sm" type="button" data-shared-image-select data-shared-image-url="${esc(url)}" data-shared-image-alt="${esc(asset.alt || "")}">Use image</button>
       ${isSiteAsset ? "" : `<button class="btn btn-ghost btn-sm" type="button" data-shared-image-delete data-shared-image-path="${esc(storagePath)}" aria-label="Delete ${esc(label)}"><i class="ph ph-trash" aria-hidden="true"></i></button>`}

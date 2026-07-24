@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 import test from "node:test";
@@ -65,13 +66,20 @@ test("site image manifest exposes every public image with reusable metadata", ()
     assert.match(asset.public_url, /^\/img\//);
     assert.ok(asset.alt, `${asset.public_url} should have reusable alt text`);
     assert.ok(asset.width > 0 && asset.height > 0, `${asset.public_url} should include dimensions`);
+    const bytes = readFileSync(join(ROOT, asset.public_url.slice(1)));
+    assert.equal(asset.byte_size, bytes.byteLength, `${asset.public_url} should include exact byte size`);
+    assert.equal(
+      asset.sha256,
+      createHash("sha256").update(bytes).digest("hex"),
+      `${asset.public_url} should include exact SHA-256`,
+    );
     assert.equal(asset.status, "available");
     assert.equal(asset.source, "site");
   }
 });
 
 test("site and CMS assets merge into one searchable, de-duplicated library", async () => {
-  const { mergeSiteImageAssets } = await import("../js/admin/site-image-library.js");
+  const { formatAssetBytes, mergeSiteImageAssets } = await import("../js/admin/site-image-library.js");
   const merged = mergeSiteImageAssets({
     cmsAssets: [{
       storage_path: "img/proof/cases/brewery.webp",
@@ -98,4 +106,7 @@ test("site and CMS assets merge into one searchable, de-duplicated library", asy
   assert.deepEqual(merged.map((asset) => asset.public_url), ["/img/proof/cases/brewery.webp"]);
   assert.equal(merged[0].alt, "CMS-authored brewery proof");
   assert.equal(merged[0].source, "cms");
+  assert.equal(formatAssetBytes(1024), "1 KB");
+  assert.equal(formatAssetBytes(239_674), "234.1 KB");
+  assert.equal(formatAssetBytes(null), "");
 });

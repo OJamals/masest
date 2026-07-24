@@ -33,6 +33,15 @@ export function assetUrl(asset = {}) {
   return canonicalPublicImageUrl(asset.public_url || asset.storage_path);
 }
 
+export function formatAssetBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  const units = bytes < 1024 * 1024 ? ["KB", 1024] : ["MB", 1024 * 1024];
+  const amount = (bytes / units[1]).toFixed(1).replace(/\.0$/, "");
+  return `${amount} ${units[0]}`;
+}
+
 export function mergeSiteImageAssets({
   cmsAssets = [],
   siteAssets = [],

@@ -266,6 +266,21 @@ export function createContentRepository(sb) {
       return data || null;
     },
 
+    async findAssetBySha256(sha256) {
+      const hash = String(sha256 || "").trim().toLowerCase();
+      if (!/^[a-f0-9]{64}$/.test(hash)) return null;
+      const { data, error } = await sb
+        .from("content_assets")
+        .select("*")
+        .eq("sha256", hash)
+        .eq("status", "available")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data || null;
+    },
+
     async deleteAsset(storagePath) {
       const path = String(storagePath || "").trim();
       if (!path) return { ok: false, error: "storage_path_required" };
@@ -293,6 +308,10 @@ export function createContentRepository(sb) {
           status,
           alt,
           mime_type: input.mime_type || null,
+          byte_size: Number.isFinite(Number(input.byte_size)) ? Number(input.byte_size) : null,
+          sha256: /^[a-f0-9]{64}$/i.test(String(input.sha256 || ""))
+            ? String(input.sha256).toLowerCase()
+            : null,
           width: Number.isFinite(Number(input.width)) ? Number(input.width) : null,
           height: Number.isFinite(Number(input.height)) ? Number(input.height) : null,
           focal_point: objectValue(input.focal_point),

@@ -6,6 +6,8 @@ test("content schema stores asset metadata, usage, and focal points", () => {
   const sql = readFileSync(new URL("../supabase/schema-content.sql", import.meta.url), "utf8");
   assert.match(sql, /content_assets/);
   assert.match(sql, /alt\s+text\s+not null/);
+  assert.match(sql, /byte_size\s+bigint/);
+  assert.match(sql, /sha256\s+text/);
   assert.match(sql, /focal_point\s+jsonb/);
   assert.match(sql, /usage\s+jsonb/);
   assert.match(sql, /asset_status/);
@@ -34,11 +36,18 @@ test("asset endpoint accepts multipart upload into CMS asset storage", () => {
 
 test("uploaded content images are optimized with TinyPNG before storage", () => {
   const source = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
+  const repository = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
 
   assert.match(source, /TINIFY_API_KEY/);
   assert.match(source, /https:\/\/api\.tinify\.com\/shrink/);
   assert.match(source, /optimized_image_required/);
   assert.match(source, /optimizeWithTinyPng/);
+  assert.match(source, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(source, /findAssetBySha256/);
+  assert.match(source, /deduplicated:\s*true/);
+  assert.match(source, /byte_size:/);
+  assert.match(source, /sha256:/);
+  assert.match(repository, /async findAssetBySha256\(/);
 });
 
 test("content asset endpoint deletes library metadata and managed storage", () => {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -122,6 +123,7 @@ const altCandidates = collectAltText();
 const assets = walk(IMAGE_ROOT, (file) => IMAGE_EXTENSIONS.has(extname(file).toLowerCase()))
   .map((file) => {
     const publicUrl = `/${relative(ROOT, file).replaceAll("\\", "/")}`;
+    const bytes = readFileSync(file);
     const { width, height } = imageSize(file);
     const pathParts = publicUrl.split("/").filter(Boolean);
     return {
@@ -131,6 +133,8 @@ const assets = walk(IMAGE_ROOT, (file) => IMAGE_EXTENSIONS.has(extname(file).toL
       alt: preferredAlt(publicUrl, altCandidates),
       width,
       height,
+      byte_size: bytes.byteLength,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
       mime_type: MIME_TYPES.get(extname(file).toLowerCase()),
       category: pathParts.length > 2 ? pathParts[1] : "site",
       status: "available",

@@ -9,9 +9,10 @@
 import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260721a";
 import {
   assetUrl,
+  formatAssetBytes,
   loadSiteImageAssets,
   mergeSiteImageAssets,
-} from "./site-image-library.js?v=20260724a";
+} from "./site-image-library.js?v=20260724b";
 
 export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, applyChosenAsset }) {
   let assetTargetField = "image";
@@ -42,7 +43,12 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
         <span class="adm-content-asset-info">
           <b>${esc(asset.storage_path || value)}</b>
           <span>${esc(asset.alt || "No alt text")}</span>
-          <small>${esc([isSiteAsset ? "Public site" : status, asset.credit || "", asset.mime_type || ""].filter(Boolean).join(" · "))}</small>
+          <small>${esc([
+            isSiteAsset ? "Public site" : status,
+            formatAssetBytes(asset.byte_size),
+            asset.credit || "",
+            asset.mime_type || "",
+          ].filter(Boolean).join(" · "))}</small>
         </span>
         <span class="adm-content-asset-actions">
           <button class="btn btn-secondary btn-sm" type="button" data-content-asset-kind="${esc(assetTargetKind)}" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">

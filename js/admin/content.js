@@ -1,8 +1,8 @@
 import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260721a";
 import { renderMarkdown } from "../md.js?v=20260721a";
 import { supabase } from "../auth.js?v=20260721a";
-import { createContentAssets } from "./content-assets.js?v=20260724a";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260724a";
+import { createContentAssets } from "./content-assets.js?v=20260724b";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260724b";
 import { createContentRevisions } from "./content-revisions.js?v=20260721a";
 import {
   createRichTextEditor,
