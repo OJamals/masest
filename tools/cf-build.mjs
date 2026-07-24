@@ -20,6 +20,7 @@ const DENY = [
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
   /^data\/public-document-review\.json$/,
+  /^data\/industry-applications\.json$/,
   // Internal seed sources — not client assets (only data/drum-pricing.json is fetched).
   /^data\/(catalog|products)\.seed\.json$/,
 ];

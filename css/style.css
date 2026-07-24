@@ -7423,6 +7423,164 @@ body.product-detail-page main > section.product-static-section {
   border-color: #fff;
 }
 
+/* ---------- Industry applications + proof ---------- */
+.ind-hero-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 32px 0 0;
+  padding: 1px;
+  list-style: none;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+.ind-hero-facts li {
+  min-width: 0;
+  padding: 16px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+.ind-hero-facts li:last-child {
+  grid-column: 1 / -1;
+  padding: 0;
+}
+.ind-hero-facts span,
+.ind-proof-grid dt {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: .06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+.ind-hero-facts strong {
+  display: block;
+  color: var(--ink);
+  font-size: .86rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+.ind-hero-facts li:last-child a {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+  color: var(--ink);
+  font-size: .84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.ind-hero-facts li:last-child a:hover,
+.ind-hero-facts li:last-child a:focus-visible {
+  color: var(--accent);
+}
+.ind-applications {
+  scroll-margin-top: 132px;
+}
+.ind-related {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: .88rem;
+}
+.ind-related a,
+.ind-proof-grid a {
+  color: var(--accent);
+  font-weight: 700;
+}
+.ind-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 30px 0 0;
+  padding: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+.ind-proof-grid > div {
+  min-width: 0;
+  padding: clamp(18px, 2vw, 25px);
+  background: var(--surface);
+}
+.ind-proof-grid dd {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: .95rem;
+  line-height: 1.65;
+}
+.ind-proof-grid dd a,
+.ind-proof-grid dd span {
+  display: inline;
+}
+.ind-proof-docs {
+  display: grid;
+  grid-template-columns: minmax(230px, .7fr) minmax(0, 1.3fr);
+  gap: clamp(20px, 4vw, 48px);
+  align-items: start;
+  margin-top: 18px;
+  padding: clamp(20px, 3vw, 32px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+}
+.ind-proof-docs h3 {
+  margin: 5px 0 8px;
+  color: var(--ink);
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+}
+.ind-proof-docs p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.55;
+}
+.ind-proof-docs .doc-lib-links {
+  align-content: start;
+}
+.ind-evidence-boundary {
+  display: grid;
+  grid-template-columns: minmax(150px, .3fr) minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin-top: 18px;
+  padding: clamp(18px, 3vw, 26px);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+}
+.ind-evidence-boundary strong {
+  color: var(--ink);
+}
+.ind-evidence-boundary p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .87rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 840px) {
+  .ind-hero-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ind-proof-docs,
+  .ind-evidence-boundary {
+    grid-template-columns: 1fr;
+  }
+  .ind-evidence-boundary .btn {
+    justify-self: start;
+  }
+}
+@media (max-width: 620px) {
+  .ind-proof-grid,
+  .ind-hero-facts {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ----------------------------------------------------------------------------
    a11y / touch — neutralize hover-only transforms on devices without a true
    hover pointer, so a tap can't leave a card stuck in its lifted/zoomed hover

@@ -2,7 +2,7 @@
 // persisted per-tab in localStorage. Pure list helpers (upsert/remove/find/sanitize)
 // are exported for unit testing; createSavedViews wraps them with localStorage + a
 // small injected control, mirroring the quotes view-toggle injection (no admin.html edit).
-import { esc } from '../util.js?v=20260721a';
+import { esc } from '../util.js?v=20260724a';
 
 // ---- pure list helpers (no I/O) ----
 export function sanitizeViews(raw) {
