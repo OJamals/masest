@@ -8,7 +8,7 @@ package-lock.json
 dist/
 backups/
 audits/
-audit-layout-hunt-*/
+audit-*/
 design-qa.md
 # Internal advisor/improve handoff docs — must NOT ship: cf-build publishes tracked
 # files, so committing these would expose them at masest.co/plans/.

@@ -164,7 +164,7 @@ export function optimizeSiteImages({ apply = false } = {}) {
           png: "lossless",
         },
         assets,
-      }, null, 2)}\n`);
+      })}\n`);
     }
   } finally {
     rmSync(temp, { recursive: true, force: true });

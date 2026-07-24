@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { shouldReplaceCandidate } from '../tools/optimize-site-images.mjs';
+
 const rootFile = (path, encoding) => readFileSync(new URL(`../${path}`, import.meta.url), encoding);
 
 test('homepage requests only the initially visible story image during initial load', () => {
@@ -29,4 +31,30 @@ test('the shared PNG favicon is delivery-sized', () => {
   assert.equal(png.readUInt32BE(16), 64, 'favicon width should be 64px');
   assert.equal(png.readUInt32BE(20), 64, 'favicon height should be 64px');
   assert.ok(png.byteLength < 20_000, 'favicon should stay below 20 KB');
+});
+
+test('image optimization requires meaningful, high-quality byte savings', () => {
+  assert.equal(shouldReplaceCandidate({
+    originalBytes: 100_000,
+    optimizedBytes: 80_000,
+    ssimDb: 18.4,
+  }), true);
+
+  assert.equal(shouldReplaceCandidate({
+    originalBytes: 100_000,
+    optimizedBytes: 99_000,
+    ssimDb: 24,
+  }), false, 'sub-2% savings do not justify generation loss');
+
+  assert.equal(shouldReplaceCandidate({
+    originalBytes: 100_000,
+    optimizedBytes: 80_000,
+    ssimDb: 17.9,
+  }), false, 'low-SSIM candidates retain the source');
+
+  assert.equal(shouldReplaceCandidate({
+    originalBytes: 100_000,
+    optimizedBytes: 110_000,
+    ssimDb: 30,
+  }), false, 'larger candidates retain the source');
 });
