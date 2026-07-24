@@ -598,7 +598,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260721a');
+    const { createContentTab } = await import('./admin/content.js?v=20260724a');
     const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -667,7 +667,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   newsletter: async () => {
-    const { createNewsletterTab } = await import('./admin/newsletter.js?v=20260721a');
+    const { createNewsletterTab } = await import('./admin/newsletter.js?v=20260724a');
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
     });

@@ -7,7 +7,10 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
+import { validatePublicDocumentReview } from './public-document-policy.mjs';
+
 const OUT = 'dist';
+const restrictedPublicPaths = validatePublicDocumentReview();
 
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
@@ -16,6 +19,7 @@ const DENY = [
   /^\.github\//, /^\.vscode\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
+  /^data\/public-document-review\.json$/,
   // Internal seed sources — not client assets (only data/drum-pricing.json is fetched).
   /^data\/(catalog|products)\.seed\.json$/,
 ];
@@ -28,6 +32,7 @@ const files = execSync('git ls-files --cached --others --exclude-standard', { en
 let n = 0;
 for (const f of files) {
   if (DENY.some((r) => r.test(f))) continue;
+  if (restrictedPublicPaths.has(f)) continue;
   if (!existsSync(f)) continue;
   const dest = join(OUT, f);
   mkdirSync(dirname(dest), { recursive: true });

@@ -187,18 +187,18 @@ test("a hero renders as the card thumbnail and post hero figure; empty falls bac
   try {
     buildBlog({ posts: [
       { slug: "with-hero", title: "With Hero", category: "news", date: "2026-02-02",
-        excerpt: "e", body: "b", hero: "img/blog/descaling-without-acid.webp", hero_alt: "a coil" },
+        excerpt: "e", body: "b", hero: "/img/blog/descaling-without-acid.webp", hero_alt: "a coil" },
       { slug: "no-hero", title: "No Hero", category: "news", date: "2026-01-01",
         excerpt: "e", body: "b", hero: "", hero_alt: "" },
     ], outDir: out, updateSitemap: false });
     const idx = readFileSync(join(out, "blog.html"), "utf8");
     // card with hero -> <img>, alt from hero_alt
-    assert.match(idx, /<img class="blog-card-img" src="img\/blog\/descaling-without-acid\.webp" alt="a coil"/);
+    assert.match(idx, /<img class="blog-card-img" src="\/img\/blog\/descaling-without-acid\.webp" alt="a coil"/);
     // card without hero -> gradient fallback div
     assert.match(idx, /class="blog-card-img blog-card-img--fallback"/);
     // post page with hero -> hero figure
     const post = readFileSync(join(out, "blog", "with-hero.html"), "utf8");
-    assert.match(post, /<figure class="blog-hero-media"><img src="\.\.\/img\/blog\/descaling-without-acid\.webp" alt="a coil"/);
+    assert.match(post, /<figure class="blog-hero-media"><img src="\/img\/blog\/descaling-without-acid\.webp" alt="a coil"/);
     // post without hero -> no hero figure
     const post2 = readFileSync(join(out, "blog", "no-hero.html"), "utf8");
     assert.ok(!post2.includes("blog-hero-media"));

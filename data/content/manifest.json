@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-12T08:48:01.000Z",
+  "generated_at": "2026-07-24T19:52:08.566Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -17,11 +17,11 @@
       "sha256": "31e97727aede770128842520a93813c5f2b0a78de74374ef3960b7778668b968"
     },
     "proof.json": {
-      "count": 14,
+      "count": 12,
       "counts": {
-        "proof_cards": 14
+        "proof_cards": 12
       },
-      "sha256": "7b0876c2279b90b9c9c6c660d3f26488ab47c7cc4c728753c9a731e3b8379053"
+      "sha256": "01a50d8485817dfdb0f5be1d8c98973b75af92d1abf1571a4bf53bc23b428e02"
     },
     "resources.json": {
       "count": 0,
@@ -63,7 +63,7 @@
       "counts": {
         "industry_sectors": 16
       },
-      "sha256": "0cb828fc267db378ae653a7c42a74a328199f060c0834c7a9f4e47a3a1787c9b"
+      "sha256": "dc83f95182f77d1f49705a55fc42c3a05ffd6cd1b3a6647621172d18221ac3e9"
     },
     "blog.json": {
       "count": 8,

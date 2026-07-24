@@ -1,4 +1,7 @@
-const URL_FIELD_KEYS = new Set(["href", "image", "og_image"]);
+import { canonicalPublicImageUrl } from "./image-url.js";
+
+const IMAGE_FIELD_KEYS = new Set(["hero", "image", "image_after", "og_image"]);
+const URL_FIELD_KEYS = new Set(["href", ...IMAGE_FIELD_KEYS]);
 
 export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   service: {
@@ -253,6 +256,7 @@ function normalizedFieldValue(field, raw) {
     return list.length ? list : undefined;
   }
   const trimmed = URL_FIELD_KEYS.has(field.key) ? cleanUrlValue(raw) : String(raw || "").trim();
+  if (trimmed && IMAGE_FIELD_KEYS.has(field.key)) return canonicalPublicImageUrl(trimmed);
   return trimmed || undefined;
 }
 

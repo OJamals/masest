@@ -1,5 +1,6 @@
 import { initReveal } from "./effects.js";
 import { esc } from "../util.js";
+import { canonicalPublicImageUrl } from "../image-url.js?v=20260723a";
 
 const SNAPSHOT_FILES = {
   proof_cards: "proof.json",
@@ -65,12 +66,14 @@ export async function loadContentSnapshot(file) {
 function proofCard(card) {
   const chips = Array.isArray(card.chips) ? card.chips : [];
   const dims = ` width="${esc(card.image_w || 1600)}" height="${esc(card.image_h || 900)}"`;
-  const img = card.image
-    ? `<img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}>`
+  const image = canonicalPublicImageUrl(card.image);
+  const img = image
+    ? `<img src="${esc(image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}>`
     : "";
   const afterDims = ` width="${esc(card.image_after_w || 1600)}" height="${esc(card.image_after_h || 900)}"`;
-  const afterImg = card.image_after
-    ? `<img src="${esc(card.image_after)}" alt="${esc(card.image_after_alt || card.title || "")}" loading="lazy"${afterDims}>`
+  const afterImage = canonicalPublicImageUrl(card.image_after);
+  const afterImg = afterImage
+    ? `<img src="${esc(afterImage)}" alt="${esc(card.image_after_alt || card.title || "")}" loading="lazy"${afterDims}>`
     : "";
   // A proof card renders one of three medias: a before/after pair (image +
   // image_after → two-figure .case-ba), a source-PDF doc-link (href set → badge
@@ -112,11 +115,12 @@ function resourceCard(card) {
 
 function industryCard(card) {
   const href = safeContentHref(card.href, "industries.html");
-  if (card.image) {
+  const image = canonicalPublicImageUrl(card.image);
+  if (image) {
     return `
       <a class="route-card route-card-media-card" href="${esc(href)}">
         <figure class="route-card-media">
-          <img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" width="${esc(card.image_w || 1600)}" height="${esc(card.image_h || 900)}" loading="lazy">
+          <img src="${esc(image)}" alt="${esc(card.image_alt || card.title || "")}" width="${esc(card.image_w || 1600)}" height="${esc(card.image_h || 900)}" loading="lazy">
         </figure>
         <span class="route-card-kicker">${esc(card.category || "Industry")}</span>
         <strong>${esc(card.title || "Untitled industry")}</strong>
@@ -144,6 +148,7 @@ function faqBlock(row) {
 
 function pageSection(row) {
   const href = safeContentHref(row.href, "");
+  const image = canonicalPublicImageUrl(row.image);
   return `
     <section id="${esc(row.slug || "")}" class="cms-page-section reveal">
       <div class="wrap cms-page-section-inner">
@@ -153,9 +158,9 @@ function pageSection(row) {
           ${row.body ? `<p class="subhead">${esc(row.body)}</p>` : ""}
           ${href && row.cta ? `<a class="btn btn-primary" href="${esc(href)}">${esc(row.cta)}</a>` : ""}
         </div>
-        ${row.image ? `
+        ${image ? `
           <figure class="cms-page-section-media">
-            <img src="${esc(row.image)}" alt="${esc(row.image_alt || row.headline || row.title || "")}" width="${esc(row.image_w || 1600)}" height="${esc(row.image_h || 900)}" loading="lazy">
+            <img src="${esc(image)}" alt="${esc(row.image_alt || row.headline || row.title || "")}" width="${esc(row.image_w || 1600)}" height="${esc(row.image_h || 900)}" loading="lazy">
           </figure>
         ` : ""}
       </div>
@@ -188,11 +193,12 @@ function industrySector(card) {
   const fit = `industries/${esc(card.slug || "")}`;
   const dims = `${card.image_w ? ` width="${esc(card.image_w)}"` : ""}${card.image_h ? ` height="${esc(card.image_h)}"` : ""}`;
   const icon = card.icon || "ph-buildings";
-  const thumb = card.image && card.href
-    ? `<a class="row-thumb" href="${esc(safeContentHref(card.href, ""))}"${card.image_label ? ` aria-label="${esc(card.image_label)}"` : ""}><img src="${esc(card.image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}></a>`
+  const image = canonicalPublicImageUrl(card.image);
+  const thumb = image && card.href
+    ? `<a class="row-thumb" href="${esc(safeContentHref(card.href, ""))}"${card.image_label ? ` aria-label="${esc(card.image_label)}"` : ""}><img src="${esc(image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}></a>`
     : "";
   return `
-    <article id="${esc(card.slug || "")}" class="row-card${card.image ? " has-photo" : ""}">
+    <article id="${esc(card.slug || "")}" class="row-card${image ? " has-photo" : ""}">
       <i class="ph ${esc(icon)}" aria-hidden="true"></i>
       <div><h3>${esc(card.title || "Industry")}</h3><p>${esc(card.summary || "")}</p></div>
       ${thumb}

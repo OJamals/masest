@@ -181,25 +181,6 @@
       "seo": {}
     },
     {
-      "slug": "trinidad-tank-cleaning",
-      "title": "Bunker-fuel tank cleaning test",
-      "href": "docs/trinidad-tank-cleaning-test.pdf",
-      "kind": "industrial",
-      "chips": [
-        "VertKleen CR + HCR",
-        "Bunker fuel residue"
-      ],
-      "image": "img/proof/cases/trinidad-tank-cr.webp",
-      "result": "Trinidad test notes say CR removed oil residue with less product than a butoxyethanol comparator. The same report cautions that formal test procedure and environmental review should be written before scaling the method.",
-      "source": "Source: Trinidad tank cleaning test",
-      "eyebrow": "Industrial · Tank cleaning",
-      "image_h": 1200,
-      "image_w": 1600,
-      "image_alt": "Bunker-fuel tank side before and after cleaning with VertKleen CR",
-      "sort_order": 5,
-      "seo": {}
-    },
-    {
       "slug": "uf-shands-drone-wash",
       "title": "Occupied campus cleaned by drone at UF Shands",
       "kind": "facility",
@@ -237,25 +218,6 @@
       "image_w": 708,
       "image_alt": "Crown lift equipment in the Walmart distribution center cleaning program",
       "sort_order": 3,
-      "seo": {}
-    },
-    {
-      "slug": "walmart-refrigeration-results",
-      "title": "Refrigeration descaling in one maintenance window",
-      "href": "docs/walmart-refrigeration-case-study.pdf",
-      "kind": "distribution",
-      "chips": [
-        "VertKleen Descaler",
-        "Cold-chain systems"
-      ],
-      "image": "img/proof/cases/walmart-refrigeration-results.webp",
-      "result": "Walmart refrigeration material reports Descaler protocols across ammonia condenser circuits, warm-water heating, aluminum coils, copper bundles, and heat exchangers, with 4-8 hour descale windows by system.",
-      "source": "Source: Walmart refrigeration case study",
-      "eyebrow": "Distribution · Refrigeration",
-      "image_h": 1200,
-      "image_w": 1600,
-      "image_alt": "Walmart refrigeration descaling results table for VertKleen Descaler",
-      "sort_order": 4,
       "seo": {}
     },
     {

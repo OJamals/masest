@@ -62,8 +62,11 @@ test("Blog and Newsletter use one shared attach-and-library image picker", () =>
   assert.match(picker, /Attach image/);
   assert.match(picker, /Browse library/);
   assert.match(picker, /data-shared-image-delete/);
-  assert.match(picker, /PAGE_SIZE = 2/);
-  assert.match(picker, /Newest first/);
+  assert.match(picker, /PAGE_SIZE = 4/);
+  assert.match(picker, /loadSiteImageAssets/);
+  assert.match(picker, /mergeSiteImageAssets/);
+  assert.match(picker, /data-shared-image-search/);
+  assert.match(picker, /CMS uploads first/);
 });
 
 test("asset repository rejects unsafe registered asset references", () => {

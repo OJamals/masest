@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
 import { imageSize } from "./_image-size.mjs";
+import { canonicalPublicImageUrl } from "../js/image-url.js";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = "https://masest.co";
@@ -77,6 +78,7 @@ function fmtDate(iso) {
 }
 
 function articleSchema(post) {
+  const heroUrl = canonicalPublicImageUrl(post.hero);
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -84,7 +86,7 @@ function articleSchema(post) {
     description: post.excerpt,
     datePublished: post.date,
     author: { "@type": post.author ? "Person" : "Organization", name: post.author || "MASEST" },
-    image: post.hero ? `${BASE}/${post.hero.replace(/^\/+/, "")}` : `${BASE}/img/og-card.png`,
+    image: heroUrl ? `${BASE}${heroUrl}` : `${BASE}/img/og-card.png`,
     mainEntityOfPage: `${BASE}/blog/${post.slug}`,
     publisher: ORG,
   };
@@ -93,9 +95,10 @@ function articleSchema(post) {
 function postPage(post, all) {
   const rt = readingTime(post.body);
   const bodyHtml = renderMarkdown(post.body);
-  const heroSize = post.hero ? imageSize(join(ROOT, post.hero)) : null;
-  const heroImg = post.hero
-    ? `<figure class="blog-hero-media"><img src="../${attr(post.hero)}" alt="${attr(post.hero_alt || post.title)}" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async"></figure>`
+  const heroUrl = canonicalPublicImageUrl(post.hero);
+  const heroSize = heroUrl ? imageSize(join(ROOT, heroUrl.replace(/^\/+/, ""))) : null;
+  const heroImg = heroUrl
+    ? `<figure class="blog-hero-media"><img src="${attr(heroUrl)}" alt="${attr(post.hero_alt || post.title)}" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async"></figure>`
     : "";
   const related = relatedPosts(post, all);
   const relatedHtml = related.length
@@ -103,7 +106,7 @@ function postPage(post, all) {
         .map((r) => `<li><a href="../blog/${attr(r.slug)}"><span class="blog-related-cat">${text(r.category)}</span> ${text(r.title)}</a></li>`)
         .join("")}</ul></aside>`
     : "";
-  const ogImage = post.hero ? `${BASE}/${post.hero.replace(/^\/+/, "")}` : `${BASE}/img/og-card.png`;
+  const ogImage = heroUrl ? `${BASE}${heroUrl}` : `${BASE}/img/og-card.png`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -170,9 +173,10 @@ function postPage(post, all) {
 }
 
 function postCard(post) {
-  const heroSize = post.hero ? imageSize(join(ROOT, post.hero)) : null;
-  const thumb = post.hero
-    ? `<img class="blog-card-img" src="${attr(post.hero)}" alt="${attr(post.hero_alt || post.title)}" width="${heroSize.width}" height="${heroSize.height}" loading="lazy" decoding="async">`
+  const heroUrl = canonicalPublicImageUrl(post.hero);
+  const heroSize = heroUrl ? imageSize(join(ROOT, heroUrl.replace(/^\/+/, ""))) : null;
+  const thumb = heroUrl
+    ? `<img class="blog-card-img" src="${attr(heroUrl)}" alt="${attr(post.hero_alt || post.title)}" width="${heroSize.width}" height="${heroSize.height}" loading="lazy" decoding="async">`
     : `<div class="blog-card-img blog-card-img--fallback" aria-hidden="true"></div>`;
   const tags = (post.tags || []).map((t) => attr(t)).join(" ");
   return `<article class="blog-card" data-slug="${attr(post.slug)}" data-category="${attr(post.category)}" data-tags="${tags}">

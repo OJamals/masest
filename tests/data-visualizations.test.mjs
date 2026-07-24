@@ -21,9 +21,17 @@ test("data visualizations render from canonical data or page metadata", () => {
   const servicesData = JSON.parse(read("data/services.json"));
   const servicesTotal = servicesData.services.length + servicesData.service_packages.length;
   const proofKinds = [...read("proof.html").matchAll(/data-proof-kind="([^"]+)"/g)].map(match => match[1]);
+  const publishedProofKinds = JSON.parse(read("data/content/proof.json"))
+    .proof_cards
+    .map(card => card.kind);
 
   assert.equal(servicesTotal, 39, "services visual should be based on the current 35 services plus 4 packages");
-  assert.ok(new Set(proofKinds).size >= 6, "proof visual needs enough sector categories to be useful");
+  assert.deepEqual(
+    [...new Set(proofKinds)].sort(),
+    [...new Set(publishedProofKinds)].sort(),
+    "proof visual taxonomy should match the published proof snapshot",
+  );
+  assert.ok(new Set(proofKinds).size >= 5, "proof visual needs enough sector categories to be useful");
   assert.match(main, /initDataVisualizations\(\);/, "main entrypoint should initialize data visuals");
   assert.match(visuals, /fetch\("data\/services\.json"/, "service mix should use the public catalog JSON");
   assert.match(visuals, /querySelectorAll\("\[data-proof-card\]"\)/, "proof coverage should derive from case-card metadata");

@@ -5,6 +5,7 @@
   "scripts": {
     "check": "node tools/check-js.mjs",
     "build:content": "node tools/build-content.mjs",
+    "build:images": "node tools/build-image-library.mjs",
     "build:blog": "node tools/build-blog.mjs",
     "build:reviews": "node tools/build-reviews.mjs",
     "preseo-inject": "node tools/build-reviews.mjs",
@@ -12,6 +13,7 @@
     "publish:content": "node tools/publish-content.mjs",
     "publish:blog": "node tools/publish-content.mjs && node tools/build-blog.mjs",
     "test": "node --test --test-concurrency=1 --test-timeout=120000 tests/*.test.mjs",
+    "prebuild": "npm run build:images",
     "build": "node tools/cf-build.mjs",
     "verify": "npm run check && npm test && npm run build && npm run verify:site && npm run qa:commerce-smoke && npm run qa:ui-critical",
     "verify:site": "node tools/verify_site.mjs",

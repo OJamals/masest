@@ -7,6 +7,11 @@
 // and re-syncs the preview). Shared primitives ($, api, admSkeleton, admEmpty, setStatus)
 // are injected; esc/confirmDialog come from util.
 import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260721a";
+import {
+  assetUrl,
+  loadSiteImageAssets,
+  mergeSiteImageAssets,
+} from "./site-image-library.js?v=20260724a";
 
 export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, applyChosenAsset }) {
   let assetTargetField = "image";
@@ -22,14 +27,11 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
     assetPickerTrigger = null;
   }
 
-  function assetValue(asset = {}) {
-    return asset.public_url || asset.storage_path || "";
-  }
-
   function assetRowTemplate(asset = {}) {
-    const value = assetValue(asset);
+    const value = assetUrl(asset);
     const status = asset.status || "available";
     const storagePath = asset.storage_path || value;
+    const isSiteAsset = asset.source === "site";
     const archived = status === "archived";
     const nextStatus = archived ? "available" : "archived";
     const statusLabel = archived ? "Restore" : "Archive";
@@ -40,18 +42,20 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
         <span class="adm-content-asset-info">
           <b>${esc(asset.storage_path || value)}</b>
           <span>${esc(asset.alt || "No alt text")}</span>
-          <small>${esc([status, asset.credit || "", asset.mime_type || ""].filter(Boolean).join(" · "))}</small>
+          <small>${esc([isSiteAsset ? "Public site" : status, asset.credit || "", asset.mime_type || ""].filter(Boolean).join(" · "))}</small>
         </span>
         <span class="adm-content-asset-actions">
           <button class="btn btn-secondary btn-sm" type="button" data-content-asset-kind="${esc(assetTargetKind)}" data-content-asset-field="${esc(assetTargetField)}" data-content-asset-path="${esc(value)}" data-content-asset-alt="${esc(asset.alt || "")}">
             <i class="ph ph-check" aria-hidden="true"></i> Select
           </button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-asset-alt-action data-content-asset-storage-path="${esc(storagePath)}" data-capability="content.assets">
-            <i class="ph ph-text-aa" aria-hidden="true"></i> Alt text
-          </button>
-          <button class="btn btn-ghost btn-sm" type="button" data-content-asset-status-action data-content-asset-storage-path="${esc(storagePath)}" data-content-asset-next-status="${esc(nextStatus)}" data-capability="content.assets">
-            <i class="ph ${esc(statusIcon)}" aria-hidden="true"></i> ${esc(statusLabel)}
-          </button>
+          ${isSiteAsset ? '<span class="muted">Managed with the public site</span>' : `
+            <button class="btn btn-ghost btn-sm" type="button" data-content-asset-alt-action data-content-asset-storage-path="${esc(storagePath)}" data-capability="content.assets">
+              <i class="ph ph-text-aa" aria-hidden="true"></i> Alt text
+            </button>
+            <button class="btn btn-ghost btn-sm" type="button" data-content-asset-status-action data-content-asset-storage-path="${esc(storagePath)}" data-content-asset-next-status="${esc(nextStatus)}" data-capability="content.assets">
+              <i class="ph ${esc(statusIcon)}" aria-hidden="true"></i> ${esc(statusLabel)}
+            </button>
+          `}
         </span>
       </div>
     `;
@@ -67,13 +71,26 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
     if (q) query.set("q", q);
     if (status) query.set("status", status);
     list.innerHTML = admSkeleton(5);
+    const path = `/api/admin/content-assets${query.toString() ? `?${query.toString()}` : ""}`;
+    const [cmsResult, siteResult] = await Promise.allSettled([
+      api(path),
+      loadSiteImageAssets(),
+    ]);
     try {
-      const path = `/api/admin/content-assets${query.toString() ? `?${query.toString()}` : ""}`;
-      const data = await api(path);
-      const assets = data.assets || [];
-      assetCache = new Map(assets.map((asset) => [asset.storage_path || assetValue(asset), asset]));
+      if (cmsResult.status === "rejected" && siteResult.status === "rejected") {
+        throw cmsResult.reason || siteResult.reason;
+      }
+      const cmsAssets = cmsResult.status === "fulfilled" ? cmsResult.value.assets || [] : [];
+      const siteAssets = siteResult.status === "fulfilled" ? siteResult.value : [];
+      const assets = mergeSiteImageAssets({ cmsAssets, siteAssets, q, status });
+      assetCache = new Map(cmsAssets.flatMap((asset) => (
+        [[asset.storage_path || assetUrl(asset), asset], [assetUrl(asset), asset]]
+      )));
       list.innerHTML = assets.map((asset) => assetRowTemplate(asset)).join("")
-        || admEmpty("ph-image", "No assets", "Upload an image or register an existing path.");
+        || admEmpty("ph-image", "No assets", "No public-site or uploaded images match these filters.");
+      if (cmsResult.status === "rejected") {
+        setStatus("Showing public-site images. Uploaded CMS assets are temporarily unavailable.", "err");
+      }
     } catch (error) {
       list.innerHTML = admEmpty(
         "ph-warning",
@@ -259,7 +276,7 @@ export function createContentAssets({ $, api, admSkeleton, admEmpty, setStatus, 
       if (pathInput) pathInput.value = "";
       if (altInput) altInput.value = "";
       if (creditInput) creditInput.value = "";
-      applyChosenAsset(assetTargetField, assetValue(result.asset), result.asset?.alt || alt, "Asset registered.", assetTargetKind);
+      applyChosenAsset(assetTargetField, assetUrl(result.asset), result.asset?.alt || alt, "Asset registered.", assetTargetKind);
       closeAssetPicker();
     } catch (error) {
       setStatus(error.data?.message || error.data?.error || error.message || "Asset registration failed.", "err");

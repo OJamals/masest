@@ -60,6 +60,19 @@ is unchanged, so there is no spurious diff).
 - Output ordering is canonical (entries by `type`, then `slug`; JSONB-ordered
   keys) so snapshots are byte-stable regardless of which source produced them.
 
+## Site image library
+
+`npm run build:images` inventories every public file under `img/` into
+`data/content/site-images.json`. The Content asset manager and the shared
+Blog/Newsletter image picker merge that catalog with uploaded `content_assets`,
+so platform staff can reuse an image already on the public site without
+registering it again.
+
+The normal `npm run build` runs this inventory first. Image values written by
+the CMS are canonicalized to root-absolute `/img/...` paths so the same content
+renders correctly on root pages, nested industry pages, previews, and generated
+blog posts. Uploaded Supabase assets keep their full public URLs.
+
 ## Operational boundary
 
 The admin publish path is immediate and deploy-hook driven. If you need the old

@@ -1,4 +1,7 @@
 import { CONTENT_TYPE_DEFINITIONS, validateStructuredPayload } from "../../js/content-types.js";
+import { canonicalPublicImageUrl } from "../../js/image-url.js";
+
+const CONTENT_IMAGE_KEYS = new Set(["hero", "image", "image_after", "og_image"]);
 
 export const CONTENT_TYPES = new Set([
   ...Object.keys(CONTENT_TYPE_DEFINITIONS),
@@ -24,6 +27,14 @@ export function normalizeSlug(value) {
 
 function objectValue(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function canonicalizeImageFields(value) {
+  return Object.fromEntries(Object.entries(objectValue(value)).map(([key, fieldValue]) => (
+    CONTENT_IMAGE_KEYS.has(key)
+      ? [key, canonicalPublicImageUrl(fieldValue)]
+      : [key, fieldValue]
+  )));
 }
 
 function compactRow(row) {
@@ -69,8 +80,8 @@ export function normalizeContentEntry(input = {}) {
     title,
     status,
     locale: String(input.locale || "en").trim() || "en",
-    payload: objectValue(input.payload),
-    seo: objectValue(input.seo),
+    payload: canonicalizeImageFields(input.payload),
+    seo: canonicalizeImageFields(input.seo),
     version: Number.isFinite(Number(input.version)) ? Number(input.version) : 1,
   });
 }

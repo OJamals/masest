@@ -1,22 +1,24 @@
 import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260721a";
+import {
+  assetUrl,
+  loadSiteImageAssets,
+  mergeSiteImageAssets,
+} from "./site-image-library.js?v=20260724a";
 
-const PAGE_SIZE = 2;
-
-function assetUrl(asset = {}) {
-  return asset.public_url || asset.storage_path || "";
-}
+const PAGE_SIZE = 4;
 
 function assetCard(asset = {}) {
   const url = assetUrl(asset);
   if (!url) return "";
   const storagePath = asset.storage_path || url;
   const label = asset.filename || storagePath.split("/").pop() || "Image";
+  const isSiteAsset = asset.source === "site";
   return `<article class="shared-image-library-card">
     <img src="${esc(url)}" alt="${esc(asset.alt || "")}" width="320" height="240" loading="lazy">
     <div><b>${esc(label)}</b><small>${esc(asset.alt || "No alt text")}</small></div>
     <div class="shared-image-library-card-actions">
       <button class="btn btn-secondary btn-sm" type="button" data-shared-image-select data-shared-image-url="${esc(url)}" data-shared-image-alt="${esc(asset.alt || "")}">Use image</button>
-      <button class="btn btn-ghost btn-sm" type="button" data-shared-image-delete data-shared-image-path="${esc(storagePath)}" aria-label="Delete ${esc(label)}"><i class="ph ph-trash" aria-hidden="true"></i></button>
+      ${isSiteAsset ? "" : `<button class="btn btn-ghost btn-sm" type="button" data-shared-image-delete data-shared-image-path="${esc(storagePath)}" aria-label="Delete ${esc(label)}"><i class="ph ph-trash" aria-hidden="true"></i></button>`}
     </div>
   </article>`;
 }
@@ -41,7 +43,12 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
         <button class="btn btn-primary" type="button" data-shared-image-upload-submit>Upload and use image</button>
       </section>
       <section class="shared-image-library" data-shared-image-library hidden aria-live="polite">
-        <div class="shared-image-library-head"><strong>Site image library <small>Newest first</small></strong><span data-shared-image-library-count></span></div>
+        <div class="shared-image-library-head"><strong>Site image library <small>CMS uploads first</small></strong><span data-shared-image-library-count></span></div>
+        <label class="search-field shared-image-library-search">
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <span class="sr-only">Search site images</span>
+          <input type="search" name="site_image_search" placeholder="Search images by name or alt text" data-shared-image-search>
+        </label>
         <div class="shared-image-library-grid" data-shared-image-library-grid></div>
         <div class="shared-image-library-pager" data-shared-image-library-pager hidden>
           <button class="btn btn-ghost btn-sm" type="button" data-shared-image-page="previous">Previous</button>
@@ -68,13 +75,17 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
     const library = dlg.querySelector("[data-shared-image-library]");
     const libraryGrid = dlg.querySelector("[data-shared-image-library-grid]");
     const libraryCount = dlg.querySelector("[data-shared-image-library-count]");
+    const librarySearch = dlg.querySelector("[data-shared-image-search]");
     const pager = dlg.querySelector("[data-shared-image-library-pager]");
     const pageLabel = dlg.querySelector("[data-shared-image-page-label]");
     const status = dlg.querySelector("[data-shared-image-status]");
     let selectedFile = null;
     let page = 0;
+    let cmsAssets = [];
+    let siteAssets = [];
     let assets = [];
     let result = null;
+    let settled = false;
 
     const setStatus = (text = "", state = "") => {
       status.textContent = text;
@@ -82,9 +93,17 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
       else delete status.dataset.state;
     };
 
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
     const closeWith = (next = null) => {
       result = next;
       dlg.close(next ? "select" : "cancel");
+      settle();
+      setTimeout(() => dlg.remove(), 0);
     };
 
     const renderLibrary = () => {
@@ -99,15 +118,36 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
       pager.querySelector('[data-shared-image-page="next"]').disabled = page >= pages - 1;
     };
 
+    const filterLibrary = () => {
+      assets = mergeSiteImageAssets({
+        cmsAssets,
+        siteAssets,
+        q: librarySearch?.value || "",
+        status: "available",
+      });
+      page = 0;
+      renderLibrary();
+    };
+
     const loadLibrary = async () => {
       if (typeof api !== "function") return;
       openLibraryButton.disabled = true;
       library.hidden = false;
       libraryGrid.innerHTML = '<p class="muted">Loading images…</p>';
       try {
-        const data = await api("/api/admin/content-assets?status=available");
-        assets = data.assets || [];
-        renderLibrary();
+        const [cmsResult, siteResult] = await Promise.allSettled([
+          api("/api/admin/content-assets?status=available"),
+          loadSiteImageAssets(),
+        ]);
+        if (cmsResult.status === "rejected" && siteResult.status === "rejected") {
+          throw cmsResult.reason || siteResult.reason;
+        }
+        cmsAssets = cmsResult.status === "fulfilled" ? cmsResult.value.assets || [] : [];
+        siteAssets = siteResult.status === "fulfilled" ? siteResult.value : [];
+        filterLibrary();
+        if (cmsResult.status === "rejected") {
+          setStatus("Showing public-site images. Uploaded CMS assets are temporarily unavailable.", "err");
+        }
       } catch (error) {
         libraryGrid.innerHTML = "";
         setStatus(error?.data?.error || "Could not load the image library.", "err");
@@ -126,6 +166,7 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
       altInput?.focus();
     });
     openLibraryButton.addEventListener("click", () => { void loadLibrary(); });
+    librarySearch?.addEventListener("input", filterLibrary);
     uploadButton.addEventListener("click", async () => {
       const alt = altInput?.value.trim() || "";
       if (!selectedFile) { setStatus("Attach an image first.", "err"); return; }
@@ -162,8 +203,8 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
       setStatus("Deleting image…");
       try {
         await api(`/api/admin/content-assets?storage_path=${encodeURIComponent(storagePath)}`, { method: "DELETE" });
-        assets = assets.filter((asset) => (asset.storage_path || assetUrl(asset)) !== storagePath);
-        renderLibrary();
+        cmsAssets = cmsAssets.filter((asset) => (asset.storage_path || assetUrl(asset)) !== storagePath);
+        filterLibrary();
         setStatus("Image deleted.", "ok");
       } catch (error) {
         setStatus(error?.data?.message || error?.data?.error || "Could not delete this image.", "err");
@@ -177,7 +218,7 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
       renderLibrary();
     });
     dlg.querySelector("[data-shared-image-cancel]")?.addEventListener("click", () => closeWith(null));
-    dlg.addEventListener("close", () => { dlg.remove(); resolve(result); });
+    dlg.addEventListener("close", () => { dlg.remove(); settle(); }, { once: true });
     dlg.showModal();
     attachButton.focus();
   });

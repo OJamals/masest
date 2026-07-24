@@ -2,6 +2,7 @@
 import { adminClient, requireStaff, json, readBody } from "../../_lib/supabase.js";
 import { staffCan } from "../../_lib/authz.js";
 import { createContentRepository } from "../../_lib/content.js";
+import { canonicalPublicImageUrl } from "../../../js/image-url.js";
 
 const DEFAULT_CONTENT_ASSET_BUCKET = "content-assets";
 const DEFAULT_MAX_CONTENT_ASSET_BYTES = 6 * 1024 * 1024;
@@ -30,8 +31,9 @@ function encodeStoragePath(path) {
 function contentAssetPublicUrl(env, storagePath) {
   const path = String(storagePath || "").trim();
   if (!path) return "";
-  if (/^(https?:)?\/\//i.test(path) || path.startsWith("/") || path.startsWith("img/")) {
-    return path;
+  const publicPath = canonicalPublicImageUrl(path);
+  if (/^(https?:)?\/\//i.test(publicPath) || publicPath.startsWith("/")) {
+    return publicPath;
   }
   const base = String(env.SUPABASE_URL || "").replace(/\/+$/, "");
   if (!base) return path;
