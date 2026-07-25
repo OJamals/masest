@@ -1,7 +1,7 @@
 // Admin offers tab (#36 per-tab split). Sends broadcast offers to accounts and
 // lists past sends. Self-caches via state.loaded (force-refreshes after a send).
 // Shared primitives + message are injected; esc/date come from the shared util.
-import { esc, confirmDialog, dateTime as date } from '../util.js?v=20260724f';
+import { esc, confirmDialog, dateTime as date } from '../util.js?v=20260724g';
 
 export function createOffersTab({ $, api, state, message, admSkeleton, admEmpty }) {
   async function renderOffers(force = false) {

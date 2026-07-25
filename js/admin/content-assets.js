@@ -6,13 +6,13 @@
 // message, kind)`, which content.js implements (it writes the value into the editor form
 // and re-syncs the preview). Shared primitives ($, api, admSkeleton, admEmpty, setStatus)
 // are injected; esc/confirmDialog come from util.
-import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260724f";
+import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260724g";
 import {
   assetUrl,
   formatAssetBytes,
   loadSiteImageAssets,
   mergeSiteImageAssets,
-} from "./site-image-library.js?v=20260724f";
+} from "./site-image-library.js?v=20260724g";
 
 const MAX_UPLOAD_EDGE = 2560;
 const UPLOAD_WEBP_QUALITY = 0.94;
