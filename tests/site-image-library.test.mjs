@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { join } from "node:path";
 import test from "node:test";
 
 import { normalizeContentEntry } from "../functions/_lib/content.js";
@@ -13,19 +12,7 @@ import {
 } from "../js/image-url.js";
 
 const ROOT = new URL("..", import.meta.url).pathname;
-const IMAGE_EXTENSIONS = new Set([".png", ".webp"]);
 const IMAGE_FIELDS = new Set(["hero", "image", "image_after", "og_image"]);
-
-function imageFiles(dir, files = []) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) imageFiles(path, files);
-    else if (IMAGE_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
-      files.push(`/${relative(ROOT, path)}`);
-    }
-  }
-  return files;
-}
 
 function contentImagePaths(value, field = "", paths = []) {
   if (Array.isArray(value)) {
@@ -79,21 +66,18 @@ test("content API canonicalizes image paths even when callers bypass the admin f
 
 test("site image manifest exposes every public image with reusable metadata", () => {
   const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
-  const expected = imageFiles(join(ROOT, "img")).sort();
-  const actual = (manifest.assets || []).map((asset) => asset.public_url).sort();
-
-  assert.deepEqual(actual, expected);
+  assert.equal(manifest.count, manifest.assets.length);
+  assert.equal(new Set(manifest.assets.map((asset) => asset.storage_path)).size, manifest.assets.length);
   for (const asset of manifest.assets || []) {
     assert.match(asset.public_url, /^\/img\//);
+    assert.equal(asset.storage_path, asset.public_url);
+    assert.equal(asset.filename, asset.public_url.split("/").at(-1));
     assert.ok(asset.alt, `${asset.public_url} should have reusable alt text`);
-    assert.ok(asset.width > 0 && asset.height > 0, `${asset.public_url} should include dimensions`);
-    const bytes = readFileSync(join(ROOT, asset.public_url.slice(1)));
-    assert.equal(asset.byte_size, bytes.byteLength, `${asset.public_url} should include exact byte size`);
-    assert.equal(
-      asset.sha256,
-      createHash("sha256").update(bytes).digest("hex"),
-      `${asset.public_url} should include exact SHA-256`,
-    );
+    assert.ok(Number.isInteger(asset.width) && asset.width > 0, `${asset.public_url} should include width`);
+    assert.ok(Number.isInteger(asset.height) && asset.height > 0, `${asset.public_url} should include height`);
+    assert.ok(Number.isInteger(asset.byte_size) && asset.byte_size > 0, `${asset.public_url} should include byte size`);
+    assert.match(asset.sha256, /^[a-f0-9]{64}$/, `${asset.public_url} should include SHA-256`);
+    assert.match(asset.mime_type, /^image\/(?:png|webp)$/);
     assert.equal(asset.status, "available");
     assert.equal(asset.source, "site");
   }
@@ -171,15 +155,27 @@ test("known site image references compile to stable CMS storage URLs", () => {
   assert.doesNotMatch(compiled, /(?:^|[("'=\s])(?:\.\.\/|\/)img\/proof\/cases\/brewery\.webp/m);
 });
 
-test("image-library builder can idempotently sync site assets and live CMS references", () => {
+test("shared chrome does not prefix compiled CMS logo URLs with a page-relative root", () => {
+  const base = "https://example.supabase.co/storage/v1/object/public/content-assets/site";
+  const chrome = readFileSync(new URL("../js/main/chrome.js", import.meta.url), "utf8");
+  const compiled = rewriteCmsImageReferences(chrome, [
+    "/img/masest-logo.png",
+    "/img/masest-logo-ink.png",
+  ], base);
+
+  assert.doesNotMatch(compiled, /\$\{root\}https:\/\/example\.supabase\.co/);
+  assert.match(compiled, new RegExp(`src="${base}/img/masest-logo\\.png"`));
+  assert.match(compiled, new RegExp(`src="${base}/img/masest-logo-ink\\.png"`));
+});
+
+test("image-library builder validates its ledger and verifies public CMS bytes", () => {
   const builder = readFileSync(new URL("../tools/build-image-library.mjs", import.meta.url), "utf8");
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
-  assert.match(pkg.scripts["sync:cms-images"], /build-image-library\.mjs --sync-cms/);
-  assert.match(builder, /--sync-cms/);
-  assert.match(builder, /site\$\{asset\.storage_path\}/);
-  assert.match(builder, /x-upsert/);
-  assert.match(builder, /content_entries/);
-  assert.match(builder, /products/);
-  assert.match(builder, /rewriteCmsImageReferences/);
+  assert.match(pkg.scripts["verify:cms-images"], /build-image-library\.mjs --verify-cms/);
+  assert.match(builder, /validateManifest/);
+  assert.match(builder, /verifyCmsImages/);
+  assert.match(builder, /createHash\("sha256"\)/);
+  assert.match(builder, /--verify-cms/);
+  assert.doesNotMatch(builder, /SUPABASE_SERVICE_ROLE_KEY|x-upsert|--sync-cms/);
 });

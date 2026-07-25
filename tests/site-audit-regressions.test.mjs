@@ -68,6 +68,12 @@ test("site verifier ignores local audit capture artifacts", () => {
   );
 });
 
+test("site verifier accepts only manifest-registered CMS image aliases without local binaries", () => {
+  assert.match(verifySite, /data\/content\/site-images\.json/);
+  assert.match(verifySite, /managedImagePaths\.has\(logicalPath\)/);
+  assert.match(verifySite, /managedImagePaths\.has\(`\/\$\{ogPath\}`\)/);
+});
+
 test("status colors use shared semantic tokens outside the token source", () => {
   const statusSwatches = [
     "#e7f5ed",

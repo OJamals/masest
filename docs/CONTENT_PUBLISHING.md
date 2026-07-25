@@ -62,17 +62,10 @@ is unchanged, so there is no spurious diff).
 
 ## Site image library
 
-`npm run build:images` inventories every public file under `img/` into
-`data/content/site-images.json`. `/img/...` remains the stable logical alias for
-each repository image.
-
-`npm run sync:cms-images` performs the audited live migration:
-
-- uploads the optimized source bytes to `content-assets/site/img/...`;
-- upserts each logical alias into `content_assets` with its public Storage URL,
-  dimensions, MIME type, byte size, and SHA-256;
-- updates product and current CMS content image references to the public
-  Storage URLs.
+Supabase Storage is the source of truth for public images.
+`data/content/site-images.json` is the versioned integrity ledger. It preserves
+each stable `/img/...` logical alias plus its dimensions, MIME type, byte size,
+SHA-256, and reusable alt text. `npm run build:images` validates that ledger.
 
 The Content asset manager and every shared image picker merge those rows with
 the local manifest, preferring the CMS row for each logical alias. “Replace
@@ -80,8 +73,13 @@ everywhere” overwrites the same managed Storage object, so its stable public U
 does not change.
 
 The normal `npm run build` rewrites known public-site image references to those
-stable CMS Storage URLs. Repository files under `img/` remain the optimized
-source and deployment fallback; they are not deleted after migration.
+stable CMS Storage URLs. Public image binaries are not duplicated in the
+repository or deployment.
+
+Run `npm run verify:cms-images` to fetch every managed object and prove its
+response MIME type, byte size, and SHA-256 against the ledger. Add or replace
+images through the CMS asset manager; update the ledger in the same reviewed
+change when an object intentionally changes.
 
 ## Operational boundary
 

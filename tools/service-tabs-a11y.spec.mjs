@@ -4,7 +4,6 @@
 // tabs with wrap-around. Guards the a11y fix in js/main/service-catalog.js.
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
-import { once } from "node:events";
 import { test, expect } from "@playwright/test";
 
 const PORT = 4291;
@@ -24,11 +23,11 @@ test.beforeAll(async () => {
   }
   throw new Error("static server did not start");
 });
-test.afterAll(async () => {
+test.afterAll(() => {
   if (!server) return;
-  const exited = Promise.race([once(server, "exit"), new Promise((resolve) => setTimeout(resolve, 1500))]);
   server.kill();
-  await exited.catch(() => {});
+  server.unref();
+  server = null;
 });
 
 test("services tablist supports roving tabindex + arrow/Home/End keyboard nav", async ({ page }) => {

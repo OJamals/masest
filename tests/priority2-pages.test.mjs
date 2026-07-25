@@ -5,6 +5,9 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const exists = (path) => existsSync(new URL(path, root));
+const managedImages = new Set(
+  JSON.parse(read("data/content/site-images.json")).assets.map((asset) => asset.public_url),
+);
 
 const priorityIndustries = [
   ["data-centers", "Data Centers", "Cooling tower scale, Legionella compliance, green mandates", "watersafe60 hcr descaler", "Schedule a water-treatment audit."],
@@ -168,7 +171,7 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
     "multiwash-gym-studio.webp",
     "purgo-studio.webp",
   ]) {
-    assert.equal(exists(`img/products/${asset}`), true, `${asset} should exist`);
+    assert.equal(managedImages.has(`/img/products/${asset}`), true, `${asset} should be registered in CMS`);
   }
 });
 

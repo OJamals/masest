@@ -1,7 +1,7 @@
 // Admin inventory card (#98, #36 per-tab split): bulk stock import + low-stock
 // reorder list. Lives inside the Products tab; shared primitives ($, api,
 // message, admSkeleton, admEmpty, downloadCsv) are injected. esc comes from util.
-import { esc } from '../util.js?v=20260725b';
+import { esc } from '../util.js?v=20260725c';
 
 export function createInventoryCard({ $, api, message, admSkeleton, admEmpty, downloadCsv }) {
   let inventoryWired = false;

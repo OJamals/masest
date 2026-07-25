@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 
-import { imageSize } from '../tools/_image-size.mjs';
 import { renderIndustryPage } from '../tools/build-industry-pages.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const industries = JSON.parse(read('data/industry-applications.json'));
+const siteImages = JSON.parse(read('data/content/site-images.json')).assets;
+const siteImageByPath = new Map(siteImages.map((asset) => [asset.public_url, asset]));
 const documentReview = JSON.parse(read('data/public-document-review.json'));
 const restrictedDocuments = new Set(documentReview.documents
   .filter((document) => document.status === 'restricted')
@@ -20,8 +21,9 @@ test('each industry route has one captioned image gallery containing every accep
   assert.equal(industries.length, 32);
   const renderedTaskImages = new Set();
   const renderedSupplementalImages = new Set();
-  const sampleFiles = readdirSync(new URL('img/industries/samples/', root))
-    .filter((file) => file.endsWith('.webp'))
+  const sampleFiles = siteImages
+    .filter((asset) => asset.public_url.startsWith('/img/industries/samples/'))
+    .map((asset) => asset.filename)
     .sort();
   const catalogHtml = `${read('industries.html')}\n${read('data/content/industry-sectors.json')}`;
   const catalogSampleImages = new Set([...catalogHtml.matchAll(
@@ -86,20 +88,29 @@ test('each industry route has one captioned image gallery containing every accep
 
     for (const image of taskImages) {
       renderedTaskImages.add(image);
-      const path = new URL(`img/industries/tasks/${image}`, root);
-      assert.ok(existsSync(path), `${industry.slug}: missing ${image}`);
-      assert.deepEqual(imageSize(path), { width: 1200, height: 750 }, `${image}: dimensions`);
+      const asset = siteImageByPath.get(`/img/industries/tasks/${image}`);
+      assert.ok(asset, `${industry.slug}: missing ${image}`);
+      assert.deepEqual(
+        { width: asset.width, height: asset.height },
+        { width: 1200, height: 750 },
+        `${image}: dimensions`,
+      );
     }
     for (const image of sampleImages) {
       renderedSupplementalImages.add(image);
-      const path = new URL(`img/industries/samples/${image}`, root);
-      assert.ok(existsSync(path), `${industry.slug}: missing ${image}`);
-      assert.deepEqual(imageSize(path), { width: 840, height: 520 }, `${image}: dimensions`);
+      const asset = siteImageByPath.get(`/img/industries/samples/${image}`);
+      assert.ok(asset, `${industry.slug}: missing ${image}`);
+      assert.deepEqual(
+        { width: asset.width, height: asset.height },
+        { width: 840, height: 520 },
+        `${image}: dimensions`,
+      );
     }
   }
 
-  const taskFiles = readdirSync(new URL('img/industries/tasks/', root))
-    .filter((file) => file.endsWith('.webp'));
+  const taskFiles = siteImages
+    .filter((asset) => asset.public_url.startsWith('/img/industries/tasks/'))
+    .map((asset) => asset.filename);
   assert.equal(renderedTaskImages.size, 75);
   assert.deepEqual([...renderedTaskImages].sort(), taskFiles.sort(), 'no orphan task images');
   assert.deepEqual(

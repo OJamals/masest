@@ -1,11 +1,8 @@
 import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { expect, test } from "@playwright/test";
 
 const PORT = 4194;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-
-test.use({ channel: "chrome" });
 
 let server;
 
@@ -24,11 +21,11 @@ test.beforeAll(async () => {
   throw new Error("static server did not start");
 });
 
-test.afterAll(async () => {
+test.afterAll(() => {
   if (!server) return;
-  const exited = Promise.race([once(server, "exit"), new Promise((resolve) => setTimeout(resolve, 1500))]);
   server.kill();
-  await exited.catch(() => {});
+  server.unref();
+  server = null;
 });
 
 test("story scene watermarks are removed from the visual layer", async ({ page }) => {

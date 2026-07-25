@@ -170,7 +170,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
   nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-logo" href="${homeHref}" aria-label="MASEST home"><img class="logo-image logo-ink" src="${root}img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="${root}img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
+      <a class="nav-logo" href="${homeHref}" aria-label="MASEST home"><img class="logo-image logo-ink" src="/img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="/img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
       <nav class="nav-links" id="navLinks" aria-label="Primary">
         ${links.map(navItem).join("")}
       </nav>
@@ -338,7 +338,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
     <div class="wrap">
       <div class="foot-grid">
         <div>
-          <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="${root}img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
+          <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="/img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
           <div class="foot-brand" translate="no">MASEST VertKleen&trade;</div>
           <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support from Florida's Space Coast.</p>
         </div>

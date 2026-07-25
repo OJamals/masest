@@ -8,6 +8,10 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
 const warnings = [];
+const managedImagePaths = new Set(
+  JSON.parse(fs.readFileSync(path.join(projectRoot, "data/content/site-images.json"), "utf8")).assets
+    .map((asset) => asset.public_url),
+);
 
 const ignoredDirs = new Set([
   ".claude",
@@ -78,6 +82,8 @@ function checkPathExists(file, rawUrl, source) {
   const resolved = localPathFromUrl(rawUrl, file);
   if (!resolved) return;
 
+  const logicalPath = `/${path.relative(projectRoot, resolved).replaceAll(path.sep, "/")}`;
+  if (managedImagePaths.has(logicalPath)) return;
   if (fs.existsSync(resolved)) return;
   if (!path.extname(resolved) && fs.existsSync(`${resolved}.html`)) return;
 
@@ -171,7 +177,10 @@ const page = publicSourceForCanonical(entry.canonicalPath);
 
     if (ogImage && ogImage.startsWith("https://masest.co/")) {
       const ogPath = ogImage.replace("https://masest.co/", "");
-      ok(fs.existsSync(path.join(projectRoot, ogPath)), `${page} og:image file missing: ${ogPath}`);
+      ok(
+        managedImagePaths.has(`/${ogPath}`) || fs.existsSync(path.join(projectRoot, ogPath)),
+        `${page} og:image file missing: ${ogPath}`,
+      );
     }
   }
 

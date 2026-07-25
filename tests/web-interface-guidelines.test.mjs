@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
-import { imageSize } from "../tools/_image-size.mjs";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const siteImages = new Map(
+  JSON.parse(read("data/content/site-images.json")).assets.map((asset) => [asset.public_url, asset]),
+);
 const htmlFiles = readdirSync(new URL("../", import.meta.url), { recursive: true })
   .filter((path) => path.endsWith(".html"))
   .filter((path) => !/^(?:dist|backups|_local|supabase|node_modules)\//.test(path));
@@ -47,18 +49,19 @@ test("generated public imagery uses each source image's intrinsic ratio", () => 
   const products = read("tools/seo-inject.mjs");
 
   assert.match(blog, /canonicalPublicImageUrl\(post\.hero\)/);
-  assert.match(blog, /return \{ url: heroUrl, size: imageSize\(file\) \}/);
-  assert.match(products, /imageSize\(new URL\(`/);
+  assert.match(blog, /SITE_IMAGE_DIMENSIONS\.get/);
+  assert.match(products, /SITE_IMAGE_DIMENSIONS\.get/);
   assert.doesNotMatch(products, /\}\.\.\.\`;\s*$/m, "generated descriptions should use a true ellipsis");
 
   for (const path of htmlFiles.filter((file) => /^(?:blog(?:\/|\.html$)|products\/)/.test(file))) {
     const markup = read(path);
-    const pageUrl = new URL(`../${path}`, import.meta.url);
+    const pageUrl = new URL(path, "https://masest.co/");
     for (const [tag, src, width, height] of markup.matchAll(/<img\b[^>]*\bsrc="([^"]+)"[^>]*\bwidth="(\d+)"\s+height="(\d+)"[^>]*>/gi)) {
-      const fileUrl = new URL(src, pageUrl);
-      if (fileUrl.protocol !== "file:" || !existsSync(fileUrl)) continue;
-      const intrinsic = imageSize(fileUrl);
-      assert.deepEqual([Number(width), Number(height)], [intrinsic.width, intrinsic.height], `${path} needs the source ratio: ${tag}`);
+      const imageUrl = new URL(src, pageUrl);
+      const publicPath = imageUrl.pathname.replace(/^\/storage\/v1\/object\/public\/content-assets\/site/, "");
+      const asset = siteImages.get(publicPath);
+      if (!asset) continue;
+      assert.deepEqual([Number(width), Number(height)], [asset.width, asset.height], `${path} needs the source ratio: ${tag}`);
     }
   }
 });

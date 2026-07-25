@@ -183,7 +183,6 @@ test("retired restricted proof sources cannot re-enter public content or the Pag
     "data/asset-manifest.json",
     "data/content/proof.json",
     "data/content/site-images.json",
-    "data/image-optimization.json",
     "supabase/seed-proof-cards.sql",
   ].map((path) => [path, read(path)]);
 

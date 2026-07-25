@@ -20,10 +20,13 @@ import {
   PRODUCTS,
   QUOTE_FIRST_IDS,
 } from "../js/main/catalog-data.js";
-import { imageSize } from "./_image-size.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
+const SITE_IMAGE_DIMENSIONS = new Map(
+  JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8")).assets
+    .map((asset) => [asset.public_url, { width: asset.width, height: asset.height }]),
+);
 const BLOG_POST_SLUGS = (BLOG_SNAPSHOT.blog_posts || []).map((post) => post.slug).filter(Boolean);
 const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document-review.json", import.meta.url), "utf8"));
 const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
@@ -568,7 +571,8 @@ function productPage(id, product, reviewsSnapshot) {
   // The brand poster is a placeholder, not a product photo (mirrors product.html +
   // catalog-card suppression) — swap the hero figure for the shared icon tile.
   const hasPhoto = product.image && !/masest-poster-transparent/.test(product.image);
-  const heroSize = hasPhoto ? imageSize(new URL(`../${product.image}`, import.meta.url)) : null;
+  const heroSize = hasPhoto ? SITE_IMAGE_DIMENSIONS.get(`/${product.image.replace(/^\/+/, "")}`) : null;
+  if (hasPhoto && !heroSize) throw new Error(`Missing CMS image metadata for /${product.image.replace(/^\/+/, "")}`);
   const heroMedia = hasPhoto
     ? `<figure class="product-hero-media reveal">
         <img src="${attr(img)}" alt="${attr(product.name)} product photo" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async">

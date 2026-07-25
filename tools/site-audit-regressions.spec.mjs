@@ -1,12 +1,10 @@
 import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { expect, test } from "@playwright/test";
 
 const PORT = 4218;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let server;
 
-test.use({ channel: "chrome" });
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
@@ -24,11 +22,11 @@ test.beforeAll(async () => {
   throw new Error("static server did not start");
 });
 
-test.afterAll(async () => {
+test.afterAll(() => {
   if (!server) return;
-  const exited = Promise.race([once(server, "exit"), new Promise((resolve) => setTimeout(resolve, 1500))]);
   server.kill();
-  await exited.catch(() => {});
+  server.unref();
+  server = null;
 });
 
 test("mobile header keeps logo, sign-in, cart, and menu inside the viewport", async ({ page }) => {
@@ -672,7 +670,7 @@ test("comparison pages keep price tables inside their cards on tablet", async ({
 
   for (const pagePath of comparisonPages) {
     await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
+    await page.locator(".product-static-panel").first().waitFor();
 
     const layout = await page.evaluate(() => {
       const panels = [...document.querySelectorAll(".product-static-panel")].map((panel) => {

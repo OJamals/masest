@@ -2,9 +2,9 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate, rowMatchesQuery } from '../util.js?v=20260725b';
-import { captureDirty, restoreDirty } from './edits.js?v=20260725b';
-import { PRODUCTS } from '../main/catalog-data.js?v=20260725b';
+import { esc, safeUrl, confirmDialog, delegate, rowMatchesQuery } from '../util.js?v=20260725c';
+import { captureDirty, restoreDirty } from './edits.js?v=20260725c';
+import { PRODUCTS } from '../main/catalog-data.js?v=20260725c';
 import { openImageLibraryPicker } from './image-library-picker.js?v=20260725c';
 
 export function withCatalogMediaFallback(product = {}) {

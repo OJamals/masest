@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { CATALOG_ORDER, PRODUCTS } from "../js/main/catalog-data.js";
+
+const managedImages = new Set(
+  JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8")).assets
+    .map((asset) => asset.public_url),
+);
 
 const expectedLabels = {
   cr: {
@@ -36,8 +41,8 @@ test("Products grid uses the real application labels and permitted jug images", 
     assert.equal(PRODUCTS[id]?.name, expected.name, `${id} display name`);
     assert.equal(PRODUCTS[id]?.image, expected.image, `${id} product image`);
     assert.ok(
-      existsSync(new URL(`../${expected.image}`, import.meta.url)),
-      `${expected.image} should exist`,
+      managedImages.has(`/${expected.image}`),
+      `${expected.image} should be registered in CMS`,
     );
   }
 

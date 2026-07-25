@@ -1,4 +1,4 @@
-import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260725b";
+import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260725c";
 import {
   assetUrl,
   formatAssetBytes,

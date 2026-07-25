@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { test, expect } from "@playwright/test";
 
 // a11y guard: the commerce/shop pill controls suppress the default outline, so they need an
@@ -22,11 +21,11 @@ test.beforeAll(async () => {
   throw new Error("static server did not start");
 });
 
-test.afterAll(async () => {
+test.afterAll(() => {
   if (!server) return;
-  const exited = Promise.race([once(server, "exit"), new Promise((resolve) => setTimeout(resolve, 1500))]);
   server.kill();
-  await exited.catch(() => {});
+  server.unref();
+  server = null;
 });
 
 test("commerce controls ship a valid :focus-visible ring", async ({ page }) => {

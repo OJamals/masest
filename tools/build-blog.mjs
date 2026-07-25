@@ -7,11 +7,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
-import { imageSize } from "./_image-size.mjs";
 import { canonicalPublicImageUrl } from "../js/image-url.js";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = "https://masest.co";
+const SITE_IMAGE_DIMENSIONS = new Map(
+  JSON.parse(readFileSync(join(ROOT, "data/content/site-images.json"), "utf8")).assets
+    .map((asset) => [asset.public_url, { width: asset.width, height: asset.height }]),
+);
 const CATEGORIES = new Set(["marketing", "technical", "news"]);
 const REQUIRED = ["title", "category", "date", "excerpt", "body"];
 const ORG = {
@@ -80,9 +83,8 @@ function fmtDate(iso) {
 function postHero(post) {
   const heroUrl = canonicalPublicImageUrl(post.hero);
   if (!heroUrl?.startsWith("/")) return null;
-  const file = join(ROOT, new URL(heroUrl, BASE).pathname.replace(/^\/+/, ""));
-  if (!existsSync(file)) return null;
-  return { url: heroUrl, size: imageSize(file) };
+  const size = SITE_IMAGE_DIMENSIONS.get(new URL(heroUrl, BASE).pathname);
+  return size ? { url: heroUrl, size } : null;
 }
 
 function articleSchema(post, heroUrl = "") {

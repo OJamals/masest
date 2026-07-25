@@ -1,15 +1,15 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260725b";
-import { renderMarkdown } from "../md.js?v=20260725b";
-import { supabase } from "../auth.js?v=20260725b";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260725c";
+import { renderMarkdown } from "../md.js?v=20260725c";
+import { supabase } from "../auth.js?v=20260725c";
 import { createContentAssets } from "./content-assets.js?v=20260725c";
 import { openImageLibraryPicker } from "./image-library-picker.js?v=20260725c";
-import { createContentRevisions } from "./content-revisions.js?v=20260725b";
+import { createContentRevisions } from "./content-revisions.js?v=20260725c";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260725b";
+} from "./rich-editor.js?v=20260725c";
 import {
   CONTENT_TYPE_DEFINITIONS,
   contentPayloadFields,
@@ -17,7 +17,7 @@ import {
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260725b";
+} from "../content-types.js?v=20260725c";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "image_after", "og_image", "hero"]);
