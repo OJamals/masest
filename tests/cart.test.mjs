@@ -57,7 +57,11 @@ test("checkout sends normalized line items and clears NET orders", async () => {
 
   const cart = await freshCartModule();
   cart.add("hcr", 2);
-  const result = await cart.checkout({ mode: "net", token: "abc" });
+  const result = await cart.checkout({
+    mode: "net",
+    token: "abc",
+    purchaseOrderNumber: "PO-1042",
+  });
 
   assert.deepEqual(result, { net: true, order_id: "ord_123" });
   assert.equal(calls[0].url, "/api/checkout");
@@ -65,6 +69,7 @@ test("checkout sends normalized line items and clears NET orders", async () => {
   const requestBody = JSON.parse(calls[0].options.body);
   assert.deepEqual(requestBody.cart, [{ sku: "hcr", qty: 2 }]);
   assert.equal(requestBody.mode, "net");
+  assert.equal(requestBody.purchase_order_number, "PO-1042");
   assert.match(requestBody.request_key, /^[a-zA-Z0-9-]+$/);
   assert.equal(store.get("masest_cart"), "{}");
   assert.equal(store.has("masest_net_request_v1"), false);
@@ -110,6 +115,28 @@ test("cart mutation starts a new NET logical attempt", async () => {
   await assert.rejects(() => cart.checkout({ mode: "net" }), /offline/);
   cart.setQty("hcr", 2);
   await assert.rejects(() => cart.checkout({ mode: "net" }), /offline/);
+
+  assert.notEqual(requestKeys[0], requestKeys[1]);
+});
+
+test("changing the purchase-order number starts a new NET logical attempt", async () => {
+  installBrowserGlobals();
+  const requestKeys = [];
+  globalThis.fetch = async (_url, options) => {
+    requestKeys.push(JSON.parse(options.body).request_key);
+    throw new TypeError("offline");
+  };
+
+  const cart = await freshCartModule();
+  cart.add("hcr", 1);
+  await assert.rejects(
+    () => cart.checkout({ mode: "net", purchaseOrderNumber: "PO-1" }),
+    /offline/,
+  );
+  await assert.rejects(
+    () => cart.checkout({ mode: "net", purchaseOrderNumber: "PO-2" }),
+    /offline/,
+  );
 
   assert.notEqual(requestKeys[0], requestKeys[1]);
 });

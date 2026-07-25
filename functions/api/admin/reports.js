@@ -15,7 +15,7 @@ export async function onRequestGet({ request, env }) {
   const { fromIso, toIso } = parseRange(params.get('from'), params.get('to'));
 
   let q = sb.from('orders')
-    .select('id,status,payment_method,subtotal,tax,total,currency,created_at,company_id,companies(name)')
+    .select('id,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,created_at,company_id,companies(name)')
     .neq('status', 'cart');
   if (fromIso) q = q.gte('created_at', fromIso);
   if (toIso) q = q.lte('created_at', toIso);
@@ -24,10 +24,10 @@ export async function onRequestGet({ request, env }) {
   const orders = data || [];
 
   if (params.get('export') === 'csv') {
-    const rows = [['Order', 'Date', 'Company', 'Status', 'Payment', 'Subtotal', 'Tax', 'Total', 'Currency']];
+    const rows = [['Order', 'Date', 'Company', 'Purchase order', 'Status', 'Payment', 'Subtotal', 'Shipping', 'Tax', 'Total', 'Currency']];
     for (const o of orders) {
-      rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.status, o.payment_method || '',
-        o.subtotal ?? '', o.tax ?? '', o.total ?? '', o.currency || '']);
+      rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.purchase_order_number || '', o.status, o.payment_method || '',
+        o.subtotal ?? '', o.shipping ?? '', o.tax ?? '', o.total ?? '', o.currency || '']);
     }
     return csvResponse(rows, 'masest-revenue');
   }

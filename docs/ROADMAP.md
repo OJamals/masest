@@ -107,6 +107,12 @@ schema-quotes.sql, grants.sql, seed.sql, variants_seed.sql.
       Handle tax-exempt companies (`companies.tax_exempt`) with resale-cert upload. *Done:* checkout shows correct tax; exempt orders are zero-rated with cert on file.
 - [ ] **Shipping / freight.** Chemicals = freight/hazmat. Add shipping options (flat, weight-based, or
       "freight quote — we'll call"), hazmat surcharge, lead-time display, and a PO-number + multiple ship-to selector at checkout.
+      **Progress (2026-07-24):** staff manage active, ordered Stripe Shipping Rates through CMS Content;
+      published entries override the `STRIPE_SHIPPING_RATE_IDS` fallback and pass into Checkout.
+      Missing, disabled, or invalid effective configuration fails closed.
+      Card and NET checkout now also capture, validate, persist, and expose an optional customer PO number
+      through confirmations and accounting reconciliation. Remaining: hazmat surcharge/routing, lead-time
+      display, and saved multi-ship selector.
 - [ ] **NET-terms checkout.** For approved companies (`can_use_net_terms`), allow "Pay by invoice (NET-x)"
       → create order in `net_open`, generate invoice, optional QuickBooks Online sync (env `QBO_*` already stubbed).
 - [ ] **Order lifecycle & fulfillment.** Add tracking number + carrier on status change, "shipped" email

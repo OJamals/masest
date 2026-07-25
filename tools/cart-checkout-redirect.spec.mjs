@@ -69,6 +69,7 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
   expect(checkoutBody).toBeNull();
 
   await receiptEmail.fill("buyer@example.com");
+  await page.locator("#checkoutPurchaseOrder").fill("PO-1042");
   await receiptEmail.press("Enter");
 
   await page.waitForURL("**/order-confirmed.html**");
@@ -76,6 +77,7 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
   expect(checkoutBody).not.toBeNull();
   expect(checkoutBody.mode).toBe("pay");
   expect(checkoutBody.email).toBe("buyer@example.com");
+  expect(checkoutBody.purchase_order_number).toBe("PO-1042");
   // The line items must travel under `cart` (the key checkout.js reads) — never `items`.
   expect(checkoutBody.cart).toEqual([{ sku: "crhd", qty: 2 }]);
   expect(checkoutBody.items).toBeUndefined();
@@ -141,6 +143,7 @@ test("approved business NET checkout posts the cart payload with auth and clears
 
   const netBtn = page.getByRole("button", { name: "Place order with NET terms" });
   await expect(netBtn).toBeEnabled();
+  await page.locator("#checkoutPurchaseOrder").fill("PO-NET-77");
   await netBtn.click();
 
   await expect(page.locator("#cartStatus")).toContainText("Order placed on account");
@@ -150,6 +153,7 @@ test("approved business NET checkout posts the cart payload with auth and clears
   expect(checkoutAuth).toBe("Bearer business-token");
   expect(checkoutBody.mode).toBe("net");
   expect(checkoutBody.email).toBe("buyer@example.com");
+  expect(checkoutBody.purchase_order_number).toBe("PO-NET-77");
   expect(checkoutBody.cart).toEqual([{ sku: "crhd", qty: 2 }]);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("masest_cart"))).toBe("{}");
 });

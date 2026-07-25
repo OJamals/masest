@@ -39,7 +39,7 @@ async function responseJson(response) {
   return { status: response.status, body: await response.json() };
 }
 
-function checkoutDb(calls) {
+function checkoutDb(calls, shippingEntries = []) {
   return {
     from(table) {
       if (table === 'product_variants') {
@@ -64,11 +64,21 @@ function checkoutDb(calls) {
           },
         };
       }
+      if (table === 'content_entries') {
+        return {
+          select() { return this; },
+          eq() { return this; },
+          order() {
+            calls.push('shipping.read');
+            return Promise.resolve({ data: shippingEntries, error: null });
+          },
+        };
+      }
       throw new Error(`unexpected checkout table: ${table}`);
     },
     async rpc(name, args) {
       calls.push([`rpc.${name}`, args]);
-      if (name === 'place_net_order_v2') {
+      if (name === 'place_net_order_v3') {
         if (args.p_probe) {
           return { data: { duplicate: false, probe: true, rejected: false }, error: null };
         }
@@ -82,18 +92,27 @@ function checkoutDb(calls) {
 function checkoutDbForRequestedSkus(calls) {
   return {
     from(table) {
-      assert.equal(table, 'product_variants');
-      return {
-        select() { return this; },
-        async in(column, skus) {
-          assert.equal(column, 'vsku');
-          calls.push('variants.read');
-          return {
-            data: skus.map((sku) => ({ ...variant, vsku: sku, stock: 2000 })),
-            error: null,
-          };
-        },
-      };
+      if (table === 'product_variants') {
+        return {
+          select() { return this; },
+          async in(column, skus) {
+            assert.equal(column, 'vsku');
+            calls.push('variants.read');
+            return {
+              data: skus.map((sku) => ({ ...variant, vsku: sku, stock: 2000 })),
+              error: null,
+            };
+          },
+        };
+      }
+      if (table === 'content_entries') {
+        return {
+          select() { return this; },
+          eq() { return this; },
+          order() { return Promise.resolve({ data: [], error: null }); },
+        };
+      }
+      throw new Error(`unexpected checkout table: ${table}`);
     },
   };
 }
@@ -146,16 +165,79 @@ test('paid checkout executes Request/env handler and creates Stripe session', as
   });
 
   const result = await responseJson(await handler({
-    request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku: 'VK-1', qty: 2 }] }),
-    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+    request: jsonRequest('https://masest.test/api/checkout', {
+      cart: [{ sku: 'VK-1', qty: 2 }],
+      purchase_order_number: ' PO-1042 ',
+    }),
+    env: { STRIPE_SECRET_KEY: 'sk_test', STRIPE_SHIPPING_RATE_IDS: 'shr_ground,shr_express', APP_URL: 'https://masest.test' },
   }));
 
   assert.deepEqual(result, { status: 200, body: { url: 'https://checkout.stripe.test/session' } });
   assert.equal(sessionParams.line_items[0].quantity, 2);
-  assert.deepEqual(calls, ['variants.read', 'stripe.session.create']);
+  assert.deepEqual(sessionParams.shipping_options, [
+    { shipping_rate: 'shr_ground' },
+    { shipping_rate: 'shr_express' },
+  ]);
+  assert.equal(sessionParams.metadata.purchase_order_number, 'PO-1042');
+  assert.deepEqual(calls, ['variants.read', 'shipping.read', 'stripe.session.create']);
 });
 
-test('NET checkout delegates the complete ledger mutation to place_net_order_v2', async () => {
+test('published CMS shipping rates override environment fallback', async () => {
+  const calls = [];
+  let sessionParams;
+  const handler = createCheckoutHandler({
+    adminClient: () => checkoutDb(calls, [
+      { slug: 'express', payload: { stripe_rate_id: 'shr_cmsexpress', active: true, sort_order: 20 } },
+      { slug: 'ground', payload: { stripe_rate_id: 'shr_cmsground', active: true, sort_order: 10 } },
+    ]),
+    tierForRequest: async () => ({ tier: 'retail' }),
+    userFromRequest: async () => ({ user: null }),
+    createStripe: () => ({
+      checkout: { sessions: { async create(params) {
+        sessionParams = params;
+        return { url: 'https://checkout.stripe.test/session' };
+      } } },
+    }),
+  });
+
+  const result = await responseJson(await handler({
+    request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku: 'VK-1', qty: 1 }] }),
+    env: {
+      STRIPE_SECRET_KEY: 'sk_test',
+      STRIPE_SHIPPING_RATE_IDS: 'shr_env',
+      APP_URL: 'https://masest.test',
+    },
+  }));
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(sessionParams.shipping_options, [
+    { shipping_rate: 'shr_cmsground' },
+    { shipping_rate: 'shr_cmsexpress' },
+  ]);
+});
+
+test('paid checkout fails closed before Stripe when shipping rates are not configured', async () => {
+  const calls = [];
+  const handler = createCheckoutHandler({
+    adminClient: () => checkoutDb(calls),
+    tierForRequest: async () => ({ tier: 'retail' }),
+    userFromRequest: async () => ({ user: null }),
+    createStripe: () => {
+      calls.push('stripe.create');
+      throw new Error('Stripe must not run');
+    },
+  });
+
+  const result = await responseJson(await handler({
+    request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku: 'VK-1', qty: 1 }] }),
+    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+  }));
+
+  assert.deepEqual(result, { status: 503, body: { error: 'shipping_not_configured' } });
+  assert.deepEqual(calls, ['variants.read', 'shipping.read']);
+});
+
+test('NET checkout delegates the complete ledger mutation and PO reference to place_net_order_v3', async () => {
   const calls = [];
   const emails = [];
   const db = checkoutDb(calls);
@@ -170,6 +252,7 @@ test('NET checkout delegates the complete ledger mutation to place_net_order_v2'
     request: jsonRequest('https://masest.test/api/checkout', {
       mode: 'net',
       request_key: 'request-1',
+      purchase_order_number: ' PO-1042 ',
       cart: [{ sku: 'VK-1', qty: 2 }],
     }),
     env: {},
@@ -179,12 +262,14 @@ test('NET checkout delegates the complete ledger mutation to place_net_order_v2'
   assert.equal(result.body.order_id, 'order-1');
   assert.equal(result.body.duplicate, false);
   const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
-  assert.deepEqual(labels, ['rpc.place_net_order_v2', 'variants.read', 'rpc.place_net_order_v2']);
-  const rpcCalls = calls.filter((call) => Array.isArray(call) && call[0] === 'rpc.place_net_order_v2');
+  assert.deepEqual(labels, ['rpc.place_net_order_v3', 'variants.read', 'rpc.place_net_order_v3']);
+  const rpcCalls = calls.filter((call) => Array.isArray(call) && call[0] === 'rpc.place_net_order_v3');
   assert.equal(rpcCalls[0][1].p_probe, true);
+  assert.equal(rpcCalls[0][1].p_purchase_order_number, 'PO-1042');
   const rpcArgs = rpcCalls[1][1];
   assert.equal(rpcArgs.p_probe, false);
   assert.equal(rpcArgs.p_request_key, 'request-1');
+  assert.equal(rpcArgs.p_purchase_order_number, 'PO-1042');
   assert.deepEqual(rpcArgs.p_items, [{
     sku: 'VK-1',
     product_sku: 'VK',
@@ -230,7 +315,7 @@ test('response-loss retry returns the original NET order before depleted-stock v
   assert.equal(result.body.order_id, 'order-1');
   assert.equal(result.body.duplicate, true);
   assert.equal(emails.length, 0);
-  assert.deepEqual(calls.map((call) => call[0]), ['rpc.place_net_order_v2']);
+  assert.deepEqual(calls.map((call) => call[0]), ['rpc.place_net_order_v3']);
 });
 
 test('duplicate NET response returns the original order without another email', async () => {
@@ -269,7 +354,7 @@ test('duplicate NET response returns the original order without another email', 
   assert.equal(emails.length, 0);
 });
 
-test('missing place_net_order_v2 fails closed with no v1 call', async () => {
+test('missing place_net_order_v3 fails closed with no older RPC call', async () => {
   const calls = [];
   const db = checkoutDb(calls);
   db.rpc = async (name, args) => {
@@ -293,8 +378,29 @@ test('missing place_net_order_v2 fails closed with no v1 call', async () => {
 
   assert.deepEqual(result, { status: 503, body: { error: 'net_order_unavailable' } });
   assert.deepEqual(calls.map((call) => Array.isArray(call) ? call[0] : call), [
-    'rpc.place_net_order_v2',
+    'rpc.place_net_order_v3',
   ]);
+});
+
+test('checkout rejects invalid purchase-order numbers before DB or provider calls', async () => {
+  const handler = createCheckoutHandler({
+    adminClient: () => { throw new Error('DB must not run'); },
+    createStripe: () => { throw new Error('Stripe must not run'); },
+  });
+
+  for (const purchase_order_number of [123, 'P'.repeat(65), 'PO-1\nInjected']) {
+    const result = await responseJson(await handler({
+      request: jsonRequest('https://masest.test/api/checkout', {
+        cart: [{ sku: 'VK-1', qty: 1 }],
+        purchase_order_number,
+      }),
+      env: {},
+    }));
+    assert.deepEqual(result, {
+      status: 400,
+      body: { error: 'invalid_purchase_order_number' },
+    });
+  }
 });
 
 test('checkout rejects empty cart before DB or provider calls', async () => {
@@ -312,7 +418,7 @@ test('checkout rejects empty cart before DB or provider calls', async () => {
 test('checkout accepts a JSON body exactly at 64 KiB', async () => {
   const result = await responseJson(await boundaryCheckoutHandler()({
     request: rawRequest(checkoutJsonWithByteLength(64 * 1024), { 'content-length': String(64 * 1024) }),
-    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+    env: { STRIPE_SECRET_KEY: 'sk_test', STRIPE_SHIPPING_RATE_IDS: 'shr_ground', APP_URL: 'https://masest.test' },
   }));
 
   assert.deepEqual(result, { status: 200, body: { url: 'https://checkout.stripe.test/session' } });
@@ -361,7 +467,7 @@ test('checkout returns bad_request for invalid JSON and malformed body shape', a
 test('checkout preserves the legacy items cart and missing RATE_KV fail-open behavior', async () => {
   const result = await responseJson(await boundaryCheckoutHandler()({
     request: jsonRequest('https://masest.test/api/checkout', { items: [{ sku: 'VK-1', qty: 1 }] }),
-    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+    env: { STRIPE_SECRET_KEY: 'sk_test', STRIPE_SHIPPING_RATE_IDS: 'shr_ground', APP_URL: 'https://masest.test' },
   }));
 
   assert.deepEqual(result, { status: 200, body: { url: 'https://checkout.stripe.test/session' } });
@@ -371,7 +477,7 @@ test('checkout accepts 50 distinct lines and rejects 51 before DB access', async
   const fifty = Array.from({ length: 50 }, (_, index) => ({ sku: `VK-${index}`, qty: 1 }));
   const accepted = await responseJson(await boundaryCheckoutHandler()({
     request: jsonRequest('https://masest.test/api/checkout', { cart: fifty }),
-    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+    env: { STRIPE_SECRET_KEY: 'sk_test', STRIPE_SHIPPING_RATE_IDS: 'shr_ground', APP_URL: 'https://masest.test' },
   }));
   assert.equal(accepted.status, 200);
 
@@ -390,7 +496,7 @@ test('checkout validates SKU type, trimmed length, and non-empty value', async (
   const acceptedSku = ` ${'S'.repeat(80)} `;
   const accepted = await responseJson(await boundaryCheckoutHandler()({
     request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku: acceptedSku, qty: 1 }] }),
-    env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+    env: { STRIPE_SECRET_KEY: 'sk_test', STRIPE_SHIPPING_RATE_IDS: 'shr_ground', APP_URL: 'https://masest.test' },
   }));
   assert.equal(accepted.status, 200);
 
@@ -409,7 +515,7 @@ test('checkout accepts integer quantities 1 through 999 only', async () => {
   for (const qty of [1, 999]) {
     const result = await responseJson(await boundaryCheckoutHandler()({
       request: jsonRequest('https://masest.test/api/checkout', { cart: [{ sku: 'VK-1', qty }] }),
-      env: { STRIPE_SECRET_KEY: 'sk_test', APP_URL: 'https://masest.test' },
+      env: { STRIPE_SECRET_KEY: 'sk_test', STRIPE_SHIPPING_RATE_IDS: 'shr_ground', APP_URL: 'https://masest.test' },
     }));
     assert.equal(result.status, 200);
   }

@@ -208,7 +208,7 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,tax,total,currency,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
+      .select('id,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
@@ -228,13 +228,13 @@ export async function onRequest({ request, env }) {
     if (error) return json(500, { error: error.message });
 
     if (isCsv) {
-      const rows = [['Order', 'Date', 'Company', 'Customer email', 'Status', 'Lifecycle', 'Next action', 'Payment', 'QBO doc', 'QBO payment', 'QBO TID', 'QBO payment TID', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Tax', 'Total', 'Currency', 'Items']];
+      const rows = [['Order', 'Date', 'Company', 'Customer email', 'Purchase order', 'Status', 'Lifecycle', 'Next action', 'Payment', 'QBO doc', 'QBO payment', 'QBO TID', 'QBO payment TID', 'Tracking status', 'Carrier', 'Tracking #', 'ETA', 'Subtotal', 'Shipping', 'Tax', 'Total', 'Currency', 'Items']];
       for (const o of data || []) {
         const lifecycle = decorateOrderLifecycle(o).lifecycle;
         const items = (o.order_items || []).map((i) => `${i.qty}x ${i.name || i.sku}`).join('; ');
-        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.status, lifecycle.label, lifecycle.next_action, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '', o.qbo_intuit_tid || '', o.qbo_payment_intuit_tid || '',
+        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.purchase_order_number || '', o.status, lifecycle.label, lifecycle.next_action, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '', o.qbo_intuit_tid || '', o.qbo_payment_intuit_tid || '',
           o.tracking_status || '', o.carrier || '', o.tracking_number || '', o.estimated_delivery_at || '',
-          o.subtotal ?? '', o.tax ?? '', o.total ?? '', o.currency || '', items]);
+          o.subtotal ?? '', o.shipping ?? '', o.tax ?? '', o.total ?? '', o.currency || '', items]);
       }
       return new Response(toCsv(rows), {
         status: 200,

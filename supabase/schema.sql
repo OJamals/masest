@@ -100,7 +100,15 @@ create table if not exists public.orders (
   customer_email        text,
   status                order_status not null default 'cart',
   payment_method        payment_method,
+  purchase_order_number text check (
+    purchase_order_number is null
+    or (
+      char_length(purchase_order_number) between 1 and 64
+      and purchase_order_number !~ '[[:cntrl:]]'
+    )
+  ),
   subtotal              numeric(12,2) not null default 0,
+  shipping              numeric(12,2) not null default 0,
   tax                   numeric(12,2) not null default 0,
   total                 numeric(12,2) not null default 0,
   currency              text not null default 'usd',
@@ -111,6 +119,8 @@ create table if not exists public.orders (
 );
 create index if not exists orders_company_idx on public.orders(company_id);
 
+alter table public.orders add column if not exists shipping numeric(12,2) not null default 0;
+alter table public.orders add column if not exists purchase_order_number text;
 alter table public.orders add column if not exists tracking_status text default 'processing';
 alter table public.orders add column if not exists customer_email text;
 alter table public.orders add column if not exists carrier text;

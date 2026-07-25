@@ -15,6 +15,24 @@ create unique index if not exists orders_stripe_payment_intent_uniq
   on public.orders (stripe_payment_intent)
   where stripe_payment_intent is not null;
 
+alter table public.orders
+  add column if not exists shipping numeric(12,2) not null default 0;
+
+alter table public.orders
+  add column if not exists purchase_order_number text;
+
+do $$ begin
+  alter table public.orders
+    add constraint orders_purchase_order_number_chk
+    check (
+      purchase_order_number is null
+      or (
+        char_length(purchase_order_number) between 1 and 64
+        and purchase_order_number !~ '[[:cntrl:]]'
+      )
+    );
+exception when duplicate_object then null; end $$;
+
 -- Persist a Stripe order header and every historical line-item snapshot in one
 -- transaction. Any malformed/invalid line rolls back the order header as well, so a
 -- webhook retry can safely try again instead of finding a permanently header-only order.
@@ -31,19 +49,21 @@ declare
   v_order_id uuid;
 begin
   insert into public.orders (
-    company_id, status, payment_method, qbo_sync_status, subtotal, tax, total,
-    currency, stripe_payment_intent, customer_email, ship_address
+    company_id, status, payment_method, qbo_sync_status, subtotal, shipping, tax, total,
+    currency, stripe_payment_intent, customer_email, purchase_order_number, ship_address
   ) values (
     nullif(p_order->>'company_id', '')::uuid,
     coalesce(nullif(p_order->>'status', ''), 'paid')::public.order_status,
     'stripe'::public.payment_method,
     nullif(p_order->>'qbo_sync_status', '')::public.qbo_sync_status,
     coalesce((p_order->>'subtotal')::numeric, 0),
+    coalesce((p_order->>'shipping')::numeric, 0),
     coalesce((p_order->>'tax')::numeric, 0),
     coalesce((p_order->>'total')::numeric, 0),
     coalesce(nullif(p_order->>'currency', ''), 'usd'),
     nullif(p_order->>'stripe_payment_intent', ''),
     nullif(p_order->>'customer_email', ''),
+    nullif(p_order->>'purchase_order_number', ''),
     p_order->'ship_address'
   )
   returning id into v_order_id;
@@ -424,3 +444,77 @@ $$;
 revoke all on function public.place_net_order_v2(uuid, uuid, text, text, jsonb, numeric, text, boolean) from public;
 revoke execute on function public.place_net_order_v2(uuid, uuid, text, text, jsonb, numeric, text, boolean) from anon, authenticated;
 grant execute on function public.place_net_order_v2(uuid, uuid, text, text, jsonb, numeric, text, boolean) to service_role;
+
+-- v3 adds an optional customer PO reference without duplicating the locked ledger
+-- transaction. Calling v2 inside this function keeps order creation + PO persistence
+-- atomic; any exception rolls the whole outer transaction back.
+create or replace function public.place_net_order_v3(
+  p_company_id uuid,
+  p_user_id uuid,
+  p_email text,
+  p_request_key text,
+  p_items jsonb,
+  p_subtotal numeric,
+  p_currency text,
+  p_purchase_order_number text,
+  p_probe boolean default false
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_purchase_order_number text := nullif(btrim(coalesce(p_purchase_order_number, '')), '');
+  v_existing_purchase_order_number text;
+  v_result jsonb;
+begin
+  if v_purchase_order_number is not null
+     and (
+       char_length(v_purchase_order_number) > 64
+       or v_purchase_order_number ~ '[[:cntrl:]]'
+     ) then
+    return jsonb_build_object('rejected', true, 'reason', 'invalid_request');
+  end if;
+
+  v_result := public.place_net_order_v2(
+    p_company_id,
+    p_user_id,
+    p_email,
+    p_request_key,
+    p_items,
+    p_subtotal,
+    p_currency,
+    p_probe
+  );
+
+  if coalesce((v_result->>'rejected')::boolean, false)
+     or coalesce((v_result->>'probe')::boolean, false) then
+    return v_result;
+  end if;
+
+  if coalesce((v_result->>'duplicate')::boolean, false) then
+    select purchase_order_number
+      into v_existing_purchase_order_number
+      from public.orders
+     where id = (v_result->>'order_id')::uuid;
+    if not found
+       or v_existing_purchase_order_number is distinct from v_purchase_order_number then
+      return jsonb_build_object('rejected', true, 'reason', 'request_key_conflict');
+    end if;
+    return v_result;
+  end if;
+
+  update public.orders
+     set purchase_order_number = v_purchase_order_number
+   where id = (v_result->>'order_id')::uuid;
+  if not found then
+    raise exception 'net_order_po_persistence_failed';
+  end if;
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.place_net_order_v3(uuid, uuid, text, text, jsonb, numeric, text, text, boolean) from public;
+revoke execute on function public.place_net_order_v3(uuid, uuid, text, text, jsonb, numeric, text, text, boolean) from anon, authenticated;
+grant execute on function public.place_net_order_v3(uuid, uuid, text, text, jsonb, numeric, text, text, boolean) to service_role;

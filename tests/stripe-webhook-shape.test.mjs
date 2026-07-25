@@ -73,10 +73,11 @@ test("cartMetadataEntries round-trips through assemble+parse and every chunk fit
 
 test("orderRowFromSession mirrors the paid-order insert incl. qbo + customer_email", () => {
   const session = {
-    metadata: { company_id: "co-9" },
+    metadata: { company_id: "co-9", purchase_order_number: "PO-1042" },
     amount_subtotal: 10000,
-    total_details: { amount_tax: 725 },
-    amount_total: 10725,
+    shipping_cost: { amount_subtotal: 1500 },
+    total_details: { amount_tax: 725, amount_shipping: 1500 },
+    amount_total: 12225,
     currency: "usd",
     payment_intent: "pi_123",
     shipping_details: { address: { line1: "1 A St" } },
@@ -87,11 +88,13 @@ test("orderRowFromSession mirrors the paid-order insert incl. qbo + customer_ema
     payment_method: "stripe",
     qbo_sync_status: "pending",
     subtotal: 100,
+    shipping: 15,
     tax: 7.25,
-    total: 107.25,
+    total: 122.25,
     currency: "usd",
     stripe_payment_intent: "pi_123",
     customer_email: "buyer@x.com",
+    purchase_order_number: "PO-1042",
     ship_address: { address: { line1: "1 A St" } },
   });
 });
@@ -116,8 +119,10 @@ test("orderRowFromSession falls back: customer_details ship address, usd currenc
   assert.equal(row.company_id, null);
   assert.equal(row.currency, "usd");
   assert.equal(row.customer_email, null);
+  assert.equal(row.purchase_order_number, null);
   assert.deepEqual(row.ship_address, { address: { city: "Tampa" } });
   assert.equal(row.subtotal, 0);
+  assert.equal(row.shipping, 0);
   assert.equal(row.total, 0);
 });
 

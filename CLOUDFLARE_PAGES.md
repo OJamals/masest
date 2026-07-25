@@ -33,6 +33,9 @@ site.
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_SHIPPING_RATE_IDS` — fallback comma-separated Stripe Shipping Rate IDs (`shr_...`);
+  published CMS **Shipping rates** override it, and paid checkout fails closed when effective
+  configuration is missing, disabled, or invalid
 - `APP_URL=https://masest.co`
 - `RESEND_API_KEY`
 - `RESEND_FROM=MASEST Orders <orders@send.masest.co>`

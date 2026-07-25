@@ -40,9 +40,22 @@ test('industry intros use sector-specific representative scenes while proof stay
   assert.doesNotMatch(proof, /Representative .* operating environment/);
 });
 
-test('all industry routes render two optimized representative task images', () => {
+test('all industry routes render two or three optimized task images with task captions', () => {
   assert.equal(industries.length, 32);
   const renderedTaskImages = new Set();
+  const expandedTaskGalleries = new Set([
+    'aviation-fbos-mro-airports',
+    'breweries-distilleries-wineries',
+    'construction',
+    'fleet-trucking-car-washes',
+    'food-processing-agriculture',
+    'golf-courses',
+    'hvac-water',
+    'manufacturing',
+    'municipalities-water-utilities',
+    'pressure-washing-soft-wash-contractors',
+    'restaurants-commercial-kitchens',
+  ]);
 
   for (const industry of industries) {
     const html = read(`industries/${industry.slug}.html`);
@@ -50,8 +63,12 @@ test('all industry routes render two optimized representative task images', () =
       /<img src="\.\.\/img\/industries\/tasks\/([^"]+\.webp)"[^>]+width="1200" height="750">/g,
     )].map((match) => match[1]);
 
-    assert.equal(taskImages.length, 2, `${industry.slug}: representative task pair`);
-    assert.match(html, /Representative scenes show common task setups—not field evidence/i);
+    assert.equal(
+      taskImages.length,
+      expandedTaskGalleries.has(industry.slug) ? 3 : 2,
+      `${industry.slug}: task gallery`,
+    );
+    assert.doesNotMatch(html, /Representative cleaning tasks|Representative tasks/);
 
     for (const image of taskImages) {
       renderedTaskImages.add(image);
@@ -63,7 +80,7 @@ test('all industry routes render two optimized representative task images', () =
 
   const taskFiles = readdirSync(new URL('img/industries/tasks/', root))
     .filter((file) => file.endsWith('.webp'));
-  assert.equal(renderedTaskImages.size, 64);
+  assert.equal(renderedTaskImages.size, 75);
   assert.deepEqual([...renderedTaskImages].sort(), taskFiles.sort(), 'no orphan task images');
 });
 

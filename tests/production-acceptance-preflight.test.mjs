@@ -18,6 +18,7 @@ const completeEnv = {
   STRIPE_SECRET_KEY: "sk_live_secret",
   STRIPE_WEBHOOK_SECRET: "whsec_secret",
   STRIPE_PUBLISHABLE_KEY: "pk_live_public",
+  STRIPE_SHIPPING_RATE_IDS: "shr_live_ground",
   QBO_CLIENT_ID: "qbo_client",
   QBO_CLIENT_SECRET: "qbo_secret",
   QBO_REDIRECT_URI: "https://masest.co/api/admin/qbo/callback",
@@ -39,6 +40,9 @@ test("acceptanceEnvGroups names the live integration gates", () => {
   assert.deepEqual(
     acceptanceEnvGroups.map((group) => group.id),
     ["supabase", "stripe", "qbo", "cms_publish"],
+  );
+  assert.ok(
+    acceptanceEnvGroups.find((group) => group.id === "stripe").required.includes("STRIPE_SHIPPING_RATE_IDS"),
   );
 });
 
@@ -210,6 +214,7 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
           "SUPABASE_SERVICE_ROLE_KEY",
           "STRIPE_SECRET_KEY",
           "STRIPE_WEBHOOK_SECRET",
+          "STRIPE_SHIPPING_RATE_IDS",
           "CONTENT_PUBLISH_HOOK_URL",
         ].map((key) => [key, { type: "secret_text" }])),
       },
@@ -256,6 +261,7 @@ test("buildPreflightReport accepts a Cloudflare QBO connect key bundle", () => {
           SUPABASE_SERVICE_ROLE_KEY: { type: "secret_text" },
           STRIPE_SECRET_KEY: { type: "secret_text" },
           STRIPE_WEBHOOK_SECRET: { type: "secret_text" },
+          STRIPE_SHIPPING_RATE_IDS: { type: "secret_text" },
           CONTENT_PUBLISH_HOOK_URL: { type: "secret_text" },
           QBO_CONNECT_KEY: { type: "secret_text" },
         },

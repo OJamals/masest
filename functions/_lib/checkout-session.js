@@ -11,6 +11,37 @@
 const CART_CHUNK_SIZE = 450;
 const CART_MAX_CHUNKS = 40;
 
+export function normalizePurchaseOrderNumber(value) {
+  if (value == null) return { value: null };
+  if (typeof value !== "string") return { error: "invalid_purchase_order_number" };
+  const normalized = value.trim();
+  if (!normalized) return { value: null };
+  if (normalized.length > 64 || /[\u0000-\u001F\u007F]/.test(normalized)) {
+    return { error: "invalid_purchase_order_number" };
+  }
+  return { value: normalized };
+}
+
+export function parseStripeShippingRateIds(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+  const ids = raw.split(",").map((id) => id.trim());
+  if (ids.some((id) => !/^shr_[A-Za-z0-9]+$/.test(id))) return null;
+  const uniqueIds = [...new Set(ids)];
+  return uniqueIds.length <= 5 ? uniqueIds : null;
+}
+
+export function shippingRateIdsFromContentEntries(entries) {
+  const active = (Array.isArray(entries) ? entries : [])
+    .filter((entry) => entry?.payload?.active === true)
+    .sort((a, b) => {
+      const order = (Number(a?.payload?.sort_order) || 0) - (Number(b?.payload?.sort_order) || 0);
+      return order || String(a?.slug || "").localeCompare(String(b?.slug || ""));
+    })
+    .map((entry) => entry.payload.stripe_rate_id);
+  return parseStripeShippingRateIds(active.join(","));
+}
+
 export function cartMetadataEntries(cart) {
   const compact = JSON.stringify((cart || []).map((l) => ({
     s: l.sku,
@@ -27,7 +58,17 @@ export function cartMetadataEntries(cart) {
   return entries;
 }
 
-export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sellable, qtyBySku, taxEnabled = false, customerId = null }) {
+export function buildStripeCheckoutSessionParams({
+  appUrl,
+  email,
+  companyId,
+  sellable,
+  qtyBySku,
+  taxEnabled = false,
+  customerId = null,
+  shippingRateIds = [],
+  purchaseOrderNumber = null,
+}) {
   const cleanEmail = String(email || "").trim();
   const cart = sellable.map((product) => ({
     sku: product.sku,
@@ -69,12 +110,14 @@ export function buildStripeCheckoutSessionParams({ appUrl, email, companyId, sel
     // origin/head-office address before it can be flipped on, or sessions error.
     automatic_tax: { enabled: !!taxEnabled },
     shipping_address_collection: { allowed_countries: ["US"] },
+    shipping_options: shippingRateIds.map((shipping_rate) => ({ shipping_rate })),
     billing_address_collection: "required",
     success_url: `${appUrl}/order-confirmed.html?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/cart.html`,
     metadata: {
       company_id: companyId || "",
       buyer_email: cleanEmail,
+      purchase_order_number: purchaseOrderNumber || "",
       ...cartMetadataEntries(cart),
     },
   };

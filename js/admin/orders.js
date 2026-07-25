@@ -3,9 +3,9 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260724c';
-import { captureDirty, restoreDirty } from './edits.js?v=20260724c';
-import { createSavedViews } from './saved-views.js?v=20260724c';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260724e';
+import { captureDirty, restoreDirty } from './edits.js?v=20260724e';
+import { createSavedViews } from './saved-views.js?v=20260724e';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const OPEN_NET_STATUS_OPTIONS = ['net_open', 'cancelled'];
@@ -352,6 +352,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const lifecycle = lifecycleFor(order);
     return `<h3 style="margin:0 0 4px">Order ${esc(order.id)}</h3>
       <p class="muted" style="margin:0 0 12px">${esc(order.companies?.name || order.company_id || 'Guest')} · ${esc(order.customer_email || '')} · ${esc(lifecycle.label)} · ${esc(order.status)} · ${esc(order.payment_method || '')}</p>
+      ${order.purchase_order_number ? `<p style="margin:0 0 12px"><b>Purchase order:</b> ${esc(order.purchase_order_number)}</p>` : ''}
       <table class="adm" style="width:100%"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Line</th></tr></thead><tbody>${items}</tbody></table>
       <p style="margin:12px 0 0"><b>Total</b> ${esc(money(order.total ?? order.subtotal, order.currency))}${Number(order.tax) ? ` (tax ${esc(money(order.tax, order.currency))})` : ''}${Number(order.refunded_amount) > 0 ? ` · refunded ${esc(money(order.refunded_amount, order.currency))}` : ''}</p>
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>

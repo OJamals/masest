@@ -5,6 +5,7 @@ import {
   buildInvoicePayload,
   buildInvoicePaymentPayload,
   qboCustomerPayload,
+  qboItemsWithShipping,
   qboItemType,
   subscriptionItemsForQbo,
   subscriptionOrderForQbo,
@@ -22,6 +23,7 @@ const items = [
 ];
 
 const itemRefs = { crhd: "101", sar: "102" };
+const qboSync = readFileSync(new URL("../functions/api/qbo-sync.js", import.meta.url), "utf8");
 
 test("invoice payload maps one QBO line per order item", () => {
   const payload = buildInvoicePayload({ order, items, customerRef: "55", itemRefs });
@@ -37,6 +39,25 @@ test("invoice payload maps one QBO line per order item", () => {
   assert.equal(payload.Line[0].SalesItemLineDetail.Qty, 2);
   assert.equal(payload.Line[0].SalesItemLineDetail.UnitPrice, 25);
   assert.equal(payload.TxnTaxDetail.TotalTax, 7.5);
+});
+
+test("invoice private note carries the customer purchase-order reference", () => {
+  const payload = buildInvoicePayload({
+    order: { ...order, purchase_order_number: "PO-1042" },
+    items,
+    customerRef: "55",
+    itemRefs,
+  });
+  assert.equal(payload.PrivateNote, `MASEST order ${order.id}; Customer PO PO-1042`);
+});
+
+test("QBO order items add one shipping line for the Stripe shipping charge", () => {
+  assert.deepEqual(qboItemsWithShipping(items, { shipping: 12.5 }), [
+    ...items,
+    { sku: "MASEST-SHIPPING", name: "Shipping", qty: 1, unit_price: 12.5, line_total: 12.5 },
+  ]);
+  assert.equal(qboItemsWithShipping(items, { shipping: 0 }), items);
+  assert.equal((qboSync.match(/qboItemsWithShipping\(/g) || []).length, 2);
 });
 
 test("invoice payload shares document structure and carries balance due", () => {

@@ -18,7 +18,7 @@ export const acceptanceEnvGroups = [
   {
     id: "stripe",
     label: "Stripe live checkout and webhook",
-    required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
+    required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_SHIPPING_RATE_IDS"],
   },
   {
     id: "qbo",

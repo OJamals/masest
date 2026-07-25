@@ -58,11 +58,13 @@ export function orderRowFromSession(session, customerEmail = null) {
     // only takes 'pending'); async_payment_succeeded flips it to 'pending'.
     qbo_sync_status: settled ? "pending" : null,
     subtotal: centsToAmount(s.amount_subtotal),
+    shipping: centsToAmount(s.shipping_cost?.amount_subtotal ?? s.total_details?.amount_shipping),
     tax: centsToAmount(s.total_details?.amount_tax),
     total: centsToAmount(s.amount_total),
     currency: s.currency || "usd",
     stripe_payment_intent: s.payment_intent,
     customer_email: customerEmail ?? null,
+    purchase_order_number: s.metadata?.purchase_order_number || null,
     ship_address: s.shipping_details || s.customer_details || null,
   };
 }

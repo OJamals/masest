@@ -1,4 +1,4 @@
-import { canonicalPublicImageUrl } from "../image-url.js?v=20260724c";
+import { canonicalPublicImageUrl } from "../image-url.js?v=20260724e";
 
 export const SITE_IMAGE_MANIFEST_URL = "/data/content/site-images.json";
 

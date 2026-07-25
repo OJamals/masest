@@ -2,7 +2,7 @@
 // Self-contained: no shared admin state, self-fetches /api/admin/traffic. Shared
 // primitives ($, api, admSkeleton, pct) are injected so this module stays a pure
 // function of its dependencies.
-import { esc } from '../util.js?v=20260724c';
+import { esc } from '../util.js?v=20260724e';
 
 export function createTrafficRenderer({ $, api, admSkeleton, pct }) {
   function renderTrafficFunnel(funnel = []) {

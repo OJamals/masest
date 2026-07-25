@@ -9,7 +9,11 @@ const ORDER_INTEGRITY = read("supabase/schema-order-integrity.sql");
 const CHECKOUT = read("functions/api/checkout.js");
 const STRIPE_WEBHOOK = read("functions/api/stripe-webhook.js");
 const ORDER_SHAPE = read("functions/_lib/order-shape.js");
+const STRIPE_EFFECTS = read("functions/_lib/stripe-effects.js");
+const ACCOUNT_ORDERS = read("functions/api/account/orders.js");
 const ADMIN_ORDERS = read("functions/api/admin/orders.js");
+const DASHBOARD = read("js/dashboard.js");
+const ADMIN_ORDER_UI = read("js/admin/orders.js");
 
 test("orders persist buyer email for shipment notifications", () => {
   assert.match(SCHEMA, /customer_email\s+text/i);
@@ -21,6 +25,16 @@ test("orders persist buyer email for shipment notifications", () => {
   // buyer email and passes it into orderRowFromSession.
   assert.match(STRIPE_WEBHOOK, /orderRowFromSession\(s,\s*buyerEmailFromStripeSession\(s\)\)/);
   assert.match(ORDER_SHAPE, /customer_email:\s*customerEmail/);
+});
+
+test("shipping and purchase-order references reach confirmations and order views", () => {
+  assert.match(CHECKOUT, /Purchase order:/);
+  assert.match(STRIPE_EFFECTS, /Purchase order:/);
+  assert.match(STRIPE_EFFECTS, />Shipping<\/td>/);
+  assert.match(ACCOUNT_ORDERS, /currency,purchase_order_number,/);
+  assert.match(ADMIN_ORDERS, /currency,purchase_order_number,/);
+  assert.match(DASHBOARD, /Purchase order:/);
+  assert.match(ADMIN_ORDER_UI, /Purchase order:/);
 });
 
 test("tracking updates email buyer + company recipients once, deduplicated", () => {

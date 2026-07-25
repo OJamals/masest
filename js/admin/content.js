@@ -1,22 +1,22 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260724c";
-import { renderMarkdown } from "../md.js?v=20260724c";
-import { supabase } from "../auth.js?v=20260724c";
-import { createContentAssets } from "./content-assets.js?v=20260724c";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260724c";
-import { createContentRevisions } from "./content-revisions.js?v=20260724c";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260724e";
+import { renderMarkdown } from "../md.js?v=20260724e";
+import { supabase } from "../auth.js?v=20260724e";
+import { createContentAssets } from "./content-assets.js?v=20260724e";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260724e";
+import { createContentRevisions } from "./content-revisions.js?v=20260724e";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260724c";
+} from "./rich-editor.js?v=20260724e";
 import {
   contentPayloadFields,
   contentTypeOptions,
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260724c";
+} from "../content-types.js?v=20260724e";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "image_after", "og_image", "hero"]);
@@ -248,7 +248,7 @@ function fieldTemplate(field, payload) {
     `;
   }
   const inputType = field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text";
-  const input = `<input class="adm-input" type="${inputType}"${field.kind === "number" ? ' step="0.01"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
+  const input = `<input class="adm-input" type="${inputType}"${field.kind === "number" ? ' step="0.01"' : ""}${field.pattern ? ` pattern="${esc(field.pattern)}"` : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
   if (ASSET_FIELD_KEYS.has(field.key)) {
     return `
       <div class="adm-content-asset-control ${esc(cls)}">

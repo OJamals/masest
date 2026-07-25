@@ -4,6 +4,7 @@ import {
   findOrCreateCustomer,
   getAccessToken,
   nextSyncState,
+  qboItemsWithShipping,
   syncOrder,
   syncRefund,
   syncSubscriptionInvoice,
@@ -272,7 +273,7 @@ export async function runQboSync({ env, batch = 10 }) {
   let failed = 0;
   for (const order of orders) {
     try {
-      const items = await orderItems(sb, order.id);
+      const items = qboItemsWithShipping(await orderItems(sb, order.id), order);
       const result = await syncOrder(sb, qboEnv, credentials.accessToken, credentials.realmId, order, items, companyNames, {
         taxExempt: taxExemptIds.has(order.company_id),
       });
@@ -318,7 +319,7 @@ export async function runQboRefundSync({ env, batch = 10 }) {
   try {
     const orderIds = [...new Set(refunds.map((r) => r.order_id))];
     const { data: ords, error: oerr } = await sb.from('orders')
-      .select('id,company_id,customer_email,payment_method,total,tax,stripe_payment_intent')
+      .select('id,company_id,customer_email,payment_method,total,shipping,tax,stripe_payment_intent')
       .in('id', orderIds);
     if (oerr) throw new Error(oerr.message || 'qbo_refund_order_read_failed');
     ordersById = Object.fromEntries((ords || []).map((o) => [o.id, o]));
@@ -338,7 +339,8 @@ export async function runQboRefundSync({ env, batch = 10 }) {
     try {
       const order = ordersById[refund.order_id];
       if (!order) throw new Error('qbo_refund_order_missing');
-      const items = await orderItems(sb, order.id);
+      const orderLines = await orderItems(sb, order.id);
+      const items = refund.fully_refunded ? qboItemsWithShipping(orderLines, order) : orderLines;
       const result = await syncRefund(sb, qboEnv, credentials.accessToken, credentials.realmId, refund, order, items, companyNames, {
         taxExempt: taxExemptIds.has(order.company_id),
       });

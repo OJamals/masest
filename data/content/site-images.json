@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 212,
+  "count": 223,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -1151,6 +1151,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/industries/tasks/aviation-fbos-mro-airports-03.webp",
+      "public_url": "/img/industries/tasks/aviation-fbos-mro-airports-03.webp",
+      "filename": "aviation-fbos-mro-airports-03.webp",
+      "alt": "Ride-on auto-scrubber recovering wet hydraulic-fluid and tire-mark soil from an aircraft hangar floor",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 117398,
+      "sha256": "5dc218156eb64a575f86699c2c1612605b53bf6af29b855417ad6295c687ffe7",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/industries/tasks/breweries-distilleries-wineries-01.webp",
       "public_url": "/img/industries/tasks/breweries-distilleries-wineries-01.webp",
       "filename": "breweries-distilleries-wineries-01.webp",
@@ -1179,6 +1193,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/industries/tasks/breweries-distilleries-wineries-03.webp",
+      "public_url": "/img/industries/tasks/breweries-distilleries-wineries-03.webp",
+      "filename": "breweries-distilleries-wineries-03.webp",
+      "alt": "Fixed CIP spray head moving from wet mash residue to clean stainless inside an empty lauter tun",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 159226,
+      "sha256": "b6b4164b4cbdc063b1438b1dcd6cc847b908c280c65aa4109ef8f734584f784d",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/industries/tasks/construction-01.webp",
       "public_url": "/img/industries/tasks/construction-01.webp",
       "filename": "construction-01.webp",
@@ -1201,6 +1229,20 @@
       "height": 750,
       "byte_size": 150768,
       "sha256": "0d0ccb5c18ed2c2457d675191cc1e273a8471174196ef689c3b7b9baaf420593",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/industries/tasks/construction-03.webp",
+      "public_url": "/img/industries/tasks/construction-03.webp",
+      "filename": "construction-03.webp",
+      "alt": "Concrete-pump hopper moving from wet cement residue through rinse to clean metal over a lined washout",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 148792,
+      "sha256": "2c3d2ef8054b2f7978ba6aff991d7e375990b712b9f763642bdcc887514d281a",
       "mime_type": "image/webp",
       "category": "industries",
       "status": "available",
@@ -1347,6 +1389,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/industries/tasks/fleet-trucking-car-washes-03.webp",
+      "public_url": "/img/industries/tasks/fleet-trucking-car-washes-03.webp",
+      "filename": "fleet-trucking-car-washes-03.webp",
+      "alt": "Empty refrigerated trailer interior moving from wet soil through low-pressure rinse to a clean lane",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 166722,
+      "sha256": "a7d092a3a3fd7dfcd19252d69946f3b7012632bba3168ac56474c9cf9fa059f0",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/industries/tasks/food-beverage-01.webp",
       "public_url": "/img/industries/tasks/food-beverage-01.webp",
       "filename": "food-beverage-01.webp",
@@ -1403,6 +1459,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/industries/tasks/food-processing-agriculture-03.webp",
+      "public_url": "/img/industries/tasks/food-processing-agriculture-03.webp",
+      "filename": "food-processing-agriculture-03.webp",
+      "alt": "Dairy milking clusters and stainless lines connected to a contained CIP wash circuit",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 143464,
+      "sha256": "61d7ecce018bdf1aad54a390b9fa8f80f3c1af2c2399607d27b739fcab19b1f4",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/industries/tasks/golf-courses-01.webp",
       "public_url": "/img/industries/tasks/golf-courses-01.webp",
       "filename": "golf-courses-01.webp",
@@ -1425,6 +1495,20 @@
       "height": 750,
       "byte_size": 105796,
       "sha256": "7838faad391a23e718d1d6d96bd767e2a655fc9cc1c9128b351aebd7781b7b38",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/industries/tasks/golf-courses-03.webp",
+      "public_url": "/img/industries/tasks/golf-courses-03.webp",
+      "filename": "golf-courses-03.webp",
+      "alt": "Electric golf cart exterior moving from wet turf soil through a protected low-pressure rinse",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 151934,
+      "sha256": "375274c8fd07cdf4cc71c193831cc9a4a2e6c056968abe3c0d5df10b027b44f7",
       "mime_type": "image/webp",
       "category": "industries",
       "status": "available",
@@ -1599,6 +1683,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/industries/tasks/hvac-water-03.webp",
+      "public_url": "/img/industries/tasks/hvac-water-03.webp",
+      "filename": "hvac-water-03.webp",
+      "alt": "Air-handler condensate pan moving from wet sludge through brush and recovery to clean metal",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 155952,
+      "sha256": "67e536f060f22c1170349d6ad20a17ac342fb7380bb64b4b3abc7213c6cd2578",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/industries/tasks/manufacturing-01.webp",
       "public_url": "/img/industries/tasks/manufacturing-01.webp",
       "filename": "manufacturing-01.webp",
@@ -1621,6 +1719,20 @@
       "height": 750,
       "byte_size": 132108,
       "sha256": "cfea0a69bad8de0afa7922b1247a696c28a4c57833839f84743e943e8e9496a6",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/industries/tasks/manufacturing-03.webp",
+      "public_url": "/img/industries/tasks/manufacturing-03.webp",
+      "filename": "manufacturing-03.webp",
+      "alt": "Manufacturer-approved reusable filter elements shown at wet soak, gentle rinse, and clean air-dry stages",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 78106,
+      "sha256": "203d1e0d86c4439448a33c4c9724b088b12de35ed80969b2bd845d00de1ad579",
       "mime_type": "image/webp",
       "category": "industries",
       "status": "available",
@@ -1767,6 +1879,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/industries/tasks/municipalities-water-utilities-03.webp",
+      "public_url": "/img/industries/tasks/municipalities-water-utilities-03.webp",
+      "filename": "municipalities-water-utilities-03.webp",
+      "alt": "Removed lift-station pump and float components undergoing a contained above-ground rinse",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 127272,
+      "sha256": "42771fb16f4e47971849884ad01ea3e1839fba4134b1f507ebe1aaa8dded7bb0",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/industries/tasks/oil-gas-01.webp",
       "public_url": "/img/industries/tasks/oil-gas-01.webp",
       "filename": "oil-gas-01.webp",
@@ -1879,6 +2005,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/industries/tasks/pressure-washing-soft-wash-contractors-03.webp",
+      "public_url": "/img/industries/tasks/pressure-washing-soft-wash-contractors-03.webp",
+      "filename": "pressure-washing-soft-wash-contractors-03.webp",
+      "alt": "Ground-based contractor moving wet siding soil through a gentle rinse to a clean facade",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 163774,
+      "sha256": "453892695325aafde3e0c2850ab4339d0bddc7b0fdd69cf707dc917a42cf4d32",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/industries/tasks/restaurants-commercial-kitchens-01.webp",
       "public_url": "/img/industries/tasks/restaurants-commercial-kitchens-01.webp",
       "filename": "restaurants-commercial-kitchens-01.webp",
@@ -1901,6 +2041,20 @@
       "height": 750,
       "byte_size": 190780,
       "sha256": "710041603a7b9364d584700f4280d5834714a638b677aff838061f53443d4c5f",
+      "mime_type": "image/webp",
+      "category": "industries",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/industries/tasks/restaurants-commercial-kitchens-03.webp",
+      "public_url": "/img/industries/tasks/restaurants-commercial-kitchens-03.webp",
+      "filename": "restaurants-commercial-kitchens-03.webp",
+      "alt": "Walk-behind auto-scrubber recovering wet grease from an empty commercial-kitchen tile floor",
+      "width": 1200,
+      "height": 750,
+      "byte_size": 95422,
+      "sha256": "2f4869fbdf88af68cd3a811f412c80c06d20c8e93ffd45a143020ffc4cb3ef56",
       "mime_type": "image/webp",
       "category": "industries",
       "status": "available",

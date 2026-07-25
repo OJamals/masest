@@ -60,6 +60,7 @@ test("products grid shows a skeleton while loading, then a quote fallback on cat
 
 test("zero-result product search offers a contextual chemical-audit handoff", async ({ page }) => {
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
   await page.locator("#shopSearch").fill("acetone");
 
   await expect(page.locator("#shopEmpty")).toBeVisible();

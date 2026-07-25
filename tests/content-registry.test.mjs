@@ -8,7 +8,7 @@ import {
   snapshotGroups,
 } from "../js/content-types.js";
 
-test("CMS type registry exposes every supported non-commerce type", () => {
+test("CMS type registry exposes every supported content type", () => {
   assert.deepEqual(Object.keys(CONTENT_TYPE_DEFINITIONS).sort(), [
     "blog_post",
     "faq_block",
@@ -21,8 +21,37 @@ test("CMS type registry exposes every supported non-commerce type", () => {
     "resource_card",
     "service",
     "service_package",
+    "shipping_rate",
   ]);
   assert.equal(CONTENT_TYPE_DEFINITIONS.product, undefined);
+});
+
+test("shipping rates stay server-side and validate CMS fields", () => {
+  const definition = CONTENT_TYPE_DEFINITIONS.shipping_rate;
+  assert.equal(definition.snapshot, undefined);
+  assert.deepEqual(
+    normalizeStructuredPayload("shipping_rate", {
+      stripe_rate_id: " shr_ground ",
+      active: "on",
+      sort_order: "2",
+    }),
+    { stripe_rate_id: "shr_ground", active: true, sort_order: 2 },
+  );
+  assert.deepEqual(validateStructuredPayload("shipping_rate", { active: true }), {
+    ok: false,
+    error: "stripe_rate_id_required",
+  });
+  assert.deepEqual(validateStructuredPayload("shipping_rate", {
+    stripe_rate_id: "price_not_shipping",
+    active: true,
+  }), {
+    ok: false,
+    error: "stripe_rate_id_invalid_format",
+  });
+  assert.equal(
+    snapshotGroups().some((group) => group.types.some(({ type }) => type === "shipping_rate")),
+    false,
+  );
 });
 
 test("pricing_tier normalizes tier fields and enforces a required name", () => {

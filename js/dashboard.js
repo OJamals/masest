@@ -3,7 +3,7 @@
 import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260711w';
 import { add as cartAdd, clear as cartClear } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast } from './util.js';
-import { initBusinessHub } from './business.js?v=20260711w';
+import { initBusinessHub } from './business.js?v=20260724a';
 
 const $ = (id) => document.getElementById(id);
 
@@ -497,6 +497,7 @@ async function renderOrders({ append = false } = {}) {
         <i class="ph ph-caret-down dash-order-caret" aria-hidden="true"></i></summary>
       <div class="dash-order-lines">${lines}
         ${trackingSteps(o)}
+        ${o.purchase_order_number ? `<p class="muted">Purchase order: ${esc(o.purchase_order_number)}</p>` : ''}
         ${o.qbo_invoice_id ? `<p class="muted">Invoice: ${esc(o.qbo_invoice_id)}</p>` : ''}
         ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
         ${o.payment_method === 'stripe' ? `<button class="btn btn-ghost btn-sm" data-receipt="${esc(o.id)}">Receipt</button>` : ''}

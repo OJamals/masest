@@ -13,9 +13,9 @@ Completed:
 2. Added `asset → soil/deposit → method → concentration → process boundary → verification → documents` guidance to every industry route.
 3. Added direct controlled-document links and localized trial-request briefs to every route.
 4. Replaced clearly mismatched aviation, fleet, restaurant, plumbing, healthcare, distribution, and pressure/soft-wash imagery with contextual, source-backed alternatives.
-5. Consolidated duplicate assets and regenerated the optimized image catalog: 212 files, about 25.79 MB, zero exact duplicate groups.
+5. Consolidated duplicate assets and regenerated the optimized image catalog: 223 files, about 27.05 MB, zero exact duplicate groups.
 6. Added document control and an indexed public document room for all 46 public PDFs. Source-byte and review-ledger drift now fail the release gate.
-7. Added two optimized, task-specific representative images to every canonical and supplemental industry route. Active chemistry scenes now distinguish wet dwell, rinse/agitation, and clean endpoint.
+7. Added two optimized, task-specific representative images to every route, plus a third high-value task on 11 routes with materially different cleaning work. Active chemistry scenes distinguish wet dwell, rinse/agitation, and clean endpoint.
 
 Residual review:
 
@@ -37,7 +37,7 @@ Residual review:
 | Failed browser requests | 0 |
 | Canonical sectors in CMS snapshot | 16 |
 | Supplemental static landing pages | 16 |
-| Representative task images | 64/64 |
+| Representative task images | 75/75 |
 | Pages with field galleries | 11/32 |
 | Pages with no field gallery | 21/32 |
 | Task-led application/proof modules | 32/32 |
@@ -47,7 +47,7 @@ Residual review:
 | Public product/SDS PDFs | 43 |
 | Public case/lab PDFs | 3 |
 | Restricted PDFs in public tree | 0 |
-| Image files / total bytes | 212 / about 25.79 MB |
+| Image files / total bytes | 223 / about 27.05 MB |
 | Exact duplicate image groups | 0 |
 
 Browser and release gates establish clean rendering, source integrity, and document control. They do not approve technical, regulatory, certification, or customer-performance claims.
@@ -134,6 +134,79 @@ Browser and release gates establish clean rendering, source integrity, and docum
 - Existing high-value healthcare and marine field photos were already integrated in corrected, cropped form. Remaining source scenes were represented with higher-quality generated task imagery rather than publishing weak derivatives as evidence.
 - No additional PDF was auto-published. New gym, home/property, transportation, and Yellowfin marketing pieces contain broad safety, regulatory, certification, antimicrobial, customer, or performance claims requiring owner/legal scope review. New Purgo technical documents are already represented in the controlled public set.
 - Data-center prospecting notes and lead-research documents are not product substantiation or customer-facing verification and remain unpublished.
+
+## Cleaning-task visual coverage map
+
+`Direct` means the task appears on its own industry page. `Shared` means a technically equivalent setup is represented on a closely related page without duplicating the same scene. `Residual direct gap` identifies page-specific variants that remain text-only; shared scenes may cover the method without depicting the exact asset.
+
+| Industry | Direct task coverage | Shared coverage | Residual direct gap |
+|---|---|---|---|
+| Construction | Formwork, tools, concrete-pump hopper and line cleanout | Hardscape via contractor page | Release oil; masonry efflorescence |
+| Data Centers | Plate exchanger, chilled-water pump, strainer, closed-loop flush | Coils, condensers, towers, and utility exchangers via HVAC/mechanical pages | CDU-specific view |
+| Distribution / Cold Storage | Freezer floor, tire/oil soil, evaporator coil | Dock, forklift, and handling equipment via warehousing page | Condensate-area detail |
+| Education | Campus steps/walkway, hydronic exchanger | Gym, locker room, cafeteria floor, and AHU via school/sports/restaurant pages | Restroom-specific view |
+| Food & Beverage | Tank CIP and plate exchanger | Fermenter, mash tun, tube sheet, floor, and drain contexts via brewery/restaurant pages | — |
+| Golf Courses | Reel mower, irrigation parts, protected golf-cart wash | Clubhouse and stadium hardscape via sports/contractor pages | — |
+| Healthcare | Water-side exchanger and entrance canopy | Laundry, accessible shower, HVAC, and plumbing via senior-living/mechanical pages | Restroom-specific view |
+| Hotels / Property Management | Pool waterline and facade | Washer, hood filter, hardscape, and back-of-house floor via resort/restaurant pages | — |
+| HVAC / Water Treatment | Coil, cooling-tower fill, condensate pan | Boiler, exchanger, loop, and pump work via mechanical/plumbing pages | — |
+| Manufacturing | Press bed, aqueous parts wash, approved reusable filter | Utility-floor recovery via warehouse/aviation pages | — |
+| Marine | Hull, waterline, and bilge | Aluminum workboat, outboard, and service parts via marina page | — |
+| Military / Government | Fleet undercarriage and pump parts | Utility equipment and maintenance-floor recovery via municipal/aviation pages | Maintenance-bay-specific view |
+| Municipalities & Water Utilities | Impeller, valve, above-ground lift-station pump and float equipment | Pipe flanges via plumbing page | — |
+| Oil & Gas | Gas-free manifold and exchanger plates | Pump skid and fin-fan cooler via industrial-plants page | — |
+| Plumbing | Tankless closed-loop flush and removed flanges | Boiler, circulation loop, valve, and pump work via mechanical/municipal pages | — |
+| Solar / Panel Cleaning | Connected soft brush and autonomous robot | Utility rows, tracker-safe brush, dust, bird residue, and spotting via solar-farms page | — |
+| Aviation — FBOs, MRO, Airports | Ground-support equipment, parts washer, hangar floor recovery | Undercarriage and shop-floor contexts via fleet/military pages | Engine-stand-specific view |
+| Breweries, Distilleries & Wineries | Fermenter CIP, exchanger tube sheet, mash-tun CIP | Tank, plate exchanger, floor, and drain contexts via food/restaurant pages | — |
+| Drone Cleaning Companies | Inaccessible facade and steep residential roof | Ground-access siding and hardscape via contractor page | — |
+| Fleet, Trucking & Car Washes | Tractor wash, parts washer, refrigerated trailer interior | Undercarriage and shop-floor recovery via military/aviation pages | Cab-interior-specific view |
+| Food Processing & Agriculture | Conveyor, hopper/auger, milking-equipment CIP | Tank and exchanger CIP via food-and-beverage page | Farm-equipment-specific view |
+| Golf Courses & Sports Facilities | Locker-room shower and stadium walkway | Mower, cart, irrigation, and hardscape via golf/contractor pages | Bleacher-specific view |
+| Healthcare & Senior Living | Laundry floor and accessible shower | HVAC, plumbing, and canopy contexts via healthcare/mechanical pages | — |
+| Hotels, Resorts & Property Management | Commercial washer and hood filter | Pool, facade, hardscape, and kitchen floor via hotel/contractor/restaurant pages | — |
+| Marine, Marinas & Boatyards | Aluminum workboat and outboard parts | Hull, waterline, and bilge via marine page | — |
+| Mechanical Contractors & Water Treatment | Tube sheet and boiler exchanger core | Coils, loops, pumps, and valves via HVAC/plumbing pages | — |
+| Oil & Gas / Industrial Plants | Pump skid and fin-fan cooler | Manifold and exchanger plates via oil-and-gas page | — |
+| Pressure-Washing & Soft-Wash Contractors | Steep roof, storefront concrete, siding | High facade and glass via drone/hotel pages | — |
+| Restaurants & Commercial Kitchens | Hood filters, cookline, floor degreasing | Process CIP via food-and-beverage page | — |
+| Schools & Universities | Gym floor and AHU coil | Cafeteria, locker room, plumbing, and campus exterior via restaurant/sports/education pages | Cafeteria-equipment-specific view |
+| Solar Farms & Panel Cleaning | Utility row, wet spotting, rail-guided brush | Autonomous robot via solar-panel page | — |
+| Warehousing & Distribution Centers | Loading dock and forklift wash bay | Aisle-floor recovery, tire marks, and light oil via cold-storage page | — |
+
+### High-value gap additions
+
+Eleven new scenes were selected because they add a materially different asset, soil, or method—not another angle of an existing task:
+
+1. Concrete-pump hopper and delivery-line cleanout over a lined washout.
+2. Brewery mash/lauter-tun CIP.
+3. Protected low-pressure golf-cart exterior cleaning.
+4. HVAC condensate-pan cleaning and recovery.
+5. Manufacturer-approved reusable industrial filter soak, rinse, and air-dry sequence.
+6. Above-ground lift-station pump, guide, and float cleaning.
+7. Aircraft-hangar floor degreasing with auto-scrub recovery.
+8. Empty refrigerated-trailer interior washout.
+9. Dairy milking-equipment CIP before sanitation.
+10. Low-pressure siding wash with surface and landscape protection.
+11. Commercial-kitchen floor degreasing before sanitation.
+
+Every added active-cleaning scene shows wet dwell or wet soil, a physically connected cleaning method, and a clean/recovered endpoint. No image implies instantaneous dry-soil removal, unsupported sanitizing, inaccessible-surface access, uncontrolled wash water, or mandatory hazmat controls.
+
+### Research basis for scene design
+
+These sources informed equipment geometry and process boundaries. They do not substantiate VertKleen performance:
+
+- [US EPA concrete washout guidance](https://www.epa.gov/sites/default/files/2015-11/documents/concretewashout_0.pdf) — pump hoppers and chutes require controlled washout and containment.
+- [Spraying Systems brewery and winery tank cleaning](https://www.spray.com/campaigns/tank-cleaning/tank-cleaning-for-breweries-and-wineries) — fixed rotary CIP hardware is used across brew kettles, tanks, and sanitary applications.
+- [Club Car vehicle cleaning and maintenance guidance](https://www.clubcar.com/en/resources/vehicle-cleaning-disinfecting-and-maintenance-guidelines) — cart cleaning must respect vehicle materials and electrical systems.
+- [Carrier condensate-drain maintenance guidance](https://www.carrier.com/us/en/residential/hvac-resources/air-conditioners/how-to-clean-ac-drain-line/) — moisture and debris form sludge around condensate collection and drainage.
+- [K&N reusable industrial filter cleaning guidance](https://www.knglobalfiltration.com/how-to-clean-your-industrial-air-filter-2/) — only approved washable filters should be soaked, gently agitated, rinsed, and fully air-dried; pressure washing is excluded.
+- [Xylem lift-station application guidance](https://www.xylem.com/en-us/applications/lift-stations/) — pump selection and maintenance are core lift-station concerns; the scene keeps service above ground and contained.
+- [Tennant aviation and transportation floor-cleaning guidance](https://www.tennantco.com/en_us/resources/industries/aviation-transportation.html) — scrub-and-recovery equipment addresses oil, grease, dust, and debris on hard floors.
+- [FDA sanitary transportation guidance](https://www.fda.gov/regulatory-information/search-fda-guidance-documents/guidance-industry-sanitary-transportation-food) — food-transport vehicles require sanitary operating controls; the image shows cleaning only, not compliance certification.
+- [Tetra Pak dairy-equipment cleaning handbook](https://dairyprocessinghandbook.tetrapak.com/chapter/cleaning-dairy-equipment) — dairy CIP uses a repeatable recovery, pre-rinse, cleaning, rinse, and separate disinfection sequence.
+- [Polymeric Exterior Products Association siding maintenance guidance](https://polymericexteriors.org/polymeric-exterior-products/siding/cleaning-and-maintenance/) — siding cleaning uses gentle tools and thorough rinse rather than a cutting pressure jet.
+- [Ecolab commercial floor and drain cleaning overview](https://www.ecolab.com/solutions/inst/commercial-floor-and-drain-cleaning-products) — kitchen-floor work targets grease buildup and controlled drain/floor cleaning.
 
 ## Remediation status
 

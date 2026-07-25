@@ -4,7 +4,7 @@
 //   #8 — Duplicate orders: a unique guard on orders.stripe_payment_intent makes the
 //        webhook idempotent under concurrent Stripe delivery (insert conflict -> 200).
 //   #9 — Credit-limit race: NET orders are placed via the complete atomic locking RPC
-//        (place_net_order_v2); missing v2 fails closed with no non-atomic fallback.
+//        (place_net_order_v3); missing v3 fails closed with no non-atomic fallback.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -13,6 +13,7 @@ import { isMissingFunctionError } from '../functions/_lib/credit.js';
 
 const WEBHOOK = readFileSync(new URL('../functions/api/stripe-webhook.js', import.meta.url), 'utf8');
 const CHECKOUT = readFileSync(new URL('../functions/api/checkout.js', import.meta.url), 'utf8');
+const SCHEMA = readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8');
 const MIGRATION = readFileSync(new URL('../supabase/schema-order-integrity.sql', import.meta.url), 'utf8');
 
 // ---- #8: classify the paid-order insert (pure, executed for real) ----
@@ -60,14 +61,14 @@ test('isMissingFunctionError is true only for undefined-function error codes', (
   assert.equal(isMissingFunctionError(undefined), false);
 });
 
-test('checkout places NET orders via place_net_order_v2 only', () => {
-  assert.match(CHECKOUT, /\.rpc\(\s*'place_net_order_v2'/, 'must call the complete ledger RPC');
+test('checkout places NET orders via place_net_order_v3 only', () => {
+  assert.match(CHECKOUT, /\.rpc\(\s*'place_net_order_v3'/, 'must call the complete ledger RPC');
   assert.doesNotMatch(CHECKOUT, /\.rpc\(\s*'place_net_order'/, 'must never call v1 from the Worker');
 });
 
 test('checkout has no app-side NET ledger mutation fallback', () => {
-  assert.match(CHECKOUT, /isMissingFunctionError\(/, 'must detect a missing v2 RPC');
-  assert.match(CHECKOUT, /net_order_unavailable/, 'missing v2 must fail closed');
+  assert.match(CHECKOUT, /isMissingFunctionError\(/, 'must detect a missing v3 RPC');
+  assert.match(CHECKOUT, /net_order_unavailable/, 'missing v3 must fail closed');
   assert.doesNotMatch(CHECKOUT, /from\(['"]orders['"]\)\.insert/, 'Worker must not insert NET order headers');
   assert.doesNotMatch(CHECKOUT, /from\(['"]order_items['"]\)\.insert/, 'Worker must not insert NET order items');
   assert.doesNotMatch(CHECKOUT, /decrement_variant_stock/, 'Worker must not mutate NET stock');
@@ -88,6 +89,17 @@ test('migration retains v1 and adds service-role-only place_net_order_v2', () =>
   assert.match(MIGRATION, /function\s+public\.place_net_order_v2/i);
   assert.match(MIGRATION, /security\s+definer/i);
   assert.match(MIGRATION, /grant\s+execute[\s\S]*place_net_order_v2[\s\S]*service_role/i, 'service_role must call v2');
+});
+
+test('order persistence carries shipping and optional PO references atomically', () => {
+  assert.match(SCHEMA, /shipping\s+numeric\(12,2\)\s+not null default 0/i);
+  assert.match(SCHEMA, /purchase_order_number\s+text/i);
+  assert.match(MIGRATION, /add column if not exists shipping\s+numeric\(12,2\)\s+not null default 0/i);
+  assert.match(MIGRATION, /add column if not exists purchase_order_number\s+text/i);
+  assert.match(MIGRATION, /p_order->>'shipping'/i);
+  assert.match(MIGRATION, /p_order->>'purchase_order_number'/i);
+  assert.match(MIGRATION, /function\s+public\.place_net_order_v3[\s\S]*p_purchase_order_number\s+text/i);
+  assert.match(MIGRATION, /set purchase_order_number\s*=\s*v_purchase_order_number/i);
 });
 
 test('place_net_order_v2 owns item persistence and stock mutation with deterministic locks', () => {

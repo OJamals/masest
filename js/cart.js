@@ -52,8 +52,11 @@ function newRequestKey() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
-function netRequestKey(lines) {
-  const cart = cartSignature(lines);
+function netRequestKey(lines, purchaseOrderNumber) {
+  const cart = JSON.stringify({
+    cart: cartSignature(lines),
+    purchase_order_number: String(purchaseOrderNumber || "").trim(),
+  });
   try {
     const stored = JSON.parse(localStorage.getItem(NET_REQUEST_KEY) || "null");
     if (
@@ -117,7 +120,12 @@ export function count() {
   return Object.values(safeReadCart()).reduce((total, qty) => total + qty, 0);
 }
 
-export async function checkout({ mode = "pay", email, token } = {}) {
+export async function checkout({
+  mode = "pay",
+  email,
+  token,
+  purchaseOrderNumber,
+} = {}) {
   const line = items();
   if (!line.length) throw new Error("cart_empty");
 
@@ -126,8 +134,13 @@ export async function checkout({ mode = "pay", email, token } = {}) {
 
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const payload = { mode, email, cart: line };
-  if (mode === "net") payload.request_key = netRequestKey(line);
+  const payload = {
+    mode,
+    email,
+    purchase_order_number: purchaseOrderNumber,
+    cart: line,
+  };
+  if (mode === "net") payload.request_key = netRequestKey(line, purchaseOrderNumber);
 
   const response = await fetch("/api/checkout", {
     method: "POST",

@@ -391,14 +391,17 @@ const TASK_GALLERY = {
   "aviation-fbos-mro-airports": [
     ["Aircraft tug and ground-power unit undergoing a contained low-pressure wash after a wet chemical dwell", "Ground-support equipment wash after wet dwell"],
     ["Aviation maintenance components moving from greasy to clean in an aqueous parts washer", "Aviation components through a contained parts wash"],
+    ["Ride-on auto-scrubber recovering wet hydraulic-fluid and tire-mark soil from an aircraft hangar floor", "Hangar floor degreasing with scrub-and-recovery"],
   ],
   "breweries-distilleries-wineries": [
     ["Fixed CIP spray ball rinsing krausen and beer-stone residue from a stainless fermenter", "Fermenter CIP from wet residue to clean stainless"],
     ["Brewery heat-exchanger tube sheet undergoing contained cleaning with a recirculation cart", "Brewery exchanger cleaning in progress"],
+    ["Fixed CIP spray head moving from wet mash residue to clean stainless inside an empty lauter tun", "Mash-tun CIP from wet residue to clean stainless"],
   ],
   construction: [
     ["Technician rinsing wet-treated concrete residue from reusable steel formwork on a contained wash pad", "Wet dwell and rinse on reusable formwork"],
     ["Concrete-stained reusable form panels and tools staged on a contained construction wash pad", "Reusable forms staged for final cleaning"],
+    ["Concrete-pump hopper moving from wet cement residue through rinse to clean metal over a lined washout", "Pump-hopper cleanout with captured wash water"],
   ],
   "data-centers": [
     ["Fouled plate heat exchanger opened beside a closed recirculating cleaning skid in a data-center mechanical room", "Fouled plates staged for a recirculating clean"],
@@ -419,6 +422,7 @@ const TASK_GALLERY = {
   "fleet-trucking-car-washes": [
     ["Road-film-covered tractor moving through a fixed commercial wash arch toward a clean finish", "Fleet road-film removal through a fixed wash arch"],
     ["Truck wheel hubs and service parts moving from greasy to clean in an aqueous parts washer", "Fleet parts through a contained aqueous wash"],
+    ["Empty refrigerated trailer interior moving from wet soil through low-pressure rinse to a clean lane", "Contained trailer-interior washout"],
   ],
   "food-beverage": [
     ["Clean-in-place spray ball rinsing the interior of a stainless beverage process tank", "CIP spray-ball coverage inside a process tank"],
@@ -427,10 +431,12 @@ const TASK_GALLERY = {
   "food-processing-agriculture": [
     ["Mounted spray bar and rotary brush cleaning organic process film from an empty stainless food conveyor", "Food conveyor cleaning before sanitation"],
     ["Wet-treated organic residue being rinsed from an empty agricultural hopper and auger", "Agricultural hopper wash after wet dwell"],
+    ["Dairy milking clusters and stainless lines connected to a contained CIP wash circuit", "Milking-equipment CIP before sanitation"],
   ],
   "golf-courses": [
     ["Commercial reel-mower components being washed on a contained golf maintenance pad", "Turf-equipment wash in progress"],
     ["Scaled golf-course irrigation valves and sprinkler parts staged beside cleaned components", "Irrigation parts staged from fouled to clean"],
+    ["Electric golf cart exterior moving from wet turf soil through a protected low-pressure rinse", "Golf-cart exterior wash with protected electricals"],
   ],
   "golf-courses-sports-facilities": [
     ["Rotary floor scrubber cleaning soap and mineral film from an empty locker-room shower", "Locker-room tile and grout cleaning"],
@@ -455,10 +461,12 @@ const TASK_GALLERY = {
   "hvac-water": [
     ["Fin-safe low-pressure cleaning on an isolated aluminum condenser coil", "Fin-safe condenser-coil cleaning"],
     ["Cooling-tower fill media undergoing contained cleaning during a shutdown", "Cooling-tower fill cleaning during shutdown"],
+    ["Air-handler condensate pan moving from wet sludge through brush and recovery to clean metal", "Condensate-pan cleaning and recovery"],
   ],
   manufacturing: [
     ["Isolated stamping press bed after controlled degreasing during maintenance", "Stamping-press degreasing during isolation"],
     ["Machined parts completing a contained aqueous parts-wash cycle", "Aqueous parts-wash cycle complete"],
+    ["Manufacturer-approved reusable filter elements shown at wet soak, gentle rinse, and clean air-dry stages", "Reusable industrial filter cleaning sequence"],
   ],
   marine: [
     ["Boat hull and waterline being washed on a contained boatyard service pad", "Hull and waterline wash on a contained pad"],
@@ -479,6 +487,7 @@ const TASK_GALLERY = {
   "municipalities-water-utilities": [
     ["Utility technician agitating wet-treated mineral deposits on a removed pump impeller over containment", "Wet dwell and agitation on a pump impeller"],
     ["Utility technician removing mineral scale from an isolated gate valve on a service bench", "Valve scale removal in progress"],
+    ["Removed lift-station pump and float components undergoing a contained above-ground rinse", "Lift-station equipment cleaning above ground"],
   ],
   "oil-gas": [
     ["Technician degreasing a de-inventoried and gas-free oilfield valve manifold over containment", "Gas-free valve-manifold degreasing"],
@@ -495,10 +504,12 @@ const TASK_GALLERY = {
   "pressure-washing-soft-wash-contractors": [
     ["Contractor using a connected ground-based soft-wash pole on wet algae at a steep residential roof", "Steep-roof soft wash from ground level"],
     ["Connected surface cleaner moving from wet chemical dwell to a clean storefront walkway", "Storefront concrete cleaning with recovery"],
+    ["Ground-based contractor moving wet siding soil through a gentle rinse to a clean facade", "Low-pressure siding wash with surface protection"],
   ],
   "restaurants-commercial-kitchens": [
     ["Commercial hood filters moving from wet grease dwell through fixed rinse to clean", "Hood-filter degreasing and rinse"],
     ["Wet softened grease being agitated from an empty commercial cookline during shutdown", "Cookline degreasing before rinse and sanitation"],
+    ["Walk-behind auto-scrubber recovering wet grease from an empty commercial-kitchen tile floor", "Kitchen-floor degreasing before sanitation"],
   ],
   "schools-universities": [
     ["Walk-behind auto-scrubber recovering wet soil and scuffs from an empty school gym floor", "School gym floor scrub and recovery"],
@@ -903,13 +914,8 @@ function taskGalleryBlock(ind) {
           <figcaption>${caption}</figcaption>
         </figure>`).join("");
   return `
-  <section class="section section-slim ind-gallery-sec">
+  <section class="section section-slim ind-gallery-sec" aria-label="${ind.name} cleaning task gallery">
     <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Representative tasks</span>
-        <h2 class="headline">Representative cleaning tasks for ${ind.name}.</h2>
-        <p class="subhead">Representative scenes show common task setups—not field evidence or final operating instructions.</p>
-      </div>
       <div class="ind-gallery ind-task-gallery">${figs}
       </div>
     </div>

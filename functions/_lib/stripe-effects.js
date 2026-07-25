@@ -245,7 +245,7 @@ async function rpcData(sb, name, args) {
 
 async function loadOrder(sb, orderId) {
   const { data: order, error: orderError } = await sb.from('orders')
-    .select('id,customer_email,subtotal,tax,total,currency,ship_address')
+    .select('id,customer_email,subtotal,shipping,tax,total,currency,purchase_order_number,ship_address')
     .eq('id', orderId)
     .maybeSingle();
   if (orderError || !order) throw errorWithCode('effect_order_not_found');
@@ -322,6 +322,7 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
         <p style="margin:0 0 20px;color:#556;font-size:14px;line-height:1.5">${pending
           ? 'Thank you. Your bank payment is processing — we’ll email a confirmation once it clears (usually within a few business days). MASEST will reconcile freight and documentation before fulfillment.'
           : 'Thank you. MASEST will reconcile freight and documentation before fulfillment. Your payment processor sends a separate card receipt.'}</p>
+        ${order.purchase_order_number ? `<p style="margin:0 0 20px;color:#556;font-size:14px"><b>Purchase order:</b> ${htmlEscape(order.purchase_order_number)}</p>` : ''}
         ${sdsNote}
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <thead><tr>
@@ -334,6 +335,7 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
         <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
           <tr><td style="padding:3px 0;color:#556">Subtotal</td><td style="padding:3px 0;text-align:right">${money(order.subtotal)}</td></tr>
           ${discount > 0 ? `<tr><td style="padding:3px 0;color:#556">Discount</td><td style="padding:3px 0;text-align:right">&minus;${money(discount)}</td></tr>` : ''}
+          ${Number(order.shipping) > 0 ? `<tr><td style="padding:3px 0;color:#556">Shipping</td><td style="padding:3px 0;text-align:right">${money(order.shipping)}</td></tr>` : ''}
           <tr><td style="padding:3px 0;color:#556">Tax</td><td style="padding:3px 0;text-align:right">${money(order.tax)}</td></tr>
           <tr><td style="padding:6px 0;font-weight:bold;border-top:1px solid #ccd">Total</td><td style="padding:6px 0;text-align:right;font-weight:bold;border-top:1px solid #ccd">${money(order.total)}</td></tr>
         </table>

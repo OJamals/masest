@@ -52,6 +52,9 @@
             <label class="field-label" for="checkoutEmail">Receipt email</label>
             <input id="checkoutEmail" name="email" class="cart-input" type="email" autocomplete="email" spellcheck="false" inputmode="email" aria-describedby="checkoutEmailHelp" placeholder="buyer@company.com">
             <p id="checkoutEmailHelp" class="cart-field-help">Optional. Order confirmation is sent to this address.</p>
+            <label class="field-label" for="checkoutPurchaseOrder">Purchase order number</label>
+            <input id="checkoutPurchaseOrder" name="purchase_order_number" class="cart-input" type="text" maxlength="64" autocomplete="off" spellcheck="false" aria-describedby="checkoutPurchaseOrderHelp" placeholder="PO-1042">
+            <p id="checkoutPurchaseOrderHelp" class="cart-field-help">Optional. This reference appears with the order and accounting record.</p>
             <div class="cart-actions">
               <button class="btn btn-primary" id="checkoutPay" type="submit">Proceed to checkout</button>
               <button class="btn btn-secondary" id="checkoutNet" type="button" hidden>Place order with NET terms</button>
@@ -132,6 +135,7 @@
   const estimate = document.getElementById("cartEstimate");
   const status = document.getElementById("cartStatus");
   const email = document.getElementById("checkoutEmail");
+  const purchaseOrder = document.getElementById("checkoutPurchaseOrder");
   const checkoutPay = document.getElementById("checkoutPay");
   const checkoutNet = document.getElementById("checkoutNet");
   const checkoutQuote = document.getElementById("checkoutQuote");
@@ -364,6 +368,7 @@
       return;
     }
     const receiptEmail = email.value.trim();
+    const purchaseOrderNumber = purchaseOrder.value.trim();
     if (receiptEmail && !email.checkValidity()) {
       status.dataset.state = "err";
       status.textContent = "Enter a valid receipt email, or leave the field blank.";
@@ -389,7 +394,12 @@
       return;
     }
     try {
-      const result = await checkout({ mode, email: receiptEmail, token });
+      const result = await checkout({
+        mode,
+        email: receiptEmail,
+        token,
+        purchaseOrderNumber,
+      });
       if (result.net) {
         status.dataset.state = "ok";
         status.textContent = result.message || "Order placed on account.";

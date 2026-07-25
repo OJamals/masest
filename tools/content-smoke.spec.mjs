@@ -192,7 +192,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.locator("[data-content-asset-status-action]").first().click();
   await page.locator('.confirm-dialog button[value="confirm"]').click();
   await expect(page.locator("#contentStatus")).toHaveText("Asset archived.");
-  await expect(page.locator("#contentAssetRows")).toContainText("No assets");
+  await expect(page.locator("#contentAssetRows")).toContainText("Managed with the public site");
   await page.locator("#contentAssetStatusFilter").selectOption("archived");
   await expect(page.locator("#contentAssetRows")).toContainText("Brewery tank cleaned with VertKleen CR and HCR");
   await expect(page.locator("[data-content-asset-status-action]").first()).toContainText("Restore");
@@ -203,7 +203,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(page.locator("#contentAssetRows")).toContainText("MASEST field team");
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-asset-manager.png`, fullPage: true });
   await page.locator("[data-content-asset-path]").first().click();
-  await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("img/proof/cases/brewery.webp");
+  await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("/img/proof/cases/brewery.webp");
   await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
 
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
@@ -211,7 +211,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.locator("#contentAssetPathAlt").fill("Registered brewery proof image");
   await page.locator("#contentAssetCredit").fill("MASEST archive");
   await page.locator('[data-content-action="register_asset"]').click();
-  await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("img/proof/cases/registered-brewery.webp");
+  await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("/img/proof/cases/registered-brewery.webp");
   await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Registered brewery proof image");
   await expect(page.locator("#contentStatus")).toHaveText("Asset registered.");
 
@@ -232,6 +232,12 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(page.frameLocator("#contentPreviewFrame").locator("h1")).toContainText("Brewery CIP");
   await page.locator("#admContent").scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-desktop.png`, fullPage: true });
+
+  await page.locator("#contentType").selectOption("shipping_rate");
+  await expect(page.locator('[data-content-payload-field="stripe_rate_id"]'))
+    .toHaveAttribute("pattern", "^shr_[A-Za-z0-9]+$");
+  await expect(page.locator('[data-content-payload-field="sort_order"]')).toBeVisible();
+  await expect(page.locator('[data-content-payload-field="active"]')).toBeVisible();
 });
 
 test("public pages render category-filtered CMS FAQs", async ({ page }) => {

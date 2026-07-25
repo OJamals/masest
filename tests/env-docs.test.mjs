@@ -25,7 +25,7 @@ test('.env.example documents the quote intake + sweep vars', () => {
 });
 
 test('.env.example documents the Stripe tax + core commerce vars', () => {
-  for (const key of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_TAX_ENABLED', 'APP_URL']) {
+  for (const key of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_TAX_ENABLED', 'STRIPE_SHIPPING_RATE_IDS', 'APP_URL']) {
     assert.match(env, new RegExp(`^${key}=`, 'm'), `${key} missing from .env.example`);
   }
 });

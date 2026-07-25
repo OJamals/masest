@@ -95,6 +95,18 @@ function lineFor(item, itemRefs, taxExempt = false) {
   };
 }
 
+export function qboItemsWithShipping(items, order) {
+  const shipping = Number(order?.shipping || 0);
+  if (!Number.isFinite(shipping) || shipping <= 0) return items;
+  return [...(items || []), {
+    sku: 'MASEST-SHIPPING',
+    name: 'Shipping',
+    qty: 1,
+    unit_price: shipping,
+    line_total: shipping,
+  }];
+}
+
 function documentLines({ order, items, itemRefs, taxExempt = false }) {
   const lines = (items || []).map((item) => lineFor(item, itemRefs, taxExempt));
   const total = Number(order?.total);
@@ -150,10 +162,14 @@ export function qboCustomerPayload({ key, displayName, email, phone, billingAddr
 
 function baseDocumentPayload({ order, items, customerRef, itemRefs, taxExempt = false }) {
   const billEmail = billEmailFor(order);
+  const privateNote = [
+    order.qbo_private_note || `MASEST order ${order.id}`,
+    order.purchase_order_number ? `Customer PO ${cleanText(order.purchase_order_number, 64)}` : '',
+  ].filter(Boolean).join('; ');
   return {
     CustomerRef: { value: customerRef },
     DocNumber: docNumber(order.id),
-    PrivateNote: order.qbo_private_note || `MASEST order ${order.id}`,
+    PrivateNote: privateNote,
     Line: documentLines({ order, items, itemRefs, taxExempt }),
     TxnTaxDetail: { TotalTax: Number(order.tax || 0) },
     ...(billEmail ? { BillEmail: billEmail } : {}),

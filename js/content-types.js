@@ -142,6 +142,20 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "active", label: "Active", kind: "checkbox" },
     ],
   },
+  shipping_rate: {
+    label: "Shipping rates",
+    fields: [
+      {
+        key: "stripe_rate_id",
+        label: "Stripe shipping rate ID",
+        kind: "text",
+        required: true,
+        pattern: "^shr_[A-Za-z0-9]+$",
+      },
+      { key: "sort_order", label: "Sort order", kind: "number" },
+      { key: "active", label: "Active", kind: "checkbox" },
+    ],
+  },
   blog_post: {
     label: "Blog posts",
     snapshot: { file: "blog.json", key: "blog_posts" },
@@ -282,6 +296,9 @@ export function validateStructuredPayload(type, values = {}) {
     }
     if (val && field.kind === "date" && (!/^\d{4}-\d{2}-\d{2}$/.test(val) || Number.isNaN(Date.parse(`${val}T00:00:00Z`)))) {
       return { ok: false, error: `${field.key}_invalid_date` };
+    }
+    if (val && field.pattern && !(new RegExp(field.pattern)).test(val)) {
+      return { ok: false, error: `${field.key}_invalid_format` };
     }
   }
   const payload = normalizeStructuredPayload(type, values);

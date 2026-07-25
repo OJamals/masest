@@ -3,7 +3,12 @@
 // mode 'net' -> approved B2B account order.
 import Stripe from 'stripe';
 import { adminClient, userFromRequest, json, tierForRequest, tierPriceMap, sendEmail, emailLayout, htmlEscape } from '../_lib/supabase.js';
-import { buildStripeCheckoutSessionParams } from '../_lib/checkout-session.js';
+import {
+  buildStripeCheckoutSessionParams,
+  normalizePurchaseOrderNumber,
+  parseStripeShippingRateIds,
+  shippingRateIdsFromContentEntries,
+} from '../_lib/checkout-session.js';
 import { ensureCompanyStripeCustomer } from '../_lib/stripe-customer.js';
 import { isMissingFunctionError } from '../_lib/credit.js';
 import { sdsAttachments } from '../_lib/sds-docs.js';
@@ -19,7 +24,13 @@ const CHECKOUT_MAX_QUANTITY = 999;
 // Branded confirmation for a NET (on-account) order. Stripe orders are confirmed by the
 // webhook; NET orders had no email at all. Best-effort: the order is already placed and
 // stock decremented, so an email failure must never fail the checkout response.
-async function sendNetOrderConfirmation({ env, order, lines, toEmail }) {
+async function sendNetOrderConfirmation({
+  env,
+  order,
+  lines,
+  toEmail,
+  purchaseOrderNumber = null,
+}) {
   try {
     if (!env.RESEND_API_KEY || !toEmail) return;
     const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
@@ -28,6 +39,9 @@ async function sendNetOrderConfirmation({ env, order, lines, toEmail }) {
     const ref = order?.id ? ` #${order.id}` : '';
     const attachments = sdsAttachments(lines, appUrl);
     const bodyHtml = `<p style="margin:0 0 16px;color:#556;font-size:14px;line-height:1.5">Your order is placed on account. A QuickBooks invoice will follow under your NET terms; no payment is due now.</p>`
+      + (purchaseOrderNumber
+        ? `<p style="margin:0 0 16px;color:#556;font-size:14px"><b>Purchase order:</b> ${htmlEscape(purchaseOrderNumber)}</p>`
+        : '')
       + orderItemsTableHtml(lines, { currency, subtotal: total, total })
       + sdsNoteHtml(attachments.length);
     await sendEmail(env, {
@@ -102,6 +116,10 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     return json(400, { error: 'bad_request' });
   }
 
+  const purchaseOrder = normalizePurchaseOrderNumber(body.purchase_order_number);
+  if (purchaseOrder.error) return json(400, { error: purchaseOrder.error });
+  const purchaseOrderNumber = purchaseOrder.value;
+
   const mode = body.mode === 'net' ? 'net' : 'pay';
   const requestKey = typeof body.request_key === 'string' ? body.request_key.trim() : '';
   if (mode === 'net' && (!requestKey || requestKey.length > 128)) {
@@ -125,7 +143,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
 
     // Probe request-key identity before catalog/stock validation. A response-loss retry
     // must return its original order even when the first attempt consumed the last stock.
-    const { data: probe, error: probeErr } = await sb.rpc('place_net_order_v2', {
+    const { data: probe, error: probeErr } = await sb.rpc('place_net_order_v3', {
       p_company_id: company.id,
       p_user_id: user.id,
       p_email: user.email || null,
@@ -133,6 +151,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       p_items: Object.entries(qtyBySku).map(([sku, qty]) => ({ sku, qty })),
       p_subtotal: 0,
       p_currency: '',
+      p_purchase_order_number: purchaseOrderNumber,
       p_probe: true,
     });
     if (probeErr && isMissingFunctionError(probeErr)) {
@@ -249,9 +268,9 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       line_total: Number(p.price) * qtyBySku[p.sku],
     }));
 
-    // The v2 RPC owns the entire NET ledger transaction: credit, order, items, stock,
-    // and request-key idempotency. Missing v2 fails closed; v1 remains migration-only.
-    const { data: placed, error: placeErr } = await sb.rpc('place_net_order_v2', {
+    // The v3 RPC owns the entire NET ledger transaction: credit, order, items, stock,
+    // purchase-order persistence, and request-key idempotency. Missing v3 fails closed.
+    const { data: placed, error: placeErr } = await sb.rpc('place_net_order_v3', {
       p_company_id: company.id,
       p_user_id: user.id,
       p_email: user.email || null,
@@ -259,6 +278,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       p_items: rpcItems,
       p_subtotal: subtotal,
       p_currency: sellable[0].currency || 'usd',
+      p_purchase_order_number: purchaseOrderNumber,
       p_probe: false,
     });
     if (placeErr && isMissingFunctionError(placeErr)) {
@@ -304,6 +324,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
         order,
         lines: sellable.map((p) => ({ name: p.name, sku: p.sku, qty: qtyBySku[p.sku], unit_price: p.price, currency: p.currency })),
         toEmail: user.email,
+        purchaseOrderNumber,
       });
     }
 
@@ -317,9 +338,22 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
 
   const secret = env.STRIPE_SECRET_KEY;
   if (!secret) return json(500, { error: 'stripe_not_configured' });
-  const stripe = createStripe(secret);
   const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');
   if (!appUrl) return json(500, { error: 'app_url_not_configured' });
+  let shippingRateIds = parseStripeShippingRateIds(env.STRIPE_SHIPPING_RATE_IDS);
+  try {
+    const { data: entries, error } = await sb.from('content_entries')
+      .select('slug,payload')
+      .eq('type', 'shipping_rate')
+      .eq('status', 'published')
+      .eq('locale', 'en')
+      .order('slug');
+    if (!error && entries?.length) shippingRateIds = shippingRateIdsFromContentEntries(entries);
+  } catch {
+    // Keep env config as emergency fallback while CMS is unavailable.
+  }
+  if (!shippingRateIds?.length) return json(503, { error: 'shipping_not_configured' });
+  const stripe = createStripe(secret);
 
   const taxEnabled = env.STRIPE_TAX_ENABLED === 'true';
 
@@ -366,6 +400,8 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       qtyBySku,
       taxEnabled,
       customerId,
+      shippingRateIds,
+      purchaseOrderNumber,
     }));
     return json(200, { url: session.url });
   } catch (err) {
