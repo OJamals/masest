@@ -114,7 +114,7 @@ function wireDocumentRoomCapture() {
   }, true);
 }
 
-export function renderChrome() {
+export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
   initCmpTableLabels();
   document.querySelector(".nojs-nav")?.setAttribute("hidden", "");
   const page = pageName();
@@ -284,7 +284,7 @@ export function renderChrome() {
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
-  import("/js/account-nav.js?v=20260711x").then((m) => m.initAccountNav && m.initAccountNav({ nav, root })).catch(() => {});
+  import("/js/account-nav.js?v=20260724a").then((m) => m.initAccountNav && m.initAccountNav({ nav, root, authModule })).catch(() => {});
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);
@@ -420,11 +420,11 @@ export function renderChrome() {
   // Load public config + first-party integrations once per page.
   if (!window.__masestIntegrations) {
     window.__masestIntegrations = true;
-    window.MASEST = Object.assign(window.MASEST || {}, { chatRoot: root });
+    window.MASEST = Object.assign(window.MASEST || {}, { chatRoot: root, authModule });
     const cfg = document.createElement("script");
     cfg.src = `${root}js/config.js?v=20260711b`;
     cfg.onload = () => {
-      ["integrations.js?v=20260711b", "customer-chat.js?v=20260719c"].forEach((src) => {
+      ["integrations.js?v=20260711b", "customer-chat.js?v=20260724a"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;

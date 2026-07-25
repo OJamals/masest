@@ -87,20 +87,20 @@ function positionAccountMenu(dd) {
   menu.style.top = `${top}px`;
 }
 
-export async function initAccountNav({ nav, root = '' } = {}) {
+export async function initAccountNav({ nav, root = '', authModule = './auth.js?v=20260711w' } = {}) {
   const actions = (nav || document).querySelector('.nav-actions');
   if (!actions) return;
   injectStyle();
-  await renderAccountNav(actions, root);
+  await renderAccountNav(actions, root, authModule);
   // Re-render when auth state changes in-page (login / logout / finish setup) so the
   // header swaps "Sign in" for the account dropdown without a full page reload.
   if (!actions.dataset.authBound) {
     actions.dataset.authBound = '1';
-    document.addEventListener('masest:auth', () => { renderAccountNav(actions, root).catch(() => {}); });
+    document.addEventListener('masest:auth', () => { renderAccountNav(actions, root, authModule).catch(() => {}); });
   }
 }
 
-async function renderAccountNav(actions, root = '') {
+async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20260711w') {
   // Replace whatever account control is present: the SSR placeholder (.nav-auth-placeholder,
   // rendered by chrome.js) on first render, or a previously-rendered control (.nav-account)
   // on a later auth-change re-render. Matching only one of these would leave the other behind,
@@ -111,7 +111,7 @@ async function renderAccountNav(actions, root = '') {
   let logout, api, data = null;
   let authResolved = true;
   if (hasSession()) {
-    try { const m = await import('./auth.js?v=20260711w'); logout = m.logout; api = m.api; data = await m.me(); }
+    try { const m = await import(authModule); logout = m.logout; api = m.api; data = await m.me(); }
     catch { authResolved = false; }
   }
 

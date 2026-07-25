@@ -27,7 +27,7 @@ export async function initCustomerChat() {
   const root = pageRoot();
   let authModule;
   const auth = async () => {
-    authModule ||= import("./auth.js?v=20260711w");
+    authModule ||= import(window.MASEST?.authModule || "./auth.js?v=20260711w");
     return authModule;
   };
   try {
