@@ -560,7 +560,7 @@ const featureLoader = createFeatureLoader({
       { createInventoryCard },
       { createCouponsCard },
     ] = await Promise.all([
-      import('./admin/products.js?v=20260725b'),
+      import('./admin/products.js?v=20260725c'),
       import('./admin/pricing.js?v=20260725b'),
       import('./admin/inventory.js?v=20260725b'),
       import('./admin/coupons.js?v=20260725b'),
@@ -598,7 +598,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260725b');
+    const { createContentTab } = await import('./admin/content.js?v=20260725c');
     const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -667,7 +667,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   newsletter: async () => {
-    const { createNewsletterTab } = await import('./admin/newsletter.js?v=20260725b');
+    const { createNewsletterTab } = await import('./admin/newsletter.js?v=20260725c');
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
     });

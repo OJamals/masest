@@ -5,7 +5,7 @@
 import { esc, safeUrl, confirmDialog, delegate, rowMatchesQuery } from '../util.js?v=20260725b';
 import { captureDirty, restoreDirty } from './edits.js?v=20260725b';
 import { PRODUCTS } from '../main/catalog-data.js?v=20260725b';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260725b';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260725c';
 
 export function withCatalogMediaFallback(product = {}) {
   const catalog = PRODUCTS[product.sku === 'cr-hd' ? 'crhd' : product.sku];

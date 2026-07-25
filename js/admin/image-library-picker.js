@@ -4,7 +4,8 @@ import {
   formatAssetBytes,
   loadSiteImageAssets,
   mergeSiteImageAssets,
-} from "./site-image-library.js?v=20260725b";
+  prepareImageUpload,
+} from "./site-image-library.js?v=20260725c";
 
 function assetOption(asset = {}, selectedUrl = "") {
   const url = assetUrl(asset);
@@ -46,6 +47,7 @@ export function openImageLibraryPicker({
         <label class="confirm-dialog-field"><span>Alt text</span><input class="adm-input" name="image_alt" autocomplete="off" data-shared-image-alt maxlength="300" placeholder="Describe the image"></label>
         <button class="btn btn-primary" type="button" data-shared-image-upload-submit>Upload and use image</button>
       </section>` : ""}
+      ${manage ? '<input type="file" name="replacement_image_file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp" data-shared-image-replace-file hidden>' : ""}
       <section class="shared-image-library" data-shared-image-library hidden aria-live="polite">
         <div class="shared-image-library-head">
           <strong>Assets <small>CMS uploads first</small></strong>
@@ -78,6 +80,7 @@ export function openImageLibraryPicker({
               </label>
               <div class="shared-image-preview-actions">
                 <button class="btn btn-primary" type="button" data-shared-image-confirm disabled>Select</button>
+                ${manage ? '<button class="btn btn-secondary btn-sm" type="button" data-shared-image-replace hidden>Replace everywhere</button>' : ""}
                 <button class="btn btn-ghost btn-sm" type="button" data-shared-image-save-alt hidden>Save alt text</button>
                 <button class="btn btn-ghost btn-sm" type="button" data-shared-image-state hidden></button>
               </div>
@@ -112,6 +115,8 @@ export function openImageLibraryPicker({
     const previewAlt = dlg.querySelector("[data-shared-image-preview-alt]");
     const confirmButton = dlg.querySelector("[data-shared-image-confirm]");
     const saveAltButton = dlg.querySelector("[data-shared-image-save-alt]");
+    const replaceButton = dlg.querySelector("[data-shared-image-replace]");
+    const replaceFileInput = dlg.querySelector("[data-shared-image-replace-file]");
     const stateButton = dlg.querySelector("[data-shared-image-state]");
     const status = dlg.querySelector("[data-shared-image-status]");
     let selectedFile = null;
@@ -158,7 +163,9 @@ export function openImageLibraryPicker({
       }
       const isSiteAsset = selectedAsset.source === "site";
       const archived = selectedAsset.status === "archived";
-      preview.src = url;
+      const previewUrl = new URL(url, location.href);
+      if (selectedAsset.sha256) previewUrl.searchParams.set("v", String(selectedAsset.sha256).slice(0, 12));
+      preview.src = previewUrl.href;
       preview.alt = selectedAsset.alt || "";
       previewName.textContent = selectedAsset.filename || selectedAsset.storage_path || url;
       previewMeta.textContent = [
@@ -170,6 +177,7 @@ export function openImageLibraryPicker({
       previewAlt.disabled = isSiteAsset;
       confirmButton.disabled = archived;
       saveAltButton.hidden = isSiteAsset;
+      if (replaceButton) replaceButton.hidden = isSiteAsset || archived;
       stateButton.hidden = isSiteAsset;
       stateButton.textContent = archived ? "Restore" : "Archive";
     };
@@ -237,13 +245,17 @@ export function openImageLibraryPicker({
       if (!selectedFile) { setStatus("Attach an image first.", "err"); return; }
       if (!alt) { setStatus("Add alt text before uploading.", "err"); altInput?.focus(); return; }
       uploadButton.disabled = true;
-      setStatus("Optimizing and uploading image…");
+      setStatus("Preparing upright, web-optimized image…");
       try {
+        const prepared = await prepareImageUpload(selectedFile);
         const form = new FormData();
-        form.append("file", selectedFile);
+        form.append("file", prepared.file);
         form.append("alt", alt);
         form.append("usage", usage);
         form.append("folder", "cms");
+        if (prepared.width) form.append("width", String(prepared.width));
+        if (prepared.height) form.append("height", String(prepared.height));
+        setStatus("Optimizing and uploading image…");
         const data = await api("/api/admin/content-assets", { method: "POST", body: form });
         const asset = data.asset || {};
         const url = assetUrl(asset);
@@ -253,6 +265,42 @@ export function openImageLibraryPicker({
         setStatus(error?.data?.message || error?.data?.error || "Could not upload and optimize this image.", "err");
       } finally {
         uploadButton.disabled = false;
+      }
+    });
+    replaceButton?.addEventListener("click", async () => {
+      if (!selectedAsset?.storage_path || selectedAsset.source === "site") return;
+      const confirmed = await confirmDialog(
+        "Replace this image everywhere it appears? The stable CMS URL stays the same.",
+        { confirmText: "Replace everywhere", cancelText: "Cancel" },
+      );
+      if (confirmed) replaceFileInput?.click();
+    });
+    replaceFileInput?.addEventListener("change", async () => {
+      const replacement = replaceFileInput.files?.[0] || null;
+      const storagePath = selectedAsset?.storage_path || "";
+      if (!replacement || !storagePath) return;
+      replaceButton.disabled = true;
+      setStatus("Preparing upright, web-optimized replacement…");
+      try {
+        const prepared = await prepareImageUpload(replacement);
+        const form = new FormData();
+        form.append("file", prepared.file);
+        form.append("replace_storage_path", storagePath);
+        form.append("alt", previewAlt.value.trim() || selectedAsset.alt || "");
+        if (prepared.width) form.append("width", String(prepared.width));
+        if (prepared.height) form.append("height", String(prepared.height));
+        const data = await api("/api/admin/content-assets", { method: "PUT", body: form });
+        selectedAsset = data.asset || selectedAsset;
+        cmsAssets = cmsAssets.map((asset) => (
+          (asset.storage_path || assetUrl(asset)) === storagePath ? selectedAsset : asset
+        ));
+        filterLibrary();
+        setStatus("Image replaced everywhere.", "ok");
+      } catch (error) {
+        setStatus(error?.data?.message || error?.data?.error || "Could not replace this image.", "err");
+      } finally {
+        replaceButton.disabled = false;
+        replaceFileInput.value = "";
       }
     });
     libraryGrid.addEventListener("click", (event) => {

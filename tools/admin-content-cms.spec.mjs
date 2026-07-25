@@ -108,6 +108,80 @@ async function scrollContentPanelIntoView(page) {
   });
 }
 
+test("Products renders CMS photos and can relink the primary image through the shared viewer", async ({ page }) => {
+  await bootAsStaff(page);
+  const cmsBase = "https://example.supabase.co/storage/v1/object/public/content-assets/site";
+  const initialUrl = `${cmsBase}/img/products/hvac-hcr-studio.webp`;
+  const replacementUrl = `${cmsBase}/img/products/cip-cr-studio.webp`;
+  const onePixelPng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  );
+  let product = {
+    sku: "hcr",
+    name: "VertKleen HCR",
+    mode: "buy",
+    active: true,
+    image_url: initialUrl,
+    photo_alt: "VertKleen HCR product bottle",
+    gallery: [],
+    product_variants: [],
+  };
+
+  await page.route(`${cmsBase}/**`, (route) => route.fulfill({
+    status: 200,
+    contentType: "image/png",
+    body: onePixelPng,
+  }));
+  await page.route("**/api/admin/content-assets**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      assets: [{
+        storage_path: "/img/products/cip-cr-studio.webp",
+        source_url: replacementUrl,
+        public_url: replacementUrl,
+        alt: "VertKleen CR product bottle",
+        status: "available",
+        mime_type: "image/webp",
+      }],
+    }),
+  }));
+  await page.route("**/api/admin/products**", async (route) => {
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON();
+      product = { ...product, ...body.product };
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, product }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ products: [product], media_ready: true }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#products`, { waitUntil: "domcontentloaded" });
+  const card = page.locator('[data-product="hcr"]');
+  const photo = card.locator(".product-photo");
+  await expect(photo).toHaveAttribute("src", initialUrl);
+  await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
+
+  await card.getByRole("button", { name: "Choose primary" }).click();
+  const picker = page.locator("dialog.shared-image-picker");
+  await expect(picker).toBeVisible();
+  await picker.getByPlaceholder("Search by name or alt text").fill("cip-cr");
+  await picker.locator(".shared-image-library-card").first().click();
+  await picker.getByRole("button", { name: "Select", exact: true }).click();
+
+  await expect(page.locator("#prodStatus")).toHaveText("hcr CMS image linked.");
+  await expect(card.locator(".product-photo")).toHaveAttribute("src", replacementUrl);
+  await expect(card.locator('[data-field="image_url"]')).toHaveValue(replacementUrl);
+});
+
 test("staff edits structured CMS service fields and posts normalized payload", async ({ page }) => {
   await bootAsStaff(page);
 

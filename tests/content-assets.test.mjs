@@ -27,6 +27,126 @@ test("asset endpoint is staff gated and content asset permission gated", () => {
   assert.match(source, /staffCan\(role, "content\.assets"\)/);
   assert.match(source, /request\.method === "GET"/);
   assert.match(source, /request\.method === "POST"/);
+  assert.match(source, /request\.method === "PUT"/);
+});
+
+test("logical site aliases resolve to managed CMS objects without trusting external URLs", async () => {
+  const {
+    assetPublicUrl,
+    managedStoragePath,
+    siteStoragePath,
+  } = await import("../functions/api/admin/content-assets.js");
+  const env = CONTENT_ASSET_ENV;
+  const logical = "/img/proof/cases/brewery.webp";
+  const managedUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp";
+  const asset = { storage_path: logical, source_url: managedUrl };
+
+  assert.equal(siteStoragePath(logical), "site/img/proof/cases/brewery.webp");
+  assert.equal(assetPublicUrl(env, asset), managedUrl);
+  assert.equal(managedStoragePath(env, asset), "site/img/proof/cases/brewery.webp");
+  assert.equal(managedStoragePath(env, {
+    storage_path: logical,
+    source_url: "https://untrusted.example/image.webp",
+  }), "");
+});
+
+test("asset manager exposes replace-everywhere control backed by optimized in-place storage", () => {
+  const api = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
+  const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
+
+  assert.match(api, /replace_storage_path/);
+  assert.match(api, /"x-upsert":\s*"true"/);
+  assert.match(api, /content_asset\.replaced/);
+  assert.match(picker, /data-shared-image-replace/);
+  assert.match(picker, /Replace everywhere/);
+  assert.match(picker, /method:\s*"PUT"/);
+});
+
+test("replace everywhere overwrites the stable CMS object and keeps the logical site alias", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const logicalPath = "/img/proof/replacement-test.webp";
+  const publicUrl = `https://example.supabase.co/storage/v1/object/public/content-assets/site${logicalPath}`;
+  const existing = {
+    storage_path: logicalPath,
+    status: "available",
+    alt: "Existing proof",
+    mime_type: "image/webp",
+    byte_size: 10,
+    sha256: "a".repeat(64),
+    width: 100,
+    height: 100,
+    focal_point: {},
+    usage: ["site:proof"],
+    credit: null,
+    source_url: publicUrl,
+    created_by: "original-owner",
+  };
+  const optimized = new Uint8Array([82, 73, 70, 70, 1, 2, 3, 4]);
+
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(String(input));
+    const method = String(init.method || input?.method || "GET").toUpperCase();
+    calls.push({ url, method, body: init.body, headers: init.headers });
+    if (url.pathname === "/auth/v1/user") {
+      return Response.json({ user: { id: "owner-id", email: "owner@example.com" } });
+    }
+    if (url.hostname === "api.tinify.com" && url.pathname === "/shrink") {
+      return new Response(null, {
+        status: 201,
+        headers: { location: "https://api.tinify.com/output/replacement" },
+      });
+    }
+    if (url.hostname === "api.tinify.com" && url.pathname === "/output/replacement") {
+      return new Response(optimized, { status: 200 });
+    }
+    if (url.pathname === "/rest/v1/content_assets" && method === "GET") {
+      return Response.json(url.searchParams.get("select") === "created_by"
+        ? [{ created_by: existing.created_by }]
+        : [existing]);
+    }
+    if (url.pathname === "/storage/v1/object/content-assets/site/img/proof/replacement-test.webp"
+      && method === "POST") {
+      return Response.json({ Key: "site/img/proof/replacement-test.webp" }, { status: 200 });
+    }
+    if (url.pathname === "/rest/v1/content_assets" && method === "POST") {
+      const row = JSON.parse(String(init.body));
+      return Response.json({ ...existing, ...row }, { status: 201 });
+    }
+    if (url.pathname === "/rest/v1/audit_log" && method === "POST") {
+      return Response.json(null, { status: 201 });
+    }
+    throw new Error(`Unexpected request: ${method} ${url}`);
+  };
+
+  const form = new FormData();
+  form.append("replace_storage_path", logicalPath);
+  form.append("alt", "Updated proof");
+  form.append("width", "1200");
+  form.append("height", "800");
+  form.append("file", new Blob([new Uint8Array(32)], { type: "image/webp" }), "replacement.webp");
+
+  try {
+    const response = await contentAssetsRequest({
+      request: new Request("https://masest.co/api/admin/content-assets", {
+        method: "PUT",
+        headers: { authorization: "Bearer owner-token" },
+        body: form,
+      }),
+      env: { ...CONTENT_ASSET_ENV, TINIFY_API_KEY: "tinify-key" },
+    });
+    const result = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(result.asset.storage_path, logicalPath);
+    assert.equal(result.asset.public_url, publicUrl);
+    assert.equal(result.asset.alt, "Updated proof");
+    const upload = calls.find(({ url, method }) => url.pathname.includes("/storage/v1/object/") && method === "POST");
+    assert.equal(upload?.headers?.["x-upsert"], "true");
+    const audit = calls.find(({ url, method }) => url.pathname === "/rest/v1/audit_log" && method === "POST");
+    assert.match(String(audit?.body), /content_asset\.replaced/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("asset endpoint accepts multipart upload into CMS asset storage", () => {
@@ -196,13 +316,17 @@ test("content editor exposes native asset upload controls", () => {
 });
 
 test("content uploads bake EXIF orientation and cap source dimensions before storage", () => {
-  const source = readFileSync(new URL("../js/admin/content-assets.js", import.meta.url), "utf8");
+  const controls = readFileSync(new URL("../js/admin/content-assets.js", import.meta.url), "utf8");
+  const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../js/admin/site-image-library.js", import.meta.url), "utf8");
   assert.match(source, /createImageBitmap\(file, \{ imageOrientation: "from-image" \}\)/);
   assert.match(source, /MAX_UPLOAD_EDGE = 2560/);
   assert.match(source, /scale === 1 && file\.type !== "image\/jpeg"/);
   assert.match(source, /canvas\.toBlob/);
   assert.match(source, /"image\/webp"/);
-  assert.match(source, /Preparing upright, web-optimized image/);
+  assert.match(controls, /prepareImageUpload\(file\)/);
+  assert.match(picker, /prepareImageUpload\(selectedFile\)/);
+  assert.match(controls + picker, /Preparing upright, web-optimized image/);
 });
 
 test("content editor registers existing asset paths without a file upload", () => {

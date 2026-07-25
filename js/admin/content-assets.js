@@ -1,42 +1,6 @@
 // CMS asset controls: reusable viewer, optimized upload, and existing-path registration.
-import { assetUrl } from "./site-image-library.js?v=20260725b";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260725b";
-
-const MAX_UPLOAD_EDGE = 2560;
-const UPLOAD_WEBP_QUALITY = 0.94;
-
-async function prepareImageUpload(file) {
-  if (!globalThis.createImageBitmap || !file?.type?.startsWith("image/")) return file;
-  let bitmap;
-  try {
-    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-  } catch {
-    return file;
-  }
-  try {
-    const scale = Math.min(1, MAX_UPLOAD_EDGE / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.type !== "image/jpeg") return file;
-    const width = Math.max(1, Math.round(bitmap.width * scale));
-    const height = Math.max(1, Math.round(bitmap.height * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d", { alpha: true });
-    if (!context) throw new Error("image_normalization_failed");
-    context.drawImage(bitmap, 0, 0, width, height);
-    const blob = await new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (result) => result ? resolve(result) : reject(new Error("image_normalization_failed")),
-        "image/webp",
-        UPLOAD_WEBP_QUALITY,
-      );
-    });
-    const name = String(file.name || "asset").replace(/\.[^.]+$/, "") || "asset";
-    return new File([blob], `${name}.webp`, { type: "image/webp", lastModified: file.lastModified });
-  } finally {
-    bitmap.close();
-  }
-}
+import { assetUrl, prepareImageUpload } from "./site-image-library.js?v=20260725c";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260725c";
 
 export function createContentAssets({ $, api, setStatus, applyChosenAsset }) {
   let assetTargetField = "image";
@@ -96,12 +60,14 @@ export function createContentAssets({ $, api, setStatus, applyChosenAsset }) {
     }
     try {
       setStatus("Preparing upright, web-optimized image…");
-      const preparedFile = await prepareImageUpload(file);
+      const prepared = await prepareImageUpload(file);
       const form = new FormData();
-      form.append("file", preparedFile);
+      form.append("file", prepared.file);
       form.append("alt", alt);
       form.append("usage", assetTargetField || "image");
       form.append("folder", folderInput?.value.trim() || "cms");
+      if (prepared.width) form.append("width", String(prepared.width));
+      if (prepared.height) form.append("height", String(prepared.height));
       setStatus("Uploading optimized asset…");
       const result = await api("/api/admin/content-assets", { method: "POST", body: form });
       const assetPath = result.asset?.public_url || result.asset?.storage_path || "";

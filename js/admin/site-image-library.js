@@ -1,11 +1,52 @@
-import { canonicalPublicImageUrl } from "../image-url.js?v=20260725b";
+import { canonicalPublicImageUrl } from "../image-url.js?v=20260725c";
 
 export const SITE_IMAGE_MANIFEST_URL = "/data/content/site-images.json";
+const MAX_UPLOAD_EDGE = 2560;
+const UPLOAD_WEBP_QUALITY = 0.94;
 
 let defaultManifestPromise;
 
+export async function prepareImageUpload(file) {
+  if (!globalThis.createImageBitmap || !file?.type?.startsWith("image/")) {
+    return { file, width: null, height: null };
+  }
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    return { file, width: null, height: null };
+  }
+  try {
+    const scale = Math.min(1, MAX_UPLOAD_EDGE / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    if (scale === 1 && file.type !== "image/jpeg") return { file, width, height };
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { alpha: true });
+    if (!context) throw new Error("image_normalization_failed");
+    context.drawImage(bitmap, 0, 0, width, height);
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (result) => result ? resolve(result) : reject(new Error("image_normalization_failed")),
+        "image/webp",
+        UPLOAD_WEBP_QUALITY,
+      );
+    });
+    const name = String(file.name || "asset").replace(/\.[^.]+$/, "") || "asset";
+    return {
+      file: new File([blob], `${name}.webp`, { type: "image/webp", lastModified: file.lastModified }),
+      width,
+      height,
+    };
+  } finally {
+    bitmap.close();
+  }
+}
+
 function normalizedAsset(asset = {}, source = "site") {
-  const publicUrl = canonicalPublicImageUrl(asset.public_url || asset.storage_path);
+  const publicUrl = canonicalPublicImageUrl(asset.public_url || asset.source_url || asset.storage_path);
   if (!publicUrl) return null;
   return {
     ...asset,
@@ -16,6 +57,11 @@ function normalizedAsset(asset = {}, source = "site") {
     source,
     status: asset.status || "available",
   };
+}
+
+function assetIdentity(asset = {}) {
+  const storagePath = canonicalPublicImageUrl(asset.storage_path);
+  return storagePath || asset.public_url;
 }
 
 function searchableAssetText(asset) {
@@ -30,7 +76,7 @@ function searchableAssetText(asset) {
 }
 
 export function assetUrl(asset = {}) {
-  return canonicalPublicImageUrl(asset.public_url || asset.storage_path);
+  return canonicalPublicImageUrl(asset.public_url || asset.source_url || asset.storage_path);
 }
 
 export function formatAssetBytes(value) {
@@ -51,11 +97,11 @@ export function mergeSiteImageAssets({
   const assetsByUrl = new Map();
   for (const asset of siteAssets) {
     const normalized = normalizedAsset(asset, "site");
-    if (normalized) assetsByUrl.set(normalized.public_url, normalized);
+    if (normalized) assetsByUrl.set(assetIdentity(normalized), normalized);
   }
   for (const asset of cmsAssets) {
     const normalized = normalizedAsset(asset, "cms");
-    if (normalized) assetsByUrl.set(normalized.public_url, normalized);
+    if (normalized) assetsByUrl.set(assetIdentity(normalized), normalized);
   }
 
   const wantedStatus = String(status || "").trim();

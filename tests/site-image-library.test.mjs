@@ -6,7 +6,11 @@ import test from "node:test";
 
 import { normalizeContentEntry } from "../functions/_lib/content.js";
 import { normalizeStructuredPayload } from "../js/content-types.js";
-import { canonicalPublicImageUrl } from "../js/image-url.js";
+import {
+  canonicalPublicImageUrl,
+  cmsPublicImageUrl,
+  rewriteCmsImageReferences,
+} from "../js/image-url.js";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const IMAGE_EXTENSIONS = new Set([".png", ".webp"]);
@@ -29,7 +33,11 @@ function contentImagePaths(value, field = "", paths = []) {
   } else if (value && typeof value === "object") {
     for (const [key, item] of Object.entries(value)) contentImagePaths(item, key, paths);
   } else if (IMAGE_FIELDS.has(field) && typeof value === "string" && value.trim()) {
-    paths.push(new URL(canonicalPublicImageUrl(value), "https://masest.co").pathname);
+    const pathname = new URL(canonicalPublicImageUrl(value), "https://masest.co").pathname;
+    const cmsSitePrefix = "/storage/v1/object/public/content-assets/site";
+    paths.push(pathname.startsWith(`${cmsSitePrefix}/img/`)
+      ? pathname.slice(cmsSitePrefix.length)
+      : pathname);
   }
   return paths;
 }
@@ -111,8 +119,8 @@ test("site and CMS assets merge into one searchable, de-duplicated library", asy
   const { formatAssetBytes, mergeSiteImageAssets } = await import("../js/admin/site-image-library.js");
   const merged = mergeSiteImageAssets({
     cmsAssets: [{
-      storage_path: "img/proof/cases/brewery.webp",
-      public_url: "img/proof/cases/brewery.webp",
+      storage_path: "/img/proof/cases/brewery.webp",
+      public_url: "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
       alt: "CMS-authored brewery proof",
       status: "available",
     }],
@@ -132,10 +140,46 @@ test("site and CMS assets merge into one searchable, de-duplicated library", asy
     q: "brewery",
   });
 
-  assert.deepEqual(merged.map((asset) => asset.public_url), ["/img/proof/cases/brewery.webp"]);
+  assert.deepEqual(merged.map((asset) => asset.public_url), [
+    "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
+  ]);
   assert.equal(merged[0].alt, "CMS-authored brewery proof");
   assert.equal(merged[0].source, "cms");
   assert.equal(formatAssetBytes(1024), "1 KB");
   assert.equal(formatAssetBytes(239_674), "234.1 KB");
   assert.equal(formatAssetBytes(null), "");
+});
+
+test("known site image references compile to stable CMS storage URLs", () => {
+  const base = "https://example.supabase.co/storage/v1/object/public/content-assets/site";
+  const brewery = "/img/proof/cases/brewery.webp";
+  assert.equal(
+    cmsPublicImageUrl("../img/proof/cases/brewery.webp?v=7", base),
+    `${base}/img/proof/cases/brewery.webp?v=7`,
+  );
+  assert.equal(cmsPublicImageUrl("/docs/file.pdf", base), "/docs/file.pdf");
+
+  const source = [
+    '<img src="/img/proof/cases/brewery.webp?v=7">',
+    "background:url(../img/proof/cases/brewery.webp)",
+    "https://masest.co/img/proof/cases/brewery.webp",
+    "/img/products/example.webp",
+  ].join("\n");
+  const compiled = rewriteCmsImageReferences(source, [brewery], base);
+  assert.equal(compiled.match(new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))?.length, 3);
+  assert.match(compiled, /\/img\/products\/example\.webp/);
+  assert.doesNotMatch(compiled, /(?:^|[("'=\s])(?:\.\.\/|\/)img\/proof\/cases\/brewery\.webp/m);
+});
+
+test("image-library builder can idempotently sync site assets and live CMS references", () => {
+  const builder = readFileSync(new URL("../tools/build-image-library.mjs", import.meta.url), "utf8");
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+
+  assert.match(pkg.scripts["sync:cms-images"], /build-image-library\.mjs --sync-cms/);
+  assert.match(builder, /--sync-cms/);
+  assert.match(builder, /site\$\{asset\.storage_path\}/);
+  assert.match(builder, /x-upsert/);
+  assert.match(builder, /content_entries/);
+  assert.match(builder, /products/);
+  assert.match(builder, /rewriteCmsImageReferences/);
 });

@@ -6,6 +6,7 @@
     "check": "node tools/check-js.mjs",
     "build:content": "node tools/build-content.mjs",
     "build:images": "node tools/build-image-library.mjs",
+    "sync:cms-images": "node tools/build-image-library.mjs --sync-cms",
     "build:industries": "node tools/build-industry-pages.mjs",
     "optimize:images": "node tools/optimize-site-images.mjs --apply && node tools/build-image-library.mjs",
     "build:blog": "node tools/build-blog.mjs",

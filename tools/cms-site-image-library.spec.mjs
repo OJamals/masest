@@ -41,13 +41,17 @@ test("platform staff can browse, search, and select existing public-site images"
   });
 
   await page.getByRole("button", { name: "Browse library" }).click();
-  await expect(page.locator("[data-shared-image-library-count]")).toHaveText("157 images");
-  await expect(page.locator(".shared-image-library-card")).toHaveCount(4);
+  await expect(page.locator("[data-shared-image-library-count]")).toHaveText("223 images");
+  await expect(page.locator(".shared-image-library-card")).toHaveCount(223);
+  const library = page.locator(".shared-image-library-grid");
+  await expect(library).toBeVisible();
+  expect(await library.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
 
-  await page.getByPlaceholder("Search images by name or alt text").fill("brewery");
+  await page.getByPlaceholder("Search by name or alt text").fill("brewery");
   await expect(page.locator("[data-shared-image-library-count]")).toContainText("image");
   await expect(page.locator(".shared-image-library-card").first()).toBeVisible();
-  await page.locator(".shared-image-library-card").first().getByRole("button", { name: "Use image" }).click();
+  await page.locator(".shared-image-library-card").first().click();
+  await page.getByRole("button", { name: "Select", exact: true }).click();
 
   await expect.poll(() => page.evaluate(() => window.__imagePickerResult)).not.toBeNull();
   const result = await page.evaluate(() => window.__imagePickerResult);

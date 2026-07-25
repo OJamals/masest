@@ -41,9 +41,39 @@ function contentAssetPublicUrl(env, storagePath) {
   return `${base}/storage/v1/object/public/${contentAssetBucket(env)}/${encodeStoragePath(path)}`;
 }
 
+export function assetPublicUrl(env, asset) {
+  const sourceUrl = canonicalPublicImageUrl(asset?.source_url);
+  return sourceUrl || contentAssetPublicUrl(env, asset?.storage_path);
+}
+
+export function siteStoragePath(storagePath) {
+  const logical = canonicalPublicImageUrl(storagePath).split(/[?#]/, 1)[0];
+  return /^\/img\/[a-z0-9_./%()+@-]+$/i.test(logical) && !logical.includes("..")
+    ? `site${logical}`
+    : "";
+}
+
+export function managedStoragePath(env, asset) {
+  const sourceUrl = String(asset?.source_url || "").trim();
+  const base = String(env.SUPABASE_URL || "").replace(/\/+$/, "");
+  const prefix = `${base}/storage/v1/object/public/${contentAssetBucket(env)}/`;
+  if (base && sourceUrl.startsWith(prefix)) {
+    try {
+      const path = sourceUrl.slice(prefix.length).split("/").map(decodeURIComponent).join("/");
+      if (path && !path.split("/").some((part) => !part || part === "." || part === "..")) return path;
+    } catch {
+      return "";
+    }
+  }
+  const storagePath = String(asset?.storage_path || "").trim();
+  return storagePath && !storagePath.startsWith("/") && assetPublicUrl(env, asset) === contentAssetPublicUrl(env, storagePath)
+    ? storagePath
+    : "";
+}
+
 function withPublicUrl(env, asset) {
   if (!asset) return asset;
-  return { ...asset, public_url: contentAssetPublicUrl(env, asset.storage_path) };
+  return { ...asset, public_url: assetPublicUrl(env, asset) };
 }
 
 function isMultipart(request) {
@@ -98,8 +128,7 @@ async function optimizeWithTinyPng(file, env) {
 }
 
 function isManagedAsset(env, asset) {
-  const storagePath = String(asset?.storage_path || "").trim();
-  return Boolean(storagePath) && asset?.source_url === contentAssetPublicUrl(env, storagePath);
+  return Boolean(managedStoragePath(env, asset));
 }
 
 async function deleteStoredAsset(env, storagePath) {
@@ -190,6 +219,8 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
     mime_type: type,
     byte_size: optimized.body.byteLength,
     sha256: sha256,
+    width: Number(form.get("width")) || null,
+    height: Number(form.get("height")) || null,
     usage: parseUsage(form),
     source_url: publicUrl,
   }, userId);
@@ -203,6 +234,88 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
       ...result,
       asset: withPublicUrl(env, result.asset),
       deduplicated: false,
+      original_bytes: size,
+      stored_bytes: optimized.body.byteLength,
+      optimized_bytes_saved: optimized.bytesSaved,
+    },
+  };
+}
+
+async function replaceUploadedAsset({ request, env, repo, user }) {
+  let form;
+  try {
+    form = await request.formData();
+  } catch {
+    return { status: 400, body: { error: "expected_multipart" } };
+  }
+  const storagePath = String(form.get("replace_storage_path") || "").trim();
+  if (!storagePath) return { status: 400, body: { error: "replace_storage_path_required" } };
+  const asset = await repo.getAsset(storagePath);
+  if (!asset) return { status: 404, body: { error: "asset_not_found" } };
+
+  const file = form.get("file");
+  if (!file || typeof file === "string") return { status: 400, body: { error: "file_required" } };
+  const type = String(file.type || "");
+  if (!ALLOWED_IMAGE_TYPES.has(type)) return { status: 400, body: { error: "unsupported_image_type" } };
+  const size = Number(file.size || 0);
+  if (size <= 0) return { status: 400, body: { error: "file_empty" } };
+  if (size > contentAssetMaxBytes(env)) return { status: 413, body: { error: "asset_too_large" } };
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { status: 500, body: { error: "storage_not_configured" } };
+  }
+
+  const objectPath = managedStoragePath(env, asset) || siteStoragePath(asset.storage_path);
+  if (!objectPath) return { status: 400, body: { error: "asset_not_cms_managed" } };
+  const optimized = await optimizeWithTinyPng(file, env);
+  if (!optimized.ok) return { status: optimized.status, body: { error: optimized.error } };
+  const sha256 = await sha256Hex(optimized.body);
+  const upload = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${contentAssetBucket(env)}/${encodeStoragePath(objectPath)}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      "content-type": type,
+      "cache-control": "max-age=60, must-revalidate",
+      "x-upsert": "true",
+    },
+    body: optimized.body,
+  });
+  if (!upload.ok) {
+    return { status: 502, body: { error: "upload_failed", detail: await upload.text().catch(() => "") } };
+  }
+
+  const sourceUrl = contentAssetPublicUrl(env, objectPath);
+  const result = await repo.saveAsset({
+    ...asset,
+    storage_path: asset.storage_path,
+    alt: String(form.get("alt") || asset.alt || "").trim(),
+    mime_type: type,
+    byte_size: optimized.body.byteLength,
+    sha256,
+    width: Number(form.get("width")) || asset.width || null,
+    height: Number(form.get("height")) || asset.height || null,
+    source_url: sourceUrl,
+    status: "available",
+  }, user.id);
+  if (!result.ok) return { status: 400, body: { error: result.error } };
+  await recordAudit(adminClient(env), {
+    user,
+    action: "content_asset.replaced",
+    targetType: "content_asset",
+    targetId: asset.storage_path,
+    detail: {
+      object_path: objectPath,
+      previous_sha256: asset.sha256 || null,
+      sha256,
+      original_bytes: size,
+      stored_bytes: optimized.body.byteLength,
+    },
+  });
+  return {
+    status: 200,
+    body: {
+      ...result,
+      asset: withPublicUrl(env, result.asset),
       original_bytes: size,
       stored_bytes: optimized.body.byteLength,
       optimized_bytes_saved: optimized.bytesSaved,
@@ -249,6 +362,18 @@ export async function onRequest({ request, env }) {
     }
   }
 
+  if (request.method === "PUT") {
+    if (!staffCan(role, "content.assets")) {
+      return json(403, { error: "forbidden", message: "Managing content assets requires owner access." });
+    }
+    try {
+      const result = await replaceUploadedAsset({ request, env, repo, user });
+      return json(result.status, result.body);
+    } catch (error) {
+      return json(500, { error: error.message });
+    }
+  }
+
   if (request.method === "DELETE") {
     if (!staffCan(role, "content.assets")) {
       return json(403, { error: "forbidden", message: "Managing content assets requires owner access." });
@@ -264,7 +389,7 @@ export async function onRequest({ request, env }) {
       if (asset.status !== "archived") return json(409, { error: "asset_must_be_archived" });
       const managed = isManagedAsset(env, asset);
       if (managed) {
-        const deleted = await deleteStoredAsset(env, asset.storage_path);
+        const deleted = await deleteStoredAsset(env, managedStoragePath(env, asset));
         if (!deleted.ok) return json(502, { error: deleted.error });
       }
       const result = await repo.deleteAsset(asset.storage_path);
