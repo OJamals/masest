@@ -630,20 +630,18 @@ test("scroll reveal sections become visible on long buyer pages", async ({ page 
       window.scrollTo(0, Math.max(0, top - Math.round(window.innerHeight * 0.65)));
       root.style.scrollBehavior = previousScrollBehavior;
     });
-    await page.waitForTimeout(800);
-
-    const state = await section.evaluate((node) => {
-      const style = getComputedStyle(node);
-      return {
-        inClass: node.classList.contains("in"),
-        opacity: Number(style.opacity),
-        transform: style.transform,
-      };
-    });
-
-    expect(state.inClass, `${item.label} should receive reveal class`).toBe(true);
-    expect(state.opacity, `${item.label} opacity`).toBeGreaterThan(0.85);
-    expect(state.transform, `${item.label} transform`).toBe("none");
+    await expect.poll(
+      () => section.evaluate((node) => node.classList.contains("in")),
+      { message: `${item.label} should receive reveal class` },
+    ).toBe(true);
+    await expect.poll(
+      () => section.evaluate((node) => Number(getComputedStyle(node).opacity)),
+      { message: `${item.label} opacity` },
+    ).toBeGreaterThan(0.85);
+    await expect.poll(
+      () => section.evaluate((node) => getComputedStyle(node).transform),
+      { message: `${item.label} transform` },
+    ).toBe("none");
   }
 });
 
