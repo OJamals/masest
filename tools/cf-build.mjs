@@ -8,11 +8,13 @@ import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSyn
 import { dirname, extname, join } from 'node:path';
 
 import { rewriteCmsImageReferences } from '../js/image-url.js';
+import { renderIndustryRedirects } from './build-industry-pages.mjs';
 import { validatePublicDocumentReview } from './public-document-policy.mjs';
 
 const OUT = 'dist';
 const restrictedPublicPaths = validatePublicDocumentReview();
 const siteImageManifest = JSON.parse(readFileSync('data/content/site-images.json', 'utf8'));
+const industryApplications = JSON.parse(readFileSync('data/industry-applications.json', 'utf8'));
 const siteImagePaths = (siteImageManifest.assets || []).map((asset) => asset.public_url);
 const configuredMediaBase = String(process.env.CMS_MEDIA_BASE || '').trim().replace(/\/+$/, '');
 const publicSupabaseUrl = readFileSync('js/config.js', 'utf8')
@@ -72,5 +74,6 @@ writeFileSync(join(OUT, '_headers'),
   Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()
   Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://static.cloudflareinsights.com; connect-src 'self' https://*.supabase.co https://api.stripe.com https://cloudflareinsights.com https://static.cloudflareinsights.com; frame-src 'self' https://challenges.cloudflare.com; form-action 'self'; upgrade-insecure-requests
 `);
+writeFileSync(join(OUT, '_redirects'), renderIndustryRedirects(industryApplications));
 
 console.log(`cf-build: copied ${n} static files to ${OUT}/; CMS media linked in ${rewritten}`);

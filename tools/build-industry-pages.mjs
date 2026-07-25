@@ -9,6 +9,7 @@ const reviewPath = new URL("data/public-document-review.json", root);
 const documentReview = JSON.parse(readFileSync(reviewPath, "utf8"));
 const documentRevision = documentReview.document_control.revision;
 const styleVersion = "20260724a";
+const industrySlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const escapeHtml = (value) => String(value)
   .replaceAll("&", "&amp;")
@@ -28,6 +29,42 @@ function replaceMarker(html, name, content) {
   const endAt = html.indexOf(end, startAt);
   if (endAt === -1) throw new Error(`Missing ${end} marker`);
   return `${html.slice(0, startAt)}${marker(name, content)}${html.slice(endAt + end.length)}`;
+}
+
+export function renderIndustryRedirects(industries) {
+  const currentSlugs = new Set();
+  const retiredSlugs = new Set();
+  const redirects = [];
+
+  for (const { slug } of industries) {
+    if (!industrySlugPattern.test(slug)) {
+      throw new Error(`invalid current route ${slug}`);
+    }
+    if (currentSlugs.has(slug)) {
+      throw new Error(`duplicate current route ${slug}`);
+    }
+    currentSlugs.add(slug);
+  }
+
+  for (const industry of industries) {
+    for (const retiredSlug of industry.redirect_from || []) {
+      if (!industrySlugPattern.test(retiredSlug)) {
+        throw new Error(`${industry.slug}: invalid retired route ${retiredSlug}`);
+      }
+      if (currentSlugs.has(retiredSlug)) {
+        throw new Error(`${industry.slug}: retired route is still current: ${retiredSlug}`);
+      }
+      if (retiredSlugs.has(retiredSlug)) {
+        throw new Error(`${industry.slug}: duplicate retired route ${retiredSlug}`);
+      }
+      retiredSlugs.add(retiredSlug);
+      redirects.push(
+        `/industries/${retiredSlug} /industries/${industry.slug} 301`,
+      );
+    }
+  }
+
+  return redirects.sort().join("\n") + (redirects.length ? "\n" : "");
 }
 
 function contactHref(industry, type = "audit") {

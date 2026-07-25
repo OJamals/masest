@@ -301,7 +301,7 @@ test("release build regenerates controlled pages and busts the shared stylesheet
   const pages = execFileSync("git", ["ls-files", "*.html", "**/*.html"], {
     cwd: root,
     encoding: "utf8",
-  }).trim().split("\n").filter(Boolean);
+  }).trim().split("\n").filter((page) => page && existsSync(new URL(page, root)));
   for (const page of pages) {
     const html = read(page);
     if (!/css\/style\.css\?v=/.test(html)) continue;

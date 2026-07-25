@@ -11,31 +11,28 @@ const managedImages = new Set(
 
 const priorityIndustries = [
   ["data-centers", "Data Centers", "Cooling tower scale, Legionella compliance, green mandates", "watersafe60 hcr descaler", "Schedule a water-treatment audit."],
-  ["golf-courses", "Golf Courses", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash purgo", "Request grounds-crew trial"],
-  ["solar-panel-cleaning", "Solar / Panel Cleaning", "Soft-wash at scale without panel damage", "multiwash lam3", "Request per-MW quote"],
+  ["golf-courses", "Golf Courses & Sports Facilities", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash purgo", "Request grounds-crew trial"],
+  ["solar-panel-cleaning", "Solar Farms & Panel Cleaning", "Soft-wash at scale without panel damage", "multiwash lam3", "Request per-MW quote"],
   ["municipalities-water-utilities", "Municipalities & Water Utilities", "NSF-60 requirements, worker safety, bids", "cr2 watersafe60 hcr", "Get on our bid list"],
-  ["hotels-property-management", "Hotels / Property Management", "Facades, pools, restrooms, HVAC", "multiwash lam3 descaler neutral", "Request property walkthrough"],
+  ["hotels-property-management", "Hotels, Resorts & Property Management", "Facades, pools, restrooms, HVAC", "multiwash lam3 descaler neutral", "Request property walkthrough"],
 ];
 
 const tab4IndustryPages = [
-  ["schools-universities", "Schools &amp; Universities", "HVAC scale, coil maintenance, and hazmat chemicals near kids", "descaler hcr multiwash", "Request district pricing"],
+  ["education", "Education Facilities", "K-12 and university facilities", "cr hcr watersafe60 lam3", "Price this cleaning task"],
   ["mechanical-contractors-water-treatment", "Mechanical Contractors &amp; Water Treatment", "Callback-driven descaling and hazmat handling costs", "hcr descaler watersafe60", "Open a contractor account"],
   ["breweries-distilleries-wineries", "Breweries, Distilleries &amp; Wineries", "CIP acid and caustic hazards", "cr hcr cr-hd-low-foam", "Book a free CIP demo"],
   ["restaurants-commercial-kitchens", "Restaurants &amp; Commercial Kitchens", "Grease, drains, hood filters, and equipment cleaning", "crhd purgo multiwash neutral", "Get a sample kit"],
   ["data-centers", "Data Centers", "Cooling tower scale, Legionella compliance, green mandates", "watersafe60 hcr descaler", "Schedule a water-treatment audit."],
   ["warehousing-distribution-centers", "Warehousing &amp; Distribution Centers", "Floor degreasing at scale", "crhd multiwash", "Request drum pricing"],
-  ["hotels-resorts-property-management", "Hotels, Resorts &amp; Property Management", "Facades, pools, restrooms, HVAC", "multiwash lam3 descaler neutral", "Request property walkthrough"],
   ["pressure-washing-soft-wash-contractors", "Pressure-Washing &amp; Soft-Wash Contractors", "Bleach damage, plant kill, and runoff liability", "lam3 multiwash crhd", "Distributor application"],
   ["drone-cleaning-companies", "Drone Cleaning Companies", "safe, drone-rated chemistry", "multiwash lam3 crhd", "Book a drone-wash consult"],
   ["marine-marinas-boatyards", "Marine, Marinas &amp; Boatyards", "Hull scale, salt, wax, and aluminum brightwork", "torque alumibrite hcr", "Get marina bulk pricing"],
   ["aviation-fbos-mro-airports", "Aviation - FBOs, MRO, Airports", "precision degreasing without corrosion", "crhd alumibrite", "Request aviation spec sheet"],
   ["municipalities-water-utilities", "Municipalities &amp; Water Utilities", "NSF-60 requirements, worker safety, bids", "cr2 watersafe60 hcr", "Get on our bid list"],
-  ["golf-courses-sports-facilities", "Golf Courses &amp; Sports Facilities", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash purgo", "Request grounds-crew trial"],
   ["healthcare-senior-living", "Healthcare &amp; Senior Living", "Cleaning near vulnerable people", "neutral multiwash descaler", "Request facilities assessment"],
   ["fleet-trucking-car-washes", "Fleet, Trucking &amp; Car Washes", "Degreasing, wash and wax", "torque crhd multiwash alumibrite", "Fleet program pricing"],
-  ["oil-gas-industrial-plants", "Oil &amp; Gas / Industrial Plants", "Tank cleaning, scale", "hcr cr crhd", "Talk to an EHS consultant"],
-  ["food-processing-agriculture", "Food Processing &amp; Agriculture", "CIP, organic residue", "cr hcr cr-hd-low-foam", "Request plant trial"],
-  ["solar-farms-panel-cleaning", "Solar Farms &amp; Panel Cleaning", "Soft-wash at scale without panel damage", "multiwash lam3", "Request per-MW quote"],
+  ["oil-gas", "Oil, Gas &amp; Process Plants", "Descale, derust, and degrease rigs", "hcr descaler crhd neutral", "Price this cleaning task"],
+  ["agriculture", "Agriculture &amp; Farm Operations", "Harvest, packing, milking", "multiwash crhd hcr", "Request farm-equipment trial"],
 ];
 
 const comparisonPages = [
@@ -58,12 +55,10 @@ const industryLabelPages = [
   "food-beverage",
   "breweries-distilleries-wineries",
   "restaurants-commercial-kitchens",
-  "food-processing-agriculture",
   "pressure-washing-soft-wash-contractors",
   "drone-cleaning-companies",
   "fleet-trucking-car-washes",
   "golf-courses",
-  "golf-courses-sports-facilities",
 ];
 
 test("product and industry listings stay concise and product-focused", () => {
@@ -129,7 +124,7 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
     pressure: read("industries/pressure-washing-soft-wash-contractors.html"),
     drone: read("industries/drone-cleaning-companies.html"),
     fleet: read("industries/fleet-trucking-car-washes.html"),
-    gym: read("industries/golf-courses-sports-facilities.html"),
+    gym: read("industries/golf-courses.html"),
   };
 
   assert.match(pages.food, /data-label-variant="fb-cip-cr"/);

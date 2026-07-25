@@ -5,7 +5,7 @@
 
 ## Executive verdict
 
-The 32-page industry library now has task-led operating guidance, controlled document links, localized trial briefs, and source-backed imagery. P0, P1, and P2 remediation is implemented locally and covered by fail-closed tests.
+The 27-page industry library now has task-led operating guidance, controlled document links, localized trial briefs, source-backed imagery, and permanent redirects from six retired overlaps. P0 through P3 remediation is implemented locally and covered by fail-closed tests.
 
 Completed:
 
@@ -16,33 +16,33 @@ Completed:
 5. Consolidated duplicate assets and regenerated the optimized image catalog: 223 files, about 27.05 MB, zero exact duplicate groups.
 6. Added document control and an indexed public document room for all 46 public PDFs. Source-byte and review-ledger drift now fail the release gate.
 7. Added two optimized, task-specific images to every route, plus a third high-value task on 11 routes with materially different cleaning work. Active chemistry scenes distinguish wet dwell, rinse/agitation, and clean endpoint.
+8. Consolidated five duplicate supplemental routes into broader maintained pages and split the mixed food-processing/agriculture route into a focused Agriculture & Farm Operations page.
 
 Residual review:
 
 - Twenty-three documents remain marked `claim_review_required`. Distribution approval does not equal technical or legal substantiation.
-- Twenty-one industry routes still lack a qualifying field gallery. Representative scenes remain explicitly labeled as representative, not proof.
+- Sixteen industry routes still lack a qualifying field gallery. Generated task scenes remain separated from field proof.
 - Supplemental pages remain useful only while their task, buyer, and search intent stay narrower than their canonical parent.
-- Production deployment and cache-busted Ego browser verification are complete.
+- P3 production deployment remains separate from this local implementation.
 
 ## Verification summary
 
 | Check | Result |
 |---|---:|
-| Public industry routes | 32/32 generated |
-| Local browser render | 32/32 H1 present |
-| Production desktop/mobile routes | 32/32 at both viewports |
+| Public industry routes | 27/27 generated |
+| Local browser render | 27/27 H1 present |
 | Broken rendered images | 0 |
 | Horizontal overflow | 0 pages |
 | Browser console errors | 0 |
 | Failed browser requests | 0 |
 | Canonical sectors in CMS snapshot | 16 |
-| Supplemental static landing pages | 16 |
+| Supplemental static landing pages | 11 |
 | Task images | 75/75 |
-| Pages with field galleries | 11/32 |
-| Pages with no field gallery | 21/32 |
-| Task-led application/proof modules | 32/32 |
-| Localized trial briefs | 32/32 |
-| Direct controlled-document access | 32/32 |
+| Pages with field galleries | 11/27 |
+| Pages with no field gallery | 16/27 |
+| Task-led application/proof modules | 27/27 |
+| Localized trial briefs | 27/27 |
+| Direct controlled-document access | 27/27 |
 | Public PDFs reviewed and controlled | 46/46 |
 | Public product/SDS PDFs | 43 |
 | Public case/lab PDFs | 3 |
@@ -59,19 +59,19 @@ Browser and release gates establish clean rendering, source integrity, and docum
 1. Construction — `/industries/construction.html`
 2. Data Centers — `/industries/data-centers.html`
 3. Distribution / Cold Storage — `/industries/distribution-cold-storage.html`
-4. Education — `/industries/education.html`
+4. Education Facilities — `/industries/education.html`
 5. Food & Beverage — `/industries/food-beverage.html`
-6. Golf Courses — `/industries/golf-courses.html`
+6. Golf Courses & Sports Facilities — `/industries/golf-courses.html`
 7. Healthcare — `/industries/healthcare.html`
-8. Hotels / Property Management — `/industries/hotels-property-management.html`
+8. Hotels, Resorts & Property Management — `/industries/hotels-property-management.html`
 9. HVAC / Water Treatment — `/industries/hvac-water.html`
 10. Manufacturing — `/industries/manufacturing.html`
 11. Marine — `/industries/marine.html`
 12. Military / Government — `/industries/military-government.html`
 13. Municipalities & Water Utilities — `/industries/municipalities-water-utilities.html`
-14. Oil & Gas — `/industries/oil-gas.html`
+14. Oil, Gas & Process Plants — `/industries/oil-gas.html`
 15. Plumbing — `/industries/plumbing.html`
-16. Solar / Panel Cleaning — `/industries/solar-panel-cleaning.html`
+16. Solar Farms & Panel Cleaning — `/industries/solar-panel-cleaning.html`
 
 ### Supplemental targeted pages
 
@@ -79,18 +79,13 @@ Browser and release gates establish clean rendering, source integrity, and docum
 18. Breweries, Distilleries & Wineries — `/industries/breweries-distilleries-wineries.html`
 19. Drone Cleaning Companies — `/industries/drone-cleaning-companies.html`
 20. Fleet, Trucking & Car Washes — `/industries/fleet-trucking-car-washes.html`
-21. Food Processing & Agriculture — `/industries/food-processing-agriculture.html`
-22. Golf Courses & Sports Facilities — `/industries/golf-courses-sports-facilities.html`
-23. Healthcare & Senior Living — `/industries/healthcare-senior-living.html`
-24. Hotels, Resorts & Property Management — `/industries/hotels-resorts-property-management.html`
-25. Marine, Marinas & Boatyards — `/industries/marine-marinas-boatyards.html`
-26. Mechanical Contractors & Water Treatment — `/industries/mechanical-contractors-water-treatment.html`
-27. Oil & Gas / Industrial Plants — `/industries/oil-gas-industrial-plants.html`
-28. Pressure-Washing & Soft-Wash Contractors — `/industries/pressure-washing-soft-wash-contractors.html`
-29. Restaurants & Commercial Kitchens — `/industries/restaurants-commercial-kitchens.html`
-30. Schools & Universities — `/industries/schools-universities.html`
-31. Solar Farms & Panel Cleaning — `/industries/solar-farms-panel-cleaning.html`
-32. Warehousing & Distribution Centers — `/industries/warehousing-distribution-centers.html`
+21. Agriculture & Farm Operations — `/industries/agriculture.html`
+22. Healthcare & Senior Living — `/industries/healthcare-senior-living.html`
+23. Marine, Marinas & Boatyards — `/industries/marine-marinas-boatyards.html`
+24. Mechanical Contractors & Water Treatment — `/industries/mechanical-contractors-water-treatment.html`
+25. Pressure-Washing & Soft-Wash Contractors — `/industries/pressure-washing-soft-wash-contractors.html`
+26. Restaurants & Commercial Kitchens — `/industries/restaurants-commercial-kitchens.html`
+27. Warehousing & Distribution Centers — `/industries/warehousing-distribution-centers.html`
 
 ## Cleaning-task research inventory
 
@@ -144,34 +139,29 @@ Browser and release gates establish clean rendering, source integrity, and docum
 | Construction | Formwork, tools, concrete-pump hopper and line cleanout | Hardscape via contractor page | Release oil; masonry efflorescence |
 | Data Centers | Plate exchanger, chilled-water pump, strainer, closed-loop flush | Coils, condensers, towers, and utility exchangers via HVAC/mechanical pages | CDU-specific view |
 | Distribution / Cold Storage | Freezer floor, tire/oil soil, evaporator coil | Dock, forklift, and handling equipment via warehousing page | Condensate-area detail |
-| Education | Campus steps/walkway, hydronic exchanger | Gym, locker room, cafeteria floor, and AHU via school/sports/restaurant pages | Restroom-specific view |
-| Food & Beverage | Tank CIP and plate exchanger | Fermenter, mash tun, tube sheet, floor, and drain contexts via brewery/restaurant pages | — |
-| Golf Courses | Reel mower, irrigation parts, protected golf-cart wash | Clubhouse and stadium hardscape via sports/contractor pages | — |
+| Education Facilities | Campus steps/walkway, hydronic exchanger, gym floor, and AHU coil | Cafeteria floor via restaurant page | Restroom-specific view |
+| Food & Beverage | Tank CIP, plate exchanger, and food conveyor | Fermenter, mash tun, tube sheet, floor, and drain contexts via brewery/restaurant pages | — |
+| Golf Courses & Sports Facilities | Reel mower, irrigation parts, protected golf-cart wash, locker-room shower, and stadium walkway | Exterior hardscape via contractor page | Bleacher-specific view |
 | Healthcare | Water-side exchanger and entrance canopy | Laundry, accessible shower, HVAC, and plumbing via senior-living/mechanical pages | Restroom-specific view |
-| Hotels / Property Management | Pool waterline and facade | Washer, hood filter, hardscape, and back-of-house floor via resort/restaurant pages | — |
+| Hotels, Resorts & Property Management | Pool waterline, facade, commercial washer, and hood filter | Hardscape and back-of-house floor via contractor/restaurant pages | — |
 | HVAC / Water Treatment | Coil, cooling-tower fill, condensate pan | Boiler, exchanger, loop, and pump work via mechanical/plumbing pages | — |
 | Manufacturing | Press bed, aqueous parts wash, approved reusable filter | Utility-floor recovery via warehouse/aviation pages | — |
 | Marine | Hull, waterline, and bilge | Aluminum workboat, outboard, and service parts via marina page | — |
 | Military / Government | Fleet undercarriage and pump parts | Utility equipment and maintenance-floor recovery via municipal/aviation pages | Maintenance-bay-specific view |
 | Municipalities & Water Utilities | Impeller, valve, above-ground lift-station pump and float equipment | Pipe flanges via plumbing page | — |
-| Oil & Gas | Gas-free manifold and exchanger plates | Pump skid and fin-fan cooler via industrial-plants page | — |
+| Oil, Gas & Process Plants | Gas-free manifold, exchanger plates, pump skid, and fin-fan cooler | — | — |
 | Plumbing | Tankless closed-loop flush and removed flanges | Boiler, circulation loop, valve, and pump work via mechanical/municipal pages | — |
-| Solar / Panel Cleaning | Connected soft brush and autonomous robot | Utility rows, tracker-safe brush, dust, bird residue, and spotting via solar-farms page | — |
+| Solar Farms & Panel Cleaning | Connected soft brush, autonomous robot, utility rows, and rail-guided brush | — | — |
 | Aviation — FBOs, MRO, Airports | Ground-support equipment, parts washer, hangar floor recovery | Undercarriage and shop-floor contexts via fleet/military pages | Engine-stand-specific view |
 | Breweries, Distilleries & Wineries | Fermenter CIP, exchanger tube sheet, mash-tun CIP | Tank, plate exchanger, floor, and drain contexts via food/restaurant pages | — |
 | Drone Cleaning Companies | Inaccessible facade and steep residential roof | Ground-access siding and hardscape via contractor page | — |
 | Fleet, Trucking & Car Washes | Tractor wash, parts washer, refrigerated trailer interior | Undercarriage and shop-floor recovery via military/aviation pages | Cab-interior-specific view |
-| Food Processing & Agriculture | Conveyor, hopper/auger, milking-equipment CIP | Tank and exchanger CIP via food-and-beverage page | Farm-equipment-specific view |
-| Golf Courses & Sports Facilities | Locker-room shower and stadium walkway | Mower, cart, irrigation, and hardscape via golf/contractor pages | Bleacher-specific view |
+| Agriculture & Farm Operations | Hopper/auger wash and milking-equipment CIP | Food-process conveyor, tank, and exchanger CIP via food-and-beverage page | Packing-line exterior |
 | Healthcare & Senior Living | Laundry floor and accessible shower | HVAC, plumbing, and canopy contexts via healthcare/mechanical pages | — |
-| Hotels, Resorts & Property Management | Commercial washer and hood filter | Pool, facade, hardscape, and kitchen floor via hotel/contractor/restaurant pages | — |
 | Marine, Marinas & Boatyards | Aluminum workboat and outboard parts | Hull, waterline, and bilge via marine page | — |
 | Mechanical Contractors & Water Treatment | Tube sheet and boiler exchanger core | Coils, loops, pumps, and valves via HVAC/plumbing pages | — |
-| Oil & Gas / Industrial Plants | Pump skid and fin-fan cooler | Manifold and exchanger plates via oil-and-gas page | — |
 | Pressure-Washing & Soft-Wash Contractors | Steep roof, storefront concrete, siding | High facade and glass via drone/hotel pages | — |
 | Restaurants & Commercial Kitchens | Hood filters, cookline, floor degreasing | Process CIP via food-and-beverage page | — |
-| Schools & Universities | Gym floor and AHU coil | Cafeteria, locker room, plumbing, and campus exterior via restaurant/sports/education pages | Cafeteria-equipment-specific view |
-| Solar Farms & Panel Cleaning | Utility row, wet spotting, rail-guided brush | Autonomous robot via solar-panel page | — |
 | Warehousing & Distribution Centers | Loading dock and forklift wash bay | Aisle-floor recovery, tire marks, and light oil via cold-storage page | — |
 
 ### High-value gap additions
@@ -232,6 +222,14 @@ These sources informed equipment geometry and process boundaries. They do not su
 - Release checks verify PDF bytes against the review ledger and source corpus under `/Users/omar/Desktop/masest`.
 - Changed or unreviewed PDF bytes fail closed.
 - Restricted customer records stay in the source corpus only; they are excluded from the Pages build.
+
+### P3 — complete locally
+
+- Consolidated Golf/Sports, Hotels/Resorts, Oil/Gas/Process Plants, Education/Schools, and Solar/Farms into five maintained routes.
+- Split the mixed Food Processing & Agriculture route: food-processing tasks moved to Food & Beverage; Agriculture & Farm Operations now has its own task, controls, documents, CTA, and gallery.
+- Added permanent 301 redirects for all six retired URLs and removed those routes from source pages and sitemap.
+- Preserved all 75 accepted task images. Every image still renders exactly once on a maintained page whose scope includes the depicted task.
+- Reduced the public industry library from 32 routes to 27 without dropping a distinct regulated use, buyer workflow, or accepted visual.
 
 ### Remaining governance work
 
@@ -566,23 +564,21 @@ The public wrapper now supplies document ID, revision, effective date, owner, an
 - **Visuals:** Cold-storage floor-cleaning lead is relevant but makes the page look freezer-specific.
 - **Materials:** Add concrete/coating/tire/floor-scrubber compatibility, dilution/dwell, slip and dry-time verification, wastewater route, and a warehouse case study. Use Walmart customer/OEM claims only after written approval and substantiation.
 
-## Recommended information architecture
+## Implemented information architecture
 
-Keep 16 canonical pages as the primary CMS collection. Treat supplemental pages as one of three types:
+The 16 canonical CMS sectors remain the primary collection. Eleven supplemental pages remain because they cover a distinct regulated use or buyer workflow:
 
 1. **Distinct regulated use:** Aviation, Drone Cleaning, Restaurants, Senior Living.
-2. **Distinct buyer/workflow:** Breweries, Fleet, Mechanical Contractors, Pressure/Soft Wash, Warehousing.
-3. **Likely merge/canonicalize unless unique proof is added:** Golf & Sports, Hotels/Resorts, Oil & Gas/Industrial Plants, Schools/Universities, Solar Farms.
+2. **Distinct buyer/workflow:** Agriculture, Breweries, Fleet, Marine/Marinas, Mechanical Contractors, Pressure/Soft Wash, Warehousing.
 
-Food Processing & Agriculture should be split. Marine/Marinas can remain distinct only if the supplemental page focuses on boatyard washwater and haul-out operations.
+The five duplicate supplemental pages were merged into broader canonical routes. Food processing moved under Food & Beverage; Agriculture became a focused farm-operations page. Marine/Marinas remains separate around boatyard washwater and haul-out operations.
 
 ## Remaining delivery order
 
-1. Deploy current source and verify production with cache-busted Ego-browser checks.
+1. Deploy current source and verify production with cache-busted browser checks.
 2. Obtain technical/legal substantiation for the 23 `claim_review_required` documents.
 3. Add qualifying field galleries only where site permission and complete method records exist.
 4. Reissue legacy PDFs with corrected embedded metadata and approved claim scope.
-5. Merge any supplemental route that cannot sustain distinct tasks, proof, and buyer intent.
 
 ## Research basis
 
@@ -603,26 +599,27 @@ Supplemental-page recommendations also rely on:
 
 ## Task imagery implementation
 
-OpenAI image generation produced two distinct task scenes for each of the 32 industry routes, plus a third scene on 11 routes. The 75 final files live in `img/industries/tasks/` as 1200 × 750 WebP assets. Each renders in its exact industry page gallery with a cleaning-task caption; source-backed field proof remains separately identified in the generator data.
+OpenAI image generation produced 75 final 1200 × 750 WebP task scenes. After P3 consolidation, every accepted file renders exactly once across 27 maintained industry galleries. Images from retired overlap pages moved only to broader pages whose scope includes the depicted task; source-backed field proof remains separate.
 
 Prompt baseline: photorealistic industrial documentary scene; landscape 8:5; upright, mechanically plausible equipment; crop-safe margins; visible soil plus cleaning in progress or a clean result; no brands, text, product bottles, exaggerated foam, unsafe runoff, or detached tools. People were avoided unless needed to make tool handling and application credible. Workers use ordinary task-appropriate controls without chemical suits or respirators; required isolation, electrical, pressure, confined-space, cooling-tower, and wastewater controls remain visible or stated.
 
 - **Construction:** formwork residue removal in progress; stained reusable forms staged for cleaning.
 - **Data Centers:** opened fouled plate exchanger; contained chilled-water loop flush.
 - **Distribution / Cold Storage:** low-foam floor auto-scrub and recovery; evaporator-coil cleaning.
-- **Education:** campus stair/walkway dry-down; hydronic exchanger recirculation clean.
-- **Food & Beverage:** process-tank CIP spray-ball coverage; fouled-to-clean exchanger plates.
-- **Golf Courses:** reel-mower wash pad; fouled-to-clean irrigation components.
+- **Education Facilities:** campus stair/walkway dry-down; hydronic exchanger recirculation clean; gym floor and AHU coil.
+- **Food & Beverage:** process-tank CIP spray-ball coverage; fouled-to-clean exchanger plates; food conveyor.
+- **Agriculture & Farm Operations:** hopper/auger wash; milking-equipment CIP.
+- **Golf Courses & Sports Facilities:** reel-mower wash pad; irrigation components; cart, locker-room, and stadium tasks.
 - **Healthcare:** isolated water-side exchanger clean; ground-level water-fed canopy cleaning.
-- **Hotels / Property Management:** pool-waterline scale brushing; low-pressure facade wash.
+- **Hotels, Resorts & Property Management:** pool-waterline scale brushing; low-pressure facade wash; washer and hood-filter cleaning.
 - **HVAC & Water Treatment:** fin-safe condenser-coil cleaning; cooling-tower fill cleaning during shutdown.
 - **Manufacturing:** isolated stamping-press degreasing; aqueous parts-wash result.
 - **Marine:** contained hull/waterline wash; bilge degreasing with absorbent recovery.
 - **Military & Government:** fleet undercarriage wash with recovery; rust-affected pump parts staged for treatment.
 - **Municipalities & Water Utilities:** pump-impeller descaling; gate-valve scale removal.
-- **Oil & Gas:** gas-free valve-manifold degreasing; fouled-to-clean exchanger plates.
+- **Oil, Gas & Process Plants:** gas-free valve-manifold degreasing; exchanger plates; pump skid and fin-fan cooler.
 - **Plumbing:** tankless-heater closed-loop flush; flange scale removal with clean comparison.
-- **Solar Panel Cleaning:** connected water-fed soft brush; autonomous brush robot leaving a clean pass.
+- **Solar Farms & Panel Cleaning:** connected water-fed soft brush; autonomous robot; rail-guided utility-row cleaning.
 
 ## Decision
 

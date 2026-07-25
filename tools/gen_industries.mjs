@@ -17,13 +17,12 @@ const OUT = resolve(HERE, "..", "industries");
 const INDUSTRIES = [
 {
   slug: "oil-gas",
-  name: "Oil & Gas",
+  name: "Oil, Gas & Process Plants",
   icon: "ph-gas-can",
   h1: "Clean rigs and terminals without making the chemical the main hazard.",
   sub: "Descale, derust, and degrease rigs, terminals, and pipelines without the acid fumes, solvent storage, and hazmat freight that usually come with the job.",
   intro: "Rigs, terminals, and pipelines usually get cleaned with acids and solvent degreasers that bring fumes, burns, and hazmat freight. VertKleen does the same descaling, rust removal, and degreasing at an HMIS 0-0-0 rating, so storage, handling, and shipping stay simple.",
   products: ["hcr", "descaler", "crhd", "neutral"],
-  proof: { img: "ddc-rust", caption: "20-year rust scale cleared with HCR, verified by DDC Engineering." }
 },
 {
   slug: "marine",
@@ -33,7 +32,6 @@ const INDUSTRIES = [
   sub: "On cruise ships, commercial vessels, and docks, confined air and soft metals make the cleaning chemical a decision you can't shortcut.",
   intro: "Hull, aluminum, glass, and deck work often leans on hydrofluoric or hydrochloric acid brighteners and solvent washes — dangerous in confined shipboard air. VertKleen Torque and AlumiBrite restore those surfaces without the acids, and MultiWash handles drone pressure-washing on occupied vessels.",
   products: ["torque", "alumibrite", "multiwash", "crhd"],
-  proof: { img: "marine", caption: "Yellowfin vessel trim, caulking, and glass cleared with VertKleen." }
 },
 {
   slug: "manufacturing",
@@ -43,7 +41,6 @@ const INDUSTRIES = [
   sub: "Strong cleaning for extrusion, processing, warehousing, and plant maintenance — with the documentation your technical review needs.",
   intro: "Plant maintenance runs on acid descaling, caustic CIP, and solvent degreasing, each one adding HazCom and exposure risk. VertKleen does those same jobs at an HMIS 0-0-0 rating, so there's less to handle and a cleaner package to put in front of technical review.",
   products: ["hcr", "cr", "crhd", "descaler"],
-  proof: { img: "farm-rust-after", caption: "Heavy industrial rust scale removed with HCR, no HCl handling." }
 },
 {
   slug: "distribution-cold-storage",
@@ -53,7 +50,6 @@ const INDUSTRIES = [
   sub: "Perishable distribution centers, refrigerated bays, ammonia systems, forklifts, kitchens, drains, and coils with proof from Walmart DSC materials.",
   intro: "Cold-storage teams juggle mildew, freezer entries, ammonia coils, condenser lines, kitchen grease, forklifts, and pilot readiness without stopping the building. VertKleen covers that whole walkdown with Descaler, CR HD, MultiWash, Purgo, and CR, and gets the proof, SDS, and trial details to you before the operations window closes.",
   products: ["descaler", "crhd", "multiwash", "purgo"],
-  proof: { img: "walmart-dc-crhd", caption: "Walmart distribution-center proof covers CR HD degreasing and Descaler refrigeration work." }
 },
 {
   slug: "food-beverage",
@@ -63,7 +59,6 @@ const INDUSTRIES = [
   sub: "Breweries, distilleries, wineries, processing floors, hood filters, and drains cleaned around staff and active food spaces.",
   intro: "Tanks, heat exchangers, and CIP/SIP lines usually depend on caustic-acid sequences that are hard on staff and effluent. Brewlando trial notes say CR and HCR worked better than traditional caustic-soda and acid blends at the same concentration and CIP time; the Carib lab table adds effluent data buyers can review.",
   products: ["cr", "hcr", "crhd", "neutral", "multiwash"],
-  proof: { img: "brewery", caption: "Brewery tanks and CIP cleaned with CR and HCR; effluent lab data on the proof page." }
 },
 {
   slug: "healthcare",
@@ -73,7 +68,6 @@ const INDUSTRIES = [
   sub: "Clean, passivate, and maintain water systems while the building stays occupied and fume-event risk stays lower.",
   intro: "Hospitals and occupied campuses can't plan around fume events or long shutdowns. VertKleen cleans, passivates, and supports water-system programs at an HMIS 0-0-0 rating, so maintenance works around the patients, staff, and visitors still in the building.",
   products: ["watersafe60", "purgo", "hcr", "cr", "descaler"],
-  proof: { img: "ac-coil", caption: "Residential facility AC coils cleaned with Descaler, aluminum-fin compatible." }
 },
 {
   slug: "construction",
@@ -83,11 +77,10 @@ const INDUSTRIES = [
   sub: "Concrete cleaning, equipment maintenance, rust removal, and site cleanup on active jobs.",
   intro: "Concrete, equipment, and exterior cleanup on active sites often puts acids and bleach near working crews. VertKleen Descaler clears concrete scale and calcium, HCR removes rust, and LAM3 handles biological growth on exteriors with simpler storage and lighter exposure risk.",
   products: ["descaler", "hcr", "crhd", "lam3"],
-  proof: { img: "grout-moss", caption: "Exterior grout, stucco, and painted surfaces cleared with CR and LAM3." }
 },
 {
   slug: "golf-courses",
-  name: "Golf Courses",
+  name: "Golf Courses & Sports Facilities",
   icon: "ph-flag",
   h1: "Keep grounds, carts, irrigation, and clubhouse surfaces out of the harsh-chemical lane.",
   sub: "Equipment, carts, irrigation scale, exterior stains, and turf-adjacent cleaning all need chemistry grounds crews can trial safely.",
@@ -95,7 +88,6 @@ const INDUSTRIES = [
   products: ["torque", "lam3", "hcr", "multiwash", "purgo"],
   primaryCta: "Request grounds-crew trial",
   primaryType: "sample",
-  proof: { img: "grout-moss", caption: "Exterior concrete, grout, and biological staining cleaned with VertKleen." }
 },
 {
   slug: "military-government",
@@ -105,17 +97,15 @@ const INDUSTRIES = [
   sub: "The procurement documentation federal, state, local, and public-facility buyers expect.",
   intro: "MASEST keeps SAM.gov, CAGE 0B2Q3, and NAICS 424690 paperwork ready for federal, state, local, and public-facility buyers. VertKleen replaces hazardous acids, caustics, and water-treatment chemistry across public assets, with HMIS 0-0-0 documentation, SDS, and exception notes on hand.",
   products: ["hcr", "descaler", "crhd", "alumibrite"],
-  proof: { img: "ddc-rust", caption: "Rust removed from defense-contractor equipment with HCR." }
 },
 {
   slug: "education",
-  name: "Education",
+  name: "Education Facilities",
   icon: "ph-graduation-cap",
   h1: "Campus work happens while campus happens.",
   sub: "K-12 and university facilities cleaned and treated while students, faculty, and staff remain on site.",
   intro: "Schools and universities maintain water systems, kitchens, and exteriors while occupied, so how you document chemical handling matters. VertKleen cleans and treats at an HMIS 0-0-0 rating for campuses still in use. Brevard County Schools is the proof behind it.",
   products: ["cr", "hcr", "watersafe60", "lam3"],
-  proof: { img: "drone-action", caption: "Occupied-campus exterior facility cleaning with VertKleen." }
 },
 {
   slug: "municipalities-water-utilities",
@@ -127,7 +117,6 @@ const INDUSTRIES = [
   products: ["cr2", "watersafe60", "hcr"],
   primaryCta: "Get on our bid list",
   primaryType: "quote",
-  proof: { img: "ddc-rust", caption: "DDC Engineering proof gives public buyers a documented acid-replacement result to review." }
 },
 {
   slug: "hvac-water",
@@ -137,7 +126,6 @@ const INDUSTRIES = [
   sub: "Inhibitor, antimicrobial support, passivation, pH control, and ASHRAE 188 support for cooling-tower programs.",
   intro: "Cooling-tower programs combine inhibitor, antimicrobial support, descaling acid, pH control, and sometimes a non-oxidizing biocide. VertKleen covers it with WaterSafe60, Purgo, HCR, and CR, with DBNPA footnoted as a low-hazard component when the non-oxidizing biocide is specified separately.",
   products: ["watersafe60", "purgo", "hcr", "cr"],
-  proof: { img: "ac-coil", caption: "HVAC coils and water systems cleaned and treated with aluminum-fin compatibility reviewed." }
 },
 {
   slug: "data-centers",
@@ -149,7 +137,6 @@ const INDUSTRIES = [
   products: ["watersafe60", "hcr", "descaler"],
   primaryCta: "Schedule a water-treatment audit.",
   primaryType: "audit",
-  proof: { img: "ac-coil", caption: "Cooling and heat-transfer surfaces cleaned with aluminum-fin compatibility reviewed." }
 },
 {
   slug: "plumbing",
@@ -159,11 +146,10 @@ const INDUSTRIES = [
   sub: "Water lines, fixtures, water heaters, and drains cleared of scale and calcium without hydrochloric acid handling.",
   intro: "Calcium, scale, and rust in supply lines, fixtures, and water heaters are usually attacked with hydrochloric-acid products or CLR. VertKleen Descaler clears buildup without hydrochloric acid handling, with metal compatibility reviewed for occupied-building plumbing work; HCR handles heavier rust passivation.",
   products: ["descaler", "hcr", "neutral"],
-  proof: { img: "ac-coil", caption: "Scale and calcium cleared from coils and water-side surfaces with Descaler." }
 },
 {
   slug: "hotels-property-management",
-  name: "Hotels / Property Management",
+  name: "Hotels, Resorts & Property Management",
   icon: "ph-buildings",
   h1: "One safer property-maintenance chemical set for guest-facing work.",
   sub: "Facades, pools, restrooms, HVAC, exterior stains, and odor complaints need one supplier that does not create guest-facing fume issues.",
@@ -171,11 +157,10 @@ const INDUSTRIES = [
   products: ["multiwash", "lam3", "descaler", "neutral"],
   primaryCta: "Request property walkthrough",
   primaryType: "audit",
-  proof: { img: "grout-moss", caption: "Exterior property surfaces cleared of biological staining with VertKleen." }
 },
 {
   slug: "solar-panel-cleaning",
-  name: "Solar / Panel Cleaning",
+  name: "Solar Farms & Panel Cleaning",
   icon: "ph-sun",
   h1: "Panel cleaning at scale without making runoff the objection.",
   sub: "Soft-wash at scale without panel damage, runoff review, and drone-site logistics need chemistry that is easy to approve.",
@@ -183,19 +168,6 @@ const INDUSTRIES = [
   products: ["multiwash", "lam3"],
   primaryCta: "Request per-MW quote",
   primaryType: "quote",
-  proof: { img: "drone-action", caption: "Drone exterior cleaning workflow supports large-site soft-wash programs." }
-},
-{
-  slug: "schools-universities",
-  name: "Schools & Universities",
-  icon: "ph-graduation-cap",
-  h1: "District facilities need safer chemistry that can move through approval.",
-  sub: "HVAC scale, coil maintenance, and hazmat chemicals near kids create a documentation burden for K-12 and higher-ed facilities.",
-  intro: "Schools and universities maintain coils, kitchens, exterior surfaces, and water-side equipment while students and staff remain on campus. Descaler, HCR, and MultiWash give facility teams a lower-hazard path for scale, rust, and everyday cleaning work.",
-  products: ["descaler", "hcr", "multiwash"],
-  primaryCta: "Request district pricing",
-  primaryType: "quote",
-  proof: { img: "drone-action", caption: "Broward County Schools proof supports occupied-campus HVAC and facilities conversations." }
 },
 {
   slug: "mechanical-contractors-water-treatment",
@@ -207,7 +179,6 @@ const INDUSTRIES = [
   products: ["hcr", "descaler", "watersafe60"],
   primaryCta: "Open a contractor account",
   primaryType: "quote",
-  proof: { img: "ac-coil", caption: "CSS Mechanical and Skytech buy in volume for facility and water-treatment work." }
 },
 {
   slug: "breweries-distilleries-wineries",
@@ -219,7 +190,6 @@ const INDUSTRIES = [
   products: ["cr", "hcr", "cr-hd-low-foam"],
   primaryCta: "Book a free CIP demo",
   primaryType: "sample",
-  proof: { img: "brewery", caption: "Brewlando Brewing ran the full CR and HCR CIP/SIP program and beat Micro Matic beer-line cleaner economics." }
 },
 {
   slug: "restaurants-commercial-kitchens",
@@ -231,7 +201,6 @@ const INDUSTRIES = [
   products: ["crhd", "purgo", "multiwash", "neutral"],
   primaryCta: "Get a sample kit",
   primaryType: "sample",
-  proof: { img: "kitchen-after", caption: "Commercial kitchen field work connects CR HD to heavy grease removal; sanitation remains a separate site-controlled step." }
 },
 {
   slug: "warehousing-distribution-centers",
@@ -243,19 +212,6 @@ const INDUSTRIES = [
   products: ["crhd", "multiwash"],
   primaryCta: "Request drum pricing",
   primaryType: "quote",
-  proof: { img: "walmart-dc-crhd", caption: "Walmart distribution centers replaced Simple Green with CR HD for heavy degreasing." }
-},
-{
-  slug: "hotels-resorts-property-management",
-  name: "Hotels, Resorts & Property Management",
-  icon: "ph-buildings",
-  h1: "Guest-facing properties need one safer maintenance lane.",
-  sub: "Facades, pools, restrooms, HVAC, exterior stains, and odor complaints need one supplier.",
-  intro: "Hotels, resorts, and property managers juggle public-facing surfaces, wet areas, HVAC coils, odor complaints, and exterior biological growth. MultiWash, LAM3, Descaler, and Neutral create one property-maintenance set.",
-  products: ["multiwash", "lam3", "descaler", "neutral"],
-  primaryCta: "Request property walkthrough",
-  primaryType: "audit",
-  proof: { img: "grout-moss", caption: "Triple-zero handling supports guest-facing work with fewer fume complaints." }
 },
 {
   slug: "pressure-washing-soft-wash-contractors",
@@ -267,7 +223,6 @@ const INDUSTRIES = [
   products: ["lam3", "multiwash", "crhd"],
   primaryCta: "Distributor application",
   primaryType: "distributor",
-  proof: { img: "grout-moss", caption: "LAM3 at $22.21/gal undercuts Wet & Forget at $34/gal and supports larger pack quoting." }
 },
 {
   slug: "drone-cleaning-companies",
@@ -279,7 +234,6 @@ const INDUSTRIES = [
   products: ["multiwash", "lam3", "crhd"],
   primaryCta: "Book a drone-wash consult",
   primaryType: "audit",
-  proof: { img: "drone-action", caption: "Inbound drone-cleaning demand is already replacing Wet & Forget and EcoAdvance conversations." }
 },
 {
   slug: "marine-marinas-boatyards",
@@ -291,7 +245,6 @@ const INDUSTRIES = [
   products: ["torque", "alumibrite", "hcr"],
   primaryCta: "Get marina bulk pricing",
   primaryType: "quote",
-  proof: { img: "marine", caption: "Torque wash-and-wax work is built for vessels and marina maintenance." }
 },
 {
   slug: "aviation-fbos-mro-airports",
@@ -303,19 +256,6 @@ const INDUSTRIES = [
   products: ["crhd", "alumibrite"],
   primaryCta: "Request aviation spec sheet",
   primaryType: "technical",
-  proof: { img: "airboat-after", caption: "AlumiBrite restored an aluminum commercial airboat; aviation use still requires written material and maintenance approval." }
-},
-{
-  slug: "golf-courses-sports-facilities",
-  name: "Golf Courses & Sports Facilities",
-  icon: "ph-flag",
-  h1: "Grounds crews need chemistry that works near turf and water features.",
-  sub: "Equipment, carts, irrigation scale, exterior stains, and sports-facility cleaning need safer trial chemistry.",
-  intro: "Golf courses and sports facilities clean carts, mowers, irrigation hardware, shop floors, clubhouses, exterior stains, equipment, mats, and high-touch areas near turf and water. Torque, LAM3, HCR, MultiWash, and Purgo cover the grounds-crew trial set.",
-  products: ["torque", "lam3", "hcr", "multiwash", "purgo"],
-  primaryCta: "Request grounds-crew trial",
-  primaryType: "sample",
-  proof: { img: "grout-moss", caption: "The grounds-crew bundle is built around turf-adjacent and water-feature work." }
 },
 {
   slug: "healthcare-senior-living",
@@ -327,7 +267,6 @@ const INDUSTRIES = [
   products: ["neutral", "multiwash", "descaler"],
   primaryCta: "Request facilities assessment",
   primaryType: "audit",
-  proof: { img: "ac-coil", caption: "HMIS 0-0-0 handling across the core line supports occupied-facility maintenance." }
 },
 {
   slug: "fleet-trucking-car-washes",
@@ -339,43 +278,17 @@ const INDUSTRIES = [
   products: ["torque", "crhd", "multiwash", "alumibrite"],
   primaryCta: "Fleet program pricing",
   primaryType: "quote",
-  proof: { img: "fleet-wash", caption: "Vehicle exterior cleaned during VertKleen field work; fleet selection still follows soil, finish, and wash-process review." }
 },
 {
-  slug: "oil-gas-industrial-plants",
-  name: "Oil & Gas / Industrial Plants",
-  icon: "ph-gas-can",
-  h1: "Industrial scale, tanks, and grease without making EHSS carry the switch.",
-  sub: "Tank cleaning, scale, and HAZWOPER-level safety burden make industrial chemistry a review-heavy decision.",
-  intro: "Oil, gas, and industrial plants need serious scale, rust, tank, and grease cleaning while EHSS reviews the handling path. HCR, CR, and CR HD cover the main industrial replacements with a lower-hazard file.",
-  products: ["hcr", "cr", "crhd"],
-  primaryCta: "Talk to an EHS consultant",
-  primaryType: "audit",
-  proof: { img: "ddc-rust", caption: "Founder experience includes 10+ years of EHSS in oil and gas, including Halliburton and Saudi Arabia." }
-},
-{
-  slug: "food-processing-agriculture",
-  name: "Food Processing & Agriculture",
+  slug: "agriculture",
+  name: "Agriculture & Farm Operations",
   icon: "ph-plant",
-  h1: "CIP, organic residue, and wash-down chemistry for plants and farms.",
-  sub: "CIP, organic residue, and wash-down compliance need chemistry that can be trialed and documented.",
-  intro: "Food processing and agriculture buyers need CIP, organic-residue cleaning, wash-down support, and lower-hazard documentation before they switch from acid and caustic routines. CR, HCR, and CR HD Low Foam cover the starting set.",
-  products: ["cr", "hcr", "cr-hd-low-foam"],
-  primaryCta: "Request plant trial",
+  h1: "Farm cleaning starts with soil, equipment, and runoff—not a generic food-plant recipe.",
+  sub: "Harvest, packing, milking, irrigation, and farm-equipment cleaning need crop, livestock, biosecurity, material, and wash-water controls.",
+  intro: "Farm operations clean plant residue, soil, grease, fertilizer salts, manure-adjacent organic load, milk film, and mineral scale across very different assets. MultiWash, CR HD, and HCR provide starting chemistry for a controlled equipment trial; food-contact sanitation and site biosecurity remain separate release steps.",
+  products: ["multiwash", "crhd", "hcr"],
+  primaryCta: "Request farm-equipment trial",
   primaryType: "sample",
-  proof: { img: "brewery", caption: "Brewery-proven CIP chemistry carries into plant and agriculture wash-down conversations." }
-},
-{
-  slug: "solar-farms-panel-cleaning",
-  name: "Solar Farms & Panel Cleaning",
-  icon: "ph-sun",
-  h1: "Solar soft-wash chemistry needs a runoff and coating story.",
-  sub: "Soft-wash at scale without panel damage is the approval problem for solar farms and panel cleaners.",
-  intro: "Solar farms and panel-cleaning crews need chemistry that supports soft-wash workflows, drone delivery, coating review, runoff control, and vegetation concerns. MultiWash and LAM3 are the core products.",
-  products: ["multiwash", "lam3"],
-  primaryCta: "Request per-MW quote",
-  primaryType: "quote",
-  proof: { img: "drone-action", caption: "Drone-delivered soft-wash workflows are ready for large solar-site cleaning conversations." }
 }
 ];
 
@@ -418,6 +331,8 @@ const TASK_GALLERY = {
   education: [
     ["Cleaned campus stair and masonry walkway during controlled dry-down", "Campus stair wash completed for dry-down"],
     ["School hydronic heat exchanger connected to a contained recirculation cleaning cart", "Hydronic heat exchanger on a closed-loop clean"],
+    ["Walk-behind auto-scrubber recovering wet soil and scuffs from an empty school gym floor", "School gym floor scrub and recovery", "schools-universities-01.webp"],
+    ["Connected low-pressure rinse cleaning an isolated school air-handler coil over recovery", "School air-handler coil cleaning", "schools-universities-02.webp"],
   ],
   "fleet-trucking-car-washes": [
     ["Road-film-covered tractor moving through a fixed commercial wash arch toward a clean finish", "Fleet road-film removal through a fixed wash arch"],
@@ -427,20 +342,18 @@ const TASK_GALLERY = {
   "food-beverage": [
     ["Clean-in-place spray ball rinsing the interior of a stainless beverage process tank", "CIP spray-ball coverage inside a process tank"],
     ["Food-process heat-exchanger plates showing mineral film beside cleaned stainless plates", "Fouled and cleaned heat-exchanger plates"],
+    ["Mounted spray bar and rotary brush cleaning organic process film from an empty stainless food conveyor", "Food conveyor cleaning before sanitation", "food-processing-agriculture-01.webp"],
   ],
-  "food-processing-agriculture": [
-    ["Mounted spray bar and rotary brush cleaning organic process film from an empty stainless food conveyor", "Food conveyor cleaning before sanitation"],
-    ["Wet-treated organic residue being rinsed from an empty agricultural hopper and auger", "Agricultural hopper wash after wet dwell"],
-    ["Dairy milking clusters and stainless lines connected to a contained CIP wash circuit", "Milking-equipment CIP before sanitation"],
+  agriculture: [
+    ["Wet-treated organic residue being rinsed from an empty agricultural hopper and auger", "Agricultural hopper wash after wet dwell", "food-processing-agriculture-02.webp"],
+    ["Dairy milking clusters and stainless lines connected to a contained CIP wash circuit", "Milking-equipment CIP before sanitation", "food-processing-agriculture-03.webp"],
   ],
   "golf-courses": [
     ["Commercial reel-mower components being washed on a contained golf maintenance pad", "Turf-equipment wash in progress"],
     ["Scaled golf-course irrigation valves and sprinkler parts staged beside cleaned components", "Irrigation parts staged from fouled to clean"],
     ["Electric golf cart exterior moving from wet turf soil through a protected low-pressure rinse", "Golf-cart exterior wash with protected electricals"],
-  ],
-  "golf-courses-sports-facilities": [
-    ["Rotary floor scrubber cleaning soap and mineral film from an empty locker-room shower", "Locker-room tile and grout cleaning"],
-    ["Connected surface cleaner removing wet-treated soil from a stadium concrete walkway", "Stadium walkway cleaning with recovery"],
+    ["Rotary floor scrubber cleaning soap and mineral film from an empty locker-room shower", "Locker-room tile and grout cleaning", "golf-courses-sports-facilities-01.webp"],
+    ["Connected surface cleaner removing wet-treated soil from a stadium concrete walkway", "Stadium walkway cleaning with recovery", "golf-courses-sports-facilities-02.webp"],
   ],
   healthcare: [
     ["Hospital mechanical-room heat exchanger connected to an isolated recirculation cleaning cart", "Water-side heat-exchanger clean in progress"],
@@ -453,10 +366,8 @@ const TASK_GALLERY = {
   "hotels-property-management": [
     ["Property-maintenance technician brushing mineral scale from resort pool waterline tile", "Mineral-scale removal at the pool waterline"],
     ["Hotel facade biological staining under a controlled low-pressure exterior wash", "Exterior staining under low-pressure wash"],
-  ],
-  "hotels-resorts-property-management": [
-    ["Fixed internal rinse jets cleaning detergent and mineral film from a hotel commercial washer drum", "Commercial washer drum cleaning"],
-    ["Hotel kitchen hood filters moving from wet greasy dwell through fixed rinse to clean", "Back-of-house hood-filter cleaning"],
+    ["Fixed internal rinse jets cleaning detergent and mineral film from a hotel commercial washer drum", "Commercial washer drum cleaning", "hotels-resorts-property-management-01.webp"],
+    ["Hotel kitchen hood filters moving from wet greasy dwell through fixed rinse to clean", "Back-of-house hood-filter cleaning", "hotels-resorts-property-management-02.webp"],
   ],
   "hvac-water": [
     ["Fin-safe low-pressure cleaning on an isolated aluminum condenser coil", "Fin-safe condenser-coil cleaning"],
@@ -492,10 +403,8 @@ const TASK_GALLERY = {
   "oil-gas": [
     ["Technician degreasing a de-inventoried and gas-free oilfield valve manifold over containment", "Gas-free valve-manifold degreasing"],
     ["Industrial heat-exchanger plates showing fouling beside cleaned metal during an isolated service clean", "Heat-exchanger plates from fouled to clean"],
-  ],
-  "oil-gas-industrial-plants": [
-    ["Wet hydrocarbon residue being rinsed from an isolated industrial pump skid over containment", "Industrial pump-skid clean after wet dwell"],
-    ["Fixed low-pressure manifold cleaning wet oily residue from an isolated fin-fan cooler coil", "Fin-fan cooler cleaning during shutdown"],
+    ["Wet hydrocarbon residue being rinsed from an isolated industrial pump skid over containment", "Industrial pump-skid clean after wet dwell", "oil-gas-industrial-plants-01.webp"],
+    ["Fixed low-pressure manifold cleaning wet oily residue from an isolated fin-fan cooler coil", "Fin-fan cooler cleaning during shutdown", "oil-gas-industrial-plants-02.webp"],
   ],
   plumbing: [
     ["Tankless water heater connected to a compact closed-loop descaling flush pump", "Tankless-heater flush loop in service"],
@@ -511,17 +420,11 @@ const TASK_GALLERY = {
     ["Wet softened grease being agitated from an empty commercial cookline during shutdown", "Cookline degreasing before rinse and sanitation"],
     ["Walk-behind auto-scrubber recovering wet grease from an empty commercial-kitchen tile floor", "Kitchen-floor degreasing before sanitation"],
   ],
-  "schools-universities": [
-    ["Walk-behind auto-scrubber recovering wet soil and scuffs from an empty school gym floor", "School gym floor scrub and recovery"],
-    ["Connected low-pressure rinse cleaning an isolated school air-handler coil over recovery", "School air-handler coil cleaning"],
-  ],
   "solar-panel-cleaning": [
     ["Technician using a connected water-fed soft brush on utility-scale solar panels", "Water-fed soft-brush cleaning"],
     ["Autonomous soft-brush robot leaving a clean pass across dusty photovoltaic panels", "Automated soft-brush pass in progress"],
-  ],
-  "solar-farms-panel-cleaning": [
-    ["Rail-guided soft-brush carriage cleaning a wet dusty section of utility-scale solar modules", "Rail-guided module-row cleaning"],
-    ["Connected rail-mounted brush moving from wet spotted modules to a clean dry band", "Wet dwell and soft-brush pass on solar modules"],
+    ["Rail-guided soft-brush carriage cleaning a wet dusty section of utility-scale solar modules", "Rail-guided module-row cleaning", "solar-farms-panel-cleaning-01.webp"],
+    ["Connected rail-mounted brush moving from wet spotted modules to a clean dry band", "Wet dwell and soft-brush pass on solar modules", "solar-farms-panel-cleaning-02.webp"],
   ],
   "warehousing-distribution-centers": [
     ["Connected surface cleaner moving from wet pallet grime to a clean loading-dock lane", "Loading-dock cleaning with recovery"],
@@ -717,12 +620,10 @@ const INDUSTRY_LABEL_VARIANTS = {
   "food-beverage": ["fb-cip-cr", "fb-cip-hcr", "fb-crhd", "fb-multiwash"],
   "breweries-distilleries-wineries": ["fb-cip-cr", "fb-cip-hcr"],
   "restaurants-commercial-kitchens": ["fb-crhd", "fb-multiwash"],
-  "food-processing-agriculture": ["fb-cip-cr", "fb-cip-hcr"],
   "pressure-washing-soft-wash-contractors": ["pw-crhd", "pw-crs", "pw-multiwash"],
   "drone-cleaning-companies": ["pw-crhd", "pw-crs", "pw-multiwash"],
   "fleet-trucking-car-washes": ["pw-crhd", "pw-multiwash"],
   "golf-courses": ["gym-multiwash", "gym-purgo"],
-  "golf-courses-sports-facilities": ["gym-multiwash", "gym-purgo"],
 };
 
 function labelVariantCard(key) {
@@ -869,9 +770,9 @@ const GALLERY_IMAGE_DIMS = {
 
 function imageGalleryBlock(ind) {
   const tasks = TASK_GALLERY[ind.slug];
-  const taskFigs = (tasks || []).map(([alt, caption], index) => `
+  const taskFigs = (tasks || []).map(([alt, caption, filename], index) => `
         <figure class="ind-shot ind-shot-wide">
-          <img src="../img/industries/tasks/${ind.slug}-${String(index + 1).padStart(2, "0")}.webp" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="1200" height="750">
+          <img src="../img/industries/tasks/${filename || `${ind.slug}-${String(index + 1).padStart(2, "0")}.webp`}" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="1200" height="750">
           <figcaption>${caption}</figcaption>
         </figure>`).join("");
 

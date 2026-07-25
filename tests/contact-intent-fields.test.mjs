@@ -45,9 +45,11 @@ test("unmatched product param falls back to the message field", () => {
 
 test("industry select covers every generated industry page", () => {
   for (const sector of [
-    "Oil &amp; Gas", "Marine", "Manufacturing", "Food &amp; Beverage", "Healthcare",
+    "Oil, Gas &amp; Process Plants", "Marine", "Manufacturing", "Food &amp; Beverage", "Healthcare",
     "Construction", "Distribution / Cold Storage", "Military / Government",
-    "Education", "HVAC / Water Treatment", "Plumbing",
+    "Education Facilities", "HVAC / Water Treatment", "Plumbing",
+    "Golf Courses &amp; Sports Facilities", "Hotels, Resorts &amp; Property Management",
+    "Solar Farms &amp; Panel Cleaning",
   ]) {
     assert.ok(contact.includes(`<option>${sector}</option>`), `industry option: ${sector}`);
   }

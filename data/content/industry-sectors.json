@@ -44,16 +44,16 @@
     },
     {
       "slug": "education",
-      "title": "Education",
+      "title": "Education Facilities",
       "href": "industries/education",
       "icon": "ph-graduation-cap",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/education.webp",
       "image_h": 104,
       "image_w": 168,
-      "summary": "K-12 and university facilities can clean and treat systems with students and staff still on campus. Brevard County Schools is the reference account.",
+      "summary": "Campus mechanical, kitchen, restroom, gym, and exterior cleaning within district chemical review and occupied-space controls.",
       "image_alt": "Campus facilities worker cleaning stained exterior steps and walkway",
       "sort_order": 9,
-      "image_label": "View Education industry page",
+      "image_label": "View Education Facilities industry page",
       "seo": {}
     },
     {
@@ -72,16 +72,16 @@
     },
     {
       "slug": "golf-courses",
-      "title": "Golf Courses",
+      "title": "Golf Courses & Sports Facilities",
       "href": "industries/golf-courses",
       "icon": "ph-flag",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/golf-courses.webp",
       "image_h": 104,
       "image_w": 168,
-      "summary": "Equipment, carts, irrigation scale, exterior stains, turf-adjacent cleaning, and water features for grounds crews that need safer trials.",
+      "summary": "Grounds equipment, carts, irrigation, locker rooms, athletic hardscape, exterior stains, and turf-adjacent cleaning.",
       "image_alt": "Grounds worker cleaning golf-course mowers and carts on a wash pad",
       "sort_order": 13,
-      "image_label": "View Golf Courses industry page",
+      "image_label": "View Golf Courses and Sports Facilities industry page",
       "seo": {}
     },
     {
@@ -100,7 +100,7 @@
     },
     {
       "slug": "hotels-property-management",
-      "title": "Hotels / Property Management",
+      "title": "Hotels, Resorts & Property Management",
       "href": "industries/hotels-property-management",
       "icon": "ph-buildings",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/hotels-property-management.webp",
@@ -109,7 +109,7 @@
       "summary": "Facades, pools, restrooms, HVAC, exterior stains, and odor complaints without creating guest-facing fume problems.",
       "image_alt": "Hotel facilities worker cleaning a poolside courtyard with a surface cleaner",
       "sort_order": 16,
-      "image_label": "View Hotels and Property Management industry page",
+      "image_label": "View Hotels, Resorts and Property Management industry page",
       "seo": {}
     },
     {
@@ -184,16 +184,16 @@
     },
     {
       "slug": "oil-gas",
-      "title": "Oil & Gas",
+      "title": "Oil, Gas & Process Plants",
       "href": "industries/oil-gas",
       "icon": "ph-gas-can",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/oil-gas.webp",
       "image_h": 104,
       "image_w": 168,
-      "summary": "Descale, derust, and degrease rigs, terminals, and pipelines without acid fumes, a solvent storage cabinet, or hazmat freight.",
+      "summary": "Contained descaling and degreasing for de-inventoried rigs, terminals, process skids, exchangers, valves, and plant-support assets.",
       "image_alt": "Oil and gas worker cleaning an isolated valve manifold and heat exchanger",
       "sort_order": 1,
-      "image_label": "View Oil and Gas industry page",
+      "image_label": "View Oil, Gas and Process Plants industry page",
       "seo": {}
     },
     {
@@ -212,7 +212,7 @@
     },
     {
       "slug": "solar-panel-cleaning",
-      "title": "Solar / Panel Cleaning",
+      "title": "Solar Farms & Panel Cleaning",
       "href": "industries/solar-panel-cleaning",
       "icon": "ph-sun",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/solar-panel-cleaning.webp",
@@ -221,7 +221,7 @@
       "summary": "Soft-wash at scale without panel damage, drone workflows, runoff review, and vegetation concerns slowing approval.",
       "image_alt": "Robotic soft-brush cleaner removing soil from a utility-scale solar array",
       "sort_order": 14,
-      "image_label": "View Solar and Panel Cleaning industry page",
+      "image_label": "View Solar Farms and Panel Cleaning industry page",
       "seo": {}
     }
   ]

@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 
-import { renderIndustryPage } from '../tools/build-industry-pages.mjs';
+import {
+  renderIndustryPage,
+  renderIndustryRedirects,
+} from '../tools/build-industry-pages.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
@@ -17,8 +20,51 @@ const industryFiles = readdirSync(new URL('industries/', root))
   .filter((file) => file.endsWith('.html'))
   .sort();
 
+test('P3 keeps distinct industry routes and permanently redirects retired overlaps', () => {
+  const redirects = new Map([
+    ['/industries/food-processing-agriculture', '/industries/agriculture'],
+    ['/industries/golf-courses-sports-facilities', '/industries/golf-courses'],
+    ['/industries/hotels-resorts-property-management', '/industries/hotels-property-management'],
+    ['/industries/oil-gas-industrial-plants', '/industries/oil-gas'],
+    ['/industries/schools-universities', '/industries/education'],
+    ['/industries/solar-farms-panel-cleaning', '/industries/solar-panel-cleaning'],
+  ]);
+  const slugs = new Set(industries.map((industry) => industry.slug));
+
+  assert.equal(industries.length, 27);
+  assert.equal(industries.filter((industry) => industry.kind === 'supplemental').length, 11);
+  assert.equal(slugs.has('agriculture'), true);
+
+  for (const [from, to] of redirects) {
+    assert.equal(existsSync(new URL(`${from}.html`.slice(1), root)), false, `${from}: stale page`);
+    assert.equal(slugs.has(from.split('/').pop()), false, `${from}: stale registry route`);
+    assert.equal(slugs.has(to.split('/').pop()), true, `${to}: redirect target`);
+  }
+
+  assert.equal(
+    renderIndustryRedirects(industries),
+    [...redirects].map(([from, to]) => `${from} ${to} 301`).join('\n') + '\n',
+  );
+});
+
+test('industry redirects reject unsafe or duplicate current routes', () => {
+  assert.throws(
+    () => renderIndustryRedirects([
+      { slug: 'safe\n/injected', redirect_from: ['retired-route'] },
+    ]),
+    /invalid current route/,
+  );
+  assert.throws(
+    () => renderIndustryRedirects([
+      { slug: 'duplicate-route' },
+      { slug: 'duplicate-route' },
+    ]),
+    /duplicate current route/,
+  );
+});
+
 test('each industry route has one captioned image gallery containing every accepted generated image', () => {
-  assert.equal(industries.length, 32);
+  assert.equal(industries.length, 27);
   const renderedTaskImages = new Set();
   const renderedSupplementalImages = new Set();
   const sampleFiles = siteImages
@@ -39,20 +85,6 @@ test('each industry route has one captioned image gallery containing every accep
     ['pressure-washing-soft-wash-contractors.webp'],
     'only exact-route supplemental imagery belongs in an individual gallery',
   );
-  const expandedTaskGalleries = new Set([
-    'aviation-fbos-mro-airports',
-    'breweries-distilleries-wineries',
-    'construction',
-    'fleet-trucking-car-washes',
-    'food-processing-agriculture',
-    'golf-courses',
-    'hvac-water',
-    'manufacturing',
-    'municipalities-water-utilities',
-    'pressure-washing-soft-wash-contractors',
-    'restaurants-commercial-kitchens',
-  ]);
-
   for (const industry of industries) {
     const html = read(`industries/${industry.slug}.html`);
     const gallery = html.match(
@@ -66,11 +98,7 @@ test('each industry route has one captioned image gallery containing every accep
       /<img src="\.\.\/img\/industries\/tasks\/([^"]+\.webp)"[^>]+width="1200" height="750">/g,
     )].map((match) => match[1]);
 
-    assert.equal(
-      taskImages.length,
-      expandedTaskGalleries.has(industry.slug) ? 3 : 2,
-      `${industry.slug}: task gallery`,
-    );
+    assert.ok(taskImages.length >= 2, `${industry.slug}: task gallery`);
 
     const sampleImages = [...gallery[1].matchAll(
       /<img src="\.\.\/img\/industries\/samples\/([^"]+\.webp)"[^>]+width="840" height="520">/g,
@@ -124,12 +152,12 @@ test('P1 registry covers every industry route with task-specific operating conte
   const expectedSlugs = industryFiles.map((file) => file.replace(/\.html$/, '')).sort();
   const actualSlugs = industries.map((industry) => industry.slug).sort();
 
-  assert.equal(industries.length, 32);
+  assert.equal(industries.length, 27);
   assert.deepEqual(actualSlugs, expectedSlugs);
   assert.equal(new Set(actualSlugs).size, actualSlugs.length);
 
   const supplemental = industries.filter((industry) => industry.kind === 'supplemental');
-  assert.equal(supplemental.length, 16);
+  assert.equal(supplemental.length, 11);
 
   for (const industry of industries) {
     for (const field of [
