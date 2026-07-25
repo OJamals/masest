@@ -117,6 +117,16 @@ test("content editor exposes native asset upload controls", () => {
   assert.match(source, /new FormData\(\)/);
 });
 
+test("content uploads bake EXIF orientation and cap source dimensions before storage", () => {
+  const source = readFileSync(new URL("../js/admin/content-assets.js", import.meta.url), "utf8");
+  assert.match(source, /createImageBitmap\(file, \{ imageOrientation: "from-image" \}\)/);
+  assert.match(source, /MAX_UPLOAD_EDGE = 2560/);
+  assert.match(source, /scale === 1 && file\.type !== "image\/jpeg"/);
+  assert.match(source, /canvas\.toBlob/);
+  assert.match(source, /"image\/webp"/);
+  assert.match(source, /Preparing upright, web-optimized image/);
+});
+
 test("content editor registers existing asset paths without a file upload", () => {
   const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8") + readFileSync(new URL("../js/admin/content-assets.js", import.meta.url), "utf8");
   assert.match(source, /contentAssetRegister/);

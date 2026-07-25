@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 
+import { imageSize } from '../tools/_image-size.mjs';
 import { renderIndustryPage } from '../tools/build-industry-pages.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const industries = JSON.parse(read('data/industry-applications.json'));
+const industrySectors = JSON.parse(read('data/content/industry-sectors.json')).industry_sectors;
 const documentReview = JSON.parse(read('data/public-document-review.json'));
 const restrictedDocuments = new Set(documentReview.documents
   .filter((document) => document.status === 'restricted')
@@ -37,6 +39,26 @@ test('industry intros use sector-specific representative scenes while proof stay
   const proof = read('proof.html');
   assert.match(proof, /img\/before-after\/moss-after\.webp/);
   assert.doesNotMatch(proof, /Representative .* operating environment/);
+});
+
+test('catalog industries render two optimized representative task images', () => {
+  assert.equal(industrySectors.length, 16);
+
+  for (const industry of industrySectors) {
+    const html = read(`industries/${industry.slug}.html`);
+    const taskImages = [...html.matchAll(
+      /<img src="\.\.\/img\/industries\/tasks\/([^"]+\.webp)"[^>]+width="1200" height="750">/g,
+    )].map((match) => match[1]);
+
+    assert.equal(taskImages.length, 2, `${industry.slug}: representative task pair`);
+    assert.match(html, /Representative scenes show common task setups—not field evidence/i);
+
+    for (const image of taskImages) {
+      const path = new URL(`img/industries/tasks/${image}`, root);
+      assert.ok(existsSync(path), `${industry.slug}: missing ${image}`);
+      assert.deepEqual(imageSize(path), { width: 1200, height: 750 }, `${image}: dimensions`);
+    }
+  }
 });
 
 test('P1 registry covers every industry route with task-specific operating context', () => {

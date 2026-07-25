@@ -482,6 +482,29 @@ Supplemental-page recommendations also rely on:
 - [CDC healthcare surface-risk guidance](https://www.cdc.gov/healthcare-associated-infections/hcp/infection-control/index.html)
 - [CDC long-term-care enhanced-barrier FAQ](https://www.cdc.gov/long-term-care-facilities/hcp/prevent-mdro/faqs.html)
 
+## Representative task imagery implementation
+
+OpenAI image generation produced two distinct task scenes for each of the 16 canonical industries. Final files live in `img/industries/tasks/` as 1200 × 750 WebP assets. They are labeled as representative task imagery—not field proof.
+
+Prompt baseline: photorealistic industrial documentary scene; landscape 8:5; upright, mechanically plausible equipment; crop-safe margins; visible soil plus cleaning in progress or a clean result; no brands, text, product bottles, exaggerated foam, unsafe runoff, or detached tools. People were avoided unless needed to make tool handling and application credible. Workers use ordinary task-appropriate controls without chemical suits or respirators; required isolation, electrical, pressure, confined-space, cooling-tower, and wastewater controls remain visible or stated.
+
+- **Construction:** formwork residue removal in progress; stained reusable forms staged for cleaning.
+- **Data Centers:** opened fouled plate exchanger; contained chilled-water loop flush.
+- **Distribution / Cold Storage:** low-foam floor auto-scrub and recovery; evaporator-coil cleaning.
+- **Education:** campus stair/walkway dry-down; hydronic exchanger recirculation clean.
+- **Food & Beverage:** process-tank CIP spray-ball coverage; fouled-to-clean exchanger plates.
+- **Golf Courses:** reel-mower wash pad; fouled-to-clean irrigation components.
+- **Healthcare:** isolated water-side exchanger clean; ground-level water-fed canopy cleaning.
+- **Hotels / Property Management:** pool-waterline scale brushing; low-pressure facade wash.
+- **HVAC & Water Treatment:** fin-safe condenser-coil cleaning; cooling-tower fill cleaning during shutdown.
+- **Manufacturing:** isolated stamping-press degreasing; aqueous parts-wash result.
+- **Marine:** contained hull/waterline wash; bilge degreasing with absorbent recovery.
+- **Military & Government:** fleet undercarriage wash with recovery; rust-affected pump parts staged for treatment.
+- **Municipalities & Water Utilities:** pump-impeller descaling; gate-valve scale removal.
+- **Oil & Gas:** gas-free valve-manifold degreasing; fouled-to-clean exchanger plates.
+- **Plumbing:** tankless-heater closed-loop flush; flange scale removal with clean comparison.
+- **Solar Panel Cleaning:** connected water-fed soft brush; autonomous brush robot leaving a clean pass.
+
 ## Decision
 
 **Ship the remediated library after release gates and production browser QA pass.** Treat document-control status as distribution control only; claim approval remains a separate owner responsibility.

@@ -385,6 +385,75 @@ const NAV = [
   ["resources", "Resources"]
 ];
 
+// Representative task imagery. Keep separate from GALLERY: these generated
+// scenes explain common workflows; GALLERY remains source-backed field proof.
+const TASK_GALLERY = {
+  construction: [
+    ["Technician using a contained low-pressure wash to remove concrete residue from reusable steel formwork", "Formwork residue removal in progress"],
+    ["Concrete-stained reusable form panels and tools staged on a contained construction wash pad", "Reusable forms staged for final cleaning"],
+  ],
+  "data-centers": [
+    ["Fouled plate heat exchanger opened beside a closed recirculating cleaning skid in a data-center mechanical room", "Fouled plates staged for a recirculating clean"],
+    ["Isolated chilled-water pump and strainer skid connected for a contained closed-loop flush", "Cooling-loop flush connected and contained"],
+  ],
+  "distribution-cold-storage": [
+    ["Low-foam floor scrubber recovering tire marks and oily soil in a refrigerated distribution aisle", "Low-foam auto-scrub and recovery"],
+    ["Technician cleaning an isolated cold-storage evaporator coil over a recovery pan", "Evaporator-coil cleaning in progress"],
+  ],
+  education: [
+    ["Cleaned campus stair and masonry walkway during controlled dry-down", "Campus stair wash completed for dry-down"],
+    ["School hydronic heat exchanger connected to a contained recirculation cleaning cart", "Hydronic heat exchanger on a closed-loop clean"],
+  ],
+  "food-beverage": [
+    ["Clean-in-place spray ball rinsing the interior of a stainless beverage process tank", "CIP spray-ball coverage inside a process tank"],
+    ["Food-process heat-exchanger plates showing mineral film beside cleaned stainless plates", "Fouled and cleaned heat-exchanger plates"],
+  ],
+  "golf-courses": [
+    ["Commercial reel-mower components being washed on a contained golf maintenance pad", "Turf-equipment wash in progress"],
+    ["Scaled golf-course irrigation valves and sprinkler parts staged beside cleaned components", "Irrigation parts staged from fouled to clean"],
+  ],
+  healthcare: [
+    ["Hospital mechanical-room heat exchanger connected to an isolated recirculation cleaning cart", "Water-side heat-exchanger clean in progress"],
+    ["Water-fed pole cleaning an occupied-campus glass canopy from ground level", "Water-fed canopy glass cleaning"],
+  ],
+  "hotels-property-management": [
+    ["Property-maintenance technician brushing mineral scale from resort pool waterline tile", "Mineral-scale removal at the pool waterline"],
+    ["Hotel facade biological staining under a controlled low-pressure exterior wash", "Exterior staining under low-pressure wash"],
+  ],
+  "hvac-water": [
+    ["Fin-safe low-pressure cleaning on an isolated aluminum condenser coil", "Fin-safe condenser-coil cleaning"],
+    ["Cooling-tower fill media undergoing contained cleaning during a shutdown", "Cooling-tower fill cleaning during shutdown"],
+  ],
+  manufacturing: [
+    ["Isolated stamping press bed after controlled degreasing during maintenance", "Stamping-press degreasing during isolation"],
+    ["Machined parts completing a contained aqueous parts-wash cycle", "Aqueous parts-wash cycle complete"],
+  ],
+  marine: [
+    ["Boat hull and waterline being washed on a contained boatyard service pad", "Hull and waterline wash on a contained pad"],
+    ["Marine technician removing oily residue from a yacht bilge with absorbent recovery", "Bilge degreasing in progress"],
+  ],
+  "military-government": [
+    ["Public works fleet undercarriage undergoing a controlled wash with drain recovery", "Fleet undercarriage wash with recovery"],
+    ["Rust-affected public works pump parts staged on a contained maintenance tray", "Pump parts staged for rust treatment"],
+  ],
+  "municipalities-water-utilities": [
+    ["Utility technician brushing mineral deposits from a removed pump impeller over containment", "Pump-impeller descaling with manual agitation"],
+    ["Utility technician removing mineral scale from an isolated gate valve on a service bench", "Valve scale removal in progress"],
+  ],
+  "oil-gas": [
+    ["Technician degreasing a de-inventoried and gas-free oilfield valve manifold over containment", "Gas-free valve-manifold degreasing"],
+    ["Industrial heat-exchanger plates showing fouling beside cleaned metal during an isolated service clean", "Heat-exchanger plates from fouled to clean"],
+  ],
+  plumbing: [
+    ["Tankless water heater connected to a compact closed-loop descaling flush pump", "Tankless-heater flush loop in service"],
+    ["Plumber brushing scale from a removed flange beside a cleaned flange face", "Flange scale removal with clean comparison"],
+  ],
+  "solar-panel-cleaning": [
+    ["Technician using a connected water-fed soft brush on utility-scale solar panels", "Water-fed soft-brush cleaning"],
+    ["Autonomous soft-brush robot leaving a clean pass across dusty photovoltaic panels", "Automated soft-brush pass in progress"],
+  ],
+};
+
 // Per-industry field gallery. Images live at img/industries/<slug>/g{1,2,3}.webp
 // (generated by tools/gen_galleries.py from the case-study photo library).
 // [alt, caption] per image — alt carries the full description, caption is the on-card line.
@@ -761,6 +830,28 @@ const GALLERY_IMAGE_DIMS = {
   "plumbing": [[1200, 900], [1200, 900], [900, 675]],
 };
 
+function taskGalleryBlock(ind) {
+  const tasks = TASK_GALLERY[ind.slug];
+  if (!tasks) return "";
+  const figs = tasks.map(([alt, caption], index) => `
+        <figure class="ind-shot">
+          <img src="../img/industries/tasks/${ind.slug}-${String(index + 1).padStart(2, "0")}.webp" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="1200" height="750">
+          <figcaption>${caption}</figcaption>
+        </figure>`).join("");
+  return `
+  <section class="section section-slim ind-gallery-sec">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Representative tasks</span>
+        <h2 class="headline">Representative cleaning tasks for ${ind.name}.</h2>
+        <p class="subhead">Representative scenes show common task setups—not field evidence or final operating instructions.</p>
+      </div>
+      <div class="ind-gallery ind-task-gallery">${figs}
+      </div>
+    </div>
+  </section>`;
+}
+
 function galleryBlock(ind) {
   const shots = GALLERY[ind.slug];
   if (!shots) return "";
@@ -841,7 +932,7 @@ function page(ind) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260706c">
+<link rel="stylesheet" href="../css/style.css?v=20260724a">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
@@ -884,7 +975,7 @@ ${nav}
 </div>
 </section>
 
-${industryDetailBlock(ind)}
+${industryDetailBlock(ind)}${taskGalleryBlock(ind)}
 
 <section class="section section-slim">
 <div class="wrap">

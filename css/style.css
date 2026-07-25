@@ -6928,6 +6928,10 @@ body.products-page .conversion-proof .proof-pill em {
   gap: 18px;
 }
 
+.ind-gallery:has(.ind-shot:nth-child(2):last-child) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .ind-shot {
   overflow: hidden;
   border: 1px solid var(--line);
@@ -6940,6 +6944,10 @@ body.products-page .conversion-proof .proof-pill em {
   height: auto;
   aspect-ratio: 4 / 3;
   object-fit: cover;
+}
+
+.ind-task-gallery .ind-shot img {
+  aspect-ratio: 8 / 5;
 }
 
 .ind-shot figcaption {
@@ -6992,7 +7000,8 @@ body:not(.products-page) #relatedWrap .shop-grid:has(.shop-card:only-child) {
     grid-template-columns: 1fr;
   }
 
-  .ind-gallery {
+  .ind-gallery,
+  .ind-gallery:has(.ind-shot:nth-child(2):last-child) {
     grid-template-columns: 1fr;
   }
 
