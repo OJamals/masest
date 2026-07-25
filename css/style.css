@@ -2586,12 +2586,6 @@ scroll-snap gallery
 .hero-split .eyebrow a { color: var(--accent); text-decoration: none; }
 .hero-split .eyebrow a:hover { text-decoration: underline; }
 
-.ind-intro {
-  display: grid;
-  grid-template-columns: 1.05fr .95fr;
-  gap: clamp(24px, 4vw, 52px);
-  align-items: center;
-}
 .ind-intro-copy .ind-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 54px; height: 54px; border-radius: var(--r-input);
@@ -2600,17 +2594,6 @@ scroll-snap gallery
 }
 .ind-intro-copy h2 { margin-bottom: 12px; }
 .ind-intro-copy p { color: var(--muted); max-width: 60ch; margin-bottom: 22px; }
-.ind-intro-photo { display: flex; flex-direction: column; margin: 0; border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow-md); }
-.ind-intro-photo img { display: block; width: 100%; height: auto; max-height: 380px; object-fit: cover; }
-.ind-intro-photo figcaption {
-  padding: 12px 16px; font-size: .86rem; color: var(--muted);
-  background: var(--surface); border-top: 1px solid var(--line);
-  line-height: 1.45;
-}
-@media (max-width: 760px) {
-  .ind-intro { grid-template-columns: 1fr; }
-  .ind-intro-photo { order: -1; }
-}
 
 /* ── Industry field gallery ─────────────────────────────────────── */
 .ind-gallery-sec .section-head { margin-bottom: 26px; }
@@ -6861,37 +6844,10 @@ body.products-page .conversion-proof .proof-pill em {
   min-width: 0;
 }
 
-.ind-intro {
-  align-items: stretch;
-}
-
-.ind-intro-copy {
-  align-self: center;
-}
-
 .ind-intro-copy p,
 .ind-specific .proof-callout p,
 .ind-gallery-sec .subhead {
   line-height: 1.6;
-}
-
-.ind-intro-photo {
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-sm);
-}
-
-.ind-intro-photo img {
-  flex: 0 1 auto;
-  height: auto;
-  min-height: 280px;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-}
-
-.ind-intro-photo figcaption {
-  flex: 0 0 auto;
-  line-height: 1.45;
 }
 
 .ind-specific {
@@ -7005,9 +6961,6 @@ body:not(.products-page) #relatedWrap .shop-grid:has(.shop-card:only-child) {
     grid-template-columns: 1fr;
   }
 
-  .ind-intro-photo img {
-    min-height: 220px;
-  }
 }
 
 @media (max-width: 560px) {

@@ -234,6 +234,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-desktop.png`, fullPage: true });
 
   await page.locator("#contentType").selectOption("shipping_rate");
+  await expect(page.locator(".adm-content-placement")).toContainText("server-side");
   await expect(page.locator('[data-content-payload-field="stripe_rate_id"]'))
     .toHaveAttribute("pattern", "^shr_[A-Za-z0-9]+$");
   await expect(page.locator('[data-content-payload-field="sort_order"]')).toBeVisible();

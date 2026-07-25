@@ -1,10 +1,10 @@
-import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260724e";
+import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260724f";
 import {
   assetUrl,
   formatAssetBytes,
   loadSiteImageAssets,
   mergeSiteImageAssets,
-} from "./site-image-library.js?v=20260724e";
+} from "./site-image-library.js?v=20260724f";
 
 const PAGE_SIZE = 4;
 

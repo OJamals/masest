@@ -588,53 +588,6 @@ const GALLERY = {
   ]
 };
 
-const PROOF_IMAGE_DIMS = {
-  "ac-coil": [839, 471],
-  "airboat-after": [817, 857],
-  "drone-action": [520, 650],
-  brewery: [1200, 900],
-  "ddc-rust": [1200, 579],
-  "farm-rust-after": [740, 967],
-  "fleet-wash": [1200, 900],
-  "grout-moss": [919, 690],
-  marine: [1175, 1125],
-  "walmart-dc-crhd": [708, 513],
-};
-
-const INDUSTRY_SCENES = {
-  "oil-gas": ["Oil terminal storage tanks and pipeline valves"],
-  marine: ["Motor yacht in a boatyard lift for hull maintenance"],
-  manufacturing: ["Heavy manufacturing plant with large production machinery"],
-  "distribution-cold-storage": ["Forklift moving pallets inside a refrigerated distribution center"],
-  "food-beverage": ["Stainless steel tanks inside a beverage processing facility"],
-  healthcare: ["Healthcare campus mechanical room with water-system piping"],
-  construction: ["Construction workers pressure-washing concrete at a commercial job site"],
-  "military-government": ["Public-sector fleet maintenance bay with utility vehicles"],
-  education: ["Campus facilities courtyard with exterior mechanical equipment"],
-  "hvac-water": ["Cooling tower water-treatment equipment at a commercial facility"],
-  "data-centers": ["Server aisle and facility cooling pipes inside a data center"],
-  plumbing: ["Commercial mechanical room with water heater and plumbing lines"],
-  "golf-courses": ["Golf course maintenance equipment and carts beside a service pad"],
-  "solar-panel-cleaning": ["Solar farm panel-cleaning equipment positioned between arrays"],
-  "municipalities-water-utilities": ["Municipal water treatment plant basins and blue utility piping"],
-  "hotels-property-management": ["Resort property maintenance walkway beside a pool courtyard"],
-  "pressure-washing-soft-wash-contractors": ["Exterior-cleaning crew staging chemistry and tools beside a landscaped commercial facade"],
-};
-
-const INDUSTRY_SCENE_ALIASES = {
-  "schools-universities": "education",
-  "mechanical-contractors-water-treatment": "hvac-water",
-  "breweries-distilleries-wineries": "food-beverage",
-  "warehousing-distribution-centers": "distribution-cold-storage",
-  "hotels-resorts-property-management": "hotels-property-management",
-  "marine-marinas-boatyards": "marine",
-  "golf-courses-sports-facilities": "golf-courses",
-  "healthcare-senior-living": "healthcare",
-  "oil-gas-industrial-plants": "oil-gas",
-  "food-processing-agriculture": "food-beverage",
-  "solar-farms-panel-cleaning": "solar-panel-cleaning",
-};
-
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
 const htmlText = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -946,30 +899,6 @@ function galleryBlock(ind) {
   </section>`;
 }
 
-function proofImageDimsAttr(img) {
-  const [width, height] = PROOF_IMAGE_DIMS[img] || [1200, 900];
-  return `width="${width}" height="${height}"`;
-}
-
-function introMediaFor(ind) {
-  const sceneKey = INDUSTRY_SCENE_ALIASES[ind.slug] || ind.slug;
-  const scene = INDUSTRY_SCENES[sceneKey];
-  if (scene) {
-    return {
-      src: `../img/industries/samples/${sceneKey}.webp`,
-      alt: scene[0],
-      caption: `Representative ${ind.name} operating environment.`,
-      dims: 'width="840" height="520"',
-    };
-  }
-  return {
-    src: `../img/proof/cases/${ind.proof.img}.webp`,
-    alt: ind.proof.caption,
-    caption: ind.proof.caption,
-    dims: proofImageDimsAttr(ind.proof.img),
-  };
-}
-
 function primaryCtaBlock(ind) {
   if (!ind.primaryCta) return "";
   const href = `../contact?industry=${enc(ind.name)}&type=${enc(ind.primaryType || "quote")}`;
@@ -987,7 +916,6 @@ function page(ind) {
     return `    <a href="../${href}"${href === "industries" ? ' aria-current="page"' : ""}>${content}</a>`;
   }).join("\n");
   const plain = ind.h1.replace(/&amp;/g, "&").replace(/<[^>]+>/g, "");
-  const introMedia = introMediaFor(ind);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1031,19 +959,13 @@ ${nav}
   </section>
 
   <section class="section section-slim">
-    <div class="wrap ind-intro">
-      <div class="ind-intro-copy">
-        <span class="ind-icon"><i class="ph ${ind.icon}" aria-hidden="true"></i></span>
-        <h2 class="headline">Why VertKleen fits ${ind.name}.</h2>
-        <p>${ind.intro}</p>
-        <a class="btn btn-ink" href="../proof">Review field evidence</a>
-      </div>
-      <figure class="ind-intro-photo">
-        <img src="${introMedia.src}" alt="${introMedia.alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" ${introMedia.dims}>
-        <figcaption>${introMedia.caption}</figcaption>
-      </figure>
-</div>
-</section>
+    <div class="wrap ind-intro-copy">
+      <span class="ind-icon"><i class="ph ${ind.icon}" aria-hidden="true"></i></span>
+      <h2 class="headline">Why VertKleen fits ${ind.name}.</h2>
+      <p>${ind.intro}</p>
+      <a class="btn btn-ink" href="../proof">Review field evidence</a>
+    </div>
+  </section>
 
 ${industryDetailBlock(ind)}${taskGalleryBlock(ind)}
 

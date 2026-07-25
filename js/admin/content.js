@@ -1,22 +1,22 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260724e";
-import { renderMarkdown } from "../md.js?v=20260724e";
-import { supabase } from "../auth.js?v=20260724e";
-import { createContentAssets } from "./content-assets.js?v=20260724e";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260724e";
-import { createContentRevisions } from "./content-revisions.js?v=20260724e";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260724f";
+import { renderMarkdown } from "../md.js?v=20260724f";
+import { supabase } from "../auth.js?v=20260724f";
+import { createContentAssets } from "./content-assets.js?v=20260724f";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260724f";
+import { createContentRevisions } from "./content-revisions.js?v=20260724f";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260724e";
+} from "./rich-editor.js?v=20260724f";
 import {
   contentPayloadFields,
   contentTypeOptions,
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260724e";
+} from "../content-types.js?v=20260724f";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "image_after", "og_image", "hero"]);
@@ -50,6 +50,7 @@ const PLACEMENT_HINTS = Object.freeze({
   page_section: "Feeds editable public page sections such as headlines, body copy, CTAs, and images.",
   page_meta: "Feeds SEO metadata for public pages.",
   pricing_tier: "Feeds public pricing tier copy. Transaction pricing still belongs in Catalog.",
+  shipping_rate: "Configures paid checkout shipping options. Published entries stay server-side and override the environment fallback.",
   blog_post: "Feeds the static blog. Publishing updates the CMS and requests a static rebuild; if automation is unavailable, run `npm run publish:blog`.",
 });
 

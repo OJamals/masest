@@ -16,30 +16,6 @@ const industryFiles = readdirSync(new URL('industries/', root))
   .filter((file) => file.endsWith('.html'))
   .sort();
 
-test('industry generator separates representative context imagery from field proof', () => {
-  const src = read('tools/gen_industries.mjs');
-  assert.match(src, /const INDUSTRY_SCENES = \{/);
-  assert.match(src, /function introMediaFor\(ind\)/);
-  assert.match(src, /Representative \$\{ind\.name\} operating environment\./);
-});
-
-test('industry intros use sector-specific representative scenes while proof stays factual', () => {
-  const dataCenters = read('industries/data-centers.html');
-  assert.match(dataCenters, /img\/industries\/samples\/data-centers\.webp/);
-  assert.match(dataCenters, /Representative Data Centers operating environment\./);
-
-  const pressureWashing = read('industries/pressure-washing-soft-wash-contractors.html');
-  assert.match(
-    pressureWashing,
-    /img\/industries\/samples\/pressure-washing-soft-wash-contractors\.webp/,
-  );
-  assert.doesNotMatch(pressureWashing, /img\/industries\/samples\/construction\.webp/);
-
-  const proof = read('proof.html');
-  assert.match(proof, /img\/before-after\/moss-after\.webp/);
-  assert.doesNotMatch(proof, /Representative .* operating environment/);
-});
-
 test('all industry routes render two or three optimized task images with task captions', () => {
   assert.equal(industries.length, 32);
   const renderedTaskImages = new Set();
@@ -69,6 +45,7 @@ test('all industry routes render two or three optimized task images with task ca
       `${industry.slug}: task gallery`,
     );
     assert.doesNotMatch(html, /Representative cleaning tasks|Representative tasks/);
+    assert.doesNotMatch(html, /Representative .* operating environment|img\/industries\/samples\//);
 
     for (const image of taskImages) {
       renderedTaskImages.add(image);
