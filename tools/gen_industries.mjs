@@ -388,8 +388,16 @@ const NAV = [
 // Representative task imagery. Keep separate from GALLERY: these generated
 // scenes explain common workflows; GALLERY remains source-backed field proof.
 const TASK_GALLERY = {
+  "aviation-fbos-mro-airports": [
+    ["Aircraft tug and ground-power unit undergoing a contained low-pressure wash after a wet chemical dwell", "Ground-support equipment wash after wet dwell"],
+    ["Aviation maintenance components moving from greasy to clean in an aqueous parts washer", "Aviation components through a contained parts wash"],
+  ],
+  "breweries-distilleries-wineries": [
+    ["Fixed CIP spray ball rinsing krausen and beer-stone residue from a stainless fermenter", "Fermenter CIP from wet residue to clean stainless"],
+    ["Brewery heat-exchanger tube sheet undergoing contained cleaning with a recirculation cart", "Brewery exchanger cleaning in progress"],
+  ],
   construction: [
-    ["Technician using a contained low-pressure wash to remove concrete residue from reusable steel formwork", "Formwork residue removal in progress"],
+    ["Technician rinsing wet-treated concrete residue from reusable steel formwork on a contained wash pad", "Wet dwell and rinse on reusable formwork"],
     ["Concrete-stained reusable form panels and tools staged on a contained construction wash pad", "Reusable forms staged for final cleaning"],
   ],
   "data-centers": [
@@ -400,25 +408,49 @@ const TASK_GALLERY = {
     ["Low-foam floor scrubber recovering tire marks and oily soil in a refrigerated distribution aisle", "Low-foam auto-scrub and recovery"],
     ["Technician cleaning an isolated cold-storage evaporator coil over a recovery pan", "Evaporator-coil cleaning in progress"],
   ],
+  "drone-cleaning-companies": [
+    ["Tethered cleaning drone washing an inaccessible commercial glass facade with a connected low-pressure spray bar", "Tethered facade wash on inaccessible glass"],
+    ["Tethered cleaning drone treating wet algae on an inaccessible steep residential roof", "Steep-roof treatment from wet dwell to clean"],
+  ],
   education: [
     ["Cleaned campus stair and masonry walkway during controlled dry-down", "Campus stair wash completed for dry-down"],
     ["School hydronic heat exchanger connected to a contained recirculation cleaning cart", "Hydronic heat exchanger on a closed-loop clean"],
+  ],
+  "fleet-trucking-car-washes": [
+    ["Road-film-covered tractor moving through a fixed commercial wash arch toward a clean finish", "Fleet road-film removal through a fixed wash arch"],
+    ["Truck wheel hubs and service parts moving from greasy to clean in an aqueous parts washer", "Fleet parts through a contained aqueous wash"],
   ],
   "food-beverage": [
     ["Clean-in-place spray ball rinsing the interior of a stainless beverage process tank", "CIP spray-ball coverage inside a process tank"],
     ["Food-process heat-exchanger plates showing mineral film beside cleaned stainless plates", "Fouled and cleaned heat-exchanger plates"],
   ],
+  "food-processing-agriculture": [
+    ["Mounted spray bar and rotary brush cleaning organic process film from an empty stainless food conveyor", "Food conveyor cleaning before sanitation"],
+    ["Wet-treated organic residue being rinsed from an empty agricultural hopper and auger", "Agricultural hopper wash after wet dwell"],
+  ],
   "golf-courses": [
     ["Commercial reel-mower components being washed on a contained golf maintenance pad", "Turf-equipment wash in progress"],
     ["Scaled golf-course irrigation valves and sprinkler parts staged beside cleaned components", "Irrigation parts staged from fouled to clean"],
   ],
+  "golf-courses-sports-facilities": [
+    ["Rotary floor scrubber cleaning soap and mineral film from an empty locker-room shower", "Locker-room tile and grout cleaning"],
+    ["Connected surface cleaner removing wet-treated soil from a stadium concrete walkway", "Stadium walkway cleaning with recovery"],
+  ],
   healthcare: [
     ["Hospital mechanical-room heat exchanger connected to an isolated recirculation cleaning cart", "Water-side heat-exchanger clean in progress"],
-    ["Water-fed pole cleaning an occupied-campus glass canopy from ground level", "Water-fed canopy glass cleaning"],
+    ["Ground-based technician using a connected low-pressure fan spray on an overhead hospital entrance canopy", "Low-pressure canopy wash from ground level"],
+  ],
+  "healthcare-senior-living": [
+    ["Walk-behind scrubber recovering laundry soil from a senior-living service floor", "Commercial laundry floor cleaning and recovery"],
+    ["Connected rotary brush cleaning mineral and soap film from an empty accessible shower", "Pre-disinfection shower cleaning"],
   ],
   "hotels-property-management": [
     ["Property-maintenance technician brushing mineral scale from resort pool waterline tile", "Mineral-scale removal at the pool waterline"],
     ["Hotel facade biological staining under a controlled low-pressure exterior wash", "Exterior staining under low-pressure wash"],
+  ],
+  "hotels-resorts-property-management": [
+    ["Fixed internal rinse jets cleaning detergent and mineral film from a hotel commercial washer drum", "Commercial washer drum cleaning"],
+    ["Hotel kitchen hood filters moving from wet greasy dwell through fixed rinse to clean", "Back-of-house hood-filter cleaning"],
   ],
   "hvac-water": [
     ["Fin-safe low-pressure cleaning on an isolated aluminum condenser coil", "Fin-safe condenser-coil cleaning"],
@@ -432,25 +464,57 @@ const TASK_GALLERY = {
     ["Boat hull and waterline being washed on a contained boatyard service pad", "Hull and waterline wash on a contained pad"],
     ["Marine technician removing oily residue from a yacht bilge with absorbent recovery", "Bilge degreasing in progress"],
   ],
+  "marine-marinas-boatyards": [
+    ["Wet-treated oxidation and waterline film being rinsed from an aluminum workboat on a contained pad", "Aluminum workboat wash after wet dwell"],
+    ["Outboard service components moving from wet oily residue to a clean dry finish", "Marine service parts from dwell to clean"],
+  ],
+  "mechanical-contractors-water-treatment": [
+    ["Shell-and-tube heat-exchanger tube sheet connected to a contained recirculation cleaning cart", "Exchanger tube-sheet cleaning in progress"],
+    ["Commercial boiler heat-exchanger core connected to an isolated closed-loop flush cart", "Boiler heat-exchanger closed-loop clean"],
+  ],
   "military-government": [
     ["Public works fleet undercarriage undergoing a controlled wash with drain recovery", "Fleet undercarriage wash with recovery"],
     ["Rust-affected public works pump parts staged on a contained maintenance tray", "Pump parts staged for rust treatment"],
   ],
   "municipalities-water-utilities": [
-    ["Utility technician brushing mineral deposits from a removed pump impeller over containment", "Pump-impeller descaling with manual agitation"],
+    ["Utility technician agitating wet-treated mineral deposits on a removed pump impeller over containment", "Wet dwell and agitation on a pump impeller"],
     ["Utility technician removing mineral scale from an isolated gate valve on a service bench", "Valve scale removal in progress"],
   ],
   "oil-gas": [
     ["Technician degreasing a de-inventoried and gas-free oilfield valve manifold over containment", "Gas-free valve-manifold degreasing"],
     ["Industrial heat-exchanger plates showing fouling beside cleaned metal during an isolated service clean", "Heat-exchanger plates from fouled to clean"],
   ],
+  "oil-gas-industrial-plants": [
+    ["Wet hydrocarbon residue being rinsed from an isolated industrial pump skid over containment", "Industrial pump-skid clean after wet dwell"],
+    ["Fixed low-pressure manifold cleaning wet oily residue from an isolated fin-fan cooler coil", "Fin-fan cooler cleaning during shutdown"],
+  ],
   plumbing: [
     ["Tankless water heater connected to a compact closed-loop descaling flush pump", "Tankless-heater flush loop in service"],
-    ["Plumber brushing scale from a removed flange beside a cleaned flange face", "Flange scale removal with clean comparison"],
+    ["Removed pipe flanges shown at wet dwell, brush agitation, and clean dry stages", "Flange scale from wet dwell to clean finish"],
+  ],
+  "pressure-washing-soft-wash-contractors": [
+    ["Contractor using a connected ground-based soft-wash pole on wet algae at a steep residential roof", "Steep-roof soft wash from ground level"],
+    ["Connected surface cleaner moving from wet chemical dwell to a clean storefront walkway", "Storefront concrete cleaning with recovery"],
+  ],
+  "restaurants-commercial-kitchens": [
+    ["Commercial hood filters moving from wet grease dwell through fixed rinse to clean", "Hood-filter degreasing and rinse"],
+    ["Wet softened grease being agitated from an empty commercial cookline during shutdown", "Cookline degreasing before rinse and sanitation"],
+  ],
+  "schools-universities": [
+    ["Walk-behind auto-scrubber recovering wet soil and scuffs from an empty school gym floor", "School gym floor scrub and recovery"],
+    ["Connected low-pressure rinse cleaning an isolated school air-handler coil over recovery", "School air-handler coil cleaning"],
   ],
   "solar-panel-cleaning": [
     ["Technician using a connected water-fed soft brush on utility-scale solar panels", "Water-fed soft-brush cleaning"],
     ["Autonomous soft-brush robot leaving a clean pass across dusty photovoltaic panels", "Automated soft-brush pass in progress"],
+  ],
+  "solar-farms-panel-cleaning": [
+    ["Rail-guided soft-brush carriage cleaning a wet dusty section of utility-scale solar modules", "Rail-guided module-row cleaning"],
+    ["Connected rail-mounted brush moving from wet spotted modules to a clean dry band", "Wet dwell and soft-brush pass on solar modules"],
+  ],
+  "warehousing-distribution-centers": [
+    ["Connected surface cleaner moving from wet pallet grime to a clean loading-dock lane", "Loading-dock cleaning with recovery"],
+    ["Wet greasy soil being rinsed from a protected electric forklift in a recovery wash bay", "Forklift maintenance-bay cleaning"],
   ],
 };
 

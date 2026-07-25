@@ -8,7 +8,6 @@ import { renderIndustryPage } from '../tools/build-industry-pages.mjs';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const industries = JSON.parse(read('data/industry-applications.json'));
-const industrySectors = JSON.parse(read('data/content/industry-sectors.json')).industry_sectors;
 const documentReview = JSON.parse(read('data/public-document-review.json'));
 const restrictedDocuments = new Set(documentReview.documents
   .filter((document) => document.status === 'restricted')
@@ -41,10 +40,11 @@ test('industry intros use sector-specific representative scenes while proof stay
   assert.doesNotMatch(proof, /Representative .* operating environment/);
 });
 
-test('catalog industries render two optimized representative task images', () => {
-  assert.equal(industrySectors.length, 16);
+test('all industry routes render two optimized representative task images', () => {
+  assert.equal(industries.length, 32);
+  const renderedTaskImages = new Set();
 
-  for (const industry of industrySectors) {
+  for (const industry of industries) {
     const html = read(`industries/${industry.slug}.html`);
     const taskImages = [...html.matchAll(
       /<img src="\.\.\/img\/industries\/tasks\/([^"]+\.webp)"[^>]+width="1200" height="750">/g,
@@ -54,11 +54,17 @@ test('catalog industries render two optimized representative task images', () =>
     assert.match(html, /Representative scenes show common task setups—not field evidence/i);
 
     for (const image of taskImages) {
+      renderedTaskImages.add(image);
       const path = new URL(`img/industries/tasks/${image}`, root);
       assert.ok(existsSync(path), `${industry.slug}: missing ${image}`);
       assert.deepEqual(imageSize(path), { width: 1200, height: 750 }, `${image}: dimensions`);
     }
   }
+
+  const taskFiles = readdirSync(new URL('img/industries/tasks/', root))
+    .filter((file) => file.endsWith('.webp'));
+  assert.equal(renderedTaskImages.size, 64);
+  assert.deepEqual([...renderedTaskImages].sort(), taskFiles.sort(), 'no orphan task images');
 });
 
 test('P1 registry covers every industry route with task-specific operating context', () => {

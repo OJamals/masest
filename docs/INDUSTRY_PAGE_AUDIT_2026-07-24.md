@@ -13,8 +13,9 @@ Completed:
 2. Added `asset → soil/deposit → method → concentration → process boundary → verification → documents` guidance to every industry route.
 3. Added direct controlled-document links and localized trial-request briefs to every route.
 4. Replaced clearly mismatched aviation, fleet, restaurant, plumbing, healthcare, distribution, and pressure/soft-wash imagery with contextual, source-backed alternatives.
-5. Consolidated duplicate assets and regenerated the optimized image catalog: 148 files, about 15.35 MB, zero exact duplicate groups.
+5. Consolidated duplicate assets and regenerated the optimized image catalog: 212 files, about 25.79 MB, zero exact duplicate groups.
 6. Added document control and an indexed public document room for all 46 public PDFs. Source-byte and review-ledger drift now fail the release gate.
+7. Added two optimized, task-specific representative images to every canonical and supplemental industry route. Active chemistry scenes now distinguish wet dwell, rinse/agitation, and clean endpoint.
 
 Residual review:
 
@@ -35,6 +36,7 @@ Residual review:
 | Failed browser requests | 0 |
 | Canonical sectors in CMS snapshot | 16 |
 | Supplemental static landing pages | 16 |
+| Representative task images | 64/64 |
 | Pages with field galleries | 11/32 |
 | Pages with no field gallery | 21/32 |
 | Task-led application/proof modules | 32/32 |
@@ -44,7 +46,7 @@ Residual review:
 | Public product/SDS PDFs | 43 |
 | Public case/lab PDFs | 3 |
 | Restricted PDFs in public tree | 0 |
-| Image files / total bytes | 148 / about 15.35 MB |
+| Image files / total bytes | 212 / about 25.79 MB |
 | Exact duplicate image groups | 0 |
 
 Browser and release gates establish clean rendering, source integrity, and document control. They do not approve technical, regulatory, certification, or customer-performance claims.
@@ -88,6 +90,49 @@ Browser and release gates establish clean rendering, source integrity, and docum
 30. Schools & Universities — `/industries/schools-universities.html`
 31. Solar Farms & Panel Cleaning — `/industries/solar-farms-panel-cleaning.html`
 32. Warehousing & Distribution Centers — `/industries/warehousing-distribution-centers.html`
+
+## Cleaning-task research inventory
+
+1. **Construction:** reusable steel formwork and concrete-pump cleanup; cured and uncured concrete residue; form-release oil; tools and equipment; masonry efflorescence; post-construction hardscape.
+2. **Data Centers:** isolated plate heat exchangers; chilled-water loops; CDUs, strainers, pumps, condensers, cooling towers, and mechanical-room assets; mineral scale and utility-side deposits.
+3. **Distribution / Cold Storage:** freezer and warehouse floors; tire marks, pallet grime, and light oil; docks; evaporator coils; condensate areas; material-handling equipment.
+4. **Education:** campus walkways and stairs; hydronic exchangers; locker rooms; gym floors; cafeterias; restrooms; air-handler coils and condensate pans.
+5. **Food & Beverage:** tank and line CIP; fermenters and kettles; krausen and organic film; beer/wine stone; plate and shell-and-tube exchangers; pre-sanitation cleaning.
+6. **Golf Courses:** reel mowers, carts, and turf equipment; maintenance pads; irrigation valves and sprinkler components; clubhouse hardscape.
+7. **Healthcare:** isolated water-side exchangers and HVAC assets; occupied-campus exterior glass and canopies; ordinary soil removal before the approved disinfection step.
+8. **Hotels / Property Management:** pool waterline scale; facade and glass staining; guest-area hardscape; kitchens; laundry; back-of-house floors.
+9. **HVAC / Water Treatment:** fin-safe coil cleaning; cooling-tower fill; boilers; exchangers; condensate pans; isolated closed-loop descaling and flushing.
+10. **Manufacturing:** presses and machine tools; cutting-fluid and grease residue; aqueous parts washing; filters; utility floors.
+11. **Marine:** hull and waterline film; bilges; oily service residue; contained boatyard washing.
+12. **Military / Government:** fleet undercarriages; pumps and utility equipment; maintenance-bay grease; controlled wash-water recovery.
+13. **Municipalities & Water Utilities:** pumps, impellers, volutes, valves, and pipe flanges; lift-station equipment; mineral scale and rust deposits.
+14. **Oil & Gas:** de-inventoried valve manifolds; isolated hydrocarbon and grease soil; heat-exchanger plates; contained maintenance cleaning.
+15. **Plumbing:** tankless heaters; boilers and circulation loops; removed flanges and valves; mineral scale and rust.
+16. **Solar / Panel Cleaning:** dust, bird residue, and hard-water spotting; utility-scale module rows; connected soft-brush and robotic cleaning.
+17. **Aviation — FBOs, MRO, Airports:** ground-support equipment; hydraulic-fluid and grease soil; hangar wash bays; wheel/brake tooling; engine stands; approved aircraft-adjacent components.
+18. **Breweries, Distilleries & Wineries:** fermenter and process-tank CIP; krausen; beer/wine stone; mash and utility equipment; tube-sheet descaling; floors and drains.
+19. **Drone Cleaning Companies:** inaccessible high-rise glass and facades; steep residential roofs; other hard-to-reach exterior surfaces; tether, overspray, finish, and runoff control.
+20. **Fleet, Trucking & Car Washes:** tractor and trailer road film; bugs; grease; wheels; cab/trailer interiors; wash bays; shop floors; aqueous parts cleaning.
+21. **Food Processing & Agriculture:** empty stainless conveyors, hoppers, and augers; fat, protein, carbohydrate, and plant residue; farm and milking equipment; pre-sanitation and biosecurity cleaning boundaries.
+22. **Golf Courses & Sports Facilities:** locker rooms and showers; stadium walkways and bleachers; athletic hardscape; grounds equipment; irrigation assets.
+23. **Healthcare & Senior Living:** commercial laundry service areas; accessible showers and restroom mineral film; HVAC and plumbing assets; cleaning before infection-prevention chemistry.
+24. **Hotels, Resorts & Property Management:** commercial washer drums; hood filters; resort hardscape; facade/glass; kitchens; pool areas; back-of-house soil.
+25. **Marine, Marinas & Boatyards:** aluminum workboat oxidation; waterline film; outboard and pump components; engine-service parts; bilges; contained service pads.
+26. **Mechanical Contractors & Water Treatment:** shell-and-tube tube sheets; boiler heat-exchanger cores; coils; loops; pumps; isolated recirculation and flush-cart work.
+27. **Oil & Gas / Industrial Plants:** isolated pump skids; hydrocarbon soil; fin-fan cooler coils; utility exchangers; shutdown cleaning with containment and permits.
+28. **Pressure-Washing & Soft-Wash Contractors:** roof algae; siding and facades; storefront concrete; atmospheric soil; traffic film; substrate-matched pressure and runoff recovery.
+29. **Restaurants & Commercial Kitchens:** hood baffles and filters; flat tops, grills, fryers, and cooklines; carbonized/polymerized grease; floors before rinse and sanitation.
+30. **Schools & Universities:** gym floors; locker rooms; cafeteria assets; air-handler coils; plumbing/HVAC utility assets; campus exteriors.
+31. **Solar Farms & Panel Cleaning:** utility-scale rows; dust, bird residue, and water spots; tracker-safe rail-guided brushes; low-water robotic cleaning.
+32. **Warehousing & Distribution Centers:** loading docks and dock plates; forklift tire marks; pallet grime; light oil; material-handling and forklift maintenance bays.
+
+### Desktop source-corpus follow-up
+
+- Fresh review covered 433 files under `/Users/omar/Desktop/masest`, including 216 raster images, 13 preferential `NEW` before/after images, and 26 preferential `NEW` PDFs.
+- Source photos documented valid tasks—brewery CIP, heat-exchanger descaling, hood-filter cleaning, hardscape/algae removal, shop-floor degreasing, filter cleaning, marine washing, fleet cleaning, and exterior drone work—but most unused files were low-resolution snapshots, text collages, screenshots, duplicates, or poorly oriented.
+- Existing high-value healthcare and marine field photos were already integrated in corrected, cropped form. Remaining source scenes were represented with higher-quality generated task imagery rather than publishing weak derivatives as evidence.
+- No additional PDF was auto-published. New gym, home/property, transportation, and Yellowfin marketing pieces contain broad safety, regulatory, certification, antimicrobial, customer, or performance claims requiring owner/legal scope review. New Purgo technical documents are already represented in the controlled public set.
+- Data-center prospecting notes and lead-research documents are not product substantiation or customer-facing verification and remain unpublished.
 
 ## Remediation status
 
