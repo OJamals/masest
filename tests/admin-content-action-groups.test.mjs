@@ -36,7 +36,7 @@ test("content action groups have mobile-safe wrapping styles", () => {
   assert.match(html, /@media \(max-width: 720px\)[\s\S]*\.adm-content-action-group \.btn \{ flex: 1 1 145px; justify-content: center; \}/);
 });
 
-test("content selectors and asset rows keep readable widths", () => {
+test("content selectors and asset viewer controls keep readable widths", () => {
   const html = read("admin.html");
   const source = read("js/admin/content.js");
 
@@ -45,9 +45,9 @@ test("content selectors and asset rows keep readable widths", () => {
   assert.match(html, /\.adm-content-selector \{ grid-column: span 3; \}/);
   assert.match(html, /#contentType \{ min-width: min\(100%, 224px\); \}/);
   assert.match(html, /#contentLocale \{ min-width: 112px; \}/);
-  assert.match(html, /\.adm-content-asset-row \{[^}]*grid-template-columns: 64px minmax\(0, 1fr\)/);
-  assert.match(html, /\.adm-content-asset-actions \{ grid-column: 2;[^}]*justify-content: flex-start; \}/);
-  assert.match(html, /@media \(max-width: 720px\)[\s\S]*\.adm-content-asset-actions \{ grid-column: 1 \/ -1; justify-content: stretch; \}/);
+  assert.match(source, /data-content-action="open_asset_viewer"/);
+  assert.match(html, /\.adm-content-open-assets \{[^}]*width: 100%[^}]*min-height: 48px/);
+  assert.doesNotMatch(source, /contentAssetRows/);
 });
 
 test("blog editor exposes formatting and reference insertion controls", () => {

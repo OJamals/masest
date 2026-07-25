@@ -65,6 +65,7 @@ test("Cloudflare build emits baseline security headers", () => {
   assert.doesNotMatch(build, /crisp\.chat/i, "removed third-party chat domains must not remain in CSP");
   assert.match(build, /script-src[^;]*https:\/\/static\.cloudflareinsights\.com/, "Cloudflare analytics script must be allowed when Pages injects it");
   assert.match(build, /connect-src[^;]*https:\/\/cloudflareinsights\.com/, "Cloudflare analytics beacon must be allowed when Pages injects it");
+  assert.match(build, /frame-src\s+'self'[^;]*https:\/\/challenges\.cloudflare\.com/, "same-origin CMS field check iframe must be allowed");
   assert.match(build, /frame-src[^;]*https:\/\/challenges\.cloudflare\.com/, "Turnstile frame must be allowed for auth forms");
 });
 

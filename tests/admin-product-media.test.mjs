@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+const { withCatalogMediaFallback } = await import("../js/admin/products.js");
+
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const readRoot = (path) => readFileSync(new URL(`../${path.replace(/^site\//, "")}`, import.meta.url), "utf8");
 
@@ -17,6 +19,9 @@ test("admin catalog can manage product photos and remove products", () => {
   assert.match(admin, /npPhotoAlt/, "admin script should submit product photo alt text");
   assert.match(admin, /image_url/, "admin script should render/edit product image URLs");
   assert.match(admin, /photo_alt/, "admin script should render/edit product photo alt text");
+  assert.match(admin, /openImageLibraryPicker/, "product photos should use the shared CMS image library");
+  assert.match(admin, /data-product-asset="primary"/, "primary photos should be selectable from CMS assets");
+  assert.match(admin, /data-product-asset="gallery"/, "gallery photos should be selectable from CMS assets");
   assert.match(admin, /method:\s*['"]DELETE['"]/, "admin script should remove products through DELETE");
 });
 
@@ -33,4 +38,24 @@ test("admin product APIs expose safe product media fields", () => {
   const schema = read("supabase/schema-phase5.sql");
   assert.match(schema, /products\s+add column if not exists image_url/i);
   assert.match(schema, /products\s+add column if not exists photo_alt/i);
+});
+
+test("admin products show catalog media when CMS media fields are empty", () => {
+  const fallback = withCatalogMediaFallback({
+    sku: "cr-hd",
+    name: "VertKleen CR HD",
+    image_url: null,
+    photo_alt: null,
+  });
+  assert.equal(fallback.image_url, "img/products/crhd-studio.webp");
+  assert.equal(fallback.photo_alt, "VertKleen CR HD product image");
+
+  const customized = withCatalogMediaFallback({
+    sku: "hcr",
+    name: "VertKleen CIP HCR",
+    image_url: "https://cdn.example.test/custom-hcr.webp",
+    photo_alt: "Custom HCR photo",
+  });
+  assert.equal(customized.image_url, "https://cdn.example.test/custom-hcr.webp");
+  assert.equal(customized.photo_alt, "Custom HCR photo");
 });

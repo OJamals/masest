@@ -2,9 +2,22 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate, rowMatchesQuery } from '../util.js?v=20260725a';
-import { getToken } from '../auth.js?v=20260725a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260725a';
+import { esc, safeUrl, confirmDialog, delegate, rowMatchesQuery } from '../util.js?v=20260725b';
+import { captureDirty, restoreDirty } from './edits.js?v=20260725b';
+import { PRODUCTS } from '../main/catalog-data.js?v=20260725b';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260725b';
+
+export function withCatalogMediaFallback(product = {}) {
+  const catalog = PRODUCTS[product.sku === 'cr-hd' ? 'crhd' : product.sku];
+  const imageUrl = product.image_url || catalog?.image || null;
+  const name = catalog?.name || product.name || product.sku || 'Product';
+  return {
+    ...product,
+    image_url: imageUrl,
+    photo_alt: product.photo_alt || (imageUrl ? `${name} product image` : null),
+    gallery: Array.isArray(product.gallery) ? product.gallery : [],
+  };
+}
 
 export function createProductsTab({ $, api, state, message, admSkeleton, admEmpty }) {
   async function renderProducts({ refetch = true } = {}) {
@@ -14,7 +27,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       box.innerHTML = admSkeleton();
       try {
         const response = await api('/api/admin/products');
-        state.products = response.products || [];
+        state.products = (response.products || []).map(withCatalogMediaFallback);
         state.loaded.add('products');
         if (response.media_ready === false) {
           message('prodStatus', 'Apply site/supabase/schema-phase5.sql to enable product photos.', 'err');
@@ -24,7 +37,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         return;
       }
     }
-    state.products = state.products || [];
+    state.products = (state.products || []).map(withCatalogMediaFallback);
     const q = $('prodSearch').value.trim().toLowerCase();
     const products = state.products.filter((product) => rowMatchesQuery(product, q));
     if (!products.length) {
@@ -80,11 +93,12 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     delegate(box, 'click', '[data-remove-product]', (event, button) => removeProduct(button.dataset.removeProduct));
     delegate(box, 'click', '[data-save-variant]', (event, button) => saveVariantRow(button.dataset.saveVariant));
     delegate(box, 'click', '[data-remove-variant]', (event, button) => removeVariant(button.dataset.removeVariant));
-    delegate(box, 'change', '[data-imgfile]', (event, inp) => {
-      if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'primary');
-    });
-    delegate(box, 'change', '[data-galfile]', (event, inp) => {
-      if (inp.files?.[0]) uploadProductImage(inp.closest('[data-product]').dataset.product, inp.files[0], 'gallery');
+    delegate(box, 'click', '[data-product-asset]', (event, button) => {
+      void chooseProductAsset(
+        button.closest('[data-product]').dataset.product,
+        button.dataset.productAsset,
+        button,
+      );
     });
     delegate(box, 'click', '[data-gact]', async (event, btn) => {
       const sku = btn.closest('[data-product]')?.dataset.product;
@@ -110,29 +124,33 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     });
   }
 
-  async function uploadProductImage(sku, file, slot) {
-    // Cheap client-side guard so a wrong pick fails instantly with a clear
-    // message instead of after a doomed server round-trip.
-    if (!/^image\//.test(file.type || '')) {
-      message('prodStatus', `"${file.name}" is not an image file.`, 'err');
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      message('prodStatus', `"${file.name}" is ${(file.size / 1048576).toFixed(1)} MB — keep product photos under 8 MB.`, 'err');
-      return;
-    }
-    message('prodStatus', 'Uploading image…');
+  async function chooseProductAsset(sku, slot, trigger) {
+    const details = await openImageLibraryPicker({
+      api,
+      trigger,
+      usage: slot === 'gallery' ? 'product-gallery' : 'product-primary',
+      autoOpenLibrary: true,
+    });
+    if (!details) return;
+    message('prodStatus', 'Linking CMS image…');
     try {
-      const fd = new FormData();
-      fd.append('sku', sku); fd.append('slot', slot); fd.append('file', file);
-      const token = await getToken();
-      const r = await fetch('/api/admin/product-image', { method: 'POST', headers: token ? { Authorization: 'Bearer ' + token } : {}, body: fd });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || 'upload_failed');
-      message('prodStatus', `${sku} image uploaded.`, 'ok');
+      if (slot === 'gallery') {
+        const product = (state.products || []).find((candidate) => candidate.sku === sku);
+        const gallery = [...new Set([...(product?.gallery || []), details.url])];
+        await api('/api/admin/product-image', {
+          method: 'PATCH',
+          body: { sku, action: 'reorder', gallery },
+        });
+      } else {
+        const row = document.querySelector(`[data-product="${CSS.escape(sku)}"]`);
+        row.querySelector('[data-field="image_url"]').value = details.url;
+        row.querySelector('[data-field="photo_alt"]').value = details.alt;
+        await api('/api/admin/products', { method: 'POST', body: { product: rowProduct(sku) } });
+      }
+      message('prodStatus', `${sku} CMS image linked.`, 'ok');
       await renderProducts();
-    } catch (err) {
-      message('prodStatus', err.message || 'Could not upload the image. Check the file and retry.', 'err');
+    } catch (error) {
+      message('prodStatus', error.data?.message || error.data?.error || 'Could not link the CMS image.', 'err');
     }
   }
 
@@ -155,8 +173,8 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     return `
       ${primary}
       ${gallery}
-      <label class="product-file-control">Upload<input type="file" accept="image/*" data-imgfile></label>
-      <label class="product-file-control">+ gallery<input type="file" accept="image/*" data-galfile></label>
+      <button class="btn btn-secondary btn-sm product-cms-image" type="button" data-product-asset="primary">Choose primary</button>
+      <button class="btn btn-ghost btn-sm product-cms-image" type="button" data-product-asset="gallery">Add gallery image</button>
     `;
   }
 

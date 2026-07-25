@@ -7,8 +7,8 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
 const MAIN_RELEASE = "20260720a";
-const ADMIN_RELEASE = "20260725a";
-const ADMIN_PAGE_RELEASE = "20260725a";
+const ADMIN_RELEASE = "20260725b";
+const ADMIN_PAGE_RELEASE = "20260725b";
 const CHROME_RELEASE = "20260719c";
 const ACCOUNT_NAV_RELEASE = "20260724a";
 const CUSTOMER_CHAT_RELEASE = "20260724a";
@@ -46,7 +46,7 @@ test("every browser auth importer uses one cache release", () => {
     }
   }
 
-  assert.ok(references >= 10, "expected all public, dashboard, and admin auth consumers");
+  assert.ok(references >= 9, "expected all public, dashboard, and admin auth consumers");
 });
 
 test("auth-consuming module paths are refreshed from their page entrypoints", () => {

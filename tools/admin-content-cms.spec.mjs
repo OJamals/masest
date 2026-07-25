@@ -795,10 +795,12 @@ test("blog_post form renders all field editors + live markdown preview", async (
   await expect(imagePicker).toBeVisible();
   await imagePicker.locator("[data-shared-image-library-open]").click();
   const assetRow = imagePicker.locator(".shared-image-library-card").first();
-  await expect(assetRow).toContainText("Blog descaling without acid preview");
-  await assetRow.locator("[data-shared-image-select]").click();
+  await expect(assetRow).toContainText("descaling-without-acid.webp");
+  await assetRow.click();
+  await expect(imagePicker.locator("[data-shared-image-preview-alt]")).toHaveValue("Blog descaling without acid preview");
+  await imagePicker.locator("[data-shared-image-confirm]").click();
   await expect(imagePicker).toHaveCount(0);
-  await expect(postBodyOutput).toHaveValue(/!\[Blog descaling without acid preview\]\(img\/blog\/descaling-without-acid\.webp\)/);
+  await expect(postBodyOutput).toHaveValue(/!\[Blog descaling without acid preview\]\(\/img\/blog\/descaling-without-acid\.webp\)/);
 
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-blog-post-desktop.png` });

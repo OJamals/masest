@@ -53,8 +53,8 @@ test("admin detail rows and compact forms keep label/value separation", () => {
 test("admin file, locale, and reply controls have enough intrinsic width", () => {
   assert.match(
     html,
-    /\.product-file-control input\s*\{[^}]*min-height:\s*36px;/,
-    "product upload controls should not render as cramped native 20px file inputs",
+    /\.product-cms-image\s*\{[^}]*width:\s*100%[^}]*justify-content:\s*center;/,
+    "product CMS image controls should fill the media column",
   );
   assert.match(
     html,

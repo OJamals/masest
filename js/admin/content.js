@@ -1,15 +1,15 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260725a";
-import { renderMarkdown } from "../md.js?v=20260725a";
-import { supabase } from "../auth.js?v=20260725a";
-import { createContentAssets } from "./content-assets.js?v=20260725a";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260725a";
-import { createContentRevisions } from "./content-revisions.js?v=20260725a";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260725b";
+import { renderMarkdown } from "../md.js?v=20260725b";
+import { supabase } from "../auth.js?v=20260725b";
+import { createContentAssets } from "./content-assets.js?v=20260725b";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260725b";
+import { createContentRevisions } from "./content-revisions.js?v=20260725b";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260725a";
+} from "./rich-editor.js?v=20260725b";
 import {
   CONTENT_TYPE_DEFINITIONS,
   contentPayloadFields,
@@ -17,7 +17,7 @@ import {
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260725a";
+} from "../content-types.js?v=20260725b";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "image_after", "og_image", "hero"]);
@@ -401,7 +401,7 @@ function revisionsTemplate(admEmpty) {
   `;
 }
 
-function assetPickerTemplate(admEmpty) {
+function assetPickerTemplate() {
   return `
     <div id="contentAssetPicker" class="adm-card adm-content-assets" hidden>
       <div class="adm-panel-header">
@@ -413,17 +413,9 @@ function assetPickerTemplate(admEmpty) {
           <i class="ph ph-x" aria-hidden="true"></i> Close
         </button>
       </div>
-      <div class="adm-content-asset-tools">
-        <input id="contentAssetSearch" name="asset_search" class="adm-search" type="search" autocomplete="off" placeholder="Search asset paths" aria-label="Search CMS assets">
-        <select id="contentAssetStatusFilter" name="asset_status" class="adm-select" aria-label="Filter CMS asset status">
-          <option value="available">Available assets</option>
-          <option value="archived">Archived assets</option>
-          <option value="all">All assets</option>
-        </select>
-        <button class="btn btn-ghost btn-sm" type="button" data-content-action="refresh_assets">
-          <i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh
-        </button>
-      </div>
+      <button class="btn btn-secondary adm-content-open-assets" type="button" data-content-action="open_asset_viewer">
+        <i class="ph ph-images" aria-hidden="true"></i> Open Asset Viewer
+      </button>
       <form id="contentAssetUpload" class="adm-content-upload" onsubmit="return false">
         <label>Folder
           <input id="contentAssetFolder" name="asset_folder" autocomplete="off" class="adm-input" type="text" value="cms" maxlength="64">
@@ -452,7 +444,6 @@ function assetPickerTemplate(admEmpty) {
           <i class="ph ph-link-simple" aria-hidden="true"></i> Register
         </button>
       </form>
-      <div id="contentAssetRows" class="adm-list" aria-live="polite">${admEmpty("ph-image", "No assets", "Add asset metadata before selecting media.")}</div>
     </div>
   `;
 }
@@ -570,7 +561,7 @@ function shellTemplate(admEmpty) {
       <div class="adm-content-layout">
         <div class="adm-content-stack">
           ${formTemplate()}
-          ${assetPickerTemplate(admEmpty)}
+          ${assetPickerTemplate()}
           ${richReferencePickerTemplate({ prefix: "content", admEmpty })}
           ${revisionsTemplate(admEmpty)}
         </div>
@@ -619,7 +610,7 @@ function blogShellTemplate(admEmpty) {
       <div class="adm-content-layout">
         <div class="adm-content-stack">
           ${formTemplate({ blog: true })}
-          ${assetPickerTemplate(admEmpty)}
+          ${assetPickerTemplate()}
           ${richReferencePickerTemplate({ prefix: "content", admEmpty })}
           ${revisionsTemplate(admEmpty)}
         </div>
@@ -1550,9 +1541,6 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (event.target.matches("#contentTypeFilter, #contentStatusFilter")) {
         renderActiveContent({ refetch: true });
       }
-      if (event.target.matches("#contentAssetStatusFilter")) {
-        void assets.loadAssets();
-      }
     });
     root.addEventListener("input", (event) => {
       if (event.target.closest("#contentForm")) formDirty = true;
@@ -1566,7 +1554,6 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (event.target.matches("#contentScheduledAt")) refreshPreview();
       if (event.target.matches("[data-content-payload-field]")) syncStructuredPayload();
       if (event.target.matches("[data-content-seo-field]")) syncSeoPayload();
-      if (event.target.matches("#contentAssetSearch")) assets.debouncedAssetSearch();
     });
     root.addEventListener("change", (event) => {
       if (event.target.matches("[data-content-payload-field]")) syncStructuredPayload();
@@ -1600,9 +1587,6 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       const picker = $("contentReferencePicker");
       if (picker) picker.hidden = true;
     });
-    delegate(root, "click", "[data-content-asset-path]", (_event, button) => assets.assignAssetPath(button));
-    delegate(root, "click", "[data-content-asset-status-action]", (_event, button) => assets.updateAssetStatus(button));
-    delegate(root, "click", "[data-content-asset-alt-action]", (_event, button) => assets.editAssetAlt(button));
     delegate(root, "click", "[data-content-workflow]", (_event, button) => runWorkflow(button.dataset.contentWorkflow));
     delegate(root, "click", "[data-content-action]", (_event, button) => {
       const action = button.dataset.contentAction;
@@ -1625,7 +1609,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         if (picker) picker.hidden = true;
         return null;
       }
-      if (action === "refresh_assets") return assets.loadAssets();
+      if (action === "open_asset_viewer") return assets.openAssetViewer(button);
       if (action === "close_assets") return assets.closeAssetPicker();
       if (action === "upload_asset") return assets.uploadAsset();
       if (action === "register_asset") return assets.registerAsset();

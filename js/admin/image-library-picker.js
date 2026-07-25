@@ -1,42 +1,42 @@
-import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260725a";
+import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260725b";
 import {
   assetUrl,
   formatAssetBytes,
   loadSiteImageAssets,
   mergeSiteImageAssets,
-} from "./site-image-library.js?v=20260725a";
+} from "./site-image-library.js?v=20260725b";
 
-const PAGE_SIZE = 4;
-
-function assetCard(asset = {}) {
+function assetOption(asset = {}, selectedUrl = "") {
   const url = assetUrl(asset);
   if (!url) return "";
-  const storagePath = asset.storage_path || url;
-  const label = asset.filename || storagePath.split("/").pop() || "Image";
-  const isSiteAsset = asset.source === "site";
-  return `<article class="shared-image-library-card">
-    <img src="${esc(url)}" alt="${esc(asset.alt || "")}" width="320" height="240" loading="lazy">
-    <div>
-      <b>${esc(label)}</b>
-      <small>${esc([asset.alt || "No alt text", formatAssetBytes(asset.byte_size)].filter(Boolean).join(" · "))}</small>
-    </div>
-    <div class="shared-image-library-card-actions">
-      <button class="btn btn-secondary btn-sm" type="button" data-shared-image-select data-shared-image-url="${esc(url)}" data-shared-image-alt="${esc(asset.alt || "")}">Use image</button>
-      ${isSiteAsset ? "" : `<button class="btn btn-ghost btn-sm" type="button" data-shared-image-archive data-shared-image-path="${esc(storagePath)}" aria-label="Archive ${esc(label)}"><i class="ph ph-archive" aria-hidden="true"></i></button>`}
-    </div>
-  </article>`;
+  const label = asset.filename || asset.storage_path?.split("/").pop() || "Image";
+  const selected = url === selectedUrl;
+  return `<button class="shared-image-library-card${selected ? " is-selected" : ""}" type="button"
+    data-shared-image-option data-shared-image-url="${esc(url)}" aria-pressed="${selected}">
+    <img src="${esc(url)}" alt="" width="320" height="240" loading="lazy">
+    <span>${esc(label)}</span>
+  </button>`;
 }
 
-// Shared Blog + Newsletter picker. Every attached file is uploaded through the
-// content-assets API, so it immediately becomes a reusable library asset.
-export function openImageLibraryPicker({ api, trigger = null, usage = "image" } = {}) {
+// Shared image flow for rich text, structured CMS fields, newsletters, and products.
+// One bounded dialog owns upload, search, preview, selection, and CMS metadata actions.
+export function openImageLibraryPicker({
+  api,
+  trigger = null,
+  usage = "image",
+  autoOpenLibrary = false,
+  allowUpload = true,
+  manage = false,
+} = {}) {
   return new Promise((resolve) => {
     const dlg = document.createElement("dialog");
     dlg.className = "confirm-dialog shared-image-picker";
     dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
-      <div class="shared-image-picker-head"><div><p class="adm-eyebrow">Image</p><h2>Choose an image</h2></div></div>
-      <p class="confirm-dialog-msg">Attach a new file or choose one already in the site library.</p>
-      <input type="file" name="image_file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp" data-shared-image-file hidden>
+      <div class="shared-image-picker-head">
+        <div><p class="adm-eyebrow">Image library</p><h2>Choose an image</h2></div>
+        <button class="btn btn-ghost btn-sm" type="button" data-shared-image-cancel aria-label="Close image library"><i class="ph ph-x" aria-hidden="true"></i> Close</button>
+      </div>
+      ${allowUpload ? `<input type="file" name="image_file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp" data-shared-image-file hidden>
       <div class="shared-image-picker-actions">
         <button class="btn btn-primary" type="button" data-shared-image-attach><i class="ph ph-paperclip" aria-hidden="true"></i> Attach image</button>
         <button class="btn btn-secondary" type="button" data-shared-image-library-open><i class="ph ph-images" aria-hidden="true"></i> Browse library</button>
@@ -45,25 +45,48 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
         <p data-shared-image-file-name class="muted"></p>
         <label class="confirm-dialog-field"><span>Alt text</span><input class="adm-input" name="image_alt" autocomplete="off" data-shared-image-alt maxlength="300" placeholder="Describe the image"></label>
         <button class="btn btn-primary" type="button" data-shared-image-upload-submit>Upload and use image</button>
-      </section>
+      </section>` : ""}
       <section class="shared-image-library" data-shared-image-library hidden aria-live="polite">
-        <div class="shared-image-library-head"><strong>Site image library <small>CMS uploads first</small></strong><span data-shared-image-library-count></span></div>
-        <label class="search-field shared-image-library-search">
-          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-          <span class="sr-only">Search site images</span>
-          <input type="search" name="site_image_search" placeholder="Search images by name or alt text" data-shared-image-search>
-        </label>
-        <div class="shared-image-library-grid" data-shared-image-library-grid></div>
-        <div class="shared-image-library-pager" data-shared-image-library-pager hidden>
-          <button class="btn btn-ghost btn-sm" type="button" data-shared-image-page="previous">Previous</button>
-          <span data-shared-image-page-label></span>
-          <button class="btn btn-ghost btn-sm" type="button" data-shared-image-page="next">Next</button>
+        <div class="shared-image-library-head">
+          <strong>Assets <small>CMS uploads first</small></strong>
+          <span data-shared-image-library-count></span>
+        </div>
+        <div class="shared-image-library-filters">
+          <label class="search-field shared-image-library-search">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <span class="sr-only">Search site images</span>
+            <input type="search" name="site_image_search" placeholder="Search by name or alt text" data-shared-image-search>
+          </label>
+          ${manage ? `<select class="adm-select" name="asset_status" aria-label="Filter asset status" data-shared-image-status-filter>
+            <option value="available">Available</option>
+            <option value="archived">Archived</option>
+            <option value="all">All</option>
+          </select>` : ""}
+        </div>
+        <div class="shared-image-library-layout">
+          <section class="shared-image-preview">
+            <div class="shared-image-preview-placeholder" data-shared-image-preview-placeholder>
+              <i class="ph ph-image" aria-hidden="true"></i>
+              <span>Select a thumbnail to inspect it.</span>
+            </div>
+            <img data-shared-image-preview alt="" width="960" height="720" hidden>
+            <div class="shared-image-preview-details" data-shared-image-preview-details hidden>
+              <strong data-shared-image-preview-name></strong>
+              <small data-shared-image-preview-meta></small>
+              <label>Alt text
+                <input class="adm-input" name="preview_alt" type="text" maxlength="300" data-shared-image-preview-alt>
+              </label>
+              <div class="shared-image-preview-actions">
+                <button class="btn btn-primary" type="button" data-shared-image-confirm disabled>Select</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-shared-image-save-alt hidden>Save alt text</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-shared-image-state hidden></button>
+              </div>
+            </div>
+          </section>
+          <div class="shared-image-library-grid" data-shared-image-library-grid></div>
         </div>
       </section>
       <p class="adm-status" data-shared-image-status aria-live="polite"></p>
-      <menu class="confirm-dialog-actions">
-        <button value="cancel" class="btn btn-ghost btn-sm" type="button" data-shared-image-cancel>Cancel</button>
-      </menu>
     </form>`;
     if (typeof dlg.showModal !== "function") { resolve(null); return; }
     document.body.appendChild(dlg);
@@ -80,11 +103,19 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
     const libraryGrid = dlg.querySelector("[data-shared-image-library-grid]");
     const libraryCount = dlg.querySelector("[data-shared-image-library-count]");
     const librarySearch = dlg.querySelector("[data-shared-image-search]");
-    const pager = dlg.querySelector("[data-shared-image-library-pager]");
-    const pageLabel = dlg.querySelector("[data-shared-image-page-label]");
+    const statusFilter = dlg.querySelector("[data-shared-image-status-filter]");
+    const preview = dlg.querySelector("[data-shared-image-preview]");
+    const previewPlaceholder = dlg.querySelector("[data-shared-image-preview-placeholder]");
+    const previewDetails = dlg.querySelector("[data-shared-image-preview-details]");
+    const previewName = dlg.querySelector("[data-shared-image-preview-name]");
+    const previewMeta = dlg.querySelector("[data-shared-image-preview-meta]");
+    const previewAlt = dlg.querySelector("[data-shared-image-preview-alt]");
+    const confirmButton = dlg.querySelector("[data-shared-image-confirm]");
+    const saveAltButton = dlg.querySelector("[data-shared-image-save-alt]");
+    const stateButton = dlg.querySelector("[data-shared-image-state]");
     const status = dlg.querySelector("[data-shared-image-status]");
     let selectedFile = null;
-    let page = 0;
+    let selectedAsset = null;
     let cmsAssets = [];
     let siteAssets = [];
     let assets = [];
@@ -107,19 +138,49 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
       result = next;
       dlg.close(next ? "select" : "cancel");
       settle();
-      setTimeout(() => dlg.remove(), 0);
+    };
+
+    const paintSelection = () => {
+      const url = selectedAsset ? assetUrl(selectedAsset) : "";
+      libraryGrid.querySelectorAll("[data-shared-image-option]").forEach((option) => {
+        const selected = option.dataset.sharedImageUrl === url;
+        option.classList.toggle("is-selected", selected);
+        option.setAttribute("aria-pressed", String(selected));
+      });
+      const hasSelection = Boolean(url);
+      preview.hidden = !hasSelection;
+      previewPlaceholder.hidden = hasSelection;
+      previewDetails.hidden = !hasSelection;
+      if (!hasSelection) {
+        preview.removeAttribute("src");
+        confirmButton.disabled = true;
+        return;
+      }
+      const isSiteAsset = selectedAsset.source === "site";
+      const archived = selectedAsset.status === "archived";
+      preview.src = url;
+      preview.alt = selectedAsset.alt || "";
+      previewName.textContent = selectedAsset.filename || selectedAsset.storage_path || url;
+      previewMeta.textContent = [
+        isSiteAsset ? "Public site" : selectedAsset.status || "available",
+        formatAssetBytes(selectedAsset.byte_size),
+        selectedAsset.mime_type || "",
+      ].filter(Boolean).join(" · ");
+      previewAlt.value = selectedAsset.alt || "";
+      previewAlt.disabled = isSiteAsset;
+      confirmButton.disabled = archived;
+      saveAltButton.hidden = isSiteAsset;
+      stateButton.hidden = isSiteAsset;
+      stateButton.textContent = archived ? "Restore" : "Archive";
     };
 
     const renderLibrary = () => {
-      const pages = Math.max(1, Math.ceil(assets.length / PAGE_SIZE));
-      page = Math.min(page, pages - 1);
-      const pageAssets = assets.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-      libraryGrid.innerHTML = pageAssets.map(assetCard).join("") || '<p class="muted">No images in the library yet. Attach one to add it.</p>';
-      libraryCount.textContent = assets.length ? `${assets.length} image${assets.length === 1 ? "" : "s"}` : "";
-      pager.hidden = pages <= 1;
-      pageLabel.textContent = `Page ${page + 1} of ${pages}`;
-      pager.querySelector('[data-shared-image-page="previous"]').disabled = page === 0;
-      pager.querySelector('[data-shared-image-page="next"]').disabled = page >= pages - 1;
+      const selectedUrl = selectedAsset ? assetUrl(selectedAsset) : "";
+      if (selectedUrl && !assets.some((asset) => assetUrl(asset) === selectedUrl)) selectedAsset = null;
+      libraryGrid.innerHTML = assets.map((asset) => assetOption(asset, selectedUrl)).join("")
+        || '<p class="muted">No images match these filters.</p>';
+      libraryCount.textContent = `${assets.length} image${assets.length === 1 ? "" : "s"}`;
+      paintSelection();
     };
 
     const filterLibrary = () => {
@@ -127,20 +188,19 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
         cmsAssets,
         siteAssets,
         q: librarySearch?.value || "",
-        status: "available",
+        status: manage ? statusFilter?.value || "available" : "available",
       });
-      page = 0;
       renderLibrary();
     };
 
     const loadLibrary = async () => {
       if (typeof api !== "function") return;
-      openLibraryButton.disabled = true;
+      if (openLibraryButton) openLibraryButton.disabled = true;
       library.hidden = false;
       libraryGrid.innerHTML = '<p class="muted">Loading images…</p>';
       try {
         const [cmsResult, siteResult] = await Promise.allSettled([
-          api("/api/admin/content-assets?status=available"),
+          api(`/api/admin/content-assets?status=${manage ? "all" : "available"}`),
           loadSiteImageAssets(),
         ]);
         if (cmsResult.status === "rejected" && siteResult.status === "rejected") {
@@ -154,13 +214,13 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
         }
       } catch (error) {
         libraryGrid.innerHTML = "";
-        setStatus(error?.data?.error || "Could not load the image library.", "err");
+        setStatus(error?.data?.message || error?.data?.error || error?.message || "Could not load the image library.", "err");
       } finally {
-        openLibraryButton.disabled = false;
+        if (openLibraryButton) openLibraryButton.disabled = false;
       }
     };
 
-    attachButton.addEventListener("click", () => fileInput?.click());
+    attachButton?.addEventListener("click", () => fileInput?.click());
     fileInput?.addEventListener("change", () => {
       selectedFile = fileInput.files?.[0] || null;
       if (!selectedFile) return;
@@ -169,9 +229,10 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
       setStatus();
       altInput?.focus();
     });
-    openLibraryButton.addEventListener("click", () => { void loadLibrary(); });
+    openLibraryButton?.addEventListener("click", () => { void loadLibrary(); });
     librarySearch?.addEventListener("input", filterLibrary);
-    uploadButton.addEventListener("click", async () => {
+    statusFilter?.addEventListener("change", filterLibrary);
+    uploadButton?.addEventListener("click", async () => {
       const alt = altInput?.value.trim() || "";
       if (!selectedFile) { setStatus("Attach an image first.", "err"); return; }
       if (!alt) { setStatus("Add alt text before uploading.", "err"); altInput?.focus(); return; }
@@ -194,41 +255,72 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
         uploadButton.disabled = false;
       }
     });
-    libraryGrid.addEventListener("click", async (event) => {
-      const select = event.target instanceof Element ? event.target.closest("[data-shared-image-select]") : null;
-      if (select) {
-        closeWith({ url: select.dataset.sharedImageUrl || "", alt: select.dataset.sharedImageAlt || "" });
-        return;
-      }
-      const archive = event.target instanceof Element ? event.target.closest("[data-shared-image-archive]") : null;
-      const storagePath = archive?.dataset.sharedImagePath || "";
-      if (!storagePath || !(await confirmDialog("Archive this image? Existing page references remain unchanged, and it can be restored from Content assets.", { confirmText: "Archive", cancelText: "Cancel" }))) return;
-      const asset = cmsAssets.find((candidate) => (candidate.storage_path || assetUrl(candidate)) === storagePath);
-      if (!asset) return;
-      archive.disabled = true;
-      setStatus("Archiving image…");
+    libraryGrid.addEventListener("click", (event) => {
+      const option = event.target instanceof Element ? event.target.closest("[data-shared-image-option]") : null;
+      if (!option) return;
+      selectedAsset = assets.find((asset) => assetUrl(asset) === option.dataset.sharedImageUrl) || null;
+      paintSelection();
+    });
+    confirmButton.addEventListener("click", () => {
+      const url = selectedAsset ? assetUrl(selectedAsset) : "";
+      if (!url || selectedAsset?.status === "archived") return;
+      closeWith({ url, alt: previewAlt.value.trim() || selectedAsset.alt || "" });
+    });
+    saveAltButton.addEventListener("click", async () => {
+      const storagePath = selectedAsset?.storage_path || "";
+      const alt = previewAlt.value.trim();
+      if (!storagePath || !alt) { setStatus("Alt text cannot be empty.", "err"); return; }
+      saveAltButton.disabled = true;
       try {
-        await api("/api/admin/content-assets", {
+        const data = await api("/api/admin/content-assets", {
           method: "POST",
-          body: { ...asset, storage_path: storagePath, status: "archived" },
+          body: { ...selectedAsset, storage_path: storagePath, alt },
         });
-        cmsAssets = cmsAssets.filter((candidate) => (candidate.storage_path || assetUrl(candidate)) !== storagePath);
+        selectedAsset = data.asset || { ...selectedAsset, alt };
+        cmsAssets = cmsAssets.map((asset) => (
+          (asset.storage_path || assetUrl(asset)) === storagePath ? selectedAsset : asset
+        ));
         filterLibrary();
-        setStatus("Image archived.", "ok");
+        setStatus("Alt text saved.", "ok");
       } catch (error) {
-        setStatus(error?.data?.message || error?.data?.error || "Could not archive this image.", "err");
-        archive.disabled = false;
+        setStatus(error?.data?.message || error?.data?.error || "Could not save alt text.", "err");
+      } finally {
+        saveAltButton.disabled = false;
       }
     });
-    pager.addEventListener("click", (event) => {
-      const direction = event.target instanceof Element ? event.target.closest("[data-shared-image-page]")?.dataset.sharedImagePage : "";
-      if (direction === "previous") page -= 1;
-      if (direction === "next") page += 1;
-      renderLibrary();
+    stateButton.addEventListener("click", async () => {
+      const storagePath = selectedAsset?.storage_path || "";
+      const nextStatus = selectedAsset?.status === "archived" ? "available" : "archived";
+      if (!storagePath) return;
+      if (nextStatus === "archived" && !(await confirmDialog("Archive this image? Existing page references remain unchanged.", { confirmText: "Archive", cancelText: "Cancel" }))) return;
+      stateButton.disabled = true;
+      try {
+        const data = await api("/api/admin/content-assets", {
+          method: "POST",
+          body: { ...selectedAsset, storage_path: storagePath, alt: previewAlt.value.trim(), status: nextStatus },
+        });
+        selectedAsset = data.asset || { ...selectedAsset, status: nextStatus };
+        cmsAssets = cmsAssets.map((asset) => (
+          (asset.storage_path || assetUrl(asset)) === storagePath ? selectedAsset : asset
+        ));
+        filterLibrary();
+        setStatus(nextStatus === "archived" ? "Image archived." : "Image restored.", "ok");
+      } catch (error) {
+        setStatus(error?.data?.message || error?.data?.error || "Could not update image status.", "err");
+      } finally {
+        stateButton.disabled = false;
+      }
     });
-    dlg.querySelector("[data-shared-image-cancel]")?.addEventListener("click", () => closeWith(null));
+    dlg.querySelectorAll("[data-shared-image-cancel]").forEach((button) => {
+      button.addEventListener("click", () => closeWith(null));
+    });
     dlg.addEventListener("close", () => { dlg.remove(); settle(); }, { once: true });
     dlg.showModal();
-    attachButton.focus();
+    if (autoOpenLibrary) {
+      void loadLibrary();
+      librarySearch?.focus();
+    } else {
+      (attachButton || openLibraryButton)?.focus();
+    }
   });
 }

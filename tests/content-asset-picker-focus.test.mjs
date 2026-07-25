@@ -9,8 +9,9 @@ test("CMS asset picker manages focus on open and close", () => {
 
   // remembers the control that opened the picker, to restore focus later
   assert.match(js, /assetPickerTrigger/, "should track the element that opened the asset picker");
-  // opening reveals the panel and moves focus into it (the search field)
-  assert.match(js, /\$\("contentAssetSearch"\)\?\.focus\(\)/, "opening the picker should move focus to the asset search field");
+  // opening reveals the panel and sends focus into the modal viewer search
+  assert.match(js, /autoOpenLibrary:\s*true/, "opening the picker should open the image viewer");
+  assert.match(read("js/admin/image-library-picker.js"), /librarySearch\?\.focus\(\)/, "opening the viewer should focus its search field");
   // closing restores focus to the trigger so keyboard users are not dropped at the top
   assert.match(js, /function closeAssetPicker\(\)[\s\S]*?assetPickerTrigger\?\.focus\(\)/, "closing the picker should restore focus to the trigger");
 });

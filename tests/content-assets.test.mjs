@@ -121,21 +121,25 @@ test("permanent deletion requires confirmation and an archived asset before dele
   }
 });
 
-test("Blog and Newsletter use one shared attach-and-library image picker with reversible archive", () => {
+test("Blog, Newsletter, Products, and Content use one preview-first image viewer", () => {
   const blog = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
   const newsletter = readFileSync(new URL("../js/admin/newsletter.js", import.meta.url), "utf8");
+  const products = readFileSync(new URL("../js/admin/products.js", import.meta.url), "utf8");
   const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
 
   assert.match(blog, /openImageLibraryPicker/);
   assert.match(newsletter, /openImageLibraryPicker/);
+  assert.match(products, /openImageLibraryPicker/);
   assert.doesNotMatch(newsletter, /Image URL/);
   assert.match(picker, /Attach image/);
   assert.match(picker, /Browse library/);
-  assert.match(picker, /data-shared-image-archive/);
-  assert.match(picker, /status:\s*"archived"/);
-  assert.doesNotMatch(picker, /data-shared-image-delete/);
+  assert.match(picker, /data-shared-image-preview/);
+  assert.match(picker, /data-shared-image-option/);
+  assert.match(picker, /data-shared-image-confirm/);
+  assert.match(picker, /data-shared-image-state/);
+  assert.match(picker, /"archived"/);
   assert.doesNotMatch(picker, /method:\s*"DELETE"/);
-  assert.match(picker, /PAGE_SIZE = 4/);
+  assert.doesNotMatch(picker, /PAGE_SIZE|data-shared-image-page/);
   assert.match(picker, /loadSiteImageAssets/);
   assert.match(picker, /mergeSiteImageAssets/);
   assert.match(picker, /data-shared-image-search/);
@@ -159,17 +163,26 @@ test("saveAsset preserves the original creator across updates (archive/restore r
 test("content editor has an asset picker contract", () => {
   const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8") + readFileSync(new URL("../js/admin/content-assets.js", import.meta.url), "utf8");
   assert.match(source, /contentAssetPicker/);
-  assert.match(source, /data-content-asset-field/);
-  assert.match(source, /data-content-asset-alt/);
-  assert.match(source, /contentAssetSearch/);
-  assert.match(source, /contentAssetStatusFilter/);
-  assert.match(source, /refresh_assets/);
+  assert.match(source, /open_asset_viewer/);
+  assert.match(source, /Open Asset Viewer/);
+  assert.match(source, /openImageLibraryPicker/);
+  assert.match(source, /autoOpenLibrary:\s*true/);
+  assert.match(source, /manage:\s*true/);
   assert.match(source, /close_assets/);
-  assert.match(source, /data-content-asset-status-action/);
-  assert.match(source, /updateAssetStatus/);
-  assert.match(source, /assetCache/);
   assert.match(source, /pairedAssetAltField/);
   assert.match(source, /\/api\/admin\/content-assets/);
+  assert.doesNotMatch(source, /contentAssetRows|contentAssetPager/);
+});
+
+test("asset viewer contains the complete library inside a bounded 3-4 column window", () => {
+  const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../css/components.css", import.meta.url), "utf8");
+
+  assert.match(picker, /assets\.map\(\(asset\) => assetOption/);
+  assert.match(css, /\.shared-image-library-layout\s*\{[^}]*grid-template-columns:/);
+  assert.match(css, /\.shared-image-library-grid\s*\{[^}]*repeat\(4,/);
+  assert.match(css, /\.shared-image-library-grid\s*\{[^}]*overflow-y:\s*auto/);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*repeat\(3,/);
 });
 
 test("content editor exposes native asset upload controls", () => {

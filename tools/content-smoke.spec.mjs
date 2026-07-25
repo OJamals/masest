@@ -184,29 +184,35 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.locator('[data-content-payload-field="image_alt"]').fill("");
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
   await expect(page.locator("#contentAssetPicker")).toBeVisible();
-  await expect(page.locator("#contentAssetSearch")).toBeVisible();
-  await expect(page.locator("#contentAssetStatusFilter")).toHaveValue("available");
-  await page.locator("#contentAssetSearch").fill("brewery");
-  await page.locator('[data-content-action="refresh_assets"]').click();
-  await expect(page.locator("#contentAssetRows")).toContainText("MASEST field team");
-  await page.locator("[data-content-asset-status-action]").first().click();
+  let assetViewer = page.locator("dialog.shared-image-picker");
+  await expect(assetViewer).toBeVisible();
+  await expect(assetViewer.locator("[data-shared-image-status-filter]")).toHaveValue("available");
+  await assetViewer.locator("[data-shared-image-search]").fill("brewery");
+  let assetOption = assetViewer.locator("[data-shared-image-option]").first();
+  await expect(assetOption).toBeVisible();
+  await assetOption.click();
+  await expect(assetViewer.locator("[data-shared-image-preview]")).toBeVisible();
+  await expect(assetViewer.locator("[data-shared-image-preview-alt]")).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
+  await assetViewer.locator("[data-shared-image-state]").click();
   await page.locator('.confirm-dialog button[value="confirm"]').click();
-  await expect(page.locator("#contentStatus")).toHaveText("Asset archived.");
-  await expect(page.locator("#contentAssetRows")).toContainText("Managed with the public site");
-  await page.locator("#contentAssetStatusFilter").selectOption("archived");
-  await expect(page.locator("#contentAssetRows")).toContainText("Brewery tank cleaned with VertKleen CR and HCR");
-  await expect(page.locator("[data-content-asset-status-action]").first()).toContainText("Restore");
-  await page.locator("[data-content-asset-status-action]").first().click();
-  await expect(page.locator("#contentStatus")).toHaveText("Asset restored.");
-  await expect(page.locator("#contentAssetRows")).toContainText("No assets");
-  await page.locator("#contentAssetStatusFilter").selectOption("available");
-  await expect(page.locator("#contentAssetRows")).toContainText("MASEST field team");
-  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-asset-manager.png`, fullPage: true });
-  await page.locator("[data-content-asset-path]").first().click();
+  await expect(assetViewer.locator("[data-shared-image-status]")).toHaveText("Image archived.");
+  await assetViewer.locator("[data-shared-image-status-filter]").selectOption("archived");
+  assetOption = assetViewer.locator("[data-shared-image-option]").first();
+  await assetOption.click();
+  await expect(assetViewer.locator("[data-shared-image-state]")).toHaveText("Restore");
+  await assetViewer.locator("[data-shared-image-state]").click();
+  await expect(assetViewer.locator("[data-shared-image-status]")).toHaveText("Image restored.");
+  await assetViewer.locator("[data-shared-image-status-filter]").selectOption("available");
+  assetOption = assetViewer.locator("[data-shared-image-option]").first();
+  await assetOption.click();
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-asset-manager.png` });
+  await assetViewer.locator("[data-shared-image-confirm]").click();
   await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("/img/proof/cases/brewery.webp");
   await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
 
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
+  assetViewer = page.locator("dialog.shared-image-picker");
+  await assetViewer.locator("[data-shared-image-cancel]").click();
   await page.locator("#contentAssetPath").fill("img/proof/cases/registered-brewery.webp");
   await page.locator("#contentAssetPathAlt").fill("Registered brewery proof image");
   await page.locator("#contentAssetCredit").fill("MASEST archive");
@@ -217,6 +223,8 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
 
   await page.locator('[data-content-payload-field="image_alt"]').fill("Stale alt from prior image");
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
+  assetViewer = page.locator("dialog.shared-image-picker");
+  await assetViewer.locator("[data-shared-image-cancel]").click();
   await page.locator("#contentAssetFile").setInputFiles({
     name: "uploaded-brewery.webp",
     mimeType: "image/webp",

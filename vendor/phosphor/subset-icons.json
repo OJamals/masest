@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 265,
-  "usedCount": 159,
+  "count": 264,
+  "usedCount": 158,
   "bufferCount": 106,
   "icons": [
     {
@@ -1127,11 +1127,6 @@
     {
       "name": "test-tube",
       "cp": "E7A0",
-      "src": "used"
-    },
-    {
-      "name": "text-aa",
-      "cp": "E6EE",
       "src": "used"
     },
     {

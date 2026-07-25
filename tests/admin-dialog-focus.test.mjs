@@ -14,7 +14,7 @@ test('shared dialogs explicitly restore focus after every close path', () => {
 
 for (const path of [
   'js/admin/newsletter.js',
-  'js/admin/content-assets.js',
+  'js/admin/image-library-picker.js',
   'js/admin/quotes.js',
   'js/admin/companies.js',
   'js/admin/crm.js',
@@ -22,7 +22,7 @@ for (const path of [
   test(`${path} restores focus for each custom dialog`, () => {
     const source = read(path);
     const dialogs = (source.match(/document\.createElement\(['"]dialog['"]\)/g) || []).length;
-    const restorers = (source.match(/restoreFocusOnClose\(dlg\)/g) || []).length;
+    const restorers = (source.match(/restoreFocusOnClose\(dlg(?:,\s*[^)]*)?\)/g) || []).length;
     assert.ok(dialogs > 0, `${path} should contain a custom dialog`);
     assert.equal(restorers, dialogs, `${path} must restore the invoker for every dialog`);
   });

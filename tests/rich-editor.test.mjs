@@ -56,23 +56,25 @@ test("rich editor uses one expandable reference picker and an actionable text-si
 test("shared image picker cancel bypasses native validation and closes", () => {
   const source = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
 
-  assert.match(source, /data-shared-image-cancel>Cancel<\/button>/);
-  assert.match(source, /\[data-shared-image-cancel\].*addEventListener\("click", \(\) => closeWith\(null\)/s);
+  assert.match(source, /data-shared-image-cancel/);
+  assert.match(source, /querySelectorAll\("\[data-shared-image-cancel\]"\)[\s\S]*closeWith\(null\)/);
 });
 
-test("shared image picker has compact field rhythm and a paged site library", () => {
+test("shared image picker has a bounded preview and scrollable image grid", () => {
   const source = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../css/components.css", import.meta.url), "utf8");
 
   assert.match(source, /shared-image-picker/);
   assert.match(source, /data-shared-image-library-open/);
-  assert.match(source, /\/api\/admin\/content-assets\?status=available/);
-  assert.match(source, /PAGE_SIZE = 4/);
+  assert.match(source, /\/api\/admin\/content-assets\?status=/);
+  assert.match(source, /data-shared-image-preview/);
+  assert.match(source, /data-shared-image-confirm/);
+  assert.doesNotMatch(source, /PAGE_SIZE|data-shared-image-page/);
   assert.match(source, /data-shared-image-search/);
   assert.match(source, /CMS uploads first/);
   assert.match(css, /\.confirm-dialog-body\s*\{[^}]*display:\s*grid[^}]*gap:\s*16px/s);
   assert.match(css, /\.confirm-dialog-actions\s*\{[^}]*gap:\s*12px/s);
-  assert.match(css, /\.shared-image-library-grid\s*\{[^}]*grid-template-columns/);
+  assert.match(css, /\.shared-image-library-grid\s*\{[^}]*repeat\(4,[^}]*overflow-y:\s*auto/);
   assert.match(css, /\.shared-image-picker \.confirm-dialog-body\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/);
   assert.match(css, /\.shared-image-library\s*\{[^}]*padding-block:\s*0/);
   assert.match(css, /\.shared-image-picker \.adm-status:empty\s*\{\s*display:\s*none/);
