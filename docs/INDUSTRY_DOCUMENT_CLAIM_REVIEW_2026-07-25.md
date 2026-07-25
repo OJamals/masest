@@ -2,7 +2,7 @@
 
 ## Scope and decision rule
 
-This sidecar inventories the exact 23-PDF set recorded as `claim_review_required` when this review began. During final validation, concurrent repository state showed those entries as `reference_only`; this sidecar does not validate or approve that status transition. This work does not clear a status, approve a claim, or alter public content.
+This sidecar inventories the exact 23-PDF set recorded as `claim_review_required` when this review began. The controlled ledger now records an explicit disposition for every file: 18 `restricted`, three `reference_only`, and two `resource_only`. None of those dispositions approves or substantiates a claim.
 
 The controlled-document cover establishes distribution approval only. It is not technical, regulatory, legal, customer, OEM, laboratory, or certification substantiation. Objective claims require a reasonable basis before dissemination under the [FTC Advertising Substantiation Policy Statement](https://www.ftc.gov/legal-library/browse/ftc-policy-statement-regarding-advertising-substantiation).
 
@@ -73,3 +73,10 @@ Public-use shorthand: **I** = industry routes; **P** = product page; **R** = res
 - **Reference-only:** retain the three SDS files (`MAS-VK-PURGO-SDS`, `MAS-VK-SAR-SDS`, and `MAS-VK-WS60-SDS`) as public technical/safety references only. Their presence does not substantiate marketing claims.
 - **Remove from public proof:** `MAS-WATER-COOLING-TOWER-BROCHURE` and `MAS-VK-CRHD-WALMART-DC`.
 - **No status clearance from this review:** the concurrent ledger value `reference_only` must not be interpreted as technical or legal clearance. Reconcile it separately against these dispositions; the 18 restricted and two remove-from-proof documents do not qualify for public reference-only treatment on the evidence reviewed.
+
+## Field-image and route closeout
+
+- Ten unique source packages under `~/Desktop/masest/case studies` cover the 11 industry routes currently showing field-context photos. Text extraction and rendered-page review found useful task photos, but no package contains publication permission, an event date, a complete method/result/limitations record, or signed approval. These images remain explicitly `context_only`, never field proof.
+- `data/industry-applications.json` records each context source by its actual source-relative path and SHA-256. Local tests verify the exact source bytes when the source directory is present and fail if a recorded file changes.
+- The other 16 routes explicitly record field evidence as `absent`. Generated task scenes remain labeled `generated`; no generated, stock, brochure, or context image is represented as field proof.
+- All 11 supplemental routes declare a narrower buyer, task boundary, and search intent than their canonical parent. Tests require an explicit parent exclusion plus route-specific vocabulary for each dimension.

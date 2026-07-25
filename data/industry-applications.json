@@ -49,7 +49,7 @@
   },
   {
     "slug": "construction",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/VertKleen CR applications- grout.moss. grime.algae.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/VertKleen CR applications- grout.moss. grime.algae.pdf", "source_sha256": "7ddeb4c70f64dd8c7dac3976319463e15ba30f93886d9da0d3fbbdd55e234638", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Construction",
     "kind": "canonical",
     "lead_task": "Clean concrete-handling equipment, forms, tools, and fleet assets without spreading silica-bearing solids or oily wash water.",
@@ -85,7 +85,7 @@
   },
   {
     "slug": "distribution-cold-storage",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/Walmart_DSC_OnSite_Assessment_1page.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/Walmart_DSC_OnSite_Assessment_1page.pdf", "source_sha256": "e0b1f73b170ce77baeaf0106993098331d32332c5aea0876e8e7251ae0bb7826", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Distribution / Cold Storage",
     "kind": "canonical",
     "lead_task": "Remove forklift oil, tire marks, food soils, and mineral buildup without leaving a slippery film in an operating facility.",
@@ -125,7 +125,7 @@
   },
   {
     "slug": "education",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf", "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Education Facilities",
     "kind": "canonical",
     "redirect_from": ["schools-universities"],
@@ -166,7 +166,7 @@
   },
   {
     "slug": "food-beverage",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf", "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Food & Beverage",
     "kind": "canonical",
     "lead_task": "Validate a CIP or COP cleaning sequence against product soil and mineral deposit before the separate sanitation release.",
@@ -226,7 +226,7 @@
   },
   {
     "slug": "healthcare",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/VertKleen Triple Zero on site at the University of Florida with Clean Team USA.docx"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/NEW VertKleen Triple Zero on site at the University of Florida with Clean Team USA.docx", "source_sha256": "7d2cda9f253c2ccb5e12b1f7eefb1a8cdc8ab75e08f6cfd233cf789e36d68606", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Healthcare",
     "kind": "canonical",
     "lead_task": "Clean isolated mechanical and facility assets without crossing infection-control, occupied-care, or water-management boundaries.",
@@ -285,7 +285,7 @@
   },
   {
     "slug": "hvac-water",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/VertKleen Descaler-Res AC coil cleaned and preserved.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/VertKleen Descaler-Res AC coil cleaned and preserved.pdf", "source_sha256": "36f23bbd0bdea7841b8554ae174c8dc6daae096bf733c7a2f708bbdc109e2c2e", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "HVAC / Water Treatment",
     "kind": "canonical",
     "lead_task": "Remove water-side scale and corrosion product, then return the isolated system to a documented treatment program.",
@@ -303,7 +303,7 @@
   },
   {
     "slug": "manufacturing",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/KN filter degreasing with VertKleen CRHD.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/KN filter degreasing with VertKleen CRHD.pdf", "source_sha256": "912ef6e40bfbffa40bb5f3a2e586f057bc6dcba311dc270063ea98683fbaaa6b", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Manufacturing",
     "kind": "canonical",
     "lead_task": "Remove process oil, carbon, grease, and scale from isolated production assets with a measurable return-to-process endpoint.",
@@ -321,7 +321,7 @@
   },
   {
     "slug": "marine",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/NEW VertKleen Torque Wash on a 43 Yellow Fin vessel-1.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/NEW VertKleen Torque Wash on a 43 Yellow Fin vessel-1.pdf", "source_sha256": "30696ceaf0199fc7c1371610becfcba0f8b3674e6254323dc6dfa78e11eaa4fa", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Marine",
     "kind": "canonical",
     "lead_task": "Remove salt, marine film, oil, and oxidation from vessels and dockside assets without releasing an oily wash plume.",
@@ -383,7 +383,7 @@
   },
   {
     "slug": "military-government",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf", "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Military / Government",
     "kind": "canonical",
     "lead_task": "Clean fleet, facility, and utility assets under technical-order, procurement, and chain-of-custody controls.",
@@ -419,7 +419,7 @@
   },
   {
     "slug": "oil-gas",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/VertKleen HCR-Rust and Descaling Test for DDC Eng.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/VertKleen HCR-Rust and Descaling Test for DDC Eng.pdf", "source_sha256": "9b4e8c27cae606d2da5cf4dbc31eb88535e7c878ab8564de3d29062d8aafb5e7", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Oil, Gas & Process Plants",
     "kind": "canonical",
     "redirect_from": ["oil-gas-industrial-plants"],
@@ -438,7 +438,7 @@
   },
   {
     "slug": "plumbing",
-    "field_evidence": {"status": "context_only", "source_files": ["docs/VertKleen Descaler used in Fire Protection System.pdf"], "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "source": "case studies/VertKleen Descaler used in Fire Protection System.pdf", "source_sha256": "f069cf916057fea06b60804cf21f9bbd67e3118f33b058a87a1264f54fc10b46", "missing": ["publication permission", "event date", "complete method, result, and limitations record"]},
     "label": "Plumbing",
     "kind": "canonical",
     "lead_task": "Restore flow and heat transfer in isolated tankless heaters, boilers, fixtures, and scale-prone water components.",

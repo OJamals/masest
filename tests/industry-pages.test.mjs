@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 import {
@@ -13,6 +16,8 @@ const industries = JSON.parse(read('data/industry-applications.json'));
 const siteImages = JSON.parse(read('data/content/site-images.json')).assets;
 const siteImageByPath = new Map(siteImages.map((asset) => [asset.public_url, asset]));
 const documentReview = JSON.parse(read('data/public-document-review.json'));
+const fieldSourceRoot = process.env.MASEST_DOCUMENT_SOURCE_ROOT
+  || join(homedir(), 'Desktop', 'masest');
 const restrictedDocuments = new Set(documentReview.documents
   .filter((document) => document.status === 'restricted')
   .map((document) => document.path));
@@ -179,6 +184,29 @@ test('gallery media fails closed between generated scenes, field context, and qu
       assert.deepEqual(evidence.missing || [], [], `${industry.slug}: qualified record gaps`);
     } else {
       assert.ok(evidence.missing?.length, `${industry.slug}: incomplete record gaps required`);
+      const gaps = evidence.missing.join(' ');
+      if (evidence.status === 'context_only') {
+        assert.match(
+          evidence.source || '',
+          /^case studies\/[^/]+\.(?:pdf|docx)$/i,
+          `${industry.slug}: controlled context source`,
+        );
+        assert.match(evidence.source_sha256 || '', /^[a-f0-9]{64}$/, `${industry.slug}: source hash`);
+        if (existsSync(fieldSourceRoot)) {
+          const sourcePath = join(fieldSourceRoot, evidence.source);
+          assert.ok(existsSync(sourcePath), `${industry.slug}: missing context source ${evidence.source}`);
+          assert.equal(
+            createHash('sha256').update(readFileSync(sourcePath)).digest('hex'),
+            evidence.source_sha256,
+            `${industry.slug}: context source changed`,
+          );
+        }
+        assert.match(gaps, /permission/i, `${industry.slug}: permission gap`);
+        assert.match(gaps, /date/i, `${industry.slug}: date gap`);
+        assert.match(gaps, /method.*result.*limitations/i, `${industry.slug}: record gaps`);
+      } else {
+        assert.match(gaps, /approved field photos/i, `${industry.slug}: absent-photo gap`);
+      }
     }
 
     const html = read(`industries/${industry.slug}.html`);
@@ -244,19 +272,42 @@ test('P1 registry covers every industry route with task-specific operating conte
 
 test('supplemental routes state a narrower buyer, task scope, and search intent than their parent', () => {
   const bySlug = new Map(industries.map((industry) => [industry.slug, industry]));
+  const ignoredTerms = new Set(
+    'the and for with from into not general cleaning chemical chemistry cleaner teams team work route facility facilities industrial task tasks this that'
+      .split(' '),
+  );
+  const meaningfulTerms = (value) => new Set(
+    String(value || '').toLowerCase().match(/[a-z0-9]+/g)
+      ?.filter((term) => term.length > 3 && !ignoredTerms.has(term)) || [],
+  );
 
   for (const industry of industries.filter((candidate) => candidate.kind === 'supplemental')) {
     const parent = bySlug.get(industry.parent);
     assert.ok(parent, `${industry.slug}: parent route`);
+    const parentTerms = meaningfulTerms(
+      [parent.label, parent.lead_task, parent.asset, parent.soil, parent.method].join(' '),
+    );
 
-    for (const field of ['buyer', 'distinct_scope', 'search_intent']) {
+    for (const [field, minimumUniqueTerms] of [
+      ['buyer', 3],
+      ['distinct_scope', 5],
+      ['search_intent', 3],
+    ]) {
       assert.ok(industry[field]?.trim(), `${industry.slug}: ${field} is required`);
       assert.notEqual(
         industry[field].trim().toLowerCase(),
         String(parent[field] || '').trim().toLowerCase(),
         `${industry.slug}: ${field} must differ from parent`,
       );
+      const uniqueTerms = [...meaningfulTerms(industry[field])]
+        .filter((term) => !parentTerms.has(term));
+      assert.ok(
+        uniqueTerms.length >= minimumUniqueTerms,
+        `${industry.slug}: ${field} must add route-specific terms`,
+      );
     }
+    assert.match(industry.distinct_scope, /\bnot\b/i, `${industry.slug}: parent boundary`);
+    assert.notEqual(industry.lead_task, parent.lead_task, `${industry.slug}: narrower task`);
 
     const html = read(`industries/${industry.slug}.html`);
     const scope = html.match(
