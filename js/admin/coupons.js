@@ -1,7 +1,7 @@
 // Admin promo-codes card (#97, #36 per-tab split): Stripe promotion-code
 // management. Lives inside the Products tab; shared primitives ($, api, message,
 // admSkeleton, admEmpty) are injected. esc/money/dateTime/confirmDialog from util.
-import { esc, money, dateTime as date, confirmDialog } from '../util.js?v=20260724g';
+import { esc, money, dateTime as date, confirmDialog } from '../util.js?v=20260725a';
 
 export function createCouponsCard({ $, api, message, admSkeleton, admEmpty }) {
   let couponsWired = false;
