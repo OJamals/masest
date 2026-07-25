@@ -2596,7 +2596,6 @@ scroll-snap gallery
 .ind-intro-copy p { color: var(--muted); max-width: 60ch; margin-bottom: 22px; }
 
 /* ── Industry field gallery ─────────────────────────────────────── */
-.ind-gallery-sec .section-head { margin-bottom: 26px; }
 .ind-gallery {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -6845,8 +6844,7 @@ body.products-page .conversion-proof .proof-pill em {
 }
 
 .ind-intro-copy p,
-.ind-specific .proof-callout p,
-.ind-gallery-sec .subhead {
+.ind-specific .proof-callout p {
   line-height: 1.6;
 }
 
@@ -6902,7 +6900,7 @@ body.products-page .conversion-proof .proof-pill em {
   object-fit: cover;
 }
 
-.ind-task-gallery .ind-shot img {
+.ind-shot-wide img {
   aspect-ratio: 8 / 5;
 }
 

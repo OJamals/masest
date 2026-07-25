@@ -385,8 +385,8 @@ const NAV = [
   ["resources", "Resources"]
 ];
 
-// Representative task imagery. Keep separate from GALLERY: these generated
-// scenes explain common workflows; GALLERY remains source-backed field proof.
+// Generated task imagery. Each key is an exact route slug; do not reuse a
+// scene on a merely related industry page.
 const TASK_GALLERY = {
   "aviation-fbos-mro-airports": [
     ["Aircraft tug and ground-power unit undergoing a contained low-pressure wash after a wet chemical dwell", "Ground-support equipment wash after wet dwell"],
@@ -526,6 +526,15 @@ const TASK_GALLERY = {
   "warehousing-distribution-centers": [
     ["Connected surface cleaner moving from wet pallet grime to a clean loading-dock lane", "Loading-dock cleaning with recovery"],
     ["Wet greasy soil being rinsed from a protected electric forklift in a recovery wash bay", "Forklift maintenance-bay cleaning"],
+  ],
+};
+
+// Generated sample scenes normally belong to the root industry catalog.
+// This one supplemental scene has no catalog card, so keep it on its exact route.
+const SAMPLE_GALLERY = {
+  "pressure-washing-soft-wash-contractors": [
+    "Exterior-cleaning contractors preparing chemistry and tools for a controlled wash",
+    "Exterior-cleaning chemistry and tool setup",
   ],
 };
 
@@ -858,27 +867,23 @@ const GALLERY_IMAGE_DIMS = {
   "plumbing": [[1200, 900], [1200, 900], [900, 675]],
 };
 
-function taskGalleryBlock(ind) {
+function imageGalleryBlock(ind) {
   const tasks = TASK_GALLERY[ind.slug];
-  if (!tasks) return "";
-  const figs = tasks.map(([alt, caption], index) => `
-        <figure class="ind-shot">
+  const taskFigs = (tasks || []).map(([alt, caption], index) => `
+        <figure class="ind-shot ind-shot-wide">
           <img src="../img/industries/tasks/${ind.slug}-${String(index + 1).padStart(2, "0")}.webp" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="1200" height="750">
           <figcaption>${caption}</figcaption>
         </figure>`).join("");
-  return `
-  <section class="section section-slim ind-gallery-sec" aria-label="${ind.name} cleaning task gallery">
-    <div class="wrap">
-      <div class="ind-gallery ind-task-gallery">${figs}
-      </div>
-    </div>
-  </section>`;
-}
 
-function galleryBlock(ind) {
+  const sample = SAMPLE_GALLERY[ind.slug];
+  const sampleFig = sample ? `
+        <figure class="ind-shot ind-shot-wide">
+          <img src="../img/industries/samples/${ind.slug}.webp" alt="${sample[0].replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="840" height="520">
+          <figcaption>${sample[1]}</figcaption>
+        </figure>` : "";
+
   const shots = GALLERY[ind.slug];
-  if (!shots) return "";
-  const figs = shots.map(([alt, cap], i) => {
+  const proofFigs = (shots || []).map(([alt, cap], i) => {
     const [w, h] = (GALLERY_IMAGE_DIMS[ind.slug] || [])[i] || [900, 675];
     return `
         <figure class="ind-shot">
@@ -886,14 +891,13 @@ function galleryBlock(ind) {
           <figcaption>${cap}</figcaption>
         </figure>`;
   }).join("");
+  const figs = `${taskFigs}${sampleFig}${proofFigs}`;
+  if (!figs) return "";
+
   return `
-  <section class="section section-slim ind-gallery-sec">
+  <section class="section section-slim ind-gallery-sec" aria-label="${ind.name} image gallery">
     <div class="wrap">
-      <div class="section-head">
-        <h2 class="headline">Field proof from ${ind.name} sites.</h2>
-        <p class="subhead">Documented work from the VertKleen field library.</p>
-      </div>
-      <div class="ind-gallery">${figs}
+      <div class="ind-gallery ind-image-gallery">${figs}
       </div>
     </div>
   </section>`;
@@ -930,7 +934,7 @@ function page(ind) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260724a">
+<link rel="stylesheet" href="../css/style.css?v=20260725a">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
@@ -967,7 +971,7 @@ ${nav}
     </div>
   </section>
 
-${industryDetailBlock(ind)}${taskGalleryBlock(ind)}
+${industryDetailBlock(ind)}${imageGalleryBlock(ind)}
 
 <section class="section section-slim">
 <div class="wrap">
@@ -979,7 +983,6 @@ ${industryDetailBlock(ind)}${taskGalleryBlock(ind)}
       <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>
   </section>${industryLabelVariantsBlock(ind)}
-${galleryBlock(ind)}
 <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="industries/${ind.slug}" data-cms-region="body"></div>
 ${ctaBlock(ind)}
 </main>

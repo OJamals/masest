@@ -16,9 +16,27 @@ const industryFiles = readdirSync(new URL('industries/', root))
   .filter((file) => file.endsWith('.html'))
   .sort();
 
-test('all industry routes render two or three optimized task images with task captions', () => {
+test('each industry route has one captioned image gallery containing every accepted generated image', () => {
   assert.equal(industries.length, 32);
   const renderedTaskImages = new Set();
+  const renderedSupplementalImages = new Set();
+  const sampleFiles = readdirSync(new URL('img/industries/samples/', root))
+    .filter((file) => file.endsWith('.webp'))
+    .sort();
+  const catalogHtml = `${read('industries.html')}\n${read('data/content/industry-sectors.json')}`;
+  const catalogSampleImages = new Set([...catalogHtml.matchAll(
+    /img\/industries\/samples\/([^"]+\.webp)/g,
+  )].map((match) => match[1]));
+  const supplementalSampleFiles = sampleFiles
+    .filter((file) => !catalogSampleImages.has(file));
+  const supplementalSampleSlugs = new Set(
+    supplementalSampleFiles.map((file) => file.replace(/\.webp$/, '')),
+  );
+  assert.deepEqual(
+    supplementalSampleFiles,
+    ['pressure-washing-soft-wash-contractors.webp'],
+    'only exact-route supplemental imagery belongs in an individual gallery',
+  );
   const expandedTaskGalleries = new Set([
     'aviation-fbos-mro-airports',
     'breweries-distilleries-wineries',
@@ -35,7 +53,14 @@ test('all industry routes render two or three optimized task images with task ca
 
   for (const industry of industries) {
     const html = read(`industries/${industry.slug}.html`);
-    const taskImages = [...html.matchAll(
+    const gallery = html.match(
+      /<section class="section section-slim ind-gallery-sec" aria-label="[^"]+ image gallery">([\s\S]*?)<\/section>/,
+    );
+    assert.ok(gallery, `${industry.slug}: image gallery`);
+    assert.equal((html.match(/class="ind-gallery ind-image-gallery"/g) || []).length, 1);
+    assert.doesNotMatch(html, /ind-task-gallery|Representative cleaning tasks|Representative tasks/);
+
+    const taskImages = [...gallery[1].matchAll(
       /<img src="\.\.\/img\/industries\/tasks\/([^"]+\.webp)"[^>]+width="1200" height="750">/g,
     )].map((match) => match[1]);
 
@@ -44,8 +69,20 @@ test('all industry routes render two or three optimized task images with task ca
       expandedTaskGalleries.has(industry.slug) ? 3 : 2,
       `${industry.slug}: task gallery`,
     );
-    assert.doesNotMatch(html, /Representative cleaning tasks|Representative tasks/);
-    assert.doesNotMatch(html, /Representative .* operating environment|img\/industries\/samples\//);
+
+    const sampleImages = [...gallery[1].matchAll(
+      /<img src="\.\.\/img\/industries\/samples\/([^"]+\.webp)"[^>]+width="840" height="520">/g,
+    )].map((match) => match[1]);
+    assert.deepEqual(
+      sampleImages,
+      supplementalSampleSlugs.has(industry.slug) ? [`${industry.slug}.webp`] : [],
+      `${industry.slug}: exact-route supplemental image`,
+    );
+    assert.equal(
+      (gallery[1].match(/<figure class="ind-shot(?: ind-shot-wide)?">/g) || []).length,
+      (gallery[1].match(/<figcaption>/g) || []).length,
+      `${industry.slug}: every gallery image has a caption`,
+    );
 
     for (const image of taskImages) {
       renderedTaskImages.add(image);
@@ -53,12 +90,23 @@ test('all industry routes render two or three optimized task images with task ca
       assert.ok(existsSync(path), `${industry.slug}: missing ${image}`);
       assert.deepEqual(imageSize(path), { width: 1200, height: 750 }, `${image}: dimensions`);
     }
+    for (const image of sampleImages) {
+      renderedSupplementalImages.add(image);
+      const path = new URL(`img/industries/samples/${image}`, root);
+      assert.ok(existsSync(path), `${industry.slug}: missing ${image}`);
+      assert.deepEqual(imageSize(path), { width: 840, height: 520 }, `${image}: dimensions`);
+    }
   }
 
   const taskFiles = readdirSync(new URL('img/industries/tasks/', root))
     .filter((file) => file.endsWith('.webp'));
   assert.equal(renderedTaskImages.size, 75);
   assert.deepEqual([...renderedTaskImages].sort(), taskFiles.sort(), 'no orphan task images');
+  assert.deepEqual(
+    [...new Set([...catalogSampleImages, ...renderedSupplementalImages])].sort(),
+    sampleFiles,
+    'every accepted sample image is assigned to its intended surface',
+  );
 });
 
 test('P1 registry covers every industry route with task-specific operating context', () => {

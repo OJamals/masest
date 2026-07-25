@@ -15,7 +15,7 @@ Completed:
 4. Replaced clearly mismatched aviation, fleet, restaurant, plumbing, healthcare, distribution, and pressure/soft-wash imagery with contextual, source-backed alternatives.
 5. Consolidated duplicate assets and regenerated the optimized image catalog: 223 files, about 27.05 MB, zero exact duplicate groups.
 6. Added document control and an indexed public document room for all 46 public PDFs. Source-byte and review-ledger drift now fail the release gate.
-7. Added two optimized, task-specific representative images to every route, plus a third high-value task on 11 routes with materially different cleaning work. Active chemistry scenes distinguish wet dwell, rinse/agitation, and clean endpoint.
+7. Added two optimized, task-specific images to every route, plus a third high-value task on 11 routes with materially different cleaning work. Active chemistry scenes distinguish wet dwell, rinse/agitation, and clean endpoint.
 
 Residual review:
 
@@ -37,7 +37,7 @@ Residual review:
 | Failed browser requests | 0 |
 | Canonical sectors in CMS snapshot | 16 |
 | Supplemental static landing pages | 16 |
-| Representative task images | 75/75 |
+| Task images | 75/75 |
 | Pages with field galleries | 11/32 |
 | Pages with no field gallery | 21/32 |
 | Task-led application/proof modules | 32/32 |
@@ -601,9 +601,9 @@ Supplemental-page recommendations also rely on:
 - [CDC healthcare surface-risk guidance](https://www.cdc.gov/healthcare-associated-infections/hcp/infection-control/index.html)
 - [CDC long-term-care enhanced-barrier FAQ](https://www.cdc.gov/long-term-care-facilities/hcp/prevent-mdro/faqs.html)
 
-## Representative task imagery implementation
+## Task imagery implementation
 
-OpenAI image generation produced two distinct task scenes for each of the 16 canonical industries. Final files live in `img/industries/tasks/` as 1200 × 750 WebP assets. They are labeled as representative task imagery—not field proof.
+OpenAI image generation produced two distinct task scenes for each of the 32 industry routes, plus a third scene on 11 routes. The 75 final files live in `img/industries/tasks/` as 1200 × 750 WebP assets. Each renders in its exact industry page gallery with a cleaning-task caption; source-backed field proof remains separately identified in the generator data.
 
 Prompt baseline: photorealistic industrial documentary scene; landscape 8:5; upright, mechanically plausible equipment; crop-safe margins; visible soil plus cleaning in progress or a clean result; no brands, text, product bottles, exaggerated foam, unsafe runoff, or detached tools. People were avoided unless needed to make tool handling and application credible. Workers use ordinary task-appropriate controls without chemical suits or respirators; required isolation, electrical, pressure, confined-space, cooling-tower, and wastewater controls remain visible or stated.
 
