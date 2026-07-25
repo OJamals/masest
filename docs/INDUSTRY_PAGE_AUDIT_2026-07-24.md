@@ -22,7 +22,7 @@ Residual review:
 - Twenty-three documents remain marked `claim_review_required`. Distribution approval does not equal technical or legal substantiation.
 - Twenty-one industry routes still lack a qualifying field gallery. Representative scenes remain explicitly labeled as representative, not proof.
 - Supplemental pages remain useful only while their task, buyer, and search intent stay narrower than their canonical parent.
-- Final completion requires production deployment plus cache-busted browser verification.
+- Production deployment and cache-busted Ego browser verification are complete.
 
 ## Verification summary
 
@@ -30,6 +30,7 @@ Residual review:
 |---|---:|
 | Public industry routes | 32/32 generated |
 | Local browser render | 32/32 H1 present |
+| Production desktop/mobile routes | 32/32 at both viewports |
 | Broken rendered images | 0 |
 | Horizontal overflow | 0 pages |
 | Browser console errors | 0 |
