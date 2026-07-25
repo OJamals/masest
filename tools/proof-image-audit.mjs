@@ -15,7 +15,7 @@ const requiredCards = [
   },
   {
     title: "Simple Green replaced across Walmart DCs",
-    images: ["img/proof/walmart-dc-proof-enhanced.webp"],
+    images: ["img/proof/cases/walmart-dc-crhd.webp"],
   },
   {
     title: "43-foot Yellowfin washed and waxed dockside",

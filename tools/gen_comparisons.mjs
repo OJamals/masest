@@ -54,7 +54,7 @@ const pages = [
     swapUse: "VertKleen HCR for acid-replacement scale work with HMIS 0-0-0 handling.",
     proofTitle: "DDC Engineering proof point",
     proof: "DDC Engineering reviewed HCR on heavy HVAC rust and scale; the result gives buyers a documented lower-hazard replacement case.",
-    image: "../img/proof/cases/farm-rust.webp",
+    image: "../img/proof/cases/farm-rust-after.webp",
     imageAlt: "Industrial rust and scale removed with VertKleen HCR",
     ctaProduct: "HCR vs RYDLYME"
   },
@@ -128,7 +128,7 @@ const pages = [
 
 const IMAGE_DIMENSIONS = {
   "../img/proof/cases/ddc-rust.webp": [1200, 579],
-  "../img/proof/cases/farm-rust.webp": [740, 967],
+  "../img/proof/cases/farm-rust-after.webp": [740, 967],
   "../img/proof/cases/walmart-dc-crhd.webp": [708, 513],
   "../img/proof/cases/grout-moss.webp": [919, 690],
   "../img/proof/cases/brewery.webp": [1200, 900],
@@ -169,7 +169,7 @@ function pageHtml(page) {
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260708c">
+<link rel="stylesheet" href="../css/style.css?v=20260724a">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <meta property="og:title" content="${html(page.title)} | MASEST VertKleen">

@@ -175,7 +175,7 @@ export const PRODUCTS = {
     replaces: "Replaces bromine and sodium hypochlorite",
     hmis: "0-0-0",
  icon: "ph-shield-plus",
-    image: "img/products/purgo-gym-studio.webp",
+    image: "img/products/purgo-studio.webp",
     tag: "Minimum-risk antimicrobial and odor-control support where the claim needs to stay label-honest.",
     desc: "A FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment for occupied-site maintenance. Purgo stays within its label: it isn't a registered disinfectant and isn't sold as one.",
     uses: [
@@ -259,12 +259,12 @@ export const PRODUCTS = {
     icon: "ph-snowflake",
  image: "img/products/descaler-studio.webp",
     tag: "Acid-style descaling for coils, towers, pumps, and refrigeration loops, minus the usual HCl drama.",
-    desc: "A hydrochloric-acid-free descaler that clears calcium, rust, and scale from coils, cooling towers, plumbing, and fire pumps. Walmart refrigeration collateral reports up to 94% heat-transfer efficiency restored on plate heat exchangers.",
+    desc: "A hydrochloric-acid-free descaler for calcium, rust, and scale in coils, cooling towers, plumbing, and fire-pump components. Application fit depends on deposit type, metallurgy, system isolation, circulation equipment, and rinse verification.",
     uses: [
       "Aluminum and copper coil descaling",
       "Cooling towers, plumbing, and ammonia coils",
       "Fire-pump and solenoid descaling",
-      "Refrigeration systems: chloride-free protocol for ammonia systems"
+      "Isolated cooling and heat-transfer circuits after site and OEM review"
     ],
     specs: [
       ["ph-shield-check", "HMIS 0-0-0", "HMIS 0-0-0 with no NFPA pictograms"],
@@ -277,8 +277,7 @@ export const PRODUCTS = {
       { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-descaler-tds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-descaler-label.pdf" },
       { label: "HCR & Descaler User Guide + Dilution Rates", file: "docs/sds/vertkleen-hcr-descaler-userguide.pdf" },
-      "Descaler vs Acids Corrosion Data",
-      "Case Study: Walmart Refrigeration Systems"
+      "Descaler vs Acids Corrosion Data"
     ]
   },
   alumibrite: {
@@ -721,7 +720,7 @@ export const PRODUCT_CATALOG_COPY = {
 export const PRODUCT_GALLERY = {
   hcr: [
     ["img/proof/cases/ddc-rust.webp", "Rusted HVAC component cleared with VertKleen HCR", "DDC rust and scale test"],
-    ["img/proof/cases/farm-rust.webp", "Diamond-plate steel rust removed with VertKleen HCR", "Brevard HVAC farm rust removal"],
+    ["img/proof/cases/farm-rust-after.webp", "Diamond-plate steel rust removed with VertKleen HCR", "Brevard HVAC farm rust removal"],
     ["img/proof/cases/brewery.webp", "Brewery tank and heat exchanger cleaned with VertKleen CR and HCR", "Brewery CIP trial"]
   ],
   cr: [
@@ -730,8 +729,8 @@ export const PRODUCT_GALLERY = {
     ["img/before-after/cr-after.webp", "Exterior surface after VertKleen CR cleaning", "After cleaning"]
   ],
   crhd: [
-    ["img/proof/walmart-dc-proof-enhanced.webp", "Walmart distribution center floor and equipment degreasing", "Distribution center degreasing"],
-    ["img/proof/cases/kitchen.webp", "Commercial kitchen deep degreased with VertKleen CR HD", "Commercial kitchen cleaning"]
+    ["img/proof/cases/walmart-dc-crhd.webp", "Walmart distribution center floor and equipment degreasing", "Distribution center degreasing"],
+    ["img/proof/cases/kitchen-after.webp", "Commercial kitchen deep degreased with VertKleen CR HD", "Commercial kitchen cleaning"]
   ],
   descaler: [
     ["img/proof/cases/fire-pump.webp", "Fire-pump component descaled with VertKleen Descaler", "Fire protection system"],

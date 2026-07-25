@@ -7,10 +7,10 @@ import { renderIndustryPage } from '../tools/build-industry-pages.mjs';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const industries = JSON.parse(read('data/industry-applications.json'));
-const restrictedDocuments = new Set([
-  'docs/trinidad-tank-cleaning-test.pdf',
-  'docs/walmart-refrigeration-case-study.pdf',
-]);
+const documentReview = JSON.parse(read('data/public-document-review.json'));
+const restrictedDocuments = new Set(documentReview.documents
+  .filter((document) => document.status === 'restricted')
+  .map((document) => document.path));
 const industryFiles = readdirSync(new URL('industries/', root))
   .filter((file) => file.endsWith('.html'))
   .sort();
@@ -26,6 +26,13 @@ test('industry intros use sector-specific representative scenes while proof stay
   const dataCenters = read('industries/data-centers.html');
   assert.match(dataCenters, /img\/industries\/samples\/data-centers\.webp/);
   assert.match(dataCenters, /Representative Data Centers operating environment\./);
+
+  const pressureWashing = read('industries/pressure-washing-soft-wash-contractors.html');
+  assert.match(
+    pressureWashing,
+    /img\/industries\/samples\/pressure-washing-soft-wash-contractors\.webp/,
+  );
+  assert.doesNotMatch(pressureWashing, /img\/industries\/samples\/construction\.webp/);
 
   const proof = read('proof.html');
   assert.match(proof, /img\/before-after\/moss-after\.webp/);

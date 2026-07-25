@@ -43,7 +43,7 @@ const INDUSTRIES = [
   sub: "Strong cleaning for extrusion, processing, warehousing, and plant maintenance — with the documentation your technical review needs.",
   intro: "Plant maintenance runs on acid descaling, caustic CIP, and solvent degreasing, each one adding HazCom and exposure risk. VertKleen does those same jobs at an HMIS 0-0-0 rating, so there's less to handle and a cleaner package to put in front of technical review.",
   products: ["hcr", "cr", "crhd", "descaler"],
-  proof: { img: "farm-rust", caption: "Heavy industrial rust scale removed with HCR, no HCl handling." }
+  proof: { img: "farm-rust-after", caption: "Heavy industrial rust scale removed with HCR, no HCl handling." }
 },
 {
   slug: "distribution-cold-storage",
@@ -231,7 +231,7 @@ const INDUSTRIES = [
   products: ["crhd", "purgo", "multiwash", "neutral"],
   primaryCta: "Get a sample kit",
   primaryType: "sample",
-  proof: { img: "kitchen", caption: "Restaurant and food-service work connects CR HD and Purgo to grease, drains, hoods, and odor-control support." }
+  proof: { img: "kitchen-after", caption: "Commercial kitchen field work connects CR HD to heavy grease removal; sanitation remains a separate site-controlled step." }
 },
 {
   slug: "warehousing-distribution-centers",
@@ -303,7 +303,7 @@ const INDUSTRIES = [
   products: ["crhd", "alumibrite"],
   primaryCta: "Request aviation spec sheet",
   primaryType: "technical",
-  proof: { img: "walmart-dc-crhd", caption: "CR HD competes with Simple Green Extreme Aircraft at lower published per-gallon economics." }
+  proof: { img: "airboat-after", caption: "AlumiBrite restored an aluminum commercial airboat; aviation use still requires written material and maintenance approval." }
 },
 {
   slug: "golf-courses-sports-facilities",
@@ -339,7 +339,7 @@ const INDUSTRIES = [
   products: ["torque", "crhd", "multiwash", "alumibrite"],
   primaryCta: "Fleet program pricing",
   primaryType: "quote",
-  proof: { img: "marine", caption: "Torque gives wash-and-wax economics for fleet programs, with CR HD and AlumiBrite for the harder jobs." }
+  proof: { img: "fleet-wash", caption: "Vehicle exterior cleaned during VertKleen field work; fleet selection still follows soil, finish, and wash-process review." }
 },
 {
   slug: "oil-gas-industrial-plants",
@@ -405,9 +405,7 @@ const GALLERY = {
     ["Degreased filter restored to clean media", "Restored to clean media"]
   ],
   "distribution-cold-storage": [
-    ["Walmart distribution center CR HD degreasing proof", "CR HD degreasing proof"],
-    ["Walmart perishable distribution center on-site assessment", "Perishable DSC assessment"],
-    ["Walmart refrigeration descaling results table", "Refrigeration results"]
+    ["Walmart perishable distribution center on-site assessment", "Perishable DSC assessment"]
   ],
   "food-beverage": [
     ["Brewery fermenters cleaned with VertKleen CR and HCR", "Fermenters cleaned, CR + HCR"],
@@ -416,8 +414,8 @@ const GALLERY = {
   ],
   "healthcare": [
     ["Facility AC coil cleaned in place with aluminum-fin compatibility reviewed", "AC coil cleaned in place"],
-    ["Tiled wet area cleared of scale without harsh acid", "Wet-area scale cleared"],
-    ["Sill and fixtures left clean in an occupied building", "Fixtures clean, building occupied"]
+    ["Clean Team USA technician cleaning exterior glass at the occupied UF Shands campus", "Exterior glass cleaned while campus stayed open"],
+    ["UF Shands campus exterior during the VertKleen field program", "UF Shands occupied-campus field site"]
   ],
   "construction": [
     ["Tiled deck mid-pass, treated half cleared of grime", "Deck mid-pass, treated half"],
@@ -440,18 +438,20 @@ const GALLERY = {
     ["Aluminum condenser coil descaled on an occupied site", "Aluminum coil descaled"]
   ],
   "plumbing": [
-    ["Glass and track heavy with calcium scale before Descaler", "Calcium scale, pre-Descaler"],
-    ["Fixture track cleared of calcium without hydrochloric acid handling", "Track cleared, no HCl handling"],
+    ["Fire-system pipe flange before mineral scale and rust removal", "Pipe flange before scale removal"],
+    ["Fire-system pipe flange after mineral scale and rust removal", "Pipe flange after scale removal"],
     ["Floor drain cleared of scale and buildup", "Floor drain cleared"]
   ]
 };
 
 const PROOF_IMAGE_DIMS = {
   "ac-coil": [839, 471],
+  "airboat-after": [817, 857],
   "drone-action": [520, 650],
   brewery: [1200, 900],
   "ddc-rust": [1200, 579],
-  "farm-rust": [740, 967],
+  "farm-rust-after": [740, 967],
+  "fleet-wash": [1200, 900],
   "grout-moss": [919, 690],
   marine: [1175, 1125],
   "walmart-dc-crhd": [708, 513],
@@ -474,16 +474,15 @@ const INDUSTRY_SCENES = {
   "solar-panel-cleaning": ["Solar farm panel-cleaning equipment positioned between arrays"],
   "municipalities-water-utilities": ["Municipal water treatment plant basins and blue utility piping"],
   "hotels-property-management": ["Resort property maintenance walkway beside a pool courtyard"],
+  "pressure-washing-soft-wash-contractors": ["Exterior-cleaning crew staging chemistry and tools beside a landscaped commercial facade"],
 };
 
 const INDUSTRY_SCENE_ALIASES = {
   "schools-universities": "education",
   "mechanical-contractors-water-treatment": "hvac-water",
   "breweries-distilleries-wineries": "food-beverage",
-  "restaurants-commercial-kitchens": "food-beverage",
   "warehousing-distribution-centers": "distribution-cold-storage",
   "hotels-resorts-property-management": "hotels-property-management",
-  "pressure-washing-soft-wash-contractors": "construction",
   "marine-marinas-boatyards": "marine",
   "golf-courses-sports-facilities": "golf-courses",
   "healthcare-senior-living": "healthcare",
@@ -561,7 +560,7 @@ const LABEL_VARIANTS = {
     market: "PW label",
     name: "VertKleen CRS",
     subtitle: "Calcium, rust & scale · non-corrosive",
-    image: "crs-pressure-wash-studio.webp",
+    image: "crs-studio.webp",
     productHref: "descaler",
     directions: [
       ["Rust & fertilizer stains", "Apply at 1:4, dwell 3–5 min, agitate, then rinse"],
@@ -598,7 +597,7 @@ const LABEL_VARIANTS = {
     market: "Gym label",
     name: "VertKleen Pūrgo",
     subtitle: "Antimicrobial · high-touch · deodorizer",
-    image: "purgo-gym-studio.webp",
+    image: "purgo-studio.webp",
     productHref: "purgo",
     directions: [
       ["High-touch odor", "Dilute 1:16; spray onto equipment, benches and rails; let stand, then wipe"],
@@ -757,7 +756,9 @@ function ctaBlock(ind) {
 }
 
 const GALLERY_IMAGE_DIMS = {
-  "distribution-cold-storage": [[708, 513], [1600, 1200], [1600, 1200]],
+  "distribution-cold-storage": [[1600, 1200]],
+  "healthcare": [[900, 675], [1200, 900], [1200, 900]],
+  "plumbing": [[1200, 900], [1200, 900], [900, 675]],
 };
 
 function galleryBlock(ind) {

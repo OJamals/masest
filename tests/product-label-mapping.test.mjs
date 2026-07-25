@@ -27,7 +27,7 @@ const expectedLabels = {
   },
   purgo: {
     name: "Purgo",
-    image: "img/products/purgo-gym-studio.webp",
+    image: "img/products/purgo-studio.webp",
   },
 };
 

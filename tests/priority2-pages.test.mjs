@@ -141,7 +141,7 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
 
   for (const html of [pages.pressure, pages.drone]) {
     assert.match(html, /crhd-pressure-wash-studio\.webp/);
-    assert.match(html, /crs-pressure-wash-studio\.webp/);
+    assert.match(html, /crs-studio\.webp/);
     assert.match(html, /multiwash-pressure-wash-studio\.webp/);
     assert.match(html, /Apply at 1:20 via downstream injector/);
     assert.match(html, /Rust &amp; fertilizer stains/);
@@ -152,7 +152,7 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
   assert.match(pages.fleet, /data-label-variant="pw-multiwash"/);
 
   assert.match(pages.gym, /multiwash-gym-studio\.webp/);
-  assert.match(pages.gym, /purgo-gym-studio\.webp/);
+  assert.match(pages.gym, /purgo-studio\.webp/);
   assert.match(pages.gym, /Floors &amp; tile:<\/strong>&nbsp; Dilute 5:1/);
   assert.match(pages.gym, /High-touch odor:<\/strong>&nbsp; Dilute 1:16/);
   assert.doesNotMatch(pages.gym, /Published pack prices|1 gal jug — \$21\.49/);
@@ -163,10 +163,10 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
     "crhd-food-beverage-studio.webp",
     "multiwash-food-beverage-studio.webp",
     "crhd-pressure-wash-studio.webp",
-    "crs-pressure-wash-studio.webp",
+    "crs-studio.webp",
     "multiwash-pressure-wash-studio.webp",
     "multiwash-gym-studio.webp",
-    "purgo-gym-studio.webp",
+    "purgo-studio.webp",
   ]) {
     assert.equal(exists(`img/products/${asset}`), true, `${asset} should exist`);
   }

@@ -78,7 +78,6 @@ CASES = {
     "proof/cases/ac-coil":    "VertKleen_Descaler_Res_AC_coil_cleaned_and_prese",
     "proof/cases/airboat":    "VertKleen_Alumni_Brite_Torque_and_N_clean_commer",
     "proof/cases/kitchen":    "VertKleen_CRHD_Commercial_kitchen_cleaning",
-    "proof/cases/farm-rust":  "VertKleen_HCR_Brevard_County_HVAC_farm_rust_remo",
     "proof/cases/grout-moss": "VertKleen_CR_applications_grout_moss_grime_algae",
 }
 # Override auto-pick where the largest file is not the best shot.
@@ -87,7 +86,7 @@ PIN = {
 }
 
 PAIR_PINS = {
-    "proof/walmart-dc-proof-enhanced": (
+    "proof/cases/walmart-dc-crhd": (
         os.path.join(CASE, "VertKleen_CRHD_being_used_as_a_replacement_to_Si"),
         "p02_4.jpeg",
     ),

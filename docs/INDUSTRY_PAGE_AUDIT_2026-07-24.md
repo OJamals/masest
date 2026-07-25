@@ -5,22 +5,29 @@
 
 ## Executive verdict
 
-The industry section has a strong visual system and useful buyer-oriented framing, but it is not yet a verification-grade industrial sales library.
+The 32-page industry library now has task-led operating guidance, controlled document links, localized trial briefs, and source-backed imagery. P0, P1, and P2 remediation is implemented locally and covered by fail-closed tests.
 
-Main problems:
+Completed:
 
-1. **The new canonical industry images are not live.** Cache-busted production checks found 16/16 live `industry-sectors.json` records different from the local records and 0/16 live image byte hashes matching the local replacements. The local files and content snapshot still require publishing/deployment.
-2. **The pages describe markets better than tasks.** Most pages need a tighter sequence: `asset → soil/deposit → cleaning method → operating boundary → verification → evidence`.
-3. **Evidence is hidden.** None of the 32 industry pages directly links an SDS, TDS, application guide, compatibility document, certification record, or case-study PDF. Visitors must leave the page and inspect product pages.
-4. **Visual proof is uneven.** Twenty-one pages have no field gallery. Several existing galleries show generic close-ups, screenshots, containers, or unrelated assets instead of the stated industrial task.
-5. **Several public PDFs need immediate governance review.** One public case study is marked confidential. Another says no safety data and no written procedure were available. Several legacy documents use broad safety, certification, or performance claims without visible scope, revision date, or substantiation.
-6. **The 16 supplemental pages overlap the 16 canonical sectors.** They can remain as targeted landing pages, but each needs a distinct buyer, task set, evidence pack, and canonical-link strategy. Otherwise they read as near-duplicate SEO pages.
+1. Removed the confidential Walmart refrigeration case study and the unsupported Trinidad tank-cleaning report from the public build. Removed their derived images and claims. Regression tests prevent either source or derivative from returning.
+2. Added `asset → soil/deposit → method → concentration → process boundary → verification → documents` guidance to every industry route.
+3. Added direct controlled-document links and localized trial-request briefs to every route.
+4. Replaced clearly mismatched aviation, fleet, restaurant, plumbing, healthcare, distribution, and pressure/soft-wash imagery with contextual, source-backed alternatives.
+5. Consolidated duplicate assets and regenerated the optimized image catalog: 148 files, about 15.35 MB, zero exact duplicate groups.
+6. Added document control and an indexed public document room for all 46 public PDFs. Source-byte and review-ledger drift now fail the release gate.
+
+Residual review:
+
+- Twenty-three documents remain marked `claim_review_required`. Distribution approval does not equal technical or legal substantiation.
+- Twenty-one industry routes still lack a qualifying field gallery. Representative scenes remain explicitly labeled as representative, not proof.
+- Supplemental pages remain useful only while their task, buyer, and search intent stay narrower than their canonical parent.
+- Final completion requires production deployment plus cache-busted browser verification.
 
 ## Verification summary
 
 | Check | Result |
 |---|---:|
-| Public industry routes | 32/32 HTTP 200 |
+| Public industry routes | 32/32 generated |
 | Local browser render | 32/32 H1 present |
 | Broken rendered images | 0 |
 | Horizontal overflow | 0 pages |
@@ -30,13 +37,17 @@ Main problems:
 | Supplemental static landing pages | 16 |
 | Pages with field galleries | 11/32 |
 | Pages with no field gallery | 21/32 |
-| Direct PDF/document links on industry pages | 0/32 |
-| Product/SDS PDFs reviewed | 43 |
-| Product/SDS PDFs live | 43/43 |
-| Public proof PDFs reviewed and live | 4/4 |
-| Live canonical image files matching local replacements | 0/16 |
+| Task-led application/proof modules | 32/32 |
+| Localized trial briefs | 32/32 |
+| Direct controlled-document access | 32/32 |
+| Public PDFs reviewed and controlled | 46/46 |
+| Public product/SDS PDFs | 43 |
+| Public case/lab PDFs | 3 |
+| Restricted PDFs in public tree | 0 |
+| Image files / total bytes | 148 / about 15.35 MB |
+| Exact duplicate image groups | 0 |
 
-The browser-quality results establish that the page templates render cleanly. They do not establish that the prose, claims, or proof are technically adequate.
+Browser and release gates establish clean rendering, source integrity, and document control. They do not approve technical, regulatory, certification, or customer-performance claims.
 
 ## Complete industry inventory
 
@@ -78,78 +89,44 @@ The browser-quality results establish that the page templates render cleanly. Th
 31. Solar Farms & Panel Cleaning — `/industries/solar-farms-panel-cleaning.html`
 32. Warehousing & Distribution Centers — `/industries/warehousing-distribution-centers.html`
 
-## Required site-wide changes
+## Remediation status
 
-### P0 — before promoting industry pages
+### P0 — complete
 
-1. **Publish the local canonical image set and content snapshot.**
-   - Deploy the 16 local `img/industries/samples/*.webp` replacements.
-   - Publish the current `data/content/industry-sectors.json`.
-   - Verify with cache-busted URLs and byte hashes, not only filenames.
+- Removed both restricted proof PDFs and all public references, derived imagery, and performance claims.
+- Added fail-closed tests against source names, public paths, claims, and derived image paths.
+- Rebuilt canonical sector imagery and CMS snapshots.
+- Reviewed all current public PDFs; 23 are unflagged by automated triage and 23 require claim substantiation.
 
-2. **Remove the public Walmart refrigeration PDF pending authorization.**
-   - `docs/walmart-refrigeration-case-study.pdf` is publicly reachable while marked `Confidential | May 2026`.
-   - It also makes high-risk claims including “World’s #1,” “Agreed OEM Standard,” “up to 94% efficiency restored,” and “8–22% energy reduction.”
-   - Republish only with written customer/OEM permission, methods, baseline, sample size, conditions, calculation method, and an approved public edition.
+### P1 — complete
 
-3. **Remove or rewrite the Trinidad tank-cleaning proof.**
-   - `docs/trinidad-tank-cleaning-test.pdf` states: “Safety: No data was available” and “Test Procedure: No procedure was written.”
-   - A tank-cleaning proof item cannot be public without the safety boundary, isolation, gas-freeing/confined-space controls, procedure, waste handling, and customer approval.
+- Every industry route now has a task-led “Applications and proof” module.
+- Every module names asset, soil, chemistry, concentration, process controls, shutdown/containment, verification endpoint, material boundary, and wastewater route.
+- Every route exposes controlled product documents and a localized six-input trial brief.
+- Representative scenes are separated from field proof. Every page states the minimum evidence required before a field result is presented as proof.
+- Canonical and supplemental relationships are encoded in the industry registry.
 
-4. **Run technical/legal claim review over all public PDFs and labels.**
-   - Fourteen of 43 product/SDS PDFs contain broad `non-toxic`, `safe`, or `zero hazard` wording detected during text review.
-   - Certification logos and references include NSF, CleanGredients, USDA, NAVSEA, Pareve, EPA/FIFRA-related wording, and other marks. Confirm current status for the exact SKU, use, manufacturing location, and scope.
-   - Cleaning, sanitizing, and disinfecting must remain separate claims. Link an exact EPA registration/label only where one exists.
+### P2 — complete
 
-### P1 — conversion and buyer verification
+- All 46 public PDFs have owner, document ID, revision, effective date, approval, and approval-scope records.
+- Public document room indexes every current PDF by ID and revision.
+- Release checks verify PDF bytes against the review ledger and source corpus under `/Users/omar/Desktop/masest`.
+- Changed or unreviewed PDF bytes fail closed.
+- Restricted customer records stay in the source corpus only; they are excluded from the Pages build.
 
-1. Add an **“Applications and proof”** module to every page:
-   - task;
-   - asset/substrate;
-   - soil/deposit;
-   - suggested product;
-   - dilution/concentration range;
-   - temperature, dwell, agitation, and rinse;
-   - shutdown/containment boundary;
-   - verification endpoint;
-   - direct links to current SDS, TDS, guide, compatibility data, and relevant case study.
+### Remaining governance work
 
-2. Replace generic market language with task-led copy. The first screen should answer:
-   - What exactly gets cleaned?
-   - What is being removed?
-   - How is it applied?
-   - What cannot be claimed or done?
-   - What evidence can the buyer download now?
-
-3. Localize the repeated CTA. All 32 pages currently end with “Put the current chemical on the table.” Keep the shared component, but prefill each form with the industry’s asset, soil, operating conditions, materials, wastewater route, and buying deadline.
-
-4. Add a field-proof standard. Do not label an image “field proof” unless MASEST can identify:
-   - customer/site permission;
-   - date;
-   - asset and substrate;
-   - soil/deposit;
-   - product and concentration;
-   - procedure;
-   - before/after endpoint;
-   - result and limitations.
-
-5. Establish canonical/supplemental relationships. Supplemental pages should target a genuinely narrower buying job and link back to the canonical sector. Merge pages that cannot sustain unique tasks, proof, and search intent.
-
-### P2 — document governance
-
-1. Put owner, document ID, revision, effective date, superseded status, and approval on every customer-facing PDF.
-2. Replace stale internal metadata. Twenty-five of 43 reviewed PDFs have empty or misleading title metadata.
-3. Repair `vertkleen-lam3-sds.pdf`; extracted text contains broken glyphs.
-4. Standardize legacy TDS, label, guide, and case-study templates.
-5. Add a public document index by SKU and revision. Preserve stable URLs while marking superseded documents.
+- Technical/legal owners must substantiate or narrow every `claim_review_required` statement.
+- Customer/OEM names, certification marks, efficacy claims, and regulatory wording need written scope approval.
+- Legacy visual templates and embedded PDF metadata should be modernized during each source-owner-approved reissue, without changing controlled bytes ad hoc.
 
 ## Customer-facing documentation audit
 
 ### Availability
 
-The 13 products recommended across the industry pages resolve to 38 direct PDF references on product pages. The broader `docs/sds` library contains 43 PDFs; all 43 return HTTP 200 as `application/pdf`, and production file sizes match local files.
+The 13 products recommended across the industry pages resolve to controlled documents from each page. The public library contains 43 product/SDS PDFs and three approved case/lab PDFs.
 
-The availability problem is therefore not upload failure. It is **industry-page discoverability and evidence selection**.
+The release gate verifies all 46 files against the review ledger, embeds visible document control, indexes them in the public document room, and confirms source bytes under `/Users/omar/Desktop/masest`.
 
 Products with strong direct-document sets include WaterSafe 60, HCR, CR HD, Descaler, LAM3, MultiWash, Neutral, Purgo, Torque, and CR. Alumibrite, CR HD Low Foam, and CR2 currently rely substantially on request-only documents. Industry pages using those products should not imply that the verification file is immediately downloadable.
 
@@ -157,8 +134,8 @@ Products with strong direct-document sets include WaterSafe 60, HCR, CR HD, Desc
 
 | Artifact | Finding | Recommendation |
 |---|---|---|
-| `walmart-refrigeration-case-study.pdf` | Public but marked confidential; major OEM/performance claims | Remove immediately; obtain permission and substantiation |
-| `trinidad-tank-cleaning-test.pdf` | No safety data; no written procedure | Remove or rebuild as a controlled retrospective |
+| Walmart refrigeration case study | Removed from public build; confidential source retained on Desktop | Republish only after written customer/OEM authorization and methods review |
+| Trinidad tank-cleaning test | Removed from public build; source lacked safety data and written procedure | Rebuild only as a controlled retrospective with procedure, safety boundary, waste route, and customer approval |
 | `walmart-dc-brochure.pdf` | “Approved by Crown Forklift and Plug Power” plus broad performance/certification framing | Require written authorization, dated scope, methods, and approved public wording |
 | `brewery-cip-trial-brewlando.pdf` | Useful four-page trial, but missing visible revision/metadata and a complete validation boundary | Add procedure, concentration/temperature/time/flow, rinse endpoint, sanitation boundary, and customer signoff |
 | `vertkleen-cooling-tower-brochure.pdf` | “Zero hazards” and broad acid-fume/hazmat framing | Technical/legal review; replace absolutes with measured, scoped statements |
@@ -178,7 +155,7 @@ Examples of stale metadata include:
 - `vertkleen-multiwash-tds.pdf` titled “MSDS Fortis.pub”
 - `watersafe60-titration-test.pdf` titled “syntech water test CONF DNSO.xls - Compatibility Mode”
 
-Only two of 43 reviewed PDFs exposed a detectable revision/effective date in extracted text. That is insufficient for procurement, EHS, QA, healthcare, food, utility, military, or engineering review.
+The public wrapper now supplies document ID, revision, effective date, owner, and approval scope. Source-owner-approved reissues should also repair stale embedded metadata and replace broad claims with scoped evidence.
 
 ## Page-by-page audit
 
@@ -202,11 +179,11 @@ Only two of 43 reviewed PDFs exposed a detectable revision/effective date in ext
 
 ### 3. Distribution / Cold Storage
 
-**Verdict:** Refine prose; replace two gallery cards.
+**Verdict:** Visual remediation complete; retain technical follow-up.
 
 - **Current focus:** Cold-chain uptime; Descaler, CR HD, MultiWash, Purgo.
 - **Prose:** Target low-temperature floor soil, forklift grease/tire marks, dock plates, door curtains, evaporator housings, guards, pans, and accessible coils. Add freezer shutdown/defrost and slip-reopening criteria.
-- **Visuals:** Forklift image is useful. Dashboard and brochure/table screenshots are unreadable as gallery cards and should become linked evidence, not “field” images.
+- **Visuals:** Contextual cold-storage lead retained. Duplicate and confidential cards were removed; gallery now shows one source-backed on-site assessment.
 - **Materials:** Add low-temperature efficacy, freeze point, galvanized/aluminum/copper compatibility, food-area rinse/use statement, wastewater route, and floor drying/reopening data.
 
 ### 4. Education
@@ -238,11 +215,11 @@ Only two of 43 reviewed PDFs exposed a detectable revision/effective date in ext
 
 ### 7. Healthcare
 
-**Verdict:** Rework the visual proof and claim boundary.
+**Verdict:** Visual remediation complete; claim boundary still needs owner review.
 
 - **Current focus:** Maintenance continuity; WaterSafe 60, Purgo, HCR, CR, Descaler.
 - **Prose:** Decide whether the page sells environmental-services cleaning, facilities/water-side maintenance, or both. If both, make them separate tracks. Cleaning must be described as the step before facility-approved disinfection; do not imply pathogen kill without an exact registered label.
-- **Visuals:** New local lead is contextual. Current gallery shows dirty coil/ledge/threshold close-ups rather than a hospital water-side or controlled EVS task.
+- **Visuals:** Contextual mechanical-room lead retained. Gallery now combines coil work with source-backed UF Shands exterior-cleaning field images.
 - **Materials:** Add residue/odor/VOC data, surface compatibility, healthcare application SOP, EPA-label links only for registered uses, and water-management-plan boundaries for towers/heat exchangers.
 
 ### 8. Hotels / Property Management
@@ -306,15 +283,15 @@ Only two of 43 reviewed PDFs exposed a detectable revision/effective date in ext
 - **Current focus:** Rigs/terminals and chemical hazard; HCR, Descaler, CR HD, Neutral.
 - **Prose:** Lead with isolated valve manifolds, pumps, skids, exchangers, tools, tank exteriors, loading areas, containment, and pre-inspection cleaning. Tank-outage work must be one controlled step inside isolation, gas-freeing, confined-space, and waste-recovery plans.
 - **Visuals:** New lead is relevant. Existing cone/beaker/rust close-ups do not demonstrate a facility task.
-- **Materials:** Do not use the current Trinidad document as public proof. Add flash point/VOC, steel/coating/gasket/seal compatibility, LOTO boundary, wash recovery, rinse endpoint, waste characterization, and a safer pump/skid or exchanger case study.
+- **Materials:** Trinidad proof is retired. Add flash point/VOC, steel/coating/gasket/seal compatibility, LOTO boundary, wash recovery, rinse endpoint, waste characterization, and a safer pump/skid or exchanger case study.
 
 ### 15. Plumbing
 
-**Verdict:** Good lead message; replace gallery.
+**Verdict:** Visual remediation complete; strengthen method evidence.
 
 - **Current focus:** Indoor scale removal; Descaler, HCR, Neutral.
 - **Prose:** Target closed-loop tankless-water-heater and isolated exchanger descaling, fixtures/valves/aerators, serviceable drain components, and complete flush/return-to-service. Avoid broad “muriatic acid replacement” claims without task-specific performance and material comparison.
-- **Visuals:** New local lead is relevant. Existing sill/edge close-ups do not show plumbing equipment.
+- **Visuals:** Contextual descaling lead retained. Gallery now shows a source-backed pipe-flange before/after pair plus a cleared floor drain.
 - **Materials:** Add OEM acceptance, metal/elastomer matrix, concentration/time/temperature limits, neutralization, flush volume, pH/conductivity endpoint, potable-water boundary, and a named heater/exchanger case study.
 
 ### 16. Solar / Panel Cleaning
@@ -328,11 +305,11 @@ Only two of 43 reviewed PDFs exposed a detectable revision/effective date in ext
 
 ### 17. Aviation — FBOs, MRO, Airports
 
-**Verdict:** Rework urgently.
+**Verdict:** Safer visual boundary implemented; aviation-specific approval remains required.
 
 - **Current focus:** Corrosion-aware degreasing; CR HD, Alumibrite.
 - **Prose:** Define the safe sales boundary. Prefer ground-support equipment, hangar floors, non-flight-critical maintenance parts, and approved corrosion-control workflows. “Aviation” must not imply airframe, avionics, engine, acrylic, coating, sealant, or OEM approval.
-- **Visuals:** Lead image is a Walmart forklift proof image and is unrelated to aviation.
+- **Visuals:** Unrelated forklift image removed. Lead now uses source-backed commercial-airboat aluminum restoration and explicitly states that aviation use requires written material and maintenance approval.
 - **Materials:** Add exact materials/testing, residue, rinse, corrosion, and OEM/operator approval. FAA corrosion guidance emphasizes aircraft-specific compounds, restrictions, rinsing, and OEM procedures. Replace the page or narrow it until MASEST has aviation-specific compatibility evidence.
 
 ### 18. Breweries, Distilleries & Wineries
@@ -355,11 +332,11 @@ Only two of 43 reviewed PDFs exposed a detectable revision/effective date in ext
 
 ### 20. Fleet, Trucking & Car Washes
 
-**Verdict:** Rework lead visual; sharpen lane-based tasks.
+**Verdict:** Lead visual corrected; retain finish/wastewater follow-up.
 
 - **Current focus:** Wash/wax/grease/aluminum; Torque, CR HD, MultiWash, Alumibrite.
 - **Prose:** Separate exterior fleet wash, chassis/engine-area degreasing, aluminum brightening, cab/interior hard surfaces, wash-bay floors, and automatic-system compatibility. Avoid implying one chemistry safely covers every finish.
-- **Visuals:** Current lead is a marine outboard/boat image and is wrong for this page.
+- **Visuals:** Marine image removed. Lead now shows a source-backed vehicle-wash result from the Desktop corpus.
 - **Materials:** Add paint, aluminum, glass, rubber, plastics, decals, polished metal, wax/sealant, reclaim-system, separator, and wastewater compatibility. EPA guidance identifies oil, grease, metals, salts, detergents, and cleaners in vehicle washwater; add capture/discharge instructions.
 
 ### 21. Food Processing & Agriculture
@@ -423,24 +400,24 @@ Only two of 43 reviewed PDFs exposed a detectable revision/effective date in ext
 - **Current focus:** Scale, tanks, grease, EHS; HCR, CR, CR HD.
 - **Prose:** “Industrial plants” is too broad beside Oil & Gas and Manufacturing. Narrow to refineries/terminals/process plants with isolated skids, exchangers, containment, and outage cleaning, or redirect the manufacturing portion.
 - **Visuals:** Oil/gas equipment-cleaning lead is relevant. No gallery exists.
-- **Materials:** Add the same confined-space, isolation, recovery, materials, and waste requirements as the canonical Oil & Gas page. Do not link the current Trinidad proof.
+- **Materials:** Add the same confined-space, isolation, recovery, materials, and waste requirements as the canonical Oil & Gas page. Trinidad proof is retired and blocked from page generation.
 
 ### 28. Pressure-Washing & Soft-Wash Contractors
 
-**Verdict:** Rework visual, chemistry claims, and wastewater guidance.
+**Verdict:** Lead visual corrected; chemistry and wastewater guidance still need owner review.
 
 - **Current focus:** Reduced bleach-damage risk; LAM3, MultiWash, CR HD.
 - **Prose:** Separate organic staining, grease, mineral deposits, roofs, siding, masonry, concrete, and fleet/equipment. Do not imply that all soft-wash work can avoid bleach or that a product is surface-safe without substrate, concentration, dwell, and rinse limits.
-- **Visuals:** Current construction concrete-pump image is not a pressure/soft-wash contractor scenario.
+- **Visuals:** Concrete-pump image removed. Lead now shows a source-backed exterior-cleaning crew staging chemistry and tools beside a landscaped facade.
 - **Materials:** Add substrate matrix, plant/landscape protection, overspray, dwell/rinse, pressure/nozzle limits, collection/diversion, sanitary-discharge approval, and spot-test procedure.
 
 ### 29. Restaurants & Commercial Kitchens
 
-**Verdict:** Rework lead image and food-service evidence.
+**Verdict:** Lead image corrected; retain food-service evidence follow-up.
 
 - **Current focus:** Grease, drains, hoods, floors; CR HD, Purgo, MultiWash, Neutral.
 - **Prose:** Separate hood/exhaust surfaces, fry-line grease, floors, drains, walls, nonfood-contact equipment exteriors, and food-contact surfaces. Define pre-clean, rinse, sanitize/disinfect, and reopening steps. Do not imply the cleaner replaces hood-system service or a registered sanitizer.
-- **Visuals:** Current CIP-skid lead is a food-processing scenario, not a commercial kitchen.
+- **Visuals:** CIP-skid image removed. Lead now shows source-backed commercial-kitchen grease-removal work and keeps sanitation as a separate controlled step.
 - **Materials:** Add FDA Food Code-aligned food-contact instructions, exact rinse requirements, floor-slip/reopening criteria, hood/metal compatibility, drain-use boundaries, and current label/SDS links.
 
 ### 30. Schools & Universities
@@ -468,7 +445,7 @@ Only two of 43 reviewed PDFs exposed a detectable revision/effective date in ext
 - **Current focus:** Floor/fleet degreasing; CR HD, MultiWash.
 - **Prose:** Target tire marks, hydraulic/forklift grease, loading docks, rack bases, battery/charging-area boundaries, floor scrubbers, pedestrian reopening, and food/nonfood storage differences.
 - **Visuals:** Cold-storage floor-cleaning lead is relevant but makes the page look freezer-specific.
-- **Materials:** Add concrete/coating/tire/floor-scrubber compatibility, dilution/dwell, slip and dry-time verification, wastewater route, and a warehouse case study. Use the Walmart DC document only after approval claims are substantiated.
+- **Materials:** Add concrete/coating/tire/floor-scrubber compatibility, dilution/dwell, slip and dry-time verification, wastewater route, and a warehouse case study. Use Walmart customer/OEM claims only after written approval and substantiation.
 
 ## Recommended information architecture
 
@@ -480,16 +457,13 @@ Keep 16 canonical pages as the primary CMS collection. Treat supplemental pages 
 
 Food Processing & Agriculture should be split. Marine/Marinas can remain distinct only if the supplemental page focuses on boatyard washwater and haul-out operations.
 
-## Recommended delivery order
+## Remaining delivery order
 
-1. Remove/restrict the two P0 proof PDFs.
-2. Publish and byte-verify the 16 new canonical images.
-3. Add direct evidence modules to Food & Beverage, HVAC/Water, Oil & Gas, Data Centers, Healthcare, and Municipalities first.
-4. Replace the clearly wrong supplemental leads: Aviation, Fleet, Pressure/Soft Wash, Restaurants.
-5. Replace weak canonical galleries: Construction, Distribution, Education, Food & Beverage, Healthcare, Manufacturing, Marine, Military/Government, Oil & Gas, Plumbing.
-6. Rewrite the supplemental pages around unique workflows; merge those without unique proof.
-7. Reissue public PDFs under document control and complete claim/certification review.
-8. Run final local and production browser QA, PDF-link checks, cache-busted image hash checks, and structured-data validation.
+1. Deploy current source and verify production with cache-busted Ego-browser checks.
+2. Obtain technical/legal substantiation for the 23 `claim_review_required` documents.
+3. Add qualifying field galleries only where site permission and complete method records exist.
+4. Reissue legacy PDFs with corrected embedded metadata and approved claim scope.
+5. Merge any supplemental route that cannot sustain distinct tasks, proof, and buyer intent.
 
 ## Research basis
 
@@ -510,4 +484,4 @@ Supplemental-page recommendations also rely on:
 
 ## Decision
 
-**Do not treat the industry library as finished after image deployment.** The correct next milestone is a six-page evidence-first pilot—Food & Beverage, HVAC/Water, Oil & Gas, Data Centers, Healthcare, and Municipalities—followed by the remaining canonical pages and then differentiated supplemental pages.
+**Ship the remediated library after release gates and production browser QA pass.** Treat document-control status as distribution control only; claim approval remains a separate owner responsibility.

@@ -152,28 +152,52 @@ test("generated product and industry PDF links expose visible document control",
   }
 });
 
-test("restricted proof PDFs cannot re-enter public content or the Pages build", () => {
+test("retired restricted proof sources cannot re-enter public content or the Pages build", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const restricted = review.documents
     .filter((document) => document.status === "restricted")
     .map((document) => document.path)
     .sort();
 
-  assert.deepEqual(restricted, [
+  assert.deepEqual(restricted, []);
+
+  const retiredPaths = [
     "docs/trinidad-tank-cleaning-test.pdf",
     "docs/walmart-refrigeration-case-study.pdf",
-  ]);
+    "img/proof/cases/trinidad-tank-before.webp",
+    "img/proof/cases/trinidad-tank-cr.webp",
+    "img/proof/cases/walmart-refrigeration-results.webp",
+    "img/industries/distribution-cold-storage/g3.webp",
+  ];
+  for (const path of retiredPaths) {
+    assert.equal(existsSync(new URL(path, root)), false, `${path} must remain retired`);
+  }
 
   const publicSources = [
     "index.html",
     "proof.html",
+    "resources.html",
+    "js/main/catalog-data.js",
+    "products/descaler.html",
+    "industries/distribution-cold-storage.html",
+    "data/asset-manifest.json",
     "data/content/proof.json",
+    "data/content/site-images.json",
+    "data/image-optimization.json",
     "supabase/seed-proof-cards.sql",
   ].map((path) => [path, read(path)]);
 
-  for (const path of restricted) {
+  const retiredMarkers = [
+    ...retiredPaths,
+    "walmart-refrigeration-results",
+    "trinidad-tank",
+    "Case Study: Walmart Refrigeration Systems",
+    "up to 94% heat-transfer efficiency",
+    "Heat-transfer efficiency restored on refrigeration descaling",
+  ];
+  for (const marker of retiredMarkers) {
     for (const [source, content] of publicSources) {
-      assert.doesNotMatch(content, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${source} links ${path}`);
+      assert.doesNotMatch(content, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), `${source} exposes ${marker}`);
     }
   }
 
@@ -185,7 +209,7 @@ test("restricted proof PDFs cannot re-enter public content or the Pages build", 
       cwd: root,
       stdio: "pipe",
     });
-    for (const path of restricted) {
+    for (const path of retiredPaths) {
       assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must not publish`);
     }
     assert.equal(
