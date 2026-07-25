@@ -1,11 +1,12 @@
 # Industry Page Audit
 
 **Date:** 2026-07-24
+**Production verification:** 2026-07-25
 **Scope:** Every public industry page, its prose, rendered visuals, recommended products, and customer-facing MASEST/VertKleen PDFs.
 
 ## Executive verdict
 
-The 27-page industry library now has task-led operating guidance, controlled document links, localized trial briefs, source-backed imagery, and permanent redirects from six retired overlaps. P0 through P3 remediation is implemented locally and covered by fail-closed tests.
+The 27-page industry library now has task-led operating guidance, controlled document links, localized trial briefs, source-backed imagery, and permanent redirects from six retired overlaps. P0 through P4 remediation is deployed, locally gated, and verified on production.
 
 Completed:
 
@@ -17,24 +18,28 @@ Completed:
 6. Added document control and an indexed public document room for all 46 public PDFs. Source-byte and review-ledger drift now fail the release gate.
 7. Added two optimized, task-specific images to every route, plus a third high-value task on 11 routes with materially different cleaning work. Active chemistry scenes distinguish wet dwell, rinse/agitation, and clean endpoint.
 8. Consolidated five duplicate supplemental routes into broader maintained pages and split the mixed food-processing/agriculture route into a focused Agriculture & Farm Operations page.
+9. Deployed the locally built artifact to production and verified all 27 routes at desktop and mobile sizes, all six permanent redirects, all 107 gallery images, canonical and Open Graph URLs, sitemap parity, and responsive layout.
 
 Residual review:
 
 - Twenty-three documents remain marked `claim_review_required`. Distribution approval does not equal technical or legal substantiation.
 - Sixteen industry routes still lack a qualifying field gallery. Generated task scenes remain separated from field proof.
 - Supplemental pages remain useful only while their task, buyer, and search intent stay narrower than their canonical parent.
-- P3 production deployment remains separate from this local implementation.
 
 ## Verification summary
 
 | Check | Result |
 |---|---:|
-| Public industry routes | 27/27 generated |
-| Local browser render | 27/27 H1 present |
+| Public industry routes | 27/27 generated and live |
+| Local release gate | 1,646/1,646 tests passed |
+| Production browser matrix | 54/54 route/viewport checks passed |
+| Production gallery images | 214/214 checks passed; 107 unique images |
+| Production redirects | 6/6 permanent redirects passed |
+| Production sitemap | Exact local artifact match |
 | Broken rendered images | 0 |
 | Horizontal overflow | 0 pages |
-| Browser console errors | 0 |
-| Failed browser requests | 0 |
+| Actionable browser errors | 0 |
+| First-party browser request failures | 0 |
 | Canonical sectors in CMS snapshot | 16 |
 | Supplemental static landing pages | 11 |
 | Task images | 75/75 |
@@ -47,6 +52,8 @@ Residual review:
 | Public product/SDS PDFs | 43 |
 | Public case/lab PDFs | 3 |
 | Restricted PDFs in public tree | 0 |
+
+The browser harness could not resolve Cloudflare's external Web Analytics beacon. That isolated third-party instrumentation failure did not affect page content, first-party requests, or CMS media and was excluded from the release result.
 | Image files / total bytes | 223 / about 27.05 MB |
 | Exact duplicate image groups | 0 |
 
@@ -575,10 +582,9 @@ The five duplicate supplemental pages were merged into broader canonical routes.
 
 ## Remaining delivery order
 
-1. Deploy current source and verify production with cache-busted browser checks.
-2. Obtain technical/legal substantiation for the 23 `claim_review_required` documents.
-3. Add qualifying field galleries only where site permission and complete method records exist.
-4. Reissue legacy PDFs with corrected embedded metadata and approved claim scope.
+1. Obtain technical/legal substantiation for the 23 `claim_review_required` documents.
+2. Add qualifying field galleries only where site permission and complete method records exist.
+3. Reissue legacy PDFs with corrected embedded metadata and approved claim scope.
 
 ## Research basis
 
