@@ -286,8 +286,7 @@ export async function sendEmailResult(env, {
       body: JSON.stringify({
         from, to: payloadTo, ...(bccR.length ? { bcc: bccR } : {}), subject, html,
         ...(bodyText ? { text: bodyText } : {}), ...(reply ? { reply_to: reply } : {}),
-        // Resend fetches `path` URLs itself (no extra latency here); 40MB cap. Caller
-        // builds these (e.g. order SDS PDFs via sds-docs.js); omitted when empty.
+        // Resend fetches `path` URLs itself; callers omit attachments when empty.
         ...(Array.isArray(attachments) && attachments.length ? { attachments } : {}),
       }),
     });

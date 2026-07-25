@@ -4,12 +4,12 @@ export const PRODUCTS = {
   hcr: {
     name: "VertKleen CIP HCR",
     cat: "acid",
-    replaces: "Replaces brewery CIP acid and beer-stone removers",
+    replaces: "Compared with brewery acid-cleaning and beer-stone programs",
     hmis: "0-0-0",
     icon: "ph-flask",
     image: "img/products/cip-hcr-studio.webp",
     tag: "Synthetic-acid beer-stone removal for brewery CIP without making mineral acid the default answer.",
-    desc: "A non-fuming synthetic-acid CIP step for beer stone, brewery tanks, lines, and heat exchangers, with label directions for 316 stainless and PVC systems.",
+    desc: "A synthetic-acid CIP step for beer stone, brewery tanks, lines, and heat exchangers. Confirm vapor controls, materials, and use conditions from the current SDS and approved procedure.",
     uses: [
       "Beer-stone removal in brewery CIP",
       "Tank, keg, and line acid-wash steps",
@@ -17,16 +17,13 @@ export const PRODUCTS = {
       "Heat-exchanger plate descaling"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-atom", "SynTech powered", "Patented technology matching mineral-acid performance"],
-      ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates, and phosphates"],
-      ["ph-truck", "Ships without hazmat freight", "Standard LTL, no placards or surcharges"]
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
+      ["ph-atom", "Controlled acid step", "Confirm concentration, dwell, and compatibility in a witnessed trial"],
+      ["ph-leaf", "Wastewater planning", "Validate pH, loading, and discharge limits for the site"],
+      ["ph-truck", "Freight review", "Confirm current transport classification before shipment"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-hcr-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-hcr-tds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-hcr-label.pdf" },
-      { label: "HCR & Descaler User Guide + Dilution Rates", file: "docs/sds/vertkleen-hcr-descaler-userguide.pdf" },
       { label: "Field Note: Pool Filter Cleaning", file: "docs/sds/vertkleen-hcr-pool-filter.pdf" },
       "Cooling Tower Case Study: Brevard County Schools"
     ]
@@ -34,20 +31,20 @@ export const PRODUCTS = {
   "hcr-t16": {
     name: "VertKleen HVAC HCR",
     cat: "acid",
-    replaces: "Replaces hydrochloric acid in HVAC descaling programs",
+    replaces: "Compared with hydrochloric-acid HVAC descaling programs",
     hmis: "0-0-0",
     icon: "ph-factory",
     image: "img/products/hvac-hcr-studio.webp",
-    tag: "Synthetic HCl replacement for calcium, scale, and rust in HVAC and water-side maintenance.",
-    desc: "A non-fuming synthetic HCl replacement for HVAC descaling, calcium, scale, and rust removal, with bulk procurement routed through freight review.",
+    tag: "Synthetic-acid option for calcium, scale, and rust in HVAC and water-side maintenance.",
+    desc: "A synthetic-acid option for HVAC descaling, calcium, scale, and rust removal. Confirm vapor controls and use conditions from the current SDS; bulk procurement routes through freight review.",
     uses: [
       "HVAC coils and water-side descaling",
       "Calcium, scale, and rust removal",
-      "Stainless and gasket-safe cleaning workflows",
+      "Stainless and gasket cleaning after compatibility testing",
       "Bulk HVAC and facility programs"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Uses the HCR acid-replacement chemistry platform"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
       ["ph-truck", "Tote freight", "Bulk orders route through quote review before release"],
       ["ph-clipboard-text", "Program pricing", "Built for procurement teams buying at committed volume"],
       ["ph-buildings", "Account fit", "Best for facilities, contractors, and multi-site programs"]
@@ -60,12 +57,12 @@ export const PRODUCTS = {
   cr: {
     name: "VertKleen CIP CR",
     cat: "alkaline",
-    replaces: "Replaces 50% caustic soda in brewery CIP",
+    replaces: "Compared with caustic-soda brewery CIP",
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/cip-cr-studio.webp",
-    tag: "Brewery CIP caustic replacement for lines, kegs, tanks, krausen, and organic soil.",
-    desc: "A 50% caustic-soda replacement for the alkaline step in brewery CIP, with label directions for lines, kegs, tanks, 316 stainless, and PVC systems.",
+    tag: "Controlled alkaline brewery CIP for lines, kegs, tanks, krausen, and organic soil.",
+    desc: "An alkaline step for brewery CIP. Set concentration, temperature, circulation, rinse, and release criteria through the current SDS and a witnessed site trial.",
     uses: [
       "Brewery lines, kegs, and tanks",
       "Krausen and organic-soil removal",
@@ -73,22 +70,20 @@ export const PRODUCTS = {
       "316 stainless and PVC CIP systems"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling, broad material compatibility"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and material compatibility before use"],
       ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 certificate status must be confirmed through document request"],
-      ["ph-atom", "SynClean powered", "Replaces sodium and potassium hydroxide"],
+      ["ph-atom", "Controlled alkaline step", "Compare against the current caustic process in a witnessed trial"],
       ["ph-leaf", "Discharge planning", "Wastewater path reviewed by site and label conditions"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-cr-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-cr-tds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-cr-label.pdf" },
       "NSF/ANSI 60 Certificate-Status Request"
     ]
   },
   neutral: {
     name: "VertKleen Neutral",
     cat: "alkaline",
-    replaces: "Replaces caustic and solvent degreasers",
+    replaces: "Compared with caustic and solvent degreasers",
     hmis: "0-0-0",
  icon: "ph-drop",
  image: "img/products/neutral-studio.webp",
@@ -97,30 +92,29 @@ export const PRODUCTS = {
     uses: [
       "Heavy equipment and machinery degreasing",
       "Marine, oil and gas, and aviation surfaces",
-      "Sensitive metals and seals: non-corrosive",
+      "Sensitive metals and seals after a compatibility test",
       "Facility and fleet maintenance"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling, replaces flammable solvent degreasers"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
       ["ph-scales", "True pH 7", "Neutral chemistry for sensitive equipment and seals"],
-      ["ph-atom", "SynClean powered", "Patented degreasing technology"],
-      ["ph-leaf", "Biodegrades in under 10 days", "Low VOC; discharge path remains site-reviewed"]
+      ["ph-atom", "Controlled degreasing", "Confirm dilution, dwell, agitation, and endpoint in a site trial"],
+      ["ph-leaf", "Wastewater planning", "Confirm the discharge path and site limits before release"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-neutral-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-neutral-tds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-neutral-label.pdf" }
     ]
   },
   multiwash: {
     name: "VertKleen MultiWash",
     cat: "alkaline",
-    replaces: "Replaces general-purpose caustic cleaners",
+    replaces: "Compared with general-purpose alkaline cleaners",
     hmis: "0-0-0",
  icon: "ph-sparkle",
     image: "img/products/multiwash-gym-studio.webp",
-    tag: "One-bottle facility cleaner for wet zones, drains, concrete, glass, exteriors, and pressure washing while the building stays open.",
-    desc: "A versatile multi-surface cleaner for facilities, drains, concrete, exterior washing, and occupied-campus maintenance.",
+    tag: "Facility cleaner for wet zones, drains, concrete, glass, exteriors, and pressure-washing programs.",
+    desc: "A multi-surface cleaner for facilities, drains, concrete, and exterior washing. Occupied-site use requires the current SDS and an approved work-area plan.",
     uses: [
       "Concrete drains and hardscape cleaning",
       "Pressure-washing programs",
@@ -128,26 +122,24 @@ export const PRODUCTS = {
       "Educational and healthcare environments"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-atom", "SynClean powered", "Patented cleaning technology"],
-      ["ph-leaf", "Biodegrades in under 10 days", "Low VOC, BOD, nitrates and phosphates"],
-      ["ph-truck", "Ships without hazmat freight", "Standard LTL, no placards or surcharges"]
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
+      ["ph-atom", "Controlled cleaning", "Confirm dilution, dwell, agitation, and endpoint in a site trial"],
+      ["ph-leaf", "Wastewater planning", "Confirm pH, loading, and discharge limits before release"],
+      ["ph-truck", "Freight review", "Confirm current transport classification before shipment"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-multiwash-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-multiwash-tds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-multiwash-label.pdf" }
     ]
   },
   watersafe60: {
     name: "WaterSafe60",
     cat: "water",
-    replaces: "Replaces phosphate, zinc, and molybdate blends",
+    replaces: "Evaluated against existing tower and closed-loop treatment programs",
     hmis: "0-0-0",
  icon: "ph-waves",
  image: "img/products/watersafe60-studio.webp",
-    tag: "Scale and corrosion control for towers and loops without the phosphate, zinc, molybdate, or chromate baggage.",
-    desc: "A scale and corrosion inhibitor with no heavy metals — no zinc, no molybdate, no chromate. Built for water-treatment programs where asset protection and documentation both matter.",
+    tag: "Water-treatment candidate for towers and closed loops, subject to site engineering and regulatory review.",
+    desc: "A water-treatment program component. Exact composition, scale or corrosion performance, potable-water use, and certification claims require current technical and regulatory records.",
     uses: [
       "Cooling tower scale and corrosion control",
       "Closed-loop and chilled-water systems",
@@ -155,49 +147,44 @@ export const PRODUCTS = {
       "Campus, hospital, and government facilities"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Replaces blends rated up to HMIS 2-0-0"],
+      ["ph-shield-check", "Current SDS", "Review each program component and task control before use"],
       ["ph-seal-check", "Controlled docs", "NSF/ANSI 60 certificate status must be confirmed through document request"],
-      ["ph-prohibit", "No heavy metals", "No chromate, zinc, or molybdate"],
-      ["ph-clipboard-text", "Documentation by site", "ASHRAE 188 program support sized to your site"]
+      ["ph-prohibit", "Composition review", "Confirm formulation and prohibited constituents from approved technical records"],
+      ["ph-clipboard-text", "Documentation by site", "Integrate only through the site's water-management program"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/watersafe60-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/watersafe60-tds.pdf" },
-      { label: "WaterSafe60 / CR User Guide (NSF 60)", file: "docs/sds/watersafe60-cr-nsf60-user-guide.pdf" },
       { label: "Titration / Sigma Test Data", file: "docs/sds/watersafe60-titration-test.pdf" },
-      { label: "Cooling Tower Chemistry Brochure", file: "docs/sds/vertkleen-cooling-tower-brochure.pdf" },
       "NSF/ANSI 60 Certificate-Status Request"
     ]
   },
   purgo: {
     name: "Purgo",
     cat: "water",
-    replaces: "Replaces bromine and sodium hypochlorite",
+    replaces: "Evaluated against existing oxidizing and non-oxidizing water-treatment programs",
     hmis: "0-0-0",
  icon: "ph-shield-plus",
     image: "img/products/purgo-studio.webp",
-    tag: "Minimum-risk antimicrobial and odor-control support where the claim needs to stay label-honest.",
-    desc: "A FIFRA 25(b) minimum-risk antimicrobial and odor-control treatment for occupied-site maintenance. Purgo stays within its label: it isn't a registered disinfectant and isn't sold as one.",
+    tag: "Water-treatment and odor-control candidate with regulatory claims held behind approved records.",
+    desc: "A water-treatment and odor-control program component. Exact antimicrobial, minimum-risk, and occupied-site use claims require an approved label and regulatory file.",
     uses: [
-      "Minimum-risk antimicrobial and odor-control support",
+      "Water-treatment and odor-control evaluation",
       "ASHRAE 188 documentation support when paired with testing and a water management program",
       "Occupied-campus water treatment",
-      "Minimum-risk antimicrobial cleaning workflows"
+      "Claim-controlled cleaning workflows"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Lower-hazard handling versus bromine and bleach"],
-      ["ph-seal-check", "FIFRA 25(b)", "Minimum-risk classification"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
+      ["ph-seal-check", "Claim boundary", "Do not assert antimicrobial efficacy or exemption without approved records"],
       ["ph-buildings", "Occupied-site fit", "Built for routine maintenance programs"],
       ["ph-clipboard-text", "Confirm against docs", "Exact use claims confirmed against the label and program documentation"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-purgo-sds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-purgo-label.pdf" },
       { label: "Purgo 101 Overview", file: "docs/sds/vertkleen-purgo-101.pdf" },
       { label: "Base Data Sheet", file: "docs/sds/vertkleen-purgo-base-data.pdf" },
       { label: "Bacterial Persistence Test", file: "docs/sds/vertkleen-purgo-bacterial-persistence-test.pdf" },
-      { label: "Cooling Tower Chemistry Brochure", file: "docs/sds/vertkleen-cooling-tower-brochure.pdf" },
-      "FIFRA 25(b) Documentation"
+      "Regulatory Status Documentation"
     ]
   },
   dbnpa: {
@@ -207,59 +194,58 @@ export const PRODUCTS = {
     hmis: "Low hazard",
  icon: "ph-pill",
  image: "img/products/dbnpa-studio.webp",
-    tag: "Footnoted controlled-release non-oxidizing biocide component. One tablet per quarter.",
-    desc: "Controlled-release tablets for non-oxidizing rotation, dosed at one tablet per quarter. DBNPA is a cooling-tower program component, not one of the 20 parent catalog products; label, SDS, and registration proof are available on request.",
+    tag: "Document-gated controlled-release program component.",
+    desc: "A cooling-tower program component available only after label, SDS, registration, dose, and site-engineering review.",
     uses: [
-      "Quarterly non-oxidizing biocide rotation",
-      "Cooling tower microbiological programs",
-      "Low-dose, controlled-release dosing"
+      "Site-engineered tower treatment",
+      "Documented cooling-tower programs",
+      "Controlled-release dosing after technical review"
     ],
     specs: [
-      ["ph-arrow-down", "Low dose", "One controlled-release tablet per quarter"],
+      ["ph-arrow-down", "Engineered dose", "Set only through approved label and site water-management records"],
       ["ph-seal-check", "Document-gated", "Registration and label files required before public claim"],
-      ["ph-fire-simple", "Non-flammable", "Replaces glutaraldehyde rated HMIS 3-2-0"],
-      ["ph-info", "Program note", "The program's one mild-hazard component. Every cataloged VertKleen product in the program is HMIS 0-0-0."]
+      ["ph-fire-simple", "Current SDS", "Review hazards and comparison chemistry before program approval"],
+      ["ph-info", "Program note", "Review the current SDS and task controls for every program component."]
     ],
     docs: ["Safety Data Sheet (SDS)", "Controlled Label / SDS Request"]
   },
   crhd: {
     name: "VertKleen CR HD",
     cat: "alkaline",
-    replaces: "Replaces Simple Green, Zep, and solvent degreasers",
+    replaces: "Evaluated against current warehouse and plant degreasers",
     hmis: "0-0-0",
     icon: "ph-spray-bottle",
  image: "img/products/crhd-studio.webp",
     tag: "For grease that laughs at light-duty cleaners: floors, forklifts, parts washers, kitchens, drains, engine bays, and warehouse equipment.",
-    desc: "A high-detergency, low-foam alkaline degreaser at roughly 50% active strength. Walmart distribution-center collateral positions CR HD as a Simple Green replacement for forklifts, workshops, kitchens, floors, parts, and windows.",
+    desc: "A low-foam alkaline degreaser for forklifts, workshops, kitchens, floors, parts, and equipment. Confirm dilution, compatibility, wastewater handling, and endpoint in a site trial.",
     uses: [
       "Warehouse and plant floors, forklifts, and engine bays",
       "Grease traps, drains, and commercial kitchen hoods",
       "Heavy oil and hydraulic-fluid degreasing",
-      "Field-proven replacing Simple Green at Walmart distribution centers"
+      "Witnessed comparison against the site's current degreaser"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-gauge", "About 50% active", "Higher active strength than common 15% degreasers"],
-      ["ph-seal-check", "Equipment files", "Crown Forklift, Plug Power, and aerospace-spec equipment files available on request"],
-      ["ph-truck", "Ships without hazmat freight", "Standard LTL, no placards or surcharges"]
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
+      ["ph-gauge", "Controlled dilution", "Set from soil load, equipment, and a witnessed comparison"],
+      ["ph-seal-check", "Equipment review", "Confirm OEM and substrate requirements before use"],
+      ["ph-truck", "Freight review", "Confirm current transport classification before shipment"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crhd-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-crhd-tds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-crhd-label.pdf" },
       { label: "Degreaser Comparison", file: "docs/sds/vertkleen-crhd-degreaser-comparison.pdf" },
-      "Case Study: Walmart Distribution Centers"
+      "Controlled Site-Trial Request"
     ]
   },
   descaler: {
     name: "VertKleen Descaler",
     cat: "acid",
-    replaces: "Replaces hydrochloric acid (muriatic acid) products, CLR, and Calci-Solve",
+    replaces: "Evaluated against hydrochloric-acid, CLR, and Calci-Solve programs",
     hmis: "0-0-0",
     icon: "ph-snowflake",
  image: "img/products/descaler-studio.webp",
-    tag: "Acid-style descaling for coils, towers, pumps, and refrigeration loops, minus the usual HCl drama.",
-    desc: "A hydrochloric-acid-free descaler for calcium, rust, and scale in coils, cooling towers, plumbing, and fire-pump components. Application fit depends on deposit type, metallurgy, system isolation, circulation equipment, and rinse verification.",
+    tag: "Controlled descaling for coils, towers, pumps, and refrigeration loops.",
+    desc: "A descaling option for calcium, rust, and scale in coils, cooling towers, plumbing, and fire-pump components. Application fit depends on deposit type, metallurgy, system isolation, circulation equipment, and rinse verification.",
     uses: [
       "Aluminum and copper coil descaling",
       "Cooling towers, plumbing, and ammonia coils",
@@ -267,16 +253,14 @@ export const PRODUCTS = {
       "Isolated cooling and heat-transfer circuits after site and OEM review"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "HMIS 0-0-0 with no NFPA pictograms"],
-      ["ph-trend-down", "Far less corrosion", "0.59 mpy versus hydrochloric at 609 mpy in VertKleen testing"],
-      ["ph-snowflake", "Metal compatibility", "Used with aluminum, copper, steel, and stainless protocols"],
-      ["ph-drop", "Discharge planning", "Built to reduce acid neutralization; confirm site rules"]
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
+      ["ph-trend-down", "Comparison required", "Confirm corrosion and cleaning performance in a documented material test"],
+      ["ph-snowflake", "Metal compatibility", "Test the exact aluminum, copper, steel, stainless, coatings, and seals"],
+      ["ph-drop", "Discharge planning", "Characterize spent solution and confirm site rules"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-descaler-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-descaler-tds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-descaler-label.pdf" },
-      { label: "HCR & Descaler User Guide + Dilution Rates", file: "docs/sds/vertkleen-hcr-descaler-userguide.pdf" },
       "Descaler vs Acids Corrosion Data"
     ]
   },
@@ -296,37 +280,36 @@ export const PRODUCTS = {
       "Field-proven on a commercial tourist airboat"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "No hydrofluoric or hydrochloric acid"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and substrate controls before use"],
       ["ph-atom", "Synthetic acid", "SynTech brightening without the burn and fume risk"],
       ["ph-chart-line-up", "Brightening Index 90.1", "Outperformed hydrochloric acid at 86.3 in VertKleen testing"],
-      ["ph-leaf", "Biodegradable", "Lower-impact discharge; confirm site rules"]
+      ["ph-leaf", "Wastewater planning", "Confirm capture and discharge rules for the site"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
   torque: {
     name: "VertKleen Torque",
     cat: "specialty",
-    replaces: "Replaces separate wash, wax, and bug removers",
+    replaces: "Evaluated against separate wash, wax, and bug-removal steps",
     hmis: "0-0-0",
  icon: "ph-sparkle",
  image: "img/products/torque-studio.webp",
     tag: "Vehicle wash and wax in one process for operators who do not want three bottles for one finish.",
-    desc: "An all-in-one wash and wax that cleans and protects in a single step across vehicles, fleet, RV, and marine. The Yellowfin job shows the proof: grime line gone.",
+    desc: "A combined wash-and-finish-care candidate for vehicles, fleet, RV, and marine surfaces. Confirm finish compatibility and acceptance criteria in a witnessed trial.",
     uses: [
       "Vehicle, fleet, and RV wash and wax",
       "Marine and boat exteriors",
       "Dealership and detailing programs",
-      "Field-proven on a 43-foot Yellowfin vessel"
+      "Yellowfin field-context photos, verification incomplete"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-sparkle", "Wash and wax in one", "Cleans and protects in a single pass"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
+      ["ph-sparkle", "Combined process", "Evaluate cleaning and finish care against the site's current steps"],
       ["ph-seal-check", "Finish-care support", "Product fit reviewed against finish-care requirements"],
-      ["ph-leaf", "Biodegradable", "Low VOC; discharge path remains site-reviewed"]
+      ["ph-leaf", "Wastewater planning", "Confirm capture and discharge rules for the site"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-torque-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-torque-tds.pdf" },
       { label: "Product Label", file: "docs/sds/vertkleen-torque-label.pdf" }
     ]
   },
@@ -346,14 +329,13 @@ export const PRODUCTS = {
       "Field-proven clearing mildew from a painted column over two weeks"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "Neutral pH, no bleach, low fumes"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and stain-treatment controls before use"],
       ["ph-plant", "Label-directed exterior use", "Follow label directions around landscaping and animals"],
       ["ph-timer", "Spray and walk away", "Keeps working up to a month; reapply about every six months"],
-      ["ph-leaf", "Biodegradable stain remover", "Use SDS precautions for mild skin and eye irritation"]
+      ["ph-leaf", "Controlled stain removal", "Use SDS precautions and verify substrate compatibility"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-lam3-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-lam3-tds.pdf" },
       { label: "Product Label (Front)", file: "docs/sds/vertkleen-lam3-label-front.pdf" },
       { label: "Product Label (Back)", file: "docs/sds/vertkleen-lam3-label-back.pdf" }
     ]
@@ -361,7 +343,7 @@ export const PRODUCTS = {
   crs: {
     name: "VertKleen CRS",
     cat: "acid",
-    replaces: "Replaces hydrochloric acid (muriatic acid) for rust, scale, and calcium",
+    replaces: "Evaluated for rust, scale, and calcium-cleaning programs",
     hmis: "0-0-0",
  icon: "ph-wrench",
  image: "img/products/crs-studio.webp",
@@ -374,26 +356,24 @@ export const PRODUCTS = {
       "Dealership and facility maintenance programs"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-drop-half", "HCl replacement", "Built for acid-cleaning jobs without muriatic-acid handling"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
+      ["ph-drop-half", "Acid-cleaning candidate", "Compare against the current process in a controlled trial"],
       ["ph-waves", "Water-side scale", "Targets calcium, rust, and mineral buildup"],
-      ["ph-leaf", "Dilution guide", "Use ratios align with the VertKleen dilution guide"]
+      ["ph-leaf", "Procedure required", "Request approved concentration and rinse guidance before use"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crs-sds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-crs-label.pdf" },
-      { label: "HCR & Descaler User Guide + Dilution Rates", file: "docs/sds/vertkleen-hcr-descaler-userguide.pdf" }
     ]
   },
   "cr-hd-low-foam": {
     name: "VertKleen CR HD Low Foam",
     cat: "alkaline",
-    replaces: "Replaces solvent and butyl degreasers",
+    replaces: "Evaluated against solvent and butyl degreasers",
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/crhd-studio.webp",
     tag: "CR HD muscle with the foam turned down for scrubbers, parts washers, and recirculating systems.",
-    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters, with the same HMIS 0-0-0 rating as CR HD.",
+    desc: "A low-foam heavy-duty degreaser built for automatic scrubbers, parts washers, and recirculating wash systems where foam control matters.",
     uses: [
       "Automatic floor scrubbers and machine wash",
       "Parts washers and recirculating wash systems",
@@ -401,57 +381,55 @@ export const PRODUCTS = {
       "Heavy soil and grease on equipment and floors"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and equipment controls before use"],
       ["ph-drop", "Low-foam formula", "Built for machine wash and recirculating systems"],
-      ["ph-atom", "SynTech powered", "Heavy-duty degreasing without solvent odor"],
-      ["ph-truck", "Ships without hazmat freight", "Standard LTL, no placards or surcharges"]
+      ["ph-atom", "Controlled degreasing", "Compare cleaning, foam, and rinse performance in the actual equipment"],
+      ["ph-truck", "Freight review", "Confirm current transport classification before shipment"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
   cr2: {
     name: "VertKleen HVAC CR",
     cat: "alkaline",
-    replaces: "Replaces caustic drain cleaners and degreasers in HVAC facilities",
+    replaces: "Evaluated against caustic drain-cleaning and degreasing programs",
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/hvac-cr-studio.webp",
-    tag: "Caustic replacement for grease, organic buildup, drains, coils, and facility maintenance.",
-    desc: "A non-corrosive caustic replacement for HVAC and facility work, including drains, grease, organic buildup, and alkaline cleaning.",
+    tag: "Controlled alkaline cleaning for grease, organic buildup, drains, coils, and facility maintenance.",
+    desc: "An alkaline cleaner for HVAC and facility work, including drains, grease, organic buildup, and controlled equipment cleaning.",
     uses: [
       "HVAC and facility drain cleaning",
       "Grease and organic-buildup removal",
       "Coils, equipment, and general maintenance"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-drop-half", "Caustic replacement", "Drain and degreasing work without harsh alkalinity"],
-      ["ph-atom", "SynClean powered", "Caustic-level performance with HMIS 0-0-0 handling"]
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and material compatibility before use"],
+      ["ph-drop-half", "Alkaline-cleaning candidate", "Compare against the current process in a controlled trial"],
+      ["ph-atom", "Controlled application", "Confirm concentration, dwell, and endpoint in a site trial"]
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
   sar: {
     name: "VertKleen SAR",
     cat: "acid",
-    replaces: "Replaces specialty and blended acid products",
+    replaces: "Evaluated for specialty and blended-acid programs",
     hmis: "0-0-0",
     icon: "ph-wrench",
     image: "img/products/sar-studio.webp",
-    tag: "A quote-reviewed specialty acid replacement for targeted descaling and water-side work.",
-    desc: "A specialty acid-replacement formulation for targeted descaling and water-side applications. We quote it case by case while application sheets and final SKU guidance are confirmed.",
+    tag: "A quote-reviewed specialty chemistry candidate for targeted descaling and water-side work.",
+    desc: "A specialty formulation for targeted descaling and water-side applications. Availability remains case-by-case while technical, regulatory, and application records are completed.",
     uses: [
       "Specialty descaling and acid-cleaning jobs",
       "Water-side scale and mineral removal",
-      "Applications needing a tuned acid replacement"
+      "Applications needing a tuned descaling procedure"
     ],
     specs: [
-      ["ph-shield-check", "HMIS 0-0-0", "0 health, flammability, and reactivity rating"],
-      ["ph-drop-half", "Acid replacement", "Targeted descaling without muriatic-acid handling"],
+      ["ph-shield-check", "Current SDS", "Review hazard classifications and task controls before use"],
+      ["ph-drop-half", "Controlled descaling", "Compare against the current process in a documented trial"],
       ["ph-waves", "Water-side scale", "Calcium, rust, and mineral buildup"]
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-sar-sds.pdf" },
-      { label: "Technical Data Sheet (TDS)", file: "docs/sds/vertkleen-sar-tds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-sar-label.pdf" }
     ]
   },
 pg100: {
@@ -578,9 +556,9 @@ export const QUOTE_FIRST_IDS = ["crs"];
 export const PRODUCT_CATALOG_COPY = {
   hcr: {
     job: "Rust, scale, and heavy deposits",
-    summary: "Use when rust staining, mineral scale, or passivation work needs industrial strength and documentation better than a muriatic-acid SDS.",
+    summary: "Use for controlled rust, mineral-scale, or passivation trials after metallurgy, concentration, rinse, and endpoint review.",
     fits: ["HVAC", "metal restoration", "concrete", "pipelines"],
-    proof: "Pool-filter field note and cooling-tower case study"
+    proof: "SDS, pool-filter field note, and context-only case records"
   },
   "hcr-t16": {
     job: "16+ tote descaling supply",
@@ -590,9 +568,9 @@ export const PRODUCT_CATALOG_COPY = {
   },
   descaler: {
     job: "Coils, towers, and heat-transfer equipment",
-    summary: "A lower-corrosion descaling choice for aluminum fins, copper, steel, plumbing, fire pumps, and refrigeration equipment.",
+    summary: "A descaling candidate for aluminum fins, copper, steel, plumbing, fire pumps, and refrigeration equipment after material testing.",
     fits: ["coils", "cooling towers", "plumbing", "fire pumps"],
-    proof: "Corrosion table and Walmart refrigeration proof"
+    proof: "SDS, label, and controlled material-test request"
   },
   crs: {
     job: "Water-side scale and rust",
@@ -602,15 +580,15 @@ export const PRODUCT_CATALOG_COPY = {
   },
   cr: {
     job: "High-pH cleaning and water-treatment support",
-    summary: "For teams that need caustic-level cleaning, pH adjustment, or the alkaline step in a CR then HCR process.",
+    summary: "For teams evaluating an alkaline cleaning step, pH adjustment, or a controlled CR then HCR process.",
     fits: ["hoods", "floors", "CIP", "water treatment"],
-    proof: "Controlled docs and brewery CIP directions"
+    proof: "Current SDS and brewery trial records"
   },
   crhd: {
     job: "Heavy grease and industrial soil",
-    summary: "A high-active degreaser for floors, forklifts, drains, engine bays, kitchen buildup, and jobs where Simple Green is not enough.",
+    summary: "A low-foam alkaline degreaser candidate for floors, forklifts, drains, engine bays, kitchen buildup, and heavy industrial soil.",
     fits: ["floors", "forklifts", "drains", "engine bays"],
-    proof: "Walmart DC proof and support files"
+    proof: "Current SDS, label, comparison file, and site-trial request"
   },
   neutral: {
     job: "Sensitive surfaces and seals",
@@ -620,33 +598,33 @@ export const PRODUCT_CATALOG_COPY = {
   },
   multiwash: {
     job: "Everyday facility washing",
-    summary: "A versatile cleaner for occupied buildings, concrete, drains, pressure washing, and routine maintenance work that touches the public.",
+    summary: "A cleaner candidate for concrete, drains, pressure washing, and routine facility maintenance under an approved work-area plan.",
     fits: ["campuses", "concrete", "drains", "pressure washing"],
-    proof: "Technical Data Sheet and Product Label"
+    proof: "Current SDS and controlled site-trial request"
   },
   watersafe60: {
     job: "Scale and corrosion control",
-    summary: "For cooling towers and closed loops that need documented asset protection without heavy-metal inhibitor blends.",
+    summary: "For site-engineered cooling-tower and closed-loop evaluation with exact composition and performance claims held behind approved records.",
     fits: ["cooling towers", "closed loops", "campuses", "hospitals"],
     proof: "Controlled documentation and program documents"
   },
   purgo: {
-    job: "Minimum-risk antimicrobial support",
-    summary: "For programs that need minimum-risk antimicrobial and odor-control support without presenting Purgo as a registered disinfectant.",
+    job: "Document-gated water-treatment support",
+    summary: "For programs evaluating odor-control or water-treatment use after label, regulatory, efficacy, and site-engineering review.",
     fits: ["towers", "WMP support", "campuses", "general use"],
-    proof: "FIFRA 25(b) and safety notes"
+    proof: "Regulatory status and safety documents"
   },
   dbnpa: {
-    job: "Quarterly tablet biocide",
-    summary: "A controlled-release tablet for the non-oxidizing rotation in cooling-tower programs.",
+    job: "Document-gated tower-treatment component",
+    summary: "A controlled-release program component available after label, SDS, registration, dose, and site-engineering review.",
     fits: ["quarterly dosing", "cooling towers", "low-dose programs"],
-    proof: "Registration proof request"
+    proof: "Registration, label, and SDS request"
   },
   lam3: {
     job: "Moss, algae, mold, and mildew",
     summary: "Spray and walk away on roofs, pavers, siding, stucco, concrete, ponds, and exterior walls; let the dwell time do the slow work.",
     fits: ["roofs", "pavers", "siding", "stucco"],
-    proof: "Field-proven mildew clearing and Technical Data Sheet"
+    proof: "Current label, SDS, and context-only field photos"
   },
   alumibrite: {
     job: "Aluminum brightening",
@@ -658,7 +636,7 @@ export const PRODUCT_CATALOG_COPY = {
     job: "Vehicle, fleet, RV, and marine wash",
     summary: "Clean and protect finishes in one wash-and-wax step for vehicles, fleets, RVs, and boats.",
     fits: ["vehicles", "fleets", "RVs", "boats"],
-    proof: "Finish-care notes and field proof"
+    proof: "Current label, SDS, and context-only field photos"
   },
   "cr-hd-low-foam": {
     job: "Machine wash and low-foam degreasing",
@@ -673,8 +651,8 @@ export const PRODUCT_CATALOG_COPY = {
     proof: "Application notes and pricing confirmed"
   },
   sar: {
-    job: "Specialty acid replacement",
-    summary: "A tuned acid-replacement SKU for targeted descaling and water-side restoration with confirmed small-pack and bulk pricing.",
+    job: "Specialty descaling evaluation",
+    summary: "A quote-reviewed chemistry candidate for targeted descaling and water-side work while technical and regulatory records are completed.",
     fits: ["descaling", "water-side scale", "specialty acid", "maintenance"],
     proof: "Application notes and pricing confirmed"
   }

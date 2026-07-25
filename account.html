@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260724a">
+<link rel="stylesheet" href="css/style.css?v=20260725f">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -179,7 +179,7 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/main.js?v=20260720a"></script>
+<script type="module" src="js/main.js?v=20260725f"></script>
 
 <!-- Tab toggle: classic script so it works without modules / before auth loads -->
 <script>
@@ -289,6 +289,15 @@
     return params.get("mode") === "reset-password" || location.hash.includes("type=recovery");
   }
 
+  function showRequestedRegistration() {
+    const params = new URLSearchParams(location.search);
+    if (params.get("mode") !== "register") return;
+    document.querySelectorAll(".acct-pane").forEach((pane) => {
+      pane.hidden = pane.dataset.pane !== "register";
+    });
+    requestAnimationFrame(() => $("rEmail")?.focus());
+  }
+
   function showComplete() {
     authBox.hidden = true; completeCard.hidden = false;
     $("cName").focus();
@@ -312,6 +321,7 @@
       return;
     }
     showAuth();
+    showRequestedRegistration();
   }
 
   // Finish setup for a confirmed user that has no company/profile yet.

@@ -20,6 +20,12 @@ import {
   PRODUCTS,
   QUOTE_FIRST_IDS,
 } from "../js/main/catalog-data.js";
+import {
+  documentAllowedOnSurface,
+  documentClaimLabel,
+  documentDistribution,
+  documentSurfaceMode,
+} from "./public-document-policy.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
@@ -31,7 +37,7 @@ const BLOG_POST_SLUGS = (BLOG_SNAPSHOT.blog_posts || []).map((post) => post.slug
 const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document-review.json", import.meta.url), "utf8"));
 const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
 const DOCUMENT_REVISION = DOCUMENT_REVIEW.document_control.revision;
-const STYLE_VERSION = "20260724a";
+const STYLE_VERSION = "20260725f";
 const DOCUMENT_SKU_LABELS = new Map([
   ["VK-HCR", "VertKleen CIP HCR"],
   ["VK-CR", "VertKleen CIP CR"],
@@ -172,19 +178,17 @@ const text = (value) => String(value ?? "")
   .replace(/</g, "&lt;")
   .replace(/>/g, "&gt;");
 
-function currentDocument(path) {
+function currentDocument(path, surface) {
   const document = DOCUMENTS.get(path);
-  if (!document || document.status === "restricted") {
-    throw new Error(`Public page references unavailable document: ${path}`);
-  }
+  if (!document) throw new Error(`Public page references unreviewed document: ${path}`);
+  if (!documentAllowedOnSurface(document, surface)) return null;
   return document;
 }
 
 function documentControl(document) {
-  const claimStatus = document.status === "claim_review_required"
-    ? "Review required"
-    : "No automated flags";
-  return `${document.document_id} · Rev ${DOCUMENT_REVISION} · Distribution: Current · Claims: ${claimStatus} · SKUs: ${document.skus.join(", ")}`;
+  const claimStatus = documentClaimLabel(document.status);
+  const distribution = documentDistribution(document) === "request_only" ? "Request only" : "Current";
+  return `${document.document_id} · Rev ${DOCUMENT_REVISION} · Distribution: ${distribution} · Claims: ${claimStatus} · SKUs: ${document.skus.join(", ")}`;
 }
 
 function documentAnalyticsName(document) {
@@ -212,7 +216,9 @@ function documentGovernance() {
 
 function documentLibrary() {
   const groups = new Map([...DOCUMENT_SKU_LABELS].map(([sku, label]) => [sku, { label, documents: [] }]));
-  for (const document of DOCUMENT_REVIEW.documents.filter((entry) => entry.status !== "restricted")) {
+  for (const document of DOCUMENT_REVIEW.documents.filter(
+    (entry) => documentAllowedOnSurface(entry, "resource"),
+  )) {
     const group = groups.get(document.skus[0]);
     if (!group) throw new Error(`Unknown primary document SKU: ${document.skus[0]}`);
     group.documents.push(document);
@@ -221,7 +227,13 @@ function documentLibrary() {
   return [...groups.entries()].map(([sku, group]) => {
     const documents = group.documents
       .sort((left, right) => left.title.localeCompare(right.title))
-      .map((document) => `          <a class="doc-chip" href="${attr(document.path)}" data-document-id="${attr(document.document_id)}" data-document-revision="${attr(DOCUMENT_REVISION)}" data-document-skus="${attr(document.skus.join(" "))}" data-document-download data-document-name="${attr(documentAnalyticsName(document))}" target="_blank" rel="noopener" download aria-label="Download ${attr(document.title)} (PDF)"><span class="doc-title">${text(document.title)}</span><span class="doc-control">${text(documentControl(document))}</span></a>`)
+      .map((document) => {
+        const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(DOCUMENT_REVISION)}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
+        if (documentSurfaceMode(document, "resource") === "request") {
+          return `          <button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Register to request ${attr(document.title)}"><span class="doc-title">${text(document.title)}</span><span class="doc-control">${text(documentControl(document))}</span><span class="doc-request-state" data-document-request-label>Register to request</span></button>`;
+        }
+        return `          <a class="doc-chip" href="${attr(document.path)}" ${common} data-document-download target="_blank" rel="noopener" download aria-label="Download ${attr(document.title)} (PDF)"><span class="doc-title">${text(document.title)}</span><span class="doc-control">${text(documentControl(document))}</span></a>`;
+      })
       .join("\n");
     return `        <div class="doc-lib-item" data-document-sku="${attr(sku)}">
           <div class="doc-lib-head"><b>${text(group.label)}</b><span>${attr(sku)} · ${group.documents.length} current ${group.documents.length === 1 ? "file" : "files"}</span></div>
@@ -580,14 +592,19 @@ function productPage(id, product, reviewsSnapshot) {
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
     .join("\n");
   const docs = (product.docs || [])
-    .map((doc) => {
+    .flatMap((doc) => {
       if (doc && typeof doc === "object" && doc.file) {
-        const document = currentDocument(doc.file);
-        return `<li class="doc-file"><a href="../${attr(doc.file)}" data-document-id="${attr(document.document_id)}" data-document-revision="${attr(DOCUMENT_REVISION)}" data-document-skus="${attr(document.skus.join(" "))}" target="_blank" rel="noopener" download><span class="doc-file-copy">${text(doc.label)}<span class="doc-control">${text(documentControl(document))}</span></span><span class="doc-pill">PDF</span></a></li>`;
+        const document = currentDocument(doc.file, "product");
+        if (!document) return [];
+        const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(DOCUMENT_REVISION)}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
+        if (documentSurfaceMode(document, "product") === "request") {
+          return [`<li class="doc-file doc-request"><button type="button" data-document-request ${common} aria-label="Register to request ${attr(document.title)}"><span class="doc-file-copy">${text(doc.label)}<span class="doc-control">${text(documentControl(document))}</span></span><span class="doc-pill doc-pill-req" data-document-request-label>Register to request</span></button></li>`];
+        }
+        return [`<li class="doc-file"><a href="../${attr(doc.file)}" ${common} data-document-download target="_blank" rel="noopener" download><span class="doc-file-copy">${text(doc.label)}<span class="doc-control">${text(documentControl(document))}</span></span><span class="doc-pill">PDF</span></a></li>`];
       }
       const label = doc && typeof doc === "object" ? doc.label : doc;
       const href = `../contact?type=technical&product=${encodeURIComponent(product.name)}&doc=${encodeURIComponent(label)}`;
-      return `<li class="doc-file doc-request"><a href="${attr(href)}">${text(label)}<span class="doc-pill doc-pill-req">Request</span></a></li>`;
+      return [`<li class="doc-file doc-request"><a href="${attr(href)}">${text(label)}<span class="doc-pill doc-pill-req">Request</span></a></li>`];
     })
     .join("\n");
   const procurement = QUOTE_ONLY_IDS.has(id)
@@ -679,7 +696,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     </div>
   </section>
 </main>
-<script type="module" src="../js/main.js?v=20260720a"></script>
+<script type="module" src="../js/main.js?v=20260725f"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

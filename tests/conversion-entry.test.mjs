@@ -83,7 +83,7 @@ test("public content generators preserve current SEO releases", () => {
 
   assert.match(blogBuilder, /brand: "VertKleen"/);
   assert.match(blogBuilder, /if \(!missing\.length\) return 0;/);
-  assert.match(blogBuilder, /style\.css\?v=20260724a/);
-  assert.match(comparisonBuilder, /style\.css\?v=20260724a/);
+  assert.match(blogBuilder, /style\.css\?v=20260725f/);
+  assert.match(comparisonBuilder, /style\.css\?v=20260725f/);
   assert.match(comparisonBuilder, /<!-- seo:auto -->[\s\S]*<!-- \/seo:auto -->/);
 });

@@ -6882,6 +6882,14 @@ body.products-page .conversion-proof .proof-pill em {
   gap: 18px;
 }
 
+.ind-gallery-note {
+  max-width: 78ch;
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.5;
+}
+
 .ind-gallery:has(.ind-shot:nth-child(2):last-child) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -6910,6 +6918,16 @@ body.products-page .conversion-proof .proof-pill em {
   color: var(--muted);
   font-size: .86rem;
   line-height: 1.35;
+}
+
+.ind-media-kind {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--accent-ink);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
 body:not(.products-page) #relatedWrap .shop-grid {
@@ -7340,6 +7358,13 @@ body.product-detail-page main > section.product-static-section {
   padding: 6px 14px;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
+.doc-request-button {
+  appearance: none;
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+}
+.doc-request-button:disabled { cursor: wait; opacity: .72; }
 .doc-chip::before {
   content: "\2193";
   font-weight: 700;
@@ -7365,6 +7390,10 @@ body.product-detail-page main > section.product-static-section {
   padding: 9px 12px;
 }
 .doc-chip[data-document-id]::before { grid-row: 1 / span 2; }
+.doc-request-button[data-document-id]::before {
+  content: "\2197";
+  grid-row: 1 / span 3;
+}
 .doc-chip .doc-title { grid-column: 2; }
 .doc-control {
   display: block;
@@ -7375,10 +7404,16 @@ body.product-detail-page main > section.product-static-section {
   line-height: 1.35;
 }
 .doc-chip .doc-control { grid-column: 2; }
+.doc-request-state {
+  grid-column: 2;
+  color: var(--accent-ink);
+  font-size: .72rem;
+  font-weight: 800;
+}
 .doc-chip:hover .doc-control,
 .doc-chip:focus-visible .doc-control,
-.product-static-panel .product-fit-list li.doc-file a:hover .doc-control,
-.product-static-panel .product-fit-list li.doc-file a:focus-visible .doc-control {
+.product-static-panel .product-fit-list li.doc-file :is(a, button):hover .doc-control,
+.product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible .doc-control {
   color: currentColor;
   opacity: .84;
 }
@@ -7393,7 +7428,8 @@ body.product-detail-page main > section.product-static-section {
   background: transparent;
 }
 .product-static-panel .product-fit-list li.doc-file::before { display: none; }
-.product-static-panel .product-fit-list li.doc-file a {
+.product-static-panel .product-fit-list li.doc-file :is(a, button) {
+  appearance: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -7403,16 +7439,20 @@ body.product-detail-page main > section.product-static-section {
   border-radius: 12px;
   background: var(--surface-soft);
   color: var(--ink-soft);
+  border: 0;
+  font: inherit;
   font-weight: 650;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition: background .15s ease, color .15s ease;
 }
-.product-static-panel .product-fit-list li.doc-file a:hover,
-.product-static-panel .product-fit-list li.doc-file a:focus-visible {
+.product-static-panel .product-fit-list li.doc-file :is(a, button):hover,
+.product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible {
   background: var(--accent);
   color: #fff;
 }
-.product-static-panel .product-fit-list li.doc-file a:focus-visible {
+.product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -7433,8 +7473,8 @@ body.product-detail-page main > section.product-static-section {
   background: var(--accent);
   color: #fff;
 }
-.product-static-panel .product-fit-list li.doc-file a:hover .doc-pill,
-.product-static-panel .product-fit-list li.doc-file a:focus-visible .doc-pill {
+.product-static-panel .product-fit-list li.doc-file :is(a, button):hover .doc-pill,
+.product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible .doc-pill {
   background: #fff;
   color: var(--accent);
 }
@@ -7444,8 +7484,8 @@ body.product-detail-page main > section.product-static-section {
   border: 1px solid var(--line);
   color: var(--muted);
 }
-.product-static-panel .product-fit-list li.doc-file a:hover .doc-pill-req,
-.product-static-panel .product-fit-list li.doc-file a:focus-visible .doc-pill-req {
+.product-static-panel .product-fit-list li.doc-file :is(a, button):hover .doc-pill-req,
+.product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible .doc-pill-req {
   background: #fff;
   color: var(--accent);
   border-color: #fff;
@@ -7517,6 +7557,37 @@ body.product-detail-page main > section.product-static-section {
 .ind-proof-grid a {
   color: var(--accent);
   font-weight: 700;
+}
+.ind-scope-note {
+  margin-top: 24px;
+  padding: clamp(18px, 3vw, 26px);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+}
+.ind-scope-note h3 {
+  margin: 5px 0 14px;
+  color: var(--ink);
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+}
+.ind-scope-note dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+}
+.ind-scope-note dt {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.ind-scope-note dd {
+  margin: 5px 0 0;
+  color: var(--ink-soft);
+  font-size: .9rem;
+  line-height: 1.55;
 }
 .ind-proof-grid {
   display: grid;
@@ -7603,6 +7674,7 @@ body.product-detail-page main > section.product-static-section {
   }
 }
 @media (max-width: 620px) {
+  .ind-scope-note dl,
   .ind-proof-grid,
   .ind-hero-facts {
     grid-template-columns: 1fr;

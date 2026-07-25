@@ -82,12 +82,85 @@ function postNewsletterCapture(payload) {
   }).catch(() => {});
 }
 
-function wireDocumentRoomCapture() {
+function documentRequestReturnPath() {
+  let path = location.pathname.replace(/^\/+/, "");
+  if (!path) path = "index.html";
+  else if (path.endsWith("/")) path += "index.html";
+  else if (!/\.[a-z0-9]+$/i.test(path)) path += ".html";
+  return `${path}${location.search}${location.hash}`;
+}
+
+function documentRegistrationHref() {
+  const params = new URLSearchParams({
+    mode: "register",
+    return: documentRequestReturnPath(),
+  });
+  return `/account.html?${params}`;
+}
+
+function setDocumentRequestState(control, text, state = "") {
+  const label = control.querySelector("[data-document-request-label]");
+  if (label) label.textContent = text;
+  control.dataset.requestState = state;
+}
+
+function wireDocumentRoomCapture(authModule) {
   if (document.__masestDocumentCapture) return;
-  const docLinks = [...document.querySelectorAll("[data-document-download]")];
-  if (!docLinks.length) return;
+  const controls = [...document.querySelectorAll("[data-document-download], [data-document-request]")];
+  if (!controls.length) return;
   document.__masestDocumentCapture = true;
-  document.addEventListener("click", (event) => {
+  import(authModule).then(async ({ getToken }) => {
+    const registered = Boolean(await getToken().catch(() => null));
+    document.querySelectorAll("[data-document-request]").forEach((control) => {
+      setDocumentRequestState(control, registered ? "Request access" : "Register to request");
+    });
+  }).catch(() => {});
+  document.addEventListener("click", async (event) => {
+    const requestControl = event.target?.closest?.("[data-document-request]");
+    if (requestControl) {
+      event.preventDefault();
+      if (requestControl.disabled) return;
+      requestControl.disabled = true;
+      const documentId = requestControl.dataset.documentId || "";
+      const documentRevision = requestControl.dataset.documentRevision || "";
+      const docName = requestControl.dataset.documentName || requestControl.textContent || "Technical document";
+      try {
+        const { api, getToken } = await import(authModule);
+        if (!await getToken()) {
+          location.assign(documentRegistrationHref());
+          return;
+        }
+        const result = await api("/api/account/document-requests", {
+          method: "POST",
+          body: {
+            document_id: documentId,
+            document_revision: documentRevision,
+            requested_from: `${location.pathname}${location.search}`,
+          },
+        });
+        if (result.request?.status === "approved") {
+          const access = await api(`/api/account/document-requests?download=${encodeURIComponent(documentId)}`);
+          if (access.url) location.assign(access.url);
+          return;
+        }
+        setDocumentRequestState(requestControl, "Request pending", "pending");
+        try {
+          if (typeof window.mtrack === "function") window.mtrack("document_request", { document: docName });
+        } catch (err) { /* analytics is best-effort */ }
+      } catch (error) {
+        if (error?.status === 401) {
+          location.assign(documentRegistrationHref());
+          return;
+        }
+        setDocumentRequestState(requestControl,
+          error?.status === 409 ? "Document updated - refresh" : "Request failed - retry",
+          "error");
+      } finally {
+        requestControl.disabled = false;
+      }
+      return;
+    }
+
     const link = event.target?.closest?.("[data-document-download]");
     if (!link) return;
     const docName = link.dataset.documentName || link.getAttribute("aria-label") || link.textContent || "Document";
@@ -284,7 +357,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
-  import("/js/account-nav.js?v=20260724a").then((m) => m.initAccountNav && m.initAccountNav({ nav, root, authModule })).catch(() => {});
+  import("/js/account-nav.js?v=20260725f").then((m) => m.initAccountNav && m.initAccountNav({ nav, root, authModule })).catch(() => {});
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);
@@ -415,7 +488,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
       }
     });
   }
-  wireDocumentRoomCapture();
+  wireDocumentRoomCapture(authModule);
 
   // Load public config + first-party integrations once per page.
   if (!window.__masestIntegrations) {
@@ -424,7 +497,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
     const cfg = document.createElement("script");
     cfg.src = `${root}js/config.js?v=20260711b`;
     cfg.onload = () => {
-      ["integrations.js?v=20260711b", "customer-chat.js?v=20260724a"].forEach((src) => {
+      ["integrations.js?v=20260711b", "customer-chat.js?v=20260725f"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;

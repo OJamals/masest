@@ -12,7 +12,7 @@ import { renderIndustryRedirects } from './build-industry-pages.mjs';
 import { validatePublicDocumentReview } from './public-document-policy.mjs';
 
 const OUT = 'dist';
-const restrictedPublicPaths = validatePublicDocumentReview();
+const excludedPublicPaths = validatePublicDocumentReview();
 const siteImageManifest = JSON.parse(readFileSync('data/content/site-images.json', 'utf8'));
 const industryApplications = JSON.parse(readFileSync('data/industry-applications.json', 'utf8'));
 const siteImagePaths = (siteImageManifest.assets || []).map((asset) => asset.public_url);
@@ -49,7 +49,7 @@ let n = 0;
 let rewritten = 0;
 for (const f of files) {
   if (DENY.some((r) => r.test(f))) continue;
-  if (restrictedPublicPaths.has(f)) continue;
+  if (excludedPublicPaths.has(f)) continue;
   if (!existsSync(f)) continue;
   const dest = join(OUT, f);
   mkdirSync(dirname(dest), { recursive: true });

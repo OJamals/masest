@@ -454,7 +454,7 @@ test("proof image sets use stable media slots", async ({ page }) => {
       pagePath: "index.html",
       viewport: { width: 1440, height: 900 },
       selector: ".proof-grid .proof-card > figure",
-      expectedCount: 3,
+      countSelector: ".proof-grid .proof-card",
       expectedAspectRatio: 16 / 10,
       label: "home proof cards",
     },

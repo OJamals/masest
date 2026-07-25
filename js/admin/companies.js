@@ -3,9 +3,9 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260725c';
-import { captureDirty, restoreDirty } from './edits.js?v=20260725c';
-import { ORDER_STATUSES } from './orders.js?v=20260725c';
+import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260725f';
+import { captureDirty, restoreDirty } from './edits.js?v=20260725f';
+import { ORDER_STATUSES } from './orders.js?v=20260725f';
 
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
@@ -125,6 +125,84 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <div class="account-metric"><span>Users without business</span><b>${esc(metrics.companyless)}</b></div>
       <div class="account-metric"><span>Staff / elevated</span><b>${esc(metrics.staff)}</b></div>
     </div>`;
+  }
+
+  function documentRequestMessage(text, kind = '') {
+    const status = $('documentRequestStatus');
+    if (!status) return;
+    status.textContent = text;
+    status.dataset.state = kind;
+  }
+
+  function documentRequestCard(request) {
+    const document = request.technical_documents || {};
+    const pending = request.status === 'pending';
+    const reviewed = request.reviewed_at ? ` · reviewed ${date(request.reviewed_at)}` : '';
+    const source = request.requested_from
+      ? `<span><b>Requested from</b>${esc(request.requested_from)}</span>`
+      : '';
+    const claimStatus = String(document.claim_status || '').replaceAll('_', ' ');
+    const controls = pending
+      ? `<div class="admin-order-actions" data-capability-scope="content.review">
+          <select class="adm-select admin-input-sm" data-document-request-decision="${esc(request.id)}" aria-label="Decision for ${esc(document.title || request.document_id)}">
+            <option value="approved">Approve</option>
+            <option value="denied">Deny</option>
+          </select>
+          <input class="adm-input admin-input-md" data-document-request-note="${esc(request.id)}" maxlength="500" placeholder="Decision note (optional)" aria-label="Decision note">
+          <button class="btn btn-primary btn-sm" type="button" data-document-request-apply="${esc(request.id)}" data-capability="content.review">Apply decision</button>
+        </div>`
+      : `<p class="muted admin-inline-note">${request.decision_note ? esc(request.decision_note) : 'No decision note.'}${reviewed}</p>`;
+    return `<article class="admin-order-card document-request-card">
+      <div class="admin-order-head">
+        <div><span class="admin-kicker">${esc(String(document.document_type || '').toUpperCase())} · Rev ${esc(request.document_revision)}</span><h3>${esc(document.title || request.document_id)}</h3></div>
+        ${statusBadge(request.status)}
+      </div>
+      <div class="admin-order-meta">
+        <span><b>Requester</b>${esc(request.requester_email || request.requester_id)}</span>
+        <span><b>Requested</b>${esc(date(request.created_at))}</span>
+        ${claimStatus ? `<span><b>Claim review</b>${esc(claimStatus)}</span>` : ''}
+        ${source}
+      </div>
+      ${controls}
+    </article>`;
+  }
+
+  async function renderDocumentRequests({ append = false } = {}) {
+    const box = $('admDocumentRequests');
+    if (!box) return;
+    const loadId = (state.documentRequestLoadId || 0) + 1;
+    state.documentRequestLoadId = loadId;
+    if (!append) {
+      state.documentRequests = [];
+      state.documentRequestOffset = 0;
+      box.innerHTML = admSkeleton(4);
+    }
+    const status = $('documentRequestFilter')?.value || 'pending';
+    try {
+      const result = await api(`/api/admin/document-requests?status=${encodeURIComponent(status)}&limit=25&offset=${state.documentRequestOffset || 0}`);
+      if (loadId !== state.documentRequestLoadId) return;
+      state.documentRequests = append
+        ? [...(state.documentRequests || []), ...(result.requests || [])]
+        : (result.requests || []);
+      state.documentRequestOffset = state.documentRequests.length;
+      state.documentRequestHasMore = result.has_more === true;
+      box.innerHTML = state.documentRequests.length
+        ? `${state.documentRequests.map(documentRequestCard).join('')}${state.documentRequestHasMore ? '<button class="btn btn-ghost btn-sm" type="button" data-document-request-more>Load more</button>' : ''}`
+        : admEmpty('ph-file-text', 'No matching document requests', status === 'pending' ? 'New SDS and TDS requests will appear here.' : 'Choose another status.');
+      if (status === 'pending') {
+        const badge = $('acctDocumentRequestCount');
+        if (badge) {
+          badge.textContent = String(result.total || 0);
+          badge.hidden = !result.total;
+        }
+      }
+      state.loaded.add('documentRequests');
+      documentRequestMessage('');
+    } catch {
+      if (loadId !== state.documentRequestLoadId) return;
+      box.innerHTML = admEmpty('ph-warning-circle', 'Could not load document requests', 'Retry from the Accounts tab.');
+      documentRequestMessage('Document request queue unavailable.', 'err');
+    }
   }
 
   const ACCOUNT_FILTERS = [
@@ -692,6 +770,28 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     wireAllUsers();
     const toggle = $('acctToggle');
     if (toggle) delegate(toggle, 'click', '[data-acct-view]', (event, button) => showAcctView(button.dataset.acctView));
+    const documentRequests = $('admDocumentRequests');
+    $('documentRequestFilter')?.addEventListener('change', () => renderDocumentRequests());
+    if (documentRequests) {
+      delegate(documentRequests, 'click', '[data-document-request-more]', () => renderDocumentRequests({ append: true }));
+      delegate(documentRequests, 'click', '[data-document-request-apply]', async (event, button) => {
+        const id = button.dataset.documentRequestApply;
+        const decision = documentRequests.querySelector(`[data-document-request-decision="${CSS.escape(id)}"]`)?.value;
+        const note = documentRequests.querySelector(`[data-document-request-note="${CSS.escape(id)}"]`)?.value || '';
+        button.disabled = true;
+        try {
+          await api('/api/admin/document-requests', {
+            method: 'PATCH',
+            body: { id, status: decision, note },
+          });
+          documentRequestMessage(decision === 'approved' ? 'Document access approved.' : 'Document access denied.', 'ok');
+          await renderDocumentRequests();
+        } catch (err) {
+          documentRequestMessage(err.data?.error || 'Could not apply the decision. Retry.', 'err');
+          button.disabled = false;
+        }
+      });
+    }
     const box = $('admCompanies');
     if (!box) return;
     delegate(box, 'click', '[data-open-company]', (event, button) => openCompanyDetail(button.dataset.openCompany));
@@ -1129,11 +1229,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     document.querySelectorAll('[data-acct-panel]').forEach((panel) => { panel.hidden = panel.dataset.acctPanel !== view; });
     if (view === 'users') renderAllUsers({ refetch: !state.loaded.has('acctUsers') });
     if (view === 'companies') renderBusinessQueue({ refetch: !state.loaded.has('companies') });
+    if (view === 'document-requests') renderDocumentRequests();
   }
 
   async function renderCompanies({ append = false, refetch = true } = {}) {
     if (!state.acctView) state.acctView = 'users';
     if (state.acctView === 'companies') await renderBusinessQueue({ refetch, append });
+    else if (state.acctView === 'document-requests') await renderDocumentRequests({ append });
     else await renderAllUsers({ refetch });
   }
 

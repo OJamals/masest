@@ -129,7 +129,7 @@ function postPage(post, all) {
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260724a">
+<link rel="stylesheet" href="../css/style.css?v=20260725f">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css">
 <link rel="stylesheet" href="../css/blog.css">
@@ -173,7 +173,7 @@ function postPage(post, all) {
     </aside>
   </article>
 </main>
-<script type="module" src="../js/main.js?v=20260720a"></script>
+<script type="module" src="../js/main.js?v=20260725f"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
@@ -225,7 +225,7 @@ function indexPage(posts) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="alternate" type="application/rss+xml" title="MASEST VertKleen Blog" href="/blog/feed.xml">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260724a">
+<link rel="stylesheet" href="css/style.css?v=20260725f">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/blog.css">
@@ -276,7 +276,7 @@ ${cards}
     </div>
   </section>
 </main>
-<script type="module" src="js/main.js?v=20260720a"></script>
+<script type="module" src="js/main.js?v=20260725f"></script>
 <script type="module" src="js/blog-index.js"></script>
 <script src="js/track.js" defer></script>
 </body>

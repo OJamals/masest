@@ -9,9 +9,9 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css?v=20260711u">
-<link rel="stylesheet" href="css/style.css?v=20260724a">
+<link rel="stylesheet" href="css/style.css?v=20260725f">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
-<link rel="stylesheet" href="css/components.css?v=20260725c">
+<link rel="stylesheet" href="css/components.css?v=20260725f">
 <style>
   .adm-wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
   body .adm-hero { padding-bottom: 36px; }
@@ -791,18 +791,34 @@
 
       <section class="adm-panel" role="tabpanel" data-panel="companies">
         <div class="adm-card adm-overview-head adm-workspace-head">
-          <div><p class="adm-eyebrow">Customer operations</p><h2>Accounts &amp; approvals</h2><p class="muted">Manage customer access, business onboarding, roles, credit, and approval status.</p></div>
+          <div><p class="adm-eyebrow">Customer operations</p><h2>Accounts &amp; approvals</h2><p class="muted">Manage customer access, business onboarding, document requests, roles, credit, and approval status.</p></div>
           <div class="adm-overview-marker"><span>Primary task</span><b>Review approvals</b></div>
         </div>
         <div class="crm-tabs" id="acctToggle" role="group" aria-label="Accounts sections">
           <button class="btn btn-ghost btn-sm is-active" type="button" data-acct-view="users" aria-pressed="true">Users</button>
           <button class="btn btn-ghost btn-sm" type="button" data-acct-view="companies" aria-pressed="false">Businesses &amp; approvals</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-acct-view="document-requests" aria-pressed="false">SDS/TDS requests <span class="pill" id="acctDocumentRequestCount" hidden>0</span></button>
         </div>
         <div id="admAcctUsers" data-acct-panel="users"></div>
         <div data-acct-panel="companies" hidden>
           <input id="coSearch" name="account_search" class="adm-search" type="search" autocomplete="off" placeholder="Search accounts" aria-label="Search accounts">
           <div id="admCompanies" class="adm-table-wrap">Loading…</div>
           <div id="companyDetail" class="adm-card" hidden></div>
+        </div>
+        <div data-acct-panel="document-requests" hidden>
+          <div class="adm-card adm-workspace-card">
+            <div class="adm-panel-header">
+              <div><h2>Open SDS &amp; TDS requests</h2><p class="muted">Approve or deny registered-user access. Approval controls delivery only; it does not substantiate document claims.</p></div>
+                  <select id="documentRequestFilter" name="document_request_status" class="adm-select adm-select-sm" aria-label="Filter technical document requests">
+                <option value="pending">Open requests</option>
+                <option value="approved">Approved</option>
+                <option value="denied">Denied</option>
+                <option value="all">All requests</option>
+              </select>
+            </div>
+            <div id="admDocumentRequests" class="admin-order-list">Loading…</div>
+            <p id="documentRequestStatus" class="adm-status" role="status" aria-live="polite"></p>
+          </div>
         </div>
       </section>
 
@@ -981,6 +997,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260725c"></script>
+<script type="module" src="js/admin.js?v=20260725f"></script>
 </body>
 </html>

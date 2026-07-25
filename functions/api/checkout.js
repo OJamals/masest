@@ -11,8 +11,7 @@ import {
 } from '../_lib/checkout-session.js';
 import { ensureCompanyStripeCustomer } from '../_lib/stripe-customer.js';
 import { isMissingFunctionError } from '../_lib/credit.js';
-import { sdsAttachments } from '../_lib/sds-docs.js';
-import { orderItemsTableHtml, sdsNoteHtml } from '../_lib/order-email.js';
+import { orderItemsTableHtml, technicalDocumentRequestNoteHtml } from '../_lib/order-email.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 
@@ -37,20 +36,18 @@ async function sendNetOrderConfirmation({
     const currency = lines[0]?.currency || 'usd';
     const total = lines.reduce((s, l) => s + (Number(l.unit_price) || 0) * (Number(l.qty) || 0), 0);
     const ref = order?.id ? ` #${order.id}` : '';
-    const attachments = sdsAttachments(lines, appUrl);
     const bodyHtml = `<p style="margin:0 0 16px;color:#556;font-size:14px;line-height:1.5">Your order is placed on account. A QuickBooks invoice will follow under your NET terms; no payment is due now.</p>`
       + (purchaseOrderNumber
         ? `<p style="margin:0 0 16px;color:#556;font-size:14px"><b>Purchase order:</b> ${htmlEscape(purchaseOrderNumber)}</p>`
         : '')
       + orderItemsTableHtml(lines, { currency, subtotal: total, total })
-      + sdsNoteHtml(attachments.length);
+      + technicalDocumentRequestNoteHtml(appUrl);
     await sendEmail(env, {
       to: [toEmail],
       bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
       subject: `Your MASEST order${ref} is placed (NET terms)`,
       html: emailLayout({ heading: `Order placed${htmlEscape(ref)}`, bodyHtml, ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders` }),
       category: 'order',
-      attachments,
       idempotencyKey: order?.id ? `order-confirm:${order.id}` : null,
     });
   } catch {

@@ -202,25 +202,6 @@
       "seo": {}
     },
     {
-      "slug": "walmart-dc-crhd",
-      "title": "Simple Green replaced across Walmart DCs",
-      "href": "docs/walmart-dc-brochure.pdf",
-      "kind": "distribution",
-      "chips": [
-        "VertKleen CR HD",
-        "Displaced Simple Green"
-      ],
-      "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/walmart-dc-crhd.webp",
-      "result": "CR HD at about 50% active replaced Simple Green and Calci-Solve for heavy degreasing, saving an estimated $10k+ per year at one center. Crown and Plug Power supporting documents are available on request.",
-      "source": "Source: Walmart DSC program",
-      "eyebrow": "Distribution · Cold chain",
-      "image_h": 513,
-      "image_w": 708,
-      "image_alt": "Walmart distribution center CR HD degreasing proof",
-      "sort_order": 3,
-      "seo": {}
-    },
-    {
       "slug": "yellowfin-torque-wash",
       "title": "43-foot Yellowfin washed and waxed dockside",
       "kind": "marine",

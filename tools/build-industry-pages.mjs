@@ -2,13 +2,19 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { PRODUCTS } from "../js/main/catalog-data.js";
+import {
+  documentAllowedOnSurface,
+  documentClaimLabel,
+  documentDistribution,
+  documentSurfaceMode,
+} from "./public-document-policy.mjs";
 
 const root = new URL("../", import.meta.url);
 const registryPath = new URL("data/industry-applications.json", root);
 const reviewPath = new URL("data/public-document-review.json", root);
 const documentReview = JSON.parse(readFileSync(reviewPath, "utf8"));
 const documentRevision = documentReview.document_control.revision;
-const styleVersion = "20260724a";
+const styleVersion = "20260725f";
 const industrySlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const escapeHtml = (value) => String(value)
@@ -109,7 +115,12 @@ function resolveDocuments(industry, reviewByPath) {
   for (const productId of industry.document_products) {
     const product = PRODUCTS[productId];
     if (!product) throw new Error(`${industry.slug}: unknown document product ${productId}`);
-    const files = (product.docs || []).filter((document) => document?.file);
+    const files = (product.docs || []).filter((document) => {
+      if (!document?.file) return false;
+      const review = reviewByPath.get(document.file);
+      if (!review) throw new Error(`${industry.slug}: unreviewed document ${document.file}`);
+      return documentAllowedOnSurface(review, "industry");
+    });
     files.sort((left, right) => {
       const rank = (document) => {
         const index = priorities.findIndex((pattern) => pattern.test(document.label));
@@ -130,6 +141,9 @@ function resolveDocuments(industry, reviewByPath) {
   }
 
   for (const evidence of industry.evidence_files || []) {
+    const review = reviewByPath.get(evidence.file);
+    if (!review) throw new Error(`${industry.slug}: unreviewed document ${evidence.file}`);
+    if (!documentAllowedOnSurface(review, "industry")) continue;
     if (seen.has(evidence.file)) continue;
     selected.push(evidence);
     seen.add(evidence.file);
@@ -138,8 +152,8 @@ function resolveDocuments(industry, reviewByPath) {
   for (const document of selected) {
     const review = reviewByPath.get(document.file);
     if (!review) throw new Error(`${industry.slug}: unreviewed document ${document.file}`);
-    if (review.status === "restricted") {
-      throw new Error(`${industry.slug}: restricted document ${document.file}`);
+    if (!documentAllowedOnSurface(review, "industry")) {
+      throw new Error(`${industry.slug}: unavailable industry document ${document.file}`);
     }
     if (!existsSync(new URL(document.file, root))) {
       throw new Error(`${industry.slug}: missing document ${document.file}`);
@@ -167,19 +181,35 @@ function renderApplications(industry, allIndustries, documents) {
     ? allIndustries.find((candidate) => candidate.slug === industry.parent)
     : null;
   const related = parent
-    ? `\n        <p class="ind-related">Broader program: <a href="./${escapeHtml(parent.slug)}">${escapeHtml(parent.label)}</a></p>`
+    ? `
+      <aside class="ind-scope-note" data-supplemental-scope>
+        <span class="eyebrow">Focused buyer route</span>
+        <h3>${escapeHtml(industry.buyer)}</h3>
+        <dl>
+          <div><dt>Distinct scope</dt><dd>${escapeHtml(industry.distinct_scope)}</dd></div>
+          <div><dt>Search intent</dt><dd>${escapeHtml(industry.search_intent)}</dd></div>
+        </dl>
+        <p class="ind-related">Broader program: <a href="./${escapeHtml(parent.slug)}">${escapeHtml(parent.label)}</a></p>
+      </aside>`
     : "";
-  const documentLinks = documents.map((document) => (
-    `<a class="doc-chip" href="../${escapeHtml(document.file)}" data-document-id="${escapeHtml(document.control.document_id)}" data-document-revision="${escapeHtml(documentRevision)}" data-document-skus="${escapeHtml(document.control.skus.join(" "))}"><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-control">${escapeHtml(document.control.document_id)} · Rev ${escapeHtml(documentRevision)} · Distribution: Current · Claims: ${document.control.status === "claim_review_required" ? "Review required" : "No automated flags"} · SKUs: ${escapeHtml(document.control.skus.join(", "))}</span></a>`
-  )).join("\n            ");
+  const documentLinks = documents.map((document) => {
+    const control = document.control;
+    const distribution = documentDistribution(control) === "request_only" ? "Request only" : "Current";
+    const metadata = `${control.document_id} · Rev ${documentRevision} · Distribution: ${distribution} · Claims: ${documentClaimLabel(control.status)} · SKUs: ${control.skus.join(", ")}`;
+    const common = `data-document-id="${escapeHtml(control.document_id)}" data-document-revision="${escapeHtml(documentRevision)}" data-document-skus="${escapeHtml(control.skus.join(" "))}" data-document-name="${escapeHtml(document.label)}"`;
+    if (documentSurfaceMode(control, "industry") === "request") {
+      return `<button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Register to request ${escapeHtml(document.label)}"><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-control">${escapeHtml(metadata)}</span><span class="doc-request-state" data-document-request-label>Register to request</span></button>`;
+    }
+    return `<a class="doc-chip" href="../${escapeHtml(document.file)}" ${common} data-document-download target="_blank" rel="noopener" download><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-control">${escapeHtml(metadata)}</span></a>`;
+  }).join("\n            ");
 
   return `<section class="section section-slim ind-applications" id="applications-and-proof" data-industry-applications-proof>
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">Applications and proof</span>
+        <span class="eyebrow">Applications and verification</span>
         <h2 class="headline">${escapeHtml(industry.lead_task)}</h2>
-        <p class="subhead">Task controls first. Product choice follows the asset, deposit, materials, operating window, and discharge route.</p>${related}
-      </div>
+        <p class="subhead">Task controls first. Product choice follows the asset, deposit, materials, operating window, and discharge route.</p>
+      </div>${related}
       <dl class="ind-proof-grid">
         <div><dt>Task</dt><dd>${escapeHtml(industry.lead_task)}</dd></div>
         <div><dt>Asset / substrate</dt><dd>${escapeHtml(industry.asset)}</dd></div>
@@ -192,16 +222,16 @@ function renderApplications(industry, allIndustries, documents) {
       </dl>
       <div class="ind-proof-docs">
         <div>
-          <span class="eyebrow">Controlled downloads</span>
-          <h3>Review the current safety and application file.</h3>
-          <p>Confirm revision, product identity, material compatibility, and application scope before site approval.</p>
+          <span class="eyebrow">Controlled technical files</span>
+          <h3>Request SDS/TDS access or open the current public application file.</h3>
+          <p>Registered users can request safety and technical sheets for staff review. Confirm revision, product identity, material compatibility, and application scope before site approval.</p>
         </div>
         <div class="doc-lib-links">
           ${documentLinks}
         </div>
       </div>
       <aside class="ind-evidence-boundary" aria-label="Evidence boundary">
-        <strong>Field-proof standard</strong>
+        <strong>Field evidence standard</strong>
         <p>No field result is presented as proof unless permission, date, asset/substrate, soil, product and concentration, procedure, before/after endpoint, result, and limitations are recorded. If no matching record exists, request a controlled trial.</p>
         <a class="btn btn-secondary" href="${contactHref(industry, "audit")}">Request compatibility review</a>
       </aside>

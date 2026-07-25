@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260720a";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260725f";
 import { smoothPref } from "./engagement.js";
 
 const IMAGE_DIMS = {
@@ -18,9 +18,7 @@ function imageDimsAttr(src) {
 export function productCard(id, heroCard = false, eager = false) {
   const p = PRODUCTS[id];
   const catalog = PRODUCT_CATALOG_COPY[id] || {};
- const badge = p.hmis === "0-0-0"
- ? '<span class="hmis-badge">HMIS 0-0-0</span>'
- : '<span class="hmis-badge note">LOW HAZARD</span>';
+ const badge = '<span class="hmis-badge note">REVIEW SDS</span>';
   const mediaLoading = heroCard || eager ? "eager" : "lazy";
   const mediaPriority = heroCard || eager ? ' fetchpriority="high"' : "";
   const media = p.image
@@ -404,9 +402,7 @@ export function catalogCard(id, eager = false) {
   const p = PRODUCTS[id];
   if (!p) return "";
   const copy = PRODUCT_CATALOG_COPY[id] || {};
-  const badge = p.hmis === "0-0-0"
-    ? '<span class="hmis-badge">HMIS 0-0-0</span>'
-    : '<span class="hmis-badge note">LOW HAZARD</span>';
+  const badge = '<span class="hmis-badge note">REVIEW SDS</span>';
   const mediaInfo = commerceMediaFor(id);
   const group = CATALOG_GROUPS.find((g) => g.ids.includes(id));
   const media = mediaInfo.src

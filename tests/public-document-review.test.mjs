@@ -14,7 +14,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { validatePublicDocumentReview } from "../tools/public-document-policy.mjs";
+import {
+  documentDistribution,
+  validatePublicDocumentReview,
+} from "../tools/public-document-policy.mjs";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
@@ -43,8 +46,11 @@ test("public PDF review ledger covers the exact current document bytes", () => {
   const onDisk = filesUnder("docs/").filter((path) => path.endsWith(".pdf")).sort();
   const recorded = documents.map((document) => document.path).sort();
 
-  assert.equal(review.reviewed_on, "2026-07-24");
+  assert.equal(review.reviewed_on, "2026-07-25");
   assert.match(review.scope || "", /claim/i);
+  assert.match(review.claim_disposition?.review_scope || "", /not technical or legal substantiation/i);
+  assert.match(review.claim_disposition?.reference_only_rule || "", /cannot substantiate public copy/i);
+  assert.match(review.claim_disposition?.resource_only_rule || "", /exclude from product and industry pages/i);
   assert.equal(control.owner, "MASEST Consulting LLC");
   assert.match(control.revision || "", /^\d+\.\d+$/);
   assert.match(control.effective_date || "", /^\d{4}-\d{2}-\d{2}$/);
@@ -65,22 +71,62 @@ test("public PDF review ledger covers the exact current document bytes", () => {
     assert.ok(Array.isArray(document.skus) && document.skus.length, `${document.path} needs at least one SKU`);
     assert.ok(document.source?.trim(), `${document.path} needs source provenance`);
     assert.ok(
-      ["no_automated_flags", "claim_review_required", "restricted"].includes(document.status),
+      ["no_automated_flags", "reference_only", "resource_only", "restricted"].includes(document.status),
       `${document.path} has an invalid review status`,
     );
     assert.ok(Array.isArray(document.flags), `${document.path} needs a flags array`);
+    if (["reference_only", "resource_only"].includes(document.status)) {
+      assert.ok(document.flags.length, `${document.path}: bounded status needs flagged claims`);
+    }
     assert.equal(
       document.superseded_status,
       document.status === "restricted" ? "restricted" : "current",
       `${document.path} has an invalid superseded status`,
     );
+    const technicalSheet = /-(?:sds|tds)\.pdf$/i.test(document.path);
+    assert.equal(
+      documentDistribution(document),
+      technicalSheet ? "request_only" : document.status === "restricted" ? "internal" : "public",
+      `${document.path} has a distribution inconsistent with its document class`,
+    );
   }
+  assert.equal(
+    documents.filter((document) => document.status === "claim_review_required").length,
+    0,
+    "claim review queue must have an explicit disposition",
+  );
+  assert.deepEqual(
+    Object.fromEntries(["no_automated_flags", "reference_only", "resource_only", "restricted"]
+      .map((status) => [status, documents.filter((document) => document.status === status).length])),
+    { no_automated_flags: 23, reference_only: 3, resource_only: 2, restricted: 18 },
+  );
+  assert.deepEqual(
+    Object.fromEntries(["public", "request_only", "internal"]
+      .map((distribution) => [
+        distribution,
+        documents.filter((document) => documentDistribution(document) === distribution).length,
+      ])),
+    { public: 16, request_only: 22, internal: 8 },
+  );
+});
+
+test("technical-document sync uploads and activates current files before retiring stale rows", () => {
+  const source = read("tools/public-document-policy.mjs");
+  const uploadAt = source.indexOf('.from("technical-documents")');
+  const activateAt = source.indexOf('.from("technical_documents")\n    .upsert');
+  const retireAt = source.indexOf(".update({ active: false");
+
+  assert.ok(uploadAt > 0, "private-bucket upload must exist");
+  assert.ok(activateAt > uploadAt, "catalog activation must follow successful uploads");
+  assert.ok(retireAt > activateAt, "stale rows must retire only after current catalog activation");
+  assert.match(source, /storagePath: `\$\{documentType\(document\)\}\/\$\{document\.document_id\}\/\$\{revision\}-\$\{document\.sha256\}\.pdf`/,
+    "storage objects must be immutable per document revision and bytes");
 });
 
 test("customer-facing PDFs embed the approved document-control record", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const control = review.document_control;
-  const publicDocuments = review.documents.filter((document) => document.status !== "restricted");
+  const publicDocuments = review.documents.filter((document) => documentDistribution(document) === "public");
 
   for (const document of publicDocuments) {
     const bytes = readFileSync(new URL(document.path, root)).toString("latin1");
@@ -100,30 +146,38 @@ test("customer-facing PDFs embed the approved document-control record", () => {
 test("public document room indexes every current PDF by ID and revision", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const resources = read("resources.html");
-  const publicDocuments = review.documents.filter((entry) => entry.status !== "restricted");
+  const listedDocuments = review.documents.filter((entry) => documentDistribution(entry) !== "internal");
 
   assert.match(resources, new RegExp(review.document_control.owner));
   assert.match(resources, new RegExp(review.document_control.revision.replace(".", "\\.")));
   assert.match(resources, /July 24, 2026/);
 
-  for (const document of publicDocuments) {
+  for (const document of listedDocuments) {
     const path = document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const id = String(document.document_id || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const skus = document.skus.join(" ");
-    const link = new RegExp(
-      `<a[^>]+href="${path}"[^>]+data-document-id="${id}"[^>]+data-document-revision="${review.document_control.revision}"[^>]+data-document-skus="${skus}"`,
-    );
-    assert.match(resources, link, `${document.path} needs a controlled document-room entry`);
+    if (documentDistribution(document) === "request_only") {
+      const request = new RegExp(
+        `<button[^>]+data-document-request[^>]+data-document-id="${id}"[^>]+data-document-revision="${review.document_control.revision}"[^>]+data-document-skus="${skus}"`,
+      );
+      assert.match(resources, request, `${document.path} needs a controlled request entry`);
+      assert.doesNotMatch(resources, new RegExp(`href="${path}"`), `${document.path} must not expose a public URL`);
+    } else {
+      const link = new RegExp(
+        `<a[^>]+href="${path}"[^>]+data-document-id="${id}"[^>]+data-document-revision="${review.document_control.revision}"[^>]+data-document-skus="${skus}"`,
+      );
+      assert.match(resources, link, `${document.path} needs a controlled document-room entry`);
+    }
     assert.match(
       resources,
-      new RegExp(`${id}[^<]*· Rev ${review.document_control.revision.replace(".", "\\.")}[^<]*· Distribution: Current[^<]*· Claims: (?:Review required|No automated flags)`),
+      new RegExp(`${id}[^<]*· Rev ${review.document_control.revision.replace(".", "\\.")}[^<]*· Distribution: (?:Current|Request only)[^<]*· Claims: (?:Reference only - flagged claims unsubstantiated|Document room only - not proof|No automated flags|Restricted - named approval required)`),
       `${document.path} needs separate distribution and claim-review status`,
     );
   }
 
   const indexedIds = [...resources.matchAll(/data-document-id="(MAS-[A-Z0-9-]+)"/g)]
     .map((match) => match[1]);
-  assert.equal(indexedIds.length, publicDocuments.length, "document room must index each current PDF once");
+  assert.equal(indexedIds.length, listedDocuments.length, "document room must index each available PDF once");
   assert.equal(new Set(indexedIds).size, indexedIds.length, "document room must not duplicate document IDs");
 });
 
@@ -142,24 +196,64 @@ test("generated product and industry PDF links expose visible document control",
     for (const link of pdfLinks) {
       const path = link.match(/href="\.\.\/(docs\/[^"]+\.pdf)"/)?.[1];
       const document = reviewByPath.get(path);
-      assert.ok(document && document.status !== "restricted", `${page} links unavailable document ${path}`);
+      assert.ok(
+        document && documentDistribution(document) === "public",
+        `${page} links unavailable document ${path}`,
+      );
       assert.match(link, new RegExp(`data-document-id="${document.document_id}"`), `${page} PDF link needs its exact document ID`);
       assert.match(link, new RegExp(`data-document-revision="${review.document_control.revision.replace(".", "\\.")}"`), `${page} PDF link needs the current revision`);
       assert.match(link, /class="doc-control"/, `${page} PDF link needs visible document control`);
       assert.match(link, /Distribution: Current/, `${page} PDF link needs distribution status`);
-      assert.match(link, /Claims: (?:Review required|No automated flags)/, `${page} PDF link needs claim-review status`);
+      assert.match(link, /Claims: (?:Reference only - flagged claims unsubstantiated|No automated flags)/, `${page} PDF link needs claim-review status`);
+    }
+    for (const request of html.matchAll(/<button\b[^>]*data-document-request[^>]*>[\s\S]*?<\/button>/g)) {
+      const id = request[0].match(/data-document-id="([^"]+)"/)?.[1];
+      const document = review.documents.find((entry) => entry.document_id === id);
+      assert.equal(document && documentDistribution(document), "request_only", `${page} requests unavailable document ${id}`);
+      assert.doesNotMatch(request[0], /href=|docs\/|\.pdf/i, `${page} request control leaks a file path`);
     }
   }
 });
 
-test("retired restricted proof sources cannot re-enter public content or the Pages build", () => {
+test("restricted claim sources cannot re-enter public content or the Pages build", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
+  const resourceOnly = review.documents
+    .filter((document) => document.status === "resource_only")
+    .map((document) => document.path)
+    .sort();
   const restricted = review.documents
     .filter((document) => document.status === "restricted")
     .map((document) => document.path)
     .sort();
+  const requestOnly = review.documents
+    .filter((document) => documentDistribution(document) === "request_only")
+    .map((document) => document.path)
+    .sort();
 
-  assert.deepEqual(restricted, []);
+  assert.deepEqual(restricted, [
+    "docs/sds/vertkleen-cr-label.pdf",
+    "docs/sds/vertkleen-cr-tds.pdf",
+    "docs/sds/vertkleen-crhd-tds.pdf",
+    "docs/sds/vertkleen-crs-label.pdf",
+    "docs/sds/vertkleen-descaler-tds.pdf",
+    "docs/sds/vertkleen-hcr-descaler-userguide.pdf",
+    "docs/sds/vertkleen-hcr-label.pdf",
+    "docs/sds/vertkleen-hcr-tds.pdf",
+    "docs/sds/vertkleen-lam3-tds.pdf",
+    "docs/sds/vertkleen-multiwash-label.pdf",
+    "docs/sds/vertkleen-multiwash-tds.pdf",
+    "docs/sds/vertkleen-neutral-tds.pdf",
+    "docs/sds/vertkleen-purgo-label.pdf",
+    "docs/sds/vertkleen-sar-label.pdf",
+    "docs/sds/vertkleen-sar-tds.pdf",
+    "docs/sds/vertkleen-torque-tds.pdf",
+    "docs/sds/watersafe60-cr-nsf60-user-guide.pdf",
+    "docs/sds/watersafe60-tds.pdf",
+  ]);
+  assert.deepEqual(resourceOnly, [
+    "docs/sds/vertkleen-cooling-tower-brochure.pdf",
+    "docs/walmart-dc-brochure.pdf",
+  ]);
 
   const retiredPaths = [
     "docs/trinidad-tank-cleaning-test.pdf",
@@ -184,7 +278,21 @@ test("retired restricted proof sources cannot re-enter public content or the Pag
     "data/content/proof.json",
     "data/content/site-images.json",
     "supabase/seed-proof-cards.sql",
+    ...filesUnder("products/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("industries/").filter((path) => path.endsWith(".html")),
   ].map((path) => [path, read(path)]);
+  for (const path of restricted) {
+    for (const [source, content] of publicSources) {
+      assert.doesNotMatch(content, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${source} exposes ${path}`);
+    }
+  }
+  const proofSources = publicSources.filter(([source]) => source !== "resources.html");
+  for (const path of resourceOnly) {
+    assert.match(read("resources.html"), new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    for (const [source, content] of proofSources) {
+      assert.doesNotMatch(content, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${source} exposes ${path}`);
+    }
+  }
 
   const retiredMarkers = [
     ...retiredPaths,
@@ -210,6 +318,15 @@ test("retired restricted proof sources cannot re-enter public content or the Pag
     });
     for (const path of retiredPaths) {
       assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must not publish`);
+    }
+    for (const path of restricted) {
+      assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must not publish`);
+    }
+    for (const path of requestOnly) {
+      assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must remain request-only`);
+    }
+    for (const path of resourceOnly) {
+      assert.equal(existsSync(new URL(`dist/${path}`, root)), true, `${path} must remain in document room`);
     }
     assert.equal(
       existsSync(new URL("dist/data/public-document-review.json", root)),
@@ -305,6 +422,6 @@ test("release build regenerates controlled pages and busts the shared stylesheet
   for (const page of pages) {
     const html = read(page);
     if (!/css\/style\.css\?v=/.test(html)) continue;
-    assert.match(html, /css\/style\.css\?v=20260724a/, `${page} needs the current stylesheet cache key`);
+    assert.match(html, /css\/style\.css\?v=20260725f/, `${page} needs the current stylesheet cache key`);
   }
 });

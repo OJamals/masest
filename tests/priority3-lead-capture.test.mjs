@@ -74,7 +74,7 @@ test("document room keeps downloads instant while offering revision notification
 });
 
 test("document downloads are logged with the document name", () => {
-  assert.match(chrome, /wireDocumentRoomCapture\(\)/, "shared chrome should wire document capture");
+  assert.match(chrome, /wireDocumentRoomCapture\(authModule\)/, "shared chrome should wire document capture");
   assert.match(chrome, /data-document-download/);
   assert.match(chrome, /mtrack\(["']document_download["'],\s*\{/);
   assert.match(chrome, /document:\s*docName/);

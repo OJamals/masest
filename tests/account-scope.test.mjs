@@ -20,7 +20,7 @@ const ACCOUNT_ROUTES = readdirSync(ACCOUNT_DIR).filter((f) => f.endsWith(".js"))
 // tenant key is the email — taken from user.email, never from client input. The
 // pattern below matches exactly that shape (`escapeLike(email)` where email is the
 // auth-derived local) so a route filtering by a client-supplied email still fails.
-const SCOPE_RE = /requireCompany\(|companyForUser\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role|\.ilike\(\s*'email'\s*,\s*escapeLike\(email\)\s*\)/;
+const SCOPE_RE = /requireCompany\(|companyForUser\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role|\.ilike\(\s*'email'\s*,\s*escapeLike\(email\)\s*\)|repository\.(?:listForUser|findRequest)\(\s*user\.id/;
 const ACCOUNT_ERASURE_IMPORT_RE = /import\s+\{\s*deleteAccountUser\s*\}\s+from\s+['"][^'"]*_lib\/account-erasure\.js['"]/;
 const ACCOUNT_ERASURE_CALL_RE = /await\s+deleteAccountUser\(\s*sb\s*,\s*user\.id\s*\)/;
 
@@ -78,7 +78,9 @@ test("account deletion passes only the authenticated user id to the erasure help
 test("auth guard precedes any DB access inside the handler", () => {
   for (const name of ACCOUNT_ROUTES) {
     const src = read(name);
-    const handlerMatch = src.match(/export\s+(?:async\s+)?function\s+onRequest\w*/);
+    const handlerMatch = src.match(
+      /export\s+(?:async\s+)?function\s+(?:onRequest\w*|handleAccountDocumentRequests)/,
+    );
     assert.ok(handlerMatch, `account/${name} must export an onRequest* handler`);
     const handler = src.slice(handlerMatch.index);
 

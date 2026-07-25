@@ -44,7 +44,7 @@
     },
     {
       "slug": "education",
-      "title": "Education Facilities",
+      "title": "Education",
       "href": "industries/education",
       "icon": "ph-graduation-cap",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/education.webp",
@@ -72,7 +72,7 @@
     },
     {
       "slug": "golf-courses",
-      "title": "Golf Courses & Sports Facilities",
+      "title": "Golf Courses",
       "href": "industries/golf-courses",
       "icon": "ph-flag",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/golf-courses.webp",
@@ -100,7 +100,7 @@
     },
     {
       "slug": "hotels-property-management",
-      "title": "Hotels, Resorts & Property Management",
+      "title": "Hotels / Property Management",
       "href": "industries/hotels-property-management",
       "icon": "ph-buildings",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/hotels-property-management.webp",
@@ -184,7 +184,7 @@
     },
     {
       "slug": "oil-gas",
-      "title": "Oil, Gas & Process Plants",
+      "title": "Oil & Gas",
       "href": "industries/oil-gas",
       "icon": "ph-gas-can",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/oil-gas.webp",
@@ -212,7 +212,7 @@
     },
     {
       "slug": "solar-panel-cleaning",
-      "title": "Solar Farms & Panel Cleaning",
+      "title": "Solar / Panel Cleaning",
       "href": "industries/solar-panel-cleaning",
       "icon": "ph-sun",
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/industries/samples/solar-panel-cleaning.webp",

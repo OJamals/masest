@@ -407,14 +407,14 @@ test("static product detail renders specs uses and docs without commerce API", a
     try {
       await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen CIP HCR"));
-      await page.waitForFunction(() => document.querySelector("#pSpecs")?.textContent.includes("HMIS 0-0-0"));
+      await page.waitForFunction(() => document.querySelector("#pSpecs")?.textContent.includes("Current SDS"));
       const content = await page.evaluate(() => ({
         specs: document.querySelector("#pSpecs")?.textContent || "",
         uses: document.querySelector("#pUses")?.textContent || "",
         docs: document.querySelector("#pDocs")?.textContent || "",
         mediaHidden: document.querySelector("#pMediaSection")?.hasAttribute("hidden")
       }));
-      assert.match(content.specs, /SynTech|SYNTEC|Synthetic acid/i);
+      assert.match(content.specs, /Current SDS.*Controlled acid step/i);
       assert.match(content.uses, /Beer-stone|brewery CIP|heat-exchanger/i);
       assert.match(content.docs, /Safety Data Sheet/);
       assert.equal(content.mediaHidden, false, "field photos section should render from static product data");

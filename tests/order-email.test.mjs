@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { orderItemsTableHtml, sdsNoteHtml, money } from '../functions/_lib/order-email.js';
+import { money, orderItemsTableHtml, technicalDocumentRequestNoteHtml } from '../functions/_lib/order-email.js';
 
 test('money formats currency uppercase with 2 decimals', () => {
   assert.equal(money(34.6, 'usd'), 'USD 34.60');
@@ -32,11 +32,9 @@ test('orderItemsTableHtml omits totals rows that are not provided', () => {
   assert.ok(!/Tax/.test(withTotals), 'tax omitted when null (NET orders)');
 });
 
-test('sdsNoteHtml is empty for 0, singular for 1, plural for many', () => {
-  assert.equal(sdsNoteHtml(0), '');
-  assert.equal(sdsNoteHtml(null), '');
-  assert.match(sdsNoteHtml(1), /Safety Data Sheet is attached/);
-  assert.match(sdsNoteHtml(1), /the product you ordered/);
-  assert.match(sdsNoteHtml(3), /Safety Data Sheets are attached/);
-  assert.match(sdsNoteHtml(3), /the products you ordered/);
+test('order emails route SDS and TDS through registered requests', () => {
+  const html = technicalDocumentRequestNoteHtml('https://masest.co/');
+  assert.match(html, /SDS and TDS files are request-only/);
+  assert.match(html, /href="https:\/\/masest\.co\/resources"/);
+  assert.match(html, /Register or sign in to request access/);
 });

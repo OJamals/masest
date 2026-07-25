@@ -13,6 +13,7 @@
     "preseo-inject": "node tools/build-reviews.mjs",
     "seo-inject": "node tools/seo-inject.mjs",
     "verify:document-sources": "node tools/public-document-policy.mjs",
+    "sync:documents": "node tools/public-document-policy.mjs --sync",
     "publish:content": "node tools/publish-content.mjs",
     "publish:blog": "node tools/publish-content.mjs && node tools/build-blog.mjs",
     "test": "node --test --test-concurrency=1 --test-timeout=120000 tests/*.test.mjs",

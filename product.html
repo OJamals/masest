@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260724a">
+<link rel="stylesheet" href="css/style.css?v=20260725f">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -162,7 +162,7 @@
 </section>
 </main>
 
-<script type="module" src="js/main.js?v=20260720a"></script>
+<script type="module" src="js/main.js?v=20260725f"></script>
 <script type="module">
   const { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal } = window.MASESTMain;
   const { QUOTE_FIRST_IDS } = window.MASESTMain;
@@ -591,6 +591,10 @@ document.addEventListener("DOMContentLoaded", () => {
  document.getElementById("pDocs").innerHTML = p.docs.map(d => {
       const label = (d && typeof d === "object") ? d.label : d;
       const file = (d && typeof d === "object" && d.file) ? d.file : null;
+      if (file && /-(?:sds|tds)\.pdf$/i.test(file)) {
+        return `<div class="doc-row"><div><b>${label}</b><span>Registered-user request</span></div>
+       <a class="btn btn-ghost btn-sm" href="resources" aria-label="Request ${label} for ${p.name}">Request access</a></div>`;
+      }
       if (file) {
         return `<div class="doc-row"><div><b>${label}</b><span>Direct download (PDF)</span></div>
        <a class="btn btn-ghost btn-sm" href="${file}" target="_blank" rel="noopener" download aria-label="Download ${label} for ${p.name}">Download</a></div>`;

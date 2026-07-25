@@ -7,11 +7,47 @@ import { fileURLToPath } from "node:url";
 const REVIEW_PATH = "data/public-document-review.json";
 const VALID_STATUSES = new Set([
   "no_automated_flags",
-  "claim_review_required",
+  "reference_only",
+  "resource_only",
   "restricted",
 ]);
 const DOCUMENT_ID_PATTERN = /^MAS-[A-Z0-9-]+$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+
+export function documentClaimLabel(status) {
+  if (status === "no_automated_flags") return "No automated flags";
+  if (status === "reference_only") return "Reference only - flagged claims unsubstantiated";
+  if (status === "resource_only") return "Document room only - not proof";
+  if (status === "restricted") return "Restricted - named approval required";
+  throw new Error(`Unknown document claim status: ${status}`);
+}
+
+export function documentType(document) {
+  const path = String(document?.path || "");
+  if (/-sds\.pdf$/i.test(path)) return "sds";
+  if (/-tds\.pdf$/i.test(path)) return "tds";
+  return "other";
+}
+
+export function documentDistribution(document) {
+  if (["sds", "tds"].includes(documentType(document))) return "request_only";
+  return document?.status === "restricted" ? "internal" : "public";
+}
+
+export function documentSurfaceMode(document, surface) {
+  if (!["resource", "product", "industry"].includes(surface)) {
+    throw new Error(`Unknown document surface: ${surface}`);
+  }
+  const distribution = documentDistribution(document);
+  if (distribution === "internal") return null;
+  if (distribution === "request_only") return "request";
+  if (document?.status === "resource_only" && surface !== "resource") return null;
+  return "download";
+}
+
+export function documentAllowedOnSurface(document, surface) {
+  return documentSurfaceMode(document, surface) !== null;
+}
 
 function pdfPaths(root, dir = join(root, "docs"), paths = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -39,7 +75,7 @@ export function validatePublicDocumentReview(
 
   const recorded = new Set();
   const documentIds = new Set();
-  const restricted = new Set();
+  const excludedPublicPaths = new Set();
   for (const document of review.documents) {
     const path = String(document?.path || "");
     if (!/^docs\/(?!.*(?:^|\/)\.\.(?:\/|$)).+\.pdf$/i.test(path) || path.includes("\\")) {
@@ -56,6 +92,9 @@ export function validatePublicDocumentReview(
     }
     if (!Array.isArray(document.flags)) {
       throw new Error(`${REVIEW_PATH}: flags must be an array for ${path}`);
+    }
+    if (["reference_only", "resource_only"].includes(document.status) && document.flags.length === 0) {
+      throw new Error(`${REVIEW_PATH}: bounded document needs flagged claims for ${path}`);
     }
 
     const actualHash = fileSha256(join(root, path));
@@ -93,7 +132,7 @@ export function validatePublicDocumentReview(
     }
     recorded.add(path);
     documentIds.add(document.document_id);
-    if (document.status === "restricted") restricted.add(path);
+    if (documentDistribution(document) !== "public") excludedPublicPaths.add(path);
   }
 
   const onDisk = pdfPaths(root).sort();
@@ -112,9 +151,26 @@ export function validatePublicDocumentReview(
   ) {
     throw new Error(`${REVIEW_PATH}: incomplete document-control release`);
   }
+  const disposition = review.claim_disposition || {};
+  if (
+    !/not technical or legal substantiation/i.test(disposition.review_scope || "")
+    || !/cannot substantiate public copy/i.test(disposition.reference_only_rule || "")
+    || !/exclude from product and industry pages/i.test(disposition.resource_only_rule || "")
+    || !/exclude from public pages and deployment/i.test(disposition.restricted_rule || "")
+  ) {
+    throw new Error(`${REVIEW_PATH}: incomplete claim disposition`);
+  }
+  const distribution = review.distribution_policy || {};
+  if (
+    !/non-restricted documents other than SDS and TDS/i.test(distribution.public_rule || "")
+    || !/registered-user request and staff approval/i.test(distribution.request_only_rule || "")
+    || !/remain internal and unavailable by request/i.test(distribution.internal_rule || "")
+  ) {
+    throw new Error(`${REVIEW_PATH}: incomplete distribution policy`);
+  }
 
   for (const document of review.documents) {
-    if (document.status === "restricted") continue;
+    if (documentDistribution(document) !== "public") continue;
     const marker = [
       "% MASEST-CONTROL",
       `ID=${document.document_id}`,
@@ -128,11 +184,86 @@ export function validatePublicDocumentReview(
       throw new Error(`${document.path}: embedded document control is missing or stale`);
     }
   }
-  return restricted;
+  return excludedPublicPaths;
+}
+
+export async function syncTechnicalDocuments(root = process.cwd(), { validate = true } = {}) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Missing SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY");
+  if (validate) validatePublicDocumentReview(root);
+  const review = JSON.parse(readFileSync(join(root, REVIEW_PATH), "utf8"));
+  const documents = review.documents.filter(
+    (document) => documentDistribution(document) === "request_only",
+  );
+  const revision = review.document_control.revision;
+  const entries = documents.map((document) => ({
+    document,
+    storagePath: `${documentType(document)}/${document.document_id}/${revision}-${document.sha256}.pdf`,
+  }));
+  const { createClient } = await import("@supabase/supabase-js");
+  const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const now = new Date().toISOString();
+
+  let bytes = 0;
+  for (const { document, storagePath } of entries) {
+    const body = readFileSync(join(root, document.path));
+    const { error: uploadError } = await sb.storage
+      .from("technical-documents")
+      .upload(storagePath, body, {
+        contentType: "application/pdf",
+        cacheControl: "300",
+        upsert: true,
+      });
+    if (uploadError) throw new Error(`${document.path} upload failed: ${uploadError.message}`);
+    bytes += body.byteLength;
+  }
+
+  const rows = entries.map(({ document, storagePath }) => ({
+    document_id: document.document_id,
+    title: document.title,
+    document_type: documentType(document),
+    revision,
+    source_path: document.path,
+    storage_path: storagePath,
+    sha256: document.sha256,
+    claim_status: document.status,
+    active: true,
+    updated_at: now,
+  }));
+  const { error } = await sb
+    .from("technical_documents")
+    .upsert(rows, { onConflict: "document_id" });
+  if (error) throw new Error(`technical document catalog sync failed: ${error.message}`);
+
+  const { data: activeRows, error: activeError } = await sb
+    .from("technical_documents")
+    .select("document_id")
+    .eq("active", true);
+  if (activeError) throw new Error(`technical document catalog read failed: ${activeError.message}`);
+  const currentIds = new Set(rows.map((row) => row.document_id));
+  const staleIds = (activeRows || [])
+    .map((row) => row.document_id)
+    .filter((documentId) => !currentIds.has(documentId));
+  if (staleIds.length) {
+    const { error: deactivateError } = await sb
+      .from("technical_documents")
+      .update({ active: false, updated_at: now })
+      .in("document_id", staleIds);
+    if (deactivateError) {
+      throw new Error(`technical document retirement failed: ${deactivateError.message}`);
+    }
+  }
+  return { documents: rows.length, bytes };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const sourceRoot = process.env.MASEST_DOCUMENT_SOURCE_ROOT || join(homedir(), "Desktop", "masest");
   validatePublicDocumentReview(process.cwd(), { sourceRoot, requireSources: true });
-  console.log(`public-document-policy: verified reviewed source bytes under ${sourceRoot}`);
+  if (process.argv.includes("--sync")) {
+    const result = await syncTechnicalDocuments(process.cwd(), { validate: false });
+    console.log(`public-document-policy: synced ${result.documents} request-only files (${result.bytes} bytes)`);
+  } else {
+    console.log(`public-document-policy: verified reviewed source bytes under ${sourceRoot}`);
+  }
 }

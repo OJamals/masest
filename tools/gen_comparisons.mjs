@@ -169,7 +169,7 @@ function pageHtml(page) {
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260724a">
+<link rel="stylesheet" href="../css/style.css?v=20260725f">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <meta property="og:title" content="${html(page.title)} | MASEST VertKleen">
@@ -269,7 +269,7 @@ function pageHtml(page) {
   </section>
 </main>
 
-<script type="module" src="../js/main.js?v=20260720a"></script>
+<script type="module" src="../js/main.js?v=20260725f"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

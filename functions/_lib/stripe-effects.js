@@ -1,5 +1,5 @@
 import { adminClient, companyEmails, htmlEscape, sendEmail } from './supabase.js';
-import { sdsAttachments } from './sds-docs.js';
+import { technicalDocumentRequestNoteHtml } from './order-email.js';
 
 const PAYLOAD_KEYS = Object.freeze({
   stock_decrement: new Set(['order_id']),
@@ -305,10 +305,7 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
     ].filter(Boolean).map(htmlEscape).join('<br>')}</p>`
     : '';
   const appUrl = env.APP_URL || 'https://masest.co';
-  const attachments = sdsAttachments(lines, appUrl);
-  const sdsNote = attachments.length
-    ? `<p style="margin:0 0 20px;color:#556;font-size:13px;line-height:1.5">Safety Data Sheet${attachments.length > 1 ? 's are' : ' is'} attached to this email for the ${attachments.length > 1 ? 'products' : 'product'} you ordered.</p>`
-    : '';
+  const documentNote = technicalDocumentRequestNoteHtml(appUrl);
   const discount = Number(effectRow.payload.discount) || 0;
   const html = `
   <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
@@ -323,7 +320,7 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
           ? 'Thank you. Your bank payment is processing — we’ll email a confirmation once it clears (usually within a few business days). MASEST will reconcile freight and documentation before fulfillment.'
           : 'Thank you. MASEST will reconcile freight and documentation before fulfillment. Your payment processor sends a separate card receipt.'}</p>
         ${order.purchase_order_number ? `<p style="margin:0 0 20px;color:#556;font-size:14px"><b>Purchase order:</b> ${htmlEscape(order.purchase_order_number)}</p>` : ''}
-        ${sdsNote}
+        ${documentNote}
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <thead><tr>
             <th style="text-align:left;padding:6px 0;border-bottom:2px solid #d7e3e3">Product</th>
@@ -358,7 +355,6 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
       : `Your MASEST order${ref} is confirmed`,
     html,
     category: 'order',
-    attachments,
     idempotencyKey: effectIdempotencyKey(effectRow),
   });
 }

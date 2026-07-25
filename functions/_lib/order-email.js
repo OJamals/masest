@@ -36,11 +36,8 @@ export function orderItemsTableHtml(lines, { currency = 'usd', subtotal = null, 
     + (totals ? `<table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">${totals}</table>` : '');
 }
 
-// One-line note that the order's SDS PDFs are attached. '' when none. Matches the Stripe
-// path's wording so both confirmation emails read the same.
-export function sdsNoteHtml(count) {
-  const n = Number(count) || 0;
-  if (n <= 0) return '';
+export function technicalDocumentRequestNoteHtml(appUrl = 'https://masest.co') {
+  const base = htmlEscape(String(appUrl).replace(/\/+$/, ''));
   return `<p style="margin:14px 0 0;color:#556;font-size:13px;line-height:1.5">`
-    + `Safety Data Sheet${n > 1 ? 's are' : ' is'} attached to this email for the ${n > 1 ? 'products' : 'product'} you ordered.</p>`;
+    + `SDS and TDS files are request-only. <a href="${base}/resources">Register or sign in to request access.</a></p>`;
 }

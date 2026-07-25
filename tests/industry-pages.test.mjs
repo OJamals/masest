@@ -109,7 +109,7 @@ test('each industry route has one captioned image gallery containing every accep
       `${industry.slug}: exact-route supplemental image`,
     );
     assert.equal(
-      (gallery[1].match(/<figure class="ind-shot(?: ind-shot-wide)?">/g) || []).length,
+      (gallery[1].match(/<figure class="ind-shot(?: ind-shot-wide)?"[^>]*>/g) || []).length,
       (gallery[1].match(/<figcaption>/g) || []).length,
       `${industry.slug}: every gallery image has a caption`,
     );
@@ -148,6 +148,64 @@ test('each industry route has one captioned image gallery containing every accep
   );
 });
 
+test('gallery media fails closed between generated scenes, field context, and qualified proof', () => {
+  const requiredProofFields = [
+    'permission',
+    'date',
+    'asset',
+    'soil',
+    'product',
+    'concentration',
+    'procedure',
+    'endpoint',
+    'result',
+    'limitations',
+  ];
+  const statusCounts = { absent: 0, context_only: 0, qualified: 0 };
+
+  for (const industry of industries) {
+    const evidence = industry.field_evidence;
+    assert.ok(evidence, `${industry.slug}: field_evidence is required`);
+    assert.ok(
+      Object.hasOwn(statusCounts, evidence.status),
+      `${industry.slug}: invalid field evidence status`,
+    );
+    statusCounts[evidence.status] += 1;
+
+    if (evidence.status === 'qualified') {
+      for (const field of requiredProofFields) {
+        assert.ok(evidence.record?.[field]?.trim(), `${industry.slug}: qualified ${field}`);
+      }
+      assert.deepEqual(evidence.missing || [], [], `${industry.slug}: qualified record gaps`);
+    } else {
+      assert.ok(evidence.missing?.length, `${industry.slug}: incomplete record gaps required`);
+    }
+
+    const html = read(`industries/${industry.slug}.html`);
+    const gallery = html.match(
+      /<section class="section section-slim ind-gallery-sec" aria-label="[^"]+ image gallery">([\s\S]*?)<\/section>/,
+    )?.[1] || '';
+    const figures = [...gallery.matchAll(/<figure class="ind-shot(?: ind-shot-wide)?" data-evidence-kind="([^"]+)">/g)]
+      .map((match) => match[1]);
+    const expectedFigures = (gallery.match(/<figure class="ind-shot(?: ind-shot-wide)?"/g) || []).length;
+
+    assert.equal(figures.length, expectedFigures, `${industry.slug}: every figure declares evidence kind`);
+    assert.ok(figures.includes('generated'), `${industry.slug}: generated scenes identified`);
+    assert.equal(
+      figures.includes('field-proof'),
+      evidence.status === 'qualified',
+      `${industry.slug}: field proof must follow record status`,
+    );
+    assert.equal(
+      figures.includes('field-context'),
+      evidence.status === 'context_only',
+      `${industry.slug}: field context must follow record status`,
+    );
+  }
+
+  assert.deepEqual(statusCounts, { absent: 16, context_only: 11, qualified: 0 });
+});
+
 test('P1 registry covers every industry route with task-specific operating context', () => {
   const expectedSlugs = industryFiles.map((file) => file.replace(/\.html$/, '')).sort();
   const actualSlugs = industries.map((industry) => industry.slug).sort();
@@ -184,7 +242,35 @@ test('P1 registry covers every industry route with task-specific operating conte
   }
 });
 
-test('every industry page renders one task-led applications and proof module', () => {
+test('supplemental routes state a narrower buyer, task scope, and search intent than their parent', () => {
+  const bySlug = new Map(industries.map((industry) => [industry.slug, industry]));
+
+  for (const industry of industries.filter((candidate) => candidate.kind === 'supplemental')) {
+    const parent = bySlug.get(industry.parent);
+    assert.ok(parent, `${industry.slug}: parent route`);
+
+    for (const field of ['buyer', 'distinct_scope', 'search_intent']) {
+      assert.ok(industry[field]?.trim(), `${industry.slug}: ${field} is required`);
+      assert.notEqual(
+        industry[field].trim().toLowerCase(),
+        String(parent[field] || '').trim().toLowerCase(),
+        `${industry.slug}: ${field} must differ from parent`,
+      );
+    }
+
+    const html = read(`industries/${industry.slug}.html`);
+    const scope = html.match(
+      /<aside class="ind-scope-note" data-supplemental-scope>([\s\S]*?)<\/aside>/,
+    )?.[1] || '';
+    assert.match(scope, /Focused buyer route/);
+    assert.match(scope, new RegExp(industry.buyer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(scope, new RegExp(industry.distinct_scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(scope, new RegExp(industry.search_intent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(scope, new RegExp(`href="./${industry.parent}"`));
+  }
+});
+
+test('every industry page renders one task-led applications and verification module', () => {
   for (const file of industryFiles) {
     const slug = file.replace(/\.html$/, '');
     const html = read(`industries/${file}`);
@@ -197,6 +283,8 @@ test('every industry page renders one task-led applications and proof module', (
     );
     assert.equal((html.match(/data-industry-local-cta/g) || []).length, 1, `${slug}: localized CTA`);
     assert.doesNotMatch(html, /Put the current chemical on the table\./);
+    assert.match(html, /Applications and verification/);
+    assert.doesNotMatch(html, /Applications and proof|Field-proof standard/);
 
     for (const label of [
       'Task',
@@ -225,8 +313,13 @@ test('industry proof links resolve locally and exclude restricted customer recor
     )?.[1] || '';
     const documents = [...module.matchAll(/href="\.\.\/(docs\/[^"]+\.pdf)"/g)]
       .map((match) => match[1]);
+    const requestIds = [...module.matchAll(/data-document-request[^>]*data-document-id="(MAS-[A-Z0-9-]+)"/g)]
+      .map((match) => match[1]);
 
-    assert.ok(documents.length >= 2, `${slug}: direct controlled-document links required`);
+    assert.ok(
+      documents.length + requestIds.length >= 2,
+      `${slug}: controlled document links or request controls required`,
+    );
     for (const document of documents) {
       assert.equal(restrictedDocuments.has(document), false, `${slug}: restricted ${document}`);
       assert.ok(existsSync(new URL(document, root)), `${slug}: missing ${document}`);

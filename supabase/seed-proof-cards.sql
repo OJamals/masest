@@ -1,15 +1,21 @@
--- Seed the 14 proof/case-study cards as published proof_card CMS entries,
+-- Seed curated proof/case-study cards as published proof_card CMS entries,
 -- extracted verbatim from proof.html (tools-side parser). Mirrors the hardcoded
 -- fallback so the admin CMS owns them and Supabase-backed builds keep emitting
 -- proof.json. sort_order preserves the curated DOM order; image_w/image_h reserve
 -- layout (CLS); the 3 ids deep-linked from products/industries are preserved as
 -- slugs. Idempotent. Apply via the pooled service-role connection.
 
+update public.content_entries
+set status = 'archived',
+    payload = payload - 'href',
+    review_note = 'Archived: supporting document is not approved as public proof.',
+    updated_at = now()
+where type = 'proof_card' and slug = 'walmart-dc-crhd';
+
 insert into public.content_entries (type, slug, title, status, locale, payload, seo)
 values
   ('proof_card', 'ddc-rust-test', '20-year rust and scale, cleared in 30 minutes', 'published', 'en', '{"eyebrow":"HVAC / Water","kind":"hvac","chips":["VertKleen HCR","Displaced CLR"],"source":"Source: DDC Engineering rust test","image":"img/proof/cases/ddc-rust.webp?v=20260617b","image_alt":"Rusted HVAC component cleared with VertKleen HCR","result":"CLR ran for 36 hours and failed. VertKleen HCR cleared the same rust and scale in half an hour, verified by DDC Engineering (David DaSilva, PE).","sort_order":1,"image_w":1200,"image_h":579}'::jsonb, '{}'::jsonb),
   ('proof_card', 'brewery-cip-trials', 'Full CR + HCR CIP at seven Florida breweries', 'published', 'en', '{"eyebrow":"Food & Beverage","kind":"food","chips":["VertKleen CR + HCR","Displaced caustic + acid"],"source":"Source: brewery trials, incl. HellnBlazes (endorser)","image":"img/proof/cases/brewery.webp?v=20260617b","image_alt":"Brewery tank and heat exchanger cleaned with VertKleen CR and HCR","result":"CR alkaline wash then HCR acid wash matched or beat caustic soda plus acid blends at equal concentration and CIP time. Final sanitation requirements remain label- and site-protocol dependent.","sort_order":2,"image_w":1200,"image_h":900,"href":"docs/brewery-cip-trial-brewlando.pdf"}'::jsonb, '{}'::jsonb),
-  ('proof_card', 'walmart-dc-crhd', 'Simple Green replaced across Walmart DCs', 'published', 'en', '{"eyebrow":"Distribution / Cold Chain","kind":"distribution","chips":["VertKleen CRHD","Displaced Simple Green"],"source":"Source: Walmart DSC program","image":"img/proof/cases/walmart-dc-crhd.webp?v=20260617b","image_alt":"Crown lift equipment in the Walmart distribution center cleaning program","result":"CRHD at about 50% active replaced Simple Green and Calci-Solve for heavy degreasing, saving an estimated $10k+ per year at one center. Crown and Plug Power supporting documents are available on request.","sort_order":3,"image_w":708,"image_h":513,"href":"docs/walmart-dc-brochure.pdf"}'::jsonb, '{}'::jsonb),
   ('proof_card', 'yellowfin-torque-wash', '43-foot Yellowfin washed and waxed dockside', 'published', 'en', '{"eyebrow":"Marine","kind":"marine","chips":["VertKleen Torque"],"source":"Source: Yellowfin vessel wash","image":"img/proof/cases/marine.webp?v=20260617b","image_alt":"43-foot Yellowfin vessel washed and waxed with VertKleen Torque","result":"VertKleen Torque cleaned and protected the hull and topsides in one step, within OEM finish-care requirements, with no harsh fumes around the water.","sort_order":6,"image_w":1175,"image_h":1125}'::jsonb, '{}'::jsonb),
   ('proof_card', 'uf-shands-drone-wash', 'Occupied campus cleaned by drone at UF Shands', 'published', 'en', '{"eyebrow":"Drone & Pressure Wash","kind":"facility","chips":["VertKleen MultiWash"],"source":"Source: UF Shands drone wash","image":"img/proof/cases/drone-before.webp?v=20260617b","image_alt":"Dirty UF Shands campus rooftops before VertKleen drone wash","result":"Clean Team USA used VertKleen MultiWash with an Apellix pressure-washing drone to clear years of scale and algae from trim, caulking, and glass, with the hospital occupied.","sort_order":7,"image_w":1200,"image_h":803}'::jsonb, '{}'::jsonb),
   ('proof_card', 'neatfreaks-hood-degrease', 'Restaurant hood filters and floors degreased', 'published', 'en', '{"eyebrow":"Food Service","kind":"food","chips":["VertKleen CR + CRHD","Displaced caustic degreasers"],"source":"Source: NeatFreaks application reports","image":"img/proof/cases/hood-before.webp?v=20260617b","image_alt":"Greasy commercial kitchen hood filters before cleaning","result":"NeatFreaks crews ran VertKleen across Boca Raton restaurants. About 32 oz of CRHD mopped 2,500 square feet, replacing caustic and solvent degreasers.","sort_order":8,"image_w":520,"image_h":650}'::jsonb, '{}'::jsonb),

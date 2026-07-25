@@ -31,7 +31,7 @@ test("data visualizations render from canonical data or page metadata", () => {
     [...new Set(publishedProofKinds)].sort(),
     "proof visual taxonomy should match the published proof snapshot",
   );
-  assert.ok(new Set(proofKinds).size >= 5, "proof visual needs enough sector categories to be useful");
+  assert.ok(new Set(proofKinds).size >= 4, "proof visual needs enough sector categories to be useful");
   assert.match(main, /initDataVisualizations\(\);/, "main entrypoint should initialize data visuals");
   assert.match(visuals, /fetch\("data\/services\.json"/, "service mix should use the public catalog JSON");
   assert.match(visuals, /querySelectorAll\("\[data-proof-card\]"\)/, "proof coverage should derive from case-card metadata");
