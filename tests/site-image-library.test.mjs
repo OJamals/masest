@@ -6,9 +6,11 @@ import test from "node:test";
 
 import { normalizeContentEntry } from "../functions/_lib/content.js";
 import { normalizeStructuredPayload } from "../js/content-types.js";
+import { canonicalPublicImageUrl } from "../js/image-url.js";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const IMAGE_EXTENSIONS = new Set([".png", ".webp"]);
+const IMAGE_FIELDS = new Set(["hero", "image", "image_after", "og_image"]);
 
 function imageFiles(dir, files = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -19,6 +21,17 @@ function imageFiles(dir, files = []) {
     }
   }
   return files;
+}
+
+function contentImagePaths(value, field = "", paths = []) {
+  if (Array.isArray(value)) {
+    for (const item of value) contentImagePaths(item, field, paths);
+  } else if (value && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) contentImagePaths(item, key, paths);
+  } else if (IMAGE_FIELDS.has(field) && typeof value === "string" && value.trim()) {
+    paths.push(new URL(canonicalPublicImageUrl(value), "https://masest.co").pathname);
+  }
+  return paths;
 }
 
 test("CMS image fields store root-absolute public paths", () => {
@@ -76,6 +89,22 @@ test("site image manifest exposes every public image with reusable metadata", ()
     assert.equal(asset.status, "available");
     assert.equal(asset.source, "site");
   }
+});
+
+test("published CMS snapshots reference images in the shared site library", () => {
+  const contentDir = join(ROOT, "data/content");
+  const manifest = JSON.parse(readFileSync(join(contentDir, "site-images.json"), "utf8"));
+  const knownImages = new Set((manifest.assets || []).map((asset) => asset.public_url));
+  const missing = [];
+
+  for (const filename of readdirSync(contentDir).filter((name) => name.endsWith(".json") && name !== "site-images.json")) {
+    const content = JSON.parse(readFileSync(join(contentDir, filename), "utf8"));
+    for (const imagePath of contentImagePaths(content)) {
+      if (!knownImages.has(imagePath)) missing.push(`${filename}: ${imagePath}`);
+    }
+  }
+
+  assert.deepEqual(missing, []);
 });
 
 test("site and CMS assets merge into one searchable, de-duplicated library", async () => {

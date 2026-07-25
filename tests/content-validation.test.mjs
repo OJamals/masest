@@ -6,6 +6,7 @@ import {
   publicContentSnapshot,
   validateContentEntry,
 } from "../functions/_lib/content.js";
+import { onRequest as contentAdminRequest } from "../functions/api/admin/content.js";
 
 test("content schema defines entries, revisions, assets, and statuses", () => {
   const sql = readFileSync(new URL("../supabase/schema-content.sql", import.meta.url), "utf8");
@@ -77,6 +78,57 @@ test("admin content API source requires staff and content repository", () => {
   assert.match(source, /request\.method === "GET"/);
   assert.match(source, /request\.method === "POST"/);
   assert.match(source, /request\.method === "DELETE"/);
+});
+
+test("admin content API lists drafts when the status filter is all", async () => {
+  const originalFetch = globalThis.fetch;
+  let contentQuery;
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/auth/v1/user") {
+      return Response.json({ user: { id: "owner-id", email: "owner@example.com" } });
+    }
+    if (url.pathname === "/rest/v1/content_entries") {
+      contentQuery = url;
+      const entries = url.searchParams.has("status")
+        ? []
+        : [{
+            id: "shipping-draft-id",
+            type: "shipping_rate",
+            slug: "ground",
+            title: "Ground shipping",
+            status: "draft",
+            locale: "en",
+            payload: { stripe_rate_id: "shr_ground", active: false },
+            seo: {},
+          }];
+      return Response.json(entries);
+    }
+    throw new Error(`Unexpected Supabase request: ${url.pathname}`);
+  };
+
+  try {
+    const response = await contentAdminRequest({
+      request: new Request(
+        "https://masest.co/api/admin/content?type=shipping_rate&status=all",
+        { headers: { authorization: "Bearer owner-token" } },
+      ),
+      env: {
+        SUPABASE_URL: "https://example.supabase.co",
+        SUPABASE_ANON_KEY: "anon-key",
+        SUPABASE_SERVICE_ROLE_KEY: "service-key",
+        ADMIN_EMAILS: "owner@example.com",
+      },
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(contentQuery.searchParams.has("status"), false);
+    assert.equal(body.entries.length, 1);
+    assert.equal(body.entries[0].status, "draft");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("admin shell exposes a native Content tab and panel", () => {

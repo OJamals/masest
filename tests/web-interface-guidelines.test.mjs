@@ -44,7 +44,7 @@ test("generated public imagery uses each source image's intrinsic ratio", () => 
   const products = read("tools/seo-inject.mjs");
 
   assert.match(blog, /canonicalPublicImageUrl\(post\.hero\)/);
-  assert.match(blog, /imageSize\(join\(ROOT, heroUrl\.replace/);
+  assert.match(blog, /return \{ url: heroUrl, size: imageSize\(file\) \}/);
   assert.match(products, /imageSize\(new URL\(`/);
   assert.doesNotMatch(products, /\}\.\.\.\`;\s*$/m, "generated descriptions should use a true ellipsis");
 

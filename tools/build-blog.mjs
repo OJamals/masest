@@ -77,8 +77,15 @@ function fmtDate(iso) {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 }
 
-function articleSchema(post) {
+function postHero(post) {
   const heroUrl = canonicalPublicImageUrl(post.hero);
+  if (!heroUrl?.startsWith("/")) return null;
+  const file = join(ROOT, new URL(heroUrl, BASE).pathname.replace(/^\/+/, ""));
+  if (!existsSync(file)) return null;
+  return { url: heroUrl, size: imageSize(file) };
+}
+
+function articleSchema(post, heroUrl = "") {
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -95,10 +102,9 @@ function articleSchema(post) {
 function postPage(post, all) {
   const rt = readingTime(post.body);
   const bodyHtml = renderMarkdown(post.body);
-  const heroUrl = canonicalPublicImageUrl(post.hero);
-  const heroSize = heroUrl ? imageSize(join(ROOT, heroUrl.replace(/^\/+/, ""))) : null;
-  const heroImg = heroUrl
-    ? `<figure class="blog-hero-media"><img src="${attr(heroUrl)}" alt="${attr(post.hero_alt || post.title)}" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async"></figure>`
+  const hero = postHero(post);
+  const heroImg = hero
+    ? `<figure class="blog-hero-media"><img src="${attr(hero.url)}" alt="${attr(post.hero_alt || post.title)}" width="${hero.size.width}" height="${hero.size.height}" fetchpriority="high" decoding="async"></figure>`
     : "";
   const related = relatedPosts(post, all);
   const relatedHtml = related.length
@@ -106,7 +112,7 @@ function postPage(post, all) {
         .map((r) => `<li><a href="../blog/${attr(r.slug)}"><span class="blog-related-cat">${text(r.category)}</span> ${text(r.title)}</a></li>`)
         .join("")}</ul></aside>`
     : "";
-  const ogImage = heroUrl ? `${BASE}${heroUrl}` : `${BASE}/img/og-card.png`;
+  const ogImage = hero ? `${BASE}${hero.url}` : `${BASE}/img/og-card.png`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -130,7 +136,7 @@ function postPage(post, all) {
 <meta property="og:url" content="${BASE}/blog/${post.slug}">
 <meta property="og:image" content="${attr(ogImage)}">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">${ldJson(articleSchema(post))}</script>
+<script type="application/ld+json">${ldJson(articleSchema(post, hero?.url))}</script>
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg blog-post-page">
@@ -173,10 +179,9 @@ function postPage(post, all) {
 }
 
 function postCard(post) {
-  const heroUrl = canonicalPublicImageUrl(post.hero);
-  const heroSize = heroUrl ? imageSize(join(ROOT, heroUrl.replace(/^\/+/, ""))) : null;
-  const thumb = heroUrl
-    ? `<img class="blog-card-img" src="${attr(heroUrl)}" alt="${attr(post.hero_alt || post.title)}" width="${heroSize.width}" height="${heroSize.height}" loading="lazy" decoding="async">`
+  const hero = postHero(post);
+  const thumb = hero
+    ? `<img class="blog-card-img" src="${attr(hero.url)}" alt="${attr(post.hero_alt || post.title)}" width="${hero.size.width}" height="${hero.size.height}" loading="lazy" decoding="async">`
     : `<div class="blog-card-img blog-card-img--fallback" aria-hidden="true"></div>`;
   const tags = (post.tags || []).map((t) => attr(t)).join(" ");
   return `<article class="blog-card" data-slug="${attr(post.slug)}" data-category="${attr(post.category)}" data-tags="${tags}">

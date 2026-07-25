@@ -15,7 +15,7 @@ export async function onRequest({ request, env }) {
     const type = url.searchParams.get("type") || undefined;
     const slug = url.searchParams.get("slug") || undefined;
     const statusParam = url.searchParams.get("status");
-    const status = statusParam === "all" ? undefined : (statusParam || "published");
+    const status = statusParam === "all" ? null : (statusParam || "published");
     const locale = url.searchParams.get("locale") || "en";
     try {
       if (type && slug) {

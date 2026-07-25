@@ -74,9 +74,13 @@ test("zero-result product search offers a contextual chemical-audit handoff", as
     /contact\?type=audit&message=.*acetone.*#quoteForm$/,
   );
 
-  const handoffBox = await handoff.boundingBox();
-  const resetBox = await page.locator("#shopEmpty button").boundingBox();
-  expect(handoffBox?.y).toBeLessThan(resetBox?.y);
+  const reset = page.locator("#shopEmpty button");
+  await expect(reset).toBeVisible();
+  await expect(page.locator("#shopEmpty")).toHaveCSS("flex-direction", "column");
+  expect(await handoff.evaluate((node) => Boolean(
+    node.compareDocumentPosition(document.querySelector("#shopEmpty button"))
+      & Node.DOCUMENT_POSITION_FOLLOWING
+  ))).toBe(true);
 });
 
 // The success path (real add-to-cart controls when /api/products returns a purchasable

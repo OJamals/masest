@@ -26,8 +26,9 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => {
   if (!server) return;
+  const exited = Promise.race([once(server, "exit"), new Promise((resolve) => setTimeout(resolve, 1500))]);
   server.kill();
-  await Promise.race([once(server, "exit"), new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
+  await exited.catch(() => {});
 });
 
 test("services tablist supports roving tabindex + arrow/Home/End keyboard nav", async ({ page }) => {

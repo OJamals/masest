@@ -26,8 +26,9 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!server) return;
+  const exited = Promise.race([once(server, "exit"), new Promise((resolve) => setTimeout(resolve, 1500))]);
   server.kill();
-  await once(server, "exit").catch(() => {});
+  await exited.catch(() => {});
 });
 
 test("mobile header keeps logo, sign-in, cart, and menu inside the viewport", async ({ page }) => {

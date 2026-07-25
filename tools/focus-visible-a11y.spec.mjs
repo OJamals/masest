@@ -24,8 +24,9 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!server) return;
+  const exited = Promise.race([once(server, "exit"), new Promise((resolve) => setTimeout(resolve, 1500))]);
   server.kill();
-  await once(server, "exit").catch(() => {});
+  await exited.catch(() => {});
 });
 
 test("commerce controls ship a valid :focus-visible ring", async ({ page }) => {

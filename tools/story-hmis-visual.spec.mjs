@@ -26,8 +26,9 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (!server) return;
+  const exited = Promise.race([once(server, "exit"), new Promise((resolve) => setTimeout(resolve, 1500))]);
   server.kill();
-  await once(server, "exit").catch(() => {});
+  await exited.catch(() => {});
 });
 
 test("story scene watermarks are removed from the visual layer", async ({ page }) => {
