@@ -1,6 +1,7 @@
 // /api/admin/content-assets - metadata library for CMS-owned public content assets.
 import { adminClient, requireStaff, json, readBody } from "../../_lib/supabase.js";
 import { staffCan } from "../../_lib/authz.js";
+import { recordAudit } from "../../_lib/audit.js";
 import { createContentRepository } from "../../_lib/content.js";
 import { canonicalPublicImageUrl } from "../../../js/image-url.js";
 
@@ -214,7 +215,8 @@ export async function onRequest({ request, env }) {
   if (!user) return json(401, { error: "unauthenticated" });
   if (!staff) return json(403, { error: "forbidden" });
 
-  const repo = createContentRepository(adminClient(env));
+  const sb = adminClient(env);
+  const repo = createContentRepository(sb);
 
   if (request.method === "GET") {
     const url = new URL(request.url);
@@ -252,15 +254,28 @@ export async function onRequest({ request, env }) {
       return json(403, { error: "forbidden", message: "Managing content assets requires owner access." });
     }
     try {
-      const storagePath = new URL(request.url).searchParams.get("storage_path") || "";
+      const url = new URL(request.url);
+      if (url.searchParams.get("permanent") !== "true") {
+        return json(409, { error: "permanent_delete_confirmation_required" });
+      }
+      const storagePath = url.searchParams.get("storage_path") || "";
       const asset = await repo.getAsset(storagePath);
       if (!asset) return json(404, { error: "asset_not_found" });
-      if (isManagedAsset(env, asset)) {
+      if (asset.status !== "archived") return json(409, { error: "asset_must_be_archived" });
+      const managed = isManagedAsset(env, asset);
+      if (managed) {
         const deleted = await deleteStoredAsset(env, asset.storage_path);
         if (!deleted.ok) return json(502, { error: deleted.error });
       }
       const result = await repo.deleteAsset(asset.storage_path);
       if (!result.ok) return json(400, { error: result.error });
+      await recordAudit(sb, {
+        user,
+        action: "content_asset.deleted",
+        targetType: "content_asset",
+        targetId: asset.storage_path,
+        detail: { managed, byte_size: asset.byte_size || null },
+      });
       return json(200, { ok: true });
     } catch (error) {
       return json(500, { error: error.message });

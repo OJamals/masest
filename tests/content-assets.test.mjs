@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { onRequest as contentAssetsRequest } from "../functions/api/admin/content-assets.js";
+
+const CONTENT_ASSET_ENV = {
+  SUPABASE_URL: "https://example.supabase.co",
+  SUPABASE_ANON_KEY: "anon-key",
+  SUPABASE_SERVICE_ROLE_KEY: "service-key",
+  ADMIN_EMAILS: "owner@example.com",
+};
 
 test("content schema stores asset metadata, usage, and focal points", () => {
   const sql = readFileSync(new URL("../supabase/schema-content.sql", import.meta.url), "utf8");
@@ -50,17 +58,70 @@ test("uploaded content images are optimized with TinyPNG before storage", () => 
   assert.match(repository, /async findAssetBySha256\(/);
 });
 
-test("content asset endpoint deletes library metadata and managed storage", () => {
-  const source = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
-  const repository = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
+test("permanent deletion requires confirmation and an archived asset before deleting storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let assetStatus = "available";
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(String(input));
+    const method = String(init.method || input?.method || "GET").toUpperCase();
+    calls.push({ url, method, body: init.body });
+    if (url.pathname === "/auth/v1/user") {
+      return Response.json({ user: { id: "owner-id", email: "owner@example.com" } });
+    }
+    if (url.pathname === "/rest/v1/content_assets" && method === "GET") {
+      return Response.json([{
+        storage_path: "cms/test.webp",
+        status: assetStatus,
+        alt: "Test image",
+        byte_size: 1200,
+        source_url: "https://example.supabase.co/storage/v1/object/public/content-assets/cms/test.webp",
+      }]);
+    }
+    if (url.pathname === "/storage/v1/object/content-assets/cms/test.webp" && method === "DELETE") {
+      return new Response(null, { status: 200 });
+    }
+    if (url.pathname === "/rest/v1/content_assets" && method === "DELETE") {
+      return new Response(null, { status: 204 });
+    }
+    if (url.pathname === "/rest/v1/audit_log" && method === "POST") {
+      return Response.json(null, { status: 201 });
+    }
+    throw new Error(`Unexpected Supabase request: ${method} ${url.pathname}`);
+  };
 
-  assert.match(source, /request\.method === "DELETE"/);
-  assert.match(source, /deleteAsset/);
-  assert.match(source, /storage\/v1\/object/);
-  assert.match(repository, /async deleteAsset\(/);
+  const request = (query) => contentAssetsRequest({
+    request: new Request(`https://masest.co/api/admin/content-assets?storage_path=cms%2Ftest.webp${query}`, {
+      method: "DELETE",
+      headers: { authorization: "Bearer owner-token" },
+    }),
+    env: CONTENT_ASSET_ENV,
+  });
+  const destructiveCalls = () => calls.filter(({ method }) => method === "DELETE");
+
+  try {
+    const unconfirmed = await request("");
+    assert.equal(unconfirmed.status, 409);
+    assert.deepEqual(await unconfirmed.json(), { error: "permanent_delete_confirmation_required" });
+    assert.equal(destructiveCalls().length, 0);
+
+    const available = await request("&permanent=true");
+    assert.equal(available.status, 409);
+    assert.deepEqual(await available.json(), { error: "asset_must_be_archived" });
+    assert.equal(destructiveCalls().length, 0);
+
+    assetStatus = "archived";
+    const archived = await request("&permanent=true");
+    assert.equal(archived.status, 200);
+    assert.equal(destructiveCalls().length, 2);
+    const audit = calls.find(({ url, method }) => url.pathname === "/rest/v1/audit_log" && method === "POST");
+    assert.match(String(audit?.body), /content_asset\.deleted/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
-test("Blog and Newsletter use one shared attach-and-library image picker", () => {
+test("Blog and Newsletter use one shared attach-and-library image picker with reversible archive", () => {
   const blog = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
   const newsletter = readFileSync(new URL("../js/admin/newsletter.js", import.meta.url), "utf8");
   const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
@@ -70,7 +131,10 @@ test("Blog and Newsletter use one shared attach-and-library image picker", () =>
   assert.doesNotMatch(newsletter, /Image URL/);
   assert.match(picker, /Attach image/);
   assert.match(picker, /Browse library/);
-  assert.match(picker, /data-shared-image-delete/);
+  assert.match(picker, /data-shared-image-archive/);
+  assert.match(picker, /status:\s*"archived"/);
+  assert.doesNotMatch(picker, /data-shared-image-delete/);
+  assert.doesNotMatch(picker, /method:\s*"DELETE"/);
   assert.match(picker, /PAGE_SIZE = 4/);
   assert.match(picker, /loadSiteImageAssets/);
   assert.match(picker, /mergeSiteImageAssets/);
@@ -78,11 +142,12 @@ test("Blog and Newsletter use one shared attach-and-library image picker", () =>
   assert.match(picker, /CMS uploads first/);
 });
 
-test("asset repository rejects unsafe registered asset references", () => {
+test("asset repository rejects unsafe references and exposes the complete current catalog", () => {
   const source = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
   assert.match(source, /unsafeAssetReference/);
   assert.match(source, /storage_path_invalid/);
   assert.match(source, /javascript\|data\|vbscript/);
+  assert.match(source, /\.limit\(1000\)/);
 });
 
 test("saveAsset preserves the original creator across updates (archive/restore re-send the row)", () => {

@@ -22,7 +22,7 @@ function assetCard(asset = {}) {
     </div>
     <div class="shared-image-library-card-actions">
       <button class="btn btn-secondary btn-sm" type="button" data-shared-image-select data-shared-image-url="${esc(url)}" data-shared-image-alt="${esc(asset.alt || "")}">Use image</button>
-      ${isSiteAsset ? "" : `<button class="btn btn-ghost btn-sm" type="button" data-shared-image-delete data-shared-image-path="${esc(storagePath)}" aria-label="Delete ${esc(label)}"><i class="ph ph-trash" aria-hidden="true"></i></button>`}
+      ${isSiteAsset ? "" : `<button class="btn btn-ghost btn-sm" type="button" data-shared-image-archive data-shared-image-path="${esc(storagePath)}" aria-label="Archive ${esc(label)}"><i class="ph ph-archive" aria-hidden="true"></i></button>`}
     </div>
   </article>`;
 }
@@ -200,19 +200,24 @@ export function openImageLibraryPicker({ api, trigger = null, usage = "image" } 
         closeWith({ url: select.dataset.sharedImageUrl || "", alt: select.dataset.sharedImageAlt || "" });
         return;
       }
-      const remove = event.target instanceof Element ? event.target.closest("[data-shared-image-delete]") : null;
-      const storagePath = remove?.dataset.sharedImagePath || "";
-      if (!storagePath || !(await confirmDialog("Delete this image from the library? It may also remove the uploaded file from storage.", { confirmText: "Delete", cancelText: "Cancel", danger: true }))) return;
-      remove.disabled = true;
-      setStatus("Deleting image…");
+      const archive = event.target instanceof Element ? event.target.closest("[data-shared-image-archive]") : null;
+      const storagePath = archive?.dataset.sharedImagePath || "";
+      if (!storagePath || !(await confirmDialog("Archive this image? Existing page references remain unchanged, and it can be restored from Content assets.", { confirmText: "Archive", cancelText: "Cancel" }))) return;
+      const asset = cmsAssets.find((candidate) => (candidate.storage_path || assetUrl(candidate)) === storagePath);
+      if (!asset) return;
+      archive.disabled = true;
+      setStatus("Archiving image…");
       try {
-        await api(`/api/admin/content-assets?storage_path=${encodeURIComponent(storagePath)}`, { method: "DELETE" });
-        cmsAssets = cmsAssets.filter((asset) => (asset.storage_path || assetUrl(asset)) !== storagePath);
+        await api("/api/admin/content-assets", {
+          method: "POST",
+          body: { ...asset, storage_path: storagePath, status: "archived" },
+        });
+        cmsAssets = cmsAssets.filter((candidate) => (candidate.storage_path || assetUrl(candidate)) !== storagePath);
         filterLibrary();
-        setStatus("Image deleted.", "ok");
+        setStatus("Image archived.", "ok");
       } catch (error) {
-        setStatus(error?.data?.message || error?.data?.error || "Could not delete this image.", "err");
-        remove.disabled = false;
+        setStatus(error?.data?.message || error?.data?.error || "Could not archive this image.", "err");
+        archive.disabled = false;
       }
     });
     pager.addEventListener("click", (event) => {

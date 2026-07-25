@@ -16,6 +16,8 @@ test("shared interaction styles preserve visible focus and touch intent", () => 
   const global = read("css/style.css");
 
   assert.match(components, /\.adm-chip-input:focus-visible\s*\{[^}]*outline:/s);
+  assert.match(components, /\.shared-image-library-card\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+  assert.match(components, /@media \(max-width: 560px\)[\s\S]*\.shared-image-library-card-actions \.btn:first-child\s*\{[^}]*padding-inline:\s*8px/s);
   assert.match(global, /touch-action:\s*manipulation/);
   assert.match(global, /-webkit-tap-highlight-color:/);
 });

@@ -253,7 +253,7 @@ export function createContentRepository(sb) {
       const search = String(q || "").trim();
       if (assetStatus && assetStatus !== "all") query = query.eq("status", assetStatus);
       if (search) query = query.ilike("storage_path", `%${search}%`);
-      const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(1000);
       if (error) throw error;
       return data || [];
     },
