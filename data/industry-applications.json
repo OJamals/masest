@@ -185,6 +185,15 @@
     "method": "Ground-tested chemistry, calibrated low-pressure spray, controlled dwell, and rinse only where the label and substrate require it",
     "products": ["multiwash", "lam3", "crhd"],
     "document_products": ["multiwash", "lam3"],
+    "trial_brief": {
+      "title": "Drone exterior cleaning controlled-trial brief",
+      "objective": "Plan a future witnessed exterior-cleaning trial that records ground-level compatibility, aircraft and spray-system operating controls, runoff capture, and dry matched-angle acceptance before any broader use.",
+      "compatibility_checks": [
+        {"material": "Coated metal, roofing membrane, and painted masonry", "gate": "Identify the exact coating or membrane, condition, repairs, and owner or manufacturer limits; approve the current ground-level finish test before any aerial application."},
+        {"material": "Glass, sealants, and photovoltaic coatings", "gate": "Record the exact glazing, sealant, and coating system; keep unverified components out of scope and accept only after the weakest current-label dilution dries without streak or finish change."},
+        {"material": "Landscaping", "gate": "Map exposure and drainage before flight, establish exclusion and protection controls, and require the current ground-level runoff test before treating the planned area."}
+      ]
+    },
     "concentration": "Use the weakest current-label dilution that passes a ground-level finish and runoff test; never increase concentration to compensate for poor coverage.",
     "process": "Record ambient/surface temperature, wind, nozzle flow, application rate, dwell, any rinse pass, flight path, and treated area.",
     "boundary": "Follow aircraft and spray-system OEM limits, aviation rules, exclusion zones, overspray controls, landscaping protection, and electrical clearances.",

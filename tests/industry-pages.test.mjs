@@ -504,6 +504,7 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
   const requiredTrialSlugs = [
     'breweries-distilleries-wineries',
     'distribution-cold-storage',
+    'drone-cleaning-companies',
     'hvac-water',
     'marine',
     'restaurants-commercial-kitchens',
@@ -514,6 +515,7 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
     assert.ok(trialBySlug.has(slug), `${slug}: required controlled-trial brief`);
   }
   const brewery = trialBySlug.get('breweries-distilleries-wineries');
+  const drone = trialBySlug.get('drone-cleaning-companies');
   const hvac = trialBySlug.get('hvac-water');
   const marine = trialBySlug.get('marine');
 
@@ -640,6 +642,36 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
   assert.doesNotMatch(
     `${JSON.stringify(hvac.trial_brief)}\n${hvacBrief}`,
     /Brevard|Schools|DDC|Legionella[- ]compliant|EPA[- ]registered|NSF(?:\/ANSI)? 60|kills? Legionella|non[- ]corrosive|safe for all|OEM[- ]approved/i,
+  );
+
+  const droneBrief = briefs.get(drone.slug);
+  const droneHtml = read('industries/drone-cleaning-companies.html');
+  const droneGallery = droneHtml.match(
+    /<section class="section section-slim ind-gallery-sec" aria-label="Drone Cleaning Companies image gallery">([\s\S]*?)<\/section>/,
+  )?.[1] || '';
+  const droneReleaseRecord = droneBrief.match(
+    /<li><h5>Release and record<\/h5><p>([\s\S]*?)<\/p><\/li>/,
+  )?.[1] || '';
+  assert.equal(drone.field_evidence.status, 'absent');
+  assert.deepEqual(drone.field_evidence.missing, [
+    'approved field photos',
+    'publication permission',
+    'dated method and endpoint record',
+  ]);
+  assert.equal(drone.evidence_files, undefined);
+  assert.match(droneBrief, /Drone exterior cleaning controlled-trial brief/i);
+  assert.match(droneBrief, /Planning asset · No field record/);
+  assert.match(droneBrief, /planning brief, not field proof/i);
+  assert.match(droneBrief, /No controlled reference is being used to substantiate/i);
+  assert.match(droneReleaseRecord, /Matched-angle before\/after images after drying/);
+  assert.equal(
+    (droneGallery.match(/data-evidence-kind="generated"/g) || []).length,
+    2,
+  );
+  assert.doesNotMatch(droneGallery, /data-evidence-kind="field(?:-context|-proof)?"/);
+  assert.doesNotMatch(
+    `${JSON.stringify(drone.trial_brief)}\n${droneBrief}\n${droneGallery}`,
+    /university|campus|student|faculty|customer|client|testimonial|endorse|source identity|named site|field result|case study|\$\d|\b\d+%|\b\d+\s*(?:minutes?|hours?|square feet)|drone[- ]rated|payload[- ]rated|platform[- ]approved|DJI|Lucid|Apellix|proven|outperform|more effective|safe for|non[- ]toxic|non[- ]corrosive|certif(?:ied|ication)|NSF|EPA[- ]registered|antimicrobial|disinfect|saniti[sz]|kills?|\bgreen\b|eco[- ]friendly|environmentally safe|approved for discharge|legal discharge|FAA[- ]approved|Part 107 compliant|aviation[- ]compliant|regulatory approval/i,
   );
 
   const marineBrief = briefs.get(marine.slug);
