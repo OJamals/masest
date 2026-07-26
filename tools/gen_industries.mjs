@@ -9,13 +9,20 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, "..", "industries");
-const FIELD_EVIDENCE_BY_SLUG = new Map(
-  JSON.parse(readFileSync(resolve(HERE, "..", "data", "industry-applications.json"), "utf8"))
-    .map((industry) => [industry.slug, industry.field_evidence]),
+const { industries: INDUSTRY_APPLICATIONS } = JSON.parse(
+  readFileSync(resolve(HERE, "..", "data", "industry-applications.json"), "utf8"),
 );
+const { assets: SITE_IMAGES } = JSON.parse(
+  readFileSync(resolve(HERE, "..", "data", "content", "site-images.json"), "utf8"),
+);
+const INDUSTRY_APPLICATIONS_BY_SLUG = new Map(
+  INDUSTRY_APPLICATIONS.map((industry) => [industry.slug, industry]),
+);
+const SITE_IMAGE_BY_PATH = new Map(SITE_IMAGES.map((asset) => [asset.public_url, asset]));
 
 // Industry order matches the industries.html index (deck priority). Plumbing last.
 const INDUSTRIES = [
@@ -24,9 +31,8 @@ const INDUSTRIES = [
   name: "Oil, Gas & Process Plants",
   icon: "ph-gas-can",
   h1: "Clean rigs and terminals without making the chemical the main hazard.",
-  sub: "Descale, derust, and degrease rigs, terminals, and pipelines without the acid fumes, solvent storage, and hazmat freight that usually come with the job.",
+  sub: "Scope descaling, derusting, and degreasing around metallurgy, containment, ventilation, discharge, and the current product documents.",
   intro: "Rigs, terminals, and pipelines need separate controls for scale, rust, hydrocarbon soil, metallurgy, containment, and discharge. Start with the current SDS, then confirm concentration, wet dwell, agitation, rinse, and endpoint in a controlled trial.",
-  products: ["hcr", "descaler", "crhd", "neutral"],
 },
 {
   slug: "marine",
@@ -34,26 +40,23 @@ const INDUSTRIES = [
   icon: "ph-anchor",
   h1: "Marine cleaning where fumes have nowhere to go.",
   sub: "On cruise ships, commercial vessels, and docks, confined air and soft metals make the cleaning chemical a decision you can't shortcut.",
-  intro: "Hull, aluminum, glass, and deck work often leans on hydrofluoric or hydrochloric acid brighteners and solvent washes — dangerous in confined shipboard air. VertKleen Torque and AlumiBrite restore those surfaces without the acids, and MultiWash handles drone pressure-washing on occupied vessels.",
-  products: ["torque", "alumibrite", "multiwash", "crhd"],
+  intro: "Hull, aluminum, glass, and deck work requires separate review of ventilation, coatings, soft metals, runoff, and dockside access. Torque, AlumiBrite, MultiWash, and CR HD are starting options only after current-SDS and material-compatibility review.",
 },
 {
   slug: "manufacturing",
   name: "Manufacturing",
   icon: "ph-factory",
-  h1: "Get production back, not another HazCom meeting.",
+  h1: "Get production back with a documented change-control plan.",
   sub: "Strong cleaning for extrusion, processing, warehousing, and plant maintenance — with the documentation your technical review needs.",
   intro: "Plant maintenance separates acid descaling, alkaline circulation, and degreasing by asset, soil, metallurgy, and production window. Use the current SDS and a controlled trial to set concentration, dwell, agitation, rinse, and release criteria.",
-  products: ["hcr", "cr", "crhd", "descaler"],
 },
 {
   slug: "distribution-cold-storage",
   name: "Distribution / Cold Storage",
   icon: "ph-warehouse",
   h1: "Cold-chain cleaning cannot wait for shutdown.",
-  sub: "Perishable distribution centers, refrigerated bays, ammonia systems, forklifts, kitchens, drains, and coils with proof from Walmart DSC materials.",
-  intro: "Cold-storage teams juggle mildew, freezer entries, ammonia coils, condenser lines, kitchen grease, forklifts, and pilot readiness without stopping the building. VertKleen covers that whole walkdown with Descaler, CR HD, MultiWash, Purgo, and CR, and gets the proof, SDS, and trial details to you before the operations window closes.",
-  products: ["descaler", "crhd", "multiwash", "purgo"],
+  sub: "Scope refrigerated bays, isolated ammonia-system components, forklifts, kitchens, drains, and coils through a cold-storage walkdown and controlled trial.",
+  intro: "Cold-storage teams juggle freezer entries, isolated refrigeration components, condenser and drain-line buildup, kitchen grease, forklifts, and narrow maintenance windows. Start with the asset, deposit, metallurgy, temperature, isolation plan, and wastewater route; then select chemistry and a controlled trial.",
 },
 {
   slug: "food-beverage",
@@ -61,8 +64,7 @@ const INDUSTRIES = [
   icon: "ph-beer-bottle",
   h1: "CIP proof beats a food-safe slogan.",
   sub: "Breweries, distilleries, wineries, processing floors, hood filters, and drains cleaned around staff and active food spaces.",
-  intro: "Tanks, heat exchangers, and CIP/SIP lines usually depend on caustic-acid sequences that are hard on staff and effluent. Brewlando trial notes say CR and HCR worked better than traditional caustic-soda and acid blends at the same concentration and CIP time; the Carib lab table adds effluent data buyers can review.",
-  products: ["cr", "hcr", "crhd", "neutral", "multiwash"],
+  intro: "Tanks, heat exchangers, and CIP/SIP lines require separate cleaning and sanitation release steps. MASEST field-trial notes record CR and HCR use at the reported concentration and cycle time; review the public reference sources, limitations, and evidence status before a controlled trial.",
 },
 {
   slug: "healthcare",
@@ -71,7 +73,6 @@ const INDUSTRIES = [
   h1: "Healthcare maintenance cannot become an event.",
   sub: "Clean, passivate, and maintain water systems while the building stays occupied and fume-event risk stays lower.",
   intro: "Hospitals and occupied campuses require infection-control coordination, isolation, ventilation, wastewater planning, and documented return-to-service criteria. Product selection follows the exact asset, soil, current SDS, and approved work plan.",
-  products: ["watersafe60", "purgo", "hcr", "cr", "descaler"],
 },
 {
   slug: "construction",
@@ -79,17 +80,15 @@ const INDUSTRIES = [
   icon: "ph-crane",
   h1: "Active jobs need chemistry that behaves.",
   sub: "Concrete cleaning, equipment maintenance, rust removal, and site cleanup on active jobs.",
-  intro: "Concrete, equipment, and exterior cleanup on active sites often puts acids and bleach near working crews. VertKleen Descaler clears concrete scale and calcium, HCR removes rust, and LAM3 handles biological growth on exteriors with simpler storage and lighter exposure risk.",
-  products: ["descaler", "hcr", "crhd", "lam3"],
+  intro: "Concrete, equipment, and exterior cleanup on active sites requires current-SDS review, crew separation, material compatibility, containment, and wastewater routing. Descaler, HCR, CR HD, and LAM3 are starting options for separate controlled trials.",
 },
 {
   slug: "golf-courses",
   name: "Golf Courses & Sports Facilities",
   icon: "ph-flag",
   h1: "Keep grounds, carts, irrigation, and clubhouse surfaces out of the harsh-chemical lane.",
-  sub: "Equipment, carts, irrigation scale, exterior stains, and turf-adjacent cleaning all need chemistry grounds crews can trial safely.",
-  intro: "Golf courses and sports facilities clean fleets, carts, shop floors, irrigation hardware, clubhouse exteriors, equipment, mats, and high-touch areas near turf and water. VertKleen matches those jobs with Torque, LAM3, HCR, MultiWash, and Purgo so grounds crews can trial one safer chemistry set across the property.",
-  products: ["torque", "lam3", "hcr", "multiwash", "purgo"],
+  sub: "Equipment, carts, irrigation scale, exterior stains, and turf-adjacent cleaning need a documented chemistry trial with runoff controls.",
+  intro: "Golf courses and sports facilities clean fleets, carts, shop floors, irrigation hardware, clubhouse exteriors, equipment, and mats near turf and water. Torque, LAM3, HCR, MultiWash, and Purgo are starting options for separate, controlled task trials.",
   primaryCta: "Request grounds-crew trial",
   primaryType: "sample",
 },
@@ -99,8 +98,7 @@ const INDUSTRIES = [
   icon: "ph-seal-check",
   h1: "Public buyers need more than a nice label.",
   sub: "The procurement documentation federal, state, local, and public-facility buyers expect.",
-  intro: "MASEST keeps SAM.gov, CAGE 0B2Q3, and NAICS 424690 paperwork ready for federal, state, local, and public-facility buyers. Each cleaning task still requires current SDS review, material compatibility, site controls, wastewater routing, and documented acceptance criteria.",
-  products: ["hcr", "descaler", "crhd", "alumibrite"],
+  intro: "Public procurement requires current registration, CAGE and NAICS records, solicitation fit, country-of-origin review, current product documents, and task-specific acceptance criteria. MASEST verifies the applicable file during bid review rather than treating an identifier as product approval.",
 },
 {
   slug: "education",
@@ -109,16 +107,14 @@ const INDUSTRIES = [
   h1: "Campus work happens while campus happens.",
   sub: "K-12 and university facilities cleaned and treated while students, faculty, and staff remain on site.",
   intro: "Schools and universities maintain water systems, kitchens, and exteriors around occupied schedules. Scope each task through the current SDS, isolation plan, material compatibility, wastewater route, and documented return-to-service endpoint.",
-  products: ["cr", "hcr", "watersafe60", "lam3"],
 },
 {
   slug: "municipalities-water-utilities",
   name: "Municipalities & Water Utilities",
   icon: "ph-buildings",
-  h1: "Bid-ready water and facilities chemistry with the safety file already started.",
-  sub: "NSF-60 requirements, worker safety, bids, and public water review need a replacement story that survives documentation review.",
-  intro: "Municipalities and water utilities need chemistry that fits bid language, worker safety expectations, and water-system documentation. CR2, WaterSafe60, and HCR give the buyer a public-sector path for NSF-60 requirements, scale and corrosion control, and acid-replacement work.",
-  products: ["cr2", "watersafe60", "hcr"],
+  h1: "Water and facilities chemistry built for bid review.",
+  sub: "Public-water requirements, worker safety, bids, exact-product certification review, and controlled trials need one documented path.",
+  intro: "Municipalities and water utilities need chemistry that fits bid language, worker-safety expectations, water-system documentation, and exact-product certification scope. CR2, WaterSafe60, and HCR are starting options only after the current listing, trade name, SKU, use limits, and site procedure are verified.",
   primaryCta: "Get on our bid list",
   primaryType: "quote",
 },
@@ -127,18 +123,16 @@ const INDUSTRIES = [
   name: "HVAC / Water Treatment",
   icon: "ph-wind",
   h1: "The tower program, translated into cleaner chemistry.",
-  sub: "Inhibitor, antimicrobial support, passivation, pH control, and ASHRAE 188 support for cooling-tower programs.",
-  intro: "Cooling-tower programs combine inhibitor, antimicrobial support, descaling acid, pH control, and sometimes a non-oxidizing biocide. VertKleen covers it with WaterSafe60, Purgo, HCR, and CR, with DBNPA footnoted as a low-hazard component when the non-oxidizing biocide is specified separately.",
-  products: ["watersafe60", "purgo", "hcr", "cr"],
+  sub: "Scope inhibitor, microbial control, passivation, pH control, and cleaning inside the facility's approved water-management plan.",
+  intro: "Cooling-tower programs separate corrosion and scale control, microbial-control strategy, cleaning, pH adjustment, monitoring, and corrective action. WaterSafe60, Purgo, HCR, and CR require exact-product document review; the facility's water-management team controls final selection and use.",
 },
 {
   slug: "data-centers",
   name: "Data Centers",
   icon: "ph-hard-drives",
-  h1: "Water-treatment chemistry for uptime teams under compliance pressure.",
-  sub: "Cooling tower scale, Legionella compliance, green mandates, and uptime risk put data-center water treatment under procurement review.",
-  intro: "Data centers cannot let scale, biological growth, or hazardous chemical handling become an uptime risk. WaterSafe60 covers scale and corrosion control, HCR handles acid-cleaning and passivation work, and Descaler gives facilities teams an acid-free path for coils, plumbing, and heat-transfer surfaces.",
-  products: ["watersafe60", "hcr", "descaler"],
+  h1: "Water-treatment chemistry for uptime teams under program review.",
+  sub: "Cooling-tower scale, water-management-plan support, heat-transfer efficiency, and uptime risk put data-center chemistry under procurement review.",
+  intro: "Data-center water work requires coordination with the facility water-management plan, redundancy limits, metallurgy, monitoring, and change control. WaterSafe60, HCR, and Descaler are starting options for documented compatibility review and a controlled maintenance window.",
   primaryCta: "Schedule a water-treatment audit.",
   primaryType: "audit",
 },
@@ -149,16 +143,14 @@ const INDUSTRIES = [
   h1: "Scale removal should not bring muriatic acid inside.",
   sub: "Water lines, fixtures, water heaters, and drains cleared of scale and calcium without hydrochloric acid handling.",
   intro: "Calcium, scale, and rust in supply lines, fixtures, and water heaters are usually attacked with hydrochloric-acid products or CLR. VertKleen Descaler clears buildup without hydrochloric acid handling, with metal compatibility reviewed for occupied-building plumbing work; HCR handles heavier rust passivation.",
-  products: ["descaler", "hcr", "neutral"],
 },
 {
   slug: "hotels-property-management",
   name: "Hotels, Resorts & Property Management",
   icon: "ph-buildings",
-  h1: "One safer property-maintenance chemical set for guest-facing work.",
-  sub: "Facades, pools, restrooms, HVAC, exterior stains, and odor complaints need one supplier that does not create guest-facing fume issues.",
-  intro: "Hotels, resorts, and property managers juggle facades, pools, restrooms, HVAC coils, odor complaints, and exterior biological growth while guests remain on site. MultiWash, LAM3, Descaler, and Neutral create one property-maintenance lane with triple-zero handling across the core products.",
-  products: ["multiwash", "lam3", "descaler", "neutral"],
+  h1: "One documented property-maintenance path for guest-facing work.",
+  sub: "Facades, pools, restrooms, HVAC, exterior stains, and odor complaints need task-specific closure, ventilation, and reopening controls.",
+  intro: "Hotels, resorts, and property managers juggle facades, pools, restrooms, HVAC coils, odor complaints, and exterior biological growth while guests remain on site. MultiWash, LAM3, Descaler, and Neutral are starting options; each task still needs the current SDS, material review, containment, and reopening criteria.",
   primaryCta: "Request property walkthrough",
   primaryType: "audit",
 },
@@ -167,9 +159,8 @@ const INDUSTRIES = [
   name: "Solar Farms & Panel Cleaning",
   icon: "ph-sun",
   h1: "Panel cleaning at scale without making runoff the objection.",
-  sub: "Soft-wash at scale without panel damage, runoff review, and drone-site logistics need chemistry that is easy to approve.",
+  sub: "Utility-scale soft-wash work needs coating compatibility, water-quality, energized-system, runoff, vegetation, and access controls.",
   intro: "Solar farms and panel-cleaning teams need a soft-wash path that respects coatings, runoff, vegetation, and large site logistics. MultiWash and LAM3 support panel-adjacent exterior cleaning where bleach damage and plant kill concerns slow approval.",
-  products: ["multiwash", "lam3"],
   primaryCta: "Request per-MW quote",
   primaryType: "quote",
 },
@@ -177,10 +168,9 @@ const INDUSTRIES = [
   slug: "mechanical-contractors-water-treatment",
   name: "Mechanical Contractors & Water Treatment",
   icon: "ph-wind",
-  h1: "Reduce callback risk with a safer descaling and water-treatment kit.",
+  h1: "Reduce callback risk with a documented descaling and water-treatment kit.",
   sub: "Callback-driven descaling and hazmat handling costs slow mechanical contractors and water-treatment teams.",
   intro: "Mechanical contractors and water-treatment providers need chemistry that works in the field and still survives owner review. HCR, Descaler, and WaterSafe60 cover scale, passivation, and cooling-water program needs without making handling the main obstacle.",
-  products: ["hcr", "descaler", "watersafe60"],
   primaryCta: "Open a contractor account",
   primaryType: "quote",
 },
@@ -191,7 +181,6 @@ const INDUSTRIES = [
   h1: "CIP cleaning that proves itself against acid and caustic sequences.",
   sub: "CIP acid and caustic hazards, beer-line cleaning cost, and rinse acceptance all matter to beverage producers.",
   intro: "Brewery, distillery, and winery teams can use CR for the alkaline cleaning step, HCR for the acid wash, and CR HD Low Foam where low-foam degreasing matters. The food and beverage pricing table keeps this segment separate from HVAC pricing.",
-  products: ["cr", "hcr", "cr-hd-low-foam"],
   primaryCta: "Book a free CIP demo",
   primaryType: "sample",
 },
@@ -202,7 +191,6 @@ const INDUSTRIES = [
   h1: "Grease, drains, hoods, and floors without turning the kitchen into a fume event.",
   sub: "Grease, drains, hood filters, and equipment cleaning need food-adjacent chemistry that crews can use repeatedly.",
   intro: "Restaurants and commercial kitchens need degreasing, drain, hood, and floor cleaning without solvent odor or caustic handling dominating the job. CR HD, Purgo, MultiWash, and Neutral cover the core food-service workflow.",
-  products: ["crhd", "purgo", "multiwash", "neutral"],
   primaryCta: "Get a sample kit",
   primaryType: "sample",
 },
@@ -213,7 +201,6 @@ const INDUSTRIES = [
   h1: "Floor and fleet degreasing at warehouse scale.",
   sub: "Floor degreasing at scale and worker-safety expectations drive warehouse chemical approvals.",
   intro: "Warehouses and distribution centers need fast degreasing for floors, forklifts, parts, kitchens, and loading areas. CR HD and MultiWash give operations teams a practical path for heavy soil and recurring facility cleaning.",
-  products: ["crhd", "multiwash"],
   primaryCta: "Request drum pricing",
   primaryType: "quote",
 },
@@ -224,7 +211,6 @@ const INDUSTRIES = [
   h1: "Soft-wash work without making bleach damage the default risk.",
   sub: "Bleach damage, plant kill, and runoff liability slow pressure-washing and soft-wash approvals.",
   intro: "Pressure-washing and soft-wash contractors need exterior chemistry that can be explained to property owners, landscapers, and runoff reviewers. LAM3 and MultiWash support biological staining and general exterior wash, while CR HD and the CRS application label cover fleet grease, concrete, rust, and mineral scale.",
-  products: ["lam3", "multiwash", "crhd"],
   primaryCta: "Distributor application",
   primaryType: "distributor",
 },
@@ -232,10 +218,9 @@ const INDUSTRIES = [
   slug: "drone-cleaning-companies",
   name: "Drone Cleaning Companies",
   icon: "ph-drone",
-  h1: "Drone-rated cleaning chemistry for exterior work at height.",
-  sub: "Drone cleaners need safe, drone-rated chemistry that can be explained around overspray, runoff, and vegetation.",
+  h1: "Cleaning chemistry scoped for exterior work at height.",
+  sub: "Drone cleaners need chemistry reviewed against equipment, substrate, overspray, runoff, vegetation, and site-access controls.",
   intro: "Drone cleaning companies need exterior chemistry that works with flight operations and keeps plant, coating, and runoff objections under control. MultiWash, LAM3, CR HD, and the CRS application label cover exterior wash, biological staining, heavier soils, rust, and mineral scale.",
-  products: ["multiwash", "lam3", "crhd"],
   primaryCta: "Book a drone-wash consult",
   primaryType: "audit",
 },
@@ -246,7 +231,6 @@ const INDUSTRIES = [
   h1: "Hull, salt, wax, and aluminum work without acid-brightener baggage.",
   sub: "Hull scale, salt, wax, and aluminum brightwork need chemistry that fits vessel and dockside constraints.",
   intro: "Marine buyers need cleaning and brightening chemistry that respects confined air, soft metals, and dockside operations. Torque, AlumiBrite, and HCR cover wash-and-wax, aluminum brightwork, and scale or rust work.",
-  products: ["torque", "alumibrite", "hcr"],
   primaryCta: "Get marina bulk pricing",
   primaryType: "quote",
 },
@@ -255,9 +239,8 @@ const INDUSTRIES = [
   name: "Aviation - FBOs, MRO, Airports",
   icon: "ph-airplane-tilt",
   h1: "Precision degreasing needs corrosion-aware chemistry.",
-  sub: "Aviation maintenance and airport facilities need precision degreasing without corrosion concerns.",
+  sub: "Aviation maintenance and airport facilities need precision degreasing with corrosion-aware material review.",
   intro: "FBOs, MRO teams, and airport facilities need degreasing and aluminum work that can survive documentation review. CR HD and AlumiBrite support heavy soil removal and brightwork where generic solvent or caustic choices are harder to approve.",
-  products: ["crhd", "alumibrite"],
   primaryCta: "Request aviation spec sheet",
   primaryType: "technical",
 },
@@ -268,7 +251,6 @@ const INDUSTRIES = [
   h1: "Cleaning near vulnerable people needs a quieter handling story.",
   sub: "Cleaning near vulnerable people and indoor air-quality concerns make harsh chemistry harder to approve.",
   intro: "Healthcare and senior-living facilities need cleaning and scale-control products that crews can explain around patients, residents, guests, and air quality. Neutral, MultiWash, and Descaler support the core facility-maintenance set.",
-  products: ["neutral", "multiwash", "descaler"],
   primaryCta: "Request facilities assessment",
   primaryType: "audit",
 },
@@ -279,7 +261,6 @@ const INDUSTRIES = [
   h1: "Fleet cleaning needs wash, wax, grease, and aluminum in one lane.",
   sub: "Degreasing, wash and wax, and wheel or aluminum brightening drive fleet and truck-wash chemistry needs.",
   intro: "Fleet, trucking, and car-wash teams need recurring chemistry for exterior wash, grease, engines, wheels, and aluminum. Torque, CR HD, MultiWash, and AlumiBrite create the core fleet program.",
-  products: ["torque", "crhd", "multiwash", "alumibrite"],
   primaryCta: "Fleet program pricing",
   primaryType: "quote",
 },
@@ -290,11 +271,21 @@ const INDUSTRIES = [
   h1: "Farm cleaning starts with soil, equipment, and runoff—not a generic food-plant recipe.",
   sub: "Harvest, packing, milking, irrigation, and farm-equipment cleaning need crop, livestock, biosecurity, material, and wash-water controls.",
   intro: "Farm operations clean plant residue, soil, grease, fertilizer salts, manure-adjacent organic load, milk film, and mineral scale across very different assets. MultiWash, CR HD, and HCR provide starting chemistry for a controlled equipment trial; food-contact sanitation and site biosecurity remain separate release steps.",
-  products: ["multiwash", "crhd", "hcr"],
   primaryCta: "Request farm-equipment trial",
   primaryType: "sample",
 }
 ];
+
+for (const industry of INDUSTRIES) {
+  const application = INDUSTRY_APPLICATIONS_BY_SLUG.get(industry.slug);
+  if (!application) throw new Error(`${industry.slug}: missing canonical industry registry record`);
+  industry.products = [...application.products];
+}
+for (const application of INDUSTRY_APPLICATIONS) {
+  if (!INDUSTRIES.some((industry) => industry.slug === application.slug)) {
+    throw new Error(`${application.slug}: canonical industry route missing from page generator`);
+  }
+}
 
 const NAV = [
   ["", "MASEST"], ["products", "Products"], ["services", "Services"], [null, "Use Cases"],
@@ -445,66 +436,24 @@ const SAMPLE_GALLERY = {
   ],
 };
 
-// Per-industry field context. Images live in CMS storage under stable g{1,2,3}.webp
-// aliases. Registry metadata decides whether each image is context or qualified proof.
-const GALLERY = {
-  "oil-gas": [
-    ["VertKleen HCR dissolving two decades of rust in a jar test", "Rust dissolved in an HCR jar test"],
-    ["Measured HCR dose for a controlled descaling test", "Measured dose, controlled descale"],
-    ["Rusted steel beside a cleaned test patch", "Cleaned patch vs. muriatic acid"]
-  ],
-  "marine": [
-    ["Yellowfin helm and console cleaned with VertKleen Torque", "Helm and console cleaned"],
-    ["Hull and topsides washed dockside without acid brighteners", "Topsides washed dockside"],
-    ["43-foot Yellowfin finished bow to transom", "Finished bow to transom"]
-  ],
-  "manufacturing": [
-    ["Greasy intake assembly before VertKleen CR HD degreasing", "Greasy intake, pre-degrease"],
-    ["Filter media cleared of grease with fibers intact", "Media cleared, fibers intact"],
-    ["Degreased filter restored to clean media", "Restored to clean media"]
-  ],
-  "distribution-cold-storage": [
-    ["Walmart perishable distribution center on-site assessment", "Perishable DSC assessment"]
-  ],
-  "food-beverage": [
-    ["Brewery fermenters cleaned with VertKleen CR and HCR", "Fermenters cleaned, CR + HCR"],
-    ["Tank interior cleaned back to bright stainless", "Tank back to bright stainless"],
-    ["Heat-exchanger plates descaled for CIP service", "Heat-exchanger plates descaled"]
-  ],
-  "healthcare": [
-    ["Facility AC coil cleaned in place with aluminum-fin compatibility reviewed", "AC coil cleaned in place"],
-    ["Clean Team USA technician cleaning exterior glass at the occupied UF Shands campus", "Exterior glass cleaned while campus stayed open"],
-    ["UF Shands campus exterior during the VertKleen field program", "UF Shands occupied-campus field site"]
-  ],
-  "construction": [
-    ["Tiled deck mid-pass, treated half cleared of grime", "Deck mid-pass, treated half"],
-    ["Paver patio cleaned of embedded algae and grime", "Pavers cleared of algae"],
-    ["Algae-covered exterior wall before VertKleen CR", "Wall before VertKleen CR"]
-  ],
-  "military-government": [
-    ["Two-decade rust and scale on equipment before treatment", "Equipment rust, pre-treatment"],
-    ["Component cleared of rust with HCR and reduced acid-fume handling", "Cleared with HCR, reduced acid-fume handling"],
-    ["Diamond-plate steel restored without hydrochloric acid handling", "Diamond plate, no HCl handling"]
-  ],
-  "education": [
-    ["Campus stair and railing cleaned with everyone on site", "Stair and railing, campus open"],
-    ["Exterior water feature cleared of scale and growth", "Water feature descaled"],
-    ["Walkway tile cleaned of grime and biological staining", "Walkway tile cleaned"]
-  ],
-  "hvac-water": [
-    ["Coil descaler dosed at an isolated condenser during controlled in-place service", "Descaler dosed at the condenser"],
-    ["Coil fins cleared of scale without bending the aluminum", "Fins cleared, not bent"],
-    ["Aluminum condenser coil descaled on an occupied site", "Aluminum coil descaled"]
-  ],
-  "plumbing": [
-    ["Fire-system pipe flange before mineral scale and rust removal", "Pipe flange before scale removal"],
-    ["Fire-system pipe flange after mineral scale and rust removal", "Pipe flange after scale removal"],
-    ["Floor drain cleared of scale and buildup", "Floor drain cleared"]
-  ]
-};
+// Owner-confirmed public field media. Registry metadata keeps public context
+// separate from qualified proof until method, endpoint, and limitations exist.
+const FIELD_GALLERY_SLUGS = new Set([
+  "oil-gas",
+  "marine",
+  "manufacturing",
+  "food-beverage",
+  "healthcare",
+  "construction",
+  "military-government",
+  "education",
+  "hvac-water",
+  "plumbing",
+]);
 
 const enc = (s) => encodeURIComponent(s).replace(/'/g, "%27");
 const htmlText = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const htmlAttr = (s) => htmlText(s).replace(/"/g, "&quot;");
 
 const LABEL_VARIANTS = {
   "fb-cip-cr": {
@@ -546,7 +495,7 @@ const LABEL_VARIANTS = {
   "fb-multiwash": {
     market: "FB label",
     name: "VertKleen MultiWash",
-    subtitle: "Multi-surface cleaner · deodorizer · antimicrobial",
+    subtitle: "Multi-surface cleaner · deodorizer",
     image: "multiwash-food-beverage-studio.webp",
     productHref: "multiwash",
     directions: [
@@ -608,7 +557,7 @@ const LABEL_VARIANTS = {
   "gym-purgo": {
     market: "Gym label",
     name: "VertKleen Pūrgo",
-    subtitle: "Antimicrobial · high-touch · deodorizer",
+    subtitle: "High-touch cleaner · deodorizer",
     image: "purgo-studio.webp",
     productHref: "purgo",
     directions: [
@@ -673,18 +622,18 @@ const INDUSTRY_DETAILS = {
   "oil-gas": ["Chemicals replaced", "Hydrochloric acid (muriatic acid), solvent degreasers, and aggressive rust removers used on rigs, terminals, pipeline parts, and tank-farm equipment.", "Bundle: HCR for rust and passivation, Descaler for mineral scale, CR HD for oily soils, Neutral for sensitive surfaces."],
   marine: ["Buyer objection", "Confined air, aluminum brightwork, glass, and dockside access make acid brighteners and solvent washes hard to manage.", "Bundle: Torque for wash-and-wax, AlumiBrite for aluminum, MultiWash for exterior cleaning, CR HD for machinery spaces."],
   manufacturing: ["Common replacements", "Acid descalers, caustic CIP cleaners, and solvent degreasers used across lines, floors, parts, and maintenance bays.", "Bundle: HCR for scale and rust, CR for alkaline cleaning, CR HD for heavy grease, Descaler for mineral deposits."],
-  "distribution-cold-storage": ["Walkdown sequence", "Walmart perishable DSC materials check banana-room mildew, refrigerated hard-to-reach areas, ammonia coil scale, condenser and drain-line buildup, kitchen grease, and pilot readiness.", "Bundle: Descaler for ammonia coils and heat-transfer circuits, CR HD for fryer, hood, floor, forklift, and parts degreasing, MultiWash and Purgo for spot mildew and odor-control support."],
+  "distribution-cold-storage": ["Walkdown sequence", "A cold-storage walkdown records refrigerated access, isolated refrigeration components, drain-line buildup, kitchen grease, fleet soil, materials, and pilot readiness before product selection.", "Starting options: Descaler for compatible mineral-scale work, CR HD for degreasing, and MultiWash for recurring surface cleaning; exact use follows document and trial review."],
   "food-beverage": ["Sector proof", "Brewery and distillery work centers on CR and HCR sequences for tanks, heat exchangers, protein soil, beer stone, and hood or drain cleaning.", "Bundle: CR for alkaline wash, HCR for acid wash, CR HD for grease, Neutral where sensitive surfaces or seals matter."],
   healthcare: ["Buyer objection", "Occupied facilities can't trade maintenance for fume events, shutdowns, or uncontrolled chemical exposure.", "Bundle: WaterSafe60 and Purgo for water-program support, HCR for passivation, CR for pH and alkaline cleaning."],
   construction: ["Common replacements", "Hydrochloric acid (muriatic acid), bleach, and caustic degreasers used for concrete cleanup, equipment, pavers, and exterior biological growth.", "Bundle: Descaler for concrete and calcium, HCR for rust, CR HD for equipment grease, LAM3 for exterior growth."],
   "golf-courses": ["Trial focus", "Grounds teams need course equipment, carts, irrigation hardware, wet areas, and exterior stains cleaned without chemistry that threatens turf, water features, or member-facing spaces.", "Bundle: Torque for carts and fleet wash, LAM3 for biological staining, HCR for irrigation scale and rust, MultiWash for clubhouse and exterior cleaning."],
   "military-government": ["Procurement signal", "Public buyers need CAGE, NAICS, SDS, and controlled documents before they'll switch a chemistry standard.", "Bundle: HCR, Descaler, CR HD, and AlumiBrite cover rust, scale, grease, and aluminum restoration, all with documentation on file."],
   education: ["Sector proof", "Campus buyers need cleaning and water-treatment options that work while students, faculty, and staff remain on site.", "Bundle: CR and HCR for facility cleaning, WaterSafe60 for water systems, LAM3 for exterior biological growth."],
-  "municipalities-water-utilities": ["Bid signal", "Public water and municipal facilities need worker-safety improvements that still respect NSF-60, bid language, and documentation review.", "Bundle: CR2 for NSF-60 caustic replacement conversations, WaterSafe60 for scale and corrosion control, HCR for acid-cleaning and passivation work."],
-  "hvac-water": ["Program coverage", "Cooling tower programs cover inhibitor, oxidizing antimicrobial support, non-oxidizing biocide, acid cleaning, pH adjustment, and degreasing.", "Bundle: WaterSafe60, Purgo, HCR, CR, and Neutral, with DBNPA footnoted separately when the non-oxidizing rotation is specified."],
-  "data-centers": ["Program coverage", "Cooling tower scale, Legionella compliance, and green mandates all sit inside the same uptime conversation for data-center facilities teams.", "Bundle: WaterSafe60 for scale and corrosion control, HCR for passivation and heavy scale, Descaler for acid-free heat-transfer cleaning."],
+  "municipalities-water-utilities": ["Bid signal", "Public water and municipal facilities need bid language, worker-safety review, exact-product certification scope, and documented acceptance criteria.", "Starting options: CR2, WaterSafe60, and HCR; verify current product identity, listing scope, materials, procedure, and discharge route before approval."],
+  "hvac-water": ["Program coverage", "Cooling-tower programs separate corrosion and scale control, microbial-control strategy, cleaning, pH adjustment, monitoring, and corrective action.", "Starting options: WaterSafe60, Purgo, HCR, CR, and Neutral; the approved water-management program and current product documents control final use."],
+  "data-centers": ["Program coverage", "Cooling-tower scale, water-management-plan duties, change control, and uptime limits sit inside the same facilities review.", "Starting options: WaterSafe60, HCR, and Descaler for compatibility review inside an approved maintenance window."],
   plumbing: ["Buyer objection", "Water lines, fixtures, heaters, and drains need scale removal without hydrochloric acid handling inside occupied buildings.", "Bundle: Descaler for calcium and scale, HCR for heavier rust and passivation, Neutral for sensitive equipment cleaning."],
-  "hotels-property-management": ["Property walkthrough", "Guest-facing properties need facades, pools, restrooms, HVAC, odor, and exterior-stain work handled without fume complaints or a pile of separate suppliers.", "Bundle: MultiWash for daily property cleaning, LAM3 for biological staining, Descaler for pools, restrooms, and HVAC scale, Neutral for sensitive surfaces."],
+  "hotels-property-management": ["Property walkthrough", "Guest-facing properties need facades, pools, restrooms, HVAC, odor, and exterior-stain work mapped to closure, ventilation, containment, and reopening controls.", "Starting options: MultiWash, LAM3, Descaler, and Neutral; confirm current documents, surface compatibility, wastewater route, and guest-area controls."],
   "solar-panel-cleaning": ["Site review", "Solar and panel-cleaning crews need soft-wash chemistry that can be explained around coatings, vegetation, runoff, drones, and large-site access.", "Bundle: MultiWash for panel-adjacent exterior cleaning and LAM3 for moss, algae, mold, and mildew staining."],
 };
 
@@ -765,14 +714,8 @@ function ctaBlock(ind) {
   </section>`;
 }
 
-const GALLERY_IMAGE_DIMS = {
-  "distribution-cold-storage": [[1600, 1200]],
-  "healthcare": [[900, 675], [1200, 900], [1200, 900]],
-  "plumbing": [[1200, 900], [1200, 900], [900, 675]],
-};
-
 function imageGalleryBlock(ind) {
-  const evidence = FIELD_EVIDENCE_BY_SLUG.get(ind.slug);
+  const evidence = INDUSTRY_APPLICATIONS_BY_SLUG.get(ind.slug)?.field_evidence;
   if (!evidence) throw new Error(`${ind.slug}: missing field evidence registry`);
 
   const tasks = TASK_GALLERY[ind.slug];
@@ -789,7 +732,14 @@ function imageGalleryBlock(ind) {
           <figcaption><span class="ind-media-kind">Generated task visualization</span>${sample[1]}</figcaption>
         </figure>` : "";
 
-  const shots = GALLERY[ind.slug] || [];
+  const shots = FIELD_GALLERY_SLUGS.has(ind.slug)
+    ? [1, 2, 3].map((index) => {
+      const path = `/img/industries/${ind.slug}/g${index}.webp`;
+      const asset = SITE_IMAGE_BY_PATH.get(path);
+      if (!asset) throw new Error(`${ind.slug}: missing canonical field image ${path}`);
+      return asset;
+    })
+    : [];
   if (shots.length && evidence.status === "absent") {
     throw new Error(`${ind.slug}: field images cannot use absent evidence status`);
   }
@@ -799,13 +749,16 @@ function imageGalleryBlock(ind) {
   const fieldKind = evidence.status === "qualified" ? "field-proof" : "field-context";
   const fieldLabel = evidence.status === "qualified"
     ? "Qualified field record"
-    : "Field context - verification incomplete";
-  const fieldFigs = shots.map(([alt, cap], i) => {
-    const [w, h] = (GALLERY_IMAGE_DIMS[ind.slug] || [])[i] || [900, 675];
+    : "Public field context - verification incomplete";
+  const fieldFigs = shots.map((asset, i) => {
+    if (!asset.alt?.trim() || !asset.width || !asset.height) {
+      throw new Error(`${ind.slug}: incomplete canonical field image g${i + 1}`);
+    }
+    const alt = htmlAttr(asset.alt);
     return `
         <figure class="ind-shot" data-evidence-kind="${fieldKind}">
-          <img src="../img/industries/${ind.slug}/g${i + 1}.webp" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" width="${w}" height="${h}">
-          <figcaption><span class="ind-media-kind">${fieldLabel}</span>${cap}</figcaption>
+          <img src="..${asset.public_url}" alt="${alt}" loading="lazy" width="${asset.width}" height="${asset.height}">
+          <figcaption><span class="ind-media-kind">${fieldLabel}</span>${alt}</figcaption>
         </figure>`;
   }).join("");
   const figs = `${taskFigs}${sampleFig}${fieldFigs}`;
@@ -814,7 +767,7 @@ function imageGalleryBlock(ind) {
   return `
   <section class="section section-slim ind-gallery-sec" aria-label="${ind.name} image gallery">
     <div class="wrap">
-      <p class="ind-gallery-note">Generated scenes illustrate tasks. Field photos are labeled separately; only records completing the verification checklist are treated as field proof.</p>
+      <p class="ind-gallery-note">Generated scenes illustrate tasks. Owner-confirmed field photos remain public context; only records completing the verification checklist are treated as field proof.</p>
       <div class="ind-gallery ind-image-gallery">${figs}
       </div>
     </div>
@@ -852,7 +805,7 @@ function page(ind) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260725a">
+<link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
@@ -885,7 +838,7 @@ ${nav}
       <span class="ind-icon"><i class="ph ${ind.icon}" aria-hidden="true"></i></span>
       <h2 class="headline">Why VertKleen fits ${ind.name}.</h2>
       <p>${ind.intro}</p>
-      <a class="btn btn-ink" href="../proof">Review field evidence</a>
+      <a class="btn btn-ink" href="../proof">Review available evidence</a>
     </div>
   </section>
 

@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, "..", "comparisons");
@@ -64,7 +65,7 @@ const pages = [
     description: "Compare VertKleen CR HD against Simple Green for heavy degreasing with active-strength and per-gallon economics.",
     eyebrow: "Degreaser comparison",
     h1: "CR HD vs Simple Green.",
-    subhead: "When Simple Green is familiar but too light for industrial grease, CR HD is the heavy-duty replacement.",
+    subhead: "When Simple Green is familiar but too light for industrial grease, compare CR HD through a task-specific controlled trial.",
     product: "VertKleen CR HD",
     productHref: "../products/crhd",
     competitor: "Simple Green Industrial",
@@ -74,10 +75,12 @@ const pages = [
     swapCurrent: "Simple Green / Zep / butyl degreasers",
     swapJob: "Heavy-duty degreasing",
     swapUse: "VertKleen CR HD for warehouse floors, forklifts, kitchens, drains, parts, and heavy oil.",
-    proofTitle: "Walmart distribution-center proof point",
-    proof: "Walmart distribution-center materials document CR HD replacing Simple Green for heavy degreasing across DC-8851, DC-7023, and DC-6099.",
-    image: "../img/proof/cases/walmart-dc-crhd.webp",
-    imageAlt: "Walmart distribution center CR HD degreasing proof",
+    proofTitle: "Build the comparison around your task",
+    proof: "Send the current cleaner, dilution, labor, water, downtime, disposal route, and volume. MASEST will return a compatibility-and-trial plan with cost per completed task.",
+    proofHref: "../contact?type=audit&product=CR%20HD%20vs%20Simple%20Green",
+    proofCta: "Request task comparison",
+    image: "../img/products/crhd-studio.webp",
+    imageAlt: "VertKleen CR HD heavy degreaser container",
     ctaProduct: "CR HD vs Simple Green"
   },
   {
@@ -118,8 +121,8 @@ const pages = [
     swapCurrent: "Caustic soda + brewing acid blends",
     swapJob: "Beer line, tank, mash tank, and heat-exchanger CIP/SIP",
     swapUse: "VertKleen CR for alkaline wash followed by VertKleen HCR for acid wash.",
-    proofTitle: "Brewlando proof point",
-    proof: "Brewlando Brewing trial notes say CR and HCR worked better than the traditional caustic-soda and acid blends at the same concentration and CIP time.",
+    proofTitle: "Public brewery trial reference",
+    proof: "Brewlando Brewing trial notes report CR and HCR results against incumbent caustic-soda and acid blends under the recorded concentration and CIP time. The source is reference-only; method completeness and independent validation are not established.",
     image: "../img/proof/cases/brewery.webp",
     imageAlt: "Brewery tank cleaned with VertKleen CR and HCR",
     ctaProduct: "beer line cleaner cost comparison"
@@ -129,7 +132,7 @@ const pages = [
 const IMAGE_DIMENSIONS = {
   "../img/proof/cases/ddc-rust.webp": [1200, 579],
   "../img/proof/cases/farm-rust-after.webp": [740, 967],
-  "../img/proof/cases/walmart-dc-crhd.webp": [708, 513],
+  "../img/products/crhd-studio.webp": [900, 1200],
   "../img/proof/cases/grout-moss.webp": [919, 690],
   "../img/proof/cases/brewery.webp": [1200, 900],
 };
@@ -169,7 +172,7 @@ function pageHtml(page) {
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260725f">
+<link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
 <meta property="og:title" content="${html(page.title)} | MASEST VertKleen">
@@ -235,7 +238,7 @@ function pageHtml(page) {
       <article class="product-static-panel">
         <h2>${html(page.proofTitle)}</h2>
         <p>${html(page.proof)}</p>
-        <a class="btn btn-ink" href="../proof">See proof library</a>
+        <a class="btn btn-ink" href="${page.proofHref || "../proof"}">${html(page.proofCta || "See proof library")}</a>
       </article>
     </div>
   </section>

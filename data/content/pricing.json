@@ -36,11 +36,11 @@
       "featured": false,
       "features": [
         "Everything in Gold, plus DDC design and commissioning",
-        "Weekly monitoring, 24/7 response",
-        "WMP engineering review, quarterly Legionella",
-        "EHSS and CAGE procurement paperwork handled"
+        "Weekly monitoring; response terms quoted by site",
+        "WMP engineering review; testing cadence quoted by site",
+        "EHSS and public-sector procurement file review"
       ],
-      "replaces": "Displaces Ecolab / Nalco / Diversey contracts",
+      "replaces": "Configured against the current incumbent program",
       "price_unit": "/ mo",
       "sort_order": 4,
       "seo": {}
@@ -60,10 +60,10 @@
       "features": [
         "Everything in Silver, plus glycol management, MultiWash, AlumiBrite",
         "Bi-weekly service",
-        "Engineering-reviewed ASHRAE 188 WMP",
-        "Legionella assessment and full injection system"
+        "ASHRAE 188 water-management-plan scope review",
+        "Water-management assessment and injection-system scope"
       ],
-      "replaces": "Displaces Nalco / Ecolab national",
+      "replaces": "Configured against the current incumbent program",
       "price_unit": "/ mo",
       "sort_order": 3,
       "seo": {}
@@ -86,7 +86,7 @@
         "Automated Advantage controller",
         "Annual ASHRAE 188 update"
       ],
-      "replaces": "Displaces Ecolab COIL-FLO",
+      "replaces": "Configured against the current incumbent program",
       "price_unit": "/ mo",
       "sort_order": 2,
       "seo": {}

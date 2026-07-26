@@ -126,20 +126,20 @@ test("programs page keeps glycol quote handling in an optional disclosure", () =
   assert.doesNotMatch(programs, /PG inhibited 100% \(96%\)[\s\S]*\$141/, "glycol prices should not be public without workbook confirmation");
 });
 
-test("products page keeps the field proof strip between catalog and CTA", () => {
+test("products page keeps the classified evidence strip between catalog and CTA", () => {
   const products = read("products.html");
   const catalogIndex = products.indexOf('id="shopGrid"');
   const proofIndex = products.indexOf('class="conversion-proof');
   const ctaIndex = products.search(/<section[^>]+class="[^"]*\bblock-dark\b[^"]*"/);
 
-  assert.ok(proofIndex > -1, "expected compact proof strip");
+  assert.ok(proofIndex > -1, "expected compact evidence strip");
   assert.ok(ctaIndex > -1, "expected closing CTA");
-  assert.ok(catalogIndex < proofIndex, "proof should follow the catalog");
-  assert.ok(proofIndex < ctaIndex, "proof should precede the CTA");
-  assert.match(products, /30 min/);
-  assert.match(products, /Brewery CIP/);
-  assert.match(products, /Occupied sites/);
-  assert.match(products, /proof/);
+  assert.ok(catalogIndex < proofIndex, "evidence should follow the catalog");
+  assert.ok(proofIndex < ctaIndex, "evidence should precede the CTA");
+  assert.match(products, /Field context/);
+  assert.match(products, /Reference only/);
+  assert.match(products, /CR \+ HCR CIP/);
+  assert.doesNotMatch(products, /30 min|36 hours|Occupied sites/);
 });
 
 test("program function map is optional below the tiers", () => {
@@ -155,9 +155,9 @@ test("program function map is optional below the tiers", () => {
   assert.ok(mapDisclosureIndex < mapIndex, "map should be wrapped by disclosure");
 });
 
-test("proof page leads with conversion proof, not internal notes", () => {
+test("proof page leads with classified evidence, not raw internal results", () => {
   const proof = read("proof.html");
-  const heroIndex = proof.indexOf("The proof came off working equipment.");
+  const heroIndex = proof.indexOf("Evidence, classified before it sells.");
   const libraryIndex = proof.indexOf('class="proof-library');
 
   assert.ok(heroIndex > -1, "expected proof hero");
@@ -166,8 +166,9 @@ test("proof page leads with conversion proof, not internal notes", () => {
   assert.doesNotMatch(proof, /proof-decision-strip/);
   assert.doesNotMatch(proof, /class="proof-decision"/);
   assert.match(proof, /Request a chemical audit/);
-  assert.match(proof, /30 min/);
-  assert.match(proof, /Brewery CIP/);
+  assert.match(proof, /Public field context—verification incomplete/);
+  assert.match(proof, /CR \+ HCR CIP reference trial notes/);
+  assert.doesNotMatch(proof, /30 min|36 hours|280&#215;|\$75|2,500 square feet/);
   assert.doesNotMatch(proof, /broader company file/i);
   assert.doesNotMatch(proof, /private pipeline detail/i);
 });
@@ -180,8 +181,10 @@ test("industries page routes buyers before the long industry list", () => {
   assert.ok(routerIndex > -1, "expected industry buyer router");
   assert.ok(gridIndex > -1, "expected industry grid to remain");
   assert.ok(routerIndex < gridIndex, "router should precede dense industry list");
-  assert.match(industries, /Start with a quote/);
-  assert.match(industries, /Match proof to your industry/);
+  assert.match(industries, /Start with your role or the job/);
+  assert.match(industries, /Facility \/ operations/);
+  assert.match(industries, /Degrease/);
+  assert.match(industries, /Evidence status/);
 });
 
 test("industry router stacks route cards on mobile", () => {
@@ -371,7 +374,7 @@ test("scrolly story keeps its static summary out of the visual flow", () => {
   assert.match(summary, /id="storySummaryTitle"/);
   assert.match(summary, /The field problem/);
   assert.match(summary, /The Replacement Ledger/);
-  assert.match(summary, /One documented switch/);
+  assert.match(summary, /One documented trial brief/);
 });
 
 test("scrolly opener states the replacement promise early", () => {
@@ -421,7 +424,7 @@ test("scrolly act 3 combines conventional burden and qualified VertKleen state",
   assert.match(actThree, /Caustic soda \/ lye/);
   assert.match(actThree, /Glutaraldehyde/);
   assert.match(actThree, /Chlorinated solvent/);
-  assert.match(actThree, /Operational shift/);
+  assert.match(actThree, /Review gate/);
   assert.match(actThree, /data-target="115000"/);
   assert.match(actThree, /class="cost-sources"/);
   for (const product of ["VertKleen HCR", "VertKleen CR", "VertKleen Neutral", "VertKleen Purgo"]) {
@@ -430,7 +433,7 @@ test("scrolly act 3 combines conventional burden and qualified VertKleen state",
   assert.equal((actThree.match(/class="hmis-chip is-safe"/g) || []).length, 4);
   assert.doesNotMatch(actThree, /DBNPA/);
   assert.match(actFour, /class="proof-panel"/);
-  assert.match(actFour, /data-target="10000"/);
+  assert.match(actFour, /data-target="6"/);
   assert.doesNotMatch(actFour, /class="ledger-row"/);
 });
 

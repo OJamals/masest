@@ -65,8 +65,8 @@ test("fourth act is an asymmetric proof and action close", () => {
   assert.match(actFour, /class="proof-close"/);
   assert.match(actFour, /class="proof-panel"/);
   assert.match(actFour, /class="close-action"/);
-  assert.match(actFour, /\$<\/span><span class="cost-num" data-target="10000">10,000<\/span>/);
-  assert.match(actFour, /Source: MASEST Walmart DSC program \(DC-8851, Calci-Solve replacement\)/);
+  assert.match(actFour, /data-target="6">6<\/span><span class="cost-per"> job inputs/);
+  assert.match(actFour, /Current chemical, dilution, labor, water, downtime, and disposal/);
   assert.match(actFour, /href="products#catalog"/);
   assert.doesNotMatch(actFour, /zero-axis|savior-zero-scale|grid-template-columns:\s*repeat\(3/);
 });

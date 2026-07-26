@@ -91,6 +91,142 @@ export function initProofFilters() {
   });
 }
 
+const discoveryTokens = (value) => new Set(
+  String(value || "").split(/\s+/).filter(Boolean),
+);
+
+export function industryDiscoveryMatches(route, filters) {
+  const role = filters.role || "";
+  const job = filters.job || "";
+  if (!role && !job) return false;
+
+  const roles = discoveryTokens(route.roles);
+  const jobs = discoveryTokens(route.jobs);
+  return (!role || roles.has(role)) && (!job || jobs.has(job));
+}
+
+export function industryDiscoveryCtaHref(href, type, base) {
+  const url = new URL(href, base);
+  url.searchParams.set("type", type === "quote" ? "quote" : "audit");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function initIndustryDiscovery() {
+  const root = document.querySelector("[data-industry-discovery]");
+  if (!root || root.dataset.industryDiscoveryWired === "true") return;
+  root.dataset.industryDiscoveryWired = "true";
+
+  const controls = [...root.querySelectorAll("[data-industry-discovery-filter]")];
+  const cards = [...root.querySelectorAll("[data-industry-discovery-card]")];
+  const results = root.querySelector("[data-industry-discovery-results]");
+  const status = root.querySelector("[data-industry-discovery-status]");
+  const clear = root.querySelector("[data-industry-discovery-clear]");
+  const filterTypes = ["role", "job"];
+  const controlsByType = Object.fromEntries(filterTypes.map((type) => [
+    type,
+    new Map(controls
+      .filter((control) => control.dataset.filterType === type)
+      .map((control) => [control.dataset.filterValue, control])),
+  ]));
+
+  const readFilters = () => {
+    const params = new URLSearchParams(window.location.search);
+    return Object.fromEntries(filterTypes.map((type) => {
+      const value = params.get(type) || "";
+      return [type, controlsByType[type].has(value) ? value : ""];
+    }));
+  };
+
+  const writeFilters = (filters) => {
+    const url = new URL(window.location.href);
+    for (const type of filterTypes) {
+      if (filters[type]) url.searchParams.set(type, filters[type]);
+      else url.searchParams.delete(type);
+    }
+    url.hash = "industry-discovery";
+    window.history.pushState({}, "", url);
+  };
+
+  const applyFilters = (filters) => {
+    const active = Boolean(filters.role || filters.job);
+    const activeControls = filterTypes
+      .map((type) => controlsByType[type].get(filters[type]))
+      .filter(Boolean);
+    const pathDetail = activeControls
+      .map((control) => control.dataset.resultDetail)
+      .filter(Boolean)
+      .join(" ");
+    const ctaControl = activeControls[0];
+    let visibleCount = 0;
+
+    controls.forEach((control) => {
+      const selected = control.dataset.filterValue === filters[control.dataset.filterType];
+      control.classList.toggle("active", selected);
+      control.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+
+    cards.forEach((card) => {
+      const visible = industryDiscoveryMatches({
+        roles: card.dataset.buyerRoles,
+        jobs: card.dataset.jobPaths,
+      }, filters);
+      card.hidden = !visible;
+      if (visible) visibleCount += 1;
+
+      card.querySelectorAll("[data-industry-discovery-product]").forEach((product) => {
+        product.hidden = Boolean(
+          filters.job && !discoveryTokens(product.dataset.jobPaths).has(filters.job),
+        );
+      });
+      const path = card.querySelector("[data-industry-discovery-path]");
+      if (path) {
+        path.textContent = pathDetail;
+        path.hidden = !pathDetail;
+      }
+      const cta = card.querySelector("[data-industry-discovery-cta]");
+      if (cta && ctaControl) {
+        const type = ctaControl.dataset.ctaType === "quote" ? "quote" : "audit";
+        cta.setAttribute(
+          "href",
+          industryDiscoveryCtaHref(cta.getAttribute("href"), type, window.location.href),
+        );
+        cta.textContent = ctaControl.dataset.ctaLabel || "Scope audit";
+      }
+    });
+
+    if (results) results.hidden = !visibleCount;
+    if (clear) clear.hidden = !active;
+    if (status) {
+      if (!active) status.textContent = "Choose a buyer role or job path.";
+      else if (!visibleCount) status.textContent = "No industry routes match both filters.";
+      else if (filters.role && !filters.job) {
+        status.textContent = `${visibleCount} industry routes match this role. Add a job path to narrow.`;
+      } else {
+        status.textContent = `${visibleCount} industry route${visibleCount === 1 ? "" : "s"} match.`;
+      }
+    }
+  };
+
+  controls.forEach((control) => {
+    control.addEventListener("click", (event) => {
+      event.preventDefault();
+      const filters = readFilters();
+      const type = control.dataset.filterType;
+      const value = control.dataset.filterValue;
+      filters[type] = filters[type] === value ? "" : value;
+      writeFilters(filters);
+      applyFilters(filters);
+    });
+  });
+  clear?.addEventListener("click", () => {
+    const filters = { role: "", job: "" };
+    writeFilters(filters);
+    applyFilters(filters);
+  });
+  window.addEventListener("popstate", () => applyFilters(readFilters()));
+  applyFilters(readFilters());
+}
+
 export function initQuoteForm() {
   const form = document.getElementById("quoteForm");
   if (!form) return;

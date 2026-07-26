@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260725f">
+<link rel="stylesheet" href="css/style.css?v=20260726a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css?v=20260619b">
 <!-- seo:auto -->
@@ -18,7 +18,7 @@
 <meta property="og:url" content="https://masest.co/industries">
 <meta property="og:image" content="https://masest.co/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/","logo":"https://masest.co/img/masest-logo.png","brand":"VertKleen","description":"HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.","areaServed":"United States and international commercial accounts","contactPoint":{"@type":"ContactPoint","contactType":"sales","url":"https://masest.co/contact"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/","logo":"https://masest.co/img/masest-logo.png","brand":"VertKleen","description":"Industrial cleaning candidates selected through exact-SKU document review and controlled trials.","areaServed":"United States and international commercial accounts","contactPoint":{"@type":"ContactPoint","contactType":"sales","url":"https://masest.co/contact"}}</script>
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg">
@@ -43,34 +43,463 @@
     </div>
   </section>
 
-  <section class="section section-slim">
+  <!-- industry:discovery:start -->
+<section class="section section-slim">
     <div class="wrap">
-      <div class="industry-router buyer-router reveal" aria-label="Industry buying paths">
+      <div class="industry-router buyer-router reveal" id="industry-discovery" data-industry-discovery>
         <div>
-          <span class="eyebrow">Choose your path</span>
-          <h2>Get to approval the short way.</h2>
-          <p class="subhead">Pick the step you want first, then open your industry when the job needs more detail.</p>
+          <span class="eyebrow">Find your route</span>
+          <h2>Start with your role or the job.</h2>
+          <p class="subhead">Filter the existing industry library. Every match keeps the sector task, starting chemistry, evidence status, and scoped audit handoff together.</p>
+          <p class="industry-discovery-status" data-industry-discovery-status aria-live="polite">Choose a buyer role or job path.</p>
+          <button class="btn btn-ghost btn-sm" type="button" data-industry-discovery-clear hidden>Clear filters</button>
         </div>
-        <div class="route-grid" data-cms-content="industry_cards">
-          <a class="route-card route-card-strong" href="contact?type=quote">
-            <span>Quote</span>
-            <strong>Start with a quote</strong>
-            <b>Product, volume, location, timeline.</b>
-          </a>
-          <a class="route-card" href="proof">
-            <span>Proof</span>
-            <strong>Match proof to your industry</strong>
-            <b>Photos, case notes, and field outcomes.</b>
-          </a>
-          <a class="route-card" href="contact?type=audit">
-            <span>Partner</span>
-            <strong>Request a chemical audit</strong>
-            <b>Match one chemical you run now to an HMIS 0-0-0 replacement.</b>
-          </a>
+        <div class="industry-discovery-controls">
+          <div>
+            <span class="eyebrow">Buyer role</span>
+            <div class="route-grid">
+              <a class="route-card" href="?role=facility-operations#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="role" data-filter-value="facility-operations" data-result-detail="Lead with asset condition, operating window, method, and return-to-service." data-cta-type="audit" data-cta-label="Scope operating fit" aria-pressed="false">
+          <span>Buyer role</span>
+          <strong>Facility / operations</strong>
+          <b>Asset, shutdown, labor, and return-to-service.</b>
+        </a>
+        <a class="route-card" href="?role=ehs-compliance#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="role" data-filter-value="ehs-compliance" data-result-detail="Lead with current documents, containment, wastewater, and approval boundaries." data-cta-type="audit" data-cta-label="Review EHS fit" aria-pressed="false">
+          <span>Buyer role</span>
+          <strong>EHS / compliance</strong>
+          <b>Hazard review, containment, wastewater, and approval.</b>
+        </a>
+        <a class="route-card" href="?role=procurement#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="role" data-filter-value="procurement" data-result-detail="Lead with starting SKUs, controlled documents, supply, and buying deadline." data-cta-type="quote" data-cta-label="Request task quote" aria-pressed="false">
+          <span>Buyer role</span>
+          <strong>Procurement</strong>
+          <b>Starting chemistry, documents, supply, and quote.</b>
+        </a>
+        <a class="route-card" href="?role=service-contractors#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="role" data-filter-value="service-contractors" data-result-detail="Lead with repeatable method, client acceptance, wastewater, and service handoff." data-cta-type="audit" data-cta-label="Build service plan" aria-pressed="false">
+          <span>Buyer role</span>
+          <strong>Service contractors</strong>
+          <b>Job fit, application controls, and client handoff.</b>
+        </a>
+            </div>
+          </div>
+          <div>
+            <span class="eyebrow">High-intent job</span>
+            <div class="route-grid">
+              <a class="route-card" href="?job=degrease#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="degrease" data-result-detail="Match oil and grease soil to materials, agitation, recovery, and finish endpoint." data-cta-type="audit" data-cta-label="Scope degreasing job" aria-pressed="false">
+          <span>Job path</span>
+          <strong>Degrease</strong>
+          <b>Oil, grease, carbon film, and process soil.</b>
+        </a>
+        <a class="route-card" href="?job=descale#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="descale" data-result-detail="Match deposit and metallurgy to circulation, endpoint, rinse, and restart." data-cta-type="audit" data-cta-label="Scope descaling job" aria-pressed="false">
+          <span>Job path</span>
+          <strong>Descale</strong>
+          <b>Mineral scale, rust, and water-side deposits.</b>
+        </a>
+        <a class="route-card" href="?job=cip#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="cip" data-result-detail="Match circuit, soil, materials, flow, rinse endpoint, and separate release step." data-cta-type="audit" data-cta-label="Scope CIP trial" aria-pressed="false">
+          <span>Job path</span>
+          <strong>CIP</strong>
+          <b>Process circuits, tanks, lines, and exchangers.</b>
+        </a>
+        <a class="route-card" href="?job=cooling-water#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="cooling-water" data-result-detail="Match water-side asset, deposit, program boundary, monitoring, and restart." data-cta-type="audit" data-cta-label="Review water-side fit" aria-pressed="false">
+          <span>Job path</span>
+          <strong>Cooling water</strong>
+          <b>Towers, loops, exchangers, and restart controls.</b>
+        </a>
+        <a class="route-card" href="?job=fleet-wash#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="fleet-wash" data-result-detail="Match vehicle soil, finish, reclaim route, throughput, and dry inspection." data-cta-type="quote" data-cta-label="Price fleet-wash task" aria-pressed="false">
+          <span>Job path</span>
+          <strong>Fleet wash</strong>
+          <b>Vehicles, equipment, finishes, and reclaim.</b>
+        </a>
+        <a class="route-card" href="?job=exterior-bio-soil#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="exterior-bio-soil" data-result-detail="Match surface and soil to access, overspray, vegetation, runoff, and finish check." data-cta-type="audit" data-cta-label="Scope exterior job" aria-pressed="false">
+          <span>Job path</span>
+          <strong>Exterior / bio-soil</strong>
+          <b>Facades, hardscape, roofs, and biological staining.</b>
+        </a>
+            </div>
+          </div>
+        </div>
+        <div class="industry-discovery-results" data-industry-discovery-results hidden>
+          <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="aviation-fbos-mro-airports" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/aviation-fbos-mro-airports">Aviation - FBOs, MRO, Airports</a></h3>
+        <p>Remove hydraulic fluid, grease, and exhaust soil from ground-support equipment and approved aircraft-adjacent components.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/neutral">VertKleen Neutral</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/aviation-fbos-mro-airports">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Aviation+-+FBOs%2C+MRO%2C+Airports&amp;type=audit&amp;message=Industry%3A+Aviation+-+FBOs%2C+MRO%2C+Airports%0AAsset+%2F+substrate%3A+Ground-support+equipment%2C+shop+floors%2C+wheel-well+tooling%2C+engine+stands%2C+and+approved+aluminum+or+coated+parts%0ASoil+%2F+deposit%3A+Hydraulic+oil%2C+lubricating+grease%2C+carbon+film%2C+rubber+transfer%2C+and+ramp+grime%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Aluminum+alloy%2C+stainless+steel%2C+painted+steel%2C+composites%2C+sealants%2C+and+elastomers%0AWastewater+route%3A+Capture+ramp+and+shop+wash+water%3B+route+oil-bearing+waste+through+the+airport%27s+approved+separator+and+discharge+program.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="breweries-distilleries-wineries" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cip" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/breweries-distilleries-wineries">Breweries, Distilleries &amp; Wineries</a></h3>
+        <p>Run an alkaline-and-acid CIP sequence against organic film, beer stone, and mineral scale in process circuits.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/cr-hd-low-foam">VertKleen CR HD Low Foam</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/breweries-distilleries-wineries">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Breweries%2C+Distilleries+%26+Wineries&amp;type=audit&amp;message=Industry%3A+Breweries%2C+Distilleries+%26+Wineries%0AAsset+%2F+substrate%3A+Fermenters%2C+bright+tanks%2C+kettles%2C+fillers%2C+kegs%2C+transfer+lines%2C+and+plate+heat+exchangers%0ASoil+%2F+deposit%3A+Krausen%2C+protein%2C+carbohydrate+film%2C+yeast%2C+beer+stone%2C+tartrate%2C+and+mineral+scale%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+316+stainless+steel%2C+PVC%2C+approved+hoses%2C+pump+seals%2C+valve+seats%2C+and+heat-exchanger+gaskets%0AWastewater+route%3A+Neutralize+and+discharge+only+within+the+site%27s+pretreatment+permit%2C+pH+limits%2C+organic+loading+controls%2C+and+volume+schedule.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="construction" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale fleet-wash exterior-bio-soil" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/construction">Construction</a></h3>
+        <p>Clean concrete-handling equipment, forms, tools, and fleet assets without spreading silica-bearing solids or oily wash water.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale exterior-bio-soil"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/lam3">VertKleen LAM3</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/construction">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Construction&amp;type=audit&amp;message=Industry%3A+Construction%0AAsset+%2F+substrate%3A+Concrete+pumps%2C+forms%2C+mixers%2C+hand+tools%2C+compact+equipment%2C+vehicle+exteriors%2C+and+finished+masonry%0ASoil+%2F+deposit%3A+Cement+film%2C+form+oil%2C+hydraulic+grease%2C+asphalt+transfer%2C+rust%2C+and+mineral+efflorescence%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Carbon+steel%2C+aluminum%2C+hydraulic+seals%2C+painted+equipment%2C+cured+concrete%2C+masonry%2C+and+form+coatings%0AWastewater+route%3A+Collect+slurry+and+wash+water%3B+settle+solids+and+route+liquid+under+the+site%27s+SWPPP+and+local+discharge+authorization.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="data-centers" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/data-centers">Data Centers</a></h3>
+        <p>Restore heat-transfer performance in isolated cooling-water assets while keeping chemistry away from energized IT space.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/data-centers">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Data+Centers&amp;type=audit&amp;message=Industry%3A+Data+Centers%0AAsset+%2F+substrate%3A+Cooling+towers%2C+plate+heat+exchangers%2C+condenser-water+piping%2C+closed+loops%2C+strainers%2C+and+mechanical-room+coils%0ASoil+%2F+deposit%3A+Carbonate+scale%2C+iron+oxide%2C+corrosion+product%2C+silt%2C+and+water-side+organic+fouling%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Copper%2C+stainless+steel%2C+carbon+steel%2C+aluminum+coils%2C+elastomers%2C+treatment+probes%2C+and+coated+tower+components%0AWastewater+route%3A+Capture+spent+cleanout+solution%3B+characterize+metals+and+pH+before+routing+through+the+facility%27s+approved+wastewater+path.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="distribution-cold-storage" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cooling-water fleet-wash" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/distribution-cold-storage">Distribution / Cold Storage</a></h3>
+        <p>Remove forklift oil, tire marks, food soils, and mineral buildup without leaving a slippery film in an operating facility.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/distribution-cold-storage">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Distribution+%2F+Cold+Storage&amp;type=audit&amp;message=Industry%3A+Distribution+%2F+Cold+Storage%0AAsset+%2F+substrate%3A+Warehouse+floors%2C+loading+docks%2C+forklifts%2C+battery+areas%2C+drains%2C+cold-room+surfaces%2C+and+isolated+evaporator+components%0ASoil+%2F+deposit%3A+Hydraulic+oil%2C+tire+polymer%2C+pallet+grime%2C+food+residue%2C+ice-related+mineral+scale%2C+and+drain+film%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Sealed+concrete%2C+epoxy%2C+urethane%2C+rubber+tires%2C+painted+steel%2C+stainless+steel%2C+aluminum%2C+and+drain+components%0AWastewater+route%3A+Recover+scrubber+solution%3B+route+grease+and+solids+through+the+site%27s+interceptor%2C+pretreatment%2C+and+discharge+schedule.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="drone-cleaning-companies" data-buyer-roles="ehs-compliance procurement service-contractors" data-job-paths="exterior-bio-soil" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/drone-cleaning-companies">Drone Cleaning Companies</a></h3>
+        <p>Deliver low-pressure exterior cleaning from a drone while controlling overspray, runoff, and finish compatibility.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/crhd">VertKleen CR HD</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/drone-cleaning-companies">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Drone+Cleaning+Companies&amp;type=audit&amp;message=Industry%3A+Drone+Cleaning+Companies%0AAsset+%2F+substrate%3A+Roofs%2C+fa%C3%A7ades%2C+siding%2C+glazing%2C+solar+modules%2C+canopies%2C+and+elevated+coated+surfaces%0ASoil+%2F+deposit%3A+Atmospheric+soot%2C+algae+and+mildew+staining%2C+bird+residue%2C+salt+film%2C+and+loose+particulate%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Coated+metal%2C+glass%2C+roofing+membrane%2C+painted+masonry%2C+sealants%2C+photovoltaic+coatings%2C+and+landscaping%0AWastewater+route%3A+Map+drainage+before+flight%3B+block+storm+inlets+and+capture+or+divert+runoff+under+the+property+permit.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="education" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cooling-water exterior-bio-soil" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/education">Education Facilities</a></h3>
+        <p>Clean campus mechanical, kitchen, restroom, and exterior assets within occupied-building and school-calendar controls.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="degrease exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/education">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Education+Facilities&amp;type=audit&amp;message=Industry%3A+Education+Facilities%0AAsset+%2F+substrate%3A+Boilers%2C+cooling+towers%2C+heat+exchangers%2C+kitchen+equipment%2C+restroom+fixtures%2C+gym+floors%2C+drains%2C+and+hardscape%0ASoil+%2F+deposit%3A+Mineral+scale%2C+rust%2C+grease%2C+soap+film%2C+tracked+soil%2C+algae+staining%2C+and+drain+residue%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Stainless+steel%2C+copper%2C+carbon+steel%2C+resilient+flooring%2C+sealed+concrete%2C+ceramic%2C+grout%2C+paint%2C+and+elastomers%0AWastewater+route%3A+Route+kitchen+grease%2C+scale-bearing+cleanout%2C+and+floor+solution+through+district-approved+pretreatment+and+local+sewer+rules.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="fleet-trucking-car-washes" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/fleet-trucking-car-washes">Fleet, Trucking &amp; Car Washes</a></h3>
+        <p>Remove road film, bugs, grease, and aluminum oxidation without damaging fleet finishes or wash-bay controls.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/torque">VertKleen Torque</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/fleet-trucking-car-washes">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Fleet%2C+Trucking+%26+Car+Washes&amp;type=audit&amp;message=Industry%3A+Fleet%2C+Trucking+%26+Car+Washes%0AAsset+%2F+substrate%3A+Truck+and+bus+exteriors%2C+wheels%2C+aluminum+tanks%2C+chassis%2C+engine+bays%2C+wash-bay+floors%2C+and+service+equipment%0ASoil+%2F+deposit%3A+Road+film%2C+insect+residue%2C+diesel+soot%2C+lubricating+grease%2C+brake+dust%2C+salt%2C+and+aluminum+oxidation%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Clear+coat%2C+painted+steel%2C+aluminum%2C+stainless+steel%2C+chrome%2C+rubber%2C+plastics%2C+glass%2C+and+sensor+housings%0AWastewater+route%3A+Use+oil-water+separation+and+solids+capture%3B+discharge+only+through+the+wash+bay%27s+permitted+reclaim+or+sewer+route.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="food-beverage" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cip" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/food-beverage">Food &amp; Beverage</a></h3>
+        <p>Validate a CIP or COP cleaning sequence against product soil and mineral deposit before the separate sanitation release.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/neutral">VertKleen Neutral</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/food-beverage">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Food+%26+Beverage&amp;type=audit&amp;message=Industry%3A+Food+%26+Beverage%0AAsset+%2F+substrate%3A+Process+tanks%2C+piping%2C+fillers%2C+pasteurizers%2C+heat+exchangers%2C+kettles%2C+conveyors%2C+and+removable+parts%0ASoil+%2F+deposit%3A+Fat%2C+protein%2C+carbohydrate%2C+yeast%2C+biofilm-supporting+residue%2C+beer+or+milk+stone%2C+and+hard-water+scale%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+304%2F316+stainless+steel%2C+PVC%2C+approved+elastomers%2C+conveyor+polymers%2C+aluminum+where+permitted%2C+and+heat-exchanger+gaskets%0AWastewater+route%3A+Balance+pH+and+organic+load+within+the+pretreatment+permit%3B+schedule+discharge+volume+with+the+plant%27s+wastewater+operator.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="agriculture" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cip fleet-wash exterior-bio-soil" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/agriculture">Agriculture &amp; Farm Operations</a></h3>
+        <p>Remove crop residue, manure-adjacent soil, fertilizer salts, grease, and mineral film from farm equipment before the site's sanitation or biosecurity step.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/agriculture">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Agriculture+%26+Farm+Operations&amp;type=audit&amp;message=Industry%3A+Agriculture+%26+Farm+Operations%0AAsset+%2F+substrate%3A+Harvest+and+packing+equipment%2C+bins%2C+hoppers%2C+augers%2C+milking+components%2C+wash+pads%2C+utility+vehicles%2C+irrigation+parts%2C+and+drains%0ASoil+%2F+deposit%3A+Plant+residue%2C+soil%2C+fertilizer+salt%2C+grease%2C+manure-adjacent+organic+load%2C+milk+film%2C+and+hard-water+scale%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Stainless+steel%2C+food-grade+polymers%2C+belts%2C+hoses%2C+seals%2C+galvanized+and+painted+equipment%2C+aluminum%2C+rubber%2C+and+sealed+concrete%0AWastewater+route%3A+Screen+solids+and+manage+nutrients%2C+fats%2Foils%2Fgrease%2C+pH%2C+and+hydraulic+load+under+the+farm%27s+approved+collection+and+discharge+plan.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="golf-courses" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale fleet-wash exterior-bio-soil" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/golf-courses">Golf Courses &amp; Sports Facilities</a></h3>
+        <p>Clean carts, grounds equipment, irrigation, athletic hardscape, locker rooms, and public areas without sending runoff into turf or surface water.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/torque">VertKleen Torque</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/golf-courses">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Golf+Courses+%26+Sports+Facilities&amp;type=audit&amp;message=Industry%3A+Golf+Courses+%26+Sports+Facilities%0AAsset+%2F+substrate%3A+Carts%2C+mowers%2C+utility+vehicles%2C+irrigation+hardware%2C+stadium+hardscape%2C+locker-room+floors%2C+sport+flooring%2C+pavers%2C+and+fountains%0ASoil+%2F+deposit%3A+Grass+oil%2C+grease%2C+rubber+transfer%2C+body-soil+film%2C+fertilizer+salt%2C+mineral+scale%2C+algae+staining%2C+mud%2C+and+tracked+organic+soil%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Sport+flooring%2C+sealed+concrete%2C+painted+metal%2C+aluminum%2C+plastics%2C+rubber%2C+tile%2C+grout%2C+irrigation+polymers%2C+and+turf%0AWastewater+route%3A+Use+designated+wash+pads+and+floor+drains%3B+intercept+solids%2Foil+and+keep+runoff+out+of+playing+fields+and+surface+water.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="healthcare" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/healthcare">Healthcare</a></h3>
+        <p>Clean isolated mechanical and facility assets without crossing infection-control, occupied-care, or water-management boundaries.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/healthcare">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Healthcare&amp;type=audit&amp;message=Industry%3A+Healthcare%0AAsset+%2F+substrate%3A+Cooling+towers%2C+closed+loops%2C+heat+exchangers%2C+steam-plant+equipment%2C+kitchen%2Flaundry+equipment%2C+drains%2C+and+nonclinical+hard+surfaces%0ASoil+%2F+deposit%3A+Scale%2C+rust%2C+corrosion+product%2C+grease%2C+soap+film%2C+mineral+deposit%2C+and+ordinary+facility+soil%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Copper%2C+stainless+and+carbon+steel%2C+aluminum%2C+elastomers%2C+coated+tower+parts%2C+tile%2C+sealed+flooring%2C+and+approved+polymers%0AWastewater+route%3A+Characterize+pH%2C+metals%2C+and+biocide%2Ftreatment+residuals%3B+route+under+hospital+EHS+and+wastewater+authorization.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="healthcare-senior-living" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale exterior-bio-soil" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/healthcare-senior-living">Healthcare &amp; Senior Living</a></h3>
+        <p>Remove grease, scale, and ordinary soil in resident-facing facilities before the approved infection-prevention step.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/neutral">VertKleen Neutral</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/healthcare-senior-living">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Healthcare+%26+Senior+Living&amp;type=audit&amp;message=Industry%3A+Healthcare+%26+Senior+Living%0AAsset+%2F+substrate%3A+Kitchens%2C+laundries%2C+mechanical+rooms%2C+restroom+fixtures%2C+nonclinical+floors%2C+drains%2C+carts%2C+and+isolated+heat-transfer+equipment%0ASoil+%2F+deposit%3A+Cooking+grease%2C+laundry+film%2C+soap+scum%2C+hard-water+scale%2C+tracked+soil%2C+and+drain+residue%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Resilient+flooring%2C+tile%2C+grout%2C+stainless+steel%2C+copper%2C+chrome%2C+plastics%2C+sealed+stone%2C+painted+surfaces%2C+and+elastomers%0AWastewater+route%3A+Route+grease+through+interceptors+and+descaling+solution+under+facility+pH%2Fdischarge+limits%3B+never+use+resident-area+storm+drains.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="hotels-property-management" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cooling-water exterior-bio-soil" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/hotels-property-management">Hotels, Resorts &amp; Property Management</a></h3>
+        <p>Remove grease, soap film, mineral scale, and exterior staining while guest-facing areas remain controlled and presentable.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/hotels-property-management">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Hotels%2C+Resorts+%26+Property+Management&amp;type=audit&amp;message=Industry%3A+Hotels%2C+Resorts+%26+Property+Management%0AAsset+%2F+substrate%3A+Commercial+kitchens%2C+laundry+equipment%2C+restroom+fixtures%2C+mechanical+rooms%2C+pool-side+hardscape%2C+fa%C3%A7ades%2C+drains%2C+and+parking+surfaces%0ASoil+%2F+deposit%3A+Cooking+grease%2C+soap+scum%2C+carbonate+scale%2C+body-soil+film%2C+algae+staining%2C+tire+marks%2C+and+atmospheric+grime%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Tile%2C+grout%2C+stone%2C+stainless+steel%2C+chrome%2C+glass%2C+sealed+concrete%2C+paint%2C+roofing%2C+plastics%2C+and+landscaping%0AWastewater+route%3A+Use+kitchen+interceptors+and+approved+sanitary+drains%3B+block+storm+inlets+and+protect+pool+and+landscape+water.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="hvac-water" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/hvac-water">HVAC / Water Treatment</a></h3>
+        <p>Remove water-side scale and corrosion product, then return the isolated system to a documented treatment program.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/purgo">Purgo</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/cr">VertKleen CIP CR</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/hvac-water">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=HVAC+%2F+Water+Treatment&amp;type=audit&amp;message=Industry%3A+HVAC+%2F+Water+Treatment%0AAsset+%2F+substrate%3A+Cooling+towers%2C+fill%2C+plate+and+shell+heat+exchangers%2C+condensers%2C+boilers%2C+closed+loops%2C+coils%2C+strainers%2C+and+piping%0ASoil+%2F+deposit%3A+Calcium+carbonate%2C+iron+oxide%2C+mixed+mineral+scale%2C+silt%2C+corrosion+product%2C+and+organic+fouling%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Copper%2C+carbon+steel%2C+stainless+steel%2C+aluminum%2C+galvanized+steel%2C+tower+polymers%2C+elastomers%2C+and+treatment+sensors%0AWastewater+route%3A+Characterize+spent+solution+for+pH+and+metals%3B+neutralize+and+discharge+only+through+the+approved+facility+route.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="manufacturing" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cip" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/manufacturing">Manufacturing</a></h3>
+        <p>Remove process oil, carbon, grease, and scale from isolated production assets with a measurable return-to-process endpoint.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/manufacturing">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Manufacturing&amp;type=audit&amp;message=Industry%3A+Manufacturing%0AAsset+%2F+substrate%3A+Parts%2C+machine+tools%2C+floors%2C+conveyors%2C+tanks%2C+heat+exchangers%2C+molds%2C+dies%2C+and+utility+piping%0ASoil+%2F+deposit%3A+Cutting+oil%2C+hydraulic+fluid%2C+grease%2C+carbonized+residue%2C+adhesive+film%2C+rust%2C+and+mineral+scale%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Carbon+and+stainless+steel%2C+aluminum%2C+copper%2C+engineered+polymers%2C+elastomers%2C+paint%2C+powder+coat%2C+and+conversion+coatings%0AWastewater+route%3A+Profile+oil%2C+metals%2C+pH%2C+and+solids%3B+use+oil-water+separation+or+hazardous%2Findustrial+waste+routes+defined+by+the+plant.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="marine" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash exterior-bio-soil" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/marine">Marine</a></h3>
+        <p>Remove salt, marine film, oil, and oxidation from vessels and dockside assets without releasing an oily wash plume.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/torque">VertKleen Torque</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/marine">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Marine&amp;type=audit&amp;message=Industry%3A+Marine%0AAsset+%2F+substrate%3A+Hulls%2C+decks%2C+topsides%2C+bilges%2C+engine-room+surfaces%2C+aluminum+rails%2C+trailers%2C+dock+equipment%2C+and+service+floors%0ASoil+%2F+deposit%3A+Salt+film%2C+algae+staining%2C+diesel+soot%2C+bilge+oil%2C+grease%2C+fish+residue%2C+road+film%2C+and+aluminum+oxidation%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Gelcoat%2C+painted+steel%2C+aluminum%2C+stainless+steel%2C+teak+kept+out+unless+approved%2C+vinyl%2C+rubber%2C+glass%2C+and+marine+sealants%0AWastewater+route%3A+Use+a+contained+wash+pad+or+mobile+recovery%3B+separate+oil+and+solids+and+never+discharge+cleaning+solution+directly+to+surface+water.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="marine-marinas-boatyards" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="fleet-wash exterior-bio-soil" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/marine-marinas-boatyards">Marine, Marinas &amp; Boatyards</a></h3>
+        <p>Clean vessel exteriors, service bays, bilges, and aluminum components inside a marina or boatyard wash-water plan.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash exterior-bio-soil"><a href="products/torque">VertKleen Torque</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/marine-marinas-boatyards">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Marine%2C+Marinas+%26+Boatyards&amp;type=audit&amp;message=Industry%3A+Marine%2C+Marinas+%26+Boatyards%0AAsset+%2F+substrate%3A+Hull+and+topside+surfaces%2C+decks%2C+bilges%2C+engine+bays%2C+lifts%2C+trailers%2C+aluminum+rails%2C+docks%2C+and+service+floors%0ASoil+%2F+deposit%3A+Salt%2C+algae+staining%2C+oil+and+grease%2C+diesel+soot%2C+fish+residue%2C+road+film%2C+and+aluminum+oxidation%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Gelcoat%2C+marine+paint%2C+aluminum%2C+stainless+steel%2C+vinyl%2C+rubber%2C+glass%2C+sealants%2C+and+antifouling+systems%0AWastewater+route%3A+Capture+at+the+work+area%3B+route+through+yard+solids%2Foil+controls+and+the+authorized+sanitary+or+waste-hauler+path.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="mechanical-contractors-water-treatment" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/mechanical-contractors-water-treatment">Mechanical Contractors &amp; Water Treatment</a></h3>
+        <p>Descale isolated boilers, heat exchangers, coils, and water loops with a documented handoff back to treatment.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/mechanical-contractors-water-treatment">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Mechanical+Contractors+%26+Water+Treatment&amp;type=audit&amp;message=Industry%3A+Mechanical+Contractors+%26+Water+Treatment%0AAsset+%2F+substrate%3A+Plate+and+shell+heat+exchangers%2C+boilers%2C+cooling+towers%2C+coils%2C+pumps%2C+closed+loops%2C+strainers%2C+and+temporary+circulation+rigs%0ASoil+%2F+deposit%3A+Carbonate+and+mixed+mineral+scale%2C+iron+oxide%2C+corrosion+product%2C+silt%2C+and+water-side+organic+film%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Copper%2C+carbon+and+stainless+steel%2C+aluminum%2C+galvanized+steel%2C+elastomers%2C+brazing+alloys%2C+plastics%2C+and+sensors%0AWastewater+route%3A+Characterize+pH+and+dissolved+metals%3B+neutralize+and+route+through+the+owner%27s+authorized+discharge+or+waste-hauler+process.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="military-government" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale fleet-wash" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/military-government">Military / Government</a></h3>
+        <p>Clean fleet, facility, and utility assets under technical-order, procurement, and chain-of-custody controls.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/military-government">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Military+%2F+Government&amp;type=audit&amp;message=Industry%3A+Military+%2F+Government%0AAsset+%2F+substrate%3A+Motor-pool+vehicles%2C+ground+equipment%2C+hangar+floors%2C+public+works+machinery%2C+heat+exchangers%2C+water+assets%2C+and+maintenance+shops%0ASoil+%2F+deposit%3A+Petroleum+grease%2C+hydraulic+oil%2C+carbon%2C+road+film%2C+rust%2C+mineral+scale%2C+and+ordinary+facility+soil%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Painted+and+bare+metals%2C+aluminum%2C+stainless+steel%2C+composites%2C+elastomers%2C+concrete%2C+coatings%2C+and+government-specified+materials%0AWastewater+route%3A+Profile+and+containerize+by+installation+rules%3B+use+approved+separators%2C+industrial+discharge%2C+or+waste+contracts.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="municipalities-water-utilities" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water fleet-wash" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/municipalities-water-utilities">Municipalities &amp; Water Utilities</a></h3>
+        <p>Remove scale, rust, and grease from isolated utility assets without confusing cleaning with potable-water disinfection.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/cr2">VertKleen HVAC CR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/municipalities-water-utilities">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Municipalities+%26+Water+Utilities&amp;type=audit&amp;message=Industry%3A+Municipalities+%26+Water+Utilities%0AAsset+%2F+substrate%3A+Pumps%2C+valves%2C+screens%2C+strainers%2C+heat+exchangers%2C+treatment+skids%2C+maintenance+floors%2C+and+out-of-service+storage+components%0ASoil+%2F+deposit%3A+Carbonate+scale%2C+iron+and+manganese+deposit%2C+rust%2C+grease%2C+silt%2C+and+treatment-chemical+residue%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Ductile+iron%2C+carbon+and+stainless+steel%2C+copper%2C+concrete%2C+coatings%2C+PVC%2FHDPE%2C+elastomers%2C+and+treatment+instruments%0AWastewater+route%3A+Characterize+pH%2C+metals%2C+solids%2C+and+treatment+residuals%3B+route+only+under+the+utility%27s+NPDES%2C+sewer%2C+or+hauled-waste+authorization.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="oil-gas" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/oil-gas">Oil, Gas &amp; Process Plants</a></h3>
+        <p>Remove hydrocarbon soil and mineral deposit from de-inventoried rigs, terminals, and process-support assets.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/oil-gas">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Oil%2C+Gas+%26+Process+Plants&amp;type=audit&amp;message=Industry%3A+Oil%2C+Gas+%26+Process+Plants%0AAsset+%2F+substrate%3A+Tanks%2C+heat+exchangers%2C+separators%2C+pipe+spools%2C+pumps%2C+valves%2C+rig+equipment%2C+containment+floors%2C+and+vehicle+components%0ASoil+%2F+deposit%3A+Crude+and+refined+hydrocarbon+film%2C+grease%2C+drilling+residue%2C+carbon%2C+iron+oxide%2C+carbonate+scale%2C+and+mixed+deposits%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Carbon+and+stainless+steel%2C+specialty+alloys%2C+coatings%2Flinings%2C+elastomers%2C+FRP%2C+concrete%2C+and+instrument+components%0AWastewater+route%3A+Profile+hydrocarbons%2C+metals%2C+pH%2C+and+solids%3B+route+to+the+site%27s+oily-water+treatment+or+licensed+waste+stream.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="plumbing" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/plumbing">Plumbing</a></h3>
+        <p>Restore flow and heat transfer in isolated tankless heaters, boilers, fixtures, and scale-prone water components.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>Field context; verification incomplete</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/plumbing">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Plumbing&amp;type=audit&amp;message=Industry%3A+Plumbing%0AAsset+%2F+substrate%3A+Tankless+heat+exchangers%2C+boilers%2C+recirculation+components%2C+valves%2C+fixtures%2C+strainers%2C+pumps%2C+and+service+piping%0ASoil+%2F+deposit%3A+Calcium+carbonate%2C+mixed+mineral+scale%2C+rust%2C+iron+deposit%2C+and+soap%2Fmineral+film%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Copper%2C+stainless+steel%2C+brass%2C+nickel+alloys%2C+aluminum+where+approved%2C+PVC%2FCPVC%2C+PEX+kept+isolated+as+required%2C+and+elastomers%0AWastewater+route%3A+Neutralize+if+required+and+discharge+only+under+local+plumbing%2Fsewer+rules%3B+capture+metal-rich+or+prohibited+waste.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="pressure-washing-soft-wash-contractors" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash exterior-bio-soil" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/pressure-washing-soft-wash-contractors">Pressure-Washing &amp; Soft-Wash Contractors</a></h3>
+        <p>Remove algae staining, atmospheric soil, and traffic film from exteriors with pressure matched to the substrate.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="fleet-wash exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/pressure-washing-soft-wash-contractors">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Pressure-Washing+%26+Soft-Wash+Contractors&amp;type=audit&amp;message=Industry%3A+Pressure-Washing+%26+Soft-Wash+Contractors%0AAsset+%2F+substrate%3A+Roofs%2C+siding%2C+stucco%2C+painted+masonry%2C+concrete%2C+pavers%2C+fences%2C+storefronts%2C+and+exterior+glass%0ASoil+%2F+deposit%3A+Algae%2C+lichen+and+mildew+staining%2C+soot%2C+pollen%2C+bird+residue%2C+tire+marks%2C+oil+spots%2C+and+general+grime%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Roofing%2C+vinyl%2C+stucco%2C+painted+masonry%2C+concrete%2C+pavers%2C+wood+only+if+approved%2C+glass%2C+sealants%2C+and+landscaping%0AWastewater+route%3A+Block+storm+inlets%2C+recover+oily%2Fchemical+wash+water%2C+and+follow+local+mobile-wash+and+property+discharge+rules.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="restaurants-commercial-kitchens" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/restaurants-commercial-kitchens">Restaurants &amp; Commercial Kitchens</a></h3>
+        <p>Remove polymerized fat, grease, and carbon from kitchen assets before the required rinse and sanitation step.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/restaurants-commercial-kitchens">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Restaurants+%26+Commercial+Kitchens&amp;type=audit&amp;message=Industry%3A+Restaurants+%26+Commercial+Kitchens%0AAsset+%2F+substrate%3A+Hoods%2C+filters%2C+fryers+kept+out+unless+OEM-approved%2C+floors%2C+walls%2C+equipment+exteriors%2C+grease+traps%2C+drains%2C+and+wash+areas%0ASoil+%2F+deposit%3A+Animal+and+vegetable+fat%2C+polymerized+grease%2C+carbonized+food%2C+protein+film%2C+floor+oil%2C+and+drain+residue%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Stainless+steel%2C+aluminum+only+after+test%2C+tile%2C+grout%2C+sealed+flooring%2C+plastics%2C+rubber%2C+paint%2C+and+hood+components%0AWastewater+route%3A+Scrape+solids+first%3B+route+fats%2Foils%2Fgrease+through+the+interceptor+and+approved+sanitary+drain%2C+never+stormwater.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="solar-panel-cleaning" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="exterior-bio-soil" hidden>
+        <span class="eyebrow">Sector route</span>
+        <h3><a href="industries/solar-panel-cleaning">Solar Farms &amp; Panel Cleaning</a></h3>
+        <p>Remove dust, bird residue, salt, and mineral spotting from modules without abrading glass or compromising energized equipment.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-soil"><a href="products/lam3">VertKleen LAM3</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/solar-panel-cleaning">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Solar+Farms+%26+Panel+Cleaning&amp;type=audit&amp;message=Industry%3A+Solar+Farms+%26+Panel+Cleaning%0AAsset+%2F+substrate%3A+Photovoltaic+module+glass%2C+frames%2C+clamps%2C+trackers%2C+inverter-pad+hardscape%2C+and+accessible+support+structures%0ASoil+%2F+deposit%3A+Dust%2C+pollen%2C+bird+residue%2C+salt+film%2C+industrial+fallout%2C+light+organic+film%2C+and+hard-water+spotting%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Tempered+coated+glass%2C+anodized+aluminum%2C+sealants%2C+backsheet+edges%2C+cable+jackets%2C+plastics%2C+and+painted%2Fgalvanized+supports%0AWastewater+route%3A+Map+runoff%2C+protect+soil+and+waterways%2C+and+capture+chemical+or+contaminated+rinse+where+the+site+permit+requires+it.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
+      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="warehousing-distribution-centers" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash" hidden>
+        <span class="eyebrow">Focused operation</span>
+        <h3><a href="industries/warehousing-distribution-centers">Warehousing &amp; Distribution Centers</a></h3>
+        <p>Remove oil, tire marks, and pallet grime from floors, docks, and material-handling equipment without leaving residue.</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span></span></dd></div>
+          <div><dt>Evidence status</dt><dd>No field record</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/warehousing-distribution-centers">Open route</a>
+          <a class="btn btn-primary btn-sm" href="contact?industry=Warehousing+%26+Distribution+Centers&amp;type=audit&amp;message=Industry%3A+Warehousing+%26+Distribution+Centers%0AAsset+%2F+substrate%3A+Concrete+and+coated+floors%2C+docks%2C+forklifts%2C+pallet+jacks%2C+racks%2C+battery+areas%2C+shop+parts%2C+and+drains%0ASoil+%2F+deposit%3A+Hydraulic+oil%2C+grease%2C+tire+polymer%2C+battery-area+residue+kept+segregated%2C+cardboard+dust%2C+adhesive%2C+and+tracked+grime%0AOperating+conditions%3A+temperature%2C+available+dwell%2C+agitation%2Fflow%2C+rinse+water%2C+shutdown+window%0AMaterials%3A+Polished+or+sealed+concrete%2C+epoxy%2Furethane+coatings%2C+painted+steel%2C+aluminum%2C+rubber+tires%2C+plastics%2C+and+drain+components%0AWastewater+route%3A+Recover+scrubber+solution%3B+separate+oil+and+solids+and+route+through+the+facility%27s+approved+pretreatment%2Fdischarge+system.%0ABuying+deadline%3A+" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>
         </div>
       </div>
     </div>
   </section>
+<!-- industry:discovery:end -->
 
   <section class="section">
     <div class="industry-grid wrap u-stack-18" data-cms-content="industry_sectors" data-cms-render="replace">
@@ -83,49 +512,49 @@
 
       <article id="marine" class="row-card has-photo">
         <i class="ph ph-anchor" aria-hidden="true"></i>
-        <div><h3>Marine</h3><p>Wash, brighten, and degrease vessels in confined air, on soft metal, against salt and corrosion — where the wrong chemical does damage of its own.</p></div>
+        <div><h3>Marine</h3><p>Vessel wash, brightening, and degreasing scoped by substrate, coatings, containment, ventilation, and marina discharge rules.</p></div>
         <a class="row-thumb" href="industries/marine" aria-label="View Marine industry page"><img src="img/industries/samples/marine.webp" alt="Boatyard worker cleaning a yacht hull while the vessel is in a lift" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/marine">View fit</a>
       </article>
 
       <article id="manufacturing" class="row-card has-photo">
         <i class="ph ph-factory" aria-hidden="true"></i>
-        <div><h3>Manufacturing</h3><p>Heavy-duty cleaning for extrusion, processing, warehousing, and plant maintenance — get the line running again with less HazCom paperwork to answer for.</p></div>
+        <div><h3>Manufacturing</h3><p>Heavy-duty cleaning for extrusion, processing, warehousing, and plant maintenance — with an SDS-led review package and controlled trial.</p></div>
         <a class="row-thumb" href="industries/manufacturing" aria-label="View Manufacturing industry page"><img src="img/industries/samples/manufacturing.webp" alt="Manufacturing worker degreasing heavy production machinery" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/manufacturing">View fit</a>
       </article>
 
       <article id="distribution-cold-storage" class="row-card has-photo">
         <i class="ph ph-warehouse" aria-hidden="true"></i>
-        <div><h3>Distribution / Cold Storage</h3><p>Refrigerated bays, ammonia coils, forklifts, kitchen grease, and drain lines in perishable distribution centers — backed by documented results from Walmart DSC.</p></div>
+        <div><h3>Distribution / Cold Storage</h3><p>Refrigerated bays, isolated refrigeration components, forklifts, kitchen grease, and drain lines — scoped through a cold-storage walkdown and controlled trial.</p></div>
         <a class="row-thumb" href="industries/distribution-cold-storage" aria-label="View Distribution and Cold Storage fit"><img src="img/industries/samples/distribution-cold-storage.webp" alt="Cold-storage worker cleaning a refrigerated warehouse floor near a forklift" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/distribution-cold-storage">View fit</a>
       </article>
 
       <article id="food-beverage" class="row-card has-photo">
         <i class="ph ph-beer-bottle" aria-hidden="true"></i>
-        <div><h3>Food &amp; Beverage</h3><p>CIP/SIP, hoods, floors, drains, and tanks — with CR and HCR proven on brewery and distillery jobs.</p></div>
+        <div><h3>Food &amp; Beverage</h3><p>CIP/SIP, hoods, floors, drains, and tanks — with CR and HCR documented in MASEST trial notes and lab data available for review.</p></div>
         <a class="row-thumb" href="industries/food-beverage" aria-label="View Food and Beverage industry page"><img src="img/industries/samples/food-beverage.webp" alt="Food-processing technician operating a clean-in-place skid beside stainless tanks" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/food-beverage">View fit</a>
       </article>
 
       <article id="healthcare" class="row-card has-photo">
         <i class="ph ph-hospital" aria-hidden="true"></i>
-        <div><h3>Healthcare</h3><p>Clean, passivate, and service water systems with patients still in the building — no fume events, no evacuations, no shutting a wing to do maintenance.</p></div>
+        <div><h3>Healthcare</h3><p>Clean, passivate, and service water systems under facility infection-control, ventilation, isolation, and shutdown approval.</p></div>
         <a class="row-thumb" href="industries/healthcare" aria-label="View Healthcare industry page"><img src="img/industries/samples/healthcare.webp" alt="Healthcare facilities technician descaling a plate heat exchanger in a mechanical room" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/healthcare">View fit</a>
       </article>
 
       <article id="construction" class="row-card has-photo">
         <i class="ph ph-crane" aria-hidden="true"></i>
-        <div><h3>Construction</h3><p>Concrete cleaning, equipment upkeep, rust removal, and site cleanup on active jobs — easier to store on site, safer to have around the crew.</p></div>
+        <div><h3>Construction</h3><p>Concrete cleaning, equipment upkeep, rust removal, and site cleanup with exact-SKU hazard review, containment, and wastewater routing.</p></div>
         <a class="row-thumb" href="industries/construction" aria-label="View Construction industry page"><img src="img/industries/samples/construction.webp" alt="Workers cleaning concrete pump equipment and a commercial job-site slab" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/construction">View fit</a>
       </article>
 
       <article id="military-government" class="row-card has-photo">
         <i class="ph ph-seal-check" aria-hidden="true"></i>
-        <div><h3>Military / Government</h3><p>MASEST sells through SAM.gov under CAGE 0B2Q3 and NAICS 424690, ready for federal, state, local, and public-facility buyers.</p></div>
+        <div><h3>Military / Government</h3><p>Public-sector bid support with registration, CAGE and NAICS records, solicitation fit, country of origin, and current product documents verified during review.</p></div>
         <a class="row-thumb" href="industries/military-government" aria-label="View Military and Government industry page"><img src="img/industries/samples/military-government.webp" alt="Public-sector fleet worker washing a utility truck in a maintenance bay" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/military-government">View fit</a>
       </article>
@@ -139,21 +568,21 @@
 
       <article id="hvac-water" class="row-card has-photo">
         <i class="ph ph-wind" aria-hidden="true"></i>
-        <div><h3>HVAC / Water Treatment</h3><p>Cooling tower programs built on WaterSafe60 inhibitor, Purgo minimum-risk antimicrobial, HCR passivation, CR pH control, and the ASHRAE 188 paperwork to back them.</p></div>
+        <div><h3>HVAC / Water Treatment</h3><p>Cooling-tower chemistry scoped inside the facility water-management plan, with current product documents, monitoring duties, and site approval kept separate.</p></div>
         <a class="row-thumb" href="industries/hvac-water" aria-label="View HVAC and Water Treatment industry page"><img src="img/industries/samples/hvac-water.webp" alt="HVAC technician servicing cooling-tower and heat-exchanger water equipment" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/hvac-water">View fit</a>
       </article>
 
       <article id="data-centers" class="row-card has-photo">
         <i class="ph ph-hard-drives" aria-hidden="true"></i>
-        <div><h3>Data Centers</h3><p>Cooling tower scale, Legionella compliance, green mandates, heat-transfer efficiency, and uptime pressure in one water-treatment audit path.</p></div>
+        <div><h3>Data Centers</h3><p>Cooling-tower scale, water-management-plan support, heat-transfer efficiency, change control, and uptime pressure in one audit path.</p></div>
         <a class="row-thumb" href="industries/data-centers" aria-label="View Data Centers fit"><img src="img/industries/samples/data-centers.webp" alt="Data-center technician cleaning water-side cooling equipment beside a server aisle" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/data-centers">View fit</a>
       </article>
 
       <article id="plumbing" class="row-card has-photo">
         <i class="ph ph-wrench" aria-hidden="true"></i>
-        <div><h3>Plumbing</h3><p>Water lines, fixtures, water heaters, and drains cleared of scale and calcium without handling hydrochloric acid — and checked against your metals before occupied-building work.</p></div>
+        <div><h3>Plumbing</h3><p>Scale and calcium work on isolated water heaters, fixtures, and lines after metallurgy, ventilation, circulation, discharge, and reopening review.</p></div>
         <a class="row-thumb" href="industries/plumbing" aria-label="View Plumbing industry page"><img src="img/industries/samples/plumbing.webp" alt="Plumber circulating descaling solution through tankless water heaters" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/plumbing">View fit</a>
       </article>
@@ -174,7 +603,7 @@
 
       <article id="municipalities-water-utilities" class="row-card has-photo">
         <i class="ph ph-buildings" aria-hidden="true"></i>
-        <div><h3>Municipalities &amp; Water Utilities</h3><p>NSF-60 requirements, worker safety, bids, public water review, and acid-replacement proof for public-sector buyers.</p></div>
+        <div><h3>Municipalities &amp; Water Utilities</h3><p>Public-water requirements, worker safety, bids, exact-product certification review, and controlled trials for public-sector buyers.</p></div>
         <a class="row-thumb" href="industries/municipalities-water-utilities" aria-label="View Municipalities and Water Utilities fit"><img src="img/industries/samples/municipalities-water-utilities.webp" alt="Municipal water utility workers cleaning a removed pump impeller and valve" loading="lazy" width="168" height="104"></a>
         <a class="btn btn-ghost btn-sm" href="industries/municipalities-water-utilities">View fit</a>
       </article>
@@ -188,18 +617,41 @@
     </div>
   </section>
 
+  <section class="section section-slim industry-specialists">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Specific operation?</span>
+        <h2 class="headline">Open the route built for your team.</h2>
+        <p class="subhead">These focused pages add task, buyer, and approval detail beyond the broader sector program.</p>
+      </div>
+      <div class="route-grid">
+        <a class="route-card" href="industries/aviation-fbos-mro-airports"><span>Manufacturing</span><strong>Aviation, FBOs, MRO &amp; Airports</strong><b>Ground support, aluminum, hangars, and documentation review.</b></a>
+        <a class="route-card" href="industries/breweries-distilleries-wineries"><span>Food &amp; Beverage</span><strong>Breweries, Distilleries &amp; Wineries</strong><b>CIP sequences, beer stone, heat exchangers, and sanitation boundaries.</b></a>
+        <a class="route-card" href="industries/agriculture"><span>Food &amp; Beverage</span><strong>Agriculture &amp; Farm Operations</strong><b>Equipment, packing, dairy maintenance, and biosecurity boundaries.</b></a>
+        <a class="route-card" href="industries/restaurants-commercial-kitchens"><span>Food &amp; Beverage</span><strong>Restaurants &amp; Commercial Kitchens</strong><b>Hoods, floors, drains, grease, and sanitation handoff.</b></a>
+        <a class="route-card" href="industries/drone-cleaning-companies"><span>Construction</span><strong>Drone Cleaning Companies</strong><b>Equipment compatibility, overspray, coatings, runoff, and access.</b></a>
+        <a class="route-card" href="industries/pressure-washing-soft-wash-contractors"><span>Construction</span><strong>Pressure &amp; Soft-Wash Contractors</strong><b>Exterior soil, vegetation, runoff, dilution, and recovery.</b></a>
+        <a class="route-card" href="industries/fleet-trucking-car-washes"><span>Distribution</span><strong>Fleet, Trucking &amp; Car Washes</strong><b>Fleet soil, finishes, reclaim systems, and throughput.</b></a>
+        <a class="route-card" href="industries/warehousing-distribution-centers"><span>Distribution</span><strong>Warehousing &amp; Distribution Centers</strong><b>Docks, forklifts, floors, battery areas, and operating windows.</b></a>
+        <a class="route-card" href="industries/healthcare-senior-living"><span>Healthcare</span><strong>Healthcare &amp; Senior Living</strong><b>Occupied-facility controls, residents, EVS, and infection prevention.</b></a>
+        <a class="route-card" href="industries/marine-marinas-boatyards"><span>Marine</span><strong>Marine, Marinas &amp; Boatyards</strong><b>Hull, salt, aluminum, containment, and dockside discharge.</b></a>
+        <a class="route-card" href="industries/mechanical-contractors-water-treatment"><span>HVAC / Water</span><strong>Mechanical Contractors &amp; Water Treatment</strong><b>Descaling, commissioning, callback risk, and owner acceptance.</b></a>
+      </div>
+    </div>
+  </section>
+
   <section class="section section-slim">
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">Proof gallery</span>
-        <h2 class="headline">Field photos by sector.</h2>
-        <p class="subhead">A cross-section of VertKleen at work. The full case record lives on the proof page.</p>
+        <span class="eyebrow">Task gallery</span>
+        <h2 class="headline">See the work by sector.</h2>
+        <p class="subhead">Field context and representative task imagery. Each sector page labels the evidence class and operating limits.</p>
       </div>
       <div class="gallery-row">
         <a class="proof-thumb" href="industries/food-beverage"><img src="img/proof/cases/brewery.webp" alt="Brewery CIP with VertKleen" loading="lazy" width="1200" height="900"><span>Breweries</span></a>
         <a class="proof-thumb" href="industries/marine"><img src="img/proof/cases/marine.webp" alt="Marine vessel washed with VertKleen" loading="lazy" width="1175" height="1125"><span>Marine</span></a>
         <a class="proof-thumb" href="industries/hvac-water"><img src="img/proof/cases/ac-coil.webp" alt="AC coil descaled in place with VertKleen" loading="lazy" width="839" height="471"><span>HVAC / Water</span></a>
-        <a class="proof-thumb" href="industries/distribution-cold-storage"><img src="img/proof/cases/walmart-dc-crhd.webp" alt="Walmart distribution center floor degreased with VertKleen CR HD" loading="lazy" width="708" height="513"><span>Cold Storage</span></a>
+        <a class="proof-thumb" href="industries/distribution-cold-storage"><img src="img/industries/samples/distribution-cold-storage.webp" alt="Representative cold-storage floor-cleaning task near a forklift" loading="lazy" width="840" height="520"><span>Cold Storage</span></a>
         <a class="proof-thumb" href="industries/manufacturing"><img src="img/proof/cases/farm-rust-after.webp" alt="Industrial rust removal" loading="lazy" width="740" height="967"><span>Manufacturing</span></a>
         <a class="proof-thumb" href="industries/hotels-property-management"><img src="img/proof/cases/grout-moss.webp" alt="Property exterior cleaning" loading="lazy" width="919" height="690"><span>Property</span></a>
         <a class="proof-thumb" href="industries/solar-panel-cleaning"><img src="img/before-after/drone.webp" alt="Drone exterior wash" loading="lazy" width="1008" height="610"><span>Drone &amp; Wash</span></a>
@@ -214,7 +666,7 @@
       <div class="section-head center">
         <span class="eyebrow">Partners</span>
         <h2 class="headline">Partner, distribute, or white-label VertKleen.</h2>
-        <p class="subhead">MASEST supplies minimum-risk products and program components, controllers and feed equipment, startup help, and distributor or white-label terms.</p>
+        <p class="subhead">MASEST supplies program components, controllers and feed equipment, startup help, and distributor or white-label terms. Product claims remain subject to current label and regulatory review.</p>
         <a class="btn btn-light" href="contact?type=distributor">Become a Distributor</a>
       </div>
     </div>

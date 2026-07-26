@@ -26,6 +26,7 @@ import {
   documentDistribution,
   documentSurfaceMode,
 } from "./public-document-policy.mjs";
+import { STYLE_VERSION } from "./static-release.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
@@ -37,7 +38,6 @@ const BLOG_POST_SLUGS = (BLOG_SNAPSHOT.blog_posts || []).map((post) => post.slug
 const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document-review.json", import.meta.url), "utf8"));
 const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
 const DOCUMENT_REVISION = DOCUMENT_REVIEW.document_control.revision;
-const STYLE_VERSION = "20260725f";
 const DOCUMENT_SKU_LABELS = new Map([
   ["VK-HCR", "VertKleen CIP HCR"],
   ["VK-CR", "VertKleen CIP CR"],
@@ -98,7 +98,7 @@ const ORG = {
   url: `${BASE}/`,
   logo: `${BASE}/img/masest-logo.png`,
   brand: "VertKleen",
-  description: "HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.",
+  description: "Industrial cleaning candidates selected through exact-SKU document review and controlled trials.",
   areaServed: "United States and international commercial accounts",
   contactPoint: { "@type": "ContactPoint", contactType: "sales", url: `${BASE}/contact` },
 };

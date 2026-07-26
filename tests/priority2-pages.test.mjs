@@ -8,37 +8,42 @@ const exists = (path) => existsSync(new URL(path, root));
 const managedImages = new Set(
   JSON.parse(read("data/content/site-images.json")).assets.map((asset) => asset.public_url),
 );
+const industryProducts = new Map(
+  JSON.parse(read("data/industry-applications.json"))
+    .industries
+    .map((industry) => [industry.slug, industry.products.join(" ")]),
+);
 
 const priorityIndustries = [
-  ["data-centers", "Data Centers", "Cooling tower scale, Legionella compliance, green mandates", "watersafe60 hcr descaler", "Schedule a water-treatment audit."],
-  ["golf-courses", "Golf Courses & Sports Facilities", "Equipment, carts, irrigation scale, exterior stains", "torque lam3 hcr multiwash purgo", "Request grounds-crew trial"],
-  ["solar-panel-cleaning", "Solar Farms & Panel Cleaning", "Soft-wash at scale without panel damage", "multiwash lam3", "Request per-MW quote"],
-  ["municipalities-water-utilities", "Municipalities & Water Utilities", "NSF-60 requirements, worker safety, bids", "cr2 watersafe60 hcr", "Get on our bid list"],
-  ["hotels-property-management", "Hotels, Resorts & Property Management", "Facades, pools, restrooms, HVAC", "multiwash lam3 descaler neutral", "Request property walkthrough"],
+  ["data-centers", "Data Centers", "Cooling-tower scale, water-management-plan support", "Schedule a water-treatment audit."],
+  ["golf-courses", "Golf Courses & Sports Facilities", "Equipment, carts, irrigation scale, exterior stains", "Request grounds-crew trial"],
+  ["solar-panel-cleaning", "Solar Farms & Panel Cleaning", "Utility-scale soft-wash work needs coating compatibility", "Request per-MW quote"],
+  ["municipalities-water-utilities", "Municipalities & Water Utilities", "Public-water requirements, worker safety, bids", "Get on our bid list"],
+  ["hotels-property-management", "Hotels, Resorts & Property Management", "Facades, pools, restrooms, HVAC", "Request property walkthrough"],
 ];
 
 const tab4IndustryPages = [
-  ["education", "Education Facilities", "K-12 and university facilities", "cr hcr watersafe60 lam3", "Price this cleaning task"],
-  ["mechanical-contractors-water-treatment", "Mechanical Contractors &amp; Water Treatment", "Callback-driven descaling and hazmat handling costs", "hcr descaler watersafe60", "Open a contractor account"],
-  ["breweries-distilleries-wineries", "Breweries, Distilleries &amp; Wineries", "CIP acid and caustic hazards", "cr hcr cr-hd-low-foam", "Book a free CIP demo"],
-  ["restaurants-commercial-kitchens", "Restaurants &amp; Commercial Kitchens", "Grease, drains, hood filters, and equipment cleaning", "crhd purgo multiwash neutral", "Get a sample kit"],
-  ["data-centers", "Data Centers", "Cooling tower scale, Legionella compliance, green mandates", "watersafe60 hcr descaler", "Schedule a water-treatment audit."],
-  ["warehousing-distribution-centers", "Warehousing &amp; Distribution Centers", "Floor degreasing at scale", "crhd multiwash", "Request drum pricing"],
-  ["pressure-washing-soft-wash-contractors", "Pressure-Washing &amp; Soft-Wash Contractors", "Bleach damage, plant kill, and runoff liability", "lam3 multiwash crhd", "Distributor application"],
-  ["drone-cleaning-companies", "Drone Cleaning Companies", "safe, drone-rated chemistry", "multiwash lam3 crhd", "Book a drone-wash consult"],
-  ["marine-marinas-boatyards", "Marine, Marinas &amp; Boatyards", "Hull scale, salt, wax, and aluminum brightwork", "torque alumibrite hcr", "Get marina bulk pricing"],
-  ["aviation-fbos-mro-airports", "Aviation - FBOs, MRO, Airports", "precision degreasing without corrosion", "crhd alumibrite", "Request aviation spec sheet"],
-  ["municipalities-water-utilities", "Municipalities &amp; Water Utilities", "NSF-60 requirements, worker safety, bids", "cr2 watersafe60 hcr", "Get on our bid list"],
-  ["healthcare-senior-living", "Healthcare &amp; Senior Living", "Cleaning near vulnerable people", "neutral multiwash descaler", "Request facilities assessment"],
-  ["fleet-trucking-car-washes", "Fleet, Trucking &amp; Car Washes", "Degreasing, wash and wax", "torque crhd multiwash alumibrite", "Fleet program pricing"],
-  ["oil-gas", "Oil, Gas &amp; Process Plants", "Descale, derust, and degrease rigs", "hcr descaler crhd neutral", "Price this cleaning task"],
-  ["agriculture", "Agriculture &amp; Farm Operations", "Harvest, packing, milking", "multiwash crhd hcr", "Request farm-equipment trial"],
+  ["education", "Education Facilities", "K-12 and university facilities", "Price this cleaning task"],
+  ["mechanical-contractors-water-treatment", "Mechanical Contractors &amp; Water Treatment", "Callback-driven descaling and hazmat handling costs", "Open a contractor account"],
+  ["breweries-distilleries-wineries", "Breweries, Distilleries &amp; Wineries", "CIP acid and caustic hazards", "Book a free CIP demo"],
+  ["restaurants-commercial-kitchens", "Restaurants &amp; Commercial Kitchens", "Grease, drains, hood filters, and equipment cleaning", "Get a sample kit"],
+  ["data-centers", "Data Centers", "Cooling-tower scale, water-management-plan support", "Schedule a water-treatment audit."],
+  ["warehousing-distribution-centers", "Warehousing &amp; Distribution Centers", "Floor degreasing at scale", "Request drum pricing"],
+  ["pressure-washing-soft-wash-contractors", "Pressure-Washing &amp; Soft-Wash Contractors", "Bleach damage, plant kill, and runoff liability", "Distributor application"],
+  ["drone-cleaning-companies", "Drone Cleaning Companies", "equipment, substrate, overspray, runoff", "Book a drone-wash consult"],
+  ["marine-marinas-boatyards", "Marine, Marinas &amp; Boatyards", "Hull scale, salt, wax, and aluminum brightwork", "Get marina bulk pricing"],
+  ["aviation-fbos-mro-airports", "Aviation - FBOs, MRO, Airports", "precision degreasing with corrosion-aware material review", "Request aviation spec sheet"],
+  ["municipalities-water-utilities", "Municipalities &amp; Water Utilities", "Public-water requirements, worker safety, bids", "Get on our bid list"],
+  ["healthcare-senior-living", "Healthcare &amp; Senior Living", "Cleaning near vulnerable people", "Request facilities assessment"],
+  ["fleet-trucking-car-washes", "Fleet, Trucking &amp; Car Washes", "Degreasing, wash and wax", "Fleet program pricing"],
+  ["oil-gas", "Oil, Gas &amp; Process Plants", "Scope descaling, derusting, and degreasing around metallurgy", "Price this cleaning task"],
+  ["agriculture", "Agriculture &amp; Farm Operations", "Harvest, packing, milking", "Request farm-equipment trial"],
 ];
 
 const comparisonPages = [
   ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "DDC Engineering"],
   ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "DDC Engineering"],
-  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "Walmart"],
+  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
   ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Wet & Forget"],
   ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "Brewlando"],
 ];
@@ -46,7 +51,7 @@ const comparisonPages = [
 const comparisonBlogPosts = [
   ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "DDC Engineering"],
   ["blog/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "DDC Engineering"],
-  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "Walmart"],
+  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
   ["blog/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Wet & Forget"],
   ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "Brewlando"],
 ];
@@ -82,7 +87,7 @@ test("priority 2 target industry pages exist with workbook-specified products an
 
   assert.match(contact, /<option>Data Centers<\/option>/, "contact form should expose Data Centers as an industry");
 
-  for (const [slug, name, problem, products, cta] of priorityIndustries) {
+  for (const [slug, name, problem, cta] of priorityIndustries) {
     const path = `industries/${slug}.html`;
     assert.equal(exists(path), true, `${path} should exist`);
 
@@ -91,7 +96,7 @@ test("priority 2 target industry pages exist with workbook-specified products an
     assert.match(sitemap, new RegExp(`https://masest\\.co/industries/${slug}`), `${name} should be in sitemap`);
     assert.match(html, new RegExp(`<title>${name.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
     assert.match(html, new RegExp(problem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    assert.match(html, new RegExp(`data-ind-products="${products}"`), `${name} should use the specified hero products`);
+    assert.match(html, new RegExp(`data-ind-products="${industryProducts.get(slug)}"`), `${name} should use the canonical starting products`);
     assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${name} CTA should match the workbook`);
     assert.match(html, new RegExp(`data-cms-content="page_sections" data-cms-page="industries/${slug}" data-cms-region="body"`), `${name} should expose a CMS page-section mount`);
     assert.match(html, /href="\.\.\/contact\?industry=.*&type=/, `${name} primary CTA should prefill CRM quote fields`);
@@ -102,7 +107,7 @@ test("Tab 4 industry rows each have a generated landing page", () => {
   const sitemap = read("sitemap.xml");
   const contact = read("contact.html");
 
-  for (const [slug, name, problem, products, cta] of tab4IndustryPages) {
+  for (const [slug, name, problem, cta] of tab4IndustryPages) {
     const path = `industries/${slug}.html`;
     assert.equal(exists(path), true, `${path} should exist`);
 
@@ -110,7 +115,7 @@ test("Tab 4 industry rows each have a generated landing page", () => {
     assert.match(sitemap, new RegExp(`https://masest\\.co/industries/${slug}`), `${slug} should be in sitemap`);
     assert.match(html, new RegExp(`<title>${name} \\| MASEST VertKleen</title>`), `${slug} title should match Tab 4 row`);
     assert.match(html, new RegExp(problem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 problem`);
-    assert.match(html, new RegExp(`data-ind-products="${products}"`), `${slug} should use the Tab 4 hero products`);
+    assert.match(html, new RegExp(`data-ind-products="${industryProducts.get(slug)}"`), `${slug} should use the canonical starting products`);
     assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 CTA`);
     assert.match(contact, new RegExp(`<option>${name}</option>`), `${name} should be available in the industry dropdown`);
   }
@@ -220,7 +225,7 @@ test("comparison SEO pages are also generated as blog posts", () => {
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show competitor per-gallon math`);
     assert.match(html, /Swap table row/, `${title} blog post should include the swap-table row`);
     assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should include a proof point`);
-    assert.match(html, /href="\/contact\?type=quote|href="\/contact\?type=quote&amp;industry=/, `${title} blog post should include a quote CTA`);
+    assert.match(html, /href="(?:\.\.\/|\/)contact\?type=quote(?:&amp;industry=)?/, `${title} blog post should include a quote CTA`);
   }
 });
 

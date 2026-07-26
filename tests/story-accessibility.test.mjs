@@ -35,7 +35,7 @@ test("static summary matches four visual acts", () => {
     "The field problem",
     "Buildup becomes operating cost",
     "The Replacement Ledger",
-    "One documented switch",
+    "One documented trial brief",
   ]) {
     assert.match(summary, new RegExp(phrase));
   }

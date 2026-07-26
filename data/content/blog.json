@@ -3,7 +3,7 @@
     {
       "slug": "beer-line-cleaner-cost-comparison",
       "title": "Beer line cleaner cost comparison",
-      "body": "## Per-gallon price math\n\nVertKleen CR: $55.05 / 2.5 gal = $22.02/gal.\n\nVertKleen HCR: $61.80 / 2.5 gal = $24.72/gal.\n\nMicro Matic beer-line cleaner: $38.85/gal.\n\nCR and HCR pricing use the confirmed CIP Food & Beverage tab. Micro Matic pricing comes from the Industries & Lead Gen tab.\n\n## Swap table row\n\nReplace: Caustic soda + brewing acid blends.\n\nFor: Beer line, tank, mash tank, and heat-exchanger CIP/SIP.\n\nUse: VertKleen CR for alkaline wash followed by VertKleen HCR for acid wash.\n\n## Proof point\n\nBrewlando Brewing trial notes say CR and HCR worked better than the traditional caustic-soda and acid blends at the same concentration and CIP time.\n\nRequest a [quote](/contact?type=quote&industry=Food%20%26%20Beverage&product=beer%20line%20cleaner%20cost%20comparison) with the current beer-line cleaner and CIP cycle details.",
+      "body": "## Per-gallon price math\n\nVertKleen CR: $55.05 / 2.5 gal = $22.02/gal.\n\nVertKleen HCR: $61.80 / 2.5 gal = $24.72/gal.\n\nMicro Matic beer-line cleaner: $38.85/gal.\n\nCR and HCR pricing use the confirmed CIP Food & Beverage tab. Micro Matic pricing comes from the Industries & Lead Gen tab.\n\n## Swap table row\n\nReplace: Caustic soda + brewing acid blends.\n\nFor: Beer line, tank, mash tank, and heat-exchanger CIP/SIP.\n\nUse: VertKleen CR for alkaline wash followed by VertKleen HCR for acid wash.\n\n## Public trial reference\n\nBrewlando Brewing trial notes report CR and HCR results against incumbent caustic-soda and acid blends under the recorded concentration and CIP time. The source is reference-only; method completeness and independent validation are not established.\n\nRequest a [quote](/contact?type=quote&industry=Food%20%26%20Beverage&product=beer%20line%20cleaner%20cost%20comparison) with the current beer-line cleaner and CIP cycle details.",
       "date": "2026-07-09",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
       "tags": [
@@ -20,18 +20,18 @@
     {
       "slug": "cr-hd-vs-simple-green",
       "title": "CR HD vs Simple Green",
-      "body": "## Per-gallon price math\n\nVertKleen CR HD: $53.03 / 5 gal = $10.61/gal.\n\nSimple Green Industrial: $66-$184 / 5 gal = $13.20-$36.80/gal.\n\nCR HD pricing uses the confirmed Website Price List. Simple Green Industrial pricing is the incumbent comparison from the launch-spec competitive matrix.\n\n## Swap table row\n\nReplace: Simple Green / Zep / butyl degreasers.\n\nFor: Heavy-duty degreasing.\n\nUse: VertKleen CR HD for warehouse floors, forklifts, kitchens, drains, parts, and heavy oil.\n\n## Proof point\n\nWalmart distribution-center materials document CR HD replacing Simple Green for heavy degreasing across DC-8851, DC-7023, and DC-6099.\n\nRequest a [quote](/contact?type=quote&product=CR%20HD%20vs%20Simple%20Green) with the current cleaner, dilution, and monthly case or drum volume.",
+      "body": "## Per-gallon price math\n\nVertKleen CR HD: $53.03 / 5 gal = $10.61/gal.\n\nSimple Green Industrial: $66-$184 / 5 gal = $13.20-$36.80/gal.\n\nCR HD pricing uses the confirmed Website Price List. Simple Green Industrial pricing is the incumbent comparison from the launch-spec competitive matrix.\n\n## Swap table row\n\nReplace: Simple Green / Zep / butyl degreasers.\n\nFor: Heavy-duty degreasing.\n\nUse: VertKleen CR HD as a starting option for warehouse floors, forklifts, kitchens, drains, parts, and heavy oil, subject to current-document and compatibility review.\n\n## Trial inputs\n\nSend the current cleaner, dilution, labor, water, downtime, disposal route, and monthly volume. MASEST will return a compatibility-and-trial plan with cost per completed task.\n\nRequest a [task comparison](/contact?type=audit&product=CR%20HD%20vs%20Simple%20Green) with those inputs.",
       "date": "2026-07-09",
-      "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/walmart-dc-crhd.webp",
+      "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/products/crhd-studio.webp",
       "tags": [
         "comparison",
         "degreasing",
         "cr-hd"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "Technical note on CR HD and Simple Green degreasing economics, Walmart proof, and monthly volume inputs for quoting.",
+      "excerpt": "Technical note on CR HD and Simple Green degreasing economics, task inputs, and cost-per-completed-task trial planning.",
       "category": "technical",
-      "hero_alt": "Walmart distribution center CR HD degreasing proof",
+      "hero_alt": "VertKleen CR HD heavy degreaser container",
       "seo": {}
     },
     {
@@ -72,7 +72,7 @@
     {
       "slug": "hmis-000-explained",
       "title": "What HMIS 0-0-0 Actually Means for Your Facility",
-      "body": "## The three numbers\n\nHMIS rates **Health**, **Flammability**, and **Physical hazard** from 0 to 4. A `0-0-0` product scores the lowest on all three.\n\n## Why it matters\n\nLower ratings can reduce PPE requirements, simplify storage, and ease shipping classification.\n\n- Fewer segregation rules\n- Simpler SDS routing\n- Lower handling training burden\n\nSee our [products](/products) for the full VertKleen line.",
+      "body": "## The three numbers\n\nHMIS rates **Health**, **Flammability**, and **Physical hazard** from 0 to 4. A `0-0-0` product scores the lowest on those three HMIS fields for that exact product and revision.\n\n## What it does not decide\n\nHMIS alone does not determine PPE, storage, transport classification, ventilation, training, material compatibility, or a site procedure. Review the exact SKU's current SDS, label, task, concentration, and workplace controls before approval.\n\nSee our [products](/products) and request the current product documents.",
       "date": "2026-07-01",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/blog/hmis-000-explained.webp",
       "tags": [
@@ -83,7 +83,7 @@
       "author": "MASEST Technical Team",
       "excerpt": "A 0-0-0 HMIS rating changes how a chemical is stored, shipped, and handled. Here is what the three zeros mean and why they lower your handling burden.",
       "category": "technical",
-      "hero_alt": "VertKleen HCR jug beside a jar of the clear, non-corrosive hydrochloric-acid replacement",
+      "hero_alt": "VertKleen HCR jug beside a clear bench-test sample used for current-SDS review",
       "seo": {}
     },
     {

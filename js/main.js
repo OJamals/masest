@@ -13,7 +13,12 @@ import {
   productCard,
   refreshCommerceActions,
 } from "./main/commerce-ui.js?v=20260725f";
-import { initBeforeAfter, initProofFilters, initQuoteForm } from "./main/engagement.js?v=20260725f";
+import {
+  initBeforeAfter,
+  initIndustryDiscovery,
+  initProofFilters,
+  initQuoteForm,
+} from "./main/engagement.js?v=20260725f";
 import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260725f";
 import { initDataVisualizations } from "./main/data-visuals.js";
 import { initContentSnapshots } from "./main/content-snapshots.js";
@@ -39,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initIndustryProducts();
   initImageFallbacks();
   initBeforeAfter();
+  initIndustryDiscovery();
   initProofFilters();
   initResponsiveTables();
   initReveal();

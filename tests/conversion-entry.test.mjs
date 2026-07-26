@@ -58,7 +58,11 @@ test("static product hero exposes buying context before long copy", () => {
 test("animated homepage copy keeps stable accessible names", () => {
   const home = read("index.html");
 
-  assert.match(home, /aria-label="Industrial cleaning power\. HMIS 0-0-0 formulas\."/);
+  assert.match(home, /<section class="act"[^>]*aria-labelledby="storyAct1Title">/);
+  assert.match(
+    home,
+    /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial cleaning power\. Lower-hazard candidates\.<\/h1>/,
+  );
   assert.match(home, /aria-label="Find your VertKleen replacement"/);
   assert.match(home, /aria-label="Request a VertKleen trial"/);
 });
@@ -83,7 +87,7 @@ test("public content generators preserve current SEO releases", () => {
 
   assert.match(blogBuilder, /brand: "VertKleen"/);
   assert.match(blogBuilder, /if \(!missing\.length\) return 0;/);
-  assert.match(blogBuilder, /style\.css\?v=20260725f/);
-  assert.match(comparisonBuilder, /style\.css\?v=20260725f/);
+  assert.match(blogBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);
+  assert.match(comparisonBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);
   assert.match(comparisonBuilder, /<!-- seo:auto -->[\s\S]*<!-- \/seo:auto -->/);
 });

@@ -413,7 +413,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
         <div>
           <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="/img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
           <div class="foot-brand" translate="no">MASEST VertKleen&trade;</div>
-          <p>HMIS 0-0-0 replacement chemistry with field proof, SDS routing, and quote support from Florida's Space Coast.</p>
+          <p>Industrial cleaning candidates with current-SDS routing, controlled-trial planning, and quote support from Florida's Space Coast.</p>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Product Categories</div>
@@ -440,7 +440,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
           <a href="tel:+18134063852">(813) 406-3852</a>
           <a href="#customerChat" data-customer-chat-open>Customer chat</a>
-          <p style="margin-top:10px;font-size:.8rem;line-height:1.7">CAGE 0B2Q3<br>NAICS 424690<br>SAM.gov registered<br>Minority-owned (self-certified)</p>
+          <p style="margin-top:10px;font-size:.8rem;line-height:1.7">Public-sector registration, identifiers, representations, and solicitation fit verified during bid review.</p>
         </div>
       </div>
       ${page === "newsletter" ? "" : `<div class="foot-news">

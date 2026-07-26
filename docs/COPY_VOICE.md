@@ -8,7 +8,7 @@ Plant maintenance leads, facility managers, hospital/school/brewery/marine opera
 ## The voice
 **Plain industrial English, confident because the product earns it.**
 
-VertKleen cleans as hard as the acids and caustics it replaces, at an HMIS 0-0-0 safety rating. The proof is real (20-yr rust in 30 min, beat CLR, brewery CIP, ~$10k/yr saved at a Walmart DC). So the copy can carry a little swagger — but the swagger comes from the number, never from a punchy fragment.
+Confidence must come from current exact-SKU documents, controlled methods, explicit boundaries, and traceable verification. Never use an unsupported result, customer identity, savings figure, safety absolute, certification, or regulatory implication as swagger.
 
 ## Answer the buyer's six questions
 What is it · what does it replace · is it safe · does it work · what's it cost · how do I buy. If a sentence answers none of these, cut it.

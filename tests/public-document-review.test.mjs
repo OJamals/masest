@@ -18,9 +18,17 @@ import {
   documentDistribution,
   validatePublicDocumentReview,
 } from "../tools/public-document-policy.mjs";
+import { STYLE_VERSION } from "../tools/static-release.mjs";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
+const sensitivityFlags = new Set([
+  "confidential_customer_data",
+  "personal_contact",
+  "named_approval",
+  "commercial_terms",
+  "publication_permission_missing",
+]);
 
 function filesUnder(path) {
   const dir = new URL(path, root);
@@ -83,10 +91,11 @@ test("public PDF review ledger covers the exact current document bytes", () => {
       document.status === "restricted" ? "restricted" : "current",
       `${document.path} has an invalid superseded status`,
     );
+    const sensitive = document.flags.some((flag) => sensitivityFlags.has(flag));
     const technicalSheet = /-(?:sds|tds)\.pdf$/i.test(document.path);
     assert.equal(
       documentDistribution(document),
-      technicalSheet ? "request_only" : document.status === "restricted" ? "internal" : "public",
+      sensitive ? "internal" : technicalSheet ? "request_only" : document.status === "restricted" ? "internal" : "public",
       `${document.path} has a distribution inconsistent with its document class`,
     );
   }
@@ -98,7 +107,7 @@ test("public PDF review ledger covers the exact current document bytes", () => {
   assert.deepEqual(
     Object.fromEntries(["no_automated_flags", "reference_only", "resource_only", "restricted"]
       .map((status) => [status, documents.filter((document) => document.status === status).length])),
-    { no_automated_flags: 23, reference_only: 3, resource_only: 2, restricted: 18 },
+    { no_automated_flags: 13, reference_only: 5, resource_only: 9, restricted: 18 },
   );
   assert.deepEqual(
     Object.fromEntries(["public", "request_only", "internal"]
@@ -106,8 +115,76 @@ test("public PDF review ledger covers the exact current document bytes", () => {
         distribution,
         documents.filter((document) => documentDistribution(document) === distribution).length,
       ])),
-    { public: 16, request_only: 22, internal: 8 },
+    { public: 15, request_only: 22, internal: 8 },
   );
+});
+
+test("confidential sources stay outside the public repository while reviewed sources stay public", () => {
+  const review = JSON.parse(read("data/public-document-review.json"));
+  const proof = read("proof.html");
+  assert.equal(
+    review.documents.some((entry) => entry.flags?.includes("confidential_customer_data")),
+    false,
+    "customer-confidential files belong outside the public-repository ledger",
+  );
+  assert.match(proof, /Distribution-center degreasing assessment/);
+  assert.match(proof, /restricted customer assessment; sanitized public summary/i);
+
+  for (const id of ["MAS-CIP-BREWLANDO-TRIAL", "MAS-CIP-CARIB-LAB"]) {
+    const document = review.documents.find((entry) => entry.document_id === id);
+    assert.equal(document.status, "reference_only", `${id}: claim boundary`);
+    assert.equal(documentDistribution(document), "public", `${id}: reviewed public source`);
+    assert.match(proof, new RegExp(document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+});
+
+test("proof cards expose only public references, sanitized summaries, or context-only field media", () => {
+  const review = JSON.parse(read("data/public-document-review.json"));
+  const cards = JSON.parse(read("data/content/proof.json")).proof_cards;
+  const proof = read("proof.html");
+  const seed = read("supabase/seed-proof-cards.sql");
+  const contextSource = "Source: public field context; verification incomplete";
+  let contextCount = 0;
+
+  assert.doesNotMatch(proof, /data-source-doc=/, "unused source-file attributes must not expose internal provenance");
+
+  for (const card of cards) {
+    assert.ok(proof.includes(card.title), `${card.slug}: fallback title must match the snapshot`);
+    assert.ok(proof.includes(card.result), `${card.slug}: fallback boundary must match the snapshot`);
+    assert.ok(proof.includes(card.source), `${card.slug}: fallback source must match the snapshot`);
+    assert.ok(seed.includes(card.title), `${card.slug}: CMS seed title must match the snapshot`);
+    assert.ok(seed.includes(card.result), `${card.slug}: CMS seed boundary must match the snapshot`);
+    assert.ok(seed.includes(card.source), `${card.slug}: CMS seed source must match the snapshot`);
+
+    if (card.href) {
+      const document = review.documents.find((entry) => entry.path === card.href);
+      assert.equal(document?.status, "reference_only", `${card.slug}: linked proof must be reference-only`);
+      assert.equal(documentDistribution(document), "public", `${card.slug}: linked proof must be public`);
+      assert.match(card.source, /public reference document/i);
+    } else if (card.slug === "distribution-center-assessment") {
+      assert.match(card.source, /sanitized public summary/i);
+      assert.match(card.result, /does not assert endorsement or verified performance/i);
+    } else {
+      contextCount += 1;
+      assert.equal(card.source, contextSource, `${card.slug}: field media must stay context-only`);
+      assert.match(card.result, /not performance(?: or savings)? proof/i, `${card.slug}: field boundary missing`);
+    }
+  }
+
+  assert.equal(contextCount, 10, "all non-document field records must stay context-only");
+});
+
+test("sensitivity flags fail closed even when a record is misclassified", () => {
+  assert.equal(documentDistribution({
+    path: "docs/customer-record.pdf",
+    status: "no_automated_flags",
+    flags: ["confidential_customer_data"],
+  }), "internal");
+  assert.equal(documentDistribution({
+    path: "docs/sds/customer-record-sds.pdf",
+    status: "reference_only",
+    flags: ["personal_contact"],
+  }), "internal");
 });
 
 test("technical-document sync uploads and activates current files before retiring stale rows", () => {
@@ -252,15 +329,20 @@ test("restricted claim sources cannot re-enter public content or the Pages build
   ]);
   assert.deepEqual(resourceOnly, [
     "docs/sds/vertkleen-cooling-tower-brochure.pdf",
-    "docs/walmart-dc-brochure.pdf",
+    "docs/sds/vertkleen-crhd-label.pdf",
+    "docs/sds/vertkleen-descaler-label.pdf",
+    "docs/sds/vertkleen-lam3-label-back.pdf",
+    "docs/sds/vertkleen-lam3-label-front.pdf",
+    "docs/sds/vertkleen-neutral-label.pdf",
+    "docs/sds/vertkleen-purgo-101.pdf",
+    "docs/sds/vertkleen-purgo-base-data.pdf",
+    "docs/sds/vertkleen-torque-label.pdf",
   ]);
 
   const retiredPaths = [
     "docs/trinidad-tank-cleaning-test.pdf",
-    "docs/walmart-refrigeration-case-study.pdf",
     "img/proof/cases/trinidad-tank-before.webp",
     "img/proof/cases/trinidad-tank-cr.webp",
-    "img/proof/cases/walmart-refrigeration-results.webp",
     "img/industries/distribution-cold-storage/g3.webp",
   ];
   for (const path of retiredPaths) {
@@ -274,7 +356,6 @@ test("restricted claim sources cannot re-enter public content or the Pages build
     "js/main/catalog-data.js",
     "products/descaler.html",
     "industries/distribution-cold-storage.html",
-    "data/asset-manifest.json",
     "data/content/proof.json",
     "data/content/site-images.json",
     "supabase/seed-proof-cards.sql",
@@ -296,9 +377,7 @@ test("restricted claim sources cannot re-enter public content or the Pages build
 
   const retiredMarkers = [
     ...retiredPaths,
-    "walmart-refrigeration-results",
     "trinidad-tank",
-    "Case Study: Walmart Refrigeration Systems",
     "up to 94% heat-transfer efficiency",
     "Heat-transfer efficiency restored on refrigeration descaling",
   ];
@@ -328,6 +407,11 @@ test("restricted claim sources cannot re-enter public content or the Pages build
     for (const path of resourceOnly) {
       assert.equal(existsSync(new URL(`dist/${path}`, root)), true, `${path} must remain in document room`);
     }
+    assert.match(
+      read("dist/industries/marine.html"),
+      /storage\/v1\/object\/public\/content-assets\/site\/img\/industries\/marine\/g1\.webp/,
+      "owner-approved field context must publish through CMS media",
+    );
     assert.equal(
       existsSync(new URL("dist/data/public-document-review.json", root)),
       false,
@@ -422,6 +506,10 @@ test("release build regenerates controlled pages and busts the shared stylesheet
   for (const page of pages) {
     const html = read(page);
     if (!/css\/style\.css\?v=/.test(html)) continue;
-    assert.match(html, /css\/style\.css\?v=20260725f/, `${page} needs the current stylesheet cache key`);
+    assert.match(
+      html,
+      new RegExp(`css/style\\.css\\?v=${STYLE_VERSION}`),
+      `${page} needs the current stylesheet cache key`,
+    );
   }
 });

@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
 import { canonicalPublicImageUrl } from "../js/image-url.js";
+import { STYLE_VERSION } from "./static-release.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = "https://masest.co";
@@ -23,7 +24,7 @@ const ORG = {
   url: `${BASE}/`,
   logo: `${BASE}/img/masest-logo.png`,
   brand: "VertKleen",
-  description: "HMIS 0-0-0 industrial cleaning chemistry for lower-hazard handling.",
+  description: "Industrial cleaning chemistry selected through current-document review and controlled trials.",
   areaServed: "United States and international commercial accounts",
   contactPoint: {
     "@type": "ContactPoint",
@@ -80,8 +81,23 @@ function fmtDate(iso) {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 }
 
+function publicSiteImageUrl(value) {
+  const canonical = canonicalPublicImageUrl(value);
+  if (!canonical || canonical.startsWith("/")) return canonical;
+  if (!/^https?:\/\//i.test(canonical)) return "";
+  try {
+    const remote = new URL(canonical);
+    const marker = "/site/img/";
+    const markerAt = remote.pathname.lastIndexOf(marker);
+    if (markerAt < 0) return "";
+    return `/img/${remote.pathname.slice(markerAt + marker.length)}${remote.search}`;
+  } catch {
+    return "";
+  }
+}
+
 function postHero(post) {
-  const heroUrl = canonicalPublicImageUrl(post.hero);
+  const heroUrl = publicSiteImageUrl(post.hero);
   if (!heroUrl?.startsWith("/")) return null;
   const size = SITE_IMAGE_DIMENSIONS.get(new URL(heroUrl, BASE).pathname);
   return size ? { url: heroUrl, size } : null;
@@ -129,7 +145,7 @@ function postPage(post, all) {
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
-<link rel="stylesheet" href="../css/style.css?v=20260725f">
+<link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css">
 <link rel="stylesheet" href="../css/blog.css">
@@ -225,7 +241,7 @@ function indexPage(posts) {
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="alternate" type="application/rss+xml" title="MASEST VertKleen Blog" href="/blog/feed.xml">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260725f">
+<link rel="stylesheet" href="css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/blog.css">
@@ -271,7 +287,7 @@ ${cards}
   <section class="block-dark on-dark cta-band">
     <div class="wrap reveal">
       <h2 class="headline">Ready to swap the hazard off your shelf?</h2>
-      <p class="subhead">Tell us the chemical you run today and we will match the HMIS 0-0-0 VertKleen replacement, with the documentation your safety officer can sign.</p>
+      <p class="subhead">Tell us the chemical and task you run today. We will return the closest VertKleen candidate, current documentation, and a controlled-trial plan for your safety team to review.</p>
       <a class="btn btn-primary" href="products#catalog">Find your replacement</a>
     </div>
   </section>

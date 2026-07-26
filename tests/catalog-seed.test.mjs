@@ -203,6 +203,30 @@ test("site copy respects documentation claim guardrails", () => {
   const programsHtml = readSite("programs.html");
   const aboutHtml = readSite("about.html");
   const chromeJs = readSite("js/main/chrome.js");
+  const publicMarketingCopy = [
+    readSite("index.html"),
+    readSite("industries.html"),
+    readSite("proof.html"),
+    readSite("comparisons/cr-hd-vs-simple-green.html"),
+    readSite("blog/cr-hd-vs-simple-green.html"),
+    readSite("data/catalog.seed.json"),
+    readSite("data/segment-pricing.json"),
+    readSite("data/content/pricing.json"),
+    readSite("data/content/industry-sectors.json"),
+    readSite("data/content/blog.json"),
+    readSite("data/content/proof.json"),
+    readSite("data/content/site-images.json"),
+    readSite("js/main/catalog-data.js"),
+    readSite("js/main/chrome.js"),
+    readSite("about.html"),
+    readSite("contact.html"),
+    readSite("programs.html"),
+    readSite("tools/gen_comparisons.mjs"),
+    readSite("tools/gen_industries.mjs"),
+    readSite("supabase/seed-pricing-tiers.sql"),
+    readSite("supabase/seed-industry-sectors.sql"),
+  ].join("\n");
+  const publicClaimCopy = `${publicMarketingCopy}\n${resourcesHtml}\n${productHtml}`;
 
   assert.doesNotMatch(productHtml, /crs:\s*"descaler"/, "CRS should not inherit Descaler commerce pricing");
   assert.doesNotMatch(productsHtml, /Every product in purchasable catalog HMIS 0-0-0/);
@@ -216,4 +240,25 @@ test("site copy respects documentation claim guardrails", () => {
   assert.doesNotMatch(resourcesHtml, /Get SDS and certification files|certifications, and case files/);
   assert.doesNotMatch(chromeJs, /SDS-backed SKUs/);
   assert.doesNotMatch(aboutHtml, /registered to ISO 14064/);
+  assert.doesNotMatch(publicMarketingCopy, /CR and HCR proven|breweries proven/i);
+  assert.doesNotMatch(publicMarketingCopy, /no fume events, no evacuations, no shutting a wing/i);
+  assert.doesNotMatch(publicMarketingCopy, /less HazCom paperwork/i);
+  assert.doesNotMatch(publicMarketingCopy, /Legionella compliance/i);
+  assert.doesNotMatch(publicMarketingCopy, /ready for federal, state, local/i);
+  assert.doesNotMatch(publicMarketingCopy, /drone-rated|precision degreasing without corrosion/i);
+  assert.doesNotMatch(publicMarketingCopy, /Antimicrobial &(?:amp;|) biofilm support/i);
+  assert.doesNotMatch(publicMarketingCopy, /no respirator program|crews keep working while it cleans|no strict-handling plan|no DOT freight, no disposal fees/i);
+  assert.doesNotMatch(publicClaimCopy, /Minimum-risk antimicrobial and odor-control support|Antimicrobial multi-surface cleaner|neutralizes odors at molecular level/i);
+  assert.doesNotMatch(publicClaimCopy, /FIFRA 25\(b\) minimum-risk/i);
+  assert.doesNotMatch(publicClaimCopy, /SAM\.gov registered|procurement-ready/i);
+  assert.doesNotMatch(publicClaimCopy, /drops the hazard rating to 0-0-0|Every VertKleen parent product is rated 0-0-0/i);
+  assert.doesNotMatch(publicClaimCopy, /service with the building still occupied|turn maintenance into an evacuation|fewer HazCom headaches/i);
+  assert.doesNotMatch(publicClaimCopy, /Biodegrades in under 10 days|no toxic fuming/i);
+  assert.doesNotMatch(publicClaimCopy, /Engineering-reviewed ASHRAE 188 WMP|Legionella assessment and full injection system|quarterly Legionella|24\/7 response/i);
+  assert.doesNotMatch(publicClaimCopy, /without acid fumes, a solvent storage cabinet, or hazmat freight|students and staff still on campus|without handling hydrochloric acid/i);
+  assert.doesNotMatch(publicClaimCopy, /non-corrosive hydrochloric-acid replacement|Non-corrosive coil descaler|no harsh fumes around the water/i);
+  assert.doesNotMatch(publicClaimCopy, /Days to biodegrade|lower ratings can reduce PPE requirements|fewer segregation rules/i);
+  assert.doesNotMatch(publicClaimCopy, /Every tier runs on.*HMIS 0-0-0|HMIS 0-0-0 replacements for acid|Every cataloged VertKleen product.*HMIS 0-0-0/i);
+  assert.doesNotMatch(resourcesHtml, /minimum-risk antimicrobial support/i);
+  assert.doesNotMatch(resourcesHtml, /data-source-table="(?:cooling-tower-traditional-vs-vertkleen|descaler-vs-acids-corrosion|dealership-area-dilution|carib-brewery-lab-results)"/);
 });

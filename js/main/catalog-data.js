@@ -102,8 +102,7 @@ export const PRODUCTS = {
       ["ph-leaf", "Wastewater planning", "Confirm the discharge path and site limits before release"]
     ],
     docs: [
-      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-neutral-sds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-neutral-label.pdf" }
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-neutral-sds.pdf" }
     ]
   },
   multiwash: {
@@ -181,8 +180,6 @@ export const PRODUCTS = {
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-purgo-sds.pdf" },
-      { label: "Purgo 101 Overview", file: "docs/sds/vertkleen-purgo-101.pdf" },
-      { label: "Base Data Sheet", file: "docs/sds/vertkleen-purgo-base-data.pdf" },
       { label: "Bacterial Persistence Test", file: "docs/sds/vertkleen-purgo-bacterial-persistence-test.pdf" },
       "Regulatory Status Documentation"
     ]
@@ -232,7 +229,6 @@ export const PRODUCTS = {
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crhd-sds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-crhd-label.pdf" },
       { label: "Degreaser Comparison", file: "docs/sds/vertkleen-crhd-degreaser-comparison.pdf" },
       "Controlled Site-Trial Request"
     ]
@@ -260,7 +256,6 @@ export const PRODUCTS = {
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-descaler-sds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-descaler-label.pdf" },
       "Descaler vs Acids Corrosion Data"
     ]
   },
@@ -309,8 +304,7 @@ export const PRODUCTS = {
       ["ph-leaf", "Wastewater planning", "Confirm capture and discharge rules for the site"]
     ],
     docs: [
-      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-torque-sds.pdf" },
-      { label: "Product Label", file: "docs/sds/vertkleen-torque-label.pdf" }
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-torque-sds.pdf" }
     ]
   },
   lam3: {
@@ -335,9 +329,7 @@ export const PRODUCTS = {
       ["ph-leaf", "Controlled stain removal", "Use SDS precautions and verify substrate compatibility"]
     ],
     docs: [
-      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-lam3-sds.pdf" },
-      { label: "Product Label (Front)", file: "docs/sds/vertkleen-lam3-label-front.pdf" },
-      { label: "Product Label (Back)", file: "docs/sds/vertkleen-lam3-label-back.pdf" }
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-lam3-sds.pdf" }
     ]
   },
   crs: {
@@ -707,7 +699,7 @@ export const PRODUCT_GALLERY = {
     ["img/before-after/cr-after.webp", "Exterior surface after VertKleen CR cleaning", "After cleaning"]
   ],
   crhd: [
-    ["img/proof/cases/walmart-dc-crhd.webp", "Walmart distribution center floor and equipment degreasing", "Distribution center degreasing"],
+    ["img/products/crhd-studio.webp", "VertKleen CR HD heavy degreaser container", "CR HD product"],
     ["img/proof/cases/kitchen-after.webp", "Commercial kitchen deep degreased with VertKleen CR HD", "Commercial kitchen cleaning"]
   ],
   descaler: [

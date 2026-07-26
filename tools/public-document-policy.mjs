@@ -13,6 +13,18 @@ const VALID_STATUSES = new Set([
 ]);
 const DOCUMENT_ID_PATTERN = /^MAS-[A-Z0-9-]+$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const SENSITIVE_FLAGS = new Set([
+  "confidential_customer_data",
+  "personal_contact",
+  "named_approval",
+  "commercial_terms",
+  "publication_permission_missing",
+]);
+
+function isSensitive(document) {
+  return Array.isArray(document?.flags)
+    && document.flags.some((flag) => SENSITIVE_FLAGS.has(flag));
+}
 
 export function documentClaimLabel(status) {
   if (status === "no_automated_flags") return "No automated flags";
@@ -30,6 +42,7 @@ export function documentType(document) {
 }
 
 export function documentDistribution(document) {
+  if (isSensitive(document)) return "internal";
   if (["sds", "tds"].includes(documentType(document))) return "request_only";
   return document?.status === "restricted" ? "internal" : "public";
 }
@@ -92,6 +105,9 @@ export function validatePublicDocumentReview(
     }
     if (!Array.isArray(document.flags)) {
       throw new Error(`${REVIEW_PATH}: flags must be an array for ${path}`);
+    }
+    if (isSensitive(document) && document.status !== "restricted") {
+      throw new Error(`${REVIEW_PATH}: sensitive document must be restricted for ${path}`);
     }
     if (["reference_only", "resource_only"].includes(document.status) && document.flags.length === 0) {
       throw new Error(`${REVIEW_PATH}: bounded document needs flagged claims for ${path}`);

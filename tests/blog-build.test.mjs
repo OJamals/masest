@@ -207,6 +207,29 @@ test("a hero renders as the card thumbnail and post hero figure; empty falls bac
   }
 });
 
+test("a managed CMS hero resolves to its public site-image path", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    buildBlog({ posts: [{
+      slug: "managed-hero",
+      title: "Managed Hero",
+      category: "news",
+      date: "2026-02-03",
+      excerpt: "e",
+      body: "b",
+      hero: "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/products/crhd-studio.webp",
+      hero_alt: "CR HD container",
+    }], outDir: out, updateSitemap: false });
+
+    const index = readFileSync(join(out, "blog.html"), "utf8");
+    const post = readFileSync(join(out, "blog", "managed-hero.html"), "utf8");
+    assert.match(index, /src="\/img\/products\/crhd-studio\.webp" alt="CR HD container"/);
+    assert.match(post, /src="\/img\/products\/crhd-studio\.webp" alt="CR HD container"/);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
 test("a missing CMS hero falls back without aborting the blog publish", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
   try {

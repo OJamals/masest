@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260725f">
+<link rel="stylesheet" href="css/style.css?v=20260726a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -47,25 +47,25 @@
     <article class="static-product-card">
       <b>VertKleen HCR</b>
       <span>Replaces hydrochloric acid</span>
-      <p>Descaling, rust removal, passivation, and acid cleaning. HMIS 0-0-0.</p>
+      <p>Descaling, rust removal, passivation, and acid-cleaning candidates. Confirm the exact SKU and current SDS.</p>
       <a href="products/hcr">Open HCR</a>
     </article>
     <article class="static-product-card">
       <b>VertKleen CR</b>
       <span>Replaces caustic soda</span>
-      <p>Caustic replacement and pH adjustment for water treatment and alkaline cleaning. HMIS 0-0-0.</p>
+      <p>Alkaline-cleaning and water-treatment candidates. Confirm the exact SKU, current SDS, and process limits.</p>
       <a href="products/cr">Open CR</a>
     </article>
     <article class="static-product-card">
       <b>VertKleen CR HD</b>
       <span>Replaces caustic and solvent degreasers</span>
-      <p>Heavy-duty degreasing for oils, hoods, machinery, and industrial floors. HMIS 0-0-0.</p>
+      <p>Heavy-duty degreasing candidates for oils, hoods, machinery, and industrial floors after task review.</p>
       <a href="products/crhd">Open CRHD</a>
     </article>
     <article class="static-product-card">
       <b>WaterSafe60</b>
       <span>Replaces phosphate, zinc, and molybdate blends</span>
-      <p>Scale and corrosion inhibitor for tower and loop programs. HMIS 0-0-0.</p>
+      <p>Tower and loop program candidates; exact composition, performance, and regulatory status require current records.</p>
       <a href="products/watersafe60">Open WaterSafe60</a>
     </article>
   </div>
@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="hmis-panel">
               <p class="eyebrow">Current line</p>
-              <h2 class="headline headline--md">HMIS 0-0-0 replacements for acid, alkaline, and water-treatment programs.</h2>
+              <h2 class="headline headline--md">Document-reviewed candidates for acid, alkaline, and water-treatment programs.</h2>
               <p class="cmp-note">Documentation and product matching are available through the quote form.</p>
             </div>
           </div>
@@ -552,10 +552,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (p.hmis === "0-0-0") {
       rows.innerHTML = ["Health", "Flammability", "Reactivity"].map(l =>
         `<div class="hmis-row"><span class="lbl">${l}</span><span class="val">0</span></div>`).join("");
-      document.getElementById("panelFoot").textContent = "HMIS 0-0-0 profile for the core line, with lower-fume handling and broad material compatibility routed through controlled SDS, label, and application-note requests.";
+      document.getElementById("panelFoot").textContent = "Confirm the exact SKU, current SDS, label, material compatibility, ventilation, and procedure through controlled document review.";
     } else {
       rows.innerHTML = `<div class="hmis-row"><span class="lbl">Classification</span><span class="val val--text">Low</span></div>`;
-      document.getElementById("panelFoot").textContent = "Document-gated program component; formal label, SDS, and registration proof route through MASEST before any public claim. Every cataloged VertKleen product in the program is HMIS 0-0-0.";
+      document.getElementById("panelFoot").textContent = "Document-gated program component; formal label, SDS, registration status, and task controls route through MASEST before any product claim.";
     }
 
     document.getElementById("pSpecs").innerHTML = p.specs.map(([ico, b, s]) =>

@@ -348,7 +348,7 @@ test("asymmetric proof close keeps the dominant CTA clear of chat", async ({ pag
   expect(collision.overlaps, JSON.stringify(collision)).toBe(false);
 });
 
-test("injury and savings proof counters reach their sourced totals", async ({ page }) => {
+test("injury and task-input counters reach their configured totals", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
@@ -365,7 +365,7 @@ test("injury and savings proof counters reach their sourced totals", async ({ pa
   }, actNumber);
 
   expect(await readAtEnd(3)).toEqual({ target: 115000, value: 115000 });
-  expect(await readAtEnd(4)).toEqual({ target: 10000, value: 10000 });
+  expect(await readAtEnd(4)).toEqual({ target: 6, value: 6 });
 });
 
 test("rail and chat release before light content in both scroll directions", async ({ page }) => {

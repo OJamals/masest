@@ -225,7 +225,7 @@ Turn traffic and leads into orders and repeat revenue.
 
 ## 6. POTENTIAL — strategic / optional (evaluate later)
 
-- [ ] **B2B procurement integration** — PunchOut (cXML/OCI) and EDI for large buyers (e.g. Walmart DC / distributors).
+- [ ] **B2B procurement integration** — PunchOut (cXML/OCI) and EDI for large distribution buyers.
 - [ ] **Customer-specific catalogs** — restricted product/pricing views per enterprise account.
 - [ ] **Distributor / reseller portal** — tiered pricing, co-branded ordering, downstream order visibility.
 - [ ] **PWA / mobile** — installable reorder app for repeat buyers; barcode reorder.

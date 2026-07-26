@@ -8,13 +8,13 @@ import {
   documentDistribution,
   documentSurfaceMode,
 } from "./public-document-policy.mjs";
+import { STYLE_VERSION } from "./static-release.mjs";
 
 const root = new URL("../", import.meta.url);
 const registryPath = new URL("data/industry-applications.json", root);
 const reviewPath = new URL("data/public-document-review.json", root);
 const documentReview = JSON.parse(readFileSync(reviewPath, "utf8"));
 const documentRevision = documentReview.document_control.revision;
-const styleVersion = "20260725f";
 const industrySlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const escapeHtml = (value) => String(value)
@@ -73,7 +73,7 @@ export function renderIndustryRedirects(industries) {
   return redirects.sort().join("\n") + (redirects.length ? "\n" : "");
 }
 
-function contactHref(industry, type = "audit") {
+function contactHref(industry, type = "audit", base = "../contact") {
   const message = [
     `Industry: ${industry.label}`,
     `Asset / substrate: ${industry.asset}`,
@@ -88,7 +88,114 @@ function contactHref(industry, type = "audit") {
     type,
     message,
   }).toString();
-  return `../contact?${escapeHtml(query)}`;
+  return `${base}?${escapeHtml(query)}`;
+}
+
+function discoveryFilterCard(type, {
+  id,
+  label,
+  detail,
+  result_detail: resultDetail,
+  cta_type: ctaType,
+  cta_label: ctaLabel,
+}) {
+  return `<a class="route-card" href="?${type}=${escapeHtml(id)}#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="${type}" data-filter-value="${escapeHtml(id)}" data-result-detail="${escapeHtml(resultDetail)}" data-cta-type="${escapeHtml(ctaType)}" data-cta-label="${escapeHtml(ctaLabel)}" aria-pressed="false">
+          <span>${type === "role" ? "Buyer role" : "Job path"}</span>
+          <strong>${escapeHtml(label)}</strong>
+          <b>${escapeHtml(detail)}</b>
+        </a>`;
+}
+
+function evidenceStatusLabel(industry) {
+  const labels = {
+    absent: "No field record",
+    context_only: "Field context; verification incomplete",
+    qualified: "Qualified field record",
+  };
+  const label = labels[industry.field_evidence?.status];
+  if (!label) throw new Error(`${industry.slug}: unsupported field evidence status`);
+  return label;
+}
+
+function renderDiscoveryProducts(industry) {
+  const jobsByProduct = new Map();
+  for (const [job, productIds] of Object.entries(industry.job_paths || {})) {
+    for (const productId of productIds) {
+      if (!jobsByProduct.has(productId)) jobsByProduct.set(productId, []);
+      jobsByProduct.get(productId).push(job);
+    }
+  }
+
+  const links = industry.products
+    .filter((productId) => jobsByProduct.has(productId))
+    .map((productId) => {
+      const product = PRODUCTS[productId];
+      if (!product) throw new Error(`${industry.slug}: unknown discovery product ${productId}`);
+      return `<span data-industry-discovery-product data-job-paths="${escapeHtml(jobsByProduct.get(productId).join(" "))}"><a href="products/${escapeHtml(productId)}">${escapeHtml(product.name)}</a></span>`;
+    })
+    .join("");
+  return `<span class="industry-discovery-products">${links}</span>`;
+}
+
+function renderDiscoveryCard(industry) {
+  const jobIds = Object.keys(industry.job_paths || {});
+  return `<article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="${escapeHtml(industry.slug)}" data-buyer-roles="${escapeHtml((industry.buyer_roles || []).join(" "))}" data-job-paths="${escapeHtml(jobIds.join(" "))}" hidden>
+        <span class="eyebrow">${industry.kind === "supplemental" ? "Focused operation" : "Sector route"}</span>
+        <h3><a href="industries/${escapeHtml(industry.slug)}">${escapeHtml(industry.label)}</a></h3>
+        <p>${escapeHtml(industry.lead_task)}</p>
+        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
+        <dl>
+          <div><dt>Starting chemistry</dt><dd>${renderDiscoveryProducts(industry)}</dd></div>
+          <div><dt>Evidence status</dt><dd>${escapeHtml(evidenceStatusLabel(industry))}</dd></div>
+        </dl>
+        <div class="prod-actions">
+          <a class="btn btn-secondary btn-sm" href="industries/${escapeHtml(industry.slug)}">Open route</a>
+          <a class="btn btn-primary btn-sm" href="${contactHref(industry, "audit", "contact")}" data-industry-discovery-cta>Scope audit</a>
+        </div>
+      </article>`;
+}
+
+export function renderIndustryDiscovery(industries, discovery) {
+  const roleCards = discovery.roles.map((role) => discoveryFilterCard("role", role)).join("\n        ");
+  const jobCards = discovery.jobs.map((job) => discoveryFilterCard("job", job)).join("\n        ");
+  const resultCards = industries.map(renderDiscoveryCard).join("\n      ");
+
+  return `<section class="section section-slim">
+    <div class="wrap">
+      <div class="industry-router buyer-router reveal" id="industry-discovery" data-industry-discovery>
+        <div>
+          <span class="eyebrow">Find your route</span>
+          <h2>Start with your role or the job.</h2>
+          <p class="subhead">Filter the existing industry library. Every match keeps the sector task, starting chemistry, evidence status, and scoped audit handoff together.</p>
+          <p class="industry-discovery-status" data-industry-discovery-status aria-live="polite">Choose a buyer role or job path.</p>
+          <button class="btn btn-ghost btn-sm" type="button" data-industry-discovery-clear hidden>Clear filters</button>
+        </div>
+        <div class="industry-discovery-controls">
+          <div>
+            <span class="eyebrow">Buyer role</span>
+            <div class="route-grid">
+              ${roleCards}
+            </div>
+          </div>
+          <div>
+            <span class="eyebrow">High-intent job</span>
+            <div class="route-grid">
+              ${jobCards}
+            </div>
+          </div>
+        </div>
+        <div class="industry-discovery-results" data-industry-discovery-results hidden>
+          ${resultCards}
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
+export function renderIndustryHub(html, industries, discovery) {
+  const rendered = replaceMarker(html, "discovery", renderIndustryDiscovery(industries, discovery));
+  if (rendered === null) throw new Error("industries hub: discovery marker missing");
+  return rendered;
 }
 
 function renderHeroFacts(industry) {
@@ -176,10 +283,77 @@ function renderProducts(industry) {
   }).join(", ");
 }
 
+function renderTrialBrief(industry, documents) {
+  const brief = industry.trial_brief;
+  if (!brief) return "";
+  if (
+    !brief.title?.trim()
+    || !brief.objective?.trim()
+    || !Array.isArray(brief.compatibility_checks)
+    || brief.compatibility_checks.length === 0
+  ) {
+    throw new Error(`${industry.slug}: incomplete controlled-trial brief`);
+  }
+
+  const compatibilityRows = brief.compatibility_checks.map(({ material, gate }) => {
+    if (!material?.trim() || !gate?.trim()) {
+      throw new Error(`${industry.slug}: incomplete compatibility check`);
+    }
+    return `<tr><th scope="row">${escapeHtml(material)}</th><td>${escapeHtml(gate)}</td></tr>`;
+  }).join("\n              ");
+  const referenceTitles = [...new Set(documents
+    .filter(({ control }) => control.status === "reference_only")
+    .map(({ control }) => control.title))];
+  const referenceBoundary = referenceTitles.length
+    ? `${referenceTitles.join(" and ")} remain controlled references. Flagged statements in these files do not substantiate public copy, including safety, certification, efficacy, compatibility, food-contact, antimicrobial, regulatory, or customer-outcome claims.`
+    : "No controlled reference is being used to substantiate this planning brief.";
+
+  return `
+      <section class="ind-scope-note ind-trial-brief" data-industry-trial-brief aria-labelledby="industry-trial-brief-title">
+        <div class="ind-trial-head">
+          <div>
+            <span class="eyebrow">Controlled-trial plan</span>
+            <h3 id="industry-trial-brief-title">${escapeHtml(brief.title)}</h3>
+            <p>${escapeHtml(brief.objective)}</p>
+          </div>
+          <span class="ind-trial-status">Planning asset · ${escapeHtml(evidenceStatusLabel(industry))}</span>
+        </div>
+        <div class="ind-trial-grid">
+          <div>
+            <h4>Material compatibility gate</h4>
+            <div class="ind-trial-table-wrap">
+              <table class="ind-trial-table">
+                <caption>Materials to approve before the trial</caption>
+                <thead><tr><th scope="col">Material</th><th scope="col">Required gate</th></tr></thead>
+                <tbody>
+              ${compatibilityRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h4>Witnessed method</h4>
+            <ol class="ind-trial-steps">
+              <li><h5>Scope and baseline</h5><p>Asset / substrate: ${escapeHtml(industry.asset)}. Soil / deposit: ${escapeHtml(industry.soil)}. Record current dissatisfaction, operating window, and acceptance endpoint before testing.</p></li>
+              <li><h5>Compatibility gate</h5><p>Materials in scope: ${escapeHtml(industry.materials)}. ${escapeHtml(industry.boundary)}</p></li>
+              <li><h5>Witnessed method</h5><p>${escapeHtml(industry.method)}. ${escapeHtml(industry.concentration)} ${escapeHtml(industry.process)}</p></li>
+              <li><h5>Release and record</h5><p>${escapeHtml(industry.verification)} ${escapeHtml(industry.wastewater)} Record the result and limitations.</p></li>
+            </ol>
+          </div>
+        </div>
+        <aside class="ind-evidence-boundary ind-trial-boundary" aria-label="Controlled-trial evidence boundary">
+          <strong>Evidence status</strong>
+          <p>${escapeHtml(evidenceStatusLabel(industry))}. This is a planning brief, not field proof. ${escapeHtml(referenceBoundary)}</p>
+          <a class="btn btn-secondary" href="${contactHref(industry, "sample")}">Scope this trial</a>
+        </aside>
+      </section>`;
+}
+
 function renderApplications(industry, allIndustries, documents) {
   const parent = industry.parent
     ? allIndustries.find((candidate) => candidate.slug === industry.parent)
     : null;
+  const children = allIndustries.filter((candidate) => candidate.parent === industry.slug);
   const related = parent
     ? `
       <aside class="ind-scope-note" data-supplemental-scope>
@@ -191,7 +365,16 @@ function renderApplications(industry, allIndustries, documents) {
         </dl>
         <p class="ind-related">Broader program: <a href="./${escapeHtml(parent.slug)}">${escapeHtml(parent.label)}</a></p>
       </aside>`
-    : "";
+    : children.length
+      ? `
+      <aside class="ind-scope-note" data-specialized-routes>
+        <span class="eyebrow">Specific operation?</span>
+        <h3>Open the route built for your team.</h3>
+        <p class="ind-related">${children.map((child) => (
+          `<a href="./${escapeHtml(child.slug)}">${escapeHtml(child.label)}</a>`
+        )).join(" · ")}</p>
+      </aside>`
+      : "";
   const documentLinks = documents.map((document) => {
     const control = document.control;
     const distribution = documentDistribution(control) === "request_only" ? "Request only" : "Current";
@@ -219,7 +402,7 @@ function renderApplications(industry, allIndustries, documents) {
         <div><dt>Process controls</dt><dd>${escapeHtml(industry.process)}</dd></div>
         <div><dt>Shutdown / containment</dt><dd>${escapeHtml(industry.boundary)}</dd></div>
         <div><dt>Verification endpoint</dt><dd>${escapeHtml(industry.verification)}</dd></div>
-      </dl>
+      </dl>${renderTrialBrief(industry, documents)}
       <div class="ind-proof-docs">
         <div>
           <span class="eyebrow">Controlled technical files</span>
@@ -272,8 +455,16 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
     resolveDocuments(industry, reviewByPath),
   );
   const cta = renderCta(industry);
+  const productMounts = html.match(/data-ind-products="[^"]*"/g) || [];
+  if (productMounts.length !== 1) {
+    throw new Error(`${industry.slug}: expected one recommended-product mount`);
+  }
 
-  html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${styleVersion}`);
+  html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
+  html = html.replace(
+    /data-ind-products="[^"]*"/,
+    `data-ind-products="${escapeHtml(industry.products.join(" "))}"`,
+  );
   let output = replaceMarker(html, "hero-facts", hero);
   if (output === null) {
     const heroSubhead = /(<section class="hero-split">[\s\S]*?<p class="subhead">[\s\S]*?<\/p>)/;
@@ -301,7 +492,7 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
 }
 
 export function buildIndustryPages() {
-  const industries = JSON.parse(readFileSync(registryPath, "utf8"));
+  const { discovery, industries } = JSON.parse(readFileSync(registryPath, "utf8"));
   const reviewByPath = new Map(documentReview.documents.map((document) => [document.path, document]));
 
   for (const industry of industries) {
@@ -311,6 +502,12 @@ export function buildIndustryPages() {
     const rendered = renderIndustryPage(html, industry, industries, reviewByPath);
     if (rendered !== html) writeFileSync(file, rendered);
   }
+
+  const hubPath = new URL("industries.html", root);
+  const hub = readFileSync(hubPath, "utf8");
+  const renderedHub = renderIndustryHub(hub, industries, discovery);
+  if (renderedHub !== hub) writeFileSync(hubPath, renderedHub);
+
   return industries.length;
 }
 

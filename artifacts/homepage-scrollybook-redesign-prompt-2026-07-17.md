@@ -172,8 +172,8 @@ Current implementation truth
 - Existing real proof and product truth must remain real. Do not invent a
   metric, testimonial, customer, certification, product, hazard score, or
   savings claim.
-- Preserve the documented $10,000/year Walmart distribution-center result and
-  its source if it remains in the story.
+- Do not publish restricted-source distribution customer, result, savings, or
+  endorsement claims.
 - Preserve “typical HMIS 0-0-0” qualification where applicable. Do not silently
   turn a qualified claim into an absolute claim.
 

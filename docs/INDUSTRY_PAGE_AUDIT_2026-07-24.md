@@ -10,7 +10,7 @@ The 27-page industry library now has task-led operating guidance, controlled doc
 
 Completed:
 
-1. Removed the confidential Walmart refrigeration case study and the unsupported Trinidad tank-cleaning report from the public build. Removed their derived images and claims. Regression tests prevent either source or derivative from returning.
+1. Removed a confidential refrigeration case study and the unsupported Trinidad tank-cleaning report from the public build. Removed their derived images and claims. Regression tests prevent either source or derivative from returning.
 2. Added `asset → soil/deposit → method → concentration → process boundary → verification → documents` guidance to every industry route.
 3. Added direct controlled-document links and localized trial-request briefs to every route.
 4. Replaced clearly mismatched aviation, fleet, restaurant, plumbing, healthcare, distribution, and pressure/soft-wash imagery with contextual, source-backed alternatives.
@@ -258,9 +258,9 @@ Products with strong direct-document sets include WaterSafe 60, HCR, CR HD, Desc
 
 | Artifact | Finding | Recommendation |
 |---|---|---|
-| Walmart refrigeration case study | Removed from public build; confidential source retained on Desktop | Republish only after written customer/OEM authorization and methods review |
+| Restricted refrigeration case study | Removed from public build; confidential source retained outside the repository | Republish only after written customer/OEM authorization and methods review |
 | Trinidad tank-cleaning test | Removed from public build; source lacked safety data and written procedure | Rebuild only as a controlled retrospective with procedure, safety boundary, waste route, and customer approval |
-| `walmart-dc-brochure.pdf` | “Approved by Crown Forklift and Plug Power” plus broad performance/certification framing | Require written authorization, dated scope, methods, and approved public wording |
+| Restricted distribution brochure | Customer/OEM endorsement plus broad performance/certification framing | Require written authorization, dated scope, methods, and approved public wording |
 | `brewery-cip-trial-brewlando.pdf` | Useful four-page trial, but missing visible revision/metadata and a complete validation boundary | Add procedure, concentration/temperature/time/flow, rinse endpoint, sanitation boundary, and customer signoff |
 | `vertkleen-cooling-tower-brochure.pdf` | “Zero hazards” and broad acid-fume/hazmat framing | Technical/legal review; replace absolutes with measured, scoped statements |
 | `vertkleen-cr-tds.pdf` | “Non-Toxic” and “Zero Corrosion Rate” | Cite test method, materials, conditions, detection limit, and limitations |
@@ -569,7 +569,7 @@ The public wrapper now supplies document ID, revision, effective date, owner, an
 - **Current focus:** Floor/fleet degreasing; CR HD, MultiWash.
 - **Prose:** Target tire marks, hydraulic/forklift grease, loading docks, rack bases, battery/charging-area boundaries, floor scrubbers, pedestrian reopening, and food/nonfood storage differences.
 - **Visuals:** Cold-storage floor-cleaning lead is relevant but makes the page look freezer-specific.
-- **Materials:** Add concrete/coating/tire/floor-scrubber compatibility, dilution/dwell, slip and dry-time verification, wastewater route, and a warehouse case study. Use Walmart customer/OEM claims only after written approval and substantiation.
+- **Materials:** Add concrete/coating/tire/floor-scrubber compatibility, dilution/dwell, slip and dry-time verification, wastewater route, and a warehouse case study. Use customer/OEM claims only after written approval and substantiation.
 
 ## Implemented information architecture
 

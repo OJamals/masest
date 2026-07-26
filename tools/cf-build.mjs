@@ -14,7 +14,9 @@ import { validatePublicDocumentReview } from './public-document-policy.mjs';
 const OUT = 'dist';
 const excludedPublicPaths = validatePublicDocumentReview();
 const siteImageManifest = JSON.parse(readFileSync('data/content/site-images.json', 'utf8'));
-const industryApplications = JSON.parse(readFileSync('data/industry-applications.json', 'utf8'));
+const { industries: industryApplications } = JSON.parse(
+  readFileSync('data/industry-applications.json', 'utf8'),
+);
 const siteImagePaths = (siteImageManifest.assets || []).map((asset) => asset.public_url);
 const configuredMediaBase = String(process.env.CMS_MEDIA_BASE || '').trim().replace(/\/+$/, '');
 const publicSupabaseUrl = readFileSync('js/config.js', 'utf8')
@@ -36,6 +38,8 @@ const DENY = [
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
   /^data\/public-document-review\.json$/,
   /^data\/industry-applications\.json$/,
+  /^img\/clients\//,
+  /^img\/proof\/carib-brewery-table\.webp$/i,
   // Internal seed sources — not client assets (only data/drum-pricing.json is fetched).
   /^data\/(catalog|products)\.seed\.json$/,
 ];

@@ -133,6 +133,11 @@ test("post-auth notification bubbles sit outside tab button corners", async ({ p
   expect(dashboard.marginLeft, "dashboard badge should not consume label space").toBe("0px");
 
   await page.goto(`${BASE_URL}/admin.html`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => {
+    const gate = document.getElementById("admGate");
+    const app = document.getElementById("admApp");
+    return gate && app && (!gate.hidden || !app.hidden);
+  });
   await page.evaluate(() => {
     document.getElementById("admGate").hidden = true;
     document.getElementById("admApp").hidden = false;

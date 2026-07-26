@@ -151,12 +151,6 @@ body.site-soft-bg main > section:not(:first-child):not(.block-dark) {
   background: var(--bg);
 }
 
-.proof-doc-link {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-}
-
 .brand,
 .adm-input {
   min-height: 44px;
@@ -695,6 +689,51 @@ no dots) ---------- */
   background: var(--surface);
 }
 .buyer-router .subhead { margin-bottom: 0; }
+.industry-discovery-controls {
+  display: grid;
+  gap: 24px;
+}
+.industry-discovery-controls > div > .eyebrow {
+  display: block;
+  margin-bottom: 8px;
+}
+.industry-discovery-status {
+  margin: 18px 0 12px;
+  color: var(--accent-ink);
+  font-weight: 750;
+}
+.industry-discovery-results {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.industry-discovery-card {
+  margin-top: 0;
+}
+.industry-discovery-card > p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.industry-discovery-card .prod-actions {
+  margin-top: 18px;
+}
+.industry-discovery-products {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.industry-discovery-results[hidden],
+.industry-discovery-card[hidden],
+[data-industry-discovery-product][hidden] {
+  display: none;
+}
+.buyer-router .route-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px rgba(14, 124, 134, .14);
+}
 .route-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1345,6 +1384,7 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 
 @media (max-width: 700px) {
   .industry-router .route-grid,
+.industry-specialists .route-grid,
 .resource-router .route-grid,
 .why-router .route-grid,
 .about-router .route-grid { grid-template-columns: 1fr; }
@@ -2124,53 +2164,6 @@ scroll-snap gallery
   border-radius: 999px;
 }
 
-/* ---- Client wall (monochrome logo / wordmark strip) ---- */
-.client-wall {
-  list-style: none;
-  margin: clamp(22px, 4vw, 36px) 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(16px, 3vw, 36px) clamp(22px, 3.8vw, 48px);
-}
-/* Logos are pre-trimmed to their content box, so a shared cap-height renders
-   every mark at the same optical size; width follows each logo's own aspect
-   (wide wordmarks get width, compact marks stay compact). */
-.client-wall li {
-  flex: 0 0 auto;
-  height: clamp(38px, 4.5vw, 48px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.client-wall img {
-  width: auto;
-  height: 100%;
-  max-width: min(216px, 30vw);
-  object-fit: contain;
-  filter: grayscale(1) contrast(1.05);
-  opacity: .74;
-  transition: filter .25s ease, opacity .25s ease;
-}
-/* Detailed multi-part marks (script + emblem) need more area than a plain
-   wordmark to read at the same optical weight. */
-.client-wall li.mark-detailed { height: clamp(52px, 6vw, 66px); }
-.client-wall li:hover img,
-.client-wall li:focus-within img {
-  filter: grayscale(0);
-  opacity: 1;
-}
-@media (max-width: 640px) {
-  .client-wall { gap: 14px 22px; }
-  .client-wall li { height: 34px; }
-  .client-wall li.mark-detailed { height: 46px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .client-wall img { transition: none; }
-}
-
 /* ---- Before/after pair ---- */
 .ba-duo {
   display: grid;
@@ -2184,6 +2177,7 @@ scroll-snap gallery
 
 /* ---- Inline document link (lab report, etc.) ---- */
 .proof-doc-link {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2194,10 +2188,8 @@ scroll-snap gallery
 }
 .proof-doc-link:hover { text-decoration: underline; }
 .proof-doc-link i { font-size: 1.05rem; }
-.cmp-note + p:has(.proof-doc-link) { margin-top: 24px; }
+.proof-source-summary .section-head { margin-bottom: 24px; }
 
-.proof-library {
-}
 .proof-filterbar {
   display: flex;
   flex-wrap: wrap;
@@ -7589,6 +7581,110 @@ body.product-detail-page main > section.product-static-section {
   font-size: .9rem;
   line-height: 1.55;
 }
+.ind-trial-brief {
+  margin-top: 18px;
+  background: var(--surface);
+}
+.ind-trial-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+.ind-trial-head h3 {
+  margin-bottom: 8px;
+}
+.ind-trial-head p,
+.ind-trial-steps p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: .9rem;
+  line-height: 1.6;
+}
+.ind-trial-status {
+  padding: 8px 11px;
+  color: var(--ink);
+  font-size: .74rem;
+  font-weight: 750;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.ind-trial-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: clamp(22px, 4vw, 46px);
+  margin-top: 26px;
+}
+.ind-trial-grid h4 {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: .82rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.ind-trial-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r-card) - 6px);
+}
+.ind-trial-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--ink-soft);
+  font-size: .84rem;
+  line-height: 1.5;
+}
+.ind-trial-table caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.ind-trial-table :is(th, td) {
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.ind-trial-table thead th {
+  color: var(--muted);
+  font-size: .68rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: var(--surface-soft);
+}
+.ind-trial-table tbody th {
+  width: 34%;
+  color: var(--ink);
+  font-weight: 700;
+}
+.ind-trial-table tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+.ind-trial-steps {
+  margin: 0;
+  padding-left: 1.3rem;
+}
+.ind-trial-steps li {
+  padding-left: 6px;
+}
+.ind-trial-steps li + li {
+  margin-top: 14px;
+}
+.ind-trial-steps li::marker {
+  color: var(--accent);
+  font-weight: 800;
+}
+.ind-trial-steps h5 {
+  margin: 0 0 3px;
+  color: var(--ink);
+  font-size: .92rem;
+}
+.ind-trial-boundary {
+  margin-top: 26px;
+}
 .ind-proof-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7665,15 +7761,21 @@ body.product-detail-page main > section.product-static-section {
   .ind-hero-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .ind-trial-head,
+  .ind-trial-grid,
   .ind-proof-docs,
   .ind-evidence-boundary {
     grid-template-columns: 1fr;
+  }
+  .ind-trial-status {
+    justify-self: start;
   }
   .ind-evidence-boundary .btn {
     justify-self: start;
   }
 }
 @media (max-width: 620px) {
+  .industry-discovery-results,
   .ind-scope-note dl,
   .ind-proof-grid,
   .ind-hero-facts {

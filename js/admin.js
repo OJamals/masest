@@ -21,7 +21,7 @@ function markDirty(event) {
 }
 
 // Coalesce rapid input (search keystrokes) into a single trailing call so a query like
-// "walmart" triggers one fetch+render instead of one per character.
+// "warehouse" triggers one fetch+render instead of one per character.
 function debounce(fn, ms = 220) {
   let t;
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };

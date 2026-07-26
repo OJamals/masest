@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-25T21:46:02.223Z",
+  "generated_at": "2026-07-26T17:34:14.000Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -17,11 +17,11 @@
       "sha256": "31e97727aede770128842520a93813c5f2b0a78de74374ef3960b7778668b968"
     },
     "proof.json": {
-      "count": 11,
+      "count": 12,
       "counts": {
-        "proof_cards": 11
+        "proof_cards": 12
       },
-      "sha256": "00978815a67b3ca943e890c467c7b210dd88416333906667b5b58a583fd4a8d6"
+      "sha256": "8faf20e5bb33eb18b044dbcfd002688b0c45028e118db3500dd9f59c65c84970"
     },
     "resources.json": {
       "count": 0,
@@ -56,21 +56,21 @@
       "counts": {
         "pricing_tiers": 4
       },
-      "sha256": "e09b2a2eedafc70b0ec883edd3f403ccb67cdba3f1498dbb521ee4633c5dd4fc"
+      "sha256": "37bfc0a675c633071ff928e02a1c3a06449b1216dc726e79438a625030261064"
     },
     "industry-sectors.json": {
       "count": 16,
       "counts": {
         "industry_sectors": 16
       },
-      "sha256": "4108046017efaa95d7224b31b454f21391e9fd7e57312f061d0dd1d3b6204cdf"
+      "sha256": "66f7f97460dd16831f38423d14f8c2c105664dbb9712b631f23b2074ae5631a3"
     },
     "blog.json": {
       "count": 8,
       "counts": {
         "blog_posts": 8
       },
-      "sha256": "6be180edeb3a4189cb961eedd77d57fc603a30316e163e858d2248267a0c84b3"
+      "sha256": "c1cdb1bf7edd049d65429a500ae535f50b7e4243ec4105ef73f435bb8b3274d6"
     }
   }
 }
