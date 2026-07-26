@@ -954,6 +954,20 @@ no dots) ---------- */
 .quote-advanced-toggle {
   align-self: end;
 }
+.quote-task-details {
+  margin: 18px 0 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--panel);
+}
+.quote-task-details legend {
+  padding: 0 8px;
+  color: var(--ink);
+  font-weight: 750;
+}
+.quote-task-details .form-note { margin: 0 0 16px; }
+.quote-task-details .quote-task-detail-wide { grid-column: 1 / -1; }
 
 .resource-disclosure summary strong {
   display: block;

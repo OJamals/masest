@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { requestDetailsHtml } from "../js/admin/quotes.js";
+import { QUOTE_TASK_DETAILS } from "../js/quote-task-details.js";
+
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 const ADMIN_QUOTES = read("../functions/api/admin/quotes.js");
@@ -59,15 +62,43 @@ test("admin quote inbox supports lead owner assignment", () => {
   assert.match(QUOTES_JS, /quote\.assigned_to/);
 });
 
-test("admin quote inbox and drawer surface sample request details", () => {
-  assert.match(QUOTES_JS, /function\s+sampleDetailsHtml/);
-  assert.match(QUOTES_JS, /payloadValues\(quote\.payload\?\.samples\)/);
-  assert.match(QUOTES_JS, /quote-sample-summary/);
-  assert.match(QUOTES_JS, /Sample products/);
-  assert.match(QUOTES_JS, /Ship-to/);
-  assert.match(QUOTES_JS, /sampleDetailsHtml\(quote\)/, "list rows should render sample payload details");
-  assert.match(QUOTES_JS, /sampleDetailsHtml\(q\)/, "drawer details should render sample payload details");
-  assert.match(ADMIN_HTML, /\.quote-sample-summary/, "sample summary should have explicit admin styling");
+test("admin quote inbox and drawer surface shared request details", () => {
+  assert.match(QUOTES_JS, /function\s+requestDetailsHtml/);
+  assert.match(QUOTES_JS, /payloadValues\(quote\.payload\?\.\[key\]\)/);
+  assert.match(QUOTES_JS, /quote-request-summary/);
+  assert.match(QUOTES_JS, /QUOTE_TASK_DETAILS\.map/);
+  assert.deepEqual(
+    QUOTE_TASK_DETAILS.map(({ label }) => label),
+    [
+      "Current chemical",
+      "Current dilution",
+      "Labor per completed task",
+      "Water per completed task",
+      "Downtime per completed task",
+      "Disposal per completed task",
+      "Asset life context",
+      "Wastewater route",
+      "Reopening / return-to-service criteria",
+    ],
+  );
+  assert.match(QUOTES_JS, /requestDetailsHtml\(quote\)/, "list rows should render request payload details");
+  assert.match(QUOTES_JS, /requestDetailsHtml\(q\)/, "drawer details should render request payload details");
+  assert.match(ADMIN_HTML, /\.quote-request-summary/, "request summary should have explicit admin styling");
+  assert.doesNotMatch(QUOTES_JS, /sampleDetailsHtml/, "sample-only renderer should be removed");
+
+  const html = requestDetailsHtml({
+    payload: {
+      samples: ["VertKleen CR", "VertKleen HCR"],
+      current_chemical: "<script>alert(1)</script>",
+      wastewater_route: "Contained and recovered",
+      reopening_criteria: "Supervisor release",
+    },
+  });
+  assert.match(html, /VertKleen CR, VertKleen HCR/);
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /Contained and recovered/);
+  assert.match(html, /Supervisor release/);
 });
 
 test("admin quotes API can send a lead follow-up email", () => {

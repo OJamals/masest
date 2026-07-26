@@ -231,11 +231,13 @@ test("quote request starts as a short lead form and reveals product details prog
       .map((node) => node.name));
 
   expect(visibleRequiredNames).toEqual(["name", "company", "email", "message"]);
-  await expect(page.getByRole("button", { name: /add product, volume & timeline/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /add request details/i })).toBeVisible();
   await expect(page.locator("#fVolume")).toBeHidden();
+  await expect(page.locator("#quoteTaskDetails")).toBeHidden();
 
-  await page.getByRole("button", { name: /add product, volume & timeline/i }).click();
+  await page.getByRole("button", { name: /add request details/i }).click();
   await expect(page.locator("#fVolume")).toBeVisible();
+  await expect(page.locator("#quoteTaskDetails")).toBeVisible();
 });
 
 test("mobile pages expose persistent quote and chemical-map actions", async ({ page }) => {

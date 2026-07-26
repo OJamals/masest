@@ -219,9 +219,25 @@
           <div class="field"><label for="fTerritory">Territory / region *</label><input id="fTerritory" name="territory" type="text" autocomplete="off" placeholder="Southeast US, Caribbean…" data-req></div>
         </div>
 
+        <fieldset class="quote-task-details" id="quoteTaskDetails" hidden>
+          <legend>Compare one completed task</legend>
+          <p class="form-note">Optional. Share the current baseline and operating boundaries so the team can scope a like-for-like trial.</p>
+          <div class="field-grid">
+            <div class="field"><label for="fCurrentChemical">Current chemical</label><input id="fCurrentChemical" name="current_chemical" type="text" maxlength="240" autocomplete="off" placeholder="Product or current method"></div>
+            <div class="field"><label for="fCurrentDilution">Current dilution</label><input id="fCurrentDilution" name="current_dilution" type="text" maxlength="160" autocomplete="off" placeholder="e.g., 1:20 or ready to use"></div>
+            <div class="field"><label for="fLaborPerTask">Labor per completed task</label><input id="fLaborPerTask" name="labor_per_task" type="text" maxlength="160" autocomplete="off" placeholder="People and time"></div>
+            <div class="field"><label for="fWaterPerTask">Water per completed task</label><input id="fWaterPerTask" name="water_per_task" type="text" maxlength="160" autocomplete="off" placeholder="Estimated volume"></div>
+            <div class="field"><label for="fDowntimePerTask">Downtime per completed task</label><input id="fDowntimePerTask" name="downtime_per_task" type="text" maxlength="160" autocomplete="off" placeholder="Shutdown through return to service"></div>
+            <div class="field"><label for="fDisposalPerTask">Disposal per completed task</label><input id="fDisposalPerTask" name="disposal_per_task" type="text" maxlength="240" autocomplete="off" placeholder="Current handling or cost"></div>
+            <div class="field quote-task-detail-wide"><label for="fAssetLife">Asset life context</label><input id="fAssetLife" name="asset_life" type="text" maxlength="240" autocomplete="off" placeholder="Current maintenance or replacement interval"></div>
+            <div class="field quote-task-detail-wide"><label for="fWastewaterRoute">Wastewater / recovery route</label><textarea id="fWastewaterRoute" name="wastewater_route" rows="3" maxlength="1000" placeholder="How washwater is currently contained, recovered, treated, or discharged"></textarea></div>
+            <div class="field quote-task-detail-wide"><label for="fReopeningCriteria">Reopening / return-to-service criteria</label><textarea id="fReopeningCriteria" name="reopening_criteria" rows="3" maxlength="1000" placeholder="Site-defined inspection, rinse, dry-down, or release criteria"></textarea></div>
+          </div>
+        </fieldset>
+
         <div class="field u-mt-18">
-          <label for="fMessage">Current chemical / site notes *</label>
-          <textarea id="fMessage" name="message" rows="5" aria-required="true" placeholder="e.g., We currently descale cooling tower fill with hydrochloric acid (muriatic acid) twice a year"></textarea>
+          <label for="fMessage">Request notes *</label>
+          <textarea id="fMessage" name="message" rows="5" aria-required="true" placeholder="Describe the asset, soil or deposit, operating conditions, and the outcome you need"></textarea>
         </div>
 
         <button class="btn btn-primary u-cta-wide" type="submit">Send Request</button>

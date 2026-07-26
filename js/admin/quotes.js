@@ -9,6 +9,27 @@ import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } fr
 import { captureDirty, restoreDirty } from './edits.js?v=20260725f';
 import { createCrmPanel } from './crm.js?v=20260725f';
 import { createSavedViews } from './saved-views.js?v=20260725f';
+import { QUOTE_TASK_DETAILS } from '../quote-task-details.js?v=20260725f';
+
+const REQUEST_DETAIL_FIELDS = [
+  ['samples', 'Sample products'],
+  ['ship_to', 'Ship-to'],
+  ...QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label]),
+];
+
+function payloadValues(value) {
+  return (Array.isArray(value) ? value : [value])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+}
+
+export function requestDetailsHtml(quote) {
+  const rows = REQUEST_DETAIL_FIELDS.map(([key, label]) => {
+    const values = payloadValues(quote.payload?.[key]);
+    return values.length ? `<span><b>${label}</b>${esc(values.join(', '))}</span>` : '';
+  }).filter(Boolean).join('');
+  return rows ? `<div class="quote-request-summary">${rows}</div>` : '';
+}
 
 export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager }) {
   const QUOTE_STATUSES = ['new', 'contacted', 'closed', 'spam'];
@@ -58,21 +79,6 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   function validStageLocal(stage) { return STAGES.includes(String(stage)); }
   function companyOptions() {
     return (state.companies || []).map((c) => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.status || '')})</option>`).join('');
-  }
-  function payloadValues(value) {
-    return (Array.isArray(value) ? value : [value])
-      .map((item) => String(item || '').trim())
-      .filter(Boolean);
-  }
-  function sampleDetailsHtml(quote) {
-    const samples = payloadValues(quote.payload?.samples);
-    const shipTo = String(quote.payload?.ship_to || '').trim();
-    if (!samples.length && !shipTo) return '';
-    const rows = [
-      samples.length ? `<span><b>Sample products</b>${esc(samples.join(', '))}</span>` : '',
-      shipTo ? `<span><b>Ship-to</b>${esc(shipTo)}</span>` : '',
-    ].filter(Boolean).join('');
-    return `<div class="quote-sample-summary">${rows}</div>`;
   }
   function isStale(quote) {
     if (['won', 'lost'].includes(quote.pipeline_stage)) return false;
@@ -300,7 +306,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     const dueValue = q.due_at ? new Date(q.due_at).toISOString().slice(0, 16) : '';
     const closeValue = q.expected_close ? String(q.expected_close).slice(0, 10) : '';
     return `<div class="drawer-details">
-      ${sampleDetailsHtml(q)}
+      ${requestDetailsHtml(q)}
       <label>Stage <select class="adm-select" data-d-stage>${STAGES.map((s) => `<option value="${s}"${s === (q.pipeline_stage || 'new') ? ' selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}</select></label>
       <label>Status <select class="adm-select" data-d-status>${QUOTE_STATUSES.map((s) => `<option value="${s}"${s === (q.status || 'new') ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
       <label>Priority <select class="adm-select" data-d-priority>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}"${p === (q.priority || 'normal') ? ' selected' : ''}>${p}</option>`).join('')}</select></label>
@@ -554,7 +560,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
             <span class="muted">${fmtMoney(quote.deal_value)} · Score ${esc(score)}</span>
           </summary>
           <p>${esc(quote.message || '')}</p>
-          ${sampleDetailsHtml(quote)}
+          ${requestDetailsHtml(quote)}
           ${meta ? `<p class="muted" style="margin:4px 0 0">${esc(meta)}</p>` : ''}
           <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" data-open-quote="${id}" type="button">Open deal</button>

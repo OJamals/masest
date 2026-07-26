@@ -80,13 +80,14 @@ function contactHref(industry, type = "audit", base = "../contact") {
     `Soil / deposit: ${industry.soil}`,
     "Operating conditions: temperature, available dwell, agitation/flow, rinse water, shutdown window",
     `Materials: ${industry.materials}`,
-    `Wastewater route: ${industry.wastewater}`,
     "Buying deadline: ",
   ].join("\n");
   const query = new URLSearchParams({
     industry: industry.label,
     type,
     message,
+    wastewater_route: industry.wastewater,
+    reopening_criteria: industry.verification,
   }).toString();
   return `${base}?${escapeHtml(query)}`;
 }

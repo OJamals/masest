@@ -10,8 +10,12 @@ import {
   readBoundedJson,
 } from '../_lib/request-body.js';
 import { verifyTurnstile } from '../_lib/turnstile.js';
+import { QUOTE_TASK_DETAILS } from '../../js/quote-task-details.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const TASK_FIELD_LIMITS = Object.fromEntries(
+  QUOTE_TASK_DETAILS.map(({ name, limit }) => [name, limit]),
+);
 
 const LABELS = {
   name: 'Name',
@@ -29,6 +33,7 @@ const LABELS = {
   samples: 'Sample products',
   ship_to: 'Ship-to address',
   territory: 'Territory / region',
+  ...Object.fromEntries(QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label])),
   message: 'Notes',
 };
 
@@ -40,6 +45,14 @@ function fieldValues(value) {
 
 function normalizeRequestType(value) {
   return String(value || 'quote').trim().toLowerCase().slice(0, 40) || 'quote';
+}
+
+function normalizeTaskDetails(fields) {
+  for (const [key, limit] of Object.entries(TASK_FIELD_LIMITS)) {
+    const value = fieldValues(fields[key]).join(', ').slice(0, limit);
+    if (value) fields[key] = value;
+    else delete fields[key];
+  }
 }
 
 function sampleProductSummary(fields) {
@@ -127,6 +140,7 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   }
 
   if (String(fields._gotcha || '').trim()) return json(200, { ok: true });
+  normalizeTaskDetails(fields);
 
   const name = String(fields.name || '').trim();
   const email = String(fields.email || '').trim();

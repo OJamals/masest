@@ -5,15 +5,15 @@ import { readFile } from "node:fs/promises";
 const engagement = await readFile(new URL("../js/main/engagement.js", import.meta.url), "utf8");
 const contact = await readFile(new URL("../contact.html", import.meta.url), "utf8");
 
-// Regression: the "Add procurement details" toggle used to swallow the intent
+// Regression: the "Add request details" toggle used to swallow the intent
 // groups — it force-hid the Sample Kit picker (a sample request could submit
 // with zero products) and stripped data-req off audit/distributor core fields.
-test("procurement toggle governs only shared + quote extras, never intent groups", () => {
+test("request-details toggle governs only shared + quote extras, never intent groups", () => {
   const idsMatch = engagement.match(/const advancedIds = \[([^\]]+)\]/);
   assert.ok(idsMatch, "advancedIds list exists");
   const ids = [...idsMatch[1].matchAll(/"(\w+)"/g)].map((m) => m[1]);
   assert.deepEqual(ids, ["fPhone", "fIndustry", "fLocation", "fProduct", "fVolume", "fTimeline"]);
-  assert.ok(!engagement.includes("progressiveSampleGroup"), "sample group is not toggled by the procurement button");
+  assert.ok(!engagement.includes("progressiveSampleGroup"), "sample group is not toggled by the request-details button");
 });
 
 test("intent-core fields keep their data-req so applyIntent can require them", () => {

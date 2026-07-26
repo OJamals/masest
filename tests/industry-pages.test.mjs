@@ -718,7 +718,7 @@ test('industry proof links resolve locally and exclude restricted customer recor
   }
 });
 
-test('localized CTA requests the six inputs needed to scope a cleaning trial', () => {
+test('localized CTA structures wastewater and reopening boundaries beside trial context', () => {
   const contactHtml = read('contact.html');
   const contactIndustries = new Set(
     [...contactHtml.matchAll(/<option>([^<]+)<\/option>/g)]
@@ -734,17 +734,25 @@ test('localized CTA requests the six inputs needed to scope a cleaning trial', (
 
     const params = new URLSearchParams(href.replaceAll('&amp;', '&'));
     assert.ok(contactIndustries.has(params.get('industry')), `${slug}: contact industry must preselect`);
+    const industry = industries.find((item) => item.slug === slug);
+    assert.ok(industry, `${slug}: registry entry`);
+    assert.equal(params.get('wastewater_route'), industry.wastewater, `${slug}: wastewater route`);
+    assert.equal(
+      params.get('reopening_criteria'),
+      industry.verification,
+      `${slug}: reopening / return-to-service criteria`,
+    );
     const message = params.get('message') || '';
     for (const prompt of [
       'Asset / substrate:',
       'Soil / deposit:',
       'Operating conditions:',
       'Materials:',
-      'Wastewater route:',
       'Buying deadline:',
     ]) {
       assert.match(message, new RegExp(prompt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${slug}: ${prompt}`);
     }
+    assert.doesNotMatch(message, /Wastewater route:/, `${slug}: no duplicate wastewater payload`);
   }
 });
 

@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { chromium } from "playwright";
 
+import { QUOTE_TASK_DETAILS } from "../js/quote-task-details.js";
+
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const PORT = 4327;
@@ -162,6 +164,19 @@ test("contact form posts all five public request types to quote intake", async (
           });
         });
         await page.goto(`${BASE_URL}/contact.html?type=${flow.intent}&industry=Data%20Centers`, { waitUntil: "load" });
+        const taskDetails = page.locator("#quoteTaskDetails");
+        assert.equal(await taskDetails.isVisible(), false, `${flow.intent} task details should start hidden`);
+        await page.getByRole("button", { name: "Add request details" }).click();
+        assert.equal(
+          await taskDetails.isVisible(),
+          ["quote", "audit", "sample"].includes(flow.intent),
+          `${flow.intent} should expose task details only when useful`,
+        );
+        if (["technical", "distributor"].includes(flow.intent)) {
+          await page.locator("#fCurrentChemical").evaluate((input) => {
+            input.value = "Not applicable";
+          });
+        }
         await page.fill("#fName", "QA Buyer");
         await page.fill("#fCompany", "QA Company");
         await page.fill("#fEmail", `${flow.intent}@example.com`);
@@ -184,6 +199,113 @@ test("contact form posts all five public request types to quote intake", async (
       assert.ok(body, `${flow.intent} request should post its type`);
       assert.ok(hasMultipartField(body, "industry", "Data Centers"), `${flow.intent} request should carry industry attribution`);
       assert.ok(hasMultipartField(body, "email", `${flow.intent}@example.com`), `${flow.intent} request should carry email`);
+      if (["technical", "distributor"].includes(flow.intent)) {
+        assert.equal(
+          hasMultipartField(body, "current_chemical", "Not applicable"),
+          false,
+          `${flow.intent} should not post task economics`,
+        );
+      }
+    }
+  });
+});
+
+test("task economics and operating boundaries survive URL prefill, editing, and submission", async () => {
+  await withServer(async () => {
+    const browser = await chromium.launch({ channel: "chrome" });
+    const requests = [];
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+      await page.route("**/api/quote", async (route) => {
+        requests.push(route.request().postData() || "");
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: true }),
+        });
+      });
+      await page.goto(
+        `${BASE_URL}/contact.html?type=audit&product=CR%20HD%20vs%20Simple%20Green`,
+        { waitUntil: "load" },
+      );
+      assert.equal(
+        await page.locator("#quoteTaskDetails").isVisible(),
+        true,
+        "comparison audit CTA should disclose cost-per-task inputs",
+      );
+      assert.match(
+        await page.inputValue("#fMessage"),
+        /Product interest: CR HD vs Simple Green/,
+      );
+
+      const query = new URLSearchParams({
+        type: "audit",
+        industry: "Data Centers",
+        current_chemical: "Current cleaner",
+        current_dilution: "1:12",
+        labor_per_task: "2 technicians × 3 hours",
+        water_per_task: "300 gallons",
+        downtime_per_task: "4 hours",
+        disposal_per_task: "Hauler pickup",
+        asset_life: "18-month maintenance interval",
+        wastewater_route: "On-site pretreatment",
+        reopening_criteria: "Supervisor inspection and release",
+      });
+      await page.goto(`${BASE_URL}/contact.html?${query}`, { waitUntil: "load" });
+
+      assert.equal(await page.locator("#quoteTaskDetails").isVisible(), true);
+      assert.equal(await page.inputValue("#fCurrentChemical"), "Current cleaner");
+      assert.equal(await page.inputValue("#fCurrentDilution"), "1:12");
+      assert.equal(await page.inputValue("#fLaborPerTask"), "2 technicians × 3 hours");
+      assert.equal(await page.inputValue("#fWaterPerTask"), "300 gallons");
+      assert.equal(await page.inputValue("#fDowntimePerTask"), "4 hours");
+      assert.equal(await page.inputValue("#fDisposalPerTask"), "Hauler pickup");
+      assert.equal(await page.inputValue("#fAssetLife"), "18-month maintenance interval");
+      assert.equal(await page.inputValue("#fWastewaterRoute"), "On-site pretreatment");
+      assert.equal(
+        await page.inputValue("#fReopeningCriteria"),
+        "Supervisor inspection and release",
+      );
+      assert.deepEqual(
+        await page.locator("#quoteTaskDetails input, #quoteTaskDetails textarea").evaluateAll(
+          (controls) => Object.fromEntries(controls.map((control) => [control.name, control.maxLength])),
+        ),
+        Object.fromEntries(QUOTE_TASK_DETAILS.map(({ name, limit }) => [name, limit])),
+      );
+
+      await page.fill("#fWastewaterRoute", "Edited permitted route");
+      await page.getByRole("button", { name: "Technical Docs" }).click();
+      assert.equal(await page.locator("#quoteTaskDetails").isVisible(), false);
+      assert.equal(await page.locator("#fCurrentChemical").isDisabled(), true);
+      await page.getByRole("button", { name: "Chemical Audit" }).click();
+      assert.equal(await page.locator("#quoteTaskDetails").isVisible(), true);
+      assert.equal(await page.inputValue("#fWastewaterRoute"), "Edited permitted route");
+
+      await page.fill("#fName", "Lifecycle Buyer");
+      await page.fill("#fCompany", "Lifecycle Facility");
+      await page.fill("#fEmail", "lifecycle@example.com");
+      await page.fill("#fSystem", "Cooling water loop");
+      await page.fill("#fMessage", "Compare one completed cleaning task.");
+      await page.getByRole("button", { name: "Send Request" }).click();
+      await page.getByRole("heading", { name: "Request received." }).waitFor();
+      await page.close();
+    } finally {
+      await browser.close();
+    }
+
+    assert.equal(requests.length, 1);
+    for (const [name, value] of [
+      ["current_chemical", "Current cleaner"],
+      ["current_dilution", "1:12"],
+      ["labor_per_task", "2 technicians × 3 hours"],
+      ["water_per_task", "300 gallons"],
+      ["downtime_per_task", "4 hours"],
+      ["disposal_per_task", "Hauler pickup"],
+      ["asset_life", "18-month maintenance interval"],
+      ["wastewater_route", "Edited permitted route"],
+      ["reopening_criteria", "Supervisor inspection and release"],
+    ]) {
+      assert.ok(hasMultipartField(requests[0], name, value), `${name} should survive submission`);
     }
   });
 });

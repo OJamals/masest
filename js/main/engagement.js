@@ -5,6 +5,7 @@ import {
   requestContextNotes,
   requestContextVolume,
 } from "../request-context.js?v=20260719c";
+import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS } from "../quote-task-details.js?v=20260725f";
 
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {
@@ -23,8 +24,7 @@ export function initBeforeAfter() {
 }
 
 /* ---------- Quote form ----------
-   No backend yet: submission opens a prefilled email to the sales
-   team (mailto handoff) and says so honestly. The form stays
+   Submit to the quote API with a prepared mailto fallback. The form stays
    recoverable: an Edit button returns the user to their answers. */
 const SALES_EMAIL = "matthew@masest.co";
 
@@ -338,9 +338,25 @@ export function initQuoteForm() {
   // ── Adaptive request type: the chooser swaps which field set is required/shown ──
   const leadMessage = form.querySelector('[name="message"]');
   if (leadMessage) leadMessage.required = true;
+  const typeInput = form.querySelector('[name="type"]');
+  const groups = [...form.querySelectorAll("[data-intent-group]")];
+  const choices = [...form.querySelectorAll(".cta-choice")];
+  const INTENTS = ["quote", "audit", "sample", "technical", "distributor"];
+  const TASK_DETAIL_INTENTS = new Set(QUOTE_TASK_DETAIL_INTENTS);
+  const taskDetails = document.getElementById("quoteTaskDetails");
+  let hasTaskDetailPrefill = false;
+  QUOTE_TASK_DETAILS.forEach(({ id, name: key }) => {
+    const input = document.getElementById(id);
+    const value = customerChatAttempt ? "" : params.get(key);
+    if (!input || !value) return;
+    input.value = value.slice(0, input.maxLength > 0 ? input.maxLength : value.length);
+    hasTaskDetailPrefill = true;
+  });
+  let activeIntent = INTENTS.includes(params.get("type")) ? params.get("type") : "quote";
+  let advancedOpen = false;
   // Only shared optional fields and quote extras live behind the toggle. Fields
   // that belong to a chosen intent (audit/sample/distributor) are that intent's
-  // core ask — hiding them behind "procurement details" left those intents with
+  // core ask — hiding them behind "request details" left those intents with
   // an empty form (and let a sample request submit with zero products).
   const advancedIds = ["fPhone", "fIndustry", "fLocation", "fProduct", "fVolume", "fTimeline"];
   const advancedFields = advancedIds.map(id => document.getElementById(id)?.closest(".field")).filter(Boolean);
@@ -348,11 +364,20 @@ export function initQuoteForm() {
   advancedButton.type = "button";
   advancedButton.className = "btn btn-secondary quote-advanced-toggle";
   advancedButton.setAttribute("aria-expanded", "false");
-  advancedButton.textContent = "Add product, volume & timeline";
+  advancedButton.textContent = "Add request details";
   advancedFields[0]?.before(advancedButton);
+  const syncTaskDetails = () => {
+    if (!taskDetails) return;
+    const useful = TASK_DETAIL_INTENTS.has(activeIntent);
+    taskDetails.hidden = !(advancedOpen && useful);
+    taskDetails.querySelectorAll("input, textarea, select").forEach(el => {
+      el.disabled = !useful;
+    });
+  };
   const setAdvancedOpen = open => {
+    advancedOpen = open;
     advancedButton.setAttribute("aria-expanded", open ? "true" : "false");
-    advancedButton.textContent = open ? "Hide product, volume & timeline" : "Add product, volume & timeline";
+    advancedButton.textContent = open ? "Hide request details" : "Add request details";
     advancedFields.forEach(field => { field.hidden = !open; });
     advancedIds.forEach(id => {
       const el = document.getElementById(id);
@@ -360,20 +385,18 @@ export function initQuoteForm() {
       el.required = false;
       el.removeAttribute("data-req");
     });
+    syncTaskDetails();
   };
   if (advancedFields.length) {
     setAdvancedOpen(false);
     advancedButton.addEventListener("click", () => setAdvancedOpen(advancedButton.getAttribute("aria-expanded") !== "true"));
-    const productQuoteAttempt = Boolean(pre) && (params.get("type") || "quote") === "quote";
-    if (requestContext || productQuoteAttempt || volumeParam) setAdvancedOpen(true);
+    const productTaskAttempt = Boolean(pre) && TASK_DETAIL_INTENTS.has(params.get("type") || "quote");
+    if (requestContext || productTaskAttempt || volumeParam || hasTaskDetailPrefill) setAdvancedOpen(true);
   }
 
-  const typeInput = form.querySelector('[name="type"]');
-  const groups = [...form.querySelectorAll("[data-intent-group]")];
-  const choices = [...form.querySelectorAll(".cta-choice")];
-  const INTENTS = ["quote", "audit", "sample", "technical", "distributor"];
   function applyIntent(intent) {
     if (!INTENTS.includes(intent)) intent = "quote";
+    activeIntent = intent;
     if (typeInput) typeInput.value = intent;
     choices.forEach(b => {
       const on = b.dataset.intent === intent;
@@ -385,6 +408,7 @@ export function initQuoteForm() {
       g.hidden = !on;
       g.querySelectorAll("[data-req]").forEach(el => { el.required = on; if (!on) setErr(el, ""); });
     });
+    syncTaskDetails();
   }
   choices.forEach(b => b.addEventListener("click", () => applyIntent(b.dataset.intent)));
   // Initial intent: a chooser type (?type or a prior set value) wins; otherwise default to quote
@@ -464,7 +488,9 @@ export function initQuoteForm() {
       product: "Product", industry: "Industry", volume: "Volume", location: "Location",
       timeline: "Timeline", system: "System / asset", audit_timeframe: "Preferred timeframe",
       samples: "Sample products", ship_to: "Ship-to address", company_type: "Company type",
-      territory: "Territory / region", message: "Notes", source: "Source"
+      territory: "Territory / region",
+      ...Object.fromEntries(QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label])),
+      message: "Notes", source: "Source"
     };
     const lines = [];
     for (const [k, v] of data.entries()) if (String(v).trim()) lines.push((labels[k] || k) + ": " + v);
