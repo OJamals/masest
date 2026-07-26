@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
+  industryDiscoveryCtaFilter,
   industryDiscoveryCtaHref,
   industryDiscoveryMatches,
 } from '../js/main/engagement.js';
@@ -42,6 +43,15 @@ test('industry discovery switches one prefilled CTA between audit and quote', ()
     industryDiscoveryCtaHref(href, 'audit', 'http://127.0.0.1:4195/industries'),
     '/contact?industry=Manufacturing&type=audit&message=Asset%3A+press',
   );
+});
+
+test('industry discovery gives buyer role CTA precedence for combined filters', () => {
+  assert.equal(
+    industryDiscoveryCtaFilter({ role: 'ehs-compliance', job: 'fleet-wash' }),
+    'role',
+  );
+  assert.equal(industryDiscoveryCtaFilter({ job: 'fleet-wash' }), 'job');
+  assert.equal(industryDiscoveryCtaFilter({}), '');
 });
 
 test('shared main initializes industry discovery from the engagement module', () => {

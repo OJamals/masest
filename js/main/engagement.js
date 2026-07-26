@@ -111,6 +111,12 @@ export function industryDiscoveryCtaHref(href, type, base) {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+export function industryDiscoveryCtaFilter(filters) {
+  if (filters.role) return "role";
+  if (filters.job) return "job";
+  return "";
+}
+
 export function initIndustryDiscovery() {
   const root = document.querySelector("[data-industry-discovery]");
   if (!root || root.dataset.industryDiscoveryWired === "true") return;
@@ -156,7 +162,8 @@ export function initIndustryDiscovery() {
       .map((control) => control.dataset.resultDetail)
       .filter(Boolean)
       .join(" ");
-    const ctaControl = activeControls[0];
+    const ctaFilter = industryDiscoveryCtaFilter(filters);
+    const ctaControl = controlsByType[ctaFilter]?.get(filters[ctaFilter]);
     let visibleCount = 0;
 
     controls.forEach((control) => {

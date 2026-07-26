@@ -475,6 +475,15 @@
     "method": "Fresh-water pre-rinse, targeted wash/degrease or brightening, soft agitation, complete rinse, and recovery",
     "products": ["torque", "alumibrite", "multiwash", "crhd"],
     "document_products": ["torque", "crhd"],
+    "trial_brief": {
+      "title": "Marine vessel controlled-trial brief",
+      "objective": "Plan a witnessed contained-pad vessel trial with documented material compatibility, washwater recovery, and dry-finish acceptance before broader use.",
+      "compatibility_checks": [
+        {"material": "Gelcoat, painted steel, and specialty coatings", "gate": "Identify the coating system, age, repairs, condition, and OEM or owner restrictions; approve a hidden-area test before enlarging the trial."},
+        {"material": "Aluminum, stainless steel, and zincs", "gate": "Record the alloy, anodizing or passivation, and sacrificial-anode locations; isolate zincs and approve chemistry and contact time on a representative test area."},
+        {"material": "Glazing, vinyl, rubber, sealants, and teak", "gate": "Confirm the exact material, age, and condition; keep teak, electrical systems, and unknown components out of scope unless separately approved."}
+      ]
+    },
     "concentration": "Keep wash and degreaser within current label ranges; establish brightener strength only after an alloy, anodizing, coating, and sealant test.",
     "process": "Record panel temperature, salinity of rinse water, dilution, dwell, brush/low-pressure action, rinse volume, and dry inspection.",
     "boundary": "Protect antifouling and specialty coatings, electrical systems, bilges, zincs, glazing, and adjacent water; follow marina and vessel OEM rules.",

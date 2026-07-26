@@ -501,25 +501,28 @@ test('every industry page renders one task-led applications and verification mod
 
 test('P2 industries publish registry-driven controlled-trial briefs without promoting references to proof', () => {
   const trialIndustries = industries.filter((industry) => industry.trial_brief);
-  const titleBySlug = new Map([
-    ['breweries-distilleries-wineries', /brewery CIP controlled-trial brief/i],
-    ['distribution-cold-storage', /distribution.*cold storage.*controlled-trial brief/i],
-    ['hvac-water', /HVAC.*water treatment.*controlled-trial brief/i],
-    ['restaurants-commercial-kitchens', /commercial kitchen.*controlled-trial brief/i],
-  ]);
-  assert.deepEqual(
-    trialIndustries.map((industry) => industry.slug),
-    [...titleBySlug.keys()],
-  );
+  const requiredTrialSlugs = [
+    'breweries-distilleries-wineries',
+    'distribution-cold-storage',
+    'hvac-water',
+    'marine',
+    'restaurants-commercial-kitchens',
+  ];
 
   const trialBySlug = new Map(trialIndustries.map((industry) => [industry.slug, industry]));
-  for (const [slug, title] of titleBySlug) {
-    assert.match(trialBySlug.get(slug).trial_brief.title, title);
+  for (const slug of requiredTrialSlugs) {
+    assert.ok(trialBySlug.has(slug), `${slug}: required controlled-trial brief`);
   }
   const brewery = trialBySlug.get('breweries-distilleries-wineries');
   const hvac = trialBySlug.get('hvac-water');
+  const marine = trialBySlug.get('marine');
 
   for (const industry of trialIndustries) {
+    assert.match(
+      industry.trial_brief.title,
+      /controlled-trial brief/i,
+      `${industry.slug}: controlled-trial title`,
+    );
     assert.ok(industry.trial_brief.objective?.trim(), `${industry.slug}: trial objective`);
     assert.equal(
       industry.trial_brief.compatibility_checks?.length,
@@ -639,6 +642,25 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
     /Brevard|Schools|DDC|Legionella[- ]compliant|EPA[- ]registered|NSF(?:\/ANSI)? 60|kills? Legionella|non[- ]corrosive|safe for all|OEM[- ]approved/i,
   );
 
+  const marineBrief = briefs.get(marine.slug);
+  const marineHtml = read('industries/marine.html');
+  const marineGallery = marineHtml.match(
+    /<section class="section section-slim ind-gallery-sec" aria-label="Marine image gallery">([\s\S]*?)<\/section>/,
+  )?.[1] || '';
+  assert.equal(marine.field_evidence.status, 'context_only');
+  assert.equal(marine.evidence_files, undefined);
+  assert.match(marineBrief, /Marine vessel controlled-trial brief/i);
+  assert.match(marineBrief, /Planning asset · Field context; verification incomplete/);
+  assert.match(marineBrief, /planning brief, not field proof/i);
+  assert.match(marineBrief, /No controlled reference is being used to substantiate/i);
+  assert.equal(
+    (marineGallery.match(/data-evidence-kind="field-context"/g) || []).length,
+    3,
+  );
+  assert.doesNotMatch(
+    `${marineBrief}\n${marineGallery}`,
+    /Yellow Fin|43[- ]foot|customer|client|endorse|before.?after|\$\d|\b\d+%|food[- ]safe|food[- ]contact|antimicrobial|disinfect|saniti[sz]|kills?|non[- ]toxic|non[- ]corrosive|environmentally safe|eco[- ]friendly|EPA[- ]registered|Coast Guard approved|regulatory approval|legal discharge/i,
+  );
 });
 
 test('industry proof links resolve locally and exclude restricted customer records', () => {
