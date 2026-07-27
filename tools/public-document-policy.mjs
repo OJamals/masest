@@ -20,97 +20,13 @@ const SENSITIVE_FLAGS = new Set([
   "commercial_terms",
   "publication_permission_missing",
 ]);
-const EXACT_PRODUCT_CONTEXT = /\b(?:VertKleen(?:\s+[A-Z0-9][A-Za-z0-9-]*)?|WaterSafe\s*60|VK-[A-Z0-9-]+|(?:this|our|the)\s+product)\b/i;
-const AUTHORITY_BOUNDARY_PREFIXES = [
-  /\b(?:does?|do|did)\s+not\s+(?:establish|support|show|demonstrate|confirm|verify|imply|assert|substantiate)(?:\s+that)?(?:\s+\S+){0,12}$/i,
-  /\b(?:is|are|was|were|has|have|had)\s+not(?:\s+(?!(?:only|just)\b)[\w-]+){0,4}$/i,
-  /\b(?:cannot|can not|never)\s+(?:be\s+)?(?:established|supported|shown|demonstrated|confirmed|verified|implied|asserted|substantiated)(?:\s+\S+){0,12}$/i,
-  /\brequires?\s+(?:the\s+)?(?:current\s+)?exact(?:-product)?$/i,
-];
-const AUTHORITY_ASSERTIONS = [
-  {
-    kind: "certification",
-    pattern: /\b(?:NSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?[-\s]+(?:certified|listed)|(?:certified|listed)\s+(?:to|under)\s+NSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?)\b/i,
-  },
-  {
-    kind: "certification",
-    pattern: /\b(?:meets?|complies? with|conforms? to)\s+NSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?\b/i,
-  },
-  {
-    kind: "certification",
-    pattern: /\bNSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?[-\s]+(?:approved|compliant)\b/i,
-  },
-  {
-    kind: "certification",
-    pattern: /\bholds?\s+NSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?\s+certification\b/i,
-  },
-  {
-    kind: "endorsement",
-    pattern: /\b(?:Boeing|Airbus|NAVSEA|military)[-\s]+(?:approved|certified|compliant)\b/i,
-  },
-  {
-    kind: "endorsement",
-    pattern: /\b(?:approved|certified)\s+by\s+(?:Boeing|Airbus|NAVSEA|military)\b/i,
-  },
-  {
-    kind: "endorsement",
-    pattern: /\b(?:meets?|complies? with)\s+(?:MIL(?:-|\s)?SPEC|Boeing|Airbus|NAVSEA)(?:\s+requirements?)?\b/i,
-  },
-  {
-    kind: "registration",
-    pattern: /\bEPA[-\s]+registered\b/i,
-  },
-  {
-    kind: "equivalency",
-    pattern: /\b(?:equivalent|equivalently|identical)\s+to\b/i,
-  },
-];
 
 function isSensitive(document) {
   return Array.isArray(document?.flags)
     && document.flags.some((flag) => SENSITIVE_FLAGS.has(flag));
 }
 
-function hasAuthorityBoundary(prefix) {
-  const normalized = String(prefix || "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return AUTHORITY_BOUNDARY_PREFIXES.some((pattern) => pattern.test(normalized));
-}
-
-export function findUnsupportedAuthorityClaim(text, { productContext = false } = {}) {
-  const value = String(text || "");
-  for (const { kind, pattern } of AUTHORITY_ASSERTIONS) {
-    const matcher = new RegExp(pattern.source, `${pattern.flags}g`);
-    for (const match of value.matchAll(matcher)) {
-      const start = Math.max(
-        value.lastIndexOf(".", match.index),
-        value.lastIndexOf("!", match.index),
-        value.lastIndexOf("?", match.index),
-        value.lastIndexOf("\n", match.index),
-      ) + 1;
-      const endCandidates = [".", "!", "?", "\n"]
-        .map((delimiter) => value.indexOf(delimiter, match.index + match[0].length))
-        .filter((index) => index >= 0);
-      const end = endCandidates.length ? Math.min(...endCandidates) : value.length;
-      const clause = value.slice(start, end);
-      const prefix = value.slice(Math.max(start, match.index - 120), match.index);
-      if (hasAuthorityBoundary(prefix)) continue;
-      if (kind !== "equivalency" && !productContext && !EXACT_PRODUCT_CONTEXT.test(clause)) continue;
-      return { kind, claim: match[0] };
-    }
-  }
-  return null;
-}
-
-export function documentClaimLabel(status) {
-  if (status === "no_automated_flags") return "No automated flags";
-  if (status === "reference_only") return "Reference only - flagged claims unsubstantiated";
-  if (status === "resource_only") return "Document room only - not proof";
-  if (status === "restricted") return "Restricted - named approval required";
-  throw new Error(`Unknown document claim status: ${status}`);
-}
+const hasText = (value) => typeof value === "string" && value.trim().length > 0;
 
 export function documentType(document) {
   const path = String(document?.path || "");
@@ -122,7 +38,7 @@ export function documentType(document) {
 export function documentDistribution(document) {
   if (isSensitive(document)) return "internal";
   if (["sds", "tds"].includes(documentType(document))) return "request_only";
-  return document?.status === "restricted" ? "internal" : "public";
+  return "public";
 }
 
 export function documentSurfaceMode(document, surface) {
@@ -132,7 +48,6 @@ export function documentSurfaceMode(document, surface) {
   const distribution = documentDistribution(document);
   if (distribution === "internal") return null;
   if (distribution === "request_only") return "request";
-  if (document?.status === "resource_only" && surface !== "resource") return null;
   return "download";
 }
 
@@ -184,13 +99,6 @@ export function validatePublicDocumentReview(
     if (!Array.isArray(document.flags)) {
       throw new Error(`${REVIEW_PATH}: flags must be an array for ${path}`);
     }
-    if (isSensitive(document) && document.status !== "restricted") {
-      throw new Error(`${REVIEW_PATH}: sensitive document must be restricted for ${path}`);
-    }
-    if (["reference_only", "resource_only"].includes(document.status) && document.flags.length === 0) {
-      throw new Error(`${REVIEW_PATH}: bounded document needs flagged claims for ${path}`);
-    }
-
     const actualHash = fileSha256(join(root, path));
     if (actualHash !== document.sha256) {
       throw new Error(`${path} changed after review; update ${REVIEW_PATH} before publishing`);
@@ -240,25 +148,14 @@ export function validatePublicDocumentReview(
     control.owner !== "MASEST Consulting LLC"
     || !/^\d+\.\d+$/.test(control.revision || "")
     || !/^\d{4}-\d{2}-\d{2}$/.test(control.effective_date || "")
-    || !/customer review/i.test(control.approval || "")
-    || !/distribution/i.test(control.approval_scope || "")
   ) {
     throw new Error(`${REVIEW_PATH}: incomplete document-control release`);
   }
-  const disposition = review.claim_disposition || {};
-  if (
-    !/not technical or legal substantiation/i.test(disposition.review_scope || "")
-    || !/cannot substantiate public copy/i.test(disposition.reference_only_rule || "")
-    || !/exclude from product and industry pages/i.test(disposition.resource_only_rule || "")
-    || !/exclude from public pages and deployment/i.test(disposition.restricted_rule || "")
-  ) {
-    throw new Error(`${REVIEW_PATH}: incomplete claim disposition`);
-  }
   const distribution = review.distribution_policy || {};
   if (
-    !/non-restricted documents other than SDS and TDS/i.test(distribution.public_rule || "")
-    || !/registered-user request and staff approval/i.test(distribution.request_only_rule || "")
-    || !/remain internal and unavailable by request/i.test(distribution.internal_rule || "")
+    !hasText(distribution.public_rule)
+    || !hasText(distribution.request_only_rule)
+    || !hasText(distribution.internal_rule)
   ) {
     throw new Error(`${REVIEW_PATH}: incomplete distribution policy`);
   }

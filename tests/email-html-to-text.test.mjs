@@ -45,9 +45,9 @@ test('collapses excess whitespace and blank lines', () => {
 });
 
 test('table cells are separated and rows broken (real order-row shape)', () => {
-  const html = '<tr><td>VertKleen HCR (VK-HCR-1)</td><td>2</td><td>USD 34.60</td></tr>';
+  const html = '<tr><td>VertKlean HCR (VK-HCR-1)</td><td>2</td><td>USD 34.60</td></tr>';
   const out = htmlToText(html);
-  assert.match(out, /VertKleen HCR \(VK-HCR-1\)/);
+  assert.match(out, /VertKlean HCR \(VK-HCR-1\)/);
   assert.match(out, /USD 34\.60/);
   assert.ok(!out.includes('<'), 'no residual tags');
 });

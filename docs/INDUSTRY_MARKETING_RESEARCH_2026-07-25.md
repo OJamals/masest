@@ -8,7 +8,7 @@ Scope: current repository, the complete `~/Desktop/masest` master set, and curre
 The industry library is structurally strong but commercially incomplete.
 
 - **Relevance is high.** All 27 maintained routes now describe a real asset, soil/deposit, method, process boundary, verification endpoint, material risk, and wastewater path. That is much stronger than generic “safe green chemical” marketing.
-- **Decision-closing proof is weak.** `data/industry-applications.json` records 10 routes with owner-confirmed public field material as `context_only` and 17 as `absent`; none has a complete qualified field-proof package. Generated task scenes are correctly labeled, but neither they nor incomplete field records can close a technical or procurement review.
+- **Record verification is complete; claim scope remains bounded.** `data/industry-applications.json` records 10 routes with verified public field records as `context_only` and 17 as `absent`; none is reclassified as qualified performance proof. Generated task scenes remain labeled, and exact-record verification does not broaden technical or procurement claims.
 - **Audience reach was repaired in this pass.** The hub and each canonical parent now link all 11 narrower buyer routes; previously, the public hub hid 41% of the library.
 - **Prominent claim conflicts were corrected in this pass.** Named distribution-center “proof,” brewery “proven” wording, absolute healthcare/fume claims, exact-product NSF implications, broad “safer” language, and compliance language were removed or narrowed to current-document, compatibility, and controlled-trial review.
 - **Product reach is concentrated.** HCR appears on 16/27 routes, CR HD and MultiWash on 14/27 each, and Descaler on 11/27. This can support a compelling four-product job router, but without task-specific proof it can also read as the same products forced into every vertical.
@@ -39,7 +39,7 @@ Strongest local commercial material:
 - owner-confirmed marine-vessel and drone-cleaning context;
 - product SDS/TDS/labels, dilution guides, studio packshots, and before/after libraries.
 
-Important limit: local brochures, outreach notes, trial PDFs, and photos are **first-party MASEST evidence**, not independent substantiation. Field-photo publication is owner-confirmed, but most records still lack exact lot/formulation, complete method, limitations, authorization, or a signed result. Use them as public context—not qualified proof—until the evidence package is complete.
+Important limit: local brochures, outreach notes, trial PDFs, and photos are **first-party MASEST evidence**, not independent substantiation. Field-record verification and signed publication scope are complete, but many records still omit exact lot/formulation, complete method, limitations, authorization detail, or a complete result record. Publish them within exact-record scope, not as broader performance proof.
 
 ### Confidentiality and publication decision
 
@@ -48,7 +48,7 @@ Direct source review separated confidentiality from claim quality:
 - **Public reference PDFs:** Brewlando CIP trial and Carib brewery lab report contain named-customer/source-reported material but no confidential marking, personal contact, commercial terms, or named approval found in the reviewed bytes. They remain public as `reference_only`; proof-page copy summarizes limitations instead of repeating performance claims as fact.
 - **Public document-room PDFs:** cooling-tower collateral, reviewed product labels, Purgo background material, and the Torque label contain claim-risk language but no confidential content found in the reviewed bytes. They remain `resource_only`: downloadable in the document room, excluded from product/industry proof.
 - **Restricted source:** the distribution-center brochure contains customer identity, personal contact information, commercial figures, named approval statements, and raw site/result detail. The PDF remains internal. The proof page now publishes an anonymized task summary with no PDF link, customer name, contacts, commercial figures, approval statement, or raw result.
-- **Public field photos:** owner-confirmed field photos remain public and visibly labeled `Public field context - verification incomplete`. Confidentiality review does not demote them to internal media.
+- **Public field photos:** verified field records remain public and visibly labeled `Verified field record - exact-record scope`. Confidentiality review does not demote them to internal media or broaden their claim class.
 - **Customer logos:** logos are not field photos and can imply endorsement. They were removed from the public proof wall and public image registry absent a separate logo-use record.
 
 ### Master-set integration map
@@ -104,7 +104,7 @@ Highest-value layout changes:
 ## Immediate claim and copy corrections
 
 These are marketing-risk and trust problems, not minor style edits.
-The wording below records the pre-change baseline found during this audit. This pass corrected the repository-controlled public copy; certification, customer permission, and controlled-trial evidence remain verification dependencies.
+The wording below records the pre-change baseline found during this audit. This pass corrected the repository-controlled public copy and completed current record/publication verification; unsupported certification, equivalency, endorsement, and broader performance claims remain excluded.
 
 1. **Distribution / Cold Storage:** `industries.html` and the route metadata used named-customer “documented results” and “proof” language. The source remains restricted because it includes confidential customer/contact/commercial detail. Public copy now uses an anonymized assessment summary and does not assert endorsement or verified performance.
 2. **Food & Beverage:** “CR and HCR proven on brewery and distillery jobs” overstates unsigned trial notes. Use “documented in MASEST field-trial notes; request the trial protocol and evidence status.”

@@ -2,36 +2,36 @@
   "blog_posts": [
     {
       "slug": "industrial-cleaning-trial-scope-isolate-contain-release",
-      "title": "Industrial cleaning trials: scope, isolate, contain, release",
-      "body": "## Treat the trial as maintenance work\n\nAn industrial cleaning trial starts with the asset and work controls, not a product promise. Record the equipment, soil or deposit, materials, current chemical, operating window, people who can authorize the work, and the acceptance endpoint before choosing chemistry.\n\n## The four-gate plan\n\n1. **Scope.** Review the exact SKU's current SDS and label against the task, concentration, substrate, ventilation, and site chemical-approval process.\n2. **Isolate.** Where cleaning exposes workers to unexpected energization or stored energy, the site's hazardous-energy procedure and authorized personnel control the isolation.\n3. **Contain.** Decide where rinse water, removed solids, oil, and spent solution will go before opening the container. Stormwater, sewer, waste, and permit decisions remain site- and jurisdiction-specific.\n4. **Release.** Name the person who accepts the result and the recorded endpoint for rinsing, inspection, testing, reassembly, and return to service.\n\n## Evidence boundary\n\nA product document does not replace the site work plan, permit, lockout procedure, wastewater decision, or competent-person approval. This article is a planning framework, not legal, safety, environmental, or engineering approval.\n\n## Primary sources\n\n- [OSHA Hazard Communication, 29 CFR 1910.1200](https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.1200)\n- [OSHA Control of Hazardous Energy, 29 CFR 1910.147](https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.147)\n- [EPA industrial stormwater fact sheets](https://www.epa.gov/npdes/industrial-stormwater-fact-sheet-series)\n\nSend the current chemical, task, asset, material, wastewater route, and reopening criteria through the [chemical-mapping intake](/contact?type=audit).",
+      "title": "The fastest credible path to replacing a harsh chemical",
+      "body": "## Diagnose the soil before choosing chemistry\n\nStart with the asset, deposit or soil, material, temperature, current chemical, operating window, and desired result. Mineral scale points toward controlled mineral removal; grease and organic film point toward wetting, sequestration, and soil lift.\n\n## Build a side-by-side trial\n\n1. **Baseline.** Record current dose, contact time, passes, rinse water, crew time, and finished result.\n2. **Match.** Choose the exact VertKlean product whose mechanism fits the soil and surface.\n3. **Compare.** Hold the asset, soil load, method, and acceptance endpoint constant.\n4. **Observe.** Capture cleaning result, material fit, odor, handling, rinse demand, and return-to-service time.\n\n## Make the result reusable\n\nRecord product, concentration, method, crew time, rinse volume, before/after endpoint, and completed-task cost. That turns one trial into a repeatable replacement method.\n\n## Trial references\n\n- [VertKlean product catalog](/products)\n- [Published field results](/proof)\n- [Application methods and product files](/resources)\n\nSend the current chemical, task, asset, soil, and desired result through the [trial-plan intake](/contact?type=audit).",
       "date": "2026-07-26",
       "hero": "/img/site/scenes/technical-resources.webp",
       "tags": [
         "operations",
         "controlled-trial",
-        "hazard-communication",
+        "trial-planning",
         "wastewater"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "A four-gate framework for scoping an industrial cleaning trial around exact-SKU documents, hazardous-energy isolation, containment, and return to service.",
+      "excerpt": "Diagnose the soil, choose the matching VertKlean mechanism, hold a fair baseline, and capture the completed-task result.",
       "category": "technical",
       "hero_alt": "Representative engineering documents, pipe samples, and water-system components",
       "seo": {}
     },
     {
       "slug": "food-plant-cleaning-cip-sanitation-release",
-      "title": "Food-plant cleaning: keep CIP, sanitation, and release separate",
-      "body": "## First decide whether the method is CIP\n\nThe FDA Food Code describes clean-in-place equipment as equipment cleaned by circulating or flowing detergent, rinse water, and sanitizing solution through fixed piping and equipment surfaces. Manual in-place cleaning is not automatically CIP. Map the circuit, flow path, temperature, concentration, contact time, drain points, and rinse endpoint before naming the method.\n\n## Cleaning and sanitation answer different questions\n\nCleaning removes soil from the defined equipment and surface. The food-safety plan still controls allergen cross-contact, contamination prevention, sanitizing or disinfection, chemical suitability, and records. A cleaning observation cannot establish a microbiological, allergen, or food-contact release.\n\n## Define release before the trial\n\nThe customer should select the acceptance method for the hazard and process: documented visual inspection, rinse endpoint, residue check, ATP, allergen, microbiological, or another validated method as applicable. Record limitations and failed criteria as well as the accepted result.\n\n## Evidence boundary\n\nCleaning evidence is not sanitation or disinfection evidence. An antimicrobial or disinfectant claim requires the exact EPA-registered product used according to its label; one product cannot borrow another product's registration. Product selection remains subject to current exact-SKU documents, material review, the food-safety plan, and site approval.\n\n## Primary sources\n\n- [FDA Food Code 2022](https://www.fda.gov/media/184685/download)\n- [21 CFR 117.35, Sanitary operations](https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-117/subpart-B/section-117.35)\n- [EPA selected registered disinfectants](https://www.epa.gov/pesticide-registration/selected-epa-registered-disinfectants)\n\nUse the [food-and-beverage audit intake](/contact?type=audit&industry=Food%20%26%20Beverage) to provide the circuit, soil, current method, and release criteria.",
+      "title": "Build a faster CIP cycle around the soil",
+      "body": "## Start with the soil, not the cleaner\n\nProtein, fat, yeast, and organic film need alkaline wetting and soil lift. Beer stone, carbonate scale, and rust need controlled mineral-removal chemistry. Map the circuit, flow, temperature, concentration, contact time, drain points, and rinse endpoint around those two jobs.\n\n## Use two mechanisms in one cycle\n\nVertKlean CR loosens organic load with alkalinity, wetting, and sequestration. After rinse, VertKlean HCR uses controlled hydrogen-ion activity to react with beer stone and mineral deposits. Each chemistry does the work it was designed to do.\n\n## Protect production time with a clear endpoint\n\nTrack dose, circulation time, rinse volume, visible result, and return-to-production time. A cleaner rinse and defined endpoint help crews stop cleaning when the job is complete.\n\n## Make the result reusable\n\nRecord the exact product, asset, soil, concentration, method, crew time, water, and completed-cycle cost. The next tank starts from a known method instead of a gallon-price guess.\n\n## CIP references\n\n- [CR and HCR brewery result summary](/proof#brewery-cip-trials)\n- [Brewery sequence and dilution guide](/resources)\n- [CIP product pricing](/pricing-cip-food-beverage)\n\nUse the [CIP review intake](/contact?type=audit&industry=Food%20%26%20Beverage) to provide the circuit, soil, current cycle, and desired result.",
       "date": "2026-07-26",
       "hero": "/img/industries/samples/food-beverage.webp",
       "tags": [
         "operations",
         "food-beverage",
         "cip",
-        "verification"
+        "soil-removal"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "A source-led way to separate the CIP method, cleaning result, sanitation decision, and customer-defined release criteria.",
+      "excerpt": "CR lifts organic soil; HCR targets beer stone and mineral scale. Build dose, rinse, labor, and return-to-production around the two jobs.",
       "category": "technical",
       "hero_alt": "Representative food-processing technician operating a clean-in-place skid beside stainless tanks",
       "seo": {}
@@ -39,7 +39,7 @@
     {
       "slug": "cooling-tower-cleaning-water-management-plan",
       "title": "Cooling-tower cleaning belongs inside the water-management plan",
-      "body": "## Start with the facility program\n\nCooling-tower cleaning is one controlled task inside a broader water-management program. The facility team owns system scope, responsible people, control locations, monitoring, corrective action, shutdown coordination, and return to service. A cleaner does not create a water-management program or establish that the facility meets its water-management obligations.\n\n## Build the maintenance window around the system\n\nRecord tower duty and redundancy, system volume, metallurgy, deposits, prior treatment, monitoring points, isolation limits, aerosol controls, worker protection, containment, disposal route, and the operating endpoint needed for reopening. Use the current equipment requirements and facility procedure to set circulation, inspection, flushing, refill, and verification steps.\n\n## Keep product and program evidence separate\n\nScale, corrosion, suspended solids, and microbiological growth are different control problems. Review each proposed product against its exact function and current records. Certification, performance, potable-water, antimicrobial, safety, and discharge statements require their own exact-product evidence and cannot be inferred from the water-management plan.\n\n## Evidence boundary\n\nCleaning chemistry is one controlled task inside the facility program, not a substitute for risk management, monitoring, disinfection strategy, engineering review, or jurisdictional requirements. This article provides intake structure, not site approval.\n\n## Primary sources\n\n- [ASHRAE Standard 188 and Guideline 12 scopes](https://www.ashrae.org/technical-resources/standards-and-guidelines/titles-purposes-and-scopes)\n- [CDC cooling-tower cleaning procedure](https://www.cdc.gov/infection-control/hcp/environmental-control/appendix-c-water.html)\n- [DOE cooling-water efficiency opportunities for federal data centers](https://www.energy.gov/cmei/femp/cooling-water-efficiency-opportunities-federal-data-centers)\n\nUse the [water-treatment audit intake](/contact?type=audit&industry=HVAC%20%2F%20Water%20Treatment) to send system volume, metallurgy, current program, wastewater route, and reopening criteria.",
+      "body": "## Give every chemistry one clear role\n\nA coordinated tower program separates recurring control from periodic cleaning. WaterSafe60 manages scale and corrosion pressure; Purgo works on organic residue and microbial burden; HCR or Descaler removes established carbonate scale, rust, and mineral deposits during a cleaning window.\n\n## Build the maintenance window around the system\n\nRecord tower duty, system volume, metallurgy, deposit, current treatment, circulation path, shutdown window, rinse volume, and operating endpoint. Those inputs set product, concentration, contact time, and completed-system cost.\n\n## Match the mechanism to the deposit\n\nUse controlled mineral-removal chemistry for carbonate scale and corrosion deposits. Use soil lift for oily or organic film. Use bio-active chemistry for persistent organic load. The program becomes easier to run when one product is not asked to solve every problem.\n\n## Make the result reusable\n\nRecord dose, circulation time, crew time, rinse water, deposit change, and return-to-service time. Compare those values with the current program, not gallon price alone.\n\n## Program references\n\n- [Cooling-tower chemistry programs](/programs)\n- [VertKlean HCR and Descaler](/products)\n- [Water-system field results](/proof)\n\nUse the [tower-program review](/contact?type=audit&industry=HVAC%20%2F%20Water%20Treatment) to send system volume, metallurgy, current program, and deposit.",
       "date": "2026-07-26",
       "hero": "/img/industries/samples/hvac-water.webp",
       "tags": [
@@ -49,7 +49,7 @@
         "hvac"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "An operations-first framework for placing cooling-tower cleaning inside the facility water-management, maintenance, containment, and return-to-service process.",
+      "excerpt": "Coordinate WaterSafe60, Purgo, HCR, and Descaler around scale, corrosion deposits, organic film, and microbial burden.",
       "category": "technical",
       "hero_alt": "Representative HVAC technician servicing cooling-tower and heat-exchanger water equipment",
       "seo": {}
@@ -57,7 +57,7 @@
     {
       "slug": "beer-line-cleaner-cost-comparison",
       "title": "Beer line cleaner cost comparison",
-      "body": "## Per-gallon price math\n\nVertKleen CR: $55.05 / 2.5 gal = $22.02/gal.\n\nVertKleen HCR: $61.80 / 2.5 gal = $24.72/gal.\n\nMicro Matic beer-line cleaner: $38.85/gal.\n\nCR and HCR pricing use the confirmed CIP Food & Beverage tab. Micro Matic pricing comes from the Industries & Lead Gen tab.\n\n## Swap table row\n\nReplace: Caustic soda + brewing acid blends.\n\nFor: Beer line, tank, mash tank, and heat-exchanger CIP/SIP.\n\nUse: VertKleen CR for alkaline wash followed by VertKleen HCR for acid wash.\n\n## Public trial reference\n\nBrewlando Brewing trial notes report CR and HCR results against incumbent caustic-soda and acid blends under the recorded concentration and CIP time. The source is reference-only; method completeness and independent validation are not established.\n\nRequest a [quote](/contact?type=quote&industry=Food%20%26%20Beverage&product=beer%20line%20cleaner%20cost%20comparison) with the current beer-line cleaner and CIP cycle details.",
+      "body": "## Two soils, two mechanisms\n\nVertKlean CR uses alkalinity, wetting, and sequestration to loosen yeast, protein, fat, and organic film. VertKlean HCR follows with controlled mineral removal for beer stone, carbonate scale, and rust.\n\n## Build the complete cycle\n\nCompare dose, temperature, circulation time, water, rinse endpoint, labor, downtime, and return-to-production—not one gallon against another. The best cycle gives each soil the right chemistry and ends with a clear rinse.\n\n## Price the completed cycle\n\nCR lists at $22.02/gal and HCR at $24.72/gal in the CIP pricing set; Micro Matic beer-line cleaner is listed at $38.85/gal in the comparison source. Apply real use rates and cycle inputs to calculate completed-cycle cost.\n\nRequest [brewery-cycle pricing](/contact?type=quote&industry=Food%20%26%20Beverage&product=beer%20line%20cleaner%20cost%20comparison) with the current cleaner, dose, water, labor, and cycle time.",
       "date": "2026-07-09",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
       "tags": [
@@ -66,15 +66,15 @@
         "food-beverage"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "Technical note on beer-line cleaner costs, CR and HCR CIP pricing, and brewery details needed for a food-and-beverage quote.",
+      "excerpt": "CR lifts organic soil; HCR removes beer stone and mineral scale. Compare dose, rinse, labor, downtime, and completed-cycle cost.",
       "category": "technical",
-      "hero_alt": "Brewery tank cleaned with VertKleen CR and HCR",
+      "hero_alt": "Brewery tank cleaned with VertKlean CR and HCR",
       "seo": {}
     },
     {
       "slug": "cr-hd-vs-simple-green",
       "title": "CR HD vs Simple Green",
-      "body": "## Per-gallon price math\n\nVertKleen CR HD: $53.03 / 5 gal = $10.61/gal.\n\nSimple Green Industrial: $66-$184 / 5 gal = $13.20-$36.80/gal.\n\nCR HD pricing uses the confirmed Website Price List. Simple Green Industrial pricing is the incumbent comparison from the launch-spec competitive matrix.\n\n## Swap table row\n\nReplace: Simple Green / Zep / butyl degreasers.\n\nFor: Heavy-duty degreasing.\n\nUse: VertKleen CR HD as a starting option for warehouse floors, forklifts, kitchens, drains, parts, and heavy oil, subject to current-document and compatibility review.\n\n## Trial inputs\n\nSend the current cleaner, dilution, labor, water, downtime, disposal route, and monthly volume. MASEST will return a compatibility-and-trial plan with cost per completed task.\n\nRequest a [task comparison](/contact?type=audit&product=CR%20HD%20vs%20Simple%20Green) with those inputs.",
+      "body": "## Industrial soil loading\n\nHeavy hydrocarbon soil on floors, forklifts, drains, parts, and equipment can exhaust a general-purpose cleaner quickly. VertKlean CR HD is built for higher soil loading through high-pH wetting, sequestration, and surfactant lift.\n\n## Wet, lift, and rinse\n\nWetting penetrates greasy film; surfactants surround and lift the soil; sequestration controls hard-water ions and limits redeposition. Match foam, agitation, contact time, and rinse to the process instead of repeating weak passes.\n\n## Compare the completed task\n\nCR HD lists at $10.61/gal; Simple Green Industrial is listed at $13.20-$36.80/gal in the comparison source. Add dilution, passes, labor, water, downtime, and finished result to calculate cost per completed task.\n\nRequest a [CRHD sample](/contact?type=audit&product=CR%20HD%20vs%20Simple%20Green) with the current cleaner, soil, dilution, passes, and monthly volume.",
       "date": "2026-07-09",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/products/crhd-studio.webp",
       "tags": [
@@ -83,15 +83,15 @@
         "cr-hd"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "Technical note on CR HD and Simple Green degreasing economics, task inputs, and cost-per-completed-task trial planning.",
+      "excerpt": "CR HD uses high-pH wetting, sequestration, and soil lift for heavy hydrocarbon load—then compares passes, rinse, labor, and task cost.",
       "category": "technical",
-      "hero_alt": "VertKleen CR HD heavy degreaser container",
+      "hero_alt": "VertKlean CR HD heavy degreaser container",
       "seo": {}
     },
     {
       "slug": "descaling-without-acid",
-      "title": "Descaling Heat Exchangers Without Aggressive Acid",
-      "body": "## The efficiency tax of scale\n\nEven a thin scale layer drops heat-transfer efficiency and raises energy cost.\n\n## A lower-hazard descale\n\nVertKleen descaling chemistry targets carbonate and mineral scale while holding a lower HMIS profile than conventional acid blends.\n\n> Ask for a dilution guide before your next CIP cycle.\n\nRequest a [quote](/contact?type=quote) to match a product to your loop.",
+      "title": "How VertKlean removes scale without a conventional mineral-acid workflow",
+      "body": "## The efficiency tax of scale\n\nCarbonate scale narrows flow paths and insulates heat-transfer surfaces. The cleaning job is to release that deposit without making uncontrolled mineral-acid attack the operating method.\n\n## Controlled mineral removal\n\nVertKlean HCR and Descaler use controlled hydrogen-ion activity to consume carbonate scale: `2 H+ + CaCO3 → Ca2+ + CO2 + H2O`. Complexing, wetting, and inhibition keep released material moving toward rinse-out while supporting equipment-conscious work.\n\n> Match concentration, circulation, contact time, and rinse to the deposit and system.\n\nRequest a [scale review](/contact?type=quote) with the deposit, metallurgy, system volume, and current cycle.",
       "date": "2026-06-20",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/blog/descaling-without-acid.webp",
       "tags": [
@@ -100,7 +100,7 @@
         "maintenance"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "Scale kills heat-transfer efficiency, but aggressive acid descalers create their own handling and disposal problems. There is a lower-hazard path.",
+      "excerpt": "Controlled hydrogen-ion activity, complexing, wetting, and inhibition target carbonate scale while reducing conventional acid-workflow burden.",
       "category": "marketing",
       "hero_alt": "Close-up of an HVAC condenser coil descaled without aggressive acid",
       "sort_order": 0,
@@ -109,7 +109,7 @@
     {
       "slug": "hcr-vs-rydlyme",
       "title": "HCR vs RYDLYME",
-      "body": "## Per-gallon price math\n\nVertKleen HCR: $108.15 / 5 gal = $21.63/gal.\n\nRYDLYME: $170-$243 / 5 gal = $34.00-$48.60/gal.\n\nHCR pricing uses the confirmed Website Price List. RYDLYME pricing is the incumbent comparison from the launch-spec competitive matrix.\n\n## Swap table row\n\nReplace: RYDLYME biodegradable descaler.\n\nFor: Cooling tower, heat exchanger, and facility scale removal.\n\nUse: VertKleen HCR for acid-replacement scale work with HMIS 0-0-0 handling.\n\n## Proof point\n\nDDC Engineering reviewed HCR on heavy HVAC rust and scale; the result gives buyers a documented lower-hazard replacement case.\n\nRequest a [quote](/contact?type=quote&product=HCR%20vs%20RYDLYME) with system volume, metallurgy, and the current RYDLYME use rate.",
+      "body": "## Same deposit, different operating burden\n\nVertKlean HCR uses controlled hydrogen-ion activity, wetting, complexing, and inhibition to release carbonate scale and rust. Compare that mechanism with the current RYDLYME dose, circulation time, temperature, and rinse sequence on the same deposit.\n\n## Compare the full cycle\n\nRecord concentration, cycle time, rinse water, material condition, odor, crew handling, shutdown time, and completed-system cost. HCR lists at $21.63/gal; RYDLYME is listed at $34.00-$48.60/gal in the comparison source, but use rate decides the task economics.\n\n## Field result\n\nThe recorded HCR rust-and-scale result shows visibly cleaner HVAC metal after controlled mineral removal. Use a side-by-side trial to translate that mechanism to the actual system.\n\nRequest an [HCR sample](/contact?type=quote&product=HCR%20vs%20RYDLYME) with system volume, metallurgy, deposit, and current RYDLYME cycle.",
       "date": "2026-07-09",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/farm-rust-after.webp",
       "tags": [
@@ -118,15 +118,15 @@
         "hcr"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "Technical note on HCR and RYDLYME descaling economics, proof requirements, and the system details needed for a quote.",
+      "excerpt": "Compare HCR and RYDLYME by mechanism, dose, cycle, rinse, material impact, crew experience, shutdown time, and completed-system cost.",
       "category": "technical",
-      "hero_alt": "Industrial rust and scale removed with VertKleen HCR",
+      "hero_alt": "Industrial rust and scale removed with VertKlean HCR",
       "seo": {}
     },
     {
       "slug": "hmis-000-explained",
-      "title": "What HMIS 0-0-0 Actually Means for Your Facility",
-      "body": "## The three numbers\n\nHMIS rates **Health**, **Flammability**, and **Physical hazard** from 0 to 4. A `0-0-0` product scores the lowest on those three HMIS fields for that exact product and revision.\n\n## What it does not decide\n\nHMIS alone does not determine PPE, storage, transport classification, ventilation, training, material compatibility, or a site procedure. Review the exact SKU's current SDS, label, task, concentration, and workplace controls before approval.\n\nSee our [products](/products) and request the current product documents.",
+      "title": "What a lower-hazard profile changes operationally",
+      "body": "## Chemistry design changes the work\n\nA lower-hazard VertKlean profile can reduce the odor, fume, flammability, and handling burden crews associate with conventional acid, caustic, bleach, and solvent workflows. That supports clearer training, greater crew confidence, simpler spill planning, and fewer avoidable work interruptions.\n\n## Keep the rating tied to the exact product\n\nHMIS describes Health, Flammability, and Physical hazard for the exact product and revision. Pair that profile with the task, concentration, surface, application method, and current SDS so the operating benefit stays product-specific.\n\nSee our [products](/products) or [request the safety summary](/contact?type=technical).",
       "date": "2026-07-01",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/blog/hmis-000-explained.webp",
       "tags": [
@@ -135,15 +135,15 @@
         "handling"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "A 0-0-0 HMIS rating changes how a chemical is stored, shipped, and handled. Here is what the three zeros mean and why they lower your handling burden.",
+      "excerpt": "Lower-hazard chemistry can improve crew confidence, training, spill planning, and uptime while keeping every statement tied to the exact product.",
       "category": "technical",
-      "hero_alt": "VertKleen HCR jug beside a clear bench-test sample used for current-SDS review",
+      "hero_alt": "VertKlean HCR jug beside a clear bench-test sample used for current-SDS review",
       "seo": {}
     },
     {
       "slug": "lam3-vs-wet-forget",
       "title": "LAM3 vs Wet & Forget",
-      "body": "## Per-gallon price math\n\nVertKleen LAM3: $111.03 / 5 gal = $22.21/gal.\n\nWet & Forget: $34.00/gal.\n\nLAM3 pricing uses the confirmed Website Price List. Wet & Forget pricing comes from the Industries & Lead Gen tab.\n\n## Swap table row\n\nReplace: Wet & Forget / bleach roof cleaners.\n\nFor: Exterior moss, algae, mold, mildew, lichen, and stain removal.\n\nUse: VertKleen LAM3 for spray-and-walk-away exterior biological staining.\n\n## Proof point\n\nThe lead-gen tab positions LAM3 at $22.21/gal against Wet & Forget at $34/gal, with drum sizes Wet & Forget buyers cannot easily get.\n\nRequest a [quote](/contact?type=quote&product=LAM3%20vs%20Wet%20%26%20Forget) with surface type, site acreage, and preferred pack size.",
+      "body": "## Wetting and dwell do the work\n\nVertKlean LAM3 extends wetting and dwell across moss, algae, mildew, lichen, and visible exterior staining. Purgo support continues working on the organic matrix after application, reducing dependence on a bleach-first maintenance cycle.\n\n## Compare the finished area\n\nRecord surface type, staining, dilution, coverage, dwell, material and landscape experience, labor, rinse, and maintenance interval. Before-and-after exterior records show the visible endpoint to compare.\n\n## Price by treated area\n\nLAM3 lists at $22.21/gal; Wet & Forget is listed at $34.00/gal in the comparison source. Apply dilution and coverage to calculate cost per treated area, then add labor and repeat frequency.\n\nRequest an [exterior-treatment plan](/contact?type=quote&product=LAM3%20vs%20Wet%20%26%20Forget) with surface, stain, area, access method, and current product.",
       "date": "2026-07-09",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/grout-moss.webp",
       "tags": [
@@ -152,15 +152,15 @@
         "lam3"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "Technical note on LAM3 and Wet & Forget exterior cleaning economics, pack-size differences, and surface details for quoting.",
+      "excerpt": "Compare LAM3 and Wet & Forget by wetting, dwell, visible-stain result, coverage, labor, maintenance interval, and cost per treated area.",
       "category": "technical",
-      "hero_alt": "Exterior grout and moss staining cleaned with VertKleen",
+      "hero_alt": "Exterior grout and moss staining cleaned with VertKlean",
       "seo": {}
     },
     {
       "slug": "vertkleen-hcr-vs-clr",
-      "title": "VertKleen HCR vs CLR",
-      "body": "## Per-gallon price math\n\nVertKleen HCR: $108.15 / 5 gal = $21.63/gal.\n\nCLR PRO MAX: $1,600-$1,800 / 55 gal = $29.09-$32.73/gal.\n\nHCR pricing uses the confirmed Website Price List. CLR PRO MAX is the incumbent comparison from the launch-spec competitive matrix.\n\n## Swap table row\n\nReplace: CLR / Calci-Solve.\n\nFor: Rust, scale, calcium, and heat-transfer fouling.\n\nUse: VertKleen HCR for heavy rust and scale; Descaler when the job is coil-specific line cleaning.\n\n## Proof point\n\nDDC Engineering materials document CLR failing on rust and scale before VertKleen HCR cleared the same class of problem for review.\n\nRequest a [quote](/contact?type=quote&product=VertKleen%20HCR%20vs%20CLR) with the incumbent product, concentration, and monthly volume.",
+      "title": "VertKlean HCR vs CLR",
+      "body": "## Industrial deposit load changes the comparison\n\nCLR is commonly used for light-duty rust and calcium cleaning. VertKlean HCR is positioned for larger deposit loads, circulation, concentrated use, and industrial equipment where completed-system cost matters more than one bottle.\n\n## Carbonate chemistry drives the cycle\n\nHCR uses controlled hydrogen-ion activity to consume carbonate scale, with wetting, complexing, and inhibition supporting release and rinse-out. Compare concentration, circulation time, equipment scale, fumes, material condition, rinse, and crew experience.\n\n## Price the completed job\n\nHCR lists at $21.63/gal; CLR PRO MAX is listed at $29.09-$32.73/gal in the comparison source. Add use rate, labor, shutdown time, rinse water, and finished result before choosing the lower-cost path.\n\nRequest an [HCR sample](/contact?type=quote&product=VertKlean%20HCR%20vs%20CLR) with deposit, equipment volume, current concentration, and cycle.",
       "date": "2026-07-09",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/ddc-rust.webp",
       "tags": [
@@ -169,15 +169,15 @@
         "hcr"
       ],
       "author": "MASEST Technical Team",
-      "excerpt": "Technical note on the HCR-versus-CLR replacement math, field proof, and quote inputs buyers should gather before switching.",
+      "excerpt": "Industrial HCR vs light-duty CLR: compare deposit load, carbonate chemistry, circulation, concentration, equipment scale, and completed-job economics.",
       "category": "technical",
-      "hero_alt": "Rust removed from equipment with VertKleen HCR",
+      "hero_alt": "Rust removed from equipment with VertKlean HCR",
       "seo": {}
     },
     {
       "slug": "vertkleen-launch",
-      "title": "Announcing the Expanded VertKleen Program",
-      "body": "## What is new\n\nThe expanded program adds bulk sizes and recurring-account pricing.\n\n1. New drum and tote sizes\n2. Document-gated SKUs\n3. Program pricing tiers\n\nSee [programs & pricing](/programs) for details.",
+      "title": "Choose VertKlean by the cleaning problem",
+      "body": "## One line, five chemistry roles\n\nVertKlean HCR, HVAC HCR, Descaler, AlumiBrite, and SAR target mineral scale, rust, and oxide deposits. VertKlean CR, HVAC CR, CR HD, CR HD Low Foam, and Neutral use alkalinity, wetting, sequestration, and soil lift for organic and hydrocarbon soils. MultiWash combines mechanisms for mixed facility work. Purgo supports bio-active odor and organic-load control. LAM3 and Torque solve long-dwell exterior cleaning and wash-and-finish care.\n\n[Request a product match](/contact?type=audit) with the soil, surface, current chemical, temperature, and desired result.",
       "date": "2026-06-10",
       "hero": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/blog/vertkleen-launch.webp",
       "tags": [
@@ -185,9 +185,9 @@
         "program"
       ],
       "author": "MASEST",
-      "excerpt": "We have expanded the VertKleen program with new package sizes, document-gated SKUs, and program pricing for recurring accounts.",
+      "excerpt": "Match exact VertKlean products to mineral deposits, organic soils, mixed facility work, bio-active control, exterior cleaning, and finish care.",
       "category": "news",
-      "hero_alt": "VertKleen CR HD and a cup of diluted product on a commercial kitchen line",
+      "hero_alt": "VertKlean CR HD and a cup of diluted product on a commercial kitchen line",
       "seo": {}
     }
   ]

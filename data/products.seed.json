@@ -1,7 +1,7 @@
 [
   {
     "sku": "cr",
-    "name": "VertKleen CIP CR",
+    "name": "VertKlean CIP CR",
     "group_key": "cip_brewery",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -12,7 +12,7 @@
   },
   {
     "sku": "cr2",
-    "name": "VertKleen HVAC CR",
+    "name": "VertKlean HVAC CR",
     "group_key": "water",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -23,7 +23,7 @@
   },
   {
     "sku": "hcr",
-    "name": "VertKleen CIP HCR",
+    "name": "VertKlean CIP HCR",
     "group_key": "descale",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -34,7 +34,7 @@
   },
   {
     "sku": "hcr-t16",
-    "name": "VertKleen HVAC HCR",
+    "name": "VertKlean HVAC HCR",
     "group_key": "descale",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -45,7 +45,7 @@
   },
   {
     "sku": "descaler",
-    "name": "VertKleen Descaler",
+    "name": "VertKlean Descaler",
     "group_key": "hvac_coils",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -56,7 +56,7 @@
   },
   {
     "sku": "cr-hd",
-    "name": "VertKleen CRHD",
+    "name": "VertKlean CRHD",
     "group_key": "degrease",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -67,7 +67,7 @@
   },
   {
     "sku": "cr-hd-low-foam",
-    "name": "VertKleen CRHD Low Foam",
+    "name": "VertKlean CRHD Low Foam",
     "group_key": "degrease",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -78,7 +78,7 @@
   },
   {
     "sku": "neutral",
-    "name": "VertKleen Neutral",
+    "name": "VertKlean Neutral",
     "group_key": "degrease",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -89,7 +89,7 @@
   },
   {
     "sku": "multiwash",
-    "name": "VertKleen MultiWash",
+    "name": "VertKlean MultiWash",
     "group_key": "softwash_exterior",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -100,7 +100,7 @@
   },
   {
     "sku": "lam3",
-    "name": "VertKleen Lam3",
+    "name": "VertKlean Lam3",
     "group_key": "softwash_exterior",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -111,7 +111,7 @@
   },
   {
     "sku": "purgo",
-    "name": "VertKleen Purgo",
+    "name": "VertKlean Purgo",
     "group_key": "water",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -122,7 +122,7 @@
   },
   {
     "sku": "alumibrite",
-    "name": "VertKleen AlumiBrite",
+    "name": "VertKlean AlumiBrite",
     "group_key": "marine",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -133,7 +133,7 @@
   },
   {
     "sku": "torque",
-    "name": "VertKleen Torque",
+    "name": "VertKlean Torque",
     "group_key": "marine",
     "hmis": "0-0-0",
     "mode": "buy",
@@ -144,7 +144,7 @@
   },
   {
     "sku": "sar",
-    "name": "VertKleen SAR",
+    "name": "VertKlean SAR",
     "group_key": "specialty",
     "hmis": "0-0-0",
     "mode": "buy",

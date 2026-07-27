@@ -1,6 +1,6 @@
 /* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4 · system-managed multi-page site · genre: modern-minimal · tone: technical · anchor hue: teal */
 /* ============================================================
-   MASEST / VertKleen Design System v2 (taste-skill applied)
+   MASEST / VertKlean Design System v2 (taste-skill applied)
    Theme lock: LIGHT,
 one dark color-block at page end.
    Accent lock: single desaturated teal (#0e7c86). Brand
@@ -717,7 +717,7 @@ no dots) ---------- */
   line-height: 1.55;
 }
 .industry-discovery-card .prod-actions {
-  margin-top: 18px;
+  margin-top: 26px;
 }
 .industry-discovery-products {
   display: flex;
@@ -2207,12 +2207,6 @@ scroll-snap gallery
   font-size: .85rem;
   line-height: 1.55;
 }
-.case-boundary {
-  padding-top: 10px;
-  border-top: 1px solid var(--line-soft);
-}
-.case-boundary strong { color: var(--ink-soft); }
-
 /* ---- Case before/after diptych ---- */
 .case-ba {
   display: grid;
@@ -2254,7 +2248,6 @@ scroll-snap gallery
 }
 
 .proof-source-summary .section-head { margin-bottom: 24px; }
-.proof-source-disclosure { max-width: 78ch; }
 
 .proof-filterbar {
   display: flex;
@@ -7277,39 +7270,6 @@ body.product-detail-page main > section.product-static-section {
 }
 
 /* ---------- Document downloads (SDS / TDS / labels) ---------- */
-.doc-governance {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0 0 18px;
-  overflow: hidden;
-  background: var(--line);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-}
-.doc-governance div,
-.doc-governance p {
-  margin: 0;
-  padding: 14px 16px;
-  background: var(--surface);
-}
-.doc-governance span,
-.doc-governance strong { display: block; }
-.doc-governance span {
-  margin-bottom: 4px;
-  color: var(--muted);
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-.doc-governance strong { font-size: .9rem; }
-.doc-governance p {
-  grid-column: 1 / -1;
-  color: var(--muted);
-  font-size: .82rem;
-  line-height: 1.5;
-}
 .doc-notify {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(220px, 320px);
@@ -7345,7 +7305,6 @@ body.product-detail-page main > section.product-static-section {
   color: var(--muted);
 }
 @media (max-width: 720px) {
-  .doc-governance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .doc-notify { grid-template-columns: 1fr; }
 }
 .doc-library {
@@ -7715,9 +7674,6 @@ body.product-detail-page main > section.product-static-section {
   color: var(--ink);
   font-size: .92rem;
 }
-.ind-trial-boundary {
-  margin-top: 26px;
-}
 .ind-proof-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7769,7 +7725,7 @@ body.product-detail-page main > section.product-static-section {
 .ind-proof-docs .doc-lib-links {
   align-content: start;
 }
-.ind-evidence-boundary {
+.ind-trial-action {
   display: grid;
   grid-template-columns: minmax(150px, .3fr) minmax(0, 1fr) auto;
   gap: 18px;
@@ -7780,10 +7736,10 @@ body.product-detail-page main > section.product-static-section {
   border: 1px solid var(--line);
   border-radius: var(--r-card);
 }
-.ind-evidence-boundary strong {
+.ind-trial-action strong {
   color: var(--ink);
 }
-.ind-evidence-boundary p {
+.ind-trial-action p {
   margin: 0;
   color: var(--muted);
   font-size: .87rem;
@@ -7797,13 +7753,13 @@ body.product-detail-page main > section.product-static-section {
   .ind-trial-head,
   .ind-trial-grid,
   .ind-proof-docs,
-  .ind-evidence-boundary {
+  .ind-trial-action {
     grid-template-columns: 1fr;
   }
   .ind-trial-status {
     justify-self: start;
   }
-  .ind-evidence-boundary .btn {
+  .ind-trial-action .btn {
     justify-self: start;
   }
 }

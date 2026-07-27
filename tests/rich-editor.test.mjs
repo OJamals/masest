@@ -13,7 +13,7 @@ test("rich editor serializes safe size, color, image, and card markup", () => {
   const html = [
     '<p><span data-md-size="20">Large</span> <span data-md-color="#0e7c86">teal</span></p>',
     '<p><img src="img/blog/x.webp" alt="Heat exchanger"></p>',
-    '<p><a class="md-card" href="/products/hcr" data-md-card data-md-image="img/products/hcr.webp" data-md-alt="HCR bottle"><strong>VertKleen HCR</strong></a></p>',
+    '<p><a class="md-card" href="/products/hcr" data-md-card data-md-image="img/products/hcr.webp" data-md-alt="HCR bottle"><strong>VertKlean HCR</strong></a></p>',
   ].join("");
 
   assert.equal(
@@ -21,7 +21,7 @@ test("rich editor serializes safe size, color, image, and card markup", () => {
     [
       "[[size:20|Large]] [[color:#0e7c86|teal]]",
       "![Heat exchanger](img/blog/x.webp)",
-      "[[card:title=VertKleen HCR|href=/products/hcr|image=img/products/hcr.webp|alt=HCR bottle]]",
+      "[[card:title=VertKlean HCR|href=/products/hcr|image=img/products/hcr.webp|alt=HCR bottle]]",
     ].join("\n\n"),
   );
 });

@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260725f";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260726a";
 import { smoothPref } from "./engagement.js";
 
 const IMAGE_DIMS = {
@@ -18,7 +18,7 @@ function imageDimsAttr(src) {
 export function productCard(id, heroCard = false, eager = false) {
   const p = PRODUCTS[id];
   const catalog = PRODUCT_CATALOG_COPY[id] || {};
- const badge = '<span class="hmis-badge note">REVIEW SDS</span>';
+  const badge = `<span class="hmis-badge note">${catalog.platform || `HMIS ${p.hmis || "0-0-0"}`}</span>`;
   const mediaLoading = heroCard || eager ? "eager" : "lazy";
   const mediaPriority = heroCard || eager ? ' fetchpriority="high"' : "";
   const media = p.image
@@ -30,9 +30,9 @@ export function productCard(id, heroCard = false, eager = false) {
     <div class="prod-top"><i class="ph ${p.icon}" aria-hidden="true"></i>${badge}</div>
     <span class="catalog-type">${catalog.job || p.replaces}</span>
     <h3>${p.name}</h3>
-      <p>${catalog.summary || p.tag}</p>
+      <p>${catalog.summary}</p>
       <div class="prod-actions">
-        <a class="btn btn-ink btn-sm" href="products/${id}">View details</a>
+        <a class="btn btn-ink btn-sm" href="products/${id}">See how it works</a>
         <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button"></span>
       </div>
   </div>`;
@@ -402,13 +402,13 @@ export function catalogCard(id, eager = false) {
   const p = PRODUCTS[id];
   if (!p) return "";
   const copy = PRODUCT_CATALOG_COPY[id] || {};
-  const badge = '<span class="hmis-badge note">REVIEW SDS</span>';
+  const badge = `<span class="hmis-badge note">${copy.platform || `HMIS ${p.hmis || "0-0-0"}`}</span>`;
   const mediaInfo = commerceMediaFor(id);
   const group = CATALOG_GROUPS.find((g) => g.ids.includes(id));
   const media = mediaInfo.src
     ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} ${imageDimsAttr(mediaInfo.src)}>`
-    : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
-  const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial chemistry");
+    : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKlean line"}</span></span>`;
+  const type = p.cat === "glycol" ? "VertKlean Glycols" : (copy.job || "Industrial chemistry");
   const quoteFirst = QUOTE_FIRST_IDS.includes(id);
   const buybar = quoteFirst
     ? quoteActionHTML(id)
@@ -417,13 +417,13 @@ export function catalogCard(id, eager = false) {
   return `
     <article class="shop-card" data-id="${id}">
       <div class="shop-card-core">
-      <a class="shop-card-link" href="products/${id}" aria-label="View details for ${p.name}">
+      <a class="shop-card-link" href="products/${id}" aria-label="See how ${p.name} works">
         <span class="shop-card-media">${media}${badge}</span>
         <span class="shop-card-body">
           <span class="shop-card-type">${type}</span>
           <b class="shop-card-name">${p.name}</b>
-          <span class="shop-card-replaces">${p.replaces}</span>
-          <span class="shop-card-cta">View details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
+          <span class="shop-card-replaces">${copy.summary || p.replaces}</span>
+          <span class="shop-card-cta">See how it works <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
         </span>
         </a>
         <div class="shop-card-buybar">
@@ -519,7 +519,19 @@ export function initShop() {
       const q = state.search;
       ids = ids.filter((id) => {
         const p = PRODUCTS[id];
-        return [p.name, p.desc, p.tag, p.replaces, id].filter(Boolean).join(" ").toLowerCase().includes(q);
+        const copy = PRODUCT_CATALOG_COPY[id];
+        return [
+          p.name,
+          p.replaces,
+          id,
+          copy.job,
+          copy.platform,
+          copy.summary,
+          copy.mechanism,
+          copy.operator_advantage,
+          copy.fits,
+          copy.proof,
+        ].flat().filter(Boolean).join(" ").toLowerCase().includes(q);
       });
     }
     return ids;
@@ -534,8 +546,8 @@ export function initShop() {
     if (emptyContact) {
       const query = searchEl?.value.trim() || "";
       const message = query
-        ? `I need to replace or clean: ${query}. Please recommend the closest VertKleen fit.`
-        : "Please recommend a VertKleen product for my current chemical or cleaning job.";
+        ? `I need to replace or clean: ${query}. Please recommend the closest VertKlean fit.`
+        : "Please recommend a VertKlean product for my current chemical or cleaning job.";
       emptyContact.href = `/contact?type=audit&message=${encodeURIComponent(message)}#quoteForm`;
     }
   };

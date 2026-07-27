@@ -1,9 +1,9 @@
-/* MASEST / VertKleen shared JS (v2, taste-skill applied)
+/* MASEST / VertKlean shared JS (v2, taste-skill applied)
    Icons: Phosphor web family only. No emoji. No em-dashes in copy. */
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCT_GALLERY, PRODUCTS, QUOTE_FIRST_IDS } from "./main/catalog-data.js?v=20260725f";
-import { renderChrome } from "./main/chrome.js?v=20260725f";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCT_GALLERY, PRODUCTS, QUOTE_FIRST_IDS, productHighlights } from "./main/catalog-data.js?v=20260726a";
+import { renderChrome } from "./main/chrome.js?v=20260726a";
 import { initResponsiveTables, initReveal } from "./main/effects.js";
-import { initServiceCatalog } from "./main/service-catalog.js?v=20260711w";
+import { initServiceCatalog } from "./main/service-catalog.js?v=20260726a";
 import {
   catalogCard,
   initCartButtons,
@@ -12,16 +12,16 @@ import {
   loadCommerceCatalog,
   productCard,
   refreshCommerceActions,
-} from "./main/commerce-ui.js?v=20260725f";
+} from "./main/commerce-ui.js?v=20260726a";
 import {
   initBeforeAfter,
   initIndustryDiscovery,
   initProofFilters,
   initQuoteForm,
-} from "./main/engagement.js?v=20260725f";
-import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260725f";
+} from "./main/engagement.js?v=20260726a";
+import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260726a";
 import { initDataVisualizations } from "./main/data-visuals.js";
-import { initContentSnapshots } from "./main/content-snapshots.js";
+import { initContentSnapshots } from "./main/content-snapshots.js?v=20260726a";
 
 window.MASESTMain = {
   CATALOG_GROUPS,
@@ -30,6 +30,7 @@ window.MASESTMain = {
   PRODUCT_GALLERY,
   PRODUCTS,
   QUOTE_FIRST_IDS,
+  productHighlights,
   catalogCard,
   initReveal,
   isLocalStaticCommerceSuppressed,

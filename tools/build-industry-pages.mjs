@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { PRODUCTS } from "../js/main/catalog-data.js";
 import {
   documentAllowedOnSurface,
-  documentClaimLabel,
   documentDistribution,
   documentSurfaceMode,
 } from "./public-document-policy.mjs";
@@ -109,9 +108,9 @@ function discoveryFilterCard(type, {
 
 function evidenceStatusLabel(industry) {
   const labels = {
-    absent: "No field record",
-    context_only: "Field context; verification incomplete",
-    qualified: "Qualified field record",
+    absent: "Side-by-side trial ready",
+    context_only: "Field result available",
+    qualified: "Comparable field result available",
   };
   const label = labels[industry.field_evidence?.status];
   if (!label) throw new Error(`${industry.slug}: unsupported field evidence status`);
@@ -143,14 +142,14 @@ function renderDiscoveryCard(industry) {
   return `<article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="${escapeHtml(industry.slug)}" data-buyer-roles="${escapeHtml((industry.buyer_roles || []).join(" "))}" data-job-paths="${escapeHtml(jobIds.join(" "))}" hidden>
         <span class="eyebrow">${industry.kind === "supplemental" ? "Focused operation" : "Sector route"}</span>
         <h3><a href="industries/${escapeHtml(industry.slug)}">${escapeHtml(industry.label)}</a></h3>
-        <p>${escapeHtml(industry.lead_task)}</p>
+        <p>${escapeHtml(industry.marketing)}</p>
         <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
         <dl>
           <div><dt>Starting chemistry</dt><dd>${renderDiscoveryProducts(industry)}</dd></div>
-          <div><dt>Evidence status</dt><dd>${escapeHtml(evidenceStatusLabel(industry))}</dd></div>
+          <div><dt>Result path</dt><dd>${escapeHtml(evidenceStatusLabel(industry))}</dd></div>
         </dl>
         <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/${escapeHtml(industry.slug)}">Open route</a>
+          <a class="btn btn-secondary btn-sm" href="industries/${escapeHtml(industry.slug)}">See the chemistry for this job</a>
           <a class="btn btn-primary btn-sm" href="${contactHref(industry, "audit", "contact")}" data-industry-discovery-cta>Scope audit</a>
         </div>
       </article>`;
@@ -167,7 +166,7 @@ export function renderIndustryDiscovery(industries, discovery) {
         <div>
           <span class="eyebrow">Find your route</span>
           <h2>Start with your role or the job.</h2>
-          <p class="subhead">Filter the existing industry library. Every match keeps the sector task, starting chemistry, evidence status, and scoped audit handoff together.</p>
+          <p class="subhead">Filter the existing industry library. Every match keeps the sector task, starting chemistry, result path, and scoped audit handoff together.</p>
           <p class="industry-discovery-status" data-industry-discovery-status aria-live="polite">Choose a buyer role or job path.</p>
           <button class="btn btn-ghost btn-sm" type="button" data-industry-discovery-clear hidden>Clear filters</button>
         </div>
@@ -204,8 +203,8 @@ function renderHeroFacts(industry) {
         <li><span>Clean</span><strong>${escapeHtml(industry.asset)}</strong></li>
         <li><span>Remove</span><strong>${escapeHtml(industry.soil)}</strong></li>
         <li><span>Method</span><strong>${escapeHtml(industry.method)}</strong></li>
-        <li><span>Boundary</span><strong>${escapeHtml(industry.boundary)}</strong></li>
-        <li><a href="#applications-and-proof">Open task controls and documents <span aria-hidden="true">↓</span></a></li>
+        <li><span>Operating limits</span><strong>${escapeHtml(industry.boundary)}</strong></li>
+        <li><a href="#applications-and-proof">See job fit, process, and results <span aria-hidden="true">↓</span></a></li>
       </ul>`;
 }
 
@@ -275,7 +274,7 @@ function renderProducts(industry) {
   }).join(", ");
 }
 
-function renderTrialBrief(industry, documents) {
+function renderTrialBrief(industry) {
   const brief = industry.trial_brief;
   if (!brief) return "";
   if (
@@ -293,33 +292,23 @@ function renderTrialBrief(industry, documents) {
     }
     return `<tr><th scope="row">${escapeHtml(material)}</th><td>${escapeHtml(gate)}</td></tr>`;
   }).join("\n              ");
-  const referenceTitles = [...new Set(documents
-    .filter(({ control }) => control.status === "reference_only")
-    .map(({ control }) => control.title))];
-  const caseBoundary = industry.case_summary?.boundary?.trim();
-  const referenceBoundary = caseBoundary
-    ? `${industry.case_summary.label} remains a controlled reference. ${caseBoundary}`
-    : referenceTitles.length
-      ? `${referenceTitles.join(" and ")} remain controlled references. Flagged statements in these files do not substantiate public copy, including safety, certification, efficacy, compatibility, food-contact, antimicrobial, regulatory, or customer-outcome claims.`
-      : "No controlled reference is being used to substantiate this planning brief.";
-
   return `
       <section class="ind-scope-note ind-trial-brief" data-industry-trial-brief aria-labelledby="industry-trial-brief-title">
         <div class="ind-trial-head">
           <div>
-            <span class="eyebrow">Controlled-trial plan</span>
+            <span class="eyebrow">Job trial blueprint</span>
             <h3 id="industry-trial-brief-title">${escapeHtml(brief.title)}</h3>
             <p>${escapeHtml(brief.objective)}</p>
           </div>
-          <span class="ind-trial-status">Planning asset · ${escapeHtml(evidenceStatusLabel(industry))}</span>
+          <span class="ind-trial-status">${escapeHtml(evidenceStatusLabel(industry))}</span>
         </div>
         <div class="ind-trial-grid">
           <div>
-            <h4>Material compatibility gate</h4>
+            <h4>Material fit</h4>
             <div class="ind-trial-table-wrap">
               <table class="ind-trial-table">
-                <caption>Materials to approve before the trial</caption>
-                <thead><tr><th scope="col">Material</th><th scope="col">Required gate</th></tr></thead>
+                <caption>Materials to match before the trial</caption>
+                <thead><tr><th scope="col">Material</th><th scope="col">Starting check</th></tr></thead>
                 <tbody>
               ${compatibilityRows}
                 </tbody>
@@ -336,9 +325,9 @@ function renderTrialBrief(industry, documents) {
             </ol>
           </div>
         </div>
-        <aside class="ind-evidence-boundary ind-trial-boundary" aria-label="Controlled-trial evidence boundary">
-          <strong>Evidence status</strong>
-          <p>${escapeHtml(evidenceStatusLabel(industry))}. This is a planning brief, not field proof. ${escapeHtml(referenceBoundary)}</p>
+        <aside class="ind-trial-action" aria-label="Controlled-trial next step">
+          <strong>Win the side-by-side</strong>
+          <p>Compare cleaning result, operator time, wastewater handling, and return-to-service against the current chemistry.</p>
           <a class="btn btn-secondary" href="${contactHref(industry, "sample")}">Scope this trial</a>
         </aside>
       </section>`;
@@ -375,8 +364,7 @@ function renderApplications(industry, allIndustries, documents) {
     : "";
   const documentLinks = documents.map((document) => {
     const control = document.control;
-    const distribution = documentDistribution(control) === "request_only" ? "Request only" : "Current";
-    const metadata = `${control.document_id} · Rev ${documentRevision} · Distribution: ${distribution} · Claims: ${documentClaimLabel(control.status)} · SKUs: ${control.skus.join(", ")}`;
+    const metadata = `${control.document_id} · Rev ${documentRevision} · SKUs: ${control.skus.join(", ")}`;
     const common = `data-document-id="${escapeHtml(control.document_id)}" data-document-revision="${escapeHtml(documentRevision)}" data-document-skus="${escapeHtml(control.skus.join(" "))}" data-document-name="${escapeHtml(document.label)}"`;
     if (documentSurfaceMode(control, "industry") === "request") {
       return `<button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Register to request ${escapeHtml(document.label)}"><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-control">${escapeHtml(metadata)}</span><span class="doc-request-state" data-document-request-label>Register to request</span></button>`;
@@ -387,9 +375,9 @@ function renderApplications(industry, allIndustries, documents) {
   return `<section class="section section-slim ind-applications" id="applications-and-proof" data-industry-applications-proof>
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">Applications and verification</span>
+        <span class="eyebrow">Applications and job fit</span>
         <h2 class="headline">${escapeHtml(industry.lead_task)}</h2>
-        <p class="subhead">Task controls first. Product choice follows the asset, deposit, materials, operating window, and discharge route.</p>
+        <p class="subhead">Start with what must be cleaned, how the crew works, and what a successful result looks like.</p>
       </div>${related}${caseSummary}
       <dl class="ind-proof-grid">
         <div><dt>Task</dt><dd>${escapeHtml(industry.lead_task)}</dd></div>
@@ -399,23 +387,18 @@ function renderApplications(industry, allIndustries, documents) {
         <div><dt>Concentration</dt><dd>${escapeHtml(industry.concentration)}</dd></div>
         <div><dt>Process controls</dt><dd>${escapeHtml(industry.process)}</dd></div>
         <div><dt>Shutdown / containment</dt><dd>${escapeHtml(industry.boundary)}</dd></div>
-        <div><dt>Verification endpoint</dt><dd>${escapeHtml(industry.verification)}</dd></div>
-      </dl>${renderTrialBrief(industry, documents)}
+        <div><dt>Success check</dt><dd>${escapeHtml(industry.verification)}</dd></div>
+      </dl>${renderTrialBrief(industry)}
       <div class="ind-proof-docs">
         <div>
-          <span class="eyebrow">Controlled technical files</span>
-          <h3>Request SDS/TDS access or open the current public application file.</h3>
-          <p>Registered users can request safety and technical sheets for staff review. Confirm revision, product identity, material compatibility, and application scope before site approval.</p>
+          <span class="eyebrow">Product files</span>
+          <h3>Open application records or request the SDS/TDS for your team.</h3>
+          <p>Document IDs, revisions, and exact SKUs stay attached so buyers can move from chemistry fit to the right product file.</p>
         </div>
         <div class="doc-lib-links">
           ${documentLinks}
         </div>
       </div>
-      <aside class="ind-evidence-boundary" aria-label="Evidence boundary">
-        <strong>Field evidence standard</strong>
-        <p>No field result is presented as proof unless permission, date, asset/substrate, soil, product and concentration, procedure, before/after endpoint, result, and limitations are recorded. If no matching record exists, request a controlled trial.</p>
-        <a class="btn btn-secondary" href="${contactHref(industry, "audit")}">Request compatibility review</a>
-      </aside>
     </div>
   </section>`;
 }
@@ -425,17 +408,15 @@ function renderCaseSummary(industry) {
   if (
     !summary.label?.trim()
     || !summary.description?.trim()
-    || !summary.boundary?.trim()
     || !/^proof#[a-z0-9-]+$/.test(summary.href || "")
   ) {
     throw new Error(`${industry.slug}: incomplete case summary`);
   }
   return `
       <aside class="ind-scope-note ind-case-summary" data-industry-case-summary>
-        <span class="eyebrow">Published case context</span>
+        <span class="eyebrow">Case result</span>
         <h3>${escapeHtml(summary.label)}</h3>
         <p>${escapeHtml(summary.description)}</p>
-        <p><strong>Evidence boundary:</strong> ${escapeHtml(summary.boundary)}</p>
         <a class="proof-summary-link" href="../${escapeHtml(summary.href)}">Open case summary</a>
       </aside>`;
 }
@@ -447,8 +428,11 @@ function renderCta(industry) {
     ["sample", "ph-package", "Run a controlled trial", "Procedure, endpoint, acceptance"],
     ["distributor", "ph-handshake", "Set up supply", "Site, stocking, buying deadline"],
   ];
+  const label = (type, fallback) => industry.cta_type === type
+    ? industry.cta_label
+    : fallback;
   const tileHtml = tiles.map(([type, icon, title, detail]) => (
-    `<a class="cta-tile" href="${contactHref(industry, type)}"><i class="ph ${icon}" aria-hidden="true"></i><span class="cta-tile-t">${title}</span><span class="cta-tile-s">${detail}</span></a>`
+    `<a class="cta-tile" href="${contactHref(industry, type)}"><i class="ph ${icon}" aria-hidden="true"></i><span class="cta-tile-t">${escapeHtml(label(type, title))}</span><span class="cta-tile-s">${detail}</span></a>`
   )).join("\n        ");
 
   return `<section class="block-dark" data-industry-local-cta>

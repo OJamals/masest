@@ -1,7 +1,7 @@
 // Contract spec for the proof_card CMS migration: proof.html mounts
 // data-cms-content="proof_cards" (replace mode) over the hardcoded case cards.
 // A published snapshot replaces the fallback; photos stay on-page while the
-// approved narrative and evidence boundary render in a native disclosure.
+// approved narrative and result-summary label render in a native disclosure.
 // Legacy href values never expose source documents. sort_order drives order; an
 // empty snapshot leaves the hardcoded cards intact.
 import { mkdirSync } from "node:fs";
@@ -30,8 +30,7 @@ const PROOF = {
       kind: "food",
       result: "Result B",
       narrative: "Narrative B",
-      boundary: "Boundary B",
-      publication_scope: "Signed publication scope recorded offline",
+      publication_scope: "Published result summary",
       image: "img/proof/cases/brewery.webp",
       image_alt: "B",
       chips: ["x"],
@@ -45,8 +44,7 @@ const PROOF = {
       kind: "hvac",
       result: "Result A",
       narrative: "Narrative A",
-      boundary: "Boundary A",
-      publication_scope: "Signed publication scope recorded offline",
+      publication_scope: "Published result summary",
       image: "img/proof/cases/ddc-rust.webp",
       image_alt: "A",
       chips: ["y"],
@@ -77,10 +75,9 @@ test("published proof_cards replace the hardcoded fallback on proof.html", async
   const disclosure = firstCard.locator("details.case-disclosure");
   await expect(disclosure).toHaveCount(1);
   await expect(disclosure).not.toHaveAttribute("open", "");
-  await expect(disclosure.locator("summary")).toHaveText("Case summary");
+  await expect(disclosure.locator("summary")).toHaveText("View result details");
   await expect(disclosure).toContainText("Narrative A");
-  await expect(disclosure).toContainText("Evidence boundary: Boundary A");
-  await expect(firstCard.locator(".case-publication")).toHaveText("Signed publication scope recorded offline");
+  await expect(firstCard.locator(".case-publication")).toHaveText("Published result summary");
   await disclosure.locator("summary").focus();
   await page.keyboard.press("Enter");
   await expect(disclosure).toHaveAttribute("open", "");
@@ -132,8 +129,7 @@ test("a proof_card with image_after renders a before/after .case-ba pair", async
         slug: "ba-card", title: "Before/after card", eyebrow: "BA", kind: "facility",
         result: "Cleared.", image: "img/proof/cases/grout-before.webp", image_alt: "Before, soiled",
         narrative: "Matched-angle images record the visible sequence.",
-        boundary: "No comparative performance claim.",
-        publication_scope: "Signed publication scope recorded offline",
+        publication_scope: "Published result summary",
         image_w: 934, image_h: 700,
         image_after: "img/proof/cases/grout-after.webp", image_after_alt: "After, clean",
         image_after_w: 850, image_after_h: 882, sort_order: 1,
@@ -157,7 +153,6 @@ test("a proof_card with image_after renders a before/after .case-ba pair", async
   await expect(card.locator(".case-ba")).toContainText("After");
   await expect(card.locator("a.doc-link")).toHaveCount(0);
   await expect(card.locator("details.case-disclosure")).toContainText("Matched-angle images record the visible sequence.");
-  await expect(card.locator("details.case-disclosure")).toContainText("Evidence boundary: No comparative performance claim.");
 });
 
 test("empty proof snapshot leaves the hardcoded case cards intact", async ({ page }) => {
@@ -166,6 +161,6 @@ test("empty proof snapshot leaves the hardcoded case cards intact", async ({ pag
   }));
   await page.goto(`${BASE_URL}/proof.html`, { waitUntil: "networkidle" });
   const grid = page.locator('.case-grid[data-cms-content="proof_cards"]');
-  await expect(grid.getByText("Rust-and-scale cleaning field context", { exact: true })).toBeVisible();
+  await expect(grid.getByText("Rust-and-scale removal", { exact: true })).toBeVisible();
   await expect(grid.locator(".case-card")).toHaveCount(12);
 });

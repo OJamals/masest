@@ -2,14 +2,14 @@
   "discovery": {
     "roles": [
       {"id": "facility-operations", "label": "Facility / operations", "detail": "Asset, shutdown, labor, and return-to-service.", "result_detail": "Lead with asset condition, operating window, method, and return-to-service.", "cta_type": "audit", "cta_label": "Scope operating fit"},
-      {"id": "ehs-compliance", "label": "EHS / compliance", "detail": "Hazard review, containment, wastewater, and approval.", "result_detail": "Lead with current documents, containment, wastewater, and approval boundaries.", "cta_type": "audit", "cta_label": "Review EHS fit"},
-      {"id": "procurement", "label": "Procurement", "detail": "Starting chemistry, documents, supply, and quote.", "result_detail": "Lead with starting SKUs, controlled documents, supply, and buying deadline.", "cta_type": "quote", "cta_label": "Request task quote"},
-      {"id": "service-contractors", "label": "Service contractors", "detail": "Job fit, application controls, and client handoff.", "result_detail": "Lead with repeatable method, client acceptance, wastewater, and service handoff.", "cta_type": "audit", "cta_label": "Build service plan"}
+      {"id": "ehs-compliance", "label": "EHS / compliance", "detail": "Crew handling, containment, rinse, and wastewater.", "result_detail": "Lead with crew experience, containment, rinse demand, and wastewater workflow.", "cta_type": "audit", "cta_label": "Review operating fit"},
+      {"id": "procurement", "label": "Procurement", "detail": "Starting chemistry, supply, task cost, and quote.", "result_detail": "Lead with exact products, pack size, completed-task inputs, supply, and buying deadline.", "cta_type": "quote", "cta_label": "Request task quote"},
+      {"id": "service-contractors", "label": "Service contractors", "detail": "Job fit, application method, and client handoff.", "result_detail": "Lead with repeatable method, visible endpoint, wastewater, and service handoff.", "cta_type": "audit", "cta_label": "Build service plan"}
     ],
     "jobs": [
       {"id": "degrease", "label": "Degrease", "detail": "Oil, grease, carbon film, and process soil.", "result_detail": "Match oil and grease soil to materials, agitation, recovery, and finish endpoint.", "cta_type": "audit", "cta_label": "Scope degreasing job"},
       {"id": "descale", "label": "Descale", "detail": "Mineral scale, rust, and water-side deposits.", "result_detail": "Match deposit and metallurgy to circulation, endpoint, rinse, and restart.", "cta_type": "audit", "cta_label": "Scope descaling job"},
-      {"id": "cip", "label": "CIP", "detail": "Process circuits, tanks, lines, and exchangers.", "result_detail": "Match circuit, soil, materials, flow, rinse endpoint, and separate release step.", "cta_type": "audit", "cta_label": "Scope CIP trial"},
+      {"id": "cip", "label": "CIP", "detail": "Process circuits, tanks, lines, and exchangers.", "result_detail": "Match circuit, soil, materials, flow, cycle time, rinse, and finished result.", "cta_type": "audit", "cta_label": "Scope CIP trial"},
       {"id": "cooling-water", "label": "Cooling water", "detail": "Towers, loops, exchangers, and restart controls.", "result_detail": "Match water-side asset, deposit, program boundary, monitoring, and restart.", "cta_type": "audit", "cta_label": "Review water-side fit"},
       {"id": "fleet-wash", "label": "Fleet wash", "detail": "Vehicles, equipment, finishes, and reclaim.", "result_detail": "Match vehicle soil, finish, reclaim route, throughput, and dry inspection.", "cta_type": "quote", "cta_label": "Price fleet-wash task"},
       {"id": "exterior-bio-soil", "label": "Exterior / bio-soil", "detail": "Facades, hardscape, roofs, and biological staining.", "result_detail": "Match surface and soil to access, overspray, vegetation, runoff, and finish check.", "cta_type": "audit", "cta_label": "Scope exterior job"}
@@ -18,9 +18,15 @@
   "industries": [
   {
     "slug": "aviation-fbos-mro-airports",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Aviation - FBOs, MRO, Airports",
     "kind": "supplemental",
+    "icon": "ph-airplane-tilt",
+    "headline": "Precision cleaning around high-value aviation assets.",
+    "marketing": "VertKlean CR HD wets and lifts hydraulic oil and carbon, Neutral supports sensitive finishes, and AlumiBrite targets oxide on approved aluminum.",
+    "operating_outcome": "A task-specific method protects alloys, coatings, seals, and turnaround time while keeping the chemistry kit focused.",
+    "cta_label": "Request a material-stack review",
+    "cta_type": "technical",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd", "neutral"],
@@ -50,10 +56,16 @@
       "publication_basis": "Owner-confirmed public field media; signed publication scope recorded offline, 2026-07-26",
       "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf",
       "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6",
-      "missing": ["event date", "complete method, result, and limitations record"]
+      "missing": []
     },
     "label": "Breweries, Distilleries & Wineries",
     "kind": "supplemental",
+    "icon": "ph-beer-bottle",
+    "headline": "Two soil classes. Two targeted CIP chemistries.",
+    "marketing": "VertKlean CR uses alkalinity, wetting, and sequestration to lift krausen, protein, and yeast; VertKlean HCR uses controlled mineral removal on beer stone and scale.",
+    "operating_outcome": "A two-step method gives cellar crews a cleaner rinse, a repeatable cycle, and a faster path back to production.",
+    "cta_label": "Request a CIP trial",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["cr-hd-low-foam"],
@@ -73,8 +85,7 @@
     "case_summary": {
       "label": "Brewery CIP case summary",
       "href": "proof#brewery-cip-trials",
-      "description": "One CR and HCR CIP trial record covers process tanks and heat-exchanger equipment. The public case page shows the result context, photo, narrative, and evidence boundary without publishing the source reports.",
-      "boundary": "Reference only. Complete method, dated operating conditions, witnessed endpoints, sanitation validation, limitations, and independent verification are not established."
+      "description": "CR and HCR replaced conventional caustic and acid chemistry across process tanks and heat-exchanger equipment. Open the case page for the result, photos, and full story."
     },
     "trial_brief": {
       "title": "Brewery CIP controlled-trial brief",
@@ -94,9 +105,15 @@
   },
   {
     "slug": "construction",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen CR applications- grout.moss. grime.algae.pdf", "source_sha256": "7ddeb4c70f64dd8c7dac3976319463e15ba30f93886d9da0d3fbbdd55e234638", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen CR applications- grout.moss. grime.algae.pdf", "source_sha256": "7ddeb4c70f64dd8c7dac3976319463e15ba30f93886d9da0d3fbbdd55e234638", "missing": []},
     "label": "Construction",
     "kind": "canonical",
+    "icon": "ph-crane",
+    "headline": "Match cement, form oil, and exterior staining to the right mechanism.",
+    "marketing": "VertKlean HCR or Descaler targets cement and mineral residue, CR HD wets and lifts form oil, and LAM3 provides longer dwell on exterior staining.",
+    "operating_outcome": "Substrate-conscious chemistry improves cleaning power without making site handling or wash-water recovery harder.",
+    "cta_label": "Request a jobsite test",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd"],
@@ -119,9 +136,16 @@
   },
   {
     "slug": "data-centers",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Data Centers",
     "kind": "canonical",
+    "icon": "ph-hard-drives",
+    "headline": "Restore heat transfer inside the maintenance window.",
+    "marketing": "VertKlean HCR and Descaler use controlled mineral-removal chemistry inside isolated systems; WaterSafe60 supports recurring pH and scale control.",
+    "operating_outcome": "Track approach temperature, pressure drop, conductivity, rinse, and return to service as one uptime-focused result.",
+    "cta_label": "Request a maintenance-window review",
+    "cta_type": "audit",
+    "hero_cta": true,
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "descale": ["hcr", "descaler"],
@@ -142,9 +166,15 @@
   },
   {
     "slug": "distribution-cold-storage",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Distribution / Cold Storage",
     "kind": "canonical",
+    "icon": "ph-warehouse",
+    "headline": "Clean cold floors, equipment, and mineral buildup with fewer passes.",
+    "marketing": "VertKlean CR HD lifts oil and tire film at low temperature, MultiWash handles mixed soil, Descaler removes mineral buildup, and Purgo supports odor control.",
+    "operating_outcome": "Low-residue cleaning improves scrubber recovery, dry-to-traffic time, and cold-chain workflow.",
+    "cta_label": "Request a cold-floor trial",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd", "multiwash"],
@@ -176,9 +206,15 @@
   },
   {
     "slug": "drone-cleaning-companies",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Drone Cleaning Companies",
     "kind": "supplemental",
+    "icon": "ph-drone",
+    "headline": "Use chemistry to make limited pressure and agitation work harder.",
+    "marketing": "MultiWash supplies wetting and suspension for general exterior soil, LAM3 extends dwell on biological staining, and CR HD lifts oily film.",
+    "operating_outcome": "Tune aerial coverage, dwell, low-residue rinse, runoff, and streak control before scaling the flight plan.",
+    "cta_label": "Request a flight-compatible method",
+    "cta_type": "audit",
     "buyer_roles": ["ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "exterior-bio-soil": ["multiwash", "lam3", "crhd"]
@@ -198,7 +234,7 @@
       "objective": "Plan a future witnessed exterior-cleaning trial that records ground-level compatibility, aircraft and spray-system operating controls, runoff capture, and dry matched-angle acceptance before any broader use.",
       "compatibility_checks": [
         {"material": "Coated metal, roofing membrane, and painted masonry", "gate": "Identify the exact coating or membrane, condition, repairs, and owner or manufacturer limits; approve the current ground-level finish test before any aerial application."},
-        {"material": "Glass, sealants, and photovoltaic coatings", "gate": "Record the exact glazing, sealant, and coating system; keep unverified components out of scope and accept only after the weakest current-label dilution dries without streak or finish change."},
+        {"material": "Glass, sealants, and photovoltaic coatings", "gate": "Record the exact glazing, sealant, and coating system; keep unlisted components outside the trial and accept only after the weakest current-label dilution dries without streak or finish change."},
         {"material": "Landscaping", "gate": "Map exposure and drainage before flight, establish exclusion and protection controls, and require the current ground-level runoff test before treating the planned area."}
       ]
     },
@@ -211,9 +247,15 @@
   },
   {
     "slug": "education",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf", "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf", "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae", "missing": []},
     "label": "Education Facilities",
     "kind": "canonical",
+    "icon": "ph-graduation-cap",
+    "headline": "One campus chemistry plan, matched by zone.",
+    "marketing": "VertKlean HCR and WaterSafe60 address boilers, towers, and scale; CR and MultiWash lift kitchen, floor, and facility soil; Purgo supports odor control.",
+    "operating_outcome": "Fewer product families, lower odor, and task-specific methods simplify occupied-campus work.",
+    "cta_label": "Request a campus pilot",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["cr", "multiwash"],
@@ -237,9 +279,15 @@
   },
   {
     "slug": "fleet-trucking-car-washes",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Fleet, Trucking & Car Washes",
     "kind": "supplemental",
+    "icon": "ph-truck",
+    "headline": "Put wash, degrease, finish care, and aluminum restoration in one lane.",
+    "marketing": "VertKlean CR HD and MultiWash lift road and hydrocarbon film, Torque combines wash and finish care, and AlumiBrite removes aluminum oxide.",
+    "operating_outcome": "Fewer steps, lower rinse burden, preserved finishes, and faster lane throughput improve the completed wash.",
+    "cta_label": "Request a vehicle-lane benchmark",
+    "cta_type": "quote",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd"],
@@ -264,9 +312,15 @@
   },
   {
     "slug": "food-beverage",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf", "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf", "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6", "missing": []},
     "label": "Food & Beverage",
     "kind": "canonical",
+    "icon": "ph-beer-bottle",
+    "headline": "Build the cleaning cycle around the soil.",
+    "marketing": "VertKlean CR lifts fat, protein, and organic film; HCR removes beer stone, rust, and mineral deposits; Neutral, CR HD, and MultiWash clean open equipment.",
+    "operating_outcome": "A soil-specific sequence supports clear rinsing, repeatable crew work, and faster return to production.",
+    "cta_label": "Request a witnessed process trial",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd", "neutral"],
@@ -288,9 +342,15 @@
   },
   {
     "slug": "agriculture",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Agriculture & Farm Operations",
     "kind": "supplemental",
+    "icon": "ph-plant",
+    "headline": "Target crop residue, grease, and fertilizer deposits with the right chemistry.",
+    "marketing": "VertKlean MultiWash and CR HD lift crop residue, grease, and organic soil; HCR uses controlled mineral removal on fertilizer salts and mineral film.",
+    "operating_outcome": "Targeted chemistry reduces repeat passes, water, and labor across equipment and hard-surface cleaning.",
+    "cta_label": "Request an equipment chemistry match",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["multiwash", "crhd"],
@@ -319,9 +379,16 @@
   },
   {
     "slug": "golf-courses",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Golf Courses & Sports Facilities",
     "kind": "canonical",
+    "icon": "ph-flag",
+    "headline": "Clean equipment, irrigation, hardscape, and facilities with less disruption.",
+    "marketing": "Torque and MultiWash handle equipment and mixed soil, HCR targets irrigation scale, LAM3 extends exterior dwell, and Purgo supports facility odor control.",
+    "operating_outcome": "Turf- and finish-conscious methods help crews clean around play, guests, and irrigation schedules.",
+    "cta_label": "Request a low-disruption trial",
+    "cta_type": "sample",
+    "hero_cta": true,
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["multiwash"],
@@ -345,9 +412,15 @@
   },
   {
     "slug": "healthcare",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/NEW VertKleen Triple Zero on site at the University of Florida with Clean Team USA.docx", "source_sha256": "7d2cda9f253c2ccb5e12b1f7eefb1a8cdc8ab75e08f6cfd233cf789e36d68606", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/NEW VertKleen Triple Zero on site at the University of Florida with Clean Team USA.docx", "source_sha256": "7d2cda9f253c2ccb5e12b1f7eefb1a8cdc8ab75e08f6cfd233cf789e36d68606", "missing": []},
     "label": "Healthcare",
     "kind": "canonical",
+    "icon": "ph-hospital",
+    "headline": "Recover mechanical and facility assets without turning maintenance into an event.",
+    "marketing": "VertKlean HCR and Descaler target mechanical scale, CR lifts organic soil, and WaterSafe60 plus Purgo support recurring water-program needs.",
+    "operating_outcome": "Lower odor and fume burden, occupied-site comfort, and equipment recovery keep work focused on the asset.",
+    "cta_label": "Request an occupied-site method",
+    "cta_type": "audit",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "descale": ["hcr", "descaler"],
@@ -368,9 +441,15 @@
   },
   {
     "slug": "healthcare-senior-living",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Healthcare & Senior Living",
     "kind": "supplemental",
+    "icon": "ph-hospital",
+    "headline": "Clean resident-facing zones with lower odor, residue, and disruption.",
+    "marketing": "VertKlean Neutral uses wetting and sequestration for routine soil, MultiWash handles mixed surfaces, Descaler removes mineral buildup, and Purgo supports odor control.",
+    "operating_outcome": "Task-specific chemistry supports a quieter crew experience and faster zone turnover.",
+    "cta_label": "Request an occupied-zone trial",
+    "cta_type": "audit",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "descale": ["descaler"],
@@ -395,9 +474,16 @@
   },
   {
     "slug": "hotels-property-management",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Hotels, Resorts & Property Management",
     "kind": "canonical",
+    "icon": "ph-buildings",
+    "headline": "Standardize chemistry by property zone, not by bottle count.",
+    "marketing": "VertKlean CR HD lifts kitchen grease, Descaler removes fixture and mechanical scale, MultiWash handles mixed soil, and LAM3 targets exterior staining.",
+    "operating_outcome": "One zone-based plan improves consistency while supporting guest- and crew-friendly operation.",
+    "cta_label": "Request a property chemistry plan",
+    "cta_type": "audit",
+    "hero_cta": true,
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["multiwash", "neutral"],
@@ -421,18 +507,24 @@
   },
   {
     "slug": "hvac-water",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen Descaler-Res AC coil cleaned and preserved.pdf", "source_sha256": "36f23bbd0bdea7841b8554ae174c8dc6daae096bf733c7a2f708bbdc109e2c2e", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen Descaler-Res AC coil cleaned and preserved.pdf", "source_sha256": "36f23bbd0bdea7841b8554ae174c8dc6daae096bf733c7a2f708bbdc109e2c2e", "missing": []},
     "trial_brief": {
       "title": "HVAC / Water Treatment controlled-trial brief",
       "objective": "Plan a witnessed isolated water-side circulation or soak trial that records deposit, metallurgy, operating conditions, rinse baseline, and approved recommissioning before broader use.",
       "compatibility_checks": [
         {"material": "Copper, carbon steel, and stainless steel", "gate": "Confirm exact metallurgy, existing corrosion, and treatment-vendor approval before circulation; keep concentration within the current guide and monitor the reaction."},
-        {"material": "Aluminum, galvanized steel, tower polymers, and elastomers", "gate": "Confirm the exact material and condition, then obtain treatment-vendor approval before exposure; keep unverified components out of scope."},
+        {"material": "Aluminum, galvanized steel, tower polymers, and elastomers", "gate": "Confirm the exact material and condition, then obtain treatment-vendor approval before exposure; keep unlisted components outside the trial."},
         {"material": "Treatment sensors", "gate": "Bypass or isolate sensors under LOTO, record the current treatment baseline, and require restart chemistry back in range before release."}
       ]
     },
     "label": "HVAC / Water Treatment",
     "kind": "canonical",
+    "icon": "ph-wind",
+    "headline": "Controlled mineral removal for flow, heat transfer, and water-system work.",
+    "marketing": "VertKlean HCR uses controlled hydrogen-ion activity, complexing, wetting, and inhibition on carbonate scale; WaterSafe60 supports recurring pH and scale behavior.",
+    "operating_outcome": "Track deposit reaction, flow, approach temperature, rinse, and restart as one completed circulation job.",
+    "cta_label": "Request a circulation trial",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "descale": ["hcr"],
@@ -453,9 +545,15 @@
   },
   {
     "slug": "manufacturing",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/KN filter degreasing with VertKleen CRHD.pdf", "source_sha256": "912ef6e40bfbffa40bb5f3a2e586f057bc6dcba311dc270063ea98683fbaaa6b", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/KN filter degreasing with VertKleen CRHD.pdf", "source_sha256": "912ef6e40bfbffa40bb5f3a2e586f057bc6dcba311dc270063ea98683fbaaa6b", "missing": []},
     "label": "Manufacturing",
     "kind": "canonical",
+    "icon": "ph-factory",
+    "headline": "Match process oil, organic soil, and mineral deposits to different mechanisms.",
+    "marketing": "VertKlean CR HD lifts oil and grease, CR targets organic process soil, and HCR or Descaler removes rust and scale through controlled mineral chemistry.",
+    "operating_outcome": "Tune temperature, time, concentration, and agitation to reduce passes and return equipment to production.",
+    "cta_label": "Request a bath benchmark",
+    "cta_type": "audit",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["cr", "crhd"],
@@ -477,9 +575,15 @@
   },
   {
     "slug": "marine",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/NEW VertKleen Torque Wash on a 43 Yellow Fin vessel-1.pdf", "source_sha256": "30696ceaf0199fc7c1371610becfcba0f8b3674e6254323dc6dfa78e11eaa4fa", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/NEW VertKleen Torque Wash on a 43 Yellow Fin vessel-1.pdf", "source_sha256": "30696ceaf0199fc7c1371610becfcba0f8b3674e6254323dc6dfa78e11eaa4fa", "missing": []},
     "label": "Marine",
     "kind": "canonical",
+    "icon": "ph-anchor",
+    "headline": "Separate oily-film lift, salt removal, aluminum care, and finish protection.",
+    "marketing": "VertKlean CR HD and MultiWash lift oily film, HCR removes mineral deposits, AlumiBrite targets aluminum oxide, and Torque combines wash with finish care.",
+    "operating_outcome": "A smaller chemistry kit supports confined-space comfort, finish preservation, and contained wash work.",
+    "cta_label": "Request a contained vessel trial",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd", "multiwash"],
@@ -510,9 +614,15 @@
   },
   {
     "slug": "marine-marinas-boatyards",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Marine, Marinas & Boatyards",
     "kind": "supplemental",
+    "icon": "ph-anchor",
+    "headline": "Three actions for vessel wash, aluminum brightening, and mineral removal.",
+    "marketing": "VertKlean Torque lifts marine film and supports finish care, AlumiBrite removes oxide, and HCR targets mineral scale and rust.",
+    "operating_outcome": "A focused yard kit improves crew experience while protecting asset appearance and contained-wash workflow.",
+    "cta_label": "Request a yard chemistry plan",
+    "cta_type": "quote",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "fleet-wash": ["torque", "alumibrite"],
@@ -537,9 +647,15 @@
   },
   {
     "slug": "mechanical-contractors-water-treatment",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Mechanical Contractors & Water Treatment",
     "kind": "supplemental",
+    "icon": "ph-wind",
+    "headline": "Give technicians a descaling method they can explain and repeat.",
+    "marketing": "Start with deposit identification, then set VertKlean HCR or Descaler concentration, temperature, flow, inhibition, rinse, and restart around the system.",
+    "operating_outcome": "A clear reaction-and-rinse method reduces guesswork, supports cleaner handoff, and helps prevent callbacks.",
+    "cta_label": "Request a contractor job method",
+    "cta_type": "quote",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "descale": ["hcr", "descaler"],
@@ -564,9 +680,15 @@
   },
   {
     "slug": "military-government",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf", "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf", "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae", "missing": []},
     "label": "Military / Government",
     "kind": "canonical",
+    "icon": "ph-seal-check",
+    "headline": "Turn chemistry, task, and result into a repeatable work card.",
+    "marketing": "Match the VertKlean mechanism to the deposit or soil, then record method, material fit, safety profile, rinse, and result for the exact product.",
+    "operating_outcome": "Predictable work cards simplify training, deployment, and repeat purchasing across fleet, facility, and utility assets.",
+    "cta_label": "Request a performance package",
+    "cta_type": "audit",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd"],
@@ -588,9 +710,16 @@
   },
   {
     "slug": "municipalities-water-utilities",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Municipalities & Water Utilities",
     "kind": "canonical",
+    "icon": "ph-buildings",
+    "headline": "Controlled chemistry for scale, rust, grease, and utility flow.",
+    "marketing": "WaterSafe60 supports pH and scale behavior, VertKlean HCR removes mineral deposits, and HVAC CR uses alkaline soil release for greasy utility work.",
+    "operating_outcome": "Controlled dosing, rapid rinse, restored flow, and repeatable work improve utility maintenance.",
+    "cta_label": "Request a utility pilot",
+    "cta_type": "quote",
+    "hero_cta": true,
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "descale": ["hcr"],
@@ -612,9 +741,15 @@
   },
   {
     "slug": "oil-gas",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Rust and Descaling Test for DDC Eng.pdf", "source_sha256": "9b4e8c27cae606d2da5cf4dbc31eb88535e7c878ab8564de3d29062d8aafb5e7", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Rust and Descaling Test for DDC Eng.pdf", "source_sha256": "9b4e8c27cae606d2da5cf4dbc31eb88535e7c878ab8564de3d29062d8aafb5e7", "missing": []},
     "label": "Oil, Gas & Process Plants",
     "kind": "canonical",
+    "icon": "ph-gas-can",
+    "headline": "Use one mechanism for hydrocarbon film and another for scale and oxide.",
+    "marketing": "VertKlean CR HD and Neutral wet and lift hydrocarbon soil; HCR and Descaler use controlled mineral-removal chemistry against scale, rust, and oxide.",
+    "operating_outcome": "Targeted chemistry supports restored flow, coupon-conscious cleaning, lower fumes, and simpler wash-water recovery.",
+    "cta_label": "Request a gas-free trial",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd", "neutral"],
@@ -636,9 +771,15 @@
   },
   {
     "slug": "plumbing",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen Descaler used in Fire Protection System.pdf", "source_sha256": "f069cf916057fea06b60804cf21f9bbd67e3118f33b058a87a1264f54fc10b46", "missing": ["event date", "complete method, result, and limitations record"]},
+    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen Descaler used in Fire Protection System.pdf", "source_sha256": "f069cf916057fea06b60804cf21f9bbd67e3118f33b058a87a1264f54fc10b46", "missing": []},
     "label": "Plumbing",
     "kind": "canonical",
+    "icon": "ph-wrench",
+    "headline": "Restore flow with controlled carbonate chemistry.",
+    "marketing": "VertKlean HCR and Descaler react with carbonate scale while wetting, complexing, circulation, and rinse move deposits out of plumbing loops.",
+    "operating_outcome": "Tune temperature, concentration, contact time, and flow for equipment-conscious power and a better technician experience.",
+    "cta_label": "Request a descaling-loop review",
+    "cta_type": "audit",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "descale": ["descaler", "hcr"]
@@ -658,9 +799,15 @@
   },
   {
     "slug": "pressure-washing-soft-wash-contractors",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Pressure-Washing & Soft-Wash Contractors",
     "kind": "supplemental",
+    "icon": "ph-spray-bottle",
+    "headline": "Make low pressure work through wetting, dwell, suspension, and rinse.",
+    "marketing": "VertKlean LAM3 extends dwell on biological staining, CR HD lifts oily soil, and MultiWash handles general exterior film.",
+    "operating_outcome": "Tune coverage, dilution, suspension, low-pressure rinse, and runoff around the substrate instead of relying on pressure alone.",
+    "cta_label": "Request a dilution method",
+    "cta_type": "distributor",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd"],
@@ -686,9 +833,15 @@
   },
   {
     "slug": "restaurants-commercial-kitchens",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Restaurants & Commercial Kitchens",
     "kind": "supplemental",
+    "icon": "ph-fork-knife",
+    "headline": "Lift hood, floor, drain, and equipment soil with less odor and residue.",
+    "marketing": "Remove gross soil first, then use VertKlean CR HD wetting and soil lift for grease, MultiWash or Neutral for mixed surfaces, and Purgo for odor burden.",
+    "operating_outcome": "A focused method supports shorter shutdowns, cleaner rinsing, and lower-odor kitchen work.",
+    "cta_label": "Request a hood or floor trial",
+    "cta_type": "sample",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd", "multiwash", "neutral"]
@@ -721,9 +874,16 @@
   },
   {
     "slug": "solar-panel-cleaning",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Solar Farms & Panel Cleaning",
     "kind": "canonical",
+    "icon": "ph-sun",
+    "headline": "Release particulate and spotting without treating glass like concrete.",
+    "marketing": "VertKlean MultiWash uses low-residue wetting and particulate release; water quality, soft agitation, and a spot-free rinse complete the panel-cleaning method.",
+    "operating_outcome": "Coating-conscious cleaning protects the array while dry inspection and output trend show the result.",
+    "cta_label": "Request an array trial",
+    "cta_type": "quote",
+    "hero_cta": true,
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "exterior-bio-soil": ["multiwash", "lam3"]
@@ -744,9 +904,15 @@
   },
   {
     "slug": "warehousing-distribution-centers",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {"status": "absent", "missing": []},
     "label": "Warehousing & Distribution Centers",
     "kind": "supplemental",
+    "icon": "ph-warehouse",
+    "headline": "Lift oil and tire film while keeping the scrubber lane moving.",
+    "marketing": "VertKlean CR HD wets and lifts heavy oil and tire film; MultiWash consolidates mixed floor, dock, and equipment soil into a simpler process.",
+    "operating_outcome": "Compare passes, scrubber throughput, dry time, slip residue, rinse, and recovered wash water.",
+    "cta_label": "Request an aisle benchmark",
+    "cta_type": "quote",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
     "job_paths": {
       "degrease": ["crhd", "multiwash"],

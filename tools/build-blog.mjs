@@ -23,8 +23,8 @@ const ORG = {
   name: "MASEST Consulting LLC",
   url: `${BASE}/`,
   logo: `${BASE}/img/masest-logo.png`,
-  brand: "VertKleen",
-  description: "Industrial cleaning chemistry selected through current-document review and controlled trials.",
+  brand: "VertKlean",
+  description: "VertKlean replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
   areaServed: "United States and international commercial accounts",
   contactPoint: {
     "@type": "ContactPoint",
@@ -136,14 +136,14 @@ function postPage(post, all) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${text(post.title)} | MASEST VertKleen</title>
+<title>${text(post.title)} | MASEST VertKlean</title>
 <meta name="description" content="${attr(post.excerpt)}">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <meta property="og:title" content="${attr(post.title)}">
 <meta property="og:description" content="${attr(post.excerpt)}">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="MASEST VertKleen">
+<meta property="og:site_name" content="MASEST VertKlean">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
@@ -181,7 +181,7 @@ function postPage(post, all) {
     ${relatedHtml}
     <aside class="blog-cta">
       <h2>Need this chemistry for your facility?</h2>
-      <p>Match a VertKleen product to your application or request program pricing.</p>
+      <p>Match a VertKlean product to your application or request program pricing.</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="../contact?type=quote">Request a quote</a>
         <a class="btn btn-ghost" href="../products">Browse products</a>
@@ -189,7 +189,7 @@ function postPage(post, all) {
     </aside>
   </article>
 </main>
-<script type="module" src="../js/main.js?v=20260725f"></script>
+<script type="module" src="../js/main.js?v=20260726a"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
@@ -222,7 +222,7 @@ function indexPage(posts) {
   const schema = {
     "@context": "https://schema.org",
     "@type": "Blog",
-    name: "MASEST VertKleen Blog",
+    name: "MASEST VertKlean Blog",
     url: `${BASE}/blog`,
     publisher: ORG,
   };
@@ -231,15 +231,15 @@ function indexPage(posts) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blog | MASEST VertKleen</title>
-<meta name="description" content="Field notes, technical guides, and program news on lower-hazard VertKleen cleaning chemistry.">
+<title>Blog | MASEST VertKlean</title>
+<meta name="description" content="Field notes, technical guides, and program news on lower-hazard VertKlean cleaning chemistry.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
-<meta property="og:title" content="Blog | MASEST VertKleen">
-<meta property="og:description" content="Field notes, technical guides, and program news on VertKleen chemistry.">
+<meta property="og:title" content="Blog | MASEST VertKlean">
+<meta property="og:description" content="Field notes, technical guides, and program news on VertKlean chemistry.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="MASEST VertKleen">
-<link rel="alternate" type="application/rss+xml" title="MASEST VertKleen Blog" href="/blog/feed.xml">
+<meta property="og:site_name" content="MASEST VertKlean">
+<link rel="alternate" type="application/rss+xml" title="MASEST VertKlean Blog" href="/blog/feed.xml">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
@@ -270,9 +270,9 @@ function indexPage(posts) {
 <main id="main">
   <section class="hero blog-index-hero">
     <div class="wrap">
-      <span class="eyebrow">VertKleen Briefing</span>
+      <span class="eyebrow">VertKlean Briefing</span>
       <h1 class="display">Blog</h1>
-      <p class="subhead">Field notes, technical guides, and program news.</p>
+      <p class="subhead">How the chemistry works, why operators switch, and what changes in the field.</p>
     </div>
   </section>
   <section class="section">
@@ -286,13 +286,13 @@ ${cards}
   </section>
   <section class="block-dark on-dark cta-band">
     <div class="wrap reveal">
-      <h2 class="headline">Ready to swap the hazard off your shelf?</h2>
-      <p class="subhead">Tell us the chemical and task you run today. We will return the closest VertKleen candidate, current documentation, and a controlled-trial plan for your safety team to review.</p>
-      <a class="btn btn-primary" href="products#catalog">Find your replacement</a>
+      <h2 class="headline">Start with the cleaning problem.</h2>
+      <p class="subhead">Match mineral deposits, organic soils, mixed facility work, or bio-active control to the exact VertKlean product.</p>
+      <a class="btn btn-primary" href="products#catalog">Browse by cleaning problem</a>
     </div>
   </section>
 </main>
-<script type="module" src="js/main.js?v=20260725f"></script>
+<script type="module" src="js/main.js?v=20260726a"></script>
 <script type="module" src="js/blog-index.js"></script>
 <script src="js/track.js" defer></script>
 </body>
@@ -318,9 +318,9 @@ function feedXml(posts) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>MASEST VertKleen Blog</title>
+    <title>MASEST VertKlean Blog</title>
     <link>${BASE}/blog</link>
-    <description>Field notes, technical guides, and program news on VertKleen chemistry.</description>
+    <description>How VertKlean chemistry works, why operators switch, and what changes in the field.</description>
     <language>en-us</language>
 ${items}
   </channel>

@@ -28,7 +28,7 @@ test("canonical catalog carries the confirmed July 2026 workbook products and va
   assert.equal(data.products.length, 15);
   assert.equal(data.product_variants.length, 66);
   assert.deepEqual(data.products.map((product) => product.slug), CONFIRMED_WORKBOOK_PRODUCTS);
-  assert.equal(data.products.find((product) => product.slug === "multiwash")?.name, "VertKleen MultiWash");
+  assert.equal(data.products.find((product) => product.slug === "multiwash")?.name, "VertKlean MultiWash");
 
   const hcrTrial = data.product_variants.find((v) => v.sku === "VK-HCR-1G");
   assert.equal(hcrTrial.product_slug, "hcr");
@@ -251,14 +251,14 @@ test("site copy respects documentation claim guardrails", () => {
   assert.doesNotMatch(publicClaimCopy, /Minimum-risk antimicrobial and odor-control support|Antimicrobial multi-surface cleaner|neutralizes odors at molecular level/i);
   assert.doesNotMatch(publicClaimCopy, /FIFRA 25\(b\) minimum-risk/i);
   assert.doesNotMatch(publicClaimCopy, /SAM\.gov registered|procurement-ready/i);
-  assert.doesNotMatch(publicClaimCopy, /drops the hazard rating to 0-0-0|Every VertKleen parent product is rated 0-0-0/i);
+  assert.doesNotMatch(publicClaimCopy, /drops the hazard rating to 0-0-0|Every VertKlean parent product is rated 0-0-0/i);
   assert.doesNotMatch(publicClaimCopy, /service with the building still occupied|turn maintenance into an evacuation|fewer HazCom headaches/i);
   assert.doesNotMatch(publicClaimCopy, /Biodegrades in under 10 days|no toxic fuming/i);
   assert.doesNotMatch(publicClaimCopy, /Engineering-reviewed ASHRAE 188 WMP|Legionella assessment and full injection system|quarterly Legionella|24\/7 response/i);
   assert.doesNotMatch(publicClaimCopy, /without acid fumes, a solvent storage cabinet, or hazmat freight|students and staff still on campus|without handling hydrochloric acid/i);
   assert.doesNotMatch(publicClaimCopy, /non-corrosive hydrochloric-acid replacement|Non-corrosive coil descaler|no harsh fumes around the water/i);
   assert.doesNotMatch(publicClaimCopy, /Days to biodegrade|lower ratings can reduce PPE requirements|fewer segregation rules/i);
-  assert.doesNotMatch(publicClaimCopy, /Every tier runs on.*HMIS 0-0-0|HMIS 0-0-0 replacements for acid|Every cataloged VertKleen product.*HMIS 0-0-0/i);
+  assert.doesNotMatch(publicClaimCopy, /Every tier runs on.*HMIS 0-0-0|HMIS 0-0-0 replacements for acid|Every cataloged VertKlean product.*HMIS 0-0-0/i);
   assert.doesNotMatch(resourcesHtml, /minimum-risk antimicrobial support/i);
   assert.doesNotMatch(resourcesHtml, /data-source-table="(?:cooling-tower-traditional-vs-vertkleen|descaler-vs-acids-corrosion|dealership-area-dilution|carib-brewery-lab-results)"/);
 });

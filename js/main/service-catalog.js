@@ -114,6 +114,13 @@ function countLabel(count, category = "") {
   return `${count} ${count === 1 ? "line item" : "line items"}`;
 }
 
+function serviceCtaLabel(item) {
+  const subject = `${item.category || ""} ${item.name || ""}`;
+  if (/material|deposit|corrosion|pipe|particle|element/i.test(subject)) return "Request a deposit test";
+  if (/field|equipment|inspection|borescope|ultrasonic|sprinkler/i.test(subject)) return "Request a wash benchmark";
+  return "Request a cycle review";
+}
+
 function renderServiceCard(item) {
   const name = displayServiceName(item.name);
   // Keep the "per" — a bare "sample" next to a dollar figure reads as
@@ -129,6 +136,7 @@ function renderServiceCard(item) {
   const description = item.description
     ? normalizeText(item.description)
     : "Final scope, schedule, and deliverables are confirmed before work begins.";
+  const cta = serviceCtaLabel(item);
 
   return `
     <article class="service-card" data-service-sku="${htmlEscape(sku)}">
@@ -141,7 +149,7 @@ function renderServiceCard(item) {
         <span>${htmlEscape(unit)}</span>
         <b>${htmlEscape(price)}</b>
       </div>
-      <a class="btn btn-secondary btn-sm" href="${href}" aria-label="Request ${htmlEscape(name)}">Request service</a>
+      <a class="btn btn-secondary btn-sm" href="${href}" aria-label="${cta}: ${htmlEscape(name)}">${cta}</a>
     </article>
   `;
 }

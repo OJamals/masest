@@ -495,7 +495,7 @@ export function initQuoteForm() {
     const lines = [];
     for (const [k, v] of data.entries()) if (String(v).trim()) lines.push((labels[k] || k) + ": " + v);
     const reqLabel = (data.get("type") || "quote").replace(/^./, c => c.toUpperCase());
-    const subject = reqLabel + " request: " + (data.get("product") || data.get("industry") || "VertKleen") + " (" + (data.get("company") || data.get("name")) + ")";
+    const subject = reqLabel + " request: " + (data.get("product") || data.get("industry") || "VertKlean") + " (" + (data.get("company") || data.get("name")) + ")";
     const mailto = "mailto:" + SALES_EMAIL +
       "?subject=" + encodeURIComponent(subject) +
       "&body=" + encodeURIComponent(lines.join("\n"));

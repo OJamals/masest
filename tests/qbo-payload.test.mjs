@@ -194,7 +194,7 @@ test("Stripe program invoices reuse the invoice plus payment accounting path", (
     company_id: "co-1",
     customer_email: "billing@example.test",
     tier: "Gold",
-    description: "VertKleen Gold program",
+    description: "VertKlean Gold program",
     subtotal: 100,
     tax: 9,
     total: 109,
@@ -215,7 +215,7 @@ test("Stripe program invoices reuse the invoice plus payment accounting path", (
   });
   assert.deepEqual(subscriptionItemsForQbo(row), [{
     sku: "program:gold",
-    name: "VertKleen Gold program",
+    name: "VertKlean Gold program",
     type: "service",
     qty: 1,
     unit_price: 100,

@@ -1,5 +1,5 @@
 /* ============================================================
-   MASEST / VertKleen — Scrollytelling story v5 (homepage opener)
+   MASEST / VertKlean — Scrollytelling story v5 (homepage opener)
    GSAP ScrollTrigger engine, native browser scroll (js/story.js).
    Dark, cinematic, art-directed; hands off to the light factual
    sections below. Reduced-motion + no-JS = static stacked layout.
@@ -526,7 +526,7 @@
    ACT 3 — THE BILL / ACT 4 — THE ZERO (mirrored hazard ledgers)
    Act 3 builds the conventional ledger row by row (chemical,
    HMIS score, what it adds to the job) and ends on the injury
-   total. Act 4 repeats the exact skeleton with VertKleen rows
+   total. Act 4 repeats the exact skeleton with VertKlean rows
    at 0-0-0 and the burdens coming off the bill.
    ============================================================ */
 .story .act-hmis .stage,
@@ -794,7 +794,7 @@
   .act-savior .savior-wrap .lede { margin-top: 8px; font-size: 1rem; max-width: 54ch; }
 }
 
-/* Clear the fixed nav so the "Enter VertKleen" badge never tucks under it,
+/* Clear the fixed nav so the "Enter VertKlean" badge never tucks under it,
    then scale the savior stack to fit the height that's left. .savior-wrap is
    NOT GSAP-transformed, so a CSS scale is safe and stays centered via the
    stage's place-items:center. Steps cascade — shortest matching rule wins. */
@@ -1485,7 +1485,7 @@ justify-content: flex-start;
 
 
 /* ============================================================
-   ACT 4 — THE COST (split-screen: conventional cost climbs, VertKleen at zero)
+   ACT 4 — THE COST (split-screen: conventional cost climbs, VertKlean at zero)
    No plain opacity:0 on [data-at] here — the global fallback near the
    top of this file owns reveal/visibility. Keep the stage within its
    floor on short viewports (see scene-3 overflow fix).

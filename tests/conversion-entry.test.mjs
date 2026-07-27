@@ -8,7 +8,7 @@ test("mobile discovery keeps the direct catalog path without the retired replace
   const products = read("products.html");
   const css = read("css/style.css");
 
-  assert.match(products, /href="#catalog">Browse all products<\/a>/);
+  assert.match(products, /href="#catalog">Shop by cleaning job<\/a>/);
   assert.doesNotMatch(products, /href="#swap"|id="swap"|id="replacementRouter"|id="swapMatrix"/);
   assert.doesNotMatch(
     css,
@@ -22,7 +22,7 @@ test("mobile discovery keeps the direct catalog path without the retired replace
 test("request page leads into the form before process reassurance", () => {
   const contact = read("contact.html");
   const css = read("css/style.css");
-  const start = contact.indexOf('href="#quoteForm">Start your request');
+  const start = contact.indexOf('href="#quoteForm">Build my replacement plan');
   const form = contact.indexOf('id="quoteForm"');
   const assurance = contact.indexOf('class="quote-assurance"');
 
@@ -61,10 +61,14 @@ test("animated homepage copy keeps stable accessible names", () => {
   assert.match(home, /<section class="act"[^>]*aria-labelledby="storyAct1Title">/);
   assert.match(
     home,
-    /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial cleaning power\. Lower-hazard candidates\.<\/h1>/,
+    /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial cleaning power, engineered around people and equipment\.<\/h1>/,
   );
-  assert.match(home, /aria-label="Find your VertKleen replacement"/);
-  assert.match(home, /aria-label="Request a VertKleen trial"/);
+  assert.match(home, /aria-label="Shop VertKlean by cleaning job"/);
+  assert.match(home, /aria-label="Plan a VertKlean field trial"/);
+  assert.doesNotMatch(home, /starting candidate|trial candidate|Candidate only after|path to approval/i);
+  assert.match(home, /React, complex, rinse/);
+  assert.match(home, /Completed-task cost/);
+  assert.doesNotMatch(home, /class="cmp-table cmp-jobs"/);
 });
 
 test("CIP pricing label stays consistent across entry, detail, and resource surfaces", () => {
@@ -75,17 +79,61 @@ test("CIP pricing label stays consistent across entry, detail, and resource surf
   const segment = segments.segments.find((item) => item.slug === "cip-food-beverage");
 
   assert.match(products, />CIP pricing<\/a>/);
-  assert.match(pricing, /<title>CIP Pricing \| MASEST VertKleen<\/title>/);
-  assert.match(pricing, /<h1 class="display">CIP pricing\.<\/h1>/);
+  assert.match(pricing, /<title>CIP Pricing \| MASEST VertKlean<\/title>/);
+  assert.match(pricing, /<h1 class="display">Build the cleaning cycle around the soil\.<\/h1>/);
   assert.equal(segment?.title, "CIP pricing");
+  assert.match(
+    segment?.rows.find((row) => row.product_slug === "cr")?.application || "",
+    /High-pH soil-lift chemistry[\s\S]*wetting and sequestration/,
+  );
+  assert.match(
+    segment?.rows.find((row) => row.product_slug === "hcr")?.application || "",
+    /Mineral-removal chemistry[\s\S]*complexing dissolved minerals/,
+  );
+  assert.doesNotMatch(
+    segment?.rows.find((row) => row.product_slug === "purgo")?.application || "",
+    /candidate|approved label|regulatory review/i,
+  );
   assert.match(resources, />Open CIP pricing<\/a>/);
+});
+
+test("support routes use task-first science copy without changing destinations", () => {
+  const pages = {
+    about: read("about.html"),
+    services: read("services.html"),
+    programs: read("programs.html"),
+    resources: read("resources.html"),
+    newsletter: read("newsletter.html"),
+    hvacPricing: read("pricing-hvac-facilities.html"),
+    cipPricing: read("pricing-cip-food-beverage.html"),
+    serviceCatalog: read("js/main/service-catalog.js"),
+    catalogData: read("js/main/catalog-data.js"),
+  };
+
+  assert.match(pages.about, />Request an application review<\/a>/);
+  assert.match(pages.services, />Prove the switch before you scale it\.<\/h1>/);
+  for (const label of ["Request a deposit test", "Request a wash benchmark", "Request a cycle review"]) {
+    assert.match(pages.serviceCatalog, new RegExp(label));
+  }
+  assert.match(pages.programs, />Request a chemistry-program quote<\/a>/);
+  assert.match(pages.resources, />Request an application protocol<\/a>/);
+  assert.match(pages.newsletter, />One mechanism\. One field result\. One practical win\.<\/h1>/);
+  assert.match(pages.hvacPricing, />Price the result, not the gallon\.<\/h1>/);
+  assert.match(pages.hvacPricing, />Request completed-task pricing<\/a>/);
+  assert.match(pages.cipPricing, />Request CIP pricing<\/a>/);
+  for (const page of [pages.about, pages.services, pages.programs, pages.resources, pages.catalogData]) {
+    assert.doesNotMatch(
+      page,
+      /Independently verified|compliance deadline|verification work|regulatory and label file|Signed trial brief|site approval|Regulatory Status Documentation/i,
+    );
+  }
 });
 
 test("public content generators preserve current SEO releases", () => {
   const blogBuilder = read("tools/build-blog.mjs");
   const comparisonBuilder = read("tools/gen_comparisons.mjs");
 
-  assert.match(blogBuilder, /brand: "VertKleen"/);
+  assert.match(blogBuilder, /brand: "VertKlean"/);
   assert.match(blogBuilder, /if \(!missing\.length\) return 0;/);
   assert.match(blogBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);
   assert.match(comparisonBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);

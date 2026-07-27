@@ -9,7 +9,7 @@ test("admin catalog presents workbook pricing as read-only", () => {
   const products = read("js/admin/products.js");
   const pricing = read("js/admin/pricing.js");
 
-  assert.match(html, /id="catalogPriceGovernance"[\s\S]*VertKleen_Website_Pricing_WebDev\.xlsx[\s\S]*npm run seed/);
+  assert.match(html, /id="catalogPriceGovernance"[\s\S]*VertKlean_Website_Pricing_WebDev\.xlsx[\s\S]*npm run seed/);
   assert.match(html, /id="npPrice"[^>]*readonly/);
   assert.match(html, /id="nvPrice"[^>]*readonly/);
   assert.doesNotMatch(products, /data-field="price"/);

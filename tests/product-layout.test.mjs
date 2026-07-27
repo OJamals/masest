@@ -8,12 +8,14 @@ import {
   CATALOG_ORDER,
   PRODUCT_CATALOG_COPY,
   PRODUCTS,
+  productHighlights,
 } from "../js/main/catalog-data.js";
 import { catalogCard, catalogDecisionHTML } from "../js/main/commerce-ui.js";
 
 const PORT = 4187;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const PROJECT_ROOT = new URL("..", import.meta.url);
+const readProject = (path) => readFileSync(new URL(path, PROJECT_ROOT), "utf8");
 
 function serverReady() {
   return fetch(`${BASE_URL}/products.html`)
@@ -47,6 +49,28 @@ test("catalog cards derive compact proof and fit cues from catalog data", () => 
       ),
       `${id} should route proof review to its detail page`,
     );
+  }
+});
+
+test("product highlights come from the shared marketing-science source", () => {
+  for (const id of Object.keys(PRODUCTS)) {
+    const highlights = productHighlights(id);
+    assert.equal(highlights.length, 4, `${id}: four concise highlights`);
+    assert.doesNotMatch(
+      highlights.flat().join(" "),
+      /claim boundary|document-gated|current SDS|approval|verification incomplete/i,
+      `${id}: no legacy claim-firewall copy`,
+    );
+  }
+});
+
+test("generated product pages reuse existing highlights without added science or authority sections", () => {
+  for (const id of CATALOG_ORDER) {
+    const html = readProject(`products/${id}.html`);
+    assert.doesNotMatch(html, /product-science-section|authority-section|authority-records/);
+    assert.match(html, /<b>How it works<\/b>/);
+    assert.match(html, /<b>Why buyers switch<\/b>/);
+    assert.match(html, /<b>Result record<\/b>/);
   }
 });
 
@@ -228,16 +252,38 @@ test("commerce size labels stay readable and bulk quote actions stay centered", 
 
 test("static product detail heroes publish full catalog copy", () => {
   for (const id of CATALOG_ORDER) {
-    const product = PRODUCTS[id];
+    const copy = PRODUCT_CATALOG_COPY[id];
     const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
     const subhead = html.match(/<p class="subhead">([^<]*)<\/p>/)?.[1] || "";
 
     assert.ok(subhead, `${id} static detail page should include hero copy`);
     assert.ok(
-      subhead.includes(htmlText(product.desc)),
-      `${id} hero copy should include the full product description`,
+      subhead.includes(htmlText(copy.summary)),
+      `${id} hero copy should include the conversion summary`,
     );
     assert.ok(!subhead.includes("..."), `${id} hero copy should not be pre-truncated`);
+  }
+});
+
+test("all product pages explain platform science, operator advantage, and next action", () => {
+  for (const id of CATALOG_ORDER) {
+    const copy = PRODUCT_CATALOG_COPY[id];
+    const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
+
+    assert.ok(copy.platform?.trim(), `${id}: platform`);
+    assert.ok(copy.mechanism?.trim(), `${id}: mechanism`);
+    assert.ok(copy.operator_advantage?.trim(), `${id}: operator advantage`);
+    assert.match(html, /How it works/);
+    assert.ok(html.includes(htmlText(copy.mechanism)), `${id}: mechanism copy`);
+    assert.ok(html.includes(htmlText(copy.operator_advantage)), `${id}: operator advantage copy`);
+    assert.ok(
+      html.includes(htmlText(copy.sample_cta || "Request free sample")),
+      `${id}: sample action`,
+    );
+    assert.ok(
+      html.includes(htmlText(copy.quote_cta || "Request a quote")),
+      `${id}: quote action`,
+    );
   }
 });
 
@@ -299,7 +345,6 @@ test("public CTA groups keep a consistent gap from their lead copy", async () =>
     const cases = [
       ["services.html", ".services-hero-copy .subhead", ".services-hero-copy .hero-actions", 28, 36],
       ["proof.html", ".page-hero .subhead", ".page-hero .btn", 28, 36],
-      ["proof.html", ".proof-source-summary .subhead", ".proof-source-summary .proof-source-disclosure", 22, 32],
       ["about.html", "#serviceCatalog .subhead", "#serviceCatalog .btn", 28, 36],
       ["industries.html", ".block-dark .section-head .subhead", ".block-dark .section-head .btn", 28, 36],
       ["programs.html", ".cta-band .subhead", ".cta-band .btn", 34, 42],
@@ -347,7 +392,7 @@ test("product detail renders HMIS panel rows from product data", async () => {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     try {
       await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen CIP HCR"));
+      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKlean CIP HCR"));
       await page.waitForTimeout(300);
       const rows = await page.$$eval("#panelRows .hmis-row", (els) =>
         els.map((el) => ({
@@ -400,21 +445,21 @@ test("product detail related products render thumbnails on the blue media stage"
   });
 });
 
-test("static product detail renders specs uses and docs without commerce API", async () => {
+test("static product detail renders marketing-science highlights, uses, and docs without commerce API", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     try {
       await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen CIP HCR"));
-      await page.waitForFunction(() => document.querySelector("#pSpecs")?.textContent.includes("Current SDS"));
+      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKlean CIP HCR"));
+      await page.waitForFunction(() => document.querySelector("#pSpecs")?.textContent.includes("How it works"));
       const content = await page.evaluate(() => ({
         specs: document.querySelector("#pSpecs")?.textContent || "",
         uses: document.querySelector("#pUses")?.textContent || "",
         docs: document.querySelector("#pDocs")?.textContent || "",
         mediaHidden: document.querySelector("#pMediaSection")?.hasAttribute("hidden")
       }));
-      assert.match(content.specs, /Current SDS.*Controlled acid step/i);
+      assert.match(content.specs, /Powered by SynTech.*How it works.*Why buyers switch.*Result record/i);
       assert.match(content.uses, /Beer-stone|brewery CIP|heat-exchanger/i);
       assert.match(content.docs, /Safety Data Sheet/);
       assert.equal(content.mediaHidden, false, "field photos section should render from static product data");
@@ -438,7 +483,7 @@ test("static product detail keeps the price panel clear of the following card", 
         body: JSON.stringify({
           products: [{
             sku: "cr",
-            name: "VertKleen CIP CR",
+            name: "VertKlean CIP CR",
             mode: "buy",
             active: true,
             product_variants: [{
@@ -481,7 +526,7 @@ test("non-canonical CRS route shows the current-catalog fallback and no checkout
         body: JSON.stringify({
           products: [{
             sku: "descaler",
-            name: "VertKleen Descaler",
+            name: "VertKlean Descaler",
             mode: "buy",
             active: true,
             product_variants: [{

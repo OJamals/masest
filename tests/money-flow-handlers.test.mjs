@@ -16,7 +16,7 @@ const variant = {
   stock: 10,
   track_stock: true,
   allow_backorder: false,
-  products: { name: 'VertKleen', mode: 'buy', active: true, taxable: true },
+  products: { name: 'VertKlean', mode: 'buy', active: true, taxable: true },
 };
 
 function jsonRequest(url, body, headers = {}) {
@@ -273,7 +273,7 @@ test('NET checkout delegates the complete ledger mutation and PO reference to pl
   assert.deepEqual(rpcArgs.p_items, [{
     sku: 'VK-1',
     product_sku: 'VK',
-    name: 'VertKleen - 1 gal',
+    name: 'VertKlean - 1 gal',
     qty: 2,
     unit_price: 25,
     line_total: 50,
@@ -635,7 +635,7 @@ function webhookDb(calls, persistResults, effectResults = []) {
           select() { return this; },
           async in() {
             calls.push('variants.enrich');
-            return { data: [{ vsku: 'VK-1', label: '1 gal', products: { name: 'VertKleen' } }], error: null };
+            return { data: [{ vsku: 'VK-1', label: '1 gal', products: { name: 'VertKlean' } }], error: null };
           },
         };
       }
@@ -711,7 +711,7 @@ test('webhook hydrates an incomplete checkout event before persisting the paid o
     order_id: null,
     sku: 'VK-1',
     product_sku: 'VK',
-    name: 'VertKleen - 1 gal',
+    name: 'VertKlean - 1 gal',
     qty: 1,
     unit_price: 25,
     line_total: 25,

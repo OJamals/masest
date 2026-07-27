@@ -4,7 +4,7 @@
   "products": [
     {
       "slug": "cr",
-      "name": "VertKleen CIP CR",
+      "name": "VertKlean CIP CR",
       "sku_stem": "VK-CR",
       "family": "cleaning_degreasing",
       "group_key": "cip_brewery",
@@ -16,11 +16,11 @@
       "public_visible": true,
       "sort": 1,
       "description": "CIP caustic replacement for brewery lines, kegs, tanks, organics, and pH",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "cr2",
-      "name": "VertKleen HVAC CR",
+      "name": "VertKlean HVAC CR",
       "sku_stem": "VK-CR2",
       "family": "water_treatment_specialty",
       "group_key": "water",
@@ -32,11 +32,11 @@
       "public_visible": true,
       "sort": 2,
       "description": "HVAC caustic replacement for drains, grease, and organic buildup",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "hcr",
-      "name": "VertKleen CIP HCR",
+      "name": "VertKlean CIP HCR",
       "sku_stem": "VK-HCR",
       "family": "cleaning_degreasing",
       "group_key": "descale",
@@ -48,11 +48,11 @@
       "public_visible": true,
       "sort": 3,
       "description": "CIP synthetic-acid beer-stone remover for brewery cleaning",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "hcr-t16",
-      "name": "VertKleen HVAC HCR",
+      "name": "VertKlean HVAC HCR",
       "sku_stem": "VK-HCR-T16",
       "family": "cleaning_degreasing",
       "group_key": "descale",
@@ -64,11 +64,11 @@
       "public_visible": true,
       "sort": 4,
       "description": "HVAC synthetic HCl replacement for calcium, scale, and rust",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "descaler",
-      "name": "VertKleen Descaler",
+      "name": "VertKlean Descaler",
       "sku_stem": "VK-DESC",
       "family": "cleaning_degreasing",
       "group_key": "hvac_coils",
@@ -80,11 +80,11 @@
       "public_visible": true,
       "sort": 5,
       "description": "HCl-style descaling for coils, towers, pumps, and loops",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "cr-hd",
-      "name": "VertKleen CRHD",
+      "name": "VertKlean CRHD",
       "sku_stem": "VK-CRHD",
       "family": "cleaning_degreasing",
       "group_key": "degrease",
@@ -96,11 +96,11 @@
       "public_visible": true,
       "sort": 6,
       "description": "High-active degreaser with current-document review and controlled-trial support",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "cr-hd-low-foam",
-      "name": "VertKleen CRHD Low Foam",
+      "name": "VertKlean CRHD Low Foam",
       "sku_stem": "VK-CRHD-LF",
       "family": "cleaning_degreasing",
       "group_key": "degrease",
@@ -112,11 +112,11 @@
       "public_visible": true,
       "sort": 7,
       "description": "CR HD-style degreasing for scrubbers and recirculating wash",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "neutral",
-      "name": "VertKleen Neutral",
+      "name": "VertKlean Neutral",
       "sku_stem": "VK-NEUT",
       "family": "cleaning_degreasing",
       "group_key": "degrease",
@@ -128,11 +128,11 @@
       "public_visible": true,
       "sort": 8,
       "description": "pH-7 degreaser when surfaces, seals, or finishes get a vote",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "multiwash",
-      "name": "VertKleen MultiWash",
+      "name": "VertKlean MultiWash",
       "sku_stem": "VK-MW",
       "family": "cleaning_degreasing",
       "group_key": "softwash_exterior",
@@ -144,11 +144,11 @@
       "public_visible": true,
       "sort": 9,
       "description": "One-bottle facility cleaner for wet zones, exteriors, and daily mess",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "lam3",
-      "name": "VertKleen Lam3",
+      "name": "VertKlean Lam3",
       "sku_stem": "VK-LAM3",
       "family": "cleaning_degreasing",
       "group_key": "softwash_exterior",
@@ -160,11 +160,11 @@
       "public_visible": true,
       "sort": 10,
       "description": "Spray-and-walk-away remover for lichen, algae, moss, and mold",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "purgo",
-      "name": "VertKleen Purgo",
+      "name": "VertKlean Purgo",
       "sku_stem": "VK-PRG",
       "family": "water_treatment_specialty",
       "group_key": "water",
@@ -175,12 +175,12 @@
       "active": true,
       "public_visible": true,
       "sort": 11,
-      "description": "Water-treatment and odor-control candidate; exact uses require approved label and regulatory review",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "description": "Water-treatment and odor-control chemistry for organic-load management in towers, drains, process water, and facility programs",
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "alumibrite",
-      "name": "VertKleen AlumiBrite",
+      "name": "VertKlean AlumiBrite",
       "sku_stem": "VK-ALB",
       "family": "cleaning_degreasing",
       "group_key": "marine",
@@ -192,11 +192,11 @@
       "public_visible": true,
       "sort": 12,
       "description": "HF/HCl-free aluminum brightening with strong Acid Brightening Index proof",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "torque",
-      "name": "VertKleen Torque",
+      "name": "VertKlean Torque",
       "sku_stem": "VK-TRQ",
       "family": "cleaning_degreasing",
       "group_key": "marine",
@@ -208,11 +208,11 @@
       "public_visible": true,
       "sort": 13,
       "description": "Wash, wax, done - vehicle and marine gloss in one pass",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "sar",
-      "name": "VertKleen SAR",
+      "name": "VertKlean SAR",
       "sku_stem": "VK-SAR",
       "family": "cleaning_degreasing",
       "group_key": "specialty",
@@ -224,7 +224,7 @@
       "public_visible": true,
       "sort": 14,
       "description": "Specialty acid replacement for quote-scoped water and process jobs",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "slug": "watersafe60",
@@ -240,7 +240,7 @@
       "public_visible": true,
       "sort": 15,
       "description": "Heavy-metal-free cooling tower inhibitor; NSF/ANSI 60 status reviewed by request",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     }
   ],
   "product_variants": [
@@ -262,7 +262,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CR-2.5G",
@@ -282,7 +282,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CR-5G",
@@ -302,7 +302,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CR-55G",
@@ -322,7 +322,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CR-275G",
@@ -342,7 +342,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CR2-1G",
@@ -362,7 +362,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — CONFIRMED: 55-gal tier +20%",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CR2-55G",
@@ -382,7 +382,7 @@
       "ships_ltl": true,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CR2-275G",
@@ -402,7 +402,7 @@
       "ships_ltl": true,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-HCR-1G",
@@ -422,7 +422,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-HCR-2.5G",
@@ -442,7 +442,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-HCR-5G",
@@ -462,7 +462,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-HCR-55G",
@@ -482,7 +482,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-HCR-275G",
@@ -502,7 +502,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-HCR-T16-1G",
@@ -522,7 +522,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — priced off 55-gal tier (no jug cost on file) — CONFIRM before publishing",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-HCR-T16-275G",
@@ -542,7 +542,7 @@
       "ships_ltl": true,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-DESC-1G",
@@ -562,7 +562,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-DESC-2.5G",
@@ -582,7 +582,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-DESC-5G",
@@ -602,7 +602,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-DESC-55G",
@@ -622,7 +622,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-DESC-275G",
@@ -642,7 +642,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-1G",
@@ -662,7 +662,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-2.5G",
@@ -682,7 +682,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-5G",
@@ -702,7 +702,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-55G",
@@ -722,7 +722,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-275G",
@@ -742,7 +742,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-LF-1G",
@@ -762,7 +762,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-LF-2.5G",
@@ -782,7 +782,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-LF-5G",
@@ -802,7 +802,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-LF-55G",
@@ -822,7 +822,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-CRHD-LF-275G",
@@ -842,7 +842,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-NEUT-1G",
@@ -862,7 +862,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-NEUT-2.5G",
@@ -882,7 +882,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-NEUT-5G",
@@ -902,7 +902,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-NEUT-55G",
@@ -922,7 +922,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-NEUT-275G",
@@ -942,7 +942,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-MW-1G",
@@ -962,7 +962,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-MW-2.5G",
@@ -982,7 +982,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-MW-5G",
@@ -1002,7 +1002,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-MW-55G",
@@ -1022,7 +1022,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-MW-275G",
@@ -1042,7 +1042,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-LAM3-1G",
@@ -1062,7 +1062,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-LAM3-2.5G",
@@ -1082,7 +1082,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-LAM3-5G",
@@ -1102,7 +1102,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-LAM3-55G",
@@ -1122,7 +1122,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-LAM3-275G",
@@ -1142,7 +1142,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-PRG-1G",
@@ -1162,7 +1162,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-PRG-2.5G",
@@ -1182,7 +1182,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-PRG-5G",
@@ -1202,7 +1202,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-PRG-55G",
@@ -1222,7 +1222,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-PRG-275G",
@@ -1242,7 +1242,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-ALB-1G",
@@ -1262,7 +1262,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-ALB-2.5G",
@@ -1282,7 +1282,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-ALB-5G",
@@ -1302,7 +1302,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-ALB-55G",
@@ -1322,7 +1322,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-ALB-275G",
@@ -1342,7 +1342,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-TRQ-1G",
@@ -1362,7 +1362,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-TRQ-2.5G",
@@ -1382,7 +1382,7 @@
       "ships_ltl": false,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-TRQ-5G",
@@ -1402,7 +1402,7 @@
       "ships_ltl": false,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-TRQ-55G",
@@ -1422,7 +1422,7 @@
       "ships_ltl": true,
       "sort": 4,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-TRQ-275G",
@@ -1442,7 +1442,7 @@
       "ships_ltl": true,
       "sort": 5,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-SAR-1G",
@@ -1462,7 +1462,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — CONFIRMED: 55-gal tier +20%",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-SAR-55G",
@@ -1482,7 +1482,7 @@
       "ships_ltl": true,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-SAR-275G",
@@ -1502,7 +1502,7 @@
       "ships_ltl": true,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-WS60-1G",
@@ -1522,7 +1522,7 @@
       "ships_ltl": false,
       "sort": 1,
       "notes": "NEW — CONFIRMED: 55-gal tier +20%",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-WS60-55G",
@@ -1542,7 +1542,7 @@
       "ships_ltl": true,
       "sort": 2,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     },
     {
       "sku": "VK-WS60-275G",
@@ -1562,7 +1562,7 @@
       "ships_ltl": true,
       "sort": 3,
       "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "source": "VertKlean Website Pricing WebDev workbook 2026-07-07"
     }
   ],
   "services": [

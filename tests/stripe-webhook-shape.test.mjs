@@ -53,7 +53,7 @@ test("cartMetadataEntries round-trips through assemble+parse and every chunk fit
   // A cart big enough to overflow one metadata value (the bug this pins: Stripe
   // rejects any metadata value >500 chars, which used to kill multi-item checkouts).
   const cart = Array.from({ length: 30 }, (_, i) => ({
-    sku: `VK-SKU-${i}-5GAL`, product_sku: `vk-${i}`, name: `VertKleen Product ${i} - 5 gallon pail`,
+    sku: `VK-SKU-${i}-5GAL`, product_sku: `vk-${i}`, name: `VertKlean Product ${i} - 5 gallon pail`,
     qty: i + 1, unit_price: 19.75 + i, backordered: i % 7 === 0,
   }));
   const entries = cartMetadataEntries(cart);
@@ -183,7 +183,7 @@ test("qboSubscriptionInvoiceRow queues paid Stripe program invoices exactly once
     currency: "usd",
     total: 10900,
     total_tax_amounts: [{ amount: 900 }],
-    lines: { data: [{ description: "VertKleen Gold program" }] },
+    lines: { data: [{ description: "VertKlean Gold program" }] },
   }, { companyId: "co-1", tier: "Gold" }), {
     company_id: "co-1",
     stripe_invoice_id: "in_123",
@@ -192,7 +192,7 @@ test("qboSubscriptionInvoiceRow queues paid Stripe program invoices exactly once
     stripe_payment_intent: "pi_123",
     customer_email: "billing@example.test",
     tier: "Gold",
-    description: "VertKleen Gold program",
+    description: "VertKlean Gold program",
     subtotal: 100,
     tax: 9,
     total: 109,

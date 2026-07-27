@@ -412,7 +412,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
       <div class="foot-grid">
         <div>
           <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="/img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
-          <div class="foot-brand" translate="no">MASEST VertKleen&trade;</div>
+          <div class="foot-brand" translate="no">MASEST VertKlean&trade;</div>
           <p>Industrial cleaning candidates with current-SDS routing, controlled-trial planning, and quote support from Florida's Space Coast.</p>
         </div>
         <div class="foot-secondary">
@@ -440,13 +440,13 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
           <a href="tel:+18134063852">(813) 406-3852</a>
           <a href="#customerChat" data-customer-chat-open>Customer chat</a>
-          <p style="margin-top:10px;font-size:.8rem;line-height:1.7">Public-sector registration, identifiers, representations, and solicitation fit verified during bid review.</p>
+          <p style="margin-top:10px;font-size:.8rem;line-height:1.7">Public-sector sourcing and bid support for registered buyers.</p>
         </div>
       </div>
       ${page === "newsletter" ? "" : `<div class="foot-news">
         <div class="foot-news-copy">
-          <div class="foot-title">VertKleen Briefing</div>
-          <p>Field results, document-gated SKUs, and program notes. No spam. Unsubscribe anytime.</p>
+          <div class="foot-title">VertKlean Briefing</div>
+          <p>Mechanisms, field results, and practical cleaning wins. No spam. Unsubscribe anytime.</p>
         </div>
         <form class="foot-news-form" id="footNews" novalidate>
           <input type="email" name="email" id="footNewsEmail" autocomplete="email" spellcheck="false" placeholder="you@company.com…" aria-label="Email address" required>
@@ -458,7 +458,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
         <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">EULA</a></span>
-        <span translate="no">VertKleen, SynTech and SynClean are trademarks of MASEST Consulting LLC.</span>
+        <span translate="no">VertKlean is a trademark of MASEST Consulting LLC.</span>
       </div>
     </div>`;
   document.body.append(foot);
@@ -497,7 +497,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
     const cfg = document.createElement("script");
     cfg.src = `${root}js/config.js?v=20260711b`;
     cfg.onload = () => {
-      ["integrations.js?v=20260711b", "customer-chat.js?v=20260725f"].forEach((src) => {
+      ["integrations.js?v=20260711b", "customer-chat.js?v=20260726a"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;

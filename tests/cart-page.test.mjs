@@ -64,7 +64,7 @@ function hcrProduct() {
     active: true,
     mode: "buy",
     image_url: "https://example.com/hcr.png",
-    photo_alt: "VertKleen HCR pail",
+    photo_alt: "VertKlean HCR pail",
     product_variants: [
       { vsku: "hcr-1", label: "1 gal bottle", gallons: 1, price: 17.3, currency: "usd", active: true, sort: 1 },
       { vsku: "hcr-2.5", label: "2.5 gal jug", gallons: 2.5, price: 43.26, currency: "usd", active: true, sort: 2 },

@@ -83,7 +83,8 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.equal(services.status, 200, "services page should exist");
     const servicesHtml = await services.text();
     assert.match(servicesHtml, /data-service-catalog/, "services page should render the service catalog");
-    assert.match(servicesHtml, /Technical services that make the chemical switch easier to approve/);
+    assert.match(servicesHtml, /Prove the switch before you scale it/);
+    assert.match(servicesHtml, /completed-task economics/);
     assert.match(servicesHtml, /35 quote-service line items plus 4 service packages/);
     assert.doesNotMatch(servicesHtml, /"offerCount":"39"/);
     const schema = JSON.parse(servicesHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)<\/script>/)[1]);
@@ -179,21 +180,21 @@ test("segment pricing pages render isolated HVAC and CIP workbook pricing", asyn
       await hvac.waitForSelector("[data-segment-pricing-row]");
       const hvacText = await hvac.locator("main").textContent();
       assert.match(hvacText, /HVAC & Facilities/);
-      assert.match(hvacText, /VertKleen AlumiBrite/);
+      assert.match(hvacText, /VertKlean AlumiBrite/);
       assert.match(hvacText, /Prices exclude shipping and freight\. FOB Ex Plant, Merritt Island, FL\./);
       assert.match(hvacText, /200\+ jugs: 5% off/);
-      assert.match(hvacText, /VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72[\s\S]*\$61\.80/);
-      assert.match(hvacText, /VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02[\s\S]*\$55\.05/);
-      assert.match(hvacText, /VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$21\.49[\s\S]*\$53\.73/);
+      assert.match(hvacText, /VertKlean HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72[\s\S]*\$61\.80/);
+      assert.match(hvacText, /VertKlean CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02[\s\S]*\$55\.05/);
+      assert.match(hvacText, /VertKlean Purgo[\s\S]*2\.5 gal jug[\s\S]*\$21\.49[\s\S]*\$53\.73/);
 
       const cip = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
       await cip.goto(`${BASE_URL}/pricing-cip-food-beverage.html`, { waitUntil: "domcontentloaded" });
       await cip.waitForSelector("[data-segment-pricing-row]");
       const cipText = await cip.locator("main").textContent();
       assert.match(cipText, /CIP pricing/);
-      assert.match(cipText, /VertKleen CR/);
-      assert.doesNotMatch(cipText, /VertKleen AlumiBrite/);
-      assert.doesNotMatch(cipText, /VertKleen Descaler/);
+      assert.match(cipText, /VertKlean CR/);
+      assert.doesNotMatch(cipText, /VertKlean AlumiBrite/);
+      assert.doesNotMatch(cipText, /VertKlean Descaler/);
       assert.match(cipText, /Prices exclude shipping and freight\. FOB Ex Plant, Merritt Island, FL\./);
       assert.match(cipText, /200\+ jugs: 5% off/);
     } finally {
@@ -204,12 +205,12 @@ test("segment pricing pages render isolated HVAC and CIP workbook pricing", asyn
 
 test("resources page publishes corrected public pricing tables only", () => {
   const resources = readFileSync(new URL("resources.html", root), "utf8");
-  assert.match(resources, /data-source-table="hvac-facility-pricing"[\s\S]*VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72\/gal[\s\S]*\$61\.80/);
-  assert.match(resources, /data-source-table="hvac-facility-pricing"[\s\S]*VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02\/gal[\s\S]*\$55\.05/);
-  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$21\.63\/gal[\s\S]*\$54\.08/);
-  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$19\.27\/gal[\s\S]*\$48\.17/);
-  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen CR HD[\s\S]*2\.5 gal jug[\s\S]*\$10\.61\/gal[\s\S]*\$26\.51/);
-  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$21\.49\/gal[\s\S]*\$53\.73/);
+  assert.match(resources, /data-source-table="hvac-facility-pricing"[\s\S]*VertKlean HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72\/gal[\s\S]*\$61\.80/);
+  assert.match(resources, /data-source-table="hvac-facility-pricing"[\s\S]*VertKlean CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02\/gal[\s\S]*\$55\.05/);
+  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKlean HCR[\s\S]*2\.5 gal jug[\s\S]*\$21\.63\/gal[\s\S]*\$54\.08/);
+  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKlean CR[\s\S]*2\.5 gal jug[\s\S]*\$19\.27\/gal[\s\S]*\$48\.17/);
+  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKlean CR HD[\s\S]*2\.5 gal jug[\s\S]*\$10\.61\/gal[\s\S]*\$26\.51/);
+  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKlean Purgo[\s\S]*2\.5 gal jug[\s\S]*\$21\.49\/gal[\s\S]*\$53\.73/);
   assert.doesNotMatch(resources, /\$43\.26|\$38\.53|\$23\.57/, "internal B2B property rates must stay off public resources");
   assert.match(resources, /FOB Ex Plant, Merritt Island FL/);
 });

@@ -1,6 +1,6 @@
 // Admin pricing tab (#36 per-tab split). Prices are displayed from the workbook-
 // managed catalog seed so staff can verify tiers without creating pricing drift.
-import { esc, rowMatchesQuery } from '../util.js?v=20260725f';
+import { esc, rowMatchesQuery } from '../util.js?v=20260726a';
 
 export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty }) {
   async function renderPricing({ refetch = true } = {}) {

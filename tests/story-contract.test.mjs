@@ -21,8 +21,8 @@ test("first act has one dominant guided replacement action and quieter trial", (
   const primaryActions = actOne.match(/class="btn btn-primary"/g) || [];
 
   assert.equal(primaryActions.length, 1);
-  assert.match(actOne, /class="btn btn-primary" href="products#catalog"[^>]*>Find your replacement<\/a>/);
-  assert.match(actOne, /class="btn btn-ghost" href="contact\?type=sample"[^>]*>Request a trial<\/a>/);
+  assert.match(actOne, /class="btn btn-primary" href="products#catalog"[^>]*>Shop by cleaning job<\/a>/);
+  assert.match(actOne, /class="btn btn-ghost" href="contact\?type=sample"[^>]*>Plan a field trial<\/a>/);
   assert.doesNotMatch(actOne, /story-shortcuts/);
 });
 
@@ -36,7 +36,7 @@ test("second act carries buildup and operational cost through one pipe", () => {
   assert.match(actTwo, /Hazmat handling/);
 });
 
-test("third act is one operational ledger with qualified replacements", () => {
+test("third act is one operational ledger with task-matched chemistry", () => {
   const actThree = story.match(/<section class="act act-ledger"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actThree, /class="replacement-ledger"/);
@@ -53,6 +53,8 @@ test("third act is one operational ledger with qualified replacements", () => {
     assert.match(actThree, new RegExp(`href="products/${product}"`));
   }
   assert.equal((actThree.match(/class="hmis-chip is-safe"/g) || []).length, 4);
+  assert.match(actThree, /React, complex, rinse/);
+  assert.doesNotMatch(actThree, /starting candidate|trial candidate|Candidate only after/i);
   assert.match(actThree, /Ratings vary by manufacturer and concentration; typical SDS values are shown/);
   assert.match(actThree, /OSHA 2026 penalty schedule/);
   assert.match(actThree, /Liberty Mutual 2025 Workplace Safety Index/);

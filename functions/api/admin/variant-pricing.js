@@ -42,7 +42,7 @@ export async function onRequest({ request, env }) {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     return json(409, {
       error: 'price_workbook_managed',
-      message: 'Prices are managed by VertKleen_Website_Pricing_WebDev.xlsx. Reflect approved workbook changes in the catalog seed data and run npm run seed.',
+      message: 'Prices are managed by VertKlean_Website_Pricing_WebDev.xlsx. Reflect approved workbook changes in the catalog seed data and run npm run seed.',
     });
   }
 

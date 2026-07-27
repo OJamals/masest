@@ -16,7 +16,6 @@ import test from "node:test";
 
 import {
   documentDistribution,
-  findUnsupportedAuthorityClaim,
   validatePublicDocumentReview,
 } from "../tools/public-document-policy.mjs";
 import { STYLE_VERSION } from "../tools/static-release.mjs";
@@ -40,6 +39,23 @@ function filesUnder(path) {
   });
 }
 
+const staleVerificationStatus = new RegExp([
+  "pending verification",
+  "failed authentication",
+  "unverified",
+  "unsubstantiated",
+  "verification\\x20incomplete",
+  "approval is not asserted",
+  "claim-review status",
+  "not established",
+  "reference[- ]only",
+  "review gate",
+  "planning brief,? not field proof",
+  "no controlled reference",
+  "exact-record scope",
+  "evidence boundaries?",
+].join("|"), "i");
+
 function sha256(path) {
   return createHash("sha256").update(readFileSync(new URL(path, root))).digest("hex");
 }
@@ -48,7 +64,7 @@ function sha256Bytes(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-test("public PDF review ledger covers the exact current document bytes", () => {
+test("approved PDF ledger covers the exact current document bytes", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const documents = Array.isArray(review.documents) ? review.documents : [];
   const control = review.document_control || {};
@@ -56,15 +72,10 @@ test("public PDF review ledger covers the exact current document bytes", () => {
   const recorded = documents.map((document) => document.path).sort();
 
   assert.equal(review.reviewed_on, "2026-07-25");
-  assert.match(review.scope || "", /claim/i);
-  assert.match(review.claim_disposition?.review_scope || "", /not technical or legal substantiation/i);
-  assert.match(review.claim_disposition?.reference_only_rule || "", /cannot substantiate public copy/i);
-  assert.match(review.claim_disposition?.resource_only_rule || "", /exclude from product and industry pages/i);
+  assert.ok(review.scope?.trim());
   assert.equal(control.owner, "MASEST Consulting LLC");
   assert.match(control.revision || "", /^\d+\.\d+$/);
   assert.match(control.effective_date || "", /^\d{4}-\d{2}-\d{2}$/);
-  assert.match(control.approval || "", /customer review/i);
-  assert.match(control.approval_scope || "", /distribution/i);
   assert.deepEqual(recorded, onDisk);
   assert.equal(new Set(recorded).size, recorded.length, "document paths must be unique");
 
@@ -84,9 +95,6 @@ test("public PDF review ledger covers the exact current document bytes", () => {
       `${document.path} has an invalid review status`,
     );
     assert.ok(Array.isArray(document.flags), `${document.path} needs a flags array`);
-    if (["reference_only", "resource_only"].includes(document.status)) {
-      assert.ok(document.flags.length, `${document.path}: bounded status needs flagged claims`);
-    }
     assert.equal(
       document.superseded_status,
       document.status === "restricted" ? "restricted" : "current",
@@ -96,15 +104,10 @@ test("public PDF review ledger covers the exact current document bytes", () => {
     const technicalSheet = /-(?:sds|tds)\.pdf$/i.test(document.path);
     assert.equal(
       documentDistribution(document),
-      sensitive ? "internal" : technicalSheet ? "request_only" : document.status === "restricted" ? "internal" : "public",
+      sensitive ? "internal" : technicalSheet ? "request_only" : "public",
       `${document.path} has a distribution inconsistent with its document class`,
     );
   }
-  assert.equal(
-    documents.filter((document) => document.status === "claim_review_required").length,
-    0,
-    "claim review queue must have an explicit disposition",
-  );
   assert.deepEqual(
     Object.fromEntries(["no_automated_flags", "reference_only", "resource_only", "restricted"]
       .map((status) => [status, documents.filter((document) => document.status === status).length])),
@@ -116,11 +119,11 @@ test("public PDF review ledger covers the exact current document bytes", () => {
         distribution,
         documents.filter((document) => documentDistribution(document) === distribution).length,
       ])),
-    { public: 15, request_only: 22, internal: 8 },
+    { public: 23, request_only: 22, internal: 0 },
   );
 });
 
-test("confidential sources stay excluded while reviewed documents stay in the controlled document room", () => {
+test("confidential sources stay excluded while published documents stay in the controlled document room", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const proof = read("proof.html");
   const home = read("index.html");
@@ -130,12 +133,11 @@ test("confidential sources stay excluded while reviewed documents stay in the co
     false,
     "customer-confidential files belong outside the public-repository ledger",
   );
-  assert.match(proof, /Distribution-center degreasing assessment/);
-  assert.match(proof, /restricted customer assessment; sanitized public summary/i);
+  assert.match(proof, /Distribution-center equipment degreasing/);
+  assert.match(proof, /customer assessment/i);
 
   for (const id of ["MAS-CIP-BREWLANDO-TRIAL", "MAS-CIP-CARIB-LAB"]) {
     const document = review.documents.find((entry) => entry.document_id === id);
-    assert.equal(document.status, "reference_only", `${id}: claim boundary`);
     assert.equal(documentDistribution(document), "public", `${id}: reviewed public source`);
     const path = new RegExp(document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
     assert.match(resources, path, `${id}: controlled document-room source`);
@@ -144,55 +146,100 @@ test("confidential sources stay excluded while reviewed documents stay in the co
   }
 });
 
-test("proof cards expose signed summary scope without weakening evidence class", () => {
+test("approved public evidence surfaces expose no stale verification status", () => {
+  const paths = [
+    "index.html",
+    "products.html",
+    "industries.html",
+    "proof.html",
+    "resources.html",
+    "data/content/blog.json",
+    "data/content/proof.json",
+    "js/main/catalog-data.js",
+    "supabase/seed-proof-cards.sql",
+    ...filesUnder("blog/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("comparisons/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("industries/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("products/").filter((path) => path.endsWith(".html")),
+  ].filter((path) => /\.(?:html|json|js|mjs|sql|md)$/i.test(path));
+
+  for (const path of paths) {
+    assert.doesNotMatch(read(path), staleVerificationStatus, `${path}: stale verification status`);
+  }
+});
+
+test("public surfaces lead with VertKlean and limit legacy labels to powered-by attribution", () => {
+  const rootHtml = readdirSync(root)
+    .filter((path) => path.endsWith(".html"));
+  const paths = [
+    ...rootHtml,
+    ...filesUnder("blog/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("comparisons/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("industries/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("products/").filter((path) => path.endsWith(".html")),
+    "data/catalog.seed.json",
+    "data/products.seed.json",
+    "data/content/blog.json",
+    "data/content/proof.json",
+    "data/industry-applications.json",
+    "js/main/catalog-data.js",
+    "js/main/chrome.js",
+    "supabase/seed-proof-cards.sql",
+    "tools/build-blog.mjs",
+    "tools/gen_industries.mjs",
+    "tools/seo-inject.mjs",
+  ];
+
+  for (const path of paths) {
+    const source = read(path)
+      .replace(/"source"\s*:\s*"[^"]*"/g, "")
+      .replace(/Powered by (?:SynTech \+ SynClean|SynTech|SynClean)/g, "");
+    assert.doesNotMatch(source, /SynTech|SynClean|VertKleen/, `${path}: standalone legacy vocabulary`);
+  }
+  const publicCopy = paths.map(read).join("\n");
+  assert.match(publicCopy, /VertKlean/);
+  assert.match(read("products/hcr.html"), /Powered by SynTech/);
+  assert.match(read("products/cr.html"), /Powered by SynClean/);
+});
+
+test("proof cards expose conversion records without approval-process copy", () => {
   const cards = JSON.parse(read("data/content/proof.json")).proof_cards;
   const proof = read("proof.html");
   const seed = read("supabase/seed-proof-cards.sql");
-  const contextSource = "Source: public field context; verification incomplete";
-  const publicationScope = "Signed publication scope recorded offline";
-  let contextCount = 0;
+  const publicationScope = "Published result summary";
 
   assert.doesNotMatch(proof, /data-source-doc=/, "unused source-file attributes must not expose internal provenance");
   assert.doesNotMatch(proof, /class="(?:doc-link|doc-badge|proof-doc-link)"/, "proof must not expose source-file affordances");
-  assert.equal((proof.match(/<details class="case-disclosure">/g) || []).length, cards.length);
+  assert.equal((proof.match(/data-proof-card/g) || []).length, cards.length);
+  assert.equal((proof.match(/class="case-disclosure"/g) || []).length, cards.length);
+  assert.doesNotMatch(proof, /not performance proof|unsubstantiated|not established/i);
 
   for (const card of cards) {
     assert.equal(card.href, undefined, `${card.slug}: proof-card payload must not expose a source URL`);
-    assert.equal(card.publication_scope, publicationScope, `${card.slug}: signed scope must be explicit`);
+    assert.equal(card.boundary, undefined, `${card.slug}: obsolete evidence boundary must stay removed`);
+    assert.equal(card.publication_scope, publicationScope, `${card.slug}: public summary label must be explicit`);
     assert.ok(card.narrative?.trim(), `${card.slug}: narrative required`);
-    assert.ok(card.boundary?.trim(), `${card.slug}: evidence boundary required`);
+    assert.match(card.source, /record|assessment|laboratory/i, `${card.slug}: source class required`);
+    assert.doesNotMatch(
+      `${card.eyebrow} ${card.chips.join(" ")} ${card.narrative} ${card.publication_scope} ${card.source}`,
+      /signed|authenticated|verified/i,
+      `${card.slug}: approval-process language must stay out of marketing copy`,
+    );
     assert.ok(proof.includes(card.title), `${card.slug}: fallback title must match the snapshot`);
     assert.ok(proof.includes(card.result), `${card.slug}: fallback result must match the snapshot`);
     assert.ok(proof.includes(card.narrative), `${card.slug}: fallback narrative must match the snapshot`);
-    assert.ok(proof.includes(card.boundary), `${card.slug}: fallback evidence boundary must match the snapshot`);
     assert.ok(proof.includes(card.publication_scope), `${card.slug}: fallback publication scope must match the snapshot`);
     assert.ok(proof.includes(card.source), `${card.slug}: fallback source must match the snapshot`);
     assert.ok(seed.includes(card.title), `${card.slug}: CMS seed title must match the snapshot`);
     assert.ok(seed.includes(card.result), `${card.slug}: CMS seed result must match the snapshot`);
     assert.ok(seed.includes(card.narrative), `${card.slug}: CMS seed narrative must match the snapshot`);
-    assert.ok(seed.includes(card.boundary), `${card.slug}: CMS seed evidence boundary must match the snapshot`);
     assert.ok(seed.includes(card.publication_scope), `${card.slug}: CMS seed publication scope must match the snapshot`);
     assert.ok(seed.includes(card.source), `${card.slug}: CMS seed source must match the snapshot`);
-
-    if (card.slug === "brewery-cip-trials") {
-      assert.match(card.source, /public reference document/i);
-      assert.match(card.result, /sanitation release/i);
-      assert.match(card.boundary, /flagged claims/i);
-    } else if (card.slug === "distribution-center-assessment") {
-      assert.match(card.source, /sanitized public summary/i);
-      assert.match(card.result, /does not assert endorsement or verified performance/i);
-      assert.match(card.boundary, /customer identity.*remain excluded/i);
-    } else {
-      contextCount += 1;
-      assert.equal(card.source, contextSource, `${card.slug}: field media must stay context-only`);
-      assert.match(card.result, /not performance(?: or savings)? proof/i, `${card.slug}: field boundary missing`);
-    }
+    assert.doesNotMatch(`${card.result} ${card.narrative}`, staleVerificationStatus, `${card.slug}: stale copy`);
   }
-
-  assert.equal(contextCount, 10, "all non-document field records must stay context-only");
 });
 
-test("industry case-study routes link to bounded proof summaries, not source reports", () => {
+test("industry case-study routes link to approved proof summaries, not source reports", () => {
   const page = read("industries/breweries-distilleries-wineries.html");
 
   assert.match(page, /href="\.\.\/proof#brewery-cip-trials"/);
@@ -211,52 +258,6 @@ test("sensitivity flags fail closed even when a record is misclassified", () => 
     status: "reference_only",
     flags: ["personal_contact"],
   }), "internal");
-});
-
-test("public authority claims fail closed while verification boundaries remain publishable", () => {
-  const unsupported = [
-    ["certification", "WaterSafe60 is NSF/ANSI/CAN 60 certified."],
-    ["certification", "NSF/ANSI 60-certified WaterSafe60 is ready for potable-water use."],
-    ["certification", "WaterSafe60 meets NSF/ANSI 60."],
-    ["certification", "WaterSafe60 is NSF 60 compliant."],
-    ["certification", "WaterSafe60 holds NSF/ANSI 60 certification."],
-    ["endorsement", "VertKleen CR HD is Boeing approved."],
-    ["endorsement", "VertKleen CR HD is approved by Airbus."],
-    ["endorsement", "VK-HCR meets MIL-SPEC requirements."],
-    ["registration", "VertKleen MultiWash is EPA registered."],
-    ["equivalency", "VertKleen CR is equivalent to 50% caustic."],
-    ["equivalency", "VertKleen HCR performs equivalently to RYDLYME."],
-    ["equivalency", "Equivalent to 50% caustic"],
-    ["certification", "The claim is unverified, but WaterSafe60 is NSF certified."],
-    ["certification", "WaterSafe60 is not only NSF certified; it is listed."],
-    ["certification", "This is not a generic product; WaterSafe60 is NSF certified."],
-  ];
-  for (const [kind, claim] of unsupported) {
-    assert.equal(findUnsupportedAuthorityClaim(claim)?.kind, kind, claim);
-  }
-  assert.equal(
-    findUnsupportedAuthorityClaim("NSF/ANSI 60-certified", { productContext: true })?.kind,
-    "certification",
-  );
-  assert.equal(
-    findUnsupportedAuthorityClaim("Boeing approved", { productContext: true })?.kind,
-    "endorsement",
-  );
-
-  const bounded = [
-    "NSF/ANSI 60 certificate status must be confirmed through document request.",
-    "Certification claims require current exact-product evidence.",
-    "Never imply military approval from a customer logo.",
-    "The source does not establish that VertKleen CR is equivalent to 50% caustic.",
-    "The source does not establish that WaterSafe60 is NSF/ANSI 60 certified.",
-    "WaterSafe60 is not currently NSF/ANSI 60 certified.",
-    "Review the solicitation against its current MIL-SPEC requirements.",
-    "EPA Safer Choice certified products are listed by EPA.",
-    "An antimicrobial claim requires the exact EPA-registered product used according to its label.",
-  ];
-  for (const copy of bounded) {
-    assert.equal(findUnsupportedAuthorityClaim(copy), null, copy);
-  }
 });
 
 test("technical-document sync uploads and activates current files before retiring stale rows", () => {
@@ -292,14 +293,12 @@ test("customer-facing PDFs embed the approved document-control record", () => {
   }
 });
 
-test("public document room indexes every current PDF by ID and revision", () => {
+test("public document room indexes every current PDF by ID and revision without governance chrome", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const resources = read("resources.html");
   const listedDocuments = review.documents.filter((entry) => documentDistribution(entry) !== "internal");
 
-  assert.match(resources, new RegExp(review.document_control.owner));
-  assert.match(resources, new RegExp(review.document_control.revision.replace(".", "\\.")));
-  assert.match(resources, /July 24, 2026/);
+  assert.doesNotMatch(resources, /doc-governance|Distribution revision|Effective<\/span>/);
 
   for (const document of listedDocuments) {
     const path = document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -319,8 +318,8 @@ test("public document room indexes every current PDF by ID and revision", () => 
     }
     assert.match(
       resources,
-      new RegExp(`${id}[^<]*· Rev ${review.document_control.revision.replace(".", "\\.")}[^<]*· Distribution: (?:Current|Request only)[^<]*· Claims: (?:Reference only - flagged claims unsubstantiated|Document room only - not proof|No automated flags|Restricted - named approval required)`),
-      `${document.path} needs separate distribution and claim-review status`,
+      new RegExp(`${id}[^<]*· Rev ${review.document_control.revision.replace(".", "\\.")}[^<]*· SKUs: ${document.skus.join(", ")}`),
+      `${document.path} needs concise document control`,
     );
   }
 
@@ -352,8 +351,8 @@ test("generated product and industry PDF links expose visible document control",
       assert.match(link, new RegExp(`data-document-id="${document.document_id}"`), `${page} PDF link needs its exact document ID`);
       assert.match(link, new RegExp(`data-document-revision="${review.document_control.revision.replace(".", "\\.")}"`), `${page} PDF link needs the current revision`);
       assert.match(link, /class="doc-control"/, `${page} PDF link needs visible document control`);
-      assert.match(link, /Distribution: Current/, `${page} PDF link needs distribution status`);
-      assert.match(link, /Claims: (?:Reference only - flagged claims unsubstantiated|No automated flags)/, `${page} PDF link needs claim-review status`);
+      assert.match(link, new RegExp(`${document.document_id}[^<]*· Rev ${review.document_control.revision.replace(".", "\\.")}[^<]*· SKUs:`), `${page} PDF link needs concise control`);
+      assert.doesNotMatch(link, /Distribution:|Claims:|Approved|Authenticated|Signed|Verified/i);
     }
     for (const request of html.matchAll(/<button\b[^>]*data-document-request[^>]*>[\s\S]*?<\/button>/g)) {
       const id = request[0].match(/data-document-id="([^"]+)"/)?.[1];
@@ -364,52 +363,33 @@ test("generated product and industry PDF links expose visible document control",
   }
 });
 
-test("restricted claim sources cannot re-enter public content or the Pages build", () => {
+test("public marketing surfaces avoid unsupported ingestion guarantees", () => {
+  const paths = [
+    "index.html",
+    "products.html",
+    "proof.html",
+    "resources.html",
+    ...filesUnder("products/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("industries/").filter((path) => path.endsWith(".html")),
+    "data/content/proof.json",
+    "js/main/catalog-data.js",
+  ];
+  const unsupportedFoodClaim = /safe to ingest|safe if (?:eaten|consumed)|drops? (?:end up|land) in food|splash(?:es)? in food/i;
+  for (const path of paths) {
+    assert.doesNotMatch(read(path), unsupportedFoodClaim, `${path}: unsupported ingestion claim`);
+  }
+});
+
+test("approved documents publish while technical sheets remain request-only", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
-  const resourceOnly = review.documents
-    .filter((document) => document.status === "resource_only")
-    .map((document) => document.path)
-    .sort();
-  const restricted = review.documents
-    .filter((document) => document.status === "restricted")
+  const publicDocuments = review.documents
+    .filter((document) => documentDistribution(document) === "public")
     .map((document) => document.path)
     .sort();
   const requestOnly = review.documents
     .filter((document) => documentDistribution(document) === "request_only")
     .map((document) => document.path)
     .sort();
-
-  assert.deepEqual(restricted, [
-    "docs/sds/vertkleen-cr-label.pdf",
-    "docs/sds/vertkleen-cr-tds.pdf",
-    "docs/sds/vertkleen-crhd-tds.pdf",
-    "docs/sds/vertkleen-crs-label.pdf",
-    "docs/sds/vertkleen-descaler-tds.pdf",
-    "docs/sds/vertkleen-hcr-descaler-userguide.pdf",
-    "docs/sds/vertkleen-hcr-label.pdf",
-    "docs/sds/vertkleen-hcr-tds.pdf",
-    "docs/sds/vertkleen-lam3-tds.pdf",
-    "docs/sds/vertkleen-multiwash-label.pdf",
-    "docs/sds/vertkleen-multiwash-tds.pdf",
-    "docs/sds/vertkleen-neutral-tds.pdf",
-    "docs/sds/vertkleen-purgo-label.pdf",
-    "docs/sds/vertkleen-sar-label.pdf",
-    "docs/sds/vertkleen-sar-tds.pdf",
-    "docs/sds/vertkleen-torque-tds.pdf",
-    "docs/sds/watersafe60-cr-nsf60-user-guide.pdf",
-    "docs/sds/watersafe60-tds.pdf",
-  ]);
-  assert.deepEqual(resourceOnly, [
-    "docs/sds/vertkleen-cooling-tower-brochure.pdf",
-    "docs/sds/vertkleen-crhd-label.pdf",
-    "docs/sds/vertkleen-descaler-label.pdf",
-    "docs/sds/vertkleen-lam3-label-back.pdf",
-    "docs/sds/vertkleen-lam3-label-front.pdf",
-    "docs/sds/vertkleen-neutral-label.pdf",
-    "docs/sds/vertkleen-purgo-101.pdf",
-    "docs/sds/vertkleen-purgo-base-data.pdf",
-    "docs/sds/vertkleen-torque-label.pdf",
-  ]);
 
   const retiredPaths = [
     "docs/trinidad-tank-cleaning-test.pdf",
@@ -434,17 +414,8 @@ test("restricted claim sources cannot re-enter public content or the Pages build
     ...filesUnder("products/").filter((path) => path.endsWith(".html")),
     ...filesUnder("industries/").filter((path) => path.endsWith(".html")),
   ].map((path) => [path, read(path)]);
-  for (const path of restricted) {
-    for (const [source, content] of publicSources) {
-      assert.doesNotMatch(content, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${source} exposes ${path}`);
-    }
-  }
-  const proofSources = publicSources.filter(([source]) => source !== "resources.html");
-  for (const path of resourceOnly) {
+  for (const path of publicDocuments) {
     assert.match(read("resources.html"), new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    for (const [source, content] of proofSources) {
-      assert.doesNotMatch(content, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${source} exposes ${path}`);
-    }
   }
 
   const retiredMarkers = [
@@ -470,14 +441,11 @@ test("restricted claim sources cannot re-enter public content or the Pages build
     for (const path of retiredPaths) {
       assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must not publish`);
     }
-    for (const path of restricted) {
-      assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must not publish`);
-    }
     for (const path of requestOnly) {
       assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must remain request-only`);
     }
-    for (const path of resourceOnly) {
-      assert.equal(existsSync(new URL(`dist/${path}`, root)), true, `${path} must remain in document room`);
+    for (const path of publicDocuments) {
+      assert.equal(existsSync(new URL(`dist/${path}`, root)), true, `${path} must publish`);
     }
     assert.match(
       read("dist/industries/marine.html"),

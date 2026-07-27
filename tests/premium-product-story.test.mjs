@@ -21,7 +21,8 @@ test("product listing exposes proof-led premium commerce cards", () => {
   const css = read("css/style.css");
 
   assert.match(html, /proof-led-catalog/, "products page should introduce proof-led catalog framing");
-  assert.match(html, /Evidence library/, "products page should offer classified evidence before purchase");
+  assert.match(html, /Results library/, "products page should offer results before purchase");
+  assert.match(html, /proof#brewery-cip-trials/, "products page should route buyers into relevant proof");
   assert.match(css, /\.proof-led-catalog\b/, "proof-led catalog needs dedicated styling");
   assert.match(css, /\.shop-card\b[\s\S]*\.shop-card-core\b/, "shop cards should gain a double-bezel core");
 });

@@ -19,17 +19,20 @@ import {
   PRODUCT_CATALOG_COPY,
   PRODUCTS,
   QUOTE_FIRST_IDS,
+  productHighlights,
 } from "../js/main/catalog-data.js";
+import { proofRecordsHtml } from "../js/proof-records.js";
 import {
   documentAllowedOnSurface,
-  documentClaimLabel,
-  documentDistribution,
   documentSurfaceMode,
 } from "./public-document-policy.mjs";
 import { STYLE_VERSION } from "./static-release.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
+const PROOF_RECORDS = JSON.parse(
+  readFileSync(new URL("../data/content/proof.json", import.meta.url), "utf8"),
+).proof_cards;
 const SITE_IMAGE_DIMENSIONS = new Map(
   JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8")).assets
     .map((asset) => [asset.public_url, { width: asset.width, height: asset.height }]),
@@ -39,18 +42,18 @@ const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document
 const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
 const DOCUMENT_REVISION = DOCUMENT_REVIEW.document_control.revision;
 const DOCUMENT_SKU_LABELS = new Map([
-  ["VK-HCR", "VertKleen CIP HCR"],
-  ["VK-CR", "VertKleen CIP CR"],
-  ["VK-CRHD", "VertKleen CR HD"],
-  ["VK-CRS", "VertKleen CRS"],
-  ["VK-DESC", "VertKleen Descaler"],
-  ["VK-NEUT", "VertKleen Neutral"],
-  ["VK-MW", "VertKleen MultiWash"],
+  ["VK-HCR", "VertKlean CIP HCR"],
+  ["VK-CR", "VertKlean CIP CR"],
+  ["VK-CRHD", "VertKlean CR HD"],
+  ["VK-CRS", "VertKlean CRS"],
+  ["VK-DESC", "VertKlean Descaler"],
+  ["VK-NEUT", "VertKlean Neutral"],
+  ["VK-MW", "VertKlean MultiWash"],
   ["VK-WS60", "WaterSafe60"],
   ["VK-PRG", "Purgo"],
-  ["VK-LAM3", "VertKleen LAM3"],
-  ["VK-SAR", "VertKleen SAR"],
-  ["VK-TRQ", "VertKleen Torque"],
+  ["VK-LAM3", "VertKlean LAM3"],
+  ["VK-SAR", "VertKlean SAR"],
+  ["VK-TRQ", "VertKlean Torque"],
 ]);
 
 const BASE = "https://masest.co";
@@ -97,14 +100,14 @@ const ORG = {
   name: "MASEST Consulting LLC",
   url: `${BASE}/`,
   logo: `${BASE}/img/masest-logo.png`,
-  brand: "VertKleen",
-  description: "Industrial cleaning candidates selected through exact-SKU document review and controlled trials.",
+  brand: "VertKlean",
+  description: "VertKlean replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
   areaServed: "United States and international commercial accounts",
   contactPoint: { "@type": "ContactPoint", contactType: "sales", url: `${BASE}/contact` },
 };
 
 const PUBLIC = {
-  "index.html": { loc: "/", priority: "1.0", changefreq: "weekly", jsonld: [ORG, { "@type": "WebSite", name: "MASEST VertKleen", url: `${BASE}/` }] },
+  "index.html": { loc: "/", priority: "1.0", changefreq: "weekly", jsonld: [ORG, { "@type": "WebSite", name: "MASEST VertKlean", url: `${BASE}/` }] },
   "about.html": { loc: "/about", priority: "0.5", changefreq: "monthly", jsonld: [ORG] },
   "contact.html": { loc: "/contact", priority: "0.6", changefreq: "monthly", jsonld: [ORG] },
   "products.html": { loc: "/products", priority: "0.9", changefreq: "weekly", jsonld: [ORG] },
@@ -112,7 +115,7 @@ const PUBLIC = {
   "programs.html": { loc: "/programs", priority: "0.8", changefreq: "monthly", jsonld: [ORG] },
   "proof.html": { loc: "/proof", priority: "0.7", changefreq: "monthly", jsonld: [ORG] },
   "resources.html": { loc: "/resources", priority: "0.6", changefreq: "monthly", jsonld: [ORG] },
-  "blog.html": { loc: "/blog", priority: "0.7", changefreq: "weekly", jsonld: [{ "@type": "Blog", name: "MASEST VertKleen Blog", url: `${BASE}/blog`, publisher: ORG }] },
+  "blog.html": { loc: "/blog", priority: "0.7", changefreq: "weekly", jsonld: [{ "@type": "Blog", name: "MASEST VertKlean Blog", url: `${BASE}/blog`, publisher: ORG }] },
   "newsletter.html": { loc: "/newsletter", priority: "0.5", changefreq: "monthly", jsonld: [ORG, { "@type": "WebPage", name: "Newsletter", url: `${BASE}/newsletter` }] },
   "privacy.html": { loc: "/privacy", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Privacy", url: `${BASE}/privacy` }] },
   "terms.html": { loc: "/terms", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Terms", url: `${BASE}/terms` }] },
@@ -186,32 +189,13 @@ function currentDocument(path, surface) {
 }
 
 function documentControl(document) {
-  const claimStatus = documentClaimLabel(document.status);
-  const distribution = documentDistribution(document) === "request_only" ? "Request only" : "Current";
-  return `${document.document_id} · Rev ${DOCUMENT_REVISION} · Distribution: ${distribution} · Claims: ${claimStatus} · SKUs: ${document.skus.join(", ")}`;
+  return `${document.document_id} · Rev ${DOCUMENT_REVISION} · SKUs: ${document.skus.join(", ")}`;
 }
 
 function documentAnalyticsName(document) {
   return document.title
     .replace("Safety Data Sheet", "SDS")
     .replace("Technical Data Sheet", "TDS");
-}
-
-function documentGovernance() {
-  const control = DOCUMENT_REVIEW.document_control;
-  const effectiveDate = new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${control.effective_date}T00:00:00Z`));
-  return `    <div class="doc-governance reveal" aria-label="Document control status">
-      <div><span>Owner</span><strong>${text(control.owner)}</strong></div>
-      <div><span>Distribution revision</span><strong>${text(control.revision)}</strong></div>
-      <div><span>Effective</span><strong>${text(effectiveDate)}</strong></div>
-      <div><span>Status</span><strong>Current · ${text(control.approval)}</strong></div>
-      <p>${text(control.approval_scope)} Technical, legal, regulatory, safety, performance, and customer-specific claims still require the applicable review.</p>
-    </div>`;
 }
 
 function documentLibrary() {
@@ -245,19 +229,21 @@ ${documents}
 }
 
 function injectDocumentLibrary(html) {
-  const blocks = [
-    ["doc-control", documentGovernance()],
-    ["doclib", documentLibrary()],
-  ];
-  for (const [name, content] of blocks) {
-    const start = `<!-- ${name}:auto -->`;
-    const end = `<!-- /${name}:auto -->`;
-    const from = html.indexOf(start);
-    const to = html.indexOf(end, from);
-    if (from === -1 || to === -1) throw new Error(`resources.html: ${name} markers missing`);
-    html = `${html.slice(0, from)}${start}\n${content}\n      ${html.slice(to)}`;
-  }
-  return html;
+  const start = "<!-- doclib:auto -->";
+  const end = "<!-- /doclib:auto -->";
+  const from = html.indexOf(start);
+  const to = html.indexOf(end, from);
+  if (from === -1 || to === -1) throw new Error("resources.html: doclib markers missing");
+  return `${html.slice(0, from)}${start}\n${documentLibrary()}\n      ${html.slice(to)}`;
+}
+
+function injectProofRecords(html) {
+  const start = "<!-- proof-records:auto -->";
+  const end = "<!-- /proof-records:auto -->";
+  const from = html.indexOf(start);
+  const to = html.indexOf(end, from);
+  if (from === -1 || to === -1) throw new Error("proof record markers missing");
+  return `${html.slice(0, from)}${start}\n${proofRecordsHtml(PROOF_RECORDS)}\n    ${html.slice(to)}`;
 }
 
 const pick = (html, re) => html.match(re)?.[1]?.trim() || "";
@@ -433,7 +419,7 @@ function applyContentHtmlMeta(html, content = {}) {
 
 function buildBlock(html, meta) {
   const content = meta.content || {};
-  const title = content.title || pick(html, /<title>([^<]*)<\/title>/i) || "MASEST VertKleen";
+  const title = content.title || pick(html, /<title>([^<]*)<\/title>/i) || "MASEST VertKlean";
   const desc = content.description || pick(html, /<meta\s+name="description"\s+content="([^"]*)"/i) || "";
   const ogImage = absoluteAssetUrl(content.og_image) || OG_IMAGE;
   const baseJsonld = content.jsonld || meta.jsonld;
@@ -468,6 +454,7 @@ async function processPage(file, meta, isPrivate = false) {
   html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
   html = stripOld(html);
   if (file === "resources.html") html = injectDocumentLibrary(html);
+  if (file === "proof.html") html = injectProofRecords(html);
   if (isPrivate) {
     if (!/name="robots"/.test(html)) {
       html = html.replace(/(<meta name="viewport"[^>]*>)/i, '$1\n<meta name="robots" content="noindex">');
@@ -513,10 +500,13 @@ function productRouteCopy(id) {
 
 function productDescription(id, product) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
-  // Bare `replaces` values ("50% ethylene glycol pre-mix") are spec labels, not
-  // sentences — only full "Replaces …" statements read correctly in prose.
   const replaces = /^Replaces\b/i.test(product.replaces || "") ? product.replaces : "";
-  const parts = [copy.summary, product.desc, replaces, productRouteCopy(id)].filter(Boolean).map(terminate);
+  const parts = [
+    copy.summary,
+    copy.operator_advantage,
+    replaces,
+    productRouteCopy(id),
+  ].filter(Boolean).map(terminate);
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
@@ -544,7 +534,7 @@ function productSchema(id, product, reviewsSnapshot) {
       {
         "@type": "Product",
         name: product.name,
-        brand: { "@type": "Brand", name: "VertKleen" },
+        brand: { "@type": "Brand", name: "VertKlean" },
         category: "Industrial cleaning chemistry",
         description: productDescription(id, product),
         url: `${BASE}/products/${id}`,
@@ -587,7 +577,7 @@ function productPage(id, product, reviewsSnapshot) {
         <span class="media-fallback-label">${text(product.name)}</span>
       </figure>`;
   const uses = (product.uses || copy.fits || []).map((item) => `<li>${text(item)}</li>`).join("\n");
-  const specs = (product.specs || [])
+  const specs = productHighlights(id)
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
     .join("\n");
   const docs = (product.docs || [])
@@ -611,21 +601,21 @@ function productPage(id, product, reviewsSnapshot) {
     : "Small packs ship from stock where available; drums, totes, and program supply are quoted.";
   const replacement = String(product.replaces || "Industrial chemistry").replace(/^Replaces\s+/i, "");
   const supply = QUOTE_ONLY_IDS.has(id) ? "Quoted to fit" : "Small packs in stock";
-  const eyebrow = id === "dbnpa" ? "Program component" : "VertKleen product";
+  const eyebrow = id === "dbnpa" ? "Program component" : "VertKlean product";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${text(product.name)} | MASEST VertKleen</title>
+<title>${text(product.name)} | MASEST VertKlean</title>
 <meta name="description" content="${attr(metaDesc)}">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
-<meta property="og:title" content="${attr(product.name)} | MASEST VertKleen">
+<meta property="og:title" content="${attr(product.name)} | MASEST VertKlean">
 <meta property="og:description" content="${attr(metaDesc)}">
 <meta property="og:type" content="product">
-<meta property="og:site_name" content="MASEST VertKleen">
+<meta property="og:site_name" content="MASEST VertKlean">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
@@ -672,8 +662,8 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         </div>`}
         <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}#quoteForm">Request a quote</a>
-          <a class="btn btn-secondary" href="../contact?type=sample&product=${encodeURIComponent(product.name)}#quoteForm">Request free sample</a>
+          <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.quote_cta || "Request a quote")}</a>
+          <a class="btn btn-secondary" href="../contact?type=sample&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.sample_cta || "Request free sample")}</a>
           <a class="btn btn-ghost" href="../products">All products</a>
         </div>
       </div>
@@ -688,14 +678,14 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         <ul class="product-fit-list">${uses}</ul>
       </article>
       <article class="product-static-panel">
-        <h2>Why it survives review.</h2>
+        <h2>What backs the switch.</h2>
         <ul class="spec-list">${specs}</ul>
         ${docs ? `<h3>Documents</h3><ul class="product-fit-list">${docs}</ul>` : ""}
       </article>
     </div>
   </section>
 </main>
-<script type="module" src="../js/main.js?v=20260725f"></script>
+<script type="module" src="../js/main.js?v=20260726a"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

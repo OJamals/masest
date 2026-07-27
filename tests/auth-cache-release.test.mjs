@@ -6,13 +6,15 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260725f";
-const ADMIN_RELEASE = "20260725f";
-const ADMIN_PAGE_RELEASE = "20260725f";
-const CHROME_RELEASE = "20260725f";
+const MAIN_RELEASE = "20260726a";
+const ADMIN_RELEASE = "20260726a";
+const ADMIN_PAGE_RELEASE = "20260726a";
+const CHROME_RELEASE = "20260726a";
 const ACCOUNT_NAV_RELEASE = "20260725f";
-const CUSTOMER_CHAT_RELEASE = "20260725f";
+const CUSTOMER_CHAT_RELEASE = "20260726a";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
+const CONTENT_RELEASE = "20260726a";
+const STORY_RELEASE = "20260726a";
 const MAIN_RELEASE_OVERRIDES = new Map();
 
 function filesUnder(path) {
@@ -55,9 +57,11 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${dashboardEntry[1]}`));
 
   assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${ADMIN_PAGE_RELEASE}`));
-  for (const module of ["content", "products", "qbo", "companies", "threads"]) {
+  for (const module of ["products", "qbo", "companies", "threads"]) {
     assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_RELEASE}`));
   }
+  assert.match(read("js/admin.js"), new RegExp(`admin/content\\.js\\?v=${CONTENT_RELEASE}`));
+  assert.match(read("js/admin/content.js"), new RegExp(`content-types\\.js\\?v=${CONTENT_RELEASE}`));
   assert.match(read("js/admin.js"), new RegExp(`renderChrome\\(\\{ authModule: "/js/auth\\.js\\?v=${ADMIN_RELEASE}" \\}\\)`));
   assert.match(read("js/main/chrome.js"), /initAccountNav\(\{ nav, root, authModule \}\)/);
   assert.match(read("js/account-nav.js"), /await import\(authModule\)/);
@@ -73,6 +77,8 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/admin-support.js"), /admin-support\.css\?v=20260711e/);
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("product.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
+  assert.match(read("index.html"), new RegExp(`story\\.css\\?v=${STORY_RELEASE}`));
+  assert.match(read("index.html"), new RegExp(`story\\.js\\?v=${STORY_RELEASE}`));
 });
 
 test("account login button and form submit share the same handler", () => {

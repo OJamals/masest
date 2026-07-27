@@ -12,30 +12,30 @@ const SEED = JSON.parse(readFileSync(new URL("../data/content/blog.json", import
 const P3_AUTHORITY_POSTS = [
   {
     slug: "industrial-cleaning-trial-scope-isolate-contain-release",
-    sources: [
-      "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.1200",
-      "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.147",
-      "https://www.epa.gov/npdes/industrial-stormwater-fact-sheet-series",
+    outcome: "completed-task cost",
+    links: [
+      "/products",
+      "/proof",
+      "/resources",
     ],
-    boundary: "A product document does not replace the site work plan",
   },
   {
     slug: "food-plant-cleaning-cip-sanitation-release",
-    sources: [
-      "https://www.fda.gov/media/184685/download",
-      "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-117/subpart-B/section-117.35",
-      "https://www.epa.gov/pesticide-registration/selected-epa-registered-disinfectants",
+    outcome: "completed-cycle cost",
+    links: [
+      "/proof#brewery-cip-trials",
+      "/resources",
+      "/pricing-cip-food-beverage",
     ],
-    boundary: "Cleaning evidence is not sanitation or disinfection evidence",
   },
   {
     slug: "cooling-tower-cleaning-water-management-plan",
-    sources: [
-      "https://www.ashrae.org/technical-resources/standards-and-guidelines/titles-purposes-and-scopes",
-      "https://www.cdc.gov/infection-control/hcp/environmental-control/appendix-c-water.html",
-      "https://www.energy.gov/cmei/femp/cooling-water-efficiency-opportunities-federal-data-centers",
+    outcome: "completed-system cost",
+    links: [
+      "/programs",
+      "/products",
+      "/proof",
     ],
-    boundary: "Cleaning chemistry is one controlled task inside the facility program",
   },
 ];
 
@@ -92,7 +92,7 @@ test("buildBlog writes a static page per post", () => {
   }
 });
 
-test("P3 authority posts cite primary operational sources and keep claims bounded", () => {
+test("P3 authority posts connect mechanisms to completed-task outcomes without unsupported claims", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
   try {
     buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
@@ -102,19 +102,19 @@ test("P3 authority posts cite primary operational sources and keep claims bounde
       assert.equal(post.category, "technical");
       assert.equal(post.author, "MASEST Technical Team");
       assert.ok(post.tags.includes("operations"));
-      assert.ok(post.body.includes(expected.boundary));
-      for (const source of expected.sources) {
-        assert.ok(post.body.includes(source), `${expected.slug} must cite ${source}`);
+      assert.ok(post.body.includes(expected.outcome), `${expected.slug} must name ${expected.outcome}`);
+      for (const link of expected.links) {
+        assert.ok(post.body.includes(`](${link})`), `${expected.slug} must link ${link}`);
       }
 
       const html = readFileSync(join(out, "blog", `${expected.slug}.html`), "utf8");
-      assert.match(html, /<h2>Primary sources<\/h2>/);
-      for (const source of expected.sources) {
-        assert.ok(html.includes(`href="${source}"`), `${expected.slug} must render ${source}`);
+      assert.match(html, /<h2>(Trial|CIP|Program) references<\/h2>/);
+      for (const link of expected.links) {
+        assert.ok(html.includes(`href="${link}"`), `${expected.slug} must render ${link}`);
       }
       assert.doesNotMatch(
         html,
-        /safe to discharge|guarantees? compliance|VertKleen WaterSafe60 is NSF|EPA-registered VertKleen/i,
+        /safe to discharge|guarantees? compliance|VertKlean WaterSafe60 is NSF|EPA-registered VertKlean/i,
       );
     }
   } finally {
@@ -147,8 +147,8 @@ test("P3 authority posts have an idempotent Blog CMS seed", () => {
     assert.match(seed, new RegExp(`'blog_post',\\s*'${expected.slug}'`));
     assert.ok(seed.includes(post.title));
     assert.ok(seed.includes(post.excerpt));
-    assert.ok(seed.includes(expected.boundary));
-    for (const source of expected.sources) assert.ok(seed.includes(source));
+    assert.ok(seed.includes(expected.outcome));
+    for (const link of expected.links) assert.ok(seed.includes(`](${link})`));
   }
   assert.match(seed, /on conflict \(type, slug, locale\) do update/);
   assert.match(seed, /where type = 'blog_post' and slug in \(/);
@@ -189,7 +189,7 @@ test("buildBlog writes an index listing every post with filter data", () => {
     }
     assert.match(idx, /data-blog-filter/);
     assert.match(idx, /canonical" href="https:\/\/masest\.co\/blog"/);
-    assert.match(idx, /"brand":"VertKleen"/);
+    assert.match(idx, /"brand":"VertKlean"/);
     assert.match(idx, /"contactPoint":\{"@type":"ContactPoint","contactType":"sales","url":"https:\/\/masest\.co\/contact"\}/);
   } finally {
     rmSync(out, { recursive: true, force: true });

@@ -42,7 +42,7 @@ async function routeProducts(page) {
     body: JSON.stringify({
       products: [{
         sku: "hcr",
-        name: "VertKleen CIP HCR",
+        name: "VertKlean CIP HCR",
         active: true,
         mode: "buy",
         price: 42,
@@ -78,7 +78,7 @@ test("product detail publishes product-specific SEO metadata", async () => {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
       await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKleen CIP HCR"));
+      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKlean CIP HCR"));
 
       const meta = await page.evaluate(() => ({
         title: document.title,
@@ -89,10 +89,11 @@ test("product detail publishes product-specific SEO metadata", async () => {
         canonical: document.querySelector('link[rel="canonical"]')?.href || "",
       }));
 
-      assert.equal(meta.title, "VertKleen CIP HCR | MASEST VertKleen");
-      assert.match(meta.description, /beer stone, brewery tanks, lines, and heat exchangers/);
-      assert.equal(meta.ogTitle, "VertKleen CIP HCR | MASEST VertKleen");
-      assert.match(meta.ogDescription, /beer stone, brewery tanks, lines, and heat exchangers/);
+      assert.equal(meta.title, "VertKlean CIP HCR | MASEST VertKlean");
+      assert.match(meta.description, /Acid-level descaling power/);
+      assert.match(meta.description, /Restore flow and heat transfer/);
+      assert.equal(meta.ogTitle, "VertKlean CIP HCR | MASEST VertKlean");
+      assert.equal(meta.ogDescription, meta.description);
       assert.doesNotMatch(meta.description, /Replaces Replaces/);
       assert.equal(meta.ogUrl, "https://masest.co/products/hcr");
       assert.equal(meta.canonical, "https://masest.co/products/hcr");

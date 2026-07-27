@@ -1,8 +1,8 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 263,
-  "usedCount": 157,
-  "bufferCount": 106,
+  "count": 259,
+  "usedCount": 150,
+  "bufferCount": 109,
   "icons": [
     {
       "name": "address-book",
@@ -32,11 +32,6 @@
     {
       "name": "arrow-counter-clockwise",
       "cp": "E038",
-      "src": "used"
-    },
-    {
-      "name": "arrow-down",
-      "cp": "E03E",
       "src": "used"
     },
     {
@@ -450,11 +445,6 @@
       "src": "buffer"
     },
     {
-      "name": "file-lock",
-      "cp": "E95C",
-      "src": "used"
-    },
-    {
       "name": "file-text",
       "cp": "E23A",
       "src": "used"
@@ -477,7 +467,7 @@
     {
       "name": "fire-simple",
       "cp": "E620",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "first-aid",
@@ -542,7 +532,7 @@
     {
       "name": "gauge",
       "cp": "E628",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "gavel",
@@ -692,7 +682,7 @@
     {
       "name": "leaf",
       "cp": "E2DA",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "lifebuoy",
@@ -930,11 +920,6 @@
       "src": "buffer"
     },
     {
-      "name": "prohibit",
-      "cp": "E3DE",
-      "src": "used"
-    },
-    {
       "name": "question",
       "cp": "E3E8",
       "src": "buffer"
@@ -967,7 +952,7 @@
     {
       "name": "scales",
       "cp": "E750",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "screwdriver",
@@ -1205,14 +1190,9 @@
       "src": "buffer"
     },
     {
-      "name": "trend-down",
-      "cp": "E4AC",
-      "src": "used"
-    },
-    {
       "name": "trend-up",
       "cp": "E4AE",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "trophy",

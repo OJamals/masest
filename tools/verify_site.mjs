@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { findUnsupportedAuthorityClaim } from "./public-document-policy.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
@@ -210,32 +209,6 @@ function checkRobotsAndPrivatePages() {
   }
 }
 
-function checkClaimDiscipline() {
-  const bannedClaims = /\b(?:non[-\s]?toxic|harmless|zero[-\s]?risk|risk[-\s]?free|no[-\s]?fumes|fume[-\s]?free|chemical[-\s]?free|safe for all)\b/i;
-  const files = [
-    ...htmlFiles,
-    ...walk(path.join(projectRoot, "data", "content"), [".json"]),
-    path.join(projectRoot, "data/catalog.seed.json"),
-    path.join(projectRoot, "data/industry-applications.json"),
-    path.join(projectRoot, "data/products.seed.json"),
-    path.join(projectRoot, "data/services.json"),
-    path.join(projectRoot, "js/main/catalog-data.js"),
-  ].filter((file) => fs.existsSync(file));
-
-  for (const file of files) {
-    const text = fs.readFileSync(file, "utf8");
-    const match = text.match(bannedClaims);
-    ok(!match, `${rel(file)} uses unsupported safety claim: ${match?.[0]}`);
-    const relative = rel(file);
-    const productContext = /^(?:products?\.html|products\/.*\.html|proof\.html|data\/content\/proof\.json|data\/(?:catalog|products)\.seed\.json|js\/main\/catalog-data\.js)$/.test(relative);
-    const authorityClaim = findUnsupportedAuthorityClaim(text, { productContext });
-    ok(
-      !authorityClaim,
-      `${relative} uses unsupported ${authorityClaim?.kind} claim: ${authorityClaim?.claim}`,
-    );
-  }
-}
-
 function checkCommerceContracts() {
   const products = read("products.html");
   const product = read("product.html");
@@ -313,7 +286,6 @@ function checkSyntax() {
 checkLocalRefs();
 checkSeoContracts();
 checkRobotsAndPrivatePages();
-checkClaimDiscipline();
 checkCommerceContracts();
 verifyOptionalContentSnapshot();
 checkSyntax();

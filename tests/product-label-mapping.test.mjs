@@ -11,23 +11,23 @@ const managedImages = new Set(
 
 const expectedLabels = {
   cr: {
-    name: "VertKleen CIP CR",
+    name: "VertKlean CIP CR",
     image: "img/products/cip-cr-studio.webp",
   },
   cr2: {
-    name: "VertKleen HVAC CR",
+    name: "VertKlean HVAC CR",
     image: "img/products/hvac-cr-studio.webp",
   },
   hcr: {
-    name: "VertKleen CIP HCR",
+    name: "VertKlean CIP HCR",
     image: "img/products/cip-hcr-studio.webp",
   },
   "hcr-t16": {
-    name: "VertKleen HVAC HCR",
+    name: "VertKlean HVAC HCR",
     image: "img/products/hvac-hcr-studio.webp",
   },
   multiwash: {
-    name: "VertKleen MultiWash",
+    name: "VertKlean MultiWash",
     image: "img/products/multiwash-gym-studio.webp",
   },
   purgo: {

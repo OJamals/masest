@@ -30,7 +30,7 @@ export function unsentPosts(posts, sentSlugs) {
 // live post. Returns { subject, html, url }. All interpolated fields are escaped.
 export function renderBlogEmail(post = {}) {
   const slug = String(post.slug || '');
-  const title = String(post.title || 'New from the VertKleen Briefing');
+  const title = String(post.title || 'New from the VertKlean Briefing');
   const excerpt = String(post.excerpt || '');
   const category = String(post.category || '');
   const author = String(post.author || '');

@@ -40,7 +40,7 @@ async function bootAsStaff(page) {
   let contentAssets = [{
     storage_path: "img/proof/cases/brewery.webp",
     public_url: "img/proof/cases/brewery.webp",
-    alt: "Brewery tank cleaned with VertKleen CR and HCR",
+    alt: "Brewery tank cleaned with VertKlean CR and HCR",
     status: "available",
     credit: "MASEST field team",
   }];
@@ -149,7 +149,7 @@ async function bootAsStaff(page) {
       payload: {
         kind: "food",
         image: "img/proof/cases/brewery.webp",
-        image_alt: "Brewery tank cleaned with VertKleen CR and HCR",
+        image_alt: "Brewery tank cleaned with VertKlean CR and HCR",
         result: "Matched legacy CIP sequence.",
       },
       seo: {},
@@ -192,7 +192,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(assetOption).toBeVisible();
   await assetOption.click();
   await expect(assetViewer.locator("[data-shared-image-preview]")).toBeVisible();
-  await expect(assetViewer.locator("[data-shared-image-preview-alt]")).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
+  await expect(assetViewer.locator("[data-shared-image-preview-alt]")).toHaveValue("Brewery tank cleaned with VertKlean CR and HCR");
   await assetViewer.locator("[data-shared-image-state]").click();
   await page.locator('.confirm-dialog button[value="confirm"]').click();
   await expect(assetViewer.locator("[data-shared-image-status]")).toHaveText("Image archived.");
@@ -208,7 +208,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-asset-manager.png` });
   await assetViewer.locator("[data-shared-image-confirm]").click();
   await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("/img/proof/cases/brewery.webp");
-  await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
+  await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Brewery tank cleaned with VertKlean CR and HCR");
 
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
   assetViewer = page.locator("dialog.shared-image-picker");
@@ -294,7 +294,7 @@ test("public industry CMS cards render managed images", async ({ page }) => {
         title: "Cold storage",
         href: "industries/distribution-cold-storage",
         image: "img/proof/cases/fire-pump.webp",
-        image_alt: "Cold storage condenser cleaned with VertKleen",
+        image_alt: "Cold storage condenser cleaned with VertKlean",
         summary: "Refrigeration maintenance proof for facilities teams.",
       }],
     }),
@@ -303,7 +303,7 @@ test("public industry CMS cards render managed images", async ({ page }) => {
   await page.goto(`${BASE_URL}/industries.html`, { waitUntil: "domcontentloaded" });
   const card = page.locator('[data-cms-content="industry_cards"] .route-card-media-card');
   await expect(card).toHaveAttribute("href", "industries/distribution-cold-storage");
-  await expect(card.locator("img")).toHaveAttribute("alt", "Cold storage condenser cleaned with VertKleen");
+  await expect(card.locator("img")).toHaveAttribute("alt", "Cold storage condenser cleaned with VertKlean");
   await expect(card).toContainText("Cold storage");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   expect(overflow).toBe(false);

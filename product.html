@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Product | MASEST VertKleen</title>
-  <meta name="description" content="VertKleen product details with HMIS ratings, replacement targets, field use cases, photos, small-pack checkout, quote paths, and controlled technical documents.">
+<title>Product | MASEST VertKlean</title>
+  <meta name="description" content="VertKlean product details with HMIS ratings, replacement targets, field use cases, photos, small-pack checkout, quote paths, and controlled technical documents.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
-<meta property="og:title" content="Product | MASEST VertKleen">
+<meta property="og:title" content="Product | MASEST VertKlean">
   <meta property="og:description" content="HMIS ratings, replacement targets, field use cases, photos, small-pack checkout, quote paths, and controlled technical documents.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="MASEST VertKleen">
+<meta property="og:site_name" content="MASEST VertKlean">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260726a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
@@ -37,27 +37,27 @@
   <a href="proof">Proof</a>
   <a href="resources">Resources</a>
 </nav>
-<section class="wrap static-product-fallback" id="staticProductFallback" aria-label="VertKleen product snapshots">
+<section class="wrap static-product-fallback" id="staticProductFallback" aria-label="VertKlean product snapshots">
   <div class="section-head">
     <span class="eyebrow">Product line</span>
-    <h1 class="headline">Find the VertKleen replacement before the next PO.</h1>
-    <p class="subhead">Compare the chemical you run today against the VertKleen line. Each product page adds photos, quotes, and document requests.</p>
+    <h1 class="headline">Find the VertKlean replacement before the next PO.</h1>
+    <p class="subhead">Compare the chemical you run today against the VertKlean line. Each product page adds photos, quotes, and document requests.</p>
   </div>
   <div class="static-product-grid">
     <article class="static-product-card">
-      <b>VertKleen HCR</b>
+      <b>VertKlean HCR</b>
       <span>Replaces hydrochloric acid</span>
       <p>Descaling, rust removal, passivation, and acid-cleaning candidates. Confirm the exact SKU and current SDS.</p>
       <a href="products/hcr">Open HCR</a>
     </article>
     <article class="static-product-card">
-      <b>VertKleen CR</b>
+      <b>VertKlean CR</b>
       <span>Replaces caustic soda</span>
       <p>Alkaline-cleaning and water-treatment candidates. Confirm the exact SKU, current SDS, and process limits.</p>
       <a href="products/cr">Open CR</a>
     </article>
     <article class="static-product-card">
-      <b>VertKleen CR HD</b>
+      <b>VertKlean CR HD</b>
       <span>Replaces caustic and solvent degreasers</span>
       <p>Heavy-duty degreasing candidates for oils, hoods, machinery, and industrial floors after task review.</p>
       <a href="products/crhd">Open CRHD</a>
@@ -162,9 +162,9 @@
 </section>
 </main>
 
-<script type="module" src="js/main.js?v=20260725f"></script>
+<script type="module" src="js/main.js?v=20260726a"></script>
 <script type="module">
-  const { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal } = window.MASESTMain;
+  const { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal, productHighlights } = window.MASESTMain;
   const { QUOTE_FIRST_IDS } = window.MASESTMain;
   const { isLocalStaticCommerceSuppressed, loadCommerceCatalog, refreshCommerceActions } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {
@@ -178,6 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const commerceId = COMMERCE_ALIAS[id] || id;
     const isCatalogProduct = Array.isArray(CATALOG_ORDER) && CATALOG_ORDER.includes(id);
     const p = isCatalogProduct ? PRODUCTS[id] : null;
+    const productCopy = PRODUCT_CATALOG_COPY[id] || {};
     const isProgramOnly = false;
     const quoteFirst = (Array.isArray(QUOTE_FIRST_IDS) && QUOTE_FIRST_IDS.includes(id)) || isProgramOnly;
     function productCanonicalUrl() {
@@ -189,15 +190,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     function setProductMeta(product) {
       const canonicalUrl = productCanonicalUrl();
-      const title = `${product.name} | MASEST VertKleen`;
+      const title = `${product.name} | MASEST VertKlean`;
       const replacementLine = product.replaces
         ? (/^replaces\b/i.test(product.replaces) ? product.replaces : `Replaces ${product.replaces}`)
         : "";
- const procurementRoute = quoteFirst
- ? "Quote review required before purchase."
- : "Small-pack checkout available; bulk sizes route through quote review.";
+      const procurementRoute = quoteFirst
+        ? "Quoted to fit the job and volume."
+        : "Small-pack checkout available; drums and totes are quoted.";
       const rawDescription = [
-        product.desc,
+        productCopy.summary,
+        productCopy.operator_advantage,
         replacementLine ? `${replacementLine}.` : "",
         product.hmis ? `HMIS ${product.hmis}.` : "",
         procurementRoute
@@ -219,10 +221,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "@context": "https://schema.org",
         "@type": "Product",
         "name": product.name,
-        "brand": { "@type": "Brand", "name": "VertKleen" },
+        "brand": { "@type": "Brand", "name": "VertKlean" },
         "manufacturer": { "@type": "Organization", "name": "MASEST Consulting LLC" },
         "category": product.category || "Industrial cleaning chemistry",
-        "description": product.desc,
+        "description": productCopy.summary,
         "url": canonicalUrl,
         "image": product.image ? new URL(product.image, "https://masest.co/").href : undefined,
         "additionalProperty": [
@@ -241,14 +243,14 @@ document.addEventListener("DOMContentLoaded", () => {
       script.textContent = JSON.stringify(graph);
     }
     if (!p) {
-      document.title = "Product not found | MASEST VertKleen";
+      document.title = "Product not found | MASEST VertKlean";
       document.getElementById("main").innerHTML = `
         <section class="hero-split">
           <div class="wrap grid-2">
             <div>
               <p class="eyebrow">Product</p>
               <h1 class="display">That product is not in the current catalog.</h1>
-              <p class="subhead">The link may be outdated, mistyped, or tied to an older source label. Browse the current VertKleen line, or send MASEST the application you need to solve.</p>
+              <p class="subhead">The link may be outdated, mistyped, or tied to an older source label. Browse the current VertKlean line, or send MASEST the application you need to solve.</p>
               <div class="hero-actions">
                 <a class="btn btn-primary" href="products">Browse products</a>
         <a class="btn btn-secondary" href="contact?type=quote">Request product quote</a>
@@ -289,12 +291,12 @@ document.addEventListener("DOMContentLoaded", () => {
         .catch(() => {});
     })();
     document.getElementById("pReplaces").textContent = p.cat === "glycol"
-      ? `VertKleen Glycols / ${p.replaces}`
+      ? `VertKlean Glycols / ${p.replaces}`
       : p.replaces;
     document.getElementById("pName").textContent = p.name;
     document.getElementById("pDesc").textContent = isProgramOnly
-      ? `${p.desc} This page is quote-only and exists to resolve older source-label links.`
-      : p.desc;
+      ? `${productCopy.summary} Quoted to fit the job and volume.`
+      : [productCopy.summary, productCopy.operator_advantage].filter(Boolean).join(" ");
     function setProductImage(src, alt) {
       const img = document.getElementById("pImage");
       img.src = src;
@@ -310,9 +312,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const quoteHref = "contact?type=quote&product=" + encodeURIComponent(isProgramOnly ? `${p.name} program fit` : p.name);
     const sampleHref = "contact?type=sample&product=" + encodeURIComponent(p.name);
     const quoteBtn = document.getElementById("pQuoteBtn");
-    if (quoteBtn) quoteBtn.href = quoteHref;
+    if (quoteBtn) {
+      quoteBtn.href = quoteHref;
+      quoteBtn.textContent = productCopy.quote_cta || "Request a quote";
+    }
     const sampleBtn = document.getElementById("pSampleBtn");
-    if (sampleBtn) sampleBtn.href = sampleHref;
+    if (sampleBtn) {
+      sampleBtn.href = sampleHref;
+      sampleBtn.textContent = productCopy.sample_cta || "Request free sample";
+    }
     const buyBtn = document.getElementById("pBuyBtn");
     const cartFeedback = document.getElementById("pCartFeedback");
 
@@ -552,13 +560,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (p.hmis === "0-0-0") {
       rows.innerHTML = ["Health", "Flammability", "Reactivity"].map(l =>
         `<div class="hmis-row"><span class="lbl">${l}</span><span class="val">0</span></div>`).join("");
-      document.getElementById("panelFoot").textContent = "Confirm the exact SKU, current SDS, label, material compatibility, ventilation, and procedure through controlled document review.";
+      document.getElementById("panelFoot").textContent = "The 0-0-0 HMIS profile supports easier crew handling and storage. Match dilution and method to the job.";
     } else {
       rows.innerHTML = `<div class="hmis-row"><span class="lbl">Classification</span><span class="val val--text">Low</span></div>`;
-      document.getElementById("panelFoot").textContent = "Document-gated program component; formal label, SDS, registration status, and task controls route through MASEST before any product claim.";
+      document.getElementById("panelFoot").textContent = "Review the product label and SDS for task controls, then match dose and method to the system.";
     }
 
-    document.getElementById("pSpecs").innerHTML = p.specs.map(([ico, b, s]) =>
+    document.getElementById("pSpecs").innerHTML = productHighlights(id).map(([ico, b, s]) =>
       `<div class="spec-item"><i class="ph ${ico}" aria-hidden="true"></i><div><b>${b}</b><span>${s}</span></div></div>`).join("");
 
  document.getElementById("pUses").innerHTML = p.uses.map(u =>

@@ -133,17 +133,15 @@ test("snapshotGroups returns every public export target", () => {
   const proofFields = contentPayloadFields("proof_card").map((field) => field.key);
   assert.ok(proofFields.includes("result"));
   assert.ok(proofFields.includes("narrative"));
-  assert.ok(proofFields.includes("boundary"));
   assert.ok(proofFields.includes("publication_scope"));
   assert.equal(proofFields.includes("href"), false);
 });
 
-test("proof cards require publication scope, narrative, and an evidence boundary", () => {
+test("proof cards require a published result label and conversion narrative", () => {
   const complete = {
     result: "Visible field result.",
     narrative: "Short case narrative.",
-    boundary: "No comparative or customer-outcome claim.",
-    publication_scope: "Signed publication scope recorded offline",
+    publication_scope: "Published result summary",
   };
 
   assert.deepEqual(validateStructuredPayload("proof_card", complete), {

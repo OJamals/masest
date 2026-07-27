@@ -115,7 +115,7 @@ test('legacy quote payloads remain unchanged and blank task details are removed'
   const response = await handler({
     request: quoteRequest({
       type: 'quote',
-      product: 'VertKleen CR',
+      product: 'VertKlean CR',
       industry: 'Data Centers',
       message: 'Existing request',
       current_chemical: '   ',
@@ -125,7 +125,7 @@ test('legacy quote payloads remain unchanged and blank task details are removed'
   });
 
   assert.equal(response.status, 200);
-  assert.equal(inserted.payload.product, 'VertKleen CR');
+  assert.equal(inserted.payload.product, 'VertKlean CR');
   assert.equal(inserted.payload.industry, 'Data Centers');
   assert.equal(inserted.payload.message, 'Existing request');
   assert.equal(Object.hasOwn(inserted.payload, 'current_chemical'), false);

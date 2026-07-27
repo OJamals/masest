@@ -44,11 +44,11 @@ test("global navigation groups proof and industries as use cases", () => {
   assert.doesNotMatch(navBlock, /Field Results/);
 });
 
-test("product cards use details as the only repeated card action", () => {
+test("product cards use one detail action", () => {
   const cardBlock = commerceUi.match(/function productCard[\s\S]*?const commerceState/);
 
   assert.ok(cardBlock, "expected productCard block");
-  assert.match(cardBlock[0], /View details/);
+  assert.match(cardBlock[0], /See how it works/);
   assert.doesNotMatch(cardBlock[0], /contact\?product/);
   assert.doesNotMatch(cardBlock[0], /Request a Quote/);
 });
@@ -97,7 +97,7 @@ test("products page wires the catalog grid from product data", () => {
   assert.match(commerceUi, /QUOTE_FIRST_IDS\.includes\(id\)/);
   assert.match(commerceUi, /shop-card-quote/);
   assert.match(commerceUi, /shop-card-bulk/);
-  assert.match(read("products.html"), /href="#catalog">Browse all products/);
+  assert.match(read("products.html"), /href="#catalog">Shop by cleaning job/);
   assert.match(read("products.html"), /contact\?type=distributor/);
   assert.doesNotMatch(read("products.html"), /Request a Quote/);
 });
@@ -126,7 +126,7 @@ test("programs page keeps glycol quote handling in an optional disclosure", () =
   assert.doesNotMatch(programs, /PG inhibited 100% \(96%\)[\s\S]*\$141/, "glycol prices should not be public without workbook confirmation");
 });
 
-test("products page keeps the classified evidence strip between catalog and CTA", () => {
+test("products page keeps the conversion-results strip between catalog and CTA", () => {
   const products = read("products.html");
   const catalogIndex = products.indexOf('id="shopGrid"');
   const proofIndex = products.indexOf('class="conversion-proof');
@@ -136,9 +136,10 @@ test("products page keeps the classified evidence strip between catalog and CTA"
   assert.ok(ctaIndex > -1, "expected closing CTA");
   assert.ok(catalogIndex < proofIndex, "evidence should follow the catalog");
   assert.ok(proofIndex < ctaIndex, "evidence should precede the CTA");
-  assert.match(products, /Field context/);
-  assert.match(products, /Reference only/);
-  assert.match(products, /CR \+ HCR CIP/);
+  assert.match(products, /Rust-and-scale removal/);
+  assert.match(products, /CR \+ HCR brewery CIP/);
+  assert.match(products, /Drone-applied exterior cleaning/);
+  assert.doesNotMatch(products, /Field context|Reference only|record incomplete/i);
   assert.doesNotMatch(products, /30 min|36 hours|Occupied sites/);
 });
 
@@ -155,9 +156,9 @@ test("program function map is optional below the tiers", () => {
   assert.ok(mapDisclosureIndex < mapIndex, "map should be wrapped by disclosure");
 });
 
-test("proof page leads with classified evidence, not raw internal results", () => {
+test("proof page leads with results and expandable conversion evidence", () => {
   const proof = read("proof.html");
-  const heroIndex = proof.indexOf("Evidence, classified before it sells.");
+  const heroIndex = proof.indexOf("Results strong enough to replace the old chemistry.");
   const libraryIndex = proof.indexOf('class="proof-library');
 
   assert.ok(heroIndex > -1, "expected proof hero");
@@ -165,19 +166,19 @@ test("proof page leads with classified evidence, not raw internal results", () =
   assert.ok(heroIndex < libraryIndex, "hero should lead proof library");
   assert.doesNotMatch(proof, /proof-decision-strip/);
   assert.doesNotMatch(proof, /class="proof-decision"/);
-  assert.match(proof, /Request a chemical audit/);
-  assert.match(proof, /Public field context—verification incomplete/);
-  assert.match(proof, /CR \+ HCR CIP reference trial notes/);
-  assert.equal((proof.match(/<summary>Case summary<\/summary>/g) || []).length, 12);
-  assert.equal((proof.match(/Signed publication scope recorded offline/g) || []).length, 13);
-  assert.match(proof, /<summary>Read the lab-record summary<\/summary>/);
+  assert.match(proof, /Request this comparison/);
+  assert.match(proof, /Real-world transformations/);
+  assert.match(proof, /Brewery chemistry that beat the old playbook/);
+  assert.equal((proof.match(/data-proof-card/g) || []).length, 12);
+  assert.equal((proof.match(/Published result summary/g) || []).length, 12);
+  assert.equal((proof.match(/<details class="case-disclosure"/g) || []).length, 12);
   assert.doesNotMatch(proof, /href="docs\/(?:brewery-cip-trial-brewlando|carib-brewery-lab-report)\.pdf"/);
   assert.doesNotMatch(proof, /30 min|36 hours|280&#215;|\$75|2,500 square feet/);
   assert.doesNotMatch(proof, /broader company file/i);
   assert.doesNotMatch(proof, /private pipeline detail/i);
 });
 
-test("home proof cards route to bounded case summaries instead of source PDFs", () => {
+test("home proof cards route to case summaries instead of source PDFs", () => {
   const home = read("index.html");
 
   assert.match(home, /href="proof#brewery-cip-trials">Read case summary<\/a>/);
@@ -197,7 +198,7 @@ test("industries page routes buyers before the long industry list", () => {
   assert.match(industries, /Start with your role or the job/);
   assert.match(industries, /Facility \/ operations/);
   assert.match(industries, /Degrease/);
-  assert.match(industries, /Evidence status/);
+  assert.match(industries, /Result path/);
 });
 
 test("industry router stacks route cards on mobile", () => {
@@ -253,7 +254,7 @@ test("no-js fallback nav stays focused on primary categories", () => {
   assert.match(nav, /Resources/);
   assert.doesNotMatch(nav, /Request a Quote/);
     assert.doesNotMatch(nav, />Home</);
-    assert.doesNotMatch(nav, />Why VertKleen</);
+    assert.doesNotMatch(nav, />Why VertKlean</);
     assert.doesNotMatch(nav, />About/);
     assert.doesNotMatch(nav, />Contact</);
   }
@@ -301,7 +302,7 @@ test("resources page puts dense technical tables behind disclosure", () => {
 
   const summaryTag = resources.slice(disclosureIndex, resources.indexOf(">", disclosureIndex));
   assert.doesNotMatch(summaryTag, /\sopen\b/, "technical disclosure should be closed by default");
-  assert.match(resources, /Request SDS and certificate-status files/);
+  assert.match(resources, /Get product documents and field records/);
   assert.match(resources, /Request a current quote/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.resource-router \.route-grid/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.resources-reference-disclosure summary/);
@@ -390,14 +391,14 @@ test("scrolly story keeps its static summary out of the visual flow", () => {
   assert.match(summary, /One documented trial brief/);
 });
 
-test("scrolly opener states the replacement promise early", () => {
+test("scrolly opener states the VertKlean mechanism early", () => {
   const index = read("index.html");
   const storyCss = read("css/story.css");
   const actOne = index.match(/<section class="act" data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actOne, /class="story-promise"/);
-  assert.match(actOne, /Built for the scale, rust, grease, and biofilm jobs/);
-  assert.match(actOne, /typical HMIS health, flammability, and reactivity ratings of 0-0-0/);
+  assert.match(actOne, /Industrial cleaning power, engineered around people and equipment/);
+  assert.match(actOne, /controlled mineral-removal and soil-lift chemistry/);
   assert.match(storyCss, /\.story-promise/);
 });
 
@@ -424,7 +425,7 @@ test("scrolly story state remains available to responsive chrome", () => {
   assert.doesNotMatch(storyCss, /crisp-client|crisp-chatbox/);
 });
 
-test("scrolly act 3 combines conventional burden and qualified VertKleen state", () => {
+test("scrolly act 3 combines conventional burden and VertKlean mechanism", () => {
   const index = read("index.html");
   const actThree = index.match(/<section class="act act-ledger"[\s\S]*?<\/section>/)?.[0];
   const actFour = index.match(/<section class="act act-savior act-proof-close"[\s\S]*?<\/section>/)?.[0];
@@ -437,10 +438,11 @@ test("scrolly act 3 combines conventional burden and qualified VertKleen state",
   assert.match(actThree, /Caustic soda \/ lye/);
   assert.match(actThree, /Glutaraldehyde/);
   assert.match(actThree, /Chlorinated solvent/);
-  assert.match(actThree, /Review gate/);
+  assert.match(actThree, /How the job works/);
+  assert.match(actThree, /React, complex, rinse/);
   assert.match(actThree, /data-target="115000"/);
   assert.match(actThree, /class="cost-sources"/);
-  for (const product of ["VertKleen HCR", "VertKleen CR", "VertKleen Neutral", "VertKleen Purgo"]) {
+  for (const product of ["VertKlean HCR", "VertKlean CR", "VertKlean Neutral", "VertKlean Purgo"]) {
     assert.match(actThree, new RegExp(product));
   }
   assert.equal((actThree.match(/class="hmis-chip is-safe"/g) || []).length, 4);
@@ -545,8 +547,11 @@ test("story homepage avoids the nav-injection + fallback-reflow CLS", () => {
 
 test("scrolly Scene 3 HMIS intro remains readable", () => {
   const home = read("index.html");
-  const intro = home.match(/<p class="act-p" data-at="1"([^>]*)>Crews fight buildup[\s\S]*?<\/p>/);
+  const intro = home.match(
+    /<div class="ledger-intro"[\s\S]*?<p class="act-p" data-at="1"([^>]*)>([\s\S]*?)<\/p>/,
+  );
 
   assert.ok(intro, "expected Scene 3 HMIS intro copy");
   assert.doesNotMatch(intro[1], /data-out/, "HMIS intro stays up while the ledger builds");
+  assert.match(intro[2], /VertKlean mineral removal, soil lift, and operating value/);
 });

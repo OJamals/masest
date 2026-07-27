@@ -43,16 +43,16 @@ test("admin product APIs expose safe product media fields", () => {
 test("admin products show catalog media when CMS media fields are empty", () => {
   const fallback = withCatalogMediaFallback({
     sku: "cr-hd",
-    name: "VertKleen CR HD",
+    name: "VertKlean CR HD",
     image_url: null,
     photo_alt: null,
   });
   assert.equal(fallback.image_url, "img/products/crhd-studio.webp");
-  assert.equal(fallback.photo_alt, "VertKleen CR HD product image");
+  assert.equal(fallback.photo_alt, "VertKlean CR HD product image");
 
   const customized = withCatalogMediaFallback({
     sku: "hcr",
-    name: "VertKleen CIP HCR",
+    name: "VertKlean CIP HCR",
     image_url: "https://cdn.example.test/custom-hcr.webp",
     photo_alt: "Custom HCR photo",
   });

@@ -1,5 +1,5 @@
 /* ============================================================
-   MASEST / VertKleen - Four-act Replacement Ledger engine
+   MASEST / VertKlean - Four-act Replacement Ledger engine
    NATIVE browser scroll. One GSAP timeline per act, driven by
    ScrollTrigger scrub (the single smoothing layer - no Lenis,
    no wheel multipliers, no custom damping). Wheel feel is the

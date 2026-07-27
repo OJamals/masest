@@ -43,7 +43,7 @@ test("content validation rejects commerce-owned product data", () => {
   const result = validateContentEntry({
     type: "product",
     slug: "hcr",
-    title: "VertKleen HCR",
+    title: "VertKlean HCR",
     payload: { price: 17.3, mode: "buy" },
     seo: {},
   });

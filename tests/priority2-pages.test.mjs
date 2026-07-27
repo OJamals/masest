@@ -8,52 +8,56 @@ const exists = (path) => existsSync(new URL(path, root));
 const managedImages = new Set(
   JSON.parse(read("data/content/site-images.json")).assets.map((asset) => asset.public_url),
 );
-const industryProducts = new Map(
+const industryBySlug = new Map(
   JSON.parse(read("data/industry-applications.json"))
     .industries
+    .map((industry) => [industry.slug, industry]),
+);
+const industryProducts = new Map(
+  [...industryBySlug.values()]
     .map((industry) => [industry.slug, industry.products.join(" ")]),
 );
 
 const priorityIndustries = [
-  ["data-centers", "Data Centers", "Cooling-tower scale, water-management-plan support", "Schedule a water-treatment audit."],
-  ["golf-courses", "Golf Courses & Sports Facilities", "Equipment, carts, irrigation scale, exterior stains", "Request grounds-crew trial"],
-  ["solar-panel-cleaning", "Solar Farms & Panel Cleaning", "Utility-scale soft-wash work needs coating compatibility", "Request per-MW quote"],
-  ["municipalities-water-utilities", "Municipalities & Water Utilities", "Public-water requirements, worker safety, bids", "Get on our bid list"],
-  ["hotels-property-management", "Hotels, Resorts & Property Management", "Facades, pools, restrooms, HVAC", "Request property walkthrough"],
+  "data-centers",
+  "golf-courses",
+  "solar-panel-cleaning",
+  "municipalities-water-utilities",
+  "hotels-property-management",
 ];
 
 const tab4IndustryPages = [
-  ["education", "Education Facilities", "K-12 and university facilities", "Price this cleaning task"],
-  ["mechanical-contractors-water-treatment", "Mechanical Contractors &amp; Water Treatment", "Callback-driven descaling and hazmat handling costs", "Open a contractor account"],
-  ["breweries-distilleries-wineries", "Breweries, Distilleries &amp; Wineries", "CIP acid and caustic hazards", "Book a free CIP demo"],
-  ["restaurants-commercial-kitchens", "Restaurants &amp; Commercial Kitchens", "Grease, drains, hood filters, and equipment cleaning", "Get a sample kit"],
-  ["data-centers", "Data Centers", "Cooling-tower scale, water-management-plan support", "Schedule a water-treatment audit."],
-  ["warehousing-distribution-centers", "Warehousing &amp; Distribution Centers", "Floor degreasing at scale", "Request drum pricing"],
-  ["pressure-washing-soft-wash-contractors", "Pressure-Washing &amp; Soft-Wash Contractors", "Bleach damage, plant kill, and runoff liability", "Distributor application"],
-  ["drone-cleaning-companies", "Drone Cleaning Companies", "equipment, substrate, overspray, runoff", "Book a drone-wash consult"],
-  ["marine-marinas-boatyards", "Marine, Marinas &amp; Boatyards", "Hull scale, salt, wax, and aluminum brightwork", "Get marina bulk pricing"],
-  ["aviation-fbos-mro-airports", "Aviation - FBOs, MRO, Airports", "precision degreasing with corrosion-aware material review", "Request aviation spec sheet"],
-  ["municipalities-water-utilities", "Municipalities &amp; Water Utilities", "Public-water requirements, worker safety, bids", "Get on our bid list"],
-  ["healthcare-senior-living", "Healthcare &amp; Senior Living", "Cleaning near vulnerable people", "Request facilities assessment"],
-  ["fleet-trucking-car-washes", "Fleet, Trucking &amp; Car Washes", "Degreasing, wash and wax", "Fleet program pricing"],
-  ["oil-gas", "Oil, Gas &amp; Process Plants", "Scope descaling, derusting, and degreasing around metallurgy", "Price this cleaning task"],
-  ["agriculture", "Agriculture &amp; Farm Operations", "Harvest, packing, milking", "Request farm-equipment trial"],
+  "education",
+  "mechanical-contractors-water-treatment",
+  "breweries-distilleries-wineries",
+  "restaurants-commercial-kitchens",
+  "data-centers",
+  "warehousing-distribution-centers",
+  "pressure-washing-soft-wash-contractors",
+  "drone-cleaning-companies",
+  "marine-marinas-boatyards",
+  "aviation-fbos-mro-airports",
+  "municipalities-water-utilities",
+  "healthcare-senior-living",
+  "fleet-trucking-car-washes",
+  "oil-gas",
+  "agriculture",
 ];
 
 const comparisonPages = [
-  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "DDC Engineering"],
-  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "DDC Engineering"],
+  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKlean HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "controlled mineral-removal"],
+  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "controlled mineral removal"],
   ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
-  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Wet & Forget"],
+  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "visibly cleaner hardscape"],
   ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "Brewlando"],
 ];
 
 const comparisonBlogPosts = [
-  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "DDC Engineering"],
-  ["blog/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "DDC Engineering"],
+  ["blog/vertkleen-hcr-vs-clr.html", "VertKlean HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "Carbonate chemistry"],
+  ["blog/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "Field result"],
   ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
-  ["blog/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Wet & Forget"],
-  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "Brewlando"],
+  ["blog/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Price by treated area"],
+  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "completed-cycle cost"],
 ];
 
 const industryLabelPages = [
@@ -68,8 +72,8 @@ const industryLabelPages = [
 
 test("product and industry listings stay concise and product-focused", () => {
   const products = read("products.html");
-  assert.match(products, /Search by job or current chemical\./);
-  assert.doesNotMatch(products, /VertKleen covers acids, caustics, degreasers/);
+  assert.match(products, /Choose chemistry by what you need to remove\./);
+  assert.doesNotMatch(products, /VertKlean covers acids, caustics, degreasers/);
 
   for (const slug of industryLabelPages) {
     const html = read(`industries/${slug}.html`);
@@ -87,14 +91,15 @@ test("priority 2 target industry pages exist with workbook-specified products an
 
   assert.match(contact, /<option>Data Centers<\/option>/, "contact form should expose Data Centers as an industry");
 
-  for (const [slug, name, problem, cta] of priorityIndustries) {
+  for (const slug of priorityIndustries) {
+    const { label: name, marketing: problem, cta_label: cta } = industryBySlug.get(slug);
     const path = `industries/${slug}.html`;
     assert.equal(exists(path), true, `${path} should exist`);
 
     const html = read(path);
     assert.match(index, new RegExp(`href="industries/${slug}"`), `${name} should be linked from industries index`);
     assert.match(sitemap, new RegExp(`https://masest\\.co/industries/${slug}`), `${name} should be in sitemap`);
-    assert.match(html, new RegExp(`<title>${name.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
+    assert.match(html, new RegExp(`<title>${name.replace(/&/g, "&amp;")} \\| MASEST VertKlean</title>`));
     assert.match(html, new RegExp(problem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(html, new RegExp(`data-ind-products="${industryProducts.get(slug)}"`), `${name} should use the canonical starting products`);
     assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${name} CTA should match the workbook`);
@@ -107,17 +112,19 @@ test("Tab 4 industry rows each have a generated landing page", () => {
   const sitemap = read("sitemap.xml");
   const contact = read("contact.html");
 
-  for (const [slug, name, problem, cta] of tab4IndustryPages) {
+  for (const slug of tab4IndustryPages) {
+    const { label: name, marketing: problem, cta_label: cta } = industryBySlug.get(slug);
+    const htmlName = name.replace(/&/g, "&amp;");
     const path = `industries/${slug}.html`;
     assert.equal(exists(path), true, `${path} should exist`);
 
     const html = read(path);
     assert.match(sitemap, new RegExp(`https://masest\\.co/industries/${slug}`), `${slug} should be in sitemap`);
-    assert.match(html, new RegExp(`<title>${name} \\| MASEST VertKleen</title>`), `${slug} title should match Tab 4 row`);
+    assert.match(html, new RegExp(`<title>${htmlName} \\| MASEST VertKlean</title>`), `${slug} title should match Tab 4 row`);
     assert.match(html, new RegExp(problem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 problem`);
     assert.match(html, new RegExp(`data-ind-products="${industryProducts.get(slug)}"`), `${slug} should use the canonical starting products`);
     assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 CTA`);
-    assert.match(contact, new RegExp(`<option>${name}</option>`), `${name} should be available in the industry dropdown`);
+    assert.match(contact, new RegExp(`<option>${htmlName}</option>`), `${name} should be available in the industry dropdown`);
   }
 });
 
@@ -198,8 +205,8 @@ test("priority 2 comparison landing pages include price math, swap row, proof po
     const html = read(path);
     const route = path.replace(/\.html$/, "");
     assert.match(sitemap, new RegExp(`https://masest\\.co/${route}`), `${route} should be in sitemap`);
-    assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
-    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should show VertKleen per-gallon math`);
+    assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKlean</title>`));
+    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should show VertKlean per-gallon math`);
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should show competitor per-gallon math`);
     assert.match(html, /<table class="cmp-table comparison-swap-table">/, `${title} should include the swap-table row`);
     assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should include a proof point`);
@@ -208,7 +215,7 @@ test("priority 2 comparison landing pages include price math, swap row, proof po
   }
 });
 
-test("comparison SEO pages are also generated as blog posts", () => {
+test("comparison SEO pages are also generated as mechanism-first blog posts", () => {
   const sitemap = read("sitemap.xml");
   const blogData = JSON.parse(read("data/content/blog.json"));
   const postSlugs = new Set(blogData.blog_posts.map((post) => post.slug));
@@ -220,12 +227,11 @@ test("comparison SEO pages are also generated as blog posts", () => {
 
     const html = read(path);
     assert.match(sitemap, new RegExp(`https://masest\\.co/blog/${slug}`), `${slug} blog URL should be in sitemap`);
-    assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
-    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show VertKleen per-gallon math`);
+    assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKlean</title>`));
+    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show VertKlean per-gallon math`);
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show competitor per-gallon math`);
-    assert.match(html, /Swap table row/, `${title} blog post should include the swap-table row`);
     assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should include a proof point`);
-    assert.match(html, /href="(?:\.\.\/|\/)contact\?type=quote(?:&amp;industry=)?/, `${title} blog post should include a quote CTA`);
+    assert.match(html, /href="(?:\.\.\/|\/)contact\?type=(?:quote|audit)(?:&amp;industry=)?/, `${title} blog post should include a task CTA`);
   }
 });
 

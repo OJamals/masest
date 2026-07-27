@@ -50,6 +50,13 @@ test("public sitemap pages expose social preview metadata", () => {
   }
 });
 
+test("public copy avoids absolute safety claims", () => {
+  const absoluteSafetyClaim = /\b(?:non[- ]?toxic|harmless|zero[- ]risk|risk[- ]free|no[- ]fumes|fume[- ]free|chemical[- ]free|safe for all)\b/i;
+  for (const page of pages) {
+    assert.doesNotMatch(html(page), absoluteSafetyClaim, `${page} contains an absolute safety claim`);
+  }
+});
+
 test("site verifier ignores local audit capture artifacts", () => {
   assert.match(
     verifySite,
@@ -109,16 +116,5 @@ test("status colors use shared semantic tokens outside the token source", () => 
     for (const swatch of statusSwatches) {
       assert.ok(!source.includes(swatch), `${file} uses raw status swatch ${swatch}`);
     }
-  }
-});
-
-test("public copy avoids absolute safety claims", () => {
-  const banned = /\b(?:non[-\s]?toxic|harmless|zero[-\s]?risk|risk[-\s]?free|no[-\s]?fumes|fume[-\s]?free|chemical[-\s]?free|safe for all)\b/i;
-  for (const page of pages) {
-    const text = html(page)
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ");
-    assert.equal(text.match(banned)?.[0], undefined, `${page} uses absolute safety claim`);
   }
 });

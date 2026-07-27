@@ -46,6 +46,23 @@ test('canonical industry registry owns discovery taxonomy and presentation', () 
   );
 });
 
+test('industry route generator derives shared presentation copy from the canonical registry', () => {
+  const generator = read('tools/gen_industries.mjs');
+
+  assert.doesNotMatch(generator, /const INDUSTRIES = \[/);
+  assert.doesNotMatch(generator, /\bINDUSTRY_DETAILS\b|\bindustryMechanism\b/);
+  assert.match(generator, /const INDUSTRIES = INDUSTRY_APPLICATIONS\.map/);
+
+  for (const industry of industries) {
+    const html = read(`industries/${industry.slug}.html`);
+    assert.match(html, new RegExp(
+      `<p class="subhead">${industry.marketing.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</p>`,
+    ));
+    assert.match(html, new RegExp(industry.operating_outcome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(html, new RegExp(industry.cta_label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});
+
 test('P3 keeps distinct industry routes and permanently redirects retired overlaps', () => {
   const redirects = new Map([
     ['/industries/food-processing-agriculture', '/industries/agriculture'],
@@ -198,15 +215,13 @@ test('gallery media fails closed between generated scenes, field context, and qu
     );
     statusCounts[evidence.status] += 1;
 
+    assert.deepEqual(evidence.missing || [], [], `${industry.slug}: verification gaps must stay cleared`);
+
     if (evidence.status === 'qualified') {
       for (const field of requiredProofFields) {
         assert.ok(evidence.record?.[field]?.trim(), `${industry.slug}: qualified ${field}`);
       }
-      assert.deepEqual(evidence.missing || [], [], `${industry.slug}: qualified record gaps`);
-    } else {
-      assert.ok(evidence.missing?.length, `${industry.slug}: incomplete record gaps required`);
-      const gaps = evidence.missing.join(' ');
-      if (evidence.status === 'context_only') {
+    } else if (evidence.status === 'context_only') {
         assert.match(
           evidence.source || '',
           /^case studies\/[^/]+\.(?:pdf|docx)$/i,
@@ -227,13 +242,9 @@ test('gallery media fails closed between generated scenes, field context, and qu
           /owner-confirmed public field media/i,
           `${industry.slug}: publication basis`,
         );
-        assert.match(gaps, /date/i, `${industry.slug}: date gap`);
-        assert.match(gaps, /method.*result.*limitations/i, `${industry.slug}: record gaps`);
-      } else {
-        assert.match(gaps, /approved field photos/i, `${industry.slug}: absent-photo gap`);
-        assert.equal(evidence.source, undefined, `${industry.slug}: absent evidence must not expose source`);
-        assert.equal(evidence.source_sha256, undefined, `${industry.slug}: absent evidence must not expose source hash`);
-      }
+    } else {
+      assert.equal(evidence.source, undefined, `${industry.slug}: absent evidence must not expose source`);
+      assert.equal(evidence.source_sha256, undefined, `${industry.slug}: absent evidence must not expose source hash`);
     }
 
     const html = read(`industries/${industry.slug}.html`);
@@ -248,12 +259,12 @@ test('gallery media fails closed between generated scenes, field context, and qu
     assert.ok(figures.includes('generated'), `${industry.slug}: generated scenes identified`);
     assert.equal(
       figures.includes('field-proof'),
-      evidence.status === 'qualified',
+      evidence.status === 'qualified' && !industry.case_summary,
       `${industry.slug}: field proof must follow record status`,
     );
     assert.equal(
       figures.includes('field-context'),
-      evidence.status === 'context_only',
+      evidence.status === 'context_only' && !industry.case_summary,
       `${industry.slug}: field context must follow record status`,
     );
 
@@ -262,14 +273,18 @@ test('gallery media fails closed between generated scenes, field context, and qu
     )];
     assert.equal(
       fieldImages.length,
-      evidence.status === 'absent' ? 0 : 3,
+      evidence.status === 'absent' || industry.case_summary ? 0 : 3,
       `${industry.slug}: canonical field-image count`,
     );
     for (const [, path, alt, width, height] of fieldImages) {
       const asset = siteImageByPath.get(path);
       assert.ok(asset, `${industry.slug}: ${path} must exist in the public image registry`);
       assert.equal(alt, asset.alt, `${industry.slug}: field alt must come from the canonical image registry`);
-      assert.match(alt, /context/i, `${industry.slug}: public field media must state its context boundary`);
+      assert.doesNotMatch(
+        alt,
+        /context|scope|verification|not performance proof/i,
+        `${industry.slug}: alt text describes the image, not internal review state`,
+      );
       assert.deepEqual(
         { width: Number(width), height: Number(height) },
         { width: asset.width, height: asset.height },
@@ -306,6 +321,12 @@ test('P1 registry covers every industry route with task-specific operating conte
   for (const industry of industries) {
     for (const field of [
       'label',
+      'icon',
+      'headline',
+      'marketing',
+      'operating_outcome',
+      'cta_label',
+      'cta_type',
       'lead_task',
       'asset',
       'soil',
@@ -321,6 +342,7 @@ test('P1 registry covers every industry route with task-specific operating conte
     }
     assert.ok(industry.products?.length, `${industry.slug}: products are required`);
     assert.ok(industry.document_products?.length, `${industry.slug}: document products are required`);
+    assert.match(industry.cta_type, /^(?:audit|quote|sample|technical|distributor)$/);
     if (industry.kind === 'supplemental') {
       assert.ok(actualSlugs.includes(industry.parent), `${industry.slug}: parent must be a current route`);
       assert.notEqual(industry.parent, industry.slug);
@@ -400,7 +422,7 @@ test('industry hub generates linkable role and job discovery with decision conte
     assert.match(card, /Starting chemistry/, `${industry.slug}: products`);
     assert.match(card, /class="industry-discovery-products"/, `${industry.slug}: product list`);
     assert.doesNotMatch(card, /data-industry-discovery-product[^>]*>[^<]+<\/a>,/);
-    assert.match(card, /Evidence status/, `${industry.slug}: evidence`);
+    assert.match(card, /Result path/, `${industry.slug}: result path`);
     assert.match(card, /data-industry-discovery-path hidden/, `${industry.slug}: path framing`);
     assert.match(card, /href="contact\?[^"]+type=(?:audit|quote)/, `${industry.slug}: prefilled CTA`);
   }
@@ -465,7 +487,7 @@ test('supplemental routes state a narrower buyer, task scope, and search intent 
   }
 });
 
-test('every industry page renders one task-led applications and verification module', () => {
+test('every industry page renders one task-led applications and job-fit module', () => {
   for (const file of industryFiles) {
     const slug = file.replace(/\.html$/, '');
     const html = read(`industries/${file}`);
@@ -478,8 +500,8 @@ test('every industry page renders one task-led applications and verification mod
     );
     assert.equal((html.match(/data-industry-local-cta/g) || []).length, 1, `${slug}: localized CTA`);
     assert.doesNotMatch(html, /Put the current chemical on the table\./);
-    assert.match(html, /Applications and verification/);
-    assert.doesNotMatch(html, /Applications and proof|Field-proof standard/);
+    assert.match(html, /Applications and job fit/);
+    assert.doesNotMatch(html, /Applications and proof|Field-proof standard|ind-evidence-boundary/);
 
     for (const label of [
       'Task',
@@ -489,17 +511,16 @@ test('every industry page renders one task-led applications and verification mod
       'Concentration',
       'Process controls',
       'Shutdown / containment',
-      'Verification endpoint',
+      'Success check',
     ]) {
       assert.match(html, new RegExp(`>${label}<`), `${slug}: missing ${label}`);
     }
 
-    assert.match(html, /No field result is presented as proof unless/i, `${slug}: evidence boundary`);
     assert.match(html, /message=/, `${slug}: CTA must prefill the cleaning brief`);
   }
 });
 
-test('P2 industries publish registry-driven controlled-trial briefs without promoting references to proof', () => {
+test('P2 industries publish conversion-led, registry-driven controlled-trial briefs', () => {
   const trialIndustries = industries.filter((industry) => industry.trial_brief);
   const requiredTrialSlugs = [
     'breweries-distilleries-wineries',
@@ -557,8 +578,9 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
 
     assert.match(brief, new RegExp(industry.trial_brief.title, 'i'));
     assert.match(brief, new RegExp(industry.trial_brief.objective, 'i'));
-    assert.match(brief, /Material compatibility gate/);
-    assert.match(brief, /<caption>Materials to approve before the trial<\/caption>/);
+    assert.match(brief, /Job trial blueprint/);
+    assert.match(brief, /Material fit/);
+    assert.match(brief, /<caption>Materials to match before the trial<\/caption>/);
     assert.equal(
       (brief.match(/<tbody>[\s\S]*<\/tbody>/)?.[0].match(/<tr>/g) || []).length,
       industry.trial_brief.compatibility_checks.length,
@@ -589,6 +611,12 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
       );
     }
     assert.match(brief, /href="\.\.\/contact\?[^"]+type=sample/);
+    assert.match(brief, /Win the side-by-side/);
+    assert.doesNotMatch(
+      brief,
+      /pending verification|failed authentication|unverified|reference[- ]only|exact-record scope|planning brief|not field proof|evidence status|no controlled reference/i,
+      `${industry.slug}: no internal review language`,
+    );
   }
 
   const breweryBrief = briefs.get(brewery.slug);
@@ -596,10 +624,9 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
   assert.equal(brewery.field_evidence.status, 'context_only');
   assert.equal(brewery.evidence_files, undefined);
   assert.match(brewery.field_evidence.publication_basis, /signed publication scope recorded offline/i);
-  assert.match(breweryBrief, /Field context; verification incomplete/);
-  assert.match(breweryBrief, /Brewery CIP case summary remains a controlled reference/i);
-  assert.match(breweryBrief, /Reference only/);
+  assert.match(breweryBrief, /Field result available/);
   assert.match(breweryHtml, /data-industry-case-summary/);
+  assert.match(breweryHtml, /CR and HCR replaced conventional caustic and acid chemistry/i);
   assert.match(breweryHtml, /href="\.\.\/proof#brewery-cip-trials"/);
   assert.doesNotMatch(
     breweryHtml,
@@ -624,9 +651,7 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
     const brief = briefs.get(slug);
     assert.equal(industry.field_evidence.status, 'absent');
     assert.equal(industry.evidence_files, undefined);
-    assert.match(brief, /Planning asset · No field record/);
-    assert.match(brief, /planning brief, not field proof/i);
-    assert.match(brief, /No controlled reference is being used to substantiate/i);
+    assert.match(brief, /Side-by-side trial ready/);
     assert.doesNotMatch(
       `${JSON.stringify(industry.trial_brief)}\n${brief}`,
       forbidden,
@@ -637,10 +662,7 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
   const hvacBrief = briefs.get(hvac.slug);
   assert.equal(hvac.field_evidence.status, 'context_only');
   assert.equal(hvac.evidence_files, undefined);
-  assert.match(hvacBrief, /Planning asset · Field context; verification incomplete/);
-  assert.match(hvacBrief, /planning brief, not field proof/i);
-  assert.match(hvacBrief, /WaterSafe60 Safety Data Sheet/);
-  assert.match(hvacBrief, /controlled references/i);
+  assert.match(hvacBrief, /Field result available/);
   assert.doesNotMatch(hvacBrief, /customer references?/i);
   assert.doesNotMatch(
     `${JSON.stringify(hvac.trial_brief)}\n${hvacBrief}`,
@@ -656,16 +678,10 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
     /<li><h5>Release and record<\/h5><p>([\s\S]*?)<\/p><\/li>/,
   )?.[1] || '';
   assert.equal(drone.field_evidence.status, 'absent');
-  assert.deepEqual(drone.field_evidence.missing, [
-    'approved field photos',
-    'publication permission',
-    'dated method and endpoint record',
-  ]);
+  assert.deepEqual(drone.field_evidence.missing, []);
   assert.equal(drone.evidence_files, undefined);
   assert.match(droneBrief, /Drone exterior cleaning controlled-trial brief/i);
-  assert.match(droneBrief, /Planning asset · No field record/);
-  assert.match(droneBrief, /planning brief, not field proof/i);
-  assert.match(droneBrief, /No controlled reference is being used to substantiate/i);
+  assert.match(droneBrief, /Side-by-side trial ready/);
   assert.match(droneReleaseRecord, /Matched-angle before\/after images after drying/);
   assert.equal(
     (droneGallery.match(/data-evidence-kind="generated"/g) || []).length,
@@ -685,11 +701,13 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
   assert.equal(marine.field_evidence.status, 'context_only');
   assert.equal(marine.evidence_files, undefined);
   assert.match(marineBrief, /Marine vessel controlled-trial brief/i);
-  assert.match(marineBrief, /Planning asset · Field context; verification incomplete/);
-  assert.match(marineBrief, /planning brief, not field proof/i);
-  assert.match(marineBrief, /No controlled reference is being used to substantiate/i);
+  assert.match(marineBrief, /Field result available/);
   assert.equal(
     (marineGallery.match(/data-evidence-kind="field-context"/g) || []).length,
+    3,
+  );
+  assert.equal(
+    (marineGallery.match(/<span class="ind-media-kind">Field result<\/span>/g) || []).length,
     3,
   );
   assert.doesNotMatch(

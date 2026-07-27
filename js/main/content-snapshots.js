@@ -1,6 +1,7 @@
 import { initReveal } from "./effects.js";
 import { esc } from "../util.js";
 import { canonicalPublicImageUrl } from "../image-url.js?v=20260723a";
+import { proofCardHtml } from "../proof-records.js?v=20260726a";
 
 const SNAPSHOT_FILES = {
   proof_cards: "proof.json",
@@ -27,7 +28,11 @@ export function safeContentHref(value, fallback = "") {
   return raw;
 }
 
-export function filterContentRows(rows = [], { category = "", page = "", region = "" } = {}) {
+export function filterContentRows(rows = [], {
+  category = "",
+  page = "",
+  region = "",
+} = {}) {
   if (!Array.isArray(rows)) return [];
   const wanted = normalizeCategory(category);
   const wantedPage = normalizeToken(page);
@@ -61,45 +66,6 @@ export async function loadContentSnapshot(file) {
   } catch {
     return null;
   }
-}
-
-function proofCard(card) {
-  const chips = Array.isArray(card.chips) ? card.chips : [];
-  const dims = ` width="${esc(card.image_w || 1600)}" height="${esc(card.image_h || 900)}"`;
-  const image = canonicalPublicImageUrl(card.image);
-  const img = image
-    ? `<img src="${esc(image)}" alt="${esc(card.image_alt || card.title || "")}" loading="lazy"${dims}>`
-    : "";
-  const afterDims = ` width="${esc(card.image_after_w || 1600)}" height="${esc(card.image_after_h || 900)}"`;
-  const afterImage = canonicalPublicImageUrl(card.image_after);
-  const afterImg = afterImage
-    ? `<img src="${esc(afterImage)}" alt="${esc(card.image_after_alt || card.title || "")}" loading="lazy"${afterDims}>`
-    : "";
-  let media = "";
-  if (img && afterImg) {
-    media = `<div class="case-ba"><figure>${img}<figcaption>Before</figcaption></figure><figure>${afterImg}<figcaption>After</figcaption></figure></div>`;
-  } else if (img) {
-    media = `<figure class="case-media">${img}</figure>`;
-  }
-  const narrative = String(card.narrative || "").trim();
-  const boundary = String(card.boundary || "").trim();
-  const disclosure = narrative || boundary
-    ? `<details class="case-disclosure"><summary>Case summary</summary><div class="case-disclosure-body">${narrative ? `<p>${esc(narrative)}</p>` : ""}${boundary ? `<p class="case-boundary"><strong>Evidence boundary:</strong> ${esc(boundary)}</p>` : ""}</div></details>`
-    : "";
-  return `
-    <article id="${esc(card.slug || "")}" class="case-card reveal" data-proof-card data-proof-kind="${esc(card.kind || "all")}">
-      ${media}
-      <div class="case-body">
-        <span class="case-eyebrow">${esc(card.eyebrow || "Proof")}</span>
-        <h3>${esc(card.title || "Untitled proof")}</h3>
-        <p class="case-result">${esc(card.result || card.summary || "")}</p>
-        ${disclosure}
-        ${chips.length ? `<div class="case-meta">${chips.map((chip) => `<span class="case-chip">${esc(chip)}</span>`).join("")}</div>` : ""}
-        ${card.publication_scope ? `<span class="case-publication">${esc(card.publication_scope)}</span>` : ""}
-        ${card.source ? `<span class="case-source">${esc(card.source)}</span>` : ""}
-      </div>
-    </article>
-  `;
 }
 
 function resourceCard(card) {
@@ -255,7 +221,7 @@ export async function initContentSnapshots() {
   ]);
 
   const rendered = [
-    renderMount("proof_cards", proof, "proof_cards", proofCard),
+    renderMount("proof_cards", proof, "proof_cards", proofCardHtml),
     renderMount("resource_cards", resources, "resource_cards", resourceCard),
     renderMount("industry_cards", industries, "industry_cards", industryCard),
     renderMount("faq_blocks", faqs, "faq_blocks", faqBlock),

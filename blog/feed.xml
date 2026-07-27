@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>MASEST VertKleen Blog</title>
+    <title>MASEST VertKlean Blog</title>
     <link>https://masest.co/blog</link>
-    <description>Field notes, technical guides, and program news on VertKleen chemistry.</description>
+    <description>How VertKlean chemistry works, why operators switch, and what changes in the field.</description>
     <language>en-us</language>
     <item>
       <title>Cooling-tower cleaning belongs inside the water-management plan</title>
@@ -11,23 +11,23 @@
       <guid isPermaLink="true">https://masest.co/blog/cooling-tower-cleaning-water-management-plan</guid>
       <pubDate>Sun, 26 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>An operations-first framework for placing cooling-tower cleaning inside the facility water-management, maintenance, containment, and return-to-service process.</description>
+      <description>Coordinate WaterSafe60, Purgo, HCR, and Descaler around scale, corrosion deposits, organic film, and microbial burden.</description>
     </item>
     <item>
-      <title>Food-plant cleaning: keep CIP, sanitation, and release separate</title>
+      <title>Build a faster CIP cycle around the soil</title>
       <link>https://masest.co/blog/food-plant-cleaning-cip-sanitation-release</link>
       <guid isPermaLink="true">https://masest.co/blog/food-plant-cleaning-cip-sanitation-release</guid>
       <pubDate>Sun, 26 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>A source-led way to separate the CIP method, cleaning result, sanitation decision, and customer-defined release criteria.</description>
+      <description>CR lifts organic soil; HCR targets beer stone and mineral scale. Build dose, rinse, labor, and return-to-production around the two jobs.</description>
     </item>
     <item>
-      <title>Industrial cleaning trials: scope, isolate, contain, release</title>
+      <title>The fastest credible path to replacing a harsh chemical</title>
       <link>https://masest.co/blog/industrial-cleaning-trial-scope-isolate-contain-release</link>
       <guid isPermaLink="true">https://masest.co/blog/industrial-cleaning-trial-scope-isolate-contain-release</guid>
       <pubDate>Sun, 26 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>A four-gate framework for scoping an industrial cleaning trial around exact-SKU documents, hazardous-energy isolation, containment, and return to service.</description>
+      <description>Diagnose the soil, choose the matching VertKlean mechanism, hold a fair baseline, and capture the completed-task result.</description>
     </item>
     <item>
       <title>Beer line cleaner cost comparison</title>
@@ -35,7 +35,7 @@
       <guid isPermaLink="true">https://masest.co/blog/beer-line-cleaner-cost-comparison</guid>
       <pubDate>Thu, 09 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>Technical note on beer-line cleaner costs, CR and HCR CIP pricing, and brewery details needed for a food-and-beverage quote.</description>
+      <description>CR lifts organic soil; HCR removes beer stone and mineral scale. Compare dose, rinse, labor, downtime, and completed-cycle cost.</description>
     </item>
     <item>
       <title>CR HD vs Simple Green</title>
@@ -43,7 +43,7 @@
       <guid isPermaLink="true">https://masest.co/blog/cr-hd-vs-simple-green</guid>
       <pubDate>Thu, 09 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>Technical note on CR HD and Simple Green degreasing economics, task inputs, and cost-per-completed-task trial planning.</description>
+      <description>CR HD uses high-pH wetting, sequestration, and soil lift for heavy hydrocarbon load—then compares passes, rinse, labor, and task cost.</description>
     </item>
     <item>
       <title>HCR vs RYDLYME</title>
@@ -51,7 +51,7 @@
       <guid isPermaLink="true">https://masest.co/blog/hcr-vs-rydlyme</guid>
       <pubDate>Thu, 09 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>Technical note on HCR and RYDLYME descaling economics, proof requirements, and the system details needed for a quote.</description>
+      <description>Compare HCR and RYDLYME by mechanism, dose, cycle, rinse, material impact, crew experience, shutdown time, and completed-system cost.</description>
     </item>
     <item>
       <title>LAM3 vs Wet &amp; Forget</title>
@@ -59,39 +59,39 @@
       <guid isPermaLink="true">https://masest.co/blog/lam3-vs-wet-forget</guid>
       <pubDate>Thu, 09 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>Technical note on LAM3 and Wet &amp; Forget exterior cleaning economics, pack-size differences, and surface details for quoting.</description>
+      <description>Compare LAM3 and Wet &amp; Forget by wetting, dwell, visible-stain result, coverage, labor, maintenance interval, and cost per treated area.</description>
     </item>
     <item>
-      <title>VertKleen HCR vs CLR</title>
+      <title>VertKlean HCR vs CLR</title>
       <link>https://masest.co/blog/vertkleen-hcr-vs-clr</link>
       <guid isPermaLink="true">https://masest.co/blog/vertkleen-hcr-vs-clr</guid>
       <pubDate>Thu, 09 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>Technical note on the HCR-versus-CLR replacement math, field proof, and quote inputs buyers should gather before switching.</description>
+      <description>Industrial HCR vs light-duty CLR: compare deposit load, carbonate chemistry, circulation, concentration, equipment scale, and completed-job economics.</description>
     </item>
     <item>
-      <title>What HMIS 0-0-0 Actually Means for Your Facility</title>
+      <title>What a lower-hazard profile changes operationally</title>
       <link>https://masest.co/blog/hmis-000-explained</link>
       <guid isPermaLink="true">https://masest.co/blog/hmis-000-explained</guid>
       <pubDate>Wed, 01 Jul 2026 00:00:00 GMT</pubDate>
       <category>technical</category>
-      <description>A 0-0-0 HMIS rating changes how a chemical is stored, shipped, and handled. Here is what the three zeros mean and why they lower your handling burden.</description>
+      <description>Lower-hazard chemistry can improve crew confidence, training, spill planning, and uptime while keeping every statement tied to the exact product.</description>
     </item>
     <item>
-      <title>Descaling Heat Exchangers Without Aggressive Acid</title>
+      <title>How VertKlean removes scale without a conventional mineral-acid workflow</title>
       <link>https://masest.co/blog/descaling-without-acid</link>
       <guid isPermaLink="true">https://masest.co/blog/descaling-without-acid</guid>
       <pubDate>Sat, 20 Jun 2026 00:00:00 GMT</pubDate>
       <category>marketing</category>
-      <description>Scale kills heat-transfer efficiency, but aggressive acid descalers create their own handling and disposal problems. There is a lower-hazard path.</description>
+      <description>Controlled hydrogen-ion activity, complexing, wetting, and inhibition target carbonate scale while reducing conventional acid-workflow burden.</description>
     </item>
     <item>
-      <title>Announcing the Expanded VertKleen Program</title>
+      <title>Choose VertKlean by the cleaning problem</title>
       <link>https://masest.co/blog/vertkleen-launch</link>
       <guid isPermaLink="true">https://masest.co/blog/vertkleen-launch</guid>
       <pubDate>Wed, 10 Jun 2026 00:00:00 GMT</pubDate>
       <category>news</category>
-      <description>We have expanded the VertKleen program with new package sizes, document-gated SKUs, and program pricing for recurring accounts.</description>
+      <description>Match exact VertKlean products to mineral deposits, organic soils, mixed facility work, bio-active control, exterior cleaning, and finish care.</description>
     </item>
   </channel>
 </rss>
