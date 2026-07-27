@@ -43,7 +43,7 @@ test("acceptanceEnvGroups names the live integration gates", () => {
   );
   assert.deepEqual(
     acceptanceEnvGroups.find((group) => group.id === "stripe").required,
-    ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
+    ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_SHIPPING_RATE_IDS"],
   );
 });
 
