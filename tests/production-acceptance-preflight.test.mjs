@@ -41,8 +41,9 @@ test("acceptanceEnvGroups names the live integration gates", () => {
     acceptanceEnvGroups.map((group) => group.id),
     ["supabase", "stripe", "qbo", "cms_publish"],
   );
-  assert.ok(
-    acceptanceEnvGroups.find((group) => group.id === "stripe").required.includes("STRIPE_SHIPPING_RATE_IDS"),
+  assert.deepEqual(
+    acceptanceEnvGroups.find((group) => group.id === "stripe").required,
+    ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
   );
 });
 
@@ -104,6 +105,27 @@ test("buildPreflightReport accepts a Supabase Postgres pooler source without lea
   assert.match(report.checks.env_supabase.details.values.SUPABASE_DB_URL, /^set:\d+$/);
   assert.equal(JSON.stringify(report).includes(dbUrl), false);
   assert.equal(JSON.stringify(report).includes("very-secret-password"), false);
+});
+
+test("buildPreflightReport accepts the abbreviated commit returned by Cloudflare Pages", () => {
+  const head = "2b85d5f9005ae264d5e4349952dbe8f7e63c532c";
+  const report = buildPreflightReport({
+    env: completeEnv,
+    git: {
+      head,
+      branch: "main",
+      originHead: head,
+      dirtyFiles: [],
+    },
+    pagesBuild: {
+      status: "built",
+      commit: "2b85d5f9",
+    },
+    now: "2026-07-27T00:00:00.000Z",
+  });
+
+  assert.equal(report.checks.pages_commit.ok, true);
+  assert.equal(report.ready, true);
 });
 
 test("cloudflarePagesDeploymentFromPayload parses authoritative production deployment", () => {

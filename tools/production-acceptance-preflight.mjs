@@ -18,7 +18,7 @@ export const acceptanceEnvGroups = [
   {
     id: "stripe",
     label: "Stripe live checkout and webhook",
-    required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_SHIPPING_RATE_IDS"],
+    required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
   },
   {
     id: "qbo",
@@ -161,7 +161,14 @@ export function buildPreflightReport({
     pagesBuild || {},
   );
   checks.pages_commit = check(
-    pagesSkipped || Boolean(git?.head && pagesBuild?.commit && pagesBuild.commit === git.head),
+    pagesSkipped || Boolean(
+      git?.head
+      && pagesBuild?.commit
+      && (
+        pagesBuild.commit === git.head
+        || (pagesBuild.commit.length >= 7 && git.head.startsWith(pagesBuild.commit))
+      )
+    ),
     pagesSkipped ? "skipped by operator" : "latest Cloudflare Pages production deployment matches HEAD",
     {
       head: git?.head || null,
