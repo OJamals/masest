@@ -22,6 +22,49 @@ const CONFIRMED_WORKBOOK_PRODUCTS = [
   "sar",
   "watersafe60",
 ];
+const CONFIRMED_WORKBOOK_SERVICES = [
+  "Raw Water - Standard Analysis",
+  "Tower Water - Standard + Bio Counts",
+  "Chill Water - Standard + Bio Counts",
+  "Closed Loop Water - Standard + Bio Counts",
+  "Steam Boiler Water - Standard",
+  "Pretreatment Water (Soft/Degas)",
+  "Boiler Feed Water - Standard",
+  "Polisher Water - Standard",
+  "Steam Condensate - Standard",
+  "Biological Counts (HPC/dip-slide)",
+  "Legionella - Full Culture + Specie ID",
+  "Legionella - PCR Pos/Neg",
+  "Biological Identifications",
+  "Corrosion Coupon Analysis (incl. photo)",
+  "Pipe Analysis (Deposit + Measurements + Photos)",
+  "Deposit Analysis - Standard",
+  "Single Element Analysis (ICP or IC)",
+  "Abbreviated Analysis (ICP or IC)",
+  "Water Treatment Bid Specification Creation",
+  "Water Treatment Bid Review",
+  "Water Treatment Bid Interview",
+  "Consulting Services (general)",
+  "Equipment Inspections",
+  "Ultrasonic / Borescope Testing",
+  "Scanning Electron Microscope Testing",
+  "Sprinkler System Testing",
+  "Particle Size Analysis",
+  "Particle Size Analysis + Particle ID",
+  "On-Site Sample Collection (travel quoted)",
+  "On-Site Sampling Fee (standard visit)",
+  "Risk Assessment (ASHRAE 188)",
+  "WMP Development (ASHRAE 188)",
+  "Plan Certification",
+  "Plan Renewal (annual)",
+  "Monthly Dashboard Access",
+];
+const CONFIRMED_WORKBOOK_SERVICE_PACKAGES = [
+  "Initial Sampling Visit Package",
+  "Water Management Plan Setup (annual)",
+  "Quarterly Audit",
+  "Yearly Recertification",
+];
 
 test("canonical catalog carries the confirmed July 2026 workbook products and variants", () => {
   const data = catalog();
@@ -85,15 +128,64 @@ test("canonical catalog carries quote-confirmed services and unique SKUs", () =>
   const data = catalog();
   assert.equal(data.services.length, 35);
   assert.equal(data.service_packages.length, 4);
+  assert.deepEqual(data.services.map((service) => service.name), CONFIRMED_WORKBOOK_SERVICES);
+  assert.deepEqual(
+    data.service_packages.map((servicePackage) => servicePackage.name),
+    CONFIRMED_WORKBOOK_SERVICE_PACKAGES,
+  );
 
-  const allServiceSkus = [...data.services, ...data.service_packages].map((s) => s.sku);
+  const allServices = [...data.services, ...data.service_packages];
+  const allServiceSkus = allServices.map((s) => s.sku);
   assert.equal(allServiceSkus.length, new Set(allServiceSkus).size);
   assert.ok(allServiceSkus.includes("MS-BID-SPEC-CREATION"));
   assert.ok(allServiceSkus.includes("MS-CONS-PARTICLE-ID"));
+  for (const service of allServices) {
+    assert.match(service.summary || "", /\S/, `${service.name} needs a buyer-facing deliverable summary`);
+  }
 
   const legionella = data.services.find((s) => s.sku === "MS-LAB-BIO-LEGIONELLA-FULL-CULTURE-SPECIE-ID");
   assert.equal(legionella.public_price, "421.43");
   assert.equal(legionella.mode, "quote_service");
+});
+
+test("Water Management Plan services carry one explicit lifecycle sequence", () => {
+  const data = catalog();
+  const lifecycle = [...data.services, ...data.service_packages]
+    .filter((service) => service.lifecycle_stage)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((service) => [service.lifecycle_stage, service.name]);
+
+  assert.deepEqual(lifecycle, [
+    ["Assess", "Risk Assessment (ASHRAE 188)"],
+    ["Develop", "WMP Development (ASHRAE 188)"],
+    ["Confirm", "Plan Certification"],
+    ["Monitor", "Monthly Dashboard Access"],
+    ["Audit", "Quarterly Audit"],
+    ["Renew", "Plan Renewal (annual)"],
+    ["Recertify", "Yearly Recertification"],
+  ]);
+});
+
+test("public service data preserves canonical deliverables and lifecycle metadata", () => {
+  const source = catalog();
+  const published = JSON.parse(readSite("data/services.json"));
+  const sourceRows = [...source.services, ...source.service_packages];
+  const publishedRows = [...published.services, ...published.service_packages];
+
+  assert.deepEqual(
+    publishedRows.map(({ sku, summary, sort_order, lifecycle_stage }) => ({
+      sku,
+      summary,
+      sort_order,
+      lifecycle_stage,
+    })),
+    sourceRows.map(({ sku, summary, sort_order, lifecycle_stage }) => ({
+      sku,
+      summary,
+      sort_order,
+      lifecycle_stage,
+    })),
+  );
 });
 
 test("Supabase seed SQL imports buyable and quote-review variant state", () => {

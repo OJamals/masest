@@ -1569,6 +1569,7 @@
     {
       "sku": "MS-LAB-WTR-RAW-WATER-STANDARD-ANALYSIS",
       "name": "Raw Water - Standard Analysis",
+      "summary": "Receive a sample-specific baseline water-analysis report; sample point, requested analytes, method, and interpretation scope are confirmed before testing.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "278.57",
@@ -1580,6 +1581,7 @@
     {
       "sku": "MS-LAB-WTR-TOWER-WATER-STANDARD-BIO-COUNTS",
       "name": "Tower Water - Standard + Bio Counts",
+      "summary": "Receive water-analysis results plus biological counts for the specified cooling-tower sample; collection conditions, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "607.14",
@@ -1591,6 +1593,7 @@
     {
       "sku": "MS-LAB-WTR-CHILL-WATER-STANDARD-BIO-COUNTS",
       "name": "Chill Water - Standard + Bio Counts",
+      "summary": "Receive water-analysis results plus biological counts for the specified chilled-water sample; collection conditions, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "464.29",
@@ -1602,6 +1605,7 @@
     {
       "sku": "MS-LAB-WTR-CLOSED-LOOP-WATER-STANDARD-BIO-COUNTS",
       "name": "Closed Loop Water - Standard + Bio Counts",
+      "summary": "Receive water-analysis results plus biological counts for the specified closed-loop sample; collection conditions, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "464.29",
@@ -1613,6 +1617,7 @@
     {
       "sku": "MS-LAB-WTR-STEAM-BOILER-WATER-STANDARD",
       "name": "Steam Boiler Water - Standard",
+      "summary": "Receive a standard result report for the specified boiler-water sample to support program review; analytes, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "307.14",
@@ -1624,6 +1629,7 @@
     {
       "sku": "MS-LAB-WTR-PRETREATMENT-WATER-SOFT-DEGAS",
       "name": "Pretreatment Water (Soft/Degas)",
+      "summary": "Receive a standard result report for the specified softened or degasified pretreatment-water sample; analytes, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "307.14",
@@ -1635,6 +1641,7 @@
     {
       "sku": "MS-LAB-WTR-BOILER-FEED-WATER-STANDARD",
       "name": "Boiler Feed Water - Standard",
+      "summary": "Receive a standard result report for the specified boiler-feed sample to support program review; analytes, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "307.14",
@@ -1646,6 +1653,7 @@
     {
       "sku": "MS-LAB-WTR-POLISHER-WATER-STANDARD",
       "name": "Polisher Water - Standard",
+      "summary": "Receive a standard result report for the specified polisher-water sample; analytes, method, and interpretation scope are confirmed before testing.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "307.14",
@@ -1657,6 +1665,7 @@
     {
       "sku": "MS-LAB-WTR-STEAM-CONDENSATE-STANDARD",
       "name": "Steam Condensate - Standard",
+      "summary": "Receive a standard result report for the specified condensate sample to support return-system review; analytes, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "public_price": "428.57",
@@ -1668,6 +1677,7 @@
     {
       "sku": "MS-LAB-BIO-BIOLOGICAL-COUNTS-HPC-DIP-SLIDE",
       "name": "Biological Counts (HPC/dip-slide)",
+      "summary": "Receive reported HPC or dip-slide count results for the specified sample and method; the result is a program performance indicator, not a measure of illness risk.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
       "public_price": "92.86",
@@ -1679,6 +1689,7 @@
     {
       "sku": "MS-LAB-BIO-LEGIONELLA-FULL-CULTURE-SPECIE-ID",
       "name": "Legionella - Full Culture + Specie ID",
+      "summary": "Receive lab-reported culture and species-identification results for the specified sample; collection plan, turnaround, and interpretation boundary are confirmed first.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
       "public_price": "421.43",
@@ -1690,6 +1701,7 @@
     {
       "sku": "MS-LAB-BIO-LEGIONELLA-PCR-POS-NEG",
       "name": "Legionella - PCR Pos/Neg",
+      "summary": "Receive a qualitative PCR result for the specified sample; collection plan, method, turnaround, and interpretation boundary are confirmed first.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
       "public_price": "285.71",
@@ -1701,6 +1713,7 @@
     {
       "sku": "MS-LAB-BIO-BIOLOGICAL-IDENTIFICATIONS",
       "name": "Biological Identifications",
+      "summary": "Receive a reported biological identification for the submitted sample within the agreed method and scope; health-risk conclusions are not included unless separately scoped.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
       "public_price": "292.86",
@@ -1712,6 +1725,7 @@
     {
       "sku": "MS-LAB-MAT-CORROSION-COUPON-ANALYSIS-INCL-PHOTO",
       "name": "Corrosion Coupon Analysis (incl. photo)",
+      "summary": "Receive coupon measurements, condition observations, and a photo record for the agreed exposure period; engineering conclusions are separate unless scoped.",
       "category": "Lab Testing - Materials",
       "unit": "per coupon",
       "public_price": "108.57",
@@ -1723,6 +1737,7 @@
     {
       "sku": "MS-LAB-MAT-PIPE-ANALYSIS-DEPOSIT-MEASUREMENTS-PHOTOS",
       "name": "Pipe Analysis (Deposit + Measurements + Photos)",
+      "summary": "Receive deposit observations, pipe measurements, and a photo record for the submitted section; destructive work, sample return, and recommendations are confirmed in scope.",
       "category": "Lab Testing - Materials",
       "unit": "per pipe",
       "public_price": "2500.00",
@@ -1734,6 +1749,7 @@
     {
       "sku": "MS-LAB-MAT-DEPOSIT-ANALYSIS-STANDARD",
       "name": "Deposit Analysis - Standard",
+      "summary": "Receive an analytical result summary for the submitted deposit within the agreed method; source diagnosis and treatment recommendations are separate unless scoped.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
       "public_price": "464.29",
@@ -1745,6 +1761,7 @@
     {
       "sku": "MS-LAB-MAT-SINGLE-ELEMENT-ANALYSIS-ICP-OR-IC",
       "name": "Single Element Analysis (ICP or IC)",
+      "summary": "Receive a reported result for one agreed element by ICP or IC; sample matrix, method, and reporting boundary are confirmed before testing.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
       "public_price": "92.86",
@@ -1756,6 +1773,7 @@
     {
       "sku": "MS-LAB-MAT-ABBREVIATED-ANALYSIS-ICP-OR-IC",
       "name": "Abbreviated Analysis (ICP or IC)",
+      "summary": "Receive a bounded ICP or IC screening report for agreed targets; full characterization and engineering interpretation are separate unless scoped.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
       "public_price": "250.00",
@@ -1767,6 +1785,7 @@
     {
       "sku": "MS-BID-SPEC-CREATION",
       "name": "Water Treatment Bid Specification Creation",
+      "summary": "Receive a draft water-treatment specification built from the supplied system inventory, operating needs, evaluation criteria, and required evidence.",
       "category": "Bid Support",
       "unit": "each",
       "public_price": "2714.29",
@@ -1778,6 +1797,7 @@
     {
       "sku": "MS-BID-SPEC-REVIEW",
       "name": "Water Treatment Bid Review",
+      "summary": "Receive marked-up specification findings and decision notes against the supplied operating needs, incumbent scope, evaluation criteria, and deadline.",
       "category": "Bid Support",
       "unit": "each",
       "public_price": "1357.14",
@@ -1789,6 +1809,7 @@
     {
       "sku": "MS-BID-BID-INTERVIEW",
       "name": "Water Treatment Bid Interview",
+      "summary": "Receive structured interview preparation and decision notes tied to the supplied solicitation and evaluation criteria; participation does not imply eligibility or award.",
       "category": "Bid Support",
       "unit": "each",
       "public_price": "1357.14",
@@ -1800,6 +1821,7 @@
     {
       "sku": "MS-CONS-CONSULTING-SERVICES-GENERAL",
       "name": "Consulting Services (general)",
+      "summary": "Receive a bounded technical working session or memo addressing one defined operating decision; field work, testing, and implementation are separate unless scoped.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "public_price": "421.43",
@@ -1811,6 +1833,7 @@
     {
       "sku": "MS-CONS-EQUIPMENT-INSPECTIONS",
       "name": "Equipment Inspections",
+      "summary": "Receive documented condition observations, available measurements, and a photo record for the agreed asset and access scope, followed by a findings handoff.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "public_price": "421.43",
@@ -1822,6 +1845,7 @@
     {
       "sku": "MS-CONS-ULTRASONIC-BORESCOPE-TESTING",
       "name": "Ultrasonic / Borescope Testing",
+      "summary": "Receive recorded ultrasonic measurements or borescope observations for the agreed asset locations; access, isolation, and interpretation limits are confirmed first.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "public_price": "500.00",
@@ -1833,6 +1857,7 @@
     {
       "sku": "MS-CONS-SCANNING-ELECTRON-MICROSCOPE-TESTING",
       "name": "Scanning Electron Microscope Testing",
+      "summary": "Receive microscope imagery and observed-feature reporting for the submitted sample; preparation, sample return, and interpretation boundary are confirmed first.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "public_price": "1785.71",
@@ -1844,6 +1869,7 @@
     {
       "sku": "MS-CONS-SPRINKLER-SYSTEM-TESTING",
       "name": "Sprinkler System Testing",
+      "summary": "Receive test observations and results for the agreed sprinkler-system scope; access, method, and any regulatory-use boundary are confirmed before work.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "public_price": "1785.71",
@@ -1855,6 +1881,7 @@
     {
       "sku": "MS-CONS-PARTICLE-SIZE",
       "name": "Particle Size Analysis",
+      "summary": "Receive a particle-size result report for the submitted sample and agreed method; identification and source diagnosis are not included unless scoped.",
       "category": "Consulting Services",
       "unit": "per sample",
       "public_price": "292.86",
@@ -1866,6 +1893,7 @@
     {
       "sku": "MS-CONS-PARTICLE-ID",
       "name": "Particle Size Analysis + Particle ID",
+      "summary": "Receive particle-size results plus identification within the agreed analytical method; source diagnosis and engineering recommendations are separate unless scoped.",
       "category": "Consulting Services",
       "unit": "per sample",
       "public_price": "564.29",
@@ -1877,6 +1905,7 @@
     {
       "sku": "MS-FLD-ON-SITE-SAMPLE-COLLECTION-TRAVEL-QUOTED",
       "name": "On-Site Sample Collection (travel quoted)",
+      "summary": "Receive a site collection record, labeled samples, and the agreed chain-of-custody handoff; access, travel, containers, preservation, and lab work are confirmed first.",
       "category": "Field Services",
       "unit": "per visit",
       "public_price": "1142.86",
@@ -1888,6 +1917,7 @@
     {
       "sku": "MS-FLD-ON-SITE-SAMPLING-FEE-STANDARD-VISIT",
       "name": "On-Site Sampling Fee (standard visit)",
+      "summary": "Receive collection of the agreed sample set during a standard visit plus a sample record; site access, travel boundary, and lab testing are confirmed separately.",
       "category": "Field Services",
       "unit": "per visit",
       "public_price": "714.29",
@@ -1899,6 +1929,9 @@
     {
       "sku": "MS-WMP-RISK-ASSESSMENT-ASHRAE-188",
       "name": "Risk Assessment (ASHRAE 188)",
+      "summary": "Receive a building- and system-specific risk assessment documenting the system inventory, risk factors, and control priorities against the agreed ASHRAE 188 project scope.",
+      "sort_order": 10,
+      "lifecycle_stage": "Assess",
       "category": "Water Management Plan",
       "unit": "each",
       "public_price": "842.86",
@@ -1910,6 +1943,9 @@
     {
       "sku": "MS-WMP-WMP-DEVELOPMENT-ASHRAE-188",
       "name": "WMP Development (ASHRAE 188)",
+      "summary": "Receive a building-specific written plan defining the program team, control locations and limits, monitoring, corrective actions, records, and review cadence.",
+      "sort_order": 20,
+      "lifecycle_stage": "Develop",
       "category": "Water Management Plan",
       "unit": "each",
       "public_price": "2528.57",
@@ -1921,6 +1957,9 @@
     {
       "sku": "MS-WMP-PLAN-CERTIFICATION",
       "name": "Plan Certification",
+      "summary": "Receive a MASEST-issued plan review statement against the agreed project scope; this is not government, ASHRAE, CDC, or third-party accreditation.",
+      "sort_order": 30,
+      "lifecycle_stage": "Confirm",
       "category": "Water Management Plan",
       "unit": "each",
       "public_price": "842.86",
@@ -1932,6 +1971,9 @@
     {
       "sku": "MS-WMP-PLAN-RENEWAL-ANNUAL",
       "name": "Plan Renewal (annual)",
+      "summary": "Receive an annual plan review and updated document reflecting supplied system changes, program records, findings, and agreed corrective actions.",
+      "sort_order": 60,
+      "lifecycle_stage": "Renew",
       "category": "Water Management Plan",
       "unit": "each",
       "public_price": "1685.71",
@@ -1943,6 +1985,9 @@
     {
       "sku": "MS-WMP-MONTHLY-DASHBOARD-ACCESS",
       "name": "Monthly Dashboard Access",
+      "summary": "Receive monthly dashboard access for agreed program records and monitoring status; data entry, alert, review, and follow-up ownership are confirmed in scope.",
+      "sort_order": 40,
+      "lifecycle_stage": "Monitor",
       "category": "Water Management Plan",
       "unit": "per month",
       "public_price": "71.43",
@@ -1956,6 +2001,7 @@
     {
       "sku": "MS-PKG-INITIAL-SAMPLING-VISIT-PACKAGE",
       "name": "Initial Sampling Visit Package",
+      "summary": "Receive a scoped initial visit, collection record, and agreed samples routed for selected testing; travel, lab methods, and turnaround are confirmed before scheduling.",
       "category": "Service Packages",
       "unit": "package",
       "public_price": "1835.71",
@@ -1967,6 +2013,7 @@
     {
       "sku": "MS-PKG-WATER-MANAGEMENT-PLAN-SETUP-ANNUAL",
       "name": "Water Management Plan Setup (annual)",
+      "summary": "Receive an annual setup engagement covering risk review, plan development, implementation handoff, and the agreed first-year review cadence for the building and systems.",
       "category": "Service Packages",
       "unit": "package",
       "public_price": "4942.86",
@@ -1978,6 +2025,9 @@
     {
       "sku": "MS-PKG-QUARTERLY-AUDIT",
       "name": "Quarterly Audit",
+      "summary": "Receive a quarterly program-record review, findings, action list, and owner handoff against the agreed Water Management Plan scope.",
+      "sort_order": 50,
+      "lifecycle_stage": "Audit",
       "category": "Service Packages",
       "unit": "per quarter",
       "public_price": "3374.29",
@@ -1989,6 +2039,9 @@
     {
       "sku": "MS-PKG-YEARLY-RECERTIFICATION",
       "name": "Yearly Recertification",
+      "summary": "Receive an annual MASEST review statement plus identified plan updates against the agreed program scope; this is not government, ASHRAE, CDC, or third-party accreditation.",
+      "sort_order": 70,
+      "lifecycle_stage": "Recertify",
       "category": "Service Packages",
       "unit": "per year",
       "public_price": "4085.71",

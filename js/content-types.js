@@ -15,6 +15,8 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "currency", label: "Currency", kind: "text" },
       { key: "active", label: "Active", kind: "checkbox" },
       { key: "summary", label: "Summary", kind: "textarea", className: "full" },
+      { key: "sort_order", label: "Display order", kind: "number" },
+      { key: "lifecycle_stage", label: "WMP lifecycle stage", kind: "text" },
     ],
   },
   service_package: {
@@ -28,6 +30,8 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "currency", label: "Currency", kind: "text" },
       { key: "active", label: "Active", kind: "checkbox" },
       { key: "summary", label: "Summary", kind: "textarea", className: "full" },
+      { key: "sort_order", label: "Display order", kind: "number" },
+      { key: "lifecycle_stage", label: "WMP lifecycle stage", kind: "text" },
     ],
   },
   proof_card: {

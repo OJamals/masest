@@ -8,6 +8,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-flask",
     image: "img/products/cip-hcr-studio.webp",
+    application_image: "img/representative/applications/cip-cycle-skid-v1.webp",
     uses: [
       "Beer-stone removal in brewery CIP",
       "Tank, keg, and line acid-wash steps",
@@ -27,6 +28,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-factory",
     image: "img/products/hvac-hcr-studio.webp",
+    application_image: "img/representative/applications/hvac-descaling-loop-v1.webp",
     uses: [
       "HVAC coils and water-side descaling",
       "Calcium, scale, and rust removal",
@@ -45,6 +47,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/cip-cr-studio.webp",
+    application_image: "img/representative/applications/cip-cycle-skid-v1.webp",
     uses: [
       "Brewery lines, kegs, and tanks",
       "Krausen and organic-soil removal",
@@ -62,6 +65,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
  icon: "ph-drop",
  image: "img/products/neutral-studio.webp",
+    application_image: "img/representative/applications/neutral-material-test-patch-v1.webp",
     uses: [
       "Heavy equipment and machinery degreasing",
       "Marine, oil and gas, and aviation surfaces",
@@ -114,6 +118,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
  icon: "ph-shield-plus",
     image: "img/products/purgo-studio.webp",
+    application_image: "img/representative/applications/purgo-controlled-drain-maintenance-v1.webp",
     uses: [
       "Water-treatment and odor-control chemistry",
       "Organic-load control in towers, drains, and process water",
@@ -166,6 +171,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-snowflake",
  image: "img/products/descaler-studio.webp",
+    application_image: "img/representative/applications/hvac-descaling-loop-v1.webp",
     uses: [
       "Aluminum and copper coil descaling",
       "Cooling towers, plumbing, and ammonia coils",
@@ -184,6 +190,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
  icon: "ph-car",
  image: "img/products/alumibrite-studio.webp",
+    application_image: "img/representative/applications/alumibrite-aluminum-test-patch-v1.webp",
     uses: [
       "Wheels, trim, and aluminum restoration",
       "Fleet, RV, and marine aluminum",
@@ -216,6 +223,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
  icon: "ph-house-line",
  image: "img/products/lam3-studio.webp",
+    application_image: "img/representative/applications/lam3-exterior-surface-trial-v1.webp",
     uses: [
       "Roofs, siding, stucco, and pavers",
       "Concrete, walkways, and exterior walls",
@@ -250,6 +258,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/crhd-studio.webp",
+    application_image: "img/representative/applications/cr-hd-low-foam-machine-wash-v1.webp",
     uses: [
       "Automatic floor scrubbers and machine wash",
       "Parts washers and recirculating wash systems",
@@ -279,6 +288,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-wrench",
     image: "img/products/sar-studio.webp",
+    application_image: "img/representative/applications/sar-application-engineering-v1.webp",
     uses: [
       "Specialty descaling and acid-cleaning jobs",
       "Water-side scale and mineral removal",

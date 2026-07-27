@@ -98,7 +98,17 @@ test("content export writes all non-commerce CMS snapshot groups", () => {
 
 test("admin CMS editor exposes structured fields for each content type", () => {
   const serviceFields = contentPayloadFields("service").map((field) => field.key);
-  assert.deepEqual(serviceFields, ["sku", "category", "unit", "public_price", "currency", "active", "summary"]);
+  assert.deepEqual(serviceFields, [
+    "sku",
+    "category",
+    "unit",
+    "public_price",
+    "currency",
+    "active",
+    "summary",
+    "sort_order",
+    "lifecycle_stage",
+  ]);
 
   const proofFields = contentPayloadFields("proof_card").map((field) => field.key);
   assert.ok(proofFields.includes("result"));

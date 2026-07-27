@@ -227,11 +227,14 @@ function servicesJson(catalog) {
   const pub = (item) => ({
     sku: item.sku,
     name: item.name,
+    summary: item.summary,
     category: item.category,
     unit: item.unit,
     public_price: item.public_price != null ? Number(item.public_price) : null,
     currency: item.currency || 'usd',
     active: item.active !== false,
+    ...(item.sort_order != null ? { sort_order: Number(item.sort_order) } : {}),
+    ...(item.lifecycle_stage ? { lifecycle_stage: item.lifecycle_stage } : {}),
   });
   return JSON.stringify({
     services: (catalog.services || []).map(pub),

@@ -35,7 +35,7 @@ const PROOF_RECORDS = JSON.parse(
 ).proof_cards;
 const SITE_IMAGE_DIMENSIONS = new Map(
   JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8")).assets
-    .map((asset) => [asset.public_url, { width: asset.width, height: asset.height }]),
+    .map((asset) => [asset.public_url, { width: asset.width, height: asset.height, alt: asset.alt }]),
 );
 const BLOG_POST_SLUGS = (BLOG_SNAPSHOT.blog_posts || []).map((post) => post.slug).filter(Boolean);
 const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document-review.json", import.meta.url), "utf8"));
@@ -603,6 +603,19 @@ function productPage(id, product, reviewsSnapshot) {
     : `<figure class="product-hero-media media-fallback reveal">
         <span class="media-fallback-label">${text(product.name)}</span>
       </figure>`;
+  const applicationPath = product.application_image
+    ? `/${product.application_image.replace(/^\/+/, "")}`
+    : "";
+  const applicationImage = applicationPath ? SITE_IMAGE_DIMENSIONS.get(applicationPath) : null;
+  if (applicationPath && !applicationImage) {
+    throw new Error(`Missing CMS image metadata for ${applicationPath}`);
+  }
+  const applicationMedia = applicationImage
+    ? `<figure class="product-application-media">
+        <img src="../${attr(product.application_image)}" alt="${attr(applicationImage.alt)}" width="${applicationImage.width}" height="${applicationImage.height}" loading="lazy" decoding="async">
+        <figcaption><b>Representative application</b><span>Final method, compatibility, containment, and PPE follow the site procedure and current SDS.</span></figcaption>
+      </figure>`
+    : "";
   const uses = (product.uses || copy.fits || []).map((item) => `<li>${text(item)}</li>`).join("\n");
   const specs = productHighlights(id)
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
@@ -707,7 +720,8 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     </div>
   </section>
   <section class="section product-static-section">
-    <div class="wrap product-static-grid">
+    <div class="wrap product-static-grid">${applicationMedia ? `
+      ${applicationMedia}` : ""}
       <article class="product-static-panel">
         <h2>${text(product.replaces || "Industrial chemistry replacement")}</h2>
         <p>${text(procurement)}</p>
@@ -721,7 +735,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     </div>
   </section>
 </main>
-<script type="module" src="../js/main.js?v=20260726a"></script>
+<script type="module" src="../js/main.js?v=20260727a"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

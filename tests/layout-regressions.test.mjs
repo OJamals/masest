@@ -233,14 +233,79 @@ test("services catalog stays visually connected to the next section on desktop",
       await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("[data-service-sku]", { timeout: 10000 });
       const activePanel = page.locator(".service-panel:not([hidden])");
-      await assert.doesNotReject(activePanel.locator(".service-card p").first().waitFor());
-      assert.match(await activePanel.locator(".service-card p").first().textContent(), /Define sample point, operating state, analytes/);
+      const rawWaterCard = activePanel
+        .locator(".service-card")
+        .filter({ has: page.getByRole("heading", { name: "Raw Water - Standard Analysis", exact: true }) });
+      await assert.doesNotReject(rawWaterCard.locator("p").waitFor());
+      assert.match(
+        await rawWaterCard.locator("p").textContent(),
+        /Receive a sample\s*-\s*specific baseline water\s*-\s*analysis report/,
+      );
       assert.equal(await activePanel.locator(".service-card .btn").first().textContent(), "Request water analysis");
+
+      await page.locator('[data-service-tab="Testing - Materials"]').click();
+      const materialsPanel = page.locator('[data-service-panel="Testing - Materials"]:not([hidden])');
+      assert.match(
+        await materialsPanel.locator(".service-category-media img").getAttribute("src"),
+        /\/img\/representative\/applications\/deposit-analysis-service-v1\.webp$/,
+      );
+      assert.match(
+        await materialsPanel.locator(".service-category-media figcaption").textContent(),
+        /Representative service setup/,
+      );
+
+      await page.locator('[data-service-tab="Bid Support"]').click();
+      const bidPanel = page.locator('[data-service-panel="Bid Support"]:not([hidden])');
+      assert.match(
+        await bidPanel.locator(".service-category-media img").getAttribute("src"),
+        /\/img\/representative\/applications\/bid-wmp-review-desk-v1\.webp$/,
+      );
+      assert.match(
+        await bidPanel.locator(".service-category-media figcaption").textContent(),
+        /Representative service setup/,
+      );
 
       await page.locator('[data-service-tab="Water Management Plan"]').click();
       const wmpPanel = page.locator('[data-service-panel="Water Management Plan"]:not([hidden])');
-      assert.match(await wmpPanel.locator(".service-card p").first().textContent(), /Define facility risk, control measures, monitoring/);
+      assert.match(
+        await wmpPanel.locator(".service-category-media img").getAttribute("src"),
+        /\/img\/representative\/applications\/bid-wmp-review-desk-v1\.webp$/,
+      );
+      assert.match(
+        await wmpPanel.locator(".service-category-media figcaption").textContent(),
+        /Representative service setup/,
+      );
+      assert.deepEqual(
+        await wmpPanel.locator(".service-card h3").allTextContents(),
+        [
+          "Risk Assessment (ASHRAE 188)",
+          "WMP Development (ASHRAE 188)",
+          "Plan Certification",
+          "Monthly Dashboard Access",
+          "Plan Renewal (annual)",
+        ],
+      );
+      assert.match(
+        await wmpPanel.locator(".service-card p").first().textContent(),
+        /Receive a building\s*-\s*and system\s*-\s*specific risk assessment/,
+      );
+      assert.deepEqual(
+        await wmpPanel.locator(".service-lifecycle b").allTextContents(),
+        ["Assess", "Develop", "Confirm", "Monitor", "Audit", "Renew", "Recertify"],
+      );
       assert.equal(await wmpPanel.locator(".service-card .btn").first().textContent(), "Request a WMP review");
+
+      await page.locator('[data-service-tab="Service Packages"]').click();
+      const packagesPanel = page.locator('[data-service-panel="Service Packages"]:not([hidden])');
+      assert.deepEqual(
+        await packagesPanel.locator(".service-card h3").allTextContents(),
+        [
+          "Initial Sampling Visit Package",
+          "Quarterly Audit",
+          "Yearly Recertification",
+          "Water Management Plan Setup (annual)",
+        ],
+      );
 
       const gap = await page.evaluate(() => {
         const cards = [...document.querySelectorAll(".service-panel:not([hidden]) .service-card")];

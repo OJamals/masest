@@ -74,6 +74,33 @@ test("generated product pages reuse existing highlights without added science or
   }
 });
 
+test("approved product pages publish representative application scenes outside proof", () => {
+  const applicationImages = {
+    alumibrite: "alumibrite-aluminum-test-patch-v1.webp",
+    cr: "cip-cycle-skid-v1.webp",
+    "cr-hd-low-foam": "cr-hd-low-foam-machine-wash-v1.webp",
+    descaler: "hvac-descaling-loop-v1.webp",
+    hcr: "cip-cycle-skid-v1.webp",
+    "hcr-t16": "hvac-descaling-loop-v1.webp",
+    lam3: "lam3-exterior-surface-trial-v1.webp",
+    neutral: "neutral-material-test-patch-v1.webp",
+    purgo: "purgo-controlled-drain-maintenance-v1.webp",
+    sar: "sar-application-engineering-v1.webp",
+  };
+
+  for (const [id, filename] of Object.entries(applicationImages)) {
+    const html = readProject(`products/${id}.html`);
+    const figure = html.match(/<figure class="product-application-media">[\s\S]*?<\/figure>/)?.[0] || "";
+    assert.match(
+      figure,
+      new RegExp(`/img/representative/applications/${filename.replaceAll(".", "\\.")}`),
+      `${id} should render its approved representative scene`,
+    );
+    assert.match(figure, /<b>Representative application<\/b>/);
+    assert.doesNotMatch(figure, /proof|evidence/i);
+  }
+});
+
 test("catalog decision cues omit missing rows without empty chrome", () => {
   assert.equal(catalogDecisionHTML("hcr", {}), "");
 

@@ -29,6 +29,7 @@ const CATEGORY_COPY = {
     title: "Materials testing",
     note: "Corrosion coupon, pipe, deposit, single-element, and abbreviated material analysis.",
     description: "Define sample, condition, measurements, photos, and analytical question before materials testing.",
+    representative_image: "/img/representative/applications/deposit-analysis-service-v1.webp",
     cta: "Request materials analysis"
   },
   "Consulting Services": {
@@ -43,6 +44,7 @@ const CATEGORY_COPY = {
     title: "Bid support",
     note: "Specification creation, spec review, and buyer-side bid interview support.",
     description: "Define operating needs, deliverables, evaluation criteria, and interview support before bid work begins.",
+    representative_image: "/img/representative/applications/bid-wmp-review-desk-v1.webp",
     cta: "Request bid support"
   },
   "Field Services": {
@@ -57,6 +59,7 @@ const CATEGORY_COPY = {
     title: "Water management",
     note: "ASHRAE 188 assessment, plan writing, renewal, and dashboard access.",
     description: "Define facility risk, control measures, monitoring, corrective actions, and review cadence before plan work begins.",
+    representative_image: "/img/representative/applications/bid-wmp-review-desk-v1.webp",
     cta: "Request a WMP review"
   },
   "Service Packages": {
@@ -124,6 +127,17 @@ function fmtMoney(value, currency = "USD") {
 }
 
 function serviceSort(a, b) {
+  const orderA = Number(a.sort_order);
+  const orderB = Number(b.sort_order);
+  const hasOrderA = Number.isFinite(orderA);
+  const hasOrderB = Number.isFinite(orderB);
+  const wmpItems = categoryKey(a.category) === "Water Management Plan"
+    && categoryKey(b.category) === "Water Management Plan";
+  if (wmpItems && (hasOrderA || hasOrderB)) {
+    if (!hasOrderA) return 1;
+    if (!hasOrderB) return -1;
+    if (orderA !== orderB) return orderA - orderB;
+  }
   const priceA = Number(a.public_price || 0);
   const priceB = Number(b.public_price || 0);
   if (a.category === "Service Packages" && b.category === "Service Packages") return priceA - priceB;
@@ -133,6 +147,28 @@ function serviceSort(a, b) {
 function countLabel(count, category = "") {
   if (category === "Service Packages") return `${count} ${count === 1 ? "package" : "packages"}`;
   return `${count} ${count === 1 ? "line item" : "line items"}`;
+}
+
+function renderLifecycle(items) {
+  if (!items.length) return "";
+  return `<br><span class="service-lifecycle" aria-label="Water Management Plan lifecycle">${items
+    .map((item, index) => (
+      `<b title="${htmlEscape(displayServiceName(item.name))}">${htmlEscape(item.lifecycle_stage)}</b>${index < items.length - 1 ? ' <span aria-hidden="true">→</span> ' : ""}`
+    ))
+    .join("")}</span>`;
+}
+
+function renderCategoryMedia(copy) {
+  if (!copy.representative_image) return "";
+  return `
+    <figure class="service-category-media">
+      <img src="${htmlEscape(copy.representative_image)}" alt="Representative ${htmlEscape(copy.title.toLowerCase())} setup" width="1536" height="1024" loading="lazy" decoding="async">
+      <figcaption>
+        <b>Representative service setup</b>
+        <span>Final scope, access, schedule, and deliverables are confirmed before work begins.</span>
+      </figcaption>
+    </figure>
+  `;
 }
 
 function renderServiceCard(item) {
@@ -148,9 +184,9 @@ function renderServiceCard(item) {
   const note = `Service request: ${name}${sku ? ` (${sku})` : ""}.`;
   const href = `contact?type=services&message=${encodeURIComponent(note)}`;
   const copy = CATEGORY_COPY[categoryKey(item.category)] || {};
-  const description = item.description
-    ? normalizeText(item.description)
-    : copy.description || "Final scope, schedule, and deliverables are confirmed before work begins.";
+  const description = normalizeText(item.summary)
+    || copy.description
+    || "Final scope, schedule, and deliverables are confirmed before work begins.";
   const cta = copy.cta || "Request service scope";
 
   return `
@@ -194,6 +230,11 @@ function renderTabs(groups) {
 }
 
 function renderPanels(groups) {
+  const lifecycle = [...groups.values()]
+    .flat()
+    .filter((item) => item.lifecycle_stage && Number.isFinite(Number(item.sort_order)))
+    .sort((a, b) => Number(a.sort_order) - Number(b.sort_order));
+
   return CATEGORY_ORDER
     .filter((category) => groups.has(category))
     .map((category, index) => {
@@ -218,13 +259,14 @@ function renderPanels(groups) {
             <div>
               <i class="ph ${copy.icon}" aria-hidden="true"></i>
               <h3>${htmlEscape(copy.title)}</h3>
-              <p>${htmlEscape(copy.note)}</p>
+              <p>${htmlEscape(copy.note)}${category === "Water Management Plan" ? renderLifecycle(lifecycle) : ""}</p>
             </div>
             <div class="service-category-price">
               <span>${htmlEscape(countLabel(items.length, category))}</span>
               <b>${htmlEscape(range)}</b>
             </div>
           </div>
+          ${renderCategoryMedia(copy)}
           <div class="service-card-grid">
             ${items.map(renderServiceCard).join("")}
           </div>
