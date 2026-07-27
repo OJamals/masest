@@ -287,6 +287,72 @@ test("all product pages explain platform science, operator advantage, and next a
   }
 });
 
+test("all public products route quote actions by buyer job", () => {
+  const expected = {
+    hcr: "Request a CIP mineral-cycle review",
+    "hcr-t16": "Request a bulk HVAC scale review",
+    descaler: "Request a deposit test",
+    sar: "Request an engineered application review",
+    cr: "Request a CIP soil-cycle review",
+    cr2: "Request an HVAC CR application review",
+    crhd: "Request a wash benchmark",
+    "cr-hd-low-foam": "Request a machine-wash benchmark",
+    neutral: "Request a material-fit test",
+    multiwash: "Request a mixed-soil trial",
+    watersafe60: "Request a water-program review",
+    purgo: "Request an odor-program assessment",
+    lam3: "Request an exterior-surface trial",
+    alumibrite: "Request an aluminum test-patch review",
+    torque: "Request a fleet or marine wash trial",
+  };
+  assert.deepEqual(Object.keys(expected).sort(), [...CATALOG_ORDER].sort());
+  for (const [id, label] of Object.entries(expected)) {
+    const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
+    assert.match(html, new RegExp(`href="[^"]*#quoteForm">${label}</a>`), `${id}: job-scoped quote action`);
+  }
+});
+
+test("product pages deep-link only scope-matched approved result summaries", () => {
+  const expected = {
+    hcr: ["brewery-cip-trials"],
+    cr: ["brewery-cip-trials"],
+    descaler: ["fire-pump-descaler", "residential-ac-coil"],
+    crhd: ["commercial-kitchen-crhd", "distribution-center-assessment"],
+    lam3: ["property-grout-moss"],
+    alumibrite: ["airboat-alumibrite"],
+    torque: ["airboat-alumibrite"],
+  };
+  const resultSlugs = [...new Set(Object.values(expected).flat())];
+  for (const id of CATALOG_ORDER) {
+    const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
+    const own = new Set(expected[id] || []);
+    for (const slug of resultSlugs) {
+      const link = new RegExp(`href="\\.\\.\\/proof#${slug}"`);
+      if (own.has(slug)) assert.match(html, link, `${id}: mapped result ${slug}`);
+      else assert.doesNotMatch(html, link, `${id}: unrelated result ${slug}`);
+    }
+  }
+  for (const id of Object.keys(expected)) {
+    const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
+    assert.match(html, /Documented result summary/);
+  }
+});
+
+test("specialty product pages scope trials without blanket or endorsement language", () => {
+  const pages = Object.fromEntries(
+    ["purgo", "lam3", "alumibrite", "torque"]
+      .map((id) => [id, readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8")]),
+  );
+  assert.match(pages.purgo, /source, loading, dose, monitoring, and cleaning method/i);
+  assert.match(pages.lam3, /substrate, stain, weather, adjacent materials, dwell, runoff path, and visual endpoint/i);
+  assert.match(pages.alumibrite, /alloy, coating, oxidation, method, containment, and test-patch endpoint/i);
+  assert.match(pages.torque, /surface finish, soil, application method, containment, and appearance endpoint/i);
+  assert.doesNotMatch(
+    Object.values(pages).join("\n"),
+    /Yellowfin|tourist airboat|landscape friendliness|material-friendly|microbial burden|general use|Brightening Index 90\.1/i,
+  );
+});
+
 test("catalog category controls filter the product grid", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });

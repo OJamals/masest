@@ -232,6 +232,16 @@ test("services catalog stays visually connected to the next section on desktop",
     try {
       await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("[data-service-sku]", { timeout: 10000 });
+      const activePanel = page.locator(".service-panel:not([hidden])");
+      await assert.doesNotReject(activePanel.locator(".service-card p").first().waitFor());
+      assert.match(await activePanel.locator(".service-card p").first().textContent(), /Define sample point, operating state, analytes/);
+      assert.equal(await activePanel.locator(".service-card .btn").first().textContent(), "Request water analysis");
+
+      await page.locator('[data-service-tab="Water Management Plan"]').click();
+      const wmpPanel = page.locator('[data-service-panel="Water Management Plan"]:not([hidden])');
+      assert.match(await wmpPanel.locator(".service-card p").first().textContent(), /Define facility risk, control measures, monitoring/);
+      assert.equal(await wmpPanel.locator(".service-card .btn").first().textContent(), "Request a WMP review");
+
       const gap = await page.evaluate(() => {
         const cards = [...document.querySelectorAll(".service-panel:not([hidden]) .service-card")];
         const lastCard = cards.at(-1);

@@ -90,8 +90,8 @@ test("product detail publishes product-specific SEO metadata", async () => {
       }));
 
       assert.equal(meta.title, "VertKlean CIP HCR | MASEST VertKlean");
-      assert.match(meta.description, /Acid-level descaling power/);
-      assert.match(meta.description, /Restore flow and heat transfer/);
+      assert.match(meta.description, /Controlled mineral removal for brewery acid-wash steps/);
+      assert.match(meta.description, /Target beer stone and mineral film/);
       assert.equal(meta.ogTitle, "VertKlean CIP HCR | MASEST VertKlean");
       assert.equal(meta.ogDescription, meta.description);
       assert.doesNotMatch(meta.description, /Replaces Replaces/);

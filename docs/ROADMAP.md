@@ -145,7 +145,7 @@ The repository has a native Supabase-backed CMS inside the existing static Pages
 checked foundations are current repository capability; unchecked items are the remaining CMS backlog.
 
 - [x] **Structured content and publishing** — the admin Content workspace and
-      `/api/admin/content` manage services, service packages, proof/resource/industry cards, industry
+      `/api/admin/content` manage services, service packages, proof/resource cards, industry
       sectors, FAQ blocks, page sections, page metadata, pricing tiers, and blog posts.
 - [x] **Media library** — `/api/admin/content-assets` and `js/admin/content-assets.js` provide
       Supabase Storage upload, metadata, lifecycle controls, and reusable selection. Product images also
@@ -154,7 +154,7 @@ checked foundations are current repository capability; unchecked items are the r
       generated public blog pages, RSS, and sitemap output.
 - [x] **Preview, draft, and revision workflow** — content has in-admin preview, draft/published states,
       scheduled publishing, and revision inspection through `/api/admin/content-revisions`.
-- [x] **Structured industry content** — `industry_card`, `industry_sector`, and `page_section` entries
+- [x] **Structured industry content** — `industry_sector` and `page_section` entries
       drive editable industry and page content.
 - [ ] **Product content CMS completion** — add rich descriptions, attached SDS/TDS documents,
       category/tag editing, and per-product SEO metadata beyond the existing image/gallery controls.

@@ -245,7 +245,6 @@ function verifyOptionalContentSnapshot() {
     ["data/content/page-meta.json", ["page_meta"]],
     ["data/content/proof.json", ["proof_cards"]],
     ["data/content/resources.json", ["resource_cards"]],
-    ["data/content/industries.json", ["industry_cards"]],
     ["data/content/faqs.json", ["faq_blocks"]],
     ["data/content/page-sections.json", ["page_sections"]],
     ["data/content/pricing.json", ["pricing_tiers"]],
@@ -259,13 +258,12 @@ function verifyOptionalContentSnapshot() {
     for (const key of keys) {
       if (!Array.isArray(parsed[key])) failures.push(`${relative} missing ${key} array`);
     }
-    for (const entry of [...(parsed.proof_cards || []), ...(parsed.industry_cards || [])]) {
+    for (const entry of parsed.proof_cards || []) {
       if (entry.image && !entry.image_alt) failures.push(`${relative} entry ${entry.slug || entry.title} has image without image_alt`);
     }
     for (const entry of [
       ...(parsed.proof_cards || []),
       ...(parsed.resource_cards || []),
-      ...(parsed.industry_cards || []),
     ]) {
       if (entry.href && /^(?:javascript|data|vbscript):/i.test(String(entry.href).trim())) {
         failures.push(`${relative} entry ${entry.slug || entry.title} has unsafe href`);

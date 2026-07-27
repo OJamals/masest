@@ -40,9 +40,9 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "source", label: "Source", kind: "text" },
       {
         key: "publication_scope",
-        label: "Result summary label",
+        label: "Public record label",
         kind: "select",
-        options: ["Published result summary"],
+        options: ["Published result summary", "Published product record"],
         required: true,
       },
       { key: "result", label: "Result", kind: "textarea", className: "full", required: true },
@@ -72,16 +72,6 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
       { key: "cta", label: "CTA", kind: "text" },
       { key: "icon", label: "Icon", kind: "text" },
       { key: "description", label: "Description", kind: "textarea", className: "full" },
-    ],
-  },
-  industry_card: {
-    label: "Industry cards",
-    snapshot: { file: "industries.json", key: "industry_cards" },
-    fields: [
-      { key: "href", label: "Link", kind: "text", required: true },
-      { key: "image", label: "Image path", kind: "text" },
-      { key: "image_alt", label: "Image alt", kind: "text" },
-      { key: "summary", label: "Summary", kind: "textarea", className: "full" },
     ],
   },
   industry_sector: {
@@ -206,10 +196,6 @@ const SNAPSHOT_GROUPS = Object.freeze([
   {
     file: "resources.json",
     types: Object.freeze([Object.freeze({ type: "resource_card", key: "resource_cards" })]),
-  },
-  {
-    file: "industries.json",
-    types: Object.freeze([Object.freeze({ type: "industry_card", key: "industry_cards" })]),
   },
   {
     file: "industry-sectors.json",

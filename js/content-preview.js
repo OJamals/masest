@@ -8,7 +8,6 @@ const LABELS = {
   service_package: "Service package",
   proof_card: "Proof card",
   resource_card: "Resource card",
-  industry_card: "Industry card",
   faq_block: "FAQ block",
   page_section: "Page section",
   page_meta: "Page metadata",

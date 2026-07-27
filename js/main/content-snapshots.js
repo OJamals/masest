@@ -6,7 +6,6 @@ import { proofCardHtml } from "../proof-records.js?v=20260726a";
 const SNAPSHOT_FILES = {
   proof_cards: "proof.json",
   resource_cards: "resources.json",
-  industry_cards: "industries.json",
   faq_blocks: "faqs.json",
   page_sections: "page-sections.json",
   pricing_tiers: "pricing.json",
@@ -75,30 +74,6 @@ function resourceCard(card) {
       <span>${esc(card.icon || card.cta || "Resource")}</span>
       <strong>${esc(card.title || "Untitled resource")}</strong>
       <b>${esc(card.description || "")}</b>
-    </a>
-  `;
-}
-
-function industryCard(card) {
-  const href = safeContentHref(card.href, "industries.html");
-  const image = canonicalPublicImageUrl(card.image);
-  if (image) {
-    return `
-      <a class="route-card route-card-media-card" href="${esc(href)}">
-        <figure class="route-card-media">
-          <img src="${esc(image)}" alt="${esc(card.image_alt || card.title || "")}" width="${esc(card.image_w || 1600)}" height="${esc(card.image_h || 900)}" loading="lazy">
-        </figure>
-        <span class="route-card-kicker">${esc(card.category || "Industry")}</span>
-        <strong>${esc(card.title || "Untitled industry")}</strong>
-        <b>${esc(card.summary || "")}</b>
-      </a>
-    `;
-  }
-  return `
-    <a class="route-card" href="${esc(href)}">
-      <span>${esc(card.category || "Industry")}</span>
-      <strong>${esc(card.title || "Untitled industry")}</strong>
-      <b>${esc(card.summary || "")}</b>
     </a>
   `;
 }
@@ -210,10 +185,9 @@ function restoreHashTarget() {
 }
 
 export async function initContentSnapshots() {
-  const [proof, resources, industries, faqs, pageSections, pricingTiers, industrySectors] = await Promise.all([
+  const [proof, resources, faqs, pageSections, pricingTiers, industrySectors] = await Promise.all([
     loadContentSnapshot(SNAPSHOT_FILES.proof_cards),
     loadContentSnapshot(SNAPSHOT_FILES.resource_cards),
-    loadContentSnapshot(SNAPSHOT_FILES.industry_cards),
     loadContentSnapshot(SNAPSHOT_FILES.faq_blocks),
     loadContentSnapshot(SNAPSHOT_FILES.page_sections),
     loadContentSnapshot(SNAPSHOT_FILES.pricing_tiers),
@@ -223,7 +197,6 @@ export async function initContentSnapshots() {
   const rendered = [
     renderMount("proof_cards", proof, "proof_cards", proofCardHtml),
     renderMount("resource_cards", resources, "resource_cards", resourceCard),
-    renderMount("industry_cards", industries, "industry_cards", industryCard),
     renderMount("faq_blocks", faqs, "faq_blocks", faqBlock),
     renderMount("page_sections", pageSections, "page_sections", pageSection),
     renderMount("pricing_tiers", pricingTiers, "pricing_tiers", pricingTier),

@@ -49,8 +49,8 @@ test("contact form pre-fills quote message from cart handoff", async ({ page }) 
 
 test("product quote handoff lands on the visible prefilled product", async ({ page }) => {
   await page.goto(`${BASE_URL}/products/descaler.html`, { waitUntil: "networkidle" });
-  await expect(page.getByRole("link", { name: "Request a quote" })).toHaveAttribute("href", /#quoteForm$/);
-  await expect(page.getByRole("link", { name: "Request free sample" })).toHaveAttribute("href", /#quoteForm$/);
+  await expect(page.getByRole("link", { name: "Request a deposit test" })).toHaveAttribute("href", /#quoteForm$/);
+  await expect(page.getByRole("link", { name: "Request a Descaler sample" })).toHaveAttribute("href", /#quoteForm$/);
 
   await page.goto(
     `${BASE_URL}/contact.html?type=quote&product=VertKlean%20Descaler#quoteForm`,

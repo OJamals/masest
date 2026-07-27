@@ -12,7 +12,6 @@ test("CMS type registry exposes every supported content type", () => {
   assert.deepEqual(Object.keys(CONTENT_TYPE_DEFINITIONS).sort(), [
     "blog_post",
     "faq_block",
-    "industry_card",
     "industry_sector",
     "page_meta",
     "page_section",
@@ -24,6 +23,7 @@ test("CMS type registry exposes every supported content type", () => {
     "shipping_rate",
   ]);
   assert.equal(CONTENT_TYPE_DEFINITIONS.product, undefined);
+  assert.equal(CONTENT_TYPE_DEFINITIONS.industry_card, undefined);
 });
 
 test("shipping rates stay server-side and validate CMS fields", () => {
@@ -123,7 +123,6 @@ test("snapshotGroups returns every public export target", () => {
     "page-meta.json",
     "proof.json",
     "resources.json",
-    "industries.json",
     "industry-sectors.json",
     "faqs.json",
     "page-sections.json",
@@ -137,7 +136,7 @@ test("snapshotGroups returns every public export target", () => {
   assert.equal(proofFields.includes("href"), false);
 });
 
-test("proof cards require a published result label and conversion narrative", () => {
+test("proof cards support published product records without source-file fields", () => {
   const complete = {
     result: "Visible field result.",
     narrative: "Short case narrative.",
@@ -148,6 +147,19 @@ test("proof cards require a published result label and conversion narrative", ()
     ok: true,
     payload: complete,
   });
+  assert.deepEqual(
+    validateStructuredPayload("proof_card", {
+      ...complete,
+      publication_scope: "Published product record",
+    }),
+    {
+      ok: true,
+      payload: {
+        ...complete,
+        publication_scope: "Published product record",
+      },
+    },
+  );
   assert.deepEqual(
     validateStructuredPayload("proof_card", { ...complete, publication_scope: "" }),
     { ok: false, error: "publication_scope_required" },

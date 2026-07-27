@@ -35,6 +35,8 @@ test("data visualizations render from canonical data or page metadata", () => {
   assert.match(main, /initDataVisualizations\(\);/, "main entrypoint should initialize data visuals");
   assert.match(visuals, /fetch\("data\/services\.json"/, "service mix should use the public catalog JSON");
   assert.match(visuals, /querySelectorAll\("\[data-proof-card\]"\)/, "proof coverage should derive from case-card metadata");
+  assert.match(visuals, /published proof records/, "mixed case and product evidence should use an accurate umbrella label");
+  assert.doesNotMatch(visuals, /field case files|case files/, "product records must not be labeled as field case files");
   assert.match(visuals, /data-proof-viz-filter/, "proof coverage segments should sync with filters");
 });
 

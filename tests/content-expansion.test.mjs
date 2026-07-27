@@ -46,15 +46,6 @@ test("content export writes all non-commerce CMS snapshot groups", () => {
       seo: {},
     },
     {
-      type: "industry_card",
-      slug: "cold-storage",
-      title: "Cold storage",
-      status: "published",
-      locale: "en",
-      payload: { href: "industries/distribution-cold-storage", summary: "Refrigeration maintenance proof." },
-      seo: {},
-    },
-    {
       type: "faq_block",
       slug: "quote-timing",
       title: "Quote timing",
@@ -98,7 +89,6 @@ test("content export writes all non-commerce CMS snapshot groups", () => {
 
     assert.equal(readJson(join(outDir, "proof.json")).proof_cards[0].slug, "brewery-cip");
     assert.equal(readJson(join(outDir, "resources.json")).resource_cards[0].href, "resources.html#sds");
-    assert.equal(readJson(join(outDir, "industries.json")).industry_cards[0].title, "Cold storage");
     assert.equal(readJson(join(outDir, "faqs.json")).faq_blocks[0].question, "How fast are quotes returned?");
     assert.equal(readJson(join(outDir, "page-sections.json")).page_sections[0].headline, "Proof buyers can route.");
   } finally {

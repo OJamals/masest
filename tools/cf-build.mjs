@@ -33,7 +33,7 @@ const rewritableExtensions = new Set(['.css', '.html', '.js', '.json', '.xml']);
 const DENY = [
   /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^factory\//, /^node_modules(\/|$)/,
   /^dist\//, /^tmp\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
-  /^\.github\//, /^\.vscode\//,
+  /^\.github\//, /^\.vscode\//, /^docs\/research\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
   /^data\/public-document-review\.json$/,

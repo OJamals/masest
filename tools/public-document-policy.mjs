@@ -12,7 +12,10 @@ const VALID_STATUSES = new Set([
   "restricted",
 ]);
 const DOCUMENT_ID_PATTERN = /^MAS-[A-Z0-9-]+$/;
+const AUTHORITY_RECORD_ID_PATTERN = /^MAS-AUTH-[A-Z0-9-]+$/;
+const PRODUCT_SLUG_PATTERN = /^[a-z0-9-]+$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const AUTHORITY_RECORD_TYPES = new Set(["certification", "equivalency"]);
 const SENSITIVE_FLAGS = new Set([
   "confidential_customer_data",
   "personal_contact",
@@ -37,7 +40,7 @@ export function documentType(document) {
 
 export function documentDistribution(document) {
   if (isSensitive(document)) return "internal";
-  if (["sds", "tds"].includes(documentType(document))) return "request_only";
+  if (document?.status === "restricted" || ["sds", "tds"].includes(documentType(document))) return "request_only";
   return "public";
 }
 
@@ -81,6 +84,8 @@ export function validatePublicDocumentReview(
 
   const recorded = new Set();
   const documentIds = new Set();
+  const authorityRecordIds = new Set();
+  const authorityProofTypes = new Map();
   const excludedPublicPaths = new Set();
   for (const document of review.documents) {
     const path = String(document?.path || "");
@@ -132,6 +137,37 @@ export function validatePublicDocumentReview(
         throw new Error(`${source}: source changed after review`);
       }
     }
+    if (document.authority_records !== undefined) {
+      if (
+        !hasText(document.source_version)
+        || document.source_version.length > 100
+        || !Array.isArray(document.authority_records)
+        || document.authority_records.length === 0
+        || document.authority_records.length > 8
+      ) {
+        throw new Error(`${REVIEW_PATH}: invalid authority record control for ${path}`);
+      }
+      for (const record of document.authority_records) {
+        if (
+          !AUTHORITY_RECORD_ID_PATTERN.test(record?.record_id || "")
+          || authorityRecordIds.has(record.record_id)
+          || !AUTHORITY_RECORD_TYPES.has(record?.type)
+          || !PRODUCT_SLUG_PATTERN.test(record?.product || "")
+          || !document.skus.includes(record?.sku)
+          || !PRODUCT_SLUG_PATTERN.test(record?.proof_slug || "")
+          || !hasText(record?.statement)
+          || record.statement.length > 240
+        ) {
+          throw new Error(`${REVIEW_PATH}: invalid authority record for ${path}`);
+        }
+        const proofType = authorityProofTypes.get(record.proof_slug);
+        if (proofType && proofType !== record.type) {
+          throw new Error(`${REVIEW_PATH}: authority proof ${record.proof_slug} mixes record types`);
+        }
+        authorityProofTypes.set(record.proof_slug, record.type);
+        authorityRecordIds.add(record.record_id);
+      }
+    }
     recorded.add(path);
     documentIds.add(document.document_id);
     if (documentDistribution(document) !== "public") excludedPublicPaths.add(path);
@@ -158,6 +194,20 @@ export function validatePublicDocumentReview(
     || !hasText(distribution.internal_rule)
   ) {
     throw new Error(`${REVIEW_PATH}: incomplete distribution policy`);
+  }
+
+  if (authorityProofTypes.size) {
+    const proofPath = join(root, "data/content/proof.json");
+    if (!existsSync(proofPath)) {
+      throw new Error(`${REVIEW_PATH}: product authority proof snapshot is missing`);
+    }
+    const proofSlugs = (JSON.parse(readFileSync(proofPath, "utf8")).proof_cards || [])
+      .filter((card) => card.publication_scope === "Published product record")
+      .map((card) => card.slug)
+      .sort();
+    if (JSON.stringify(proofSlugs) !== JSON.stringify([...authorityProofTypes.keys()].sort())) {
+      throw new Error(`${REVIEW_PATH}: authority proof cards do not match controlled records`);
+    }
   }
 
   for (const document of review.documents) {

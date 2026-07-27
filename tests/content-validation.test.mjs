@@ -179,7 +179,7 @@ test("content export tool writes service and page metadata snapshot paths", () =
   assert.match(source, /"page-meta\.json": pageMetaPayload/);
   assert.match(source, /"proof\.json": typedPayload/);
   assert.match(source, /"resources\.json": typedPayload/);
-  assert.match(source, /"industries\.json": typedPayload/);
+  assert.doesNotMatch(source, /"industries\.json": typedPayload/);
   assert.match(source, /"faqs\.json": typedPayload/);
   assert.match(source, /"manifest\.json"/);
   assert.match(source, /publicContentSnapshot/);
@@ -200,7 +200,7 @@ test("site verifier validates optional content service snapshot shape", () => {
   assert.match(source, /service_packages/);
   assert.match(source, /data\/content\/proof\.json/);
   assert.match(source, /data\/content\/resources\.json/);
-  assert.match(source, /data\/content\/industries\.json/);
+  assert.doesNotMatch(source, /data\/content\/industries\.json/);
   assert.match(source, /data\/content\/faqs\.json/);
 });
 

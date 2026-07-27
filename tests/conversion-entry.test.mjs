@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { CATALOG_ORDER, PRODUCTS, PRODUCT_CATALOG_COPY } from "../js/main/catalog-data.js";
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
@@ -112,9 +113,21 @@ test("support routes use task-first science copy without changing destinations",
 
   assert.match(pages.about, />Request an application review<\/a>/);
   assert.match(pages.services, />Prove the switch before you scale it\.<\/h1>/);
-  for (const label of ["Request a deposit test", "Request a wash benchmark", "Request a cycle review"]) {
+  for (const label of [
+    "Request water analysis",
+    "Request biological testing",
+    "Request materials analysis",
+    "Request bid support",
+    "Request technical review",
+    "Request site sampling",
+    "Request a WMP review",
+    "Request package scope",
+  ]) {
     assert.match(pages.serviceCatalog, new RegExp(label));
   }
+  assert.doesNotMatch(pages.serviceCatalog, /Request a deposit test|Request a wash benchmark|Request a cycle review/);
+  assert.match(pages.serviceCatalog, /Define sample point, operating state, analytes, and decision needed/);
+  assert.match(pages.serviceCatalog, /Define facility risk, control measures, monitoring, corrective actions, and review cadence/);
   assert.match(pages.programs, />Request a chemistry-program quote<\/a>/);
   assert.match(pages.resources, />Request an application protocol<\/a>/);
   assert.match(pages.newsletter, />One mechanism\. One field result\. One practical win\.<\/h1>/);
@@ -127,6 +140,23 @@ test("support routes use task-first science copy without changing destinations",
       /Independently verified|compliance deadline|verification work|regulatory and label file|Signed trial brief|site approval|Regulatory Status Documentation/i,
     );
   }
+});
+
+test("every public product replaces the generic sample CTA with an exact-product label", () => {
+  for (const id of CATALOG_ORDER) {
+    const publicName = PRODUCTS[id].name.replace(/^VertKlean /, "");
+    const cta = PRODUCT_CATALOG_COPY[id]?.sample_cta;
+    assert.ok(cta, `${id} needs an exact-product sample CTA`);
+    assert.ok(cta.includes(publicName), `${id} sample CTA must use public name "${publicName}"`);
+  }
+});
+
+test("overlapping product families stay separated by public job scope", () => {
+  assert.match(PRODUCT_CATALOG_COPY.hcr.job, /CIP/);
+  assert.match(PRODUCT_CATALOG_COPY.cr.job, /CIP/);
+  assert.match(PRODUCT_CATALOG_COPY["hcr-t16"].job, /HVAC/);
+  assert.match(PRODUCT_CATALOG_COPY.cr2.job, /HVAC/);
+  assert.doesNotMatch(PRODUCT_CATALOG_COPY["cr-hd-low-foam"].proof, /adapted/i);
 });
 
 test("public content generators preserve current SEO releases", () => {

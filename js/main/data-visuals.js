@@ -59,10 +59,10 @@ function renderProofCoverage(root, cards) {
   root.innerHTML = `
     <div class="viz-copy">
       <span class="eyebrow">Proof coverage</span>
-      <h3>Evidence spans ${total} field case files across ${entries.length} sectors.</h3>
-      <p data-proof-coverage-note>${activeProofKind() === "all" ? "Showing the full case record." : `Filtered to ${PROOF_LABELS[activeProofKind()]}.`}</p>
+      <h3>Evidence spans ${total} published proof records across ${entries.length} sectors.</h3>
+      <p data-proof-coverage-note>${activeProofKind() === "all" ? "Showing the full proof record." : `Filtered to ${PROOF_LABELS[activeProofKind()]}.`}</p>
     </div>
-    <div class="viz-stack" role="group" aria-label="Filter proof cases by sector">
+    <div class="viz-stack" role="group" aria-label="Filter proof records by sector">
       ${entries.map(([kind], index) => `
         <button
           class="viz-segment viz-tone-${index + 1}"
@@ -70,7 +70,7 @@ function renderProofCoverage(root, cards) {
           style="--share:${percent(counts[kind], total)}"
           data-proof-viz-filter="${htmlEscape(kind)}"
           aria-pressed="${kind === activeProofKind() ? "true" : "false"}"
-          aria-label="${htmlEscape(PROOF_LABELS[kind])}: ${counts[kind]} case files"
+          aria-label="${htmlEscape(PROOF_LABELS[kind])}: ${counts[kind]} proof records"
         >
           <b>${counts[kind]}</b>
           <span>${htmlEscape(PROOF_LABELS[kind])}</span>
@@ -82,7 +82,7 @@ function renderProofCoverage(root, cards) {
   const sync = () => {
     const kind = activeProofKind();
     root.querySelector("[data-proof-coverage-note]").textContent = kind === "all"
-      ? "Showing the full case record."
+      ? "Showing the full proof record."
       : `Filtered to ${PROOF_LABELS[kind] || kind}.`;
     root.querySelectorAll("[data-proof-viz-filter]").forEach((item) => {
       const selected = kind !== "all" && item.dataset.proofVizFilter === kind;

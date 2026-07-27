@@ -40,6 +40,8 @@ const SITE_IMAGE_DIMENSIONS = new Map(
 const BLOG_POST_SLUGS = (BLOG_SNAPSHOT.blog_posts || []).map((post) => post.slug).filter(Boolean);
 const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document-review.json", import.meta.url), "utf8"));
 const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
+const AUTHORITY_RECORDS = DOCUMENT_REVIEW.documents.flatMap((document) => document.authority_records || []);
+const PROOF_RECORDS_BY_SLUG = new Map(PROOF_RECORDS.map((record) => [record.slug, record]));
 const DOCUMENT_REVISION = DOCUMENT_REVIEW.document_control.revision;
 const DOCUMENT_SKU_LABELS = new Map([
   ["VK-HCR", "VertKlean CIP HCR"],
@@ -59,7 +61,6 @@ const DOCUMENT_SKU_LABELS = new Map([
 const BASE = "https://masest.co";
 const OG_IMAGE = `${BASE}/img/og-card.png`;
 const PRODUCT_FALLBACK_IMAGE = "img/products/masest-poster-transparent.png";
-const PRODUCT_FALLBACK_IMAGE_URL = `${BASE}/${PRODUCT_FALLBACK_IMAGE}`;
 const START = "<!-- seo:auto -->";
 const END = "<!-- /seo:auto -->";
 
@@ -186,6 +187,32 @@ function currentDocument(path, surface) {
   if (!document) throw new Error(`Public page references unreviewed document: ${path}`);
   if (!documentAllowedOnSurface(document, surface)) return null;
   return document;
+}
+
+function productProofRecords(productId) {
+  const records = new Map();
+  for (const authority of AUTHORITY_RECORDS.filter((record) => record.product === productId)) {
+    const proof = PROOF_RECORDS_BY_SLUG.get(authority.proof_slug);
+    if (!proof) throw new Error(`Missing authority proof ${authority.proof_slug}`);
+    const current = records.get(proof.slug);
+    if (current && current.record_type !== authority.type) {
+      throw new Error(`Authority proof ${proof.slug} mixes record types`);
+    }
+    records.set(proof.slug, {
+      ...proof,
+      record_type: authority.type,
+      record_label: `Exact-product ${authority.type} record`,
+    });
+  }
+  for (const slug of PRODUCT_CATALOG_COPY[productId]?.proof_slugs || []) {
+    const proof = PROOF_RECORDS_BY_SLUG.get(slug);
+    if (!proof || proof.publication_scope !== "Published result summary") {
+      throw new Error(`Missing published result summary ${slug}`);
+    }
+    if (records.has(slug)) throw new Error(`Proof ${slug} mixes authority and result mappings`);
+    records.set(slug, { ...proof, record_label: "Documented result summary" });
+  }
+  return [...records.values()];
 }
 
 function documentControl(document) {
@@ -538,7 +565,7 @@ function productSchema(id, product, reviewsSnapshot) {
         category: "Industrial cleaning chemistry",
         description: productDescription(id, product),
         url: `${BASE}/products/${id}`,
-        image: product.image ? `${BASE}/${product.image}` : PRODUCT_FALLBACK_IMAGE_URL,
+        image: product.image ? `${BASE}/${product.image}` : `${BASE}/${PRODUCT_FALLBACK_IMAGE}`,
         ...(offers.length ? { offers } : {}),
         additionalProperty: [
           { "@type": "PropertyValue", name: "HMIS rating", value: product.hmis },
@@ -580,6 +607,11 @@ function productPage(id, product, reviewsSnapshot) {
   const specs = productHighlights(id)
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
     .join("\n");
+  const proofLinks = productProofRecords(id)
+    .map((record) => (
+      `<li class="doc-file"><a href="../proof#${attr(record.slug)}"><span class="doc-file-copy">${text(record.title)}<span class="doc-control">${text(record.record_label)}</span></span><span class="doc-pill">Proof</span></a></li>`
+    ))
+    .join("\n");
   const docs = (product.docs || [])
     .flatMap((doc) => {
       if (doc && typeof doc === "object" && doc.file) {
@@ -596,6 +628,10 @@ function productPage(id, product, reviewsSnapshot) {
       return [`<li class="doc-file doc-request"><a href="${attr(href)}">${text(label)}<span class="doc-pill doc-pill-req">Request</span></a></li>`];
     })
     .join("\n");
+  const backingSections = [
+    proofLinks && `<h3>Records and results</h3><ul class="product-fit-list">${proofLinks}</ul>`,
+    docs && `<h3>Documents</h3><ul class="product-fit-list">${docs}</ul>`,
+  ].filter(Boolean).join("\n        ");
   const procurement = QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
     : "Small packs ship from stock where available; drums, totes, and program supply are quoted.";
@@ -679,8 +715,8 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
       </article>
       <article class="product-static-panel">
         <h2>What backs the switch.</h2>
-        <ul class="spec-list">${specs}</ul>
-        ${docs ? `<h3>Documents</h3><ul class="product-fit-list">${docs}</ul>` : ""}
+        <ul class="spec-list">${specs}</ul>${backingSections ? `
+        ${backingSections}` : ""}
       </article>
     </div>
   </section>

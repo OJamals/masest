@@ -781,7 +781,6 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
    brand marks keep their existing stage treatment. */
 :where(
   .contact-hero-media img,
-  .route-card-media img,
   .cms-page-section-media img,
   .page-hero-scene-media img,
   .row-thumb img,

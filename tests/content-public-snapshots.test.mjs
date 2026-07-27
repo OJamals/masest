@@ -12,7 +12,6 @@ test("public content snapshot helper loads optional CMS snapshots", () => {
   assert.match(source, /fetch\(`\/data\/content\/\$\{file\}`/, "snapshot fetches must be root-relative for extensionless product detail pages");
   assert.match(source, /proof\.json/);
   assert.match(source, /resources\.json/);
-  assert.match(source, /industries\.json/);
   assert.match(source, /faqs\.json/);
   assert.match(source, /page-sections\.json/);
   assert.match(source, /pricing\.json/);
@@ -133,14 +132,9 @@ test("public CMS renderer supports multi-mount category filters", () => {
   assert.match(css, /\.service-catalog-page \.services-cms-faq\s*\{\s*order:\s*5;/);
 });
 
-test("public CMS industry cards render editor-managed images", () => {
+test("public CMS renderer omits the orphaned industry-card branch", () => {
   const source = readFileSync(new URL("../js/main/content-snapshots.js", import.meta.url), "utf8");
-  const css = readFileSync(new URL("../css/style.css", import.meta.url), "utf8");
-
-  assert.match(source, /route-card-media-card/);
-  assert.match(source, /card\.image_alt \|\| card\.title/);
-  assert.match(css, /\.route-card-media-card\s*\{/);
-  assert.match(css, /\.route-card-media img\s*\{/);
+  assert.doesNotMatch(source, /industry_cards|industries\.json|route-card-media-card/);
 });
 
 test("category filtering returns matching rows and uncategorized fallback rows", () => {

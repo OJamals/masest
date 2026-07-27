@@ -45,7 +45,6 @@ const PLACEMENT_HINTS = Object.freeze({
   service_package: "Feeds service package cards used on public services and pricing surfaces.",
   proof_card: "Feeds proof and case-study cards across the public site.",
   resource_card: "Feeds resource cards and downloadable links.",
-  industry_card: "Feeds industry overview cards on sector pages.",
   industry_sector: "Feeds individual industry sector pages and related cards.",
   faq_block: "Feeds FAQ sections on public pages.",
   page_section: "Feeds editable public page sections such as headlines, body copy, CTAs, and images.",

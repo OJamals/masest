@@ -13,42 +13,58 @@ const CATEGORY_COPY = {
   "Lab Testing - Water Analysis": {
     icon: "ph-drop",
     title: "Water analysis",
-    note: "Raw, tower, chilled, closed-loop, boiler, pretreatment, polisher, and condensate testing."
+    note: "Raw, tower, chilled, closed-loop, boiler, pretreatment, polisher, and condensate testing.",
+    description: "Define sample point, operating state, analytes, and decision needed before lab scope.",
+    cta: "Request water analysis"
   },
   "Lab Testing - Biological": {
     icon: "ph-test-tube",
     title: "Biological testing",
-    note: "Biological counts, Legionella culture, Legionella PCR, and biological identification."
+    note: "Biological counts, Legionella culture, Legionella PCR, and biological identification.",
+    description: "Confirm sample plan, test method, turnaround, and interpretation boundary before biological testing.",
+    cta: "Request biological testing"
   },
   "Testing - Materials": {
     icon: "ph-magnifying-glass",
     title: "Materials testing",
-    note: "Corrosion coupon, pipe, deposit, single-element, and abbreviated material analysis."
+    note: "Corrosion coupon, pipe, deposit, single-element, and abbreviated material analysis.",
+    description: "Define sample, condition, measurements, photos, and analytical question before materials testing.",
+    cta: "Request materials analysis"
   },
   "Consulting Services": {
     icon: "ph-compass-tool",
     title: "Consulting",
-    note: "Equipment inspections, ultrasonic and borescope testing, sprinkler testing, and particle work."
+    note: "Equipment inspections, ultrasonic and borescope testing, sprinkler testing, and particle work.",
+    description: "Define asset, condition, test method, access, and decision-ready deliverable before technical review.",
+    cta: "Request technical review"
   },
   "Bid Support": {
     icon: "ph-file-text",
     title: "Bid support",
-    note: "Specification creation, spec review, and buyer-side bid interview support."
+    note: "Specification creation, spec review, and buyer-side bid interview support.",
+    description: "Define operating needs, deliverables, evaluation criteria, and interview support before bid work begins.",
+    cta: "Request bid support"
   },
   "Field Services": {
     icon: "ph-hard-hat",
     title: "Field services",
-    note: "On-site sample collection and standard sampling visits."
+    note: "On-site sample collection and standard sampling visits.",
+    description: "Confirm sample points, site access, travel, chain of custody, and field conditions before collection.",
+    cta: "Request site sampling"
   },
   "Water Management Plan": {
     icon: "ph-clipboard-text",
     title: "Water management",
-    note: "ASHRAE 188 assessment, plan writing, renewal, and dashboard access."
+    note: "ASHRAE 188 assessment, plan writing, renewal, and dashboard access.",
+    description: "Define facility risk, control measures, monitoring, corrective actions, and review cadence before plan work begins.",
+    cta: "Request a WMP review"
   },
   "Service Packages": {
     icon: "ph-package",
     title: "Packages",
-    note: "Bundled initial sampling, annual setup, quarterly audit, and yearly recertification."
+    note: "Bundled initial sampling, annual setup, quarterly audit, and yearly recertification.",
+    description: "Bundle sampling, planning, audit, or recertification work under one scoped engagement.",
+    cta: "Request package scope"
   }
 };
 
@@ -61,10 +77,15 @@ function normalizeText(value) {
     .trim();
 }
 
-function displayCategory(value) {
+function categoryKey(value) {
   const clean = normalizeText(value);
-  if (clean === "Testing - Materials") return "Lab Testing - Materials";
+  if (clean === "Lab Testing - Materials") return "Testing - Materials";
   return clean;
+}
+
+function displayCategory(value) {
+  const key = categoryKey(value);
+  return key === "Testing - Materials" ? "Lab Testing - Materials" : key;
 }
 
 function displayServiceName(value) {
@@ -114,13 +135,6 @@ function countLabel(count, category = "") {
   return `${count} ${count === 1 ? "line item" : "line items"}`;
 }
 
-function serviceCtaLabel(item) {
-  const subject = `${item.category || ""} ${item.name || ""}`;
-  if (/material|deposit|corrosion|pipe|particle|element/i.test(subject)) return "Request a deposit test";
-  if (/field|equipment|inspection|borescope|ultrasonic|sprinkler/i.test(subject)) return "Request a wash benchmark";
-  return "Request a cycle review";
-}
-
 function renderServiceCard(item) {
   const name = displayServiceName(item.name);
   // Keep the "per" — a bare "sample" next to a dollar figure reads as
@@ -133,10 +147,11 @@ function renderServiceCard(item) {
   // line item into the notes field so it actually reaches the request.
   const note = `Service request: ${name}${sku ? ` (${sku})` : ""}.`;
   const href = `contact?type=services&message=${encodeURIComponent(note)}`;
+  const copy = CATEGORY_COPY[categoryKey(item.category)] || {};
   const description = item.description
     ? normalizeText(item.description)
-    : "Final scope, schedule, and deliverables are confirmed before work begins.";
-  const cta = serviceCtaLabel(item);
+    : copy.description || "Final scope, schedule, and deliverables are confirmed before work begins.";
+  const cta = copy.cta || "Request service scope";
 
   return `
     <article class="service-card" data-service-sku="${htmlEscape(sku)}">
@@ -289,8 +304,7 @@ function renderCatalog(root, catalog) {
 
   const groups = new Map();
   for (const item of items) {
-    const rawCategory = normalizeText(item.category);
-    const category = rawCategory === "Lab Testing - Materials" ? "Testing - Materials" : rawCategory;
+    const category = categoryKey(item.category);
     if (!groups.has(category)) groups.set(category, []);
     groups.get(category).push(item);
   }

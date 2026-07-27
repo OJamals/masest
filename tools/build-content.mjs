@@ -82,7 +82,6 @@ export function snapshotPayloads(entries) {
     "page-meta.json": pageMetaPayload(snapshot),
     "proof.json": typedPayload(snapshot, "proof_card", "proof_cards"),
     "resources.json": typedPayload(snapshot, "resource_card", "resource_cards"),
-    "industries.json": typedPayload(snapshot, "industry_card", "industry_cards"),
     "faqs.json": typedPayload(snapshot, "faq_block", "faq_blocks"),
     "page-sections.json": typedPayload(snapshot, "page_section", "page_sections"),
     "pricing.json": typedPayload(snapshot, "pricing_tier", "pricing_tiers"),

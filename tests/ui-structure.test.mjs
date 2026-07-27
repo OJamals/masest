@@ -158,6 +158,9 @@ test("program function map is optional below the tiers", () => {
 
 test("proof page leads with results and expandable conversion evidence", () => {
   const proof = read("proof.html");
+  const proofCards = JSON.parse(read("data/content/proof.json")).proof_cards;
+  const productRecordCount = proofCards
+    .filter((card) => card.publication_scope === "Published product record").length;
   const heroIndex = proof.indexOf("Results strong enough to replace the old chemistry.");
   const libraryIndex = proof.indexOf('class="proof-library');
 
@@ -169,9 +172,13 @@ test("proof page leads with results and expandable conversion evidence", () => {
   assert.match(proof, /Request this comparison/);
   assert.match(proof, /Real-world transformations/);
   assert.match(proof, /Brewery chemistry that beat the old playbook/);
-  assert.equal((proof.match(/data-proof-card/g) || []).length, 12);
-  assert.equal((proof.match(/Published result summary/g) || []).length, 12);
-  assert.equal((proof.match(/<details class="case-disclosure"/g) || []).length, 12);
+  assert.equal((proof.match(/data-proof-card/g) || []).length, proofCards.length);
+  assert.equal(
+    (proof.match(/Published result summary/g) || []).length,
+    proofCards.length - productRecordCount,
+  );
+  assert.equal((proof.match(/Published product record/g) || []).length, productRecordCount);
+  assert.equal((proof.match(/<details class="case-disclosure"/g) || []).length, proofCards.length);
   assert.doesNotMatch(proof, /href="docs\/(?:brewery-cip-trial-brewlando|carib-brewery-lab-report)\.pdf"/);
   assert.doesNotMatch(proof, /30 min|36 hours|280&#215;|\$75|2,500 square feet/);
   assert.doesNotMatch(proof, /broader company file/i);

@@ -4,11 +4,14 @@
 // approved narrative and result-summary label render in a native disclosure.
 // Legacy href values never expose source documents. sort_order drives order; an
 // empty snapshot leaves the hardcoded cards intact.
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 import { startStaticTestServer } from "./test-static-server.mjs";
 
 const DIR = "output/playwright/proof-cms";
+const FALLBACK_PROOF_COUNT = JSON.parse(
+  readFileSync(new URL("../data/content/proof.json", import.meta.url), "utf8"),
+).proof_cards.length;
 let BASE_URL = "";
 let staticSite;
 
@@ -162,5 +165,5 @@ test("empty proof snapshot leaves the hardcoded case cards intact", async ({ pag
   await page.goto(`${BASE_URL}/proof.html`, { waitUntil: "networkidle" });
   const grid = page.locator('.case-grid[data-cms-content="proof_cards"]');
   await expect(grid.getByText("Rust-and-scale removal", { exact: true })).toBeVisible();
-  await expect(grid.locator(".case-card")).toHaveCount(12);
+  await expect(grid.locator(".case-card")).toHaveCount(FALLBACK_PROOF_COUNT);
 });

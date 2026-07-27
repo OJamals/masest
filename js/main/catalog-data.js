@@ -52,8 +52,7 @@ export const PRODUCTS = {
       "316 stainless and PVC CIP systems"
     ],
     docs: [
-      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-cr-sds.pdf" },
-      "NSF/ANSI 60 Certificate-Status Request"
+      { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-cr-sds.pdf" }
     ]
   },
   neutral: {
@@ -105,8 +104,7 @@ export const PRODUCTS = {
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/watersafe60-sds.pdf" },
-      { label: "Titration / Sigma Test Data", file: "docs/sds/watersafe60-titration-test.pdf" },
-      "NSF/ANSI 60 Certificate-Status Request"
+      { label: "Titration / Sigma Test Data", file: "docs/sds/watersafe60-titration-test.pdf" }
     ]
   },
   purgo: {
@@ -190,7 +188,7 @@ export const PRODUCTS = {
       "Wheels, trim, and aluminum restoration",
       "Fleet, RV, and marine aluminum",
       "Detailing and dealership reconditioning",
-      "Field-proven on a commercial tourist airboat"
+      "Documented commercial aluminum-restoration context"
     ],
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
@@ -205,7 +203,7 @@ export const PRODUCTS = {
       "Vehicle, fleet, and RV wash and wax",
       "Marine and boat exteriors",
       "Dealership and detailing programs",
-      "Yellowfin vessel-wash field result"
+      "Documented vessel-wash result"
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-torque-sds.pdf" }
@@ -272,7 +270,7 @@ export const PRODUCTS = {
       "Grease and organic-buildup removal",
       "Coils, equipment, and general maintenance"
     ],
-    docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
+    docs: ["Safety Data Sheet (SDS)"]
   },
   sar: {
     name: "VertKlean SAR",
@@ -371,24 +369,27 @@ export const QUOTE_FIRST_IDS = ["crs"];
 
 export const PRODUCT_CATALOG_COPY = {
   hcr: {
-    job: "Rust, scale, and heavy deposits",
+    job: "Brewery CIP mineral cleaning",
     platform: "Powered by SynTech",
-    summary: "Acid-level descaling power without making conventional mineral acid the default.",
+    summary: "Controlled mineral removal for brewery acid-wash steps.",
     mechanism: "Controlled hydrogen-ion activity consumes carbonate scale (2 H+ + CaCO3 → Ca2+ + CO2 + H2O), while complexing, wetting, and inhibition keep the reaction focused on the deposit.",
-    operator_advantage: "Restore flow and heat transfer with lower fume, material-attack, storage, and handling burden than a conventional mineral-acid workflow.",
-    sample_cta: "Request an HCR sample",
-    fits: ["HVAC", "metal restoration", "concrete", "pipelines"],
-    proof: "Brewery CIP, heat-exchanger, pool-filter, and rust-removal results"
+    operator_advantage: "Target beer stone and mineral film in tanks, kegs, lines, and heat-transfer surfaces through a controlled CIP acid-wash step.",
+    quote_cta: "Request a CIP mineral-cycle review",
+    sample_cta: "Request a CIP HCR sample",
+    fits: ["brewery CIP", "beer stone", "tanks and kegs", "heat-exchanger plates"],
+    proof: "Brewery CIP, heat-exchanger, pool-filter, and rust-removal results",
+    proof_slugs: ["brewery-cip-trials"]
   },
   "hcr-t16": {
-    job: "16+ tote descaling supply",
+    job: "Bulk HVAC descaling",
     platform: "Powered by SynTech",
-    summary: "VertKlean descaling power for repeated large-volume work.",
+    summary: "Controlled mineral removal for repeated large-volume HVAC and facility work.",
     mechanism: "Controlled hydrogen-ion activity, complexing, wetting, and inhibition dissolve calcium, rust, and water-side scale through the same HCR mineral-removal pathway.",
     operator_advantage: "Tote economics, repeat dosing, fewer shutdown complications, and a simpler crew experience improve recurring descaling work.",
-    quote_cta: "Request a bulk-program quote",
-    fits: ["16+ totes", "contractors", "campuses", "industrial descaling"],
-    proof: "Bulk HCR program profile and volume pricing"
+    quote_cta: "Request a bulk HVAC scale review",
+    fits: ["HVAC coils", "water-side scale", "facility loops", "bulk programs"],
+    proof: "HVAC HCR application and bulk-program scope",
+    sample_cta: "Request an HVAC HCR sample"
   },
   descaler: {
     job: "Coils, towers, and heat-transfer equipment",
@@ -396,8 +397,11 @@ export const PRODUCT_CATALOG_COPY = {
     summary: "Controlled mineral-removal chemistry for equipment that matters.",
     mechanism: "Controlled hydrogen-ion activity, wetting, and circulation convert mineral scale into rinsable material across coils, towers, plumbing, and heat-transfer equipment.",
     operator_advantage: "Restore flow and heat transfer with equipment-conscious action, lower fume burden, and a better technician experience.",
+    quote_cta: "Request a deposit test",
     fits: ["coils", "cooling towers", "plumbing", "fire pumps"],
-    proof: "AC-coil, fire-pump, and water-side cleaning results"
+    proof: "AC-coil, fire-pump, and water-side cleaning results",
+    proof_slugs: ["fire-pump-descaler", "residential-ac-coil"],
+    sample_cta: "Request a Descaler sample"
   },
   crs: {
     job: "Water-side scale and rust",
@@ -406,14 +410,16 @@ export const PRODUCT_CATALOG_COPY = {
     proof: "User guide and application notes"
   },
   cr: {
-    job: "High-pH organics and caustic replacement",
+    job: "Brewery CIP organic-soil cleaning",
     platform: "Powered by SynClean",
-    summary: "High-pH cleaning power, re-engineered.",
+    summary: "High-pH cleaning for brewery alkaline-wash steps.",
     mechanism: "Alkalinity loosens fat, protein, and organic film; wetting and sequestration lift residue, control hard-water ions, and carry soil into a cleaner rinse.",
     operator_advantage: "Strong CIP cleaning with less caustic-workflow burden, a cleaner rinse, and faster return to production.",
-    sample_cta: "Request a CR sample",
-    fits: ["hoods", "floors", "CIP", "water treatment"],
-    proof: "Brewery CIP, commercial-hood, and exterior-cleaning results"
+    quote_cta: "Request a CIP soil-cycle review",
+    sample_cta: "Request a CIP CR sample",
+    fits: ["brewery CIP", "krausen", "tanks and kegs", "hot circulation"],
+    proof: "Exact-product caustic-replacement record and concentration-specific application guidance",
+    proof_slugs: ["brewery-cip-trials"]
   },
   crhd: {
     job: "Heavy grease and industrial soil",
@@ -421,9 +427,11 @@ export const PRODUCT_CATALOG_COPY = {
     summary: "Heavy-duty degreasing without the solvent-first experience.",
     mechanism: "Wetting penetrates greasy film; surfactants surround and lift hydrocarbon soil while sequestration controls hard-water ions and limits redeposition.",
     operator_advantage: "Lower odor and flammability burden, strong soil loading, fewer passes, and a cleaner rinse improve heavy industrial work.",
-    sample_cta: "Request a CRHD sample",
+    quote_cta: "Request a wash benchmark",
+    sample_cta: "Request a CR HD sample",
     fits: ["floors", "forklifts", "drains", "engine bays"],
-    proof: "Distribution-center, commercial-kitchen, and filter-cleaning results"
+    proof: "Distribution-center, commercial-kitchen, and filter-cleaning results",
+    proof_slugs: ["commercial-kitchen-crhd", "distribution-center-assessment"]
   },
   neutral: {
     job: "Sensitive surfaces and seals",
@@ -431,6 +439,7 @@ export const PRODUCT_CATALOG_COPY = {
     summary: "Serious soil lift at a near-neutral pH.",
     mechanism: "Wetting lowers interfacial tension, sequestration controls hard-water ions, and surfactants lift oily soil into the wash so it rinses away.",
     operator_advantage: "A finish-, seal-, and occupied-space-friendly profile supports frequent cleaning without an acid or high-alkaline cycle.",
+    quote_cta: "Request a material-fit test",
     sample_cta: "Request a Neutral sample",
     fits: ["equipment", "marine", "aviation", "fleet"],
     proof: "Neutral-pH application and material-use guidance"
@@ -441,6 +450,7 @@ export const PRODUCT_CATALOG_COPY = {
     summary: "One formulation for mixed soils that usually require several bottles.",
     mechanism: "Controlled mineral-soil action works beside grease and organic-soil dispersion, with Purgo support for odor-causing residue in wet zones.",
     operator_advantage: "Fewer products, simpler training, low-odor handling, and faster routine work streamline mixed facility cleaning.",
+    quote_cta: "Request a mixed-soil trial",
     sample_cta: "Request a MultiWash sample",
     fits: ["campuses", "concrete", "drains", "pressure washing"],
     proof: "Campus drone-wash, gym, vehicle, and property-maintenance results"
@@ -451,17 +461,21 @@ export const PRODUCT_CATALOG_COPY = {
     summary: "Controlled pH and scale chemistry for water systems.",
     mechanism: "Controlled pH movement and hydrogen-ion activity manage carbonate-scale pressure while the inhibitor package supports recurring system treatment.",
     operator_advantage: "Dose follows water chemistry, supporting stable operation, controlled scale response, and simpler water-program handling.",
+    quote_cta: "Request a water-program review",
     fits: ["cooling towers", "closed loops", "campuses", "hospitals"],
-    proof: "NSF listing, titration data, and cooling-tower program results"
+    proof: "NSF/ANSI/CAN 60 product record, listed-use guidance, and titration data",
+    sample_cta: "Request a WaterSafe60 sample"
   },
   purgo: {
-    job: "Bio-active odor and organic-load control",
+    job: "Odor-source and organic-load control",
     platform: "Purgo Bio-Active",
-    summary: "Control odor and microbial burden without making bleach the default.",
-    mechanism: "Stabilized live vegetative microbes digest odor-causing organic residue at the source and keep working beyond the first application.",
-    operator_advantage: "Lower odor, material-friendly application, and persistent biological action reduce repeat masking, bleach cycles, and odor rebound.",
-    fits: ["towers", "WMP support", "campuses", "general use"],
-    proof: "Bacterial-persistence data, gym programs, and property-maintenance results"
+    summary: "Bio-active support for odor-causing organic residue in scoped water and drain programs.",
+    mechanism: "Bio-active treatment works on odor-causing organic residue within the defined cleaning and monitoring program.",
+    operator_advantage: "Define source, loading, dose, monitoring, and cleaning method before treating recurring odor.",
+    quote_cta: "Request an odor-program assessment",
+    fits: ["drains", "wet zones", "water programs", "odor-source maintenance"],
+    proof: "Technical persistence data and application guidance",
+    sample_cta: "Request a Purgo sample"
   },
   dbnpa: {
     job: "Low-dose tower-treatment component",
@@ -472,30 +486,38 @@ export const PRODUCT_CATALOG_COPY = {
   lam3: {
     job: "Moss, algae, mold, and mildew",
     platform: "VertKlean + Purgo",
-    summary: "Long-dwell exterior cleaning without the bleach-first maintenance cycle.",
-    mechanism: "Extended wetting and dwell attack adhered organic staining, mineral film, and biological residue while Purgo keeps working on the organic matrix.",
-    operator_advantage: "Spray-and-leave simplicity, material and landscape friendliness, and fewer maintenance steps reduce exterior-cleaning labor.",
+    summary: "Long-dwell exterior cleaning for scoped surface and stain conditions.",
+    mechanism: "Extended wetting and dwell address adhered organic staining, mineral film, and biological residue on the selected test area.",
+    operator_advantage: "Define substrate, stain, weather, adjacent materials, dwell, runoff path, and visual endpoint before scaling the work.",
+    quote_cta: "Request an exterior-surface trial",
     fits: ["roofs", "pavers", "siding", "stucco"],
-    proof: "Moss, algae, mildew, paver, and painted-surface transformations"
+    proof: "Exterior-surface application guidance and documented result summaries",
+    proof_slugs: ["property-grout-moss"],
+    sample_cta: "Request a LAM3 sample"
   },
   alumibrite: {
     job: "Aluminum brightening",
     platform: "Powered by SynTech",
-    summary: "Restore aluminum brightness without HF/HCl punishment.",
-    mechanism: "Controlled oxide and mineral removal combines wetting and inhibition to release aluminum film without relying on HF/HCl brighteners.",
-    operator_advantage: "Restore finish with lower fume, material-attack, and crew burden than conventional aluminum brightening.",
+    summary: "Controlled aluminum brightening for a selected alloy and finish.",
+    mechanism: "Controlled oxide and mineral removal combines wetting and inhibition within a confirmed aluminum test patch.",
+    operator_advantage: "Define alloy, coating, oxidation, method, containment, and test-patch endpoint before scaling the work.",
+    quote_cta: "Request an aluminum test-patch review",
     sample_cta: "Request an AlumiBrite sample",
     fits: ["wheels", "trim", "RV", "marine"],
-    proof: "Brightening Index 90.1 and commercial-airboat field use"
+    proof: "Aluminum-brightening test data and documented marine context",
+    proof_slugs: ["airboat-alumibrite"]
   },
   torque: {
     job: "Vehicle, fleet, RV, and marine wash",
     platform: "Powered by SynClean",
-    summary: "Wash and finish care in one labor-saving step.",
+    summary: "One wash step for scoped fleet, RV, and marine exterior programs.",
     mechanism: "Surfactants release road film, salt, grime, and bugs while finish-care components remain after rinse.",
-    operator_advantage: "Fewer steps, faster lane throughput, and improved appearance and protection replace separate wash, bug-removal, and wax products.",
+    operator_advantage: "Define surface finish, soil, application method, containment, and appearance endpoint before the trial.",
+    quote_cta: "Request a fleet or marine wash trial",
     fits: ["vehicles", "fleets", "RVs", "boats"],
-    proof: "Yellowfin marine wash and vehicle-cleaning results"
+    proof: "Documented vehicle and vessel-wash context",
+    proof_slugs: ["airboat-alumibrite"],
+    sample_cta: "Request a Torque sample"
   },
   "cr-hd-low-foam": {
     job: "Machine wash and low-foam degreasing",
@@ -503,18 +525,21 @@ export const PRODUCT_CATALOG_COPY = {
     summary: "Heavy soil removal that lets the machine do its work.",
     mechanism: "Wetting and soil lift surround greasy residue while controlled foam preserves agitation, pump efficiency, visibility, and recovery.",
     operator_advantage: "Fewer foam interruptions and faster rinsing keep scrubbers, parts washers, and recirculating systems productive.",
+    quote_cta: "Request a machine-wash benchmark",
     fits: ["floor scrubbers", "parts washers", "recirculating wash", "heavy soil"],
-    proof: "CR HD field results adapted for low-foam equipment"
+    proof: "Low-foam equipment scope and application guidance",
+    sample_cta: "Request a CR HD Low Foam sample"
   },
   cr2: {
-    job: "Concentrated alkaline cleaning",
+    job: "HVAC drains and organic buildup",
     platform: "Powered by SynClean",
-    summary: "Concentrated VertKlean chemistry for heavier soil and dosing efficiency.",
+    summary: "Concentrated alkaline cleaning for HVAC drains, equipment, and facility maintenance.",
     mechanism: "High-pH soil release combines wetting, lift, and dispersion to loosen organic load and keep it moving toward rinse-out.",
     operator_advantage: "More cleaning capacity per delivered volume supports a smaller storage footprint and a simpler heavy-soil workflow.",
-    sample_cta: "Request a CR2 sample",
-    fits: ["alkaline cleaning", "water treatment", "high-pH", "dosing"],
-    proof: "CR-family cleaning results and concentration-specific application guidance"
+    quote_cta: "Request an HVAC CR application review",
+    sample_cta: "Request an HVAC CR sample",
+    fits: ["HVAC drains", "organic buildup", "coils", "facility maintenance"],
+    proof: "60% sodium-hydroxide replacement record and concentration-specific guidance"
   },
   sar: {
     job: "Specialty rust and scale removal",
@@ -522,11 +547,11 @@ export const PRODUCT_CATALOG_COPY = {
     summary: "Tuned VertKlean chemistry for specialty mineral and oxide deposits.",
     mechanism: "A controlled reaction is tailored to the deposit and surface instead of depending on blunt mineral-acid strength.",
     operator_advantage: "Precision, asset care, application engineering, and predictable work planning improve specialty mineral removal.",
-    quote_cta: "Request an SAR application quote",
+    quote_cta: "Request an engineered application review",
     fits: ["descaling", "water-side scale", "specialty acid", "maintenance"],
-    proof: "VertKlean field results and specialty application guidance"
-  }
-  ,
+    proof: "VertKlean field results and specialty application guidance",
+    sample_cta: "Request an SAR sample"
+  },
   pg100: {
     job: "Inhibited propylene glycol concentrate",
     summary: "Concentrated inhibited PG for closed-loop heat-transfer and freeze-protection programs, with Florida-sourced supply in the Brevard Schools list.",
@@ -613,7 +638,7 @@ export const PRODUCT_GALLERY = {
     ["img/proof/cases/airboat.webp", "Commercial airboat aluminum restored with VertKlean AlumiBrite", "Airboat aluminum restoration"]
   ],
   torque: [
-    ["img/proof/cases/marine.webp", "43-foot Yellowfin vessel washed and waxed with VertKlean Torque", "Vessel wash and wax"]
+    ["img/proof/cases/marine.webp", "Vessel washed and waxed with VertKlean Torque", "Vessel wash and wax"]
   ]
 };
 
