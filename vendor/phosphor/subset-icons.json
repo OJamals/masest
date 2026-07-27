@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 264,
-  "usedCount": 158,
+  "count": 263,
+  "usedCount": 157,
   "bufferCount": 106,
   "icons": [
     {
@@ -452,11 +452,6 @@
     {
       "name": "file-lock",
       "cp": "E95C",
-      "src": "used"
-    },
-    {
-      "name": "file-pdf",
-      "cp": "E702",
       "src": "used"
     },
     {

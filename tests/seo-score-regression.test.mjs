@@ -125,6 +125,11 @@ test("product detail pages are static, crawlable, and schema-rich", () => {
     const schema = types.find((block) => block["@type"] === "Product");
     assert.equal(schema?.name, product.name, `${file} Product schema name`);
     assert.equal(schema?.url, `${base}/products/${id}`, `${file} Product schema url`);
+    assert.equal(
+      schema?.manufacturer,
+      undefined,
+      `${file} must not identify a manufacturer without an exact-product source record`,
+    );
     const expectedOffers = buyableVariants.filter((variant) => variant.product_slug === id);
     if (expectedOffers.length) {
       assert.equal(schema?.offers?.length, expectedOffers.length, `${file} buyable variant offers`);
@@ -134,6 +139,10 @@ test("product detail pages are static, crawlable, and schema-rich", () => {
         `${file} offer SKUs`
       );
       assert.ok(schema.offers.every((offer) => offer.priceCurrency === "USD" && offer.availability === "https://schema.org/InStock"));
+      assert.ok(
+        schema.offers.every((offer) => offer.seller?.name === "MASEST Consulting LLC"),
+        `${file} offers must identify MASEST as seller`,
+      );
     }
   }
 });

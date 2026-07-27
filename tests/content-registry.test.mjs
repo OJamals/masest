@@ -130,5 +130,38 @@ test("snapshotGroups returns every public export target", () => {
     "pricing.json",
     "blog.json",
   ]);
-  assert.ok(contentPayloadFields("proof_card").some((field) => field.key === "result"));
+  const proofFields = contentPayloadFields("proof_card").map((field) => field.key);
+  assert.ok(proofFields.includes("result"));
+  assert.ok(proofFields.includes("narrative"));
+  assert.ok(proofFields.includes("boundary"));
+  assert.ok(proofFields.includes("publication_scope"));
+  assert.equal(proofFields.includes("href"), false);
+});
+
+test("proof cards require publication scope, narrative, and an evidence boundary", () => {
+  const complete = {
+    result: "Visible field result.",
+    narrative: "Short case narrative.",
+    boundary: "No comparative or customer-outcome claim.",
+    publication_scope: "Signed publication scope recorded offline",
+  };
+
+  assert.deepEqual(validateStructuredPayload("proof_card", complete), {
+    ok: true,
+    payload: complete,
+  });
+  assert.deepEqual(
+    validateStructuredPayload("proof_card", { ...complete, publication_scope: "" }),
+    { ok: false, error: "publication_scope_required" },
+  );
+  for (const publication_scope of [
+    "Owner-confirmed image",
+    "Customer logo on file",
+    "Internal trial history",
+  ]) {
+    assert.deepEqual(
+      validateStructuredPayload("proof_card", { ...complete, publication_scope }),
+      { ok: false, error: "publication_scope_invalid_option" },
+    );
+  }
 });

@@ -1,33 +1,21 @@
-import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { test, expect } from "@playwright/test";
+import { startStaticTestServer } from "./test-static-server.mjs";
 
 // End-to-end guard for the cart -> Stripe checkout hand-off. Stubs /api/products and
 // /api/checkout (no real Stripe/Supabase) and asserts (1) the POST body the browser sends
 // uses the `cart` key the server reads, and (2) the returned session url drives a redirect.
 // This is the integration-level counterpart to the static cart-key contract test; it would
 // have caught the `items` vs `cart` mismatch that broke live checkout.
-const PORT = 4187;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
-let server;
+let BASE_URL = "";
+let staticSite;
 
 test.beforeAll(async () => {
-  server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], {
-    cwd: new URL("..", import.meta.url).pathname,
-    stdio: "ignore",
-  });
-  for (let i = 0; i < 40; i += 1) {
-    const response = await fetch(`${BASE_URL}/cart.html`).catch(() => null);
-    if (response?.ok) return;
-    await new Promise((resolve) => setTimeout(resolve, 125));
-  }
-  throw new Error("static server did not start");
+  staticSite = await startStaticTestServer(new URL("..", import.meta.url));
+  BASE_URL = staticSite.baseUrl;
 });
 
 test.afterAll(async () => {
-  if (!server) return;
-  server.kill();
-  await once(server, "exit").catch(() => {});
+  await staticSite?.close();
 });
 
 test("Card/ACH checkout posts the cart payload and redirects to the Stripe session url", async ({ page }) => {

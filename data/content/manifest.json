@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-26T17:34:14.000Z",
+  "generated_at": "2026-07-26T23:59:12.000Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -21,7 +21,7 @@
       "counts": {
         "proof_cards": 12
       },
-      "sha256": "8faf20e5bb33eb18b044dbcfd002688b0c45028e118db3500dd9f59c65c84970"
+      "sha256": "ff931f90e6b004ca524e2c74597a44055743e7ddc53271205ddb1d48de8224b0"
     },
     "resources.json": {
       "count": 0,
@@ -66,11 +66,11 @@
       "sha256": "66f7f97460dd16831f38423d14f8c2c105664dbb9712b631f23b2074ae5631a3"
     },
     "blog.json": {
-      "count": 8,
+      "count": 11,
       "counts": {
-        "blog_posts": 8
+        "blog_posts": 11
       },
-      "sha256": "c1cdb1bf7edd049d65429a500ae535f50b7e4243ec4105ef73f435bb8b3274d6"
+      "sha256": "b1b1ffb4f730073c82761df28eb1a6d5fb9fb84a7c545f96522bc5a586c4f6b2"
     }
   }
 }

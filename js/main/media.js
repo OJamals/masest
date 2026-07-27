@@ -21,8 +21,8 @@ export function initIndustryProducts() {
   });
 }
 
-// Click any content photo to view it full-size. Document previews (.doc-link) open their
-// PDF instead, and before/after sliders ([data-ba]) keep their drag behavior - both excluded.
+// Click any content photo to view it full-size. Before/after sliders keep their
+// drag behavior and are excluded.
 export function initLightbox() {
   const ZOOM_SCOPE = ".proof-card, .case-card, .ind-gallery, figure.photo";
   const dlg = document.createElement("dialog");
@@ -38,7 +38,7 @@ export function initLightbox() {
   document.addEventListener("click", (e) => {
     const img = e.target.closest("img");
     if (!img || !img.closest(ZOOM_SCOPE)) return;
-    if (img.closest(".doc-link, [data-ba]")) return; // docs open PDF; sliders drag
+    if (img.closest("[data-ba]")) return;
     e.preventDefault();
     lbImg.src = img.currentSrc || img.src;
     lbImg.alt = img.alt || "";

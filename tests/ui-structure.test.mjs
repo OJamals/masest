@@ -168,9 +168,22 @@ test("proof page leads with classified evidence, not raw internal results", () =
   assert.match(proof, /Request a chemical audit/);
   assert.match(proof, /Public field context—verification incomplete/);
   assert.match(proof, /CR \+ HCR CIP reference trial notes/);
+  assert.equal((proof.match(/<summary>Case summary<\/summary>/g) || []).length, 12);
+  assert.equal((proof.match(/Signed publication scope recorded offline/g) || []).length, 13);
+  assert.match(proof, /<summary>Read the lab-record summary<\/summary>/);
+  assert.doesNotMatch(proof, /href="docs\/(?:brewery-cip-trial-brewlando|carib-brewery-lab-report)\.pdf"/);
   assert.doesNotMatch(proof, /30 min|36 hours|280&#215;|\$75|2,500 square feet/);
   assert.doesNotMatch(proof, /broader company file/i);
   assert.doesNotMatch(proof, /private pipeline detail/i);
+});
+
+test("home proof cards route to bounded case summaries instead of source PDFs", () => {
+  const home = read("index.html");
+
+  assert.match(home, /href="proof#brewery-cip-trials">Read case summary<\/a>/);
+  assert.match(home, /href="proof#uf-shands-drone-wash">Read case summary<\/a>/);
+  assert.doesNotMatch(home, /href="docs\/brewery-cip-trial-brewlando\.pdf"/);
+  assert.doesNotMatch(home, /class="(?:doc-link|doc-badge)"/);
 });
 
 test("industries page routes buyers before the long industry list", () => {

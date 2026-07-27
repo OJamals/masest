@@ -1,32 +1,18 @@
-import { spawn } from "node:child_process";
 import { expect, test } from "@playwright/test";
+import { startStaticTestServer } from "./test-static-server.mjs";
 
-const PORT = 4218;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
-let server;
+let BASE_URL = "";
+let staticSite;
 
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
-  server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], {
-    cwd: new URL("..", import.meta.url).pathname,
-    stdio: "ignore",
-  });
-
-  for (let i = 0; i < 40; i += 1) {
-    const response = await fetch(`${BASE_URL}/products.html`).catch(() => null);
-    if (response?.ok) return;
-    await new Promise((resolve) => setTimeout(resolve, 125));
-  }
-
-  throw new Error("static server did not start");
+  staticSite = await startStaticTestServer(new URL("..", import.meta.url));
+  BASE_URL = staticSite.baseUrl;
 });
 
-test.afterAll(() => {
-  if (!server) return;
-  server.kill();
-  server.unref();
-  server = null;
+test.afterAll(async () => {
+  await staticSite?.close();
 });
 
 test("mobile header keeps logo, sign-in, cart, and menu inside the viewport", async ({ page }) => {
@@ -460,16 +446,17 @@ test("proof image sets use stable media slots", async ({ page }) => {
     {
       pagePath: "index.html",
       viewport: { width: 1440, height: 900 },
-      selector: ".proof-grid .proof-card > figure",
-      countSelector: ".proof-grid .proof-card",
+      cardSelector: ".proof-grid .proof-card",
+      mediaSelector: ":scope > figure",
       expectedAspectRatio: 16 / 10,
       label: "home proof cards",
     },
     {
       pagePath: "proof.html",
       viewport: { width: 1440, height: 900 },
-      selector: ".case-grid .case-card > :is(.case-media, .doc-link, .case-ba, img)",
-      countSelector: ".case-grid .case-card:not([hidden])",
+      cardSelector: ".case-grid .case-card:not([hidden])",
+      mediaSelector: ":scope > :is(.case-media, .case-ba, img)",
+      readySelector: '.case-grid[data-cms-content="proof_cards"]',
       label: "proof case cards",
     },
   ];
@@ -478,29 +465,37 @@ test("proof image sets use stable media slots", async ({ page }) => {
     await page.setViewportSize(set.viewport);
     await page.goto(`${BASE_URL}/${set.pagePath}`, { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
+    if (set.readySelector) {
+      await expect(page.locator(set.readySelector)).toHaveAttribute("data-cms-loaded", "true");
+    }
 
-    const result = await page.locator(set.selector).evaluateAll((nodes) => {
-      const boxes = nodes
-        .map((node) => {
+    const result = await page.locator(set.cardSelector).evaluateAll((cards, mediaSelector) => {
+      const samples = cards
+        .filter((card) => !card.hidden && getComputedStyle(card).display !== "none")
+        .map((card) => {
+          const node = card.querySelector(mediaSelector);
+          if (!node) return { card: card.id || card.dataset.assetId || "", height: 0, width: 0, src: "" };
           const rect = node.getBoundingClientRect();
           const img = node.matches("img") ? node : node.querySelector("img");
           return {
+            card: card.id || card.dataset.assetId || "",
             height: Math.round(rect.height),
             width: Math.round(rect.width),
             src: img?.getAttribute("src") || "",
           };
-        })
-        .filter((box) => box.width > 80 && box.height > 80);
+        });
+      const boxes = samples.filter((box) => box.width > 80 && box.height > 80);
       const heights = boxes.map((box) => box.height);
       return {
         boxes,
+        cardCount: samples.length,
+        invalid: samples.filter((box) => box.width <= 80 || box.height <= 80),
         min: Math.min(...heights),
         max: Math.max(...heights),
       };
-    });
+    }, set.mediaSelector);
 
-    const expectedCount = set.countSelector ? await page.locator(set.countSelector).count() : set.expectedCount;
-    expect(result.boxes, `${set.label} media count`).toHaveLength(expectedCount);
+    expect(result.boxes, `${set.label} media count; invalid: ${JSON.stringify(result.invalid)}`).toHaveLength(result.cardCount);
     if (set.expectedAspectRatio) {
       for (const box of result.boxes) {
         expect(

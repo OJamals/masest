@@ -9,6 +9,35 @@ import { buildBlog } from "../tools/build-blog.mjs";
 import { escapeHtml } from "../tools/_md.mjs";
 
 const SEED = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
+const P3_AUTHORITY_POSTS = [
+  {
+    slug: "industrial-cleaning-trial-scope-isolate-contain-release",
+    sources: [
+      "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.1200",
+      "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.147",
+      "https://www.epa.gov/npdes/industrial-stormwater-fact-sheet-series",
+    ],
+    boundary: "A product document does not replace the site work plan",
+  },
+  {
+    slug: "food-plant-cleaning-cip-sanitation-release",
+    sources: [
+      "https://www.fda.gov/media/184685/download",
+      "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-117/subpart-B/section-117.35",
+      "https://www.epa.gov/pesticide-registration/selected-epa-registered-disinfectants",
+    ],
+    boundary: "Cleaning evidence is not sanitation or disinfection evidence",
+  },
+  {
+    slug: "cooling-tower-cleaning-water-management-plan",
+    sources: [
+      "https://www.ashrae.org/technical-resources/standards-and-guidelines/titles-purposes-and-scopes",
+      "https://www.cdc.gov/infection-control/hcp/environmental-control/appendix-c-water.html",
+      "https://www.energy.gov/cmei/femp/cooling-water-efficiency-opportunities-federal-data-centers",
+    ],
+    boundary: "Cleaning chemistry is one controlled task inside the facility program",
+  },
+];
 
 test("blog_post content type is registered", () => {
   const def = CONTENT_TYPE_DEFINITIONS.blog_post;
@@ -61,6 +90,68 @@ test("buildBlog writes a static page per post", () => {
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
+});
+
+test("P3 authority posts cite primary operational sources and keep claims bounded", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
+    for (const expected of P3_AUTHORITY_POSTS) {
+      const post = SEED.blog_posts.find(({ slug }) => slug === expected.slug);
+      assert.ok(post, `${expected.slug} must exist in the Blog CMS snapshot`);
+      assert.equal(post.category, "technical");
+      assert.equal(post.author, "MASEST Technical Team");
+      assert.ok(post.tags.includes("operations"));
+      assert.ok(post.body.includes(expected.boundary));
+      for (const source of expected.sources) {
+        assert.ok(post.body.includes(source), `${expected.slug} must cite ${source}`);
+      }
+
+      const html = readFileSync(join(out, "blog", `${expected.slug}.html`), "utf8");
+      assert.match(html, /<h2>Primary sources<\/h2>/);
+      for (const source of expected.sources) {
+        assert.ok(html.includes(`href="${source}"`), `${expected.slug} must render ${source}`);
+      }
+      assert.doesNotMatch(
+        html,
+        /safe to discharge|guarantees? compliance|VertKleen WaterSafe60 is NSF|EPA-registered VertKleen/i,
+      );
+    }
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("P3 authority posts have an idempotent Blog CMS seed", () => {
+  const seed = readFileSync(
+    new URL("../supabase/seed-blog-authority-posts.sql", import.meta.url),
+    "utf8",
+  );
+  const payloads = [...seed.matchAll(/\$post\$([\s\S]*?)\$post\$::jsonb/g)]
+    .map((match) => JSON.parse(match[1]));
+  assert.equal(payloads.length, P3_AUTHORITY_POSTS.length);
+  for (const expected of P3_AUTHORITY_POSTS) {
+    const post = SEED.blog_posts.find(({ slug }) => slug === expected.slug);
+    const payload = payloads.find(({ title }) => title === post.title);
+    assert.deepEqual(payload, {
+      title: post.title,
+      body: post.body,
+      date: post.date,
+      hero: post.hero,
+      tags: post.tags,
+      author: post.author,
+      excerpt: post.excerpt,
+      category: post.category,
+      hero_alt: post.hero_alt,
+    });
+    assert.match(seed, new RegExp(`'blog_post',\\s*'${expected.slug}'`));
+    assert.ok(seed.includes(post.title));
+    assert.ok(seed.includes(post.excerpt));
+    assert.ok(seed.includes(expected.boundary));
+    for (const source of expected.sources) assert.ok(seed.includes(source));
+  }
+  assert.match(seed, /on conflict \(type, slug, locale\) do update/);
+  assert.match(seed, /where type = 'blog_post' and slug in \(/);
 });
 
 test("buildBlog rejects an invalid category", () => {

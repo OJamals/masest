@@ -278,7 +278,7 @@ test('gallery media fails closed between generated scenes, field context, and qu
     }
   }
 
-  assert.deepEqual(statusCounts, { absent: 17, context_only: 10, qualified: 0 });
+  assert.deepEqual(statusCounts, { absent: 16, context_only: 11, qualified: 0 });
 });
 
 test("public image registry excludes customer logos but retains owner-approved field records", () => {
@@ -592,20 +592,23 @@ test('P2 industries publish registry-driven controlled-trial briefs without prom
   }
 
   const breweryBrief = briefs.get(brewery.slug);
-  assert.match(breweryBrief, /No field record/);
-  assert.match(breweryBrief, /Brewlando CIP Trial/);
-  assert.match(breweryBrief, /Carib Brewery Laboratory Report/);
-  assert.match(breweryBrief, /controlled references/i);
-  assert.match(breweryBrief, /flagged statements[^.]+do not substantiate/i);
+  const breweryHtml = read('industries/breweries-distilleries-wineries.html');
+  assert.equal(brewery.field_evidence.status, 'context_only');
+  assert.equal(brewery.evidence_files, undefined);
+  assert.match(brewery.field_evidence.publication_basis, /signed publication scope recorded offline/i);
+  assert.match(breweryBrief, /Field context; verification incomplete/);
+  assert.match(breweryBrief, /Brewery CIP case summary remains a controlled reference/i);
+  assert.match(breweryBrief, /Reference only/);
+  assert.match(breweryHtml, /data-industry-case-summary/);
+  assert.match(breweryHtml, /href="\.\.\/proof#brewery-cip-trials"/);
+  assert.doesNotMatch(
+    breweryHtml,
+    /href="\.\.\/docs\/(?:brewery-cip-trial-brewlando|carib-brewery-lab-report)\.pdf"/,
+  );
   assert.doesNotMatch(
     breweryBrief,
     /worked better|more effective|non-fuming|non-corrosive|safe environment|green option for CIP/i,
   );
-
-  const referenceFiles = brewery.evidence_files.map(({ file }) => (
-    documentReview.documents.find((document) => document.path === file)
-  ));
-  assert.equal(referenceFiles.every((document) => document?.status === 'reference_only'), true);
 
   for (const [slug, forbidden] of [
     [

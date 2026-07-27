@@ -16,6 +16,7 @@ import test from "node:test";
 
 import {
   documentDistribution,
+  findUnsupportedAuthorityClaim,
   validatePublicDocumentReview,
 } from "../tools/public-document-policy.mjs";
 import { STYLE_VERSION } from "../tools/static-release.mjs";
@@ -119,9 +120,11 @@ test("public PDF review ledger covers the exact current document bytes", () => {
   );
 });
 
-test("confidential sources stay outside the public repository while reviewed sources stay public", () => {
+test("confidential sources stay excluded while reviewed documents stay in the controlled document room", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const proof = read("proof.html");
+  const home = read("index.html");
+  const resources = read("resources.html");
   assert.equal(
     review.documents.some((entry) => entry.flags?.includes("confidential_customer_data")),
     false,
@@ -134,36 +137,51 @@ test("confidential sources stay outside the public repository while reviewed sou
     const document = review.documents.find((entry) => entry.document_id === id);
     assert.equal(document.status, "reference_only", `${id}: claim boundary`);
     assert.equal(documentDistribution(document), "public", `${id}: reviewed public source`);
-    assert.match(proof, new RegExp(document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    const path = new RegExp(document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    assert.match(resources, path, `${id}: controlled document-room source`);
+    assert.doesNotMatch(proof, path, `${id}: proof must publish a bounded summary, not the source file`);
+    assert.doesNotMatch(home, path, `${id}: home proof must link to the case summary, not the source file`);
   }
 });
 
-test("proof cards expose only public references, sanitized summaries, or context-only field media", () => {
-  const review = JSON.parse(read("data/public-document-review.json"));
+test("proof cards expose signed summary scope without weakening evidence class", () => {
   const cards = JSON.parse(read("data/content/proof.json")).proof_cards;
   const proof = read("proof.html");
   const seed = read("supabase/seed-proof-cards.sql");
   const contextSource = "Source: public field context; verification incomplete";
+  const publicationScope = "Signed publication scope recorded offline";
   let contextCount = 0;
 
   assert.doesNotMatch(proof, /data-source-doc=/, "unused source-file attributes must not expose internal provenance");
+  assert.doesNotMatch(proof, /class="(?:doc-link|doc-badge|proof-doc-link)"/, "proof must not expose source-file affordances");
+  assert.equal((proof.match(/<details class="case-disclosure">/g) || []).length, cards.length);
 
   for (const card of cards) {
+    assert.equal(card.href, undefined, `${card.slug}: proof-card payload must not expose a source URL`);
+    assert.equal(card.publication_scope, publicationScope, `${card.slug}: signed scope must be explicit`);
+    assert.ok(card.narrative?.trim(), `${card.slug}: narrative required`);
+    assert.ok(card.boundary?.trim(), `${card.slug}: evidence boundary required`);
     assert.ok(proof.includes(card.title), `${card.slug}: fallback title must match the snapshot`);
-    assert.ok(proof.includes(card.result), `${card.slug}: fallback boundary must match the snapshot`);
+    assert.ok(proof.includes(card.result), `${card.slug}: fallback result must match the snapshot`);
+    assert.ok(proof.includes(card.narrative), `${card.slug}: fallback narrative must match the snapshot`);
+    assert.ok(proof.includes(card.boundary), `${card.slug}: fallback evidence boundary must match the snapshot`);
+    assert.ok(proof.includes(card.publication_scope), `${card.slug}: fallback publication scope must match the snapshot`);
     assert.ok(proof.includes(card.source), `${card.slug}: fallback source must match the snapshot`);
     assert.ok(seed.includes(card.title), `${card.slug}: CMS seed title must match the snapshot`);
-    assert.ok(seed.includes(card.result), `${card.slug}: CMS seed boundary must match the snapshot`);
+    assert.ok(seed.includes(card.result), `${card.slug}: CMS seed result must match the snapshot`);
+    assert.ok(seed.includes(card.narrative), `${card.slug}: CMS seed narrative must match the snapshot`);
+    assert.ok(seed.includes(card.boundary), `${card.slug}: CMS seed evidence boundary must match the snapshot`);
+    assert.ok(seed.includes(card.publication_scope), `${card.slug}: CMS seed publication scope must match the snapshot`);
     assert.ok(seed.includes(card.source), `${card.slug}: CMS seed source must match the snapshot`);
 
-    if (card.href) {
-      const document = review.documents.find((entry) => entry.path === card.href);
-      assert.equal(document?.status, "reference_only", `${card.slug}: linked proof must be reference-only`);
-      assert.equal(documentDistribution(document), "public", `${card.slug}: linked proof must be public`);
+    if (card.slug === "brewery-cip-trials") {
       assert.match(card.source, /public reference document/i);
+      assert.match(card.result, /sanitation release/i);
+      assert.match(card.boundary, /flagged claims/i);
     } else if (card.slug === "distribution-center-assessment") {
       assert.match(card.source, /sanitized public summary/i);
       assert.match(card.result, /does not assert endorsement or verified performance/i);
+      assert.match(card.boundary, /customer identity.*remain excluded/i);
     } else {
       contextCount += 1;
       assert.equal(card.source, contextSource, `${card.slug}: field media must stay context-only`);
@@ -172,6 +190,14 @@ test("proof cards expose only public references, sanitized summaries, or context
   }
 
   assert.equal(contextCount, 10, "all non-document field records must stay context-only");
+});
+
+test("industry case-study routes link to bounded proof summaries, not source reports", () => {
+  const page = read("industries/breweries-distilleries-wineries.html");
+
+  assert.match(page, /href="\.\.\/proof#brewery-cip-trials"/);
+  assert.match(page, /Brewery CIP case summary/);
+  assert.doesNotMatch(page, /href="\.\.\/docs\/(?:brewery-cip-trial-brewlando|carib-brewery-lab-report)\.pdf"/);
 });
 
 test("sensitivity flags fail closed even when a record is misclassified", () => {
@@ -185,6 +211,52 @@ test("sensitivity flags fail closed even when a record is misclassified", () => 
     status: "reference_only",
     flags: ["personal_contact"],
   }), "internal");
+});
+
+test("public authority claims fail closed while verification boundaries remain publishable", () => {
+  const unsupported = [
+    ["certification", "WaterSafe60 is NSF/ANSI/CAN 60 certified."],
+    ["certification", "NSF/ANSI 60-certified WaterSafe60 is ready for potable-water use."],
+    ["certification", "WaterSafe60 meets NSF/ANSI 60."],
+    ["certification", "WaterSafe60 is NSF 60 compliant."],
+    ["certification", "WaterSafe60 holds NSF/ANSI 60 certification."],
+    ["endorsement", "VertKleen CR HD is Boeing approved."],
+    ["endorsement", "VertKleen CR HD is approved by Airbus."],
+    ["endorsement", "VK-HCR meets MIL-SPEC requirements."],
+    ["registration", "VertKleen MultiWash is EPA registered."],
+    ["equivalency", "VertKleen CR is equivalent to 50% caustic."],
+    ["equivalency", "VertKleen HCR performs equivalently to RYDLYME."],
+    ["equivalency", "Equivalent to 50% caustic"],
+    ["certification", "The claim is unverified, but WaterSafe60 is NSF certified."],
+    ["certification", "WaterSafe60 is not only NSF certified; it is listed."],
+    ["certification", "This is not a generic product; WaterSafe60 is NSF certified."],
+  ];
+  for (const [kind, claim] of unsupported) {
+    assert.equal(findUnsupportedAuthorityClaim(claim)?.kind, kind, claim);
+  }
+  assert.equal(
+    findUnsupportedAuthorityClaim("NSF/ANSI 60-certified", { productContext: true })?.kind,
+    "certification",
+  );
+  assert.equal(
+    findUnsupportedAuthorityClaim("Boeing approved", { productContext: true })?.kind,
+    "endorsement",
+  );
+
+  const bounded = [
+    "NSF/ANSI 60 certificate status must be confirmed through document request.",
+    "Certification claims require current exact-product evidence.",
+    "Never imply military approval from a customer logo.",
+    "The source does not establish that VertKleen CR is equivalent to 50% caustic.",
+    "The source does not establish that WaterSafe60 is NSF/ANSI 60 certified.",
+    "WaterSafe60 is not currently NSF/ANSI 60 certified.",
+    "Review the solicitation against its current MIL-SPEC requirements.",
+    "EPA Safer Choice certified products are listed by EPA.",
+    "An antimicrobial claim requires the exact EPA-registered product used according to its label.",
+  ];
+  for (const copy of bounded) {
+    assert.equal(findUnsupportedAuthorityClaim(copy), null, copy);
+  }
 });
 
 test("technical-document sync uploads and activates current files before retiring stale rows", () => {

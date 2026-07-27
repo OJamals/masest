@@ -248,15 +248,6 @@ function resolveDocuments(industry, reviewByPath) {
     if (selected.length >= 6) break;
   }
 
-  for (const evidence of industry.evidence_files || []) {
-    const review = reviewByPath.get(evidence.file);
-    if (!review) throw new Error(`${industry.slug}: unreviewed document ${evidence.file}`);
-    if (!documentAllowedOnSurface(review, "industry")) continue;
-    if (seen.has(evidence.file)) continue;
-    selected.push(evidence);
-    seen.add(evidence.file);
-  }
-
   for (const document of selected) {
     const review = reviewByPath.get(document.file);
     if (!review) throw new Error(`${industry.slug}: unreviewed document ${document.file}`);
@@ -305,9 +296,12 @@ function renderTrialBrief(industry, documents) {
   const referenceTitles = [...new Set(documents
     .filter(({ control }) => control.status === "reference_only")
     .map(({ control }) => control.title))];
-  const referenceBoundary = referenceTitles.length
-    ? `${referenceTitles.join(" and ")} remain controlled references. Flagged statements in these files do not substantiate public copy, including safety, certification, efficacy, compatibility, food-contact, antimicrobial, regulatory, or customer-outcome claims.`
-    : "No controlled reference is being used to substantiate this planning brief.";
+  const caseBoundary = industry.case_summary?.boundary?.trim();
+  const referenceBoundary = caseBoundary
+    ? `${industry.case_summary.label} remains a controlled reference. ${caseBoundary}`
+    : referenceTitles.length
+      ? `${referenceTitles.join(" and ")} remain controlled references. Flagged statements in these files do not substantiate public copy, including safety, certification, efficacy, compatibility, food-contact, antimicrobial, regulatory, or customer-outcome claims.`
+      : "No controlled reference is being used to substantiate this planning brief.";
 
   return `
       <section class="ind-scope-note ind-trial-brief" data-industry-trial-brief aria-labelledby="industry-trial-brief-title">
@@ -376,6 +370,9 @@ function renderApplications(industry, allIndustries, documents) {
         )).join(" · ")}</p>
       </aside>`
       : "";
+  const caseSummary = industry.case_summary
+    ? renderCaseSummary(industry)
+    : "";
   const documentLinks = documents.map((document) => {
     const control = document.control;
     const distribution = documentDistribution(control) === "request_only" ? "Request only" : "Current";
@@ -393,7 +390,7 @@ function renderApplications(industry, allIndustries, documents) {
         <span class="eyebrow">Applications and verification</span>
         <h2 class="headline">${escapeHtml(industry.lead_task)}</h2>
         <p class="subhead">Task controls first. Product choice follows the asset, deposit, materials, operating window, and discharge route.</p>
-      </div>${related}
+      </div>${related}${caseSummary}
       <dl class="ind-proof-grid">
         <div><dt>Task</dt><dd>${escapeHtml(industry.lead_task)}</dd></div>
         <div><dt>Asset / substrate</dt><dd>${escapeHtml(industry.asset)}</dd></div>
@@ -421,6 +418,26 @@ function renderApplications(industry, allIndustries, documents) {
       </aside>
     </div>
   </section>`;
+}
+
+function renderCaseSummary(industry) {
+  const summary = industry.case_summary;
+  if (
+    !summary.label?.trim()
+    || !summary.description?.trim()
+    || !summary.boundary?.trim()
+    || !/^proof#[a-z0-9-]+$/.test(summary.href || "")
+  ) {
+    throw new Error(`${industry.slug}: incomplete case summary`);
+  }
+  return `
+      <aside class="ind-scope-note ind-case-summary" data-industry-case-summary>
+        <span class="eyebrow">Published case context</span>
+        <h3>${escapeHtml(summary.label)}</h3>
+        <p>${escapeHtml(summary.description)}</p>
+        <p><strong>Evidence boundary:</strong> ${escapeHtml(summary.boundary)}</p>
+        <a class="proof-summary-link" href="../${escapeHtml(summary.href)}">Open case summary</a>
+      </aside>`;
 }
 
 function renderCta(industry) {

@@ -545,7 +545,6 @@ function productSchema(id, product, reviewsSnapshot) {
         "@type": "Product",
         name: product.name,
         brand: { "@type": "Brand", name: "VertKleen" },
-        manufacturer: { "@type": "Organization", name: "MASEST Consulting LLC", url: `${BASE}/` },
         category: "Industrial cleaning chemistry",
         description: productDescription(id, product),
         url: `${BASE}/products/${id}`,

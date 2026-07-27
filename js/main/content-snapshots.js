@@ -75,19 +75,17 @@ function proofCard(card) {
   const afterImg = afterImage
     ? `<img src="${esc(afterImage)}" alt="${esc(card.image_after_alt || card.title || "")}" loading="lazy"${afterDims}>`
     : "";
-  // A proof card renders one of three medias: a before/after pair (image +
-  // image_after → two-figure .case-ba), a source-PDF doc-link (href set → badge
-  // wrapper, kept a direct child of .case-card for the 16:10 aspect-ratio), or a
-  // plain figure. `href` doubles as the PDF doc link for single-image cards.
-  const docHref = card.href ? safeContentHref(card.href, "") : "";
   let media = "";
   if (img && afterImg) {
     media = `<div class="case-ba"><figure>${img}<figcaption>Before</figcaption></figure><figure>${afterImg}<figcaption>After</figcaption></figure></div>`;
-  } else if (img && docHref) {
-    media = `<a class="doc-link" href="${esc(docHref)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(card.title || "Proof")} (opens PDF in new tab)">${img}<span class="doc-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 2 4 4h-4V4ZM8 13h8v1.5H8V13Zm0 3h8v1.5H8V16Zm0-6h4v1.5H8V10Z"/></svg>PDF</span></a>`;
   } else if (img) {
     media = `<figure class="case-media">${img}</figure>`;
   }
+  const narrative = String(card.narrative || "").trim();
+  const boundary = String(card.boundary || "").trim();
+  const disclosure = narrative || boundary
+    ? `<details class="case-disclosure"><summary>Case summary</summary><div class="case-disclosure-body">${narrative ? `<p>${esc(narrative)}</p>` : ""}${boundary ? `<p class="case-boundary"><strong>Evidence boundary:</strong> ${esc(boundary)}</p>` : ""}</div></details>`
+    : "";
   return `
     <article id="${esc(card.slug || "")}" class="case-card reveal" data-proof-card data-proof-kind="${esc(card.kind || "all")}">
       ${media}
@@ -95,7 +93,9 @@ function proofCard(card) {
         <span class="case-eyebrow">${esc(card.eyebrow || "Proof")}</span>
         <h3>${esc(card.title || "Untitled proof")}</h3>
         <p class="case-result">${esc(card.result || card.summary || "")}</p>
+        ${disclosure}
         ${chips.length ? `<div class="case-meta">${chips.map((chip) => `<span class="case-chip">${esc(chip)}</span>`).join("")}</div>` : ""}
+        ${card.publication_scope ? `<span class="case-publication">${esc(card.publication_scope)}</span>` : ""}
         ${card.source ? `<span class="case-source">${esc(card.source)}</span>` : ""}
       </div>
     </article>
@@ -231,6 +231,18 @@ function renderMount(name, snapshot, key, renderer) {
   return rendered;
 }
 
+function restoreHashTarget() {
+  const rawId = window.location.hash.slice(1);
+  if (!rawId) return;
+  let id;
+  try {
+    id = decodeURIComponent(rawId);
+  } catch {
+    return;
+  }
+  document.getElementById(id)?.scrollIntoView({ block: "start" });
+}
+
 export async function initContentSnapshots() {
   const [proof, resources, industries, faqs, pageSections, pricingTiers, industrySectors] = await Promise.all([
     loadContentSnapshot(SNAPSHOT_FILES.proof_cards),
@@ -256,5 +268,8 @@ export async function initContentSnapshots() {
   // scroll-reveal IntersectionObserver never saw these nodes. Re-run the
   // idempotent reveal pass so injected `.reveal` sections/cards become visible
   // for motion-enabled users without requiring a scroll/resize.
-  if (rendered) initReveal();
+  if (rendered) {
+    initReveal();
+    restoreHashTarget();
+  }
 }

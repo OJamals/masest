@@ -20,10 +20,88 @@ const SENSITIVE_FLAGS = new Set([
   "commercial_terms",
   "publication_permission_missing",
 ]);
+const EXACT_PRODUCT_CONTEXT = /\b(?:VertKleen(?:\s+[A-Z0-9][A-Za-z0-9-]*)?|WaterSafe\s*60|VK-[A-Z0-9-]+|(?:this|our|the)\s+product)\b/i;
+const AUTHORITY_BOUNDARY_PREFIXES = [
+  /\b(?:does?|do|did)\s+not\s+(?:establish|support|show|demonstrate|confirm|verify|imply|assert|substantiate)(?:\s+that)?(?:\s+\S+){0,12}$/i,
+  /\b(?:is|are|was|were|has|have|had)\s+not(?:\s+(?!(?:only|just)\b)[\w-]+){0,4}$/i,
+  /\b(?:cannot|can not|never)\s+(?:be\s+)?(?:established|supported|shown|demonstrated|confirmed|verified|implied|asserted|substantiated)(?:\s+\S+){0,12}$/i,
+  /\brequires?\s+(?:the\s+)?(?:current\s+)?exact(?:-product)?$/i,
+];
+const AUTHORITY_ASSERTIONS = [
+  {
+    kind: "certification",
+    pattern: /\b(?:NSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?[-\s]+(?:certified|listed)|(?:certified|listed)\s+(?:to|under)\s+NSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?)\b/i,
+  },
+  {
+    kind: "certification",
+    pattern: /\b(?:meets?|complies? with|conforms? to)\s+NSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?\b/i,
+  },
+  {
+    kind: "certification",
+    pattern: /\bNSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?[-\s]+(?:approved|compliant)\b/i,
+  },
+  {
+    kind: "certification",
+    pattern: /\bholds?\s+NSF(?:\/ANSI(?:\/CAN)?)?(?:\s+\d+)?\s+certification\b/i,
+  },
+  {
+    kind: "endorsement",
+    pattern: /\b(?:Boeing|Airbus|NAVSEA|military)[-\s]+(?:approved|certified|compliant)\b/i,
+  },
+  {
+    kind: "endorsement",
+    pattern: /\b(?:approved|certified)\s+by\s+(?:Boeing|Airbus|NAVSEA|military)\b/i,
+  },
+  {
+    kind: "endorsement",
+    pattern: /\b(?:meets?|complies? with)\s+(?:MIL(?:-|\s)?SPEC|Boeing|Airbus|NAVSEA)(?:\s+requirements?)?\b/i,
+  },
+  {
+    kind: "registration",
+    pattern: /\bEPA[-\s]+registered\b/i,
+  },
+  {
+    kind: "equivalency",
+    pattern: /\b(?:equivalent|equivalently|identical)\s+to\b/i,
+  },
+];
 
 function isSensitive(document) {
   return Array.isArray(document?.flags)
     && document.flags.some((flag) => SENSITIVE_FLAGS.has(flag));
+}
+
+function hasAuthorityBoundary(prefix) {
+  const normalized = String(prefix || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return AUTHORITY_BOUNDARY_PREFIXES.some((pattern) => pattern.test(normalized));
+}
+
+export function findUnsupportedAuthorityClaim(text, { productContext = false } = {}) {
+  const value = String(text || "");
+  for (const { kind, pattern } of AUTHORITY_ASSERTIONS) {
+    const matcher = new RegExp(pattern.source, `${pattern.flags}g`);
+    for (const match of value.matchAll(matcher)) {
+      const start = Math.max(
+        value.lastIndexOf(".", match.index),
+        value.lastIndexOf("!", match.index),
+        value.lastIndexOf("?", match.index),
+        value.lastIndexOf("\n", match.index),
+      ) + 1;
+      const endCandidates = [".", "!", "?", "\n"]
+        .map((delimiter) => value.indexOf(delimiter, match.index + match[0].length))
+        .filter((index) => index >= 0);
+      const end = endCandidates.length ? Math.min(...endCandidates) : value.length;
+      const clause = value.slice(start, end);
+      const prefix = value.slice(Math.max(start, match.index - 120), match.index);
+      if (hasAuthorityBoundary(prefix)) continue;
+      if (kind !== "equivalency" && !productContext && !EXACT_PRODUCT_CONTEXT.test(clause)) continue;
+      return { kind, claim: match[0] };
+    }
+  }
+  return null;
 }
 
 export function documentClaimLabel(status) {

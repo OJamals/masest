@@ -45,7 +45,13 @@
   },
   {
     "slug": "breweries-distilleries-wineries",
-    "field_evidence": {"status": "absent", "missing": ["approved field photos", "publication permission", "dated method and endpoint record"]},
+    "field_evidence": {
+      "status": "context_only",
+      "publication_basis": "Owner-confirmed public field media; signed publication scope recorded offline, 2026-07-26",
+      "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf",
+      "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6",
+      "missing": ["event date", "complete method, result, and limitations record"]
+    },
     "label": "Breweries, Distilleries & Wineries",
     "kind": "supplemental",
     "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
@@ -64,10 +70,12 @@
     "method": "Validated CIP: pre-rinse, alkaline circulation, intermediate rinse, acid circulation when required, final rinse, then the site's sanitation step",
     "products": ["cr", "hcr", "cr-hd-low-foam"],
     "document_products": ["cr", "hcr"],
-    "evidence_files": [
-      {"label": "Brewlando CIP trial", "file": "docs/brewery-cip-trial-brewlando.pdf"},
-      {"label": "Carib brewery laboratory report", "file": "docs/carib-brewery-lab-report.pdf"}
-    ],
+    "case_summary": {
+      "label": "Brewery CIP case summary",
+      "href": "proof#brewery-cip-trials",
+      "description": "One CR and HCR CIP trial record covers process tanks and heat-exchanger equipment. The public case page shows the result context, photo, narrative, and evidence boundary without publishing the source reports.",
+      "boundary": "Reference only. Complete method, dated operating conditions, witnessed endpoints, sanitation validation, limitations, and independent verification are not established."
+    },
     "trial_brief": {
       "title": "Brewery CIP controlled-trial brief",
       "objective": "Plan a witnessed circuit trial and measurable release decision before any site-wide chemistry change.",

@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { chromium } from "playwright";
+import { startStaticTestServer } from "../tools/test-static-server.mjs";
 
-const PORT = 4198;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
 const ROOT = new URL("..", import.meta.url);
+let BASE_URL = "";
 
 function read(path) {
   return readFileSync(new URL(path, ROOT), "utf8");
@@ -139,27 +137,12 @@ export async function api(path, options = {}) {
 }
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", String(PORT)], {
-    cwd: ROOT,
-    stdio: ["ignore", "ignore", "pipe"],
-  });
-  let exited = false;
-  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
-
+  const staticSite = await startStaticTestServer(ROOT);
+  BASE_URL = staticSite.baseUrl;
   try {
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      const ready = await fetch(`${BASE_URL}/services.html`).then((r) => r.ok).catch(() => false);
-      if (ready) break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (Date.now() >= deadline) throw new Error("server did not start");
     await fn();
   } finally {
-    if (!exited) server.kill("SIGTERM");
-    await Promise.race([exitedOnce, new Promise((resolve) => setTimeout(resolve, 1500))]);
-    if (!exited) server.kill("SIGKILL");
+    await staticSite.close();
   }
 }
 

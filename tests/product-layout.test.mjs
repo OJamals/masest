@@ -299,7 +299,7 @@ test("public CTA groups keep a consistent gap from their lead copy", async () =>
     const cases = [
       ["services.html", ".services-hero-copy .subhead", ".services-hero-copy .hero-actions", 28, 36],
       ["proof.html", ".page-hero .subhead", ".page-hero .btn", 28, 36],
-      ["proof.html", ".proof-source-summary .subhead", ".proof-source-summary .proof-doc-link", 22, 32],
+      ["proof.html", ".proof-source-summary .subhead", ".proof-source-summary .proof-source-disclosure", 22, 32],
       ["about.html", "#serviceCatalog .subhead", "#serviceCatalog .btn", 28, 36],
       ["industries.html", ".block-dark .section-head .subhead", ".block-dark .section-head .btn", 28, 36],
       ["programs.html", ".cta-band .subhead", ".cta-band .btn", 34, 42],
