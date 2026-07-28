@@ -1,33 +1,18 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
-import { chromium } from "playwright";
+import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
 
-const PORT = 4198;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+let BASE_URL = "";
 const root = new URL("../", import.meta.url);
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", String(PORT)], {
-    cwd: root,
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-
+  const staticSite = await startStaticTestServer(root);
+  BASE_URL = staticSite.baseUrl;
   try {
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      const response = await fetch(`${BASE_URL}/products.html`).catch(() => null);
-      if (response?.ok) break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (Date.now() >= deadline) throw new Error("server did not start");
     await fn();
   } finally {
-    server.kill("SIGTERM");
-    await once(server, "exit").catch(() => {});
+    await staticSite.close();
   }
 }
 
@@ -107,7 +92,7 @@ test("products page is shop-focused and routes services to a standalone page", a
 
 test("product cards expose price, volume, and add-to-cart as one buying block", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     const apiErrors = [];
     await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
@@ -173,7 +158,7 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
 
 test("segment pricing pages render isolated HVAC and CIP workbook pricing", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     try {
       const hvac = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
       await hvac.goto(`${BASE_URL}/pricing-hvac-facilities.html`, { waitUntil: "domcontentloaded" });
@@ -217,7 +202,7 @@ test("resources page publishes corrected public pricing tables only", () => {
 
 test("descaler card defaults to the public 1 gal website price", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
     await page.route("**/api/products", (route) => route.fulfill({
@@ -243,7 +228,7 @@ test("descaler card defaults to the public 1 gal website price", async () => {
 
 test("changing a card volume updates the visible price and cart SKU", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
     await page.route("**/api/products", (route) => route.fulfill({

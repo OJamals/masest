@@ -1,34 +1,16 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
 import test from "node:test";
-import { chromium } from "playwright";
+import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
 
-const PORT = 4199;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+let BASE_URL = "";
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", String(PORT)], {
-    cwd: new URL("..", import.meta.url),
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  const staticSite = await startStaticTestServer(new URL("..", import.meta.url));
+  BASE_URL = staticSite.baseUrl;
   try {
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      try {
-        const response = await fetch(`${BASE_URL}/products.html`);
-        if (response.ok) break;
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        continue;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (Date.now() >= deadline) throw new Error("server did not start");
     await fn();
   } finally {
-    server.kill("SIGTERM");
-    await once(server, "exit").catch(() => {});
+    await staticSite.close();
   }
 }
 
@@ -56,7 +38,7 @@ async function routeProducts(page) {
 
 test("storefront grid uses owner-updated product photos from the commerce API", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
@@ -73,7 +55,7 @@ test("storefront grid uses owner-updated product photos from the commerce API", 
 
 test("product detail publishes product-specific SEO metadata", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
@@ -104,7 +86,7 @@ test("product detail publishes product-specific SEO metadata", async () => {
 
 test("product detail uses owner-updated product photos from the commerce API", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);

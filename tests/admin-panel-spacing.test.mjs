@@ -1,35 +1,8 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
-import { request } from "node:http";
 import test from "node:test";
-import { chromium } from "playwright";
+import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
 
-const PORT = 4326;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
-
-function serverReady() {
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (ready) => {
-      if (settled) return;
-      settled = true;
-      resolve(ready);
-    };
-    const req = request(`${BASE_URL}/admin.html`, {
-      method: "GET",
-      agent: false,
-      headers: { Connection: "close" },
-    }, (response) => {
-      response.resume();
-      response.once("end", () => finish(response.statusCode >= 200 && response.statusCode < 400));
-      response.once("error", () => finish(false));
-    });
-    req.setTimeout(1000, () => req.destroy());
-    req.once("error", () => finish(false));
-    req.end();
-  });
-}
+let BASE_URL = "";
 
 const authModule = `
 const okSession = { access_token: "stub-token", user: { id: "u-1", email: "staff@example.test" } };
@@ -68,30 +41,18 @@ export async function api(path) {
 `;
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", String(PORT)], {
-    cwd: new URL("..", import.meta.url),
-    stdio: "ignore",
-  });
-  let exited = false;
-  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
+  const staticSite = await startStaticTestServer(new URL("..", import.meta.url));
+  BASE_URL = staticSite.baseUrl;
   try {
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      if (await serverReady()) break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (Date.now() >= deadline) throw new Error("server did not start");
     await fn();
   } finally {
-    if (!exited) server.kill("SIGTERM");
-    await Promise.race([exitedOnce, new Promise((resolve) => setTimeout(resolve, 1500))]);
-    if (!exited) server.kill("SIGKILL");
+    await staticSite.close();
   }
 }
 
 test("admin panel content starts at the sidebar top without inherited section padding", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 2048, height: 768 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -136,7 +97,7 @@ test("admin panel content starts at the sidebar top without inherited section pa
 
 test("admin sidebar scrolls independently when hovered", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 1280, height: 520 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -236,7 +197,7 @@ test("admin sidebar scrolls independently when hovered", async () => {
 
 test("mobile admin navigation stays collapsed until requested and closes after selection", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -272,7 +233,7 @@ test("mobile admin navigation stays collapsed until requested and closes after s
 
 test("read-only staff see their role and cannot trigger mutation controls", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -303,7 +264,7 @@ test("read-only staff see their role and cannot trigger mutation controls", asyn
 
 test("admin dialogs return focus to their invoking control", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -338,7 +299,7 @@ test("admin dialogs return focus to their invoking control", async () => {
 
 test("admin shell reflows at the 400-percent zoom equivalent", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 320, height: 800 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -363,7 +324,7 @@ test("admin shell reflows at the 400-percent zoom equivalent", async () => {
 
 test("core admin helper text meets WCAG AA text contrast", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -414,7 +375,7 @@ test("core admin helper text meets WCAG AA text contrast", async () => {
 
 test("production-shaped action density and long labels remain scannable on mobile", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -449,7 +410,7 @@ test("production-shaped action density and long labels remain scannable on mobil
 
 test("admin status changes are exposed through a live region", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -477,7 +438,7 @@ test("admin status changes are exposed through a live region", async () => {
 
 test("admin boots when an older unversioned util module remains cached", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
     await context.addInitScript(() => {
       window.MASEST_SUPABASE_URL = "https://stub.supabase.co";

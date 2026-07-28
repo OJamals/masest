@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
 
 const MIME = {
   ".css": "text/css",
@@ -16,6 +17,32 @@ const MIME = {
   ".webp": "image/webp",
   ".woff2": "font/woff2",
 };
+
+export async function launchTestBrowser(options = {}) {
+  const browserServer = await chromium.launchServer(options);
+  let browser;
+  try {
+    browser = await chromium.connect(browserServer.wsEndpoint());
+  } catch (error) {
+    await browserServer.kill();
+    throw error;
+  }
+
+  let closed = false;
+  return {
+    newContext: (...args) => browser.newContext(...args),
+    newPage: (...args) => browser.newPage(...args),
+    async close() {
+      if (closed) return;
+      closed = true;
+      try {
+        await Promise.all(browser.contexts().map((context) => context.close()));
+      } finally {
+        await browserServer.kill();
+      }
+    },
+  };
+}
 
 export async function startStaticTestServer(rootDirectory) {
   const root = resolve(rootDirectory instanceof URL ? fileURLToPath(rootDirectory) : rootDirectory);

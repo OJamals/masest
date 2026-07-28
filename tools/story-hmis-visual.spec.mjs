@@ -353,19 +353,20 @@ test("injury and task-input counters reach their configured totals", async ({ pa
   await page.goto(BASE_URL + "/index.html", { waitUntil: "networkidle" });
   await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
 
-  const readAtEnd = async (actNumber) => page.evaluate(async (number) => {
-    const act = document.querySelector('.story .act[data-act="' + number + '"]');
-    window.scrollTo(0, act.offsetTop + act.offsetHeight - window.innerHeight - 30);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    const counter = act.querySelector(".cost-num");
-    return {
-      target: Number(counter.dataset.target),
-      value: Number(counter.textContent.replace(/[,\s]/g, "")),
-    };
-  }, actNumber);
+  const expectAtEnd = async (actNumber) => {
+    const act = page.locator(`.story .act[data-act="${actNumber}"]`);
+    await act.evaluate((element) => {
+      window.scrollTo(0, element.offsetTop + element.offsetHeight - window.innerHeight - 30);
+    });
+    const counter = act.locator(".cost-num");
+    const target = Number(await counter.getAttribute("data-target"));
+    await expect.poll(async () => (
+      Number((await counter.textContent()).replace(/[,\s]/g, ""))
+    )).toBe(target);
+  };
 
-  expect(await readAtEnd(3)).toEqual({ target: 115000, value: 115000 });
-  expect(await readAtEnd(4)).toEqual({ target: 6, value: 6 });
+  await expectAtEnd(3);
+  await expectAtEnd(4);
 });
 
 test("rail and chat release before light content in both scroll directions", async ({ page }) => {

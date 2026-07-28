@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
-import { chromium } from "playwright";
+import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
 import {
   CATALOG_ORDER,
   PRODUCT_CATALOG_COPY,
@@ -12,16 +10,9 @@ import {
 } from "../js/main/catalog-data.js";
 import { catalogCard, catalogDecisionHTML } from "../js/main/commerce-ui.js";
 
-const PORT = 4187;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+let BASE_URL = "";
 const PROJECT_ROOT = new URL("..", import.meta.url);
 const readProject = (path) => readFileSync(new URL(path, PROJECT_ROOT), "utf8");
-
-function serverReady() {
-  return fetch(`${BASE_URL}/products.html`)
-    .then((response) => response.ok)
-    .catch(() => false);
-}
 
 function htmlText(value) {
   return String(value ?? "")
@@ -155,43 +146,18 @@ async function gotoDomReady(page, path, selector) {
 }
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", String(PORT)], {
-    cwd: new URL("..", import.meta.url),
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  let exited = false;
-  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
-
+  const staticSite = await startStaticTestServer(PROJECT_ROOT);
+  BASE_URL = staticSite.baseUrl;
   try {
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      const ready = await serverReady();
-      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      if (ready) break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (Date.now() >= deadline) throw new Error("server did not start");
     await fn();
   } finally {
-    if (!exited) server.kill("SIGTERM");
-    await Promise.race([
-      exitedOnce,
-      new Promise((resolve) => setTimeout(resolve, 1500)),
-    ]);
-    if (!exited) {
-      server.kill("SIGKILL");
-      await Promise.race([
-        exitedOnce,
-        new Promise((resolve) => setTimeout(resolve, 1500)),
-      ]);
-    }
+    await staticSite.close();
   }
 }
 
 test("product grid lays out 4-5 clickable cards per row at desktop width", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await gotoDomReady(page, "products.html", ".shop-card");
@@ -221,7 +187,7 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
 
 test("products page thumbnails use the blue media stage", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: "reduce" });
     try {
       await gotoDomReady(page, "products.html", ".shop-card-media img");
@@ -247,7 +213,7 @@ test("products page thumbnails use the blue media stage", async () => {
 
 test("commerce size labels stay readable and bulk quote actions stay centered", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: "reduce" });
     try {
       await gotoDomReady(page, "products.html", ".shop-card-buybar");
@@ -394,7 +360,7 @@ test("specialty product pages scope trials without blanket or endorsement langua
 
 test("catalog category controls filter the product grid", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await gotoDomReady(page, "products.html", ".shop-card");
@@ -413,7 +379,7 @@ test("catalog category controls filter the product grid", async () => {
 
 test("product job router headline does not overlap its copy", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     try {
       for (const viewport of [
         { width: 390, height: 900 },
@@ -446,7 +412,7 @@ test("product job router headline does not overlap its copy", async () => {
 
 test("public CTA groups keep a consistent gap from their lead copy", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const cases = [
       ["services.html", ".services-hero-copy .subhead", ".services-hero-copy .hero-actions", 28, 36],
       ["proof.html", ".page-hero .subhead", ".page-hero .btn", 28, 36],
@@ -493,7 +459,7 @@ test("public CTA groups keep a consistent gap from their lead copy", async () =>
 
 test("static product detail keeps the price panel clear of the following card", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1024, height: 900 }, reducedMotion: "reduce" });
     try {
       await page.addInitScript(() => {

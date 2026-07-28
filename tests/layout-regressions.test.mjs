@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { chromium } from "playwright";
-import { startStaticTestServer } from "../tools/test-static-server.mjs";
+import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 let BASE_URL = "";
@@ -160,7 +159,7 @@ async function newAuthedPage(browser, viewport) {
 
 test("admin products management keeps inline controls readable on desktop and mobile", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const expectedProducts = productsPayload().products.length;
     try {
       for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
@@ -197,7 +196,7 @@ test("admin products management keeps inline controls readable on desktop and mo
 
 test("admin products remove volume variants from the Products tab without reloading", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const { context, page } = await newAuthedPage(browser, { width: 1280, height: 900 });
     let navigations = 0;
     try {
@@ -227,7 +226,7 @@ test("admin products remove volume variants from the Products tab without reload
 
 test("services catalog stays visually connected to the next section on desktop", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
     try {
       await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
@@ -323,7 +322,7 @@ test("services catalog stays visually connected to the next section on desktop",
 
 test("mobile dashboard navigation shows all account sections without horizontal overflow", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     try {
       for (const hash of ["overview", "business"]) {
         const { context, page } = await newAuthedPage(browser, { width: 390, height: 844 });
@@ -358,7 +357,7 @@ test("mobile dashboard navigation shows all account sections without horizontal 
 
 test("dashboard sidebar scrolls independently for user and business panels", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     try {
       for (const hash of ["overview", "business"]) {
         const { context, page } = await newAuthedPage(browser, { width: 1280, height: 520 });
@@ -456,7 +455,7 @@ test("dashboard sidebar scrolls independently for user and business panels", asy
 
 test("mobile admin analytics SEO audit wraps without a hidden table", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const { context, page } = await newAuthedPage(browser, { width: 390, height: 844 });
     try {
       await page.goto(`${BASE_URL}/admin.html#analytics`, { waitUntil: "domcontentloaded" });
@@ -485,7 +484,7 @@ test("mobile admin analytics SEO audit wraps without a hidden table", async () =
 
 test("admin panels start compactly without stretched empty control rails", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = await launchTestBrowser();
     const { context, page } = await newAuthedPage(browser, { width: 1440, height: 1000 });
     try {
       for (const hash of ["overview", "orders", "companies", "products", "support-settings", "quotes", "reviews", "newsletter", "crm"]) {

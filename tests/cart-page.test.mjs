@@ -1,60 +1,16 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
-import { get } from "node:http";
 import test from "node:test";
-import { chromium } from "playwright";
+import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
 
-const PORT = 4191;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
-
-function serverReady() {
-  return new Promise(resolve => {
-    const req = get(`${BASE_URL}/cart.html`, response => {
-      response.resume();
-      resolve(response.statusCode >= 200 && response.statusCode < 500);
-    });
-    req.on("error", () => resolve(false));
-    req.setTimeout(1000, () => {
-      req.destroy();
-      resolve(false);
-    });
-  });
-}
+let BASE_URL = "";
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", String(PORT)], {
-    cwd: new URL("..", import.meta.url),
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let exited = false;
-  const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
-
+  const staticSite = await startStaticTestServer(new URL("..", import.meta.url));
+  BASE_URL = staticSite.baseUrl;
   try {
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      const ready = await serverReady();
-      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      if (ready) break;
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    if (Date.now() >= deadline) throw new Error("server did not start");
-
     await fn();
   } finally {
-    if (!exited) server.kill("SIGTERM");
-    await Promise.race([
-      exitedOnce,
-      new Promise((resolve) => setTimeout(resolve, 1500)),
-    ]);
-    if (!exited) {
-      server.kill("SIGKILL");
-      await Promise.race([
-        exitedOnce,
-        new Promise((resolve) => setTimeout(resolve, 1500)),
-      ]);
-    }
+    await staticSite.close();
   }
 }
 
@@ -98,7 +54,7 @@ async function routeProducts(page, products = [hcrProduct()]) {
 
 test("static catalog does not show cart controls without commerce metadata", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
@@ -122,7 +78,7 @@ test("static catalog does not show cart controls without commerce metadata", asy
 
 test("confirmed catalog products hydrate buy controls instead of quote-first CTAs", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await routeProducts(page, [hcrProduct(), ...confirmedProducts()]);
@@ -143,7 +99,7 @@ test("confirmed catalog products hydrate buy controls instead of quote-first CTA
 
 test("product catalog shows public list pricing and small-pack selectors", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await routeProducts(page);
@@ -186,7 +142,7 @@ test("product catalog shows public list pricing and small-pack selectors", async
 
 test("priced products can be added to the cart", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await routeProducts(page);
@@ -204,7 +160,7 @@ test("priced products can be added to the cart", async () => {
 
 test("cart page explains bulk freight review when checkout rejects a SKU", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await routeProducts(page);
@@ -231,7 +187,7 @@ test("cart page explains bulk freight review when checkout rejects a SKU", async
 
 test("cart uses a conventional order summary without catalog policy duplication", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await routeProducts(page);
@@ -259,7 +215,7 @@ test("cart uses a conventional order summary without catalog policy duplication"
 
 test("cart holds product lines until catalog names and pricing resolve", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await page.addInitScript(() => {
@@ -292,7 +248,7 @@ test("cart holds product lines until catalog names and pricing resolve", async (
 
 test("cart renders untrusted SKU text without creating injected markup", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await page.addInitScript(() => {

@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { readFileSync } from "node:fs";
-import { get } from "node:http";
 import test from "node:test";
-import { chromium } from "playwright";
+import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const chat = read("js/customer-chat.js");
@@ -14,31 +11,15 @@ const messages = read("functions/api/account/messages.js");
 const adminMessages = read("functions/api/admin/messages.js");
 const phase5 = read("supabase/schema-phase5.sql");
 const admin = read("js/admin.js");
-const PORT = 4194;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
-
-function serverReady() {
-  return new Promise((resolve) => {
-    const request = get(`${BASE_URL}/products.html`, (response) => {
-      response.resume();
-      resolve(response.statusCode >= 200 && response.statusCode < 500);
-    });
-    request.on("error", () => resolve(false));
-    request.setTimeout(1000, () => { request.destroy(); resolve(false); });
-  });
-}
+let BASE_URL = "";
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", String(PORT)], { cwd: new URL("..", import.meta.url), stdio: "ignore" });
-  const exited = once(server, "exit");
+  const staticSite = await startStaticTestServer(new URL("..", import.meta.url));
+  BASE_URL = staticSite.baseUrl;
   try {
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline && !await serverReady()) await new Promise((resolve) => setTimeout(resolve, 100));
-    if (Date.now() >= deadline) throw new Error("server did not start");
     await fn();
   } finally {
-    server.kill("SIGTERM");
-    await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 1500))]);
+    await staticSite.close();
   }
 }
 
@@ -113,7 +94,7 @@ test("customer chat records open/closed presence and delegates conditional staff
 
 test("logged-out visitors always see chat and get a sign-up/login link", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
@@ -156,7 +137,7 @@ test("logged-out visitors always see chat and get a sign-up/login link", async (
 
 test("guest and authenticated chat quote links carry bounded page and cart context", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const guestAuth = `
       export async function getToken() { return null; }
       export async function me() { return null; }
@@ -245,7 +226,7 @@ test("guest and authenticated chat quote links carry bounded page and cart conte
 
 test("customer chat places and restores focus for every open path", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const guestAuth = `
       export async function getToken() { return null; }
       export async function me() { return null; }

@@ -1,16 +1,13 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { chromium } from "playwright";
+import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
 
 import { QUOTE_TASK_DETAILS } from "../js/quote-task-details.js";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
-const PORT = 4327;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+let BASE_URL = "";
 
 const resources = read("resources.html");
 const chrome = read("js/main/chrome.js");
@@ -41,24 +38,12 @@ const SAMPLE_PRODUCTS = [
 ];
 
 async function withServer(fn) {
-  const server = spawn("python3", ["-m", "http.server", String(PORT)], {
-    cwd: root,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-
+  const staticSite = await startStaticTestServer(root);
+  BASE_URL = staticSite.baseUrl;
   try {
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      if (server.exitCode !== null) throw new Error(`server exited early: ${server.exitCode}`);
-      const response = await fetch(`${BASE_URL}/contact.html`).catch(() => null);
-      if (response?.ok) break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (Date.now() >= deadline) throw new Error("server did not start");
     await fn();
   } finally {
-    server.kill("SIGTERM");
-    await once(server, "exit").catch(() => {});
+    await staticSite.close();
   }
 }
 
@@ -149,7 +134,7 @@ test("contact form posts all five public request types to quote intake", async (
   ];
 
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const requests = [];
     try {
       for (const flow of flows) {
@@ -211,7 +196,7 @@ test("contact form posts all five public request types to quote intake", async (
 
 test("task economics and operating boundaries survive URL prefill, editing, and submission", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const requests = [];
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
@@ -311,7 +296,7 @@ test("task economics and operating boundaries survive URL prefill, editing, and 
 
 test("product-prefilled sample requests can submit one requested product", async () => {
   await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
+    const browser = await launchTestBrowser({ channel: "chrome" });
     const requests = [];
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
