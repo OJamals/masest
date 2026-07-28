@@ -3,17 +3,9 @@ import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sen
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
 import { taskRow, taskPatch, validSubject, taskDigest } from '../../../_lib/crm.js';
+import { timingSafeEqual } from '../../../_lib/secret.js';
 
 const SELECT = 'id,subject_type,subject_id,title,due_at,assigned_to,status,created_by,created_at,completed_at,completed_by';
-
-function timingSafeEqual(a, b) {
-  const sa = String(a || '');
-  const sb = String(b || '');
-  if (sa.length !== sb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < sa.length; i++) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
-  return diff === 0;
-}
 
 function staffRecipients(env) {
   return String(env.ADMIN_EMAILS || '')

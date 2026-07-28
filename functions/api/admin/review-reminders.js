@@ -1,18 +1,8 @@
 // functions/api/admin/review-reminders.js — secret-guarded post-delivery review nudge.
-// Guard pattern copied verbatim from functions/api/admin/quotes.js's sweep_due path
-// (local timingSafeEqual + x-<feature>-crm-secret header) — no staff auth for this
-// automation-only route.
+// Secret-gated automation-only route; no staff session required.
 import { adminClient, json, readBody, sendEmail } from '../../_lib/supabase.js';
 import { reviewToken, REMINDER_DELAY_DAYS } from '../../_lib/reviews.js';
-
-function timingSafeEqual(a, b) {
-  const sa = String(a || '');
-  const sb = String(b || '');
-  if (sa.length !== sb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < sa.length; i += 1) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
-  return diff === 0;
-}
+import { timingSafeEqual } from '../../_lib/secret.js';
 
 const reviewSecret = (env) => env.REVIEW_TOKEN_SECRET || env.EMAIL_UNSUB_SECRET || '';
 const enc = encodeURIComponent;

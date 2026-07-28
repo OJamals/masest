@@ -10,6 +10,7 @@ import {
   syncSubscriptionInvoice,
 } from '../_lib/qbo.js';
 import { qboConfigEnv } from '../_lib/qbo-config.js';
+import { timingSafeEqual } from '../_lib/secret.js';
 
 // #26 — a doc that exhausts MAX_ATTEMPTS dead-letters to 'error' and stops retrying.
 // Email staff once per run per queue so it doesn't rot silently in the table.
@@ -30,17 +31,6 @@ async function alertDeadLetter(env, kind, items) {
 function boundedBatch(request) {
   const requested = Number(new URL(request.url).searchParams.get('batch') || 10);
   return Math.min(25, Math.max(1, Math.floor(requested) || 10));
-}
-
-// Constant-time string comparison — avoids leaking the secret length/prefix via
-// response-timing on the unauthenticated /api/qbo-sync endpoint.
-function timingSafeEqual(a, b) {
-  const sa = String(a || '');
-  const sb = String(b || '');
-  if (sa.length !== sb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < sa.length; i++) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
-  return diff === 0;
 }
 
 const textEncoder = new TextEncoder();

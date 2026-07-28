@@ -11,15 +11,7 @@ import {
   runSupabaseDeliveryWorker,
 } from '../../_lib/newsletter-delivery.js';
 import { staffCanWrite } from '../../_lib/authz.js';
-
-function timingSafeEqual(a, b) {
-  const sa = String(a || '');
-  const sb = String(b || '');
-  if (sa.length !== sb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < sa.length; i += 1) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
-  return diff === 0;
-}
+import { timingSafeEqual } from '../../_lib/secret.js';
 
 async function resolveNewsletterAudience(env, sb, n) {
   const populations = Array.isArray(n.audience?.populations) ? n.audience.populations : [];

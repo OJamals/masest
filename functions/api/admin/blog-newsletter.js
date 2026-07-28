@@ -5,15 +5,7 @@ import { adminClient, json, readBody } from '../../_lib/supabase.js';
 import { klaviyoListProfiles } from '../../_lib/klaviyo.js';
 import { postFromEntry, unsentPosts, renderBlogEmail } from '../../_lib/blog-newsletter.js';
 import { createSupabaseDeliveryStore, materializeDeliverySource } from '../../_lib/newsletter-delivery.js';
-
-function timingSafeEqual(a, b) {
-  const sa = String(a || '');
-  const sb = String(b || '');
-  if (sa.length !== sb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < sa.length; i += 1) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
-  return diff === 0;
-}
+import { timingSafeEqual } from '../../_lib/secret.js';
 
 const MAX_POSTS_PER_RUN = 5;
 

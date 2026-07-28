@@ -9,19 +9,11 @@ import { stagePatch, pipelineSummary, pipelineReport } from '../../_lib/crm-pipe
 import { klaviyoTrack } from '../../_lib/klaviyo.js';
 import { escapeLike } from '../../_lib/crm.js';
 import { recordSupportMessage } from '../../_lib/support-messages.js';
+import { timingSafeEqual } from '../../_lib/secret.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
-
-function timingSafeEqual(a, b) {
-  const sa = String(a || '');
-  const sb = String(b || '');
-  if (sa.length !== sb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < sa.length; i++) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
-  return diff === 0;
-}
 
 function dueAt(value) {
   if (value === null || value === '') return null;

@@ -3,17 +3,7 @@
 // No scheduler is provisioned here; STRIPE_EFFECTS_WORKER_SECRET owns access.
 import { json } from '../../_lib/supabase.js';
 import { runStripeEffectsWorker } from '../../_lib/stripe-effects.js';
-
-function timingSafeEqual(left, right) {
-  const a = String(left || '');
-  const b = String(right || '');
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let index = 0; index < a.length; index++) {
-    diff |= a.charCodeAt(index) ^ b.charCodeAt(index);
-  }
-  return diff === 0;
-}
+import { timingSafeEqual } from '../../_lib/secret.js';
 
 function boundedLimit(request) {
   const value = Number(new URL(request.url).searchParams.get('limit'));

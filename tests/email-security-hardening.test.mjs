@@ -16,7 +16,8 @@ test("support notification emails escape customer and staff-supplied body", () =
 });
 
 test("Svix verifier uses a constant-time compare (no === short-circuit on the MAC)", () => {
-  assert.match(emailSrc, /timingSafeEqualStr\(sig, expected\)/);
+  assert.match(emailSrc, /import \{ timingSafeEqual \} from "\.\/secret\.js"/);
+  assert.match(emailSrc, /timingSafeEqual\(sig, expected\)/);
   assert.doesNotMatch(emailSrc, /provided\.some\(\(sig\) => sig === expected\)/);
 });
 

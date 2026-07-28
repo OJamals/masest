@@ -1,5 +1,6 @@
 import { qboConfigEnv } from './qbo-config.js';
 import { intuitTidFromHeaders, intuitTidSuffix } from './intuit.js';
+import { timingSafeEqual } from './secret.js';
 
 const INTUIT_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const INTUIT_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -14,13 +15,6 @@ function stateSecret(env) {
 function base64Url(bytes) {
   const binary = String.fromCharCode(...new Uint8Array(bytes));
   return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
-}
-
-function timingSafeEqual(a, b) {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
 }
 
 async function signState(payload, secret) {
