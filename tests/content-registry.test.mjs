@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CONTENT_TYPE_DEFINITIONS,
+  contentPageOptionsFromSitemap,
   contentPayloadFields,
+  ensureContentPageMount,
+  normalizeContentPageKey,
   normalizeStructuredPayload,
   validateStructuredPayload,
   snapshotGroups,
@@ -104,6 +107,26 @@ test("registry normalizes type-specific structured payloads", () => {
       active: true,
     },
   );
+});
+
+test("CMS page registry normalizes routes, lists sitemap pages, and mounts once", () => {
+  assert.equal(normalizeContentPageKey("/"), "home");
+  assert.equal(normalizeContentPageKey("https://masest.co/products/hcr.html?x=1"), "products/hcr");
+  assert.equal(normalizeContentPageKey("../private"), "");
+  assert.deepEqual(
+    normalizeStructuredPayload("page_section", {
+      page: "https://masest.co/industries/hvac-water.html",
+      region: "body",
+      headline: "Clean loops",
+    }),
+    { page: "industries/hvac-water", region: "body", headline: "Clean loops" },
+  );
+  const sitemap = "<loc>https://masest.co/</loc><loc>https://masest.co/products/hcr</loc><loc>https://masest.co/blog/post</loc>";
+  assert.deepEqual(contentPageOptionsFromSitemap(sitemap), ["home", "products/hcr"]);
+  const html = "<main><h1>Privacy</h1></main>";
+  const mounted = ensureContentPageMount(html, "/privacy");
+  assert.match(mounted, /data-cms-page="privacy"/);
+  assert.equal(ensureContentPageMount(mounted, "/privacy"), mounted);
 });
 
 test("registry validates required fields and URL/image fields", () => {

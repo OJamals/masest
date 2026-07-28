@@ -6,7 +6,7 @@ const URL_FIELD_KEYS = new Set(["href", ...IMAGE_FIELD_KEYS]);
 export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   service: {
     label: "Services",
-    snapshot: { file: "services.json", key: "services" },
+    snapshot: { file: "services.json", key: "services", order: 0 },
     fields: [
       { key: "sku", label: "SKU", kind: "text", required: true },
       { key: "category", label: "Category", kind: "text", required: true },
@@ -21,7 +21,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   service_package: {
     label: "Service packages",
-    snapshot: { file: "services.json", key: "service_packages" },
+    snapshot: { file: "services.json", key: "service_packages", order: 0 },
     fields: [
       { key: "sku", label: "SKU", kind: "text", required: true },
       { key: "category", label: "Category", kind: "text" },
@@ -36,7 +36,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   proof_card: {
     label: "Proof cards",
-    snapshot: { file: "proof.json", key: "proof_cards" },
+    snapshot: { file: "proof.json", key: "proof_cards", order: 2 },
     fields: [
       { key: "eyebrow", label: "Eyebrow", kind: "text" },
       { key: "kind", label: "Sector key", kind: "text" },
@@ -70,7 +70,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   resource_card: {
     label: "Resource cards",
-    snapshot: { file: "resources.json", key: "resource_cards" },
+    snapshot: { file: "resources.json", key: "resource_cards", order: 3 },
     fields: [
       { key: "href", label: "Link", kind: "text", required: true },
       { key: "cta", label: "CTA", kind: "text" },
@@ -80,7 +80,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   industry_sector: {
     label: "Industry sectors",
-    snapshot: { file: "industry-sectors.json", key: "industry_sectors" },
+    snapshot: { file: "industry-sectors.json", key: "industry_sectors", order: 4 },
     fields: [
       { key: "icon", label: "Icon (phosphor class)", kind: "text" },
       { key: "summary", label: "Summary", kind: "textarea", className: "full", required: true },
@@ -95,7 +95,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   faq_block: {
     label: "FAQ blocks",
-    snapshot: { file: "faqs.json", key: "faq_blocks" },
+    snapshot: { file: "faqs.json", key: "faq_blocks", order: 5 },
     fields: [
       { key: "category", label: "Category", kind: "text" },
       { key: "question", label: "Question", kind: "text", className: "wide", required: true },
@@ -104,7 +104,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   page_section: {
     label: "Page sections",
-    snapshot: { file: "page-sections.json", key: "page_sections" },
+    snapshot: { file: "page-sections.json", key: "page_sections", order: 6 },
     fields: [
       { key: "page", label: "Page", kind: "text", required: true },
       { key: "region", label: "Region", kind: "text", required: true },
@@ -122,7 +122,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   page_meta: {
     label: "Page metadata",
-    snapshot: { file: "page-meta.json", key: "page_meta" },
+    snapshot: { file: "page-meta.json", key: "page_meta", order: 1 },
     fields: [
       { key: "page", label: "Page", kind: "text", required: true },
       { key: "description", label: "Description", kind: "textarea", className: "full", required: true },
@@ -132,7 +132,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   pricing_tier: {
     label: "Pricing tiers",
-    snapshot: { file: "pricing.json", key: "pricing_tiers" },
+    snapshot: { file: "pricing.json", key: "pricing_tiers", order: 7 },
     fields: [
       { key: "badge", label: "Badge", kind: "text" },
       { key: "name", label: "Tier name", kind: "text", className: "wide", required: true },
@@ -165,7 +165,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   blog_post: {
     label: "Blog posts",
-    snapshot: { file: "blog.json", key: "blog_posts" },
+    snapshot: { file: "blog.json", key: "blog_posts", order: 8 },
     fields: [
       { key: "title", label: "Title", kind: "text", className: "wide", required: true },
       { key: "category", label: "Category", kind: "select", options: ["marketing", "technical", "news"], required: true },
@@ -180,48 +180,6 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
     ],
   },
 });
-
-const SNAPSHOT_GROUPS = Object.freeze([
-  {
-    file: "services.json",
-    types: Object.freeze([
-      Object.freeze({ type: "service", key: "services" }),
-      Object.freeze({ type: "service_package", key: "service_packages" }),
-    ]),
-  },
-  {
-    file: "page-meta.json",
-    types: Object.freeze([Object.freeze({ type: "page_meta", key: "page_meta" })]),
-  },
-  {
-    file: "proof.json",
-    types: Object.freeze([Object.freeze({ type: "proof_card", key: "proof_cards" })]),
-  },
-  {
-    file: "resources.json",
-    types: Object.freeze([Object.freeze({ type: "resource_card", key: "resource_cards" })]),
-  },
-  {
-    file: "industry-sectors.json",
-    types: Object.freeze([Object.freeze({ type: "industry_sector", key: "industry_sectors" })]),
-  },
-  {
-    file: "faqs.json",
-    types: Object.freeze([Object.freeze({ type: "faq_block", key: "faq_blocks" })]),
-  },
-  {
-    file: "page-sections.json",
-    types: Object.freeze([Object.freeze({ type: "page_section", key: "page_sections" })]),
-  },
-  {
-    file: "pricing.json",
-    types: Object.freeze([Object.freeze({ type: "pricing_tier", key: "pricing_tiers" })]),
-  },
-  {
-    file: "blog.json",
-    types: Object.freeze([Object.freeze({ type: "blog_post", key: "blog_posts" })]),
-  },
-]);
 
 export function contentPayloadFields(type) {
   return [...(CONTENT_TYPE_DEFINITIONS[type]?.fields || [])].map((field) => ({ ...field }));
@@ -238,10 +196,61 @@ export function structuredPayloadKeys() {
 }
 
 export function snapshotGroups() {
-  return SNAPSHOT_GROUPS.map((group) => ({
-    file: group.file,
-    types: group.types.map((entry) => ({ ...entry })),
-  }));
+  const groups = new Map();
+  for (const [type, definition] of Object.entries(CONTENT_TYPE_DEFINITIONS)) {
+    const snapshot = definition.snapshot;
+    if (!snapshot) continue;
+    const group = groups.get(snapshot.file) || { file: snapshot.file, order: snapshot.order, types: [] };
+    group.types.push({ type, key: snapshot.key });
+    groups.set(snapshot.file, group);
+  }
+  return [...groups.values()]
+    .sort((a, b) => a.order - b.order)
+    .map(({ file, types }) => ({ file, types }));
+}
+
+export function normalizeContentPageKey(value) {
+  const input = String(value || "").trim();
+  if (!input) return "";
+  let path = input;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(input)) {
+    try {
+      const url = new URL(input);
+      if (url.protocol !== "https:" || !/^(?:www\.)?masest\.co$/i.test(url.hostname)) return "";
+      path = url.pathname;
+    } catch {
+      return "";
+    }
+  } else {
+    path = path.split(/[?#]/, 1)[0];
+  }
+  if (/^\.\.?(?:\/|$)/.test(path)) return "";
+  const key = path
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/(?:\/index)?\.html$/i, "")
+    .toLowerCase();
+  if (!key || key === "index") return "home";
+  return /^[a-z0-9][a-z0-9/_-]*$/.test(key) ? key : "";
+}
+
+export function contentPageOptionsFromSitemap(xml) {
+  const seen = new Set();
+  return [...String(xml || "").matchAll(/<loc>([^<]+)<\/loc>/gi)]
+    .map((match) => normalizeContentPageKey(match[1]))
+    .filter((page) => page && (page === "blog" || !page.startsWith("blog/")))
+    .filter((page) => !seen.has(page) && seen.add(page));
+}
+
+export function contentPageMount(page) {
+  const key = normalizeContentPageKey(page);
+  return key ? `<div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="${key}" data-cms-region="body"></div>` : "";
+}
+
+export function ensureContentPageMount(html, page) {
+  const source = String(html || "");
+  const mount = contentPageMount(page);
+  if (!mount || source.includes('data-cms-content="page_sections"')) return source;
+  return source.replace(/<\/main>/i, `${mount}\n</main>`);
 }
 
 function parseList(value) {
@@ -273,6 +282,7 @@ function normalizedFieldValue(field, raw) {
     return list.length ? list : undefined;
   }
   const trimmed = URL_FIELD_KEYS.has(field.key) ? cleanUrlValue(raw) : String(raw || "").trim();
+  if (field.key === "page") return normalizeContentPageKey(trimmed) || undefined;
   if (trimmed && IMAGE_FIELD_KEYS.has(field.key)) return canonicalPublicImageUrl(trimmed);
   return trimmed || undefined;
 }

@@ -73,7 +73,7 @@ test("generated product routes own the complete public detail surface", () => {
     assert.match(html, new RegExp(`data-commerce-media="${id}"`));
     assert.match(html, new RegExp(`data-commerce-action="${id}"`));
     assert.match(html, /data-reviews data-sku="[^"]+" data-kind="product"/);
-    assert.match(html, /data-cms-content="page_sections" data-cms-page="product"/);
+    assert.match(html, new RegExp(`data-cms-content="page_sections" data-cms-page="products/${id}"`));
   }
 });
 

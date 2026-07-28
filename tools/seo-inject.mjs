@@ -21,6 +21,11 @@ import {
   QUOTE_FIRST_IDS,
   productHighlights,
 } from "../js/main/catalog-data.js";
+import {
+  contentPageMount,
+  ensureContentPageMount,
+  normalizeContentPageKey,
+} from "../js/content-types.js";
 import { proofRecordsHtml } from "../js/proof-records.js";
 import {
   documentAllowedOnSurface,
@@ -30,6 +35,9 @@ import { STYLE_VERSION } from "./static-release.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
+const INDUSTRY_SLUGS = JSON.parse(
+  readFileSync(new URL("../data/industry-applications.json", import.meta.url), "utf8"),
+).industries.map((industry) => industry.slug);
 const PROOF_RECORDS = JSON.parse(
   readFileSync(new URL("../data/content/proof.json", import.meta.url), "utf8"),
 ).proof_cards;
@@ -120,38 +128,12 @@ const PUBLIC = {
   "terms.html": { loc: "/terms", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Terms", url: `${BASE}/terms` }] },
   "eula.html": { loc: "/eula", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "End-User License Agreement", url: `${BASE}/eula` }] },
   "industries.html": { loc: "/industries", priority: "0.7", changefreq: "monthly", jsonld: [ORG] },
-  "industries/oil-gas.html": { loc: "/industries/oil-gas", priority: "0.6", changefreq: "monthly" },
-  "industries/marine.html": { loc: "/industries/marine", priority: "0.6", changefreq: "monthly" },
-  "industries/manufacturing.html": { loc: "/industries/manufacturing", priority: "0.6", changefreq: "monthly" },
-  "industries/distribution-cold-storage.html": { loc: "/industries/distribution-cold-storage", priority: "0.6", changefreq: "monthly" },
-  "industries/food-beverage.html": { loc: "/industries/food-beverage", priority: "0.6", changefreq: "monthly" },
-  "industries/healthcare.html": { loc: "/industries/healthcare", priority: "0.6", changefreq: "monthly" },
-  "industries/construction.html": { loc: "/industries/construction", priority: "0.6", changefreq: "monthly" },
-  "industries/military-government.html": { loc: "/industries/military-government", priority: "0.6", changefreq: "monthly" },
-  "industries/education.html": { loc: "/industries/education", priority: "0.6", changefreq: "monthly" },
-  "industries/hvac-water.html": { loc: "/industries/hvac-water", priority: "0.6", changefreq: "monthly" },
-  "industries/plumbing.html": { loc: "/industries/plumbing", priority: "0.6", changefreq: "monthly" },
 };
 
 Object.assign(PUBLIC, Object.fromEntries([
+  ...INDUSTRY_SLUGS.map((slug) => [`industries/${slug}.html`, `/industries/${slug}`, "0.6"]),
   ["pricing-hvac-facilities.html", "/pricing-hvac-facilities", "0.7"],
   ["pricing-cip-food-beverage.html", "/pricing-cip-food-beverage", "0.7"],
-  ["industries/data-centers.html", "/industries/data-centers", "0.6"],
-  ["industries/golf-courses.html", "/industries/golf-courses", "0.6"],
-  ["industries/solar-panel-cleaning.html", "/industries/solar-panel-cleaning", "0.6"],
-  ["industries/municipalities-water-utilities.html", "/industries/municipalities-water-utilities", "0.6"],
-  ["industries/hotels-property-management.html", "/industries/hotels-property-management", "0.6"],
-  ["industries/mechanical-contractors-water-treatment.html", "/industries/mechanical-contractors-water-treatment", "0.6"],
-  ["industries/breweries-distilleries-wineries.html", "/industries/breweries-distilleries-wineries", "0.6"],
-  ["industries/restaurants-commercial-kitchens.html", "/industries/restaurants-commercial-kitchens", "0.6"],
-  ["industries/warehousing-distribution-centers.html", "/industries/warehousing-distribution-centers", "0.6"],
-  ["industries/pressure-washing-soft-wash-contractors.html", "/industries/pressure-washing-soft-wash-contractors", "0.6"],
-  ["industries/drone-cleaning-companies.html", "/industries/drone-cleaning-companies", "0.6"],
-  ["industries/marine-marinas-boatyards.html", "/industries/marine-marinas-boatyards", "0.6"],
-  ["industries/aviation-fbos-mro-airports.html", "/industries/aviation-fbos-mro-airports", "0.6"],
-  ["industries/healthcare-senior-living.html", "/industries/healthcare-senior-living", "0.6"],
-  ["industries/fleet-trucking-car-washes.html", "/industries/fleet-trucking-car-washes", "0.6"],
-  ["industries/agriculture.html", "/industries/agriculture", "0.6"],
   ["comparisons/vertkleen-hcr-vs-clr.html", "/comparisons/vertkleen-hcr-vs-clr", "0.7"],
   ["comparisons/hcr-vs-rydlyme.html", "/comparisons/hcr-vs-rydlyme", "0.7"],
   ["comparisons/cr-hd-vs-simple-green.html", "/comparisons/cr-hd-vs-simple-green", "0.7"],
@@ -279,8 +261,8 @@ function loadContentPageMeta() {
   const out = new Map();
   for (const row of rows) {
     for (const key of [row.page, row.slug]) {
-      const normalized = pageMetaKey(key);
-      if (normalized || normalized === "") out.set(normalized, row);
+      const normalized = normalizeContentPageKey(key);
+      if (normalized) out.set(normalized, row);
     }
   }
   return out;
@@ -352,12 +334,6 @@ function cleanPath(path) {
   return path.replace(/\.html$/i, "");
 }
 
-function pageMetaKey(value) {
-  const raw = String(value || "").trim().replace(/^\/+/, "");
-  if (!raw) return "";
-  return cleanPath(raw);
-}
-
 function pageMetaOverrides(entry = {}) {
   const seo = entry.seo && typeof entry.seo === "object" ? entry.seo : {};
   return {
@@ -369,7 +345,7 @@ function pageMetaOverrides(entry = {}) {
 }
 
 function applyContentPageMeta(file, meta, contentPageMeta) {
-  const override = contentPageMeta.get(pageMetaKey(file));
+  const override = contentPageMeta.get(normalizeContentPageKey(file));
   if (!override) return meta;
   return { ...meta, content: pageMetaOverrides(override) };
 }
@@ -484,6 +460,7 @@ async function processPage(file, meta, isPrivate = false) {
     }
   } else {
     html = normalizePublicUrls(html);
+    html = ensureContentPageMount(html, meta.loc);
     html = applyContentHtmlMeta(html, meta.content);
     html = html.replace(/<\/head>/i, `${buildBlock(html, meta)}\n</head>`);
   }
@@ -722,7 +699,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
       <div data-reviews data-sku="${attr(commerceSku(id))}" data-kind="product" data-name="${attr(product.name)}"></div>
     </div>
   </section>
-  <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="product" data-cms-region="body"></div>
+  ${contentPageMount(`products/${id}`)}
 </main>
 <script type="module" src="../js/main.js?v=20260727b"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
@@ -776,7 +753,7 @@ const reviewsSnapshot = loadReviewsSnapshot();
 // unlike products/<id>.html) — bake reviewed services in as extra @graph nodes.
 PUBLIC["services.html"].reviewJsonld = serviceReviewNodes(reviewsSnapshot);
 for (const [file, meta] of Object.entries(PUBLIC)) {
-  changed += await processPage(file, applyContentPageMeta(file, meta, contentPageMeta), false);
+  changed += await processPage(file, applyContentPageMeta(meta.loc, meta, contentPageMeta), false);
 }
 for (const file of PRIVATE) changed += await processPage(file, null, true);
 changed += await writeProductPages(reviewsSnapshot);

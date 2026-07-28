@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createContentRepository } from "../functions/_lib/content.js";
 
@@ -250,4 +251,13 @@ test("one invalid due entry is skipped, not allowed to abort the whole batch", a
   assert.equal(db.content_entries.find((e) => e.id === "entry_ok").status, "published");
   assert.equal(db.content_entries.find((e) => e.id === "entry_ok2").status, "published");
   assert.equal(db.content_entries.find((e) => e.id === "entry_bad").status, "scheduled", "the invalid entry stays queued");
+});
+
+test("scheduled CMS publishing has a secret-gated automatic sweep", () => {
+  const endpoint = readFileSync(new URL("../functions/api/admin/content.js", import.meta.url), "utf8");
+  const cron = readFileSync(new URL("../supabase/content-publish-cron.example.sql", import.meta.url), "utf8");
+  assert.match(endpoint, /CONTENT_PUBLISH_CRON_SECRET/);
+  assert.match(endpoint, /x-content-publish-cron-secret/);
+  assert.match(endpoint, /publishDue\(createContentRepository\(adminClient\(env\)\),\s*env,\s*null\)/);
+  assert.match(cron, /jsonb_build_object\('action', 'publish_scheduled'\)/);
 });

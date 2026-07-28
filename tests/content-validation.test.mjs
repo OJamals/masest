@@ -172,41 +172,9 @@ test("admin content editor normalizes slugs without clobbering manual edits", ()
   assert.match(source, /#contentSlug/);
 });
 
-test("content export tool writes service and page metadata snapshot paths", () => {
-  const source = readFileSync(new URL("../tools/build-content.mjs", import.meta.url), "utf8");
-  assert.match(source, /CONTENT_EXPORT_OUT_DIR/);
-  assert.match(source, /"services\.json": servicesPayload/);
-  assert.match(source, /"page-meta\.json": pageMetaPayload/);
-  assert.match(source, /"proof\.json": typedPayload/);
-  assert.match(source, /"resources\.json": typedPayload/);
-  assert.doesNotMatch(source, /"industries\.json": typedPayload/);
-  assert.match(source, /"faqs\.json": typedPayload/);
-  assert.match(source, /"manifest\.json"/);
-  assert.match(source, /publicContentSnapshot/);
-  assert.match(source, /SUPABASE_SERVICE_ROLE_KEY/);
-});
-
-test("services catalog tries CMS snapshot before legacy services data", () => {
-  const source = readFileSync(new URL("../js/main/service-catalog.js", import.meta.url), "utf8");
-  assert.match(source, /data\/content\/services\.json/);
-  assert.match(source, /data\/services\.json/);
-  assert.match(source, /fetchServicesCatalog/);
-});
-
-test("site verifier validates optional content service snapshot shape", () => {
-  const source = readFileSync(new URL("../tools/verify_site.mjs", import.meta.url), "utf8");
-  assert.match(source, /verifyOptionalContentSnapshot/);
-  assert.match(source, /data\/content\/services\.json/);
-  assert.match(source, /service_packages/);
-  assert.match(source, /data\/content\/proof\.json/);
-  assert.match(source, /data\/content\/resources\.json/);
-  assert.doesNotMatch(source, /data\/content\/industries\.json/);
-  assert.match(source, /data\/content\/faqs\.json/);
-});
-
-test("seo injector source can read content page metadata snapshots", () => {
-  const source = readFileSync(new URL("../tools/seo-inject.mjs", import.meta.url), "utf8");
-  assert.match(source, /data\/content\/page-meta\.json/);
-  assert.match(source, /page_meta/);
-  assert.match(source, /loadContentPageMeta/);
+test("admin CMS page fields use canonical sitemap suggestions", () => {
+  const source = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
+  assert.match(source, /contentPageOptionsFromSitemap/);
+  assert.match(source, /fetch\(["']\/sitemap\.xml["']/);
+  assert.match(source, /list="contentPageOptions"/);
 });

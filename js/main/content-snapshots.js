@@ -2,15 +2,19 @@ import { initReveal } from "./effects.js";
 import { esc } from "../util.js";
 import { canonicalPublicImageUrl } from "../image-url.js?v=20260723a";
 import { proofCardHtml } from "../proof-records.js?v=20260727b";
+import {
+  CONTENT_TYPE_DEFINITIONS,
+  normalizeContentPageKey,
+} from "../content-types.js";
 
-const SNAPSHOT_FILES = {
-  proof_cards: "proof.json",
-  resource_cards: "resources.json",
-  faq_blocks: "faqs.json",
-  page_sections: "page-sections.json",
-  pricing_tiers: "pricing.json",
-  industry_sectors: "industry-sectors.json",
-};
+const MOUNTS = [
+  ["proof_card", proofCardHtml],
+  ["resource_card", resourceCard],
+  ["faq_block", faqBlock],
+  ["page_section", pageSection],
+  ["pricing_tier", pricingTier],
+  ["industry_sector", industrySector],
+];
 
 function normalizeCategory(value) {
   return String(value || "").trim().toLowerCase();
@@ -34,12 +38,12 @@ export function filterContentRows(rows = [], {
 } = {}) {
   if (!Array.isArray(rows)) return [];
   const wanted = normalizeCategory(category);
-  const wantedPage = normalizeToken(page);
+  const wantedPage = normalizeContentPageKey(page);
   const wantedRegion = normalizeToken(region);
   return rows.filter((row) => {
     if (row?.active === false) return false;
     const rowCategory = normalizeCategory(row?.category);
-    const rowPage = normalizeToken(row?.page);
+    const rowPage = normalizeContentPageKey(row?.page);
     const rowRegion = normalizeToken(row?.region);
     if (wanted && rowCategory && rowCategory !== wanted) return false;
     if (wantedPage && rowPage && rowPage !== wantedPage) return false;
@@ -185,23 +189,13 @@ function restoreHashTarget() {
 }
 
 export async function initContentSnapshots() {
-  const [proof, resources, faqs, pageSections, pricingTiers, industrySectors] = await Promise.all([
-    loadContentSnapshot(SNAPSHOT_FILES.proof_cards),
-    loadContentSnapshot(SNAPSHOT_FILES.resource_cards),
-    loadContentSnapshot(SNAPSHOT_FILES.faq_blocks),
-    loadContentSnapshot(SNAPSHOT_FILES.page_sections),
-    loadContentSnapshot(SNAPSHOT_FILES.pricing_tiers),
-    loadContentSnapshot(SNAPSHOT_FILES.industry_sectors),
-  ]);
-
-  const rendered = [
-    renderMount("proof_cards", proof, "proof_cards", proofCardHtml),
-    renderMount("resource_cards", resources, "resource_cards", resourceCard),
-    renderMount("faq_blocks", faqs, "faq_blocks", faqBlock),
-    renderMount("page_sections", pageSections, "page_sections", pageSection),
-    renderMount("pricing_tiers", pricingTiers, "pricing_tiers", pricingTier),
-    renderMount("industry_sectors", industrySectors, "industry_sectors", industrySector),
-  ].some(Boolean);
+  const snapshots = await Promise.all(MOUNTS.map(([type]) => (
+    loadContentSnapshot(CONTENT_TYPE_DEFINITIONS[type].snapshot.file)
+  )));
+  const rendered = MOUNTS.map(([type, renderer], index) => {
+    const key = CONTENT_TYPE_DEFINITIONS[type].snapshot.key;
+    return renderMount(key, snapshots[index], key, renderer);
+  }).some(Boolean);
 
   // CMS content is injected after initReveal() ran at DOMContentLoaded, so the
   // scroll-reveal IntersectionObserver never saw these nodes. Re-run the

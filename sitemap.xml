@@ -14,35 +14,35 @@
   <url><loc>https://masest.co/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://masest.co/eula</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://masest.co/industries</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://masest.co/industries/oil-gas</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/marine</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/manufacturing</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/distribution-cold-storage</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/food-beverage</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/healthcare</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/aviation-fbos-mro-airports</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/breweries-distilleries-wineries</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/industries/construction</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/military-government</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/data-centers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/distribution-cold-storage</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/drone-cleaning-companies</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/industries/education</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/fleet-trucking-car-washes</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/food-beverage</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/agriculture</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/golf-courses</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/healthcare</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/healthcare-senior-living</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/hotels-property-management</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/industries/hvac-water</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/manufacturing</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/marine</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/marine-marinas-boatyards</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/mechanical-contractors-water-treatment</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/military-government</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/municipalities-water-utilities</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/oil-gas</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/industries/plumbing</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/pressure-washing-soft-wash-contractors</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/restaurants-commercial-kitchens</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/solar-panel-cleaning</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://masest.co/industries/warehousing-distribution-centers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/pricing-hvac-facilities</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/pricing-cip-food-beverage</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://masest.co/industries/data-centers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/golf-courses</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/solar-panel-cleaning</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/municipalities-water-utilities</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/hotels-property-management</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/mechanical-contractors-water-treatment</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/breweries-distilleries-wineries</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/restaurants-commercial-kitchens</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/warehousing-distribution-centers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/pressure-washing-soft-wash-contractors</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/drone-cleaning-companies</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/marine-marinas-boatyards</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/aviation-fbos-mro-airports</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/healthcare-senior-living</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/fleet-trucking-car-washes</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://masest.co/industries/agriculture</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://masest.co/comparisons/vertkleen-hcr-vs-clr</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/comparisons/hcr-vs-rydlyme</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://masest.co/comparisons/cr-hd-vs-simple-green</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>

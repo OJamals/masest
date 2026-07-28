@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { publicContentSnapshot } from "../functions/_lib/content.js";
+import { snapshotGroups } from "../js/content-types.js";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUT_DIR = process.env.CONTENT_EXPORT_OUT_DIR || join(ROOT, "data/content");
@@ -33,42 +34,14 @@ function manifestEntry(text, value) {
   };
 }
 
-function servicesPayload(snapshot) {
+function snapshotRow(entry, type) {
+  const service = type === "service" || type === "service_package";
   return {
-    services: (snapshot.service || []).map((entry) => ({
-      slug: entry.slug,
-      ...entry.payload,
-      name: entry.payload?.name || entry.title,
-      seo: entry.seo,
-    })),
-    service_packages: (snapshot.service_package || []).map((entry) => ({
-      slug: entry.slug,
-      ...entry.payload,
-      name: entry.payload?.name || entry.title,
-      seo: entry.seo,
-    })),
-  };
-}
-
-function pageMetaPayload(snapshot) {
-  return {
-    page_meta: (snapshot.page_meta || []).map((entry) => ({
-      slug: entry.slug,
-      title: entry.title,
-      ...entry.payload,
-      seo: entry.seo,
-    })),
-  };
-}
-
-function typedPayload(snapshot, type, key) {
-  return {
-    [key]: (snapshot[type] || []).map((entry) => ({
-      slug: entry.slug,
-      title: entry.title,
-      ...entry.payload,
-      seo: entry.seo,
-    })),
+    slug: entry.slug,
+    ...(!service ? { title: entry.title } : {}),
+    ...entry.payload,
+    ...(service ? { name: entry.payload?.name || entry.title } : {}),
+    seo: entry.seo,
   };
 }
 
@@ -77,17 +50,13 @@ function typedPayload(snapshot, type, key) {
 // produce byte-identical output.
 export function snapshotPayloads(entries) {
   const snapshot = publicContentSnapshot(entries);
-  return {
-    "services.json": servicesPayload(snapshot),
-    "page-meta.json": pageMetaPayload(snapshot),
-    "proof.json": typedPayload(snapshot, "proof_card", "proof_cards"),
-    "resources.json": typedPayload(snapshot, "resource_card", "resource_cards"),
-    "faqs.json": typedPayload(snapshot, "faq_block", "faq_blocks"),
-    "page-sections.json": typedPayload(snapshot, "page_section", "page_sections"),
-    "pricing.json": typedPayload(snapshot, "pricing_tier", "pricing_tiers"),
-    "industry-sectors.json": typedPayload(snapshot, "industry_sector", "industry_sectors"),
-    "blog.json": typedPayload(snapshot, "blog_post", "blog_posts"),
-  };
+  return Object.fromEntries(snapshotGroups().map(({ file, types }) => [
+    file,
+    Object.fromEntries(types.map(({ type, key }) => [
+      key,
+      (snapshot[type] || []).map((entry) => snapshotRow(entry, type)),
+    ])),
+  ]));
 }
 
 // Read the prior manifest's generated_at, but only if every file's sha matches —

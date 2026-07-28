@@ -330,6 +330,9 @@ export async function onRequest({ request, env }) {
 
   const sb = adminClient(env);
   const repo = createContentRepository(sb);
+  if (request.method !== "GET" && !staffCan(role, "content.assets")) {
+    return json(403, { error: "forbidden", message: "Managing content assets requires owner access." });
+  }
 
   if (request.method === "GET") {
     const url = new URL(request.url);
@@ -345,9 +348,6 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === "POST") {
-    if (!staffCan(role, "content.assets")) {
-      return json(403, { error: "forbidden", message: "Managing content assets requires owner access." });
-    }
     try {
       if (isMultipart(request)) {
         const result = await saveUploadedAsset({ request, env, repo, userId: user.id });
@@ -363,9 +363,6 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === "PUT") {
-    if (!staffCan(role, "content.assets")) {
-      return json(403, { error: "forbidden", message: "Managing content assets requires owner access." });
-    }
     try {
       const result = await replaceUploadedAsset({ request, env, repo, user });
       return json(result.status, result.body);
@@ -375,9 +372,6 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === "DELETE") {
-    if (!staffCan(role, "content.assets")) {
-      return json(403, { error: "forbidden", message: "Managing content assets requires owner access." });
-    }
     try {
       const url = new URL(request.url);
       if (url.searchParams.get("permanent") !== "true") {

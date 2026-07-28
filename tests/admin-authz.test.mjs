@@ -53,6 +53,8 @@ const PRE_GUARD_DB_GATES = {
   // Newsletter cron sweep (sweep_due) sends scheduled newsletters before the staff guard,
   // gated by a constant-time NEWSLETTER_CRON_SECRET header; staff actions still requireStaff.
   "newsletters.js": /NEWSLETTER_CRON_SECRET/,
+  // Scheduled CMS sweep follows the same secret-gated pre-staff pattern.
+  "content.js": /CONTENT_PUBLISH_CRON_SECRET/,
 };
 
 // Detects the service-role CLIENT creation itself (adminClient(env)) — not only chained

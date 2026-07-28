@@ -12,6 +12,7 @@ import {
 } from "./rich-editor.js?v=20260726a";
 import {
   CONTENT_TYPE_DEFINITIONS,
+  contentPageOptionsFromSitemap,
   contentPayloadFields,
   contentTypeOptions,
   normalizeStructuredPayload,
@@ -222,14 +223,10 @@ function fieldTemplate(field, payload) {
         ${preview}
       `;
     }
-    const preview = isMd
-      ? `<div class="adm-md-preview" data-md-preview-for="${esc(field.key)}" aria-live="polite"><span class="adm-md-preview-label">Preview</span><div class="adm-md-preview-body blog-body"></div></div>`
-      : "";
     return `
       <label class="${esc(cls)}">${esc(field.label)}
         <textarea class="adm-textarea adm-content-field-text" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true"${required}>${esc(value)}</textarea>
       </label>
-      ${preview}
     `;
   }
   if (field.kind === "checkbox") {
@@ -251,7 +248,7 @@ function fieldTemplate(field, payload) {
     `;
   }
   const inputType = field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text";
-  const input = `<input class="adm-input" type="${inputType}"${field.kind === "number" ? ' step="0.01"' : ""}${field.pattern ? ` pattern="${esc(field.pattern)}"` : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
+  const input = `<input class="adm-input" type="${inputType}"${field.kind === "number" ? ' step="0.01"' : ""}${field.pattern ? ` pattern="${esc(field.pattern)}"` : ""}${field.key === "page" ? ' list="contentPageOptions"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
   if (ASSET_FIELD_KEYS.has(field.key)) {
     return `
       <div class="adm-content-asset-control ${esc(cls)}">
@@ -276,7 +273,10 @@ function structuredFieldsTemplate(type, payload) {
   // in code instead of rendering a second, conflicting Title input.
   const fields = contentPayloadFields(type).filter((field) => type !== "blog_post" || field.key !== "title");
   if (!fields.length) return "";
-  return fields.map((field) => fieldTemplate(field, payload)).join("");
+  const datalist = fields.some((field) => field.key === "page")
+    ? '<datalist id="contentPageOptions"></datalist>'
+    : "";
+  return `${fields.map((field) => fieldTemplate(field, payload)).join("")}${datalist}`;
 }
 
 function seoFieldTemplate(field, seo) {
@@ -736,6 +736,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let formDirty = false;
   let ownUserId = null; // resolved once; lets a reload recognise our own editor lock
   let lastGeneratedSlug = "";
+  let contentPageOptions = null;
 
   function activeRoot() {
     return $(mountedRootId) || $("admContent") || $("admBlog");
@@ -939,8 +940,25 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     const box = $("contentStructuredFields");
     if (!box) return;
     box.innerHTML = structuredFieldsTemplate(type, payload);
+    void hydrateContentPageOptions();
     mountRichEditors();
     updateMarkdownPreviews();
+  }
+
+  async function hydrateContentPageOptions() {
+    const list = $("contentPageOptions");
+    if (!list) return;
+    if (contentPageOptions === null) {
+      try {
+        const response = await fetch("/sitemap.xml", { cache: "no-store" });
+        contentPageOptions = response.ok
+          ? contentPageOptionsFromSitemap(await response.text())
+          : [];
+      } catch {
+        contentPageOptions = [];
+      }
+    }
+    list.innerHTML = contentPageOptions.map((page) => `<option value="${esc(page)}"></option>`).join("");
   }
 
   function updateSeoMeters() {

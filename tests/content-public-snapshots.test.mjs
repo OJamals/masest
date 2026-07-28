@@ -10,12 +10,8 @@ test("public content snapshot helper loads optional CMS snapshots", () => {
   const source = readFileSync(new URL("../js/main/content-snapshots.js", import.meta.url), "utf8");
   assert.match(source, /loadContentSnapshot/);
   assert.match(source, /fetch\(`\/data\/content\/\$\{file\}`/, "snapshot fetches must be root-relative for extensionless product detail pages");
-  assert.match(source, /proof\.json/);
-  assert.match(source, /resources\.json/);
-  assert.match(source, /faqs\.json/);
-  assert.match(source, /page-sections\.json/);
-  assert.match(source, /pricing\.json/);
-  assert.match(source, /industry-sectors\.json/);
+  assert.match(source, /CONTENT_TYPE_DEFINITIONS\[type\]\.snapshot\.file/, "snapshot filenames should come from the shared registry");
+  assert.equal((source.match(/\["(?:proof_card|resource_card|faq_block|page_section|pricing_tier|industry_sector)",/g) || []).length, 6);
 });
 
 test("service catalog tries the root CMS snapshot before legacy static services data", () => {
@@ -164,6 +160,13 @@ test("page-section filtering honors page, region, active state, and sort order",
     filterContentRows(rows, { page: "home", region: "body" }).map((row) => row.slug),
     ["early", "fallback", "late"],
   );
+  assert.deepEqual(
+    filterContentRows([
+      { slug: "canonical", page: "products/hcr", region: "body" },
+      { slug: "legacy-url", page: "https://masest.co/products/hcr.html", region: "body" },
+    ], { page: "/products/hcr", region: "body" }).map((row) => row.slug),
+    ["canonical", "legacy-url"],
+  );
 });
 
 test("public CMS renderer neutralizes unsafe hrefs before insertion", () => {
@@ -187,7 +190,8 @@ test("public CMS renderer supports generic page sections", () => {
   assert.match(source, /cms-page-section/);
   assert.match(source, /safeContentHref\(row\.href/);
   assert.match(source, /btn btn-primary/);
-  assert.match(source, /renderMount\("page_sections"/);
+  assert.match(source, /\["page_section", pageSection\]/);
+  assert.match(source, /CONTENT_TYPE_DEFINITIONS\[type\]\.snapshot\.key/);
   assert.match(css, /\.cms-page-section-inner/);
   assert.match(css, /grid-template-columns: 1fr/);
 });
