@@ -5,6 +5,7 @@ import test from "node:test";
 
 import { normalizeContentEntry } from "../functions/_lib/content.js";
 import { normalizeStructuredPayload } from "../js/content-types.js";
+import { PRODUCTS } from "../js/main/catalog-data.js";
 import {
   canonicalPublicImageUrl,
   cmsPublicImageUrl,
@@ -14,22 +15,11 @@ import {
 const ROOT = new URL("..", import.meta.url).pathname;
 const IMAGE_FIELDS = new Set(["hero", "image", "image_after", "og_image"]);
 const APPROVED_REPRESENTATIVE_IMAGES = [
-  "alumibrite-aluminum-test-patch-v1.webp",
   "bid-wmp-review-desk-v1.webp",
-  "cip-cycle-skid-v1.webp",
-  "cr-hd-low-foam-machine-wash-v1.webp",
   "deposit-analysis-service-v1.webp",
-  "hvac-descaling-loop-v1.webp",
-  "lam3-exterior-surface-trial-v1.webp",
-  "neutral-material-test-patch-v1.webp",
-  "purgo-controlled-drain-maintenance-v1.webp",
-  "sar-application-engineering-v1.webp",
-];
-const HELD_REPRESENTATIVE_IMAGES = [
-  "cr-hd-degreasing-trial-v1.webp",
-  "multiwash-facility-floor-v1.webp",
-  "torque-contained-fleet-wash-v1.webp",
-  "watersafe60-water-program-v1.webp",
+  ...new Set(Object.values(PRODUCTS)
+    .map((product) => product.application_image?.split("/").at(-1))
+    .filter(Boolean)),
 ];
 
 function contentImagePaths(value, field = "", paths = []) {
@@ -101,7 +91,7 @@ test("site image manifest exposes every public image with reusable metadata", ()
   }
 });
 
-test("approved representative scenes use managed-image paths while held candidates remain internal", () => {
+test("approved representative scenes use managed-image paths", () => {
   const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
   const representativeAssets = manifest.assets.filter((asset) =>
     asset.storage_path.startsWith("/img/representative/applications/")
@@ -114,13 +104,6 @@ test("approved representative scenes use managed-image paths while held candidat
   for (const asset of representativeAssets) {
     assert.match(asset.alt, /^Representative /);
     assert.equal(asset.category, "representative");
-  }
-  for (const filename of HELD_REPRESENTATIVE_IMAGES) {
-    assert.equal(
-      manifest.assets.some((asset) => asset.filename === filename),
-      false,
-      `${filename} must remain unpublished`,
-    );
   }
 });
 

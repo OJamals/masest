@@ -81,8 +81,9 @@ export const PRODUCTS = {
     cat: "alkaline",
     replaces: "Compared with general-purpose alkaline cleaners",
     hmis: "0-0-0",
- icon: "ph-sparkle",
+    icon: "ph-sparkle",
     image: "img/products/multiwash-gym-studio.webp",
+    application_image: "img/representative/applications/multiwash-facility-floor-v1.webp",
     uses: [
       "Concrete drains and hardscape cleaning",
       "Pressure-washing programs",
@@ -98,8 +99,9 @@ export const PRODUCTS = {
     cat: "water",
     replaces: "Evaluated against existing tower and closed-loop treatment programs",
     hmis: "0-0-0",
- icon: "ph-waves",
- image: "img/products/watersafe60-studio.webp",
+    icon: "ph-waves",
+    image: "img/products/watersafe60-studio.webp",
+    application_image: "img/representative/applications/watersafe60-water-program-v1.webp",
     uses: [
       "Cooling tower scale and corrosion control",
       "Closed-loop and chilled-water systems",
@@ -151,7 +153,8 @@ export const PRODUCTS = {
     replaces: "Evaluated against current warehouse and plant degreasers",
     hmis: "0-0-0",
     icon: "ph-spray-bottle",
- image: "img/products/crhd-studio.webp",
+    image: "img/products/crhd-studio.webp",
+    application_image: "img/representative/applications/cr-hd-degreasing-trial-v1.webp",
     uses: [
       "Warehouse and plant floors, forklifts, and engine bays",
       "Grease traps, drains, and commercial kitchen hoods",
@@ -204,8 +207,9 @@ export const PRODUCTS = {
     cat: "specialty",
     replaces: "Evaluated against separate wash, wax, and bug-removal steps",
     hmis: "0-0-0",
- icon: "ph-sparkle",
- image: "img/products/torque-studio.webp",
+    icon: "ph-sparkle",
+    image: "img/products/torque-studio.webp",
+    application_image: "img/representative/applications/torque-contained-fleet-wash-v1.webp",
     uses: [
       "Vehicle, fleet, and RV wash and wax",
       "Marine and boat exteriors",
@@ -274,6 +278,7 @@ export const PRODUCTS = {
     hmis: "0-0-0",
     icon: "ph-drop-half",
     image: "img/products/hvac-cr-studio.webp",
+    application_image: "img/representative/applications/hvac-cr-drain-maintenance-v1.webp",
     uses: [
       "HVAC and facility drain cleaning",
       "Grease and organic-buildup removal",

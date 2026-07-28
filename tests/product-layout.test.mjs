@@ -81,15 +81,22 @@ test("approved product pages publish representative application scenes outside p
   const applicationImages = {
     alumibrite: "alumibrite-aluminum-test-patch-v1.webp",
     cr: "cip-cycle-skid-v1.webp",
+    cr2: "hvac-cr-drain-maintenance-v1.webp",
+    crhd: "cr-hd-degreasing-trial-v1.webp",
     "cr-hd-low-foam": "cr-hd-low-foam-machine-wash-v1.webp",
     descaler: "hvac-descaling-loop-v1.webp",
     hcr: "cip-cycle-skid-v1.webp",
     "hcr-t16": "hvac-descaling-loop-v1.webp",
     lam3: "lam3-exterior-surface-trial-v1.webp",
+    multiwash: "multiwash-facility-floor-v1.webp",
     neutral: "neutral-material-test-patch-v1.webp",
     purgo: "purgo-controlled-drain-maintenance-v1.webp",
     sar: "sar-application-engineering-v1.webp",
+    torque: "torque-contained-fleet-wash-v1.webp",
+    watersafe60: "watersafe60-water-program-v1.webp",
   };
+
+  assert.deepEqual(Object.keys(applicationImages).sort(), [...CATALOG_ORDER].sort());
 
   for (const [id, filename] of Object.entries(applicationImages)) {
     const html = readProject(`products/${id}.html`);

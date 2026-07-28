@@ -71,6 +71,12 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.match(servicesHtml, /Prove the switch before you scale it/);
     assert.match(servicesHtml, /completed-task economics/);
     assert.match(servicesHtml, /35 quote-service line items plus 4 service packages/);
+    assert.match(
+      servicesHtml,
+      /<img src="img\/representative\/applications\/deposit-analysis-service-v1\.webp"[^>]*width="1536" height="1024">/,
+      "service proof should use a task-aligned landscape image with exact intrinsic dimensions",
+    );
+    assert.doesNotMatch(servicesHtml, /plate-after-enhanced\.webp/);
     assert.doesNotMatch(servicesHtml, /"offerCount":"39"/);
     const schema = JSON.parse(servicesHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)<\/script>/)[1]);
     const serviceNode = schema["@graph"].find((node) => node["@type"] === "Service");

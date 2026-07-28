@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 214,
+  "count": 219,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -2747,6 +2747,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/representative/applications/cr-hd-degreasing-trial-v1.webp",
+      "public_url": "/img/representative/applications/cr-hd-degreasing-trial-v1.webp",
+      "filename": "cr-hd-degreasing-trial-v1.webp",
+      "alt": "Representative contained industrial degreasing trial with sprayer, wet vacuum, and recovery barriers",
+      "width": 1536,
+      "height": 1024,
+      "byte_size": 337954,
+      "sha256": "0d5de9ff1c098e73715dfa083bbb4ba2339b327412f23d516f4ccd9528e8c4cb",
+      "mime_type": "image/webp",
+      "category": "representative",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/representative/applications/cr-hd-low-foam-machine-wash-v1.webp",
       "public_url": "/img/representative/applications/cr-hd-low-foam-machine-wash-v1.webp",
       "filename": "cr-hd-low-foam-machine-wash-v1.webp",
@@ -2775,6 +2789,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/representative/applications/hvac-cr-drain-maintenance-v1.webp",
+      "public_url": "/img/representative/applications/hvac-cr-drain-maintenance-v1.webp",
+      "filename": "hvac-cr-drain-maintenance-v1.webp",
+      "alt": "Representative HVAC drain-maintenance setup with open condensate section, wet vacuum, and contained tools",
+      "width": 1536,
+      "height": 1024,
+      "byte_size": 216806,
+      "sha256": "1970929544776d6b8644c388504365ff5121195eae5aaaa676c6e8d4eccf070e",
+      "mime_type": "image/webp",
+      "category": "representative",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/representative/applications/hvac-descaling-loop-v1.webp",
       "public_url": "/img/representative/applications/hvac-descaling-loop-v1.webp",
       "filename": "hvac-descaling-loop-v1.webp",
@@ -2797,6 +2825,20 @@
       "height": 1024,
       "byte_size": 334746,
       "sha256": "ede9b54a5c142633a9a9710c3f614b38af7088738dc4a1e0e0ed9821c41e15ac",
+      "mime_type": "image/webp",
+      "category": "representative",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/representative/applications/multiwash-facility-floor-v1.webp",
+      "public_url": "/img/representative/applications/multiwash-facility-floor-v1.webp",
+      "filename": "multiwash-facility-floor-v1.webp",
+      "alt": "Representative facility-floor cleaning trial with scrubber, wet vacuum, and contained application tools",
+      "width": 1536,
+      "height": 1024,
+      "byte_size": 262212,
+      "sha256": "84d30cde72cceacd0691b6f6e2386f2d2e979428d44529e38999c4a1c1e95cde",
       "mime_type": "image/webp",
       "category": "representative",
       "status": "available",
@@ -2839,6 +2881,34 @@
       "height": 1024,
       "byte_size": 133730,
       "sha256": "4398b16e8a5ec30a7971a19b7d9088fe29df51a8e433d32599e19986f2079951",
+      "mime_type": "image/webp",
+      "category": "representative",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/representative/applications/torque-contained-fleet-wash-v1.webp",
+      "public_url": "/img/representative/applications/torque-contained-fleet-wash-v1.webp",
+      "filename": "torque-contained-fleet-wash-v1.webp",
+      "alt": "Representative contained fleet-wash setup with service vehicle, pressure washer, and recovery equipment",
+      "width": 1536,
+      "height": 1024,
+      "byte_size": 266072,
+      "sha256": "0b2cf62d753683e5c607591a317a613ba8033d9781ca50ca3ebc82ae27520129",
+      "mime_type": "image/webp",
+      "category": "representative",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/representative/applications/watersafe60-water-program-v1.webp",
+      "public_url": "/img/representative/applications/watersafe60-water-program-v1.webp",
+      "filename": "watersafe60-water-program-v1.webp",
+      "alt": "Representative cooling-water program setup with generic treatment tank, controller, and containment",
+      "width": 1536,
+      "height": 1024,
+      "byte_size": 159628,
+      "sha256": "149af3242bc0a74ea47f78b4966f7c384fdee3002f1344e7b6329f1ae757e078",
       "mime_type": "image/webp",
       "category": "representative",
       "status": "available",

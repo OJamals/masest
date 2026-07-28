@@ -37,12 +37,11 @@ Implementation status from this pass:
 - P4.2 complete for proven mappings: exact-product authority records remain limited
   to VertKlean CIP CR, VertKlean HVAC CR, and WaterSafe60; seven products also
   deep-link only generic-slug result summaries that match their current public job;
-- P4.3 category layer complete: all 35 service lines and four packages now use the
-  shared category decision copy and CTA routing; per-line deliverable detail and WMP
-  lifecycle sequencing remain;
-- P4.4 candidate generation is complete across all listed scopes with 14
-  equipment-only assets; every asset remains internal until it passes the existing
-  managed-image review and CMS path.
+- P4.3 complete: all 35 service lines and four packages use shared category
+  decision copy, deliverable detail, CTA routing, and one WMP lifecycle sequence;
+- P4.4 review complete: 15 equipment-only representative assets passed visual and
+  claim-boundary review, use the managed-image manifest and CMS path, and cover all
+  15 product pages plus the selected service contexts.
 
 ## Current inventory and real gaps
 
@@ -462,6 +461,8 @@ Generated candidates, for representative context only:
 
 ![Unoccupied contained HVAC descaling loop](assets/hvac-descaling-loop-v1.webp)
 
+![Unoccupied HVAC drain-maintenance setup](assets/hvac-cr-drain-maintenance-v1.webp)
+
 ![Unoccupied managed water-system monitoring station](assets/watersafe60-water-program-v1.webp)
 
 ![Unoccupied industrial deposit-analysis intake bench](assets/deposit-analysis-service-v1.webp)
@@ -482,9 +483,9 @@ Generated candidates, for representative context only:
 
 ![Unoccupied bid and water-management planning review desk](assets/bid-wmp-review-desk-v1.webp)
 
-The candidates contain no people, customer identity, certification mark, result claim,
-or endorsement. Route each through the existing managed-image review and CMS path
-before public use.
+The reviewed assets contain no people, customer identity, certification mark, result
+claim, or endorsement. Their public references use the existing managed-image manifest
+and CMS path; generated imagery remains separate from proof.
 
 ## Ordered implementation candidates
 
@@ -497,15 +498,15 @@ before public use.
    - deep-link each product only to approved mapped records;
    - show exact-product documents where controlled records exist;
    - do not infer variant equivalence for HVAC HCR, CR HD Low Foam, or AlumiBrite.
-3. **P4.3 — service decision architecture — category layer complete**
+3. **P4.3 — service decision architecture — complete**
    - refine current category/card copy and lifecycle order;
    - preserve the 35 lines, four packages, pricing source, and shared quote flow;
    - clarify regulated terms such as certification, recertification, and Legionella
      testing without renaming authoritative workbook items.
-4. **P4.4 — application image set — candidates complete; review remains**
-   - 14 representative, equipment-only candidates now cover every listed P0-P2
-     product and service scope;
-   - review and publish only through the current managed-image path;
+4. **P4.4 — application image set — complete**
+   - 15 representative, equipment-only assets cover every listed P0-P2 product and
+     selected service scope;
+   - publish only through the current managed-image path;
    - retain packshots as product identity, not sole persuasion.
 
 ## Definition of done
