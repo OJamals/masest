@@ -4,19 +4,16 @@
 // Tier→price mapping is the PROGRAM_PRICES env var (JSON, e.g. {"Gold":"price_123"}). If a tier
 // has no price, returns 409 {fallback:true} so the client falls back to the request-enrollment flow.
 import Stripe from 'stripe';
-import { adminClient, userFromRequest, companyForUser, json, readBody } from '../../_lib/supabase.js';
+import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { subscribeAction } from '../../_lib/order-shape.js';
 import { ensureCompanyStripeCustomer } from '../../_lib/stripe-customer.js';
 
 const TIERS = ['Bronze', 'Silver', 'Gold', 'Platinum'];
 
 export async function onRequest({ request, env }) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return json(401, { error: 'unauthenticated' });
-
-  const sb = adminClient(env);
-  const companyId = await companyForUser(sb, user.id);
-  if (!companyId) return json(403, { error: 'no_company' });
+  const ctx = await requireCompany(request, env);
+  if (ctx.error) return ctx.error;
+  const { user, companyId, sb } = ctx;
 
   if (request.method === 'GET') {
     const { data } = await sb.from('program_subscriptions')

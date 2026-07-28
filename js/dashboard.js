@@ -2,7 +2,7 @@
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260711w';
 import { add as cartAdd, clear as cartClear } from './cart.js';
-import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 import { initBusinessHub } from './business.js?v=20260725f';
 
 const $ = (id) => document.getElementById(id);
@@ -141,9 +141,6 @@ function orderLifecycleFor(order = {}) {
     is_active: !['cart', 'cancelled', 'refunded', 'complete'].includes(stage),
   };
 }
-function orderIsActive(order) {
-  return orderLifecycleFor(order).is_active;
-}
 function orderLifecycleBadge(order) {
   const lifecycle = orderLifecycleFor(order);
   return statusBadge(lifecycle.stage || order.status, lifecycle.label || orderStatusLabel(order.status));
@@ -231,21 +228,20 @@ async function renderOverview() {
   const stats = $('ovStats');
   stats.innerHTML = [0, 1, 2].map(() => `<div class="stat"><div class="skeleton skeleton-text w-40 dash-stat-skeleton-main"></div><div class="skeleton skeleton-text w-80"></div></div>`).join('');
   const [ordRes, notif] = await Promise.all([
-    fetchOrders({ limit: 100 }).catch(() => ({ orders: [], total: 0 })),
+    fetchOrders({ limit: 5, summary: true }).catch(() => ({ orders: [], total: 0, active_total: 0 })),
     api('/api/account/notifications').catch(() => ({ notifications: [], unread: 0 })),
   ]);
   const ord = ordRes.orders || [];
   // True company-wide total (the endpoint count), not just the size of the fetched page.
   const totalOrders = Number.isFinite(ordRes.total) && ordRes.total > 0 ? ordRes.total : ord.length;
   setBadge('badgeNotifs', notif.unread);
-  const openOrders = ord.filter(orderIsActive).length;
   stats.innerHTML = [
     ['ph-package', totalOrders, 'Total orders'],
-    ['ph-truck', openOrders, 'In progress'],
+    ['ph-truck', ordRes.active_total, 'In progress'],
     ['ph-bell', notif.unread, 'Unread alerts'],
   ].map(([i, n, l]) => `<div class="stat"><div class="big-fig">${n}</div><div class="lbl"><i class="ph ${i}" aria-hidden="true"></i> ${l}</div></div>`).join('');
   renderSetupProgress();
-  await renderOverviewActivity(ord, notif);
+  await renderOverviewActivity(ord, notif, ordRes.active_total);
 }
 
 function renderSetupProgress() {
@@ -279,10 +275,9 @@ function openSetupSteps() {
   return steps.filter((step) => !(step.done || step.state === 'done'));
 }
 
-function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
+function renderBuyerActionRail({ activeTotal = 0, messages = [] } = {}) {
   const box = $('ovActionRail');
   if (!box) return;
-  const openOrders = orders.filter(orderIsActive);
   const openSteps = openSetupSteps();
   const actions = [];
   // No-company users already get the full "Business setup" steps card on this screen —
@@ -305,12 +300,12 @@ function renderBuyerActionRail({ orders = [], messages = [] } = {}) {
       href: 'cart.html',
     });
   }
-  if (openOrders.length) {
+  if (activeTotal) {
     actions.push({
       id: 'orders',
       icon: 'ph-truck',
       label: 'Track orders',
-      detail: `${openOrders.length} active ${openOrders.length === 1 ? 'order' : 'orders'}`,
+      detail: `${activeTotal} active ${activeTotal === 1 ? 'order' : 'orders'}`,
       href: '#orders',
     });
   }
@@ -393,10 +388,10 @@ function renderRecentMessages(messages = []) {
   wirePanelLinks(box);
 }
 
-async function renderOverviewActivity(orders = [], notif = { notifications: [] }) {
+async function renderOverviewActivity(orders = [], notif = { notifications: [] }, activeTotal = 0) {
   let messages = [];
   try { messages = (await api('/api/account/messages?peek=1')).messages || []; } catch { messages = []; }
-  renderBuyerActionRail({ orders, notifications: notif.notifications || [], messages });
+  renderBuyerActionRail({ activeTotal, notifications: notif.notifications || [], messages });
   renderRecentOrders(orders);
   renderRecentMessages(messages);
 }
@@ -422,22 +417,6 @@ function wirePanelLinks(scope) {
     event.preventDefault();
     selectTab(tab);
   }));
-}
-
-function openReservedTab() {
-  const tab = window.open('about:blank', '_blank');
-  try { if (tab) tab.opener = null; } catch {}
-  return tab;
-}
-
-function sendReservedTab(tab, url) {
-  const target = safeUrl(url);
-  if (tab) tab.location.href = target;
-  else location.href = target;
-}
-
-function closeReservedTab(tab) {
-  try { tab?.close(); } catch {}
 }
 
 /* ---------- orders ---------- */

@@ -121,8 +121,8 @@ test("Stripe billing portal opens outside the dashboard shell", () => {
   const dashboard = read("js/dashboard.js");
   const business = read("js/business.js");
 
-  assert.match(dashboard, /window\.open\('about:blank', '_blank'/, "dashboard should reserve a new tab before awaiting the portal URL");
-  assert.match(business, /window\.open\('about:blank', '_blank'/, "business hub should reserve a new tab before awaiting the portal URL");
+  assert.match(dashboard, /openReservedTab\(\)/, "dashboard should reserve a new tab before awaiting the portal URL");
+  assert.match(business, /openReservedTab\(\)/, "business hub should reserve a new tab before awaiting the portal URL");
   assert.doesNotMatch(dashboard, /location\.href\s*=\s*url;/, "dashboard payment portal should not replace the account dashboard tab");
   assert.doesNotMatch(business, /window\.location\.assign\(out\.url\)/, "business payment portal should not replace the business hub tab");
 });

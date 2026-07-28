@@ -13,6 +13,7 @@ test("resale-cert endpoint is company-scoped and uses a PRIVATE bucket with sign
   assert.match(src, /`\$\{companyId\}\/cert-/, "upload path must be scoped under the company id");
   assert.match(src, /onRequestPost/, "must accept uploads");
   assert.match(src, /onRequestDelete/, "must allow removing the certificate");
+  assert.equal((src.match(/role !== 'admin'/g) || []).length, 2, "both certificate mutations require a company admin");
   assert.match(src, /ALLOWED[\s\S]*application\/pdf/, "must validate file type");
   // The private object must never be written to a public bucket path.
   assert.doesNotMatch(src, /object\/public\//, "must not expose the certificate via a public URL");

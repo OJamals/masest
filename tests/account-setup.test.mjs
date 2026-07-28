@@ -18,7 +18,7 @@ function supabaseJson(body, status = 200) {
   });
 }
 
-async function callBuyerCompany(body, { companyId = null, companyStatus = "pending" } = {}) {
+async function callBuyerCompany(body, { companyId = null, companyStatus = "pending", role = "admin" } = {}) {
   const calls = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init = {}) => {
@@ -31,7 +31,7 @@ async function callBuyerCompany(body, { companyId = null, companyStatus = "pendi
       return supabaseJson({ id: "buyer-1", email: "buyer@example.com" });
     }
     if (url.pathname === "/rest/v1/profiles") {
-      return supabaseJson([{ id: "buyer-1", company_id: companyId, role: "admin" }]);
+      return supabaseJson([{ id: "buyer-1", company_id: companyId, role }]);
     }
     if (url.pathname === "/rest/v1/rpc/create_company_for_user") {
       return supabaseJson({ id: "company-new", ...requestBody.p_company });
@@ -188,6 +188,19 @@ test("buyer certificate resubmission updates evidence without mutating tax exemp
   assert.equal(update.body.status, "pending");
 });
 
+test("buyers can create their first company but cannot mutate an existing company", async () => {
+  const created = await callBuyerCompany({ name: "Buyer Company" }, { role: "buyer" });
+  assert.equal(created.response.status, 201);
+
+  const updated = await callBuyerCompany(
+    { name: "Renamed Company" },
+    { companyId: "company-1", role: "buyer" },
+  );
+  assert.equal(updated.response.status, 403);
+  assert.equal(updated.payload.error, "company_admin_required");
+  assert.equal(updated.calls.some((call) => call.path === "/rest/v1/companies"), false);
+});
+
 test("checkout maps only stored Company tax status to Stripe Customer exemption", () => {
   const checkout = read("functions/api/checkout.js");
   assert.match(
@@ -213,6 +226,8 @@ test("dashboard business panel renders and submits company setup form", () => {
   assert.match(js, /Submit for approval/, "company creation should be framed as an approval request");
   assert.match(js, /\/api\/account\/company/, "company setup form should submit to account company endpoint");
   assert.match(js, /tax_exempt/, "company setup form should include tax-exempt control");
+  assert.match(js, /profile\?\.role === 'admin'/, "existing company edits should be shown only to company admins");
+  assert.match(js, /Only a company admin can update/, "buyers should see a clear read-only business state");
 });
 
 test("embedded business panel renders guest and needs-profile states safely", () => {

@@ -5,7 +5,7 @@
  * Program-enrollment and bulk-order requests post through the company support thread
  * (/api/account/messages) so staff see them in the admin Messages tab - no extra tables. */
 import { me, api, getToken } from './auth.js?v=20260711w';
-import { esc, safeUrl, money, fmtDate, confirmDialog } from './util.js';
+import { esc, safeUrl, money, fmtDate, confirmDialog, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -23,18 +23,6 @@ const VOLUME_BANDS = [['under_10k', 'Under $10k / year'], ['10k_50k', '$10k–$5
 const NET_TERMS = [['0', 'Pay as you go (no terms)'], ['15', 'NET-15'], ['30', 'NET-30'], ['45', 'NET-45'], ['60', 'NET-60']];
 
 const STATUS_LABEL = { approved: 'Verified', pending: 'Under review', rejected: 'Needs attention', suspended: 'Suspended' };
-
-function openReservedTab() {
-  const tab = window.open('about:blank', '_blank');
-  try { if (tab) tab.opener = null; } catch {}
-  return tab;
-}
-function sendReservedTab(tab, url) {
-  const target = safeUrl(url);
-  if (tab) tab.location.href = target;
-  else location.href = target;
-}
-function closeReservedTab(tab) { try { tab?.close(); } catch {} }
 
 function optionList(pairs, selected) {
   const sel = selected == null ? '' : String(selected);
@@ -106,7 +94,7 @@ function renderProfile(data) {
     <div class="biz-row"><span>Tax-exempt</span><b>${c.tax_exempt ? 'Yes' : 'No'}</b></div>
     ${note ? `<p class="biz-banner" data-tone="${tone}">${note}</p>` : ''}
     <div class="actions">
-      <a class="btn btn-ghost btn-sm" href="#bizCompanySetup">Edit business details</a>
+      ${data.profile?.role === 'admin' ? '<a class="btn btn-ghost btn-sm" href="#bizCompanySetup">Edit business details</a>' : ''}
       <a class="btn btn-ghost btn-sm" href="#addresses">Manage addresses</a>
       ${data.can_checkout ? '<a class="btn btn-primary btn-sm" href="products.html">Browse catalog</a>' : ''}
     </div>`;
@@ -174,6 +162,10 @@ function renderCompanySetupForm(data) {
   if (!box) return;
   const status = c?.status || null;
   const isCreate = !c;
+  if (!isCreate && data.profile?.role !== 'admin') {
+    box.innerHTML = '<h2>Business details</h2><p class="lead">Only a company admin can update shared verification, billing, and compliance details.</p>';
+    return;
+  }
   const heading = isCreate ? 'Register your business' : status === 'approved' ? 'Business details' : 'Verification details';
   const submitText = isCreate ? 'Submit for approval' : status === 'rejected' ? 'Update & resubmit' : 'Save business details';
   const intro = isCreate
@@ -571,7 +563,7 @@ async function loadTeam() {
     if (isSelf(m)) return `<div class="biz-row"><span>${name} <span class="muted">(you)</span></span><b>${esc(m.role)}</b></div>`;
     const opts = TEAM_ROLES.map(([v, l]) => `<option value="${v}"${m.role === v ? ' selected' : ''}>${l}</option>`).join('');
     return `<div class="biz-row"><span>${name}</span><span class="biz-row-actions">
-      <select data-role-for="${esc(m.id)}" aria-label="Role for ${esc(m.email || m.full_name || 'member')}">${opts}</select>
+      <span class="field"><select data-role-for="${esc(m.id)}" aria-label="Role for ${esc(m.email || m.full_name || 'member')}">${opts}</select></span>
       <button class="btn btn-ghost btn-sm" type="button" data-remove-member="${esc(m.id)}" data-member-name="${esc(m.full_name || m.email || 'this member')}"><i class="ph ph-user-minus" aria-hidden="true"></i> Remove</button>
     </span></div>`;
   }).join('') || `<div class="empty-state"><i class="ph ph-users empty-icon" aria-hidden="true"></i><div class="empty-title">No team members yet</div><div class="empty-body">Invite colleagues to manage orders and quotes together.</div></div>`;

@@ -1,16 +1,17 @@
-// requireCompany wrapper (#38): dedupe the userFromRequest→401→companyForUser→403 boilerplate.
+// requireCompany wrapper (#38): dedupe account-route auth and company-role lookup.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
-test('supabase.js defines requireCompany returning user/companyId/sb or an error response', () => {
+test('supabase.js defines requireCompany returning user/companyId/role/sb or an error response', () => {
   const src = read('functions/_lib/supabase.js');
   assert.match(src, /export async function requireCompany/);
   assert.match(src, /requireCompany[\s\S]{0,400}unauthenticated/, '401 when no user');
-  assert.match(src, /requireCompany[\s\S]{0,400}companyForUser/, 'resolves the company');
+  assert.match(src, /requireCompany[\s\S]{0,400}select\('company_id,role'\)/, 'resolves company and role together');
   assert.match(src, /requireCompany[\s\S]{0,400}no_company/, '403 when no company');
+  assert.match(src, /return \{ user, companyId, role: profile\.role, sb \}/, 'returns the role for mutation authorization');
 });
 
 // Every company-scoped account route uses the wrapper instead of re-deriving the company.

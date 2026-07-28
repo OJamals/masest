@@ -1,6 +1,5 @@
-/* MASEST commerce - client auth helper (Phase 1 scaffold).
- * Not yet referenced by any page; wire into an account page in Phase 1 UI work.
- * Set these before import (e.g. injected at build, or a small inline <script>):
+/* MASEST commerce - client auth helper.
+ * Configure before import:
  *   window.MASEST_SUPABASE_URL, window.MASEST_SUPABASE_ANON
  * Supabase is self-hosted (vendor/supabase-js.esm.js), NOT loaded from a third-party
  * CDN — an esm.sh 503 outage previously took down all auth site-wide. Regenerate the
@@ -147,21 +146,26 @@ export async function me() {
   }
 }
 
-/* Recent orders for the signed-in account (company orders + line items) plus the true total
-   count, or an empty envelope if logged out. Returns { orders, total, has_more } so callers can
-   show an accurate "total orders" figure instead of just the size of the first page. */
-export async function orders({ limit } = {}) {
-  const empty = { orders: [], total: 0, has_more: false };
+/* Recent orders plus optional exact company summary counts. */
+export async function orders({ limit, summary = false } = {}) {
+  const empty = { orders: [], total: 0, active_total: 0, has_more: false };
   const sb = requireClient();
   const { data } = await sb.auth.getSession();
   const token = data.session?.access_token;
   if (!token) return empty;
-  const qs = limit ? `?limit=${encodeURIComponent(limit)}` : '';
-  const r = await fetch(`/api/account/orders${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  const params = new URLSearchParams();
+  if (limit) params.set('limit', limit);
+  if (summary) params.set('summary', '1');
+  const r = await fetch(`/api/account/orders${params.size ? `?${params}` : ''}`, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) return empty;
   const body = await r.json().catch(() => null);
   if (!body) return empty;
-  return { orders: body.orders || [], total: Number(body.total || 0), has_more: Boolean(body.has_more) };
+  return {
+    orders: body.orders || [],
+    total: Number(body.total || 0),
+    active_total: Number(body.active_total || 0),
+    has_more: Boolean(body.has_more),
+  };
 }
 
 /* Public catalog with mode flags (no auth needed). */

@@ -338,7 +338,7 @@
   .biz-inv-summary-skeleton { height: 64px; }
   .biz-inv-list-skeleton { height: 48px; margin-top: 10px; }
   .biz-team-skeleton { height: 40px; margin-bottom: 8px; }
-  .biz-inv-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .biz-inv-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .9rem; }
   .biz-inv-table th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); padding: 0 10px 8px; border-bottom: 1px solid var(--line); }
   .biz-inv-table td { padding: 11px 10px; border-bottom: 1px solid var(--line-soft, var(--line)); }
   .biz-inv-amt { text-align: right; font-variant-numeric: tabular-nums; }
@@ -413,6 +413,8 @@
       flex-direction: column;
       gap: 4px;
     }
+    #bizTeam .biz-row > :first-child { flex: 0 1 auto; }
+    #bizTeam .biz-row-actions { justify-content: flex-start; margin-left: 0; }
     .biz-row b {
       text-align: left;
     }

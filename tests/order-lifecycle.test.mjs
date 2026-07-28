@@ -112,10 +112,11 @@ test("admin status dropdown narrows open NET orders to safe generic transitions"
   assert.match(src, /orderStatusOptions\(order\.status,\s*order\)/g);
 });
 
-test("dashboard in-progress counts route through lifecycle rather than raw net_paid status", () => {
+test("dashboard actions use the server lifecycle aggregate", () => {
   const src = read("js/dashboard.js");
-  assert.match(src, /function orderIsActive/);
-  assert.match(src, /orderLifecycleFor\(order\)\.is_active/);
+  assert.match(src, /renderBuyerActionRail\(\{ activeTotal = 0/);
+  assert.match(src, /detail: `\$\{activeTotal\} active/);
+  assert.doesNotMatch(src, /function orderIsActive/);
   assert.doesNotMatch(src, /TERMINAL_ORDER_STATES/);
 });
 

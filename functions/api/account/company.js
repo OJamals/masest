@@ -133,6 +133,11 @@ export async function onRequestPost({ request, env }) {
     .maybeSingle();
   if (profileErr) return json(500, { error: 'server_error' });
   if (!profile) return json(403, { error: 'no_profile' });
+  // Any signed-in user may create their first company. Once linked, only a company
+  // admin may change shared verification, billing, or compliance details.
+  if (profile.company_id && profile.role !== 'admin') {
+    return json(403, { error: 'company_admin_required' });
+  }
 
   const resaleCertUrl = body.resale_cert_url === undefined ? undefined : cleanUrl(body.resale_cert_url);
   if (resaleCertUrl === undefined && body.resale_cert_url !== undefined) return json(400, { error: 'invalid_resale_cert_url' });

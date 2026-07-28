@@ -20,6 +20,21 @@ export const safeUrl = (u) => {
   return s;                                        // relative / anchor / path — no scheme
 };
 
+export function openReservedTab() {
+  const tab = window.open('about:blank', '_blank');
+  try { if (tab) tab.opener = null; } catch {}
+  return tab;
+}
+
+export function sendReservedTab(tab, url) {
+  if (tab) tab.location.href = safeUrl(url);
+  else location.href = safeUrl(url);
+}
+
+export function closeReservedTab(tab) {
+  try { tab?.close(); } catch {}
+}
+
 export const money = (n, c = 'USD') => `${String(c || 'USD').toUpperCase()} ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // Full-row substring search, memoized by object identity. Admin search inputs

@@ -12,7 +12,7 @@ const read = (name) => readFileSync(new URL(name, ACCOUNT_DIR), "utf8");
 const ACCOUNT_ROUTES = readdirSync(ACCOUNT_DIR).filter((f) => f.endsWith(".js"));
 
 // Self/tenant scoping primitives. A route is considered scoped if it constrains queries
-// by the resolved company (requireCompany / companyForUser / .eq('company_id', ...)) or by
+// by the resolved company (requireCompany / .eq('company_id', ...)) or by
 // the auth user id. requireCompany resolves the caller's company from their session, so a
 // route built on it is tenant-scoped by construction.
 // account/quotes.js scopes by the AUTH email instead: quote requests are submitted
@@ -20,7 +20,7 @@ const ACCOUNT_ROUTES = readdirSync(ACCOUNT_DIR).filter((f) => f.endsWith(".js"))
 // tenant key is the email — taken from user.email, never from client input. The
 // pattern below matches exactly that shape (`escapeLike(email)` where email is the
 // auth-derived local) so a route filtering by a client-supplied email still fails.
-const SCOPE_RE = /requireCompany\(|companyForUser\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role|\.ilike\(\s*'email'\s*,\s*escapeLike\(email\)\s*\)|repository\.(?:listForUser|findRequest)\(\s*user\.id/;
+const SCOPE_RE = /requireCompany\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role|\.ilike\(\s*'email'\s*,\s*escapeLike\(email\)\s*\)|repository\.(?:listForUser|findRequest)\(\s*user\.id/;
 const ACCOUNT_ERASURE_IMPORT_RE = /import\s+\{\s*deleteAccountUser\s*\}\s+from\s+['"][^'"]*_lib\/account-erasure\.js['"]/;
 const ACCOUNT_ERASURE_CALL_RE = /await\s+deleteAccountUser\(\s*sb\s*,\s*user\.id\s*\)/;
 
@@ -46,7 +46,7 @@ test("every account route authenticates (requireCompany or userFromRequest) and 
   for (const name of ACCOUNT_ROUTES) {
     const src = read(name);
     // Routes authenticate either via the requireCompany wrapper (which does
-    // userFromRequest→401→companyForUser→403 internally) or the raw primitive.
+    // profile/company lookup internally) or the raw primitive.
     const usesWrapper = /requireCompany\(\s*request\s*,\s*env\s*\)/.test(src);
     const usesRaw = /userFromRequest\(\s*request\s*,\s*env\s*\)/.test(src);
     assert.ok(usesWrapper || usesRaw,

@@ -37,23 +37,17 @@ export async function readBody(request) {
   try { return await request.json(); } catch { return {}; }
 }
 
-// Resolve the caller's company_id (or null) for a given auth user id, via the service-role client.
-export async function companyForUser(sb, userId) {
-  if (!userId) return null;
-  const { data } = await sb.from('profiles').select('company_id').eq('id', userId).maybeSingle();
-  return data?.company_id || null;
-}
-
-// Auth gate for company-scoped account routes (#38). Returns { user, companyId, sb }
+// Auth gate for company-scoped account routes (#38). Returns { user, companyId, role, sb }
 // on success, or { error: Response } to return early — collapses the repeated
-// userFromRequest → 401 → companyForUser → 403 boilerplate into one call.
+// auth → profile/company/role lookup → access errors into one call.
 export async function requireCompany(request, env) {
   const { user } = await userFromRequest(request, env);
   if (!user) return { error: json(401, { error: 'unauthenticated' }) };
   const sb = adminClient(env);
-  const companyId = await companyForUser(sb, user.id);
+  const { data: profile } = await sb.from('profiles').select('company_id,role').eq('id', user.id).maybeSingle();
+  const companyId = profile?.company_id || null;
   if (!companyId) return { error: json(403, { error: 'no_company' }) };
-  return { user, companyId, sb };
+  return { user, companyId, role: profile.role, sb };
 }
 
 // Resolve the caller's pricing tier. Guests, anonymous requests, and non-approved

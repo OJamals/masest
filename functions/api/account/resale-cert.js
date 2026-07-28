@@ -52,7 +52,8 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   const ctx = await requireCompany(request, env);
   if (ctx.error) return ctx.error;
-  const { companyId, sb } = ctx;
+  const { companyId, role, sb } = ctx;
+  if (role !== 'admin') return json(403, { error: 'company_admin_required' });
 
   let form;
   try { form = await request.formData(); } catch { return json(400, { error: 'expected_multipart' }); }
@@ -95,7 +96,8 @@ export async function onRequestPost({ request, env }) {
 export async function onRequestDelete({ request, env }) {
   const ctx = await requireCompany(request, env);
   if (ctx.error) return ctx.error;
-  const { companyId, sb } = ctx;
+  const { companyId, role, sb } = ctx;
+  if (role !== 'admin') return json(403, { error: 'company_admin_required' });
   const { data: company } = await sb.from('companies').select('resale_cert_path').eq('id', companyId).maybeSingle();
   const path = company?.resale_cert_path || null;
   const { error } = await sb.from('companies').update({ resale_cert_path: null }).eq('id', companyId);
