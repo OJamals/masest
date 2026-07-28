@@ -319,19 +319,17 @@ const opsGroupIcons = {
  'Catalog + analytics': 'ph-chart-line-up',
 };
 
-function actionIcon(item = {}) {
+function requestIcon(item = {}) {
  const label = String(item.label || '').toLowerCase();
  const href = String(item.href || '').toLowerCase();
- if (href.includes('orders') || label.includes('order') || label.includes('fulfillment')) return 'ph-package';
+ if (label.includes('document')) return 'ph-files';
  if (href.includes('companies') || label.includes('account') || label.includes('approval')) return 'ph-buildings';
  if (href.includes('quotes') || label.includes('quote')) return 'ph-clipboard-text';
  if (href.includes('messages') || label.includes('message')) return 'ph-chats';
- if (href.includes('products') || label.includes('stock') || label.includes('catalog')) return 'ph-flask';
- if (href.includes('crm') || label.includes('follow')) return 'ph-address-book';
- return 'ph-warning-circle';
+ return 'ph-inbox';
 }
 
-function actionPriority(priority = '') {
+function requestPriority(priority = '') {
  const value = String(priority || 'normal').trim().toLowerCase();
  return value || 'normal';
 }
@@ -376,10 +374,10 @@ function renderOpsSummary(stats = {}) {
  `).join('')}</div>`).join('')}${renderSetupFollowups(stats)}</div>`;
 }
 
-function renderActionRail(actions = []) {
- if (!actions.length) return '<div class="adm-card adm-action-card"><h2>Priority actions</h2><div class="empty-state"><i class="ph ph-check-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No urgent admin actions.</div><div class="empty-body">New orders, approvals, quote follow-ups, and message queues will appear here.</div></div></div>';
- return `<div class="adm-card adm-action-card"><h2>Priority actions</h2><div class="adm-action-list">${actions.map((item) => `
- <a class="adm-action-item" data-priority="${esc(actionPriority(item.priority))}" href="${esc(safeUrl(item.href || '#overview'))}"><span class="adm-action-icon"><i class="ph ${actionIcon(item)}" aria-hidden="true"></i></span><span><b>${esc(item.label)}</b><small class="muted">Priority ${esc(item.priority || 'normal')}</small></span><strong data-numeric>${esc(item.value || 0)}</strong></a>
+function renderRequestQueue(requests = []) {
+ if (!requests.length) return '<div class="adm-card adm-action-card"><h2>Requests queue</h2><div class="empty-state"><i class="ph ph-check-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No open requests.</div><div class="empty-body">Account, quote, message, and document requests will appear here.</div></div></div>';
+ return `<div class="adm-card adm-action-card"><h2>Requests queue</h2><div class="adm-action-list">${requests.map((item) => `
+ <a class="adm-action-item" data-priority="${esc(requestPriority(item.priority))}" href="${esc(safeUrl(item.href || '#overview'))}"><span class="adm-action-icon"><i class="ph ${requestIcon(item)}" aria-hidden="true"></i></span><span><b>${esc(item.label)}</b><small class="muted">Open requests</small></span><strong data-numeric>${esc(item.value || 0)}</strong></a>
  `).join('')}</div></div>`;
 }
 
@@ -444,7 +442,7 @@ function renderStats(stats = {}) {
  // (The old 10-tile grid repeated revenue/pending/messages/low-stock a second time.)
  if ($('admStats')) $('admStats').innerHTML = '';
  if ($('admOpsSummary')) $('admOpsSummary').innerHTML = renderOpsSummary(stats);
- if ($('admActionRail')) $('admActionRail').innerHTML = renderActionRail(stats.actions || []);
+ if ($('admRequestQueue')) $('admRequestQueue').innerHTML = renderRequestQueue(stats.request_queue || []);
 }
 
 // Re-pull the stats snapshot and repaint the nav badges + ops summary. Tab modules

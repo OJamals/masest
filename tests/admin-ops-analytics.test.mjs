@@ -5,14 +5,16 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 
-test("admin stats exposes operations grouped metrics and action list", () => {
+test("admin stats exposes grouped metrics and one requests queue", () => {
   const src = read("functions/api/admin/stats.js");
   assert.match(src, /commerce\s*:/, "stats payload should expose commerce group");
   assert.match(src, /crm\s*:/, "stats payload should expose CRM group");
   assert.match(src, /accounts\s*:/, "stats payload should expose accounts group");
   assert.match(src, /catalog_health\s*:/, "stats payload should expose catalog health group");
   assert.match(src, /analytics\s*:/, "stats payload should expose analytics group");
-  assert.match(src, /actions\s*:/, "stats payload should expose prioritized actions");
+  assert.match(src, /request_queue[,:\s]/, "stats payload should expose one requests queue");
+  assert.match(src, /technical_document_requests/, "requests queue should include document access requests");
+  assert.doesNotMatch(src, /actions\s*:/, "legacy priority-actions payload should be removed");
   assert.match(src, /average_order_value/, "commerce group should include AOV");
   assert.match(src, /fulfillment_queue/, "commerce group should include fulfillment queue");
   assert.match(src, /net_exposure/, "commerce group should include NET exposure");
@@ -29,12 +31,14 @@ test("admin traffic aggregates funnel events campaigns and daily conversion rows
   assert.match(src, /conversion_events/, "daily rows should include conversion event count");
 });
 
-test("admin overview renders operations summary and action rail", () => {
+test("admin overview renders operations summary and unified requests queue", () => {
   const html = read("admin.html");
   const js = read("js/admin.js");
-  assert.match(html, /admActionRail/, "overview shell should include action rail");
+  assert.match(html, /admRequestQueue/, "overview shell should include requests queue");
   assert.match(html, /admOpsSummary/, "overview shell should include operations summary");
-  assert.match(js, /renderActionRail/, "admin JS should render priority actions");
+  assert.match(js, /renderRequestQueue/, "admin JS should render unified requests");
+  assert.match(js, /Requests queue/, "queue should identify its consolidated purpose");
+  assert.doesNotMatch(js, /renderActionRail/, "legacy action renderer should be removed");
   assert.match(js, /renderOpsSummary/, "admin JS should render grouped operations summary");
 });
 

@@ -57,7 +57,7 @@
 .adm-workspace-card > .adm-panel-header h3 { margin: 0; }
 .adm-workspace-card > .adm-panel-header p { margin: 5px 0 0; }
 .adm-overview-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .34fr); gap: 16px; align-items: start; }
-.adm-ops-summary, .adm-action-rail { min-width: 0; }
+.adm-ops-summary, .adm-request-queue { min-width: 0; }
 .adm-report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
 .adm-report-card { min-height: 100%; box-shadow: var(--shadow-xs); }
 .adm-report-card h2 { display: flex; align-items: center; gap: 8px; }
@@ -729,7 +729,7 @@
         <div id="admStats" class="adm-grid" hidden></div>
         <div class="adm-overview-layout">
           <div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div>
-          <div id="admActionRail" class="adm-action-rail" aria-live="polite"></div>
+          <div id="admRequestQueue" class="adm-request-queue" aria-live="polite"></div>
         </div>
       </section>
 

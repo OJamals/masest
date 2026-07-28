@@ -25,7 +25,7 @@ test('stats.js crm_tasks count filters due_at <= nowIso', () => {
 });
 
 test('stats.js destructures overdueTasks from Promise.all', () => {
-  assert.match(stats, /overdueTasks,?\s*\]\s*=\s*await Promise\.all/);
+  assert.match(stats, /const\s*\[[^\]]*\boverdueTasks\b[^\]]*\]\s*=\s*await Promise\.all/);
 });
 
 // ── stats.js: response shape ──────────────────────────────────────────────────

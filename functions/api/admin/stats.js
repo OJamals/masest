@@ -5,12 +5,12 @@ import { cached } from '../../_lib/cache.js';
 import { orderLifecycle } from '../../_lib/order-lifecycle.js';
 import { staffAccessSummary } from '../../_lib/authz.js';
 
-// ~15 count queries + a 1000-row scan per load; the result is org-wide, so cache it
+// Count queries + a 1000-row scan per load; result is org-wide, so cache it
 // briefly (no-op until RATE_KV is bound). Staff auth runs BEFORE the cache lookup.
 const STATS_TTL_SEC = 60;
 
 const since = (days) => new Date(Date.now() - days * 86400e3).toISOString();
-const action = (priority, label, value, href) => ({ priority, label, value, href });
+const requestBucket = (priority, label, value, href) => ({ priority, label, value, href });
 const sumTotals = (orders) => orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
 const withinDays = (iso, days) => iso && new Date(iso).getTime() >= Date.now() - days * 86400e3;
 
@@ -20,7 +20,7 @@ export async function onRequestGet({ request, env }) {
   if (!staff) return json(403, { error: 'forbidden' });
 
   const sb = adminClient(env);
-  const payload = await cached(env, 'cache:admin:stats:v1', STATS_TTL_SEC, () => computeStats(sb));
+  const payload = await cached(env, 'cache:admin:stats:v2', STATS_TTL_SEC, () => computeStats(sb));
   // Role data must be attached AFTER the org-wide cache lookup. Putting it in the
   // cached payload could leak an owner's capabilities into another staff session.
   return json(200, { ...payload, staff_context: staffAccessSummary(role, user.email) });
@@ -107,6 +107,7 @@ async function computeStats(sb) {
     newQuotes,
     urgentQuotes,
     overdueTasks,
+    pendingDocumentRequests,
   ] = await Promise.all([
     count('companies', (q) => q.eq('status', 'pending')),
     count('companies', (q) => q.eq('status', 'approved')),
@@ -123,6 +124,7 @@ async function computeStats(sb) {
     count('quotes', (q) => q.eq('status', 'new')),
     count('quotes', (q) => q.eq('priority', 'urgent').neq('status', 'closed').neq('status', 'spam')),
     count('crm_tasks', (q) => q.eq('status', 'open').not('due_at', 'is', null).lte('due_at', nowIso)),
+    count('technical_document_requests', (q) => q.eq('status', 'pending')),
   ]);
 
   const byStatus = recentOrders.reduce((m, order) => {
@@ -177,13 +179,11 @@ async function computeStats(sb) {
     quote_conversion_rate: views7d ? Number((quoteSubmits7d / views7d).toFixed(4)) : 0,
     checkout_conversion_rate: views7d ? Number((checkoutStarts7d / views7d).toFixed(4)) : 0,
   };
-  const actions = [
-    pendingCompanies ? action(1, 'Approve pending accounts', pendingCompanies, '#companies') : null,
-    overdueQuoteFollowups ? action(2, 'Follow up overdue quotes', overdueQuoteFollowups, '#quotes') : null,
-    unreadMessages ? action(3, 'Reply to unread buyer messages', unreadMessages, '#messages') : null,
-    commerce.fulfillment_queue ? action(4, 'Move paid / NET orders through fulfillment', commerce.fulfillment_queue, '#orders') : null,
-    lowStock ? action(5, 'Review low-stock products', lowStock, '#products') : null,
-    setup_followups.companies ? action(6, 'Close account setup gaps', setup_followups.companies, '#companies') : null,
+  const request_queue = [
+    pendingCompanies ? requestBucket(1, 'Account approvals', pendingCompanies, '#companies') : null,
+    newQuotes ? requestBucket(2, 'New quote requests', newQuotes, '#quotes') : null,
+    unreadMessages ? requestBucket(3, 'Buyer messages awaiting reply', unreadMessages, '#messages') : null,
+    pendingDocumentRequests ? requestBucket(4, 'Document access requests', pendingDocumentRequests, '#companies') : null,
   ].filter(Boolean);
 
   return {
@@ -203,6 +203,6 @@ async function computeStats(sb) {
     accounts: accounts,
     catalog_health: catalog_health,
     analytics: analytics,
-    actions: actions,
+    request_queue,
   };
 }

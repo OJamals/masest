@@ -28,7 +28,7 @@ test('overview contains action work only, with reports, analytics, and QBO in de
   const integrations = panel('integrations', 'orders');
 
   assert.match(overview, /id="admOpsSummary"/);
-  assert.match(overview, /id="admActionRail"/);
+  assert.match(overview, /id="admRequestQueue"/);
   for (const id of ['admQbo', 'admReports', 'admSeo', 'admTraffic']) {
     assert.doesNotMatch(overview, new RegExp(`id="${id}"`), `${id} should not remain on Overview`);
   }

@@ -82,7 +82,7 @@ test('staffAccessSummary exposes only the current role capabilities', () => {
 
 test('stats attaches per-user access context after the org-wide cache lookup', () => {
   const src = read('functions/api/admin/stats.js');
-  const cacheIndex = src.indexOf("cached(env, 'cache:admin:stats:v1'");
+  const cacheIndex = src.search(/cached\(env, 'cache:admin:stats:v\d+'/);
   const contextIndex = src.indexOf('staffAccessSummary(role, user.email)');
   assert.ok(cacheIndex > -1 && contextIndex > cacheIndex, 'role context must never enter the shared cached payload');
 });

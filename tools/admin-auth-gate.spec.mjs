@@ -40,7 +40,7 @@ async function stubStaffBoot(page) {
       catalog_health: {},
       analytics: {},
       traffic: {},
-      actions: [],
+      request_queue: [],
     }),
   }));
 }
@@ -136,7 +136,7 @@ test("staff auth stays neutral while booting and does not flash the gate between
         catalog_health: {},
         analytics: {},
         traffic: {},
-        actions: [],
+        request_queue: [],
       }),
     });
   });
