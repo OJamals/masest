@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -52,17 +52,9 @@ const AUTH_STEPS = [
   ["dashboard-business", "/dashboard.html#business"],
   ["dashboard-addresses", "/dashboard.html#addresses"],
   ["dashboard-profile", "/dashboard.html#profile"],
-  ["admin-overview", "/admin.html#overview"],
-  ["admin-orders", "/admin.html#orders"],
-  ["admin-companies", "/admin.html#companies"],
-  ["admin-products", "/admin.html#products"],
-  ["admin-pricing", "/admin.html#pricing"],
-  ["admin-content", "/admin.html#content"],
-  ["admin-messages", "/admin.html#messages"],
-  ["admin-quotes", "/admin.html#quotes"],
-  ["admin-crm", "/admin.html#crm"],
-  ["admin-offers", "/admin.html#offers"],
-  ["admin-traffic", "/admin.html#traffic"],
+  ...["overview", "analytics", "finance", "integrations", "orders", "companies", "products",
+    "content", "blog", "support-settings", "quotes", "reviews", "newsletter", "crm"]
+    .map((panel) => [`admin-${panel}`, `/admin.html#${panel}`]),
 ];
 
 function serviceFixtures() {
@@ -154,7 +146,7 @@ function authModule() {
   const fixtures = {
     account: {
       email: "operations.buyer@acme-industrial.example",
-      profile: { full_name: "Avery Procurement Lead" },
+      profile: { full_name: "Avery Procurement Lead", role: "admin" },
       company: {
         id: "co-1",
         name: "Acme HVAC and Water Systems International",
@@ -320,7 +312,7 @@ export async function api(path, options = {}) {
   if (pathname.startsWith("/api/admin/crm/contacts")) return { contacts: fixtures.contacts, total: fixtures.contacts.length, has_more: false };
   if (pathname.startsWith("/api/admin/crm")) return { timeline: [], notes: [], tasks: fixtures.tasks, contacts: fixtures.contacts };
   if (pathname === "/api/account/me") return fixtures.account;
-  if (pathname.startsWith("/api/account/orders")) return { orders: fixtures.orders, total: fixtures.orders.length, has_more: false };
+  if (pathname.startsWith("/api/account/orders")) return { orders: fixtures.orders, total: fixtures.orders.length, active_total: fixtures.orders.length, has_more: false };
   if (pathname.startsWith("/api/account/messages")) return { messages: fixtures.messages };
   if (pathname.startsWith("/api/account/notifications")) return { notifications: fixtures.notifications, unread: 2, total: 2, has_more: false };
   if (pathname.startsWith("/api/account/addresses")) return { addresses: fixtures.addresses };
@@ -337,7 +329,7 @@ export async function api(path, options = {}) {
 
 async function withServer(fn) {
   const server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], {
-    cwd: ROOT_PATH,
+    cwd: path.join(ROOT_PATH, "dist"),
     stdio: "ignore",
   });
   let exited = false;
@@ -362,16 +354,16 @@ async function newContext(browser, viewport, authenticated) {
     deviceScaleFactor: 1,
     reducedMotion: "reduce",
   });
-  await context.addInitScript(({ authenticated: auth }) => {
+  await context.addInitScript(({ authenticated: auth, origin }) => {
     const fixedNow = new Date("2026-07-06T18:30:00Z").getTime();
     Date.now = () => fixedNow;
     Math.random = () => 0.5;
     window.MASEST_ENABLE_LOCAL_API = true;
     window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
     window.MASEST_SUPABASE_ANON = "stub-anon";
-    if (auth) localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
-  }, { authenticated });
-  await context.route("**/js/auth.js", (route) => route.fulfill({
+    if (auth && location.origin === origin) localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
+  }, { authenticated, origin: BASE_URL });
+  await context.route("**/js/auth.js*", (route) => route.fulfill({
     status: 200,
     contentType: "text/javascript",
     body: authModule(),
@@ -394,11 +386,11 @@ async function waitForStable(page, stepName) {
   await page.waitForLoadState("load", { timeout: 8000 }).catch(() => {});
   if (stepName.startsWith("dashboard-")) {
     const panel = stepName.replace("dashboard-", "");
-    await page.waitForSelector(`.dash-panel[data-panel="${panel}"]:not([hidden])`, { timeout: 10000 }).catch(() => {});
+    await page.waitForSelector(`.dash-panel[data-panel="${panel}"]:not([hidden])`, { timeout: 10000 });
   }
   if (stepName.startsWith("admin-")) {
     const panel = stepName.replace("admin-", "");
-    await page.waitForSelector(`.adm-panel[data-panel="${panel}"][data-active="true"]`, { timeout: 10000 }).catch(() => {});
+    await page.waitForSelector(`.adm-panel[data-panel="${panel}"][data-active="true"]`, { timeout: 10000 });
   }
   if (stepName === "services") {
     await page.waitForSelector("[data-service-sku]", { timeout: 10000 }).catch(() => {});
@@ -529,8 +521,7 @@ function auditScript() {
   return issues.slice(0, 80);
 }
 
-async function captureStep(browser, mode, viewport, [name, url], authenticated) {
-  const context = await newContext(browser, viewport, authenticated);
+async function captureStep(context, mode, [name, url], authenticated) {
   const page = await context.newPage();
   try {
     await page.goto(`${BASE_URL}${url}`, { waitUntil: "domcontentloaded" });
@@ -548,19 +539,30 @@ async function captureStep(browser, mode, viewport, [name, url], authenticated) 
       issues,
     };
   } finally {
-    await context.close();
+    await page.close();
   }
 }
 
 async function main() {
+  execFileSync("npm", ["run", "build"], { cwd: ROOT_PATH, stdio: "inherit" });
   await mkdir(OUT_DIR, { recursive: true });
   const rows = [];
   await withServer(async () => {
     const browser = await chromium.launch();
     try {
       for (const [mode, viewport] of Object.entries(VIEWPORTS)) {
-        for (const step of PUBLIC_STEPS) rows.push(await captureStep(browser, mode, viewport, step, false));
-        for (const step of AUTH_STEPS) rows.push(await captureStep(browser, mode, viewport, step, true));
+        const publicContext = await newContext(browser, viewport, false);
+        try {
+          for (const step of PUBLIC_STEPS) rows.push(await captureStep(publicContext, mode, step, false));
+        } finally {
+          await publicContext.close();
+        }
+        const authContext = await newContext(browser, viewport, true);
+        try {
+          for (const step of AUTH_STEPS) rows.push(await captureStep(authContext, mode, step, true));
+        } finally {
+          await authContext.close();
+        }
       }
     } finally {
       await browser.close();

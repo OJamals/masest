@@ -2139,6 +2139,7 @@ scroll-snap gallery
 .case-disclosure summary::after {
   width: 8px;
   height: 8px;
+  margin-right: 3px;
   flex: 0 0 auto;
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;

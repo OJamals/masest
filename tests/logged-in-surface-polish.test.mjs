@@ -13,6 +13,9 @@ test("dashboard business panel avoids blank setup cards and cramped inline forms
   assert.match(html, /data-tab="business"/, "business tools should live in the dashboard sidebar");
   assert.match(html, /class="biz-inline-form"/, "business forms need reusable inline form layout");
   assert.match(html, /id="bulkNotes"[^>]+placeholder="Timing notes \(optional\)"/, "bulk-order timing placeholder should fit mobile input width");
+  assert.match(js, /class="field"><select data-role-for=/, "team role controls should reuse shared touch-sized field styling");
+  assert.match(html, /\.biz-inv-table\s*\{[^}]*table-layout:\s*fixed/, "invoice columns should stay inside mobile cards");
+  assert.match(html, /@media \(max-width: 640px\)[\s\S]*#bizTeam \.biz-row > :first-child\s*\{\s*flex:\s*0 1 auto/, "mobile team rows should drop desktop column flex-basis");
   assert.doesNotMatch(businessPanel, /style="/, "business panel should not rely on inline style polish");
   assert.match(html, /tier-grid/, "program tier layout should remain explicit and responsive");
 });
@@ -62,6 +65,7 @@ test("visual QA padding contracts cover disclosures and dense admin controls", (
 
   assert.match(css, /\.services-faq-list \.resource-disclosure > p\s*\{[\s\S]*padding:\s*0 clamp/, "service FAQ answers should keep body padding even without a disclosure-body wrapper");
   assert.match(css, /\.foot-legal a\s*\{[\s\S]*min-height:\s*44px/, "footer legal links should keep touch-sized hit areas");
+  assert.match(css, /\.case-disclosure summary::after\s*\{[^}]*margin-right:\s*3px/, "proof disclosure chevrons should stay inside their scroll box");
   assert.match(dashboard, /\.dash-disclosure summary\s*\{[\s\S]*min-height:\s*44px/, "dashboard disclosure summaries should keep a touch-sized hit area");
   assert.match(dashboard, /\.biz-detail-options summary\s*\{[\s\S]*min-height:\s*44px/, "business-detail summaries should keep a touch-sized hit area");
   assert.match(dashboard, /\.dash-order-summary\s*\{[\s\S]*min-height:\s*44px/, "order summaries should not collapse into cramped rows");
@@ -80,4 +84,14 @@ test("visual QA padding contracts cover disclosures and dense admin controls", (
   assert.match(inventoryJs, /invLow[\s\S]*<div class="adm-table-wrap">[\s\S]*low-stock variants/, "low-stock admin tables should scroll inside cards instead of clipping columns");
   assert.match(couponsJs, /cpList[\s\S]*<div class="adm-table-wrap">[\s\S]*promo code/, "promo-code tables should scroll inside cards instead of clipping columns");
   assert.match(audit, /hasCornerCounterOverflow[\s\S]*\.dash-tab, \.adm-tab/, "visual audit should allow only tab counter pills to extend outside button corners");
+  assert.doesNotMatch(audit, /async function captureStep\(browser/, "visual audit should not churn one browser context per page");
+  assert.match(audit, /const publicContext = await newContext\(browser, viewport, false\)/, "visual audit should reuse one public context per viewport");
+  assert.match(audit, /const authContext = await newContext\(browser, viewport, true\)/, "visual audit should reuse one authenticated context per viewport");
+  assert.match(audit, /await page\.close\(\)/, "each captured page should still be released promptly");
+  assert.doesNotMatch(audit, /admin-(?:pricing|messages|offers|traffic)/, "visual audit should target current admin panels, not legacy hash aliases");
+  assert.match(audit, /profile:\s*\{\s*full_name:[^}]+role:\s*"admin"/, "authenticated visual fixture should exercise company-admin controls");
+  assert.match(audit, /active_total:\s*fixtures\.orders\.length/, "authenticated visual fixture should expose server-derived active-order totals");
+  assert.match(audit, /context\.route\("\*\*\/js\/auth\.js\*"/, "visual audit should intercept cache-busted auth module URLs");
+  assert.match(audit, /auth && location\.origin === origin/, "visual audit should not touch localStorage in opaque-origin documents");
+  assert.ok(audit.includes('execFileSync("npm", ["run", "build"]') && audit.includes('cwd: path.join(ROOT_PATH, "dist")'), "visual audit should build and serve production output");
 });
