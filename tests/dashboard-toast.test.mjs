@@ -20,8 +20,9 @@ test("dashboard reorder/receipt flows use toast instead of blocking alert()", ()
 
   assert.doesNotMatch(js, /\balert\(/, "the dashboard should not call window.alert()");
   assert.match(js, /import \{[^}]*\btoast\b[^}]*\} from '\.\/util\.js'/, "dashboard should import toast from util");
-  assert.match(js, /toast\('None of these items are available to reorder\.',\s*\{ variant: 'error' \}\)/, "the empty-reorder path should raise an error toast");
-  assert.match(js, /toast\('Some items changed since your last order/, "the changed-items notice should become a toast");
+  assert.match(js, /toast\(emptyMessage,\s*\{ variant: 'error' \}\)/, "empty restored carts should raise an error toast");
+  assert.match(js, /restoreCart\(o\.id,\s*b,\s*'None of these items are available to reorder\.'\)/, "reorder should supply its error copy");
+  assert.match(js, /toast\('Some items changed:\\n'/, "the changed-items notice should become a toast");
   assert.match(js, /toast\('No receipt is available for this order yet\.'\)/, "the missing-receipt notice should become a toast");
 });
 

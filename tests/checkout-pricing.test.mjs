@@ -8,12 +8,12 @@ import test from "node:test";
 
 const SRC = readFileSync(new URL("../functions/api/checkout.js", import.meta.url), "utf8");
 const CHECKOUT_SESSION = readFileSync(new URL("../functions/_lib/checkout-session.js", import.meta.url), "utf8");
+const ORDER_SHAPE = readFileSync(new URL("../functions/_lib/order-shape.js", import.meta.url), "utf8");
 const CART_JS = readFileSync(new URL("../js/cart.js", import.meta.url), "utf8");
 
 // Regression: the browser cart client and the checkout API must agree on the request
 // payload key. A prior refactor renamed the server read to `body.cart` while js/cart.js
-// still posted `items`, so every live checkout returned 400 cart_empty. The server now
-// accepts both, and the client posts the canonical `cart`.
+// still posted `items`, so every live checkout returned 400 cart_empty.
 // Regression: userFromRequest returns an object { user, token }. checkout.js must
 // destructure it; assigning the raw wrapper to `user` makes `user.id` undefined, which
 // silently broke NET checkout (company lookup) and dropped company_id from Stripe orders.
@@ -27,15 +27,15 @@ test("checkout destructures userFromRequest (never uses the raw wrapper as the u
 test("client cart payload key matches what the checkout API reads", () => {
   assert.match(CART_JS, /fetch\(\s*["']\/api\/checkout["']/, "cart.js must POST to /api/checkout");
   assert.match(CART_JS, /cart:\s*line/, "cart.js must send the line items under the canonical `cart` key");
-  assert.match(SRC, /normalizeCart\(\s*body\.cart\s*\?\?\s*body\.items\s*\)/,
-    "checkout.js must read body.cart (with body.items as a back-compat fallback)");
+  assert.match(SRC, /normalizeCartQuantities\(\s*body\.cart\s*\)/,
+    "checkout.js must read canonical body.cart");
+  assert.doesNotMatch(SRC, /body\.items/, "stale cart payload aliases should not return");
 });
 
 test("the client cart is normalized to {sku, qty} only — no client price is read", () => {
-  // normalizeCart only ever extracts sku + qty from each cart item.
-  assert.match(SRC, /typeof\s+item\.sku\s*!==\s*'string'/);
-  assert.match(SRC, /Number\.isInteger\(\s*item\.qty\s*\)/);
-  assert.match(SRC, /item\.qty\s*<\s*1\s*\|\|\s*item\.qty\s*>\s*CHECKOUT_MAX_QUANTITY/);
+  assert.match(ORDER_SHAPE, /typeof\s+item\.sku\s*!==\s*["']string["']/);
+  assert.match(ORDER_SHAPE, /Number\.isInteger\(\s*item\.qty\s*\)/);
+  assert.match(SRC, /normalizeCartQuantities\(body\.cart\)/);
   // The body must never feed a price into the charge.
   assert.doesNotMatch(SRC, /item\.price/, "checkout must not read a price off a client cart item");
   assert.doesNotMatch(SRC, /body\.price/, "checkout must not read a price off the request body");

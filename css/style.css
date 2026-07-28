@@ -3951,6 +3951,9 @@ fully clickable cards) ---- */
 .cart-actions { display: grid; gap: 10px; margin-top: 20px; }
 .cart-actions .btn { width: 100%; justify-content: center; }
 .cart-actions [hidden] { display: none !important; }
+.cart-requisition { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.cart-requisition[hidden] { display: none !important; }
+.cart-requisition .cart-actions { margin-top: 10px; }
 /* Disabled checkout paths drop to neutral gray — a washed brand-teal fill still
    reads tappable and outranks the enabled quote link beneath it. */
 .cart-actions .btn:disabled {

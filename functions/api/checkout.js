@@ -14,11 +14,9 @@ import { isMissingFunctionError } from '../_lib/credit.js';
 import { orderItemsTableHtml, technicalDocumentRequestNoteHtml } from '../_lib/order-email.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
+import { normalizeCartQuantities } from '../_lib/order-shape.js';
 
 const CHECKOUT_BODY_MAX_BYTES = 64 * 1024;
-const CHECKOUT_MAX_CART_LINES = 50;
-const CHECKOUT_MAX_SKU_LENGTH = 80;
-const CHECKOUT_MAX_QUANTITY = 999;
 
 // Branded confirmation for a NET (on-account) order. Stripe orders are confirmed by the
 // webhook; NET orders had no email at all. Best-effort: the order is already placed and
@@ -53,30 +51,6 @@ async function sendNetOrderConfirmation({
   } catch {
     // Confirmation email is advisory — never fail a placed NET order on it.
   }
-}
-
-function normalizeCart(cart) {
-  if (!Array.isArray(cart)) return Object.create(null);
-
-  const qtyBySku = Object.create(null);
-  let distinctLines = 0;
-  for (const item of cart) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
-    if (typeof item.sku !== 'string') return null;
-    const sku = item.sku.trim();
-    if (!sku || sku.length > CHECKOUT_MAX_SKU_LENGTH) return null;
-    if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > CHECKOUT_MAX_QUANTITY) return null;
-
-    if (qtyBySku[sku] === undefined) {
-      distinctLines += 1;
-      if (distinctLines > CHECKOUT_MAX_CART_LINES) return null;
-      qtyBySku[sku] = 0;
-    }
-    const qty = qtyBySku[sku] + item.qty;
-    if (qty > CHECKOUT_MAX_QUANTITY) return null;
-    qtyBySku[sku] = qty;
-  }
-  return qtyBySku;
 }
 
 function variantIsStocked(variant, qty) {
@@ -122,9 +96,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   if (mode === 'net' && (!requestKey || requestKey.length > 128)) {
     return json(400, { error: 'bad_request' });
   }
-  // Cart line items. Canonical key is `cart`; `items` is accepted as a fallback so an
-  // in-flight/cached client build (js/cart.js historically posted `items`) still checks out.
-  const qtyBySku = normalizeCart(body.cart ?? body.items);
+  const qtyBySku = normalizeCartQuantities(body.cart);
   if (!qtyBySku) return json(400, { error: 'bad_request' });
   const skus = Object.keys(qtyBySku);
   if (!skus.length) return json(400, { error: 'cart_empty' });

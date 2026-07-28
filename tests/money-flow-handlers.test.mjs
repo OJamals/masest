@@ -464,13 +464,13 @@ test('checkout returns bad_request for invalid JSON and malformed body shape', a
   }
 });
 
-test('checkout preserves the legacy items cart and missing RATE_KV fail-open behavior', async () => {
+test('checkout rejects the removed legacy items cart alias', async () => {
   const result = await responseJson(await boundaryCheckoutHandler()({
     request: jsonRequest('https://masest.test/api/checkout', { items: [{ sku: 'VK-1', qty: 1 }] }),
     env: { STRIPE_SECRET_KEY: 'sk_test', STRIPE_SHIPPING_RATE_IDS: 'shr_ground', APP_URL: 'https://masest.test' },
   }));
 
-  assert.deepEqual(result, { status: 200, body: { url: 'https://checkout.stripe.test/session' } });
+  assert.deepEqual(result, { status: 400, body: { error: 'cart_empty' } });
 });
 
 test('checkout accepts 50 distinct lines and rejects 51 before DB access', async () => {

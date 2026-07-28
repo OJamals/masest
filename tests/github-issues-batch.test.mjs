@@ -52,7 +52,9 @@ test('#43 company-scoped account routes share no-company contract and order shap
   assert.ok(noCompanyContract(notifications), 'notifications must enforce the no_company 403 contract');
   assert.ok(noCompanyContract(orders), 'orders must enforce the no_company 403 contract');
   assert.ok(noCompanyContract(order), 'order must enforce the no_company 403 contract');
-  assert.doesNotMatch(orders, /\.eq\(\s*'user_id'\s*,\s*user\.id\s*\)/, 'orders list must not fall back to user_id');
+  const placedOrdersQuery = orders.slice(orders.indexOf('const ordersQuery'), orders.indexOf('const requisitionsQuery'));
+  assert.doesNotMatch(placedOrdersQuery, /\.eq\(\s*'user_id'/, 'placed orders must remain company-scoped');
+  assert.match(orders, /const requisitionsQuery[\s\S]*\.eq\('user_id', user\.id\)/, 'saved requisitions must remain buyer-private');
   assert.match(orders, /order_items\(sku,product_sku,name,qty,unit_price,line_total\)/);
   assert.match(order, /order_items\(sku,product_sku,name,qty,unit_price,line_total\)/);
 });

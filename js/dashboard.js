@@ -1,7 +1,7 @@
 /* MASEST user dashboard controller. Loaded as a module by dashboard.html.
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260711w';
-import { add as cartAdd, clear as cartClear } from './cart.js';
+import { add as cartAdd, clear as cartClear, items as cartItems } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 import { initBusinessHub } from './business.js?v=20260725f';
 
@@ -463,9 +463,16 @@ async function renderOrders({ append = false } = {}) {
   st.items = st.items.concat(res.orders || []);
   st.offset += (res.orders || []).length;
   st.total = res.total; st.hasMore = !!res.has_more;
-  if (!st.items.length) { box.innerHTML = `<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>`; return; }
   const list = st.items;
-  box.innerHTML = list.map((o, i) => {
+  const requisitions = res.requisitions || [];
+  const requisitionHtml = `<section>
+    <div class="dash-card-toolbar"><div><h2 class="headline dash-section-title dash-section-title-tight">Saved requisitions</h2><p class="muted">${requisitions.length} of 25 saved</p></div><a class="btn btn-ghost btn-sm" href="cart.html">Open cart</a></div>
+    ${requisitions.length ? requisitions.map((requisition) => {
+      const itemCount = (requisition.order_items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
+      return `<div class="dash-row"><span><b>${esc(requisition.requisition_name)}</b><small class="muted">${itemCount} item${itemCount === 1 ? '' : 's'} · ${fmtDate(requisition.created_at)}</small></span><span class="dash-action-row dash-action-row--flush"><b>${money(requisition.total, requisition.currency)}</b><button class="btn btn-primary btn-sm" type="button" data-use-requisition="${esc(requisition.id)}">Use</button><button class="btn btn-ghost btn-sm" type="button" data-delete-requisition="${esc(requisition.id)}">Delete</button></span></div>`;
+    }).join('') : '<div class="empty-state"><i class="ph ph-clipboard-text empty-icon" aria-hidden="true"></i><div class="empty-title">No saved requisitions</div><div class="empty-body">Build a repeat order in the cart, then save it here for later.</div></div>'}
+  </section>`;
+  const orderHtml = list.length ? list.map((o, i) => {
     const items = o.order_items || [];
     const n = items.reduce((s, it) => s + (it.qty || 0), 0);
     const lines = items.map((it) => `<div class="dash-row dash-order-line"><span>${esc(it.name)} × ${it.qty}</span><span>${money(it.line_total, o.currency)}</span></div>`).join('');
@@ -481,18 +488,36 @@ async function renderOrders({ append = false } = {}) {
         ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
         ${o.payment_method === 'stripe' ? `<button class="btn btn-ghost btn-sm" data-receipt="${esc(o.id)}">Receipt</button>` : ''}
       </div></details>`;
-  }).join('') + pagerHtml('data-load-more-orders', st);
+  }).join('') + pagerHtml('data-load-more-orders', st)
+    : '<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>';
+  box.innerHTML = `${requisitionHtml}<section><h2 class="headline dash-section-title">Order history</h2>${orderHtml}</section>`;
+  const restoreCart = async (id, button, emptyMessage) => {
+    if (cartItems().length && !(await confirmDialog('Replace your current cart with these items?', { confirmText: 'Replace cart', cancelText: 'Keep cart' }))) return;
+    button.disabled = true;
+    try {
+      const { lines: cartLines, issues } = await api('/api/account/order', { method: 'POST', body: { id } });
+      if (!cartLines || !cartLines.length) { toast(emptyMessage, { variant: 'error' }); button.disabled = false; return; }
+      cartClear();
+      cartLines.forEach((line) => cartAdd(line.sku, line.qty));
+      if (issues?.length) toast('Some items changed:\n' + issues.map((issue) => `• ${issue.name || issue.sku} — ${issue.reason.replace('_', ' ')}`).join('\n'), { variant: 'warning' });
+      location.href = 'cart.html';
+    } catch { toast('Could not rebuild this cart. Try again.', { variant: 'error' }); button.disabled = false; }
+  };
+  box.querySelectorAll('[data-use-requisition]').forEach((button) => button.addEventListener('click', () => {
+    restoreCart(button.dataset.useRequisition, button, 'None of these saved items are available.');
+  }));
   box.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', async () => {
     const o = list[Number(b.dataset.reorder)];
-    b.disabled = true;
+    restoreCart(o.id, b, 'None of these items are available to reorder.');
+  }));
+  box.querySelectorAll('[data-delete-requisition]').forEach((button) => button.addEventListener('click', async () => {
+    if (!(await confirmDialog('Delete this saved requisition?', { confirmText: 'Delete', cancelText: 'Keep' }))) return;
+    button.disabled = true;
     try {
-      const { lines: cartLines, issues } = await api('/api/account/order', { method: 'POST', body: { id: o.id } });
-      if (!cartLines || !cartLines.length) { toast('None of these items are available to reorder.', { variant: 'error' }); b.disabled = false; return; }
-      cartClear();
-      cartLines.forEach((l) => cartAdd(l.sku, l.qty));
-      if (issues && issues.length) toast('Some items changed since your last order:\n' + issues.map((x) => `• ${x.name || x.sku} — ${x.reason.replace('_', ' ')}`).join('\n'), { variant: 'warning' });
-      location.href = 'cart.html';
-    } catch { toast('Could not reorder. Try again.', { variant: 'error' }); b.disabled = false; }
+      await api(`/api/account/orders?id=${encodeURIComponent(button.dataset.deleteRequisition)}`, { method: 'DELETE' });
+      await renderOrders();
+      toast('Saved requisition deleted.', { variant: 'success' });
+    } catch { toast('Could not delete this requisition. Try again.', { variant: 'error' }); button.disabled = false; }
   }));
   box.querySelectorAll('[data-receipt]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;

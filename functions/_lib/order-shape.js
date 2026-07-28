@@ -40,6 +40,27 @@ export function parseCartMetadata(raw) {
   }
 }
 
+export function normalizeCartQuantities(cart, {
+  maxLines = 50,
+  maxSkuLength = 80,
+  maxQuantity = 999,
+} = {}) {
+  if (!Array.isArray(cart)) return Object.create(null);
+  const qtyBySku = Object.create(null);
+  let distinctLines = 0;
+  for (const item of cart) {
+    if (!item || typeof item !== "object" || Array.isArray(item) || typeof item.sku !== "string") return null;
+    const sku = item.sku.trim();
+    if (!sku || sku.length > maxSkuLength || !Number.isInteger(item.qty) || item.qty < 1 || item.qty > maxQuantity) return null;
+    if (qtyBySku[sku] === undefined) {
+      if (++distinctLines > maxLines) return null;
+      qtyBySku[sku] = 0;
+    }
+    if ((qtyBySku[sku] += item.qty) > maxQuantity) return null;
+  }
+  return qtyBySku;
+}
+
 // The `orders` row for a paid `checkout.session.completed` event. Mirrors the insert in
 // onRequestPost: cents→dollars, qbo sync queued, currency default, ship-address fallback chain.
 // customer_email is resolved by the caller (buyerEmailFromStripeSession) and passed in so this

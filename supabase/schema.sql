@@ -99,6 +99,13 @@ create table if not exists public.orders (
   user_id               uuid references public.profiles(id),
   customer_email        text,
   status                order_status not null default 'cart',
+  requisition_name      text check (
+    requisition_name is null
+    or (
+      char_length(btrim(requisition_name)) between 1 and 80
+      and requisition_name !~ '[[:cntrl:]]'
+    )
+  ),
   payment_method        payment_method,
   purchase_order_number text check (
     purchase_order_number is null

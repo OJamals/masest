@@ -11,6 +11,10 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
+  delete from public.orders
+  where user_id = old.id
+    and status = 'cart';
+
   update public.orders
   set
     user_id = null,
