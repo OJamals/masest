@@ -53,11 +53,9 @@ test("sitemap lists industry and product detail pages as final URLs", () => {
  const locs = [...xml.matchAll(/<loc>([^<]+)/g)].map((m) => m[1]);
  assert.equal(locs.length, new Set(locs).size, "sitemap has duplicate <loc> entries");
 });
-test("product no-script fallback starts with an h1", () => {
-  const html = read("product.html");
-  const fallback = html.match(/<noscript>[\s\S]*?<\/noscript>/i)?.[0] || "";
-  const firstHeading = fallback.match(/<h([1-6])\b/i)?.[1];
-
-  assert.equal(firstHeading, "1");
-  assert.match(fallback, /Find the VertKlean replacement before the next PO\./);
+test("generated product detail is crawlable without client rendering", () => {
+  const html = read("products/hcr.html");
+  assert.match(html, /<h1 class="display">VertKlean CIP HCR<\/h1>/);
+  assert.match(html, /<b>How it works<\/b>/);
+  assert.doesNotMatch(html, /id="pName"/);
 });

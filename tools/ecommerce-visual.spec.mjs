@@ -85,19 +85,15 @@ test("product detail shows next decision without an oversized hero", async ({ pa
     }),
   }));
 
-  await page.goto(`${BASE_URL}/product.html?id=crhd`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/products/crhd.html`, { waitUntil: "networkidle" });
 
-  const hero = await page.locator(".page-hero").boundingBox();
-  const mediaTop = await page.locator("#pMediaSection").evaluate((node) => {
+  const hero = await page.locator(".product-detail-hero").boundingBox();
+  const detailsTop = await page.locator(".product-static-section").evaluate((node) => {
     const rect = node.getBoundingClientRect();
     return rect.top + window.scrollY;
   });
-  const mediaHeights = await page.locator(".product-media-card img").evaluateAll((images) =>
-    images.map((image) => Math.round(image.getBoundingClientRect().height))
-  );
 
   expect(hero.height).toBeLessThan(800);
-  expect(mediaTop).toBeLessThan(1900);
-  expect(Math.max(...mediaHeights) - Math.min(...mediaHeights), `product media heights: ${mediaHeights.join(", ")}`).toBeLessThanOrEqual(3);
-  await expect(page.getByRole("button", { name: "Add to cart" })).toBeVisible();
+  expect(detailsTop).toBeLessThan(1100);
+  await expect(page.getByRole("button", { name: /Add .* to cart/ })).toBeVisible();
 });

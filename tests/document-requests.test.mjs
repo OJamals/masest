@@ -235,7 +235,7 @@ test("request workflow is mounted in Accounts and uses the shared authenticated 
   const accounts = read("js/admin/companies.js");
   const chrome = read("js/main/chrome.js");
   const account = read("account.html");
-  const legacyProduct = read("product.html");
+  const product = read("products/hcr.html");
   const schema = read("supabase/schema-content.sql");
 
   assert.match(admin, /data-acct-view="document-requests"/);
@@ -254,7 +254,8 @@ test("request workflow is mounted in Accounts and uses the shared authenticated 
   assert.match(chrome, /document_revision:\s*documentRevision/);
   assert.match(chrome, /mode:\s*"register"/);
   assert.match(account, /params\.get\("mode"\).+"register"/);
-  assert.match(legacyProduct, /-\(\?:sds\|tds\)\\\.pdf.*Registered-user request/s);
+  assert.match(product, /data-document-request/);
+  assert.match(product, /Register to request/);
 
   assert.match(schema, /create table if not exists public\.technical_documents/);
   assert.match(schema, /create table if not exists public\.technical_document_requests/);

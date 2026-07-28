@@ -20,7 +20,7 @@ const integrations = read("js/integrations.js");
 const newsletter = read("functions/api/newsletter.js");
 const klaviyo = read("functions/_lib/klaviyo.js");
 const contact = read("contact.html");
-const productPage = read("product.html");
+const productPage = read("products/hcr.html");
 
 const SAMPLE_PRODUCTS = [
   "VertKlean CR",
@@ -113,9 +113,8 @@ test("contact page exposes all five public request types", () => {
 });
 
 test("product detail pages expose a product-specific free sample request CTA", () => {
-  assert.match(productPage, /id="pSampleBtn"/, "product hero should include a free sample CTA");
   assert.match(productPage, /contact\?type=sample&product=/, "sample CTA should prefill the contact sample flow");
-  assert.match(productPage, /Request free sample/);
+  assert.match(productPage, /Request [^<]*sample/);
 });
 
 test("sample picker covers the full parent product catalog", () => {

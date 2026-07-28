@@ -14,17 +14,15 @@ function htmlPages() {
   return [...pages, ...industryPages].sort();
 }
 
-test("main entrypoint imports catalog data from a split module", () => {
-  const main = read("js/main.js");
-  assert.match(main, /from\s+["']\.\/main\/catalog-data\.js(?:\?v=\d{8}[a-z])?["']/);
-  assert.doesNotMatch(main, /^const PRODUCTS =/m);
+test("commerce UI imports catalog data from a split module", () => {
+  const commerce = read("js/main/commerce-ui.js");
+  assert.match(commerce, /from\s+["']\.\/catalog-data\.js(?:\?v=\d{8}[a-z])?["']/);
   const data = read("js/main/catalog-data.js");
   for (const name of [
     "PRODUCTS",
     "CATALOG_ORDER",
     "CATALOG_GROUPS",
     "PRODUCT_CATALOG_COPY",
-    "PRODUCT_GALLERY",
   ]) {
     assert.match(data, new RegExp(`export const ${name}\\b`), `${name} must be exported`);
   }
@@ -36,8 +34,8 @@ test("changed public module graph shares one cache release", () => {
   const contentSnapshots = read("js/main/content-snapshots.js");
   const media = read("js/main/media.js");
   const proofRecords = read("js/proof-records.js");
-  const release = main.match(/catalog-data\.js\?v=(\d{8}[a-z])/i)?.[1];
-  assert.ok(release, "main catalog data import must be cache-busted");
+  const release = main.match(/commerce-ui\.js\?v=(\d{8}[a-z])/i)?.[1];
+  assert.ok(release, "main commerce import must be cache-busted");
   assert.match(main, new RegExp(`chrome\\.js\\?v=${release}`));
   assert.match(main, new RegExp(`commerce-ui\\.js\\?v=${release}`));
   assert.match(main, new RegExp(`content-snapshots\\.js\\?v=${release}`));
@@ -142,11 +140,8 @@ test("all pages load shared main as a module", () => {
   assert.deepEqual(offenders, []);
 });
 
-test("older inline pages use the module compatibility surface", () => {
+test("inline home page uses the module compatibility surface", () => {
   const main = read("js/main.js");
-  assert.match(main, /window\.MASESTMain/);
-  assert.match(main, /productCard/);
-  assert.match(main, /initReveal/);
+  assert.match(main, /window\.MASESTMain\s*=\s*\{\s*initReveal,\s*productCard,\s*\}/);
   assert.match(read("index.html"), /const \{ initReveal, productCard \} = window\.MASESTMain/);
-  assert.match(read("product.html"), /const \{ CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCT_GALLERY, PRODUCTS, catalogCard, initReveal, productHighlights \} = window\.MASESTMain/);
 });

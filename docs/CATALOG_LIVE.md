@@ -21,7 +21,7 @@ catalog. It is the canonical *initial* dataset and the input to the seed scripts
 - Bucket `product-images` is **public-read**; uploads are server-only
   (`functions/api/admin/product-image.js` writes with the service-role key).
 - Primary image → `products.image_url`; extra shots → `products.gallery` (jsonb array).
-- Storefront (`product.html`) prefers the DB image, falling back to the static
+- Storefront product cards and generated `products/<id>.html` details prefer the DB image, falling back to the static
   `img/products/*` asset when no DB image is set.
 - Public URL form: `${SUPABASE_URL}/storage/v1/object/public/product-images/<sku>/<uuid>.<ext>`.
 

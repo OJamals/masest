@@ -1,7 +1,7 @@
 /* Industry product blocks, lightbox, and image fallback helpers. */
 
-import { PRODUCTS } from "./catalog-data.js?v=20260727a";
-import { productCard } from "./commerce-ui.js?v=20260727a";
+import { PRODUCTS } from "./catalog-data.js?v=20260727b";
+import { productCard } from "./commerce-ui.js?v=20260727b";
 
 export function initIndustryProducts() {
   document.querySelectorAll("[data-ind-products]").forEach((box) => {
@@ -52,7 +52,7 @@ export function initLightbox() {
 }
 
 export function initImageFallbacks() {
-  const frameSelector = ".catalog-shelf-media, .product-media-card, .proof-card figure, .case-card figure, .ind-gallery figure, figure.photo, .proof-thumb, .row-thumb";
+  const frameSelector = ".catalog-shelf-media, .proof-card figure, .case-card figure, .ind-gallery figure, figure.photo, .proof-thumb, .row-thumb";
   const labelFor = (img) => {
     const figcaption = img.closest("figure")?.querySelector("figcaption")?.textContent?.trim();
     return figcaption || img.getAttribute("alt") || "Visual reference pending";

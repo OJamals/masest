@@ -66,10 +66,8 @@ const END = "<!-- /seo:auto -->";
 
 const PRODUCT_IDS = CATALOG_ORDER.filter((id) => PRODUCTS[id]);
 
-// Editorial catalog id -> commerce/reviews sku. Reviews (and orders.order_items
-// .product_sku, and data-sku on product.html) key on the commerce sku, not the
-// editorial id — keep in sync with COMMERCE_ALIAS in product.html and
-// COMMERCE_SKU_ALIASES in js/main/commerce-ui.js.
+// Editorial catalog id -> commerce/reviews sku. Reviews and order items key on
+// the commerce sku, not the editorial id. Keep this aligned with commerce-ui.
 const COMMERCE_SKU_ALIAS = { crhd: "cr-hd" };
 const commerceSku = (id) => COMMERCE_SKU_ALIAS[id] || id;
 
@@ -169,8 +167,6 @@ const PRIVATE = [
   "dashboard.html",
   "order-confirmed.html",
 ];
-
-const PRODUCT_FALLBACK = "product.html";
 
 const attr = (value) => String(value ?? "")
   .replace(/&/g, "&amp;")
@@ -498,18 +494,6 @@ async function processPage(file, meta, isPrivate = false) {
   return 0;
 }
 
-async function processProductFallback() {
-  let html = await readFile(PRODUCT_FALLBACK, "utf8");
-  const before = html;
-  html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
-  html = normalizePublicUrls(html);
-  if (html !== before) {
-    await writeFile(PRODUCT_FALLBACK, html);
-    return 1;
-  }
-  return 0;
-}
-
 // DBNPA is a program component with no stocked small packs; static-page route
 // copy treats it as quote-only even though runtime buy logic keys on QUOTE_FIRST_IDS.
 const QUOTE_ONLY_IDS = new Set([...QUOTE_FIRST_IDS, "dbnpa"]);
@@ -591,16 +575,15 @@ function productPage(id, product, reviewsSnapshot) {
   const heroDesc = productDescription(id, product);
   const metaDesc = productMetaDescription(id, product);
   const img = product.image ? `../${product.image}` : `../${PRODUCT_FALLBACK_IMAGE}`;
-  // The brand poster is a placeholder, not a product photo (mirrors product.html +
-  // catalog-card suppression) — swap the hero figure for the shared icon tile.
+  // The brand poster is a placeholder, not a product photo. Use the shared tile.
   const hasPhoto = product.image && !/masest-poster-transparent/.test(product.image);
   const heroSize = hasPhoto ? SITE_IMAGE_DIMENSIONS.get(`/${product.image.replace(/^\/+/, "")}`) : null;
   if (hasPhoto && !heroSize) throw new Error(`Missing CMS image metadata for /${product.image.replace(/^\/+/, "")}`);
   const heroMedia = hasPhoto
-    ? `<figure class="product-hero-media reveal">
+    ? `<figure class="product-hero-media reveal" data-commerce-media="${id}">
         <img src="${attr(img)}" alt="${attr(product.name)} product photo" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async">
       </figure>`
-    : `<figure class="product-hero-media media-fallback reveal">
+    : `<figure class="product-hero-media media-fallback reveal" data-commerce-media="${id}">
         <span class="media-fallback-label">${text(product.name)}</span>
       </figure>`;
   const applicationPath = product.application_image
@@ -734,8 +717,15 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
       </article>
     </div>
   </section>
+  <section class="section-slim" data-reviews-section hidden>
+    <div class="wrap reveal">
+      <div data-reviews data-sku="${attr(commerceSku(id))}" data-kind="product" data-name="${attr(product.name)}"></div>
+    </div>
+  </section>
+  <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="product" data-cms-region="body"></div>
 </main>
-<script type="module" src="../js/main.js?v=20260727a"></script>
+<script type="module" src="../js/main.js?v=20260727b"></script>
+<script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
@@ -790,7 +780,6 @@ for (const [file, meta] of Object.entries(PUBLIC)) {
 }
 for (const file of PRIVATE) changed += await processPage(file, null, true);
 changed += await writeProductPages(reviewsSnapshot);
-changed += await processProductFallback();
 changed += await writeSitemap();
 
 console.log(`\nseo-inject: ${changed} files changed`);

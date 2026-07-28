@@ -562,12 +562,6 @@ test("scroll reveal sections become visible on long buyer pages", async ({ page 
       label: "product catalog toolbar",
     },
     {
-      pagePath: "product.html?id=hcr",
-      viewport: { width: 390, height: 844 },
-      selector: ".product-media-row.reveal",
-      label: "product proof media",
-    },
-    {
       pagePath: "services.html",
       viewport: { width: 1440, height: 1000 },
       selector: ".service-data-panel.reveal",
@@ -652,7 +646,7 @@ test("cart and product static preview avoid unavailable commerce API", async ({ 
     if (request.url().includes("/api/products")) apiRequests.push(request.url());
   });
 
-  for (const pagePath of ["cart.html", "product.html?id=hcr"]) {
+  for (const pagePath of ["cart.html", "products/hcr.html"]) {
     await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "networkidle" });
   }
 

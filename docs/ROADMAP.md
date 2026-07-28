@@ -120,7 +120,7 @@ schema-quotes.sql, grants.sql, seed.sql, variants_seed.sql.
 - [ ] **Subscription management UI.** In the dashboard, let buyers view/upgrade/cancel programs via the
       Stripe portal (program-aware), show next billing date + included services. *Where:* `dashboard.html` programs panel, `functions/api/programs/*`.
 - [ ] **Product depth.** Per-product **SDS/TDS/spec-sheet downloads**, certifications, variants (case packs,
-      drum/tote/bulk), MOQ + quantity-break pricing, related/cross-sell products. *Where:* products schema + `product.html` + admin products.
+      drum/tote/bulk), MOQ + quantity-break pricing, related/cross-sell products. *Where:* products schema + generated `products/<id>.html` + admin products.
 - [ ] **Contract / customer-specific pricing.** Per-company price lists (negotiated) applied automatically when signed in.
 - [ ] **Inventory.** Low-stock alerts to staff, backorder handling, optional multi-location stock.
 

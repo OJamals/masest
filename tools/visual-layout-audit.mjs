@@ -22,7 +22,7 @@ const VIEWPORTS = {
 const PUBLIC_STEPS = [
   ["home", "/index.html"],
   ["products", "/products.html"],
-  ["product-detail", "/product.html?id=hcr"],
+  ["product-detail", "/products/hcr.html"],
   ["services", "/services.html"],
   ["programs", "/programs.html"],
   ["proof", "/proof.html"],

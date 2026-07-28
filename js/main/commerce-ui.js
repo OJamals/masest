@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260727a";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260727b";
 import { smoothPref } from "./engagement.js";
 
 const IMAGE_DIMS = {
@@ -320,19 +320,23 @@ function commerceMediaFor(id) {
 }
 
 function refreshCommerceMedia(root = document) {
-  root.querySelectorAll(".shop-card[data-id]").forEach(card => {
-    const media = commerceMediaFor(card.dataset.id);
+  root.querySelectorAll(".shop-card[data-id], [data-commerce-media]").forEach(container => {
+    const isDetail = container.hasAttribute("data-commerce-media");
+    const media = commerceMediaFor(isDetail ? container.dataset.commerceMedia : container.dataset.id);
     if (!media.src) return;
-    const slot = card.querySelector(".shop-card-media");
+    const slot = isDetail ? container : container.querySelector(".shop-card-media");
     if (!slot) return;
     let img = slot.querySelector("img");
     if (!img) {
-      slot.querySelector("i")?.remove();
+      slot.querySelector(".shop-card-placeholder, .media-fallback-label")?.remove();
       img = document.createElement("img");
-      img.loading = "lazy";
+      img.loading = isDetail ? "eager" : "lazy";
+      img.decoding = "async";
+      img.width = 900;
+      img.height = 1200;
       slot.insertBefore(img, slot.firstChild);
     }
-    img.src = media.src;
+    img.src = isDetail && !/^(?:[a-z]+:|\/)/i.test(media.src) ? `/${media.src}` : media.src;
     img.alt = media.alt;
   });
 }

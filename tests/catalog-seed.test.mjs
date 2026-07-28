@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
+import { CATALOG_ORDER } from "../js/main/catalog-data.js";
 
 const readSite = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const catalog = () => JSON.parse(readSite("data/catalog.seed.json"));
@@ -237,7 +238,7 @@ test("segment pricing uses current public workbook rows and quote footers", () =
 test("public pricing surfaces avoid retired rates and stale FOB wording", () => {
   const publicPricingPages = [
     "products.html",
-    "product.html",
+    ...CATALOG_ORDER.map((id) => `products/${id}.html`),
     "cart.html",
     "resources.html",
     "programs.html",
@@ -289,7 +290,7 @@ test("legacy non-workbook product routes are not published as static product pag
 
 test("site copy respects documentation claim guardrails", () => {
   const catalogJs = readSite("js/main/catalog-data.js");
-  const productHtml = readSite("product.html");
+  const productHtml = CATALOG_ORDER.map((id) => readSite(`products/${id}.html`)).join("\n");
   const productsHtml = readSite("products.html");
   const resourcesHtml = readSite("resources.html");
   const programsHtml = readSite("programs.html");

@@ -6,10 +6,10 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260727a";
+const MAIN_RELEASE = "20260727b";
 const ADMIN_RELEASE = "20260726a";
 const ADMIN_PAGE_RELEASE = "20260726a";
-const CHROME_RELEASE = "20260727a";
+const CHROME_RELEASE = "20260727b";
 const ACCOUNT_NAV_RELEASE = "20260725f";
 const CUSTOMER_CHAT_RELEASE = "20260726a";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
@@ -32,7 +32,6 @@ test("every browser auth importer uses one cache release", () => {
   const files = [
     ...filesUnder("js/").filter((path) => path.endsWith(".js")),
     "account.html",
-    "product.html",
   ];
   let references = 0;
 
@@ -48,7 +47,7 @@ test("every browser auth importer uses one cache release", () => {
     }
   }
 
-  assert.ok(references >= 9, "expected all public, dashboard, and admin auth consumers");
+  assert.ok(references >= 8, "expected all public, dashboard, and admin auth consumers");
 });
 
 test("auth-consuming module paths are refreshed from their page entrypoints", () => {
@@ -76,7 +75,7 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/customer-chat.js"), /admin-support\.js\?v=20260711e/);
   assert.match(read("js/admin-support.js"), /admin-support\.css\?v=20260711e/);
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
-  assert.match(read("product.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
+  assert.match(read("products/hcr.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("index.html"), new RegExp(`story\\.css\\?v=${STORY_RELEASE}`));
   assert.match(read("index.html"), new RegExp(`story\\.js\\?v=${STORY_RELEASE}`));
 });

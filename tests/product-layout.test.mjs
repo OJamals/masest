@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { chromium } from "playwright";
 import {
@@ -71,6 +71,18 @@ test("generated product pages reuse existing highlights without added science or
     assert.match(html, /<b>How it works<\/b>/);
     assert.match(html, /<b>Why buyers switch<\/b>/);
     assert.match(html, /<b>Result record<\/b>/);
+  }
+});
+
+test("generated product routes own the complete public detail surface", () => {
+  assert.equal(existsSync(new URL("../product.html", import.meta.url)), false);
+
+  for (const id of CATALOG_ORDER) {
+    const html = readProject(`products/${id}.html`);
+    assert.match(html, new RegExp(`data-commerce-media="${id}"`));
+    assert.match(html, new RegExp(`data-commerce-action="${id}"`));
+    assert.match(html, /data-reviews data-sku="[^"]+" data-kind="product"/);
+    assert.match(html, /data-cms-content="page_sections" data-cms-page="product"/);
   }
 });
 
@@ -479,89 +491,6 @@ test("public CTA groups keep a consistent gap from their lead copy", async () =>
   });
 });
 
-test("product detail renders HMIS panel rows from product data", async () => {
-  await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
-    try {
-      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKlean CIP HCR"));
-      await page.waitForTimeout(300);
-      const rows = await page.$$eval("#panelRows .hmis-row", (els) =>
-        els.map((el) => ({
-          label: el.querySelector(".lbl")?.textContent.trim(),
-          value: el.querySelector(".val")?.textContent.trim(),
-        }))
-      );
-      assert.deepEqual(rows, [
-        { label: "Health", value: "0" },
-        { label: "Flammability", value: "0" },
-        { label: "Reactivity", value: "0" },
-      ]);
-      await browser.close();
-    } catch (error) {
-      await browser.close();
-      throw error;
-    }
-  });
-});
-
-test("product detail related products render thumbnails on the blue media stage", async () => {
-  await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
-    try {
-      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForSelector("#relatedWrap:not([hidden]) .shop-card-media img");
-      const related = await page.evaluate(() => {
-        const media = document.querySelector("#relatedWrap .shop-card-media");
-        const img = media?.querySelector("img");
-        const mediaStyle = media ? getComputedStyle(media) : null;
-        const imgRect = img?.getBoundingClientRect();
-        return {
-          imgSrc: img?.getAttribute("src") || "",
-          mediaBackgroundColor: mediaStyle?.backgroundColor || "",
-          mediaBackgroundImage: mediaStyle?.backgroundImage || "",
-          imgWidth: Math.round(imgRect?.width || 0),
-          imgHeight: Math.round(imgRect?.height || 0),
-        };
-      });
-
-      assert.match(related.imgSrc, /^img\/products\//, "related products should use product thumbnail assets");
-      assert.equal(related.mediaBackgroundColor, "rgb(227, 240, 241)", "related thumbnail stage should use the blue product-card background");
-      assert.match(related.mediaBackgroundImage, /14,\s*124,\s*134/, "related thumbnail stage should include the teal blue wash");
-      assert.ok(related.imgWidth > 100, "related product image should be visible");
-      assert.ok(related.imgHeight > 100, "related product image should be visible");
-    } finally {
-      await browser.close();
-    }
-  });
-});
-
-test("static product detail renders marketing-science highlights, uses, and docs without commerce API", async () => {
-  await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
-    try {
-      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKlean CIP HCR"));
-      await page.waitForFunction(() => document.querySelector("#pSpecs")?.textContent.includes("How it works"));
-      const content = await page.evaluate(() => ({
-        specs: document.querySelector("#pSpecs")?.textContent || "",
-        uses: document.querySelector("#pUses")?.textContent || "",
-        docs: document.querySelector("#pDocs")?.textContent || "",
-        mediaHidden: document.querySelector("#pMediaSection")?.hasAttribute("hidden")
-      }));
-      assert.match(content.specs, /Powered by SynTech.*How it works.*Why buyers switch.*Result record/i);
-      assert.match(content.uses, /Beer-stone|brewery CIP|heat-exchanger/i);
-      assert.match(content.docs, /Safety Data Sheet/);
-      assert.equal(content.mediaHidden, false, "field photos section should render from static product data");
-    } finally {
-      await browser.close();
-    }
-  });
-});
-
 test("static product detail keeps the price panel clear of the following card", async () => {
   await withServer(async () => {
     const browser = await chromium.launch({ channel: "chrome" });
@@ -599,55 +528,6 @@ test("static product detail keeps the price panel clear of the following card", 
         return nextSection.getBoundingClientRect().top - price.getBoundingClientRect().bottom;
       });
       assert.ok(gap >= 32, `price panel should have at least 32px before the next card, got ${gap.toFixed(1)}px`);
-    } finally {
-      await browser.close();
-    }
-  });
-});
-
-test("non-canonical CRS route shows the current-catalog fallback and no checkout", async () => {
-  await withServer(async () => {
-    const browser = await chromium.launch({ channel: "chrome" });
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
-    try {
-      await page.addInitScript(() => {
-        window.MASEST_ENABLE_LOCAL_API = true;
-      });
-      await page.route("**/api/products", (route) => route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          products: [{
-            sku: "descaler",
-            name: "VertKlean Descaler",
-            mode: "buy",
-            active: true,
-            product_variants: [{
-              vsku: "VK-DSC-1",
-              label: "1 gal",
-              gallons: 1,
-              price: 12.02,
-              currency: "usd",
-              active: true,
-              sort: 1
-            }]
-          }]
-        })
-      }));
-      await page.goto(`${BASE_URL}/product.html?id=crs`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("main")?.textContent.includes("That product is not in the current catalog."));
-      const state = await page.evaluate(() => ({
-        main: document.querySelector("main")?.textContent || "",
-        addVisible: Boolean(document.querySelector("#pBuyBtn") && !document.querySelector("#pBuyBtn").hidden),
-        volSelect: !!document.querySelector("#pVol"),
-        bulkQuoteBtn: !!document.querySelector("#pBulkQuoteBtn"),
-        quoteText: document.querySelector("main a[href*='contact?type=quote']")?.textContent || ""
-      }));
-      assert.match(state.main, /not in the current catalog/i);
-      assert.equal(state.addVisible, false, "CRS must not borrow Descaler add-cart variants");
-      assert.equal(state.volSelect, false, "CRS must not borrow Descaler volume selector");
-      assert.equal(state.bulkQuoteBtn, false, "CRS must not borrow Descaler bulk quote CTA");
-      assert.match(state.quoteText, /quote|Request/i);
     } finally {
       await browser.close();
     }

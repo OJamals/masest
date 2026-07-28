@@ -207,7 +207,7 @@ test("request context handles general, unknown, and malicious pages without quer
   }), "https://masest.co");
   assert.equal(unknown.searchParams.get("product"), "not-in-catalog");
   const explicitProduct = new URL(buildRequestContextHref({
-    pageUrl: "https://masest.co/product.html",
+    pageUrl: "https://masest.co/products/hcr",
     product: "VK-HCR-5G",
     quoteUrl: "/contact.html",
   }), "https://masest.co");

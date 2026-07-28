@@ -264,8 +264,6 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
  const leadBarPages = new Set([
  "products",
  "products.html",
- "product",
- "product.html",
  "services",
  "services.html",
  "programs",

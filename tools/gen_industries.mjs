@@ -598,7 +598,7 @@ ${industryDetailBlock(ind)}${imageGalleryBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js?v=20260727a"></script>
+<script type="module" src="../js/main.js?v=20260727b"></script>
 </body>
 </html>
 `;

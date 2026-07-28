@@ -94,7 +94,7 @@ Cron template: `supabase/review-reminder-cron.example.sql` — daily (`0 15 * * 
 ### 4. Storefront UI — `js/reviews.js` (+ CSS in existing stylesheet, cache-busted)
 
 - Renders: star summary (avg + count), 5-bar distribution, review cards (name, verified badge, stars, title, body, date), "Write a review" affordance.
-- Mounts on `product.html`, `services.html`, and static product/service detail pages via a `[data-reviews sku=… kind=…]` mount point.
+- Mounts on generated `products/<id>.html` pages and `services.html` via a `[data-reviews sku=… kind=…]` mount point.
 - Write form: shown enabled only when the visitor is a verified buyer (logged-in with a qualifying order) OR arrived via a valid review token (on `review.html`). Otherwise shows "Only verified buyers can review this product." with a sign-in link.
 - Injects `AggregateRating` JSON-LD from the live `stats` (script[type=application/ld+json]).
 - **SEO snapshot:** `tools/build-reviews.mjs` pulls approved-review aggregates from Supabase at CF build → `data/reviews.json`; `seo-inject` bakes static `AggregateRating` into product/service HTML so crawlers see stars before JS runs. Live list still hydrates client-side.

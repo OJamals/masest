@@ -102,17 +102,13 @@ test("products page wires the catalog grid from product data", () => {
   assert.doesNotMatch(read("products.html"), /Request a Quote/);
 });
 
-test("product details include source-backed media galleries", () => {
-  const product = read("product.html");
-  const main = read("js/main.js");
+test("generated product details include source-backed application media", () => {
+  const product = read("products/hcr.html");
 
-  assert.match(product, /id="pMediaSection"/);
-  assert.match(product, /id="pMedia"/);
+  assert.match(product, /class="product-application-media"/);
+  assert.match(product, /Representative application/);
   assert.doesNotMatch(product, /Request a Quote/);
   assert.doesNotMatch(product, /type=distributor/);
-  assert.match(product, /PRODUCT_GALLERY\[id\]/);
-  assert.match(mainCatalogData, /img\/proof\/cases\/ddc-rust\.webp/);
-  assert.match(mainCatalogData, /img\/proof\/cases\/marine\.webp/);
 });
 
 test("programs page keeps glycol quote handling in an optional disclosure", () => {

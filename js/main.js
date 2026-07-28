@@ -1,42 +1,29 @@
 /* MASEST / VertKlean shared JS (v2, taste-skill applied)
    Icons: Phosphor web family only. No emoji. No em-dashes in copy. */
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCT_GALLERY, PRODUCTS, QUOTE_FIRST_IDS, productHighlights } from "./main/catalog-data.js?v=20260727a";
-import { renderChrome } from "./main/chrome.js?v=20260727a";
+import { renderChrome } from "./main/chrome.js?v=20260727b";
 import { initResponsiveTables, initReveal } from "./main/effects.js";
-import { initServiceCatalog } from "./main/service-catalog.js?v=20260727a";
+import { initServiceCatalog } from "./main/service-catalog.js?v=20260727b";
 import {
-  catalogCard,
   initCartButtons,
   initShop,
   isLocalStaticCommerceSuppressed,
   loadCommerceCatalog,
   productCard,
   refreshCommerceActions,
-} from "./main/commerce-ui.js?v=20260727a";
+} from "./main/commerce-ui.js?v=20260727b";
 import {
   initBeforeAfter,
   initIndustryDiscovery,
   initProofFilters,
   initQuoteForm,
-} from "./main/engagement.js?v=20260727a";
-import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260727a";
+} from "./main/engagement.js?v=20260727b";
+import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260727b";
 import { initDataVisualizations } from "./main/data-visuals.js";
-import { initContentSnapshots } from "./main/content-snapshots.js?v=20260727a";
+import { initContentSnapshots } from "./main/content-snapshots.js?v=20260727b";
 
 window.MASESTMain = {
-  CATALOG_GROUPS,
-  CATALOG_ORDER,
-  PRODUCT_CATALOG_COPY,
-  PRODUCT_GALLERY,
-  PRODUCTS,
-  QUOTE_FIRST_IDS,
-  productHighlights,
-  catalogCard,
   initReveal,
-  isLocalStaticCommerceSuppressed,
-  loadCommerceCatalog,
   productCard,
-  refreshCommerceActions,
 };
 
 document.addEventListener("DOMContentLoaded", () => {

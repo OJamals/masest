@@ -5,7 +5,7 @@ MASEST is a static Cloudflare Pages commerce site with Pages Functions for serve
 ## Runtime Boundaries
 
 - Public pages: root `*.html`, `css/style.css`, `css/components.css`, and `js/main/*`.
-- Commerce pages: `products.html`, `product.html`, `cart.html`, `js/cart.js`, and account/order APIs.
+- Commerce pages: `products.html`, generated `products/<id>.html`, `cart.html`, `js/cart.js`, and account/order APIs.
 - Admin console: `admin.html`, `js/admin.js`, split modules under `js/admin/*`, and guarded `/api/admin/*` functions.
 - Buyer dashboard: `dashboard.html`, `js/dashboard.js`, and `/api/account/*` functions.
 - CMS: `js/admin/content.js` with asset/revision modules, guarded `/api/admin/content*` functions,

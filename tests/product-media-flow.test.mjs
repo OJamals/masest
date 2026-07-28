@@ -77,8 +77,7 @@ test("product detail publishes product-specific SEO metadata", async () => {
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
-      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => document.querySelector("#pName")?.textContent.includes("VertKlean CIP HCR"));
+      await page.goto(`${BASE_URL}/products/hcr.html`, { waitUntil: "domcontentloaded" });
 
       const meta = await page.evaluate(() => ({
         title: document.title,
@@ -109,11 +108,11 @@ test("product detail uses owner-updated product photos from the commerce API", a
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
-      await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "domcontentloaded" });
-      const image = page.locator("#pImage");
+      await page.goto(`${BASE_URL}/products/hcr.html`, { waitUntil: "domcontentloaded" });
+      const image = page.locator('[data-commerce-media="hcr"] img');
       await image.waitFor();
-      await page.waitForFunction(() => document.querySelector("#pImage")?.getAttribute("src") === "img/products/owner-hcr.webp");
-      assert.equal(await image.getAttribute("src"), "img/products/owner-hcr.webp");
+      await page.waitForFunction(() => document.querySelector('[data-commerce-media="hcr"] img')?.getAttribute("src") === "/img/products/owner-hcr.webp");
+      assert.equal(await image.getAttribute("src"), "/img/products/owner-hcr.webp");
       assert.equal(await image.getAttribute("alt"), "Owner uploaded HCR drum photo");
     } finally {
       await browser.close();

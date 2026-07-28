@@ -3,15 +3,14 @@
  *
  * Mount shape: <div data-reviews data-sku="…" data-kind="product|service"
  * [data-compact]></div>.
- *   - Full mode (default, used on product.html): summary + review list + a
+ *   - Full mode (default, used on generated product pages): summary + review list + a
  *     write form gated to a signed-in verified buyer.
  *   - Compact mode (used on the services.html line-item grid, where dozens of
  *     SKUs share one page): a star/average/count badge plus the JSON-LD only.
  *     Writing a service review happens through the emailed one-click link
  *     (review.html), not inline in the 39-card catalog grid.
  *
- * Auth: mirrors the real session accessor product.html and cart.html already
- * use - js/auth.js's getToken() (Supabase session token) gates the write form,
+ * Auth: js/auth.js's getToken() (Supabase session token) gates the write form,
  * and js/auth.js's api() attaches the same Authorization: Bearer header the
  * rest of the authenticated storefront uses when it submits.
  */
@@ -230,15 +229,14 @@ export async function hydrateReviewMount(mount) {
 }
 
 export function initReviewMounts(root) {
-  (root || document).querySelectorAll("[data-reviews]").forEach((mount) => { hydrateReviewMount(mount); });
+  (root || document).querySelectorAll("[data-reviews]").forEach(async (mount) => {
+    if (await hydrateReviewMount(mount)) mount.closest("[data-reviews-section]")?.removeAttribute("hidden");
+  });
 }
 
 // Self-init for any page that ships a static [data-reviews] mount (data-sku
-// already in the HTML) alongside a plain <script src="/js/reviews.js"> include.
-// product.html and the services.html catalog resolve their SKU only after an
-// async fetch, so they import this module and call hydrateReviewMount() /
-// initReviewMounts() explicitly once data-sku is set instead of relying on this
-// listener - see product.html and js/main/service-catalog.js.
+// already in the HTML). The services catalog resolves SKUs after an async fetch
+// and calls hydration explicitly from js/main/service-catalog.js.
 if (typeof document !== "undefined") {
   document.addEventListener("DOMContentLoaded", () => initReviewMounts(document));
 }

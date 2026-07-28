@@ -141,7 +141,7 @@ test("JavaScript-rendered forms give every control a stable name", () => {
 });
 
 test("progress copy uses the ellipsis character", () => {
-  const sources = ["account.html", "admin.html", "cart.html", "dashboard.html", "product.html", "review.html", "js/admin.js", "js/dashboard.js", "js/reviews.js"];
+  const sources = ["account.html", "admin.html", "cart.html", "dashboard.html", "review.html", "js/admin.js", "js/dashboard.js", "js/reviews.js"];
   for (const path of sources) {
     assert.doesNotMatch(read(path), /(?:Loading|Saving|Submitting|Starting|Checking|Adding|Preparing|Running|Opening|Uploading)\.\.\./, `${path} uses three periods in progress copy`);
   }

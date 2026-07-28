@@ -14,7 +14,7 @@ test.beforeAll(async () => {
   });
 
   for (let i = 0; i < 40; i += 1) {
-    const response = await fetch(`${BASE_URL}/product.html?id=crhd`).catch(() => null);
+    const response = await fetch(`${BASE_URL}/products/crhd.html`).catch(() => null);
     if (response?.ok) return;
     await new Promise((resolve) => setTimeout(resolve, 125));
   }
@@ -35,38 +35,34 @@ test.beforeEach(async ({ context }) => {
 });
 
 test("product add-to-cart resolves the crhd commerce sku", async ({ page }) => {
-  // Editorial id and the live catalog sku are both `crhd` (COMMERCE_ALIAS is empty in
-  // product.html), so the buy button resolves the /api/products row directly — no remap.
-  // NOTE: data/catalog.seed.json still describes a future `cr-hd` catalog redesign that is
-  // NOT imported to the live DB; if that migration ever lands, the alias must be restored.
   await page.route("**/api/products", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         products: [
-          { sku: "crhd", name: "VertKlean CR HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+          { sku: "cr-hd", name: "VertKlean CR HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
         ],
       }),
     });
   });
 
-  await page.goto(`${BASE_URL}/product.html?id=crhd`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /Add to cart/ }).click();
+  await page.goto(`${BASE_URL}/products/crhd.html`, { waitUntil: "domcontentloaded" });
+  const button = page.locator(".product-hero-buy [data-cart-add]");
+  await button.click();
 
-  await expect(page.getByText("Added to cart")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Review cart" })).toHaveAttribute("href", "cart");
+  await expect(button).toHaveText("Added");
   await expect(page.locator("[data-cart-count]")).toHaveText("1");
 });
 
-test("buy selector defaults to the 5 gallon pail and routes bulk freight to quote", async ({ page }) => {
+test("product selector routes bulk freight to the shared quote flow", async ({ page }) => {
   await page.route("**/api/products", async route => route.fulfill({
     status: 200,
     contentType: "application/json",
     body: JSON.stringify({
       products: [
         {
-          sku: "crhd",
+          sku: "cr-hd",
           name: "VertKlean CR HD",
           mode: "buy",
           active: true,
@@ -81,20 +77,20 @@ test("buy selector defaults to the 5 gallon pail and routes bulk freight to quot
     }),
   }));
 
-  await page.goto(`${BASE_URL}/product.html?id=crhd`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/products/crhd.html`, { waitUntil: "networkidle" });
 
-  await expect(page.locator("#pVol")).toHaveValue("VK-CRHD-5");
-  await expect(page.locator("#pVol")).toContainText("55 gal drum");
-  await expect(page.locator("#pUnitPrice")).toHaveText("$8.48/gal");
-  await expect(page.locator("#pBuyBtn")).toBeVisible();
-  await expect(page.locator("#pBulkQuoteBtn")).toBeHidden();
+  const selector = page.locator(".product-hero-buy .commerce-vol");
+  const buy = page.locator(".product-hero-buy [data-cart-add]");
+  const quote = page.locator(".product-hero-buy .commerce-quote-swap");
+  await expect(selector).toHaveValue("VK-CRHD-1");
+  await expect(selector).toContainText("55 gal");
+  await expect(buy).toBeVisible();
+  await expect(quote).toBeHidden();
 
-  await page.locator("#pVol").selectOption("VK-CRHD-55");
-  await expect(page.locator("#pUnitPrice")).toHaveText("$5.12/gal");
-  await expect(page.locator("#pStock")).toContainText("freight quoted");
-  await expect(page.locator("#pBuyBtn")).toBeHidden();
-  await expect(page.locator("#pBulkQuoteBtn")).toBeVisible();
-  await expect(page.locator("#pBulkQuoteBtn")).toHaveAttribute("href", /freight%20quote/);
+  await selector.selectOption("VK-CRHD-55");
+  await expect(buy).toBeHidden();
+  await expect(quote).toBeVisible();
+  await expect(quote).toHaveAttribute("href", /contact\?type=quote&product=.*message=.*#quoteForm/);
 });
 
 test("hcr bulk pricing shows freight-quote CTA through the commerce selector", async ({ page }) => {
@@ -118,14 +114,15 @@ test("hcr bulk pricing shows freight-quote CTA through the commerce selector", a
     }),
   }));
 
-  await page.goto(`${BASE_URL}/product.html?id=hcr`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/products/hcr.html`, { waitUntil: "networkidle" });
 
-  await expect(page.locator("#pDrums")).toHaveCount(0);
-  await expect(page.locator("#pVol")).toContainText("55 gal drum");
-  await page.locator("#pVol").selectOption("hcr-55");
-  await expect(page.locator("#pBuyBtn")).toBeHidden();
-  await expect(page.locator("#pBulkQuoteBtn")).toBeVisible();
-  await expect(page.locator("#pBulkQuoteBtn")).toHaveAttribute("href", /freight%20quote/);
+  const selector = page.locator(".product-hero-buy .commerce-vol");
+  const quote = page.locator(".product-hero-buy .commerce-quote-swap");
+  await expect(selector).toContainText("55 gal");
+  await selector.selectOption("hcr-55");
+  await expect(page.locator(".product-hero-buy [data-cart-add]")).toBeHidden();
+  await expect(quote).toBeVisible();
+  await expect(quote).toHaveAttribute("href", /message=.*#quoteForm/);
 });
 
 test("catalog decision cues stay compact and actionable at 390px", async ({ page }) => {

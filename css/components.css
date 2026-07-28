@@ -315,9 +315,7 @@ body .hero-split {
   padding-bottom: 112px;
 }
 
-body:has(#pMediaSection) .page-hero { padding-top: 72px; }
 body .product-detail-hero { padding-bottom: 42px; }
-body:has(#pMediaSection) .product-detail-hero { padding-bottom: 112px; }
 body:has(.about-router) .page-hero { padding-bottom: 112px; }
 @media (max-width: 680px) {
   body .page-hero,
@@ -325,8 +323,6 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
     padding-top: 72px;
     padding-bottom: 96px;
   }
-  body:has(#pMediaSection) .page-hero { padding-top: 82px; }
-  body:has(#pMediaSection) .product-detail-hero { padding-bottom: 108px; }
   body:has(.about-router) .page-hero { padding-bottom: 96px; }
 }
 
@@ -547,7 +543,7 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
 
 /* ----------------------------------------------------------------------------
    Reviews — star summary, review list, write form (js/reviews.js). Full mode on
-   product.html; compact star-badge mode on the services.html line-item grid.
+   generated product pages; compact star-badge mode on the service line-item grid.
 ---------------------------------------------------------------------------- */
 .rv-title { margin: 0 0 4px; }
 .rv-summary { display: flex; align-items: center; gap: 10px; margin: 4px 0 18px; font-size: .95rem; }
@@ -794,7 +790,6 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
   .proof-thumb img,
   .ind-shot img,
   .catalog-photo img,
-  .product-media-card img,
   .segment-pricing-media img,
   .services-hero-media img,
   .services-proof-image img,

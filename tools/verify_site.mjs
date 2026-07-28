@@ -211,13 +211,13 @@ function checkRobotsAndPrivatePages() {
 
 function checkCommerceContracts() {
   const products = read("products.html");
-  const product = read("product.html");
+  const product = read("products/hcr.html");
   const contact = read("contact.html");
   const main = read("js/main.js");
 
   ok(/class=["'][^"']*product-job-router/.test(products), "products.html missing buyer job router");
   ok(/id=["']catalog["']/.test(products), "products.html missing catalog section");
-  ok(/id=["']pName["']/.test(product) && /id=["']pBuyBtn["']/.test(product), "product.html missing product detail mounts");
+  ok(/data-commerce-action=["']hcr["']/.test(product) && /data-reviews/.test(product), "generated product page missing shared detail mounts");
   ok(/data-endpoint=["']\/api\/quote["']/.test(contact), "contact form should post to quote intake endpoint");
   ok(/window\.MASESTMain/.test(main), "js/main.js should preserve window.MASESTMain compatibility");
 }

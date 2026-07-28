@@ -616,40 +616,4 @@ export function productHighlights(id) {
   ];
 }
 
-export const PRODUCT_GALLERY = {
-  hcr: [
-    ["img/proof/cases/ddc-rust.webp", "Rusted HVAC component cleared with VertKlean HCR", "DDC rust and scale test"],
-    ["img/proof/cases/farm-rust-after.webp", "Diamond-plate steel rust removed with VertKlean HCR", "Brevard HVAC farm rust removal"],
-    ["img/proof/cases/brewery.webp", "Brewery tank and heat exchanger cleaned with VertKlean CR and HCR", "Brewery CIP trial"]
-  ],
-  cr: [
-    ["img/proof/cases/brewery.webp", "Brewery tank and heat exchanger cleaned with VertKlean CR and HCR", "Brewery CIP trial"],
-    ["img/proof/cases/hood.webp", "Commercial kitchen hood and range degreased with VertKlean CR", "Commercial hood cleaning"],
-    ["img/before-after/cr-after.webp", "Exterior surface after VertKlean CR cleaning", "After cleaning"]
-  ],
-  crhd: [
-    ["img/products/crhd-studio.webp", "VertKlean CR HD heavy degreaser container", "CR HD product"],
-    ["img/proof/cases/kitchen-after.webp", "Commercial kitchen deep degreased with VertKlean CR HD", "Commercial kitchen cleaning"]
-  ],
-  descaler: [
-    ["img/proof/cases/fire-pump.webp", "Fire-pump component descaled with VertKlean Descaler", "Fire protection system"],
-    ["img/proof/cases/ac-coil.webp", "Residential AC coil cleaned with VertKlean Descaler", "AC coil cleaning"]
-  ],
-  multiwash: [
-    ["img/proof/drone-wash-proof-enhanced.webp", "Occupied campus exterior cleaned by drone with VertKlean MultiWash", "Occupied campus wash"],
-    ["img/before-after/drone.webp", "Before and after exterior drone cleaning", "Before and after"]
-  ],
-  lam3: [
-    ["img/proof/cases/grout-moss.webp", "Exterior grout, grime, and algae cleared with VertKlean", "Exterior biogrowth cleaning"],
-    ["img/before-after/moss-before.webp", "Exterior surface before treatment, covered in heavy moss", "Before treatment"],
-    ["img/before-after/moss-after.webp", "Exterior surface after moss treatment", "After treatment"]
-  ],
-  alumibrite: [
-    ["img/proof/cases/airboat.webp", "Commercial airboat aluminum restored with VertKlean AlumiBrite", "Airboat aluminum restoration"]
-  ],
-  torque: [
-    ["img/proof/cases/marine.webp", "Vessel washed and waxed with VertKlean Torque", "Vessel wash and wax"]
-  ]
-};
-
 /* ---------- Nav / footer injection ---------- */

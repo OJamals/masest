@@ -68,7 +68,7 @@ const publicHtml = [
     .map((file) => `industries/${file}`),
 ];
 
-const publicLinkHtml = [...publicHtml, "product.html"];
+const publicLinkHtml = publicHtml;
 
 test("sitemap lists final extensionless canonical URLs and product details", () => {
   const xml = read("sitemap.xml");

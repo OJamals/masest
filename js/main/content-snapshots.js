@@ -1,7 +1,7 @@
 import { initReveal } from "./effects.js";
 import { esc } from "../util.js";
 import { canonicalPublicImageUrl } from "../image-url.js?v=20260723a";
-import { proofCardHtml } from "../proof-records.js?v=20260727a";
+import { proofCardHtml } from "../proof-records.js?v=20260727b";
 
 const SNAPSHOT_FILES = {
   proof_cards: "proof.json",
