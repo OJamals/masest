@@ -1,10 +1,14 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const PORT = 4317;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let server;
+const SITE_IMAGE_COUNT = JSON.parse(
+  readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"),
+).count;
 
 test.beforeAll(async () => {
   server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], {
@@ -41,8 +45,8 @@ test("platform staff can browse, search, and select existing public-site images"
   });
 
   await page.getByRole("button", { name: "Browse library" }).click();
-  await expect(page.locator("[data-shared-image-library-count]")).toHaveText("223 images");
-  await expect(page.locator(".shared-image-library-card")).toHaveCount(223);
+  await expect(page.locator("[data-shared-image-library-count]")).toHaveText(`${SITE_IMAGE_COUNT} images`);
+  await expect(page.locator(".shared-image-library-card")).toHaveCount(SITE_IMAGE_COUNT);
   const library = page.locator(".shared-image-library-grid");
   await expect(library).toBeVisible();
   expect(await library.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);

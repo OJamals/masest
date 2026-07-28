@@ -72,6 +72,14 @@ function searchableAssetText(asset) {
     asset.alt,
     asset.category,
     ...(Array.isArray(asset.usage) ? asset.usage : []),
+    ...(Array.isArray(asset.references)
+      ? asset.references.flatMap((reference) => [
+        reference.title,
+        reference.type,
+        reference.slug,
+        ...(reference.fields || []),
+      ])
+      : []),
   ].filter(Boolean).join(" ").toLowerCase();
 }
 

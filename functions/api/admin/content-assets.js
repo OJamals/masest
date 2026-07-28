@@ -76,6 +76,83 @@ function withPublicUrl(env, asset) {
   return { ...asset, public_url: assetPublicUrl(env, asset) };
 }
 
+function referenceKey(value) {
+  const canonical = canonicalPublicImageUrl(value).split(/[?#]/, 1)[0];
+  if (!canonical) return "";
+  try {
+    const url = new URL(canonical, "https://masest.co");
+    if (/^(?:www\.)?masest\.co$/i.test(url.hostname) && /^\/img\//i.test(url.pathname)) {
+      return url.pathname;
+    }
+  } catch {
+    return canonical;
+  }
+  return canonical;
+}
+
+function collectReferences(value, path, found) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectReferences(item, `${path}[${index}]`, found));
+  } else if (value && typeof value === "object") {
+    Object.entries(value).forEach(([key, item]) => {
+      collectReferences(item, path ? `${path}.${key}` : key, found);
+    });
+  } else if (typeof value === "string") {
+    found.push({ value, path });
+  }
+}
+
+export function withContentAssetReferences(assets = [], entries = []) {
+  const aliases = new Map();
+  const references = new Map();
+  assets.forEach((asset, index) => {
+    references.set(index, new Map());
+    [asset.storage_path, asset.public_url, asset.source_url].forEach((value) => {
+      const key = referenceKey(value);
+      if (key) {
+        const matches = aliases.get(key) || new Set();
+        matches.add(index);
+        aliases.set(key, matches);
+      }
+    });
+  });
+
+  entries.forEach((entry) => {
+    const found = [];
+    collectReferences(entry.payload, "payload", found);
+    collectReferences(entry.seo, "seo", found);
+    found.forEach(({ value, path }) => {
+      const keys = new Set();
+      const exact = referenceKey(value);
+      if (aliases.has(exact)) keys.add(exact);
+      if (String(value).includes("/")) {
+        aliases.forEach((_matches, key) => {
+          if (String(value).includes(key)) keys.add(key);
+        });
+      }
+      keys.forEach((key) => aliases.get(key).forEach((assetIndex) => {
+        const entryKey = `${entry.type}:${entry.slug}:${entry.locale || "en"}`;
+        const impacted = references.get(assetIndex);
+        const reference = impacted.get(entryKey) || {
+          type: entry.type,
+          slug: entry.slug,
+          locale: entry.locale || "en",
+          status: entry.status,
+          title: entry.title,
+          fields: [],
+        };
+        if (!reference.fields.includes(path)) reference.fields.push(path);
+        impacted.set(entryKey, reference);
+      }));
+    });
+  });
+
+  return assets.map((asset, index) => {
+    const impacted = [...references.get(index).values()];
+    return { ...asset, reference_count: impacted.length, references: impacted };
+  });
+}
+
 function isMultipart(request) {
   return (request.headers.get("content-type") || "").toLowerCase().includes("multipart/form-data");
 }
@@ -337,11 +414,19 @@ export async function onRequest({ request, env }) {
   if (request.method === "GET") {
     const url = new URL(request.url);
     try {
-      const assets = await repo.listAssets({
-        q: url.searchParams.get("q") || "",
-        status: url.searchParams.get("status") === "all" ? "" : url.searchParams.get("status") || "available",
+      const [assets, entries] = await Promise.all([
+        repo.listAssets({
+          q: url.searchParams.get("q") || "",
+          status: url.searchParams.get("status") === "all" ? "" : url.searchParams.get("status") || "available",
+        }),
+        repo.list({ status: "" }),
+      ]);
+      return json(200, {
+        assets: withContentAssetReferences(
+          assets.map((asset) => withPublicUrl(env, asset)),
+          entries,
+        ),
       });
-      return json(200, { assets: assets.map((asset) => withPublicUrl(env, asset)) });
     } catch (error) {
       return json(500, { error: error.message });
     }

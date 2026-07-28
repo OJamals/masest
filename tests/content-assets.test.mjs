@@ -50,6 +50,41 @@ test("logical site aliases resolve to managed CMS objects without trusting exter
   }), "");
 });
 
+test("content assets expose exact reverse references and impacted fields", async () => {
+  const { withContentAssetReferences } = await import("../functions/api/admin/content-assets.js");
+  const assets = withContentAssetReferences([{
+    storage_path: "/img/proof/cases/brewery.webp",
+    public_url: "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
+  }, {
+    storage_path: "cms/unused.webp",
+    public_url: "https://example.supabase.co/storage/v1/object/public/content-assets/cms/unused.webp",
+  }], [{
+    type: "proof_card",
+    slug: "brewery",
+    locale: "en",
+    status: "published",
+    title: "Brewery proof",
+    payload: {
+      image: "/img/proof/cases/brewery.webp?v=1",
+      image_after: "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
+      body: 'Proof image: <img src="/img/proof/cases/brewery.webp" alt="">',
+    },
+    seo: { og_image: "/img/proof/cases/brewery.webp" },
+  }]);
+
+  assert.equal(assets[0].reference_count, 1);
+  assert.deepEqual(assets[0].references, [{
+    type: "proof_card",
+    slug: "brewery",
+    locale: "en",
+    status: "published",
+    title: "Brewery proof",
+    fields: ["payload.image", "payload.image_after", "payload.body", "seo.og_image"],
+  }]);
+  assert.equal(assets[1].reference_count, 0);
+  assert.deepEqual(assets[1].references, []);
+});
+
 test("asset manager exposes replace-everywhere control backed by optimized in-place storage", () => {
   const api = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
   const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
@@ -60,6 +95,8 @@ test("asset manager exposes replace-everywhere control backed by optimized in-pl
   assert.match(picker, /data-shared-image-replace/);
   assert.match(picker, /Replace everywhere/);
   assert.match(picker, /method:\s*"PUT"/);
+  assert.match(picker, /data-shared-image-impact/);
+  assert.match(picker, /content entr/);
 });
 
 test("replace everywhere overwrites the stable CMS object and keeps the logical site alias", async () => {

@@ -78,6 +78,7 @@ export function openImageLibraryPicker({
               <label>Alt text
                 <input class="adm-input" name="preview_alt" type="text" maxlength="300" data-shared-image-preview-alt>
               </label>
+              <div data-shared-image-impact></div>
               <div class="shared-image-preview-actions">
                 <button class="btn btn-primary" type="button" data-shared-image-confirm disabled>Select</button>
                 ${manage ? '<button class="btn btn-secondary btn-sm" type="button" data-shared-image-replace hidden>Replace everywhere</button>' : ""}
@@ -113,6 +114,7 @@ export function openImageLibraryPicker({
     const previewName = dlg.querySelector("[data-shared-image-preview-name]");
     const previewMeta = dlg.querySelector("[data-shared-image-preview-meta]");
     const previewAlt = dlg.querySelector("[data-shared-image-preview-alt]");
+    const previewImpact = dlg.querySelector("[data-shared-image-impact]");
     const confirmButton = dlg.querySelector("[data-shared-image-confirm]");
     const saveAltButton = dlg.querySelector("[data-shared-image-save-alt]");
     const replaceButton = dlg.querySelector("[data-shared-image-replace]");
@@ -175,6 +177,12 @@ export function openImageLibraryPicker({
       ].filter(Boolean).join(" · ");
       previewAlt.value = selectedAsset.alt || "";
       previewAlt.disabled = isSiteAsset;
+      const references = Array.isArray(selectedAsset.references) ? selectedAsset.references : [];
+      previewImpact.innerHTML = isSiteAsset
+        ? "<small>Source-controlled public-site asset.</small>"
+        : `<small><strong>${references.length}</strong> content entr${references.length === 1 ? "y" : "ies"} affected</small>${references.length
+          ? `<ul>${references.map((reference) => `<li><strong>${esc(reference.title || reference.slug || reference.type)}</strong> <small>${esc((reference.fields || []).join(", "))}</small></li>`).join("")}</ul>`
+          : ""}`;
       confirmButton.disabled = archived;
       saveAltButton.hidden = isSiteAsset;
       if (replaceButton) replaceButton.hidden = isSiteAsset || archived;
