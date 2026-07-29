@@ -50,6 +50,52 @@ async function boundQuote(sb, quoteId, draftOrderId) {
   return { quote };
 }
 
+function quoteOrderIdentity(quote, finalOrderId) {
+  const currentFinalOrderId = quote.payload?.final_order_id;
+  if ((quote.payload?.offer_status === 'ordered' || currentFinalOrderId)
+    && currentFinalOrderId !== finalOrderId) {
+    return { error: 'quote_final_order_mismatch' };
+  }
+  return quote.payload?.offer_status === 'ordered' ? { ok: true } : null;
+}
+
+function quotePaymentIsPending(quote, finalOrderId) {
+  return quote.payload?.offer_status === 'payment_pending'
+    && quote.payload?.final_order_id === finalOrderId;
+}
+
+function quoteIsAccepted(quote) {
+  return quote.payload?.offer_status === 'accepted'
+    && !quote.payload?.final_order_id;
+}
+
+async function updateQuoteState(sb, quote, patch) {
+  let query = guardQuoteOffer(
+    sb.from('quotes').update(patch).eq('id', quote.id),
+    quote.payload,
+  );
+  const finalOrderId = String(quote.payload?.final_order_id || '');
+  query = finalOrderId
+    ? query.contains('payload', { final_order_id: finalOrderId })
+    : query.is('payload->>final_order_id', null);
+  const { data, error } = await query.select('id,payload').maybeSingle();
+  return error ? { error: error.message } : { quote: data || null };
+}
+
+async function resolveQuoteUpdate(
+  sb,
+  { quoteId, draftOrderId, finalOrderId },
+  updated,
+  reachedState = () => false,
+) {
+  if (updated.error) return updated;
+  if (updated.quote) return { ok: true };
+  const current = await boundQuote(sb, quoteId, draftOrderId);
+  if (current.error) return current;
+  return quoteOrderIdentity(current.quote, finalOrderId)
+    || (reachedState(current.quote) ? { ok: true } : { error: 'quote_state_conflict' });
+}
+
 export async function markQuotePaymentPending(sb, {
   quoteId,
   draftOrderId,
@@ -59,25 +105,28 @@ export async function markQuotePaymentPending(sb, {
   if (!UUID.test(String(finalOrderId || ''))) return { error: 'invalid_quote_order_identity' };
   const bound = await boundQuote(sb, quoteId, draftOrderId);
   if (bound.error) return bound;
-  if (bound.quote.payload?.offer_status === 'ordered') return { ok: true };
-  if (bound.quote.payload?.final_order_id
-    && bound.quote.payload.final_order_id !== finalOrderId) {
-    return { error: 'quote_final_order_mismatch' };
-  }
+  const identity = quoteOrderIdentity(bound.quote, finalOrderId);
+  if (identity) return identity;
+  if (quotePaymentIsPending(bound.quote, finalOrderId)) return { ok: true };
   const payload = quotePayloadWithOffer(bound.quote.payload, {
     orderId: draftOrderId,
     status: 'payment_pending',
     at,
     finalOrderId,
   });
-  const { error } = await sb.from('quotes').update({
+  const updated = await updateQuoteState(sb, bound.quote, {
     payload,
     status: 'contacted',
     pipeline_stage: 'proposal',
     handled_at: at,
     next_step: 'Awaiting bank payment settlement',
-  }).eq('id', quoteId);
-  return error ? { error: error.message } : { ok: true };
+  });
+  return resolveQuoteUpdate(
+    sb,
+    { quoteId, draftOrderId, finalOrderId },
+    updated,
+    (quote) => quotePaymentIsPending(quote, finalOrderId),
+  );
 }
 
 export async function reopenQuoteAfterPaymentFailure(sb, {
@@ -88,10 +137,11 @@ export async function reopenQuoteAfterPaymentFailure(sb, {
 }) {
   const bound = await boundQuote(sb, quoteId, draftOrderId);
   if (bound.error) return bound;
-  if (bound.quote.payload?.offer_status === 'ordered') return { ok: true };
-  if (bound.quote.payload?.final_order_id
-    && bound.quote.payload.final_order_id !== finalOrderId) {
-    return { error: 'quote_final_order_mismatch' };
+  const identity = quoteOrderIdentity(bound.quote, finalOrderId);
+  if (identity) return identity;
+  if (quoteIsAccepted(bound.quote)) return { ok: true };
+  if (bound.quote.payload?.offer_status !== 'payment_pending') {
+    return { error: 'quote_state_conflict' };
   }
   const payload = {
     ...bound.quote.payload,
@@ -99,14 +149,19 @@ export async function reopenQuoteAfterPaymentFailure(sb, {
     offer_payment_failed_at: at,
   };
   delete payload.final_order_id;
-  const { error } = await sb.from('quotes').update({
+  const updated = await updateQuoteState(sb, bound.quote, {
     payload,
     status: 'contacted',
     pipeline_stage: 'proposal',
     handled_at: at,
     next_step: 'Payment failed; buyer can retry checkout',
-  }).eq('id', quoteId);
-  return error ? { error: error.message } : { ok: true };
+  });
+  return resolveQuoteUpdate(
+    sb,
+    { quoteId, draftOrderId, finalOrderId },
+    updated,
+    quoteIsAccepted,
+  );
 }
 
 export async function finalizeQuoteOrder(sb, {
@@ -119,19 +174,17 @@ export async function finalizeQuoteOrder(sb, {
   const bound = await boundQuote(sb, quoteId, draftOrderId);
   if (bound.error) return bound;
   const quote = bound.quote;
-  if (quote.payload?.offer_status === 'ordered'
-    && quote.payload?.final_order_id !== finalOrderId) {
-    return { error: 'quote_final_order_mismatch' };
-  }
+  const identity = quoteOrderIdentity(quote, finalOrderId);
+  if (identity?.error) return identity;
 
-  if (quote.payload?.offer_status !== 'ordered' || quote.payload?.final_order_id !== finalOrderId) {
+  if (!identity?.ok) {
     const payload = quotePayloadWithOffer(quote.payload, {
       orderId: draftOrderId,
       status: 'ordered',
       at,
       finalOrderId,
     });
-    const { error: updateError } = await sb.from('quotes').update({
+    const updated = await updateQuoteState(sb, quote, {
       payload,
       status: 'closed',
       pipeline_stage: 'won',
@@ -139,8 +192,13 @@ export async function finalizeQuoteOrder(sb, {
       handled_at: at,
       next_step: 'Order placed',
       due_at: null,
-    }).eq('id', quoteId);
-    if (updateError) return { error: updateError.message };
+    });
+    const resolved = await resolveQuoteUpdate(
+      sb,
+      { quoteId, draftOrderId, finalOrderId },
+      updated,
+    );
+    if (resolved.error) return resolved;
   }
 
   if (draftOrderId !== finalOrderId) {

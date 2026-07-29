@@ -27,6 +27,7 @@ function quoteOrderDb() {
       pipeline_stage: "proposal",
     },
     draft: { id: DRAFT_ID, status: "cart", requisition_name: null },
+    beforeQuoteUpdate: null,
   };
   const calls = [];
 
@@ -38,27 +39,55 @@ function quoteOrderDb() {
       select() { return api; },
       update(value) { operation = "update"; patch = value; return api; },
       delete() { operation = "delete"; return api; },
-      eq(column, value) { filters.push([column, value]); return api; },
-      is(column, value) { filters.push([column, value]); return api; },
+      eq(column, value) { filters.push(["eq", column, value]); return api; },
+      contains(column, value) { filters.push(["contains", column, value]); return api; },
+      is(column, value) { filters.push(["is", column, value]); return api; },
       async maybeSingle() {
-        if (table !== "quotes" || !filters.every(([key, value]) => state.quote?.[key] === value)) {
+        if (table !== "quotes") return { data: null, error: null };
+        if (operation === "update") return updateQuote();
+        if (!matches(state.quote)) {
           return { data: null, error: null };
         }
         return { data: state.quote, error: null };
       },
       then(resolve) {
         if (operation === "update" && table === "quotes") {
-          calls.push(["quote.update", patch]);
-          Object.assign(state.quote, patch);
+          resolve(updateQuote());
+          return;
         }
         if (operation === "delete" && table === "orders") {
-          const matches = state.draft && filters.every(([key, value]) => state.draft[key] === value);
-          calls.push(["draft.delete", matches]);
-          if (matches) state.draft = null;
+          const matched = state.draft && matches(state.draft);
+          calls.push(["draft.delete", matched]);
+          if (matched) state.draft = null;
         }
         resolve({ error: null });
       },
     };
+
+    function matches(row) {
+      return Boolean(row) && filters.every(([operator, column, value]) => {
+        if (operator === "contains") {
+          return Object.entries(value).every(([key, expected]) => row[column]?.[key] === expected);
+        }
+        if (operator === "is" && column.startsWith("payload->>")) {
+          return (row.payload?.[column.slice(10)] ?? null) === value;
+        }
+        return (row[column] ?? null) === value;
+      });
+    }
+
+    function updateQuote() {
+      if (state.beforeQuoteUpdate) {
+        const beforeUpdate = state.beforeQuoteUpdate;
+        state.beforeQuoteUpdate = null;
+        beforeUpdate(state.quote);
+      }
+      const matched = matches(state.quote);
+      calls.push(["quote.update", patch, matched]);
+      if (matched) Object.assign(state.quote, patch);
+      return { data: matched ? state.quote : null, error: null };
+    }
+
     return api;
   }
 
@@ -105,6 +134,20 @@ test("finalizeQuoteOrder never rebinds an ordered quote to a second payment", as
     quoteId: QUOTE_ID,
     draftOrderId: DRAFT_ID,
     finalOrderId: "66666666-6666-4666-8666-666666666666",
+  });
+
+  assert.deepEqual(result, { error: "quote_final_order_mismatch" });
+  assert.deepEqual(calls, []);
+  assert.ok(state.draft);
+});
+
+test("finalizeQuoteOrder rejects an ordered quote missing its final order identity", async () => {
+  const { state, calls, db } = quoteOrderDb();
+  state.quote.payload.offer_status = "ordered";
+  const result = await finalizeQuoteOrder(db, {
+    quoteId: QUOTE_ID,
+    draftOrderId: DRAFT_ID,
+    finalOrderId: FINAL_ID,
   });
 
   assert.deepEqual(result, { error: "quote_final_order_mismatch" });
@@ -214,4 +257,89 @@ test("ACH quote stays bound to its draft while pending and reopens after failure
   assert.equal(state.quote.payload.final_order_id, undefined);
   assert.ok(state.draft, "failed ACH must leave the accepted quote retryable");
   assert.deepEqual(calls.map(([name]) => name), ["quote.update", "quote.update"]);
+});
+
+test("quote transitions never overwrite a concurrent ordered state", async () => {
+  for (const transition of [
+    markQuotePaymentPending,
+    reopenQuoteAfterPaymentFailure,
+    finalizeQuoteOrder,
+  ]) {
+    const { state, calls, db } = quoteOrderDb();
+    if (transition === reopenQuoteAfterPaymentFailure) {
+      state.quote.payload.offer_status = "payment_pending";
+      state.quote.payload.final_order_id = FINAL_ID;
+    }
+    state.beforeQuoteUpdate = (quote) => {
+      quote.payload = {
+        ...quote.payload,
+        offer_status: "ordered",
+        final_order_id: FINAL_ID,
+      };
+      quote.status = "closed";
+      quote.pipeline_stage = "won";
+    };
+
+    const result = await transition(db, {
+      quoteId: QUOTE_ID,
+      draftOrderId: DRAFT_ID,
+      finalOrderId: FINAL_ID,
+    });
+
+    assert.deepEqual(result, { ok: true });
+    assert.equal(state.quote.payload.offer_status, "ordered");
+    assert.equal(state.quote.status, "closed");
+    assert.equal(state.quote.pipeline_stage, "won");
+    if (transition === finalizeQuoteOrder) {
+      assert.equal(state.draft, null);
+    } else {
+      assert.ok(state.draft);
+    }
+    assert.equal(calls[0][2], false, `${transition.name} must use compare-and-swap filters`);
+  }
+});
+
+test("markQuotePaymentPending accepts a concurrent identical transition", async () => {
+  const { state, calls, db } = quoteOrderDb();
+  state.beforeQuoteUpdate = (quote) => {
+    quote.payload = {
+      ...quote.payload,
+      offer_status: "payment_pending",
+      final_order_id: FINAL_ID,
+    };
+  };
+
+  const result = await markQuotePaymentPending(db, {
+    quoteId: QUOTE_ID,
+    draftOrderId: DRAFT_ID,
+    finalOrderId: FINAL_ID,
+  });
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(state.quote.payload.offer_status, "payment_pending");
+  assert.equal(state.quote.payload.final_order_id, FINAL_ID);
+  assert.equal(calls[0][2], false);
+});
+
+test("finalizeQuoteOrder never overwrites a concurrent different final order", async () => {
+  const otherFinalId = "66666666-6666-4666-8666-666666666666";
+  const { state, calls, db } = quoteOrderDb();
+  state.beforeQuoteUpdate = (quote) => {
+    quote.payload = {
+      ...quote.payload,
+      offer_status: "ordered",
+      final_order_id: otherFinalId,
+    };
+  };
+
+  const result = await finalizeQuoteOrder(db, {
+    quoteId: QUOTE_ID,
+    draftOrderId: DRAFT_ID,
+    finalOrderId: FINAL_ID,
+  });
+
+  assert.deepEqual(result, { error: "quote_final_order_mismatch" });
+  assert.equal(state.quote.payload.final_order_id, otherFinalId);
+  assert.ok(state.draft);
+  assert.equal(calls[0][2], false);
 });
