@@ -76,6 +76,48 @@ test("checkout sends normalized line items and clears NET orders", async () => {
   assert.equal(events.at(-1).count, 0);
 });
 
+test("accepted quote checkout sends only quote identity and invalidates it on cart changes", async () => {
+  installBrowserGlobals();
+  const bodies = [];
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return new Response(JSON.stringify({ net: true, order_id: "ord_quoted" }), { status: 201 });
+  };
+
+  const cart = await freshCartModule();
+  cart.replaceWithQuote({
+    quoteId: "quote-1",
+    orderId: "draft-1",
+    items: [
+      { sku: "VK-1", qty: 2, unit_price: 1 },
+      { sku: "VK-2", qty: 1, unit_price: 999 },
+    ],
+  });
+  await cart.checkout({ mode: "net" });
+
+  assert.deepEqual(bodies[0].cart, [
+    { sku: "VK-1", qty: 2 },
+    { sku: "VK-2", qty: 1 },
+  ]);
+  assert.equal(bodies[0].quote_id, "quote-1");
+  assert.equal(bodies[0].quote_order_id, "draft-1");
+  assert.equal("unit_price" in bodies[0].cart[0], false);
+
+  cart.replaceWithQuote({
+    quoteId: "quote-2",
+    orderId: "draft-2",
+    items: [{ sku: "VK-1", qty: 2 }],
+  });
+  cart.setQty("VK-1", 3);
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    throw new TypeError("offline");
+  };
+  await assert.rejects(() => cart.checkout({ mode: "pay" }), /offline/);
+  assert.equal(bodies[1].quote_id, undefined);
+  assert.equal(bodies[1].quote_order_id, undefined);
+});
+
 test("NET checkout retains one request key across response-loss retries", async () => {
   const { store } = installBrowserGlobals();
   const requestKeys = [];

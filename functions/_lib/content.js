@@ -41,7 +41,7 @@ function compactRow(row) {
   return Object.fromEntries(Object.entries(row).filter(([, value]) => value !== undefined));
 }
 
-function activeContentLock(entry = {}, nowMs = Date.now()) {
+export function activeContentLock(entry = {}, nowMs = Date.now()) {
   const row = entry || {};
   if (!row.locked_by || !row.locked_at) return false;
   const lockedAt = new Date(row.locked_at).getTime();
@@ -221,7 +221,8 @@ async function writeRevision(sb, entry, userId, note) {
 export function createContentRepository(sb) {
   return {
     async list({ type, status = "published", locale = "en" } = {}) {
-      let query = sb.from("content_entries").select("*").eq("locale", locale);
+      let query = sb.from("content_entries").select("*");
+      if (locale) query = query.eq("locale", locale);
       if (type) query = query.eq("type", type);
       if (status) query = query.eq("status", status);
       const { data, error } = await query.order("updated_at", { ascending: false });
@@ -449,6 +450,16 @@ export function createContentRepository(sb) {
       const prior = await existingEntry(sb, input);
       const conflict = contentLockConflict(prior, userId, options);
       if (conflict) return conflict;
+      const expectedVersion = Number(options.expectedVersion);
+      const checksVersion = Number.isFinite(expectedVersion);
+      if (checksVersion && Number(prior?.version || 0) !== expectedVersion) {
+        return {
+          ok: false,
+          error: "content_version_conflict",
+          expected_version: expectedVersion,
+          current_version: Number(prior?.version || 0),
+        };
+      }
       const version = Number(prior?.version || 0) + 1;
       const now = new Date().toISOString();
       const row = compactRow({
@@ -458,11 +469,30 @@ export function createContentRepository(sb) {
         updated_by: userId || null,
         updated_at: now,
       });
-      const { data, error } = await sb
-        .from("content_entries")
-        .upsert(row, { onConflict: "type,slug,locale" })
-        .select("*")
-        .single();
+      let result;
+      if (prior && checksVersion) {
+        result = await sb.from("content_entries")
+          .update(row)
+          .eq("id", prior.id)
+          .eq("version", expectedVersion)
+          .select("*")
+          .maybeSingle();
+        if (!result.error && !result.data) {
+          const current = await existingEntry(sb, input);
+          return {
+            ok: false,
+            error: "content_version_conflict",
+            expected_version: expectedVersion,
+            current_version: Number(current?.version || 0),
+          };
+        }
+      } else {
+        result = await sb.from("content_entries")
+          .upsert(row, { onConflict: "type,slug,locale" })
+          .select("*")
+          .single();
+      }
+      const { data, error } = result;
       if (error) throw error;
       await writeRevision(sb, data, userId, note);
       return { ok: true, entry: data };

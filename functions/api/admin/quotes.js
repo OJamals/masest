@@ -1,7 +1,12 @@
 // /api/admin/quotes - staff view of inbound /api/quote leads.
 import { adminClient, companyEmails, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
-import { buildConvertItems, netOrderRow } from '../../_lib/quote-convert.js';
+import {
+  buildConvertItems,
+  netOrderRow,
+  quoteOrderRow,
+  quotePayloadWithOffer,
+} from '../../_lib/quote-convert.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { csvResponse } from '../../_lib/reports.js';
@@ -10,10 +15,12 @@ import { klaviyoTrack } from '../../_lib/klaviyo.js';
 import { escapeLike } from '../../_lib/crm.js';
 import { recordSupportMessage } from '../../_lib/support-messages.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
+import { guardQuoteOffer, requisitionQuoteMayBeSent } from '../../_lib/quote-order.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
-const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,source,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
 
 function dueAt(value) {
   if (value === null || value === '') return null;
@@ -91,6 +98,216 @@ async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
     link: '/dashboard.html#messages',
   });
   return { posted: true, company_id: resolvedCompanyId, message_id: message?.id || null };
+}
+
+async function requisitionQuoteWorkspace(sb, id) {
+  if (!UUID.test(String(id || ''))) return { status: 400, body: { error: 'invalid_id' } };
+  const { data: quote, error: quoteError } = await sb.from('quotes')
+    .select('id,source,payload,email,company,product,status,pipeline_stage')
+    .eq('id', id)
+    .maybeSingle();
+  if (quoteError) return { status: 500, body: { error: quoteError.message } };
+  if (!quote) return { status: 404, body: { error: 'not_found' } };
+  const requisitionId = String(quote.payload?.requisition_id || '');
+  const requesterId = String(quote.payload?.requester_id || '');
+  const companyId = String(quote.payload?.company_id || '');
+  if (quote.source !== 'requisition' || !UUID.test(requisitionId)
+    || !UUID.test(requesterId) || !UUID.test(companyId)) {
+    return { status: 409, body: { error: 'workspace_unavailable' } };
+  }
+
+  const offerOrderId = String(quote.payload?.offer_order_id || '');
+  const requisitionQuery = sb.from('orders')
+    .select('id,company_id,user_id,requisition_name,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
+    .eq('id', requisitionId)
+    .eq('company_id', companyId)
+    .eq('user_id', requesterId)
+    .eq('status', 'cart')
+    .not('requisition_name', 'is', null)
+    .maybeSingle();
+  const offerQuery = UUID.test(offerOrderId)
+    ? sb.from('orders')
+      .select('id,company_id,user_id,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
+      .eq('id', offerOrderId)
+      .eq('company_id', companyId)
+      .eq('user_id', requesterId)
+      .eq('status', 'cart')
+      .is('requisition_name', null)
+      .maybeSingle()
+    : Promise.resolve({ data: null, error: null });
+  const messagesQuery = sb.from('messages')
+    .select('id,sender_role,body,created_at')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  const documentsQuery = sb.from('technical_document_requests')
+    .select('id,status,created_at,document_id,document_revision,requested_from,technical_documents(title,document_type)')
+    .eq('requester_id', requesterId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  const [
+    { data: requisition, error: requisitionError },
+    { data: offer, error: offerError },
+    { data: messages, error: messagesError },
+    { data: documents, error: documentsError },
+  ] = await Promise.all([requisitionQuery, offerQuery, messagesQuery, documentsQuery]);
+  const error = requisitionError || offerError || messagesError || documentsError;
+  if (error) return { status: 500, body: { error: error.message } };
+  if (!requisition) return { status: 409, body: { error: 'requisition_unavailable' } };
+
+  const pricedOrder = offer || requisition;
+  return {
+    status: 200,
+    body: {
+      workspace: {
+        quote_id: quote.id,
+        company_id: companyId,
+        requester_id: requesterId,
+        requisition_id: requisition.id,
+        requisition_name: requisition.requisition_name,
+        offer_order_id: offer?.id || null,
+        offer_status: quote.payload?.offer_status || null,
+        currency: pricedOrder.currency || 'usd',
+        subtotal: Number(pricedOrder.subtotal || 0),
+        total: Number(pricedOrder.total || 0),
+        items: pricedOrder.order_items || [],
+        messages: messages || [],
+        documents: documents || [],
+      },
+    },
+  };
+}
+
+async function sendRequisitionQuote({ sb, env, request, body, user }) {
+  const { data: quote, error: quoteError } = await sb.from('quotes')
+    .select('id,source,payload,email,company,product,status')
+    .eq('id', body.id)
+    .maybeSingle();
+  if (quoteError) return json(500, { error: quoteError.message });
+  if (!quote) return json(404, { error: 'quote_not_found' });
+  if (!requisitionQuoteMayBeSent(quote)) {
+    return json(409, { error: 'quote_closed' });
+  }
+  const requisitionId = String(quote.payload?.requisition_id || '');
+  const requesterId = String(quote.payload?.requester_id || '');
+  const companyId = String(quote.payload?.company_id || '');
+  if (quote.source !== 'requisition' || !UUID.test(requisitionId)
+    || !UUID.test(requesterId) || !UUID.test(companyId)) {
+    return json(409, { error: 'invalid_requisition_quote' });
+  }
+
+  const { data: requisition, error: requisitionError } = await sb.from('orders')
+    .select('id,company_id,user_id,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
+    .eq('id', requisitionId)
+    .eq('company_id', companyId)
+    .eq('user_id', requesterId)
+    .eq('status', 'cart')
+    .not('requisition_name', 'is', null)
+    .maybeSingle();
+  if (requisitionError) return json(500, { error: requisitionError.message });
+  if (!requisition) return json(409, { error: 'requisition_unavailable' });
+
+  const built = buildConvertItems(body.items);
+  if (built.error) return json(400, { error: built.error });
+  const sourceBySku = new Map((requisition.order_items || []).map((item) => [item.sku, item]));
+  if (built.items.some((item) => !sourceBySku.has(item.sku))) {
+    return json(400, { error: 'item_not_in_requisition' });
+  }
+  const clean = built.items.map((item) => ({
+    ...item,
+    product_sku: sourceBySku.get(item.sku)?.product_sku || item.product_sku,
+    name: sourceBySku.get(item.sku)?.name || item.name,
+  }));
+  const currency = String(requisition.currency || 'usd').toLowerCase();
+  const { data: order, error: orderError } = await sb.from('orders')
+    .insert(quoteOrderRow({
+      companyId,
+      userId: requesterId,
+      email: String(quote.email || '').toLowerCase(),
+      subtotal: built.subtotal,
+      currency,
+    }))
+    .select('id')
+    .single();
+  if (orderError) return json(500, { error: orderError.message });
+
+  const { error: itemsError } = await sb.from('order_items')
+    .insert(clean.map((item) => ({ order_id: order.id, ...item })));
+  if (itemsError) {
+    await sb.from('orders').delete().eq('id', order.id);
+    return json(500, { error: itemsError.message });
+  }
+
+  const at = new Date().toISOString();
+  const previousOfferOrderId = String(quote.payload?.offer_order_id || '');
+  const payload = quotePayloadWithOffer(quote.payload, { orderId: order.id, status: 'sent', at });
+  const updateQuery = sb.from('quotes').update({
+    payload,
+    status: 'contacted',
+    pipeline_stage: 'proposal',
+    stage_changed_at: at,
+    handled_at: at,
+    handled_by: user.email || null,
+    deal_value: built.subtotal,
+    next_step: 'Buyer review and checkout',
+    due_at: null,
+  }).eq('id', quote.id).eq('status', quote.status);
+  const { data: updated, error: updateError } = await guardQuoteOffer(updateQuery, quote.payload)
+    .select('id,status,pipeline_stage,payload,deal_value,next_step')
+    .maybeSingle();
+  if (updateError) {
+    await sb.from('orders').delete().eq('id', order.id);
+    return json(500, { error: updateError.message });
+  }
+  if (!updated) {
+    await sb.from('orders').delete().eq('id', order.id);
+    return json(409, { error: 'quote_changed' });
+  }
+  if (UUID.test(previousOfferOrderId) && previousOfferOrderId !== order.id) {
+    await sb.from('orders').delete()
+      .eq('id', previousOfferOrderId)
+      .eq('company_id', companyId)
+      .eq('user_id', requesterId)
+      .eq('status', 'cart')
+      .is('requisition_name', null);
+  }
+
+  await sb.from('notifications').insert({
+    company_id: companyId,
+    type: 'quote',
+    title: 'Your quote is ready',
+    body: `${quote.product || 'Requested pricing'} is ready to review and accept.`,
+    link: '/dashboard.html#quotes',
+  });
+  await postQuoteThreadHandoff({
+    sb,
+    quote,
+    companyId,
+    text: 'Your requested pricing is ready to review and accept in the Quotes tab.',
+    actor: user.email || 'staff',
+  });
+  const appUrl = env.APP_URL || new URL(request.url).origin;
+  if (quote.email) {
+    await sendEmail(env, {
+      to: [quote.email],
+      subject: 'Your MASEST quote is ready',
+      html: emailLayout({
+        heading: 'Your quote is ready',
+        bodyHtml: `<p>Review the pricing for ${htmlEscape(quote.product || 'your saved requisition')}, accept it, and continue to secure checkout.</p>`,
+        ctaText: 'Review your quote',
+        ctaUrl: `${appUrl}/dashboard.html#quotes`,
+      }),
+      category: 'quote',
+    });
+  }
+  await recordAudit(sb, {
+    user,
+    action: 'quote.send',
+    targetType: 'quote',
+    targetId: quote.id,
+    detail: { company_id: companyId, order_id: order.id, subtotal: built.subtotal },
+  });
+  return json(200, { ok: true, order_id: order.id, quote: updated });
 }
 
 async function sendTrackedLeadEmail(env, options) {
@@ -191,6 +408,13 @@ export async function onRequest({ request, env }) {
   const sb = adminClient(env);
 
   if (request.method === 'GET') {
+    if (new URL(request.url).searchParams.get('view') === 'workspace') {
+      const result = await requisitionQuoteWorkspace(
+        sb,
+        new URL(request.url).searchParams.get('id'),
+      );
+      return json(result.status, result.body, { 'cache-control': 'no-store' });
+    }
     if (new URL(request.url).searchParams.get('view') === 'pipeline') {
       const { data, error } = await sb.from('quotes').select('id,pipeline_stage,deal_value').neq('status', 'spam').limit(5000);
       if (error) {
@@ -344,6 +568,10 @@ export async function onRequest({ request, env }) {
     }
 
     if (!body.id) return json(400, { error: 'id_required' });
+
+    if (body.action === 'send_quote') {
+      return sendRequisitionQuote({ sb, env, request, body, user });
+    }
 
     if (body.action === 'convert') {
       const companyId = String(body.company_id || '');

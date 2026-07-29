@@ -2,9 +2,11 @@
  * Browser storage is only a convenience; the checkout API re-prices every line.
  */
 import { safeUrl } from "./util.js";
+import { normalizeCartLines, normalizeCartQty } from "./cart-shape.js";
 
 const KEY = "masest_cart";
 const NET_REQUEST_KEY = "masest_net_request_v1";
+const QUOTE_KEY = "masest_quote_checkout_v1";
 
 export class CheckoutError extends Error {
   constructor(status, payload = {}) {
@@ -16,19 +18,13 @@ export class CheckoutError extends Error {
   }
 }
 
-function normalizeQty(qty) {
-  const number = Number(qty);
-  if (!Number.isFinite(number)) return 0;
-  return Math.max(0, Math.floor(number));
-}
-
 function safeReadCart() {
   try {
     const parsed = JSON.parse(localStorage.getItem(KEY) || "{}");
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
     return Object.fromEntries(
       Object.entries(parsed)
-        .map(([sku, qty]) => [String(sku), normalizeQty(qty)])
+        .map(([sku, qty]) => [String(sku), normalizeCartQty(qty)])
         .filter(([sku, qty]) => sku && qty > 0)
     );
   } catch (err) {
@@ -40,7 +36,7 @@ function safeReadCart() {
 function cartSignature(lines) {
   return JSON.stringify(
     lines
-      .map(({ sku, qty }) => ({ sku: String(sku), qty: normalizeQty(qty) }))
+      .map(({ sku, qty }) => ({ sku: String(sku), qty: normalizeCartQty(qty) }))
       .sort((a, b) => a.sku.localeCompare(b.sku))
   );
 }
@@ -80,6 +76,7 @@ function netRequestKey(lines, purchaseOrderNumber) {
 
 function write(cart) {
   localStorage.removeItem(NET_REQUEST_KEY);
+  localStorage.removeItem(QUOTE_KEY);
   localStorage.setItem(KEY, JSON.stringify(cart));
   const detail = { count: count(), items: items() };
   document.dispatchEvent(new CustomEvent("cart:updated", { detail }));
@@ -90,7 +87,7 @@ export function add(sku, qty = 1) {
   const cleanSku = String(sku || "").trim();
   if (!cleanSku) throw new Error("sku_required");
   const cart = safeReadCart();
-  cart[cleanSku] = Math.max(1, (cart[cleanSku] || 0) + normalizeQty(qty || 1));
+  cart[cleanSku] = Math.max(1, (cart[cleanSku] || 0) + normalizeCartQty(qty || 1));
   write(cart);
 }
 
@@ -98,7 +95,7 @@ export function setQty(sku, qty) {
   const cleanSku = String(sku || "").trim();
   if (!cleanSku) return;
   const cart = safeReadCart();
-  const cleanQty = normalizeQty(qty);
+  const cleanQty = normalizeCartQty(qty);
   if (cleanQty <= 0) delete cart[cleanSku];
   else cart[cleanSku] = cleanQty;
   write(cart);
@@ -118,6 +115,39 @@ export function items() {
 
 export function count() {
   return Object.values(safeReadCart()).reduce((total, qty) => total + qty, 0);
+}
+
+export function replaceWithQuote({ quoteId, orderId, items: offerItems } = {}) {
+  const cleanQuoteId = String(quoteId || "").trim();
+  const cleanOrderId = String(orderId || "").trim();
+  if (!cleanQuoteId || !cleanOrderId || !Array.isArray(offerItems)) {
+    throw new Error("quote_offer_invalid");
+  }
+  const lines = normalizeCartLines(offerItems, { merge: false });
+  if (!lines.length || lines.length !== offerItems.length) throw new Error("quote_offer_invalid");
+  const cart = Object.fromEntries(lines.map(({ sku, qty }) => [sku, qty]));
+  write(cart);
+  localStorage.setItem(QUOTE_KEY, JSON.stringify({
+    quote_id: cleanQuoteId,
+    quote_order_id: cleanOrderId,
+    cart: cartSignature(items()),
+  }));
+}
+
+function acceptedQuoteContext(lines) {
+  try {
+    const value = JSON.parse(localStorage.getItem(QUOTE_KEY) || "null");
+    if (!value || typeof value !== "object"
+      || !value.quote_id || !value.quote_order_id
+      || value.cart !== cartSignature(lines)) return null;
+    return {
+      quote_id: String(value.quote_id),
+      quote_order_id: String(value.quote_order_id),
+    };
+  } catch {
+    localStorage.removeItem(QUOTE_KEY);
+    return null;
+  }
 }
 
 export async function checkout({
@@ -140,6 +170,8 @@ export async function checkout({
     purchase_order_number: purchaseOrderNumber,
     cart: line,
   };
+  const quote = acceptedQuoteContext(line);
+  if (quote) Object.assign(payload, quote);
   if (mode === "net") payload.request_key = netRequestKey(line, purchaseOrderNumber);
 
   const response = await fetch("/api/checkout", {
@@ -161,6 +193,6 @@ export async function checkout({
 
 if (typeof window !== "undefined") {
   window.MASEST = Object.assign(window.MASEST || {}, {
-    cart: { add, setQty, remove, clear, items, count, checkout },
+    cart: { add, setQty, remove, clear, items, count, replaceWithQuote, checkout },
   });
 }

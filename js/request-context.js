@@ -1,3 +1,5 @@
+import { normalizeCartLines, normalizeCartQty } from "./cart-shape.js";
+
 export const REQUEST_CONTEXT_MAX_URL_LENGTH = 1800;
 
 const REQUEST_CONTEXT_SOURCE = "customer_chat";
@@ -14,12 +16,6 @@ function normalizeIdentifier(value) {
   return SAFE_IDENTIFIER_RE.test(normalized) ? normalized : "";
 }
 
-function normalizeQty(value) {
-  const qty = Number(value);
-  if (!Number.isFinite(qty) || qty <= 0) return 0;
-  return Math.min(Math.floor(qty), Number.MAX_SAFE_INTEGER);
-}
-
 function addSafe(left, right) {
   return Math.min(left + right, Number.MAX_SAFE_INTEGER);
 }
@@ -27,7 +23,7 @@ function addSafe(left, right) {
 function safeCount(value) {
   const text = String(value || "");
   if (!/^[1-9]\d{0,15}$/.test(text)) return 0;
-  return normalizeQty(text);
+  return normalizeCartQty(text);
 }
 
 export function normalizePagePath(value, siteOrigin) {
@@ -64,16 +60,7 @@ function inferPageProduct(explicitProduct, path) {
 }
 
 function normalizeCart(cartItems) {
-  if (!Array.isArray(cartItems)) return [];
-  const merged = new Map();
-  for (const item of cartItems) {
-    const sku = normalizeIdentifier(item?.sku);
-    const qty = normalizeQty(item?.qty);
-    if (!sku || !qty) continue;
-    merged.set(sku, addSafe(merged.get(sku) || 0, qty));
-  }
-  return [...merged].map(([sku, qty]) => ({ sku, qty }))
-    .sort((a, b) => a.sku.localeCompare(b.sku));
+  return normalizeCartLines(cartItems, { normalizeSku: normalizeIdentifier });
 }
 
 function contextParams(context) {

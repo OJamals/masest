@@ -323,17 +323,102 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         <button class="btn btn-ghost btn-sm" data-drawer-followup type="button">Send follow-up</button>
         <button class="btn btn-primary btn-sm" data-drawer-save type="button">Save</button>
       </div>
-      <hr>
-      <h4 style="margin:4px 0">Convert to order</h4>
-      <label>Company <select class="adm-select" data-d-co><option value="">Pick company…</option>${companyOptions()}</select></label>
-      <div class="adm-tools" style="flex-wrap:wrap">
-        <input class="adm-input" data-d-sku placeholder="SKU" style="max-width:120px">
-        <input class="adm-input" data-d-name placeholder="Item name" style="max-width:150px">
-        <input class="adm-input" data-d-qty type="number" min="1" value="1" style="max-width:64px" aria-label="Qty">
-        <input class="adm-input" data-d-price type="number" min="0" step="0.01" placeholder="Unit $" style="max-width:90px">
-        <button class="btn btn-ghost btn-sm" data-drawer-convert type="button">Convert</button>
-      </div>
+      ${q.source === 'requisition' ? `
+        <hr>
+        <section data-quote-workspace aria-label="Requisition quote workspace">
+          <h3 style="margin:4px 0">Requisition quote</h3>
+          <div class="adm-skeleton">Loading pricing, messages, and documents…</div>
+        </section>
+      ` : `
+        <hr>
+        <h4 style="margin:4px 0">Convert to order</h4>
+        <label>Company <select class="adm-select" data-d-co><option value="">Pick company…</option>${companyOptions()}</select></label>
+        <div class="adm-tools" style="flex-wrap:wrap">
+          <input class="adm-input" data-d-sku placeholder="SKU" style="max-width:120px">
+          <input class="adm-input" data-d-name placeholder="Item name" style="max-width:150px">
+          <input class="adm-input" data-d-qty type="number" min="1" value="1" style="max-width:64px" aria-label="Qty">
+          <input class="adm-input" data-d-price type="number" min="0" step="0.01" placeholder="Unit $" style="max-width:90px">
+          <button class="btn btn-ghost btn-sm" data-drawer-convert type="button">Convert</button>
+        </div>
+      `}
     </div>`;
+  }
+
+  function quoteWorkspaceHtml(workspace) {
+    const lines = (workspace.items || []).map((item) => `
+      <div class="adm-tools quote-offer-line" data-quote-offer-line style="align-items:end;flex-wrap:wrap">
+        <input type="hidden" data-offer-sku value="${esc(item.sku)}">
+        <input type="hidden" data-offer-product-sku value="${esc(item.product_sku || item.sku)}">
+        <label style="flex:1;min-width:180px">Item
+          <input class="adm-input" data-offer-name value="${esc(item.name || item.sku)}" readonly>
+        </label>
+        <label style="max-width:80px">Qty
+          <input class="adm-input" data-offer-qty type="number" min="1" step="1" value="${esc(item.qty)}">
+        </label>
+        <label style="max-width:120px">Unit price
+          <input class="adm-input" data-offer-price type="number" min="0" step="0.01" value="${esc(item.unit_price)}">
+        </label>
+      </div>`).join('');
+    const messages = (workspace.messages || []).map((item) =>
+      `<li><b>${esc(item.sender_role || 'buyer')}:</b> ${esc(item.body || '')}<br><small>${esc(dateTime(item.created_at))}</small></li>`).join('');
+    const documents = (workspace.documents || []).map((item) => {
+      const doc = item.technical_documents || {};
+      return `<li>${esc(doc.title || item.document_id || 'Document')} · ${esc(item.status || 'pending')}</li>`;
+    }).join('');
+    return `
+      <p class="muted">${esc(workspace.requisition_name || 'Saved requisition')} · ${esc(workspace.currency || 'usd').toUpperCase()}${workspace.offer_status ? ` · ${esc(workspace.offer_status)}` : ''}</p>
+      <div class="quote-offer-lines" aria-label="Quote line items">${lines || '<p class="muted">No line items.</p>'}</div>
+      <div class="adm-tools" style="justify-content:flex-end">
+        <button class="btn btn-primary btn-sm" data-send-quote type="button"${lines && !['accepted', 'ordered', 'payment_pending'].includes(workspace.offer_status) ? '' : ' disabled'}>${workspace.offer_status === 'ordered' ? 'Order placed' : (workspace.offer_status === 'payment_pending' ? 'Payment pending' : (workspace.offer_status === 'accepted' ? 'Buyer accepted' : (workspace.offer_status === 'sent' ? 'Resend quote' : 'Send quote')))}</button>
+      </div>
+      <div class="drawer-details">
+        <section><h4>Messages</h4>${messages ? `<ul>${messages}</ul>` : '<p class="muted">No company messages.</p>'}</section>
+        <section><h4>Documents</h4>${documents ? `<ul>${documents}</ul>` : '<p class="muted">No document requests.</p>'}</section>
+      </div>`;
+  }
+
+  async function loadQuoteWorkspace(dlg, quote) {
+    const box = dlg.querySelector('[data-quote-workspace]');
+    if (!box) return;
+    try {
+      const { workspace } = await api(`/api/admin/quotes?view=workspace&id=${encodeURIComponent(quote.id)}`);
+      box.innerHTML = `<h3 style="margin:4px 0">Requisition quote</h3>${quoteWorkspaceHtml(workspace)}`;
+    } catch (err) {
+      box.innerHTML = `<h3 style="margin:4px 0">Requisition quote</h3><p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load the quote workspace.')}</p>`;
+    }
+  }
+
+  async function sendQuote(dlg, quote, button) {
+    const status = dlg.querySelector('[data-drawer-status]');
+    const items = [...dlg.querySelectorAll('[data-quote-offer-line]')].map((line) => ({
+      sku: line.querySelector('[data-offer-sku]')?.value,
+      product_sku: line.querySelector('[data-offer-product-sku]')?.value,
+      name: line.querySelector('[data-offer-name]')?.value,
+      qty: line.querySelector('[data-offer-qty]')?.value,
+      unit_price: line.querySelector('[data-offer-price]')?.value,
+    }));
+    if (!items.length) {
+      status.textContent = 'Add at least one priced line.';
+      status.dataset.state = 'err';
+      return;
+    }
+    button.disabled = true;
+    try {
+      const res = await api('/api/admin/quotes', {
+        method: 'POST',
+        body: { id: quote.id, action: 'send_quote', items },
+      });
+      if (res.quote) Object.assign(quote, res.quote);
+      status.textContent = 'Quote sent. Buyer can accept and check out.';
+      status.dataset.state = 'ok';
+      await loadQuoteWorkspace(dlg, quote);
+      await renderQuotePipeline({ refetch: false });
+    } catch (err) {
+      status.textContent = err.data?.error || 'Could not send the quote.';
+      status.dataset.state = 'err';
+    } finally {
+      button.disabled = false;
+    }
   }
 
   async function saveDrawer(dlg, quote) {
@@ -480,12 +565,15 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       if (snooze) { await snoozeDrawer(dlg, quote, snooze); return; }
       const followup = event.target.closest('[data-drawer-followup]');
       if (followup) { await followupDrawer(dlg, quote, followup); return; }
+      const send = event.target.closest('[data-send-quote]');
+      if (send) { await sendQuote(dlg, quote, send); return; }
       if (event.target.closest('[data-drawer-convert]')) { await convertDrawer(dlg, quote); }
     });
     dlg.addEventListener('close', () => dlg.remove());
     dlg.showModal();
     crm.mount(dlg.querySelector('[data-drawer-crm]'), 'quote', quote.id);
     loadDrawerContacts(dlg, quote);
+    loadQuoteWorkspace(dlg, quote);
   }
 
   async function openQuoteById(id) {

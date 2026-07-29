@@ -21,6 +21,11 @@ export const acceptanceEnvGroups = [
     required: ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_SHIPPING_RATE_IDS"],
   },
   {
+    id: "stripe_effects",
+    label: "Stripe post-webhook effects worker",
+    required: ["STRIPE_EFFECTS_WORKER_SECRET"],
+  },
+  {
     id: "qbo",
     label: "QuickBooks Online sync",
     required: [],

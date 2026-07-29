@@ -108,6 +108,13 @@ async function scrollContentPanelIntoView(page) {
   });
 }
 
+async function openContentWorkspace(page, tab) {
+  const button = page.locator(`[data-content-workspace-tab="${tab}"]`);
+  await button.click();
+  await expect(button).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(`[data-content-workspace-panel="${tab}"]`)).toBeVisible();
+}
+
 test("Products renders CMS photos and can relink the primary image through the shared viewer", async ({ page }) => {
   await bootAsStaff(page);
   const cmsBase = "https://example.supabase.co/storage/v1/object/public/content-assets/site";
@@ -206,16 +213,28 @@ test("staff edits structured CMS service fields and posts normalized payload", a
   await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
   await expect(page.locator("#contentStructuredFields")).toBeVisible();
+  const copyTab = page.locator('[data-content-workspace-tab="copy"]');
+  await expect(copyTab).toHaveAttribute("aria-selected", "true");
+  await copyTab.focus();
+  await copyTab.press("ArrowRight");
+  await expect(page.locator('[data-content-workspace-tab="seo"]')).toHaveAttribute("aria-selected", "true");
+  await page.locator('[data-content-workspace-tab="seo"]').press("ArrowLeft");
+  await expect(copyTab).toHaveAttribute("aria-selected", "true");
   await page.locator("[data-content-edit]").first().click();
 
   await expect(page.locator('[data-content-payload-field="sku"]')).toHaveValue("MS-LAB-WATER");
-  await expect(page.locator('[data-content-seo-field="description"]')).toHaveValue("Industrial water analysis.");
   await page.locator('[data-content-payload-field="public_price"]').fill("130.25");
   await page.locator('[data-content-payload-field="active"]').uncheck();
+  await openContentWorkspace(page, "seo");
+  await expect(page.locator('[data-content-seo-field="description"]')).toHaveValue("Industrial water analysis.");
   await page.locator('[data-content-seo-field="title"]').fill("Industrial water analysis | MASEST");
   await page.locator('[data-content-seo-field="description"]').fill("Industrial water analysis for field teams replacing legacy service calls.");
   await page.locator('[data-content-seo-field="og_image"]').fill("img/proof/cases/water-analysis.webp");
   await expect(page.locator("#contentSeo")).toHaveValue(/Industrial water analysis \| MASEST/);
+  await openContentWorkspace(page, "images");
+  await expect(page.locator("#contentImageSummary")).toContainText("SEO · social image");
+  await expect(page.locator("#contentImageSummary img")).toHaveAttribute("src", "img/proof/cases/water-analysis.webp");
+  await openContentWorkspace(page, "preview");
   await page.locator('[data-content-action="preview"]').click();
 
   const frame = page.frameLocator("#contentPreviewFrame");
@@ -315,7 +334,7 @@ test("content editor duplicates entries as collision-safe drafts", async ({ page
   await expect(page.locator("#contentSlug")).toHaveValue("water-analysis-copy-2");
   await expect(page.locator("#contentStatus")).toHaveText("Duplicated as a new draft. Review the slug, then save.");
   expect(saveBody).toBeNull();
-  await page.locator("#contentForm .adm-inline-actions").screenshot({
+  await page.locator("#contentForm .adm-content-workspace-actions").screenshot({
     path: `${SCREENSHOT_DIR}/admin-content-duplicate-draft-desktop.png`,
   });
 
@@ -362,6 +381,7 @@ test("content editor schedules publish with an explicit datetime", async ({ page
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator("[data-content-edit]").first().click();
 
+  await openContentWorkspace(page, "publish");
   await expect(page.locator("#contentScheduledAt")).toBeVisible();
   await page.locator("#contentScheduledAt").fill("2026-07-01T09:30");
   const expectedScheduledAt = await page.locator("#contentScheduledAt").evaluate((input) => new Date(input.value).toISOString());
@@ -402,6 +422,7 @@ test("content editor requires a datetime before scheduling publish", async ({ pa
   await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator("[data-content-edit]").first().click();
+  await openContentWorkspace(page, "publish");
   await expect(page.locator("#contentScheduledAt")).toHaveValue("");
 
   await page.locator('[data-content-workflow="schedule"]').click();
@@ -461,6 +482,7 @@ test("dedicated blog tab schedules posts and publishes due posts in blog scope",
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator("[data-content-edit]").first().click();
 
+  await openContentWorkspace(page, "publish");
   await page.locator("#contentScheduledAt").fill("2026-07-10T09:30");
   const expectedScheduledAt = await page.locator("#contentScheduledAt").evaluate((input) => new Date(input.value).toISOString());
 
@@ -576,6 +598,7 @@ test("content editor warns when publish cannot trigger a static rebuild", async 
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator("[data-content-edit]").first().click();
 
+  await openContentWorkspace(page, "publish");
   const publishResponse = page.waitForResponse((response) => (
     response.url().includes("/api/admin/content") && response.request().method() === "POST"
   ));
@@ -622,6 +645,7 @@ test("content editor sends workflow notes and surfaces review notes", async ({ p
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator("[data-content-edit]").first().click();
 
+  await openContentWorkspace(page, "publish");
   const note = "Tighten the compliance wording before publishing.";
   await page.locator(".adm-content-disclosure > summary").click();
   await expect(page.locator("#contentWorkflowNote")).toBeVisible();
@@ -677,6 +701,7 @@ test("content editor blocks writes behind active editorial locks", async ({ page
   await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator("[data-content-edit]").first().click();
+  await openContentWorkspace(page, "publish");
   await page.locator(".adm-content-disclosure > summary").click();
 
   await expect(page.locator("#contentLockStatus")).toContainText("Locked by another editor");
@@ -753,7 +778,7 @@ test("content editor restores archived entries back to draft", async ({ page }) 
   await expect(page.locator("#contentEditorBadge")).toHaveText("archived");
   await expect(page.locator('[data-content-action="archive"]')).toBeHidden();
   await expect(page.locator('[data-content-action="unarchive"]')).toBeVisible();
-  await page.locator("#contentForm .adm-inline-actions").screenshot({
+  await page.locator("#contentForm .adm-content-workspace-actions").screenshot({
     path: `${SCREENSHOT_DIR}/admin-content-archived-restore-desktop.png`,
   });
 
@@ -957,8 +982,10 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
   await expect(page.locator("#contentType")).toHaveValue("blog_post");
   await expect(page.locator("#contentTypeFilter")).toHaveCount(0);
   await expect(page.locator('[data-content-action="draft"]')).toBeVisible();
+  await openContentWorkspace(page, "publish");
   await expect(page.locator('[data-content-action="publish"]')).toBeVisible();
   await expect(page.locator("#contentRevisionList")).toBeVisible();
+  await openContentWorkspace(page, "copy");
   const localeWidth = await page.locator("#contentLocale").evaluate((node) =>
     Math.round(node.getBoundingClientRect().width),
   );
@@ -1028,6 +1055,7 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
   await page.locator('[data-editor-reference-path="/services"]').click();
   await expect(bodyOutput).toHaveValue(/\[\[card:title=Water analysis\|href=\/services/);
 
+  await openContentWorkspace(page, "preview");
   await page.locator('[data-content-action="preview"]').click();
   const frame = page.frameLocator("#contentPreviewFrame");
   await expect(frame.locator("article.blog-preview")).toBeVisible();

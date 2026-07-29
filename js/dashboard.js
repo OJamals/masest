@@ -1,7 +1,12 @@
 /* MASEST user dashboard controller. Loaded as a module by dashboard.html.
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
 import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260711w';
-import { add as cartAdd, clear as cartClear, items as cartItems } from './cart.js';
+import {
+  add as cartAdd,
+  clear as cartClear,
+  items as cartItems,
+  replaceWithQuote,
+} from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 import { initBusinessHub } from './business.js?v=20260725f';
 
@@ -469,7 +474,7 @@ async function renderOrders({ append = false } = {}) {
     <div class="dash-card-toolbar"><div><h2 class="headline dash-section-title dash-section-title-tight">Saved requisitions</h2><p class="muted">${requisitions.length} of 25 saved</p></div><a class="btn btn-ghost btn-sm" href="cart.html">Open cart</a></div>
     ${requisitions.length ? requisitions.map((requisition) => {
       const itemCount = (requisition.order_items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
-      return `<div class="dash-row"><span><b>${esc(requisition.requisition_name)}</b><small class="muted">${itemCount} item${itemCount === 1 ? '' : 's'} · ${fmtDate(requisition.created_at)}</small></span><span class="dash-action-row dash-action-row--flush"><b>${money(requisition.total, requisition.currency)}</b><button class="btn btn-primary btn-sm" type="button" data-use-requisition="${esc(requisition.id)}">Use</button><button class="btn btn-ghost btn-sm" type="button" data-delete-requisition="${esc(requisition.id)}">Delete</button></span></div>`;
+      return `<div class="dash-row"><span><b>${esc(requisition.requisition_name)}</b><small class="muted">${itemCount} item${itemCount === 1 ? '' : 's'} · ${fmtDate(requisition.created_at)}</small></span><span class="dash-action-row dash-action-row--flush"><b>${money(requisition.total, requisition.currency)}</b><button class="btn btn-primary btn-sm" type="button" data-request-requisition-quote="${esc(requisition.id)}">Request quote</button><button class="btn btn-ghost btn-sm" type="button" data-use-requisition="${esc(requisition.id)}">Use</button><button class="btn btn-ghost btn-sm" type="button" data-delete-requisition="${esc(requisition.id)}">Delete</button></span></div>`;
     }).join('') : '<div class="empty-state"><i class="ph ph-clipboard-text empty-icon" aria-hidden="true"></i><div class="empty-title">No saved requisitions</div><div class="empty-body">Build a repeat order in the cart, then save it here for later.</div></div>'}
   </section>`;
   const orderHtml = list.length ? list.map((o, i) => {
@@ -506,6 +511,21 @@ async function renderOrders({ append = false } = {}) {
   box.querySelectorAll('[data-use-requisition]').forEach((button) => button.addEventListener('click', () => {
     restoreCart(button.dataset.useRequisition, button, 'None of these saved items are available.');
   }));
+  box.querySelectorAll('[data-request-requisition-quote]').forEach((button) => button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      const result = await api('/api/account/orders', {
+        method: 'POST',
+        body: { action: 'request_quote', id: button.dataset.requestRequisitionQuote },
+      });
+      pages.quotes = { items: [], offset: 0, total: null, hasMore: false };
+      await renderQuoteRequests();
+      toast(result.existing ? 'This requisition already has an open quote request.' : 'Quote requested.', { variant: 'success' });
+    } catch (error) {
+      toast(error.data?.error || 'Could not request a quote. Try again.', { variant: 'error' });
+      button.disabled = false;
+    }
+  }));
   box.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', async () => {
     const o = list[Number(b.dataset.reorder)];
     restoreCart(o.id, b, 'None of these items are available to reorder.');
@@ -535,8 +555,8 @@ async function renderOrders({ append = false } = {}) {
 }
 
 /* ---------- quote requests ---------- */
-// Read-only mirror of the caller's quote requests (email-keyed — works with or
-// without a business profile). Hidden entirely when there are none.
+// Buyer-safe mirror of quote requests. Ready offers can be accepted into the cart;
+// checkout revalidates the quote and its server-owned order before using prices.
 async function renderQuoteRequests({ append = false } = {}) {
   const box = $('quotesBody');
   if (!box) return;
@@ -548,11 +568,36 @@ async function renderQuoteRequests({ append = false } = {}) {
   st.offset += (res.quotes || []).length;
   st.total = res.total; st.hasMore = !!res.has_more;
   if (!st.items.length) { box.hidden = true; return; }
-  const stateAttr = { Received: 'pending_payment', 'In review': 'net_open', Quoted: 'paid', Closed: 'cancelled' };
+  const stateAttr = { Received: 'pending_payment', 'In review': 'net_open', 'Quote ready': 'paid', Accepted: 'paid', 'Payment pending': 'pending_payment', 'Order placed': 'fulfilled', Quoted: 'paid', Closed: 'cancelled' };
   box.innerHTML = `<h2 class="headline dash-section-title">Quote requests</h2>`
-    + st.items.map((q) => `<div class="dash-row"><span>${fmtDate(q.created_at)} · ${esc(q.product || q.type || 'Quote')}</span><span class="badge" data-s="${esc(stateAttr[q.state] || '')}">${esc(q.state)}</span></div>`).join('')
+    + st.items.map((q) => {
+      const lines = (q.offer?.order_items || []).map((item) =>
+        `<small class="muted">${esc(item.name || item.sku)} × ${esc(item.qty)} · ${money(item.line_total, q.offer.currency)}</small>`).join('');
+      return `<div class="dash-row"><span>${fmtDate(q.created_at)} · ${esc(q.product || q.type || 'Quote')}${lines}</span><span class="dash-action-row dash-action-row--flush"><span class="badge" data-s="${esc(stateAttr[q.state] || '')}">${esc(q.state)}</span>${q.can_accept ? `<button class="btn btn-primary btn-sm" type="button" data-accept-quote="${esc(q.id)}">${q.state === 'Accepted' ? 'Load quote' : 'Accept quote'}</button>` : ''}</span></div>`;
+    }).join('')
     + pagerHtml('data-load-more-quotes', st)
-    + `<p class="muted">Our team replies by email. Need to add details? <a href="contact?type=quote">Send another request</a>.</p>`;
+    + `<p class="muted">Need to add details? <a href="#messages">Message your account team</a>.</p>`;
+  box.querySelectorAll('[data-accept-quote]').forEach((button) => button.addEventListener('click', async () => {
+    const quote = st.items.find((item) => item.id === button.dataset.acceptQuote);
+    if (!quote) return;
+    if (cartItems().length && !(await confirmDialog('Replace your current cart with this accepted quote?', { confirmText: 'Accept and replace', cancelText: 'Keep cart' }))) return;
+    button.disabled = true;
+    try {
+      const result = await api('/api/account/quotes', {
+        method: 'POST',
+        body: { id: quote.id, action: 'accept_offer' },
+      });
+      replaceWithQuote({
+        quoteId: result.quote_id,
+        orderId: result.offer.id,
+        items: result.offer.order_items,
+      });
+      location.href = 'cart.html';
+    } catch (error) {
+      toast(error.data?.error || 'Could not accept this quote. Try again.', { variant: 'error' });
+      button.disabled = false;
+    }
+  }));
   box.querySelector('[data-load-more-quotes]')?.addEventListener('click', (e) => { e.currentTarget.disabled = true; renderQuoteRequests({ append: true }); });
   box.hidden = false;
 }

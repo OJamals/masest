@@ -38,7 +38,7 @@ test("QuickBooks setup docs call out online invoice payment requirements", () =>
   assert.match(cf, /online card and ACH/i);
 });
 
-test("new NET and Stripe orders enter the QBO sync queue", () => {
+test("new NET and live Stripe orders enter QBO; Stripe test-mode stays skipped", () => {
   const orderIntegrity = read("supabase/schema-order-integrity.sql");
   const webhook = read("functions/api/stripe-webhook.js");
   const orderShape = read("functions/_lib/order-shape.js");
@@ -52,10 +52,16 @@ test("new NET and Stripe orders enter the QBO sync queue", () => {
     "webhook should build the paid order via orderRowFromSession");
   // Settled card orders queue immediately; unsettled ACH orders hold at null until
   // async_payment_succeeded releases them (claim_qbo_orders only takes 'pending').
-  assert.match(orderShape, /payment_method:\s*['"]stripe['"][\s\S]*qbo_sync_status:\s*settled\s*\?\s*['"]pending['"]\s*:\s*null/,
-    "Stripe checkout orders should start pending QBO sync only once payment settled");
-  assert.match(webhook, /async_payment_succeeded[\s\S]*qbo_sync_status:\s*'pending'/,
-    "ACH settlement should release the order into the QBO sync queue");
+  assert.match(orderShape, /function stripeQboSyncStatus\(livemode\)[\s\S]*livemode === false[\s\S]*["']skipped["'][\s\S]*["']pending["']/,
+    "Stripe mode should have one canonical production-QBO gate");
+  assert.match(orderShape, /qbo_sync_status:\s*settled\s*\?\s*stripeQboSyncStatus\(s\.livemode\)\s*:\s*null/,
+    "only live settled Stripe checkout orders should enter the production QBO queue");
+  assert.match(webhook, /async_payment_succeeded[\s\S]*qbo_sync_status:\s*stripeQboSyncStatus\(s\.livemode\)/,
+    "ACH settlement should keep Stripe test-mode orders outside production QBO");
+  assert.match(orderShape, /qboSubscriptionInvoiceRow[\s\S]*qbo_sync_status:\s*total\s*>\s*0\s*\?\s*stripeQboSyncStatus\(inv\.livemode\)/,
+    "Stripe test subscription invoices must stay outside production QBO");
+  assert.match(webhook, /function qboRefundRowsFromCharge[\s\S]*order\.qbo_sync_status === 'skipped'[\s\S]*return \[\]/,
+    "refunds for QBO-skipped Stripe test orders must not queue production credit memos");
 });
 
 test("QBO invoice auto-sync notifies the buyer company when the invoice is ready", () => {

@@ -135,6 +135,8 @@ test('refund credit memo is wired end to end', () => {
   assert.match(sync, /syncRefund/);
   const admin = read('functions/api/admin/orders.js');
   assert.match(admin, /qbo_refunds/);
+  assert.match(admin, /qbo_sync_status !== 'skipped'[\s\S]*qbo_refunds/,
+    'admin refunds must keep Stripe test-mode orders outside production QBO');
   const migration = read('supabase/schema-qbo-refunds.sql');
   assert.match(migration, /create table if not exists public\.qbo_refunds/);
   assert.match(migration, /stripe_refund_id\s+text/);

@@ -68,6 +68,9 @@ export function buildStripeCheckoutSessionParams({
   customerId = null,
   shippingRateIds = [],
   purchaseOrderNumber = null,
+  quoteId = null,
+  quoteOrderId = null,
+  allowPromotionCodes = true,
 }) {
   const cleanEmail = String(email || "").trim();
   const cart = sellable.map((product) => ({
@@ -105,7 +108,7 @@ export function buildStripeCheckoutSessionParams({
     // Lets buyers enter a Stripe promotion code at checkout (#97). Codes/coupons are
     // managed via /api/admin/coupons; Stripe validates expiry/usage/minimum. NET
     // on-account orders don't run through Checkout, so they don't take promo codes.
-    allow_promotion_codes: true,
+    allow_promotion_codes: !!allowPromotionCodes,
     // Gated by STRIPE_TAX_ENABLED (see caller). Off by default; requires a Stripe
     // origin/head-office address before it can be flipped on, or sessions error.
     automatic_tax: { enabled: !!taxEnabled },
@@ -118,6 +121,8 @@ export function buildStripeCheckoutSessionParams({
       company_id: companyId || "",
       buyer_email: cleanEmail,
       purchase_order_number: purchaseOrderNumber || "",
+      quote_id: quoteId || "",
+      quote_order_id: quoteOrderId || "",
       ...cartMetadataEntries(cart),
     },
   };

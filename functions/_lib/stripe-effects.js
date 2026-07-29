@@ -245,7 +245,7 @@ async function rpcData(sb, name, args) {
 
 async function loadOrder(sb, orderId) {
   const { data: order, error: orderError } = await sb.from('orders')
-    .select('id,customer_email,subtotal,shipping,tax,total,currency,purchase_order_number,ship_address')
+    .select('id,status,customer_email,subtotal,shipping,tax,total,currency,purchase_order_number,ship_address')
     .eq('id', orderId)
     .maybeSingle();
   if (orderError || !order) throw errorWithCode('effect_order_not_found');
@@ -283,6 +283,7 @@ function addressOf(order) {
 
 async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
   const { order, lines } = await loadOrder(sb, effectRow.payload.order_id);
+  if (order.status === 'cancelled' || order.status === 'refunded') return true;
   if (!order.customer_email) throw errorWithCode('effect_order_email_missing');
   const pending = Boolean(effectRow.payload.pending);
   const currency = (order.currency || 'usd').toUpperCase();

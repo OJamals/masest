@@ -61,13 +61,14 @@ test("content assets expose exact reverse references and impacted fields", async
   }], [{
     type: "proof_card",
     slug: "brewery",
-    locale: "en",
+    locale: "es",
     status: "published",
     title: "Brewery proof",
     payload: {
       image: "/img/proof/cases/brewery.webp?v=1",
       image_after: "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
       body: 'Proof image: <img src="/img/proof/cases/brewery.webp" alt="">',
+      not_a_reference: "cms/unused.webp-not-a-reference",
     },
     seo: { og_image: "/img/proof/cases/brewery.webp" },
   }]);
@@ -76,7 +77,7 @@ test("content assets expose exact reverse references and impacted fields", async
   assert.deepEqual(assets[0].references, [{
     type: "proof_card",
     slug: "brewery",
-    locale: "en",
+    locale: "es",
     status: "published",
     title: "Brewery proof",
     fields: ["payload.image", "payload.image_after", "payload.body", "seo.og_image"],
@@ -85,21 +86,66 @@ test("content assets expose exact reverse references and impacted fields", async
   assert.deepEqual(assets[1].references, []);
 });
 
-test("asset manager exposes replace-everywhere control backed by optimized in-place storage", () => {
+test("asset manager exposes preview-first replacement backed by content revisions", () => {
   const api = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
   const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
 
-  assert.match(api, /replace_storage_path/);
-  assert.match(api, /"x-upsert":\s*"true"/);
-  assert.match(api, /content_asset\.replaced/);
+  assert.match(api, /preview_replace_everywhere/);
+  assert.match(api, /apply_replace_everywhere/);
+  assert.match(api, /impact_hash/);
+  assert.match(api, /repo\.saveEntry/);
+  assert.doesNotMatch(api, /"x-upsert":\s*"true"/);
   assert.match(picker, /data-shared-image-replace/);
   assert.match(picker, /Replace everywhere/);
-  assert.match(picker, /method:\s*"PUT"/);
+  assert.match(picker, /preview_replace_everywhere/);
+  assert.match(picker, /apply_replace_everywhere/);
+  assert.match(picker, /data-asset-replacement-diff/);
+  assert.match(picker, /Revisions/);
   assert.match(picker, /data-shared-image-impact/);
   assert.match(picker, /content entr/);
 });
 
-test("replace everywhere overwrites the stable CMS object and keeps the logical site alias", async () => {
+test("replacement plan previews exact payload and SEO field diffs without mutating entries", async () => {
+  const { planContentAssetReplacement } = await import("../functions/api/admin/content-assets.js");
+  const oldUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/cms/old.webp";
+  const nextUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/cms/new.webp";
+  const entry = {
+    id: "entry-1",
+    type: "page_section",
+    slug: "home-hero",
+    locale: "en",
+    title: "Home hero",
+    status: "published",
+    version: 7,
+    payload: {
+      image: oldUrl,
+      body: `<figure><img src="${oldUrl}" alt=""></figure>`,
+      untouched: "cms/old.webp-not-a-reference",
+    },
+    seo: { og_image: oldUrl },
+  };
+  const plan = planContentAssetReplacement({
+    source: { storage_path: "cms/old.webp", public_url: oldUrl, source_url: oldUrl },
+    target: { storage_path: "cms/new.webp", public_url: nextUrl, source_url: nextUrl },
+    entries: [entry],
+  });
+
+  assert.equal(plan.changes.length, 1);
+  assert.deepEqual(plan.changes[0].fields, [
+    { path: "payload.image", before: oldUrl, after: nextUrl },
+    {
+      path: "payload.body",
+      before: `<figure><img src="${oldUrl}" alt=""></figure>`,
+      after: `<figure><img src="${nextUrl}" alt=""></figure>`,
+    },
+    { path: "seo.og_image", before: oldUrl, after: nextUrl },
+  ]);
+  assert.equal(plan.changes[0].next.payload.image, nextUrl);
+  assert.equal(plan.changes[0].next.payload.untouched, "cms/old.webp-not-a-reference");
+  assert.equal(entry.payload.image, oldUrl, "preview must not mutate the current entry");
+});
+
+test("unsafe in-place replacement is rejected before storage mutation", async () => {
   const originalFetch = globalThis.fetch;
   const calls = [];
   const logicalPath = "/img/proof/replacement-test.webp";
@@ -119,7 +165,6 @@ test("replace everywhere overwrites the stable CMS object and keeps the logical 
     source_url: publicUrl,
     created_by: "original-owner",
   };
-  const optimized = new Uint8Array([82, 73, 70, 70, 1, 2, 3, 4]);
 
   globalThis.fetch = async (input, init = {}) => {
     const url = new URL(String(input));
@@ -128,30 +173,10 @@ test("replace everywhere overwrites the stable CMS object and keeps the logical 
     if (url.pathname === "/auth/v1/user") {
       return Response.json({ user: { id: "owner-id", email: "owner@example.com" } });
     }
-    if (url.hostname === "api.tinify.com" && url.pathname === "/shrink") {
-      return new Response(null, {
-        status: 201,
-        headers: { location: "https://api.tinify.com/output/replacement" },
-      });
-    }
-    if (url.hostname === "api.tinify.com" && url.pathname === "/output/replacement") {
-      return new Response(optimized, { status: 200 });
-    }
     if (url.pathname === "/rest/v1/content_assets" && method === "GET") {
       return Response.json(url.searchParams.get("select") === "created_by"
         ? [{ created_by: existing.created_by }]
         : [existing]);
-    }
-    if (url.pathname === "/storage/v1/object/content-assets/site/img/proof/replacement-test.webp"
-      && method === "POST") {
-      return Response.json({ Key: "site/img/proof/replacement-test.webp" }, { status: 200 });
-    }
-    if (url.pathname === "/rest/v1/content_assets" && method === "POST") {
-      const row = JSON.parse(String(init.body));
-      return Response.json({ ...existing, ...row }, { status: 201 });
-    }
-    if (url.pathname === "/rest/v1/audit_log" && method === "POST") {
-      return Response.json(null, { status: 201 });
     }
     throw new Error(`Unexpected request: ${method} ${url}`);
   };
@@ -173,14 +198,164 @@ test("replace everywhere overwrites the stable CMS object and keeps the logical 
       env: { ...CONTENT_ASSET_ENV, TINIFY_API_KEY: "tinify-key" },
     });
     const result = await response.json();
-    assert.equal(response.status, 200);
-    assert.equal(result.asset.storage_path, logicalPath);
-    assert.equal(result.asset.public_url, publicUrl);
-    assert.equal(result.asset.alt, "Updated proof");
-    const upload = calls.find(({ url, method }) => url.pathname.includes("/storage/v1/object/") && method === "POST");
-    assert.equal(upload?.headers?.["x-upsert"], "true");
-    const audit = calls.find(({ url, method }) => url.pathname === "/rest/v1/audit_log" && method === "POST");
-    assert.match(String(audit?.body), /content_asset\.replaced/);
+    assert.equal(response.status, 409);
+    assert.deepEqual(result, {
+      error: "in_place_replace_unsafe",
+      message: "Upload a new asset and use previewed replace everywhere.",
+    });
+    assert.equal(calls.some(({ url, method }) =>
+      url.pathname.includes("/storage/v1/object/") && method === "POST"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("replace everywhere rejects stale impact then writes content through revisions", async () => {
+  const originalFetch = globalThis.fetch;
+  const mutations = [];
+  let concurrentChange = false;
+  const oldUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/cms/old.webp";
+  const nextUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/cms/new.webp";
+  const source = {
+    storage_path: "cms/old.webp",
+    status: "available",
+    alt: "Old proof",
+    source_url: oldUrl,
+  };
+  const target = {
+    storage_path: "cms/new.webp",
+    status: "available",
+    alt: "New proof",
+    source_url: nextUrl,
+  };
+  const entry = {
+    id: "entry-1",
+    type: "page_section",
+    slug: "home-hero",
+    locale: "es",
+    title: "Home hero",
+    status: "published",
+    version: 7,
+    payload: { image: oldUrl },
+    seo: { og_image: oldUrl },
+    locked_by: "owner-id",
+    locked_at: new Date().toISOString(),
+  };
+
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(String(input));
+    const method = String(init.method || input?.method || "GET").toUpperCase();
+    if (url.pathname === "/auth/v1/user") {
+      return Response.json({ user: { id: "owner-id", email: "owner@example.com" } });
+    }
+    if (url.pathname === "/rest/v1/content_assets" && method === "GET") {
+      const filter = url.searchParams.get("storage_path") || "";
+      return Response.json([filter.includes("new.webp") ? target : source]);
+    }
+    if (url.pathname === "/rest/v1/content_entries" && method === "GET") {
+      return Response.json(
+        url.searchParams.has("slug") || !url.searchParams.has("locale") ? [entry] : [],
+      );
+    }
+    if (url.pathname === "/rest/v1/content_entries" && ["PATCH", "POST"].includes(method)) {
+      const body = JSON.parse(String(init.body || "{}"));
+      if (concurrentChange && method === "PATCH") return Response.json([]);
+      mutations.push({ table: "content_entries", body });
+      return Response.json({ ...body, id: entry.id, version: 8 }, { status: 201 });
+    }
+    if (url.pathname === "/rest/v1/content_revisions" && method === "POST") {
+      mutations.push({ table: "content_revisions", body: JSON.parse(String(init.body || "{}")) });
+      return Response.json(null, { status: 201 });
+    }
+    if (url.pathname === "/rest/v1/audit_log" && method === "POST") {
+      mutations.push({ table: "audit_log", body: JSON.parse(String(init.body || "{}")) });
+      return Response.json(null, { status: 201 });
+    }
+    throw new Error(`Unexpected request: ${method} ${url}`);
+  };
+
+  const request = (body) => contentAssetsRequest({
+    request: new Request("https://masest.co/api/admin/content-assets", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer owner-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }),
+    env: CONTENT_ASSET_ENV,
+  });
+
+  try {
+    const previewResponse = await request({
+      action: "preview_replace_everywhere",
+      source_storage_path: source.storage_path,
+      target_storage_path: target.storage_path,
+    });
+    const preview = await previewResponse.json();
+    assert.equal(previewResponse.status, 200);
+    assert.equal(preview.preview.change_count, 1);
+    assert.equal(preview.preview.field_count, 2);
+    assert.match(preview.preview.impact_hash, /^[a-f0-9]{64}$/);
+
+    const staleResponse = await request({
+      action: "apply_replace_everywhere",
+      source_storage_path: source.storage_path,
+      target_storage_path: target.storage_path,
+      impact_hash: "stale",
+      confirm: "replace_everywhere",
+    });
+    assert.equal(staleResponse.status, 409);
+    assert.equal((await staleResponse.json()).error, "asset_impact_changed");
+    assert.equal(mutations.length, 0);
+
+    entry.locked_by = "other-editor";
+    const lockedResponse = await request({
+      action: "apply_replace_everywhere",
+      source_storage_path: source.storage_path,
+      target_storage_path: target.storage_path,
+      impact_hash: preview.preview.impact_hash,
+      confirm: "replace_everywhere",
+    });
+    assert.equal(lockedResponse.status, 409);
+    assert.equal((await lockedResponse.json()).error, "content_locked");
+    assert.equal(mutations.length, 0);
+    entry.locked_by = "owner-id";
+
+    concurrentChange = true;
+    const changedResponse = await request({
+      action: "apply_replace_everywhere",
+      source_storage_path: source.storage_path,
+      target_storage_path: target.storage_path,
+      impact_hash: preview.preview.impact_hash,
+      confirm: "replace_everywhere",
+    });
+    const changed = await changedResponse.json();
+    assert.equal(changedResponse.status, 409);
+    assert.equal(changed.error, "asset_impact_changed");
+    assert.equal(changed.rolled_back, 0);
+    assert.equal(mutations.length, 0);
+    concurrentChange = false;
+
+    const applyResponse = await request({
+      action: "apply_replace_everywhere",
+      source_storage_path: source.storage_path,
+      target_storage_path: target.storage_path,
+      impact_hash: preview.preview.impact_hash,
+      confirm: "replace_everywhere",
+    });
+    const applied = await applyResponse.json();
+    assert.equal(applyResponse.status, 200);
+    assert.equal(applied.replaced_entries, 1);
+    assert.equal(applied.replaced_fields, 2);
+    assert.deepEqual(mutations.map(({ table }) => table), [
+      "content_entries",
+      "content_revisions",
+      "audit_log",
+    ]);
+    assert.equal(mutations[0].body.payload.image, nextUrl);
+    assert.equal(mutations[0].body.seo.og_image, nextUrl);
+    assert.equal(mutations[1].body.version, 8);
   } finally {
     globalThis.fetch = originalFetch;
   }

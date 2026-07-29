@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   centsToAmount,
+  stripeQboSyncStatus,
   assembleCartMetadata,
   parseCartMetadata,
   orderRowFromSession,
@@ -105,6 +106,26 @@ test("orderRowFromSession: unsettled ACH session -> pending_payment with QBO syn
   assert.equal(row.qbo_sync_status, null); // out of the claim queue until the debit clears
   assert.equal(orderRowFromSession({ payment_status: "paid" }).status, "paid");
   assert.equal(orderRowFromSession({}).status, "paid"); // absent payment_status = settled (card)
+});
+
+test("Stripe test-mode orders and subscription invoices never enter production QBO queues", () => {
+  assert.equal(stripeQboSyncStatus(false), "skipped");
+  assert.equal(stripeQboSyncStatus(true), "pending");
+  assert.equal(
+    orderRowFromSession({ payment_status: "paid", livemode: false }).qbo_sync_status,
+    "skipped",
+  );
+  assert.equal(
+    orderRowFromSession({ payment_status: "paid", livemode: true }).qbo_sync_status,
+    "pending",
+  );
+  assert.equal(
+    qboSubscriptionInvoiceRow(
+      { id: "in_test", total: 1000, livemode: false },
+      { companyId: "co-1", tier: "Silver" },
+    ).qbo_sync_status,
+    "skipped",
+  );
 });
 
 test("stockIncrements mirrors decrements: skuless AND backordered lines are skipped", () => {

@@ -19,6 +19,70 @@ function assetOption(asset = {}, selectedUrl = "") {
   </button>`;
 }
 
+function diffValue(value = "") {
+  const text = String(value);
+  return text.length > 500 ? `${text.slice(0, 500)}…` : text;
+}
+
+function replacementDiffDialog({ preview = {}, source = {}, target = {}, trigger = null } = {}) {
+  return new Promise((resolve) => {
+    const dlg = document.createElement("dialog");
+    const changes = Array.isArray(preview.changes) ? preview.changes : [];
+    dlg.className = "confirm-dialog asset-replacement-dialog";
+    dlg.innerHTML = `<div class="confirm-dialog-body" data-asset-replacement-diff>
+      <div class="shared-image-picker-head">
+        <div><p class="adm-eyebrow">Replace everywhere</p><h2>Review every content change</h2></div>
+        <button class="btn btn-ghost btn-sm" type="button" data-asset-replacement-cancel aria-label="Cancel replacement"><i class="ph ph-x" aria-hidden="true"></i> Cancel</button>
+      </div>
+      <div class="asset-replacement-visual">
+        <figure><img src="${esc(assetUrl(source))}" alt="" width="800" height="500"><figcaption>Current image</figcaption></figure>
+        <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        <figure><img src="${esc(assetUrl(target))}" alt="" width="800" height="500"><figcaption>New image</figcaption></figure>
+      </div>
+      <p><strong>${Number(preview.change_count || 0)}</strong> content entr${Number(preview.change_count || 0) === 1 ? "y" : "ies"} · <strong>${Number(preview.field_count || 0)}</strong> field${Number(preview.field_count || 0) === 1 ? "" : "s"}</p>
+      <div class="asset-replacement-diffs">
+        ${changes.map((change) => `<section>
+          <h3>${esc(change.title || change.slug || change.type)} <small>${esc(`${change.type} · ${change.locale || "en"} · v${change.version || 0}`)}</small></h3>
+          ${(change.fields || []).map((field) => `<div class="asset-replacement-field">
+            <code>${esc(field.path)}</code>
+            <del>${esc(diffValue(field.before))}</del>
+            <ins>${esc(diffValue(field.after))}</ins>
+          </div>`).join("")}
+        </section>`).join("")}
+      </div>
+      <p class="adm-callout"><strong>Rollback:</strong> each change creates a content revision. Restore prior content from that entry’s <strong>Revisions</strong>.</p>
+      <div class="confirm-dialog-actions">
+        <button class="btn btn-ghost" type="button" data-asset-replacement-cancel>Keep references unchanged</button>
+        <button class="btn btn-primary" type="button" data-asset-replacement-confirm>Replace in ${Number(preview.change_count || 0)} entr${Number(preview.change_count || 0) === 1 ? "y" : "ies"}</button>
+      </div>
+    </div>`;
+    if (typeof dlg.showModal !== "function") { resolve(false); return; }
+    document.body.appendChild(dlg);
+    restoreFocusOnClose(dlg, trigger);
+    let settled = false;
+    const finish = (confirmed) => {
+      if (settled) return;
+      settled = true;
+      resolve(confirmed);
+      dlg.close(confirmed ? "confirm" : "cancel");
+    };
+    dlg.querySelectorAll("[data-asset-replacement-cancel]").forEach((button) => {
+      button.addEventListener("click", () => finish(false));
+    });
+    dlg.querySelector("[data-asset-replacement-confirm]")?.addEventListener("click", () => finish(true));
+    dlg.addEventListener("cancel", (event) => { event.preventDefault(); finish(false); });
+    dlg.addEventListener("close", () => {
+      dlg.remove();
+      if (!settled) {
+        settled = true;
+        resolve(false);
+      }
+    }, { once: true });
+    dlg.showModal();
+    dlg.querySelector("[data-asset-replacement-confirm]")?.focus();
+  });
+}
+
 // Shared image flow for rich text, structured CMS fields, newsletters, and products.
 // One bounded dialog owns upload, search, preview, selection, and CMS metadata actions.
 export function openImageLibraryPicker({
@@ -275,37 +339,88 @@ export function openImageLibraryPicker({
         uploadButton.disabled = false;
       }
     });
-    replaceButton?.addEventListener("click", async () => {
+    replaceButton?.addEventListener("click", () => {
       if (!selectedAsset?.storage_path || selectedAsset.source === "site") return;
-      const confirmed = await confirmDialog(
-        "Replace this image everywhere it appears? The stable CMS URL stays the same.",
-        { confirmText: "Replace everywhere", cancelText: "Cancel" },
-      );
-      if (confirmed) replaceFileInput?.click();
+      replaceFileInput?.click();
     });
     replaceFileInput?.addEventListener("change", async () => {
       const replacement = replaceFileInput.files?.[0] || null;
-      const storagePath = selectedAsset?.storage_path || "";
-      if (!replacement || !storagePath) return;
+      const sourceAsset = selectedAsset;
+      const sourcePath = sourceAsset?.storage_path || "";
+      const alt = previewAlt.value.trim() || sourceAsset?.alt || "";
+      if (!replacement || !sourcePath) return;
+      if (!alt) {
+        setStatus("Add alt text before uploading the replacement.", "err");
+        previewAlt.focus();
+        replaceFileInput.value = "";
+        return;
+      }
       replaceButton.disabled = true;
       setStatus("Preparing upright, web-optimized replacement…");
       try {
         const prepared = await prepareImageUpload(replacement);
         const form = new FormData();
         form.append("file", prepared.file);
-        form.append("replace_storage_path", storagePath);
-        form.append("alt", previewAlt.value.trim() || selectedAsset.alt || "");
+        form.append("alt", alt);
+        form.append("usage", usage);
+        form.append("folder", "cms");
         if (prepared.width) form.append("width", String(prepared.width));
         if (prepared.height) form.append("height", String(prepared.height));
-        const data = await api("/api/admin/content-assets", { method: "PUT", body: form });
-        selectedAsset = data.asset || selectedAsset;
-        cmsAssets = cmsAssets.map((asset) => (
-          (asset.storage_path || assetUrl(asset)) === storagePath ? selectedAsset : asset
-        ));
+        setStatus("Uploading new image without changing references…");
+        const uploaded = await api("/api/admin/content-assets", { method: "POST", body: form });
+        const targetAsset = uploaded.asset || {};
+        const targetPath = targetAsset.storage_path || "";
+        if (!targetPath) throw new Error("upload_missing_asset_path");
+        if (targetPath === sourcePath) {
+          throw new Error("Replacement matches the current image. No references changed.");
+        }
+        setStatus("Building exact content diff…");
+        const planned = await api("/api/admin/content-assets", {
+          method: "POST",
+          body: {
+            action: "preview_replace_everywhere",
+            source_storage_path: sourcePath,
+            target_storage_path: targetPath,
+          },
+        });
+        const impact = planned.preview || {};
+        if (!impact.change_count) {
+          await loadLibrary();
+          selectedAsset = cmsAssets.find((asset) => asset.storage_path === targetPath) || targetAsset;
+          filterLibrary();
+          setStatus("New image uploaded. No content references needed replacement.", "ok");
+          return;
+        }
+        const confirmed = await replacementDiffDialog({
+          preview: impact,
+          source: sourceAsset,
+          target: targetAsset,
+          trigger: replaceButton,
+        });
+        if (!confirmed) {
+          await loadLibrary();
+          selectedAsset = cmsAssets.find((asset) => asset.storage_path === targetPath) || targetAsset;
+          filterLibrary();
+          setStatus("New image uploaded. Existing content references unchanged.");
+          return;
+        }
+        setStatus("Replacing reviewed references and writing revisions…");
+        const applied = await api("/api/admin/content-assets", {
+          method: "POST",
+          body: {
+            action: "apply_replace_everywhere",
+            source_storage_path: sourcePath,
+            target_storage_path: targetPath,
+            impact_hash: impact.impact_hash,
+            confirm: "replace_everywhere",
+          },
+        });
+        await loadLibrary();
+        selectedAsset = cmsAssets.find((asset) => asset.storage_path === targetPath) || targetAsset;
         filterLibrary();
-        setStatus("Image replaced everywhere.", "ok");
+        setStatus(`Replaced ${applied.replaced_fields || 0} field${applied.replaced_fields === 1 ? "" : "s"} in ${applied.replaced_entries || 0} content entr${applied.replaced_entries === 1 ? "y" : "ies"}. Roll back from Revisions.`, "ok");
       } catch (error) {
-        setStatus(error?.data?.message || error?.data?.error || "Could not replace this image.", "err");
+        setStatus(error?.data?.message || error?.data?.error || error?.message || "Could not replace this image.", "err");
       } finally {
         replaceButton.disabled = false;
         replaceFileInput.value = "";

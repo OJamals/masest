@@ -2,7 +2,7 @@
 import { adminClient, requireStaff, json, readBody } from "../../_lib/supabase.js";
 import { staffCan } from "../../_lib/authz.js";
 import { recordAudit } from "../../_lib/audit.js";
-import { createContentRepository } from "../../_lib/content.js";
+import { activeContentLock, createContentRepository } from "../../_lib/content.js";
 import { canonicalPublicImageUrl } from "../../../js/image-url.js";
 
 const DEFAULT_CONTENT_ASSET_BUCKET = "content-assets";
@@ -127,7 +127,7 @@ export function withContentAssetReferences(assets = [], entries = []) {
       if (aliases.has(exact)) keys.add(exact);
       if (String(value).includes("/")) {
         aliases.forEach((_matches, key) => {
-          if (String(value).includes(key)) keys.add(key);
+          if (containsAssetReference(value, key)) keys.add(key);
         });
       }
       keys.forEach((key) => aliases.get(key).forEach((assetIndex) => {
@@ -151,6 +151,88 @@ export function withContentAssetReferences(assets = [], entries = []) {
     const impacted = [...references.get(index).values()];
     return { ...asset, reference_count: impacted.length, references: impacted };
   });
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function assetReferencePattern(source) {
+  const boundary = "[^A-Za-z0-9._~%+@/:-]";
+  return new RegExp(`(^|${boundary})${escapeRegExp(source)}(?=$|${boundary})`, "g");
+}
+
+function containsAssetReference(value, source) {
+  return assetReferencePattern(source).test(String(value));
+}
+
+function replacementPairs(source = {}, target = {}) {
+  const targetUrl = String(target.public_url || target.source_url || target.storage_path || "").trim();
+  const pairs = new Map();
+  [source.public_url, source.source_url, source.storage_path].forEach((value) => {
+    const alias = String(value || "").trim();
+    if (alias && targetUrl && alias !== targetUrl) pairs.set(alias, targetUrl);
+  });
+  return [...pairs.entries()].sort(([left], [right]) => right.length - left.length);
+}
+
+function replaceAssetReference(value, pairs) {
+  return pairs.reduce((current, [source, target]) => {
+    return current.replace(assetReferencePattern(source), (_match, prefix) => `${prefix}${target}`);
+  }, String(value));
+}
+
+function replaceAssetReferences(value, path, pairs, fields) {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => replaceAssetReferences(item, `${path}[${index}]`, pairs, fields));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+      key,
+      replaceAssetReferences(item, path ? `${path}.${key}` : key, pairs, fields),
+    ]));
+  }
+  if (typeof value !== "string") return value;
+  const after = replaceAssetReference(value, pairs);
+  if (after !== value) fields.push({ path, before: value, after });
+  return after;
+}
+
+export function planContentAssetReplacement({ source = {}, target = {}, entries = [] } = {}) {
+  const pairs = replacementPairs(source, target);
+  const changes = [];
+  entries.forEach((entry) => {
+    const fields = [];
+    const payload = replaceAssetReferences(entry.payload, "payload", pairs, fields);
+    const seo = replaceAssetReferences(entry.seo, "seo", pairs, fields);
+    if (!fields.length) return;
+    changes.push({
+      id: entry.id,
+      type: entry.type,
+      slug: entry.slug,
+      locale: entry.locale || "en",
+      title: entry.title,
+      status: entry.status,
+      version: Number(entry.version || 0),
+      fields,
+      current: entry,
+      next: { ...entry, payload, seo },
+    });
+  });
+  return { source, target, changes };
+}
+
+function publicReplacementPreview(plan, impactHash) {
+  const changes = plan.changes.map(({ current: _current, next: _next, ...change }) => change);
+  return {
+    source: plan.source,
+    target: plan.target,
+    change_count: changes.length,
+    field_count: changes.reduce((total, change) => total + change.fields.length, 0),
+    changes,
+    impact_hash: impactHash,
+    rollback: "Each changed content entry keeps its prior version. Roll back from Revisions.",
+  };
 }
 
 function isMultipart(request) {
@@ -179,6 +261,22 @@ function tinifyAuthorization(apiKey) {
 async function sha256Hex(body) {
   const digest = await crypto.subtle.digest("SHA-256", body);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function replacementImpactHash(plan) {
+  const material = {
+    source: plan.source.storage_path,
+    target: plan.target.storage_path,
+    changes: plan.changes.map((change) => ({
+      id: change.id,
+      type: change.type,
+      slug: change.slug,
+      locale: change.locale,
+      version: change.version,
+      fields: change.fields,
+    })),
+  };
+  return sha256Hex(new TextEncoder().encode(JSON.stringify(material)));
 }
 
 async function optimizeWithTinyPng(file, env) {
@@ -318,84 +416,166 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
   };
 }
 
-async function replaceUploadedAsset({ request, env, repo, user }) {
-  let form;
-  try {
-    form = await request.formData();
-  } catch {
-    return { status: 400, body: { error: "expected_multipart" } };
+async function contentAssetReplacementPlan({ body, env, repo }) {
+  const sourcePath = String(body?.source_storage_path || "").trim();
+  const targetPath = String(body?.target_storage_path || "").trim();
+  if (!sourcePath || !targetPath) {
+    return { status: 400, body: { error: "source_and_target_required" } };
   }
-  const storagePath = String(form.get("replace_storage_path") || "").trim();
-  if (!storagePath) return { status: 400, body: { error: "replace_storage_path_required" } };
-  const asset = await repo.getAsset(storagePath);
-  if (!asset) return { status: 404, body: { error: "asset_not_found" } };
-
-  const file = form.get("file");
-  if (!file || typeof file === "string") return { status: 400, body: { error: "file_required" } };
-  const type = String(file.type || "");
-  if (!ALLOWED_IMAGE_TYPES.has(type)) return { status: 400, body: { error: "unsupported_image_type" } };
-  const size = Number(file.size || 0);
-  if (size <= 0) return { status: 400, body: { error: "file_empty" } };
-  if (size > contentAssetMaxBytes(env)) return { status: 413, body: { error: "asset_too_large" } };
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    return { status: 500, body: { error: "storage_not_configured" } };
+  if (sourcePath === targetPath) {
+    return { status: 409, body: { error: "replacement_asset_must_differ" } };
   }
-
-  const objectPath = managedStoragePath(env, asset) || siteStoragePath(asset.storage_path);
-  if (!objectPath) return { status: 400, body: { error: "asset_not_cms_managed" } };
-  const optimized = await optimizeWithTinyPng(file, env);
-  if (!optimized.ok) return { status: optimized.status, body: { error: optimized.error } };
-  const sha256 = await sha256Hex(optimized.body);
-  const upload = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${contentAssetBucket(env)}/${encodeStoragePath(objectPath)}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      "content-type": type,
-      "cache-control": "max-age=60, must-revalidate",
-      "x-upsert": "true",
-    },
-    body: optimized.body,
+  const [sourceRow, targetRow, entries] = await Promise.all([
+    repo.getAsset(sourcePath),
+    repo.getAsset(targetPath),
+    repo.list({ status: "", locale: "" }),
+  ]);
+  if (!sourceRow || !targetRow) return { status: 404, body: { error: "asset_not_found" } };
+  if (sourceRow.status !== "available" || targetRow.status !== "available") {
+    return { status: 409, body: { error: "replacement_asset_unavailable" } };
+  }
+  const plan = planContentAssetReplacement({
+    source: withPublicUrl(env, sourceRow),
+    target: withPublicUrl(env, targetRow),
+    entries,
   });
-  if (!upload.ok) {
-    return { status: 502, body: { error: "upload_failed", detail: await upload.text().catch(() => "") } };
+  const impactHash = await replacementImpactHash(plan);
+  return { status: 200, plan, preview: publicReplacementPreview(plan, impactHash) };
+}
+
+async function previewContentAssetReplacement(context) {
+  const result = await contentAssetReplacementPlan(context);
+  if (result.status !== 200) return result;
+  return { status: 200, body: { ok: true, preview: result.preview } };
+}
+
+async function applyContentAssetReplacement({ body, env, repo, user, sb }) {
+  if (body?.confirm !== "replace_everywhere") {
+    return { status: 409, body: { error: "replace_everywhere_confirmation_required" } };
+  }
+  const result = await contentAssetReplacementPlan({ body, env, repo });
+  if (result.status !== 200) return result;
+  if (!body.impact_hash || body.impact_hash !== result.preview.impact_hash) {
+    return {
+      status: 409,
+      body: {
+        error: "asset_impact_changed",
+        message: "Content references changed. Review the updated diff before applying.",
+        preview: result.preview,
+      },
+    };
   }
 
-  const sourceUrl = contentAssetPublicUrl(env, objectPath);
-  const result = await repo.saveAsset({
-    ...asset,
-    storage_path: asset.storage_path,
-    alt: String(form.get("alt") || asset.alt || "").trim(),
-    mime_type: type,
-    byte_size: optimized.body.byteLength,
-    sha256,
-    width: Number(form.get("width")) || asset.width || null,
-    height: Number(form.get("height")) || asset.height || null,
-    source_url: sourceUrl,
-    status: "available",
-  }, user.id);
-  if (!result.ok) return { status: 400, body: { error: result.error } };
-  await recordAudit(adminClient(env), {
+  const locked = result.plan.changes.find((change) => {
+    return activeContentLock(change.current)
+      && String(change.current.locked_by) !== String(user.id);
+  });
+  if (locked) {
+    return {
+      status: 409,
+      body: {
+        error: "content_locked",
+        message: `${locked.title || locked.slug} is being edited. Retry after its lock is released.`,
+        entry: {
+          type: locked.type,
+          slug: locked.slug,
+          locale: locked.locale,
+          locked_by: locked.current.locked_by,
+          locked_at: locked.current.locked_at,
+        },
+      },
+    };
+  }
+
+  const applied = [];
+  let failureCode = "";
+  try {
+    for (const change of result.plan.changes) {
+      const saved = await repo.saveEntry(
+        change.next,
+        user.id,
+        `Media replaced: ${result.plan.source.storage_path} → ${result.plan.target.storage_path}`,
+        { expectedVersion: change.version },
+      );
+      if (!saved.ok) {
+        failureCode = saved.error || "content_save_failed";
+        throw new Error(failureCode);
+      }
+      applied.push({ change, entry: saved.entry });
+    }
+  } catch (error) {
+    const rollbackFailures = [];
+    for (const item of [...applied].reverse()) {
+      try {
+        const restored = await repo.saveEntry(
+          item.change.current,
+          user.id,
+          `Automatic rollback after failed media replacement`,
+          { force: true },
+        );
+        if (!restored.ok) rollbackFailures.push(item.change.id || item.change.slug);
+      } catch {
+        rollbackFailures.push(item.change.id || item.change.slug);
+      }
+    }
+    if (failureCode === "content_version_conflict" && !rollbackFailures.length) {
+      const refreshed = await contentAssetReplacementPlan({ body, env, repo });
+      return {
+        status: 409,
+        body: {
+          error: "asset_impact_changed",
+          message: "Content changed during replacement. Review the updated diff before applying again.",
+          preview: refreshed.status === 200 ? refreshed.preview : undefined,
+          rolled_back: applied.length,
+          rollback_failures: [],
+        },
+      };
+    }
+    return {
+      status: 500,
+      body: {
+        error: "replace_everywhere_failed",
+        message: error.message,
+        rolled_back: applied.length - rollbackFailures.length,
+        rollback_failures: rollbackFailures,
+      },
+    };
+  }
+
+  await recordAudit(sb, {
     user,
-    action: "content_asset.replaced",
+    action: "content_asset.references_replaced",
     targetType: "content_asset",
-    targetId: asset.storage_path,
+    targetId: result.plan.source.storage_path,
     detail: {
-      object_path: objectPath,
-      previous_sha256: asset.sha256 || null,
-      sha256,
-      original_bytes: size,
-      stored_bytes: optimized.body.byteLength,
+      source_storage_path: result.plan.source.storage_path,
+      target_storage_path: result.plan.target.storage_path,
+      impact_hash: result.preview.impact_hash,
+      replaced_entries: applied.length,
+      replaced_fields: result.preview.field_count,
+      revisions: applied.map(({ change, entry }) => ({
+        type: change.type,
+        slug: change.slug,
+        locale: change.locale,
+        previous_version: change.version,
+        current_version: entry.version,
+      })),
     },
   });
   return {
     status: 200,
     body: {
-      ...result,
-      asset: withPublicUrl(env, result.asset),
-      original_bytes: size,
-      stored_bytes: optimized.body.byteLength,
-      optimized_bytes_saved: optimized.bytesSaved,
+      ok: true,
+      target: result.preview.target,
+      replaced_entries: applied.length,
+      replaced_fields: result.preview.field_count,
+      rollback: applied.map(({ change, entry }) => ({
+        type: change.type,
+        slug: change.slug,
+        locale: change.locale,
+        version: change.version,
+        current_version: entry.version,
+      })),
     },
   };
 }
@@ -419,7 +599,7 @@ export async function onRequest({ request, env }) {
           q: url.searchParams.get("q") || "",
           status: url.searchParams.get("status") === "all" ? "" : url.searchParams.get("status") || "available",
         }),
-        repo.list({ status: "" }),
+        repo.list({ status: "", locale: "" }),
       ]);
       return json(200, {
         assets: withContentAssetReferences(
@@ -439,6 +619,14 @@ export async function onRequest({ request, env }) {
         return json(result.status, result.body);
       }
       const body = await readBody(request);
+      if (body?.action === "preview_replace_everywhere") {
+        const result = await previewContentAssetReplacement({ body, env, repo });
+        return json(result.status, result.body);
+      }
+      if (body?.action === "apply_replace_everywhere") {
+        const result = await applyContentAssetReplacement({ body, env, repo, user, sb });
+        return json(result.status, result.body);
+      }
       const result = await repo.saveAsset(body || {}, user.id);
       if (!result.ok) return json(400, { error: result.error });
       return json(200, { ...result, asset: withPublicUrl(env, result.asset) });
@@ -448,12 +636,10 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === "PUT") {
-    try {
-      const result = await replaceUploadedAsset({ request, env, repo, user });
-      return json(result.status, result.body);
-    } catch (error) {
-      return json(500, { error: error.message });
-    }
+    return json(409, {
+      error: "in_place_replace_unsafe",
+      message: "Upload a new asset and use previewed replace everywhere.",
+    });
   }
 
   if (request.method === "DELETE") {

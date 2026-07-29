@@ -9,7 +9,7 @@ export function createContentAssets({ $, api, setStatus, applyChosenAsset }) {
 
   function closeAssetPicker() {
     const panel = $("contentAssetPicker");
-    if (panel) panel.hidden = true;
+    if (panel && panel.dataset.contentWorkspacePersistent !== "true") panel.hidden = true;
     assetPickerTrigger?.focus();
     assetPickerTrigger = null;
   }

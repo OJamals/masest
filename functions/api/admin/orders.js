@@ -335,7 +335,7 @@ export async function onRequest({ request, env }) {
     if (body.action === 'refund') {
       if (!staffCan(role, 'order.refund')) return json(403, { error: 'forbidden', message: 'Refunds require finance or owner access.' });
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,customer_email,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,order_items(sku,qty,backordered)').eq('id', body.id).single();
+        .select('id,company_id,customer_email,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,qbo_sync_status,order_items(sku,qty,backordered)').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       if (!ord) return json(404, { error: 'not_found' });
       if (REFUND_BLOCKING_STATUSES.has(ord.status)) {
@@ -379,12 +379,14 @@ export async function onRequest({ request, env }) {
       // Queue a reversing QBO credit memo (#22) so the books match the refund. The
       // worker posts it and retries on failure; best-effort here — never fail the
       // refund (the money already moved at Stripe) if the enqueue hiccups.
-      await sb.from('qbo_refunds').insert({
-        order_id: ord.id,
-        amount: plan.amount,
-        fully_refunded: qboFullDocumentRefund({ total: ord.total, refundedAmount: ord.refunded_amount, amount: plan.amount }),
-        stripe_refund_id: stripeRefund?.id || null,
-      }).then(() => {}, () => {});
+      if (ord.qbo_sync_status !== 'skipped') {
+        await sb.from('qbo_refunds').insert({
+          order_id: ord.id,
+          amount: plan.amount,
+          fully_refunded: qboFullDocumentRefund({ total: ord.total, refundedAmount: ord.refunded_amount, amount: plan.amount }),
+          stripe_refund_id: stripeRefund?.id || null,
+        }).then(() => {}, () => {});
+      }
       const label = plan.fullyRefunded ? 'refunded' : 'partially refunded';
       const refundMsg = plan.fullyRefunded
         ? 'Your MASEST order was refunded. The amount will return to your original payment method.'

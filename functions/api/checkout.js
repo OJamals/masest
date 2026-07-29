@@ -15,8 +15,10 @@ import { orderItemsTableHtml, technicalDocumentRequestNoteHtml } from '../_lib/o
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
+import { finalizeQuoteOrder } from '../_lib/quote-order.js';
 
 const CHECKOUT_BODY_MAX_BYTES = 64 * 1024;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Branded confirmation for a NET (on-account) order. Stripe orders are confirmed by the
 // webhook; NET orders had no email at all. Best-effort: the order is already placed and
@@ -102,11 +104,81 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   if (!skus.length) return json(400, { error: 'cart_empty' });
 
   const sb = getAdminClient(env);
+  const { user } = await getUserFromRequest(request, env);
+  let profile = null;
+  const quoteId = String(body.quote_id || '');
+  const quoteOrderId = String(body.quote_order_id || '');
+  const hasQuoteIdentity = Boolean(quoteId || quoteOrderId);
+  let quoteContext = null;
+  if (hasQuoteIdentity) {
+    if (!UUID.test(quoteId) || !UUID.test(quoteOrderId)) {
+      return json(400, { error: 'invalid_quote_identity' });
+    }
+    if (!user) return json(401, { error: 'auth_required_for_quote' });
+    const { data, error: profileError } = await sb.from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profileError) return json(500, { error: 'server_error' });
+    profile = data || null;
+    if (!profile?.company_id) return json(403, { error: 'quote_unavailable' });
+
+    const quoteQuery = sb.from('quotes')
+      .select('id,payload,status')
+      .eq('id', quoteId)
+      .neq('status', 'spam')
+      .maybeSingle();
+    const orderQuery = sb.from('orders')
+      .select('id,company_id,user_id,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
+      .eq('id', quoteOrderId)
+      .eq('company_id', profile.company_id)
+      .eq('user_id', user.id)
+      .eq('status', 'cart')
+      .is('requisition_name', null)
+      .maybeSingle();
+    const [
+      { data: quote, error: quoteError },
+      { data: quoteOrder, error: quoteOrderError },
+    ] = await Promise.all([quoteQuery, orderQuery]);
+    if (quoteError || quoteOrderError) return json(500, { error: 'server_error' });
+    if (!quote || !quoteOrder
+      || quote.status === 'closed'
+      || quote.payload?.offer_order_id !== quoteOrder.id
+      || quote.payload?.requester_id !== user.id
+      || quote.payload?.company_id !== profile.company_id
+      || quote.payload?.offer_status !== 'accepted') {
+      return json(409, { error: 'quote_unavailable' });
+    }
+
+    const quotedItemsBySku = new Map();
+    for (const item of quoteOrder.order_items || []) {
+      if (quotedItemsBySku.has(item.sku)
+        || !Number.isFinite(Number(item.unit_price))
+        || Number(item.unit_price) < 0) {
+        return json(409, { error: 'quote_unavailable' });
+      }
+      quotedItemsBySku.set(item.sku, item);
+    }
+    if (quotedItemsBySku.size !== skus.length
+      || skus.some((sku) => Number(quotedItemsBySku.get(sku)?.qty) !== qtyBySku[sku])) {
+      return json(409, { error: 'quote_cart_changed' });
+    }
+    quoteContext = {
+      quoteId,
+      quoteOrderId,
+      companyId: profile.company_id,
+      currency: String(quoteOrder.currency || 'usd').toLowerCase(),
+      quotedItemsBySku,
+    };
+  }
+
   let netContext = null;
   if (mode === 'net') {
-    const { user } = await getUserFromRequest(request, env);
     if (!user) return json(401, { error: 'auth_required_for_net' });
-    const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
+    if (!profile) {
+      const { data } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
+      profile = data || null;
+    }
     const { data: company } = await sb.from('companies').select('id,status,net_terms_days,credit_limit').eq('id', profile?.company_id).maybeSingle();
     if (!company) return json(403, { error: 'net_terms_unavailable' });
 
@@ -136,6 +208,14 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       return json(409, { error: probe.reason || 'net_order_rejected' });
     }
     if (probe.duplicate) {
+      if (quoteContext) {
+        const finalized = await finalizeQuoteOrder(sb, {
+          quoteId: quoteContext.quoteId,
+          draftOrderId: quoteContext.quoteOrderId,
+          finalOrderId: probe.order_id,
+        });
+        if (finalized.error) return json(503, { error: 'quote_finalize_failed' });
+      }
       return json(200, {
         net: true,
         order_id: probe.order_id,
@@ -205,22 +285,33 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     });
   }
 
+  if (quoteContext) {
+    for (const line of sellable) {
+      const quoted = quoteContext.quotedItemsBySku.get(line.sku);
+      line.price = quoted.unit_price;
+      line.product_sku = quoted.product_sku || line.product_sku;
+      line.name = quoted.name || line.name;
+      line.currency = quoteContext.currency;
+      line.stripe_price_id = null;
+    }
+  } else {
+    const { tier } = await getTierForRequest(request, env);
+    if (tier !== 'retail') {
+      const overrides = await getTierPriceMap(sb, tier);
+      for (const line of sellable) {
+        if (overrides.has(line.sku)) {
+          line.price = overrides.get(line.sku);
+          line.stripe_price_id = null;
+        }
+      }
+    }
+  }
+
   // One order = one currency (Stripe forbids mixed-currency sessions, and the subtotal sum
   // would be meaningless). Catalog is USD today; this guards a future non-USD variant.
   const currencies = new Set(sellable.map((p) => (p.currency || 'usd').toLowerCase()));
   if (currencies.size > 1) {
     return json(409, { error: 'mixed_currency', message: 'Items in your cart use different currencies. Order them separately.' });
-  }
-
-  const { tier } = await getTierForRequest(request, env);
-  if (tier !== 'retail') {
-    const overrides = await getTierPriceMap(sb, tier);
-    for (const line of sellable) {
-      if (overrides.has(line.sku)) {
-        line.price = overrides.get(line.sku);
-        line.stripe_price_id = null;
-      }
-    }
   }
 
   if (mode === 'net') {
@@ -287,6 +378,15 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
 
     const order = { id: placed.order_id };
 
+    if (quoteContext) {
+      const finalized = await finalizeQuoteOrder(sb, {
+        quoteId: quoteContext.quoteId,
+        draftOrderId: quoteContext.quoteOrderId,
+        finalOrderId: order.id,
+      });
+      if (finalized.error) return json(503, { error: 'quote_finalize_failed' });
+    }
+
     if (!placed.duplicate) {
       await sendNetConfirmation({
         env,
@@ -328,9 +428,11 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
 
   let companyId = null;
   let company = null;
-  const { user } = await getUserFromRequest(request, env);
   if (user) {
-    const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
+    if (!profile) {
+      const { data } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
+      profile = data || null;
+    }
     companyId = profile?.company_id || null;
     if (companyId) {
       const { data } = await sb.from('companies')
@@ -371,10 +473,13 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       customerId,
       shippingRateIds,
       purchaseOrderNumber,
-    }));
+      quoteId: quoteContext?.quoteId || null,
+      quoteOrderId: quoteContext?.quoteOrderId || null,
+      allowPromotionCodes: !quoteContext,
+    }), quoteContext ? { idempotencyKey: `quote-checkout:${quoteContext.quoteOrderId}` } : undefined);
     return json(200, { url: session.url });
   } catch (err) {
-    return json(502, { error: 'stripe_error', code: err?.code || null, detail: err?.message || String(err) });
+    return json(502, { error: 'stripe_error', code: err?.code || null });
   }
 }
 

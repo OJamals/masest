@@ -8,6 +8,10 @@ import {
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { decorateOrderLifecycle } from '../../_lib/order-lifecycle.js';
 import { normalizeCartQuantities } from '../../_lib/order-shape.js';
+import {
+  findOpenRequisitionQuote,
+  isOpenRequisitionQuoteConflict,
+} from '../../_lib/quote-order.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
 
 const REQUISITION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -17,6 +21,59 @@ const REQUISITION_BODY_MAX_BYTES = 16 * 1024;
 function requisitionName(value) {
   const name = String(value || '').trim();
   return name && name.length <= REQUISITION_NAME_MAX && !/[\u0000-\u001f\u007f]/.test(name) ? name : '';
+}
+
+async function requestRequisitionQuote(sb, companyId, user, body) {
+  const id = String(body.id || '');
+  if (!REQUISITION_ID.test(id)) return json(400, { error: 'invalid_requisition_id' });
+
+  const { data: requisition, error: requisitionError } = await sb.from('orders')
+    .select('id,requisition_name,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
+    .eq('id', id)
+    .eq('company_id', companyId)
+    .eq('user_id', user.id)
+    .eq('status', 'cart')
+    .not('requisition_name', 'is', null)
+    .maybeSingle();
+  if (requisitionError) return json(500, { error: 'server_error' });
+  if (!requisition) return json(404, { error: 'not_found' });
+  if (!requisition.order_items?.length) return json(409, { error: 'empty_requisition' });
+
+  const { quote: existing, error: existingError } = await findOpenRequisitionQuote(sb, requisition.id);
+  if (existingError) return json(500, { error: 'server_error' });
+  if (existing) return json(200, { quote: existing, existing: true }, { 'cache-control': 'no-store' });
+
+  const { data: company, error: companyError } = await sb.from('companies')
+    .select('name')
+    .eq('id', companyId)
+    .maybeSingle();
+  if (companyError) return json(500, { error: 'server_error' });
+
+  const { data: quote, error: quoteError } = await sb.from('quotes').insert({
+    name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Buyer',
+    email: String(user.email || '').toLowerCase(),
+    company: company?.name || '',
+    product: requisition.requisition_name,
+    message: `Quote requested for saved requisition: ${requisition.requisition_name}`,
+    source: 'requisition',
+    status: 'new',
+    pipeline_stage: 'new',
+    next_step: 'Review requisition pricing and send quote',
+    deal_value: Number(requisition.total || requisition.subtotal || 0),
+    payload: {
+      requisition_id: requisition.id,
+      requester_id: user.id,
+      company_id: companyId,
+    },
+  }).select('id,status,pipeline_stage,created_at').single();
+  if (isOpenRequisitionQuoteConflict(quoteError)) {
+    const { quote: raced, error: racedError } = await findOpenRequisitionQuote(sb, requisition.id);
+    if (!racedError && raced) {
+      return json(200, { quote: raced, existing: true }, { 'cache-control': 'no-store' });
+    }
+  }
+  if (quoteError) return json(500, { error: 'server_error' });
+  return json(201, { quote }, { 'cache-control': 'no-store' });
 }
 
 async function priceRequisition(sb, request, env, qtyBySku) {
@@ -109,6 +166,9 @@ export async function onRequestPost({ request, env }) {
     });
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'bad_request' });
+  if (body.action === 'request_quote') {
+    return requestRequisitionQuote(sb, companyId, user, body);
+  }
   const name = requisitionName(body.name);
   if (!name) return json(400, { error: 'invalid_requisition_name' });
   const qtyBySku = normalizeCartQuantities(body.cart);
@@ -152,6 +212,9 @@ export async function onRequestDelete({ request, env }) {
   const { companyId, user, sb } = ctx;
   const id = new URL(request.url).searchParams.get('id') || '';
   if (!REQUISITION_ID.test(id)) return json(400, { error: 'invalid_requisition_id' });
+  const { quote, error: quoteError } = await findOpenRequisitionQuote(sb, id);
+  if (quoteError) return json(500, { error: 'server_error' });
+  if (quote) return json(409, { error: 'quote_in_progress' });
   const { data, error } = await sb.from('orders')
     .delete()
     .eq('id', id)

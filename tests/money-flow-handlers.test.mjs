@@ -778,6 +778,41 @@ test('webhook enqueue failure prevents acknowledgement after order persistence',
   assert.deepEqual(result, { status: 503, body: { error: 'stripe_effect_enqueue_failed' } });
 });
 
+test('quoted Stripe sessions finalize card orders but retain ACH drafts while pending', async () => {
+  for (const paymentStatus of ['paid', 'unpaid']) {
+    const calls = [];
+    const transitions = [];
+    const session = paidSession();
+    session.payment_status = paymentStatus;
+    session.metadata.quote_id = 'quote-1';
+    session.metadata.quote_order_id = 'draft-1';
+    const handler = createStripeWebhookHandler({
+      constructEvent: async () => ({
+        id: `evt_${paymentStatus}`,
+        type: 'checkout.session.completed',
+        data: { object: session },
+      }),
+      adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
+      finalizeQuoteOrder: async (_sb, input) => {
+        transitions.push(['finalize', input]);
+        return { ok: true };
+      },
+      markQuotePaymentPending: async (_sb, input) => {
+        transitions.push(['pending', input]);
+        return { ok: true };
+      },
+    });
+
+    const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+    assert.equal(result.status, 200);
+    assert.deepEqual(transitions, [[paymentStatus === 'paid' ? 'finalize' : 'pending', {
+      quoteId: 'quote-1',
+      draftOrderId: 'draft-1',
+      finalOrderId: 'order-1',
+    }]]);
+  }
+});
+
 function achDb(calls, claimResults) {
   let orderReads = 0;
   return {
@@ -841,6 +876,36 @@ test('concurrent ACH success deliveries have one claim and duplicate-safe effect
   assert.deepEqual(enqueues[0][1], enqueues[1][1]);
 });
 
+test('successful quoted ACH payment finalizes the pending quote', async () => {
+  const calls = [];
+  const finalized = [];
+  const session = paidSession();
+  session.metadata.quote_id = 'quote-1';
+  session.metadata.quote_order_id = 'draft-1';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_quoted_ach_success',
+      type: 'checkout.session.async_payment_succeeded',
+      data: { object: session },
+    }),
+    adminClient: () => achDb(calls, [
+      { data: { id: 'order-1', status: 'paid', company_id: null }, error: null },
+    ]),
+    finalizeQuoteOrder: async (_sb, input) => {
+      finalized.push(input);
+      return { ok: true };
+    },
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(finalized, [{
+    quoteId: 'quote-1',
+    draftOrderId: 'draft-1',
+    finalOrderId: 'order-1',
+  }]);
+});
+
 test('ACH claim failure returns retryable 503 before stock decrement', async () => {
   const calls = [];
   const handler = createStripeWebhookHandler({
@@ -855,6 +920,58 @@ test('ACH claim failure returns retryable 503 before stock decrement', async () 
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.deepEqual(result, { status: 503, body: { error: 'order_update_failed' } });
   assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.upsert'), false);
+});
+
+test('test-mode ACH settlement remains outside the production QBO queue', async () => {
+  const calls = [];
+  const session = { ...paidSession(), livemode: false };
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_test_ach_success',
+      type: 'checkout.session.async_payment_succeeded',
+      data: { object: session },
+    }),
+    adminClient: () => achDb(calls, [
+      { data: { id: 'order-1', status: 'paid', company_id: null }, error: null },
+    ]),
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.equal(result.status, 200);
+  assert.equal(
+    calls.find((call) => Array.isArray(call) && call[0] === 'orders.claim')[1].qbo_sync_status,
+    'skipped',
+  );
+});
+
+test('failed quoted ACH payment reopens the accepted draft after cancelling its order', async () => {
+  const calls = [];
+  const reopened = [];
+  const session = paidSession();
+  session.metadata.quote_id = 'quote-1';
+  session.metadata.quote_order_id = 'draft-1';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_ach_failed',
+      type: 'checkout.session.async_payment_failed',
+      data: { object: session },
+    }),
+    adminClient: () => achDb(calls, [
+      { data: { id: 'order-1', status: 'cancelled', company_id: null }, error: null },
+    ]),
+    reopenQuoteAfterPaymentFailure: async (_sb, input) => {
+      reopened.push(input);
+      return { ok: true };
+    },
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(reopened, [{
+    quoteId: 'quote-1',
+    draftOrderId: 'draft-1',
+    finalOrderId: 'order-1',
+  }]);
 });
 
 test('subscription status persistence failure returns retryable 503', async () => {
@@ -934,4 +1051,54 @@ test('refund queue retries before order reconciliation and accepts duplicate rep
   assert.equal(labels.filter((label) => label === 'qbo_refunds.insert').length, 2);
   assert.equal(labels.filter((label) => label === 'orders.update').length, 1);
   assert.ok(labels.lastIndexOf('qbo_refunds.insert') < labels.indexOf('orders.update'));
+});
+
+test('refund of a QBO-skipped Stripe test order never queues a production credit memo', async () => {
+  const calls = [];
+  const db = {
+    from(table) {
+      if (table !== 'orders') throw new Error(`unexpected refund table: ${table}`);
+      let operation = 'select';
+      return {
+        select() { return this; },
+        update(patch) { operation = 'update'; calls.push(['orders.update', patch]); return this; },
+        eq() { return this; },
+        then(resolve, reject) {
+          return Promise.resolve({ data: null, error: null }).then(resolve, reject);
+        },
+        async maybeSingle() {
+          assert.equal(operation, 'select');
+          return {
+            data: {
+              id: 'order-test',
+              company_id: 'company-1',
+              status: 'paid',
+              total: 25,
+              refunded_amount: 0,
+              qbo_sync_status: 'skipped',
+            },
+            error: null,
+          };
+        },
+      };
+    },
+  };
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      type: 'charge.refunded',
+      data: {
+        object: {
+          id: 'ch_test',
+          payment_intent: 'pi_test',
+          amount_refunded: 2500,
+          refunds: { data: [{ id: 're_test', amount: 2500, status: 'succeeded' }] },
+        },
+      },
+    }),
+    adminClient: () => db,
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.equal(result.status, 200);
+  assert.equal(calls.filter(([label]) => label === 'orders.update').length, 1);
 });

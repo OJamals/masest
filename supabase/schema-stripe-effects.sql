@@ -88,6 +88,43 @@ begin
     raise exception 'invalid_worker_id';
   end if;
 
+  -- Terminal orders make their not-yet-delivered purchase effects obsolete.
+  -- Finish these rows before claiming work so a delayed worker cannot send stale
+  -- confirmations, decrement returned stock, or create stale order notifications.
+  update public.stripe_webhook_effects as effect
+     set status = 'completed',
+         lease_owner = null,
+         lease_expires_at = null,
+         provider_succeeded_at = coalesce(effect.provider_succeeded_at, now()),
+         provider_result = coalesce(
+           effect.provider_result,
+           case
+             when effect.effect_type = 'stock_decrement' then
+               jsonb_build_object('shorted_skus', '[]'::jsonb, 'skipped', 'order_terminal')
+             else jsonb_build_object('skipped', 'order_terminal')
+           end
+         ),
+         completed_at = coalesce(effect.completed_at, now()),
+         last_error_code = null,
+         updated_at = now()
+    from public.orders as order_row
+   where effect.payload ->> 'order_id' = order_row.id::text
+     and order_row.status in ('cancelled', 'refunded')
+     and (
+       effect.status = 'pending'
+       or (
+         effect.status = 'processing'
+         and effect.lease_expires_at <= now()
+       )
+     )
+     and (
+       effect.effect_type in ('stock_decrement', 'oversell_alert', 'order_confirmation')
+       or (
+         effect.effect_type = 'company_notification'
+         and effect.payload ->> 'kind' in ('order_received', 'payment_cleared')
+       )
+     );
+
   return query
   with candidates as (
     select effect.id
@@ -250,6 +287,7 @@ as $$
 declare
   v_effect public.stripe_webhook_effects%rowtype;
   v_order_id uuid;
+  v_order_status public.order_status;
   v_line record;
   v_applied boolean;
   v_shorted text[] := array[]::text[];
@@ -277,9 +315,28 @@ begin
   exception when invalid_text_representation then
     raise exception 'invalid_stock_effect_order';
   end;
-  if v_order_id is null
-     or not exists (select 1 from public.orders where id = v_order_id) then
+  if v_order_id is null then
     raise exception 'invalid_stock_effect_order';
+  end if;
+
+  select status
+    into v_order_status
+    from public.orders
+   where id = v_order_id;
+  if not found then
+    raise exception 'invalid_stock_effect_order';
+  end if;
+  if v_order_status in ('cancelled', 'refunded') then
+    v_result := jsonb_build_object(
+      'shorted_skus', '[]'::jsonb,
+      'skipped', 'order_terminal'
+    );
+    update public.stripe_webhook_effects
+       set provider_succeeded_at = now(),
+           provider_result = v_result,
+           updated_at = now()
+     where id = p_effect_id;
+    return v_result;
   end if;
 
   for v_line in
@@ -320,6 +377,8 @@ set search_path = public
 as $$
 declare
   v_effect public.stripe_webhook_effects%rowtype;
+  v_order_id uuid;
+  v_order_status public.order_status;
   v_company_id uuid;
   v_type text;
   v_title text;
@@ -341,6 +400,32 @@ begin
 
   if v_effect.provider_succeeded_at is not null then
     return true;
+  end if;
+
+  if v_effect.payload ->> 'kind' in ('order_received', 'payment_cleared') then
+    begin
+      v_order_id := nullif(v_effect.payload ->> 'order_id', '')::uuid;
+    exception when invalid_text_representation then
+      raise exception 'invalid_notification_effect_order';
+    end;
+    if v_order_id is null then
+      raise exception 'invalid_notification_effect_order';
+    end if;
+    select status
+      into v_order_status
+      from public.orders
+     where id = v_order_id;
+    if not found then
+      raise exception 'invalid_notification_effect_order';
+    end if;
+    if v_order_status in ('cancelled', 'refunded') then
+      update public.stripe_webhook_effects
+         set provider_succeeded_at = now(),
+             provider_result = jsonb_build_object('skipped', 'order_terminal'),
+             updated_at = now()
+       where id = p_effect_id;
+      return true;
+    end if;
   end if;
 
   if jsonb_typeof(p_notification) <> 'object' then
@@ -368,7 +453,7 @@ begin
   end if;
 
   insert into public.notifications (company_id, type, title, body, link)
-  values (v_company_id, v_type, v_title, v_body, v_link);
+  values (v_company_id, v_type::public.notification_type, v_title, v_body, v_link);
 
   update public.stripe_webhook_effects
      set provider_succeeded_at = now(),

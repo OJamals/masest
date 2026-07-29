@@ -16,6 +16,14 @@ function fakeSb(db) {
         select() { return q; },
         eq(column, value) { q._filters.push([column, value]); return q; },
         update(patch) { q._update = patch; return q; },
+        upsert(row) {
+          const idx = db[table].findIndex((current) => (
+            current.type === row.type && current.slug === row.slug && current.locale === row.locale
+          ));
+          if (idx >= 0) db[table][idx] = { ...db[table][idx], ...row };
+          else db[table].push({ ...row, id: `e${db[table].length + 1}` });
+          return q;
+        },
         insert(row) {
           if (table === "content_revisions" && db[table].some((revision) => (
             revision.entry_id === row.entry_id && revision.version === row.version
@@ -96,6 +104,29 @@ test("minimal transition (identity only, no payload) never wipes existing conten
   assert.equal(row.status, "changes_requested");
   assert.equal(row.payload.sku, "KEEP", "minimal transition must not wipe payload");
   assert.equal(row.seo.description, "keep seo", "minimal transition must not wipe seo");
+});
+
+test("saveEntry rejects stale expected versions without overwriting newer content", async () => {
+  const db = {
+    content_entries: [seedEntry({ version: 4, title: "Concurrent edit" })],
+    content_revisions: [],
+  };
+  const repo = createContentRepository(fakeSb(db));
+  const result = await repo.saveEntry(
+    seedEntry({ version: 3, title: "Stale replacement" }),
+    "staff_9",
+    "Media replaced",
+    { expectedVersion: 3 },
+  );
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: "content_version_conflict",
+    expected_version: 3,
+    current_version: 4,
+  });
+  assert.equal(db.content_entries[0].title, "Concurrent edit");
+  assert.deepEqual(db.content_revisions, []);
 });
 
 test("status-only content mutations advance the revision version", async () => {

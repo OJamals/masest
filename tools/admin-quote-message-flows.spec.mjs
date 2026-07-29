@@ -118,6 +118,106 @@ test("staff converts a quote into a NET order with the expected payload", async 
   await expect(drawer.locator("[data-drawer-status]")).toHaveText("Order ord-99 created.");
 });
 
+test("staff reviews a requisition workspace and sends all priced lines", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/companies**", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ companies: [] }),
+  }));
+  for (const path of ["timeline", "tasks", "notes"]) {
+    await page.route(`**/api/admin/crm/${path}**`, (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ [path]: [] }),
+    }));
+  }
+
+  let sendBody = null;
+  await page.route("**/api/admin/quotes**", (route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    if (req.method() === "POST" && req.postDataJSON()?.action === "send_quote") {
+      sendBody = req.postDataJSON();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          order_id: "draft-2",
+          quote: { status: "contacted", pipeline_stage: "proposal" },
+        }),
+      });
+    }
+    if (url.searchParams.get("view") === "workspace") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          workspace: {
+            quote_id: "q-req",
+            requisition_name: "July plant refill",
+            currency: "usd",
+            items: [
+              { sku: "VK-HCR-5", product_sku: "hcr", name: "VertKlean HCR - 5 gal", qty: 2, unit_price: 45 },
+              { sku: "VK-DBNPA-1", product_sku: "dbnpa", name: "VertKlean DBNPA - 1 gal", qty: 1, unit_price: 30 },
+            ],
+            messages: [{ id: "m-1", sender_role: "buyer", body: "Need delivery by August.", created_at: "2026-07-28T12:00:00Z" }],
+            documents: [{ id: "d-1", status: "approved", technical_documents: { title: "HCR SDS", document_type: "sds" } }],
+          },
+        }),
+      });
+    }
+    if (url.searchParams.get("view") === "contacts") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ company_id: "co-1", contacts: [] }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        quotes: [{
+          id: "q-req",
+          name: "Pat Buyer",
+          email: "pat@example.com",
+          company: "Buyer Co",
+          product: "July plant refill",
+          source: "requisition",
+          status: "new",
+          pipeline_stage: "new",
+          payload: { requisition_id: "req-1" },
+        }],
+        new_count: 1,
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#quotes`, { waitUntil: "domcontentloaded" });
+  await page.locator(".quote-item summary").first().click();
+  await page.locator('[data-open-quote="q-req"]').click();
+  const drawer = page.locator('.adm-drawer[data-quote-drawer]');
+  await expect(drawer.locator("[data-quote-workspace]")).toContainText("July plant refill");
+  await expect(drawer.locator("[data-quote-workspace]")).toContainText("Need delivery by August.");
+  await expect(drawer.locator("[data-quote-workspace]")).toContainText("HCR SDS");
+  await drawer.locator("[data-offer-price]").first().fill("42.50");
+
+  const sendResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/admin/quotes") && response.request().postDataJSON()?.action === "send_quote");
+  await drawer.locator("[data-send-quote]").click();
+  await sendResponse;
+
+  expect(sendBody).toEqual({
+    id: "q-req",
+    action: "send_quote",
+    items: [
+      { sku: "VK-HCR-5", product_sku: "hcr", name: "VertKlean HCR - 5 gal", qty: "2", unit_price: "42.50" },
+      { sku: "VK-DBNPA-1", product_sku: "dbnpa", name: "VertKlean DBNPA - 1 gal", qty: "1", unit_price: "30" },
+    ],
+  });
+  await expect(drawer.locator("[data-drawer-status]")).toHaveText("Quote sent. Buyer can accept and check out.");
+});
+
 test("staff replies to a support thread with the expected payload", async ({ page }) => {
   await bootAsStaff(page);
 

@@ -17,6 +17,7 @@ import {
 import { qboFullDocumentRefund } from '../_lib/refund.js';
 import {
   centsToAmount,
+  stripeQboSyncStatus,
   assembleCartMetadata,
   parseCartMetadata,
   orderRowFromSession,
@@ -35,6 +36,11 @@ import {
   enqueueStripeEffects,
   subscriptionActivationEffects,
 } from '../_lib/stripe-effects.js';
+import {
+  finalizeQuoteOrder,
+  markQuotePaymentPending,
+  reopenQuoteAfterPaymentFailure,
+} from '../_lib/quote-order.js';
 
 export { htmlEscape as escapeHtml } from '../_lib/supabase.js';
 
@@ -79,7 +85,7 @@ async function enrichLineNames(sb, lines) {
 }
 
 function qboRefundRowsFromCharge(charge, order, plan) {
-  if (!order?.id || !plan?.amount) return [];
+  if (!order?.id || !plan?.amount || order.qbo_sync_status === 'skipped') return [];
   const total = Number(order.total) || 0;
   const refunds = Array.isArray(charge?.refunds?.data) ? charge.refunds.data : [];
   const rows = refunds
@@ -103,8 +109,20 @@ function qboRefundRowsFromCharge(charge, order, plan) {
   }];
 }
 
+async function transitionQuotedCheckout(sb, session, finalOrderId, transition, errorCode) {
+  const quoteId = session.metadata?.quote_id;
+  const draftOrderId = session.metadata?.quote_order_id;
+  if (!quoteId && !draftOrderId) return null;
+  if (!quoteId || !draftOrderId) return json(503, { error: 'quote_identity_incomplete' });
+  const result = await transition(sb, { quoteId, draftOrderId, finalOrderId });
+  return result?.error ? json(503, { error: errorCode }) : null;
+}
+
 export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
+  const finalizeQuotedOrder = dependencies.finalizeQuoteOrder || finalizeQuoteOrder;
+  const markQuotedOrderPending = dependencies.markQuotePaymentPending || markQuotePaymentPending;
+  const reopenQuotedOrder = dependencies.reopenQuoteAfterPaymentFailure || reopenQuoteAfterPaymentFailure;
   const constructEvent = dependencies.constructEvent || (async ({ raw, sig, whSecret }) => {
     const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
     const cryptoProvider = Stripe.createSubtleCryptoProvider();
@@ -235,6 +253,10 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       }),
     );
     if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });
+    const quoteTransitionError = await transitionQuotedCheckout(
+      sb, s, order.id, settled ? finalizeQuotedOrder : markQuotedOrderPending, 'quote_transition_failed',
+    );
+    if (quoteTransitionError) return quoteTransitionError;
     // QBO invoice + linked payment are created asynchronously by /api/qbo-sync
     // (order tagged qbo_sync_status='pending' on insert above).
     return json(200, {
@@ -260,7 +282,10 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       // qbo_sync_status was held at null while the debit processed; 'pending' releases
       // the order to the QBO invoice+payment worker now the money actually landed.
       const { data: claimedOrder, error: updErr } = await sb.from('orders')
-        .update({ status: 'paid', qbo_sync_status: 'pending' })
+        .update({
+          status: 'paid',
+          qbo_sync_status: stripeQboSyncStatus(s.livemode),
+        })
         .eq('id', order.id)
         .eq('status', 'pending_payment')
         .select('id,status,company_id')
@@ -285,6 +310,10 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       }),
     );
     if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });
+    const quoteTransitionError = await transitionQuotedCheckout(
+      sb, s, effectOrder.id, finalizeQuotedOrder, 'quote_finalize_failed',
+    );
+    if (quoteTransitionError) return quoteTransitionError;
     return json(200, { received: true, ...(duplicate ? { duplicate: true } : {}) });
   }
 
@@ -323,6 +352,10 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       }),
     );
     if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });
+    const quoteTransitionError = await transitionQuotedCheckout(
+      sb, s, effectOrder.id, reopenQuotedOrder, 'quote_reopen_failed',
+    );
+    if (quoteTransitionError) return quoteTransitionError;
     return json(200, { received: true, ...(duplicate ? { duplicate: true } : {}) });
   }
 
@@ -414,7 +447,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     const charge = event.data.object;
     if (charge.payment_intent) {
       const { data: order } = await sb.from('orders')
-        .select('id,company_id,status,total,refunded_amount')
+        .select('id,company_id,status,total,refunded_amount,qbo_sync_status')
         .eq('stripe_payment_intent', charge.payment_intent).maybeSingle();
       if (order) {
         const plan = planRefundReconcile(charge, order);

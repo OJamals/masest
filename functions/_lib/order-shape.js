@@ -8,6 +8,11 @@ export function centsToAmount(cents) {
   return (cents ?? 0) / 100;
 }
 
+// Production QBO must never receive Stripe sandbox transactions.
+export function stripeQboSyncStatus(livemode) {
+  return livemode === false ? "skipped" : "pending";
+}
+
 // Reassemble the chunked cart metadata (cart, cart2, cart3…) written by
 // cartMetadataEntries() back into one JSON string. Single-key legacy sessions
 // (pre-chunking) pass through unchanged.
@@ -62,7 +67,7 @@ export function normalizeCartQuantities(cart, {
 }
 
 // The `orders` row for a paid `checkout.session.completed` event. Mirrors the insert in
-// onRequestPost: cents→dollars, qbo sync queued, currency default, ship-address fallback chain.
+// onRequestPost: cents→dollars, QBO mode gate, currency default, ship-address fallback chain.
 // customer_email is resolved by the caller (buyerEmailFromStripeSession) and passed in so this
 // stays pure (no checkout-session import).
 export function orderRowFromSession(session, customerEmail = null) {
@@ -77,7 +82,7 @@ export function orderRowFromSession(session, customerEmail = null) {
     payment_method: "stripe",
     // null keeps unsettled ACH orders out of the QBO claim queue (claim_qbo_orders
     // only takes 'pending'); async_payment_succeeded flips it to 'pending'.
-    qbo_sync_status: settled ? "pending" : null,
+    qbo_sync_status: settled ? stripeQboSyncStatus(s.livemode) : null,
     subtotal: centsToAmount(s.amount_subtotal),
     shipping: centsToAmount(s.shipping_cost?.amount_subtotal ?? s.total_details?.amount_shipping),
     tax: centsToAmount(s.total_details?.amount_tax),
@@ -178,7 +183,7 @@ export function qboSubscriptionInvoiceRow(invoice, { companyId, tier } = {}) {
     tax,
     total,
     currency: inv.currency || "usd",
-    qbo_sync_status: total > 0 ? "pending" : "skipped",
+    qbo_sync_status: total > 0 ? stripeQboSyncStatus(inv.livemode) : "skipped",
   };
 }
 

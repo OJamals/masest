@@ -27,6 +27,11 @@ create table if not exists public.quotes (
 
 create index if not exists quotes_status_idx  on public.quotes (status, created_at desc);
 create index if not exists quotes_created_idx on public.quotes (created_at desc);
+create unique index if not exists quotes_open_requisition_unique_idx
+  on public.quotes ((payload ->> 'requisition_id'))
+  where source = 'requisition'
+    and status not in ('closed', 'spam')
+    and payload ? 'requisition_id';
 
 alter table public.quotes add column if not exists priority text default 'normal';
 alter table public.quotes add column if not exists next_step text;

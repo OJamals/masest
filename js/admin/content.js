@@ -317,7 +317,7 @@ function seoFieldsTemplate(seo = {}) {
   return SEO_FIELDS.map((field) => seoFieldTemplate(field, seo)).join("");
 }
 
-function formTemplate({ blog = false } = {}) {
+function formTemplate({ blog = false, admEmpty } = {}) {
   const typeControl = blog
     ? `<input id="contentType" type="hidden" value="blog_post"><p class="adm-content-placement full" role="note">${esc(placementText("blog_post"))}</p>`
     : `<label class="adm-content-selector">Content area <select id="contentType" name="content_type" class="adm-select">${selectOptions(TYPES, "service")}</select></label>`;
@@ -326,31 +326,21 @@ function formTemplate({ blog = false } = {}) {
       <div class="adm-panel-header">
         <div>
           <p class="adm-eyebrow">${blog ? "Blog CMS" : "CMS"}</p>
-          <h2>${blog ? "Blog editor" : "Edit website content"}</h2>
-          <p class="muted">${blog ? "Write formatted posts in a normal editor; the system saves Markdown for the static blog." : "Choose where the content appears, edit the fields people see on the site, then save or publish."}</p>
+          <h2 id="contentWorkspaceHeading">${blog ? "New blog post" : "New content entry"}</h2>
+          <p class="muted">${blog ? "Copy, SEO, images, preview, scheduling, and publishing stay together for this post." : "Choose an entry, then manage its copy, SEO, images, preview, schedule, and publication in one workspace."}</p>
         </div>
         <span id="contentEditorBadge" class="badge" data-s="draft">draft</span>
       </div>
-      <form id="contentForm" class="adm-form-grid" onsubmit="return false" data-capability-scope="content.write">
-        ${typeControl}
-        <label class="adm-content-locale">Language <select id="contentLocale" name="content_locale" class="adm-select"><option value="en">English (en)</option></select></label>
-        <p id="contentPlacementHint" class="adm-content-placement full" role="note"${blog ? " hidden" : ""}>${esc(placementText("service"))}</p>
-        <label class="wide">Title <input id="contentTitle" name="content_title" autocomplete="off" class="adm-input" required></label>
-        <label class="wide">Page slug <input id="contentSlug" name="content_slug" autocomplete="off" class="adm-input" required></label>
-        <label class="wide">Schedule CMS publish <input id="contentScheduledAt" name="content_scheduled_at" class="adm-input" type="datetime-local"></label>
-        <div id="contentStructuredFields" class="adm-content-fields full"></div>
-        <fieldset id="contentSeoFields" class="adm-content-seo full"></fieldset>
-        <details class="adm-content-json full">
-          <summary>Developer JSON</summary>
-          <label>Payload JSON <textarea id="contentPayload" name="content_payload" class="adm-textarea" spellcheck="false">{}</textarea></label>
-          <label>SEO JSON <textarea id="contentSeo" name="content_seo" class="adm-textarea" spellcheck="false">{}</textarea></label>
-        </details>
-        <div class="adm-inline-actions adm-content-actions full" aria-label="CMS editor actions">
-          <div class="adm-content-action-group" data-content-action-group="draft-publish" aria-label="Draft and publish">
-            <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft" data-capability="content.write"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save Draft</button>
-            <button class="btn btn-primary btn-sm" type="button" data-content-action="publish" data-capability="content.publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish to CMS</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule" data-capability="content.publish"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule CMS Publish</button>
-          </div>
+      <div class="adm-content-workspace-tabs" role="tablist" aria-label="Page workspace">
+        <button id="contentWorkspaceTabCopy" class="adm-content-workspace-tab" type="button" role="tab" aria-selected="true" aria-controls="contentWorkspaceCopy" tabindex="0" data-content-workspace-tab="copy"><i class="ph ph-note-pencil" aria-hidden="true"></i> Copy</button>
+        <button id="contentWorkspaceTabSeo" class="adm-content-workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="contentWorkspaceSeo" tabindex="-1" data-content-workspace-tab="seo"><i class="ph ph-magnifying-glass" aria-hidden="true"></i> SEO</button>
+        <button id="contentWorkspaceTabImages" class="adm-content-workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="contentWorkspaceImages" tabindex="-1" data-content-workspace-tab="images"><i class="ph ph-images" aria-hidden="true"></i> Images</button>
+        <button id="contentWorkspaceTabPreview" class="adm-content-workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="contentWorkspacePreview" tabindex="-1" data-content-workspace-tab="preview"><i class="ph ph-eye" aria-hidden="true"></i> Preview</button>
+        <button id="contentWorkspaceTabPublish" class="adm-content-workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="contentWorkspacePublish" tabindex="-1" data-content-workspace-tab="publish"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule &amp; publish</button>
+      </div>
+      <form id="contentForm" onsubmit="return false" data-capability-scope="content.write">
+        <div class="adm-inline-actions adm-content-actions adm-content-workspace-actions" aria-label="CMS editor actions">
+          <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft" data-capability="content.write"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save Draft</button>
           <div class="adm-content-action-group" data-content-action-group="manage" aria-label="Manage entry">
             <button class="btn btn-ghost btn-sm" type="button" data-content-action="new" data-capability="content.write"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
             <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate" data-capability="content.write"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
@@ -358,34 +348,69 @@ function formTemplate({ blog = false } = {}) {
             <button class="btn btn-secondary btn-sm" type="button" data-content-action="unarchive" data-capability="content.write" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore Draft</button>
           </div>
         </div>
-        <p class="adm-publish-contract full" role="note"><strong>Publication status:</strong> Publishing updates the CMS first. The public site changes after the static rebuild completes. If the rebuild hook is unavailable, run <code>${blog ? "npm run publish:blog" : "npm run publish:content"}</code>.</p>
-        <details class="adm-content-disclosure full">
-          <summary>Review workflow &amp; editor lock (multi-editor tools)</summary>
-          <div class="adm-content-disclosure-body">
-            <label>Workflow note
-              <textarea id="contentWorkflowNote" name="workflow_note" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
-            </label>
-            <div class="adm-content-action-group" data-content-action-group="review" aria-label="Review workflow">
-              <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review" data-capability="content.write"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes" data-capability="content.review"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
-            </div>
-            <div class="adm-content-lockbar">
-              <span id="contentLockStatus" class="adm-content-lock-status" data-state="">Unlocked</span>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock" data-capability="content.write"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock" data-capability="content.write"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock" data-capability="content.review"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
+        <section id="contentWorkspaceCopy" class="adm-form-grid adm-content-workspace-panel" role="tabpanel" aria-labelledby="contentWorkspaceTabCopy" data-content-workspace-panel="copy">
+          ${typeControl}
+          <label class="adm-content-locale">Language <select id="contentLocale" name="content_locale" class="adm-select"><option value="en">English (en)</option></select></label>
+          <p id="contentPlacementHint" class="adm-content-placement full" role="note"${blog ? " hidden" : ""}>${esc(placementText("service"))}</p>
+          <label class="wide">Title <input id="contentTitle" name="content_title" autocomplete="off" class="adm-input" required></label>
+          <label class="wide">Page slug <input id="contentSlug" name="content_slug" autocomplete="off" class="adm-input" required></label>
+          <div id="contentStructuredFields" class="adm-content-fields full"></div>
+          <details class="adm-content-json full">
+            <summary>Developer payload JSON</summary>
+            <label>Payload JSON <textarea id="contentPayload" name="content_payload" class="adm-textarea" spellcheck="false">{}</textarea></label>
+          </details>
+        </section>
+        <section id="contentWorkspaceSeo" class="adm-form-grid adm-content-workspace-panel" role="tabpanel" aria-labelledby="contentWorkspaceTabSeo" data-content-workspace-panel="seo" hidden>
+          <fieldset id="contentSeoFields" class="adm-content-seo full"></fieldset>
+          <details class="adm-content-json full">
+            <summary>Developer SEO JSON</summary>
+            <label>SEO JSON <textarea id="contentSeo" name="content_seo" class="adm-textarea" spellcheck="false">{}</textarea></label>
+          </details>
+        </section>
+        <section id="contentWorkspaceImages" class="adm-content-workspace-panel" role="tabpanel" aria-labelledby="contentWorkspaceTabImages" data-content-workspace-panel="images" hidden>
+          ${assetPickerTemplate({ embedded: true })}
+        </section>
+        <section id="contentWorkspacePreview" class="adm-content-workspace-panel" role="tabpanel" aria-labelledby="contentWorkspaceTabPreview" data-content-workspace-panel="preview" hidden>
+          ${previewTemplate({ embedded: true })}
+        </section>
+        <section id="contentWorkspacePublish" class="adm-form-grid adm-content-workspace-panel" role="tabpanel" aria-labelledby="contentWorkspaceTabPublish" data-content-workspace-panel="publish" hidden>
+          <label class="wide">Schedule CMS publish <input id="contentScheduledAt" name="content_scheduled_at" class="adm-input" type="datetime-local"></label>
+          <div class="adm-inline-actions adm-content-actions full" aria-label="CMS editor actions">
+            <div class="adm-content-action-group" data-content-action-group="draft-publish" aria-label="Draft and publish">
+              <button class="btn btn-primary btn-sm" type="button" data-content-action="publish" data-capability="content.publish"><i class="ph ph-upload-simple" aria-hidden="true"></i> Publish to CMS</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="schedule" data-capability="content.publish"><i class="ph ph-calendar-check" aria-hidden="true"></i> Schedule CMS Publish</button>
             </div>
           </div>
-        </details>
+          <p class="adm-publish-contract full" role="note"><strong>Publication status:</strong> Publishing updates the CMS first. The public site changes after the static rebuild completes. If the rebuild hook is unavailable, run <code>${blog ? "npm run publish:blog" : "npm run publish:content"}</code>.</p>
+          <details class="adm-content-disclosure full">
+            <summary>Review workflow &amp; editor lock (multi-editor tools)</summary>
+            <div class="adm-content-disclosure-body">
+              <label>Workflow note
+                <textarea id="contentWorkflowNote" name="workflow_note" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
+              </label>
+              <div class="adm-content-action-group" data-content-action-group="review" aria-label="Review workflow">
+                <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review" data-capability="content.write"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-content-workflow="request_changes" data-capability="content.review"><i class="ph ph-warning-circle" aria-hidden="true"></i> Request changes</button>
+              </div>
+              <div class="adm-content-lockbar">
+                <span id="contentLockStatus" class="adm-content-lock-status" data-state="">Unlocked</span>
+                <button class="btn btn-ghost btn-sm" type="button" data-content-action="lock" data-capability="content.write"><i class="ph ph-lock-key" aria-hidden="true"></i> Claim lock</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-content-action="unlock" data-capability="content.write"><i class="ph ph-lock-key-open" aria-hidden="true"></i> Release</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-content-action="force_unlock" data-capability="content.review"><i class="ph ph-warning-circle" aria-hidden="true"></i> Force unlock</button>
+              </div>
+            </div>
+          </details>
+          <div class="full">${revisionsTemplate(admEmpty, { embedded: true })}</div>
+        </section>
       </form>
       <p id="contentStatus" class="adm-status" role="status" aria-live="polite"></p>
     </div>
   `;
 }
 
-function revisionsTemplate(admEmpty) {
+function revisionsTemplate(admEmpty, { embedded = false } = {}) {
   return `
-    <div class="adm-card adm-content-revisions">
+    <div class="${embedded ? "adm-content-workspace-card " : "adm-card "}adm-content-revisions">
       <div class="adm-panel-header">
         <div>
           <h2>Revision history</h2>
@@ -400,22 +425,20 @@ function revisionsTemplate(admEmpty) {
   `;
 }
 
-function assetPickerTemplate() {
+function assetPickerTemplate({ embedded = false } = {}) {
   return `
-    <div id="contentAssetPicker" class="adm-card adm-content-assets" hidden>
+    <div id="contentAssetPicker" class="${embedded ? "adm-content-workspace-card " : "adm-card "}adm-content-assets"${embedded ? ' data-content-workspace-persistent="true"' : " hidden"}>
       <div class="adm-panel-header">
         <div>
-          <h2>Asset manager</h2>
-          <p class="muted">Upload CMS images or select existing asset metadata for structured fields.</p>
+          <h2>Images</h2>
+          <p class="muted">Review media attached to this entry, choose existing assets, or upload a new image.</p>
         </div>
-        <button class="btn btn-ghost btn-sm" type="button" data-content-action="close_assets">
-          <i class="ph ph-x" aria-hidden="true"></i> Close
-        </button>
       </div>
+      <div id="contentImageSummary" class="adm-content-image-summary" aria-live="polite"></div>
       <button class="btn btn-secondary adm-content-open-assets" type="button" data-content-action="open_asset_viewer">
         <i class="ph ph-images" aria-hidden="true"></i> Open Asset Viewer
       </button>
-      <form id="contentAssetUpload" class="adm-content-upload" onsubmit="return false">
+      <div id="contentAssetUpload" class="adm-content-upload">
         <label>Folder
           <input id="contentAssetFolder" name="asset_folder" autocomplete="off" class="adm-input" type="text" value="cms" maxlength="64">
         </label>
@@ -428,8 +451,8 @@ function assetPickerTemplate() {
         <button class="btn btn-secondary btn-sm" type="button" data-content-action="upload_asset" data-capability="content.assets">
           <i class="ph ph-upload-simple" aria-hidden="true"></i> Upload
         </button>
-      </form>
-      <form id="contentAssetRegister" class="adm-content-register" onsubmit="return false">
+      </div>
+      <div id="contentAssetRegister" class="adm-content-register">
         <label>Existing path or URL
           <input id="contentAssetPath" name="asset_path" autocomplete="off" class="adm-input" type="text" placeholder="e.g. img/proof/cases/tank.webp…">
         </label>
@@ -442,14 +465,14 @@ function assetPickerTemplate() {
         <button class="btn btn-secondary btn-sm" type="button" data-content-action="register_asset" data-capability="content.assets">
           <i class="ph ph-link-simple" aria-hidden="true"></i> Register
         </button>
-      </form>
+      </div>
     </div>
   `;
 }
 
-function previewTemplate() {
+function previewTemplate({ embedded = false } = {}) {
   return `
-    <div class="adm-card adm-content-preview">
+    <div class="${embedded ? "adm-content-workspace-card " : "adm-card "}adm-content-preview">
       <div class="adm-panel-header">
         <div>
           <h2>Field check</h2>
@@ -559,10 +582,8 @@ function shellTemplate(admEmpty) {
       ${contentHubTemplate()}
       <div class="adm-content-layout">
         <div class="adm-content-stack">
-          ${formTemplate()}
-          ${assetPickerTemplate()}
+          ${formTemplate({ admEmpty })}
           ${richReferencePickerTemplate({ prefix: "content", admEmpty })}
-          ${revisionsTemplate(admEmpty)}
         </div>
         <div class="adm-content-side">
           <div class="adm-card adm-content-list">
@@ -583,7 +604,6 @@ function shellTemplate(admEmpty) {
             <div id="contentList" class="adm-content-list-body">${admEmpty("ph-note-pencil", "No content entries", "Create a draft or switch the filters.")}</div>
           </div>
           ${workflowTemplate(admEmpty)}
-          ${previewTemplate()}
           ${exportStatusTemplate()}
         </div>
       </div>
@@ -608,10 +628,8 @@ function blogShellTemplate(admEmpty) {
       </div>
       <div class="adm-content-layout">
         <div class="adm-content-stack">
-          ${formTemplate({ blog: true })}
-          ${assetPickerTemplate()}
+          ${formTemplate({ blog: true, admEmpty })}
           ${richReferencePickerTemplate({ prefix: "content", admEmpty })}
-          ${revisionsTemplate(admEmpty)}
         </div>
         <div class="adm-content-side">
           <div class="adm-card adm-content-list">
@@ -624,7 +642,6 @@ function blogShellTemplate(admEmpty) {
             <div id="contentList" class="adm-content-list-body">${admEmpty("ph-note-pencil", "No blog posts", "Create a blog draft to get started.")}</div>
           </div>
           ${workflowTemplate(admEmpty, { blog: true })}
-          ${previewTemplate()}
           ${exportStatusTemplate()}
         </div>
       </div>
@@ -685,7 +702,12 @@ function readScheduledAt() {
 
 function selectedFormEntry({ validate = false } = {}) {
   const form = document.getElementById("contentForm");
-  if (validate && form && !form.reportValidity()) {
+  if (validate && form && !form.checkValidity()) {
+    const invalid = form.querySelector(":invalid");
+    const panel = invalid?.closest("[data-content-workspace-panel]");
+    const tab = panel?.dataset.contentWorkspacePanel;
+    if (tab) document.querySelector(`[data-content-workspace-tab="${tab}"]`)?.click();
+    form.reportValidity();
     throw new Error("Complete the required content fields before saving.");
   }
   let payload;
@@ -737,9 +759,29 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   let ownUserId = null; // resolved once; lets a reload recognise our own editor lock
   let lastGeneratedSlug = "";
   let contentPageOptions = null;
+  let contentWorkspaceTab = "copy";
 
   function activeRoot() {
     return $(mountedRootId) || $("admContent") || $("admBlog");
+  }
+
+  function setContentWorkspaceTab(tab = "copy", { focus = false } = {}) {
+    const root = activeRoot();
+    if (!root) return;
+    const tabs = [...root.querySelectorAll("[data-content-workspace-tab]")];
+    const next = tabs.some((button) => button.dataset.contentWorkspaceTab === tab) ? tab : "copy";
+    contentWorkspaceTab = next;
+    tabs.forEach((button) => {
+      const selected = button.dataset.contentWorkspaceTab === next;
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+      if (selected && focus) button.focus();
+    });
+    root.querySelectorAll("[data-content-workspace-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.contentWorkspacePanel !== next;
+    });
+    if (next === "images") renderContentImageSummary();
+    if (next === "preview") requestAnimationFrame(() => refreshPreview());
   }
 
   function setStatus(text, kind = "") {
@@ -761,6 +803,35 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       <span><b>${esc(drafts)}</b> drafts</span>
       <span><b>${esc(scheduled)}</b> scheduled</span>
     `;
+  }
+
+  function renderContentImageSummary() {
+    const box = $("contentImageSummary");
+    if (!box) return;
+    let payload = {};
+    let seo = {};
+    try { payload = readPayloadJson(); } catch {}
+    try { seo = readSeoJson(); } catch {}
+    const images = [];
+    Object.entries(payload || {}).forEach(([key, value]) => {
+      if (!ASSET_FIELD_KEYS.has(key) || !String(value || "").trim()) return;
+      images.push({
+        field: `Copy · ${key}`,
+        url: String(value),
+        alt: String(payload[pairedAssetAltField(key)] || ""),
+      });
+    });
+    if (String(seo.og_image || "").trim()) {
+      images.push({ field: "SEO · social image", url: String(seo.og_image), alt: "" });
+    }
+    box.innerHTML = images.length
+      ? images.map((image) => `
+        <figure class="adm-content-image-card">
+          <img src="${esc(image.url)}" alt="" width="320" height="180" loading="lazy">
+          <figcaption><strong>${esc(image.field)}</strong><span>${esc(image.alt || image.url)}</span></figcaption>
+        </figure>
+      `).join("")
+      : '<p class="muted">No images attached to this entry yet.</p>';
   }
 
   function selectedEntryIdentity() {
@@ -896,6 +967,8 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     mountedRootId = rootId;
     blogMode = blog;
     root.innerHTML = blog ? blogShellTemplate(admEmpty) : shellTemplate(admEmpty);
+    contentWorkspaceTab = "copy";
+    setContentWorkspaceTab(contentWorkspaceTab);
     renderStructuredFields(blog ? "blog_post" : "service", {});
     renderSeoFields({});
     const type = $("contentType");
@@ -943,6 +1016,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     void hydrateContentPageOptions();
     mountRichEditors();
     updateMarkdownPreviews();
+    renderContentImageSummary();
   }
 
   async function hydrateContentPageOptions() {
@@ -978,6 +1052,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (!box) return;
     box.innerHTML = `<legend>Search metadata</legend>${seoFieldsTemplate(seo)}`;
     updateSeoMeters();
+    renderContentImageSummary();
   }
 
   function syncStructuredPayload() {
@@ -987,6 +1062,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       $("contentPayload").value = jsonText(payload);
       setStatus("");
       updateMarkdownPreviews();
+      renderContentImageSummary();
       refreshPreview();
     } catch (error) {
       setStatus(`Invalid JSON: ${error.message}`, "err");
@@ -998,6 +1074,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       const seo = mergeSeoPayload(readSeoJson(), readSeoValues());
       $("contentSeo").value = jsonText(seo);
       updateSeoMeters();
+      renderContentImageSummary();
       setStatus("");
       refreshPreview();
     } catch (error) {
@@ -1073,6 +1150,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       badge.textContent = entry.status || "draft";
       badge.dataset.s = entry.status || "draft";
     }
+    const heading = $("contentWorkspaceHeading");
+    if (heading) heading.textContent = entry.title || (blogMode ? "New blog post" : "New content entry");
+    renderContentImageSummary();
+    if (!entry.type && contentWorkspaceTab !== "copy") setContentWorkspaceTab("copy");
     setStatus("");
     formDirty = false;
     void revisions.loadRevisions(entry);
@@ -1119,6 +1200,18 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     if (!root || !fieldKey) return null;
     const selectorKey = window.CSS?.escape ? CSS.escape(fieldKey) : fieldKey.replace(/"/g, '\\"');
     return root.querySelector(`[data-content-seo-field="${selectorKey}"]`);
+  }
+
+  function openWorkspaceAssetViewer(trigger) {
+    const root = activeRoot();
+    const payloadControl = ["image", "hero", "image_after", "og_image"]
+      .map((key) => findPayloadField(root, key))
+      .find(Boolean);
+    if (payloadControl) {
+      return assets.openAssetPicker(payloadControl.dataset.contentPayloadField, "payload", trigger);
+    }
+    const seoControl = findSeoField(root, "og_image");
+    return assets.openAssetPicker(seoControl?.dataset.contentSeoField || "og_image", "seo", trigger);
   }
 
   // Callback for the asset module: write a chosen asset's path/alt into the editor form
@@ -1577,6 +1670,19 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (event.target.matches("[data-content-seo-field]")) syncSeoPayload();
     });
     root.addEventListener("keydown", (event) => {
+      const workspaceButton = event.target.closest?.("[data-content-workspace-tab]");
+      if (workspaceButton && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        const tabs = [...root.querySelectorAll("[data-content-workspace-tab]")];
+        const current = tabs.indexOf(workspaceButton);
+        const next = event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? tabs.length - 1
+            : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+        event.preventDefault();
+        setContentWorkspaceTab(tabs[next]?.dataset.contentWorkspaceTab || "copy", { focus: true });
+        return;
+      }
       if (event.key === "Escape" && $("contentAssetPicker") && !$("contentAssetPicker").hidden) assets.closeAssetPicker();
       if (event.target.matches("[data-chip-input]") && (event.key === "Enter" || event.key === ",")) {
         event.preventDefault();
@@ -1595,6 +1701,9 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       const container = button.closest(".adm-chips");
       button.closest(".adm-chip")?.remove();
       if (container) chipHiddenSync(container);
+    });
+    delegate(root, "click", "[data-content-workspace-tab]", (_event, button) => {
+      setContentWorkspaceTab(button.dataset.contentWorkspaceTab || "copy");
     });
     delegate(root, "click", "[data-content-edit]", (_event, button) => editEntry(button.dataset.contentEdit));
     delegate(root, "click", "[data-content-revision]", (_event, button) => revisions.inspectRevision(button.dataset.contentRevision));
@@ -1626,7 +1735,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
         if (picker) picker.hidden = true;
         return null;
       }
-      if (action === "open_asset_viewer") return assets.openAssetViewer(button);
+      if (action === "open_asset_viewer") return openWorkspaceAssetViewer(button);
       if (action === "close_assets") return assets.closeAssetPicker();
       if (action === "upload_asset") return assets.uploadAsset();
       if (action === "register_asset") return assets.registerAsset();

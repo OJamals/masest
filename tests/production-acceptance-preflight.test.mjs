@@ -17,6 +17,7 @@ const completeEnv = {
   SUPABASE_SERVICE_ROLE_KEY: "service_role_secret_value",
   STRIPE_SECRET_KEY: "sk_live_secret",
   STRIPE_WEBHOOK_SECRET: "whsec_secret",
+  STRIPE_EFFECTS_WORKER_SECRET: "stripe_effects_secret",
   STRIPE_PUBLISHABLE_KEY: "pk_live_public",
   STRIPE_SHIPPING_RATE_IDS: "shr_live_ground",
   QBO_CLIENT_ID: "qbo_client",
@@ -39,11 +40,15 @@ test("redactValue reports presence without leaking secret values", () => {
 test("acceptanceEnvGroups names the live integration gates", () => {
   assert.deepEqual(
     acceptanceEnvGroups.map((group) => group.id),
-    ["supabase", "stripe", "qbo", "cms_publish"],
+    ["supabase", "stripe", "stripe_effects", "qbo", "cms_publish"],
   );
   assert.deepEqual(
     acceptanceEnvGroups.find((group) => group.id === "stripe").required,
     ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_SHIPPING_RATE_IDS"],
+  );
+  assert.deepEqual(
+    acceptanceEnvGroups.find((group) => group.id === "stripe_effects").required,
+    ["STRIPE_EFFECTS_WORKER_SECRET"],
   );
 });
 
@@ -236,6 +241,7 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
           "SUPABASE_SERVICE_ROLE_KEY",
           "STRIPE_SECRET_KEY",
           "STRIPE_WEBHOOK_SECRET",
+          "STRIPE_EFFECTS_WORKER_SECRET",
           "STRIPE_SHIPPING_RATE_IDS",
           "CONTENT_PUBLISH_HOOK_URL",
         ].map((key) => [key, { type: "secret_text" }])),
@@ -267,6 +273,7 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
   assert.equal(report.checks.env_supabase.ok, true);
   assert.equal(report.checks.env_cms_publish.ok, true);
   assert.equal(report.checks.env_stripe.ok, true);
+  assert.equal(report.checks.env_stripe_effects.ok, true);
   assert.equal(report.checks.env_qbo.ok, false);
   assert.deepEqual(report.checks.env_stripe.details.missing, []);
   assert.equal(JSON.stringify(report).includes("cloudflare:secret_text"), false);
@@ -283,6 +290,7 @@ test("buildPreflightReport accepts a Cloudflare QBO connect key bundle", () => {
           SUPABASE_SERVICE_ROLE_KEY: { type: "secret_text" },
           STRIPE_SECRET_KEY: { type: "secret_text" },
           STRIPE_WEBHOOK_SECRET: { type: "secret_text" },
+          STRIPE_EFFECTS_WORKER_SECRET: { type: "secret_text" },
           STRIPE_SHIPPING_RATE_IDS: { type: "secret_text" },
           CONTENT_PUBLISH_HOOK_URL: { type: "secret_text" },
           QBO_CONNECT_KEY: { type: "secret_text" },

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cleanConvertItem, buildConvertItems, netOrderRow } from "../functions/_lib/quote-convert.js";
+import {
+  buildConvertItems,
+  cleanConvertItem,
+  netOrderRow,
+  quoteOrderRow,
+  quotePayloadWithOffer,
+} from "../functions/_lib/quote-convert.js";
 
 // Pins the item-cleaning + NET-order shape extracted from the admin
 // "convert a quote/lead into a NET order" action (functions/api/admin/quotes.js).
@@ -57,6 +63,27 @@ test("buildConvertItems rejects an empty or non-array list with invalid_item", (
   assert.deepEqual(buildConvertItems(undefined), { error: "invalid_item" });
 });
 
+test("buildConvertItems enforces the canonical checkout quantity limits", () => {
+  assert.deepEqual(buildConvertItems([{ sku: "A", qty: 1000, unit_price: 5 }]), {
+    error: "invalid_item",
+  });
+  assert.deepEqual(buildConvertItems([
+    { sku: "A", qty: 600, unit_price: 5 },
+    { sku: "A", qty: 400, unit_price: 5 },
+  ]), {
+    error: "invalid_item",
+  });
+});
+
+test("buildConvertItems rejects duplicate SKUs instead of creating ambiguous prices", () => {
+  assert.deepEqual(buildConvertItems([
+    { sku: "A", qty: 1, unit_price: 5 },
+    { sku: "A", qty: 1, unit_price: 6 },
+  ]), {
+    error: "invalid_item",
+  });
+});
+
 test("netOrderRow builds a NET invoice order shape", () => {
   assert.deepEqual(netOrderRow("co-123", 49.99), {
     company_id: "co-123",
@@ -66,5 +93,60 @@ test("netOrderRow builds a NET invoice order shape", () => {
     subtotal: 49.99,
     total: 49.99,
     currency: "usd",
+  });
+});
+
+test("quoteOrderRow builds a buyer-owned checkout draft without a second line-item model", () => {
+  assert.deepEqual(quoteOrderRow({
+    companyId: "co-123",
+    userId: "user-9",
+    email: "buyer@example.com",
+    subtotal: 49.99,
+    currency: "usd",
+  }), {
+    company_id: "co-123",
+    user_id: "user-9",
+    customer_email: "buyer@example.com",
+    status: "cart",
+    payment_method: "stripe",
+    qbo_sync_status: null,
+    subtotal: 49.99,
+    total: 49.99,
+    currency: "usd",
+  });
+});
+
+test("quotePayloadWithOffer preserves intake context while moving the offer forward", () => {
+  assert.deepEqual(quotePayloadWithOffer(
+    { requisition_id: "req-1", requester_id: "user-9", company_id: "co-123" },
+    {
+      orderId: "order-2",
+      status: "sent",
+      at: "2026-07-28T20:00:00.000Z",
+    },
+  ), {
+    requisition_id: "req-1",
+    requester_id: "user-9",
+    company_id: "co-123",
+    offer_order_id: "order-2",
+    offer_status: "sent",
+    offer_sent_at: "2026-07-28T20:00:00.000Z",
+  });
+});
+
+test("quote item normalization preserves an existing product SKU", () => {
+  assert.deepEqual(buildConvertItems([{
+    sku: "VK-HCR-5",
+    product_sku: "hcr",
+    name: "VertKlean HCR - 5 gal",
+    qty: 2,
+    unit_price: 45,
+  }]).items[0], {
+    sku: "VK-HCR-5",
+    product_sku: "hcr",
+    name: "VertKlean HCR - 5 gal",
+    qty: 2,
+    unit_price: 45,
+    line_total: 90,
   });
 });

@@ -6,6 +6,7 @@ import {
   billingFailureEffects,
   billingRecoveryEffects,
   checkoutOrderEffects,
+  deliverStripeEffect,
   disputeEffects,
   effectIdempotencyKey,
   enqueueStripeEffects,
@@ -315,6 +316,59 @@ test('provider idempotency key is stable per Stripe event and effect', () => {
   );
 });
 
+test('late buyer confirmations skip orders already cancelled or refunded', async () => {
+  for (const status of ['cancelled', 'refunded']) {
+    let sends = 0;
+    const sb = {
+      from(table) {
+        if (table === 'orders') {
+          return resolvedQuery({
+            data: {
+              id: 'order-1',
+              status,
+              customer_email: 'buyer@example.com',
+              subtotal: 10,
+              shipping: 0,
+              tax: 0,
+              total: 10,
+              currency: 'usd',
+              purchase_order_number: null,
+              ship_address: null,
+            },
+            error: null,
+          });
+        }
+        if (table === 'order_items') {
+          return resolvedQuery({
+            data: [{ sku: 'SKU-1', name: 'Product', qty: 1, unit_price: 10, backordered: false }],
+            error: null,
+          });
+        }
+        throw new Error(`unexpected table ${table}`);
+      },
+    };
+    const result = await deliverStripeEffect({
+      env: {},
+      sb,
+      effect: {
+        id: `effect-${status}`,
+        stripe_event_id: `evt-${status}`,
+        effect_key: 'buyer-confirmation',
+        effect_type: 'order_confirmation',
+        payload: { order_id: 'order-1', pending: false, discount: 0 },
+        lease_owner: 'worker-1',
+      },
+    }, {
+      sendEmail: async () => {
+        sends += 1;
+        return true;
+      },
+    });
+    assert.deepEqual(result, { providerRecorded: false });
+    assert.equal(sends, 0);
+  }
+});
+
 test('worker records provider success before completion and skips provider after response-loss retry', async () => {
   const calls = [];
   const fresh = {
@@ -468,6 +522,17 @@ test('worker endpoint fails closed on missing or invalid secret and bounds batch
   assert.equal(runs, 1);
 });
 
+test('worker cron template schedules bounded effect processing with dedicated secret', () => {
+  const sql = read('supabase/stripe-effects-cron.example.sql');
+  assert.match(sql, /create extension if not exists pg_cron/i);
+  assert.match(sql, /create extension if not exists pg_net/i);
+  assert.match(sql, /cron\.unschedule\('stripe-effects'\)/);
+  assert.match(sql, /cron\.schedule\(\s*'stripe-effects',\s*'\*\/1 \* \* \* \*'/);
+  assert.match(sql, /https:\/\/masest\.co\/api\/admin\/stripe-effects\?limit=25/);
+  assert.match(sql, /'x-stripe-effects-secret', '<STRIPE_EFFECTS_WORKER_SECRET>'/);
+  assert.doesNotMatch(sql, /QBO_SYNC_SECRET|QUOTE_CRM_SECRET/);
+});
+
 test('schema supplies unique rows, bounded lease claims, reclaim, backoff, dead-letter, and least privilege', () => {
   const sql = read('supabase/schema-stripe-effects.sql');
   assert.match(sql, /unique\s*\(\s*stripe_event_id\s*,\s*effect_key\s*\)/i);
@@ -493,6 +558,30 @@ test('schema supplies unique rows, bounded lease claims, reclaim, backoff, dead-
     assert.match(sql, new RegExp(`revoke\\s+all\\s+on\\s+function\\s+public\\.${signature}\\s+from\\s+public`, 'i'));
     assert.match(sql, new RegExp(`grant\\s+execute\\s+on\\s+function\\s+public\\.${signature}\\s+to\\s+service_role`, 'i'));
   }
+});
+
+test('schema atomically skips stale stock and order notifications for terminal orders', () => {
+  const sql = read('supabase/schema-stripe-effects.sql');
+  const claim = sql.slice(
+    sql.indexOf('create or replace function public.claim_stripe_webhook_effects'),
+    sql.indexOf('-- Record an external provider success'),
+  );
+  assert.match(claim, /update public\.stripe_webhook_effects as effect[\s\S]*set status = 'completed'/i);
+  assert.match(claim, /order_row\.status in \('cancelled', 'refunded'\)/i);
+  assert.match(claim, /effect_type in \('stock_decrement', 'oversell_alert', 'order_confirmation'\)/i);
+  assert.match(claim, /effect\.payload ->> 'kind' in \('order_received', 'payment_cleared'\)/i);
+  assert.match(
+    sql,
+    /apply_stripe_stock_effect[\s\S]*v_order_status[\s\S]*in \('cancelled', 'refunded'\)[\s\S]*'skipped', 'order_terminal'/i,
+  );
+  assert.match(
+    sql,
+    /deliver_stripe_notification_effect[\s\S]*order_received[\s\S]*payment_cleared[\s\S]*in \('cancelled', 'refunded'\)[\s\S]*'skipped', 'order_terminal'/i,
+  );
+  assert.match(
+    sql,
+    /insert into public\.notifications[\s\S]*v_type::public\.notification_type/i,
+  );
 });
 
 test('webhook branch wiring enqueues before every relevant 2xx and leaves refund accounting durable', () => {
