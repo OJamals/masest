@@ -59,10 +59,6 @@ function inferPageProduct(explicitProduct, path) {
   }
 }
 
-function normalizeCart(cartItems) {
-  return normalizeCartLines(cartItems, { normalizeSku: normalizeIdentifier });
-}
-
 function contextParams(context) {
   const params = new URLSearchParams();
   params.set("type", "quote");
@@ -92,7 +88,7 @@ export function buildRequestContextHref({
     quote.hash = "";
 
     const path = normalizePagePath(page.href, page.origin);
-    const allCart = normalizeCart(cartItems);
+    const allCart = normalizeCartLines(cartItems, { normalizeSku: normalizeIdentifier });
     const context = {
       source: REQUEST_CONTEXT_SOURCE,
       product: inferPageProduct(product, path),
