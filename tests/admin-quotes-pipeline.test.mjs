@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const src = readFileSync(new URL('../functions/api/admin/quotes.js', import.meta.url), 'utf8');
+const lifecycle = readFileSync(new URL('../functions/_lib/quote-leads.js', import.meta.url), 'utf8');
 
 test('imports the pure pipeline lib at the right depth', () => {
-  assert.match(src, /from '\.\.\/\.\.\/_lib\/crm-pipeline\.js'/);
-  assert.doesNotMatch(src, /from '\.\.\/_lib\/crm-pipeline/);
+  assert.match(lifecycle, /from '\.\/crm-pipeline\.js'/);
 });
 
 test('GET list selects the new pipeline columns', () => {
@@ -25,21 +25,22 @@ test('serves a pipeline report view', () => {
 });
 
 test('POST validates stage + accepts deal fields', () => {
-  assert.match(src, /stagePatch\(/);
-  assert.match(src, /if \(res\.error\) return json\(400/); // stage validation propagated as 400
-  assert.match(src, /body\.deal_value/);
-  assert.match(src, /invalid_deal_value/);
-  assert.match(src, /body\.expected_close/);
+  assert.match(lifecycle, /stagePatch\(/);
+  assert.match(lifecycle, /if \(stage\.error\) return \{ ok: false, error: stage\.error \}/);
+  assert.match(lifecycle, /changes\.deal_value/);
+  assert.match(lifecycle, /invalid_deal_value/);
+  assert.match(lifecycle, /changes\.expected_close/);
 });
 
 test('convert marks the quote won', () => {
-  assert.match(src, /pipeline_stage: 'won'/);
+  assert.match(lifecycle, /pipeline_stage: 'won'/);
 });
 
 test('supports bulk row updates by id array', () => {
   assert.match(src, /Array\.isArray\(body\.ids\)/);
-  assert.match(src, /\.in\('id', ids\)/);
-  assert.match(src, /updated:/);
+  assert.match(src, /leadLifecycle\.bulkUpdate\(/);
+  assert.match(lifecycle, /\.in\('id', ids\)/);
+  assert.match(lifecycle, /updated:/);
 });
 
 test('stays staff + write guarded', () => {

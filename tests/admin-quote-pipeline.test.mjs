@@ -8,6 +8,7 @@ import { QUOTE_TASK_DETAILS } from "../js/quote-task-details.js";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 const ADMIN_QUOTES = read("../functions/api/admin/quotes.js");
+const QUOTE_LEADS = read("../functions/_lib/quote-leads.js");
 const ADMIN_STATS = read("../functions/api/admin/stats.js");
 const QUOTE_INTAKE = read("../functions/api/quote.js");
 const ADMIN_JS = read("../js/admin.js");
@@ -44,12 +45,12 @@ test("public sample intake defaults to the Sample / Audit CRM stage", () => {
 test("admin quotes API reads and updates pipeline fields", () => {
   assert.match(ADMIN_QUOTES, /priority,next_step,due_at,lead_score/);
   assert.match(ADMIN_QUOTES, /assigned_to,assigned_at/);
-  assert.match(ADMIN_QUOTES, /PRIORITIES\s*=\s*\[/);
-  assert.match(ADMIN_QUOTES, /body\.priority/);
-  assert.match(ADMIN_QUOTES, /body\.assigned_to/);
-  assert.match(ADMIN_QUOTES, /assigned_at:\s*assignedTo\s*\?\s*new Date\(\)\.toISOString\(\)\s*:\s*null/);
-  assert.match(ADMIN_QUOTES, /body\.next_step/);
-  assert.match(ADMIN_QUOTES, /body\.due_at/);
+  assert.match(QUOTE_LEADS, /PRIORITIES\s*=\s*\[/);
+  assert.match(QUOTE_LEADS, /changes\.priority/);
+  assert.match(QUOTE_LEADS, /changes\.assigned_to/);
+  assert.match(QUOTE_LEADS, /assigned_at:\s*assignedTo\s*\?\s*now\.toISOString\(\)\s*:\s*null/);
+  assert.match(QUOTE_LEADS, /changes\.next_step/);
+  assert.match(QUOTE_LEADS, /changes\.due_at/);
 });
 
 test("admin quote inbox supports lead owner assignment", () => {
@@ -103,11 +104,12 @@ test("admin quote inbox and drawer surface shared request details", () => {
 
 test("admin quotes API can send a lead follow-up email", () => {
   assert.match(ADMIN_QUOTES, /action\s*===\s*'followup'/);
+  assert.match(ADMIN_QUOTES, /leadLifecycle\.followUp\(/);
   assert.match(ADMIN_QUOTES, /sendEmail/);
   assert.match(ADMIN_QUOTES, /emailLayout/);
-  assert.match(ADMIN_QUOTES, /\.from\('quotes'\)\.select\('id,name,email,company,status,priority,next_step,due_at,notes'\)/);
+  assert.match(QUOTE_LEADS, /\.from\('quotes'\)[\s\S]*\.select\('id,name,email,company,status,priority,next_step,due_at,notes'\)/);
   assert.match(ADMIN_QUOTES, /category:\s*'lead_followup'/);
-  assert.match(ADMIN_QUOTES, /next_step:\s*'Follow-up sent'/);
+  assert.match(QUOTE_LEADS, /next_step:\s*'Follow-up sent'/);
 });
 
 test("admin quote follow-up can hand off to buyer message thread", () => {
@@ -123,13 +125,14 @@ test("admin quote follow-up can hand off to buyer message thread", () => {
 
 test("admin quotes API sweeps stale due leads with email and notes", () => {
   assert.match(ADMIN_QUOTES, /action\s*===\s*'sweep_due'/);
-  assert.match(ADMIN_QUOTES, /\.from\('quotes'\)[\s\S]*\.lte\('due_at',\s*nowIso\)/);
+  assert.match(ADMIN_QUOTES, /\.sweepDue\(/);
+  assert.match(QUOTE_LEADS, /\.from\('quotes'\)[\s\S]*\.lte\('due_at',\s*nowIso\)/);
   assert.match(ADMIN_QUOTES, /category:\s*'lead_followup_reminder'/);
   assert.match(ADMIN_QUOTES, /category:\s*'lead_followup_alert'/);
   assert.match(ADMIN_QUOTES, /logEmailEvent/);
   assert.match(ADMIN_QUOTES, /resend_not_configured|no_recipients/);
-  assert.match(ADMIN_QUOTES, /Automated due follow-up/);
-  assert.match(ADMIN_QUOTES, /Automated reminder sent/);
+  assert.match(QUOTE_LEADS, /Automated due follow-up/);
+  assert.match(QUOTE_LEADS, /Automated reminder sent/);
   assert.match(ADMIN_QUOTES, /x-quote-crm-secret/i);
 });
 

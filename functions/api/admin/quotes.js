@@ -1,54 +1,21 @@
 // /api/admin/quotes - staff view of inbound /api/quote leads.
-import { adminClient, companyEmails, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
+import { adminClient, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
-import {
-  buildConvertItems,
-  netOrderRow,
-  quoteOrderRow,
-  quotePayloadWithOffer,
-} from '../../_lib/quote-convert.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { csvResponse } from '../../_lib/reports.js';
-import { stagePatch, pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
+import { pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
 import { klaviyoTrack } from '../../_lib/klaviyo.js';
 import { escapeLike } from '../../_lib/crm.js';
 import { recordSupportMessage } from '../../_lib/support-messages.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
-import { guardQuoteOffer, requisitionQuoteMayBeSent } from '../../_lib/quote-order.js';
+import { createQuoteLeadLifecycle, createSupabaseQuoteLeadStore } from '../../_lib/quote-leads.js';
 
-const STATUSES = ['new', 'contacted', 'closed', 'spam'];
-const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,source,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
 
-function dueAt(value) {
-  if (value === null || value === '') return null;
-  if (value === undefined) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? false : date.toISOString();
-}
-
-function batchLimit(value) {
-  const requested = Number(value || 25);
-  return Math.min(50, Math.max(1, Math.floor(requested) || 25));
-}
-
-function plusDays(days, base = new Date()) {
-  const next = new Date(base);
-  next.setDate(next.getDate() + days);
-  return next.toISOString();
-}
-
-function staffRecipients(env) {
-  return String(env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((email) => email.trim())
-    .filter(Boolean);
-}
-
-function appendNote(existing, note) {
-  return [existing, note].filter(Boolean).join('\n').slice(0, 4000);
+function leadMutationResponse(result) {
+  if (result.ok) return json(200, result);
+  return json(result.status || (result.storage_error ? 500 : 400), { error: result.error });
 }
 
 async function companyIdForQuote(sb, { companyId, email }) {
@@ -100,216 +67,6 @@ async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
   return { posted: true, company_id: resolvedCompanyId, message_id: message?.id || null };
 }
 
-async function requisitionQuoteWorkspace(sb, id) {
-  if (!UUID.test(String(id || ''))) return { status: 400, body: { error: 'invalid_id' } };
-  const { data: quote, error: quoteError } = await sb.from('quotes')
-    .select('id,source,payload,email,company,product,status,pipeline_stage')
-    .eq('id', id)
-    .maybeSingle();
-  if (quoteError) return { status: 500, body: { error: quoteError.message } };
-  if (!quote) return { status: 404, body: { error: 'not_found' } };
-  const requisitionId = String(quote.payload?.requisition_id || '');
-  const requesterId = String(quote.payload?.requester_id || '');
-  const companyId = String(quote.payload?.company_id || '');
-  if (quote.source !== 'requisition' || !UUID.test(requisitionId)
-    || !UUID.test(requesterId) || !UUID.test(companyId)) {
-    return { status: 409, body: { error: 'workspace_unavailable' } };
-  }
-
-  const offerOrderId = String(quote.payload?.offer_order_id || '');
-  const requisitionQuery = sb.from('orders')
-    .select('id,company_id,user_id,requisition_name,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
-    .eq('id', requisitionId)
-    .eq('company_id', companyId)
-    .eq('user_id', requesterId)
-    .eq('status', 'cart')
-    .not('requisition_name', 'is', null)
-    .maybeSingle();
-  const offerQuery = UUID.test(offerOrderId)
-    ? sb.from('orders')
-      .select('id,company_id,user_id,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
-      .eq('id', offerOrderId)
-      .eq('company_id', companyId)
-      .eq('user_id', requesterId)
-      .eq('status', 'cart')
-      .is('requisition_name', null)
-      .maybeSingle()
-    : Promise.resolve({ data: null, error: null });
-  const messagesQuery = sb.from('messages')
-    .select('id,sender_role,body,created_at')
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false })
-    .limit(50);
-  const documentsQuery = sb.from('technical_document_requests')
-    .select('id,status,created_at,document_id,document_revision,requested_from,technical_documents(title,document_type)')
-    .eq('requester_id', requesterId)
-    .order('created_at', { ascending: false })
-    .limit(50);
-  const [
-    { data: requisition, error: requisitionError },
-    { data: offer, error: offerError },
-    { data: messages, error: messagesError },
-    { data: documents, error: documentsError },
-  ] = await Promise.all([requisitionQuery, offerQuery, messagesQuery, documentsQuery]);
-  const error = requisitionError || offerError || messagesError || documentsError;
-  if (error) return { status: 500, body: { error: error.message } };
-  if (!requisition) return { status: 409, body: { error: 'requisition_unavailable' } };
-
-  const pricedOrder = offer || requisition;
-  return {
-    status: 200,
-    body: {
-      workspace: {
-        quote_id: quote.id,
-        company_id: companyId,
-        requester_id: requesterId,
-        requisition_id: requisition.id,
-        requisition_name: requisition.requisition_name,
-        offer_order_id: offer?.id || null,
-        offer_status: quote.payload?.offer_status || null,
-        currency: pricedOrder.currency || 'usd',
-        subtotal: Number(pricedOrder.subtotal || 0),
-        total: Number(pricedOrder.total || 0),
-        items: pricedOrder.order_items || [],
-        messages: messages || [],
-        documents: documents || [],
-      },
-    },
-  };
-}
-
-async function sendRequisitionQuote({ sb, env, request, body, user }) {
-  const { data: quote, error: quoteError } = await sb.from('quotes')
-    .select('id,source,payload,email,company,product,status')
-    .eq('id', body.id)
-    .maybeSingle();
-  if (quoteError) return json(500, { error: quoteError.message });
-  if (!quote) return json(404, { error: 'quote_not_found' });
-  if (!requisitionQuoteMayBeSent(quote)) {
-    return json(409, { error: 'quote_closed' });
-  }
-  const requisitionId = String(quote.payload?.requisition_id || '');
-  const requesterId = String(quote.payload?.requester_id || '');
-  const companyId = String(quote.payload?.company_id || '');
-  if (quote.source !== 'requisition' || !UUID.test(requisitionId)
-    || !UUID.test(requesterId) || !UUID.test(companyId)) {
-    return json(409, { error: 'invalid_requisition_quote' });
-  }
-
-  const { data: requisition, error: requisitionError } = await sb.from('orders')
-    .select('id,company_id,user_id,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
-    .eq('id', requisitionId)
-    .eq('company_id', companyId)
-    .eq('user_id', requesterId)
-    .eq('status', 'cart')
-    .not('requisition_name', 'is', null)
-    .maybeSingle();
-  if (requisitionError) return json(500, { error: requisitionError.message });
-  if (!requisition) return json(409, { error: 'requisition_unavailable' });
-
-  const built = buildConvertItems(body.items);
-  if (built.error) return json(400, { error: built.error });
-  const sourceBySku = new Map((requisition.order_items || []).map((item) => [item.sku, item]));
-  if (built.items.some((item) => !sourceBySku.has(item.sku))) {
-    return json(400, { error: 'item_not_in_requisition' });
-  }
-  const clean = built.items.map((item) => ({
-    ...item,
-    product_sku: sourceBySku.get(item.sku)?.product_sku || item.product_sku,
-    name: sourceBySku.get(item.sku)?.name || item.name,
-  }));
-  const currency = String(requisition.currency || 'usd').toLowerCase();
-  const { data: order, error: orderError } = await sb.from('orders')
-    .insert(quoteOrderRow({
-      companyId,
-      userId: requesterId,
-      email: String(quote.email || '').toLowerCase(),
-      subtotal: built.subtotal,
-      currency,
-    }))
-    .select('id')
-    .single();
-  if (orderError) return json(500, { error: orderError.message });
-
-  const { error: itemsError } = await sb.from('order_items')
-    .insert(clean.map((item) => ({ order_id: order.id, ...item })));
-  if (itemsError) {
-    await sb.from('orders').delete().eq('id', order.id);
-    return json(500, { error: itemsError.message });
-  }
-
-  const at = new Date().toISOString();
-  const previousOfferOrderId = String(quote.payload?.offer_order_id || '');
-  const payload = quotePayloadWithOffer(quote.payload, { orderId: order.id, status: 'sent', at });
-  const updateQuery = sb.from('quotes').update({
-    payload,
-    status: 'contacted',
-    pipeline_stage: 'proposal',
-    stage_changed_at: at,
-    handled_at: at,
-    handled_by: user.email || null,
-    deal_value: built.subtotal,
-    next_step: 'Buyer review and checkout',
-    due_at: null,
-  }).eq('id', quote.id).eq('status', quote.status);
-  const { data: updated, error: updateError } = await guardQuoteOffer(updateQuery, quote.payload)
-    .select('id,status,pipeline_stage,payload,deal_value,next_step')
-    .maybeSingle();
-  if (updateError) {
-    await sb.from('orders').delete().eq('id', order.id);
-    return json(500, { error: updateError.message });
-  }
-  if (!updated) {
-    await sb.from('orders').delete().eq('id', order.id);
-    return json(409, { error: 'quote_changed' });
-  }
-  if (UUID.test(previousOfferOrderId) && previousOfferOrderId !== order.id) {
-    await sb.from('orders').delete()
-      .eq('id', previousOfferOrderId)
-      .eq('company_id', companyId)
-      .eq('user_id', requesterId)
-      .eq('status', 'cart')
-      .is('requisition_name', null);
-  }
-
-  await sb.from('notifications').insert({
-    company_id: companyId,
-    type: 'quote',
-    title: 'Your quote is ready',
-    body: `${quote.product || 'Requested pricing'} is ready to review and accept.`,
-    link: '/dashboard.html#quotes',
-  });
-  await postQuoteThreadHandoff({
-    sb,
-    quote,
-    companyId,
-    text: 'Your requested pricing is ready to review and accept in the Quotes tab.',
-    actor: user.email || 'staff',
-  });
-  const appUrl = env.APP_URL || new URL(request.url).origin;
-  if (quote.email) {
-    await sendEmail(env, {
-      to: [quote.email],
-      subject: 'Your MASEST quote is ready',
-      html: emailLayout({
-        heading: 'Your quote is ready',
-        bodyHtml: `<p>Review the pricing for ${htmlEscape(quote.product || 'your saved requisition')}, accept it, and continue to secure checkout.</p>`,
-        ctaText: 'Review your quote',
-        ctaUrl: `${appUrl}/dashboard.html#quotes`,
-      }),
-      category: 'quote',
-    });
-  }
-  await recordAudit(sb, {
-    user,
-    action: 'quote.send',
-    targetType: 'quote',
-    targetId: quote.id,
-    detail: { company_id: companyId, order_id: order.id, subtotal: built.subtotal },
-  });
-  return json(200, { ok: true, order_id: order.id, quote: updated });
-}
-
 async function sendTrackedLeadEmail(env, options) {
   const recipients = [...(Array.isArray(options.to) ? options.to : []), ...(Array.isArray(options.bcc) ? options.bcc : [])]
     .filter(Boolean);
@@ -326,30 +83,35 @@ async function sendTrackedLeadEmail(env, options) {
   return sendEmail(env, options);
 }
 
-async function sweepDueQuotes({ sb, env, actor, batch }) {
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const { data: quotes, error } = await sb.from('quotes')
-    .select('id,name,email,company,status,priority,next_step,due_at,notes')
-    .lte('due_at', nowIso)
-    .neq('status', 'closed')
-    .neq('status', 'spam')
-    .order('due_at', { ascending: true })
-    .limit(batchLimit(batch));
-  if (error) return { ok: false, error: error.message };
-
-  const staff = staffRecipients(env);
-  const results = [];
-  let buyer_reminders = 0;
-  let staff_alerts = 0;
-
-  for (const quote of quotes || []) {
-    const label = quote.company || quote.name || quote.email || quote.id;
-    const nextStep = quote.next_step || 'We are checking in on your quote request.';
-    const dueText = quote.due_at ? new Date(quote.due_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' }) : 'now';
-    const hasBuyerEmail = Boolean(quote.email);
-
-    const sent = hasBuyerEmail ? await sendTrackedLeadEmail(env, {
+function quoteLeadLifecycle({ sb, env }) {
+  return createQuoteLeadLifecycle({
+    store: createSupabaseQuoteLeadStore(sb),
+    stageChanged: (quote, stage, source) => klaviyoTrack(env, {
+      email: quote.email,
+      metric: 'Deal Stage Changed',
+      value: quote.deal_value,
+      properties: {
+        stage,
+        deal_value: quote.deal_value,
+        product: quote.product,
+        company: quote.company,
+        type: quote.type,
+        source,
+      },
+    }),
+    sendFollowUp: ({ quote, nextStep, dueText, subject, actor }) => sendEmail(env, {
+      to: [quote.email],
+      subject: subject || 'MASEST quote follow-up',
+      category: 'lead_followup',
+      html: emailLayout({
+        heading: `Follow-up for ${htmlEscape(quote.company || quote.name || 'your request')}`,
+        bodyHtml: `<p>${htmlEscape(nextStep)}</p>${dueText ? `<p><b>Target follow-up:</b> ${htmlEscape(dueText)} ET</p>` : ''}`,
+        ctaText: 'Reply to MASEST',
+        ctaUrl: `mailto:${actor || 'matthew@masest.co'}`,
+      }),
+    }),
+    handoff: (input) => postQuoteThreadHandoff({ sb, ...input }),
+    sendDueNotice: ({ quote, label, nextStep, dueText, hasBuyerEmail }) => sendTrackedLeadEmail(env, hasBuyerEmail ? {
       to: [quote.email],
       subject: 'MASEST quote follow-up reminder',
       category: 'lead_followup_reminder',
@@ -359,35 +121,39 @@ async function sweepDueQuotes({ sb, env, actor, batch }) {
         ctaText: 'Reply to MASEST',
         ctaUrl: 'mailto:matthew@masest.co',
       }),
-    }) : await sendTrackedLeadEmail(env, {
-      to: staff,
+    } : {
+      to: String(env.ADMIN_EMAILS || '').split(',').map((email) => email.trim()).filter(Boolean),
       subject: `Quote follow-up needed: ${label}`,
       category: 'lead_followup_alert',
       html: emailLayout({
         heading: `Quote follow-up needed: ${htmlEscape(label)}`,
         bodyHtml: `<p>${htmlEscape(nextStep)}</p><p>This lead has no buyer email on file. Follow-up was due ${htmlEscape(dueText)} ET.</p>`,
       }),
-    });
-
-    if (hasBuyerEmail) buyer_reminders += 1;
-    else staff_alerts += 1;
-
-    const note = `Automated due follow-up by ${actor}: ${hasBuyerEmail ? 'buyer reminder' : 'staff alert'} ${sent ? 'sent' : 'attempted'} for ${nextStep}`;
-    const nextDue = plusDays(hasBuyerEmail ? 2 : 1, now);
-    const update = {
-      status: quote.status === 'new' ? 'contacted' : quote.status,
-      handled_at: nowIso,
-      handled_by: actor,
-      next_step: hasBuyerEmail ? 'Automated reminder sent' : 'Staff alert sent',
-      due_at: nextDue,
-      notes: appendNote(quote.notes, note),
-    };
-
-    const { error: updateError } = await sb.from('quotes').update(update).eq('id', quote.id);
-    results.push({ id: quote.id, ok: !updateError, emailed: sent, error: updateError?.message });
-  }
-
-  return { ok: true, processed: (quotes || []).length, buyer_reminders, staff_alerts, results };
+    }),
+    offerReady: ({ quote, appUrl }) => sendEmail(env, {
+      to: [quote.email],
+      subject: 'Your MASEST quote is ready',
+      html: emailLayout({
+        heading: 'Your quote is ready',
+        bodyHtml: `<p>Review the pricing for ${htmlEscape(quote.product || 'your saved requisition')}, accept it, and continue to secure checkout.</p>`,
+        ctaText: 'Review your quote',
+        ctaUrl: `${appUrl}/dashboard.html#quotes`,
+      }),
+      category: 'quote',
+    }),
+    converted: ({ quote, recipients, appUrl }) => sendEmail(env, {
+      to: recipients,
+      subject: 'Your quote is now an order',
+      html: emailLayout({
+        heading: 'Order created from your quote',
+        bodyHtml: `<p>We turned your quote request${quote?.product ? ` for ${htmlEscape(quote.product)}` : ''} into a NET order. Review the details and invoice status in your dashboard.</p>`,
+        ctaText: 'View your order',
+        ctaUrl: `${appUrl}/dashboard.html#orders`,
+      }),
+      category: 'order',
+    }),
+    audit: (entry) => recordAudit(sb, entry),
+  });
 }
 
 export async function onRequest({ request, env }) {
@@ -396,7 +162,10 @@ export async function onRequest({ request, env }) {
     body = await readBody(request);
     if (body.action === 'sweep_due' && env.QUOTE_CRM_SECRET && timingSafeEqual(request.headers.get('x-quote-crm-secret'), env.QUOTE_CRM_SECRET)) {
       const sb = adminClient(env);
-      const result = await sweepDueQuotes({ sb, env, actor: 'automation', batch: body.batch });
+      const result = await quoteLeadLifecycle({ sb, env }).sweepDue({
+        actor: 'automation',
+        batch: body.batch,
+      });
       return json(result.ok ? 200 : 500, result);
     }
   }
@@ -409,10 +178,9 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'GET') {
     if (new URL(request.url).searchParams.get('view') === 'workspace') {
-      const result = await requisitionQuoteWorkspace(
-        sb,
-        new URL(request.url).searchParams.get('id'),
-      );
+      const result = await quoteLeadLifecycle({ sb, env }).workspace({
+        id: new URL(request.url).searchParams.get('id'),
+      });
       return json(result.status, result.body, { 'cache-control': 'no-store' });
     }
     if (new URL(request.url).searchParams.get('view') === 'pipeline') {
@@ -510,253 +278,64 @@ export async function onRequest({ request, env }) {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     body = body || await readBody(request);
     if (body.action === 'sweep_due') {
-      const result = await sweepDueQuotes({ sb, env, actor: user.email || 'staff', batch: body.batch });
+      const result = await quoteLeadLifecycle({ sb, env }).sweepDue({
+        actor: user.email || 'staff',
+        batch: body.batch,
+      });
       return json(result.ok ? 200 : 500, result);
     }
 
-    if (Array.isArray(body.ids) && body.ids.length) {
-      const ids = body.ids.slice(0, 200);
-      const bulk = {};
-      if (body.status) {
-        if (!STATUSES.includes(body.status)) return json(400, { error: 'invalid_status' });
-        bulk.status = body.status;
-        bulk.handled_at = body.status === 'new' ? null : new Date().toISOString();
-        bulk.handled_by = body.status === 'new' ? null : (user.email || null);
-      }
-      if (body.priority) {
-        if (!PRIORITIES.includes(body.priority)) return json(400, { error: 'invalid_priority' });
-        bulk.priority = body.priority;
-      }
-      if (typeof body.assigned_to === 'string') {
-        const assignedTo = body.assigned_to.trim().slice(0, 160);
-        Object.assign(bulk, { assigned_to: assignedTo || null, assigned_at: assignedTo ? new Date().toISOString() : null });
-      }
-      // Stage moves get the same treatment as the single-id path: skip quotes
-      // already in the target stage (no stage_changed_at re-stamp) and emit the
-      // Klaviyo "Deal Stage Changed" event per quote that actually moved (Q5 —
-      // bulk used to skip the event entirely, so owner flows missed bulk moves).
-      let stagePatchRes = null;
-      if (body.pipeline_stage !== undefined) {
-        stagePatchRes = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
-        if (stagePatchRes.error) return json(400, { error: stagePatchRes.error });
-      }
-      if (!Object.keys(bulk).length && !stagePatchRes) return json(400, { error: 'nothing_to_update' });
+    const leadLifecycle = quoteLeadLifecycle({ sb, env });
 
-      if (Object.keys(bulk).length) {
-        const { error } = await sb.from('quotes').update(bulk).in('id', ids);
-        if (error) return json(500, { error: error.message });
-      }
-      let moved = [];
-      if (stagePatchRes) {
-        const { data: rows, error: rErr } = await sb.from('quotes')
-          .select('id,email,pipeline_stage,deal_value,product,company,type').in('id', ids);
-        if (rErr) return json(500, { error: rErr.message });
-        moved = (rows || []).filter((q) => (q.pipeline_stage || 'new') !== body.pipeline_stage);
-        if (moved.length) {
-          const { error } = await sb.from('quotes').update(stagePatchRes.patch).in('id', moved.map((q) => q.id));
-          if (error) return json(500, { error: error.message });
-          // Best-effort, mirrors the single-id event shape — never blocks the response.
-          await Promise.allSettled(moved.filter((q) => q.email).map((q) => klaviyoTrack(env, {
-            email: q.email,
-            metric: 'Deal Stage Changed',
-            value: q.deal_value,
-            properties: { stage: body.pipeline_stage, deal_value: q.deal_value, product: q.product, company: q.company, type: q.type, source: 'pipeline_bulk' },
-          })));
-        }
-      }
-      return json(200, { ok: true, updated: ids.length, stage_moved: stagePatchRes ? moved.length : undefined });
+    if (Array.isArray(body.ids) && body.ids.length) {
+      return leadMutationResponse(await leadLifecycle.bulkUpdate({
+        ids: body.ids,
+        changes: body,
+        actor: user.email || null,
+      }));
     }
 
     if (!body.id) return json(400, { error: 'id_required' });
 
     if (body.action === 'send_quote') {
-      return sendRequisitionQuote({ sb, env, request, body, user });
+      const result = await leadLifecycle.sendOffer({
+        id: body.id,
+        items: body.items,
+        actor: user.email || null,
+        user,
+        appUrl: env.APP_URL || new URL(request.url).origin,
+      });
+      return json(result.status, result.body);
     }
 
     if (body.action === 'convert') {
-      const companyId = String(body.company_id || '');
-      const { data: company, error: coErr } = await sb.from('companies').select('id,status').eq('id', companyId).single();
-      if (coErr || !company) return json(404, { error: 'company_not_found' });
-
-      const built = buildConvertItems(body.items);
-      if (built.error) return json(400, { error: built.error });
-      const clean = built.items;
-
-      const { data: order, error: oErr } = await sb.from('orders')
-        .insert(netOrderRow(companyId, built.subtotal))
-        .select('id').single();
-      if (oErr) return json(500, { error: oErr.message });
-
-      const { error: iErr } = await sb.from('order_items').insert(clean.map((item) => ({ order_id: order.id, ...item })));
-      if (iErr) return json(500, { error: iErr.message });
-
-      await sb.from('quotes').update({
-        status: 'closed',
-        pipeline_stage: 'won',
-        stage_changed_at: new Date().toISOString(),
-        handled_at: new Date().toISOString(),
-        handled_by: user.email || null,
-        next_step: 'Converted to order',
-        due_at: null,
-      }).eq('id', body.id);
-      await sb.from('notifications').insert({
-        company_id: companyId,
-        type: 'order',
-        title: 'Order created from your quote',
-        body: 'We turned your quote request into an order. See it in your dashboard.',
-        link: '/dashboard.html#orders',
+      const result = await leadLifecycle.convert({
+        id: body.id,
+        companyId: body.company_id,
+        items: body.items,
+        actor: user.email || null,
+        user,
+        appUrl: env.APP_URL || new URL(request.url).origin,
       });
-      // Close the loop off-dashboard too: email the company's order recipients and
-      // the quote requester, emit the same Klaviyo won event as a stage move, and
-      // leave an audit trail (this handler previously did none of the three).
-      const { data: qRow } = await sb.from('quotes')
-        .select('email,deal_value,product,company,type').eq('id', body.id).maybeSingle();
-      const appUrl = env.APP_URL || new URL(request.url).origin;
-      const recipients = [...new Set([
-        ...(await companyEmails(sb, companyId, 'orders')),
-        String(qRow?.email || '').trim(),
-      ].map((e) => String(e || '').trim().toLowerCase()).filter(Boolean))];
-      if (recipients.length) {
-        await sendEmail(env, {
-          to: recipients,
-          subject: 'Your quote is now an order',
-          html: emailLayout({
-            heading: 'Order created from your quote',
-            bodyHtml: `<p>We turned your quote request${qRow?.product ? ` for ${htmlEscape(qRow.product)}` : ''} into a NET order. Review the details and invoice status in your dashboard.</p>`,
-            ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders`,
-          }),
-          category: 'order',
-        });
-      }
-      if (qRow?.email) {
-        await klaviyoTrack(env, {
-          email: qRow.email,
-          metric: 'Deal Stage Changed',
-          value: qRow.deal_value,
-          properties: { stage: 'won', deal_value: qRow.deal_value, product: qRow.product, company: qRow.company, type: qRow.type, source: 'quote_convert' },
-        });
-      }
-      await recordAudit(sb, { user, action: 'quote.convert', targetType: 'quote', targetId: body.id, detail: { company_id: companyId, order_id: order.id, subtotal: built.subtotal } });
-
-      return json(200, { ok: true, order_id: order.id });
+      return json(result.status, result.body);
     }
 
     if (body.action === 'followup') {
-      const { data: quote, error: qErr } = await sb.from('quotes').select('id,name,email,company,status,priority,next_step,due_at,notes').eq('id', body.id).single();
-      if (qErr || !quote) return json(404, { error: 'quote_not_found' });
-      if (!quote.email) return json(400, { error: 'quote_email_required' });
-
-      const nextStep = String(body.next_step || quote.next_step || 'We are reviewing your request and will follow up with next steps.').slice(0, 500);
-      const due = dueAt(body.due_at ?? quote.due_at);
-      if (due === false) return json(400, { error: 'invalid_due_at' });
-      const dueText = due ? new Date(due).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' }) : null;
-
-      await sendEmail(env, {
-        to: [quote.email],
-        subject: body.subject || 'MASEST quote follow-up',
-        category: 'lead_followup',
-        html: emailLayout({
-          heading: `Follow-up for ${htmlEscape(quote.company || quote.name || 'your request')}`,
-          bodyHtml: `<p>${htmlEscape(nextStep)}</p>${dueText ? `<p><b>Target follow-up:</b> ${htmlEscape(dueText)} ET</p>` : ''}`,
-          ctaText: 'Reply to MASEST',
-          ctaUrl: `mailto:${user.email || 'matthew@masest.co'}`,
-        }),
-      });
-
-      const thread = await postQuoteThreadHandoff({
-        sb,
-        quote,
+      return leadMutationResponse(await leadLifecycle.followUp({
+        id: body.id,
+        actor: user.email || null,
         companyId: body.company_id,
-        text: nextStep,
-        actor: user.email || 'staff',
-      });
-      const handoffNote = thread.posted ? `Buyer message thread updated (${thread.message_id || 'message'})` : `Buyer message thread not updated (${thread.reason || thread.error || 'no account match'})`;
-      const notes = [quote.notes, `Follow-up sent by ${user.email || 'staff'}: ${nextStep}`, handoffNote].filter(Boolean).join('\n');
-      const { data, error } = await sb.from('quotes').update({
-        status: quote.status === 'closed' ? quote.status : 'contacted',
-        handled_at: new Date().toISOString(),
-        handled_by: user.email || null,
-        next_step: 'Follow-up sent',
-        due_at: due || null,
-        notes: notes.slice(0, 4000),
-      }).eq('id', body.id)
-        .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason')
-        .single();
-      if (error) return json(500, { error: error.message });
-      return json(200, { ok: true, quote: data });
+        subject: body.subject,
+        nextStep: body.next_step,
+        dueAt: body.due_at,
+      }));
     }
 
-    const patch = {};
-    if (body.status) {
-      if (!STATUSES.includes(body.status)) return json(400, { error: 'invalid_status' });
-      patch.status = body.status;
-      patch.handled_at = body.status === 'new' ? null : new Date().toISOString();
-      patch.handled_by = body.status === 'new' ? null : (user.email || null);
-    }
-    if (body.priority) {
-      if (!PRIORITIES.includes(body.priority)) return json(400, { error: 'invalid_priority' });
-      patch.priority = body.priority;
-    }
-    if (typeof body.assigned_to === 'string') {
-      const assignedTo = body.assigned_to.trim().slice(0, 160);
-      Object.assign(patch, {
-        assigned_to: assignedTo || null,
-        assigned_at: assignedTo ? new Date().toISOString() : null,
-      });
-    }
-    if (typeof body.notes === 'string') patch.notes = body.notes.slice(0, 4000);
-    if (typeof body.next_step === 'string') patch.next_step = body.next_step.slice(0, 500);
-
-    // Belt-and-braces no-op guard: an unchanged stage must not re-stamp
-    // stage_changed_at (clears Stale tracking) or fire the Klaviyo stage event.
-    let stageActuallyChanged = false;
-    if (body.pipeline_stage !== undefined) {
-      const { data: current } = await sb.from('quotes').select('pipeline_stage').eq('id', body.id).single();
-      stageActuallyChanged = (current?.pipeline_stage || 'new') !== body.pipeline_stage;
-      if (stageActuallyChanged) {
-        const res = stagePatch({ stage: body.pipeline_stage, lost_reason: body.lost_reason, actor: user.email || null });
-        if (res.error) return json(400, { error: res.error });
-        Object.assign(patch, res.patch);
-      }
-    }
-    if (body.deal_value !== undefined) {
-      if (body.deal_value === null || body.deal_value === '') patch.deal_value = null;
-      else {
-        const v = Number(body.deal_value);
-        if (!Number.isFinite(v) || v < 0) return json(400, { error: 'invalid_deal_value' });
-        patch.deal_value = v;
-      }
-    }
-    if (body.expected_close !== undefined) {
-      patch.expected_close = body.expected_close ? String(body.expected_close).slice(0, 10) : null;
-    }
-    if (body.contact_id !== undefined) {
-      patch.contact_id = body.contact_id === null || body.contact_id === '' ? null : (Number(body.contact_id) || null);
-    }
-
-    const parsedDueAt = dueAt(body.due_at);
-    if (parsedDueAt === false) return json(400, { error: 'invalid_due_at' });
-    if (parsedDueAt !== undefined) patch.due_at = parsedDueAt;
-
-    if (!Object.keys(patch).length) return json(400, { error: 'nothing_to_update' });
-
-    const { data, error } = await sb.from('quotes').update(patch).eq('id', body.id)
-      .select('id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,contact_id,email,product,company,type')
-      .single();
-    if (error) return json(500, { error: error.message });
-
-    // Stage moves emit a Klaviyo metric event so owner-built flows (templates/cadences) can
-    // fire. An event does NOT itself send mail. Best-effort — never blocks the response.
-    if (stageActuallyChanged && data?.email) {
-      await klaviyoTrack(env, {
-        email: data.email,
-        metric: 'Deal Stage Changed',
-        value: data.deal_value,
-        properties: { stage: data.pipeline_stage, deal_value: data.deal_value, product: data.product, company: data.company, type: data.type, source: 'pipeline' },
-      }).catch(() => {});
-    }
-
-    return json(200, { ok: true, quote: data });
+    return leadMutationResponse(await leadLifecycle.update({
+      id: body.id,
+      changes: body,
+      actor: user.email || null,
+    }));
   }
 
   return json(405, { error: 'method_not_allowed' });

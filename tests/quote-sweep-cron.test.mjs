@@ -21,5 +21,5 @@ test('cron posts exactly the contract the quotes endpoint verifies (no drift)', 
   assert.match(endpoint, /body\.action === 'sweep_due'/);
   assert.match(endpoint, /x-quote-crm-secret/);
   assert.match(endpoint, /env\.QUOTE_CRM_SECRET/);
-  assert.match(endpoint, /sweepDueQuotes\(/);
+  assert.match(endpoint, /quoteLeadLifecycle\(\{ sb, env \}\)\.sweepDue\(/);
 });
