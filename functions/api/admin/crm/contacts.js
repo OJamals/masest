@@ -3,22 +3,27 @@
 import { adminClient, json, readBody, requireStaff } from '../../../_lib/supabase.js';
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
-import { contactEmailKey, contactRow, contactPatch, mergeFields, parseContactsCsv, prepareContactImportRows, CONTACT_ROLES } from '../../../_lib/crm-contacts.js';
+import {
+  contactRow,
+  contactPatch,
+  createCrmContactModule,
+  createSupabaseCrmContactStore,
+  CONTACT_ROLES,
+} from '../../../_lib/crm-contacts.js';
 import { parsePage, pageEnvelope } from '../../../_lib/paginate.js';
 
 const SELECT = 'id,company_id,name,role,title,email,phone,is_primary,notes,created_by,created_at,updated_at';
 
-function isMissingCrmContactsTable(error) {
-  return /does not exist|relation|schema cache/i.test(error?.message || '');
-}
-
-function isCrmContactUniqueConflict(error) {
-  return /crm_contacts_company_email_uniq|duplicate key value|23505/i.test([
-    error?.message,
-    error?.details,
-    error?.hint,
-    error?.code,
-  ].filter(Boolean).join(' '));
+function mutationResponse(result) {
+  if (result.ok || result.needs_migration) return json(200, result);
+  if (result.error === 'duplicate_email') {
+    return json(409, { error: result.error, message: result.message });
+  }
+  if (['company_required', 'no_rows', 'invalid_merge', 'different_company'].includes(result.error)) {
+    return json(400, { error: result.error });
+  }
+  if (result.error === 'not_found') return json(404, { error: result.error });
+  return json(500, { error: result.message || result.error });
 }
 
 export async function onRequest({ request, env }) {
@@ -78,87 +83,24 @@ export async function onRequest({ request, env }) {
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await readBody(request);
+    const contacts = createCrmContactModule({
+      store: createSupabaseCrmContactStore(sb),
+      audit: (entry) => recordAudit(sb, { user, ...entry }),
+    });
 
     if (body.action === 'import') {
-      const companyId = String(body.company_id || '').trim();
-      if (!companyId) return json(400, { error: 'company_required' });
-      const parsed = parseContactsCsv(body.csv || '');
-      if (!parsed.length) return json(400, { error: 'no_rows' });
-      const prepared = prepareContactImportRows(parsed, { companyId, actor: user.email || null });
-      const errors = [...prepared.errors];
-      const existingEmailKeys = new Set();
-      if (prepared.emailKeys.length) {
-        const { data: existing, error: existingErr } = await sb.from('crm_contacts')
-          .select('email')
-          .eq('company_id', companyId)
-          .is('deleted_at', null)
-          .not('email', 'is', null)
-          .limit(2000);
-        if (existingErr) {
-          if (isMissingCrmContactsTable(existingErr)) {
-            return json(200, { ok: false, inserted: 0, skipped: errors.length, skipped_duplicates: errors.filter((entry) => entry.error === 'duplicate_email').length, errors: errors.slice(0, 10), needs_migration: true });
-          }
-          return json(500, { error: existingErr.message });
-        }
-        for (const contact of existing || []) {
-          const key = contactEmailKey(contact.email);
-          if (key) existingEmailKeys.add(key);
-        }
-      }
-      const entries = prepared.entries.filter((entry) => {
-        if (entry.emailKey && existingEmailKeys.has(entry.emailKey)) {
-          errors.push({ row: entry.rowNumber, error: 'duplicate_email', email: entry.emailKey });
-          return false;
-        }
-        return true;
-      });
-      const rows = entries.map((entry) => entry.row);
-      const duplicateSkips = errors.filter((entry) => entry.error === 'duplicate_email').length;
-      let inserted = 0;
-      if (rows.length) {
-        const { data, error } = await sb.from('crm_contacts').insert(rows).select('id');
-        if (isCrmContactUniqueConflict(error)) {
-          return json(409, { error: 'duplicate_email', message: 'One or more contacts already exist. Refresh and retry the import.' });
-        }
-        if (error) return json(500, { error: error.message });
-        inserted = (data || []).length;
-      }
-      await recordAudit(sb, { user, action: 'crm.contact_import', targetType: 'company', targetId: companyId, detail: { inserted, skipped: errors.length, skipped_duplicates: duplicateSkips } });
-      return json(200, { ok: true, inserted, skipped: errors.length, skipped_duplicates: duplicateSkips, errors: errors.slice(0, 10) });
+      return mutationResponse(await contacts.importCsv({
+        companyId: body.company_id,
+        csv: body.csv,
+        actor: user.email || null,
+      }));
     }
 
     if (body.action === 'merge') {
-      const fromId = Number(body.from_id);
-      const intoId = Number(body.into_id);
-      if (!fromId || !intoId || fromId === intoId) return json(400, { error: 'invalid_merge' });
-      const { data: rows, error: gErr } = await sb.from('crm_contacts')
-        .select('id,company_id,name,title,email,phone,is_primary').in('id', [fromId, intoId]).is('deleted_at', null);
-      if (gErr) return json(500, { error: gErr.message });
-      const from = (rows || []).find((r) => r.id === fromId);
-      const into = (rows || []).find((r) => r.id === intoId);
-      if (!from || !into) return json(404, { error: 'not_found' });
-      if (from.company_id !== into.company_id) return json(400, { error: 'different_company' });
-
-      // Repoint everything the duplicate owns onto the survivor.
-      await sb.from('quotes').update({ contact_id: intoId }).eq('contact_id', fromId);
-      await sb.from('crm_notes').update({ subject_id: String(intoId) }).eq('subject_type', 'contact').eq('subject_id', String(fromId));
-      await sb.from('crm_tasks').update({ subject_id: String(intoId) }).eq('subject_type', 'contact').eq('subject_id', String(fromId));
-
-      // Retire the duplicate FIRST, then backfill the survivor's blank fields. The partial
-      // unique index crm_contacts(company_id, lower(email)) where deleted_at is null counts
-      // only active rows — so if we backfilled the survivor's email while the duplicate (which
-      // owns that email) was still active, the write would hit a 23505 and be swallowed,
-      // silently losing the email. Soft-deleting the loser first frees the value.
-      await sb.from('crm_contacts').update({ deleted_at: new Date().toISOString() }).eq('id', fromId);
-      const fill = mergeFields(into, from);
-      if (Object.keys(fill).length) {
-        const { error: fillErr } = await sb.from('crm_contacts').update(fill).eq('id', intoId);
-        if (fillErr) return json(500, { error: fillErr.message });
-      }
-
-      const { data: survivor } = await sb.from('crm_contacts').select(SELECT).eq('id', intoId).single();
-      await recordAudit(sb, { user, action: 'crm.contact_merge', targetType: 'company', targetId: into.company_id, detail: { from: fromId, into: intoId } });
-      return json(200, { ok: true, contact: survivor });
+      return mutationResponse(await contacts.merge({
+        fromId: body.from_id,
+        intoId: body.into_id,
+      }));
     }
 
     if (body.id) {

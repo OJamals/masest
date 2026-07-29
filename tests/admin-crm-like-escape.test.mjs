@@ -1,4 +1,4 @@
-// Unit tests for escapeLike (pure behavioral) + source-contract that timeline.js
+// Unit tests for escapeLike (pure behavioral) + source-contract that the activity store
 // imports and uses it at both ilike call sites.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -42,19 +42,19 @@ test('escapeLike coerces non-string values', () => {
   assert.equal(escapeLike(true), 'true');
 });
 
-// --- source-contract: timeline.js imports and uses escapeLike ---
+// --- source-contract: crm-activity.js imports and uses escapeLike ---
 
-const TIMELINE = readFileSync(new URL('../functions/api/admin/crm/timeline.js', import.meta.url), 'utf8');
+const ACTIVITY = readFileSync(new URL('../functions/_lib/crm-activity.js', import.meta.url), 'utf8');
 
-test('timeline.js imports escapeLike from _lib/crm.js', () => {
-  assert.match(TIMELINE, /escapeLike/);
-  assert.match(TIMELINE, /from '\.\.\/\.\.\/\.\.\/_lib\/crm\.js'/);
+test('crm-activity.js imports escapeLike from crm.js', () => {
+  assert.match(ACTIVITY, /escapeLike/);
+  assert.match(ACTIVITY, /from '\.\/crm\.js'/);
 });
 
-test('timeline.js uses escapeLike on the company ilike (exact match, no surrounding %)', () => {
-  assert.match(TIMELINE, /\.ilike\('company',\s*escapeLike\(name\)\)/);
+test('activity store uses escapeLike on the company ilike (exact match, no surrounding %)', () => {
+  assert.match(ACTIVITY, /\.ilike\('company',\s*escapeLike\(companyName\)\)/);
 });
 
-test('timeline.js uses escapeLike on the to_email ilike (contains, addr wrapped in %)', () => {
-  assert.match(TIMELINE, /\.ilike\('to_email',\s*`%\$\{escapeLike\(addr\)\}%`\)/);
+test('activity store uses escapeLike on the to_email ilike (contains, address wrapped in %)', () => {
+  assert.match(ACTIVITY, /\.ilike\('to_email',\s*`%\$\{escapeLike\(address\)\}%`\)/);
 });

@@ -7,7 +7,7 @@ import test from 'node:test';
 const src = readFileSync(new URL('../functions/api/admin/crm/contacts.js', import.meta.url), 'utf8');
 
 test('imports CONTACT_ROLES from crm-contacts.js', () => {
-  assert.match(src, /CONTACT_ROLES.*from.*crm-contacts\.js/);
+  assert.match(src, /CONTACT_ROLES,[\s\S]*?from '\.\.\/\.\.\/\.\.\/_lib\/crm-contacts\.js'/);
 });
 
 test('imports parsePage and pageEnvelope from paginate.js', () => {

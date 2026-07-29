@@ -4,12 +4,14 @@ import test from 'node:test';
 
 const src = readFileSync(new URL('../functions/api/admin/crm/timeline.js', import.meta.url), 'utf8');
 
-test('contact timeline pulls the deals it is the buyer on', () => {
-  assert.match(src, /subjectType === 'contact'/);
-  assert.match(src, /from\('quotes'\)[\s\S]*\.eq\('contact_id', Number\(id\) \|\| -1\)/);
+test('contact timeline delegates retrieval to the relationship activity module', () => {
+  assert.match(src, /createCrmActivityModule\(\{/);
+  assert.match(src, /store: createSupabaseCrmActivityStore\(\{ sb \}\)/);
+  assert.match(src, /activity\.timeline\(\{ subjectType, subjectId \}\)/);
 });
 
-test('notes + tasks still keyed by subject (works for contact too)', () => {
-  assert.match(src, /crm_notes'\)[\s\S]*\.eq\('subject_type', subjectType\)/);
-  assert.match(src, /crm_tasks'\)[\s\S]*\.eq\('subject_type', subjectType\)/);
+test('route no longer owns contact deal, note, or task query details', () => {
+  assert.doesNotMatch(src, /from\('quotes'\)/);
+  assert.doesNotMatch(src, /from\('crm_notes'\)/);
+  assert.doesNotMatch(src, /from\('crm_tasks'\)/);
 });

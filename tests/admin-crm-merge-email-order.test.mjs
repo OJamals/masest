@@ -1,21 +1,50 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { createCrmContactModule } from '../functions/_lib/crm-contacts.js';
 
-const src = readFileSync(new URL('../functions/api/admin/crm/contacts.js', import.meta.url), 'utf8');
+function mergeStore({ failBackfill = false } = {}) {
+  const calls = [];
+  const contacts = [
+    { id: 1, company_id: 'company-1', name: 'Duplicate', email: 'buyer@example.com' },
+    { id: 2, company_id: 'company-1', name: 'Survivor', email: null },
+  ];
+  return {
+    calls,
+    async contactsByIds() {
+      return contacts;
+    },
+    async moveQuoteContact() {
+      calls.push('move_quote');
+    },
+    async moveActivitySubject(kind) {
+      calls.push(`move_${kind}`);
+    },
+    async retireContact() {
+      calls.push('retire_duplicate');
+    },
+    async updateContact() {
+      calls.push('backfill_survivor');
+      if (failBackfill) throw new Error('duplicate key value violates unique constraint');
+    },
+    async contact(id) {
+      return contacts.find((contact) => contact.id === id);
+    },
+  };
+}
 
-// Regression guard for the contact-merge email-loss bug: the survivor's email backfill must
-// happen AFTER the duplicate is soft-deleted, otherwise it collides with the live partial
-// unique index crm_contacts(company_id, lower(email)) where deleted_at is null and the
-// 23505 is swallowed — losing the email while reporting success.
-test('merge retires the duplicate before backfilling the survivor', () => {
-  const delIdx = src.indexOf("deleted_at: new Date().toISOString() }).eq('id', fromId)");
-  const fillIdx = src.indexOf('mergeFields(into, from)');
-  assert.ok(delIdx > -1 && fillIdx > -1, 'both merge steps must be present');
-  assert.ok(delIdx < fillIdx, 'the loser soft-delete must precede the survivor email backfill');
+test('merge retires the duplicate before backfilling the survivor', async () => {
+  const store = mergeStore();
+  const result = await createCrmContactModule({ store }).merge({ fromId: 1, intoId: 2 });
+
+  assert.equal(result.ok, true);
+  assert.ok(store.calls.indexOf('retire_duplicate') < store.calls.indexOf('backfill_survivor'));
 });
 
-test('merge backfill checks the write result (no swallowed unique-conflict)', () => {
-  assert.match(src, /const \{ error: fillErr \} = await sb\.from\('crm_contacts'\)\.update\(fill\)/);
-  assert.match(src, /if \(fillErr\) return json\(500, \{ error: fillErr\.message \}\)/);
+test('merge backfill checks the write result (no swallowed unique-conflict)', async () => {
+  const store = mergeStore({ failBackfill: true });
+  const result = await createCrmContactModule({ store }).merge({ fromId: 1, intoId: 2 });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'storage_error');
+  assert.match(result.message, /duplicate key value/);
 });

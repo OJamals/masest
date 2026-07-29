@@ -16,9 +16,13 @@ for (const [name, src] of [['notes', NOTES], ['tasks', TASKS], ['timeline', TIME
     assert.match(src, /requireStaff\(\s*request\s*,\s*env\s*\)/);
     assert.match(src, /if\s*\(\s*!user\s*\)\s*return\s+json\(\s*401/);
     assert.match(src, /if\s*\(\s*!staff\s*\)\s*return\s+json\(\s*403/);
-    assert.match(src, /validSubject/);
   });
 }
+
+test('notes/tasks validate their subject before persistence', () => {
+  assert.match(NOTES, /validSubject/);
+  assert.match(TASKS, /validSubject/);
+});
 
 test('notes/tasks gate writes behind staffCanWrite and audit them', () => {
   for (const src of [NOTES, TASKS]) {
@@ -37,14 +41,11 @@ test('notes DELETE is author-or-owner only', () => {
   assert.match(NOTES, /deleted_at/);
 });
 
-test('timeline merges sources virtually and tolerates missing tables', () => {
-  assert.match(TIMELINE, /mergeTimeline\(/);
-  assert.match(TIMELINE, /async function safe\(/);
-  assert.match(TIMELINE, /from\('orders'\)/);
-  assert.match(TIMELINE, /from\('messages'\)/);
-  assert.match(TIMELINE, /from\('shipment_events'\)/);
-  assert.match(TIMELINE, /from\('audit_log'\)/);
-  assert.match(TIMELINE, /from\('quotes'\)/);
+test('timeline keeps retrieval, validation, and virtual merge behind one module', () => {
+  assert.match(TIMELINE, /createCrmActivityModule\(\{/);
+  assert.match(TIMELINE, /createSupabaseCrmActivityStore\(\{ sb \}\)/);
+  assert.match(TIMELINE, /activity\.timeline\(\{ subjectType, subjectId \}\)/);
+  assert.match(TIMELINE, /if \(!result\.ok\) return json\(400, \{ error: result\.error \}\)/);
 });
 
 test('tasks endpoint supports global scopes', () => {
