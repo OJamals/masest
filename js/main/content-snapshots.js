@@ -3,18 +3,28 @@ import { esc } from "../util.js";
 import { canonicalPublicImageUrl } from "../image-url.js?v=20260723a";
 import { proofCardHtml } from "../proof-records.js?v=20260727b";
 import {
-  CONTENT_TYPE_DEFINITIONS,
+  browserContentDeliveries,
   normalizeContentPageKey,
 } from "../content-types.js";
 
-const MOUNTS = [
-  ["proof_card", proofCardHtml],
-  ["resource_card", resourceCard],
-  ["faq_block", faqBlock],
-  ["page_section", pageSection],
-  ["pricing_tier", pricingTier],
-  ["industry_sector", industrySector],
-];
+const BROWSER_RENDERERS = Object.freeze({
+  proof_card: proofCardHtml,
+  resource_card: resourceCard,
+  industry_sector: industrySector,
+  faq_block: faqBlock,
+  page_section: pageSection,
+  pricing_tier: pricingTier,
+});
+
+export function contentSnapshotMounts() {
+  return browserContentDeliveries().map((delivery) => {
+    const renderer = BROWSER_RENDERERS[delivery.renderer];
+    if (typeof renderer !== "function") {
+      throw new Error(`content_renderer_missing:${delivery.renderer}`);
+    }
+    return { ...delivery, renderer };
+  });
+}
 
 function normalizeCategory(value) {
   return String(value || "").trim().toLowerCase();
@@ -189,11 +199,9 @@ function restoreHashTarget() {
 }
 
 export async function initContentSnapshots() {
-  const snapshots = await Promise.all(MOUNTS.map(([type]) => (
-    loadContentSnapshot(CONTENT_TYPE_DEFINITIONS[type].snapshot.file)
-  )));
-  const rendered = MOUNTS.map(([type, renderer], index) => {
-    const key = CONTENT_TYPE_DEFINITIONS[type].snapshot.key;
+  const mounts = contentSnapshotMounts();
+  const snapshots = await Promise.all(mounts.map(({ file }) => loadContentSnapshot(file)));
+  const rendered = mounts.map(({ key, renderer }, index) => {
     return renderMount(key, snapshots[index], key, renderer);
   }).some(Boolean);
 

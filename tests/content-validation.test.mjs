@@ -72,9 +72,12 @@ test("public snapshots omit draft-only metadata", () => {
 
 test("admin content API source requires staff and content repository", () => {
   const source = readFileSync(new URL("../functions/api/admin/content.js", import.meta.url), "utf8");
+  const lifecycle = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
   assert.match(source, /requireStaff/);
   assert.match(source, /createContentRepository/);
-  assert.match(source, /staffCan\(role, "content\.write"\)/);
+  assert.match(source, /createContentPublicationLifecycle/);
+  assert.match(lifecycle, /capability:\s*"content\.write"/);
+  assert.match(lifecycle, /staffCan\(role, policy\.capability\)/);
   assert.match(source, /request\.method === "GET"/);
   assert.match(source, /request\.method === "POST"/);
   assert.match(source, /request\.method === "DELETE"/);

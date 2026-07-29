@@ -51,7 +51,7 @@ test("logical site aliases resolve to managed CMS objects without trusting exter
 });
 
 test("content assets expose exact reverse references and impacted fields", async () => {
-  const { withContentAssetReferences } = await import("../functions/api/admin/content-assets.js");
+  const { withContentAssetReferences } = await import("../functions/_lib/content-asset-replacement.js");
   const assets = withContentAssetReferences([{
     storage_path: "/img/proof/cases/brewery.webp",
     public_url: "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
@@ -88,12 +88,19 @@ test("content assets expose exact reverse references and impacted fields", async
 
 test("asset manager exposes preview-first replacement backed by content revisions", () => {
   const api = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
+  const replacement = readFileSync(
+    new URL("../functions/_lib/content-asset-replacement.js", import.meta.url),
+    "utf8",
+  );
   const picker = readFileSync(new URL("../js/admin/image-library-picker.js", import.meta.url), "utf8");
 
+  assert.match(api, /createContentAssetReplacementService/);
   assert.match(api, /preview_replace_everywhere/);
   assert.match(api, /apply_replace_everywhere/);
   assert.match(api, /impact_hash/);
-  assert.match(api, /repo\.saveEntry/);
+  assert.match(replacement, /repository\.saveEntry/);
+  assert.match(replacement, /expectedVersion:\s*change\.version/);
+  assert.match(replacement, /expectedVersion:\s*item\.entry\.version/);
   assert.doesNotMatch(api, /"x-upsert":\s*"true"/);
   assert.match(picker, /data-shared-image-replace/);
   assert.match(picker, /Replace everywhere/);
@@ -106,7 +113,7 @@ test("asset manager exposes preview-first replacement backed by content revision
 });
 
 test("replacement plan previews exact payload and SEO field diffs without mutating entries", async () => {
-  const { planContentAssetReplacement } = await import("../functions/api/admin/content-assets.js");
+  const { planContentAssetReplacement } = await import("../functions/_lib/content-asset-replacement.js");
   const oldUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/cms/old.webp";
   const nextUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/cms/new.webp";
   const entry = {
@@ -214,6 +221,7 @@ test("replace everywhere rejects stale impact then writes content through revisi
   const originalFetch = globalThis.fetch;
   const mutations = [];
   let concurrentChange = false;
+  let failSecondEntry = false;
   const oldUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/cms/old.webp";
   const nextUrl = "https://example.supabase.co/storage/v1/object/public/content-assets/cms/new.webp";
   const source = {
@@ -241,6 +249,13 @@ test("replace everywhere rejects stale impact then writes content through revisi
     locked_by: "owner-id",
     locked_at: new Date().toISOString(),
   };
+  const secondEntry = {
+    ...entry,
+    id: "entry-2",
+    slug: "home-footer",
+    title: "Home footer",
+  };
+  const entries = [entry, secondEntry];
 
   globalThis.fetch = async (input, init = {}) => {
     const url = new URL(String(input));
@@ -253,15 +268,21 @@ test("replace everywhere rejects stale impact then writes content through revisi
       return Response.json([filter.includes("new.webp") ? target : source]);
     }
     if (url.pathname === "/rest/v1/content_entries" && method === "GET") {
-      return Response.json(
-        url.searchParams.has("slug") || !url.searchParams.has("locale") ? [entry] : [],
-      );
+      if (!url.searchParams.has("slug")) {
+        return Response.json(!url.searchParams.has("locale") ? entries : []);
+      }
+      const slug = String(url.searchParams.get("slug") || "").replace(/^eq\./, "");
+      return Response.json(entries.filter((item) => item.slug === slug));
     }
     if (url.pathname === "/rest/v1/content_entries" && ["PATCH", "POST"].includes(method)) {
       const body = JSON.parse(String(init.body || "{}"));
       if (concurrentChange && method === "PATCH") return Response.json([]);
+      const id = String(url.searchParams.get("id") || "").replace(/^eq\./, "");
+      const current = entries.find((item) => item.id === id) || entry;
+      if (failSecondEntry && current.id === secondEntry.id) return Response.json([]);
+      Object.assign(current, body);
       mutations.push({ table: "content_entries", body });
-      return Response.json({ ...body, id: entry.id, version: 8 }, { status: 201 });
+      return Response.json(current, { status: 201 });
     }
     if (url.pathname === "/rest/v1/content_revisions" && method === "POST") {
       mutations.push({ table: "content_revisions", body: JSON.parse(String(init.body || "{}")) });
@@ -294,8 +315,8 @@ test("replace everywhere rejects stale impact then writes content through revisi
     });
     const preview = await previewResponse.json();
     assert.equal(previewResponse.status, 200);
-    assert.equal(preview.preview.change_count, 1);
-    assert.equal(preview.preview.field_count, 2);
+    assert.equal(preview.preview.change_count, 2);
+    assert.equal(preview.preview.field_count, 4);
     assert.match(preview.preview.impact_hash, /^[a-f0-9]{64}$/);
 
     const staleResponse = await request({
@@ -337,25 +358,60 @@ test("replace everywhere rejects stale impact then writes content through revisi
     assert.equal(mutations.length, 0);
     concurrentChange = false;
 
-    const applyResponse = await request({
+    failSecondEntry = true;
+    const partialResponse = await request({
       action: "apply_replace_everywhere",
       source_storage_path: source.storage_path,
       target_storage_path: target.storage_path,
       impact_hash: preview.preview.impact_hash,
       confirm: "replace_everywhere",
     });
+    const partial = await partialResponse.json();
+    assert.equal(partialResponse.status, 409);
+    assert.equal(partial.error, "asset_impact_changed");
+    assert.equal(partial.rolled_back, 1);
+    assert.deepEqual(partial.rollback_failures, []);
+    assert.equal(entry.payload.image, oldUrl);
+    assert.equal(entry.version, 9);
+    assert.deepEqual(mutations.map(({ table }) => table), [
+      "content_entries",
+      "content_revisions",
+      "content_entries",
+      "content_revisions",
+    ]);
+    assert.equal(mutations[2].body.version, 9);
+    failSecondEntry = false;
+    mutations.length = 0;
+
+    const refreshedResponse = await request({
+      action: "preview_replace_everywhere",
+      source_storage_path: source.storage_path,
+      target_storage_path: target.storage_path,
+    });
+    const refreshed = await refreshedResponse.json();
+    assert.equal(refreshedResponse.status, 200);
+
+    const applyResponse = await request({
+      action: "apply_replace_everywhere",
+      source_storage_path: source.storage_path,
+      target_storage_path: target.storage_path,
+      impact_hash: refreshed.preview.impact_hash,
+      confirm: "replace_everywhere",
+    });
     const applied = await applyResponse.json();
     assert.equal(applyResponse.status, 200);
-    assert.equal(applied.replaced_entries, 1);
-    assert.equal(applied.replaced_fields, 2);
+    assert.equal(applied.replaced_entries, 2);
+    assert.equal(applied.replaced_fields, 4);
     assert.deepEqual(mutations.map(({ table }) => table), [
+      "content_entries",
+      "content_revisions",
       "content_entries",
       "content_revisions",
       "audit_log",
     ]);
     assert.equal(mutations[0].body.payload.image, nextUrl);
     assert.equal(mutations[0].body.seo.og_image, nextUrl);
-    assert.equal(mutations[1].body.version, 8);
+    assert.equal(mutations[1].body.version, 10);
   } finally {
     globalThis.fetch = originalFetch;
   }

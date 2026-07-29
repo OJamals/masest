@@ -1,17 +1,19 @@
 // /api/admin/content - staff-managed CMS entries for non-commerce public content.
 import { adminClient, requireStaff, json, readBody } from "../../_lib/supabase.js";
-import { staffCan } from "../../_lib/authz.js";
-import { createContentRepository, triggerContentPublishBuild, triggerBlogPublishWorkflow } from "../../_lib/content.js";
+import {
+  createContentPublicationLifecycle,
+  createContentRepository,
+  triggerBlogPublishWorkflow,
+  triggerContentPublishBuild,
+} from "../../_lib/content.js";
 import { timingSafeEqual } from "../../_lib/secret.js";
 
-async function publishDue(repo, env, userId, type = "") {
-  const result = await repo.publishScheduledDue(type ? { type } : {}, userId);
-  if (result.ok && result.count > 0) {
-    result.publish_hook = await triggerContentPublishBuild(env, result.entries[0]);
-    const blogEntry = result.entries.find((entry) => entry?.type === "blog_post");
-    if (blogEntry) result.blog_workflow = await triggerBlogPublishWorkflow(env, blogEntry);
-  }
-  return result;
+function contentPublication(repository, env) {
+  return createContentPublicationLifecycle({
+    repository,
+    publishHook: (entry) => triggerContentPublishBuild(env, entry),
+    blogWorkflow: (entry) => triggerBlogPublishWorkflow(env, entry),
+  });
 }
 
 export async function onRequest({ request, env }) {
@@ -22,18 +24,20 @@ export async function onRequest({ request, env }) {
       || !timingSafeEqual(cronHeader, env.CONTENT_PUBLISH_CRON_SECRET)) {
       return json(401, { error: "unauthorized" });
     }
-    try {
-      return json(200, await publishDue(createContentRepository(adminClient(env)), env, null));
-    } catch (error) {
-      return json(500, { error: error.message });
-    }
+    const repository = createContentRepository(adminClient(env));
+    const response = await contentPublication(repository, env).publishScheduled({
+      userId: null,
+      system: true,
+    });
+    return json(response.status, response.result);
   }
 
   const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: "unauthenticated" });
   if (!staff) return json(403, { error: "forbidden" });
 
-  const repo = createContentRepository(adminClient(env));
+  const repository = createContentRepository(adminClient(env));
+  const publication = contentPublication(repository, env);
 
   if (request.method === "GET") {
     const url = new URL(request.url);
@@ -44,10 +48,10 @@ export async function onRequest({ request, env }) {
     const locale = url.searchParams.get("locale") || "en";
     try {
       if (type && slug) {
-        const entry = await repo.get({ type, slug, locale });
+        const entry = await repository.get({ type, slug, locale });
         return json(200, { entry });
       }
-      const entries = await repo.list({ type, status, locale });
+      const entries = await repository.list({ type, status, locale });
       return json(200, { entries });
     } catch (error) {
       return json(500, { error: error.message });
@@ -55,93 +59,23 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === "POST") {
-    const action = body.action || (body.publish ? "publish" : "save_draft");
-    const entry = body.entry || body;
-    try {
-      let result;
-      if (action === "publish_scheduled") {
-        if (!staffCan(role, "content.publish")) {
-          return json(403, { error: "forbidden", message: "Publishing scheduled content requires owner access." });
-        }
-        result = await publishDue(repo, env, user.id, body.type || "");
-      } else if (action === "lock") {
-        if (!staffCan(role, "content.write")) {
-          return json(403, { error: "forbidden", message: "Locking content requires owner access." });
-        }
-        result = await repo.lock(entry, user.id);
-      } else if (action === "unlock") {
-        if (!staffCan(role, "content.write")) {
-          return json(403, { error: "forbidden", message: "Unlocking content requires owner access." });
-        }
-        result = await repo.unlock(entry, user.id);
-      } else if (action === "force_unlock") {
-        if (!staffCan(role, "content.review")) {
-          return json(403, { error: "forbidden", message: "Force unlocking content requires reviewer access." });
-        }
-        result = await repo.unlock(entry, user.id, { force: true });
-      } else if (action === "unarchive") {
-        if (!staffCan(role, "content.write")) {
-          return json(403, { error: "forbidden", message: "Restoring archived content requires owner access." });
-        }
-        result = await repo.unarchive(entry, user.id);
-      } else if (action === "submit_review") {
-        if (!staffCan(role, "content.write")) {
-          return json(403, { error: "forbidden", message: "Submitting content requires owner access." });
-        }
-        result = await repo.transition(entry, user.id, "in_review", body.note || "Submitted for review");
-      } else if (action === "request_changes") {
-        if (!staffCan(role, "content.review")) {
-          return json(403, { error: "forbidden", message: "Requesting changes requires owner access." });
-        }
-        result = await repo.transition(entry, user.id, "changes_requested", body.note || "Changes requested");
-      } else if (action === "schedule") {
-        if (!staffCan(role, "content.publish")) {
-          return json(403, { error: "forbidden", message: "Scheduling content requires owner access." });
-        }
-        const scheduledAt = new Date(entry.scheduled_at || "");
-        if (!entry.scheduled_at || Number.isNaN(scheduledAt.getTime())) {
-          return json(400, {
-            error: "scheduled_at_required",
-            message: "Choose a publish date before scheduling.",
-          });
-        }
-        entry.scheduled_at = scheduledAt.toISOString();
-        result = await repo.transition(entry, user.id, "scheduled", body.note || "Scheduled publish");
-      } else if (action === "publish") {
-        if (!staffCan(role, "content.publish")) {
-          return json(403, { error: "forbidden", message: "Publishing content requires owner access." });
-        }
-        result = await repo.publish(entry, user.id);
-        if (result.ok) {
-          result.publish_hook = await triggerContentPublishBuild(env, result.entry);
-          result.blog_workflow = await triggerBlogPublishWorkflow(env, result.entry);
-        }
-      } else {
-        if (!staffCan(role, "content.write")) {
-          return json(403, { error: "forbidden", message: "Editing content requires owner access." });
-        }
-        result = await repo.saveDraft(entry, user.id);
-      }
-      if (!result.ok) return json(result.error === "content_locked" ? 409 : 400, result);
-      return json(200, result);
-    } catch (error) {
-      return json(500, { error: error.message });
-    }
+    const response = await publication.execute({
+      action: body.action || (body.publish ? "publish" : "save_draft"),
+      entry: body.entry || body,
+      body,
+      userId: user.id,
+      role,
+    });
+    return json(response.status, response.result);
   }
 
   if (request.method === "DELETE") {
-    if (!staffCan(role, "content.write")) {
-      return json(403, { error: "forbidden", message: "Archiving content requires owner access." });
-    }
-    const body = await readBody(request);
-    try {
-      const result = await repo.archive(body, user.id);
-      if (!result.ok) return json(result.error === "content_locked" ? 409 : 400, result);
-      result.publish_hook = await triggerContentPublishBuild(env, result.entry);
-      return json(200, result);
-    } catch (error) {
-      return json(500, { error: error.message });
-    }
+    const response = await publication.archive({
+      entry: await readBody(request),
+      userId: user.id,
+      role,
+    });
+    return json(response.status, response.result);
   }
 
   return json(405, { error: "method_not_allowed" });

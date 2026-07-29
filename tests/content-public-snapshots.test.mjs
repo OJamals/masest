@@ -2,16 +2,31 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
+  contentSnapshotMounts,
   filterContentRows,
   safeContentHref,
 } from "../js/main/content-snapshots.js";
+
+test("browser snapshot mounts derive delivery metadata from the registry", () => {
+  const mounts = contentSnapshotMounts();
+  assert.deepEqual(mounts.map(({ type, file, key }) => ({ type, file, key })), [
+    { type: "proof_card", file: "proof.json", key: "proof_cards" },
+    { type: "resource_card", file: "resources.json", key: "resource_cards" },
+    { type: "industry_sector", file: "industry-sectors.json", key: "industry_sectors" },
+    { type: "faq_block", file: "faqs.json", key: "faq_blocks" },
+    { type: "page_section", file: "page-sections.json", key: "page_sections" },
+    { type: "pricing_tier", file: "pricing.json", key: "pricing_tiers" },
+  ]);
+  assert.ok(mounts.every(({ renderer }) => typeof renderer === "function"));
+});
 
 test("public content snapshot helper loads optional CMS snapshots", () => {
   const source = readFileSync(new URL("../js/main/content-snapshots.js", import.meta.url), "utf8");
   assert.match(source, /loadContentSnapshot/);
   assert.match(source, /fetch\(`\/data\/content\/\$\{file\}`/, "snapshot fetches must be root-relative for extensionless product detail pages");
-  assert.match(source, /CONTENT_TYPE_DEFINITIONS\[type\]\.snapshot\.file/, "snapshot filenames should come from the shared registry");
-  assert.equal((source.match(/\["(?:proof_card|resource_card|faq_block|page_section|pricing_tier|industry_sector)",/g) || []).length, 6);
+  assert.match(source, /browserContentDeliveries\(\)/, "snapshot filenames should come from the shared delivery registry");
+  assert.match(source, /loadContentSnapshot\(file\)/);
+  assert.doesNotMatch(source, /const MOUNTS/);
 });
 
 test("service catalog tries the root CMS snapshot before legacy static services data", () => {
@@ -190,8 +205,8 @@ test("public CMS renderer supports generic page sections", () => {
   assert.match(source, /cms-page-section/);
   assert.match(source, /safeContentHref\(row\.href/);
   assert.match(source, /btn btn-primary/);
-  assert.match(source, /\["page_section", pageSection\]/);
-  assert.match(source, /CONTENT_TYPE_DEFINITIONS\[type\]\.snapshot\.key/);
+  assert.match(source, /page_section:\s*pageSection/);
+  assert.match(source, /browserContentDeliveries\(\)/);
   assert.match(css, /\.cms-page-section-inner/);
   assert.match(css, /grid-template-columns: 1fr/);
 });

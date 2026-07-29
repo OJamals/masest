@@ -64,11 +64,14 @@ test("publish hook reports non-blocking failure details", async () => {
 
 test("content publish API and editor surface static rebuild hook state", () => {
   const api = readFileSync(new URL("../functions/api/admin/content.js", import.meta.url), "utf8");
+  const lifecycle = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
   const ui = readFileSync(new URL("../js/admin/content.js", import.meta.url), "utf8");
   const env = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
 
+  assert.match(api, /createContentPublicationLifecycle/);
   assert.match(api, /triggerContentPublishBuild/);
-  assert.match(api, /publish_hook/);
+  assert.match(api, /publishHook:\s*\(entry\)\s*=>\s*triggerContentPublishBuild\(env, entry\)/);
+  assert.match(lifecycle, /result\.publish_hook\s*=\s*await publishHook\(result\.entry\)/);
   assert.match(ui, /publish_hook/);
   assert.match(ui, /Static rebuild/);
   assert.match(ui, /public pages keep the previous export until a build runs/);
@@ -77,13 +80,13 @@ test("content publish API and editor surface static rebuild hook state", () => {
   assert.match(env, /CONTENT_PUBLISH_HOOK_URL/);
 });
 
-test("content archive triggers the static rebuild hook", () => {
+test("content archive delegates the static rebuild hook to the publication lifecycle", () => {
   const api = readFileSync(new URL("../functions/api/admin/content.js", import.meta.url), "utf8");
-  const deleteBranch = api
-    .split('if (request.method === "DELETE")')[1]
-    ?.split("return json(405")[0] || "";
+  const lifecycle = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
 
-  assert.match(deleteBranch, /result\.publish_hook\s*=\s*await triggerContentPublishBuild\(env, result\.entry\)/);
+  assert.match(api, /publication\.archive\(/);
+  assert.match(lifecycle, /async function archive\(/);
+  assert.match(lifecycle, /result\.publish_hook\s*=\s*await publishHook\(result\.entry\)/);
 });
 
 import { triggerBlogPublishWorkflow } from "../functions/_lib/content.js";

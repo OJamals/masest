@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CONTENT_TYPE_DEFINITIONS,
+  browserContentDeliveries,
+  contentDeliveryRegistry,
   contentPageOptionsFromSitemap,
   contentPayloadFields,
   ensureContentPageMount,
@@ -9,6 +11,7 @@ import {
   normalizeStructuredPayload,
   validateStructuredPayload,
   snapshotGroups,
+  specializedContentDeliveries,
 } from "../js/content-types.js";
 
 test("CMS type registry exposes every supported content type", () => {
@@ -157,6 +160,24 @@ test("snapshotGroups returns every public export target", () => {
   assert.ok(proofFields.includes("narrative"));
   assert.ok(proofFields.includes("publication_scope"));
   assert.equal(proofFields.includes("href"), false);
+});
+
+test("delivery registry derives exporter, browser, and specialized generation policy", () => {
+  assert.equal(contentDeliveryRegistry().length, 10);
+  assert.deepEqual(browserContentDeliveries(), [
+    { type: "proof_card", file: "proof.json", key: "proof_cards", renderer: "proof_card" },
+    { type: "resource_card", file: "resources.json", key: "resource_cards", renderer: "resource_card" },
+    { type: "industry_sector", file: "industry-sectors.json", key: "industry_sectors", renderer: "industry_sector" },
+    { type: "faq_block", file: "faqs.json", key: "faq_blocks", renderer: "faq_block" },
+    { type: "page_section", file: "page-sections.json", key: "page_sections", renderer: "page_section" },
+    { type: "pricing_tier", file: "pricing.json", key: "pricing_tiers", renderer: "pricing_tier" },
+  ]);
+  assert.deepEqual(specializedContentDeliveries(), [
+    { type: "service", file: "services.json", key: "services", generator: "service_catalog" },
+    { type: "service_package", file: "services.json", key: "service_packages", generator: "service_catalog" },
+    { type: "page_meta", file: "page-meta.json", key: "page_meta", generator: "page_metadata" },
+    { type: "blog_post", file: "blog.json", key: "blog_posts", generator: "blog_pages" },
+  ]);
 });
 
 test("proof cards support published product records without source-file fields", () => {

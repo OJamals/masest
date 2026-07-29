@@ -8,10 +8,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
 import { canonicalPublicImageUrl } from "../js/image-url.js";
+import { specializedContentDeliveries } from "../js/content-types.js";
 import { STYLE_VERSION } from "./static-release.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = "https://masest.co";
+const BLOG_DELIVERY = specializedContentDeliveries()
+  .find(({ generator }) => generator === "blog_pages");
+if (!BLOG_DELIVERY) throw new Error("blog_delivery_missing");
 const SITE_IMAGE_DIMENSIONS = new Map(
   JSON.parse(readFileSync(join(ROOT, "data/content/site-images.json"), "utf8")).assets
     .map((asset) => [asset.public_url, { width: asset.width, height: asset.height }]),
@@ -377,13 +381,14 @@ export function buildBlog({ posts, outDir = ROOT, updateSitemap = true } = {}) {
 }
 
 function main() {
-  const snapshotPath = join(ROOT, "data/content/blog.json");
+  const snapshotPath = join(ROOT, "data/content", BLOG_DELIVERY.file);
   if (!existsSync(snapshotPath)) {
-    console.error("build-blog: data/content/blog.json not found — run publish:content first.");
+    console.error(`build-blog: data/content/${BLOG_DELIVERY.file} not found — run publish:content first.`);
     process.exitCode = 1;
     return;
   }
-  const { blog_posts: posts = [] } = JSON.parse(readFileSync(snapshotPath, "utf8"));
+  const snapshot = JSON.parse(readFileSync(snapshotPath, "utf8"));
+  const posts = snapshot[BLOG_DELIVERY.key] || [];
   const { changed } = buildBlog({ posts });
   console.log(`build-blog: ${posts.length} posts, ${changed} pages written.`);
 }

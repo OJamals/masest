@@ -1,5 +1,6 @@
 import { CONTENT_TYPE_DEFINITIONS, validateStructuredPayload } from "../../js/content-types.js";
 import { canonicalPublicImageUrl } from "../../js/image-url.js";
+import { staffCan } from "./authz.js";
 
 const CONTENT_IMAGE_KEYS = new Set(["hero", "image", "image_after", "og_image"]);
 
@@ -583,4 +584,186 @@ export function createContentRepository(sb) {
       return { ok: true, entry: data };
     },
   };
+}
+
+const CONTENT_ACTION_POLICY = Object.freeze({
+  publish_scheduled: {
+    capability: "content.publish",
+    message: "Publishing scheduled content requires owner access.",
+  },
+  lock: {
+    capability: "content.write",
+    message: "Locking content requires owner access.",
+  },
+  unlock: {
+    capability: "content.write",
+    message: "Unlocking content requires owner access.",
+  },
+  force_unlock: {
+    capability: "content.review",
+    message: "Force unlocking content requires reviewer access.",
+  },
+  unarchive: {
+    capability: "content.write",
+    message: "Restoring archived content requires owner access.",
+  },
+  submit_review: {
+    capability: "content.write",
+    message: "Submitting content requires owner access.",
+  },
+  request_changes: {
+    capability: "content.review",
+    message: "Requesting changes requires owner access.",
+  },
+  schedule: {
+    capability: "content.publish",
+    message: "Scheduling content requires owner access.",
+  },
+  publish: {
+    capability: "content.publish",
+    message: "Publishing content requires owner access.",
+  },
+  save_draft: {
+    capability: "content.write",
+    message: "Editing content requires owner access.",
+  },
+  archive: {
+    capability: "content.write",
+    message: "Archiving content requires owner access.",
+  },
+});
+
+function publicationResponse(result) {
+  if (result.ok) return { status: 200, result };
+  return {
+    status: result.error === "content_locked" ? 409 : 400,
+    result,
+  };
+}
+
+function denied(action) {
+  const policy = CONTENT_ACTION_POLICY[action] || CONTENT_ACTION_POLICY.save_draft;
+  return {
+    status: 403,
+    result: { error: "forbidden", message: policy.message },
+  };
+}
+
+export function createContentPublicationLifecycle({
+  repository,
+  publishHook = async () => ({ ok: false, skipped: "publish_hook_not_configured" }),
+  blogWorkflow = async () => ({ ok: false, skipped: "blog_workflow_not_configured" }),
+} = {}) {
+  if (!repository) throw new Error("content_repository_required");
+
+  async function publishScheduled({
+    type = "",
+    userId,
+    role,
+    system = false,
+  } = {}) {
+    if (!system && !staffCan(role, "content.publish")) {
+      return denied("publish_scheduled");
+    }
+    try {
+      const result = await repository.publishScheduledDue(type ? { type } : {}, userId);
+      if (result.ok && result.count > 0) {
+        result.publish_hook = await publishHook(result.entries[0]);
+        const blogEntry = result.entries.find((entry) => entry?.type === "blog_post");
+        if (blogEntry) result.blog_workflow = await blogWorkflow(blogEntry);
+      }
+      return publicationResponse(result);
+    } catch (error) {
+      return { status: 500, result: { error: error.message } };
+    }
+  }
+
+  async function execute({
+    action: requestedAction,
+    entry = {},
+    body = {},
+    userId,
+    role,
+  } = {}) {
+    const action = requestedAction || "save_draft";
+    const policy = CONTENT_ACTION_POLICY[action] || CONTENT_ACTION_POLICY.save_draft;
+    if (!staffCan(role, policy.capability)) return denied(action);
+
+    try {
+      if (action === "publish_scheduled") {
+        return publishScheduled({
+          type: body.type || "",
+          userId,
+          role,
+        });
+      }
+
+      let result;
+      if (action === "lock") {
+        result = await repository.lock(entry, userId);
+      } else if (action === "unlock") {
+        result = await repository.unlock(entry, userId);
+      } else if (action === "force_unlock") {
+        result = await repository.unlock(entry, userId, { force: true });
+      } else if (action === "unarchive") {
+        result = await repository.unarchive(entry, userId);
+      } else if (action === "submit_review") {
+        result = await repository.transition(
+          entry,
+          userId,
+          "in_review",
+          body.note || "Submitted for review",
+        );
+      } else if (action === "request_changes") {
+        result = await repository.transition(
+          entry,
+          userId,
+          "changes_requested",
+          body.note || "Changes requested",
+        );
+      } else if (action === "schedule") {
+        const scheduledAt = new Date(entry.scheduled_at || "");
+        if (!entry.scheduled_at || Number.isNaN(scheduledAt.getTime())) {
+          return {
+            status: 400,
+            result: {
+              error: "scheduled_at_required",
+              message: "Choose a publish date before scheduling.",
+            },
+          };
+        }
+        entry.scheduled_at = scheduledAt.toISOString();
+        result = await repository.transition(
+          entry,
+          userId,
+          "scheduled",
+          body.note || "Scheduled publish",
+        );
+      } else if (action === "publish") {
+        result = await repository.publish(entry, userId);
+        if (result.ok) {
+          result.publish_hook = await publishHook(result.entry);
+          result.blog_workflow = await blogWorkflow(result.entry);
+        }
+      } else {
+        result = await repository.saveDraft(entry, userId);
+      }
+      return publicationResponse(result);
+    } catch (error) {
+      return { status: 500, result: { error: error.message } };
+    }
+  }
+
+  async function archive({ entry = {}, userId, role } = {}) {
+    if (!staffCan(role, "content.write")) return denied("archive");
+    try {
+      const result = await repository.archive(entry, userId);
+      if (result.ok) result.publish_hook = await publishHook(result.entry);
+      return publicationResponse(result);
+    } catch (error) {
+      return { status: 500, result: { error: error.message } };
+    }
+  }
+
+  return { execute, publishScheduled, archive };
 }

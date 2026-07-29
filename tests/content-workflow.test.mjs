@@ -13,7 +13,10 @@ test("content schema supports review, changes, scheduled, and locks", () => {
 });
 
 test("content API exposes workflow actions with publish and review permissions", () => {
-  const source = readFileSync(new URL("../functions/api/admin/content.js", import.meta.url), "utf8");
+  const endpoint = readFileSync(new URL("../functions/api/admin/content.js", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../functions/_lib/content.js", import.meta.url), "utf8");
+  assert.match(endpoint, /publication\.execute\(/);
+  assert.match(endpoint, /contentPublication\(repository, env\)\.publishScheduled\(/);
   assert.match(source, /action === "submit_review"/);
   assert.match(source, /action === "request_changes"/);
   assert.match(source, /action === "schedule"/);
@@ -22,12 +25,13 @@ test("content API exposes workflow actions with publish and review permissions",
   assert.match(source, /action === "unlock"/);
   assert.match(source, /action === "force_unlock"/);
   assert.match(source, /action === "unarchive"/);
-  assert.match(source, /repo\.unarchive/);
+  assert.match(source, /repository\.unarchive/);
   assert.match(source, /scheduled_at_required/);
   assert.match(source, /publishScheduledDue/);
   assert.match(source, /body\.note \|\| "Submitted for review"/);
   assert.match(source, /body\.note \|\| "Scheduled publish"/);
-  assert.match(source, /staffCan\(role, "content\.review"\)/);
+  assert.match(source, /request_changes:\s*\{\s*capability:\s*"content\.review"/);
+  assert.match(source, /staffCan\(role, policy\.capability\)/);
   assert.match(source, /staffCan\(role, "content\.publish"\)/);
   assert.match(source, /result\.error === "content_locked" \? 409/);
 });

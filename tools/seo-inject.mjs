@@ -25,6 +25,7 @@ import {
   contentPageMount,
   ensureContentPageMount,
   normalizeContentPageKey,
+  specializedContentDeliveries,
 } from "../js/content-types.js";
 import { proofRecordsHtml } from "../js/proof-records.js";
 import {
@@ -34,7 +35,14 @@ import {
 import { STYLE_VERSION } from "./static-release.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
-const BLOG_SNAPSHOT = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
+const SPECIALIZED_CONTENT = specializedContentDeliveries();
+const BLOG_DELIVERY = SPECIALIZED_CONTENT.find(({ generator }) => generator === "blog_pages");
+const PAGE_META_DELIVERY = SPECIALIZED_CONTENT.find(({ generator }) => generator === "page_metadata");
+if (!BLOG_DELIVERY || !PAGE_META_DELIVERY) throw new Error("specialized_content_delivery_missing");
+const BLOG_SNAPSHOT = JSON.parse(readFileSync(
+  new URL(`../data/content/${BLOG_DELIVERY.file}`, import.meta.url),
+  "utf8",
+));
 const INDUSTRY_SLUGS = JSON.parse(
   readFileSync(new URL("../data/industry-applications.json", import.meta.url), "utf8"),
 ).industries.map((industry) => industry.slug);
@@ -45,7 +53,7 @@ const SITE_IMAGE_DIMENSIONS = new Map(
   JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8")).assets
     .map((asset) => [asset.public_url, { width: asset.width, height: asset.height, alt: asset.alt }]),
 );
-const BLOG_POST_SLUGS = (BLOG_SNAPSHOT.blog_posts || []).map((post) => post.slug).filter(Boolean);
+const BLOG_POST_SLUGS = (BLOG_SNAPSHOT[BLOG_DELIVERY.key] || []).map((post) => post.slug).filter(Boolean);
 const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document-review.json", import.meta.url), "utf8"));
 const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
 const AUTHORITY_RECORDS = DOCUMENT_REVIEW.documents.flatMap((document) => document.authority_records || []);
@@ -254,10 +262,12 @@ function injectProofRecords(html) {
 const pick = (html, re) => html.match(re)?.[1]?.trim() || "";
 
 function loadContentPageMeta() {
-  const file = "data/content/page-meta.json";
+  const file = `data/content/${PAGE_META_DELIVERY.file}`;
   if (!existsSync(file)) return new Map();
   const parsed = JSON.parse(readFileSync(file, "utf8"));
-  const rows = Array.isArray(parsed.page_meta) ? parsed.page_meta : [];
+  const rows = Array.isArray(parsed[PAGE_META_DELIVERY.key])
+    ? parsed[PAGE_META_DELIVERY.key]
+    : [];
   const out = new Map();
   for (const row of rows) {
     for (const key of [row.page, row.slug]) {

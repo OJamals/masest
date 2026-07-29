@@ -258,6 +258,7 @@ test("scheduled CMS publishing has a secret-gated automatic sweep", () => {
   const cron = readFileSync(new URL("../supabase/content-publish-cron.example.sql", import.meta.url), "utf8");
   assert.match(endpoint, /CONTENT_PUBLISH_CRON_SECRET/);
   assert.match(endpoint, /x-content-publish-cron-secret/);
-  assert.match(endpoint, /publishDue\(createContentRepository\(adminClient\(env\)\),\s*env,\s*null\)/);
+  assert.match(endpoint, /contentPublication\(repository, env\)\.publishScheduled\(/);
+  assert.match(endpoint, /system:\s*true/);
   assert.match(cron, /jsonb_build_object\('action', 'publish_scheduled'\)/);
 });
