@@ -1,15 +1,15 @@
 /* MASEST staff admin console. */
-import { login, logout, api, getToken } from './auth.js?v=20260726a';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260726a';
-import { editKey } from './admin/edits.js?v=20260726a';
-import { createFeatureLoader } from './admin/feature-loader.js?v=20260726a';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260726a';
-import { renderChrome } from './main/chrome.js?v=20260726a';
+import { login, api, getToken } from './auth.js?v=20260730a';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260730a';
+import { editKey } from './admin/edits.js?v=20260730a';
+import { createFeatureLoader } from './admin/feature-loader.js?v=20260730a';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260730a';
+import { renderChrome } from './main/chrome.js?v=20260730a';
 
 const $ = (id) => document.getElementById(id);
 
 // Admin owns its staff-only runtime, but still needs shared site navigation.
-renderChrome({ authModule: "/js/auth.js?v=20260726a" });
+renderChrome({ authModule: "/js/auth.js?v=20260730a", resolveSession: true });
 
 // #28 dirty-edit guard: flag an inline control the moment the user edits it, so a
 // later sibling save / cache re-render can snapshot and restore it (see admin/edits.js).
@@ -47,7 +47,6 @@ const state = {
 
 function applyStaffContext(value) {
   state.staff = normalizeStaffContext(value);
-  if ($('admGreeting')) $('admGreeting').textContent = state.staff.email ? `Signed in as ${state.staff.email}.` : 'Signed in as staff.';
   if ($('admRoleBadge')) {
     $('admRoleBadge').textContent = `${staffRoleLabel(state.staff.role)} access`;
     $('admRoleBadge').dataset.s = state.staff.role === 'read_only' ? 'changes_requested' : 'published';
@@ -473,8 +472,8 @@ let supportReady = false;
 const featureLoader = createFeatureLoader({
   analytics: async () => {
     const [{ createTrafficRenderer }, { createSeoAudit }] = await Promise.all([
-      import('./admin/traffic.js?v=20260726a'),
-      import('./admin/seo.js?v=20260726a'),
+      import('./admin/traffic.js?v=20260730a'),
+      import('./admin/seo.js?v=20260730a'),
     ]);
     const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
     const runSeoAudit = createSeoAudit({ $, state });
@@ -484,7 +483,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   integrations: async () => {
-    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260726a');
+    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260730a');
     return {
       wire() {
         $('qboConnect')?.addEventListener('click', connectQbo);
@@ -498,7 +497,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   orders: async () => {
-    const { ORDER_STATUSES, createOrdersTab } = await import('./admin/orders.js?v=20260726a');
+    const { ORDER_STATUSES, createOrdersTab } = await import('./admin/orders.js?v=20260730a');
     const { renderOrders, wireOrders } = createOrdersTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
     });
@@ -522,8 +521,8 @@ const featureLoader = createFeatureLoader({
   },
   companies: async () => {
     const [{ createCompaniesTab }, { createCrmPanel }] = await Promise.all([
-      import('./admin/companies.js?v=20260726a'),
-      import('./admin/crm.js?v=20260726a'),
+      import('./admin/companies.js?v=20260730a'),
+      import('./admin/crm.js?v=20260730a'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({
@@ -558,10 +557,10 @@ const featureLoader = createFeatureLoader({
       { createInventoryCard },
       { createCouponsCard },
     ] = await Promise.all([
-      import('./admin/products.js?v=20260726a'),
-      import('./admin/pricing.js?v=20260726a'),
-      import('./admin/inventory.js?v=20260726a'),
-      import('./admin/coupons.js?v=20260726a'),
+      import('./admin/products.js?v=20260730a'),
+      import('./admin/pricing.js?v=20260730a'),
+      import('./admin/inventory.js?v=20260730a'),
+      import('./admin/coupons.js?v=20260730a'),
     ]);
     const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({
       $, api, state, message, admSkeleton, admEmpty,
@@ -596,7 +595,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260726a');
+    const { createContentTab } = await import('./admin/content.js?v=20260730a');
     const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -609,7 +608,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   support: async () => {
-    const { createThreadsTab } = await import('./admin/threads.js?v=20260726a');
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260730a');
     const { renderThreads, wireThreads, openThread } = createThreadsTab({
       $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats,
     });
@@ -625,7 +624,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   quotes: async () => {
-    const { createQuotesTab } = await import('./admin/quotes.js?v=20260726a');
+    const { createQuotesTab } = await import('./admin/quotes.js?v=20260730a');
     const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager,
     });
@@ -646,7 +645,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   reviews: async () => {
-    const { createReviewsTab } = await import('./admin/reviews.js?v=20260726a');
+    const { createReviewsTab } = await import('./admin/reviews.js?v=20260730a');
     const {
       renderReviews,
       wireReviews,
@@ -665,7 +664,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   newsletter: async () => {
-    const { createNewsletterTab } = await import('./admin/newsletter.js?v=20260726a');
+    const { createNewsletterTab } = await import('./admin/newsletter.js?v=20260730a');
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
     });
@@ -676,9 +675,9 @@ const featureLoader = createFeatureLoader({
   },
   crm: async () => {
     const [{ createCrmWorkspace }, { createOffersTab }, { createCrmPanel }] = await Promise.all([
-      import('./admin/crm-workspace.js?v=20260726a'),
-      import('./admin/offers.js?v=20260726a'),
-      import('./admin/crm.js?v=20260726a'),
+      import('./admin/crm-workspace.js?v=20260730a'),
+      import('./admin/offers.js?v=20260730a'),
+      import('./admin/crm.js?v=20260730a'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const openSubject = (type, id, label) => {
@@ -781,7 +780,6 @@ function wire() {
   window.addEventListener('hashchange', syncTabFromHash);
   new MutationObserver(() => applyCapabilityUi(document.body, state.staff)).observe(document.body, { childList: true, subtree: true });
   $('adminSupportLauncher')?.addEventListener('click', loadSupportFromLauncher);
-  $('admLogout').addEventListener('click', async () => { await logout(); location.reload(); });
   $('gateForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     const cap = gateCaptchaToken();

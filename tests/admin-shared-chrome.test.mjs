@@ -10,7 +10,7 @@ test('admin keeps a labeled customer-support launcher visible when unread count 
   const sharedSupport = read('js/admin-support.js');
 
   assert.match(admin, /import \{ renderChrome \} from '\.\/main\/chrome\.js\?v=/);
-  assert.match(admin, /renderChrome\(\{ authModule: "\/js\/auth\.js\?v=\d{8}[a-z]" \}\);/);
+  assert.match(admin, /renderChrome\(\{ authModule: "\/js\/auth\.js\?v=\d{8}[a-z]", resolveSession: true \}\);/);
   assert.match(html, /id="adminSupportLauncher"[^>]*aria-label="Open customer support"/);
   assert.match(html, /ph-lifebuoy/);
   assert.match(html, /class="admin-support-launcher__label">Customer support<\/span>/);

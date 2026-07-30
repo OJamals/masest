@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 219,
+  "count": 217,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -1931,34 +1931,6 @@
       "sha256": "a9995517712834fbaad4bdf8fb69a68be165f568998ad023e20eff78fd190663",
       "mime_type": "image/webp",
       "category": "industries",
-      "status": "available",
-      "source": "site"
-    },
-    {
-      "storage_path": "/img/masest-logo-ink.png",
-      "public_url": "/img/masest-logo-ink.png",
-      "filename": "masest-logo-ink.png",
-      "alt": "Masest Logo Ink",
-      "width": 192,
-      "height": 240,
-      "byte_size": 28716,
-      "sha256": "bf0ed436374bb567c8f839b6619252bf18d52abad3972be41adf2c02b77e36a8",
-      "mime_type": "image/png",
-      "category": "site",
-      "status": "available",
-      "source": "site"
-    },
-    {
-      "storage_path": "/img/masest-logo.png",
-      "public_url": "/img/masest-logo.png",
-      "filename": "masest-logo.png",
-      "alt": "MASEST",
-      "width": 192,
-      "height": 240,
-      "byte_size": 32233,
-      "sha256": "531a21b255642bed0bfe04eb5bfdfe24264926a4ec19b0816801b34f9aefcaf8",
-      "mime_type": "image/png",
-      "category": "site",
       "status": "available",
       "source": "site"
     },

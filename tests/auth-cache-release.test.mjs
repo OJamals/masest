@@ -6,14 +6,14 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260727b";
-const ADMIN_RELEASE = "20260726a";
-const ADMIN_PAGE_RELEASE = "20260726a";
-const CHROME_RELEASE = "20260727b";
-const ACCOUNT_NAV_RELEASE = "20260725f";
+const MAIN_RELEASE = "20260730a";
+const ADMIN_RELEASE = "20260730a";
+const ADMIN_PAGE_RELEASE = "20260730a";
+const CHROME_RELEASE = "20260730a";
+const ACCOUNT_NAV_RELEASE = "20260730a";
 const CUSTOMER_CHAT_RELEASE = "20260726a";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
-const CONTENT_RELEASE = "20260726a";
+const CONTENT_RELEASE = "20260730a";
 const STORY_RELEASE = "20260726a";
 const MAIN_RELEASE_OVERRIDES = new Map();
 
@@ -61,8 +61,8 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   }
   assert.match(read("js/admin.js"), new RegExp(`admin/content\\.js\\?v=${CONTENT_RELEASE}`));
   assert.match(read("js/admin/content.js"), new RegExp(`content-types\\.js\\?v=${CONTENT_RELEASE}`));
-  assert.match(read("js/admin.js"), new RegExp(`renderChrome\\(\\{ authModule: "/js/auth\\.js\\?v=${ADMIN_RELEASE}" \\}\\)`));
-  assert.match(read("js/main/chrome.js"), /initAccountNav\(\{ nav, root, authModule \}\)/);
+  assert.match(read("js/admin.js"), new RegExp(`renderChrome\\(\\{ authModule: "/js/auth\\.js\\?v=${ADMIN_RELEASE}", resolveSession: true \\}\\)`));
+  assert.match(read("js/main/chrome.js"), /initAccountNav\(\{ nav, root, authModule, resolveSession \}\)/);
   assert.match(read("js/account-nav.js"), /await import\(authModule\)/);
   assert.match(read("js/main/chrome.js"), /\{ chatRoot: root, authModule \}/);
   assert.match(read("js/customer-chat.js"), /window\.MASEST\?\.authModule/);

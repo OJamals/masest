@@ -187,7 +187,10 @@ function wireDocumentRoomCapture(authModule) {
   }, true);
 }
 
-export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
+export function renderChrome({
+  authModule = "/js/auth.js?v=20260711w",
+  resolveSession = false,
+} = {}) {
   initCmpTableLabels();
   document.querySelector(".nojs-nav")?.setAttribute("hidden", "");
   const page = pageName();
@@ -355,7 +358,9 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
-  import("/js/account-nav.js?v=20260725f").then((m) => m.initAccountNav && m.initAccountNav({ nav, root, authModule })).catch(() => {});
+  import("/js/account-nav.js?v=20260730a").then((m) => (
+    m.initAccountNav && m.initAccountNav({ nav, root, authModule, resolveSession })
+  )).catch(() => {});
   const setMenuOpen = open => {
     navLinks.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);

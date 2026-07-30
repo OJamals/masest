@@ -19,7 +19,6 @@
   .adm-hero .subhead { max-width: 62ch; font-size: 1.08rem; line-height: 1.55; }
   #gateTitle { font-size: 28px; line-height: 1.12; margin: 0 0 8px; }
   .adm-shell { display: grid; gap: 18px; padding: 16px 0 72px; }
-  .adm-top { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
   .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; }
   .adm-tab { position: relative; overflow: visible; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 12px; font: inherit; cursor: pointer; transition: transform .15s var(--ease-out), border-color .18s var(--ease-out), background-color .18s var(--ease-out), color .18s var(--ease-out); }
   .adm-tab:active { transform: scale(.96); }
@@ -509,11 +508,9 @@
   .adm-layout { display: grid; grid-template-columns: minmax(200px, 240px) minmax(0, 1fr); gap: 24px; align-items: start; }
   .adm-main { min-width: 0; align-self: start; overflow-anchor: none; }
   .adm-sidebar.adm-tabs-wrap { position: sticky; top: 96px; align-self: start; max-height: calc(100vh - 120px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: auto; scrollbar-gutter: stable; padding: 12px; margin-bottom: 0; border: 1px solid var(--line-soft); border-radius: var(--r-card); background: rgba(255,255,255,.76); box-shadow: var(--shadow-xs); }
-  .adm-sidebar .adm-top { display: grid; gap: 10px; align-items: start; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-  .adm-sidebar .adm-top .btn { justify-content: center; width: 100%; }
-  .adm-staff-context { display: grid; gap: 4px; min-width: 0; }
-  .adm-staff-context .badge { justify-self: start; text-transform: none; }
-  .adm-staff-context small { color: var(--muted); font-size: .72rem; line-height: 1.35; overflow-wrap: anywhere; }
+  .adm-role-context { display: grid; gap: 4px; min-width: 0; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .adm-role-context .badge { justify-self: start; text-transform: none; }
+  .adm-role-context small { color: var(--muted); font-size: .72rem; line-height: 1.35; overflow-wrap: anywhere; }
   [data-permission-restricted="true"] { border-color: var(--line-soft); }
   [data-permission-disabled="true"] { cursor: not-allowed !important; }
   .adm-nav-toggle { display: none; width: 100%; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); color: var(--ink); font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
@@ -640,7 +637,7 @@
     .adm-hero { padding-top: 24px; padding-bottom: 16px; }
     .adm-hero h1 { font-size: 34px; }
     .adm-hero .subhead { margin-top: 10px; font-size: .95rem; line-height: 1.45; }
-    .adm-top, .adm-panel-header { align-items: flex-start; flex-direction: column; }
+    .adm-panel-header { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: left; }
   }
@@ -690,13 +687,9 @@
     <div id="admApp" hidden>
       <div class="adm-layout">
         <aside class="adm-sidebar adm-tabs-wrap" aria-label="Admin navigation">
-          <div class="adm-top">
-            <div class="adm-staff-context">
-              <p id="admGreeting" class="muted">Signed in.</p>
-              <span id="admRoleBadge" class="badge" data-s="draft">Checking access…</span>
-              <small id="admRoleHint">Controls match your assigned staff role.</small>
-            </div>
-            <button id="admLogout" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-sign-out" aria-hidden="true"></i> Sign out</button>
+          <div class="adm-role-context">
+            <span id="admRoleBadge" class="badge" data-s="draft">Checking access…</span>
+            <small id="admRoleHint">Controls match your assigned staff role.</small>
           </div>
 
           <button id="admNavToggle" class="adm-nav-toggle" type="button" aria-expanded="false" aria-controls="admNavTabs">
@@ -1022,6 +1015,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260726a"></script>
+<script type="module" src="js/admin.js?v=20260730a"></script>
 </body>
 </html>

@@ -87,31 +87,51 @@ function positionAccountMenu(dd) {
   menu.style.top = `${top}px`;
 }
 
-export async function initAccountNav({ nav, root = '', authModule = './auth.js?v=20260711w' } = {}) {
+export async function initAccountNav({
+  nav,
+  root = '',
+  authModule = './auth.js?v=20260711w',
+  resolveSession = false,
+} = {}) {
   const actions = (nav || document).querySelector('.nav-actions');
   if (!actions) return;
   injectStyle();
-  await renderAccountNav(actions, root, authModule);
+  await renderAccountNav(actions, root, authModule, resolveSession);
   // Re-render when auth state changes in-page (login / logout / finish setup) so the
   // header swaps "Sign in" for the account dropdown without a full page reload.
   if (!actions.dataset.authBound) {
     actions.dataset.authBound = '1';
-    document.addEventListener('masest:auth', () => { renderAccountNav(actions, root, authModule).catch(() => {}); });
+    document.addEventListener('masest:auth', () => {
+      renderAccountNav(actions, root, authModule, resolveSession).catch(() => {});
+    });
   }
 }
 
-async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20260711w') {
+async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20260711w', resolveSession = false) {
   // Replace whatever account control is present: the SSR placeholder (.nav-auth-placeholder,
   // rendered by chrome.js) on first render, or a previously-rendered control (.nav-account)
   // on a later auth-change re-render. Matching only one of these would leave the other behind,
   // showing both a "Sign in" button and the account control at once.
   const prev = actions.querySelector('.nav-account, .nav-auth-placeholder');
 
-  // Only load the Supabase SDK + call me() when a session exists; otherwise render Sign in instantly.
+  // Marketing pages retain the cheap localStorage fast path. Authenticated app shells
+  // can request an authoritative Supabase session check so chrome cannot disagree with
+  // the page's authenticated API state during token restoration.
   let logout, api, data = null;
   let authResolved = true;
-  if (hasSession()) {
-    try { const m = await import(authModule); logout = m.logout; api = m.api; data = await m.me(); }
+  if (resolveSession || hasSession()) {
+    try {
+      const m = await import(authModule);
+      logout = m.logout;
+      api = m.api;
+      let sessionExists = true;
+      if (resolveSession) {
+        const { data: sessionData, error } = await m.supabase.auth.getSession();
+        if (error) throw error;
+        sessionExists = Boolean(sessionData?.session);
+      }
+      if (sessionExists) data = await m.me();
+    }
     catch { authResolved = false; }
   }
 

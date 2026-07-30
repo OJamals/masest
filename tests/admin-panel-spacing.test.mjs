@@ -7,7 +7,7 @@ let BASE_URL = "";
 const authModule = `
 const okSession = { access_token: "stub-token", user: { id: "u-1", email: "staff@example.test" } };
 export const supabase = { auth: { async getSession() { return { data: { session: okSession }, error: null }; }, async signOut() {}, async refreshSession() { return { data: { session: okSession }, error: null }; } } };
-export async function me() { return { email: "staff@example.test", staff: { role: "admin" }, can_admin: true }; }
+export async function me() { return { email: "staff@example.test", profile: { full_name: "Avery Staff" }, staff: { role: "admin" }, can_admin: true }; }
 export async function logout() {}
 export async function login() { return { session: okSession }; }
 export async function resetPasswordForEmail() { return {}; }
@@ -49,6 +49,39 @@ async function withServer(fn) {
     await staticSite.close();
   }
 }
+
+test("admin top navigation owns the signed-in identity and sign-out action", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser();
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
+    await context.addInitScript(() => {
+      window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
+      window.MASEST_SUPABASE_ANON = "stub-anon";
+      window.__TEST_STAFF_CONTEXT = {
+        role: "owner",
+        email: "staff@example.test",
+        can_write: true,
+        capabilities: ["admin.write"],
+      };
+    });
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    const page = await context.newPage();
+    try {
+      await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector('.adm-panel[data-panel="overview"][data-active="true"]', { timeout: 10000 });
+      await page.locator(".acct-name").waitFor();
+
+      assert.equal(await page.locator(".acct-name").textContent(), "Avery");
+      assert.equal(await page.locator(".nav-signin").count(), 0, "signed-in admin must not retain a Sign in link");
+      assert.equal(await page.locator("#admGreeting").count(), 0, "admin body must not duplicate signed-in identity");
+      assert.equal(await page.locator("#admLogout").count(), 0, "sign out belongs in the top account menu");
+      assert.equal(await page.locator("#admRoleBadge").textContent(), "Owner access");
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  });
+});
 
 test("admin panel content starts at the sidebar top without inherited section padding", async () => {
   await withServer(async () => {
@@ -248,7 +281,6 @@ test("read-only staff see their role and cannot trigger mutation controls", asyn
       await page.waitForSelector('.adm-panel[data-panel="products"][data-active="true"]', { timeout: 10000 });
       await page.waitForFunction(() => document.getElementById("admRoleBadge")?.textContent === "Read only access");
 
-      assert.equal(await page.locator("#admGreeting").textContent(), "Signed in as viewer@example.test.");
       assert.equal(await page.locator("#admRoleHint").textContent(), "Viewing only. Mutation controls are disabled.");
       assert.equal(await page.locator(".adm-order-create").isHidden(), true);
       assert.equal(await page.locator('[data-capability="product.write"][data-capability-mode="hide"]').first().isHidden(), true);
@@ -354,7 +386,7 @@ test("core admin helper text meets WCAG AA text contrast", async () => {
           }
           return [255, 255, 255];
         };
-        const selectors = ["#admGreeting", "#admRoleHint", ".adm-nav-group > span", ".adm-overview-head .muted", ".adm-overview-marker span", ".adm-eyebrow"];
+        const selectors = ["#admRoleHint", ".adm-nav-group > span", ".adm-overview-head .muted", ".adm-overview-marker span", ".adm-eyebrow"];
         return selectors.flatMap((selector) => [...document.querySelectorAll(selector)])
           .filter((element) => element.getClientRects().length)
           .map((element) => {

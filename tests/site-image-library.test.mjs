@@ -72,10 +72,15 @@ test("content API canonicalizes image paths even when callers bypass the admin f
   assert.equal(entry.seo.og_image, "/img/og-card.png");
 });
 
-test("site image manifest exposes every public image with reusable metadata", () => {
+test("CMS image manifest exposes managed content images with reusable metadata", () => {
   const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
   assert.equal(manifest.count, manifest.assets.length);
   assert.equal(new Set(manifest.assets.map((asset) => asset.storage_path)).size, manifest.assets.length);
+  assert.equal(
+    manifest.assets.some((asset) => /\/masest-logo(?:-ink)?\.png$/.test(asset.public_url)),
+    false,
+    "brand chrome belongs to the repository, not the CMS image library",
+  );
   for (const asset of manifest.assets || []) {
     assert.match(asset.public_url, /^\/img\//);
     assert.equal(asset.storage_path, asset.public_url);
@@ -180,17 +185,19 @@ test("known site image references compile to stable CMS storage URLs", () => {
   assert.doesNotMatch(compiled, /(?:^|[("'=\s])(?:\.\.\/|\/)?img\/proof\/cases\/brewery\.webp/m);
 });
 
-test("shared chrome does not prefix compiled CMS logo URLs with a page-relative root", () => {
+test("shared chrome keeps brand logos repository-local during CMS image compilation", () => {
   const base = "https://example.supabase.co/storage/v1/object/public/content-assets/site";
   const chrome = readFileSync(new URL("../js/main/chrome.js", import.meta.url), "utf8");
-  const compiled = rewriteCmsImageReferences(chrome, [
-    "/img/masest-logo.png",
-    "/img/masest-logo-ink.png",
-  ], base);
+  const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
+  const compiled = rewriteCmsImageReferences(
+    chrome,
+    manifest.assets.map((asset) => asset.public_url),
+    base,
+  );
 
-  assert.doesNotMatch(compiled, /\$\{root\}https:\/\/example\.supabase\.co/);
-  assert.match(compiled, new RegExp(`src="${base}/img/masest-logo\\.png"`));
-  assert.match(compiled, new RegExp(`src="${base}/img/masest-logo-ink\\.png"`));
+  assert.doesNotMatch(compiled, new RegExp(`${base}/img/masest-logo(?:-ink)?\\.png`));
+  assert.match(compiled, /src="\/img\/masest-logo\.png"/);
+  assert.match(compiled, /src="\/img\/masest-logo-ink\.png"/);
 });
 
 test("image-library builder validates its ledger and verifies public CMS bytes", () => {
