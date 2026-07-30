@@ -48,7 +48,7 @@ const PROOF = {
       result: "Result A",
       narrative: "Narrative A",
       publication_scope: "Published result summary",
-      image: "img/proof/cases/ddc-rust.webp",
+      image: "img/proof/cases/farm-rust-before.webp",
       image_alt: "A",
       chips: ["y"],
       source: "Source: A",
@@ -86,7 +86,7 @@ test("published proof_cards replace the hardcoded fallback on proof.html", async
   await expect(disclosure).toHaveAttribute("open", "");
 
   await expect(grid.locator(".case-card", { hasText: "Second card" }).locator("figure.case-media")).toHaveCount(1);
-  // The hardcoded fallback (the DDC rust hero card) is gone under replace mode.
+  // The hardcoded fallback result cards are gone under replace mode.
   await expect(grid.getByText("cleared in 30 minutes", { exact: false })).toHaveCount(0);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
@@ -164,6 +164,6 @@ test("empty proof snapshot leaves the hardcoded case cards intact", async ({ pag
   }));
   await page.goto(`${BASE_URL}/proof.html`, { waitUntil: "networkidle" });
   const grid = page.locator('.case-grid[data-cms-content="proof_cards"]');
-  await expect(grid.getByText("Rust-and-scale removal", { exact: true })).toBeVisible();
+  await expect(grid.getByText("HVAC rust and scale restoration", { exact: true })).toBeVisible();
   await expect(grid.locator(".case-card")).toHaveCount(FALLBACK_PROOF_COUNT);
 });

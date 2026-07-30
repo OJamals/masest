@@ -211,7 +211,7 @@ const htmlAttr = (s) => htmlText(s).replace(/"/g, "&quot;");
 const LABEL_VARIANTS = {
   "fb-cip-cr": {
     market: "FB label",
-    name: "VertKlean CIP CR",
+    name: "VertKleen CIP CR",
     subtitle: "50% caustic soda replacement · brewery CIP",
     image: "cip-cr-studio.webp",
     productHref: "cr",
@@ -223,7 +223,7 @@ const LABEL_VARIANTS = {
   },
   "fb-cip-hcr": {
     market: "FB label",
-    name: "VertKlean CIP HCR",
+    name: "VertKleen CIP HCR",
     subtitle: "Synthetic acid · beer stone remover · brewery CIP",
     image: "cip-hcr-studio.webp",
     productHref: "hcr",
@@ -235,7 +235,7 @@ const LABEL_VARIANTS = {
   },
   "fb-crhd": {
     market: "FB label",
-    name: "VertKlean CR HD",
+    name: "VertKleen CR HD",
     subtitle: "Heavy-duty kitchen & bar degreaser",
     image: "crhd-food-beverage-studio.webp",
     productHref: "crhd",
@@ -247,7 +247,7 @@ const LABEL_VARIANTS = {
   },
   "fb-multiwash": {
     market: "FB label",
-    name: "VertKlean MultiWash",
+    name: "VertKleen MultiWash",
     subtitle: "Multi-surface cleaner · deodorizer",
     image: "multiwash-food-beverage-studio.webp",
     productHref: "multiwash",
@@ -260,7 +260,7 @@ const LABEL_VARIANTS = {
   },
   "pw-crhd": {
     market: "PW label",
-    name: "VertKlean CR HD",
+    name: "VertKleen CR HD",
     subtitle: "Heavy-duty degreaser · fleet & concrete",
     image: "crhd-pressure-wash-studio.webp",
     productHref: "crhd",
@@ -272,7 +272,7 @@ const LABEL_VARIANTS = {
   },
   "pw-crs": {
     market: "PW label",
-    name: "VertKlean CRS",
+    name: "VertKleen CRS",
     subtitle: "Calcium, rust & scale · compatibility tested",
     image: "crs-studio.webp",
     productHref: "descaler",
@@ -284,7 +284,7 @@ const LABEL_VARIANTS = {
   },
   "pw-multiwash": {
     market: "PW label",
-    name: "VertKlean MultiWash",
+    name: "VertKleen MultiWash",
     subtitle: "Bleach / sodium hypochlorite replacement",
     image: "multiwash-pressure-wash-studio.webp",
     productHref: "multiwash",
@@ -296,7 +296,7 @@ const LABEL_VARIANTS = {
   },
   "gym-multiwash": {
     market: "Gym label",
-    name: "VertKlean MultiWash",
+    name: "VertKleen MultiWash",
     subtitle: "Gym · fitness · studio & clinic cleaner",
     image: "multiwash-gym-studio.webp",
     productHref: "multiwash",
@@ -309,7 +309,7 @@ const LABEL_VARIANTS = {
   },
   "gym-purgo": {
     market: "Gym label",
-    name: "VertKlean Pūrgo",
+    name: "VertKleen Pūrgo",
     subtitle: "High-touch cleaner · deodorizer",
     image: "purgo-studio.webp",
     productHref: "purgo",
@@ -403,20 +403,20 @@ function industrySchema(ind, plain) {
         name: "MASEST Consulting LLC",
         url: "https://masest.co/",
         logo: "https://masest.co/img/masest-logo.png",
-        brand: "VertKlean",
-        description: "VertKlean replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
+        brand: "VertKleen",
+        description: "VertKleen replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
         areaServed: "United States and international commercial accounts",
         contactPoint: { "@type": "ContactPoint", contactType: "sales", url: "https://masest.co/contact" }
       },
       {
         "@type": "WebPage",
-        name: `${ind.name} VertKlean replacements`,
+        name: `${ind.name} VertKleen replacements`,
         url: `https://masest.co/industries/${ind.slug}`,
         description: ind.sub.replace(/&amp;/g, "&")
       },
       {
         "@type": "Service",
-        name: `${ind.name} VertKlean replacement program`,
+        name: `${ind.name} VertKleen replacement program`,
         provider: { "@type": "Organization", name: "MASEST Consulting LLC", url: "https://masest.co/" },
         serviceType: `${ind.name} industrial cleaning chemistry replacement`,
         url: `https://masest.co/industries/${ind.slug}`,
@@ -447,7 +447,7 @@ function ctaBlock(ind) {
       </div>
       <div class="cta-grid">
         <a class="cta-tile" href="${q("quote")}"><i class="ph ph-tag" aria-hidden="true"></i><span class="cta-tile-t">${label("quote", "Price the replacement")}</span><span class="cta-tile-s">Product, volume, freight</span></a>
-        <a class="cta-tile" href="${q("audit")}"><i class="ph ph-clipboard-text" aria-hidden="true"></i><span class="cta-tile-t">${label("audit", "Match the current drum")}</span><span class="cta-tile-s">Current chemical to VertKlean fit</span></a>
+        <a class="cta-tile" href="${q("audit")}"><i class="ph ph-clipboard-text" aria-hidden="true"></i><span class="cta-tile-t">${label("audit", "Match the current drum")}</span><span class="cta-tile-s">Current chemical to VertKleen fit</span></a>
         <a class="cta-tile" href="${q("sample")}"><i class="ph ph-package" aria-hidden="true"></i><span class="cta-tile-t">${label("sample", "Run a site trial")}</span><span class="cta-tile-s">Trial 3 to 5 products on site</span></a>
         <a class="cta-tile" href="${q("distributor")}"><i class="ph ph-handshake" aria-hidden="true"></i><span class="cta-tile-t">${label("distributor", "Set up supply")}</span><span class="cta-tile-s">BSC, distributor, white-label</span></a>
       </div>
@@ -507,7 +507,7 @@ function imageGalleryBlock(ind) {
   return `
   <section class="section section-slim ind-gallery-sec" aria-label="${ind.name} image gallery">
     <div class="wrap">
-      <p class="ind-gallery-note">Generated scenes show common tasks. Field photos show VertKlean at work in real applications.</p>
+      <p class="ind-gallery-note">Generated scenes show common tasks. Field photos show VertKleen at work in real applications.</p>
       <div class="ind-gallery ind-image-gallery">${figs}
       </div>
     </div>
@@ -536,13 +536,13 @@ function page(ind) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${htmlText(ind.name)} | MASEST VertKlean</title>
+<title>${htmlText(ind.name)} | MASEST VertKleen</title>
 <meta name="description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta name="theme-color" content="#fafbfc">
-<meta property="og:title" content="${htmlText(ind.name)} | MASEST VertKlean">
+<meta property="og:title" content="${htmlText(ind.name)} | MASEST VertKleen">
 <meta property="og:description" content="${ind.sub.replace(/&amp;/g, "&").replace(/"/g, "&quot;")}">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="MASEST VertKlean">
+<meta property="og:site_name" content="MASEST VertKleen">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
@@ -576,9 +576,9 @@ ${nav}
   <section class="section section-slim">
     <div class="wrap ind-intro-copy">
       <span class="ind-icon"><i class="ph ${ind.icon}" aria-hidden="true"></i></span>
-      <h2 class="headline">Why VertKlean fits ${ind.name}.</h2>
+      <h2 class="headline">Why VertKleen fits ${ind.name}.</h2>
       <p>${ind.intro}</p>
-      <a class="btn btn-ink" href="../proof">See VertKlean results</a>
+      <a class="btn btn-ink" href="../proof">See VertKleen results</a>
     </div>
   </section>
 
@@ -588,8 +588,8 @@ ${industryDetailBlock(ind)}${imageGalleryBlock(ind)}
 <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Recommended</span>
-        <h2 class="headline">VertKlean products for ${ind.name}.</h2>
-          <p class="subhead">VertKlean options for ${ind.name} workflows.</p>
+        <h2 class="headline">VertKleen products for ${ind.name}.</h2>
+          <p class="subhead">VertKleen options for ${ind.name} workflows.</p>
       </div>
       <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>

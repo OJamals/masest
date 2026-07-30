@@ -9,9 +9,9 @@ test('money formats currency uppercase with 2 decimals', () => {
 
 test('orderItemsTableHtml renders a row per line with qty * unit_price', () => {
   const html = orderItemsTableHtml([
-    { name: 'VertKlean HCR - 1 gal', sku: 'VK-HCR-1', qty: 2, unit_price: 17.3 },
+    { name: 'VertKleen HCR - 1 gal', sku: 'VK-HCR-1', qty: 2, unit_price: 17.3 },
   ], { currency: 'usd' });
-  assert.match(html, /VertKlean HCR - 1 gal/);
+  assert.match(html, /VertKleen HCR - 1 gal/);
   assert.match(html, /\(VK-HCR-1\)/);
   assert.match(html, /USD 34\.60/); // 2 * 17.30
   assert.match(html, /<th[^>]*>Product<\/th>/);

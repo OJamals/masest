@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Products | Shop VertKlean Industrial Cleaners</title>
-  <meta name="description" content="Shop VertKlean industrial cleaners by application. Compare pack sizes and pricing, buy small packs online, or request a bulk quote.">
+<title>Products | Shop VertKleen Industrial Cleaners</title>
+  <meta name="description" content="Shop VertKleen industrial cleaners by application. Compare pack sizes and pricing, buy small packs online, or request a bulk quote.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
-<meta property="og:title" content="Products | Shop VertKlean Industrial Cleaners">
-  <meta property="og:description" content="Shop VertKlean industrial cleaners by job, with small-pack checkout and bulk quotes.">
+<link rel="preload" as="image" href="img/products/hvac-hcr-studio.webp" fetchpriority="high">
+<meta property="og:title" content="Products | Shop VertKleen Industrial Cleaners">
+  <meta property="og:description" content="Shop VertKleen industrial cleaners by job, with small-pack checkout and bulk quotes.">
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260727b">
@@ -19,7 +20,7 @@
 <meta property="og:url" content="https://masest.co/products">
 <meta property="og:image" content="https://masest.co/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/","logo":"https://masest.co/img/masest-logo.png","brand":"VertKlean","description":"VertKlean replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.","areaServed":"United States and international commercial accounts","contactPoint":{"@type":"ContactPoint","contactType":"sales","url":"https://masest.co/contact"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/","logo":"https://masest.co/img/masest-logo.png","brand":"VertKleen","description":"VertKleen replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.","areaServed":"United States and international commercial accounts","contactPoint":{"@type":"ContactPoint","contactType":"sales","url":"https://masest.co/contact"}}</script>
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg products-page">
@@ -39,7 +40,7 @@
     <div class="wrap hero-grid">
       <div class="hero-copy reveal">
       <h1 class="display">Choose chemistry by what you need to remove.</h1>
-        <p class="subhead">Match mineral scale, rust, grease, oils, and organic film to the VertKlean mechanism built for the job.</p>
+        <p class="subhead">Match mineral scale, rust, grease, oils, and organic film to the VertKleen mechanism built for the job.</p>
         <div class="hero-actions">
           <a class="btn btn-secondary" href="#catalog">Shop by cleaning job</a>
         </div>
@@ -49,17 +50,17 @@
           <span><b>bulk</b> quotes</span>
         </div>
       </div>
-      <div class="catalog-hero-media catalog-bottle-stage reveal" aria-label="Featured VertKlean products">
+      <div class="catalog-hero-media catalog-bottle-stage reveal" aria-label="Featured VertKleen products">
         <figure class="catalog-photo catalog-bottle catalog-bottle-hcr bottle-shot-frame">
-          <img src="img/products/hvac-hcr-studio.webp" alt="VertKlean HVAC HCR container" width="900" height="1200" fetchpriority="high" decoding="async">
+          <img src="img/products/hvac-hcr-studio.webp" alt="VertKleen HVAC HCR container" width="900" height="1200" fetchpriority="high" decoding="async">
           <figcaption class="sr-only">Rust and scale removal</figcaption>
         </figure>
         <figure class="catalog-photo catalog-bottle catalog-bottle-crhd bottle-shot-frame">
-          <img src="img/products/crhd-studio.webp" alt="VertKlean CR HD heavy degreaser container" width="900" height="1200" decoding="async">
+          <img src="img/products/crhd-studio.webp" alt="VertKleen CR HD heavy degreaser container" width="900" height="1200" loading="lazy" fetchpriority="low" decoding="async">
           <figcaption class="sr-only">Heavy degreasing</figcaption>
         </figure>
         <figure class="catalog-photo catalog-bottle catalog-bottle-multiwash bottle-shot-frame">
-          <img src="img/products/multiwash-pressure-wash-studio.webp" alt="VertKlean MultiWash exterior cleaner container" width="900" height="1200" decoding="async">
+          <img src="img/products/multiwash-pressure-wash-studio.webp" alt="VertKleen MultiWash exterior cleaner container" width="900" height="1200" loading="lazy" fetchpriority="low" decoding="async">
           <figcaption class="sr-only">Exterior cleaning</figcaption>
         </figure>
       </div>
@@ -103,6 +104,10 @@
       </div>
 
       <div class="shop-grid" id="shopGrid"></div>
+      <button class="btn btn-secondary catalog-more" id="shopMore" type="button" hidden>
+        <span>Show <b data-shop-more-count></b> more products</span>
+        <i class="ph ph-caret-down" aria-hidden="true"></i>
+      </button>
       <div class="empty-state shop-empty" id="shopEmpty" hidden>
         <i class="ph ph-package empty-icon" aria-hidden="true"></i>
         <p class="empty-title">No products match</p>
@@ -118,10 +123,10 @@
       <div class="conversion-proof-head reveal">
         <span class="catalog-label">Results library</span>
         <h2 class="headline">See the switch before you make it.</h2>
-        <p class="subhead">Rust, scale, brewery CIP, and drone-applied cleaning results show where VertKlean earns its place.</p>
+        <p class="subhead">Rust, scale, brewery CIP, and drone-applied cleaning results show where VertKleen earns its place.</p>
       </div>
       <div class="proof-strip reveal">
-        <a class="proof-pill" href="proof#ddc-rust-test"><span>Field result</span><b>Rust-and-scale removal</b><em>HCR cuts heavy mineral buildup and reveals visibly cleaner metal.</em></a>
+        <a class="proof-pill" href="proof#brevard-farm-hvac"><span>Before + after</span><b>HVAC rust and scale restoration</b><em>HCR removes stubborn mineral buildup from HVAC metal and diamond plate.</em></a>
         <a class="proof-pill" href="proof#brewery-cip-trials"><span>Field + lab</span><b>CR + HCR brewery CIP</b><em>One replacement system for organics, beer stone, rust, and scale.</em></a>
         <a class="proof-pill" href="proof#uf-shands-drone-wash"><span>Before + after</span><b>Drone-applied exterior cleaning</b><em>MultiWash reaches large exterior surfaces with speed and visible impact.</em></a>
       </div>

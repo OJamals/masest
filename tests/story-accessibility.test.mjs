@@ -10,7 +10,7 @@ const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<sectio
 const summary = home.match(/<section class="story-summary sr-only"[\s\S]*?<\/section>/)?.[0] || "";
 
 test("four visual acts expose a coherent heading and region structure", () => {
-  assert.match(story, /role="region" aria-label="The story of conventional chemicals versus VertKlean"/);
+  assert.match(story, /role="region" aria-label="The story of conventional chemicals versus VertKleen"/);
   for (let act = 1; act <= 4; act += 1) {
     assert.match(story, new RegExp(`<section class="act[^"]*"[^>]*data-act="${act}"[^>]*aria-labelledby="storyAct${act}Title"`));
     assert.match(story, new RegExp(`id="storyAct${act}Title"`));
@@ -51,8 +51,8 @@ test("reduced-motion, missing-library, no-JS, and mobile modes expose complete c
 });
 
 test("story actions, proof, and visual media retain accessible names", () => {
-  assert.match(story, /aria-label="Shop VertKlean by cleaning job"/);
-  assert.match(story, /aria-label="Plan a VertKlean field trial"/);
+  assert.match(story, /aria-label="Shop VertKleen by cleaning job"/);
+  assert.match(story, /aria-label="Plan a VertKleen field trial"/);
   assert.equal((story.match(/<canvas class="fx-canvas" aria-hidden="true">/g) || []).length, 2);
   assert.match(story, /<svg class="pipe-diagram"[^>]*role="img" aria-label="[^"]+"/);
   assert.doesNotMatch(story, /<img(?![^>]*\salt=")[^>]*>/);

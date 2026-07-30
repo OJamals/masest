@@ -11,7 +11,7 @@ export { renderNewsletterBody };
 
 // Full email: subject + branded shell around the rendered body.
 export function renderNewsletterEmail(newsletter = {}) {
-  const subject = String(newsletter.subject || 'The VertKlean Briefing').slice(0, 180);
+  const subject = String(newsletter.subject || 'The VertKleen Briefing').slice(0, 180);
   const bodyHtml = renderNewsletterBody(newsletter.body_md);
   const html = emailLayout({ heading: htmlEscape(subject), bodyHtml });
   return { subject, html };

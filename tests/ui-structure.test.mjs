@@ -132,7 +132,7 @@ test("products page keeps the conversion-results strip between catalog and CTA",
   assert.ok(ctaIndex > -1, "expected closing CTA");
   assert.ok(catalogIndex < proofIndex, "evidence should follow the catalog");
   assert.ok(proofIndex < ctaIndex, "evidence should precede the CTA");
-  assert.match(products, /Rust-and-scale removal/);
+  assert.match(products, /HVAC rust and scale restoration/);
   assert.match(products, /CR \+ HCR brewery CIP/);
   assert.match(products, /Drone-applied exterior cleaning/);
   assert.doesNotMatch(products, /Field context|Reference only|record incomplete/i);
@@ -257,7 +257,7 @@ test("no-js fallback nav stays focused on primary categories", () => {
   assert.match(nav, /Resources/);
   assert.doesNotMatch(nav, /Request a Quote/);
     assert.doesNotMatch(nav, />Home</);
-    assert.doesNotMatch(nav, />Why VertKlean</);
+    assert.doesNotMatch(nav, />Why VertKleen</);
     assert.doesNotMatch(nav, />About/);
     assert.doesNotMatch(nav, />Contact</);
   }
@@ -394,7 +394,7 @@ test("scrolly story keeps its static summary out of the visual flow", () => {
   assert.match(summary, /One documented trial brief/);
 });
 
-test("scrolly opener states the VertKlean mechanism early", () => {
+test("scrolly opener states the VertKleen mechanism early", () => {
   const index = read("index.html");
   const storyCss = read("css/story.css");
   const actOne = index.match(/<section class="act" data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
@@ -428,7 +428,7 @@ test("scrolly story state remains available to responsive chrome", () => {
   assert.doesNotMatch(storyCss, /crisp-client|crisp-chatbox/);
 });
 
-test("scrolly act 3 combines conventional burden and VertKlean mechanism", () => {
+test("scrolly act 3 combines conventional burden and VertKleen mechanism", () => {
   const index = read("index.html");
   const actThree = index.match(/<section class="act act-ledger"[\s\S]*?<\/section>/)?.[0];
   const actFour = index.match(/<section class="act act-savior act-proof-close"[\s\S]*?<\/section>/)?.[0];
@@ -445,7 +445,7 @@ test("scrolly act 3 combines conventional burden and VertKlean mechanism", () =>
   assert.match(actThree, /React, complex, rinse/);
   assert.match(actThree, /data-target="115000"/);
   assert.match(actThree, /class="cost-sources"/);
-  for (const product of ["VertKlean HCR", "VertKlean CR", "VertKlean Neutral", "VertKlean Purgo"]) {
+  for (const product of ["VertKleen HCR", "VertKleen CR", "VertKleen Neutral", "VertKleen Purgo"]) {
     assert.match(actThree, new RegExp(product));
   }
   assert.equal((actThree.match(/class="hmis-chip is-safe"/g) || []).length, 4);
@@ -556,5 +556,5 @@ test("scrolly Scene 3 HMIS intro remains readable", () => {
 
   assert.ok(intro, "expected Scene 3 HMIS intro copy");
   assert.doesNotMatch(intro[1], /data-out/, "HMIS intro stays up while the ledger builds");
-  assert.match(intro[2], /VertKlean mineral removal, soil lift, and operating value/);
+  assert.match(intro[2], /VertKleen mineral removal, soil lift, and operating value/);
 });

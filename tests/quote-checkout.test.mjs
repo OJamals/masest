@@ -48,7 +48,7 @@ function quoteCheckoutDb() {
           order_items: [{
             sku: "VK-1",
             product_sku: "VK",
-            name: "Quoted VertKlean",
+            name: "Quoted VertKleen",
             qty: 2,
             unit_price: 12,
             line_total: 24,
@@ -71,7 +71,7 @@ function quoteCheckoutDb() {
                 stock: 10,
                 track_stock: true,
                 allow_backorder: false,
-                products: { name: "VertKlean", mode: "buy", active: true, taxable: true },
+                products: { name: "VertKleen", mode: "buy", active: true, taxable: true },
               }],
               error: null,
             };
@@ -138,7 +138,7 @@ test("quoted checkout ignores client/catalog prices and carries exact server ide
 
   assert.equal(response.status, 200);
   assert.equal(capture.params.line_items[0].price_data.unit_amount, 1200);
-  assert.equal(capture.params.line_items[0].price_data.product_data.name, "Quoted VertKlean");
+  assert.equal(capture.params.line_items[0].price_data.product_data.name, "Quoted VertKleen");
   assert.equal(capture.params.allow_promotion_codes, false);
   assert.equal(capture.params.metadata.quote_id, QUOTE_ID);
   assert.equal(capture.params.metadata.quote_order_id, DRAFT_ID);

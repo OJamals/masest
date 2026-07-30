@@ -41,7 +41,7 @@ test("product add-to-cart resolves the crhd commerce sku", async ({ page }) => {
       contentType: "application/json",
       body: JSON.stringify({
         products: [
-          { sku: "cr-hd", name: "VertKlean CR HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+          { sku: "cr-hd", name: "VertKleen CR HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
         ],
       }),
     });
@@ -63,7 +63,7 @@ test("product selector routes bulk freight to the shared quote flow", async ({ p
       products: [
         {
           sku: "cr-hd",
-          name: "VertKlean CR HD",
+          name: "VertKleen CR HD",
           mode: "buy",
           active: true,
           product_variants: [
@@ -101,7 +101,7 @@ test("hcr bulk pricing shows freight-quote CTA through the commerce selector", a
       products: [
         {
           sku: "hcr",
-          name: "VertKlean HCR",
+          name: "VertKleen HCR",
           mode: "buy",
           active: true,
           product_variants: [
@@ -133,7 +133,7 @@ test("catalog decision cues stay compact and actionable at 390px", async ({ page
     body: JSON.stringify({
       products: [{
         sku: "hcr",
-        name: "VertKlean CIP HCR",
+        name: "VertKleen CIP HCR",
         mode: "buy",
         active: true,
         product_variants: [
@@ -145,7 +145,7 @@ test("catalog decision cues stay compact and actionable at 390px", async ({ page
 
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
   const card = page.locator('.shop-card[data-id="hcr"]');
-  const proofLink = card.getByRole("link", { name: "Review proof for VertKlean CIP HCR" });
+  const proofLink = card.getByRole("link", { name: "Review proof for VertKleen CIP HCR" });
 
   await expect(card.locator(".shop-card-fit")).toHaveCount(3);
   await expect(card.locator(".shop-card-proof-cue")).toHaveText(PRODUCT_CATALOG_COPY.hcr.proof);

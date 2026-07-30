@@ -15,30 +15,73 @@ test.afterAll(async () => {
   await staticSite?.close();
 });
 
-test("mobile header keeps logo, sign-in, cart, and menu inside the viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+test("mobile and tablet header keeps every action inside the viewport", async ({ page }) => {
+  for (const width of [390, 768, 800, 820]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
-  const boxes = await page.locator(".nav-inner, .nav-logo, .nav-signin, .nav-cart, .nav-burger")
-    .evaluateAll((nodes) => nodes.map((node) => {
-      const rect = node.getBoundingClientRect();
-      const style = getComputedStyle(node);
-      return {
-        className: node.className,
-        left: rect.left,
-        right: rect.right,
-        width: rect.width,
-        height: rect.height,
-        visible: rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden",
-      };
-    }).filter((box) => box.visible));
+    await expect(page.locator(".nav-links")).toBeHidden();
+    await expect(page.locator(".nav-burger")).toBeVisible();
+    const boxes = await page.locator(".nav-inner, .nav-logo, .nav-signin, .nav-cart, .nav-burger")
+      .evaluateAll((nodes) => nodes.map((node) => {
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return {
+          className: node.className,
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          height: rect.height,
+          visible: rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden",
+        };
+      }).filter((box) => box.visible));
 
-  for (const box of boxes) {
-    expect(box.left, `${box.className} left edge`).toBeGreaterThanOrEqual(0);
-    expect(box.right, `${box.className} right edge`).toBeLessThanOrEqual(390);
-    expect(box.width, `${box.className} width`).toBeGreaterThan(20);
-    expect(box.height, `${box.className} height`).toBeGreaterThanOrEqual(44);
+    for (const box of boxes) {
+      expect(box.left, `${width} ${box.className} left edge`).toBeGreaterThanOrEqual(0);
+      expect(box.right, `${width} ${box.className} right edge`).toBeLessThanOrEqual(width);
+      expect(box.width, `${width} ${box.className} width`).toBeGreaterThan(20);
+      expect(box.height, `${width} ${box.className} height`).toBeGreaterThanOrEqual(44);
+    }
+
+    await page.locator(".nav-burger").click();
+    await expect(page.locator(".nav-links")).toBeVisible();
+    const menu = await page.locator(".nav-links").boundingBox();
+    expect(menu?.x, `${width} open-menu left edge`).toBeGreaterThanOrEqual(0);
+    expect(menu?.x + menu?.width, `${width} open-menu right edge`).toBeLessThanOrEqual(width);
   }
+});
+
+test("desktop header begins after tablet collapse without overlap", async ({ page }) => {
+  for (const width of [821, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+
+    await expect(page.locator(".nav-links")).toBeVisible();
+    await expect(page.locator(".nav-burger")).toBeHidden();
+    const boxes = await page.locator(".nav-logo, .nav-links, .nav-actions")
+      .evaluateAll((nodes) => nodes.map((node) => {
+        const rect = node.getBoundingClientRect();
+        return { left: rect.left, right: rect.right };
+      }));
+    expect(boxes[0].right, `${width} logo/nav gap`).toBeLessThanOrEqual(boxes[1].left);
+    expect(boxes[1].right, `${width} nav/actions gap`).toBeLessThanOrEqual(boxes[2].left);
+  }
+});
+
+test("mobile catalog starts concise and expands without hiding search results", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/products.html#catalog`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#shopGrid .shop-card")).toHaveCount(15);
+  await expect(page.locator("#shopGrid .shop-card:visible")).toHaveCount(6);
+  await expect(page.locator("#shopMore")).toBeVisible();
+  await expect(page.locator("#shopMore")).toContainText("9 more");
+
+  await page.locator("#shopMore").click();
+  await expect(page.locator("#shopGrid .shop-card:visible")).toHaveCount(15);
+  await expect(page.locator("#shopMore")).toBeHidden();
+
+  await page.locator("#shopSearch").fill("descaler");
+  await expect(page.locator("#shopGrid .shop-card:visible")).toHaveCount(1);
 });
 
 test("shared chrome keeps one skip link after hydration", async ({ page }) => {
@@ -667,8 +710,13 @@ test("comparison pages keep price tables inside their cards on tablet", async ({
   for (const pagePath of comparisonPages) {
     await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
     await page.locator(".product-static-panel").first().waitFor();
+    await expect(page.locator(".product-hero-media img")).toHaveJSProperty("complete", true);
 
     const layout = await page.evaluate(() => {
+      const heroImage = document.querySelector(".product-hero-media img");
+      const heroBox = heroImage?.getBoundingClientRect();
+      const intrinsicWidth = Number(heroImage?.getAttribute("width"));
+      const intrinsicHeight = Number(heroImage?.getAttribute("height"));
       const panels = [...document.querySelectorAll(".product-static-panel")].map((panel) => {
         const panelBox = panel.getBoundingClientRect();
         const tables = [...panel.querySelectorAll(".table-scroll, .cmp-table")].map((node) => {
@@ -688,11 +736,16 @@ test("comparison pages keep price tables inside their cards on tablet", async ({
       return {
         viewport: document.documentElement.clientWidth,
         pageOverflow: Math.round(document.documentElement.scrollWidth - document.documentElement.clientWidth),
+        heroAspectDelta: heroImage && heroBox?.height && intrinsicWidth && intrinsicHeight
+          ? Math.abs((heroBox.width / heroBox.height) - (intrinsicWidth / intrinsicHeight))
+          : null,
         panels,
       };
     });
 
     expect(layout.pageOverflow, `${pagePath} page overflow`).toBeLessThanOrEqual(2);
+    expect(layout.heroAspectDelta, `${pagePath} hero image distortion`).not.toBeNull();
+    expect(layout.heroAspectDelta, `${pagePath} hero image distortion`).toBeLessThan(0.02);
     for (const panel of layout.panels) {
       expect(panel.left, `${pagePath} panel left`).toBeGreaterThanOrEqual(0);
       expect(panel.right, `${pagePath} panel right`).toBeLessThanOrEqual(layout.viewport);

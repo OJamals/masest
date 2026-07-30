@@ -20,20 +20,20 @@ const contact = read("contact.html");
 const productPage = read("products/hcr.html");
 
 const SAMPLE_PRODUCTS = [
-  "VertKlean CR",
-  "VertKlean CR2",
-  "VertKlean HCR",
-  "VertKlean HCR - 16+ Tote Program",
-  "VertKlean Descaler",
-  "VertKlean CR HD",
-  "VertKlean CR HD Low Foam",
-  "VertKlean Neutral",
-  "VertKlean MultiWash",
-  "VertKlean LAM3",
+  "VertKleen CR",
+  "VertKleen CR2",
+  "VertKleen HCR",
+  "VertKleen HCR - 16+ Tote Program",
+  "VertKleen Descaler",
+  "VertKleen CR HD",
+  "VertKleen CR HD Low Foam",
+  "VertKleen Neutral",
+  "VertKleen MultiWash",
+  "VertKleen LAM3",
   "Purgo",
-  "VertKlean AlumiBrite",
-  "VertKlean Torque",
-  "VertKlean SAR",
+  "VertKleen AlumiBrite",
+  "VertKleen Torque",
+  "VertKleen SAR",
   "WaterSafe60",
 ];
 
@@ -56,7 +56,7 @@ test("document room keeps downloads instant while offering revision notification
   assert.match(resources, /id="docNotifyEmail"/, "document room should expose an optional email field");
   assert.match(resources, /Notify me when this document is revised\./);
   assert.match(resources, /data-document-download/);
-  assert.match(resources, /data-document-name="VertKlean HCR SDS"/, "download links should carry document names");
+  assert.match(resources, /data-document-name="VertKleen HCR SDS"/, "download links should carry document names");
   assert.doesNotMatch(resources, /required[^>]*id="docNotifyEmail"/, "revision email must stay optional");
 });
 
@@ -115,7 +115,7 @@ test("contact form posts all five public request types to quote intake", async (
     {
       intent: "sample",
       fill: async (page) => {
-        for (const label of ["VertKlean HCR", "VertKlean CR", "VertKlean Descaler"]) {
+        for (const label of ["VertKleen HCR", "VertKleen CR", "VertKleen Descaler"]) {
           const checkbox = page.getByLabel(label, { exact: true });
           await checkbox.evaluate(input => input.click());
           assert.equal(await checkbox.isChecked(), true, `${label} should be selected`);
@@ -308,8 +308,8 @@ test("product-prefilled sample requests can submit one requested product", async
           body: JSON.stringify({ ok: true }),
         });
       });
-      await page.goto(`${BASE_URL}/contact.html?type=sample&product=VertKlean%20CR2`, { waitUntil: "domcontentloaded" });
-      await expectPoll(async () => page.getByLabel("VertKlean CR2", { exact: true }).isChecked());
+      await page.goto(`${BASE_URL}/contact.html?type=sample&product=VertKleen%20CR2`, { waitUntil: "domcontentloaded" });
+      await expectPoll(async () => page.getByLabel("VertKleen CR2", { exact: true }).isChecked());
       await page.fill("#fName", "Sample Buyer");
       await page.fill("#fCompany", "Sample Company");
       await page.fill("#fEmail", "sample-product@example.com");
@@ -324,8 +324,8 @@ test("product-prefilled sample requests can submit one requested product", async
 
     assert.equal(requests.length, 1);
     assert.ok(hasMultipartField(requests[0], "type", "sample"), "request should post sample type");
-    assert.ok(hasMultipartField(requests[0], "product", "VertKlean CR2"), "request should carry product interest");
-    assert.ok(hasMultipartField(requests[0], "samples", "VertKlean CR2"), "request should carry the selected sample product");
+    assert.ok(hasMultipartField(requests[0], "product", "VertKleen CR2"), "request should carry product interest");
+    assert.ok(hasMultipartField(requests[0], "samples", "VertKleen CR2"), "request should carry the selected sample product");
   });
 });
 

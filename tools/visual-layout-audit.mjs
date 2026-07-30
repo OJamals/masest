@@ -119,8 +119,8 @@ function serviceFixtures() {
 
 function catalogFixtures() {
   const products = [
-    ["hcr", "VertKlean HCR", "buy", "img/chemistry/AdobeStock_554104937_Preview.jpeg"],
-    ["cr", "VertKlean CR", "buy", "img/chemistry/AdobeStock_298635145_Preview.jpeg"],
+    ["hcr", "VertKleen HCR", "buy", "img/chemistry/AdobeStock_554104937_Preview.jpeg"],
+    ["cr", "VertKleen CR", "buy", "img/chemistry/AdobeStock_298635145_Preview.jpeg"],
     ["water-safe-60", "WaterSafe 60", "quote", "img/chemistry/AdobeStock_236245730_Preview.jpeg"],
     ["alumibrite", "Alumibrite", "buy", "img/chemistry/AdobeStock_636273322_Preview.jpeg"],
   ].map(([slug, name, mode, image_url], index) => ({
@@ -176,7 +176,7 @@ function authModule() {
         carrier: "LTL freight desk",
         tracking_number: "PRO-1234567890-ALONGREFERENCE",
         order_items: [
-          { name: "VertKlean HCR 5 gal pail - replacement chemistry for condenser loop", qty: 4, line_total: 960 },
+          { name: "VertKleen HCR 5 gal pail - replacement chemistry for condenser loop", qty: 4, line_total: 960 },
           { name: "WaterSafe 60 technical review packet", qty: 1, line_total: 880 },
         ],
         companies: { name: "Acme HVAC and Water Systems International", net_terms_days: 30 },
@@ -189,7 +189,7 @@ function authModule() {
         currency: "usd",
         payment_method: "stripe",
         order_items: [
-          { name: "VertKlean CR 1 gal bottle", qty: 3, line_total: 445.5 },
+          { name: "VertKleen CR 1 gal bottle", qty: 3, line_total: 445.5 },
         ],
       },
     ],

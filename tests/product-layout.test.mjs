@@ -478,7 +478,7 @@ test("static product detail keeps the price panel clear of the following card", 
         body: JSON.stringify({
           products: [{
             sku: "cr",
-            name: "VertKlean CIP CR",
+            name: "VertKleen CIP CR",
             mode: "buy",
             active: true,
             product_variants: [{

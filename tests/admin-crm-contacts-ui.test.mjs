@@ -26,5 +26,6 @@ test('wires set-primary, edit, delete and create/update submit', () => {
   assert.match(src, /data-crm-contact-edit/);
   assert.match(src, /data-crm-contact-del/);
   assert.match(src, /if \(form\.dataset\.editId\) payload\.id = form\.dataset\.editId/);
-  assert.match(src, /method: 'DELETE' \}\); load\(body, subjectType, subjectId, 'contacts'\)/);
+  assert.match(src, /encodeURIComponent\(cDel\.dataset\.crmContactDel\)/);
+  assert.match(src, /runMutation\(cDel, 'contacts'/);
 });

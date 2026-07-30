@@ -32,7 +32,7 @@ test.afterAll(async () => {
 
 const PRICING = {
   pricing_tiers: [
-    { slug: "managed-starter", name: "Managed Starter", badge: "Starter", audience: "Single-site pilots", price: "$420-780", price_unit: "/ mo", annual: "$5K-9.4K / yr", features: ["VertKlean core line", "Quarterly audit"], replaces: "Replaces commodity programs", cta: "Quote Starter", href: "contact?type=quote", sort_order: 1, active: true },
+    { slug: "managed-starter", name: "Managed Starter", badge: "Starter", audience: "Single-site pilots", price: "$420-780", price_unit: "/ mo", annual: "$5K-9.4K / yr", features: ["VertKleen core line", "Quarterly audit"], replaces: "Replaces commodity programs", cta: "Quote Starter", href: "contact?type=quote", sort_order: 1, active: true },
     { slug: "managed-pro", name: "Managed Pro", badge: "Pro · Most chosen", audience: "Districts & hospitals", price: "$1,400-3,200", price_unit: "/ mo", annual: "$16.8K-38K / yr", features: ["Everything in Starter", "Glycol management", "WMP support"], replaces: "Displaces Nalco / Ecolab", cta: "Quote Pro", href: "contact?type=quote", featured: true, sort_order: 2, active: true },
   ],
 };

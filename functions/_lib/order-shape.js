@@ -169,7 +169,7 @@ export function qboSubscriptionInvoiceRow(invoice, { companyId, tier } = {}) {
   const total = centsToAmount(inv.total);
   const tax = centsToAmount((inv.total_tax_amounts || []).reduce((sum, row) => sum + Number(row?.amount || 0), 0));
   const subtotal = Math.max(0, Number((total - tax).toFixed(2)));
-  const description = String(inv.lines?.data?.[0]?.description || `VertKlean ${tier || "Business"} program`).trim();
+  const description = String(inv.lines?.data?.[0]?.description || `VertKleen ${tier || "Business"} program`).trim();
   return {
     company_id: companyId || null,
     stripe_invoice_id: inv.id || null,

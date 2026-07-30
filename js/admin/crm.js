@@ -263,6 +263,12 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       });
       load(body, subjectType, subjectId, tab);
     };
+    const runMutation = async (control, tab, request) => {
+      if (control) control.disabled = true;
+      try { const result = await request(); await load(body, subjectType, subjectId, tab); return result; }
+      catch (err) { showErr(body, err.data?.error); return null; }
+      finally { if (control) control.disabled = false; }
+    };
 
     panel.addEventListener('click', async (event) => {
       const tabBtn = event.target.closest('[data-crm-tab]');
@@ -278,9 +284,8 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       const del = event.target.closest('[data-crm-note-del]');
       if (del) {
         if (!(await confirmDialog('Delete this note?', { confirmText: 'Delete', danger: true }))) return;
-        del.disabled = true;
-        try { await api(`/api/admin/crm/notes?id=${encodeURIComponent(del.dataset.crmNoteDel)}`, { method: 'DELETE' }); load(body, subjectType, subjectId, 'notes'); }
-        catch (err) { showErr(body, err.data?.error); del.disabled = false; }
+        const id = encodeURIComponent(del.dataset.crmNoteDel);
+        await runMutation(del, 'notes', () => api(`/api/admin/crm/notes?id=${id}`, { method: 'DELETE' }));
         return;
       }
 
@@ -291,25 +296,25 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
         if (!others.length) { showErr(body, 'No other contact to merge into.'); return; }
         const intoId = await pickMergeTarget(others);
         if (!intoId) return;
-        try { await api('/api/admin/crm/contacts', { method: 'POST', body: { action: 'merge', from_id: fromId, into_id: intoId } }); load(body, subjectType, subjectId, 'contacts'); }
-        catch (err) { showErr(body, err.data?.error); }
+        await runMutation(cMerge, 'contacts', () => api('/api/admin/crm/contacts', {
+          method: 'POST', body: { action: 'merge', from_id: fromId, into_id: intoId },
+        }));
         return;
       }
 
       const cDel = event.target.closest('[data-crm-contact-del]');
       if (cDel) {
         if (!(await confirmDialog('Delete this contact?', { confirmText: 'Delete', danger: true }))) return;
-        cDel.disabled = true;
-        try { await api(`/api/admin/crm/contacts?id=${encodeURIComponent(cDel.dataset.crmContactDel)}`, { method: 'DELETE' }); load(body, subjectType, subjectId, 'contacts'); }
-        catch (err) { showErr(body, err.data?.error); cDel.disabled = false; }
+        const id = encodeURIComponent(cDel.dataset.crmContactDel);
+        await runMutation(cDel, 'contacts', () => api(`/api/admin/crm/contacts?id=${id}`, { method: 'DELETE' }));
         return;
       }
 
       const cPrim = event.target.closest('[data-crm-contact-primary-set]');
       if (cPrim) {
-        cPrim.disabled = true;
-        try { await api('/api/admin/crm/contacts', { method: 'POST', body: { id: cPrim.dataset.crmContactPrimarySet, is_primary: true } }); load(body, subjectType, subjectId, 'contacts'); }
-        catch (err) { showErr(body, err.data?.error); cPrim.disabled = false; }
+        await runMutation(cPrim, 'contacts', () => api('/api/admin/crm/contacts', {
+          method: 'POST', body: { id: cPrim.dataset.crmContactPrimarySet, is_primary: true },
+        }));
         return;
       }
 
@@ -342,56 +347,52 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
 
       const toggle = event.target.closest('[data-crm-task-toggle]');
       if (toggle) {
-        toggle.disabled = true;
         const action = toggle.dataset.crmTaskStatus === 'done' ? 'reopen' : 'complete';
-        try { await api('/api/admin/crm/tasks', { method: 'PATCH', body: { id: toggle.dataset.crmTaskToggle, action } }); load(body, subjectType, subjectId, 'tasks'); }
-        catch (err) { showErr(body, err.data?.error); toggle.disabled = false; }
+        await runMutation(toggle, 'tasks', () => api('/api/admin/crm/tasks', {
+          method: 'PATCH', body: { id: toggle.dataset.crmTaskToggle, action },
+        }));
       }
     });
 
     panel.addEventListener('change', async (event) => {
       const imp = event.target.closest('[data-crm-contact-import]');
       if (!imp || !imp.files || !imp.files[0]) return;
-      const file = imp.files[0];
-      imp.disabled = true;
-      try {
-        const csv = await file.text();
-        const res = await api('/api/admin/crm/contacts', { method: 'POST', body: { action: 'import', company_id: subjectId, csv } });
-        await load(body, subjectType, subjectId, 'contacts');
-        body.insertAdjacentHTML('afterbegin', `<p class="adm-status" data-state="ok">Imported ${res.inserted}, skipped ${res.skipped}.</p>`);
-      } catch (err) {
-        showErr(body, err.data?.error);
-      }
+      const res = await runMutation(imp, 'contacts', async () => {
+        const csv = await imp.files[0].text();
+        return api('/api/admin/crm/contacts', {
+          method: 'POST', body: { action: 'import', company_id: subjectId, csv },
+        });
+      });
+      if (res) body.insertAdjacentHTML('afterbegin', `<p class="adm-status" data-state="ok">Imported ${res.inserted}, skipped ${res.skipped}.</p>`);
       imp.value = '';
-      imp.disabled = false;
     });
 
-        panel.addEventListener('click', (event) => {
+    panel.addEventListener('click', (event) => {
       const trigger = event.target.closest('[data-crm-contact-import-btn]');
       if (trigger) panel.querySelector('[data-crm-contact-import]')?.click();
     });
 
-panel.addEventListener('submit', async (event) => {
+    panel.addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = event.target;
       // In-flight guard: a double-click/double-Enter would POST the note/task/contact twice.
       const submitBtn = form.querySelector('[type="submit"]');
       if (submitBtn?.disabled) return;
-      if (submitBtn) submitBtn.disabled = true;
-      try {
       if (form.matches('[data-crm-note-form]')) {
         const text = form.querySelector('[data-crm-note-body]').value.trim();
         if (!text) return;
         const kind = form.querySelector('[data-crm-note-kind]').value;
-        try { await api('/api/admin/crm/notes', { method: 'POST', body: { subject_type: subjectType, subject_id: subjectId, kind, body: text } }); load(body, subjectType, subjectId, 'notes'); }
-        catch (err) { showErr(body, err.data?.error); }
+        await runMutation(submitBtn, 'notes', () => api('/api/admin/crm/notes', {
+          method: 'POST', body: { subject_type: subjectType, subject_id: subjectId, kind, body: text },
+        }));
       } else if (form.matches('[data-crm-task-form]')) {
         const title = form.querySelector('[data-crm-task-title]').value.trim();
         if (!title) return;
         const due = form.querySelector('[data-crm-task-due]').value;
         const assignee = form.querySelector('[data-crm-task-assignee]').value.trim();
-        try { await api('/api/admin/crm/tasks', { method: 'POST', body: { subject_type: subjectType, subject_id: subjectId, title, due_at: due || null, assigned_to: assignee || null } }); load(body, subjectType, subjectId, 'tasks'); }
-        catch (err) { showErr(body, err.data?.error); }
+        await runMutation(submitBtn, 'tasks', () => api('/api/admin/crm/tasks', {
+          method: 'POST', body: { subject_type: subjectType, subject_id: subjectId, title, due_at: due || null, assigned_to: assignee || null },
+        }));
       } else if (form.matches('[data-crm-contact-form]')) {
         const name = form.querySelector('[data-crm-contact-name]').value.trim();
         if (!name) return;
@@ -405,10 +406,8 @@ panel.addEventListener('submit', async (event) => {
           is_primary: form.querySelector('[data-crm-contact-primary]').checked,
         };
         if (form.dataset.editId) payload.id = form.dataset.editId;
-        try { await api('/api/admin/crm/contacts', { method: 'POST', body: payload }); load(body, subjectType, subjectId, 'contacts'); }
-        catch (err) { showErr(body, err.data?.error); }
+        await runMutation(submitBtn, 'contacts', () => api('/api/admin/crm/contacts', { method: 'POST', body: payload }));
       }
-      } finally { if (submitBtn) submitBtn.disabled = false; }
     });
 
     show('timeline');

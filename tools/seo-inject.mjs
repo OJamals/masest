@@ -12,7 +12,8 @@
  * pages, same as it already reads data/content/page-meta.json for CMS overrides.
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname } from "node:path";
 import {
   CATALOG_ORDER,
@@ -60,18 +61,18 @@ const AUTHORITY_RECORDS = DOCUMENT_REVIEW.documents.flatMap((document) => docume
 const PROOF_RECORDS_BY_SLUG = new Map(PROOF_RECORDS.map((record) => [record.slug, record]));
 const DOCUMENT_REVISION = DOCUMENT_REVIEW.document_control.revision;
 const DOCUMENT_SKU_LABELS = new Map([
-  ["VK-HCR", "VertKlean CIP HCR"],
-  ["VK-CR", "VertKlean CIP CR"],
-  ["VK-CRHD", "VertKlean CR HD"],
-  ["VK-CRS", "VertKlean CRS"],
-  ["VK-DESC", "VertKlean Descaler"],
-  ["VK-NEUT", "VertKlean Neutral"],
-  ["VK-MW", "VertKlean MultiWash"],
+  ["VK-HCR", "VertKleen CIP HCR"],
+  ["VK-CR", "VertKleen CIP CR"],
+  ["VK-CRHD", "VertKleen CR HD"],
+  ["VK-CRS", "VertKleen CRS"],
+  ["VK-DESC", "VertKleen Descaler"],
+  ["VK-NEUT", "VertKleen Neutral"],
+  ["VK-MW", "VertKleen MultiWash"],
   ["VK-WS60", "WaterSafe60"],
   ["VK-PRG", "Purgo"],
-  ["VK-LAM3", "VertKlean LAM3"],
-  ["VK-SAR", "VertKlean SAR"],
-  ["VK-TRQ", "VertKlean Torque"],
+  ["VK-LAM3", "VertKleen LAM3"],
+  ["VK-SAR", "VertKleen SAR"],
+  ["VK-TRQ", "VertKleen Torque"],
 ]);
 
 const BASE = "https://masest.co";
@@ -93,10 +94,13 @@ const BUYABLE_VARIANTS = CATALOG_SEED.product_variants.filter((variant) => (
   && !variant.requires_quote
   && Number(variant.retail_price) > 0
 ));
+const CATALOG_PRODUCTS_BY_SLUG = new Map(
+  CATALOG_SEED.products.map((product) => [product.slug, product]),
+);
 
 function productOffers(id, product) {
   return BUYABLE_VARIANTS
-    .filter((variant) => variant.product_slug === id)
+    .filter((variant) => variant.product_slug === commerceSku(id))
     .map((variant) => ({
       "@type": "Offer",
       sku: variant.sku,
@@ -115,14 +119,14 @@ const ORG = {
   name: "MASEST Consulting LLC",
   url: `${BASE}/`,
   logo: `${BASE}/img/masest-logo.png`,
-  brand: "VertKlean",
-  description: "VertKlean replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
+  brand: "VertKleen",
+  description: "VertKleen replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
   areaServed: "United States and international commercial accounts",
   contactPoint: { "@type": "ContactPoint", contactType: "sales", url: `${BASE}/contact` },
 };
 
 const PUBLIC = {
-  "index.html": { loc: "/", priority: "1.0", changefreq: "weekly", jsonld: [ORG, { "@type": "WebSite", name: "MASEST VertKlean", url: `${BASE}/` }] },
+  "index.html": { loc: "/", priority: "1.0", changefreq: "weekly", jsonld: [ORG, { "@type": "WebSite", name: "MASEST VertKleen", url: `${BASE}/` }] },
   "about.html": { loc: "/about", priority: "0.5", changefreq: "monthly", jsonld: [ORG] },
   "contact.html": { loc: "/contact", priority: "0.6", changefreq: "monthly", jsonld: [ORG] },
   "products.html": { loc: "/products", priority: "0.9", changefreq: "weekly", jsonld: [ORG] },
@@ -130,7 +134,7 @@ const PUBLIC = {
   "programs.html": { loc: "/programs", priority: "0.8", changefreq: "monthly", jsonld: [ORG] },
   "proof.html": { loc: "/proof", priority: "0.7", changefreq: "monthly", jsonld: [ORG] },
   "resources.html": { loc: "/resources", priority: "0.6", changefreq: "monthly", jsonld: [ORG] },
-  "blog.html": { loc: "/blog", priority: "0.7", changefreq: "weekly", jsonld: [{ "@type": "Blog", name: "MASEST VertKlean Blog", url: `${BASE}/blog`, publisher: ORG }] },
+  "blog.html": { loc: "/blog", priority: "0.7", changefreq: "weekly", jsonld: [{ "@type": "Blog", name: "MASEST VertKleen Blog", url: `${BASE}/blog`, publisher: ORG }] },
   "newsletter.html": { loc: "/newsletter", priority: "0.5", changefreq: "monthly", jsonld: [ORG, { "@type": "WebPage", name: "Newsletter", url: `${BASE}/newsletter` }] },
   "privacy.html": { loc: "/privacy", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Privacy", url: `${BASE}/privacy` }] },
   "terms.html": { loc: "/terms", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Terms", url: `${BASE}/terms` }] },
@@ -428,7 +432,7 @@ function applyContentHtmlMeta(html, content = {}) {
 
 function buildBlock(html, meta) {
   const content = meta.content || {};
-  const title = content.title || pick(html, /<title>([^<]*)<\/title>/i) || "MASEST VertKlean";
+  const title = content.title || pick(html, /<title>([^<]*)<\/title>/i) || "MASEST VertKleen";
   const desc = content.description || pick(html, /<meta\s+name="description"\s+content="([^"]*)"/i) || "";
   const ogImage = absoluteAssetUrl(content.og_image) || OG_IMAGE;
   const baseJsonld = content.jsonld || meta.jsonld;
@@ -517,6 +521,7 @@ function productMetaDescription(id, product) {
 function productSchema(id, product, reviewsSnapshot) {
   const aggregateRating = aggregateRatingNode("product", commerceSku(id), reviewsSnapshot);
   const offers = productOffers(id, product);
+  const sku = CATALOG_PRODUCTS_BY_SLUG.get(commerceSku(id))?.sku_stem;
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -532,7 +537,8 @@ function productSchema(id, product, reviewsSnapshot) {
       {
         "@type": "Product",
         name: product.name,
-        brand: { "@type": "Brand", name: "VertKlean" },
+        ...(sku ? { sku } : {}),
+        brand: { "@type": "Brand", name: "VertKleen" },
         category: "Industrial cleaning chemistry",
         description: productDescription(id, product),
         url: `${BASE}/products/${id}`,
@@ -545,6 +551,12 @@ function productSchema(id, product, reviewsSnapshot) {
             "@type": "PropertyValue",
             name: "Procurement",
             value: QUOTE_ONLY_IDS.has(id) ? "Quoted before purchase" : "Small packs in stock; bulk quoted",
+          },
+          { "@type": "PropertyValue", name: "Shipping", value: "Non-hazmat" },
+          {
+            "@type": "PropertyValue",
+            name: "Routine work-area controls",
+            value: "No special ventilation or area clearance required",
           },
         ].filter((item) => item.value),
         // No approved reviews yet -> omit entirely (matches the "no reviews yet"
@@ -620,21 +632,21 @@ function productPage(id, product, reviewsSnapshot) {
     : "Small packs ship from stock where available; drums, totes, and program supply are quoted.";
   const replacement = String(product.replaces || "Industrial chemistry").replace(/^Replaces\s+/i, "");
   const supply = QUOTE_ONLY_IDS.has(id) ? "Quoted to fit" : "Small packs in stock";
-  const eyebrow = id === "dbnpa" ? "Program component" : "VertKlean product";
+  const eyebrow = id === "dbnpa" ? "Program component" : "VertKleen product";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${text(product.name)} | MASEST VertKlean</title>
+<title>${text(product.name)} | MASEST VertKleen</title>
 <meta name="description" content="${attr(metaDesc)}">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
-<meta property="og:title" content="${attr(product.name)} | MASEST VertKlean">
+<meta property="og:title" content="${attr(product.name)} | MASEST VertKleen">
 <meta property="og:description" content="${attr(metaDesc)}">
 <meta property="og:type" content="product">
-<meta property="og:site_name" content="MASEST VertKlean">
+<meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
@@ -704,6 +716,24 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
       </article>
     </div>
   </section>
+  <section class="section-slim product-handling-section" aria-labelledby="product-handling-${id}">
+    <div class="wrap">
+      <article class="product-static-panel product-handling-panel">
+        <div>
+          <span class="eyebrow">Operating profile</span>
+          <h2 id="product-handling-${id}">Strong cleaning. Simpler work-area controls.</h2>
+          <p>Current VertKleen documentation records an HMIS 0-0-0 profile and shipping without hazardous-material freight requirements. Routine use does not require special ventilation or area clearance.</p>
+        </div>
+        <ul class="product-handling-list">
+          <li><b>HMIS 0-0-0</b><span>Health, flammability, and physical-hazard ratings.</span></li>
+          <li><b>Non-hazmat shipping</b><span>No hazardous-material freight requirement.</span></li>
+          <li><b>No special clearance</b><span>No special ventilation or area-clearance requirement for routine use.</span></li>
+          <li><b>Mild contact irritation</b><span>Eye or skin contact may be mildly irritating; no chemical burns or permanent damage.</span></li>
+        </ul>
+        <p class="product-data-note">Use the current product label and SDS for the exact SKU, concentration, task, and site procedure.</p>
+      </article>
+    </div>
+  </section>
   <section class="section-slim" data-reviews-section hidden>
     <div class="wrap reveal">
       <div data-reviews data-sku="${attr(commerceSku(id))}" data-kind="product" data-name="${attr(product.name)}"></div>
@@ -736,15 +766,51 @@ async function writeProductPages(reviewsSnapshot) {
   return changed;
 }
 
+const LASTMOD_CACHE = new Map();
+
+function fileLastModified(file) {
+  if (LASTMOD_CACHE.has(file)) return LASTMOD_CACHE.get(file);
+  let lastmod = "";
+  try {
+    const dirty = execFileSync("git", ["status", "--porcelain", "--", file], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (!dirty) {
+      lastmod = execFileSync("git", ["log", "-1", "--format=%cs", "--", file], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+    }
+  } catch {
+    // Source archives and local previews may not include Git metadata.
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(lastmod)) {
+    lastmod = statSync(file).mtime.toISOString().slice(0, 10);
+  }
+  LASTMOD_CACHE.set(file, lastmod);
+  return lastmod;
+}
+
 async function writeSitemap() {
   const entries = [
-    ...Object.values(PUBLIC),
-    ...PRODUCT_IDS.map((id) => ({ loc: `/products/${id}`, priority: "0.7", changefreq: "monthly" })),
-    ...BLOG_POST_SLUGS.map((slug) => ({ loc: `/blog/${slug}`, priority: "0.6", changefreq: "monthly" })),
+    ...Object.entries(PUBLIC).map(([file, entry]) => ({ ...entry, lastmod: fileLastModified(file) })),
+    ...PRODUCT_IDS.map((id) => ({
+      loc: `/products/${id}`,
+      priority: "0.7",
+      changefreq: "monthly",
+      lastmod: fileLastModified(`products/${id}.html`),
+    })),
+    ...BLOG_POST_SLUGS.map((slug) => ({
+      loc: `/blog/${slug}`,
+      priority: "0.6",
+      changefreq: "monthly",
+      lastmod: fileLastModified(`blog/${slug}.html`),
+    })),
   ];
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${entries.map((entry) => `  <url><loc>${BASE}${entry.loc}</loc><changefreq>${entry.changefreq}</changefreq><priority>${entry.priority}</priority></url>`).join("\n")}
+${entries.map((entry) => `  <url><loc>${BASE}${entry.loc}</loc><lastmod>${entry.lastmod}</lastmod><changefreq>${entry.changefreq}</changefreq><priority>${entry.priority}</priority></url>`).join("\n")}
 </urlset>
 `;
   const before = existsSync("sitemap.xml") ? await readFile("sitemap.xml", "utf8") : "";

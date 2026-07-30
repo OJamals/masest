@@ -49,7 +49,7 @@ const VARIANT_WRITABLE = [
   'active',
   'sort',
 ];
-const PRICE_MANAGED_MESSAGE = 'Prices are managed by VertKlean_Website_Pricing_WebDev.xlsx. Reflect approved workbook changes in the catalog seed data and run npm run seed.';
+const PRICE_MANAGED_MESSAGE = 'Prices are managed by VertKleen_Website_Pricing_WebDev.xlsx. Reflect approved workbook changes in the catalog seed data and run npm run seed.';
 
 function includesManagedPrice(input) {
   return Boolean(input && Object.prototype.hasOwnProperty.call(input, 'price'));

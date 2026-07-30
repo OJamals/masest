@@ -10,7 +10,7 @@
         {
           "sku": "VK-HCR-1G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -23,7 +23,7 @@
         {
           "sku": "VK-HCR-2.5G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -36,7 +36,7 @@
         {
           "sku": "VK-HCR-5G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -49,7 +49,7 @@
         {
           "sku": "VK-HCR-55G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -62,7 +62,7 @@
         {
           "sku": "VK-HCR-275G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -75,7 +75,7 @@
         {
           "sku": "VK-DESC-1G",
           "product_slug": "descaler",
-          "product": "VertKlean Descaler",
+          "product": "VertKleen Descaler",
           "application": "Circulation descaler for coils and lines—loosens mineral deposits while supporting aluminum and copper system cleaning and restored heat transfer.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -88,7 +88,7 @@
         {
           "sku": "VK-DESC-2.5G",
           "product_slug": "descaler",
-          "product": "VertKlean Descaler",
+          "product": "VertKleen Descaler",
           "application": "Circulation descaler for coils and lines—loosens mineral deposits while supporting aluminum and copper system cleaning and restored heat transfer.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -101,7 +101,7 @@
         {
           "sku": "VK-DESC-5G",
           "product_slug": "descaler",
-          "product": "VertKlean Descaler",
+          "product": "VertKleen Descaler",
           "application": "Circulation descaler for coils and lines—loosens mineral deposits while supporting aluminum and copper system cleaning and restored heat transfer.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -114,7 +114,7 @@
         {
           "sku": "VK-DESC-55G",
           "product_slug": "descaler",
-          "product": "VertKlean Descaler",
+          "product": "VertKleen Descaler",
           "application": "Circulation descaler for coils and lines—loosens mineral deposits while supporting aluminum and copper system cleaning and restored heat transfer.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -127,7 +127,7 @@
         {
           "sku": "VK-DESC-275G",
           "product_slug": "descaler",
-          "product": "VertKlean Descaler",
+          "product": "VertKleen Descaler",
           "application": "Circulation descaler for coils and lines—loosens mineral deposits while supporting aluminum and copper system cleaning and restored heat transfer.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -140,7 +140,7 @@
         {
           "sku": "VK-ALB-1G",
           "product_slug": "alumibrite",
-          "product": "VertKlean AlumiBrite",
+          "product": "VertKleen AlumiBrite",
           "application": "Targeted aluminum brightening and restoration—lifts oxidation and mineral film from tanks, boats, airboats, and railings.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -153,7 +153,7 @@
         {
           "sku": "VK-ALB-2.5G",
           "product_slug": "alumibrite",
-          "product": "VertKlean AlumiBrite",
+          "product": "VertKleen AlumiBrite",
           "application": "Targeted aluminum brightening and restoration—lifts oxidation and mineral film from tanks, boats, airboats, and railings.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -166,7 +166,7 @@
         {
           "sku": "VK-ALB-5G",
           "product_slug": "alumibrite",
-          "product": "VertKlean AlumiBrite",
+          "product": "VertKleen AlumiBrite",
           "application": "Targeted aluminum brightening and restoration—lifts oxidation and mineral film from tanks, boats, airboats, and railings.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -179,7 +179,7 @@
         {
           "sku": "VK-ALB-55G",
           "product_slug": "alumibrite",
-          "product": "VertKlean AlumiBrite",
+          "product": "VertKleen AlumiBrite",
           "application": "Targeted aluminum brightening and restoration—lifts oxidation and mineral film from tanks, boats, airboats, and railings.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -192,7 +192,7 @@
         {
           "sku": "VK-ALB-275G",
           "product_slug": "alumibrite",
-          "product": "VertKlean AlumiBrite",
+          "product": "VertKleen AlumiBrite",
           "application": "Targeted aluminum brightening and restoration—lifts oxidation and mineral film from tanks, boats, airboats, and railings.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -205,7 +205,7 @@
         {
           "sku": "VK-CR-1G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -218,7 +218,7 @@
         {
           "sku": "VK-CR-2.5G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -231,7 +231,7 @@
         {
           "sku": "VK-CR-5G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -244,7 +244,7 @@
         {
           "sku": "VK-CR-55G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -257,7 +257,7 @@
         {
           "sku": "VK-CR-275G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -270,7 +270,7 @@
         {
           "sku": "VK-CRHD-1G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -283,7 +283,7 @@
         {
           "sku": "VK-CRHD-2.5G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -296,7 +296,7 @@
         {
           "sku": "VK-CRHD-5G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -309,7 +309,7 @@
         {
           "sku": "VK-CRHD-55G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -322,7 +322,7 @@
         {
           "sku": "VK-CRHD-275G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -335,7 +335,7 @@
         {
           "sku": "VK-MW-1G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -348,7 +348,7 @@
         {
           "sku": "VK-MW-2.5G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -361,7 +361,7 @@
         {
           "sku": "VK-MW-5G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -374,7 +374,7 @@
         {
           "sku": "VK-MW-55G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -387,7 +387,7 @@
         {
           "sku": "VK-MW-275G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -400,7 +400,7 @@
         {
           "sku": "VK-MW-1400G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 1400,
           "pack": "1400 gal tote",
@@ -413,7 +413,7 @@
         {
           "sku": "VK-NEUT-1G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -426,7 +426,7 @@
         {
           "sku": "VK-NEUT-2.5G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -439,7 +439,7 @@
         {
           "sku": "VK-NEUT-5G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -452,7 +452,7 @@
         {
           "sku": "VK-NEUT-55G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -465,7 +465,7 @@
         {
           "sku": "VK-NEUT-275G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -478,7 +478,7 @@
         {
           "sku": "VK-LAM3-1G",
           "product_slug": "lam3",
-          "product": "VertKlean Lam3",
+          "product": "VertKleen Lam3",
           "application": "Extended-dwell exterior treatment for lichen, algae, moss, mold, and mildew staining—wet, dwell, and reduce repeat wash labor.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -491,7 +491,7 @@
         {
           "sku": "VK-LAM3-2.5G",
           "product_slug": "lam3",
-          "product": "VertKlean Lam3",
+          "product": "VertKleen Lam3",
           "application": "Extended-dwell exterior treatment for lichen, algae, moss, mold, and mildew staining—wet, dwell, and reduce repeat wash labor.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -504,7 +504,7 @@
         {
           "sku": "VK-LAM3-5G",
           "product_slug": "lam3",
-          "product": "VertKlean Lam3",
+          "product": "VertKleen Lam3",
           "application": "Extended-dwell exterior treatment for lichen, algae, moss, mold, and mildew staining—wet, dwell, and reduce repeat wash labor.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -517,7 +517,7 @@
         {
           "sku": "VK-LAM3-55G",
           "product_slug": "lam3",
-          "product": "VertKlean Lam3",
+          "product": "VertKleen Lam3",
           "application": "Extended-dwell exterior treatment for lichen, algae, moss, mold, and mildew staining—wet, dwell, and reduce repeat wash labor.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -530,7 +530,7 @@
         {
           "sku": "VK-LAM3-275G",
           "product_slug": "lam3",
-          "product": "VertKlean Lam3",
+          "product": "VertKleen Lam3",
           "application": "Extended-dwell exterior treatment for lichen, algae, moss, mold, and mildew staining—wet, dwell, and reduce repeat wash labor.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -543,7 +543,7 @@
         {
           "sku": "VK-PRG-1G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -556,7 +556,7 @@
         {
           "sku": "VK-PRG-2.5G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -569,7 +569,7 @@
         {
           "sku": "VK-PRG-5G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -582,7 +582,7 @@
         {
           "sku": "VK-PRG-55G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -595,7 +595,7 @@
         {
           "sku": "VK-PRG-275G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -615,7 +615,7 @@
         {
           "sku": "VK-CR-1G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -628,7 +628,7 @@
         {
           "sku": "VK-CR-2.5G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -641,7 +641,7 @@
         {
           "sku": "VK-CR-5G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -654,7 +654,7 @@
         {
           "sku": "VK-CR-55G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -667,7 +667,7 @@
         {
           "sku": "VK-CR-275G",
           "product_slug": "cr",
-          "product": "VertKlean CR",
+          "product": "VertKleen CR",
           "application": "High-pH soil-lift chemistry for fats, proteins, and organic film—wetting and sequestration carry residue through CIP/SIP and heavy cleaning.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -680,7 +680,7 @@
         {
           "sku": "VK-HCR-1G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -693,7 +693,7 @@
         {
           "sku": "VK-HCR-2.5G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -706,7 +706,7 @@
         {
           "sku": "VK-HCR-5G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -719,7 +719,7 @@
         {
           "sku": "VK-HCR-55G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -732,7 +732,7 @@
         {
           "sku": "VK-HCR-275G",
           "product_slug": "hcr",
-          "product": "VertKlean HCR",
+          "product": "VertKleen HCR",
           "application": "Mineral-removal chemistry for rust, carbonate scale, and calcium deposits—reacts with deposits while complexing dissolved minerals for a cleaner rinse and restored flow.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -745,7 +745,7 @@
         {
           "sku": "VK-CRHD-1G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -758,7 +758,7 @@
         {
           "sku": "VK-CRHD-2.5G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -771,7 +771,7 @@
         {
           "sku": "VK-CRHD-5G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -784,7 +784,7 @@
         {
           "sku": "VK-CRHD-55G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -797,7 +797,7 @@
         {
           "sku": "VK-CRHD-275G",
           "product_slug": "cr-hd",
-          "product": "VertKlean CRHD",
+          "product": "VertKleen CRHD",
           "application": "Concentrated high-pH soil lift for heavy grease and hydrocarbon loads—wetting, sequestration, and rinseable lift reduce repeat passes.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -810,7 +810,7 @@
         {
           "sku": "VK-NEUT-1G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -823,7 +823,7 @@
         {
           "sku": "VK-NEUT-2.5G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -836,7 +836,7 @@
         {
           "sku": "VK-NEUT-5G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -849,7 +849,7 @@
         {
           "sku": "VK-NEUT-55G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -862,7 +862,7 @@
         {
           "sku": "VK-NEUT-275G",
           "product_slug": "neutral",
-          "product": "VertKlean Neutral",
+          "product": "VertKleen Neutral",
           "application": "Neutral-pH wetting and sequestration for material-sensitive cleaning—lifts oil and soil where aggressive pH is unnecessary.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -875,7 +875,7 @@
         {
           "sku": "VK-MW-1G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -888,7 +888,7 @@
         {
           "sku": "VK-MW-2.5G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -901,7 +901,7 @@
         {
           "sku": "VK-MW-5G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -914,7 +914,7 @@
         {
           "sku": "VK-MW-55G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -927,7 +927,7 @@
         {
           "sku": "VK-MW-275G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 275,
           "pack": "275 gal tote",
@@ -940,7 +940,7 @@
         {
           "sku": "VK-MW-1400G",
           "product_slug": "multiwash",
-          "product": "VertKlean MultiWash (Fortis)",
+          "product": "VertKleen MultiWash (Fortis)",
           "application": "Multi-surface wetting and soil suspension for routine grease, tracked soil, carpet, and stain work across restaurants and facilities.",
           "size_gal": 1400,
           "pack": "1400 gal tote",
@@ -953,7 +953,7 @@
         {
           "sku": "VK-PRG-1G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 1,
           "pack": "1 gal jug",
@@ -966,7 +966,7 @@
         {
           "sku": "VK-PRG-2.5G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 2.5,
           "pack": "2.5 gal jug",
@@ -979,7 +979,7 @@
         {
           "sku": "VK-PRG-5G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 5,
           "pack": "5 gal pail",
@@ -992,7 +992,7 @@
         {
           "sku": "VK-PRG-55G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 55,
           "pack": "55 gal drum",
@@ -1005,7 +1005,7 @@
         {
           "sku": "VK-PRG-275G",
           "product_slug": "purgo",
-          "product": "VertKlean Purgo",
+          "product": "VertKleen Purgo",
           "application": "Water-treatment and odor-control chemistry for organic load—fits towers, drains, wastewater, and facility odor programs.",
           "size_gal": 275,
           "pack": "275 gal tote",

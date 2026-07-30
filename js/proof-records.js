@@ -26,7 +26,7 @@ export function proofCardHtml(card) {
       ${media}
       <div class="case-body">
         <span class="case-eyebrow">${escapeHtml(card?.eyebrow || "Result")}</span>
-        <h3>${escapeHtml(card?.title || "VertKlean result")}</h3>
+        <h3>${escapeHtml(card?.title || "VertKleen result")}</h3>
         <p class="case-result">${escapeHtml(card?.result || "")}</p>
         ${chips.length ? `<div class="case-meta">${chips.map((chip) => `<span class="case-chip">${escapeHtml(chip)}</span>`).join("")}</div>` : ""}
         <details class="case-disclosure">

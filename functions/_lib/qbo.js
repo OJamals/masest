@@ -309,7 +309,7 @@ export function subscriptionItemsForQbo(row = {}) {
   const amount = Number(row.subtotal || 0);
   return [{
     sku: `program:${tier.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-    name: cleanText(row.description || `VertKlean ${tier} program`),
+    name: cleanText(row.description || `VertKleen ${tier} program`),
     type: 'service',
     qty: 1,
     unit_price: amount,

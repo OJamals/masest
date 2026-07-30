@@ -17,12 +17,13 @@ const html = (s) => String(s)
 const pages = [
   {
     slug: "vertkleen-hcr-vs-clr",
-    title: "VertKlean HCR vs CLR",
+    title: "VertKleen HCR vs CLR",
+    seoTitle: "VertKleen HCR vs CLR: Industrial Descaling",
     description: "Compare industrial HCR descaling with CLR by deposit load, carbonate chemistry, circulation, crew burden, and completed-system cost.",
     eyebrow: "Acid replacement comparison",
-    h1: "Industrial VertKlean descaling vs light-duty acid cleaning.",
+    h1: "Industrial VertKleen descaling vs light-duty acid cleaning.",
     subhead: "Compare deposit load, circulation, concentration, equipment scale, crew burden, and completed-system cost.",
-    product: "VertKlean HCR",
+    product: "VertKleen HCR",
     productHref: "../products/hcr",
     competitor: "CLR PRO MAX",
     vkMath: "$108.15 / 5 gal = $21.63/gal",
@@ -30,22 +31,24 @@ const pages = [
     priceNote: "Use current pack pricing as one input; dose, cycle, labor, water, wastewater, and downtime determine completed-system cost.",
     swapCurrent: "CLR / Calci-Solve",
     swapJob: "Rust, scale, calcium, and heat-transfer fouling",
-    swapUse: "VertKlean HCR for heavy rust and scale; Descaler when the job is coil-specific line cleaning.",
+    swapUse: "VertKleen HCR for heavy rust and scale; Descaler when the job is coil-specific line cleaning.",
     proofTitle: "Recorded rust-and-scale result",
     proof: "The HCR field record shows controlled mineral-removal chemistry releasing heavy rust and scale from metal to produce a visibly cleaner surface.",
-    image: "../img/proof/cases/ddc-rust.webp",
-    imageAlt: "Rust removed from equipment with VertKlean HCR",
-    ctaProduct: "VertKlean HCR vs CLR",
-    ctaLabel: "Request an HCR deposit trial"
+    image: "../img/proof/cases/farm-rust-after.webp",
+    imageAlt: "HVAC metal and diamond plate after VertKleen HCR cleaning",
+    ctaProduct: "VertKleen HCR vs CLR",
+    ctaLabel: "Request an HCR deposit trial",
+    decision: "Choose from the actual deposit and system, not the label category. Light spot cleaning and an industrial circulation job impose different demands on concentration, wetting, deposit capacity, rinse volume, and shutdown time."
   },
   {
     slug: "hcr-vs-rydlyme",
     title: "HCR vs RYDLYME",
+    seoTitle: "HCR vs RYDLYME: System-Cost Guide",
     description: "Compare HCR and RYDLYME by mechanism, dose, cycle, rinse, equipment impact, crew experience, shutdown time, and completed-system cost.",
     eyebrow: "Green descaler comparison",
     h1: "Same descaling job. Different operating burden.",
     subhead: "Compare mineral-removal mechanism, dose, cycle, rinse, equipment impact, crew experience, and shutdown cost.",
-    product: "VertKlean HCR",
+    product: "VertKleen HCR",
     productHref: "../products/hcr",
     competitor: "RYDLYME",
     vkMath: "$108.15 / 5 gal = $21.63/gal",
@@ -53,22 +56,24 @@ const pages = [
     priceNote: "Current pack prices start the comparison; circulation dose, cycle, rinse, labor, wastewater, and shutdown finish it.",
     swapCurrent: "RYDLYME biodegradable descaler",
     swapJob: "Cooling tower, heat exchanger, and facility scale removal",
-    swapUse: "VertKlean HCR for controlled carbonate-scale and rust removal with wetting, complexing, and inhibition.",
+    swapUse: "VertKleen HCR for controlled carbonate-scale and rust removal with wetting, complexing, and inhibition.",
     proofTitle: "Recorded HVAC result",
     proof: "The HCR field record shows controlled mineral removal releasing heavy rust and scale from HVAC metal to produce a visibly cleaner surface.",
     image: "../img/proof/cases/farm-rust-after.webp",
-    imageAlt: "Industrial rust and scale removed with VertKlean HCR",
+    imageAlt: "Industrial rust and scale removed with VertKleen HCR",
     ctaProduct: "HCR vs RYDLYME",
-    ctaLabel: "Request a side-by-side trial"
+    ctaLabel: "Request a side-by-side trial",
+    decision: "Hold system volume, deposit, metallurgy, temperature, circulation, and endpoint constant. Then compare how much chemistry, crew time, rinse water, and shutdown each completed system requires."
   },
   {
     slug: "cr-hd-vs-simple-green",
     title: "CR HD vs Simple Green",
-    description: "Compare VertKlean CR HD against Simple Green for heavy degreasing with active-strength and per-gallon economics.",
+    seoTitle: "CR HD vs Simple Green: Task-Cost Guide",
+    description: "Compare VertKleen CR HD against Simple Green for heavy degreasing with active-strength and per-gallon economics.",
     eyebrow: "Degreaser comparison",
     h1: "Industrial hydrocarbon soil vs general-purpose cleaning.",
     subhead: "Compare soil loading, wetting and lift, foam fit, passes, rinse, labor, and completed-task cost.",
-    product: "VertKlean CR HD",
+    product: "VertKleen CR HD",
     productHref: "../products/crhd",
     competitor: "Simple Green Industrial",
     vkMath: "$53.03 / 5 gal = $10.61/gal",
@@ -76,24 +81,26 @@ const pages = [
     priceNote: "Pack price matters; active dose, passes, rinse water, labor, wastewater, and downtime decide completed-task cost.",
     swapCurrent: "Simple Green / Zep / butyl degreasers",
     swapJob: "Heavy-duty degreasing",
-    swapUse: "VertKlean CR HD for warehouse floors, forklifts, kitchens, drains, parts, and heavy oil.",
+    swapUse: "VertKleen CR HD for warehouse floors, forklifts, kitchens, drains, parts, and heavy oil.",
     proofTitle: "Build the comparison around your task",
     proof: "Send the current cleaner, soil load, dilution, passes, labor, water, downtime, and volume. MASEST will build a side-by-side benchmark with cost per completed task.",
     proofHref: "../contact?type=audit&product=CR%20HD%20vs%20Simple%20Green",
     proofCta: "Request task comparison",
     image: "../img/products/crhd-studio.webp",
-    imageAlt: "VertKlean CR HD heavy degreaser container",
+    imageAlt: "VertKleen CR HD heavy degreaser container",
     ctaProduct: "CR HD vs Simple Green",
-    ctaLabel: "Request a CRHD benchmark"
+    ctaLabel: "Request a CRHD benchmark",
+    decision: "Heavy hydrocarbon loading can exhaust a general-purpose wash before the surface is complete. Compare equal soil areas and record dilution, agitation, passes, rinse demand, labor, and visible residue."
   },
   {
     slug: "lam3-vs-wet-forget",
     title: "LAM3 vs Wet & Forget",
-    description: "Compare VertKlean LAM3 against Wet & Forget for moss, algae, mold, mildew, and exterior stain removal.",
+    seoTitle: "LAM3 vs Wet & Forget: Finished-Area Guide",
+    description: "Compare VertKleen LAM3 against Wet & Forget for moss, algae, mold, mildew, and exterior stain removal.",
     eyebrow: "Exterior stain comparison",
     h1: "Compare the finished area, labor, and maintenance cycle.",
     subhead: "Compare wetting, dwell, visible-stain result, coverage, surface experience, and cost per treated area.",
-    product: "VertKlean LAM3",
+    product: "VertKleen LAM3",
     productHref: "../products/lam3",
     competitor: "Wet & Forget",
     vkMath: "$111.03 / 5 gal = $22.21/gal",
@@ -101,22 +108,24 @@ const pages = [
     priceNote: "Use pack price with coverage, application time, repeat visits, water, cleanup, and maintenance interval to compare finished-area cost.",
     swapCurrent: "Wet & Forget / bleach roof cleaners",
     swapJob: "Exterior moss, algae, mold, mildew, lichen, and stain removal",
-    swapUse: "VertKlean LAM3 for spray-and-walk-away exterior biological staining.",
+    swapUse: "VertKleen LAM3 for spray-and-walk-away exterior biological staining.",
     proofTitle: "Recorded exterior result",
     proof: "Before-and-after property records show CR and LAM3 lifting embedded soil, biological buildup, and grout staining to leave visibly cleaner hardscape.",
     image: "../img/proof/cases/grout-moss.webp",
-    imageAlt: "Exterior grout and moss staining cleaned with VertKlean",
+    imageAlt: "Exterior grout and moss staining cleaned with VertKleen",
     ctaProduct: "LAM3 vs Wet & Forget",
-    ctaLabel: "Request exterior-treatment pricing"
+    ctaLabel: "Request exterior-treatment pricing",
+    decision: "Exterior programs should be judged by finished area, not concentrate price. Keep substrate, stain, weather, application method, dwell, runoff control, and inspection interval consistent."
   },
   {
     slug: "beer-line-cleaner-cost-comparison",
     title: "Beer line cleaner cost comparison",
-    description: "Compare brewery CIP cleaner economics using VertKlean CR and HCR against beer-line cleaner pricing.",
+    seoTitle: "VertKleen Brewery CIP: Full-Cycle Cost Guide",
+    description: "Compare brewery CIP cleaner economics using VertKleen CR and HCR against beer-line cleaner pricing.",
     eyebrow: "Brewery CIP comparison",
     h1: "Two soil classes. Two targeted chemistries. One cleaner cycle.",
     subhead: "CR lifts organic soil; HCR removes beer stone and mineral scale. Compare the full CIP cycle, not one gallon.",
-    product: "VertKlean CR + HCR",
+    product: "VertKleen CR + HCR",
     productHref: "../pricing-cip-food-beverage",
     competitor: "Micro Matic beer-line cleaner",
     vkMath: "CR: $55.05 / 2.5 gal = $22.02/gal; HCR: $61.80 / 2.5 gal = $24.72/gal",
@@ -124,18 +133,18 @@ const pages = [
     priceNote: "Compare chemistry dose with cycle time, rinses, labor, water, wastewater, downtime, and return-to-production.",
     swapCurrent: "Caustic soda + brewing acid blends",
     swapJob: "Beer line, tank, mash tank, and heat-exchanger CIP/SIP",
-    swapUse: "VertKlean CR for alkaline wash followed by VertKlean HCR for acid wash.",
+    swapUse: "VertKleen CR for alkaline wash followed by VertKleen HCR for acid wash.",
     proofTitle: "Recorded brewery cycle",
     proof: "Brewlando Brewing trial and laboratory records show CR and HCR replacing incumbent caustic-soda and acid blends across brewery CIP.",
     image: "../img/proof/cases/brewery.webp",
-    imageAlt: "Brewery tank cleaned with VertKlean CR and HCR",
+    imageAlt: "Brewery tank cleaned with VertKleen CR and HCR",
     ctaProduct: "beer line cleaner cost comparison",
-    ctaLabel: "Request brewery-cycle pricing"
+    ctaLabel: "Request brewery-cycle pricing",
+    decision: "Organic soil and mineral beer stone are different cleaning jobs. Compare a complete alkaline and mineral-removal sequence with the incumbent cycle, using the same circuit, temperature, soil condition, rinse endpoint, and production-release requirement."
   }
 ];
 
 const IMAGE_DIMENSIONS = {
-  "../img/proof/cases/ddc-rust.webp": [1200, 579],
   "../img/proof/cases/farm-rust-after.webp": [740, 967],
   "../img/products/crhd-studio.webp": [900, 1200],
   "../img/proof/cases/grout-moss.webp": [919, 690],
@@ -148,7 +157,7 @@ function schema(page) {
     "@graph": [
       {
         "@type": "WebPage",
-        name: page.title,
+        name: page.seoTitle,
         url: `${BASE}/comparisons/${page.slug}`,
         description: page.description
       },
@@ -172,7 +181,7 @@ function pageHtml(page) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${html(page.title)} | MASEST VertKlean</title>
+<title>${html(page.seoTitle)} | MASEST VertKleen</title>
 <meta name="description" content="${html(page.description)}">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
@@ -180,10 +189,10 @@ function pageHtml(page) {
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="../css/components.css?v=20260619b">
-<meta property="og:title" content="${html(page.title)} | MASEST VertKlean">
+<meta property="og:title" content="${html(page.seoTitle)} | MASEST VertKleen">
 <meta property="og:description" content="${html(page.description)}">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="MASEST VertKlean">
+<meta property="og:site_name" content="MASEST VertKleen">
 <script type="application/ld+json">${JSON.stringify(schema(page))}</script>
 <!-- seo:auto -->
 <link rel="canonical" href="${BASE}/comparisons/${page.slug}">
@@ -260,6 +269,33 @@ function pageHtml(page) {
             <tr><td class="job">${html(page.swapCurrent)}</td><td>${html(page.swapJob)}</td><td><strong>${html(page.swapUse)}</strong></td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-slim">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Controlled comparison</span>
+        <h2 class="headline">Run one fair side-by-side.</h2>
+        <p class="subhead">${html(page.decision)}</p>
+      </div>
+      <div class="product-static-grid">
+        <article class="product-static-panel">
+          <h3>Hold the job constant</h3>
+          <ol class="comparison-trial-list">
+            <li><b>Document the baseline.</b> Record asset, substrate, soil or deposit, current product, concentration, temperature, contact time, agitation, passes, rinse water, crew time, and shutdown.</li>
+            <li><b>Define the endpoint.</b> Agree on visible residue, flow or heat-transfer recovery, rinse condition, surface condition, and return-to-service requirement before either product is applied.</li>
+            <li><b>Test equal areas or circuits.</b> Use the current label, the exact VertKleen product directions, the same operating window, and the same inspection method.</li>
+            <li><b>Price the completed result.</b> Add chemistry, labor, water, wastewater handling, equipment time, repeat passes, and production interruption.</li>
+          </ol>
+        </article>
+        <article class="product-static-panel">
+          <h3>VertKleen operating profile</h3>
+          <p>Current VertKleen documentation records HMIS 0-0-0 and shipping without hazardous-material freight requirements. Routine use does not require special ventilation or area clearance.</p>
+          <p>Eye or skin contact may be mildly irritating; documentation records no chemical-burn or permanent-damage risk. Use the current product label and SDS for the exact SKU, concentration, task, and site procedure.</p>
+          <a class="btn btn-secondary" href="../resources">Review methods and product files</a>
+        </article>
       </div>
     </div>
   </section>

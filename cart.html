@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
   <title>Cart | MASEST</title>
-  <meta name="description" content="Review your VertKlean cart and continue to secure checkout.">
+  <meta name="description" content="Review your VertKleen cart and continue to secure checkout.">
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
@@ -77,7 +77,7 @@
 </main>
 <script type="module">
   import { checkout, clear, items, remove, setQty } from "./js/cart.js";
-  import { api, me, getToken } from "./js/auth.js";
+  import { api, me, getToken } from "./js/auth.js?v=20260711w";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -88,8 +88,8 @@
   const vmap = new Map();
   let catalogReady = false;
   const fallbackNames = {
-    crhd: "VertKlean CR HD",
-    hcr: "VertKlean HCR",
+    crhd: "VertKleen CR HD",
+    hcr: "VertKleen HCR",
   };
   function isLocalStaticPreview() {
     return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname) && !window.MASEST_ENABLE_LOCAL_API;
@@ -219,7 +219,7 @@
   function productName(sku) {
     const fallback = fallbackNames[String(sku).toLowerCase()];
     const name = vmap.get(sku)?.name || fallback || sku;
-    return fallback && name === "VertKlean CRHD" ? fallback : name;
+    return fallback && name === "VertKleen CRHD" ? fallback : name;
   }
 
   function quoteUrl(cartItems) {

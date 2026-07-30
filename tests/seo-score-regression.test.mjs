@@ -118,7 +118,7 @@ test("product detail pages are static, crawlable, and schema-rich", () => {
     assert.ok(product, `${id} static product page must map to catalog data`);
     assert.ok(fs.existsSync(path.join(root, file)), `${file} missing`);
     const html = read(file);
-    assert.match(html, new RegExp(`<title>${product.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\| MASEST VertKlean<\\/title>`));
+    assert.match(html, new RegExp(`<title>${product.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\| MASEST VertKleen<\\/title>`));
     assert.match(html, new RegExp(`<h1[^>]*>${product.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}<\\/h1>`));
     assert.equal(canonical(html), `${base}/products/${id}`, `${file} canonical`);
     const types = jsonLdBlocks(html).flatMap(flattenJsonLd);

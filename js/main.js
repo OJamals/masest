@@ -1,4 +1,4 @@
-/* MASEST / VertKlean shared JS (v2, taste-skill applied)
+/* MASEST / VertKleen shared JS (v2, taste-skill applied)
    Icons: Phosphor web family only. No emoji. No em-dashes in copy. */
 import { renderChrome } from "./main/chrome.js?v=20260727b";
 import { initResponsiveTables, initReveal } from "./main/effects.js";

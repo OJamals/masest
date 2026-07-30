@@ -55,7 +55,7 @@ test("sitemap lists industry and product detail pages as final URLs", () => {
 });
 test("generated product detail is crawlable without client rendering", () => {
   const html = read("products/hcr.html");
-  assert.match(html, /<h1 class="display">VertKlean CIP HCR<\/h1>/);
+  assert.match(html, /<h1 class="display">VertKleen CIP HCR<\/h1>/);
   assert.match(html, /<b>How it works<\/b>/);
   assert.doesNotMatch(html, /id="pName"/);
 });

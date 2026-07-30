@@ -2,7 +2,7 @@ const PRODUCT_FALLBACK_IMAGE = "img/products/masest-poster-transparent.png";
 
 export const PRODUCTS = {
   hcr: {
-    name: "VertKlean CIP HCR",
+    name: "VertKleen CIP HCR",
     cat: "acid",
     replaces: "Compared with brewery acid-cleaning and beer-stone programs",
     hmis: "0-0-0",
@@ -22,7 +22,7 @@ export const PRODUCTS = {
     ]
   },
   "hcr-t16": {
-    name: "VertKlean HVAC HCR",
+    name: "VertKleen HVAC HCR",
     cat: "acid",
     replaces: "Compared with hydrochloric-acid HVAC descaling programs",
     hmis: "0-0-0",
@@ -41,7 +41,7 @@ export const PRODUCTS = {
     ]
   },
   cr: {
-    name: "VertKlean CIP CR",
+    name: "VertKleen CIP CR",
     cat: "alkaline",
     replaces: "Compared with caustic-soda brewery CIP",
     hmis: "0-0-0",
@@ -59,7 +59,7 @@ export const PRODUCTS = {
     ]
   },
   neutral: {
-    name: "VertKlean Neutral",
+    name: "VertKleen Neutral",
     cat: "alkaline",
     replaces: "Compared with caustic and solvent degreasers",
     hmis: "0-0-0",
@@ -77,7 +77,7 @@ export const PRODUCTS = {
     ]
   },
   multiwash: {
-    name: "VertKlean MultiWash",
+    name: "VertKleen MultiWash",
     cat: "alkaline",
     replaces: "Compared with general-purpose alkaline cleaners",
     hmis: "0-0-0",
@@ -148,7 +148,7 @@ export const PRODUCTS = {
     docs: ["Safety Data Sheet (SDS)", "Controlled Label / SDS Request"]
   },
   crhd: {
-    name: "VertKlean CR HD",
+    name: "VertKleen CR HD",
     cat: "alkaline",
     replaces: "Evaluated against current warehouse and plant degreasers",
     hmis: "0-0-0",
@@ -168,7 +168,7 @@ export const PRODUCTS = {
     ]
   },
   descaler: {
-    name: "VertKlean Descaler",
+    name: "VertKleen Descaler",
     cat: "acid",
     replaces: "Evaluated against hydrochloric-acid, CLR, and Calci-Solve programs",
     hmis: "0-0-0",
@@ -187,7 +187,7 @@ export const PRODUCTS = {
     ]
   },
   alumibrite: {
-    name: "VertKlean AlumiBrite",
+    name: "VertKleen AlumiBrite",
     cat: "specialty",
     replaces: "Replaces hydrofluoric and hydrochloric aluminum brighteners",
     hmis: "0-0-0",
@@ -203,7 +203,7 @@ export const PRODUCTS = {
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
   torque: {
-    name: "VertKlean Torque",
+    name: "VertKleen Torque",
     cat: "specialty",
     replaces: "Evaluated against separate wash, wax, and bug-removal steps",
     hmis: "0-0-0",
@@ -221,7 +221,7 @@ export const PRODUCTS = {
     ]
   },
   lam3: {
-    name: "VertKlean LAM3",
+    name: "VertKleen LAM3",
     cat: "specialty",
     replaces: "Replaces Wet & Forget and bleach roof cleaners",
     hmis: "0-0-0",
@@ -239,7 +239,7 @@ export const PRODUCTS = {
     ]
   },
   crs: {
-    name: "VertKlean CRS",
+    name: "VertKleen CRS",
     cat: "acid",
     replaces: "Evaluated for rust, scale, and calcium-cleaning programs",
     hmis: "0-0-0",
@@ -256,7 +256,7 @@ export const PRODUCTS = {
     ]
   },
   "cr-hd-low-foam": {
-    name: "VertKlean CR HD Low Foam",
+    name: "VertKleen CR HD Low Foam",
     cat: "alkaline",
     replaces: "Evaluated against solvent and butyl degreasers",
     hmis: "0-0-0",
@@ -272,7 +272,7 @@ export const PRODUCTS = {
     docs: ["Safety Data Sheet (SDS)", "Technical Application Sheet"]
   },
   cr2: {
-    name: "VertKlean HVAC CR",
+    name: "VertKleen HVAC CR",
     cat: "alkaline",
     replaces: "Evaluated against caustic drain-cleaning and degreasing programs",
     hmis: "0-0-0",
@@ -287,7 +287,7 @@ export const PRODUCTS = {
     docs: ["Safety Data Sheet (SDS)"]
   },
   sar: {
-    name: "VertKlean SAR",
+    name: "VertKleen SAR",
     cat: "acid",
     replaces: "Evaluated for specialty and blended-acid programs",
     hmis: "0-0-0",
@@ -385,7 +385,7 @@ export const QUOTE_FIRST_IDS = ["crs"];
 export const PRODUCT_CATALOG_COPY = {
   hcr: {
     job: "Brewery CIP mineral cleaning",
-    platform: "Powered by SynTech",
+    platform: "VertKleen mineral-removal chemistry",
     summary: "Controlled mineral removal for brewery acid-wash steps.",
     mechanism: "Controlled hydrogen-ion activity consumes carbonate scale (2 H+ + CaCO3 → Ca2+ + CO2 + H2O), while complexing, wetting, and inhibition keep the reaction focused on the deposit.",
     operator_advantage: "Target beer stone and mineral film in tanks, kegs, lines, and heat-transfer surfaces through a controlled CIP acid-wash step.",
@@ -397,7 +397,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   "hcr-t16": {
     job: "Bulk HVAC descaling",
-    platform: "Powered by SynTech",
+    platform: "VertKleen mineral-removal chemistry",
     summary: "Controlled mineral removal for repeated large-volume HVAC and facility work.",
     mechanism: "Controlled hydrogen-ion activity, complexing, wetting, and inhibition dissolve calcium, rust, and water-side scale through the same HCR mineral-removal pathway.",
     operator_advantage: "Tote economics, repeat dosing, fewer shutdown complications, and a simpler crew experience improve recurring descaling work.",
@@ -408,7 +408,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   descaler: {
     job: "Coils, towers, and heat-transfer equipment",
-    platform: "Powered by SynTech",
+    platform: "VertKleen mineral-removal chemistry",
     summary: "Controlled mineral-removal chemistry for equipment that matters.",
     mechanism: "Controlled hydrogen-ion activity, wetting, and circulation convert mineral scale into rinsable material across coils, towers, plumbing, and heat-transfer equipment.",
     operator_advantage: "Restore flow and heat transfer with equipment-conscious action, lower fume burden, and a better technician experience.",
@@ -426,7 +426,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   cr: {
     job: "Brewery CIP organic-soil cleaning",
-    platform: "Powered by SynClean",
+    platform: "VertKleen soil-lift chemistry",
     summary: "High-pH cleaning for brewery alkaline-wash steps.",
     mechanism: "Alkalinity loosens fat, protein, and organic film; wetting and sequestration lift residue, control hard-water ions, and carry soil into a cleaner rinse.",
     operator_advantage: "Strong CIP cleaning with less caustic-workflow burden, a cleaner rinse, and faster return to production.",
@@ -438,7 +438,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   crhd: {
     job: "Heavy grease and industrial soil",
-    platform: "Powered by SynClean",
+    platform: "VertKleen soil-lift chemistry",
     summary: "Heavy-duty degreasing without the solvent-first experience.",
     mechanism: "Wetting penetrates greasy film; surfactants surround and lift hydrocarbon soil while sequestration controls hard-water ions and limits redeposition.",
     operator_advantage: "Lower odor and flammability burden, strong soil loading, fewer passes, and a cleaner rinse improve heavy industrial work.",
@@ -450,7 +450,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   neutral: {
     job: "Sensitive surfaces and seals",
-    platform: "Powered by SynClean",
+    platform: "VertKleen soil-lift chemistry",
     summary: "Serious soil lift at a near-neutral pH.",
     mechanism: "Wetting lowers interfacial tension, sequestration controls hard-water ions, and surfactants lift oily soil into the wash so it rinses away.",
     operator_advantage: "A finish-, seal-, and occupied-space-friendly profile supports frequent cleaning without an acid or high-alkaline cycle.",
@@ -461,7 +461,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   multiwash: {
     job: "Everyday facility washing",
-    platform: "Powered by SynTech + SynClean",
+    platform: "VertKleen mixed-soil chemistry",
     summary: "One formulation for mixed soils that usually require several bottles.",
     mechanism: "Controlled mineral-soil action works beside grease and organic-soil dispersion, with Purgo support for odor-causing residue in wet zones.",
     operator_advantage: "Fewer products, simpler training, low-odor handling, and faster routine work streamline mixed facility cleaning.",
@@ -472,7 +472,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   watersafe60: {
     job: "Scale and corrosion control",
-    platform: "Powered by SynTech",
+    platform: "VertKleen water-system chemistry",
     summary: "Controlled pH and scale chemistry for water systems.",
     mechanism: "Controlled pH movement and hydrogen-ion activity manage carbonate-scale pressure while the inhibitor package supports recurring system treatment.",
     operator_advantage: "Dose follows water chemistry, supporting stable operation, controlled scale response, and simpler water-program handling.",
@@ -483,7 +483,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   purgo: {
     job: "Odor-source and organic-load control",
-    platform: "Purgo Bio-Active",
+    platform: "VertKleen Purgo bio-active chemistry",
     summary: "Bio-active support for odor-causing organic residue in scoped water and drain programs.",
     mechanism: "Bio-active treatment works on odor-causing organic residue within the defined cleaning and monitoring program.",
     operator_advantage: "Define source, loading, dose, monitoring, and cleaning method before treating recurring odor.",
@@ -500,7 +500,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   lam3: {
     job: "Moss, algae, mold, and mildew",
-    platform: "VertKlean + Purgo",
+    platform: "VertKleen exterior-care chemistry",
     summary: "Long-dwell exterior cleaning for scoped surface and stain conditions.",
     mechanism: "Extended wetting and dwell address adhered organic staining, mineral film, and biological residue on the selected test area.",
     operator_advantage: "Define substrate, stain, weather, adjacent materials, dwell, runoff path, and visual endpoint before scaling the work.",
@@ -512,7 +512,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   alumibrite: {
     job: "Aluminum brightening",
-    platform: "Powered by SynTech",
+    platform: "VertKleen aluminum-care chemistry",
     summary: "Controlled aluminum brightening for a selected alloy and finish.",
     mechanism: "Controlled oxide and mineral removal combines wetting and inhibition within a confirmed aluminum test patch.",
     operator_advantage: "Define alloy, coating, oxidation, method, containment, and test-patch endpoint before scaling the work.",
@@ -524,7 +524,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   torque: {
     job: "Vehicle, fleet, RV, and marine wash",
-    platform: "Powered by SynClean",
+    platform: "VertKleen wash-and-finish chemistry",
     summary: "One wash step for scoped fleet, RV, and marine exterior programs.",
     mechanism: "Surfactants release road film, salt, grime, and bugs while finish-care components remain after rinse.",
     operator_advantage: "Define surface finish, soil, application method, containment, and appearance endpoint before the trial.",
@@ -536,7 +536,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   "cr-hd-low-foam": {
     job: "Machine wash and low-foam degreasing",
-    platform: "Powered by SynClean",
+    platform: "VertKleen low-foam soil-lift chemistry",
     summary: "Heavy soil removal that lets the machine do its work.",
     mechanism: "Wetting and soil lift surround greasy residue while controlled foam preserves agitation, pump efficiency, visibility, and recovery.",
     operator_advantage: "Fewer foam interruptions and faster rinsing keep scrubbers, parts washers, and recirculating systems productive.",
@@ -547,7 +547,7 @@ export const PRODUCT_CATALOG_COPY = {
   },
   cr2: {
     job: "HVAC drains and organic buildup",
-    platform: "Powered by SynClean",
+    platform: "VertKleen concentrated soil-lift chemistry",
     summary: "Concentrated alkaline cleaning for HVAC drains, equipment, and facility maintenance.",
     mechanism: "High-pH soil release combines wetting, lift, and dispersion to loosen organic load and keep it moving toward rinse-out.",
     operator_advantage: "More cleaning capacity per delivered volume supports a smaller storage footprint and a simpler heavy-soil workflow.",
@@ -558,13 +558,13 @@ export const PRODUCT_CATALOG_COPY = {
   },
   sar: {
     job: "Specialty rust and scale removal",
-    platform: "Powered by SynTech",
-    summary: "Tuned VertKlean chemistry for specialty mineral and oxide deposits.",
+    platform: "VertKleen specialty mineral-removal chemistry",
+    summary: "Tuned VertKleen chemistry for specialty mineral and oxide deposits.",
     mechanism: "A controlled reaction is tailored to the deposit and surface instead of depending on blunt mineral-acid strength.",
     operator_advantage: "Precision, asset care, application engineering, and predictable work planning improve specialty mineral removal.",
     quote_cta: "Request an engineered application review",
     fits: ["descaling", "water-side scale", "specialty acid", "maintenance"],
-    proof: "VertKlean field results and specialty application guidance",
+    proof: "VertKleen field results and specialty application guidance",
     sample_cta: "Request an SAR sample"
   },
   pg100: {
@@ -609,7 +609,7 @@ export function productHighlights(id) {
   const product = PRODUCTS[id];
   const copy = PRODUCT_CATALOG_COPY[id];
   if (!product || !copy) return [];
-  const platform = copy.platform || "VertKlean program";
+  const platform = copy.platform || "VertKleen program";
   const mechanism = copy.mechanism || copy.summary;
   const advantage = copy.operator_advantage
     || `Built around ${copy.fits.join(", ")} with a clear product and supply path.`;

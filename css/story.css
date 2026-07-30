@@ -1,5 +1,5 @@
 /* ============================================================
-   MASEST / VertKlean — Scrollytelling story v5 (homepage opener)
+   MASEST / VertKleen — Scrollytelling story v5 (homepage opener)
    GSAP ScrollTrigger engine, native browser scroll (js/story.js).
    Dark, cinematic, art-directed; hands off to the light factual
    sections below. Reduced-motion + no-JS = static stacked layout.
@@ -142,7 +142,7 @@
 .story .kicker.safe { color: var(--s-safe-text); }
 
 .story .act-h {
-  font-size: clamp(2rem, 4.6vw, 3.5rem); font-weight: 900; line-height: 1.04;
+  font-size: clamp(2rem, 4.6vw, 3.5rem); font-weight: var(--heading-weight); line-height: 1.04;
   letter-spacing: -.035em; text-wrap: balance; margin: 0;
   text-shadow: 0 2px 32px rgba(7, 9, 13, .65);
 }
@@ -334,7 +334,7 @@
   position: absolute; z-index: 1; left: 22px; right: 22px; bottom: 18px;
 }
 .reel-slide figcaption b {
-  display: block; font-size: clamp(1.5rem, 2.6vw, 2.1rem); font-weight: 900;
+  display: block; font-size: clamp(1.5rem, 2.6vw, 2.1rem); font-weight: var(--heading-weight);
   letter-spacing: -.02em; line-height: 1.1; color: var(--s-ink);
 }
 .reel-slide figcaption span {
@@ -526,7 +526,7 @@
    ACT 3 — THE BILL / ACT 4 — THE ZERO (mirrored hazard ledgers)
    Act 3 builds the conventional ledger row by row (chemical,
    HMIS score, what it adds to the job) and ends on the injury
-   total. Act 4 repeats the exact skeleton with VertKlean rows
+   total. Act 4 repeats the exact skeleton with VertKleen rows
    at 0-0-0 and the burdens coming off the bill.
    ============================================================ */
 .story .act-hmis .stage,
@@ -756,19 +756,12 @@
    ACT 5 — THE SWITCH (close + CTAs)
    ============================================================ */
 .act-savior .stage { background: linear-gradient(180deg, var(--s-bg) 0%, #0f1a1e 55%, #0c1417 100%); }
-.savior-wrap { position: relative; z-index: 5; box-sizing: border-box; width: min(900px, 90vw); text-align: center; padding: 0 24px; }
 .savior-badge {
   display: inline-flex; align-items: center; gap: 9px; margin-bottom: clamp(12px, 2vh, 22px);
   padding: 8px 16px; border-radius: 999px; border: 1px solid var(--s-safe-soft);
   background: var(--s-safe-soft); color: var(--s-safe-text);
   font-size: .76rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
 }
-.savior-wrap h2 {
-  font-size: clamp(2.2rem, 5vw, 3.7rem); font-weight: 900; letter-spacing: -.045em; line-height: 1.02;
-  margin: 0; text-wrap: balance;
-}
-.savior-wrap h2 .accent { color: var(--s-safe-text); }
-.savior-wrap .lede { margin: clamp(12px, 2vh, 22px) auto 0; max-width: 50ch; font-size: clamp(1rem, 1.4vw, 1.18rem); color: var(--s-mut); line-height: 1.5; }
 .savior-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 .story.story-ready .act-savior .savior-ctas {
   transform: translateY(-8px);
@@ -790,23 +783,11 @@
 
  /* Act 4 — savior stack */
   .act-savior .savior-badge { margin-bottom: 8px; }
-  .act-savior .savior-wrap h2 { font-size: clamp(2rem, 4.2vw, 3rem); }
-  .act-savior .savior-wrap .lede { margin-top: 8px; font-size: 1rem; max-width: 54ch; }
 }
 
-/* Clear the fixed nav so the "Enter VertKlean" badge never tucks under it,
-   then scale the savior stack to fit the height that's left. .savior-wrap is
-   NOT GSAP-transformed, so a CSS scale is safe and stays centered via the
-   stage's place-items:center. Steps cascade — shortest matching rule wins. */
 @media (min-width: 761px) {
   .act-savior .stage { padding-top: 64px; box-sizing: border-box; }
-  .act-savior .savior-wrap { transform-origin: center center; }
 }
-@media (min-width: 761px) and (max-height: 800px) { .act-savior .savior-wrap { transform: scale(.94); } }
-@media (min-width: 761px) and (max-height: 730px) { .act-savior .savior-wrap { transform: scale(.88); } }
-@media (min-width: 761px) and (max-height: 670px) { .act-savior .savior-wrap { transform: scale(.81); } }
-@media (min-width: 761px) and (max-height: 610px) { .act-savior .savior-wrap { transform: scale(.74); } }
-@media (min-width: 761px) and (max-height: 560px) { .act-savior .savior-wrap { transform: scale(.68); } }
 
 /* ============================================================
    REDUCED MOTION + NO-JS FALLBACK: stacked, fully visible.
@@ -1138,10 +1119,6 @@ font-size: .68rem;
     align-items: start;
   }
 
-  .act-savior .savior-wrap {
-    align-self: stretch;
-  }
-
   .act-savior .savior-ctas {
     margin-bottom: 72px;
   }
@@ -1303,7 +1280,6 @@ font-size: .68rem;
    stroke-width via --build) is rewritten every scrub frame, so any filter forces
    a per-frame re-raster — the Act 2 jank removed in #114. Glow = layered strokes. */
 
-.story .zero-axis,
 .story .pipe-callout .chip {
   transition:
     border-color .22s var(--s-ease),
@@ -1330,8 +1306,7 @@ font-size: .68rem;
 @media (prefers-reduced-motion: reduce) {
 .story .rail-btn,
 .story .rail-btn::after,
-.story .zero-axis,
-  .story .pipe-callout .chip {
+.story .pipe-callout .chip {
     transition: none !important;
   }
 
@@ -1348,105 +1323,11 @@ font-size: .68rem;
   opacity: 0 !important;
 }
 
-
-
-
-
-.story .zero-axis span {
-  display: block;
-  font-size: .72rem;
-  font-weight: 900;
-  letter-spacing: .13em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--ax, #d7fbff) 60%, #eafdff);
-}
-
-.story .savior-zero-scale {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  width: min(760px, 86vw);
-  margin: clamp(26px, 5.5vh, 56px) auto;   /* centered between the lede text and the proof images */
-}
-
-.story .zero-axis {
-  --ax: var(--s-safe-text);
-  position: relative;
-  overflow: hidden;
-  min-height: 100px;
-  padding: 16px 14px;
-  border: 1px solid color-mix(in srgb, var(--ax) 42%, rgba(126, 224, 255, .3));
-  border-radius: 18px;
-  background:
-    radial-gradient(92% 140% at 50% 0%, color-mix(in srgb, var(--ax) 26%, transparent), transparent 70%),
-    linear-gradient(180deg, rgba(12, 54, 67, .74), rgba(8, 18, 23, .72));
-  color: #d7fbff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .1),
-    0 24px 72px -60px color-mix(in srgb, var(--ax) 55%, rgba(72, 211, 255, .9));
-  text-align: center;
-}
-
-/* Each card carries its HMIS axis accent — the colors the small tiles used. */
-.story .zero-axis::before {
-  content: "";
-  position: absolute; top: 0; left: 16%; right: 16%; height: 3px;
-  border-radius: 0 0 4px 4px;
-  background: var(--ax);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--ax) 75%, transparent);
-}
-.story .savior-zero-scale .zero-axis:nth-child(1) { --ax: var(--hmis-h); }
-.story .savior-zero-scale .zero-axis:nth-child(2) { --ax: var(--hmis-f); }
-.story .savior-zero-scale .zero-axis:nth-child(3) { --ax: var(--hmis-r); }
-
-.story .zero-axis strong {
-  display: block;
-  margin: 2px 0 4px;
-  color: #f3ffff;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: .95;
-  text-shadow: 0 0 22px color-mix(in srgb, var(--ax) 45%, rgba(72, 211, 255, .6));
-}
-/* Benefits variant of the scale (scene 5 close): the big slot holds a short
-   word/rating instead of a single "0" glyph, so it needs a smaller type ramp. */
-.story .savior-zero-scale.is-benefits .zero-axis strong {
-  font-size: clamp(1.15rem, 2.4vw, 1.6rem);
-  letter-spacing: -.01em;
-  text-wrap: balance;
-}
-
-.story .zero-axis small {
-  color: rgba(220, 252, 255, .72);
-  font-size: .78rem;
-  line-height: 1.3;
-}
-
 @media (max-width: 760px) {
 .act-savior .stage { padding-top: 72px; box-sizing: border-box; }
-.act-savior .savior-wrap { width: min(350px, 90vw); padding: 0 8px; }
 .act-savior .savior-badge { margin-bottom: 8px; padding: 7px 12px; font-size: .66rem; }
-.act-savior .savior-wrap h2 { font-size: clamp(1.75rem, 8.4vw, 2.45rem); line-height: 1; }
-.act-savior .savior-wrap .lede { margin-top: 9px; font-size: .9rem; line-height: 1.36; }
-
-.story .savior-zero-scale {
-  width: 100%;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 16px auto 18px;
-}
-
-.story .zero-axis {
-  min-height: auto;
-  padding: 10px 7px;
-  border-radius: 14px;
-}
-
-.story .zero-axis span { font-size: .58rem; letter-spacing: .09em; }
-.story .zero-axis strong { font-size: clamp(1.65rem, 8vw, 2.1rem); }
-.story .zero-axis small { font-size: .62rem; line-height: 1.2; }
 .savior-ctas { gap: 8px; }
 .savior-ctas .btn { min-height: 46px; padding-inline: 14px; }
-}
 }
 
 @media (max-width: 760px) {
@@ -1485,7 +1366,7 @@ justify-content: flex-start;
 
 
 /* ============================================================
-   ACT 4 — THE COST (split-screen: conventional cost climbs, VertKlean at zero)
+   ACT 4 — THE COST (split-screen: conventional cost climbs, VertKleen at zero)
    No plain opacity:0 on [data-at] here — the global fallback near the
    top of this file owns reveal/visibility. Keep the stage within its
    floor on short viewports (see scene-3 overflow fix).

@@ -89,7 +89,7 @@ function blogPostEntry(overrides = {}) {
       author: "MASEST Technical Team",
       date: "2026-07-01",
       hero: "img/blog/hmis-000-explained.webp",
-      hero_alt: "VertKlean HCR jug beside a clear sample",
+      hero_alt: "VertKleen HCR jug beside a clear sample",
       excerpt: "A scheduled post for the static blog.",
       body: "## Scheduled\n\nThis post should publish when due.",
     },
@@ -126,11 +126,11 @@ test("Products renders CMS photos and can relink the primary image through the s
   );
   let product = {
     sku: "hcr",
-    name: "VertKlean HCR",
+    name: "VertKleen HCR",
     mode: "buy",
     active: true,
     image_url: initialUrl,
-    photo_alt: "VertKlean HCR product bottle",
+    photo_alt: "VertKleen HCR product bottle",
     gallery: [],
     product_variants: [],
   };
@@ -148,7 +148,7 @@ test("Products renders CMS photos and can relink the primary image through the s
         storage_path: "/img/products/cip-cr-studio.webp",
         source_url: replacementUrl,
         public_url: replacementUrl,
-        alt: "VertKlean CR product bottle",
+        alt: "VertKleen CR product bottle",
         status: "available",
         mime_type: "image/webp",
       }],
@@ -921,7 +921,7 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
       author: "MASEST Technical Team",
       date: "2026-07-01",
       hero: "img/blog/hmis-000-explained.webp",
-      hero_alt: "VertKlean HCR jug beside a clear sample",
+      hero_alt: "VertKleen HCR jug beside a clear sample",
       excerpt: "A lower handling burden starts with safer chemistry.",
       body: "## The three numbers\n\nHMIS rates **Health**, **Flammability**, and **Physical hazard**.",
     },
@@ -965,9 +965,9 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
     body: JSON.stringify({
       products: [{
         sku: "hcr",
-        name: "VertKlean HCR",
+        name: "VertKleen HCR",
         image_url: "img/products/hvac-hcr-studio.webp",
-        photo_alt: "VertKlean HCR product bottle",
+        photo_alt: "VertKleen HCR product bottle",
         active: true,
       }],
     }),
@@ -1040,7 +1040,7 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
 
   await page.locator('[data-editor-action="open_reference"]').click();
   await expect(page.locator("#contentReferencePicker")).toBeVisible();
-  await expect(page.locator("#contentReferenceRows")).toContainText("VertKlean HCR");
+  await expect(page.locator("#contentReferenceRows")).toContainText("VertKleen HCR");
   const blogProductReference = page.locator('[data-editor-reference-path="/products/hcr"]');
   await blogProductReference.evaluate((button) => {
     for (let details = button.closest("details"); details; details = details.parentElement?.closest("details")) {
@@ -1048,7 +1048,7 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
     }
   });
   await blogProductReference.click();
-  await expect(bodyOutput).toHaveValue(/\[\[card:title=VertKlean HCR\|href=\/products\/hcr\|image=img\/products\/hvac-hcr-studio\.webp/);
+  await expect(bodyOutput).toHaveValue(/\[\[card:title=VertKleen HCR\|href=\/products\/hcr\|image=img\/products\/hvac-hcr-studio\.webp/);
 
   await page.locator('[data-editor-action="open_reference"]').click();
   await expect(page.locator("#contentReferenceRows")).toContainText("Water analysis");
@@ -1060,7 +1060,7 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
   const frame = page.frameLocator("#contentPreviewFrame");
   await expect(frame.locator("article.blog-preview")).toBeVisible();
   await expect(frame.locator(".blog-body")).toContainText("Scale");
-  await expect(frame.locator('.blog-body a.md-card[href="/products/hcr"]')).toContainText("VertKlean HCR");
+  await expect(frame.locator('.blog-body a.md-card[href="/products/hcr"]')).toContainText("VertKleen HCR");
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-blog-dedicated-desktop.png` });
 });
@@ -1084,9 +1084,9 @@ test("newsletter compose uses the shared visual editor and markdown output", asy
     body: JSON.stringify({
       products: [{
         sku: "hcr",
-        name: "VertKlean HCR",
+        name: "VertKleen HCR",
         image_url: "img/products/hvac-hcr-studio.webp",
-        photo_alt: "VertKlean HCR product bottle",
+        photo_alt: "VertKleen HCR product bottle",
         active: true,
       }],
     }),
@@ -1133,7 +1133,7 @@ test("newsletter compose uses the shared visual editor and markdown output", asy
   await expect(page.locator("#nlBody")).toHaveValue("**Field** note");
 
   await page.locator('#admNewsletter [data-editor-action="open_reference"]').click();
-  await expect(page.locator("#nlReferenceRows")).toContainText("VertKlean HCR");
+  await expect(page.locator("#nlReferenceRows")).toContainText("VertKleen HCR");
   const newsletterProductReference = page.locator('#admNewsletter [data-editor-reference-path="/products/hcr"]');
   await newsletterProductReference.evaluate((button) => {
     for (let details = button.closest("details"); details; details = details.parentElement?.closest("details")) {
@@ -1141,11 +1141,11 @@ test("newsletter compose uses the shared visual editor and markdown output", asy
     }
   });
   await newsletterProductReference.click();
-  await expect(page.locator("#nlBody")).toHaveValue(/\[\[card:title=VertKlean HCR\|href=\/products\/hcr/);
+  await expect(page.locator("#nlBody")).toHaveValue(/\[\[card:title=VertKleen HCR\|href=\/products\/hcr/);
 
   await page.locator('#admNewsletter [data-editor-action="open_reference"]').click();
   await expect(page.locator("#nlReferenceRows")).toContainText("Water analysis");
   await page.locator('#admNewsletter [data-editor-reference-path="/services"]').click();
   await expect(page.locator("#nlBody")).toHaveValue(/\[\[card:title=Water analysis\|href=\/services/);
-  await expect(page.locator('#nlPreview .md-card[href="/products/hcr"]')).toContainText("VertKlean HCR");
+  await expect(page.locator('#nlPreview .md-card[href="/products/hcr"]')).toContainText("VertKleen HCR");
 });

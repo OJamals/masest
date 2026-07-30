@@ -33,6 +33,29 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test("cart loads one canonical auth module instance", async ({ page }) => {
+  const authRequests = [];
+  const duplicateClientWarnings = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/js/auth.js") authRequests.push(request.url());
+  });
+  page.on("console", (message) => {
+    if (message.text().includes("Multiple GoTrueClient instances detected")) {
+      duplicateClientWarnings.push(message.text());
+    }
+  });
+
+  await page.route("**/api/products", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ products: [] }),
+  }));
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "networkidle" });
+
+  expect(authRequests).toHaveLength(1);
+  expect(duplicateClientWarnings).toEqual([]);
+});
+
 test("cart shows server catalog prices and estimated subtotal", async ({ page }) => {
   await page.route("**/api/products", async (route) => {
     await route.fulfill({
@@ -40,8 +63,8 @@ test("cart shows server catalog prices and estimated subtotal", async ({ page })
       contentType: "application/json",
       body: JSON.stringify({
         products: [
-          { sku: "crhd", name: "VertKlean CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
-          { sku: "hcr", name: "VertKlean HCR", mode: "buy", active: true, price: 10, currency: "usd" },
+          { sku: "crhd", name: "VertKleen CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+          { sku: "hcr", name: "VertKleen HCR", mode: "buy", active: true, price: 10, currency: "usd" },
         ],
       }),
     });
@@ -77,8 +100,8 @@ test("cart accepts flattened connector variant rows", async ({ page }) => {
           currency: "usd",
           active: true,
           mode: "buy",
-          name: "VertKlean CRHD",
-          products: { sku: "crhd", name: "VertKlean CRHD", mode: "buy", active: true },
+          name: "VertKleen CRHD",
+          products: { sku: "crhd", name: "VertKleen CRHD", mode: "buy", active: true },
         },
       ],
     }),
@@ -90,7 +113,7 @@ test("cart accepts flattened connector variant rows", async ({ page }) => {
   });
   await page.reload({ waitUntil: "networkidle" });
 
-  await expect(page.getByText("VertKlean CRHD - 5 gal pail")).toBeVisible();
+  await expect(page.getByText("VertKleen CRHD - 5 gal pail")).toBeVisible();
   await expect(page.getByText("$125.00 each")).toBeVisible();
   await expect(page.getByRole("button", { name: "Proceed to checkout" })).toBeEnabled();
   await expect(page.getByText("$250.00")).toBeVisible();
@@ -103,8 +126,8 @@ test("cart disables direct checkout when bulk freight items are present", async 
       contentType: "application/json",
       body: JSON.stringify({
         products: [
-          { sku: "crhd", name: "VertKlean CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
-          { sku: "lam3", name: "VertKlean LAM3", mode: "quote", active: true, price: null, currency: "usd" },
+          { sku: "crhd", name: "VertKleen CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+          { sku: "lam3", name: "VertKleen LAM3", mode: "quote", active: true, price: null, currency: "usd" },
         ],
       }),
     });
@@ -126,8 +149,8 @@ test("cart disables direct checkout when bulk freight items are present", async 
   expect(quoteUrl.searchParams.get("type")).toBe("quote");
   // The dead ?cart= param was dropped; the message carries the lines.
   expect(quoteUrl.searchParams.get("cart")).toBeNull();
-  expect(quoteUrl.searchParams.get("message")).toContain("VertKlean CR HD x 1");
-  expect(quoteUrl.searchParams.get("message")).toContain("VertKlean LAM3 x 1");
+  expect(quoteUrl.searchParams.get("message")).toContain("VertKleen CR HD x 1");
+  expect(quoteUrl.searchParams.get("message")).toContain("VertKleen LAM3 x 1");
 });
 
 test("cart quote link reflects edited quantities before blur", async ({ page }) => {
@@ -137,7 +160,7 @@ test("cart quote link reflects edited quantities before blur", async ({ page }) 
       contentType: "application/json",
       body: JSON.stringify({
         products: [
-          { sku: "crhd", name: "VertKlean CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+          { sku: "crhd", name: "VertKleen CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
         ],
       }),
     });
@@ -156,7 +179,7 @@ test("cart quote link reflects edited quantities before blur", async ({ page }) 
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("cart")).toBeNull();
   expect(quoteUrl.searchParams.get("email")).toBe("buyer@example.com");
-  expect(quoteUrl.searchParams.get("message")).toContain("VertKlean CR HD x 4");
+  expect(quoteUrl.searchParams.get("message")).toContain("VertKleen CR HD x 4");
 });
 
 test("cart re-enables checkout after removing bulk freight items", async ({ page }) => {
@@ -166,8 +189,8 @@ test("cart re-enables checkout after removing bulk freight items", async ({ page
       contentType: "application/json",
       body: JSON.stringify({
         products: [
-          { sku: "crhd", name: "VertKlean CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
-          { sku: "lam3", name: "VertKlean LAM3", mode: "quote", active: true, price: null, currency: "usd" },
+          { sku: "crhd", name: "VertKleen CRHD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+          { sku: "lam3", name: "VertKleen LAM3", mode: "quote", active: true, price: null, currency: "usd" },
         ],
       }),
     });

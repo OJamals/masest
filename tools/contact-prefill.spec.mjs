@@ -37,7 +37,7 @@ test.afterAll(async () => {
 });
 
 test("contact form pre-fills quote message from cart handoff", async ({ page }) => {
-  const message = "Cart quote request: VertKlean CR-HD x 1; VertKlean LAM3 x 1.";
+  const message = "Cart quote request: VertKleen CR-HD x 1; VertKleen LAM3 x 1.";
   await page.goto(`${BASE_URL}/contact.html?type=quote&email=buyer%40example.com&message=${encodeURIComponent(message)}`, {
     waitUntil: "networkidle",
   });
@@ -53,15 +53,15 @@ test("product quote handoff lands on the visible prefilled product", async ({ pa
   await expect(page.getByRole("link", { name: "Request a Descaler sample" })).toHaveAttribute("href", /#quoteForm$/);
 
   await page.goto(
-    `${BASE_URL}/contact.html?type=quote&product=VertKlean%20Descaler#quoteForm`,
+    `${BASE_URL}/contact.html?type=quote&product=VertKleen%20Descaler#quoteForm`,
     { waitUntil: "networkidle" },
   );
 
   await expect(page.locator("#fProduct")).toBeVisible();
-  await expect(page.locator("#fProduct")).toHaveValue("VertKlean Descaler");
+  await expect(page.locator("#fProduct")).toHaveValue("VertKleen Descaler");
   await expect(page.locator(".quote-advanced-toggle")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#quoteContextSummary")).toBeVisible();
-  await expect(page.locator("#quoteContextSummary")).toContainText("Quote request for VertKlean Descaler.");
+  await expect(page.locator("#quoteContextSummary")).toContainText("Quote request for VertKleen Descaler.");
 
   const formTop = await page.locator("#quoteForm").evaluate((form) => form.getBoundingClientRect().top);
   expect(formTop).toBeGreaterThanOrEqual(0);
@@ -105,7 +105,7 @@ test("customer chat context stays visible, editable, and submits only its allowe
   ].join("\n"));
   await expect(page.locator("#fEmail")).toHaveValue("");
 
-  await page.locator("#fProduct").selectOption({ label: "VertKlean HCR" });
+  await page.locator("#fProduct").selectOption({ label: "VertKleen HCR" });
   await page.locator("#fVolume").selectOption({ label: "1-10 pails" });
   await page.locator("#fMessage").fill("Edited buyer notes.");
   await page.locator("#fName").fill("Test Buyer");
@@ -116,7 +116,7 @@ test("customer chat context stays visible, editable, and submits only its allowe
 
   expect(submittedBody).toContain('name="source"');
   expect(submittedBody).toContain("customer_chat");
-  expect(submittedBody).toContain("VertKlean HCR");
+  expect(submittedBody).toContain("VertKleen HCR");
   expect(submittedBody).toContain("1-10 pails");
   expect(submittedBody).toContain("Edited buyer notes.");
   expect(submittedBody).not.toContain("private history must not prefill");

@@ -410,7 +410,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
       <div class="foot-grid">
         <div>
           <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="/img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
-          <div class="foot-brand" translate="no">MASEST VertKlean&trade;</div>
+          <div class="foot-brand" translate="no">MASEST VertKleen&trade;</div>
           <p>Industrial cleaning candidates with current-SDS routing, controlled-trial planning, and quote support from Florida's Space Coast.</p>
         </div>
         <div class="foot-secondary">
@@ -443,7 +443,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
       </div>
       ${page === "newsletter" ? "" : `<div class="foot-news">
         <div class="foot-news-copy">
-          <div class="foot-title">VertKlean Briefing</div>
+          <div class="foot-title">VertKleen Briefing</div>
           <p>Mechanisms, field results, and practical cleaning wins. No spam. Unsubscribe anytime.</p>
         </div>
         <form class="foot-news-form" id="footNews" novalidate>
@@ -456,7 +456,7 @@ export function renderChrome({ authModule = "/js/auth.js?v=20260711w" } = {}) {
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
         <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">EULA</a></span>
-        <span translate="no">VertKlean is a trademark of MASEST Consulting LLC.</span>
+        <span translate="no">VertKleen is a trademark of MASEST Consulting LLC.</span>
       </div>
     </div>`;
   document.body.append(foot);

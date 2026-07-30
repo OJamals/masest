@@ -45,15 +45,15 @@ const tab4IndustryPages = [
 ];
 
 const comparisonPages = [
-  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKlean HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "controlled mineral-removal"],
-  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "controlled mineral removal"],
-  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
-  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "visibly cleaner hardscape"],
-  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "Brewlando"],
+  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "$21.63/gal", "CLR PRO MAX", "controlled mineral-removal"],
+  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "$21.63/gal", "$34.00-$48.60/gal", "controlled mineral removal"],
+  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Task-Cost Guide", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
+  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "$22.21/gal", "$34.00/gal", "visibly cleaner hardscape"],
+  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "$22.02/gal", "$38.85/gal", "Brewlando"],
 ];
 
 const comparisonBlogPosts = [
-  ["blog/vertkleen-hcr-vs-clr.html", "VertKlean HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "Carbonate chemistry"],
+  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "Carbonate chemistry"],
   ["blog/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "Field result"],
   ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
   ["blog/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Price by treated area"],
@@ -73,7 +73,7 @@ const industryLabelPages = [
 test("product and industry listings stay concise and product-focused", () => {
   const products = read("products.html");
   assert.match(products, /Choose chemistry by what you need to remove\./);
-  assert.doesNotMatch(products, /VertKlean covers acids, caustics, degreasers/);
+  assert.doesNotMatch(products, /VertKleen covers acids, caustics, degreasers/);
 
   for (const slug of industryLabelPages) {
     const html = read(`industries/${slug}.html`);
@@ -99,7 +99,7 @@ test("priority 2 target industry pages exist with workbook-specified products an
     const html = read(path);
     assert.match(index, new RegExp(`href="industries/${slug}"`), `${name} should be linked from industries index`);
     assert.match(sitemap, new RegExp(`https://masest\\.co/industries/${slug}`), `${name} should be in sitemap`);
-    assert.match(html, new RegExp(`<title>${name.replace(/&/g, "&amp;")} \\| MASEST VertKlean</title>`));
+    assert.match(html, new RegExp(`<title>${name.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
     assert.match(html, new RegExp(problem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(html, new RegExp(`data-ind-products="${industryProducts.get(slug)}"`), `${name} should use the canonical starting products`);
     assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${name} CTA should match the workbook`);
@@ -120,7 +120,7 @@ test("Tab 4 industry rows each have a generated landing page", () => {
 
     const html = read(path);
     assert.match(sitemap, new RegExp(`https://masest\\.co/industries/${slug}`), `${slug} should be in sitemap`);
-    assert.match(html, new RegExp(`<title>${htmlName} \\| MASEST VertKlean</title>`), `${slug} title should match Tab 4 row`);
+    assert.match(html, new RegExp(`<title>${htmlName} \\| MASEST VertKleen</title>`), `${slug} title should match Tab 4 row`);
     assert.match(html, new RegExp(problem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 problem`);
     assert.match(html, new RegExp(`data-ind-products="${industryProducts.get(slug)}"`), `${slug} should use the canonical starting products`);
     assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 CTA`);
@@ -200,13 +200,13 @@ test("industry page images route to industry pages, not proof or contact", () =>
 test("priority 2 comparison landing pages include price math, swap row, proof point, and quote CTA", () => {
   const sitemap = read("sitemap.xml");
 
-  for (const [path, title, vkMath, marketMath, proof] of comparisonPages) {
+  for (const [path, title, seoTitle, vkMath, marketMath, proof] of comparisonPages) {
     assert.equal(exists(path), true, `${path} should exist`);
     const html = read(path);
     const route = path.replace(/\.html$/, "");
     assert.match(sitemap, new RegExp(`https://masest\\.co/${route}`), `${route} should be in sitemap`);
-    assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKlean</title>`));
-    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should show VertKlean per-gallon math`);
+    assert.match(html, new RegExp(`<title>${seoTitle.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
+    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should show VertKleen per-gallon math`);
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should show competitor per-gallon math`);
     assert.match(html, /<table class="cmp-table comparison-swap-table">/, `${title} should include the swap-table row`);
     assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should include a proof point`);
@@ -227,8 +227,8 @@ test("comparison SEO pages are also generated as mechanism-first blog posts", ()
 
     const html = read(path);
     assert.match(sitemap, new RegExp(`https://masest\\.co/blog/${slug}`), `${slug} blog URL should be in sitemap`);
-    assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKlean</title>`));
-    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show VertKlean per-gallon math`);
+    assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
+    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show VertKleen per-gallon math`);
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show competitor per-gallon math`);
     assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should include a proof point`);
     assert.match(html, /href="(?:\.\.\/|\/)contact\?type=(?:quote|audit)(?:&amp;industry=)?/, `${title} blog post should include a task CTA`);

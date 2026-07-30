@@ -8,8 +8,8 @@ test("checkout connector carries buyer email and cart metadata into Stripe", () 
     email: "buyer@example.com",
     companyId: "company_123",
     sellable: [
-      { sku: "crhd-5", product_sku: "crhd", name: "VertKlean CR-HD", price: 12.5, currency: "usd", stripe_price_id: null },
-      { sku: "hcr-1", product_sku: "hcr", name: "VertKlean HCR", price: 10, currency: "usd", stripe_price_id: "price_hcr" },
+      { sku: "crhd-5", product_sku: "crhd", name: "VertKleen CR-HD", price: 12.5, currency: "usd", stripe_price_id: null },
+      { sku: "hcr-1", product_sku: "hcr", name: "VertKleen HCR", price: 10, currency: "usd", stripe_price_id: "price_hcr" },
     ],
     qtyBySku: { "crhd-5": 4, "hcr-1": 2 },
   });
@@ -31,7 +31,7 @@ test("checkout connector carries buyer email and cart metadata into Stripe", () 
       price_data: {
         currency: "usd",
         unit_amount: 1250,
-        product_data: { name: "VertKlean CR-HD", metadata: { sku: "crhd-5" } },
+        product_data: { name: "VertKleen CR-HD", metadata: { sku: "crhd-5" } },
         tax_behavior: "exclusive",
       },
     },

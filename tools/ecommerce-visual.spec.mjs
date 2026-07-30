@@ -75,7 +75,7 @@ test("product detail shows next decision without an oversized hero", async ({ pa
     body: JSON.stringify({
       products: [{
         sku: "cr-hd",
-        name: "VertKlean CRHD",
+        name: "VertKleen CRHD",
         mode: "buy",
         active: true,
         product_variants: [

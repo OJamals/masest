@@ -169,7 +169,7 @@ test("approved public evidence surfaces expose no stale verification status", ()
   }
 });
 
-test("public surfaces lead with VertKlean and limit legacy labels to powered-by attribution", () => {
+test("public surfaces use VertKleen without source-brand attribution", () => {
   const rootHtml = readdirSync(root)
     .filter((path) => path.endsWith(".html"));
   const paths = [
@@ -192,15 +192,13 @@ test("public surfaces lead with VertKlean and limit legacy labels to powered-by 
   ];
 
   for (const path of paths) {
-    const source = read(path)
-      .replace(/"source"\s*:\s*"[^"]*"/g, "")
-      .replace(/Powered by (?:SynTech \+ SynClean|SynTech|SynClean)/g, "");
-    assert.doesNotMatch(source, /SynTech|SynClean|VertKleen/, `${path}: standalone legacy vocabulary`);
+    const source = read(path).replace(/"source"\s*:\s*"[^"]*"/g, "");
+    assert.doesNotMatch(source, /SynTech|SynClean/, `${path}: source-brand vocabulary`);
   }
   const publicCopy = paths.map(read).join("\n");
-  assert.match(publicCopy, /VertKlean/);
-  assert.match(read("products/hcr.html"), /Powered by SynTech/);
-  assert.match(read("products/cr.html"), /Powered by SynClean/);
+  assert.match(publicCopy, /VertKleen/);
+  assert.doesNotMatch(read("products/hcr.html"), /SynTech|SynClean/);
+  assert.doesNotMatch(read("products/cr.html"), /SynTech|SynClean/);
 });
 
 test("proof cards expose conversion records without approval-process copy", () => {

@@ -168,15 +168,16 @@ test("known site image references compile to stable CMS storage URLs", () => {
   assert.equal(cmsPublicImageUrl("/docs/file.pdf", base), "/docs/file.pdf");
 
   const source = [
+    '<img src="img/proof/cases/brewery.webp">',
     '<img src="/img/proof/cases/brewery.webp?v=7">',
     "background:url(../img/proof/cases/brewery.webp)",
     "https://masest.co/img/proof/cases/brewery.webp",
     "/img/products/example.webp",
   ].join("\n");
   const compiled = rewriteCmsImageReferences(source, [brewery], base);
-  assert.equal(compiled.match(new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))?.length, 3);
+  assert.equal(compiled.match(new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))?.length, 4);
   assert.match(compiled, /\/img\/products\/example\.webp/);
-  assert.doesNotMatch(compiled, /(?:^|[("'=\s])(?:\.\.\/|\/)img\/proof\/cases\/brewery\.webp/m);
+  assert.doesNotMatch(compiled, /(?:^|[("'=\s])(?:\.\.\/|\/)?img\/proof\/cases\/brewery\.webp/m);
 });
 
 test("shared chrome does not prefix compiled CMS logo URLs with a page-relative root", () => {
@@ -202,4 +203,12 @@ test("image-library builder validates its ledger and verifies public CMS bytes",
   assert.match(builder, /createHash\("sha256"\)/);
   assert.match(builder, /--verify-cms/);
   assert.doesNotMatch(builder, /SUPABASE_SERVICE_ROLE_KEY|x-upsert|--sync-cms/);
+});
+
+test("local preview serves the production-compiled artifact", () => {
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(
+    pkg.scripts.serve,
+    "npm run build && python3 -m http.server 4195 --directory dist",
+  );
 });

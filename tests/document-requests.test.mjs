@@ -12,7 +12,7 @@ const staffUser = { id: "staff-1", email: "owner@example.com" };
 const requestId = "11111111-1111-4111-8111-111111111111";
 const documentRow = {
   document_id: "MAS-VK-HCR-SDS",
-  title: "VertKlean HCR Safety Data Sheet",
+  title: "VertKleen HCR Safety Data Sheet",
   document_type: "sds",
   revision: "1.0",
   storage_path: "sds/vertkleen-hcr-sds.pdf",

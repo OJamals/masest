@@ -114,7 +114,7 @@ test("P3 authority posts connect mechanisms to completed-task outcomes without u
       }
       assert.doesNotMatch(
         html,
-        /safe to discharge|guarantees? compliance|VertKlean WaterSafe60 is NSF|EPA-registered VertKlean/i,
+        /safe to discharge|guarantees? compliance|VertKleen WaterSafe60 is NSF|EPA-registered VertKleen/i,
       );
     }
   } finally {
@@ -189,7 +189,7 @@ test("buildBlog writes an index listing every post with filter data", () => {
     }
     assert.match(idx, /data-blog-filter/);
     assert.match(idx, /canonical" href="https:\/\/masest\.co\/blog"/);
-    assert.match(idx, /"brand":"VertKlean"/);
+    assert.match(idx, /"brand":"VertKleen"/);
     assert.match(idx, /"contactPoint":\{"@type":"ContactPoint","contactType":"sales","url":"https:\/\/masest\.co\/contact"\}/);
   } finally {
     rmSync(out, { recursive: true, force: true });

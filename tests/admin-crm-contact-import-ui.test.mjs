@@ -11,7 +11,7 @@ test('contacts tab offers a CSV file import control', () => {
 
 test('a change handler reads the file + posts the import action', () => {
   assert.match(src, /panel\.addEventListener\('change'/);
-  assert.match(src, /await file\.text\(\)/);
+  assert.match(src, /await imp\.files\[0\]\.text\(\)/);
   assert.match(src, /body: \{ action: 'import', company_id: subjectId, csv \}/);
   assert.match(src, /Imported \$\{res\.inserted\}, skipped \$\{res\.skipped\}/);
 });

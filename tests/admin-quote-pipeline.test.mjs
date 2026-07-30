@@ -89,13 +89,13 @@ test("admin quote inbox and drawer surface shared request details", () => {
 
   const html = requestDetailsHtml({
     payload: {
-      samples: ["VertKlean CR", "VertKlean HCR"],
+      samples: ["VertKleen CR", "VertKleen HCR"],
       current_chemical: "<script>alert(1)</script>",
       wastewater_route: "Contained and recovered",
       reopening_criteria: "Supervisor release",
     },
   });
-  assert.match(html, /VertKlean CR, VertKlean HCR/);
+  assert.match(html, /VertKleen CR, VertKleen HCR/);
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.doesNotMatch(html, /<script>/);
   assert.match(html, /Contained and recovered/);

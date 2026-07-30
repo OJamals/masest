@@ -23,7 +23,7 @@
   min-width: 0;
 }
 
-@media (min-width: 721px) {
+@media (min-width: 821px) {
   .nav-group > .nav-menu {
     min-width: 184px;
   }
@@ -53,7 +53,7 @@
   opacity: 0;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 820px) {
   /* Reserve for the floating lead bar lives on the footer so the strip
      below the last content stays the footer's dark surface, not bare body. */
   body:has(.lead-action-bar) footer {
@@ -104,10 +104,34 @@
   }
 
   .nav-links {
+    display: none;
+    position: fixed;
+    top: 66px;
     left: 12px;
     right: 12px;
     width: auto;
+    z-index: 85;
+    flex-direction: column;
+    gap: 0;
+    padding: 12px 28px 20px;
+    border-bottom: 1px solid var(--line);
+    background: #fff;
+    box-shadow: var(--shadow-md);
     transform: none;
+  }
+
+  .nav-links.open {
+    display: flex;
+  }
+
+  .nav-links a {
+    min-height: 44px;
+    padding: 12px 0;
+    font-size: 1.05rem;
+  }
+
+  .nav-burger {
+    display: block;
   }
 
   .lead-action-bar {
@@ -175,7 +199,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 820px) {
   .nav.over-dark .nav-links.open > a,
   .nav.over-dark .nav-links.open .nav-group summary,
   .nav.over-dark .nav-links.open .nav-menu a {

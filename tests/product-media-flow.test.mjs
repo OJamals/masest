@@ -24,7 +24,7 @@ async function routeProducts(page) {
     body: JSON.stringify({
       products: [{
         sku: "hcr",
-        name: "VertKlean CIP HCR",
+        name: "VertKleen CIP HCR",
         active: true,
         mode: "buy",
         price: 42,
@@ -70,10 +70,10 @@ test("product detail publishes product-specific SEO metadata", async () => {
         canonical: document.querySelector('link[rel="canonical"]')?.href || "",
       }));
 
-      assert.equal(meta.title, "VertKlean CIP HCR | MASEST VertKlean");
+      assert.equal(meta.title, "VertKleen CIP HCR | MASEST VertKleen");
       assert.match(meta.description, /Controlled mineral removal for brewery acid-wash steps/);
       assert.match(meta.description, /Target beer stone and mineral film/);
-      assert.equal(meta.ogTitle, "VertKlean CIP HCR | MASEST VertKlean");
+      assert.equal(meta.ogTitle, "VertKleen CIP HCR | MASEST VertKleen");
       assert.equal(meta.ogDescription, meta.description);
       assert.doesNotMatch(meta.description, /Replaces Replaces/);
       assert.equal(meta.ogUrl, "https://masest.co/products/hcr");

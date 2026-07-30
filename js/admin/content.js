@@ -1363,6 +1363,11 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     return blogMode ? renderBlog({ refetch }) : renderContent({ refetch });
   }
 
+  async function runContentMutation(request, onSuccess, failureMessage) {
+    try { const result = await request(); onSuccess(result); await renderActiveContent({ refetch: true }); }
+    catch (error) { setStatus(error.data?.message || error.data?.error || error.message || failureMessage, "err"); }
+  }
+
   async function saveContent({ publish = false } = {}) {
     if (stopIfLocked()) return;
     const preserveLockOwner = editorLockOwned;
@@ -1385,20 +1390,20 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (!ok) return;
     }
     setStatus(publish ? "Publishing…" : "Saving draft…");
-    try {
-      const result = await api("/api/admin/content", {
+    await runContentMutation(
+      () => api("/api/admin/content", {
         method: "POST",
         body: { publish, entry: selectedFormEntry({ validate: true }) },
-      });
-      populateForm(result.entry || {}, { preserveLockOwner });
-      setStatus(
-        publish ? publishStatusText(result) : "Draft saved.",
-        publish ? publishStatusKind(result) : "ok",
-      );
-      await renderActiveContent({ refetch: true });
-    } catch (error) {
-      setStatus(error.data?.message || error.data?.error || error.message || "Save failed.", "err");
-    }
+      }),
+      (result) => {
+        populateForm(result.entry || {}, { preserveLockOwner });
+        setStatus(
+          publish ? publishStatusText(result) : "Draft saved.",
+          publish ? publishStatusKind(result) : "ok",
+        );
+      },
+      "Save failed.",
+    );
   }
 
   async function runWorkflow(action) {
@@ -1475,17 +1480,14 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (!ok) return;
     }
     setStatus("Archiving…");
-    try {
-      const result = await api("/api/admin/content", {
+    await runContentMutation(
+      () => api("/api/admin/content", {
         method: "DELETE",
         body: { type: entry.type, slug: entry.slug, locale: entry.locale },
-      });
-      populateForm(result.entry || {}, { preserveLockOwner });
-      setStatus("Archived.", "ok");
-      await renderActiveContent({ refetch: true });
-    } catch (error) {
-      setStatus(error.data?.message || error.data?.error || error.message || "Archive failed.", "err");
-    }
+      }),
+      (result) => { populateForm(result.entry || {}, { preserveLockOwner }); setStatus("Archived.", "ok"); },
+      "Archive failed.",
+    );
   }
 
   function duplicateContent() {
@@ -1524,17 +1526,14 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       return;
     }
     setStatus("Restoring archived entry…");
-    try {
-      const result = await api("/api/admin/content", {
+    await runContentMutation(
+      () => api("/api/admin/content", {
         method: "POST",
         body: { action: "unarchive", entry },
-      });
-      populateForm(result.entry || {}, { preserveLockOwner });
-      setStatus("Restored as draft.", "ok");
-      await renderActiveContent({ refetch: true });
-    } catch (error) {
-      setStatus(error.data?.message || error.data?.error || error.message || "Restore failed.", "err");
-    }
+      }),
+      (result) => { populateForm(result.entry || {}, { preserveLockOwner }); setStatus("Restored as draft.", "ok"); },
+      "Restore failed.",
+    );
   }
 
   async function restoreRevision(version) {
@@ -1552,18 +1551,17 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       return;
     }
     setStatus(`Restoring version ${version}…`);
-    try {
-      const result = await api("/api/admin/content-revisions", {
+    await runContentMutation(
+      () => api("/api/admin/content-revisions", {
         method: "POST",
         body: { type: entry.type, slug: entry.slug, locale: entry.locale, version },
-      });
-      populateForm(result.entry || {}, { preserveLockOwner });
-      revisions.closeRevisionDiff();
-      setStatus(`Restored version ${version} as a draft.`, "ok");
-      await renderActiveContent({ refetch: true });
-    } catch (error) {
-      setStatus(error.data?.message || error.data?.error || error.message || "Restore failed.", "err");
-    }
+      }),
+      (result) => {
+        populateForm(result.entry || {}, { preserveLockOwner });
+        revisions.closeRevisionDiff(); setStatus(`Restored version ${version} as a draft.`, "ok");
+      },
+      "Restore failed.",
+    );
   }
 
   async function updateContentLock(action) {

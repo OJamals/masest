@@ -1,4 +1,4 @@
-// /api/programs/subscribe — VertKlean service programs as Stripe subscriptions.
+// /api/programs/subscribe — VertKleen service programs as Stripe subscriptions.
 //   GET            → { subscriptions: [...] } for the caller's company
 //   POST { tier }  → Stripe subscription Checkout Session for that tier → { url }
 // Tier→price mapping is the PROGRAM_PRICES env var (JSON, e.g. {"Gold":"price_123"}). If a tier

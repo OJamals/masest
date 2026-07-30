@@ -157,8 +157,8 @@ test("staff reviews a requisition workspace and sends all priced lines", async (
             requisition_name: "July plant refill",
             currency: "usd",
             items: [
-              { sku: "VK-HCR-5", product_sku: "hcr", name: "VertKlean HCR - 5 gal", qty: 2, unit_price: 45 },
-              { sku: "VK-DBNPA-1", product_sku: "dbnpa", name: "VertKlean DBNPA - 1 gal", qty: 1, unit_price: 30 },
+              { sku: "VK-HCR-5", product_sku: "hcr", name: "VertKleen HCR - 5 gal", qty: 2, unit_price: 45 },
+              { sku: "VK-DBNPA-1", product_sku: "dbnpa", name: "VertKleen DBNPA - 1 gal", qty: 1, unit_price: 30 },
             ],
             messages: [{ id: "m-1", sender_role: "buyer", body: "Need delivery by August.", created_at: "2026-07-28T12:00:00Z" }],
             documents: [{ id: "d-1", status: "approved", technical_documents: { title: "HCR SDS", document_type: "sds" } }],
@@ -211,8 +211,8 @@ test("staff reviews a requisition workspace and sends all priced lines", async (
     id: "q-req",
     action: "send_quote",
     items: [
-      { sku: "VK-HCR-5", product_sku: "hcr", name: "VertKlean HCR - 5 gal", qty: "2", unit_price: "42.50" },
-      { sku: "VK-DBNPA-1", product_sku: "dbnpa", name: "VertKlean DBNPA - 1 gal", qty: "1", unit_price: "30" },
+      { sku: "VK-HCR-5", product_sku: "hcr", name: "VertKleen HCR - 5 gal", qty: "2", unit_price: "42.50" },
+      { sku: "VK-DBNPA-1", product_sku: "dbnpa", name: "VertKleen DBNPA - 1 gal", qty: "1", unit_price: "30" },
     ],
   });
   await expect(drawer.locator("[data-drawer-status]")).toHaveText("Quote sent. Buyer can accept and check out.");

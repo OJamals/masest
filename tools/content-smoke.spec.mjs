@@ -40,7 +40,7 @@ async function bootAsStaff(page) {
   let contentAssets = [{
     storage_path: "img/proof/cases/brewery.webp",
     public_url: "img/proof/cases/brewery.webp",
-    alt: "Brewery tank cleaned with VertKlean CR and HCR",
+    alt: "Brewery tank cleaned with VertKleen CR and HCR",
     status: "available",
     credit: "MASEST field team",
   }];
@@ -149,7 +149,7 @@ async function bootAsStaff(page) {
       payload: {
         kind: "food",
         image: "img/proof/cases/brewery.webp",
-        image_alt: "Brewery tank cleaned with VertKlean CR and HCR",
+        image_alt: "Brewery tank cleaned with VertKleen CR and HCR",
         result: "Matched legacy CIP sequence.",
       },
       seo: {},
@@ -168,7 +168,9 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
   await expect(page.locator("#contentStructuredFields")).toBeVisible();
+  await page.locator('[data-content-workspace-tab="preview"]').click();
   await expect(page.locator("#contentPreviewFrame")).toBeVisible();
+  await page.locator('[data-content-workspace-tab="publish"]').click();
   await expect(page.locator("#contentRevisionList")).toBeVisible();
   await expect(page.locator("#contentWorkflowQueue")).toBeVisible();
   // Default filter is "all" so fresh drafts are never hidden from the library.
@@ -180,10 +182,10 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(page.locator("#contentManifestRows")).toContainText("service packages: 1");
 
   await page.locator("#contentWorkflowRows [data-content-edit]").first().click();
+  await page.locator('[data-content-workspace-tab="copy"]').click();
   await expect(page.locator('[data-content-payload-field="image"]')).toBeVisible();
   await page.locator('[data-content-payload-field="image_alt"]').fill("");
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
-  await expect(page.locator("#contentAssetPicker")).toBeVisible();
   let assetViewer = page.locator("dialog.shared-image-picker");
   await expect(assetViewer).toBeVisible();
   await expect(assetViewer.locator("[data-shared-image-status-filter]")).toHaveValue("available");
@@ -192,7 +194,7 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(assetOption).toBeVisible();
   await assetOption.click();
   await expect(assetViewer.locator("[data-shared-image-preview]")).toBeVisible();
-  await expect(assetViewer.locator("[data-shared-image-preview-alt]")).toHaveValue("Brewery tank cleaned with VertKlean CR and HCR");
+  await expect(assetViewer.locator("[data-shared-image-preview-alt]")).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
   await assetViewer.locator("[data-shared-image-state]").click();
   await page.locator('.confirm-dialog button[value="confirm"]').click();
   await expect(assetViewer.locator("[data-shared-image-status]")).toHaveText("Image archived.");
@@ -208,11 +210,13 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-asset-manager.png` });
   await assetViewer.locator("[data-shared-image-confirm]").click();
   await expect(page.locator('[data-content-payload-field="image"]')).toHaveValue("/img/proof/cases/brewery.webp");
-  await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Brewery tank cleaned with VertKlean CR and HCR");
+  await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Brewery tank cleaned with VertKleen CR and HCR");
 
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
   assetViewer = page.locator("dialog.shared-image-picker");
   await assetViewer.locator("[data-shared-image-cancel]").click();
+  await page.locator('[data-content-workspace-tab="images"]').click();
+  await expect(page.locator("#contentAssetPicker")).toBeVisible();
   await page.locator("#contentAssetPath").fill("img/proof/cases/registered-brewery.webp");
   await page.locator("#contentAssetPathAlt").fill("Registered brewery proof image");
   await page.locator("#contentAssetCredit").fill("MASEST archive");
@@ -221,10 +225,12 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Registered brewery proof image");
   await expect(page.locator("#contentStatus")).toHaveText("Asset registered.");
 
+  await page.locator('[data-content-workspace-tab="copy"]').click();
   await page.locator('[data-content-payload-field="image_alt"]').fill("Stale alt from prior image");
   await page.locator('[data-content-action="asset"][data-content-asset-target="image"]').click();
   assetViewer = page.locator("dialog.shared-image-picker");
   await assetViewer.locator("[data-shared-image-cancel]").click();
+  await page.locator('[data-content-workspace-tab="images"]').click();
   await page.locator("#contentAssetFile").setInputFiles({
     name: "uploaded-brewery.webp",
     mimeType: "image/webp",
@@ -236,11 +242,13 @@ test("cms editor supports preview, revision history, workflow, and asset picker"
   await expect(page.locator('[data-content-payload-field="image_alt"]')).toHaveValue("Uploaded brewery proof image");
   await expect(page.locator("#contentStatus")).toHaveText("Asset uploaded.");
 
+  await page.locator('[data-content-workspace-tab="preview"]').click();
   await page.locator('[data-content-action="preview"]').click();
   await expect(page.frameLocator("#contentPreviewFrame").locator("h1")).toContainText("Brewery CIP");
   await page.locator("#admContent").scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-desktop.png`, fullPage: true });
 
+  await page.locator('[data-content-workspace-tab="copy"]').click();
   await page.locator("#contentType").selectOption("shipping_rate");
   await expect(page.locator(".adm-content-placement")).toContainText("server-side");
   await expect(page.locator('[data-content-payload-field="stripe_rate_id"]'))

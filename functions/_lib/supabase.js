@@ -332,7 +332,7 @@ export function emailLayout({ heading = '', bodyHtml = '', ctaText, ctaUrl } = {
   <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
     <div style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
       <div style="background:#0e7c86;padding:20px 28px">
-        <span style="color:#fff;font-size:18px;font-weight:800;letter-spacing:.04em">MASEST &middot; VertKlean</span>
+        <span style="color:#fff;font-size:18px;font-weight:800;letter-spacing:.04em">MASEST &middot; VertKleen</span>
       </div>
       <div style="padding:28px;color:#223;font-size:15px;line-height:1.55">
         ${heading ? `<h1 style="margin:0 0 14px;font-size:20px;color:#15171c">${heading}</h1>` : ''}
@@ -340,7 +340,7 @@ export function emailLayout({ heading = '', bodyHtml = '', ctaText, ctaUrl } = {
         ${cta}
       </div>
       <div style="background:#0b0d12;padding:18px 28px;color:#8a93a0;font-size:11px;line-height:1.7">
-        MASEST &middot; VertKlean industrial &amp; HVAC chemistry<br>
+        MASEST &middot; VertKleen industrial &amp; HVAC chemistry<br>
         <a href="mailto:matthew@masest.co" style="color:#8a93a0">matthew@masest.co</a> &middot; (813) 406-3852
       </div>
     </div>

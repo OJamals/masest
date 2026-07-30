@@ -1,8 +1,8 @@
-# VertKlean product and service market-conversion opportunities
+# VertKleen product and service market-conversion opportunities
 
 **Date:** 2026-07-27
 **Scope:** remaining refinement opportunities after P2 conversion work and P3 case-summary, authority-article, and exact-product certification/equivalency work
-**Public brand:** VertKlean
+**Public brand:** VertKleen
 
 ## Executive decision
 
@@ -12,9 +12,9 @@ existing service catalog.
 
 Highest-value remaining sequence:
 
-1. **Differentiate high-intent product pairs**: VertKlean CIP CR vs VertKlean HVAC
-   CR; VertKlean CIP HCR vs VertKlean HVAC HCR vs VertKlean Descaler; VertKlean CR
-   HD vs VertKlean CR HD Low Foam.
+1. **Differentiate high-intent product pairs**: VertKleen CIP CR vs VertKleen HVAC
+   CR; VertKleen CIP HCR vs VertKleen HVAC HCR vs VertKleen Descaler; VertKleen CR
+   HD vs VertKleen CR HD Low Foam.
 2. **Turn generic sample CTAs into job-scoping CTAs** while preserving the existing
    quote form, five request types, API, persistence, CRM, admin, and notification
    path.
@@ -35,7 +35,7 @@ Implementation status from this pass:
 - P4.1 complete: all 15 pages now use authoritative names, distinct job scope,
   exact-product sample labels, and job-first quote actions;
 - P4.2 complete for proven mappings: exact-product authority records remain limited
-  to VertKlean CIP CR, VertKlean HVAC CR, and WaterSafe60; seven products also
+  to VertKleen CIP CR, VertKleen HVAC CR, and WaterSafe60; seven products also
   deep-link only generic-slug result summaries that match their current public job;
 - P4.3 complete: all 35 service lines and four packages use shared category
   decision copy, deliverable detail, CTA routing, and one WMP lifecycle sequence;
@@ -49,20 +49,20 @@ Implementation status from this pass:
 
 The authoritative public set is the 15 names already used in `/Products`:
 
-- VertKlean CIP CR
-- VertKlean HVAC CR
-- VertKlean CIP HCR
-- VertKlean HVAC HCR
-- VertKlean Descaler
-- VertKlean CR HD
-- VertKlean CR HD Low Foam
-- VertKlean Neutral
-- VertKlean MultiWash
-- VertKlean LAM3
+- VertKleen CIP CR
+- VertKleen HVAC CR
+- VertKleen CIP HCR
+- VertKleen HVAC HCR
+- VertKleen Descaler
+- VertKleen CR HD
+- VertKleen CR HD Low Foam
+- VertKleen Neutral
+- VertKleen MultiWash
+- VertKleen LAM3
 - Purgo
-- VertKlean AlumiBrite
-- VertKlean Torque
-- VertKlean SAR
+- VertKleen AlumiBrite
+- VertKleen Torque
+- VertKleen SAR
 - WaterSafe60
 
 Do not expand this work to CRS, DBNPA, glycols, or other catalog-only/internal
@@ -73,25 +73,25 @@ Current controlled-document and proof coverage:
 
 | Existing product | Current strong coverage | Remaining conversion gap |
 |---|---|---|
-| VertKlean CIP CR | Six controlled records; brewery results; exact source-versioned equivalency record | Lead with CIP job conditions and completed-cycle economics; deep-link approved brewery and exact-product records |
-| VertKlean HVAC CR | One controlled user guide; exact source-versioned equivalency record | Public CTA says “CR2” although authoritative public name is VertKlean HVAC CR; explain HVAC/drain job boundary and use public name in CTA |
-| VertKlean CIP HCR | Seven controlled records; brewery, rust, and pool-filter results | Distinguish brewery CIP from HVAC HCR and Descaler; ask for scale type, metallurgy, loop volume, and endpoint |
-| VertKlean HVAC HCR | Product page and packshot; HCR-family context | No exact T16/HVAC HCR controlled record found in current ledger; avoid transferring CIP HCR claims and build a bulk-HVAC scope request |
-| VertKlean Descaler | Four controlled records; fire-system and AC-coil result summaries | Clarify when buyer should choose Descaler instead of either HCR product |
-| VertKlean CR HD | Four controlled records; kitchen, distribution, and equipment summaries | Convert broad degreaser positioning into soil loading, passes, rinse, downtime, and wash-water questions |
-| VertKlean CR HD Low Foam | Public page; reused CR HD packshot | No exact Low Foam controlled record, distinct image, or direct result summary found; prove machine/foam distinction before expanding claims |
-| VertKlean Neutral | Three controlled records | No current public result summary; focus on substrate, finish, seal, and test-patch decision rather than broad “safe for” language |
-| VertKlean MultiWash | Three controlled records; exterior/drone-wash summary | Broad job set risks “one cleaner for everything”; separate facility-floor, pressure-wash, and mixed-soil entry points |
-| VertKlean LAM3 | Four controlled records; property-surface summary | Add substrate/stain/weather/runoff questions; avoid universal exterior or landscape claims |
+| VertKleen CIP CR | Six controlled records; brewery results; exact source-versioned equivalency record | Lead with CIP job conditions and completed-cycle economics; deep-link approved brewery and exact-product records |
+| VertKleen HVAC CR | One controlled user guide; exact source-versioned equivalency record | Public CTA says “CR2” although authoritative public name is VertKleen HVAC CR; explain HVAC/drain job boundary and use public name in CTA |
+| VertKleen CIP HCR | Seven controlled records; brewery, rust, and pool-filter results | Distinguish brewery CIP from HVAC HCR and Descaler; ask for scale type, metallurgy, loop volume, and endpoint |
+| VertKleen HVAC HCR | Product page and packshot; HCR-family context | No exact T16/HVAC HCR controlled record found in current ledger; avoid transferring CIP HCR claims and build a bulk-HVAC scope request |
+| VertKleen Descaler | Four controlled records; fire-system and AC-coil result summaries | Clarify when buyer should choose Descaler instead of either HCR product |
+| VertKleen CR HD | Four controlled records; kitchen, distribution, and equipment summaries | Convert broad degreaser positioning into soil loading, passes, rinse, downtime, and wash-water questions |
+| VertKleen CR HD Low Foam | Public page; reused CR HD packshot | No exact Low Foam controlled record, distinct image, or direct result summary found; prove machine/foam distinction before expanding claims |
+| VertKleen Neutral | Three controlled records | No current public result summary; focus on substrate, finish, seal, and test-patch decision rather than broad “safe for” language |
+| VertKleen MultiWash | Three controlled records; exterior/drone-wash summary | Broad job set risks “one cleaner for everything”; separate facility-floor, pressure-wash, and mixed-soil entry points |
+| VertKleen LAM3 | Four controlled records; property-surface summary | Add substrate/stain/weather/runoff questions; avoid universal exterior or landscape claims |
 | Purgo | Six controlled records including technical tests | No current public result summary; antimicrobial wording is regulated and must remain exact-label bounded |
-| VertKlean AlumiBrite | Packshot; approved marine result summary | No exact controlled SKU record found; keep conversion around aluminum type, finish, test patch, and contained wash |
-| VertKlean Torque | Three controlled records; approved vessel-wash summary | Replace branded-vessel/customer implications with generic documented vessel-wash context |
-| VertKlean SAR | Three controlled records | Positioning remains too abstract; require deposit, metallurgy, sample/coupon, and procedure before promising fit |
+| VertKleen AlumiBrite | Packshot; approved marine result summary | No exact controlled SKU record found; keep conversion around aluminum type, finish, test patch, and contained wash |
+| VertKleen Torque | Three controlled records; approved vessel-wash summary | Replace branded-vessel/customer implications with generic documented vessel-wash context |
+| VertKleen SAR | Three controlled records | Positioning remains too abstract; require deposit, metallurgy, sample/coupon, and procedure before promising fit |
 | WaterSafe60 | Five controlled records; exact source-versioned NSF/ANSI/CAN 60 record | Strongest authority opportunity; keep certification limited to listed functions/use levels and connect it to system-specific water-program review |
 
-VertKlean CIP CR, VertKlean HVAC CR, and WaterSafe60 receive direct exact-product
-authority links. VertKlean CIP CR, VertKlean CIP HCR, VertKlean Descaler, VertKlean
-CR HD, VertKlean LAM3, VertKlean AlumiBrite, and VertKlean Torque also receive only
+VertKleen CIP CR, VertKleen HVAC CR, and WaterSafe60 receive direct exact-product
+authority links. VertKleen CIP CR, VertKleen CIP HCR, VertKleen Descaler, VertKleen
+CR HD, VertKleen LAM3, VertKleen AlumiBrite, and VertKleen Torque also receive only
 their scope-matched generic-slug result links. HVAC HCR, CR HD Low Foam, Neutral,
 MultiWash, Purgo, SAR, and every other unmapped variant remain unlinked rather than
 inheriting family proof.
@@ -104,7 +104,7 @@ That is good catalog coverage, not complete sales coverage.
 Remaining visual gaps:
 
 - every product page uses one packshot as its only product-specific visual;
-- VertKlean CR HD Low Foam reuses the VertKlean CR HD image and has no distinct
+- VertKleen CR HD Low Foam reuses the VertKleen CR HD image and has no distinct
   Low Foam asset;
 - several alternate CR HD and MultiWash label renders exist but do not show the
   buying job or method;
@@ -121,7 +121,7 @@ Never generate a before/after result and present it as evidence.
 
 #### Mineral-removal family
 
-**Products:** VertKlean CIP HCR, VertKlean HVAC HCR, VertKlean Descaler, VertKlean
+**Products:** VertKleen CIP HCR, VertKleen HVAC HCR, VertKleen Descaler, VertKleen
 SAR.
 
 Buyer problem: all four can currently read as versions of “scale remover.” The page
@@ -150,8 +150,8 @@ Recommended CTA routing:
 
 #### Alkaline/soil-lift family
 
-**Products:** VertKlean CIP CR, VertKlean HVAC CR, VertKlean CR HD, VertKlean CR HD
-Low Foam, VertKlean Neutral, VertKlean MultiWash.
+**Products:** VertKleen CIP CR, VertKleen HVAC CR, VertKleen CR HD, VertKleen CR HD
+Low Foam, VertKleen Neutral, VertKleen MultiWash.
 
 Buyer problem: “organic soil,” “degreasing,” and “mixed soil” overlap. Differentiate
 by process:
@@ -439,7 +439,7 @@ method; final PPE remains controlled by the exact SDS and site procedure.
 
 | Priority | Scope | Generation brief | Required exclusions |
 |---|---|---|---|
-| P0 | VertKlean CR HD Low Foam | Premium industrial photo of a parked automatic floor scrubber or enclosed parts washer staged for a controlled trial; low, controlled suds visible through recovery window; generic labeled container staged outside splash zone; clean machine-room lighting | No people; no ordinary CR HD packshot reuse; no unattended moving equipment; no “zero foam”; no performance numbers |
+| P0 | VertKleen CR HD Low Foam | Premium industrial photo of a parked automatic floor scrubber or enclosed parts washer staged for a controlled trial; low, controlled suds visible through recovery window; generic labeled container staged outside splash zone; clean machine-room lighting | No people; no ordinary CR HD packshot reuse; no unattended moving equipment; no “zero foam”; no performance numbers |
 | P0 | CIP CR + CIP HCR | Unoccupied stainless sanitary CIP skid, tank, pump, closed hoses, flow path, and unreadable cycle screen; product containers secondary; distinct alkaline and mineral-cycle visual variants | No people, food contact, open tank entry, customer logo, sanitizer/disinfectant implication, or FDA/3-A mark |
 | P0 | HVAC HCR + Descaler | Isolated plate heat exchanger or coil-cleaning loop with lockout tag, containment tub, hoses, sample jar, and metallurgy coupon | No live electrical work, open pressurized system, universal material-compatibility claim, or dramatic fabricated result |
 | P0 | Services: deposit analysis | Unoccupied technical bench with labeled generic deposit sample, pipe section, caliper, neutral photo scale, and chain-of-custody sheet with unreadable placeholder text | No people, fabricated lab result, accreditation seal, customer identity, or “certified” report |
@@ -491,7 +491,7 @@ and CMS path; generated imagery remains separate from proof.
 
 1. **P4.1 — product differentiation and CTA cleanup — complete**
    - replace overlapping copy inside current canonical product data;
-   - rename public “CR2” CTA to VertKlean HVAC CR;
+   - rename public “CR2” CTA to VertKleen HVAC CR;
    - replace eight generic “Request free sample” labels with job-specific actions;
    - preserve all existing quote behavior.
 2. **P4.2 — controlled proof adjacency — complete for proven mappings**

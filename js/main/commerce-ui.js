@@ -411,8 +411,8 @@ export function catalogCard(id, eager = false) {
   const group = CATALOG_GROUPS.find((g) => g.ids.includes(id));
   const media = mediaInfo.src
     ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} ${imageDimsAttr(mediaInfo.src)}>`
-    : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKlean line"}</span></span>`;
-  const type = p.cat === "glycol" ? "VertKlean Glycols" : (copy.job || "Industrial chemistry");
+    : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
+  const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial chemistry");
   const quoteFirst = QUOTE_FIRST_IDS.includes(id);
   const buybar = quoteFirst
     ? quoteActionHTML(id)
@@ -490,6 +490,8 @@ export function initShop() {
   const emptyEl = document.getElementById("shopEmpty");
   const emptyContact = document.getElementById("shopEmptyContact");
   const searchEl = document.getElementById("shopSearch");
+  const moreButton = document.getElementById("shopMore");
+  const moreCount = moreButton?.querySelector("[data-shop-more-count]");
   grid.addEventListener("click", e => {
     const button = e.target.closest("[data-cart-add]");
     if (!button) return;
@@ -499,7 +501,7 @@ export function initShop() {
   });
 
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
-  const state = { group: "all", sort: "featured", search: "" };
+  const state = { group: "all", sort: "featured", search: "", expanded: false };
 
   const chips = [{ key: "all", label: "All products" }, ...CATALOG_GROUPS.map((g) => ({ key: g.key, label: g.label }))];
   chipsBox.innerHTML = chips
@@ -543,15 +545,23 @@ export function initShop() {
 
   const apply = () => {
     const ids = visibleIds();
+    const canCollapse = state.group === "all" && !state.search && ids.length > 6;
+    const collapsed = canCollapse && !state.expanded;
     grid.innerHTML = ids.map((id, index) => catalogCard(id, index < 2)).join("");
+    grid.classList.toggle("is-collapsed", collapsed);
+    if (moreButton) moreButton.hidden = !collapsed;
+    if (moreCount) moreCount.textContent = String(Math.max(0, ids.length - 6));
     refreshCommerceActions(grid);
-    if (countEl) countEl.textContent = `Showing ${ids.length} of ${CATALOG_ORDER.length}`;
+    if (countEl) {
+      const shown = collapsed && matchMedia("(max-width: 560px)").matches ? 6 : ids.length;
+      countEl.textContent = `Showing ${shown} of ${CATALOG_ORDER.length}`;
+    }
     if (emptyEl) emptyEl.hidden = ids.length > 0;
     if (emptyContact) {
       const query = searchEl?.value.trim() || "";
       const message = query
-        ? `I need to replace or clean: ${query}. Please recommend the closest VertKlean fit.`
-        : "Please recommend a VertKlean product for my current chemical or cleaning job.";
+        ? `I need to replace or clean: ${query}. Please recommend the closest VertKleen fit.`
+        : "Please recommend a VertKleen product for my current chemical or cleaning job.";
       emptyContact.href = `/contact?type=audit&message=${encodeURIComponent(message)}#quoteForm`;
     }
   };
@@ -561,6 +571,7 @@ export function initShop() {
     state.search = "";
     if (searchEl) searchEl.value = "";
     state.sort = "featured";
+    state.expanded = false;
     if (sortSel) sortSel.value = "featured";
     syncChips();
     apply();
@@ -570,17 +581,25 @@ export function initShop() {
     const btn = e.target.closest(".shop-chip");
     if (!btn) return;
     state.group = btn.dataset.group;
+    state.expanded = false;
     syncChips();
     apply();
   });
 
   sortSel?.addEventListener("change", () => {
     state.sort = sortSel.value;
+    state.expanded = false;
     apply();
   });
 
   searchEl?.addEventListener("input", () => {
     state.search = searchEl.value.trim().toLowerCase();
+    state.expanded = false;
+    apply();
+  });
+
+  moreButton?.addEventListener("click", () => {
+    state.expanded = true;
     apply();
   });
 

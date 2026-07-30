@@ -138,13 +138,13 @@ test("quote item normalization preserves an existing product SKU", () => {
   assert.deepEqual(buildConvertItems([{
     sku: "VK-HCR-5",
     product_sku: "hcr",
-    name: "VertKlean HCR - 5 gal",
+    name: "VertKleen HCR - 5 gal",
     qty: 2,
     unit_price: 45,
   }]).items[0], {
     sku: "VK-HCR-5",
     product_sku: "hcr",
-    name: "VertKlean HCR - 5 gal",
+    name: "VertKleen HCR - 5 gal",
     qty: 2,
     unit_price: 45,
     line_total: 90,

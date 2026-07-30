@@ -63,7 +63,7 @@ export async function onRequest({ request, env }) {
         subject: 'You’re invited to a MASEST business account',
         html: emailLayout({
           heading: 'You’re invited',
-          bodyHtml: `<p>You’ve been invited to join a MASEST VertKlean business account.</p><p>Create your account with <b>this email address</b> to join automatically.</p>`,
+          bodyHtml: `<p>You’ve been invited to join a MASEST VertKleen business account.</p><p>Create your account with <b>this email address</b> to join automatically.</p>`,
           ctaText: 'Open your account', ctaUrl: `${appUrl}/account.html`,
         }),
         category: 'team',

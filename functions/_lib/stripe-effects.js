@@ -470,7 +470,7 @@ function notificationFromEffect(effectRow) {
         company_id: payload.company_id,
         type: 'account',
         title: `${payload.tier || 'Program'} program active`,
-        body: 'Your VertKlean service program is now active.',
+        body: 'Your VertKleen service program is now active.',
         link: '/dashboard.html#business',
       };
     case 'order_received':

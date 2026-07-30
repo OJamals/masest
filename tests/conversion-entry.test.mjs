@@ -64,8 +64,8 @@ test("animated homepage copy keeps stable accessible names", () => {
     home,
     /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial cleaning power, engineered around people and equipment\.<\/h1>/,
   );
-  assert.match(home, /aria-label="Shop VertKlean by cleaning job"/);
-  assert.match(home, /aria-label="Plan a VertKlean field trial"/);
+  assert.match(home, /aria-label="Shop VertKleen by cleaning job"/);
+  assert.match(home, /aria-label="Plan a VertKleen field trial"/);
   assert.doesNotMatch(home, /starting candidate|trial candidate|Candidate only after|path to approval/i);
   assert.match(home, /React, complex, rinse/);
   assert.match(home, /Completed-task cost/);
@@ -80,7 +80,7 @@ test("CIP pricing label stays consistent across entry, detail, and resource surf
   const segment = segments.segments.find((item) => item.slug === "cip-food-beverage");
 
   assert.match(products, />CIP pricing<\/a>/);
-  assert.match(pricing, /<title>CIP Pricing \| MASEST VertKlean<\/title>/);
+  assert.match(pricing, /<title>CIP Pricing \| MASEST VertKleen<\/title>/);
   assert.match(pricing, /<h1 class="display">Build the cleaning cycle around the soil\.<\/h1>/);
   assert.equal(segment?.title, "CIP pricing");
   assert.match(
@@ -144,7 +144,7 @@ test("support routes use task-first science copy without changing destinations",
 
 test("every public product replaces the generic sample CTA with an exact-product label", () => {
   for (const id of CATALOG_ORDER) {
-    const publicName = PRODUCTS[id].name.replace(/^VertKlean /, "");
+    const publicName = PRODUCTS[id].name.replace(/^VertKleen /, "");
     const cta = PRODUCT_CATALOG_COPY[id]?.sample_cta;
     assert.ok(cta, `${id} needs an exact-product sample CTA`);
     assert.ok(cta.includes(publicName), `${id} sample CTA must use public name "${publicName}"`);
@@ -163,7 +163,7 @@ test("public content generators preserve current SEO releases", () => {
   const blogBuilder = read("tools/build-blog.mjs");
   const comparisonBuilder = read("tools/gen_comparisons.mjs");
 
-  assert.match(blogBuilder, /brand: "VertKlean"/);
+  assert.match(blogBuilder, /brand: "VertKleen"/);
   assert.match(blogBuilder, /if \(!missing\.length\) return 0;/);
   assert.match(blogBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);
   assert.match(comparisonBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);

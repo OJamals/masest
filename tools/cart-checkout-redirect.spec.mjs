@@ -24,7 +24,7 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
     contentType: "application/json",
     body: JSON.stringify({
       products: [
-        { sku: "crhd", name: "VertKlean CR-HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+        { sku: "crhd", name: "VertKleen CR-HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
       ],
     }),
   }));
@@ -107,7 +107,7 @@ test("approved business NET checkout posts the cart payload with auth and clears
     contentType: "application/json",
     body: JSON.stringify({
       products: [
-        { sku: "crhd", name: "VertKlean CR-HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+        { sku: "crhd", name: "VertKleen CR-HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
       ],
     }),
   }));
