@@ -698,7 +698,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     refreshStats?.(); // approve/reject/suspend changes the pending count → refresh the nav badge
   }
 
-  let businessQueueRequestId = 0;
+  let businessQueueRequestId = 0, accountDataRequestId = 0;
 
   async function renderBusinessQueue({ append = false, refetch = true } = {}) {
     const box = $('admCompanies');
@@ -932,11 +932,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
 
   async function loadAccountData({ refetch = true, append = false } = {}) {
     if (!refetch && state.loaded.has('acctUsers') && (state.companies || []).length) return;
+    const requestId = ++accountDataRequestId;
     const userOffset = append ? (state.acctUsers || []).length : 0;
     const [usersRes, companiesRes] = await Promise.all([
       refetch || !state.loaded.has('acctUsers') ? api(`/api/admin/users?limit=${ACCOUNT_USER_PAGE_SIZE}&offset=${userOffset}`) : Promise.resolve({ users: state.acctUsers || [] }),
       refetch || !(state.companies || []).length ? api('/api/admin/companies?limit=500') : Promise.resolve({ companies: state.companies || [] }),
     ]);
+    if (requestId !== accountDataRequestId || state.acctView !== 'users') return;
     state.acctUsers = append ? [...(state.acctUsers || []), ...(usersRes.users || [])] : (usersRes.users || []);
     state.acctUsersTotal = usersRes.total ?? state.acctUsers.length;
     state.acctUsersHasMore = !!usersRes.has_more;
