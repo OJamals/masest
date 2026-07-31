@@ -783,10 +783,11 @@ function fileLastModified(file) {
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
     if (!dirty) {
-      lastmod = execFileSync("git", ["log", "-1", "--format=%cs", "--", file], {
+      const committedAt = execFileSync("git", ["log", "-1", "--format=%cI", "--", file], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
       }).trim();
+      if (committedAt) lastmod = new Date(committedAt).toISOString().slice(0, 10);
     }
   } catch {
     // Source archives and local previews may not include Git metadata.
