@@ -241,14 +241,15 @@ async function renderOverview() {
   const ord = ordRes.orders || [];
   // True company-wide total (the endpoint count), not just the size of the fetched page.
   const totalOrders = Number.isFinite(ordRes.total) && ordRes.total > 0 ? ordRes.total : ord.length;
+  const activeOrders = Number.isFinite(ordRes.active_total) ? ordRes.active_total : 0;
   setBadge('badgeNotifs', notif.unread);
   stats.innerHTML = [
     ['ph-package', totalOrders, 'Total orders'],
-    ['ph-truck', ordRes.active_total, 'In progress'],
+    ['ph-truck', activeOrders, 'In progress'],
     ['ph-bell', notif.unread, 'Unread alerts'],
   ].map(([i, n, l]) => `<div class="stat"><div class="big-fig">${n}</div><div class="lbl"><i class="ph ${i}" aria-hidden="true"></i> ${l}</div></div>`).join('');
   renderSetupProgress();
-  await renderOverviewActivity(ord, notif, ordRes.active_total);
+  await renderOverviewActivity(ord, notif, activeOrders);
 }
 
 function renderSetupProgress() {

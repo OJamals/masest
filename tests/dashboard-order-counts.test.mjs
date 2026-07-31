@@ -24,8 +24,9 @@ test('dashboard overview uses the true total and excludes terminal/refunded/cart
   const src = read('js/dashboard.js');
   assert.match(src, /\['ph-package', totalOrders, 'Total orders'\]/);
   assert.match(src, /fetchOrders\(\{ limit: 5, summary: true \}\)/);
-  assert.match(src, /\['ph-truck', ordRes\.active_total, 'In progress'\]/);
-  assert.match(src, /renderOverviewActivity\(ord, notif, ordRes\.active_total\)/);
+  assert.match(src, /const activeOrders = Number\.isFinite\(ordRes\.active_total\) \? ordRes\.active_total : 0/);
+  assert.match(src, /\['ph-truck', activeOrders, 'In progress'\]/);
+  assert.match(src, /renderOverviewActivity\(ord, notif, activeOrders\)/);
   // The headline figure must no longer be the size of the capped first page.
   assert.doesNotMatch(src, /\['ph-package', ord\.length, 'Total orders'\]/);
   assert.doesNotMatch(src, /const openOrders = ord\.filter/, "overview must not infer a company aggregate from one page");

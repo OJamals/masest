@@ -4942,6 +4942,8 @@ body .page-hero .product-shot {
   }
 
   .shop-chips {
+    min-width: 0;
+    width: 100%;
     overflow-x: auto;
     flex-wrap: nowrap;
     padding-bottom: 4px;

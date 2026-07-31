@@ -84,6 +84,25 @@ test("mobile catalog starts concise and expands without hiding search results", 
   await expect(page.locator("#shopGrid .shop-card:visible")).toHaveCount(1);
 });
 
+test("mobile catalog filters stay inside the page width", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/products.html#catalog`, { waitUntil: "domcontentloaded" });
+
+  const layout = await page.locator(".shop-chips").evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    return {
+      viewport: document.documentElement.clientWidth,
+      body: document.body.scrollWidth,
+      left: rect.left,
+      right: rect.right,
+    };
+  });
+
+  expect(layout.body).toBeLessThanOrEqual(layout.viewport);
+  expect(layout.left).toBeGreaterThanOrEqual(0);
+  expect(layout.right).toBeLessThanOrEqual(layout.viewport);
+});
+
 test("shared chrome keeps one skip link after hydration", async ({ page }) => {
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
