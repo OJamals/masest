@@ -126,15 +126,6 @@ export function refreshRichTextEditor(editor) {
   return true;
 }
 
-function closestEditor(target) {
-  return target?.closest?.("[data-rich-editor-key]");
-}
-
-function selectedText() {
-  const selection = window.getSelection?.();
-  return selection ? selection.toString() : "";
-}
-
 function selectedRange(surface, fallbackRange) {
   const selection = window.getSelection?.();
   if (selection?.rangeCount) {
