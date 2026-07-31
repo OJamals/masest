@@ -7,15 +7,15 @@ import {
   safeContentHref,
 } from "../js/main/content-snapshots.js";
 
-test("browser snapshot mounts derive delivery metadata from the registry", () => {
+test("browser content mounts derive snapshot and runtime delivery metadata from the registry", () => {
   const mounts = contentSnapshotMounts();
-  assert.deepEqual(mounts.map(({ type, file, key }) => ({ type, file, key })), [
-    { type: "proof_card", file: "proof.json", key: "proof_cards" },
-    { type: "resource_card", file: "resources.json", key: "resource_cards" },
-    { type: "industry_sector", file: "industry-sectors.json", key: "industry_sectors" },
-    { type: "faq_block", file: "faqs.json", key: "faq_blocks" },
-    { type: "page_section", file: "page-sections.json", key: "page_sections" },
-    { type: "pricing_tier", file: "pricing.json", key: "pricing_tiers" },
+  assert.deepEqual(mounts.map(({ type, file, endpoint, key }) => ({ type, file, endpoint, key })), [
+    { type: "proof_card", file: "proof.json", endpoint: null, key: "proof_cards" },
+    { type: "resource_card", file: "resources.json", endpoint: null, key: "resource_cards" },
+    { type: "industry_sector", file: "industry-sectors.json", endpoint: null, key: "industry_sectors" },
+    { type: "faq_block", file: "faqs.json", endpoint: null, key: "faq_blocks" },
+    { type: "page_section", file: "page-sections.json", endpoint: null, key: "page_sections" },
+    { type: "pricing_tier", file: null, endpoint: "/api/pricing", key: "pricing_tiers" },
   ]);
   assert.ok(mounts.every(({ renderer }) => typeof renderer === "function"));
 });
@@ -25,7 +25,7 @@ test("public content snapshot helper loads optional CMS snapshots", () => {
   assert.match(source, /loadContentSnapshot/);
   assert.match(source, /fetch\(`\/data\/content\/\$\{file\}`/, "snapshot fetches must be root-relative for extensionless product detail pages");
   assert.match(source, /browserContentDeliveries\(\)/, "snapshot filenames should come from the shared delivery registry");
-  assert.match(source, /loadContentSnapshot\(file\)/);
+  assert.match(source, /mounts\.map\(loadContentSnapshot\)/);
   assert.doesNotMatch(source, /const MOUNTS/);
 });
 
@@ -41,11 +41,11 @@ test("public pages expose CMS mount points without replacing hardcoded fallback 
   }
 });
 
-test("programs pricing tiers mount as a CMS-replaceable region over hardcoded fallback", () => {
+test("programs pricing tiers mount as a CMS-only region without static fallback", () => {
   const html = readFileSync(new URL("../programs.html", import.meta.url), "utf8");
   assert.match(html, /data-cms-content="pricing_tiers"/, "programs.html must mount the pricing_tiers snapshot");
-  assert.match(html, /data-cms-render="replace"/, "CMS tiers should replace the hardcoded fallback when present");
-  assert.match(html, /class="tier-card/, "hardcoded tier cards must remain as fallback");
+  assert.match(html, /data-cms-render="replace"/, "CMS tiers own the region");
+  assert.doesNotMatch(html, /class="tier-card/, "program tiers must not duplicate CMS values");
 });
 
 test("industries sector rows mount as a CMS-replaceable region over hardcoded fallback", () => {

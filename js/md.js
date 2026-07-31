@@ -37,6 +37,11 @@ function inline(src) {
     `<span data-md-size="${size}" style="font-size:${size}px">${text}</span>`);
   s = s.replace(/\[\[color:(#[0-9a-fA-F]{3,6})\|([^\]]+)\]\]/g, (_m, color, text) =>
     `<span data-md-color="${color}" style="color:${color}">${text}</span>`);
+  s = s.replace(
+    /\[\[price:([A-Za-z0-9.-]+)\|(retail|hvac)\|(unit|per_gallon)\]\]/g,
+    (_m, vsku, tier, field) =>
+      `<span data-price-vsku="${vsku.toUpperCase()}" data-price-tier="${tier}" data-price-field="${field}"></span>`,
+  );
   return s;
 }
 

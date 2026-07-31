@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -12,6 +12,7 @@ const PORT = Number(process.env.VISUAL_AUDIT_PORT || 4317);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const AUDIT_LABEL = process.env.VISUAL_AUDIT_LABEL || new Date().toISOString().slice(0, 10);
 const OUT_DIR = path.resolve(ROOT_PATH, "audits", `visual-qa-${AUDIT_LABEL}`);
+const CATALOG = JSON.parse(await readFile(new URL("data/catalog.seed.json", ROOT), "utf8"));
 
 const VIEWPORTS = {
   desktop: { width: 1440, height: 1000 },
@@ -23,14 +24,22 @@ const PUBLIC_STEPS = [
   ["home", "/index.html"],
   ["products", "/products.html"],
   ["product-detail", "/products/hcr.html"],
+  ["pricing-hvac-facilities", "/pricing-hvac-facilities.html"],
+  ["pricing-cip-food-beverage", "/pricing-cip-food-beverage.html"],
   ["services", "/services.html"],
   ["programs", "/programs.html"],
   ["proof", "/proof.html"],
   ["resources", "/resources.html"],
+  ["resources-pricing-expanded", "/resources.html"],
   ["blog", "/blog.html"],
   ["blog-detail-descaling", "/blog/descaling-without-acid.html"],
   ["blog-detail-hmis", "/blog/hmis-000-explained.html"],
   ["blog-detail-launch", "/blog/vertkleen-launch.html"],
+  ["blog-detail-beer-line", "/blog/beer-line-cleaner-cost-comparison.html"],
+  ["blog-detail-crhd-simple-green", "/blog/cr-hd-vs-simple-green.html"],
+  ["blog-detail-hcr-rydlyme", "/blog/hcr-vs-rydlyme.html"],
+  ["blog-detail-lam3-wet-forget", "/blog/lam3-vs-wet-forget.html"],
+  ["blog-detail-hcr-clr", "/blog/vertkleen-hcr-vs-clr.html"],
   ["industries", "/industries.html"],
   ["industry-detail", "/industries/plumbing.html"],
   ["comparison-beer-line", "/comparisons/beer-line-cleaner-cost-comparison.html"],
@@ -52,10 +61,52 @@ const AUTH_STEPS = [
   ["dashboard-business", "/dashboard.html#business"],
   ["dashboard-addresses", "/dashboard.html#addresses"],
   ["dashboard-profile", "/dashboard.html#profile"],
-  ...["overview", "analytics", "finance", "integrations", "orders", "companies", "products",
-    "content", "blog", "support-settings", "quotes", "reviews", "newsletter", "crm"]
+  ...["overview", "analytics", "finance", "integrations", "orders", "companies", "products"]
+    .map((panel) => [`admin-${panel}`, `/admin.html#${panel}`]),
+  ["admin-pricing", "/admin.html#pricing"],
+  ...["content", "blog", "support-settings", "quotes", "reviews", "newsletter", "crm"]
     .map((panel) => [`admin-${panel}`, `/admin.html#${panel}`]),
 ];
+
+function pricingFixtures() {
+  const productNames = new Map(CATALOG.products.map((product) => [product.slug, product.name]));
+  const variants = CATALOG.product_variants.map((variant, index) => {
+    const retail = Math.round((24 + index * 3.17) * 100) / 100;
+    return {
+      vsku: variant.sku,
+      product_sku: variant.product_slug,
+      product_name: productNames.get(variant.product_slug),
+      label: variant.label,
+      gallons: variant.size_gal,
+      active: variant.active,
+      tiers: {
+        retail,
+        hvac: Math.round(retail * 0.9 * 100) / 100,
+      },
+    };
+  });
+  const services = [...CATALOG.services, ...CATALOG.service_packages].map((service, index) => ({
+    sku: service.sku,
+    name: service.name,
+    category: service.category,
+    unit: service.unit,
+    public_price: 165 + index * 85,
+    mode: service.mode,
+  }));
+  const pricing_tiers = [
+    { slug: "managed-starter", title: "Managed Starter", name: "Managed Starter", badge: "Starter", audience: "Single-site pilots", price: "$420-780", price_unit: "/ mo", annual: "$5K-9.4K / yr", features: ["VertKleen core line", "Quarterly audit"], replaces: "Replaces commodity programs", cta: "Quote Starter", href: "contact?type=quote", sort_order: 1, active: true, version: 2 },
+    { slug: "managed-pro", title: "Managed Pro", name: "Managed Pro", badge: "Pro · Most chosen", audience: "Districts and hospitals", price: "$1,400-3,200", price_unit: "/ mo", annual: "$16.8K-38K / yr", features: ["Everything in Starter", "Glycol management", "WMP support"], replaces: "Displaces legacy programs", cta: "Quote Pro", href: "contact?type=quote", featured: true, sort_order: 2, active: true, version: 2 },
+    { slug: "managed-enterprise", title: "Managed Enterprise", name: "Managed Enterprise", badge: "Enterprise", audience: "Multi-site portfolios", price: "$3,800-7,200", price_unit: "/ mo", annual: "$45.6K-86.4K / yr", features: ["Portfolio reporting", "Site audits", "Priority response"], replaces: "Replaces fragmented vendors", cta: "Quote Enterprise", href: "contact?type=quote", sort_order: 3, active: true, version: 2 },
+    { slug: "program-custom", title: "Custom Program", name: "Custom Program", badge: "Custom", audience: "Complex operating scopes", price: "Quoted scope", price_unit: "", annual: "Annual terms quoted", features: ["Custom chemistry map", "Implementation plan", "Executive reporting"], replaces: "Consolidates custom scopes", cta: "Design a program", href: "contact?type=quote", sort_order: 4, active: true, version: 2 },
+  ];
+  return {
+    generated_at: "2026-07-31T12:00:00.000Z",
+    currency: "usd",
+    variants,
+    services,
+    pricing_tiers,
+  };
+}
 
 function serviceFixtures() {
   return [
@@ -142,6 +193,7 @@ function catalogFixtures() {
 function authModule() {
   const now = "2026-07-06T18:30:00Z";
   const productsPayload = catalogFixtures();
+  const pricingPayload = pricingFixtures();
   const fixtures = {
     account: {
       email: "operations.buyer@acme-industrial.example",
@@ -162,6 +214,7 @@ function authModule() {
       can_admin: true,
     },
     productsPayload,
+    pricingPayload,
     orders: [
       {
         id: "ord-1001-long-reference",
@@ -291,7 +344,27 @@ export async function api(path, options = {}) {
   if (pathname.startsWith("/api/admin/orders")) return { orders: fixtures.orders, total: fixtures.orders.length, has_more: false };
   if (pathname.startsWith("/api/admin/companies")) return { companies: fixtures.companies, total: fixtures.companies.length, has_more: false };
   if (pathname.startsWith("/api/admin/customers")) return { customers: fixtures.contacts };
-  if (pathname.startsWith("/api/admin/variant-pricing")) return { variants: [] };
+  if (pathname.startsWith("/api/admin/variant-pricing")) return {
+    tiers: ["retail", "hvac", "wholesale"],
+    rows: fixtures.pricingPayload.variants.map((variant) => ({
+      ...variant,
+      mode: "buy",
+      base_price: variant.tiers.retail,
+      currency: "usd",
+      tiers: {
+        ...variant.tiers,
+        wholesale: Math.round(variant.tiers.retail * 0.8 * 100) / 100,
+      },
+    })),
+    services: fixtures.pricingPayload.services,
+    programs: fixtures.pricingPayload.pricing_tiers.map((program) => ({
+      slug: program.slug,
+      title: program.title,
+      version: program.version,
+      price: program.price,
+      annual: program.annual,
+    })),
+  };
   if (pathname.startsWith("/api/admin/coupons")) return { coupons: [{ code: "SUMMERPROCURE", percent_off: 10, max_redemptions: 50, expires_at: "2026-09-01" }] };
   if (pathname.startsWith("/api/admin/messages")) return { threads: [{ id: "t-1", subject: "Emergency condenser loop", company: fixtures.companies[0].name }], messages: fixtures.messages };
   if (pathname.startsWith("/api/admin/quotes/report")) return { count: 1, value: 12800, by_stage: { proposal: 1 }, weighted: 8960 };
@@ -372,6 +445,22 @@ async function newContext(browser, viewport, authenticated) {
     contentType: "application/json",
     body: JSON.stringify({ services: serviceFixtures() }),
   }));
+  await context.route("**/api/pricing", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(pricingFixtures()),
+  }));
+  await context.route("**/api/reviews**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      ok: true,
+      stats: { avg: 0, count: 0, dist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } },
+      reviews: [],
+      page: 1,
+      hasMore: false,
+    }),
+  }));
   await context.route("**/api/products**", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -388,12 +477,34 @@ async function waitForStable(page, stepName) {
     await page.waitForSelector(`.dash-panel[data-panel="${panel}"]:not([hidden])`, { timeout: 10000 });
   }
   if (stepName.startsWith("admin-")) {
-    const panel = stepName.replace("admin-", "");
+    const panel = stepName === "admin-pricing" ? "products" : stepName.replace("admin-", "");
     await page.waitForSelector(`.adm-panel[data-panel="${panel}"][data-active="true"]`, { timeout: 10000 });
+  }
+  if (stepName === "admin-pricing") {
+    await page.waitForSelector('[data-price-resource="variant"]', { timeout: 10000 });
+    await page.waitForSelector('[data-price-resource="service"]', { timeout: 10000 });
+    await page.waitForSelector('[data-price-resource="program"]', { timeout: 10000 });
   }
   if (stepName === "services") {
     await page.waitForSelector("[data-service-sku]", { timeout: 10000 }).catch(() => {});
   }
+  if (stepName === "programs") {
+    await page.waitForSelector(".tier-card", { timeout: 10000 });
+  }
+  if (stepName === "resources" || stepName === "resources-pricing-expanded") {
+    await page.waitForSelector("[data-variant-price-table] tbody tr", { state: "attached", timeout: 10000 });
+  }
+  if (stepName === "resources-pricing-expanded") {
+    await page.locator("details.resources-reference-disclosure > summary").click();
+    await page.waitForSelector("[data-variant-price-table] tbody tr", { state: "visible", timeout: 10000 });
+  }
+  if (stepName.startsWith("pricing-")) {
+    await page.waitForSelector("[data-segment-pricing-row]", { timeout: 10000 });
+  }
+  await page.waitForFunction(() => {
+    const bindings = [...document.querySelectorAll("[data-price-field]")];
+    return bindings.every((binding) => /^\$/.test(binding.textContent.trim()));
+  }, null, { timeout: 10000 }).catch(() => {});
   await page.evaluate(() => {
     document.querySelectorAll("img").forEach((image) => {
       image.loading = "eager";
@@ -517,18 +628,96 @@ function auditScript() {
     }
   }
 
+  for (const binding of [...document.querySelectorAll("[data-price-field]")].filter(visible)) {
+    if (!/^\$/.test(binding.textContent.trim())) {
+      issues.push({ type: "pricing-unresolved", selector: labelFor(binding), detail: "runtime price did not render" });
+    }
+  }
+  for (const table of [...document.querySelectorAll("[data-variant-price-table]")].filter(visible)) {
+    if (!table.querySelector("tbody tr")) {
+      issues.push({ type: "pricing-table-empty", selector: labelFor(table), detail: "runtime pricing table has no rows" });
+    }
+  }
+
+  for (const image of [...document.querySelectorAll("img")].filter(visible)) {
+    if (!image.hasAttribute("alt")) {
+      issues.push({ type: "image-missing-alt", selector: labelFor(image), detail: "visible image has no alt attribute" });
+    }
+  }
+
+  const interactiveElements = [...document.querySelectorAll("a[href], button, input, select, textarea, summary")].filter(visible);
+  for (const control of interactiveElements) {
+    const labelledBy = control.getAttribute("aria-labelledby");
+    const labelText = labelledBy
+      ? labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || "").join(" ")
+      : "";
+    const explicitLabel = control.id ? document.querySelector(`label[for="${CSS.escape(control.id)}"]`)?.textContent || "" : "";
+    const wrappingLabel = control.closest("label")?.textContent || "";
+    const imageAlt = control.querySelector("img[alt]")?.getAttribute("alt") || "";
+    const name = [
+      control.getAttribute("aria-label"),
+      labelText,
+      explicitLabel,
+      wrappingLabel,
+      control.getAttribute("title"),
+      control.getAttribute("alt"),
+      imageAlt,
+      control.textContent,
+      control.value && control.matches('input[type="button"], input[type="submit"]') ? control.value : "",
+    ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    if (!name && control.getAttribute("aria-hidden") !== "true") {
+      issues.push({ type: "control-missing-name", selector: labelFor(control), detail: "visible interactive control has no accessible name" });
+    }
+  }
+
+  const visibleH1s = [...document.querySelectorAll("h1")].filter(visible);
+  if (visibleH1s.length !== 1) {
+    issues.push({ type: "h1-count", selector: "document", detail: `${visibleH1s.length} visible h1 elements` });
+  }
+
   return issues.slice(0, 80);
 }
 
 async function captureStep(context, mode, [name, url], authenticated) {
   const page = await context.newPage();
+  const runtimeIssues = [];
+  page.on("console", (message) => {
+    if (!["error", "warning"].includes(message.type())) return;
+    runtimeIssues.push({
+      type: `console-${message.type()}`,
+      selector: "console",
+      detail: message.text().slice(0, 240),
+    });
+  });
+  page.on("pageerror", (error) => {
+    runtimeIssues.push({
+      type: "page-error",
+      selector: "window",
+      detail: String(error.message || error).slice(0, 240),
+    });
+  });
+  page.on("requestfailed", (request) => {
+    runtimeIssues.push({
+      type: "request-failed",
+      selector: request.method(),
+      detail: `${request.url()} - ${request.failure()?.errorText || "failed"}`.slice(0, 240),
+    });
+  });
+  page.on("response", (response) => {
+    if (response.status() < 400 || !response.url().startsWith(BASE_URL)) return;
+    runtimeIssues.push({
+      type: "http-error",
+      selector: String(response.status()),
+      detail: response.url().slice(0, 240),
+    });
+  });
   try {
     await page.goto(`${BASE_URL}${url}`, { waitUntil: "domcontentloaded" });
     await waitForStable(page, name);
     const screenshotPath = path.join(OUT_DIR, mode, `${String(authenticated ? "auth" : "public")}-${name}.png`);
     await mkdir(path.dirname(screenshotPath), { recursive: true });
     await page.screenshot({ path: screenshotPath, fullPage: true, animations: "disabled", caret: "hide" });
-    const issues = await page.evaluate(auditScript);
+    const issues = [...await page.evaluate(auditScript), ...runtimeIssues].slice(0, 80);
     return {
       mode,
       name,

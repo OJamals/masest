@@ -119,7 +119,7 @@ test("public copy names VertKleen only and excludes non-toxic wording", () => {
   assert.deepEqual(offenders, []);
 });
 
-test("product schema includes SKU identity and every buyable CR HD offer", () => {
+test("product schema includes SKU identity without stale static offers", () => {
   for (const file of fs.readdirSync(path.join(root, "products")).filter((name) => name.endsWith(".html"))) {
     const html = read(`products/${file}`);
     const blocks = [...html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
@@ -127,7 +127,7 @@ test("product schema includes SKU identity and every buyable CR HD offer", () =>
     const nodes = blocks.flatMap((block) => block["@graph"] || [block]);
     const schema = nodes.find((node) => node["@type"] === "Product");
     assert.match(schema?.sku || "", /^VK-/, `products/${file}: product sku`);
-    if (file === "crhd.html") assert.equal(schema?.offers?.length, 3, "CR HD offers");
+    assert.equal(schema?.offers, undefined, `products/${file}: static offers`);
   }
 });
 

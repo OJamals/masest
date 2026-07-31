@@ -20,6 +20,7 @@ import {
 import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260730a";
 import { initDataVisualizations } from "./main/data-visuals.js";
 import { initContentSnapshots } from "./main/content-snapshots.js?v=20260730a";
+import { initPricingBindings } from "./main/pricing-data.js?v=20260730a";
 
 window.MASESTMain = {
   initReveal,
@@ -41,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!isLocalStaticCommerceSuppressed()) loadCommerceCatalog().then(() => refreshCommerceActions(document));
   initShop();
   initServiceCatalog();
+  initPricingBindings();
   // Run the proof-coverage viz AFTER the CMS snapshot inject resolves so it counts
   // the live [data-proof-card] set, not the pre-injection fallback DOM.
   Promise.resolve(initContentSnapshots()).finally(() => { initDataVisualizations(); });

@@ -5,8 +5,7 @@ import { CATALOG_ORDER } from "../js/main/catalog-data.js";
 
 const readSite = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const catalog = () => JSON.parse(readSite("data/catalog.seed.json"));
-const drumPricing = () => JSON.parse(readSite("data/drum-pricing.json"));
-const CONFIRMED_WORKBOOK_PRODUCTS = [
+const CATALOG_PRODUCTS = [
   "cr",
   "cr2",
   "hcr",
@@ -23,7 +22,7 @@ const CONFIRMED_WORKBOOK_PRODUCTS = [
   "sar",
   "watersafe60",
 ];
-const CONFIRMED_WORKBOOK_SERVICES = [
+const SERVICE_NAMES = [
   "Raw Water - Standard Analysis",
   "Tower Water - Standard + Bio Counts",
   "Chill Water - Standard + Bio Counts",
@@ -60,45 +59,44 @@ const CONFIRMED_WORKBOOK_SERVICES = [
   "Plan Renewal (annual)",
   "Monthly Dashboard Access",
 ];
-const CONFIRMED_WORKBOOK_SERVICE_PACKAGES = [
+const SERVICE_PACKAGE_NAMES = [
   "Initial Sampling Visit Package",
   "Water Management Plan Setup (annual)",
   "Quarterly Audit",
   "Yearly Recertification",
 ];
 
-test("canonical catalog carries the confirmed July 2026 workbook products and variants", () => {
+test("canonical catalog carries product and variant metadata without prices", () => {
   const data = catalog();
   assert.equal(data.products.length, 15);
   assert.equal(data.product_variants.length, 66);
-  assert.deepEqual(data.products.map((product) => product.slug), CONFIRMED_WORKBOOK_PRODUCTS);
+  assert.deepEqual(data.products.map((product) => product.slug), CATALOG_PRODUCTS);
   assert.equal(data.products.find((product) => product.slug === "multiwash")?.name, "VertKleen MultiWash");
 
   const hcrTrial = data.product_variants.find((v) => v.sku === "VK-HCR-1G");
   assert.equal(hcrTrial.product_slug, "hcr");
-  assert.equal(hcrTrial.retail_price, "21.63");
   assert.equal(hcrTrial.active, true);
   assert.equal(hcrTrial.requires_quote, false);
 
   const watersafeTrial = data.product_variants.find((v) => v.sku === "VK-WS60-1G");
-  assert.equal(watersafeTrial.retail_price, "16.88");
   assert.equal(watersafeTrial.active, true);
   assert.equal(watersafeTrial.requires_quote, false);
 
   const hcrTote = data.product_variants.find((v) => v.sku === "VK-HCR-275G");
-  assert.equal(hcrTote.retail_price, "3443.34");
   assert.equal(hcrTote.active, false);
   assert.equal(hcrTote.requires_quote, true);
 
   const hcrT16Jug = data.product_variants.find((v) => v.sku === "VK-HCR-T16-1G");
-  assert.equal(hcrT16Jug.retail_price, "21.71");
   assert.equal(hcrT16Jug.active, true);
   assert.equal(hcrT16Jug.requires_quote, false);
 
   const descalerTrial = data.product_variants.find((v) => v.sku === "VK-DESC-1G");
-  assert.equal(descalerTrial.retail_price, "15.03");
   assert.equal(descalerTrial.active, true);
   assert.equal(descalerTrial.requires_quote, false);
+  const retiredFields = ["retail_price", "price_per_gallon", "currency", "notes", "source"];
+  assert.ok(data.product_variants.every((variant) => (
+    retiredFields.every((field) => !(field in variant))
+  )));
 });
 
 test("product catalog policy: confirmed small packs are buyable and drums/totes quote-routed", () => {
@@ -115,7 +113,6 @@ test("product catalog policy: confirmed small packs are buyable and drums/totes 
     assert.ok(small.length > 0, `${product.slug} should have small-pack variants`);
     assert.equal(product.mode, "buy", `${product.slug} should be buyable in small packs`);
     assert.ok(small.every((v) => v.active === true), `${product.slug} small packs should be active`);
-    assert.ok(small.every((v) => Number(v.retail_price) > 0), `${product.slug} small packs should be priced`);
     assert.ok(small.every((v) => v.requires_quote === false), `${product.slug} small packs should not require quote`);
   }
 
@@ -129,10 +126,10 @@ test("canonical catalog carries quote-confirmed services and unique SKUs", () =>
   const data = catalog();
   assert.equal(data.services.length, 35);
   assert.equal(data.service_packages.length, 4);
-  assert.deepEqual(data.services.map((service) => service.name), CONFIRMED_WORKBOOK_SERVICES);
+  assert.deepEqual(data.services.map((service) => service.name), SERVICE_NAMES);
   assert.deepEqual(
     data.service_packages.map((servicePackage) => servicePackage.name),
-    CONFIRMED_WORKBOOK_SERVICE_PACKAGES,
+    SERVICE_PACKAGE_NAMES,
   );
 
   const allServices = [...data.services, ...data.service_packages];
@@ -145,8 +142,8 @@ test("canonical catalog carries quote-confirmed services and unique SKUs", () =>
   }
 
   const legionella = data.services.find((s) => s.sku === "MS-LAB-BIO-LEGIONELLA-FULL-CULTURE-SPECIE-ID");
-  assert.equal(legionella.public_price, "421.43");
   assert.equal(legionella.mode, "quote_service");
+  assert.ok(allServices.every((service) => !("public_price" in service)));
 });
 
 test("Water Management Plan services carry one explicit lifecycle sequence", () => {
@@ -189,28 +186,19 @@ test("public service data preserves canonical deliverables and lifecycle metadat
   );
 });
 
-test("Supabase seed SQL imports buyable and quote-review variant state", () => {
+test("Supabase seed SQL imports metadata without changing CMS prices", () => {
   const seed = readSite("supabase/variants_seed.sql");
   assert.match(seed, /delete from public\.product_variants where vsku not in/, "variant seed should purge stale DB variants");
-  assert.match(seed, /delete from public\.price_tiers where vsku not in/, "variant seed should purge stale tier cells for removed variants");
-  assert.match(seed, /insert into public\.price_tiers \(vsku, tier, price, currency\)/, "variant seed should refresh retail tier prices");
-  assert.match(seed, /on conflict \(vsku, tier\) do update set/, "retail tier prices should update when workbook prices change");
-  assert.match(seed, /'VK-HCR-1G','hcr','1 gal jug',1,21\.63,true,1/);
-  assert.match(seed, /'VK-WS60-1G','watersafe60','1 gal jug',1,16\.88,true,1/);
-  assert.match(seed, /'VK-CR2-1G','cr2','1 gal jug',1,18\.25,true,1/);
-  assert.match(seed, /'VK-SAR-1G','sar','1 gal jug',1,15\.13,true,1/);
+  assert.doesNotMatch(seed, /price_tiers|retail_price|public_price/);
+  assert.match(seed, /'VK-HCR-1G','hcr','1 gal jug',1,true,1/);
+  assert.match(seed, /'VK-WS60-1G','watersafe60','1 gal jug',1,true,1/);
+  assert.match(seed, /'VK-CR2-1G','cr2','1 gal jug',1,true,1/);
+  assert.match(seed, /'VK-SAR-1G','sar','1 gal jug',1,true,1/);
   assert.doesNotMatch(seed, /VK-PG100|VK-EG5050/);
-  assert.match(seed, /'VK-HCR-275G','hcr','275 gal tote',275,3443\.34,false,5/);
+  assert.match(seed, /'VK-HCR-275G','hcr','275 gal tote',275,false,5/);
 });
 
-test("public drum pricing includes confirmed products while all bulk remains quote-routed", () => {
-  const pricing = drumPricing();
-  assert.equal(pricing.watersafe60[0].label, "55 gal drum");
-  assert.equal(pricing.cr2[0].label, "55 gal drum");
-  assert.equal(pricing.sar[0].label, "55 gal drum");
-});
-
-test("segment pricing uses current public workbook rows and quote footers", () => {
+test("segment pricing keeps membership and copy without static prices", () => {
   const data = JSON.parse(readSite("data/segment-pricing.json"));
   assert.equal(
     data.volume_discount,
@@ -223,12 +211,12 @@ test("segment pricing uses current public workbook rows and quote footers", () =
 
   const hvac = data.segments.find((segment) => segment.slug === "hvac-facilities");
   const row = (sku) => hvac.rows.find((item) => item.sku === sku);
-  assert.equal(row("VK-HCR-2.5G").price_per_unit, "61.80");
-  assert.equal(row("VK-CR-2.5G").price_per_unit, "55.05");
-  assert.equal(row("VK-CRHD-55G").price_per_gallon, "6.40");
-  assert.equal(row("VK-CRHD-55G").price_per_unit, "352.28");
-  assert.equal(row("VK-PRG-2.5G").price_per_unit, "53.73");
-  assert.equal(row("VK-PRG-2.5G").price_per_gallon, "21.49");
+  assert.equal(row("VK-HCR-2.5G").pack, "2.5 gal jug");
+  assert.equal(row("VK-CRHD-55G").quote_only, true);
+  assert.ok(data.segments.flatMap((segment) => segment.rows).every((item) => (
+    !("price_per_unit" in item) && !("price_per_gallon" in item)
+  )));
+  assert.equal(data.segments.flatMap((segment) => segment.rows).some((item) => item.sku === "VK-MW-1400G"), false);
 
   const resourcesHtml = readSite("resources.html");
   assert.doesNotMatch(resourcesHtml, /HCR \$43\.26|CR \$38\.53|CR HD \$23\.57|\$58\.61/);
@@ -258,8 +246,7 @@ test("seed script imports products, variants, and services from canonical catalo
   assert.match(script, /\['product_variants', variants, 'vsku'\]/);
   assert.match(script, /\['services', services, 'sku'\]/);
   assert.match(script, /deleteStaleRows\('product_variants', 'vsku', currentVariants\)/);
-  assert.match(script, /deleteStaleRows\('price_tiers', 'vsku', currentVariants, \{ optional: true \}\)/);
-  assert.match(script, /syncRetailPriceTiers\(\)/);
+  assert.doesNotMatch(script, /price_tiers|retail_price|public_price:\s*s\.public_price/);
 });
 
 test("raw tier-pricing table is not publicly readable", () => {
@@ -275,11 +262,11 @@ test("public catalog excludes non-canonical program aliases", () => {
   assert.equal(data.products.length, 15);
   assert.ok(!slugs.includes("crs"), "CRS needs owner confirmation before public ecommerce listing");
   assert.ok(!slugs.includes("dbnpa"), "DBNPA stays a program component, not canonical parent SKU");
-  assert.ok(!slugs.includes("pg100"), "PG/EG glycol products are not in the confirmed July 2026 website price list");
-  assert.ok(!slugs.includes("eg5050"), "PG/EG glycol products are not in the confirmed July 2026 website price list");
+  assert.ok(!slugs.includes("pg100"), "PG/EG glycol products are not in the canonical catalog");
+  assert.ok(!slugs.includes("eg5050"), "PG/EG glycol products are not in the canonical catalog");
 });
 
-test("legacy non-workbook product routes are not published as static product pages", () => {
+test("legacy non-catalog product routes are not published as static product pages", () => {
   const legacy = ["crs", "dbnpa", "pg100", "pg50", "eg100", "eg50", "egu96", "eg5050"];
   const sitemap = readSite("sitemap.xml");
   for (const slug of legacy) {
@@ -304,7 +291,6 @@ test("site copy respects documentation claim guardrails", () => {
     readSite("blog/cr-hd-vs-simple-green.html"),
     readSite("data/catalog.seed.json"),
     readSite("data/segment-pricing.json"),
-    readSite("data/content/pricing.json"),
     readSite("data/content/industry-sectors.json"),
     readSite("data/content/blog.json"),
     readSite("data/content/proof.json"),
@@ -316,7 +302,6 @@ test("site copy respects documentation claim guardrails", () => {
     readSite("programs.html"),
     readSite("tools/gen_comparisons.mjs"),
     readSite("tools/gen_industries.mjs"),
-    readSite("supabase/seed-pricing-tiers.sql"),
     readSite("supabase/seed-industry-sectors.sql"),
   ].join("\n");
   const publicClaimCopy = `${publicMarketingCopy}\n${resourcesHtml}\n${productHtml}`;

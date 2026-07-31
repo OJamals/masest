@@ -45,19 +45,19 @@ const tab4IndustryPages = [
 ];
 
 const comparisonPages = [
-  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "$21.63/gal", "CLR PRO MAX", "controlled mineral-removal"],
-  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "$21.63/gal", "$34.00-$48.60/gal", "controlled mineral removal"],
-  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Task-Cost Guide", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
-  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "$22.21/gal", "$34.00/gal", "visibly cleaner hardscape"],
-  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "$22.02/gal", "$38.85/gal", "Brewlando"],
+  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "VK-HCR-5G", "CLR PRO MAX", "controlled mineral-removal"],
+  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "VK-HCR-5G", "$34.00-$48.60/gal", "controlled mineral removal"],
+  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Task-Cost Guide", "VK-CRHD-5G", "$13.20-$36.80/gal", "cost per completed task"],
+  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "VK-LAM3-5G", "$34.00/gal", "visibly cleaner hardscape"],
+  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "VK-CR-2.5G", "$38.85/gal", "Brewlando"],
 ];
 
 const comparisonBlogPosts = [
-  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "$21.63/gal", "CLR PRO MAX", "Carbonate chemistry"],
-  ["blog/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "$21.63/gal", "$34.00-$48.60/gal", "Field result"],
-  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "$10.61/gal", "$13.20-$36.80/gal", "cost per completed task"],
-  ["blog/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "$22.21/gal", "$34.00/gal", "Price by treated area"],
-  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "$22.02/gal", "$38.85/gal", "completed-cycle cost"],
+  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VK-HCR-5G", "CLR PRO MAX", "Carbonate chemistry"],
+  ["blog/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "VK-HCR-5G", "$34.00-$48.60/gal", "Field result"],
+  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "VK-CRHD-5G", "$13.20-$36.80/gal", "cost per completed task"],
+  ["blog/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "VK-LAM3-5G", "$34.00/gal", "Price by treated area"],
+  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VK-CR-2.5G", "$38.85/gal", "completed-cycle cost"],
 ];
 
 const industryLabelPages = [
@@ -206,7 +206,7 @@ test("priority 2 comparison landing pages include price math, swap row, proof po
     const route = path.replace(/\.html$/, "");
     assert.match(sitemap, new RegExp(`https://masest\\.co/${route}`), `${route} should be in sitemap`);
     assert.match(html, new RegExp(`<title>${seoTitle.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
-    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should show VertKleen per-gallon math`);
+    assert.match(html, new RegExp(`data-price-vsku="${vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `${title} should bind VertKleen pricing`);
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should show competitor per-gallon math`);
     assert.match(html, /<table class="cmp-table comparison-swap-table">/, `${title} should include the swap-table row`);
     assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} should include a proof point`);
@@ -228,20 +228,19 @@ test("comparison SEO pages are also generated as mechanism-first blog posts", ()
     const html = read(path);
     assert.match(sitemap, new RegExp(`https://masest\\.co/blog/${slug}`), `${slug} blog URL should be in sitemap`);
     assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
-    assert.match(html, new RegExp(vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show VertKleen per-gallon math`);
+    assert.match(html, new RegExp(`data-price-vsku="${vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `${title} blog post should bind VertKleen pricing`);
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show competitor per-gallon math`);
     assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should include a proof point`);
     assert.match(html, /href="(?:\.\.\/|\/)contact\?type=(?:quote|audit)(?:&amp;industry=)?/, `${title} blog post should include a task CTA`);
   }
 });
 
-test("CIP pricing route is backed by the full Tab 3 row set", () => {
+test("CIP pricing route keeps canonical membership without static values", () => {
   const data = JSON.parse(read("data/segment-pricing.json"));
   const cip = data.segments.find((segment) => segment.slug === "cip-food-beverage");
   assert.ok(cip, "CIP pricing segment should exist");
-  assert.equal(cip.rows.length, 31, "CIP Tab 3 has 31 public rows");
-  assert.equal(cip.rows.find((row) => row.sku === "VK-CR-1G")?.price_per_unit, "22.02");
-  assert.equal(cip.rows.find((row) => row.sku === "VK-HCR-2.5G")?.price_per_unit, "61.80");
-  assert.equal(cip.rows.find((row) => row.sku === "VK-CRHD-55G")?.price_per_gallon, "6.40");
-  assert.equal(cip.rows.find((row) => row.sku === "VK-PRG-2.5G")?.price_per_unit, "53.73");
+  assert.equal(cip.rows.length, 30);
+  assert.ok(cip.rows.some((row) => row.sku === "VK-CR-1G"));
+  assert.ok(cip.rows.some((row) => row.sku === "VK-HCR-2.5G"));
+  assert.ok(cip.rows.every((row) => !("price_per_unit" in row) && !("price_per_gallon" in row)));
 });

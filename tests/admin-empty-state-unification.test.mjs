@@ -6,8 +6,12 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 
 test("admin list empties use the shared admEmpty primitive, not ad-hoc <p class=muted>", () => {
   const pricing = read("js/admin/pricing.js");
-  assert.match(pricing, /admEmpty\('ph-[a-z-]+', q \? 'No matching variants' : 'No variants'/, "pricing should use a search-aware admEmpty");
-  assert.doesNotMatch(pricing, /<p class="muted"[^>]*>No variants/, "pricing should drop the hand-rolled no-variants empty");
+  assert.match(
+    pricing,
+    /admEmpty\(\s*'ph-[a-z-]+',\s*q \? 'No matching prices' : 'No pricing records'/,
+    "pricing should use a search-aware admEmpty for every managed price type",
+  );
+  assert.doesNotMatch(pricing, /<p class="muted"[^>]*>No (?:variants|pricing records)/, "pricing should drop hand-rolled empties");
 
   const threads = read("js/admin/threads.js");
   assert.match(threads, /admEmpty\('ph-[a-z-]+', 'No conversations'/, "threads should use admEmpty");

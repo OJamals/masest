@@ -1,8 +1,10 @@
-// Admin tier-pricing verification matrix.
-// GET  /api/admin/variant-pricing → every variant + its price_tiers cells.
-// POST is intentionally rejected: the pricing workbook + seed command own writes.
-import { requireStaff, adminClient, json } from '../../_lib/supabase.js';
-import { staffCanWrite } from '../../_lib/authz.js';
+// Unified CMS pricing workspace.
+// Existing commerce/content tables remain canonical; this route is their one
+// staff-facing write boundary.
+import { requireStaff, adminClient, json, readBody } from '../../_lib/supabase.js';
+import { staffCan, staffCanWrite } from '../../_lib/authz.js';
+import { createContentRepository } from '../../_lib/content.js';
+import { normalizePricingUpdate } from '../../_lib/pricing.js';
 
 const TIERS = ['retail', 'hvac', 'wholesale'];
 
@@ -19,11 +21,23 @@ export async function onRequest({ request, env }) {
       .order('product_sku', { ascending: true })
       .order('sort', { ascending: true });
     if (error) return json(500, { error: error.message });
-    const { data: cells, error: tErr } = await sb.from('price_tiers').select('vsku,tier,price');
-    if (tErr) return json(500, { error: tErr.message });
+    const [cellsResult, servicesResult, programsResult] = await Promise.all([
+      sb.from('price_tiers').select('vsku,tier,price'),
+      sb
+        .from('services')
+        .select('sku,name,category,unit,public_price,mode,active')
+        .order('sku', { ascending: true }),
+      sb
+        .from('content_entries')
+        .select('slug,title,payload,status,version')
+        .eq('type', 'pricing_tier')
+        .eq('status', 'published'),
+    ]);
+    const readError = cellsResult.error || servicesResult.error || programsResult.error;
+    if (readError) return json(500, { error: readError.message });
 
     const byVsku = {};
-    for (const c of cells || []) { (byVsku[c.vsku] ||= {})[c.tier] = Number(c.price); }
+    for (const c of cellsResult.data || []) { (byVsku[c.vsku] ||= {})[c.tier] = Number(c.price); }
     const rows = (variants || []).map((v) => ({
       vsku: v.vsku,
       product_sku: v.product_sku,
@@ -35,14 +49,78 @@ export async function onRequest({ request, env }) {
       active: v.active,
       tiers: TIERS.reduce((o, t) => { o[t] = byVsku[v.vsku]?.[t] ?? null; return o; }, {}),
     }));
-    return json(200, { tiers: TIERS, rows });
+    const services = (servicesResult.data || []).map((service) => ({
+      ...service,
+      public_price: service.public_price == null ? null : Number(service.public_price),
+    }));
+    const programs = (programsResult.data || []).map((program) => ({
+      slug: program.slug,
+      title: program.title,
+      status: program.status,
+      version: Number(program.version || 0),
+      price: program.payload?.price || '',
+      annual: program.payload?.annual || '',
+    }));
+    return json(200, { tiers: TIERS, rows, services, programs });
   }
 
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
-    return json(409, {
-      error: 'price_workbook_managed',
-      message: 'Prices are managed by VertKleen_Website_Pricing_WebDev.xlsx. Reflect approved workbook changes in the catalog seed data and run npm run seed.',
+    if (!staffCan(role, 'product.write')) {
+      return json(403, { error: 'forbidden', message: 'Editing pricing requires owner access.' });
+    }
+
+    let update;
+    try {
+      update = normalizePricingUpdate(await readBody(request));
+    } catch (error) {
+      return json(400, { error: error.message || 'invalid_pricing_update' });
+    }
+
+    if (update.resource === 'variant') {
+      const { error } = await sb.rpc('set_variant_pricing', {
+        p_vsku: update.vsku,
+        p_tiers: update.tiers,
+      });
+      if (error?.code === 'P0002') return json(404, { error: 'variant_not_found' });
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true, resource: update.resource, vsku: update.vsku });
+    }
+
+    if (update.resource === 'service') {
+      const { data, error } = await sb
+        .from('services')
+        .update({ public_price: update.public_price })
+        .eq('sku', update.sku)
+        .select('sku')
+        .maybeSingle();
+      if (error) return json(500, { error: error.message });
+      if (!data) return json(404, { error: 'service_not_found' });
+      return json(200, { ok: true, resource: update.resource, sku: update.sku });
+    }
+
+    const repository = createContentRepository(sb);
+    const current = await repository.get({ type: 'pricing_tier', slug: update.slug });
+    if (!current) return json(404, { error: 'program_not_found' });
+    const saved = await repository.saveEntry(
+      {
+        ...current,
+        payload: {
+          ...(current.payload || {}),
+          price: update.price,
+          annual: update.annual,
+        },
+      },
+      user.id,
+      'Pricing updated from unified Pricing workspace',
+      { expectedVersion: update.expected_version ?? current.version },
+    );
+    if (!saved.ok) return json(409, saved);
+    return json(200, {
+      ok: true,
+      resource: update.resource,
+      slug: update.slug,
+      version: Number(saved.entry.version || 0),
     });
   }
 

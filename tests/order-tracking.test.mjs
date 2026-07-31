@@ -68,6 +68,10 @@ test("staff console surfaces tracking controls on each order", () => {
   assert.match(ADMIN_JS, /data-track-number/);
   assert.match(ADMIN_JS, /data-track-url/);
   assert.match(ADMIN_JS, /data-track-eta/);
+  assert.match(ADMIN_JS, /data-track-status="\$\{id\}"[^>]+aria-label="Tracking status for order \$\{id\}"/);
+  assert.match(ADMIN_JS, /data-track-carrier="\$\{id\}"[^>]+aria-label="Carrier for order \$\{id\}"/);
+  assert.match(ADMIN_JS, /data-track-number="\$\{id\}"[^>]+aria-label="Tracking number for order \$\{id\}"/);
+  assert.match(ADMIN_JS, /data-track-url="\$\{id\}"[^>]+aria-label="Tracking URL for order \$\{id\}"/);
   assert.match(ADMIN_JS, /action:\s*['"]update_tracking['"]/);
 });
 

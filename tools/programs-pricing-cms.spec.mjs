@@ -1,7 +1,5 @@
-// Contract spec for the pricing_tier CMS type: programs.html mounts
-// data-cms-content="pricing_tiers" (replace mode) over the hardcoded tier cards.
-// A published snapshot replaces the fallback; an empty/missing snapshot leaves the
-// hardcoded tiers untouched. Mirrors the static-server harness used by content-smoke.
+// Contract spec for runtime pricing_tier delivery. programs.html renders only rows
+// returned by /api/pricing; no static program-price fallback exists.
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { once } from "node:events";
@@ -37,21 +35,19 @@ const PRICING = {
   ],
 };
 
-test("published pricing_tiers replace the hardcoded fallback tiers on programs.html", async ({ page }) => {
+test("published pricing_tiers render from the live pricing API on programs.html", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
-  await page.route("**/data/content/pricing.json", (route) => route.fulfill({
+  await page.route("**/api/pricing", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify(PRICING),
   }));
   await page.goto(`${BASE_URL}/programs.html`, { waitUntil: "networkidle" });
 
   const grid = page.locator('.tier-grid[data-cms-content="pricing_tiers"]');
   await expect(grid).toBeVisible();
-  // CMS tiers rendered…
   await expect(grid.locator(".tier-card")).toHaveCount(2);
   await expect(grid.getByText("Managed Pro")).toBeVisible();
   await expect(grid.locator(".tier-card.featured")).toHaveCount(1);
   await expect(grid.locator(".tier-card.featured")).toContainText("Managed Pro");
-  // …and the hardcoded fallback (Bronze/Essentials) is gone under replace mode.
   await expect(grid.getByText("Essentials", { exact: true })).toHaveCount(0);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
@@ -59,12 +55,11 @@ test("published pricing_tiers replace the hardcoded fallback tiers on programs.h
   await page.locator(".tier-grid").screenshot({ path: `${DIR}/programs-cms-tiers.png` });
 });
 
-test("empty pricing snapshot leaves the hardcoded fallback tiers intact", async ({ page }) => {
-  await page.route("**/data/content/pricing.json", (route) => route.fulfill({
+test("empty live pricing response leaves no stale program tiers", async ({ page }) => {
+  await page.route("**/api/pricing", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify({ pricing_tiers: [] }),
   }));
   await page.goto(`${BASE_URL}/programs.html`, { waitUntil: "networkidle" });
   const grid = page.locator('.tier-grid[data-cms-content="pricing_tiers"]');
-  await expect(grid.getByText("Essentials", { exact: true })).toBeVisible();
-  await expect(grid.locator(".tier-card")).toHaveCount(4);
+  await expect(grid.locator(".tier-card")).toHaveCount(0);
 });

@@ -7,7 +7,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 1
   },
   {
@@ -18,7 +17,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 2
   },
   {
@@ -29,7 +27,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 3
   },
   {
@@ -40,7 +37,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 4
   },
   {
@@ -51,7 +47,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 5
   },
   {
@@ -62,7 +57,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 6
   },
   {
@@ -73,7 +67,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 7
   },
   {
@@ -84,7 +77,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 8
   },
   {
@@ -95,7 +87,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 9
   },
   {
@@ -106,7 +97,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 10
   },
   {
@@ -117,7 +107,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 11
   },
   {
@@ -128,7 +117,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 12
   },
   {
@@ -139,7 +127,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 13
   },
   {
@@ -150,7 +137,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 14
   },
   {
@@ -161,7 +147,6 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
-    "price": null,
     "sort": 15
   }
 ]

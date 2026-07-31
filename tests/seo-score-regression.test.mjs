@@ -6,10 +6,6 @@ import { PRODUCTS } from "../js/main/catalog-data.js";
 
 const root = path.resolve(new URL("..", import.meta.url).pathname);
 const base = "https://masest.co";
-const catalogSeed = JSON.parse(fs.readFileSync(path.join(root, "data/catalog.seed.json"), "utf8"));
-const buyableVariants = catalogSeed.product_variants.filter((variant) => (
-  variant.active && variant.public_visible && !variant.requires_quote && Number(variant.retail_price) > 0
-));
 const productIds = fs.readdirSync(path.join(root, "products"))
   .filter((file) => file.endsWith(".html"))
   .map((file) => file.replace(/\.html$/, ""))
@@ -130,19 +126,6 @@ test("product detail pages are static, crawlable, and schema-rich", () => {
       undefined,
       `${file} must not identify a manufacturer without an exact-product source record`,
     );
-    const expectedOffers = buyableVariants.filter((variant) => variant.product_slug === id);
-    if (expectedOffers.length) {
-      assert.equal(schema?.offers?.length, expectedOffers.length, `${file} buyable variant offers`);
-      assert.deepEqual(
-        schema.offers.map((offer) => offer.sku).sort(),
-        expectedOffers.map((variant) => variant.sku).sort(),
-        `${file} offer SKUs`
-      );
-      assert.ok(schema.offers.every((offer) => offer.priceCurrency === "USD" && offer.availability === "https://schema.org/InStock"));
-      assert.ok(
-        schema.offers.every((offer) => offer.seller?.name === "MASEST Consulting LLC"),
-        `${file} offers must identify MASEST as seller`,
-      );
-    }
+    assert.equal(schema?.offers, undefined, `${file} must not bake CMS prices into Offer schema`);
   }
 });

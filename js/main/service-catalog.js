@@ -387,7 +387,21 @@ async function fetchServicesCatalog() {
         lastError = new Error("content_services_empty");
         continue;
       }
-      return catalog;
+      try {
+        const pricing = await loadPricingData();
+        const liveBySku = new Map((pricing.services || []).map((service) => [service.sku, service]));
+        const applyPrices = (services = []) => services.map((service) => ({
+          ...service,
+          public_price: liveBySku.get(service.sku)?.public_price ?? null,
+        }));
+        return {
+          ...catalog,
+          services: applyPrices(catalog.services),
+          service_packages: applyPrices(catalog.service_packages),
+        };
+      } catch {
+        return catalog;
+      }
     } catch (error) {
       lastError = error;
     }
@@ -411,3 +425,4 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
+import { loadPricingData } from "./pricing-data.js?v=20260730a";

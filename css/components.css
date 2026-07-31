@@ -562,7 +562,7 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
 .rv-card footer { background: none; padding: 0; color: var(--muted, #5f656d); font-size: .78rem; }
 .rv-form { display: grid; gap: 12px; margin-top: 18px; max-width: 32rem; }
 .rv-field { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; font-weight: 600; color: var(--ink-soft, #393d44); }
-.rv-field input, .rv-field select, .rv-field textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--line, #e4e6e9); border-radius: var(--r-input, 10px); color: var(--ink, #15171c); background: var(--surface, #fff); }
+.rv-field input, .rv-field select, .rv-field textarea { min-height: 44px; font: inherit; padding: 8px 10px; border: 1px solid var(--line, #e4e6e9); border-radius: var(--r-input, 10px); color: var(--ink, #15171c); background: var(--surface, #fff); }
 .rv-form button { justify-self: start; }
 .rv-msg { font-size: .84rem; color: var(--muted, #5f656d); }
 .rv-gate { color: var(--muted, #5f656d); font-size: .9rem; }

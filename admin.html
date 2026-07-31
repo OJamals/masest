@@ -843,11 +843,11 @@
       <section class="adm-panel" role="tabpanel" data-panel="products">
         <div class="adm-card adm-overview-head adm-workspace-head">
           <div><p class="adm-eyebrow">Catalog</p><h2>Products &amp; inventory</h2><p class="muted">Search and edit the live catalog, monitor stock, and manage product media.</p></div>
-          <div class="adm-overview-marker"><span>Pricing control</span><b>Workbook governed</b></div>
+          <div class="adm-overview-marker"><span>Pricing control</span><b>CMS managed</b></div>
         </div>
         <div class="adm-card adm-governance-note adm-governance-note-compact" id="catalogPriceGovernance" role="note">
-          <h2><i class="ph ph-shield-check" aria-hidden="true"></i> Workbook-managed pricing</h2>
-          <p>Product, variant, and customer-tier prices are read-only here. Reflect approved changes from <code>VertKleen_Website_Pricing_WebDev.xlsx</code> in the catalog seed data, then run <code>npm run seed</code> so the catalog, checkout, and admin stay aligned.</p>
+          <h2><i class="ph ph-shield-check" aria-hidden="true"></i> CMS-managed pricing</h2>
+          <p>Use the Pricing workspace for product, customer-tier, service, and program prices. Catalog seed files are bootstrap and recovery data only.</p>
         </div>
         <div class="adm-card adm-workspace-card adm-catalog-browser">
           <div class="adm-panel-header"><div><h2>Product catalog</h2><p class="muted">Search first, then edit the matching product or variant in place.</p></div><input id="prodSearch" name="product_search" class="adm-search" type="search" autocomplete="off" placeholder="Search name, SKU, or variant" aria-label="Search products"></div>
@@ -868,7 +868,7 @@
             <label>SKU <input id="npSku" name="sku" class="adm-input" autocomplete="off" spellcheck="false" required></label>
             <label class="wide">Name <input id="npName" name="name" class="adm-input" autocomplete="off"></label>
             <label>Mode <select id="npMode" name="mode" class="adm-select"><option value="buy">Buy</option><option value="quote">Quote</option></select></label>
-            <label>Price <input id="npPrice" name="price" class="adm-input" value="Workbook managed" readonly aria-describedby="catalogPriceGovernance"></label>
+            <label>Price <input id="npPrice" name="price" class="adm-input" value="Managed in Pricing" readonly aria-describedby="catalogPriceGovernance"></label>
             <label>Stock <input id="npStock" name="stock" class="adm-input" type="number" min="0" step="1"></label>
             <label class="wide">Photo URL <input id="npImageUrl" name="image_url" class="adm-input" type="url" autocomplete="off" spellcheck="false" placeholder="img/products/example.webp"></label>
             <label class="wide">Photo alt <input id="npPhotoAlt" name="image_alt" class="adm-input" autocomplete="off" placeholder="VertKleen HCR bottle"></label>
@@ -883,7 +883,7 @@
             <label>Variant SKU <input id="nvSku" name="variant_sku" class="adm-input" autocomplete="off" spellcheck="false" required></label>
             <label>Label <input id="nvLabel" name="label" class="adm-input" autocomplete="off" placeholder="5 gal pail" required></label>
             <label>Gallons <input id="nvGallons" name="gallons" class="adm-input" type="number" min="0" step="0.01"></label>
-            <label>Price <input id="nvPrice" name="price" class="adm-input" value="Workbook managed" readonly aria-describedby="catalogPriceGovernance"></label>
+            <label>Price <input id="nvPrice" name="price" class="adm-input" value="Managed in Pricing" readonly aria-describedby="catalogPriceGovernance"></label>
             <label>Stock <input id="nvStock" name="stock" class="adm-input" type="number" min="0" step="1"></label>
             <button class="btn btn-primary" type="submit">Save variant</button>
           </form>
@@ -908,6 +908,7 @@
         </div>
         <div class="adm-card">
           <input id="priceSearch" name="variant_search" type="search" class="adm-search" autocomplete="off" placeholder="Search variants" aria-label="Search variants">
+          <p id="pricingStatus" class="adm-status" role="status" aria-live="polite"></p>
           <div id="admPricing">Loading…</div>
         </div>
       </section>

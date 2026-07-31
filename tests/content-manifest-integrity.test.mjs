@@ -29,11 +29,11 @@ test("verify_site fails when a snapshot sha drifts from the manifest", () => {
   try {
     const manifest = JSON.parse(original.toString("utf8"));
     // Forge a wrong sha for one snapshot without touching the file itself.
-    manifest.files["pricing.json"].sha256 = "0".repeat(64);
+    manifest.files["blog.json"].sha256 = "0".repeat(64);
     writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
     const { code, out } = runVerifySite();
     assert.equal(code, 1, "tampered manifest must fail the gate");
-    assert.match(out, /pricing\.json sha256 does not match manifest/);
+    assert.match(out, /blog\.json sha256 does not match manifest/);
   } finally {
     writeFileSync(MANIFEST, original); // restore exact original bytes
   }

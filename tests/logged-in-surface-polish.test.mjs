@@ -64,12 +64,16 @@ test("dashboard panels protect form and notification text from clipping", () => 
 
 test("visual QA padding contracts cover disclosures and dense admin controls", () => {
   const css = read("css/style.css");
+  const components = read("css/components.css");
   const dashboard = read("dashboard.html");
   const admin = read("admin.html");
   const adminJs = read("js/admin.js");
+  const adminPricing = read("js/admin/pricing.js");
+  const adminQuotes = read("js/admin/quotes.js");
   const audit = read("tools/visual-layout-audit.mjs");
 
   assert.match(css, /\.services-faq-list \.resource-disclosure > p\s*\{[\s\S]*padding:\s*0 clamp/, "service FAQ answers should keep body padding even without a disclosure-body wrapper");
+  assert.match(components, /\.rv-field input, \.rv-field select, \.rv-field textarea\s*\{[^}]*min-height:\s*44px/, "review form controls should keep touch-sized hit areas");
   assert.match(css, /\.foot-legal a\s*\{[\s\S]*min-height:\s*44px/, "footer legal links should keep touch-sized hit areas");
   assert.match(css, /\.case-disclosure summary::after\s*\{[^}]*margin-right:\s*3px/, "proof disclosure chevrons should stay inside their scroll box");
   assert.match(dashboard, /\.dash-disclosure summary\s*\{[\s\S]*min-height:\s*44px/, "dashboard disclosure summaries should keep a touch-sized hit area");
@@ -89,12 +93,24 @@ test("visual QA padding contracts cover disclosures and dense admin controls", (
   const couponsJs = read("js/admin/coupons.js");
   assert.match(inventoryJs, /invLow[\s\S]*<div class="adm-table-wrap">[\s\S]*low-stock variants/, "low-stock admin tables should scroll inside cards instead of clipping columns");
   assert.match(couponsJs, /cpList[\s\S]*<div class="adm-table-wrap">[\s\S]*promo code/, "promo-code tables should scroll inside cards instead of clipping columns");
+  assert.equal((adminPricing.match(/class="adm-table-wrap"/g) || []).length, 3, "all unified pricing tables should use the admin scroll boundary");
+  assert.doesNotMatch(adminPricing, /class="table-scroll"/, "admin pricing should not inherit public comparison-table mobile behavior");
+  assert.match(adminQuotes, /id="qBulkOwner"[^>]+aria-label="Assign selected leads to owner"/, "bulk owner control should have a stable accessible name");
   assert.match(audit, /hasCornerCounterOverflow[\s\S]*\.dash-tab, \.adm-tab/, "visual audit should allow only tab counter pills to extend outside button corners");
   assert.doesNotMatch(audit, /async function captureStep\(browser/, "visual audit should not churn one browser context per page");
   assert.match(audit, /const publicContext = await newContext\(browser, viewport, false\)/, "visual audit should reuse one public context per viewport");
   assert.match(audit, /const authContext = await newContext\(browser, viewport, true\)/, "visual audit should reuse one authenticated context per viewport");
   assert.match(audit, /await page\.close\(\)/, "each captured page should still be released promptly");
-  assert.doesNotMatch(audit, /admin-(?:pricing|messages|offers|traffic)/, "visual audit should target current admin panels, not legacy hash aliases");
+  assert.doesNotMatch(audit, /admin-(?:messages|offers|traffic)/, "visual audit should target current admin panels, not legacy hash aliases");
+  assert.match(audit, /\["admin-pricing", "\/admin\.html#pricing"\]/, "visual audit should capture the unified pricing workspace");
+  assert.match(audit, /pricing-hvac-facilities/, "visual audit should capture HVAC runtime pricing");
+  assert.match(audit, /pricing-cip-food-beverage/, "visual audit should capture CIP runtime pricing");
+  assert.match(audit, /\["resources-pricing-expanded", "\/resources\.html"\]/, "visual audit should capture expanded runtime resource pricing tables");
+  assert.match(audit, /context\.route\("\*\*\/api\/pricing"/, "visual audit should supply canonical runtime pricing");
+  assert.match(audit, /context\.route\("\*\*\/api\/reviews\*\*"/, "visual audit should isolate public review hydration from the static preview server");
+  assert.match(audit, /pathname\.startsWith\("\/api\/admin\/variant-pricing"\)[\s\S]*\brows\b[\s\S]*\bservices\b[\s\S]*\bprograms\b/, "visual audit should exercise every unified admin pricing section");
+  assert.match(audit, /page\.on\("console"/, "visual audit should capture browser console regressions");
+  assert.match(audit, /page\.on\("requestfailed"/, "visual audit should capture failed requests");
   assert.match(audit, /profile:\s*\{\s*full_name:[^}]+role:\s*"admin"/, "authenticated visual fixture should exercise company-admin controls");
   assert.match(audit, /active_total:\s*fixtures\.orders\.length/, "authenticated visual fixture should expose server-derived active-order totals");
   assert.match(audit, /context\.route\("\*\*\/js\/auth\.js\*"/, "visual audit should intercept cache-busted auth module URLs");

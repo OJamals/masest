@@ -620,9 +620,9 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
 
     const bulkBar = `<div class="adm-tools adm-tools-flush" data-capability-scope="admin.write" style="flex-wrap:wrap">
       <label class="admin-select-all"><input type="checkbox" id="qAll" aria-label="Select all"> Select all</label>
-      <select class="adm-select adm-select-sm" id="qBulkStage"><option value="">Set stage…</option>${STAGES.map((s) => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}</select>
-      <select class="adm-select adm-select-sm" id="qBulkPriority"><option value="">Set priority…</option>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}">${p}</option>`).join('')}</select>
-      <input class="adm-input" id="qBulkOwner" placeholder="Assign owner" style="max-width:160px">
+      <select class="adm-select adm-select-sm" id="qBulkStage" aria-label="Set stage for selected leads"><option value="">Set stage…</option>${STAGES.map((s) => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}</select>
+      <select class="adm-select adm-select-sm" id="qBulkPriority" aria-label="Set priority for selected leads"><option value="">Set priority…</option>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}">${p}</option>`).join('')}</select>
+      <input class="adm-input" id="qBulkOwner" placeholder="Assign owner" aria-label="Assign selected leads to owner" style="max-width:160px">
       <button class="btn btn-ghost btn-sm" id="qBulkApply" type="button">Apply to selected</button>
     </div>`;
 

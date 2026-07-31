@@ -88,31 +88,9 @@ const PRODUCT_IDS = CATALOG_ORDER.filter((id) => PRODUCTS[id]);
 const COMMERCE_SKU_ALIAS = { crhd: "cr-hd" };
 const commerceSku = (id) => COMMERCE_SKU_ALIAS[id] || id;
 
-const BUYABLE_VARIANTS = CATALOG_SEED.product_variants.filter((variant) => (
-  variant.active
-  && variant.public_visible
-  && !variant.requires_quote
-  && Number(variant.retail_price) > 0
-));
 const CATALOG_PRODUCTS_BY_SLUG = new Map(
   CATALOG_SEED.products.map((product) => [product.slug, product]),
 );
-
-function productOffers(id, product) {
-  return BUYABLE_VARIANTS
-    .filter((variant) => variant.product_slug === commerceSku(id))
-    .map((variant) => ({
-      "@type": "Offer",
-      sku: variant.sku,
-      name: `${product.name} — ${variant.label}`,
-      price: Number(variant.retail_price).toFixed(2),
-      priceCurrency: String(variant.currency || "usd").toUpperCase(),
-      availability: "https://schema.org/InStock",
-      itemCondition: "https://schema.org/NewCondition",
-      url: `${BASE}/products/${id}`,
-      seller: { "@type": "Organization", name: "MASEST Consulting LLC" },
-    }));
-}
 
 const ORG = {
   "@type": "Organization",
@@ -520,7 +498,6 @@ function productMetaDescription(id, product) {
 
 function productSchema(id, product, reviewsSnapshot) {
   const aggregateRating = aggregateRatingNode("product", commerceSku(id), reviewsSnapshot);
-  const offers = productOffers(id, product);
   const sku = CATALOG_PRODUCTS_BY_SLUG.get(commerceSku(id))?.sku_stem;
   return {
     "@context": "https://schema.org",
@@ -543,7 +520,6 @@ function productSchema(id, product, reviewsSnapshot) {
         description: productDescription(id, product),
         url: `${BASE}/products/${id}`,
         image: product.image ? `${BASE}/${product.image}` : `${BASE}/${PRODUCT_FALLBACK_IMAGE}`,
-        ...(offers.length ? { offers } : {}),
         additionalProperty: [
           { "@type": "PropertyValue", name: "HMIS rating", value: product.hmis },
           {

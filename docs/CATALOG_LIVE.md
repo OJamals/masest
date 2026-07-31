@@ -1,49 +1,48 @@
-# Catalog: runtime source of truth (Phase 3)
+# Catalog and pricing runtime authority
 
-As of Phase 3 the **Supabase database is the runtime source of truth** for the
-catalog (products, variants, prices, tier prices, stock, images). The admin
-console writes directly to it and changes go live immediately — no redeploy.
+## Pricing
 
-`data/catalog.seed.json` is now **bootstrap / disaster-reset only**, not the live
-catalog. It is the canonical *initial* dataset and the input to the seed scripts.
+`Admin > Pricing` is the only operator-facing price source.
 
-## What lives where
+- Product variant tiers: `public.price_tiers` (`retail`, `hvac`, `wholesale`)
+- Services and packages: `public.services.public_price`
+- Program tiers: published `public.content_entries` rows with type `pricing_tier`
 
-| Data | Home | Edited via |
-|---|---|---|
-| Products, variants, base price, mode, stock | `products` / `product_variants` tables | Admin → Products & stock |
-| Tier prices (retail/hvac/wholesale) | `price_tiers` table | Admin → Pricing |
-| Company → tier, NET terms, credit | `companies` table | Admin → Accounts |
-| Product images | Supabase Storage bucket `product-images` (public) + `products.image_url` / `products.gallery` | Admin → Products & stock (per-row upload) |
+`GET /api/pricing` combines the public rows for website rendering. It excludes wholesale
+pricing and sends `cache-control: no-store`, so a saved CMS change appears on the next
+website request without a catalog rebuild or deploy.
 
-## Images
+Website pages, Markdown price tokens, comparison pages, program cards, segment tables,
+resource tables, and service cards have no static numeric fallback. If live pricing is
+unavailable, they omit the price or show the existing unavailable state instead of a stale
+number.
 
-- Bucket `product-images` is **public-read**; uploads are server-only
-  (`functions/api/admin/product-image.js` writes with the service-role key).
-- Primary image → `products.image_url`; extra shots → `products.gallery` (jsonb array).
-- Storefront product cards and generated `products/<id>.html` details prefer the DB image, falling back to the static
-  `img/products/*` asset when no DB image is set.
-- Public URL form: `${SUPABASE_URL}/storage/v1/object/public/product-images/<sku>/<uuid>.<ext>`.
+`public.set_variant_pricing` writes variant tier cells atomically. Retail writes also update
+the existing `product_variants.price` checkout mirror until checkout storage is migrated;
+the CMS tier remains the operator authority.
 
-## Reseed / reset path (rare)
+## Metadata
 
-The seed scripts overwrite DB rows from the canonical JSON. Use only to bootstrap
-a fresh project or recover from corruption — **this clobbers live admin edits**
-to products/variants. It also deletes stale products, variants, services, and
-price-tier cells whose variant SKU is no longer in `data/catalog.seed.json`, then
-refreshes `retail` tier cells to match the base workbook price. It does not touch
-`companies` or Storage.
+`data/catalog.seed.json` owns product, variant, service, and package metadata only.
+`data/segment-pricing.json` owns segment membership and copy only. Generated JSON and SQL
+artifacts contain no prices.
 
-```
-# 1. (re)generate catalog.seed.json + SQL seeds from the source decks
+Run:
+
+```bash
 node tools/build-catalog.mjs
-# 2. push products + variants + services into Supabase
-node tools/seed-products.mjs        # needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in env
+npm run seed
 ```
 
-## Migrations applied
+`npm run seed` upserts metadata and removes stale catalog rows. It does not create, change,
+or delete CMS price tiers or service prices.
 
-- `supabase/schema-pricing.sql` — tier pricing (Phase 2).
-- `supabase/schema-images.sql` — `products.gallery` column + `product-images` bucket (Phase 3).
+## Database setup
 
-Both are idempotent and re-runnable.
+Apply these tracked schemas:
+
+1. `supabase/schema-pricing.sql`
+2. `supabase/schema-services.sql`
+3. `supabase/schema-cms-pricing.sql`
+
+After setup, use `Admin > Pricing` for every future price change.

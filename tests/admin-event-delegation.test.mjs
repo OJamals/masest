@@ -37,10 +37,11 @@ for (const { mod, wire, container } of TABS) {
   });
 }
 
-test('admin pricing tab is a read-only verification view with no row-action listeners', () => {
+test('admin pricing tab delegates one live save action on its stable container', () => {
   const src = read('js/admin/pricing.js');
-  assert.match(src, /function wirePricing\(\) \{\}/);
-  assert.doesNotMatch(src, /data-price-tier|delegate\(box,/);
+  assert.match(src, /function wirePricing\(\)/);
+  assert.match(src, /delegate\(\$\('admPricing'\), 'click', '\[data-price-save\]'/);
+  assert.match(src, /method: 'POST'/);
 });
 
 test('admin.js binds every tab\'s delegated row actions once in wire()', () => {

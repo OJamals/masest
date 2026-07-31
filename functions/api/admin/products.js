@@ -23,7 +23,6 @@ const VARIANT_SELECT = 'product_variants(id,vsku,product_sku,label,gallons,price
 const PRODUCT_WRITABLE = [
   'name',
   'mode',
-  'price',
   'currency',
   'hazmat',
   'taxable',
@@ -41,7 +40,6 @@ const VARIANT_WRITABLE = [
   'product_sku',
   'label',
   'gallons',
-  'price',
   'currency',
   'stripe_price_id',
   'stock',
@@ -49,7 +47,7 @@ const VARIANT_WRITABLE = [
   'active',
   'sort',
 ];
-const PRICE_MANAGED_MESSAGE = 'Prices are managed by VertKleen_Website_Pricing_WebDev.xlsx. Reflect approved workbook changes in the catalog seed data and run npm run seed.';
+const PRICE_MANAGED_MESSAGE = 'Prices are managed in Admin > Pricing. Update them there.';
 
 function includesManagedPrice(input) {
   return Boolean(input && Object.prototype.hasOwnProperty.call(input, 'price'));
@@ -94,14 +92,6 @@ export function normalizeProduct(input) {
   }
 
   if (row.mode && !['buy', 'quote'].includes(row.mode)) return { error: 'invalid_mode' };
-
-  if (row.price != null && row.price !== '') {
-    const price = Number(row.price);
-    if (!Number.isFinite(price) || price < 0) return { error: 'invalid_price' };
-    row.price = price;
-  } else if (row.price === '') {
-    row.price = null;
-  }
 
   if (row.stock !== undefined && row.stock !== null && row.stock !== '') {
     const stock = Number(row.stock);
@@ -160,14 +150,6 @@ export function normalizeVariant(input) {
     row.gallons = 0;
   }
 
-  if (row.price !== undefined && row.price !== '') {
-    const price = Number(row.price);
-    if (!Number.isFinite(price) || price < 0) return { error: 'invalid_price' };
-    row.price = price;
-  } else if (row.price === '') {
-    row.price = null;
-  }
-
   if (row.stock !== undefined && row.stock !== null && row.stock !== '') {
     const stock = Number(row.stock);
     if (!Number.isInteger(stock) || stock < 0) return { error: 'invalid_stock' };
@@ -202,7 +184,7 @@ export async function onRequest({ request, env }) {
     if (!staffCan(role, 'product.write')) return json(403, { error: 'forbidden', message: 'Editing the catalog requires owner access.' });
     const body = await readBody(request);
     if (body.variant) {
-      if (includesManagedPrice(body.variant)) return json(409, { error: 'price_workbook_managed', message: PRICE_MANAGED_MESSAGE });
+      if (includesManagedPrice(body.variant)) return json(409, { error: 'price_cms_managed', message: PRICE_MANAGED_MESSAGE });
       const normalized = normalizeVariant(body);
       if (normalized.error) return json(400, { error: normalized.error });
       const { error } = await sb.from('product_variants').upsert(normalized.row, { onConflict: 'vsku' });
@@ -211,7 +193,7 @@ export async function onRequest({ request, env }) {
     }
 
     const productInput = body.product || body;
-    if (includesManagedPrice(productInput)) return json(409, { error: 'price_workbook_managed', message: PRICE_MANAGED_MESSAGE });
+    if (includesManagedPrice(productInput)) return json(409, { error: 'price_cms_managed', message: PRICE_MANAGED_MESSAGE });
     const normalized = normalizeProduct(body);
     if (normalized.error) return json(400, { error: normalized.error });
 

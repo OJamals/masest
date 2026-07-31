@@ -80,10 +80,28 @@ export async function initSegmentPricing(root = document) {
       cache: "no-store",
     });
     if (!response.ok) throw new Error("segment_pricing_unavailable");
-    renderSegment(mount, await response.json());
+    const data = await response.json();
+    const pricing = await loadPricingData();
+    const liveBySku = new Map((pricing.variants || []).map((variant) => [variant.vsku, variant]));
+    data.segments = (data.segments || []).map((segment) => ({
+      ...segment,
+      rows: (segment.rows || []).flatMap((row) => {
+        const variant = liveBySku.get(row.sku);
+        const price = variant?.tiers?.hvac;
+        if (price == null) return [];
+        return [{
+          ...row,
+          currency: pricing.currency || "usd",
+          price_per_unit: Number(price),
+          price_per_gallon: Number(price) / Number(variant.gallons || row.size_gal || 1),
+        }];
+      }),
+    }));
+    renderSegment(mount, data);
   } catch {
     mount.innerHTML = '<p class="muted">Pricing is unavailable.</p>';
   }
 }
 
 initSegmentPricing();
+import { loadPricingData } from "./pricing-data.js?v=20260730a";

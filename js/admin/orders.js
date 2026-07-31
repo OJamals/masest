@@ -175,12 +175,12 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
     return `${qboReconciliation(order)}<details class="adm-track" data-capability-scope="admin.write"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
       <div class="adm-track-controls">
-        <select class="adm-select" data-track-status="${id}">
+        <select class="adm-select" data-track-status="${id}" aria-label="Tracking status for order ${id}">
           ${['processing', 'packing', 'shipped', 'delivered', 'blocked'].map((status) => `<option value="${status}" ${status === (order.tracking_status || 'processing') ? 'selected' : ''}>${status.replaceAll('_', ' ')}</option>`).join('')}
         </select>
-        <input class="adm-input" data-track-carrier="${id}" value="${esc(order.carrier || '')}" placeholder="Carrier">
-        <input class="adm-input" data-track-number="${id}" value="${esc(order.tracking_number || '')}" placeholder="Tracking #">
-        <input class="adm-input admin-input-wide" data-track-url="${id}" value="${esc(order.tracking_url || '')}" placeholder="Tracking URL">
+        <input class="adm-input" data-track-carrier="${id}" value="${esc(order.carrier || '')}" placeholder="Carrier" aria-label="Carrier for order ${id}">
+        <input class="adm-input" data-track-number="${id}" value="${esc(order.tracking_number || '')}" placeholder="Tracking #" aria-label="Tracking number for order ${id}">
+        <input class="adm-input admin-input-wide" data-track-url="${id}" value="${esc(order.tracking_url || '')}" placeholder="Tracking URL" aria-label="Tracking URL for order ${id}">
         <input class="adm-input" data-track-eta="${id}" value="${esc(eta)}" type="datetime-local" aria-label="Estimated delivery">
         <input class="adm-input admin-input-wide" data-track-note="${id}" placeholder="Note (shown to customer)" aria-label="Shipment note">
         <button class="btn btn-ghost btn-sm" data-save-tracking="${id}" type="button">Save tracking</button>

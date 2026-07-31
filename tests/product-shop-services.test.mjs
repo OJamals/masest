@@ -25,7 +25,7 @@ function apiProductsPayload() {
       vsku: variant.sku,
       label: variant.label,
       gallons: variant.size_gal,
-      price: variant.retail_price,
+      price: Number(variant.sort) * 10,
       currency: variant.currency,
       active: variant.active,
       sort: variant.sort
@@ -43,13 +43,38 @@ function apiProductsPayload() {
       product_variants: product.slug === "cr"
         ? [
           ...(variants.get(product.slug) || []),
-          { vsku: "cr-1-old", label: "1 gal duplicate", gallons: 1, price: 12.02, currency: "usd", active: true, sort: 0 },
-          { vsku: "cr-55-old", label: "55 gal old drum", gallons: 55, price: 528.41, currency: "usd", active: false, sort: 0 },
+          { vsku: "cr-1-old", label: "1 gal duplicate", gallons: 1, price: 5, currency: "usd", active: true, sort: 0 },
+          { vsku: "cr-55-old", label: "55 gal old drum", gallons: 55, price: 50, currency: "usd", active: false, sort: 0 },
         ]
         : variants.get(product.slug) || []
     }))
   };
 }
+
+function apiPricingPayload() {
+  const catalog = JSON.parse(readFileSync(new URL("data/catalog.seed.json", root), "utf8"));
+  const productNames = new Map(catalog.products.map((product) => [product.slug, product.name]));
+  return {
+    currency: "usd",
+    variants: catalog.product_variants.map((variant) => ({
+      vsku: variant.sku,
+      product_sku: variant.product_slug,
+      product_name: productNames.get(variant.product_slug),
+      label: variant.label,
+      gallons: variant.size_gal,
+      active: variant.active,
+      tiers: { retail: Number(variant.sort) * 10, hvac: Number(variant.sort) * 10 },
+    })),
+    services: [],
+    pricing_tiers: [],
+  };
+}
+
+const routePricing = (page) => page.route("**/api/pricing", (route) => route.fulfill({
+  status: 200,
+  contentType: "application/json",
+  body: JSON.stringify(apiPricingPayload()),
+}));
 
 test("products page is shop-focused and routes services to a standalone page", async () => {
   await withServer(async () => {
@@ -107,6 +132,7 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
       contentType: "application/json",
       body: JSON.stringify(apiProductsPayload())
     }));
+    await routePricing(page);
     page.on("response", (response) => {
       if (response.url().includes("/api/") && response.status() >= 400) {
         apiErrors.push(`${response.status()} ${response.url()}`);
@@ -126,7 +152,7 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
         href: card.querySelector(".shop-card-link")?.getAttribute("href")
       }));
 
-      assert.match(first.price, /^\$19\.27$/, "card should show the current first buyable pack price");
+      assert.equal(first.price, "$10", "card should show API pricing");
       assert.equal(first.subprice, "1 gal jug", "card should show the selected pack size");
       assert.equal(first.variantCount, 5, "card should dedupe stale duplicate quantities while keeping quoted bulk choices");
       assert.equal(new Set(first.optionValues).size, first.optionValues.length, "volume options should not duplicate SKUs");
@@ -162,11 +188,16 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
   });
 });
 
-test("segment pricing pages render isolated HVAC and CIP workbook pricing", async () => {
+test("segment pricing pages render isolated metadata with live API prices", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     try {
       const hvac = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+      await hvac.route("**/api/pricing", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(apiPricingPayload()),
+      }));
       await hvac.goto(`${BASE_URL}/pricing-hvac-facilities.html`, { waitUntil: "domcontentloaded" });
       await hvac.waitForSelector("[data-segment-pricing-row]");
       const hvacText = await hvac.locator("main").textContent();
@@ -174,11 +205,16 @@ test("segment pricing pages render isolated HVAC and CIP workbook pricing", asyn
       assert.match(hvacText, /VertKleen AlumiBrite/);
       assert.match(hvacText, /Prices exclude shipping and freight\. FOB Ex Plant, Merritt Island, FL\./);
       assert.match(hvacText, /200\+ jugs: 5% off/);
-      assert.match(hvacText, /VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72[\s\S]*\$61\.80/);
-      assert.match(hvacText, /VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02[\s\S]*\$55\.05/);
-      assert.match(hvacText, /VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$21\.49[\s\S]*\$53\.73/);
+      assert.match(hvacText, /VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$8\.00[\s\S]*\$20\.00/);
+      assert.match(hvacText, /VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$8\.00[\s\S]*\$20\.00/);
+      assert.match(hvacText, /VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$8\.00[\s\S]*\$20\.00/);
 
       const cip = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+      await cip.route("**/api/pricing", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(apiPricingPayload()),
+      }));
       await cip.goto(`${BASE_URL}/pricing-cip-food-beverage.html`, { waitUntil: "domcontentloaded" });
       await cip.waitForSelector("[data-segment-pricing-row]");
       const cipText = await cip.locator("main").textContent();
@@ -194,19 +230,15 @@ test("segment pricing pages render isolated HVAC and CIP workbook pricing", asyn
   });
 });
 
-test("resources page publishes corrected public pricing tables only", () => {
+test("resources page declares CMS-driven public pricing tables only", () => {
   const resources = readFileSync(new URL("resources.html", root), "utf8");
-  assert.match(resources, /data-source-table="hvac-facility-pricing"[\s\S]*VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$24\.72\/gal[\s\S]*\$61\.80/);
-  assert.match(resources, /data-source-table="hvac-facility-pricing"[\s\S]*VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$22\.02\/gal[\s\S]*\$55\.05/);
-  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$21\.63\/gal[\s\S]*\$54\.08/);
-  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$19\.27\/gal[\s\S]*\$48\.17/);
-  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen CR HD[\s\S]*2\.5 gal jug[\s\S]*\$10\.61\/gal[\s\S]*\$26\.51/);
-  assert.match(resources, /data-source-table="property-maintenance-pricing"[\s\S]*VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$21\.49\/gal[\s\S]*\$53\.73/);
-  assert.doesNotMatch(resources, /\$43\.26|\$38\.53|\$23\.57/, "internal B2B property rates must stay off public resources");
+  assert.match(resources, /data-variant-price-table[^>]*data-price-tier="hvac"/);
+  assert.match(resources, /data-variant-price-table[^>]*data-price-tier="retail"/);
+  assert.doesNotMatch(resources, /\$[0-9]/, "resources must not ship static prices");
   assert.match(resources, /FOB Ex Plant, Merritt Island FL/);
 });
 
-test("descaler card defaults to the public 1 gal website price", async () => {
+test("descaler card defaults to the first live API variant price", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -216,11 +248,12 @@ test("descaler card defaults to the public 1 gal website price", async () => {
       contentType: "application/json",
       body: JSON.stringify(apiProductsPayload())
     }));
+    await routePricing(page);
 
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
       const descaler = page.locator('.shop-card[data-id="descaler"]');
-      await descaler.locator(".price-main", { hasText: "$15.03" }).waitFor();
+      await descaler.locator(".price-main", { hasText: "$10" }).waitFor();
       assert.equal(await descaler.locator(".price-note").textContent(), "1 gal jug");
       const options = await descaler.locator(".commerce-vol").evaluate((select) =>
         Array.from(select.options).map((option) => option.textContent.trim())
@@ -242,12 +275,13 @@ test("changing a card volume updates the visible price and cart SKU", async () =
       contentType: "application/json",
       body: JSON.stringify(apiProductsPayload())
     }));
+    await routePricing(page);
 
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
       const first = page.locator(".shop-card").first();
       await first.locator(".commerce-vol").selectOption("VK-CR-5G");
-      await assert.doesNotReject(() => first.locator(".price-main", { hasText: "$96.34" }).waitFor());
+      await assert.doesNotReject(() => first.locator(".price-main", { hasText: "$30" }).waitFor());
       assert.equal(await first.locator(".price-note").textContent(), "5 gal pail");
       assert.equal(await first.locator("[data-cart-add]").getAttribute("data-cart-add"), "VK-CR-5G");
     } finally {

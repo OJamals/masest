@@ -26,7 +26,7 @@ const pages = [
     product: "VertKleen HCR",
     productHref: "../products/hcr",
     competitor: "CLR PRO MAX",
-    vkMath: "$108.15 / 5 gal = $21.63/gal",
+    vkPrices: [{ vsku: "VK-HCR-5G", tier: "retail", gallons: 5 }],
     marketMath: "$1,600-$1,800 / 55 gal = $29.09-$32.73/gal",
     priceNote: "Use current pack pricing as one input; dose, cycle, labor, water, wastewater, and downtime determine completed-system cost.",
     swapCurrent: "CLR / Calci-Solve",
@@ -51,7 +51,7 @@ const pages = [
     product: "VertKleen HCR",
     productHref: "../products/hcr",
     competitor: "RYDLYME",
-    vkMath: "$108.15 / 5 gal = $21.63/gal",
+    vkPrices: [{ vsku: "VK-HCR-5G", tier: "retail", gallons: 5 }],
     marketMath: "$170-$243 / 5 gal = $34.00-$48.60/gal",
     priceNote: "Current pack prices start the comparison; circulation dose, cycle, rinse, labor, wastewater, and shutdown finish it.",
     swapCurrent: "RYDLYME biodegradable descaler",
@@ -76,7 +76,7 @@ const pages = [
     product: "VertKleen CR HD",
     productHref: "../products/crhd",
     competitor: "Simple Green Industrial",
-    vkMath: "$53.03 / 5 gal = $10.61/gal",
+    vkPrices: [{ vsku: "VK-CRHD-5G", tier: "retail", gallons: 5 }],
     marketMath: "$66-$184 / 5 gal = $13.20-$36.80/gal",
     priceNote: "Pack price matters; active dose, passes, rinse water, labor, wastewater, and downtime decide completed-task cost.",
     swapCurrent: "Simple Green / Zep / butyl degreasers",
@@ -103,7 +103,7 @@ const pages = [
     product: "VertKleen LAM3",
     productHref: "../products/lam3",
     competitor: "Wet & Forget",
-    vkMath: "$111.03 / 5 gal = $22.21/gal",
+    vkPrices: [{ vsku: "VK-LAM3-5G", tier: "retail", gallons: 5 }],
     marketMath: "$34.00/gal",
     priceNote: "Use pack price with coverage, application time, repeat visits, water, cleanup, and maintenance interval to compare finished-area cost.",
     swapCurrent: "Wet & Forget / bleach roof cleaners",
@@ -128,7 +128,10 @@ const pages = [
     product: "VertKleen CR + HCR",
     productHref: "../pricing-cip-food-beverage",
     competitor: "Micro Matic beer-line cleaner",
-    vkMath: "CR: $55.05 / 2.5 gal = $22.02/gal; HCR: $61.80 / 2.5 gal = $24.72/gal",
+    vkPrices: [
+      { label: "CR", vsku: "VK-CR-2.5G", tier: "hvac", gallons: 2.5 },
+      { label: "HCR", vsku: "VK-HCR-2.5G", tier: "hvac", gallons: 2.5 },
+    ],
     marketMath: "$38.85/gal",
     priceNote: "Compare chemistry dose with cycle time, rinses, labor, water, wastewater, downtime, and return-to-production.",
     swapCurrent: "Caustic soda + brewing acid blends",
@@ -171,6 +174,17 @@ function schema(page) {
       }
     ]
   };
+}
+
+function priceBinding({ vsku, tier }, field) {
+  return `<span data-price-vsku="${html(vsku)}" data-price-tier="${html(tier)}" data-price-field="${field}"></span>`;
+}
+
+function vertKleenMath(page) {
+  return page.vkPrices.map((price) => {
+    const prefix = price.label ? `${html(price.label)}: ` : "";
+    return `${prefix}${priceBinding(price, "unit")} / ${html(price.gallons)} gal = ${priceBinding(price, "per_gallon")}`;
+  }).join("; ");
 }
 
 function pageHtml(page) {
@@ -241,7 +255,7 @@ function pageHtml(page) {
           <table class="cmp-table">
             <thead><tr><th scope="col">Line</th><th scope="col">Pack math</th><th scope="col">Per gallon</th></tr></thead>
             <tbody>
-              <tr><td class="job">${html(page.product)}</td><td>${html(page.vkMath)}</td><td><strong>${html(page.vkMath.match(/\$[0-9.,]+\/gal/)?.[0] || "See math")}</strong></td></tr>
+              <tr><td class="job">${html(page.product)}</td><td>${vertKleenMath(page)}</td><td><strong>${priceBinding(page.vkPrices[0], "per_gallon")}</strong></td></tr>
               <tr><td class="job">${html(page.competitor)}</td><td>${html(page.marketMath)}</td><td><strong>${html(page.marketMath.match(/\$[0-9.,]+(?:-\$[0-9.,]+)?\/gal/)?.[0] || page.marketMath)}</strong></td></tr>
             </tbody>
           </table>

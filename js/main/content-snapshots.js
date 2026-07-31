@@ -6,6 +6,7 @@ import {
   browserContentDeliveries,
   normalizeContentPageKey,
 } from "../content-types.js";
+import { loadPricingData } from "./pricing-data.js?v=20260730a";
 
 const BROWSER_RENDERERS = Object.freeze({
   proof_card: proofCardHtml,
@@ -71,7 +72,17 @@ export function mergeCmsMountHtml(fallbackHtml = "", cmsHtml = "", { mode = "", 
   return `${fallback}${cms}`;
 }
 
-export async function loadContentSnapshot(file) {
+export async function loadContentSnapshot({ file, endpoint, key }) {
+  if (endpoint) {
+    try {
+      const pricing = await loadPricingData();
+      return Array.isArray(pricing?.[key])
+        ? { [key]: pricing[key] }
+        : null;
+    } catch {
+      return null;
+    }
+  }
   try {
     const response = await fetch(`/data/content/${file}`, { cache: "no-store" });
     if (!response.ok) return null;
@@ -200,7 +211,7 @@ function restoreHashTarget() {
 
 export async function initContentSnapshots() {
   const mounts = contentSnapshotMounts();
-  const snapshots = await Promise.all(mounts.map(({ file }) => loadContentSnapshot(file)));
+  const snapshots = await Promise.all(mounts.map(loadContentSnapshot));
   const rendered = mounts.map(({ key, renderer }, index) => {
     return renderMount(key, snapshots[index], key, renderer);
   }).some(Boolean);

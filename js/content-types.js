@@ -140,7 +140,7 @@ export const CONTENT_TYPE_DEFINITIONS = Object.freeze({
   },
   pricing_tier: {
     label: "Pricing tiers",
-    snapshot: { file: "pricing.json", key: "pricing_tiers", order: 7 },
+    runtime: { endpoint: "/api/pricing", key: "pricing_tiers", order: 7 },
     delivery: { browser: { renderer: "pricing_tier" } },
     fields: [
       { key: "badge", label: "Badge", kind: "text" },
@@ -208,12 +208,15 @@ export function structuredPayloadKeys() {
 export function contentDeliveryRegistry() {
   return Object.entries(CONTENT_TYPE_DEFINITIONS)
     .flatMap(([type, definition]) => {
-      if (!definition.snapshot) return [];
+      const source = definition.snapshot || definition.runtime;
+      if (!source) return [];
       return [{
         type,
-        file: definition.snapshot.file,
-        key: definition.snapshot.key,
-        order: definition.snapshot.order,
+        file: source.file || null,
+        endpoint: source.endpoint || null,
+        key: source.key,
+        order: source.order,
+        snapshot: Boolean(definition.snapshot),
         browser: definition.delivery?.browser
           ? { ...definition.delivery.browser }
           : null,
@@ -226,9 +229,10 @@ export function contentDeliveryRegistry() {
 export function browserContentDeliveries() {
   return contentDeliveryRegistry()
     .filter((delivery) => delivery.browser)
-    .map(({ type, file, key, browser }) => ({
+    .map(({ type, file, endpoint, key, browser }) => ({
       type,
       file,
+      endpoint,
       key,
       renderer: browser.renderer,
     }));
@@ -236,7 +240,7 @@ export function browserContentDeliveries() {
 
 export function specializedContentDeliveries() {
   return contentDeliveryRegistry()
-    .filter((delivery) => delivery.generator)
+    .filter((delivery) => delivery.snapshot && delivery.generator)
     .map(({ type, file, key, generator }) => ({
       type,
       file,
@@ -247,7 +251,7 @@ export function specializedContentDeliveries() {
 
 export function snapshotGroups() {
   const groups = new Map();
-  for (const delivery of contentDeliveryRegistry()) {
+  for (const delivery of contentDeliveryRegistry().filter(({ snapshot }) => snapshot)) {
     const group = groups.get(delivery.file)
       || { file: delivery.file, order: delivery.order, types: [] };
     group.types.push({ type: delivery.type, key: delivery.key });

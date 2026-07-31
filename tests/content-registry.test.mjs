@@ -152,7 +152,6 @@ test("snapshotGroups returns every public export target", () => {
     "industry-sectors.json",
     "faqs.json",
     "page-sections.json",
-    "pricing.json",
     "blog.json",
   ]);
   const proofFields = contentPayloadFields("proof_card").map((field) => field.key);
@@ -165,12 +164,12 @@ test("snapshotGroups returns every public export target", () => {
 test("delivery registry derives exporter, browser, and specialized generation policy", () => {
   assert.equal(contentDeliveryRegistry().length, 10);
   assert.deepEqual(browserContentDeliveries(), [
-    { type: "proof_card", file: "proof.json", key: "proof_cards", renderer: "proof_card" },
-    { type: "resource_card", file: "resources.json", key: "resource_cards", renderer: "resource_card" },
-    { type: "industry_sector", file: "industry-sectors.json", key: "industry_sectors", renderer: "industry_sector" },
-    { type: "faq_block", file: "faqs.json", key: "faq_blocks", renderer: "faq_block" },
-    { type: "page_section", file: "page-sections.json", key: "page_sections", renderer: "page_section" },
-    { type: "pricing_tier", file: "pricing.json", key: "pricing_tiers", renderer: "pricing_tier" },
+    { type: "proof_card", file: "proof.json", endpoint: null, key: "proof_cards", renderer: "proof_card" },
+    { type: "resource_card", file: "resources.json", endpoint: null, key: "resource_cards", renderer: "resource_card" },
+    { type: "industry_sector", file: "industry-sectors.json", endpoint: null, key: "industry_sectors", renderer: "industry_sector" },
+    { type: "faq_block", file: "faqs.json", endpoint: null, key: "faq_blocks", renderer: "faq_block" },
+    { type: "page_section", file: "page-sections.json", endpoint: null, key: "page_sections", renderer: "page_section" },
+    { type: "pricing_tier", file: null, endpoint: "/api/pricing", key: "pricing_tiers", renderer: "pricing_tier" },
   ]);
   assert.deepEqual(specializedContentDeliveries(), [
     { type: "service", file: "services.json", key: "services", generator: "service_catalog" },

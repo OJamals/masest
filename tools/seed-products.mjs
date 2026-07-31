@@ -21,7 +21,6 @@ const products = catalog.products.map((p) => ({
   mode: p.mode,
   hazmat: p.hazmat,
   taxable: p.taxable,
-  price: null,
   currency: 'usd',
   active: p.active,
   sort: p.sort,
@@ -33,8 +32,7 @@ const variants = catalog.product_variants.map((v) => ({
   product_sku: v.product_slug,
   label: v.label,
   gallons: v.size_gal,
-  price: v.retail_price,
-  currency: v.currency,
+  currency: 'usd',
   active: v.active,
   sort: v.sort,
 }));
@@ -44,7 +42,6 @@ const services = [...catalog.services, ...catalog.service_packages].map((s) => (
   name: s.name,
   category: s.category,
   unit: s.unit,
-  public_price: s.public_price,
   mode: s.mode,
   active: s.active,
   updated_at: now,
@@ -58,15 +55,10 @@ const chunk = (items, size = 100) => {
   return out;
 };
 
-function missingOptionalTable(error, table) {
-  return table === 'price_tiers' && /relation .*price_tiers|schema cache|does not exist/i.test(error?.message || '');
-}
-
-async function deleteStaleRows(table, keyColumn, keepValues, { optional = false } = {}) {
+async function deleteStaleRows(table, keyColumn, keepValues) {
   const keep = new Set(keepValues.map((value) => String(value)));
   const { data, error } = await sb.from(table).select(keyColumn).limit(10000);
   if (error) {
-    if (optional && missingOptionalTable(error, table)) return 0;
     throw new Error(`${table} cleanup read failed: ${error.message}`);
   }
   const stale = (data || [])
@@ -77,27 +69,6 @@ async function deleteStaleRows(table, keyColumn, keepValues, { optional = false 
     if (delError) throw new Error(`${table} cleanup delete failed: ${delError.message}`);
   }
   return stale.length;
-}
-
-async function syncRetailPriceTiers() {
-  const rows = variants
-    .filter((variant) => variant.price != null)
-    .map((variant) => ({
-      vsku: variant.vsku,
-      tier: 'retail',
-      price: variant.price,
-      currency: variant.currency || 'usd',
-      updated_at: now,
-    }));
-  if (!rows.length) return 0;
-  const { error } = await sb
-    .from('price_tiers')
-    .upsert(rows, { onConflict: 'vsku,tier' });
-  if (error) {
-    if (missingOptionalTable(error, 'price_tiers')) return 0;
-    throw new Error(`price_tiers retail sync failed: ${error.message}`);
-  }
-  return rows.length;
 }
 
 for (const [table, rows, onConflict] of [
@@ -118,17 +89,15 @@ try {
   const currentVariants = variants.map((row) => row.vsku);
   const currentServices = services.map((row) => row.sku);
   cleaned = {
-    price_tiers: await deleteStaleRows('price_tiers', 'vsku', currentVariants, { optional: true }),
     product_variants: await deleteStaleRows('product_variants', 'vsku', currentVariants),
     services: await deleteStaleRows('services', 'sku', currentServices),
     products: await deleteStaleRows('products', 'sku', currentProducts),
-    retail_tiers_synced: await syncRetailPriceTiers(),
   };
 } catch (error) {
   console.error('Seed cleanup failed:', error.message);
   process.exit(1);
 }
 
-const buyable = variants.filter((v) => v.active && v.price != null).length;
-console.log(`Seeded ${products.length} products, ${variants.length} variants (${buyable} buyable), and ${services.length} services/packages.`);
-console.log(`Cleaned stale rows: ${cleaned.product_variants} variants, ${cleaned.products} products, ${cleaned.services} services, ${cleaned.price_tiers} price-tier cells; synced ${cleaned.retail_tiers_synced} retail tier cells.`);
+const active = variants.filter((variant) => variant.active).length;
+console.log(`Seeded ${products.length} products, ${variants.length} variants (${active} active), and ${services.length} services/packages without changing CMS prices.`);
+console.log(`Cleaned stale rows: ${cleaned.product_variants} variants, ${cleaned.products} products, ${cleaned.services} services.`);

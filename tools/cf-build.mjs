@@ -40,7 +40,7 @@ const DENY = [
   /^data\/industry-applications\.json$/,
   /^img\/clients\//,
   /^img\/proof\/carib-brewery-table\.webp$/i,
-  // Internal seed sources — not client assets (only data/drum-pricing.json is fetched).
+  // Internal catalog bootstrap sources — never public client assets.
   /^data\/(catalog|products)\.seed\.json$/,
 ];
 

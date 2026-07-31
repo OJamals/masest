@@ -38,13 +38,9 @@ test("snapshotPayloads merges payload + drops drafts, keyed per snapshot file", 
   const out = snapshotPayloads(ENTRIES);
   assert.deepEqual(Object.keys(out).sort(), [
     "blog.json", "faqs.json", "industry-sectors.json", "page-meta.json",
-    "page-sections.json", "pricing.json", "proof.json", "resources.json", "services.json",
+    "page-sections.json", "proof.json", "resources.json", "services.json",
   ]);
-  assert.equal(out["pricing.json"].pricing_tiers.length, 1); // draft excluded
-  const tier = out["pricing.json"].pricing_tiers[0];
-  assert.equal(tier.slug, "essentials");
-  assert.equal(tier.badge, "Bronze");
-  assert.deepEqual(tier.features, ["a", "b"]);
+  assert.equal(out["pricing.json"], undefined, "runtime pricing must not enter static snapshots");
   assert.equal(out["faqs.json"].faq_blocks.length, 1);
 });
 
@@ -55,9 +51,8 @@ test("writeSnapshots writes every file + a manifest with counts", () => {
     const written = readdirSync(dir);
     for (const name of names) assert.ok(written.includes(name), `${name} written`);
     const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
-    assert.equal(manifest.files["pricing.json"].count, 1);
     assert.equal(manifest.files["faqs.json"].count, 1);
-    assert.match(manifest.files["pricing.json"].sha256, /^[a-f0-9]{64}$/);
+    assert.equal(manifest.files["pricing.json"], undefined);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -75,7 +70,7 @@ test("writeSnapshots regenerates empty snapshots for zero published entries (not
       for (const arr of Object.values(parsed)) assert.deepEqual(arr, []);
     }
     const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
-    assert.equal(manifest.files["pricing.json"].count, 0);
+    assert.equal(manifest.files["pricing.json"], undefined);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -108,8 +103,7 @@ test("publish:content regenerates snapshots from CONTENT_EXPORT_SOURCE", () => {
       env: { ...process.env, CONTENT_EXPORT_OUT_DIR: dir, CONTENT_EXPORT_SOURCE: JSON.stringify(ENTRIES) },
     });
     assert.match(stdout, /regenerated snapshots from 2 published entries/);
-    const pricing = JSON.parse(readFileSync(join(dir, "pricing.json"), "utf8"));
-    assert.equal(pricing.pricing_tiers.length, 1);
+    assert.equal(readdirSync(dir).includes("pricing.json"), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -118,8 +112,8 @@ test("publish:content regenerates snapshots from CONTENT_EXPORT_SOURCE", () => {
 test("publish:content refuses to wipe an existing non-empty snapshot without --allow-empty", () => {
   const dir = mkdtempSync(join(tmpdir(), "masest-publish-guard-"));
   try {
-    const prior = `${JSON.stringify({ pricing_tiers: [{ slug: "essentials" }] }, null, 2)}\n`;
-    writeFileSync(join(dir, "pricing.json"), prior);
+    const prior = `${JSON.stringify({ faq_blocks: [{ slug: "shipping" }] }, null, 2)}\n`;
+    writeFileSync(join(dir, "faqs.json"), prior);
 
     let threw = false;
     try {
@@ -131,11 +125,11 @@ test("publish:content refuses to wipe an existing non-empty snapshot without --a
     } catch (err) {
       threw = true;
       assert.match(String(err.stderr || ""), /refusing to publish/);
-      assert.match(String(err.stderr || ""), /pricing\.json: 1/);
+      assert.match(String(err.stderr || ""), /faqs\.json: 1/);
     }
 
     assert.ok(threw, "exits non-zero before wiping a non-empty snapshot");
-    assert.equal(readFileSync(join(dir, "pricing.json"), "utf8"), prior);
+    assert.equal(readFileSync(join(dir, "faqs.json"), "utf8"), prior);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -144,7 +138,7 @@ test("publish:content refuses to wipe an existing non-empty snapshot without --a
 test("publish:content allows intentional empty snapshots with --allow-empty", () => {
   const dir = mkdtempSync(join(tmpdir(), "masest-publish-allow-empty-"));
   try {
-    writeFileSync(join(dir, "pricing.json"), `${JSON.stringify({ pricing_tiers: [{ slug: "essentials" }] }, null, 2)}\n`);
+    writeFileSync(join(dir, "faqs.json"), `${JSON.stringify({ faq_blocks: [{ slug: "shipping" }] }, null, 2)}\n`);
 
     const stdout = execFileSync(process.execPath, ["tools/publish-content.mjs", "--allow-empty"], {
       cwd: ROOT,
@@ -153,10 +147,10 @@ test("publish:content allows intentional empty snapshots with --allow-empty", ()
     });
 
     assert.match(stdout, /regenerated snapshots from 0 published entries/);
-    const pricing = JSON.parse(readFileSync(join(dir, "pricing.json"), "utf8"));
-    assert.deepEqual(pricing.pricing_tiers, []);
+    const faqs = JSON.parse(readFileSync(join(dir, "faqs.json"), "utf8"));
+    assert.deepEqual(faqs.faq_blocks, []);
     const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
-    assert.equal(manifest.files["pricing.json"].count, 0);
+    assert.equal(manifest.files["faqs.json"].count, 0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

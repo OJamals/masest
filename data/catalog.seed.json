@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-07",
+  "generated_at": "2026-07-31",
   "source_directory": "/Users/omar/Desktop/masest/pricingproductservices",
   "products": [
     {
@@ -250,9 +250,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "19.2675",
-      "retail_price": "19.27",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -260,9 +257,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-CR-2.5G",
@@ -270,9 +265,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "19.2675",
-      "retail_price": "48.17",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -280,9 +272,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-CR-5G",
@@ -290,9 +280,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "19.2675",
-      "retail_price": "96.34",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -300,9 +287,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-CR-55G",
@@ -310,9 +295,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "12.0093",
-      "retail_price": "660.51",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -320,9 +302,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-CR-275G",
@@ -330,9 +310,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "10.1588",
-      "retail_price": "2793.66",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -340,9 +317,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-CR2-1G",
@@ -350,9 +325,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "18.2541",
-      "retail_price": "18.25",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -360,9 +332,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — CONFIRMED: 55-gal tier +20%",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-CR2-55G",
@@ -370,9 +340,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "15.2118",
-      "retail_price": "836.65",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -380,9 +347,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-CR2-275G",
@@ -390,9 +355,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "11.0645",
-      "retail_price": "3042.74",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -400,9 +362,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-HCR-1G",
@@ -410,9 +370,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "21.63",
-      "retail_price": "21.63",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -420,9 +377,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-HCR-2.5G",
@@ -430,9 +385,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "21.63",
-      "retail_price": "54.08",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -440,9 +392,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-HCR-5G",
@@ -450,9 +400,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "21.63",
-      "retail_price": "108.15",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -460,9 +407,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-HCR-55G",
@@ -470,9 +415,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "16.8263",
-      "retail_price": "925.44",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -480,9 +422,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-HCR-275G",
@@ -490,9 +430,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "12.5213",
-      "retail_price": "3443.34",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -500,9 +437,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-HCR-T16-1G",
@@ -510,9 +445,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "21.7088",
-      "retail_price": "21.71",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -520,9 +452,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — priced off 55-gal tier (no jug cost on file) — CONFIRM before publishing",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-HCR-T16-275G",
@@ -530,9 +460,6 @@
       "label": "275 gal tote (16+ totes)",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "21.7088",
-      "retail_price": "5969.91",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -540,9 +467,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-DESC-1G",
@@ -550,9 +475,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "15.0283",
-      "retail_price": "15.03",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -560,9 +482,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-DESC-2.5G",
@@ -570,9 +490,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "15.0283",
-      "retail_price": "37.57",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -580,9 +497,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-DESC-5G",
@@ -590,9 +505,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "15.0283",
-      "retail_price": "75.14",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -600,9 +512,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-DESC-55G",
@@ -610,9 +520,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "9.6863",
-      "retail_price": "532.74",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -620,9 +527,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-DESC-275G",
@@ -630,9 +535,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "8.5838",
-      "retail_price": "2360.53",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -640,9 +542,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-CRHD-1G",
@@ -650,9 +550,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "10.605",
-      "retail_price": "10.61",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -660,9 +557,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-CRHD-2.5G",
@@ -670,9 +565,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "10.605",
-      "retail_price": "26.51",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -680,9 +572,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-CRHD-5G",
@@ -690,9 +580,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "10.605",
-      "retail_price": "53.03",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -700,9 +587,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-CRHD-55G",
@@ -710,9 +595,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "6.405",
-      "retail_price": "352.28",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -720,9 +602,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-CRHD-275G",
@@ -730,9 +610,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "5.6438",
-      "retail_price": "1552.03",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -740,9 +617,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-CRHD-LF-1G",
@@ -750,9 +625,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "10.605",
-      "retail_price": "10.61",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -760,9 +632,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-CRHD-LF-2.5G",
@@ -770,9 +640,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "10.605",
-      "retail_price": "26.51",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -780,9 +647,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-CRHD-LF-5G",
@@ -790,9 +655,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "10.605",
-      "retail_price": "53.03",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -800,9 +662,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-CRHD-LF-55G",
@@ -810,9 +670,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "6.405",
-      "retail_price": "352.28",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -820,9 +677,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-CRHD-LF-275G",
@@ -830,9 +685,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "5.6438",
-      "retail_price": "1552.03",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -840,9 +692,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-NEUT-1G",
@@ -850,9 +700,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "16.225",
-      "retail_price": "16.23",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -860,9 +707,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-NEUT-2.5G",
@@ -870,9 +715,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "16.225",
-      "retail_price": "40.56",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -880,9 +722,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-NEUT-5G",
@@ -890,9 +730,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "16.225",
-      "retail_price": "81.13",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -900,9 +737,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-NEUT-55G",
@@ -910,9 +745,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "16.2225",
-      "retail_price": "892.24",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -920,9 +752,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-NEUT-275G",
@@ -930,9 +760,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "15.3695",
-      "retail_price": "4226.61",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -940,9 +767,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-MW-1G",
@@ -950,9 +775,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "14.6868",
-      "retail_price": "14.69",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -960,9 +782,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-MW-2.5G",
@@ -970,9 +790,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "14.6868",
-      "retail_price": "36.72",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -980,9 +797,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-MW-5G",
@@ -990,9 +805,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "14.6868",
-      "retail_price": "73.43",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1000,9 +812,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-MW-55G",
@@ -1010,9 +820,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "8.6625",
-      "retail_price": "476.44",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1020,9 +827,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-MW-275G",
@@ -1030,9 +835,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "8.0193",
-      "retail_price": "2205.29",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1040,9 +842,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-LAM3-1G",
@@ -1050,9 +850,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "22.2065",
-      "retail_price": "22.21",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1060,9 +857,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-LAM3-2.5G",
@@ -1070,9 +865,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "22.2065",
-      "retail_price": "55.52",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1080,9 +872,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-LAM3-5G",
@@ -1090,9 +880,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "22.2065",
-      "retail_price": "111.03",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1100,9 +887,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-LAM3-55G",
@@ -1110,9 +895,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "15.0055",
-      "retail_price": "825.30",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1120,9 +902,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-LAM3-275G",
@@ -1130,9 +910,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "15.6355",
-      "retail_price": "4299.75",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1140,9 +917,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-PRG-1G",
@@ -1150,9 +925,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "21.49",
-      "retail_price": "21.49",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1160,9 +932,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-PRG-2.5G",
@@ -1170,9 +940,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "21.49",
-      "retail_price": "53.73",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1180,9 +947,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-PRG-5G",
@@ -1190,9 +955,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "21.49",
-      "retail_price": "107.45",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1200,9 +962,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-PRG-55G",
@@ -1210,9 +970,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "15.7938",
-      "retail_price": "868.66",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1220,9 +977,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-PRG-275G",
@@ -1230,9 +985,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "14.3325",
-      "retail_price": "3941.44",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1240,9 +992,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-ALB-1G",
@@ -1250,9 +1000,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "12.0488",
-      "retail_price": "12.05",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1260,9 +1007,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-ALB-2.5G",
@@ -1270,9 +1015,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "12.0488",
-      "retail_price": "30.12",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1280,9 +1022,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-ALB-5G",
@@ -1290,9 +1030,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "12.0488",
-      "retail_price": "60.24",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1300,9 +1037,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-ALB-55G",
@@ -1310,9 +1045,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "8.1508",
-      "retail_price": "448.29",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1320,9 +1052,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-ALB-275G",
@@ -1330,9 +1060,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "7.3633",
-      "retail_price": "2024.89",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1340,9 +1067,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-TRQ-1G",
@@ -1350,9 +1075,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "10.395",
-      "retail_price": "10.40",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1360,9 +1082,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — 1-gal size @ jug-tier $/gal",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-TRQ-2.5G",
@@ -1370,9 +1090,6 @@
       "label": "2.5 gal jug",
       "size_gal": 2.5,
       "container_type": "jug",
-      "price_per_gallon": "10.395",
-      "retail_price": "25.99",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1380,9 +1097,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-TRQ-5G",
@@ -1390,9 +1105,6 @@
       "label": "5 gal pail",
       "size_gal": 5,
       "container_type": "pail",
-      "price_per_gallon": "10.395",
-      "retail_price": "51.98",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1400,9 +1112,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-TRQ-55G",
@@ -1410,9 +1120,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "6.9038",
-      "retail_price": "379.71",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1420,9 +1127,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 4,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 4
     },
     {
       "sku": "VK-TRQ-275G",
@@ -1430,9 +1135,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "6.0243",
-      "retail_price": "1656.67",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1440,9 +1142,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 5,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 5
     },
     {
       "sku": "VK-SAR-1G",
@@ -1450,9 +1150,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "15.1341",
-      "retail_price": "15.13",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1460,9 +1157,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — CONFIRMED: 55-gal tier +20%",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-SAR-55G",
@@ -1470,9 +1165,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "12.6118",
-      "retail_price": "693.65",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1480,9 +1172,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-SAR-275G",
@@ -1490,9 +1180,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "9.9225",
-      "retail_price": "2728.69",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1500,9 +1187,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     },
     {
       "sku": "VK-WS60-1G",
@@ -1510,9 +1195,6 @@
       "label": "1 gal jug",
       "size_gal": 1,
       "container_type": "jug",
-      "price_per_gallon": "16.884",
-      "retail_price": "16.88",
-      "currency": "usd",
       "active": true,
       "public_visible": true,
       "account_only": false,
@@ -1520,9 +1202,7 @@
       "freight_mode": "parcel_or_ground",
       "ships_ground": true,
       "ships_ltl": false,
-      "sort": 1,
-      "notes": "NEW — CONFIRMED: 55-gal tier +20%",
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 1
     },
     {
       "sku": "VK-WS60-55G",
@@ -1530,9 +1210,6 @@
       "label": "55 gal drum",
       "size_gal": 55,
       "container_type": "drum",
-      "price_per_gallon": "14.07",
-      "retail_price": "773.85",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1540,9 +1217,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 2,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 2
     },
     {
       "sku": "VK-WS60-275G",
@@ -1550,9 +1225,6 @@
       "label": "275 gal tote",
       "size_gal": 275,
       "container_type": "tote",
-      "price_per_gallon": "12.6133",
-      "retail_price": "3468.64",
-      "currency": "usd",
       "active": false,
       "public_visible": true,
       "account_only": false,
@@ -1560,9 +1232,7 @@
       "freight_mode": "ltl_final_quote",
       "ships_ground": false,
       "ships_ltl": true,
-      "sort": 3,
-      "notes": null,
-      "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
+      "sort": 3
     }
   ],
   "services": [
@@ -1572,7 +1242,6 @@
       "summary": "Receive a sample-specific baseline water-analysis report; sample point, requested analytes, method, and interpretation scope are confirmed before testing.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "278.57",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1584,7 +1253,6 @@
       "summary": "Receive water-analysis results plus biological counts for the specified cooling-tower sample; collection conditions, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "607.14",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1596,7 +1264,6 @@
       "summary": "Receive water-analysis results plus biological counts for the specified chilled-water sample; collection conditions, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "464.29",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1608,7 +1275,6 @@
       "summary": "Receive water-analysis results plus biological counts for the specified closed-loop sample; collection conditions, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "464.29",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1620,7 +1286,6 @@
       "summary": "Receive a standard result report for the specified boiler-water sample to support program review; analytes, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "307.14",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1632,7 +1297,6 @@
       "summary": "Receive a standard result report for the specified softened or degasified pretreatment-water sample; analytes, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "307.14",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1644,7 +1308,6 @@
       "summary": "Receive a standard result report for the specified boiler-feed sample to support program review; analytes, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "307.14",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1656,7 +1319,6 @@
       "summary": "Receive a standard result report for the specified polisher-water sample; analytes, method, and interpretation scope are confirmed before testing.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "307.14",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1668,7 +1330,6 @@
       "summary": "Receive a standard result report for the specified condensate sample to support return-system review; analytes, method, and interpretation scope are confirmed first.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
-      "public_price": "428.57",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1680,7 +1341,6 @@
       "summary": "Receive reported HPC or dip-slide count results for the specified sample and method; the result is a program performance indicator, not a measure of illness risk.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
-      "public_price": "92.86",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1692,7 +1352,6 @@
       "summary": "Receive lab-reported culture and species-identification results for the specified sample; collection plan, turnaround, and interpretation boundary are confirmed first.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
-      "public_price": "421.43",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1704,7 +1363,6 @@
       "summary": "Receive a qualitative PCR result for the specified sample; collection plan, method, turnaround, and interpretation boundary are confirmed first.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
-      "public_price": "285.71",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1716,7 +1374,6 @@
       "summary": "Receive a reported biological identification for the submitted sample within the agreed method and scope; health-risk conclusions are not included unless separately scoped.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
-      "public_price": "292.86",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1728,7 +1385,6 @@
       "summary": "Receive coupon measurements, condition observations, and a photo record for the agreed exposure period; engineering conclusions are separate unless scoped.",
       "category": "Lab Testing - Materials",
       "unit": "per coupon",
-      "public_price": "108.57",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1740,7 +1396,6 @@
       "summary": "Receive deposit observations, pipe measurements, and a photo record for the submitted section; destructive work, sample return, and recommendations are confirmed in scope.",
       "category": "Lab Testing - Materials",
       "unit": "per pipe",
-      "public_price": "2500.00",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1752,7 +1407,6 @@
       "summary": "Receive an analytical result summary for the submitted deposit within the agreed method; source diagnosis and treatment recommendations are separate unless scoped.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
-      "public_price": "464.29",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1764,7 +1418,6 @@
       "summary": "Receive a reported result for one agreed element by ICP or IC; sample matrix, method, and reporting boundary are confirmed before testing.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
-      "public_price": "92.86",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1776,7 +1429,6 @@
       "summary": "Receive a bounded ICP or IC screening report for agreed targets; full characterization and engineering interpretation are separate unless scoped.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
-      "public_price": "250.00",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1788,7 +1440,6 @@
       "summary": "Receive a draft water-treatment specification built from the supplied system inventory, operating needs, evaluation criteria, and required evidence.",
       "category": "Bid Support",
       "unit": "each",
-      "public_price": "2714.29",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1800,7 +1451,6 @@
       "summary": "Receive marked-up specification findings and decision notes against the supplied operating needs, incumbent scope, evaluation criteria, and deadline.",
       "category": "Bid Support",
       "unit": "each",
-      "public_price": "1357.14",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1812,7 +1462,6 @@
       "summary": "Receive structured interview preparation and decision notes tied to the supplied solicitation and evaluation criteria; participation does not imply eligibility or award.",
       "category": "Bid Support",
       "unit": "each",
-      "public_price": "1357.14",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1824,7 +1473,6 @@
       "summary": "Receive a bounded technical working session or memo addressing one defined operating decision; field work, testing, and implementation are separate unless scoped.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
-      "public_price": "421.43",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1836,7 +1484,6 @@
       "summary": "Receive documented condition observations, available measurements, and a photo record for the agreed asset and access scope, followed by a findings handoff.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
-      "public_price": "421.43",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1848,7 +1495,6 @@
       "summary": "Receive recorded ultrasonic measurements or borescope observations for the agreed asset locations; access, isolation, and interpretation limits are confirmed first.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
-      "public_price": "500.00",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1860,7 +1506,6 @@
       "summary": "Receive microscope imagery and observed-feature reporting for the submitted sample; preparation, sample return, and interpretation boundary are confirmed first.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
-      "public_price": "1785.71",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1872,7 +1517,6 @@
       "summary": "Receive test observations and results for the agreed sprinkler-system scope; access, method, and any regulatory-use boundary are confirmed before work.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
-      "public_price": "1785.71",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1884,7 +1528,6 @@
       "summary": "Receive a particle-size result report for the submitted sample and agreed method; identification and source diagnosis are not included unless scoped.",
       "category": "Consulting Services",
       "unit": "per sample",
-      "public_price": "292.86",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1896,7 +1539,6 @@
       "summary": "Receive particle-size results plus identification within the agreed analytical method; source diagnosis and engineering recommendations are separate unless scoped.",
       "category": "Consulting Services",
       "unit": "per sample",
-      "public_price": "564.29",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1908,7 +1550,6 @@
       "summary": "Receive a site collection record, labeled samples, and the agreed chain-of-custody handoff; access, travel, containers, preservation, and lab work are confirmed first.",
       "category": "Field Services",
       "unit": "per visit",
-      "public_price": "1142.86",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1920,7 +1561,6 @@
       "summary": "Receive collection of the agreed sample set during a standard visit plus a sample record; site access, travel boundary, and lab testing are confirmed separately.",
       "category": "Field Services",
       "unit": "per visit",
-      "public_price": "714.29",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1934,7 +1574,6 @@
       "lifecycle_stage": "Assess",
       "category": "Water Management Plan",
       "unit": "each",
-      "public_price": "842.86",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1948,7 +1587,6 @@
       "lifecycle_stage": "Develop",
       "category": "Water Management Plan",
       "unit": "each",
-      "public_price": "2528.57",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1962,7 +1600,6 @@
       "lifecycle_stage": "Confirm",
       "category": "Water Management Plan",
       "unit": "each",
-      "public_price": "842.86",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1976,7 +1613,6 @@
       "lifecycle_stage": "Renew",
       "category": "Water Management Plan",
       "unit": "each",
-      "public_price": "1685.71",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -1990,7 +1626,6 @@
       "lifecycle_stage": "Monitor",
       "category": "Water Management Plan",
       "unit": "per month",
-      "public_price": "71.43",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -2004,7 +1639,6 @@
       "summary": "Receive a scoped initial visit, collection record, and agreed samples routed for selected testing; travel, lab methods, and turnaround are confirmed before scheduling.",
       "category": "Service Packages",
       "unit": "package",
-      "public_price": "1835.71",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -2016,7 +1650,6 @@
       "summary": "Receive an annual setup engagement covering risk review, plan development, implementation handoff, and the agreed first-year review cadence for the building and systems.",
       "category": "Service Packages",
       "unit": "package",
-      "public_price": "4942.86",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -2030,7 +1663,6 @@
       "lifecycle_stage": "Audit",
       "category": "Service Packages",
       "unit": "per quarter",
-      "public_price": "3374.29",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",
@@ -2044,7 +1676,6 @@
       "lifecycle_stage": "Recertify",
       "category": "Service Packages",
       "unit": "per year",
-      "public_price": "4085.71",
       "mode": "quote_service",
       "active": true,
       "payment_capture": "after_scope_and_schedule_confirmed",

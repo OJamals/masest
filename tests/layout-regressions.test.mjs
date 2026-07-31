@@ -20,7 +20,7 @@ function productsPayload() {
       sku: variant.sku,
       label: variant.label,
       gallons: variant.size_gal,
-      price: variant.retail_price,
+      price: Number(variant.sort || 1) * 10,
       currency: variant.currency || "usd",
       active: variant.active !== false,
       sort: variant.sort || 0,
@@ -113,7 +113,7 @@ export async function api(path, options = {}) {
   if (pathname.startsWith("/api/admin/orders")) return { orders: fixtures.orders, total: fixtures.orders.length, has_more: false };
   if (pathname.startsWith("/api/admin/companies")) return { companies: [] };
   if (pathname.startsWith("/api/admin/customers")) return { customers: [] };
-  if (pathname.startsWith("/api/admin/variant-pricing")) return { variants: [] };
+  if (pathname.startsWith("/api/admin/variant-pricing")) return { variants: [], services: [], programs: [] };
   if (pathname.startsWith("/api/admin/coupons")) return { coupons: [] };
   if (pathname.startsWith("/api/admin/messages")) return { threads: [], messages: fixtures.messages };
   if (pathname.startsWith("/api/admin/quotes")) return { quotes: [], new_count: 0 };
@@ -229,6 +229,18 @@ test("services catalog stays visually connected to the next section on desktop",
     const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
     try {
+      await page.route("**/api/pricing", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          services: [
+            { sku: "MS-PKG-INITIAL-SAMPLING-VISIT-PACKAGE", public_price: 100 },
+            { sku: "MS-PKG-QUARTERLY-AUDIT", public_price: 200 },
+            { sku: "MS-PKG-YEARLY-RECERTIFICATION", public_price: 300 },
+            { sku: "MS-PKG-WATER-MANAGEMENT-PLAN-SETUP-ANNUAL", public_price: 400 },
+          ],
+        }),
+      }));
       await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("[data-service-sku]", { timeout: 10000 });
       const activePanel = page.locator(".service-panel:not([hidden])");
