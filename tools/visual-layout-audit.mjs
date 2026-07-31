@@ -119,18 +119,17 @@ function serviceFixtures() {
 
 function catalogFixtures() {
   const products = [
-    ["hcr", "VertKleen HCR", "buy", "img/chemistry/AdobeStock_554104937_Preview.jpeg"],
-    ["cr", "VertKleen CR", "buy", "img/chemistry/AdobeStock_298635145_Preview.jpeg"],
-    ["water-safe-60", "WaterSafe 60", "quote", "img/chemistry/AdobeStock_236245730_Preview.jpeg"],
-    ["alumibrite", "Alumibrite", "buy", "img/chemistry/AdobeStock_636273322_Preview.jpeg"],
-  ].map(([slug, name, mode, image_url], index) => ({
+    ["hcr", "VertKleen HCR", "buy"],
+    ["cr", "VertKleen CR", "buy"],
+    ["water-safe-60", "WaterSafe 60", "quote"],
+    ["alumibrite", "Alumibrite", "buy"],
+  ].map(([slug, name, mode], index) => ({
     sku: slug,
     slug,
     name,
     mode,
     active: true,
     sort: index + 1,
-    image_url,
     photo_alt: `${name} product image`,
     product_variants: [
       { vsku: `${slug}-1`, sku: `${slug}-1`, label: "1 gal bottle", gallons: 1, price: 64 + index * 8, currency: "usd", active: true, sort: 1 },

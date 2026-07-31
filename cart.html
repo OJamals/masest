@@ -48,7 +48,11 @@
         <p id="cartStatus" class="cart-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
         <div id="checkoutActive">
           <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
-          <form id="checkoutForm" novalidate>
+          <form id="checkoutForm" class="cart-path cart-path-primary" novalidate>
+            <div class="cart-path-heading">
+              <span>Pay now</span>
+              <small>Secure Card / ACH checkout</small>
+            </div>
             <label class="field-label" for="checkoutEmail">Receipt email</label>
             <input id="checkoutEmail" name="email" class="cart-input" type="email" autocomplete="email" spellcheck="false" inputmode="email" aria-describedby="checkoutEmailHelp" placeholder="buyer@company.com">
             <p id="checkoutEmailHelp" class="cart-field-help">Optional. Order confirmation is sent to this address.</p>
@@ -56,11 +60,22 @@
             <input id="checkoutPurchaseOrder" name="purchase_order_number" class="cart-input" type="text" maxlength="64" autocomplete="off" spellcheck="false" aria-describedby="checkoutPurchaseOrderHelp" placeholder="PO-1042">
             <p id="checkoutPurchaseOrderHelp" class="cart-field-help">Optional. This reference appears with the order and accounting record.</p>
             <div class="cart-actions">
-              <button class="btn btn-primary" id="checkoutPay" type="submit">Proceed to checkout</button>
+              <button class="btn btn-primary" id="checkoutPay" type="submit">Pay now</button>
               <button class="btn btn-secondary" id="checkoutNet" type="button" hidden>Place order with NET terms</button>
             </div>
           </form>
-          <form id="saveRequisitionForm" class="cart-requisition" hidden>
+          <div class="cart-path cart-path-quote cart-quote-prompt">
+            <div class="cart-path-heading">
+              <span>Formal quote</span>
+              <small>Get documented pricing before purchase.</small>
+            </div>
+            <a class="btn btn-secondary" id="checkoutQuote" href="contact.html?type=quote">Get formal quote</a>
+          </div>
+          <form id="saveRequisitionForm" class="cart-requisition cart-path cart-path-requisition" hidden>
+            <div class="cart-path-heading">
+              <span>Save requisition</span>
+              <small>Keep these canonical order lines for repeat purchasing.</small>
+            </div>
             <label class="field-label" for="requisitionName">Save this cart</label>
             <input id="requisitionName" name="requisition_name" class="cart-input" type="text" maxlength="80" autocomplete="off" placeholder="Monthly plant supplies">
             <p class="cart-field-help">Save a named requisition to your buyer account for fast repeat orders.</p>
@@ -68,7 +83,6 @@
             <p id="requisitionStatus" class="cart-field-help" role="status" aria-live="polite"></p>
           </form>
           <p class="cart-checkout-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Secure Card / ACH checkout. Freight is confirmed separately before fulfillment.</p>
-          <p class="cart-quote-prompt">Need a formal quote? <a id="checkoutQuote" href="contact.html?type=quote">Request a quote</a></p>
           <div id="cartAccount" class="cart-account" hidden></div>
         </div>
       </aside>

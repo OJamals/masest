@@ -10,7 +10,8 @@ test('full dashboard message inbox exposes controls and email settings', () => {
   const nav = read('js/account-nav.js');
   assert.match(html, /id="msgThread"/);
   assert.match(html, /id="refreshMessages"/);
-  assert.match(html, /data-customer-chat-open/);
+  assert.doesNotMatch(html, /data-customer-chat-open/, 'full inbox should replace the floating-chat entry point');
+  assert.match(js, /support-suppressed/);
   assert.match(html, /id="msgEmailUpdates"/);
   assert.match(js, /function wireMessageSettings/);
   assert.match(js, /notify_messages/);

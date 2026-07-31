@@ -269,9 +269,9 @@ test("quote request starts as a short lead form and reveals product details prog
   await expect(page.locator("#quoteTaskDetails")).toBeVisible();
 });
 
-test("mobile pages expose persistent quote and chemical-map actions", async ({ page }) => {
+test("mobile non-catalog pages expose persistent quote and chemical-map actions", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
 
   const bar = page.locator(".lead-action-bar");
   await expect(bar).toBeHidden();

@@ -141,12 +141,12 @@ test("admin shell exposes a native Content tab and panel", () => {
   assert.match(html, /id="admContent"/);
 });
 
-test("admin shell exposes a dedicated Blog tab in Comms", () => {
+test("admin shell exposes a dedicated Blog tab in Publishing", () => {
   const html = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
   assert.match(html, /data-tab="blog"/);
   assert.match(html, /data-panel="blog"/);
   assert.match(html, /id="admBlog"/);
-  assert.match(html, /Comms[\s\S]*data-tab="blog"[\s\S]*data-tab="newsletter"/);
+  assert.match(html, /Publishing[\s\S]*data-tab="blog"[\s\S]*data-tab="newsletter"/);
 });
 
 test("admin content module is registered with lazy render and wire hooks", () => {

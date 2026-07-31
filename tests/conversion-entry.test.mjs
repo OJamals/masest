@@ -5,16 +5,21 @@ import { CATALOG_ORDER, PRODUCTS, PRODUCT_CATALOG_COPY } from "../js/main/catalo
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
-test("mobile discovery keeps the direct catalog path without the retired replacement checker", () => {
+test("mobile discovery opens directly on the catalog without redundant routing controls", () => {
   const products = read("products.html");
   const css = read("css/style.css");
+  const hero = products.match(/<section class="hero product-catalog-hero"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.match(products, /href="#catalog">Shop by cleaning job<\/a>/);
+  assert.doesNotMatch(hero, /hero-actions|href="#catalog"/);
   assert.doesNotMatch(products, /href="#swap"|id="swap"|id="replacementRouter"|id="swapMatrix"/);
-  assert.doesNotMatch(
+  assert.match(products, /<details class="catalog-buying-details">[\s\S]*<summary>Buying details<\/summary>/);
+  assert.match(
     css,
-    /\.product-catalog-hero \.hero-actions \.btn-secondary\s*{[^}]*display:\s*none/i,
-    "mobile CSS must not hide the direct catalog path",
+    /@media \(max-width: 720px\)[\s\S]*body\.products-page \.catalog-quick-facts\s*\{\s*display:\s*none/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 760px\)[\s\S]*\.shop-chips\s*\{[^}]*overflow-x:\s*auto[^}]*flex-wrap:\s*nowrap/,
   );
   assert.match(products, />CIP pricing<\/a>/, "catalog facts should use the concise CIP pricing label");
   assert.doesNotMatch(products, />CIP food pricing<\/a>/i);
@@ -54,6 +59,9 @@ test("static product hero exposes buying context before long copy", () => {
   assert.ok(buy > facts, "price and pack controls should follow product highlights");
   assert.ok(description > buy, "buying context should appear before the long product description");
   assert.match(product, /<b>HMIS<\/b>0-0-0/);
+  assert.match(product, /<b>Alternative to<\/b>Conventional brewery acid-cleaning and beer-stone programs/);
+  assert.match(product, /class="btn btn-secondary"[^>]*>Request a CIP mineral-cycle review<\/a>/);
+  assert.match(product, /class="product-back-link"[^>]*>All products<\/a>/);
 });
 
 test("animated homepage copy keeps stable accessible names", () => {
@@ -81,7 +89,7 @@ test("CIP pricing label stays consistent across entry, detail, and resource surf
 
   assert.match(products, />CIP pricing<\/a>/);
   assert.match(pricing, /<title>CIP Pricing \| MASEST VertKleen<\/title>/);
-  assert.match(pricing, /<h1 class="display">Build the cleaning cycle around the soil\.<\/h1>/);
+  assert.match(pricing, /<h1 class="display">Price each CIP cycle around soil and throughput\.<\/h1>/);
   assert.equal(segment?.title, "CIP pricing");
   assert.match(
     segment?.rows.find((row) => row.product_slug === "cr")?.application || "",
@@ -162,10 +170,13 @@ test("overlapping product families stay separated by public job scope", () => {
 test("public content generators preserve current SEO releases", () => {
   const blogBuilder = read("tools/build-blog.mjs");
   const comparisonBuilder = read("tools/gen_comparisons.mjs");
+  const seoBuilder = read("tools/seo-inject.mjs");
 
   assert.match(blogBuilder, /brand: "VertKleen"/);
   assert.match(blogBuilder, /if \(!missing\.length\) return 0;/);
   assert.match(blogBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);
   assert.match(comparisonBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);
   assert.match(comparisonBuilder, /<!-- seo:auto -->[\s\S]*<!-- \/seo:auto -->/);
+  assert.match(seoBuilder, /<span><b>Alternative to<\/b>\$\{text\(replacement\)\}<\/span>/);
+  assert.match(seoBuilder, /<a class="product-back-link"[^>]*>All products<\/a>/);
 });

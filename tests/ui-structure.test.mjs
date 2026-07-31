@@ -97,7 +97,8 @@ test("products page wires the catalog grid from product data", () => {
   assert.match(commerceUi, /QUOTE_FIRST_IDS\.includes\(id\)/);
   assert.match(commerceUi, /shop-card-quote/);
   assert.match(commerceUi, /shop-card-bulk/);
-  assert.match(read("products.html"), /href="#catalog">Shop by cleaning job/);
+  assert.match(read("products.html"), /<details class="catalog-buying-details">/);
+  assert.doesNotMatch(read("products.html"), /href="#catalog">Shop by cleaning job/);
   assert.match(read("products.html"), /contact\?type=distributor/);
   assert.doesNotMatch(read("products.html"), /Request a Quote/);
 });

@@ -32,9 +32,19 @@ test('admin.html declares the CRM tab + panel', () => {
 
 test('admin.js wires the workspace tab', () => {
   assert.match(ADMIN, /import\(\s*'\.\/admin\/crm-workspace\.js\?v=\d{8}[a-z]'\s*\)/);
-  // 2026-07-07: the Emails (offers) tab folded into CRM — its renderer rides along.
-  assert.match(ADMIN, /render:\s*\(options\)\s*=>\s*Promise\.all\(\[renderCrm\(options\),\s*renderOffers\(options\)\]\)/);
-  assert.match(ADMIN, /wireCrm\(\)/);
+  assert.match(ADMIN, /render:\s*\(options\)\s*=>\s*renderCrm\(options\)/);
+  assert.match(ADMIN, /wire:\s*wireCrm/);
+});
+
+test('account announcements live with newsletter publishing, not CRM follow-ups', () => {
+  const newsletter = HTML.match(/data-panel="newsletter"[\s\S]*?data-panel="crm"/)?.[0] || '';
+  const crm = HTML.match(/data-panel="crm"[\s\S]*?adminSupportLauncher/)?.[0] || '';
+
+  assert.match(newsletter, /id="offerForm"/);
+  assert.match(newsletter, /id="admOffers"/);
+  assert.doesNotMatch(crm, /id="offerForm"|id="admOffers"/);
+  assert.match(ADMIN, /newsletter:[\s\S]*createOffersTab/);
+  assert.match(ADMIN, /tab === 'offers'\) tab = 'newsletter'/);
 });
 
 test('workspace delegates events on stable container (no per-render listener leak)', () => {

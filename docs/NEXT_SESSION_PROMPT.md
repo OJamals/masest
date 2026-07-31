@@ -1,49 +1,76 @@
-# MASEST - Next Session Prompt
+# MASEST Session Handoff
 
-Paste the block below to start the next development session.
+Updated: 2026-07-30
+
+## Completed
+
+- Implemented product-design audit across public discovery, product detail, cart,
+  buyer dashboard, staff admin, industry routes, support launchers, SEO markup,
+  responsive CSS, and visual QA fixtures.
+- Simplified conversion paths: one primary industry CTA, clearer cart choices,
+  quieter product/catalog hierarchy, tighter dashboard workspace, and admin
+  navigation grouped by business task.
+- Moved account announcements from CRM follow-up work into Newsletter publishing.
+  Historical `#offers` links now resolve to `#newsletter`.
+- Consolidated responsive/product styles and refreshed generated pages plus
+  Phosphor subset. Session ends with less source/output code than it started.
+- Replaced a source-shape support test with browser behavior coverage.
+- Fixed root cause of floating support remaining hidden after leaving dashboard
+  Messages: `selectTab()` dispatched `masest:support-route` before
+  `history.replaceState()`, so listeners read the stale `#messages` hash.
+- Removed orphaned empty responsive CSS blocks.
+- Google Search Console ownership is verified. Search data was still processing
+  at handoff; no evidence-based query/index cleanup is available yet.
+
+## Verified
+
+- `npm run check` — 237 JavaScript files.
+- `npm test` — 1,764 passed, 0 failed.
+- `npm run build` — passed; second run produced `seo-inject: 0 files changed`.
+- `npm run verify:site` — 88 HTML, 7 CSS, 184 JS files.
+- `npm run verify:cms-images` — 217 live objects, 30,672,659 bytes.
+- `npm run qa:commerce-smoke` — 18 passed.
+- `npm run qa:ui-critical` — 43 passed.
+- `npm run smoke:admin` — 25 passed.
+
+No deployment was performed. Commit containing this file is the session handoff;
+verify exact hash and `origin/main` parity at next-session start.
+
+## Next Session Entry Prompt
+
+Paste this block into the next session:
 
 ```text
-MASEST site. Work from /Users/omar/Claude/Projects/MASEST on main.
+Continue MASEST from /Users/omar/Claude/Projects/MASEST on main.
 
-Rules:
-- Run `git fetch origin` and check `git status --short --branch` before edits.
-- Treat main as the deploy branch. Push only verified commits.
-- Keep changes scoped; do not revert unrelated dirty work.
-- For behavior changes, write/keep structural tests first.
-- Use the visual guard for no-visual-change CSS/large frontend refactors.
+Start read-only:
+1. Read AGENTS.md, CONTEXT.md, docs/agents/domain.md, and
+   docs/NEXT_SESSION_PROMPT.md.
+2. Run `git fetch origin`, `git status --short --branch`,
+   `git log -1 --oneline`, and verify HEAD matches origin/main.
+3. Do not repeat the completed product-design redesign or create parallel
+   handoff/audit artifacts.
 
-Current state as of 2026-06-18:
-- Latest feature state includes 32b9e66 (`feat(admin): show company setup gaps`); verify current HEAD before editing.
-- main.js has been split into shared entrypoint modules.
-- admin QBO controls have been split into js/admin/qbo.js.
-- QBO auto-sync is implemented, with cron endpoint, staff manual sync, queue summary, and admin status.
-- Buyer setup progress is returned from /api/account/me and shown in dashboard/business hub.
-- Staff company setup gaps are shown in the admin companies table.
-- Latest verification: `node --test --test-concurrency=1 tests/*.test.mjs` = 146 pass; admin Playwright smoke = 1 pass; `node tools/verify-seo.mjs` = pass; `git diff --check` = pass.
+Current state:
+- Product-design audit implementation, cleanup, root-cause support-route fix,
+  generated outputs, and regression coverage are committed on main.
+- Baseline gates: check 237 JS files; tests 1,764/1,764; site verification
+  88 HTML + 7 CSS + 184 JS; CMS images 217; Playwright commerce 18,
+  critical UI 43, admin 25.
+- Google Search Console ownership is verified, but performance/indexing data was
+  still processing at handoff.
+- No deployment was performed in the prior session.
 
-Recent commits:
-- 32b9e66 feat(admin): show company setup gaps
-- 94ffee9 feat(account): surface buyer setup progress
-- f41cc0a feat(qbo): show sync queue summary
-- 974b2a6 feat(qbo): add manual admin sync trigger
-- cc810c3 refactor(admin): split qbo controls
-- 69fcdb1 refactor(main): split commerce and interaction modules
-- c50d23d refactor(main): split shared entrypoint modules
-
-Good next work:
-1. Continue admin.js split in small tested slices: orders, companies, products, quotes.
-2. Add real admin browser smoke coverage for QBO manual sync and company setup rendering.
-3. Add owner-facing deployment docs for QBO enablement: Supabase schema-qbo.sql, QBO env vars, pg_cron/pg_net cron, and first manual sync.
-4. Optional frontend cleanup: replace inline admin overview layout styles with CSS classes, using visual guard where relevant.
-
-Ops-only reminders:
-- QBO production enablement requires owner secrets and Intuit account access.
-- Live rate-limit verification requires deployed Cloudflare bindings.
+Next work:
+- Check whether Search Console performance and indexing data has populated.
+- If data exists, inspect query/page performance, indexing exclusions, canonical
+  selection, sitemap status, and Core Web Vitals. Record exact evidence before
+  changing code.
+- Fix only confirmed root causes. Replace > accumulate: consolidate when useful;
+  remove stale/orphaned/legacy code; preserve canonical generators and authenticated
+  buyer/staff workflows; aim for net code reduction.
+- If Search Console still has no data, do not invent SEO churn. Rebaseline open
+  GitHub issues and choose the highest-value ready-for-agent item.
+- Run proportionate focused tests, then the full relevant gate. Do not deploy,
+  commit, or push unless the session request explicitly authorizes it.
 ```
-
-## Current Verification
-
-- `node --test --test-concurrency=1 tests/*.test.mjs` - 146 pass.
-- `npx playwright test tools/admin-auth-gate.spec.mjs --reporter=line` - 1 pass.
-- `node tools/verify-seo.mjs` - pass.
-- `git diff --check` - pass.

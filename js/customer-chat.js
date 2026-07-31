@@ -9,6 +9,12 @@ function pageRoot() {
   return window.MASEST?.chatRoot || "";
 }
 
+function routeSuppressesSupport() {
+  const dashboardMessages = /(?:^|\/)dashboard(?:\.html)?$/.test(location.pathname)
+    && location.hash.replace(/^#/, "") === "messages";
+  return dashboardMessages || document.body.classList.contains("support-suppressed");
+}
+
 function makeMessage(message) {
   const item = document.createElement("article");
   item.className = `customer-chat__message customer-chat__message--${message.sender_role === "staff" ? "staff" : "buyer"}`;
@@ -58,6 +64,7 @@ export async function initCustomerChat() {
   const shell = document.createElement("aside");
   shell.id = "customerChat";
   shell.className = "customer-chat";
+  shell.hidden = routeSuppressesSupport();
   shell.innerHTML = `
     <section class="customer-chat__panel" role="dialog" aria-labelledby="customerChatTitle" hidden>
       <header class="customer-chat__header">
@@ -170,7 +177,7 @@ export async function initCustomerChat() {
     try { await presenceRequest; }
     catch { if (chatPresenceOpen === open) chatPresenceOpen = !open; }
   };
-  const setOpen = (open) => {
+  const setOpen = (open, { restoreFocus = true } = {}) => {
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
     toggle.setAttribute("aria-label", open ? "Close customer chat" : "Open customer chat");
@@ -179,8 +186,14 @@ export async function initCustomerChat() {
       window.clearInterval(pollId);
       pollId = 0;
       void setChatPresence(false);
-      toggle.focus();
+      if (restoreFocus) toggle.focus();
     }
+  };
+  const syncRouteVisibility = () => {
+    const suppressed = routeSuppressesSupport();
+    if (suppressed && !panel.hidden) setOpen(false, { restoreFocus: false });
+    shell.hidden = suppressed;
+    if (!suppressed) scheduleDockAvoidance();
   };
   const showGuest = () => {
     if (authenticated) void setChatPresence(false);
@@ -265,7 +278,9 @@ export async function initCustomerChat() {
   document.addEventListener("masest:auth", () => { if (!panel.hidden) void refresh(); });
   document.addEventListener("masest:session-expired", () => { if (!panel.hidden) showGuest(); });
   document.addEventListener("cart:updated", () => { if (!panel.hidden) void updateQuoteHref(); });
+  document.addEventListener("masest:support-route", syncRouteVisibility);
   document.addEventListener(OBSTRUCTION_EVENT, scheduleDockAvoidance);
+  window.addEventListener("hashchange", syncRouteVisibility);
   window.addEventListener("resize", scheduleDockAvoidance, { passive: true });
   document.addEventListener("visibilitychange", () => {
     if (panel.hidden || !authenticated) return;

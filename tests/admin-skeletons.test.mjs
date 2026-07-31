@@ -15,7 +15,7 @@ const srcAll = src + readdirSync(adminDir)
 test('admin defines reusable skeleton + empty-state helpers', () => {
   assert.match(src, /admSkeleton/, 'skeleton helper');
   assert.match(src, /admEmpty/, 'empty-state helper');
-  assert.match(src, /skeleton skeleton-block/, 'reuses the shared skeleton block');
+  assert.match(src, /class="adm-skeletons" role="status"[\s\S]*class="sr-only">Loading admin data<[\s\S]*skeleton skeleton-block/, 'announces loading while reusing the shared skeleton block');
   assert.match(src, /class="empty-state"/, 'reuses the shared empty-state block');
 });
 

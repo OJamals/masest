@@ -4,7 +4,7 @@ export const PRODUCTS = {
   hcr: {
     name: "VertKleen CIP HCR",
     cat: "acid",
-    replaces: "Compared with brewery acid-cleaning and beer-stone programs",
+    replaces: "Conventional brewery acid-cleaning and beer-stone programs",
     hmis: "0-0-0",
     icon: "ph-flask",
     image: "img/products/cip-hcr-studio.webp",

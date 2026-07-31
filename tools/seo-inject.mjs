@@ -546,7 +546,11 @@ function productSchema(id, product, reviewsSnapshot) {
         ...(offers.length ? { offers } : {}),
         additionalProperty: [
           { "@type": "PropertyValue", name: "HMIS rating", value: product.hmis },
-          { "@type": "PropertyValue", name: "Replaces", value: product.replaces },
+          {
+            "@type": "PropertyValue",
+            name: "Alternative to",
+            value: String(product.replaces || "").replace(/^(?:Replaces|Compared with|Evaluated against|Evaluated for)\s+/i, ""),
+          },
           {
             "@type": "PropertyValue",
             name: "Procurement",
@@ -630,9 +634,11 @@ function productPage(id, product, reviewsSnapshot) {
   const procurement = QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
     : "Small packs ship from stock where available; drums, totes, and program supply are quoted.";
-  const replacement = String(product.replaces || "Industrial chemistry").replace(/^Replaces\s+/i, "");
+  const replacement = String(product.replaces || "Industrial chemistry")
+    .replace(/^(?:Replaces|Compared with|Evaluated against|Evaluated for)\s+/i, "");
   const supply = QUOTE_ONLY_IDS.has(id) ? "Quoted to fit" : "Small packs in stock";
   const eyebrow = id === "dbnpa" ? "Program component" : "VertKleen product";
+  const quoteButtonClass = QUOTE_ONLY_IDS.has(id) ? "btn-primary" : "btn-secondary";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -680,7 +686,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         <h1 class="display">${text(product.name)}</h1>
         <div class="product-hero-facts" aria-label="Product highlights">
           <span><b>HMIS</b>${text(product.hmis || "0-0-0")}</span>
-          <span><b>Replaces</b>${text(replacement)}</span>
+          <span><b>Alternative to</b>${text(replacement)}</span>
           <span><b>Supply</b>${text(supply)}</span>
         </div>${QUOTE_ONLY_IDS.has(id) ? "" : `
         <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
@@ -693,10 +699,10 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         </div>`}
         <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="../contact?type=quote&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.quote_cta || "Request a quote")}</a>
-          <a class="btn btn-secondary" href="../contact?type=sample&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.sample_cta || "Request free sample")}</a>
-          <a class="btn btn-ghost" href="../products">All products</a>
+          <a class="btn ${quoteButtonClass}" href="../contact?type=quote&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.quote_cta || "Request a quote")}</a>
+          <a class="btn btn-ghost" href="../contact?type=sample&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.sample_cta || "Request free sample")}</a>
         </div>
+        <a class="product-back-link" href="../products">All products</a>
       </div>
       ${heroMedia}
     </div>
@@ -705,7 +711,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     <div class="wrap product-static-grid">${applicationMedia ? `
       ${applicationMedia}` : ""}
       <article class="product-static-panel">
-        <h2>${text(product.replaces || "Industrial chemistry replacement")}</h2>
+        <h2>Alternative to ${text(replacement)}</h2>
         <p>${text(procurement)}</p>
         <ul class="product-fit-list">${uses}</ul>
       </article>

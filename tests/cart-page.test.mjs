@@ -198,9 +198,12 @@ test("cart uses a conventional order summary without catalog policy duplication"
 
       await page.getByText("2 items").waitFor();
       await page.getByText("$34.60", { exact: true }).first().waitFor();
-      await page.getByRole("button", { name: "Proceed to checkout" }).waitFor();
+      await page.getByRole("button", { name: "Pay now", exact: true }).waitFor();
       assert.equal(await page.getByRole("button", { name: "Place order with NET terms" }).isVisible(), false);
-      await page.getByRole("link", { name: "Request a quote" }).waitFor();
+      await page.getByRole("link", { name: "Get formal quote" }).waitFor();
+      assert.equal(await page.locator(".cart-path-primary").count(), 1);
+      assert.equal(await page.locator(".cart-path-quote").count(), 1);
+      assert.equal(await page.locator(".cart-path-requisition").count(), 1);
       assert.equal(await page.getByText(/200\+ jugs/i).count(), 0);
       assert.equal(await page.getByText(/Prices valid six months/i).count(), 0);
       assert.equal(await page.locator("#shipZone").count(), 0);

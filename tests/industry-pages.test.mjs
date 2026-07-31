@@ -258,6 +258,12 @@ test('gallery media fails closed between generated scenes, field context, and qu
     assert.equal(figures.length, expectedFigures, `${industry.slug}: every figure declares evidence kind`);
     assert.ok(figures.includes('generated'), `${industry.slug}: generated scenes identified`);
     assert.equal(
+      (gallery.match(/<span class="ind-media-kind">Representative setup<\/span>/g) || []).length,
+      figures.filter((kind) => kind === 'generated').length,
+      `${industry.slug}: representative scenes need a visible label`,
+    );
+    assert.doesNotMatch(gallery, /Generated task visualization/);
+    assert.equal(
       figures.includes('field-proof'),
       evidence.status === 'qualified' && !industry.case_summary,
       `${industry.slug}: field proof must follow record status`,
@@ -491,6 +497,13 @@ test('every industry page renders one task-led applications and job-fit module',
   for (const file of industryFiles) {
     const slug = file.replace(/\.html$/, '');
     const html = read(`industries/${file}`);
+    const industry = industries.find((candidate) => candidate.slug === slug);
+    const applications = html.match(
+      /<!-- industry:applications:start -->([\s\S]*?)<!-- industry:applications:end -->/,
+    )?.[1] || '';
+    const cta = html.match(
+      /<!-- industry:cta:start -->([\s\S]*?)<!-- industry:cta:end -->/,
+    )?.[1] || '';
 
     assert.equal((html.match(/data-industry-hero-facts/g) || []).length, 1, `${slug}: hero facts`);
     assert.equal(
@@ -502,6 +515,29 @@ test('every industry page renders one task-led applications and job-fit module',
     assert.doesNotMatch(html, /Put the current chemical on the table\./);
     assert.match(html, /Applications and job fit/);
     assert.doesNotMatch(html, /Applications and proof|Field-proof standard|ind-evidence-boundary/);
+    assert.doesNotMatch(
+      html,
+      /Generated scenes show common tasks|Start with what must be cleaned|Document IDs, revisions, and exact SKUs stay attached|The request opens with asset/,
+      `${slug}: repeated template prose`,
+    );
+    assert.equal(
+      (cta.match(/data-industry-primary-cta/g) || []).length,
+      1,
+      `${slug}: one primary CTA`,
+    );
+    assert.match(cta, new RegExp(industry.cta_label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.equal(
+      new URLSearchParams(
+        cta.match(/href="\.\.\/contact\?([^"]+)"/)?.[1].replaceAll('&amp;', '&'),
+      ).get('type'),
+      industry.cta_type,
+      `${slug}: authored CTA intent`,
+    );
+    assert.match(
+      applications,
+      new RegExp(industry.lead_task.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      `${slug}: unique lead task`,
+    );
 
     for (const label of [
       'Task',

@@ -13,12 +13,14 @@ function panel(name, nextName) {
   return html.slice(start, end);
 }
 
-test('admin navigation separates daily work from insights and system controls', () => {
+test('admin navigation groups daily, commerce, customer, publishing, and system work', () => {
   for (const tab of ['analytics', 'finance', 'integrations']) {
     assert.match(html, new RegExp(`data-tab="${tab}"`), `${tab} should be a first-class admin tab`);
     assert.match(html, new RegExp(`data-panel="${tab}"`), `${tab} should have a matching panel`);
   }
-  assert.match(html, /Insights &amp; system/);
+  for (const group of ['Today', 'Commerce', 'Customers', 'Publishing', 'Business system']) {
+    assert.match(html, new RegExp(`>${group}<`));
+  }
 });
 
 test('overview contains action work only, with reports, analytics, and QBO in dedicated workspaces', () => {
@@ -42,6 +44,7 @@ test('admin tab renderer preserves historical deep links in the new information 
   assert.match(admin, /focusQuickBooks\) tab = 'integrations'/);
   assert.match(admin, /tab === 'traffic' \|\| tab === 'seo'\) tab = 'analytics'/);
   assert.match(admin, /tab === 'reports' \|\| tab === 'exports'\) tab = 'finance'/);
+  assert.match(admin, /tab === 'offers'\) tab = 'newsletter'/);
   assert.match(admin, /state\.tab === 'overview'\) renderStats\(state\.stats\)/);
   assert.match(admin, /state\.tab === 'finance'\) wireReports\(\)/);
   assert.match(admin, /analytics: 'analytics'/);

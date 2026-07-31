@@ -24,10 +24,14 @@ test("admin dashboard has production shell affordances without inline layout hac
   const html = read("admin.html");
   const js = read("js/admin.js");
 
+  assert.match(html, /body \.adm-hero\s*\{[^}]*padding-top:\s*24px[^}]*padding-bottom:\s*20px/);
+  assert.match(html, /\.adm-hero h1\s*\{[^}]*font-size:\s*clamp\(2rem,\s*4vw,\s*2\.75rem\)/);
   assert.match(html, /adm-tabs-wrap/, "admin tab rail should keep its mobile-safe scroll container class");
   assert.match(html, /class="adm-layout"/, "admin app should use a dashboard-style two-column shell");
   assert.match(html, /class="adm-sidebar adm-tabs-wrap"/, "admin sections should live in a sidebar rail");
-  assert.match(html, /class="adm-nav-group"[\s\S]*<span aria-hidden="true">Operations<\/span>/, "admin nav should group operational sections");
+  for (const group of ["Today", "Commerce", "Customers", "Publishing", "Business system"]) {
+    assert.match(html, new RegExp(`<span aria-hidden="true">${group}<\\/span>`), `admin nav should expose the ${group} group`);
+  }
   assert.match(html, /adm-panel-header/, "admin panels should expose consistent panel header utility");
   assert.match(html, /adm-inline-actions/, "admin inline action rows should use reusable classes");
   assert.doesNotMatch(html, /style="/, "admin shell should not rely on inline style polish");
@@ -41,6 +45,8 @@ test("dashboard panels protect form and notification text from clipping", () => 
   const html = read("dashboard.html");
   const js = read("js/dashboard.js");
 
+  assert.match(html, /class="hero-split dashboard-hero"/);
+  assert.match(html, /class="section section-slim dashboard-workspace"/);
   assert.match(html, /\.dash-card \.field-grid/, "dashboard forms should override public-page field grid widths");
   assert.match(html, /\.dash-tab\s*\{[^}]*position:\s*relative/, "dashboard notification bubbles should anchor to tab button corners");
   assert.match(html, /\.dash-tab \.pill\s*\{[^}]*position:\s*absolute[^}]*top:\s*-[^;}]+[^}]*right:\s*-[^;}]+/, "dashboard notification bubbles should sit outside tab button chrome");
@@ -49,7 +55,7 @@ test("dashboard panels protect form and notification text from clipping", () => 
   assert.match(html, /\.notif-prefs\s*\{[^}]*display:\s*flex/, "notification preferences should use a reusable layout class");
   assert.match(html, /class="notif-pref-label"/, "notification preference labels should use reusable classes");
   assert.match(html, /\.dash-pager/, "dashboard pagers should use reusable spacing classes");
-  assert.match(html, /@media \(max-width: 820px\)[\s\S]*\.dash-sidebar \.dash-tabs\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/, "mobile dashboard nav should show all sections in a no-overflow grid");
+  assert.match(html, /@media \(max-width: 820px\)[\s\S]*\.dash-sidebar \.dash-tabs\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/, "mobile dashboard nav should expose every section in a compact grid");
   assert.match(html, /@media \(max-width: 820px\)[\s\S]*\.dash-nav-group\s*\{\s*display:\s*contents;\s*\}/, "mobile dashboard nav should flatten grouped sections");
   assert.doesNotMatch(html, /\.notif\.unread\s*\{[^}]*margin:\s*0\s+-/, "unread notifications should not use negative margins inside cards");
   assert.doesNotMatch(html, /style="/, "dashboard shell should not rely on inline layout styles");

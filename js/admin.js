@@ -29,7 +29,7 @@ function debounce(fn, ms = 220) {
 
 // Loading skeleton + rich empty state for admin lists (#31). Reuse the shared
 // components.css .skeleton / .empty-state styles.
-const admSkeleton = (rows = 5) => `<div class="adm-skeletons" aria-hidden="true">${'<div class="skeleton skeleton-block adm-skeleton-row"></div>'.repeat(rows)}</div>`;
+const admSkeleton = (rows = 5) => `<div class="adm-skeletons" role="status"><span class="sr-only">Loading admin data</span>${'<div class="skeleton skeleton-block adm-skeleton-row"></div>'.repeat(rows)}</div>`;
 const admEmpty = (icon, title, body) => `<div class="empty-state"><i class="ph ${icon} empty-icon" aria-hidden="true"></i><div class="empty-title">${esc(title)}</div><div class="empty-body">${esc(body)}</div></div>`;
 const state = {
   tab: 'overview',
@@ -244,7 +244,7 @@ function setTab(tab, context = {}) {
   if (focusQuickBooks) tab = 'integrations';
   if (tab === 'pricing') tab = 'products';
   if (tab === 'messages') tab = 'support-settings';
-  if (tab === 'offers') tab = 'crm';
+  if (tab === 'offers') tab = 'newsletter';
   if (tab === 'traffic' || tab === 'seo') tab = 'analytics';
   if (tab === 'reports' || tab === 'exports') tab = 'finance';
   state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
@@ -664,19 +664,27 @@ const featureLoader = createFeatureLoader({
     };
   },
   newsletter: async () => {
-    const { createNewsletterTab } = await import('./admin/newsletter.js?v=20260730a');
+    const [{ createNewsletterTab }, { createOffersTab }] = await Promise.all([
+      import('./admin/newsletter.js?v=20260730a'),
+      import('./admin/offers.js?v=20260730a'),
+    ]);
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
     });
+    const { renderOffers, wireOfferForm } = createOffersTab({
+      $, api, state, message, admSkeleton, admEmpty,
+    });
     return {
-      wire: wireNewsletter,
-      render: (options) => renderNewsletter(options),
+      wire() {
+        wireNewsletter();
+        wireOfferForm();
+      },
+      render: (options) => Promise.all([renderNewsletter(options), renderOffers(options)]),
     };
   },
   crm: async () => {
-    const [{ createCrmWorkspace }, { createOffersTab }, { createCrmPanel }] = await Promise.all([
+    const [{ createCrmWorkspace }, { createCrmPanel }] = await Promise.all([
       import('./admin/crm-workspace.js?v=20260730a'),
-      import('./admin/offers.js?v=20260730a'),
       import('./admin/crm.js?v=20260730a'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
@@ -689,15 +697,9 @@ const featureLoader = createFeatureLoader({
     const { renderCrm, wireCrm } = createCrmWorkspace({
       $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager, refreshStats,
     });
-    const { renderOffers, wireOfferForm } = createOffersTab({
-      $, api, state, message, admSkeleton, admEmpty,
-    });
     return {
-      wire() {
-        wireCrm();
-        wireOfferForm();
-      },
-      render: (options) => Promise.all([renderCrm(options), renderOffers(options)]),
+      wire: wireCrm,
+      render: (options) => renderCrm(options),
     };
   },
 });

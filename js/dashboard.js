@@ -65,6 +65,7 @@ function reserveDashboardHeight() {
 
 function selectTab(name) {
   activeDashboardTab = name;
+  document.body.classList.toggle('support-suppressed', name === 'messages');
   const tabs = [...document.querySelectorAll('.dash-tab')];
   tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   rovingTabindex(tabs, (t) => t.dataset.tab === name);
@@ -77,6 +78,7 @@ function selectTab(name) {
   reserveDashboardHeight();
   document.querySelectorAll('.dash-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+  document.dispatchEvent(new Event('masest:support-route'));
   loadTab(name);
 }
 

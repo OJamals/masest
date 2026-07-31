@@ -1,8 +1,8 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 259,
+  "count": 258,
   "usedCount": 150,
-  "bufferCount": 109,
+  "bufferCount": 108,
   "icons": [
     {
       "name": "address-book",
@@ -222,11 +222,6 @@
     {
       "name": "chat-circle",
       "cp": "E168",
-      "src": "used"
-    },
-    {
-      "name": "chat-circle-dots",
-      "cp": "E16C",
       "src": "used"
     },
     {
@@ -452,7 +447,7 @@
     {
       "name": "files",
       "cp": "E710",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "fingerprint",

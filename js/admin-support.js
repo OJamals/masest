@@ -10,6 +10,11 @@ const date = (value) => {
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toLocaleString();
 };
 
+const routeSuppressesSupport = () => (
+  /(?:^|\/)dashboard(?:\.html)?$/.test(location.pathname)
+  && location.hash.replace(/^#/, "") === "messages"
+) || document.body.classList.contains("support-suppressed");
+
 export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   if (document.getElementById("adminSupportConsole") || document.getElementById("adminSupportLauncher") || !auth?.api) return;
 
@@ -25,6 +30,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   const shell = document.createElement("aside");
   shell.id = "adminSupportConsole";
   shell.className = "site-support";
+  shell.hidden = routeSuppressesSupport();
   shell.innerHTML = `
     <section class="site-support__drawer" role="dialog" aria-modal="false" aria-labelledby="siteSupportTitle" hidden>
       <div class="site-support__list-pane">
@@ -75,7 +81,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     catch { if (presenceOpen === open) presenceOpen = !open; }
   };
 
-  const setOpen = (open) => {
+  const setOpen = (open, { restoreFocus = true } = {}) => {
     drawer.hidden = !open;
     launcher.setAttribute("aria-expanded", String(open));
     launcher.setAttribute("aria-label", open ? "Close admin support" : "Open admin support");
@@ -85,8 +91,13 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
       requestAnimationFrame(() => (list.querySelector("button") || close).focus());
     } else {
       void setPresence(false);
-      launcher.focus();
+      if (restoreFocus) launcher.focus();
     }
+  };
+  const syncRouteVisibility = () => {
+    const suppressed = routeSuppressesSupport();
+    if (suppressed && !drawer.hidden) setOpen(false, { restoreFocus: false });
+    shell.hidden = suppressed;
   };
 
   const renderThreads = () => {
@@ -173,6 +184,8 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   });
   launcher.addEventListener("click", () => setOpen(drawer.hidden));
   close.addEventListener("click", () => setOpen(false));
+  document.addEventListener("masest:support-route", syncRouteVisibility);
+  window.addEventListener("hashchange", syncRouteVisibility);
   document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !drawer.hidden) setOpen(false); });
   document.addEventListener("visibilitychange", () => {
     if (drawer.hidden) return;

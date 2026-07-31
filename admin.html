@@ -14,9 +14,9 @@
 <link rel="stylesheet" href="css/components.css?v=20260725f">
 <style>
   .adm-wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
-  body .adm-hero { padding-bottom: 36px; }
-  .adm-hero h1 { font-size: 56px; line-height: .98; letter-spacing: -.035em; margin: 0; }
-  .adm-hero .subhead { max-width: 62ch; font-size: 1.08rem; line-height: 1.55; }
+  body .adm-hero { min-height: 0; padding-top: 24px; padding-bottom: 20px; }
+  .adm-hero h1 { font-size: clamp(2rem, 4vw, 2.75rem); line-height: 1; letter-spacing: -.035em; margin: 0; }
+  .adm-hero .subhead { max-width: 72ch; margin-top: 8px; font-size: .95rem; line-height: 1.45; }
   #gateTitle { font-size: 28px; line-height: 1.12; margin: 0 0 8px; }
   .adm-shell { display: grid; gap: 18px; padding: 16px 0 72px; }
   .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; }
@@ -699,30 +699,30 @@
 
           <div id="admNavTabs" class="adm-tabs" role="tablist" aria-orientation="vertical" aria-label="Admin sections">
             <div class="adm-nav-group" role="presentation">
-              <span aria-hidden="true">Operations</span>
+              <span aria-hidden="true">Today</span>
               <button class="adm-tab" role="tab" data-tab="overview" type="button"><i class="ph ph-squares-four" aria-hidden="true"></i> Overview</button>
-              <button class="adm-tab" role="tab" data-tab="orders" type="button"><i class="ph ph-package" aria-hidden="true"></i> Orders</button>
-              <button class="adm-tab" role="tab" data-tab="companies" type="button"><i class="ph ph-buildings" aria-hidden="true"></i> Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
-              <button class="adm-tab" role="tab" data-tab="crm" type="button"><i class="ph ph-address-book" aria-hidden="true"></i> People &amp; follow-ups <span class="pill" id="aBadgeCrm" hidden>0</span></button>
-              <button class="adm-tab" role="tab" data-tab="quotes" type="button"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
             </div>
             <div class="adm-nav-group" role="presentation">
-              <span aria-hidden="true">Catalog</span>
+              <span aria-hidden="true">Commerce</span>
+              <button class="adm-tab" role="tab" data-tab="orders" type="button"><i class="ph ph-package" aria-hidden="true"></i> Orders</button>
+              <button class="adm-tab" role="tab" data-tab="quotes" type="button"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Quotes <span class="pill" id="aBadgeQuotes" hidden>0</span></button>
               <button class="adm-tab" role="tab" data-tab="products" type="button"><i class="ph ph-flask" aria-hidden="true"></i> Products</button>
             </div>
             <div class="adm-nav-group" role="presentation">
-              <span aria-hidden="true">Website</span>
-              <button class="adm-tab" role="tab" data-tab="content" type="button"><i class="ph ph-note-pencil" aria-hidden="true"></i> Website content</button>
+              <span aria-hidden="true">Customers</span>
+              <button class="adm-tab" role="tab" data-tab="companies" type="button"><i class="ph ph-buildings" aria-hidden="true"></i> Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
+              <button class="adm-tab" role="tab" data-tab="crm" type="button"><i class="ph ph-address-book" aria-hidden="true"></i> People &amp; follow-ups <span class="pill" id="aBadgeCrm" hidden>0</span></button>
+              <button class="adm-tab" role="tab" data-tab="support-settings" type="button"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Customer support</button>
             </div>
             <div class="adm-nav-group" role="presentation">
-              <span aria-hidden="true">Comms</span>
-              <button class="adm-tab" role="tab" data-tab="support-settings" type="button"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Customer support</button>
+              <span aria-hidden="true">Publishing</span>
+              <button class="adm-tab" role="tab" data-tab="content" type="button"><i class="ph ph-note-pencil" aria-hidden="true"></i> Website content</button>
               <button class="adm-tab" role="tab" data-tab="reviews" type="button"><i class="ph ph-star" aria-hidden="true"></i> Reviews <span class="pill" id="aBadgeReviews" hidden>0</span></button>
               <button class="adm-tab" role="tab" data-tab="blog" type="button"><i class="ph ph-newspaper" aria-hidden="true"></i> Blog</button>
               <button class="adm-tab" role="tab" data-tab="newsletter" type="button"><i class="ph ph-envelope-simple" aria-hidden="true"></i> Newsletter</button>
             </div>
             <div class="adm-nav-group" role="presentation">
-              <span aria-hidden="true">Insights &amp; system</span>
+              <span aria-hidden="true">Business system</span>
               <button class="adm-tab" role="tab" data-tab="analytics" type="button"><i class="ph ph-chart-line-up" aria-hidden="true"></i> Analytics</button>
               <button class="adm-tab" role="tab" data-tab="finance" type="button"><i class="ph ph-receipt" aria-hidden="true"></i> Finance</button>
               <button class="adm-tab" role="tab" data-tab="integrations" type="button"><i class="ph ph-plugs-connected" aria-hidden="true"></i> Integrations</button>
@@ -977,15 +977,9 @@
 
       <section class="adm-panel" role="tabpanel" data-panel="newsletter">
         <div id="admNewsletter"></div>
-      </section>
-
-      <section class="adm-panel" role="tabpanel" data-panel="crm">
-        <div id="admCrm" class="adm-panel-list">Loading…</div>
-        <!-- Outreach (offer/announcement blasts + send log) folded in from the
-             Emails tab 2026-07-07 — it's CRM work; #offers deep links land here. -->
-        <div class="adm-card">
+        <div class="adm-card adm-newsletter-offer">
           <h2>Send an offer / announcement</h2>
-          <p class="muted admin-inline-note">Posts a dashboard notification to matching <b>customer accounts</b> (optionally emails them too), segmented by account status. For a full email campaign to your subscriber &amp; lead lists — with scheduling and a compose editor — use <a href="#newsletter">Newsletter</a>.</p>
+          <p class="muted admin-inline-note">Send a dashboard notification to matching <b>customer accounts</b>, with optional email delivery. Use the campaign editor above for scheduled subscriber and lead campaigns.</p>
           <form onsubmit="return false" id="offerForm" class="adm-form-grid" data-capability-scope="admin.write">
             <label class="wide">Title <input id="ofTitle" name="title" class="adm-input" autocomplete="off" required></label>
             <label class="wide">CTA URL <input id="ofCta" name="cta_url" class="adm-input" autocomplete="off" spellcheck="false" value="/products.html"></label>
@@ -997,6 +991,10 @@
           <p id="offerStatus" class="adm-status" role="status" aria-live="polite"></p>
         </div>
         <div class="adm-card"><h2>Recent sends</h2><div id="admOffers">Loading…</div></div>
+      </section>
+
+      <section class="adm-panel" role="tabpanel" data-panel="crm">
+        <div id="admCrm" class="adm-panel-list">Loading…</div>
       </section>
 
         <button id="adminSupportLauncher" class="admin-support-launcher" type="button" aria-label="Open customer support" aria-controls="adminSupportDrawer" aria-expanded="false"><i class="ph ph-lifebuoy" aria-hidden="true"></i><span class="admin-support-launcher__label">Customer support</span><span id="adminSupportUnread" class="admin-support-unread" hidden>0</span></button>

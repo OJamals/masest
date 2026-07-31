@@ -436,20 +436,15 @@ function industrySchema(ind, plain) {
 
 function ctaBlock(ind) {
   const q = (type) => `../contact?industry=${enc(ind.name)}&type=${type}`;
-  const label = (type, fallback) => ind.ctaType === type ? ind.ctaLabel : fallback;
   return `
   <section class="block-dark">
-    <div class="wrap">
+    <div class="wrap cta-band">
       <div class="section-head center">
-        <span class="eyebrow">Next move</span>
-          <h2 class="headline">Put the current chemical on the table.</h2>
-          <p class="subhead">Send the current product, surface, soil, volume, and buying deadline. We'll come back with the replacement, a relevant result record, a sample, or a distributor.</p>
+        <span class="eyebrow">Scope the job</span>
+        <h2 class="headline">Plan the next ${ind.name} cleaning task.</h2>
       </div>
-      <div class="cta-grid">
-        <a class="cta-tile" href="${q("quote")}"><i class="ph ph-tag" aria-hidden="true"></i><span class="cta-tile-t">${label("quote", "Price the replacement")}</span><span class="cta-tile-s">Product, volume, freight</span></a>
-        <a class="cta-tile" href="${q("audit")}"><i class="ph ph-clipboard-text" aria-hidden="true"></i><span class="cta-tile-t">${label("audit", "Match the current drum")}</span><span class="cta-tile-s">Current chemical to VertKleen fit</span></a>
-        <a class="cta-tile" href="${q("sample")}"><i class="ph ph-package" aria-hidden="true"></i><span class="cta-tile-t">${label("sample", "Run a site trial")}</span><span class="cta-tile-s">Trial 3 to 5 products on site</span></a>
-        <a class="cta-tile" href="${q("distributor")}"><i class="ph ph-handshake" aria-hidden="true"></i><span class="cta-tile-t">${label("distributor", "Set up supply")}</span><span class="cta-tile-s">BSC, distributor, white-label</span></a>
+      <div class="hero-ctas">
+        <a class="btn btn-light" href="${q(ind.ctaType)}" data-industry-primary-cta>${ind.ctaLabel}</a>
       </div>
     </div>
   </section>`;
@@ -464,14 +459,14 @@ function imageGalleryBlock(ind) {
   const taskFigs = (tasks || []).map(([alt, caption, filename], index) => `
         <figure class="ind-shot ind-shot-wide" data-evidence-kind="generated">
           <img src="../img/industries/tasks/${filename || `${ind.slug}-${String(index + 1).padStart(2, "0")}.webp`}" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="1200" height="750">
-          <figcaption><span class="ind-media-kind">Generated task visualization</span>${caption}</figcaption>
+          <figcaption><span class="ind-media-kind">Representative setup</span>${caption}</figcaption>
         </figure>`).join("");
 
   const sample = SAMPLE_GALLERY[ind.slug];
   const sampleFig = sample ? `
         <figure class="ind-shot ind-shot-wide" data-evidence-kind="generated">
           <img src="../img/industries/samples/${ind.slug}.webp" alt="${sample[0].replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="840" height="520">
-          <figcaption><span class="ind-media-kind">Generated task visualization</span>${sample[1]}</figcaption>
+          <figcaption><span class="ind-media-kind">Representative setup</span>${sample[1]}</figcaption>
         </figure>` : "";
 
   const shots = FIELD_GALLERY_SLUGS.has(ind.slug)
@@ -507,7 +502,6 @@ function imageGalleryBlock(ind) {
   return `
   <section class="section section-slim ind-gallery-sec" aria-label="${ind.name} image gallery">
     <div class="wrap">
-      <p class="ind-gallery-note">Generated scenes show common tasks. Field photos show VertKleen at work in real applications.</p>
       <div class="ind-gallery ind-image-gallery">${figs}
       </div>
     </div>

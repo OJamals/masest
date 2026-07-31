@@ -377,7 +377,6 @@ function renderApplications(industry, allIndustries, documents) {
       <div class="section-head">
         <span class="eyebrow">Applications and job fit</span>
         <h2 class="headline">${escapeHtml(industry.lead_task)}</h2>
-        <p class="subhead">Start with what must be cleaned, how the crew works, and what a successful result looks like.</p>
       </div>${related}${caseSummary}
       <dl class="ind-proof-grid">
         <div><dt>Task</dt><dd>${escapeHtml(industry.lead_task)}</dd></div>
@@ -393,7 +392,6 @@ function renderApplications(industry, allIndustries, documents) {
         <div>
           <span class="eyebrow">Product files</span>
           <h3>Open application records or request the SDS/TDS for your team.</h3>
-          <p>Document IDs, revisions, and exact SKUs stay attached so buyers can move from chemistry fit to the right product file.</p>
         </div>
         <div class="doc-lib-links">
           ${documentLinks}
@@ -422,28 +420,14 @@ function renderCaseSummary(industry) {
 }
 
 function renderCta(industry) {
-  const tiles = [
-    ["quote", "ph-tag", "Price this cleaning task", "Product, volume, freight"],
-    ["audit", "ph-clipboard-text", "Review compatibility", "Materials, soil, operating limits"],
-    ["sample", "ph-package", "Run a controlled trial", "Procedure, endpoint, acceptance"],
-    ["distributor", "ph-handshake", "Set up supply", "Site, stocking, buying deadline"],
-  ];
-  const label = (type, fallback) => industry.cta_type === type
-    ? industry.cta_label
-    : fallback;
-  const tileHtml = tiles.map(([type, icon, title, detail]) => (
-    `<a class="cta-tile" href="${contactHref(industry, type)}"><i class="ph ${icon}" aria-hidden="true"></i><span class="cta-tile-t">${escapeHtml(label(type, title))}</span><span class="cta-tile-s">${detail}</span></a>`
-  )).join("\n        ");
-
   return `<section class="block-dark" data-industry-local-cta>
-    <div class="wrap">
+    <div class="wrap cta-band">
       <div class="section-head center">
         <span class="eyebrow">Scope the job</span>
-        <h2 class="headline">Bring us your ${escapeHtml(industry.label)} cleaning task.</h2>
-        <p class="subhead">The request opens with asset, soil, operating conditions, materials, wastewater route, and buying deadline already prompted.</p>
+        <h2 class="headline">Plan the next ${escapeHtml(industry.label)} cleaning task.</h2>
       </div>
-      <div class="cta-grid">
-        ${tileHtml}
+      <div class="hero-ctas">
+        <a class="btn btn-light" href="${contactHref(industry, industry.cta_type)}" data-industry-primary-cta>${escapeHtml(industry.cta_label)}</a>
       </div>
     </div>
   </section>`;

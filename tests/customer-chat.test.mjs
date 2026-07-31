@@ -38,7 +38,7 @@ async function chatPage(browser, authModuleSource, {
     body: authModuleSource,
   }));
   await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
-  await page.locator(".customer-chat__toggle").waitFor();
+  await page.locator(".customer-chat__toggle").waitFor({ state: "attached" });
   await page.waitForFunction(() => document.querySelector('link[data-masest-customer-chat="true"]')?.sheet);
   return { context, page };
 }
@@ -52,6 +52,38 @@ test("customer chat is always mounted and gates sending on an auth session", () 
   assert.match(chat, /masest:session-expired/);
   assert.equal((chat.match(/Request a quote with this context/g) || []).length, 2);
   assert.match(chat, /request-context\.js/);
+});
+
+test("dashboard restores floating chat after leaving the full message inbox", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const authModule = `
+      export async function getToken() { return "test-token"; }
+      export async function me() { return { can_admin: false, profile: { full_name: "Test Buyer" } }; }
+      export async function logout() {}
+      export async function orders() { return { orders: [] }; }
+      export async function api() { return { messages: [], unread: 0 }; }
+      export async function updatePassword() {}
+    `;
+    try {
+      const { context, page } = await chatPage(browser, authModule, {
+        path: "/dashboard.html#messages",
+      });
+      const shell = page.locator("#customerChat");
+      assert.equal(await shell.evaluate((element) => element.hidden), true);
+
+      await page.locator('.dash-tab[data-tab="overview"]').click();
+      await page.evaluate(() => new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      }));
+
+      assert.equal(new URL(page.url()).hash, "#overview");
+      assert.equal(await shell.evaluate((element) => element.hidden), false);
+      await context.close();
+    } finally {
+      await browser.close();
+    }
+  });
 });
 
 test("customer chat has its own icon and a bounded popup layout", () => {

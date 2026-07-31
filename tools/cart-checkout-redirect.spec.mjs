@@ -49,7 +49,7 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
   await page.reload({ waitUntil: "domcontentloaded" });
 
   const receiptEmail = page.locator("#checkoutEmail");
-  const payBtn = page.getByRole("button", { name: "Proceed to checkout" });
+  const payBtn = page.locator("#checkoutPay");
   await expect(payBtn).toBeEnabled();
   await receiptEmail.fill("not-an-email");
   await receiptEmail.press("Enter");

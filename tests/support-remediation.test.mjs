@@ -95,6 +95,8 @@ test('public staff accounts receive a full support workspace instead of buyer ch
   assert.match(support, /site-support__conversation-body/);
   assert.match(support, /threadsLoaded/);
   assert.match(support, /site-support__skeleton/);
+  assert.match(support, /routeSuppressesSupport/);
+  assert.match(support, /masest:support-route/);
   assert.match(styles, /\.site-support__conversation-toolbar/);
   assert.match(styles, /\.site-support__conversation-empty/);
   assert.match(styles, /\.site-support__skeleton/);
