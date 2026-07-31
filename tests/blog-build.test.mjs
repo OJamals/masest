@@ -92,6 +92,27 @@ test("buildBlog writes a static page per post", () => {
   }
 });
 
+test("buildBlog removes post pages absent from the published snapshot", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  const [current, stale] = SEED.blog_posts;
+  try {
+    buildBlog({ posts: [current, stale], outDir: out, updateSitemap: false });
+    const staleFile = join(out, "blog", `${stale.slug}.html`);
+    assert.ok(existsSync(staleFile));
+
+    buildBlog({ posts: [current], outDir: out, updateSitemap: false });
+    assert.equal(existsSync(staleFile), false);
+    assert.ok(existsSync(join(out, "blog", `${current.slug}.html`)));
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("production build regenerates blog outputs after refreshing CMS snapshots", () => {
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.match(pkg.scripts.prebuild, /npm run build:blog/);
+});
+
 test("P3 authority posts connect mechanisms to completed-task outcomes without unsupported claims", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
   try {

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Blog page generator. Reads data/content/blog.json (the committed CMS snapshot)
 // and writes static /blog.html, /blog/<slug>.html, and /blog/feed.xml, then
-// merges blog URLs into sitemap.xml. Manual + committed build step — run AFTER
-// tools/seo-inject.mjs (which regenerates sitemap.xml wholesale). Zero deps.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+// merges blog URLs into sitemap.xml. The production prebuild runs this after
+// refreshing CMS snapshots and before seo-inject regenerates the final sitemap.
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
@@ -353,11 +353,24 @@ function mergeSitemap(posts, outDir) {
   return 0;
 }
 
+function removeStalePostPages(posts, outDir) {
+  const blogDir = join(outDir, "blog");
+  if (!existsSync(blogDir)) return 0;
+  const currentFiles = new Set(posts.map((post) => `${post.slug}.html`));
+  let removed = 0;
+  for (const entry of readdirSync(blogDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".html") || currentFiles.has(entry.name)) continue;
+    unlinkSync(join(blogDir, entry.name));
+    removed++;
+  }
+  return removed;
+}
+
 export function buildBlog({ posts, outDir = ROOT, updateSitemap = true } = {}) {
   validate(posts);
   const sorted = sortPosts(posts);
-  let changed = 0;
   mkdirSync(join(outDir, "blog"), { recursive: true });
+  let changed = removeStalePostPages(sorted, outDir);
   for (const post of sorted) {
     const file = join(outDir, "blog", `${post.slug}.html`);
     const html = postPage(post, sorted);
