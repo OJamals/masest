@@ -571,6 +571,50 @@ test("proof image sets use stable media slots", async ({ page }) => {
   }
 });
 
+test("clicking a proof image opens a visible full-size lightbox", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route("**/img/**", (route) => route.fulfill({
+    contentType: "image/svg+xml",
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400"></svg>',
+  }));
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+
+  await page.locator(".proof-card img").first().dispatchEvent("click");
+  await expect(page.locator("#lightbox")).toBeVisible();
+  await page.locator("#lightbox .lb-img").evaluate((node) => node.decode());
+
+  const image = await page.locator("#lightbox .lb-img").evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    return {
+      naturalWidth: node.naturalWidth,
+      naturalHeight: node.naturalHeight,
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+    };
+  });
+
+  expect(image.naturalWidth).toBeGreaterThan(1);
+  expect(image.naturalHeight).toBeGreaterThan(1);
+  expect(image.width).toBeGreaterThan(160);
+  expect(image.height).toBeGreaterThan(100);
+});
+
+test("industry cards keep consistent desktop proportions", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.goto(`${BASE_URL}/industries.html`, { waitUntil: "networkidle" });
+  const categoryWidth = await page.locator(".industry-specialists .route-card span").first().evaluate((node) =>
+    Math.round(node.getBoundingClientRect().width)
+  );
+  expect(categoryWidth).toBeGreaterThanOrEqual(96);
+
+  await page.goto(`${BASE_URL}/industries/plumbing.html`, { waitUntil: "networkidle" });
+  const productWidths = await page.locator("[data-ind-products] .prod-card").evaluateAll((cards) =>
+    cards.map((card) => Math.round(card.getBoundingClientRect().width))
+  );
+  expect(Math.max(...productWidths) - Math.min(...productWidths)).toBeLessThanOrEqual(3);
+});
+
 test("visible content images reserve dimensions on key buyer pages", async ({ page }) => {
   const pages = [
     "products.html",
@@ -729,7 +773,18 @@ test("comparison pages keep price tables inside their cards on tablet", async ({
   for (const pagePath of comparisonPages) {
     await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "domcontentloaded" });
     await page.locator(".product-static-panel").first().waitFor();
-    await expect(page.locator(".product-hero-media img")).toHaveJSProperty("complete", true);
+    const heroImage = page.locator(".product-hero-media img");
+    await expect(heroImage).toHaveJSProperty("complete", true);
+    await expect.poll(
+      () => heroImage.evaluate((image) => image.naturalWidth),
+      { message: `${pagePath} hero image should load` },
+    ).toBeGreaterThan(0);
+    if (pagePath === "comparisons/cr-hd-vs-simple-green.html") {
+      await expect(heroImage).toHaveAttribute(
+        "src",
+        "../img/comparisons/cr-hd-vs-simple-green-split.webp",
+      );
+    }
 
     const layout = await page.evaluate(() => {
       const heroImage = document.querySelector(".product-hero-media img");

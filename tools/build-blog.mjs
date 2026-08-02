@@ -22,6 +22,29 @@ const SITE_IMAGE_DIMENSIONS = new Map(
 );
 const CATEGORIES = new Set(["marketing", "technical", "news"]);
 const REQUIRED = ["title", "category", "date", "excerpt", "body"];
+const COMPARISON_HERO_SIZE = { width: 1448, height: 1086 };
+const COMPARISON_HEROES = new Map([
+  ["vertkleen-hcr-vs-clr", {
+    url: "/img/blog/comparisons/vertkleen-hcr-vs-clr-split.webp",
+    alt: "VertKleen HVAC HCR and CLR PRO MAX Industrial Descaler containers side by side",
+  }],
+  ["hcr-vs-rydlyme", {
+    url: "/img/blog/comparisons/hcr-vs-rydlyme-split.webp",
+    alt: "VertKleen HVAC HCR and RYDLYME descaler containers side by side",
+  }],
+  ["cr-hd-vs-simple-green", {
+    url: "/img/blog/comparisons/cr-hd-vs-simple-green-split.webp",
+    alt: "VertKleen CR HD and Simple Green Industrial Cleaner and Degreaser containers side by side",
+  }],
+  ["lam3-vs-wet-forget", {
+    url: "/img/blog/comparisons/lam3-vs-wet-forget-split.webp",
+    alt: "VertKleen LAM3 and Wet and Forget Outdoor Concentrate containers side by side",
+  }],
+  ["beer-line-cleaner-cost-comparison", {
+    url: "/img/blog/comparisons/beer-line-cleaner-cost-comparison-split.webp",
+    alt: "VertKleen CIP CR and CIP HCR beside Micro Matic Alkaline Beer Line Cleaner",
+  }],
+]);
 const ORG = {
   "@type": "Organization",
   name: "MASEST Consulting LLC",
@@ -101,10 +124,12 @@ function publicSiteImageUrl(value) {
 }
 
 function postHero(post) {
+  const comparison = COMPARISON_HEROES.get(post.slug);
+  if (comparison) return { ...comparison, size: COMPARISON_HERO_SIZE };
   const heroUrl = publicSiteImageUrl(post.hero);
   if (!heroUrl?.startsWith("/")) return null;
   const size = SITE_IMAGE_DIMENSIONS.get(new URL(heroUrl, BASE).pathname);
-  return size ? { url: heroUrl, size } : null;
+  return size ? { url: heroUrl, size, alt: post.hero_alt || post.title } : null;
 }
 
 function articleSchema(post, heroUrl = "") {
@@ -126,7 +151,7 @@ function postPage(post, all) {
   const bodyHtml = renderMarkdown(post.body);
   const hero = postHero(post);
   const heroImg = hero
-    ? `<figure class="blog-hero-media"><img src="${attr(hero.url)}" alt="${attr(post.hero_alt || post.title)}" width="${hero.size.width}" height="${hero.size.height}" fetchpriority="high" decoding="async"></figure>`
+    ? `<figure class="blog-hero-media"><img src="${attr(hero.url)}" alt="${attr(hero.alt)}" width="${hero.size.width}" height="${hero.size.height}" fetchpriority="high" decoding="async"></figure>`
     : "";
   const related = relatedPosts(post, all);
   const relatedHtml = related.length
@@ -203,7 +228,7 @@ function postPage(post, all) {
 function postCard(post) {
   const hero = postHero(post);
   const thumb = hero
-    ? `<img class="blog-card-img" src="${attr(hero.url)}" alt="${attr(post.hero_alt || post.title)}" width="${hero.size.width}" height="${hero.size.height}" loading="lazy" decoding="async">`
+    ? `<img class="blog-card-img" src="${attr(hero.url)}" alt="${attr(hero.alt)}" width="${hero.size.width}" height="${hero.size.height}" loading="lazy" decoding="async">`
     : `<div class="blog-card-img blog-card-img--fallback" aria-hidden="true"></div>`;
   const tags = (post.tags || []).map((t) => attr(t)).join(" ");
   return `<article class="blog-card" data-slug="${attr(post.slug)}" data-category="${attr(post.category)}" data-tags="${tags}">

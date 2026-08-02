@@ -34,8 +34,8 @@ const pages = [
     swapUse: "VertKleen HCR for heavy rust and scale; Descaler when the job is coil-specific line cleaning.",
     proofTitle: "Recorded rust-and-scale result",
     proof: "The HCR field record shows controlled mineral-removal chemistry releasing heavy rust and scale from metal to produce a visibly cleaner surface.",
-    image: "../img/proof/cases/farm-rust-after.webp",
-    imageAlt: "HVAC metal and diamond plate after VertKleen HCR cleaning",
+    image: "../img/blog/comparisons/vertkleen-hcr-vs-clr-split.webp",
+    imageAlt: "VertKleen HVAC HCR and CLR PRO MAX Industrial Descaler containers side by side",
     ctaProduct: "VertKleen HCR vs CLR",
     ctaLabel: "Request an HCR deposit trial",
     decision: "Choose from the actual deposit and system, not the label category. Light spot cleaning and an industrial circulation job impose different demands on concentration, wetting, deposit capacity, rinse volume, and shutdown time."
@@ -59,8 +59,8 @@ const pages = [
     swapUse: "VertKleen HCR for controlled carbonate-scale and rust removal with wetting, complexing, and inhibition.",
     proofTitle: "Recorded HVAC result",
     proof: "The HCR field record shows controlled mineral removal releasing heavy rust and scale from HVAC metal to produce a visibly cleaner surface.",
-    image: "../img/proof/cases/farm-rust-after.webp",
-    imageAlt: "Industrial rust and scale removed with VertKleen HCR",
+    image: "../img/blog/comparisons/hcr-vs-rydlyme-split.webp",
+    imageAlt: "VertKleen HVAC HCR and RYDLYME descaler containers side by side",
     ctaProduct: "HCR vs RYDLYME",
     ctaLabel: "Request a side-by-side trial",
     decision: "Hold system volume, deposit, metallurgy, temperature, circulation, and endpoint constant. Then compare how much chemistry, crew time, rinse water, and shutdown each completed system requires."
@@ -86,8 +86,8 @@ const pages = [
     proof: "Send the current cleaner, soil load, dilution, passes, labor, water, downtime, and volume. MASEST will build a side-by-side benchmark with cost per completed task.",
     proofHref: "../contact?type=audit&product=CR%20HD%20vs%20Simple%20Green",
     proofCta: "Request task comparison",
-    image: "../img/products/crhd-studio.webp",
-    imageAlt: "VertKleen CR HD heavy degreaser container",
+    image: "../img/comparisons/cr-hd-vs-simple-green-split.webp",
+    imageAlt: "VertKleen CR HD and Simple Green Industrial cleaner containers side by side",
     ctaProduct: "CR HD vs Simple Green",
     ctaLabel: "Request a CRHD benchmark",
     decision: "Heavy hydrocarbon loading can exhaust a general-purpose wash before the surface is complete. Compare equal soil areas and record dilution, agitation, passes, rinse demand, labor, and visible residue."
@@ -111,8 +111,8 @@ const pages = [
     swapUse: "VertKleen LAM3 for spray-and-walk-away exterior biological staining.",
     proofTitle: "Recorded exterior result",
     proof: "Before-and-after property records show CR and LAM3 lifting embedded soil, biological buildup, and grout staining to leave visibly cleaner hardscape.",
-    image: "../img/proof/cases/grout-moss.webp",
-    imageAlt: "Exterior grout and moss staining cleaned with VertKleen",
+    image: "../img/blog/comparisons/lam3-vs-wet-forget-split.webp",
+    imageAlt: "VertKleen LAM3 and Wet and Forget Outdoor Concentrate containers side by side",
     ctaProduct: "LAM3 vs Wet & Forget",
     ctaLabel: "Request exterior-treatment pricing",
     decision: "Exterior programs should be judged by finished area, not concentrate price. Keep substrate, stain, weather, application method, dwell, runoff control, and inspection interval consistent."
@@ -139,8 +139,8 @@ const pages = [
     swapUse: "VertKleen CR for alkaline wash followed by VertKleen HCR for acid wash.",
     proofTitle: "Recorded brewery cycle",
     proof: "Brewlando Brewing trial and laboratory records show CR and HCR replacing incumbent caustic-soda and acid blends across brewery CIP.",
-    image: "../img/proof/cases/brewery.webp",
-    imageAlt: "Brewery tank cleaned with VertKleen CR and HCR",
+    image: "../img/blog/comparisons/beer-line-cleaner-cost-comparison-split.webp",
+    imageAlt: "VertKleen CIP CR and CIP HCR beside Micro Matic Alkaline Beer Line Cleaner",
     ctaProduct: "beer line cleaner cost comparison",
     ctaLabel: "Request brewery-cycle pricing",
     decision: "Organic soil and mineral beer stone are different cleaning jobs. Compare a complete alkaline and mineral-removal sequence with the incumbent cycle, using the same circuit, temperature, soil condition, rinse endpoint, and production-release requirement."
@@ -148,10 +148,11 @@ const pages = [
 ];
 
 const IMAGE_DIMENSIONS = {
-  "../img/proof/cases/farm-rust-after.webp": [740, 967],
-  "../img/products/crhd-studio.webp": [900, 1200],
-  "../img/proof/cases/grout-moss.webp": [919, 690],
-  "../img/proof/cases/brewery.webp": [1200, 900],
+  "../img/blog/comparisons/vertkleen-hcr-vs-clr-split.webp": [1448, 1086],
+  "../img/blog/comparisons/hcr-vs-rydlyme-split.webp": [1448, 1086],
+  "../img/comparisons/cr-hd-vs-simple-green-split.webp": [1086, 1448],
+  "../img/blog/comparisons/lam3-vs-wet-forget-split.webp": [1448, 1086],
+  "../img/blog/comparisons/beer-line-cleaner-cost-comparison-split.webp": [1448, 1086],
 };
 
 function schema(page) {

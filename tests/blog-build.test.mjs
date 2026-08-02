@@ -319,6 +319,30 @@ test("a hero renders as the card thumbnail and post hero figure; empty falls bac
   }
 });
 
+test("protected comparison posts use durable split-product heroes", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  const expected = [
+    "vertkleen-hcr-vs-clr",
+    "hcr-vs-rydlyme",
+    "cr-hd-vs-simple-green",
+    "lam3-vs-wet-forget",
+    "beer-line-cleaner-cost-comparison",
+  ];
+  try {
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
+    const index = readFileSync(join(out, "blog.html"), "utf8");
+    for (const slug of expected) {
+      const src = `/img/blog/comparisons/${slug}-split.webp`;
+      assert.ok(existsSync(new URL(`../img/blog/comparisons/${slug}-split.webp`, import.meta.url)));
+      assert.match(index, new RegExp(`src="${src}"[^>]+width="1448" height="1086"`));
+      const post = readFileSync(join(out, "blog", `${slug}.html`), "utf8");
+      assert.match(post, new RegExp(`src="${src}"[^>]+width="1448" height="1086"`));
+    }
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
 test("a managed CMS hero resolves to its public site-image path", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
   try {

@@ -384,11 +384,11 @@ function industryDetailBlock(ind) {
   return `<section class="section section-slim">
     <div class="wrap ind-specific">
       <div class="section-head">
-        <h2 class="headline">What ${ind.name} buyers want from the switch.</h2>
+        <h2 class="headline">What matters before you switch chemistry.</h2>
       </div>
       <div class="proof-callout">
-        <p>Choose chemistry by what must be removed, then benchmark the field result against the incumbent workflow.</p>
-        <p>Track completed-task economics across labor, rinse and wastewater work, downtime, and return-to-service.</p>
+        <p>Prove removal on the actual soil and surface before replacing the incumbent.</p>
+        <p>Compare cost per completed job across labor, rinse water, wastewater handling, downtime, and return to service.</p>
       </div>
     </div>
   </section>`;
@@ -570,7 +570,7 @@ ${nav}
   <section class="section section-slim">
     <div class="wrap ind-intro-copy">
       <span class="ind-icon"><i class="ph ${ind.icon}" aria-hidden="true"></i></span>
-      <h2 class="headline">Why VertKleen fits ${ind.name}.</h2>
+      <h2 class="headline">Cleaning chemistry for ${ind.name}.</h2>
       <p>${ind.intro}</p>
       <a class="btn btn-ink" href="../proof">See VertKleen results</a>
     </div>
@@ -583,7 +583,7 @@ ${industryDetailBlock(ind)}${imageGalleryBlock(ind)}
       <div class="section-head">
         <span class="eyebrow">Recommended</span>
         <h2 class="headline">VertKleen products for ${ind.name}.</h2>
-          <p class="subhead">VertKleen options for ${ind.name} workflows.</p>
+          <p class="subhead">Match the formula to the soil, surface, and cleaning process.</p>
       </div>
       <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>
