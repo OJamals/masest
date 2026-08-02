@@ -588,8 +588,10 @@ test("clicking a proof image opens a visible full-size lightbox", async ({ page 
     return {
       naturalWidth: node.naturalWidth,
       naturalHeight: node.naturalHeight,
+      left: Math.round(rect.left),
       width: Math.round(rect.width),
       height: Math.round(rect.height),
+      viewportWidth: window.innerWidth,
     };
   });
 
@@ -597,6 +599,7 @@ test("clicking a proof image opens a visible full-size lightbox", async ({ page 
   expect(image.naturalHeight).toBeGreaterThan(1);
   expect(image.width).toBeGreaterThan(160);
   expect(image.height).toBeGreaterThan(100);
+  expect(Math.abs(image.left - ((image.viewportWidth - image.width) / 2))).toBeLessThanOrEqual(2);
 });
 
 test("industry cards keep consistent desktop proportions", async ({ page }) => {

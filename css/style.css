@@ -2539,7 +2539,7 @@ figure.photo img { cursor: zoom-in; }
 .hmis-panel img { cursor: default; }
 
 /* ── Lightbox ── */
-#lightbox { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 96vh; overflow: visible; color: #e9edf5; }
+#lightbox { margin: auto; border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 96vh; overflow: visible; color: #e9edf5; }
 #lightbox::backdrop { background: rgba(8, 11, 18, .9); }
 #lightbox .lb-fig { margin: 0; display: flex; flex-direction: column; align-items: center; }
 #lightbox .lb-img { width: auto; height: auto; max-width: 96vw; max-height: 88vh; display: block; border-radius: 8px; box-shadow: 0 12px 48px rgba(0, 0, 0, .55); }
