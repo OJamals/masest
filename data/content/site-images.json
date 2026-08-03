@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 225,
+  "count": 228,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -3147,6 +3147,48 @@
       "height": 811,
       "byte_size": 141192,
       "sha256": "ddeac9c1bb2d93524a85e22a7998774e13868e79d50f6242cc086b39ee0ebbd3",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/commercial-gym-cleaning-hero.webp",
+      "public_url": "/img/blog/commercial-gym-cleaning-hero.webp",
+      "filename": "commercial-gym-cleaning-hero.webp",
+      "alt": "Facility staff member wiping down cardio equipment in a modern commercial gym",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 84550,
+      "sha256": "03a5602d1dc95dc474f683fccbcacbf8a2a6de9ad658fec9e9a5e133963ea61d",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/car-dealership-cleaning-hero.webp",
+      "public_url": "/img/blog/car-dealership-cleaning-hero.webp",
+      "filename": "car-dealership-cleaning-hero.webp",
+      "alt": "Cleaning technician running a floor scrubber through an automotive dealership service bay",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 91430,
+      "sha256": "c78be72dcf01b50d91fb0fd00bd5c2ceb6b529eee941d889f2d6503af5099bab",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/cases/durango-crhd-after.webp",
+      "public_url": "/img/blog/cases/durango-crhd-after.webp",
+      "filename": "durango-crhd-after.webp",
+      "alt": "Clean red Durango door after a CRHD wash",
+      "width": 1280,
+      "height": 895,
+      "byte_size": 196606,
+      "sha256": "711fd1b4212734502fc8dd1d9227cdcbfe58adb53f36af395f4761710aefe26b",
       "mime_type": "image/webp",
       "category": "blog",
       "status": "available",

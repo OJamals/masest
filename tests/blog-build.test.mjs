@@ -84,6 +84,29 @@ const SEO_INTENT_POSTS = [
       "/proof#airboat-alumibrite",
     ],
   },
+  {
+    slug: "commercial-gym-cleaning-checklist",
+    hero: "/img/blog/commercial-gym-cleaning-hero.webp",
+    diagram: "/img/blog/diagrams/commercial-gym-cleaning-zones.svg",
+    product: "Purgo",
+    links: [
+      "/products/purgo",
+      "/products/multiwash",
+      "/products",
+    ],
+  },
+  {
+    slug: "car-dealership-cleaning-checklist",
+    hero: "/img/blog/car-dealership-cleaning-hero.webp",
+    diagram: "/img/blog/diagrams/car-dealership-cleaning-zones.svg",
+    product: "CRHD",
+    links: [
+      "/products/crhd",
+      "/products/torque",
+      "/products/alumibrite",
+      "/industries/fleet-trucking-car-washes",
+    ],
+  },
 ];
 
 test("blog_post content type is registered", () => {
