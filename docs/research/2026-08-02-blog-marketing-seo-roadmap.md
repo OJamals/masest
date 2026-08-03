@@ -16,7 +16,7 @@ The current 11 articles already cover controlled trials, CIP, cooling towers, HM
 
 | Priority | Proposed article | Primary search intent | VertKleen proof or product | Required visual | Conversion target |
 | --- | --- | --- | --- | --- | --- |
-| 1 | How HCR cleared 20 years of rust and scale after a 36-hour incumbent trial | Industrial descaling case study | DDC: CLR 36 hours vs HCR 30 minutes | Annotated timeline, before/after, cycle facts | HCR trial request |
+| 1 | How HCR cleaned a 20-year HVAC base plate after a 36-hour CLR attempt | Industrial descaling case study | Brevard Schools: CLR 36 hours; DDC selected HCR; HCR 30 minutes | Annotated timeline, before/after, cycle facts | HCR trial request |
 | 2 | Heavy-duty warehouse degreasing: the CR HD distribution-center case | Warehouse floor degreaser, forklift degreaser | Walmart distribution-center replacement and savings | Area workflow, task-cost ledger | CR HD sample |
 | 3 | Brewery CIP field report: seven Florida breweries, two soil families | Brewery CIP chemicals, beer stone cleaner | CR and HCR work across tanks, kegs, lines, and heat exchangers | Circuit map, soil-stage matrix | CIP cycle review |
 | 4 | Industrial descaler cost calculator: price the shutdown, not the gallon | Industrial descaler cost | HCR and Descaler | Interactive or downloadable task-cost calculator | Quote with system inputs |

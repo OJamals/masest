@@ -243,6 +243,7 @@ test("mergeSitemap inserts blog urls idempotently", () => {
     let xml = readFileSync(sm, "utf8");
     assert.match(xml, /https:\/\/masest\.co\/blog<\/loc>/);
     assert.match(xml, /https:\/\/masest\.co\/blog\/hmis-000-explained<\/loc>/);
+    assert.match(xml, /<loc>https:\/\/masest\.co\/blog\/hmis-000-explained<\/loc><lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/);
     assert.ok(xml.indexOf("https://masest.co/blog</loc>") < xml.indexOf("https://masest.co/resources</loc>"));
     const firstCount = (xml.match(/\/blog\/hmis-000-explained</g) || []).length;
     const firstXml = xml;

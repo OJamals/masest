@@ -73,6 +73,11 @@ test("cards preserve declared intrinsic image dimensions", () => {
   assert.match(out, /<img src="\/result\.webp" alt="Result image" width="919" height="690"/);
 });
 
+test("images preserve declared intrinsic dimensions", () => {
+  const out = renderMarkdown("![Field result](/img/blog/cases/result.webp){580x559}");
+  assert.match(out, /<img src="\/img\/blog\/cases\/result\.webp" alt="Field result" width="580" height="559"/);
+});
+
 test("readingTime is at least 1 minute", () => {
   assert.equal(readingTime(""), 1);
   assert.equal(readingTime(new Array(400).fill("w").join(" ")), 2);

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 217,
+  "count": 219,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -69,6 +69,34 @@
       "sha256": "db39fe24d313e53208ae9cfe7519219112dd38aaa19c06988d538e2401e0df7f",
       "mime_type": "image/webp",
       "category": "before-after",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/cases/hcr-brevard-after.webp",
+      "public_url": "/img/blog/cases/hcr-brevard-after.webp",
+      "filename": "hcr-brevard-after.webp",
+      "alt": "HVAC drain area after a documented 30-minute VertKleen HCR application and garden-hose rinse",
+      "width": 1417,
+      "height": 714,
+      "byte_size": 151284,
+      "sha256": "6846a81fa809845fb201edfc0c95d0a5256abdec7a61712797750a49912be3f4",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/cases/hcr-brevard-before.webp",
+      "public_url": "/img/blog/cases/hcr-brevard-before.webp",
+      "filename": "hcr-brevard-before.webp",
+      "alt": "Rusted HVAC drain area before the documented VertKleen HCR application",
+      "width": 580,
+      "height": 559,
+      "byte_size": 78704,
+      "sha256": "6d661dff723a5ac9bdec0bfbe215d2edb6d9a7779ac68d2f0b57ecb06a9806c6",
+      "mime_type": "image/webp",
+      "category": "blog",
       "status": "available",
       "source": "site"
     },

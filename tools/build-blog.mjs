@@ -362,14 +362,15 @@ function mergeSitemap(posts, outDir) {
   const smPath = join(outDir, "sitemap.xml");
   if (!existsSync(smPath)) return 0;
   const original = readFileSync(smPath, "utf8");
+  const latestPostDate = posts.reduce((latest, post) => post.date > latest ? post.date : latest, "");
   const entries = [
-    { url: `${BASE}/blog`, changefreq: "weekly", priority: "0.7" },
-    ...posts.map((p) => ({ url: `${BASE}/blog/${p.slug}`, changefreq: "monthly", priority: "0.6" })),
+    { url: `${BASE}/blog`, lastmod: latestPostDate, changefreq: "weekly", priority: "0.7" },
+    ...posts.map((p) => ({ url: `${BASE}/blog/${p.slug}`, lastmod: p.date, changefreq: "monthly", priority: "0.6" })),
   ];
   const missing = entries.filter(({ url }) => !original.includes(`<loc>${url}</loc>`));
   if (!missing.length) return 0;
   const lines = missing
-    .map(({ url, changefreq, priority }) => `  <url><loc>${url}</loc><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`)
+    .map(({ url, lastmod, changefreq, priority }) => `  <url><loc>${url}</loc><lastmod>${lastmod}</lastmod><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`)
     .join("\n");
   const merged = original.replace(/<\/urlset>/, `${lines}\n</urlset>`);
   if (merged !== original) {

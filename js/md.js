@@ -25,8 +25,11 @@ function isSafeUrl(url) {
 function inline(src) {
   let s = escapeHtml(src);
   // URL char class allows one level of balanced parens (e.g. javascript:alert(1)).
-  s = s.replace(/!\[([^\]]*)\]\(((?:[^()\s]|\([^()]*\))+)\)/g, (_m, alt, url) =>
-    isSafeUrl(url) ? `<img src="${url.trim()}" alt="${alt}" width="1200" height="675" loading="lazy" decoding="async">` : alt);
+  s = s.replace(/!\[([^\]]*)\]\(((?:[^()\s]|\([^()]*\))+)\)(?:\{([1-9]\d{0,3})x([1-9]\d{0,3})\})?/g, (_m, alt, url, rawWidth, rawHeight) => {
+    const width = rawWidth ? Math.min(Number(rawWidth), 4096) : 1200;
+    const height = rawHeight ? Math.min(Number(rawHeight), 4096) : 675;
+    return isSafeUrl(url) ? `<img src="${url.trim()}" alt="${alt}" width="${width}" height="${height}" loading="lazy" decoding="async">` : alt;
+  });
   s = s.replace(/\[([^\]]+)\]\(((?:[^()\s]|\([^()]*\))+)\)/g, (_m, txt, url) =>
     isSafeUrl(url) ? `<a href="${url.trim()}">${txt}</a>` : txt);
   s = s.replace(/`([^`]+)`/g, (_m, c) => `<code>${c}</code>`);
