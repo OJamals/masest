@@ -12,7 +12,7 @@ const SEED = JSON.parse(readFileSync(new URL("../data/content/blog.json", import
 const P3_AUTHORITY_POSTS = [
   {
     slug: "industrial-cleaning-trial-scope-isolate-contain-release",
-    outcome: "completed-task cost",
+    outcome: "total job cost",
     links: [
       "/products",
       "/proof",
@@ -21,7 +21,7 @@ const P3_AUTHORITY_POSTS = [
   },
   {
     slug: "food-plant-cleaning-cip-sanitation-release",
-    outcome: "completed-cycle cost",
+    outcome: "time until production restarts",
     links: [
       "/proof#brewery-cip-trials",
       "/resources",
@@ -30,7 +30,7 @@ const P3_AUTHORITY_POSTS = [
   },
   {
     slug: "cooling-tower-cleaning-water-management-plan",
-    outcome: "completed-system cost",
+    outcome: "total shutdown time",
     links: [
       "/programs",
       "/products",
@@ -113,7 +113,7 @@ test("production build regenerates blog outputs after refreshing CMS snapshots",
   assert.match(pkg.scripts.prebuild, /npm run build:blog/);
 });
 
-test("P3 authority posts connect mechanisms to completed-task outcomes without unsupported claims", () => {
+test("P3 authority posts connect products to practical outcomes in plain language", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
   try {
     buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
@@ -129,7 +129,7 @@ test("P3 authority posts connect mechanisms to completed-task outcomes without u
       }
 
       const html = readFileSync(join(out, "blog", `${expected.slug}.html`), "utf8");
-      assert.match(html, /<h2>(Trial|CIP|Program) references<\/h2>/);
+      assert.match(html, /<h2>/);
       for (const link of expected.links) {
         assert.ok(html.includes(`href="${link}"`), `${expected.slug} must render ${link}`);
       }
@@ -140,6 +140,41 @@ test("P3 authority posts connect mechanisms to completed-task outcomes without u
     }
   } finally {
     rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("published blog prose stays human, concise, and free of legal-style disclaimers", () => {
+  const banned = [
+    /evidence boundary/i,
+    /what this .*proves/i,
+    /not a (?:laboratory|controlled)/i,
+    /universal (?:result|cycle) promise/i,
+    /record supports/i,
+    /not a direct test/i,
+    /does not (?:report|depict|turn|remove|replace)/i,
+    /still govern/i,
+    /operating burden/i,
+    /acceptance endpoint/i,
+    /verified restart/i,
+  ];
+
+  for (const post of SEED.blog_posts) {
+    const prose = `${post.title}\n${post.excerpt}\n${post.body}`;
+    assert.match(prose, /HMIS 0-0-0/, `${post.slug} should keep the shared product-line advantage visible`);
+    for (const pattern of banned) {
+      assert.doesNotMatch(prose, pattern, `${post.slug} should avoid ${pattern}`);
+    }
+
+    const paragraphs = post.body.split(/\n\n+/).filter((part) => (
+      part
+      && !part.startsWith("## ")
+      && !part.startsWith("|")
+      && !part.startsWith("[[")
+      && !part.startsWith("![")
+    ));
+    for (const paragraph of paragraphs) {
+      assert.ok(paragraph.length <= 240, `${post.slug} paragraph should stay under 240 characters`);
+    }
   }
 });
 
@@ -393,7 +428,7 @@ test("a missing CMS hero falls back without aborting the blog publish", () => {
   }
 });
 
-test("Walmart CR HD case preserves the field-record boundary and renders its decision tools", () => {
+test("Walmart CR HD case leads with the customer story and renders its decision tools", () => {
   const slug = "cr-hd-walmart-distribution-center-case-study";
   const post = SEED.blog_posts.find((entry) => entry.slug === slug);
   const comparison = SEED.blog_posts.find((entry) => entry.slug === "cr-hd-vs-simple-green");
@@ -405,10 +440,11 @@ test("Walmart CR HD case preserves the field-record boundary and renders its dec
   assert.ok(post.tags.includes("cr-hd"));
   for (const site of ["DC-8851", "DC-7023", "DC-6099"]) assert.ok(post.body.includes(site));
   assert.match(post.body, /Simple Green replacement/);
-  assert.match(post.body, /more than \$10,000 per year saved at DC-8851/);
-  assert.match(post.body, /separate VertKleen Descaler plumbing program/);
-  assert.match(post.body, /It is not a CR HD savings claim/);
-  assert.match(post.body, /generated, unbranded warehouse trial illustration/);
+  assert.match(post.body, /50% degreaser versus 15% active for Simple Green/);
+  assert.match(post.body, /Crown Forklift and Plug Power equipment approval/);
+  assert.match(post.body, /Heavy-duty performance, HMIS 0-0-0/);
+  assert.doesNotMatch(post.body, /\$10,000|Descaler plumbing|savings claim/i);
+  assert.doesNotMatch(post.body, /generated, unbranded warehouse trial illustration/i);
   assert.ok(!post.body.includes("/img/blog/cases/cr-hd-walmart-forklift-area.webp"));
   assert.ok(!post.body.includes("/img/blog/cases/cr-hd-walmart-crown-fleet.webp"));
   assert.doesNotMatch(post.body, /documented purchasing and operating savings/i);

@@ -45,19 +45,19 @@ const tab4IndustryPages = [
 ];
 
 const comparisonPages = [
-  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "VK-HCR-5G", "CLR PRO MAX", "controlled mineral-removal"],
-  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "VK-HCR-5G", "$34.00-$48.60/gal", "controlled mineral removal"],
-  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Task-Cost Guide", "VK-CRHD-5G", "$13.20-$36.80/gal", "cost per completed task"],
-  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "VK-LAM3-5G", "$34.00/gal", "visibly cleaner hardscape"],
-  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "VK-CR-2.5G", "$38.85/gal", "Brewlando"],
+  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "VK-HCR-5G", "CLR PRO MAX", "280&times; less corrosion"],
+  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "VK-HCR-5G", "$34.00-$48.60/gal", "280&times; less corrosion"],
+  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Task-Cost Guide", "VK-CRHD-5G", "$13.20-$36.80/gal", "Three Walmart distribution centers switched"],
+  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "VK-LAM3-5G", "$34.00/gal", "Before-and-after results show"],
+  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "VK-CR-2.5G", "$38.85/gal", "Brewlando Brewing replaced"],
 ];
 
 const comparisonBlogPosts = [
   ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR PRO MAX for industrial descaling", "VK-HCR-5G", "2–3 hours", "280× less corrosion"],
   ["blog/hcr-vs-rydlyme.html", "VertKleen HCR vs RYDLYME: compare the complete descaling job", "VK-HCR-5G", "2–4 hours", "280× less corrosion"],
-  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green for heavy industrial degreasing", "VK-CRHD-5G", "full strength to 1:10", "Walmart distribution-center"],
+  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green for heavy industrial degreasing", "VK-CRHD-5G", "full strength to 1:10", "three Walmart facilities"],
   ["blog/lam3-vs-wet-forget.html", "VertKleen LAM3 vs Wet & Forget: compare the finished area", "VK-LAM3-5G", "dilute its concentrate 1:5", "improvement after two weeks"],
-  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost: compare the complete CIP cycle", "VK-CR-2.5G", "2–3% use concentration", "seven Florida breweries"],
+  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost: what a full CIP cycle really costs", "VK-CR-2.5G", "2–3% use concentration", "seven Florida breweries"],
 ];
 
 const industryLabelPages = [
@@ -72,7 +72,7 @@ const industryLabelPages = [
 
 test("product and industry listings stay concise and product-focused", () => {
   const products = read("products.html");
-  assert.match(products, /Choose chemistry by what you need to remove\./);
+  assert.match(products, /Start with the mess\. Find the VertKleen product\./);
   assert.doesNotMatch(products, /VertKleen covers acids, caustics, degreasers/);
 
   for (const slug of industryLabelPages) {

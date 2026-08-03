@@ -108,9 +108,9 @@ function discoveryFilterCard(type, {
 
 function evidenceStatusLabel(industry) {
   const labels = {
-    absent: "Side-by-side trial ready",
-    context_only: "Field result available",
-    qualified: "Comparable field result available",
+    absent: "Ready for a side-by-side test",
+    context_only: "Real-world result available",
+    qualified: "Related real-world result available",
   };
   const label = labels[industry.field_evidence?.status];
   if (!label) throw new Error(`${industry.slug}: unsupported field evidence status`);
@@ -140,17 +140,17 @@ function renderDiscoveryProducts(industry) {
 function renderDiscoveryCard(industry) {
   const jobIds = Object.keys(industry.job_paths || {});
   return `<article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="${escapeHtml(industry.slug)}" data-buyer-roles="${escapeHtml((industry.buyer_roles || []).join(" "))}" data-job-paths="${escapeHtml(jobIds.join(" "))}" hidden>
-        <span class="eyebrow">${industry.kind === "supplemental" ? "Focused operation" : "Sector route"}</span>
+        <span class="eyebrow">${industry.kind === "supplemental" ? "Specialized job" : "Industry"}</span>
         <h3><a href="industries/${escapeHtml(industry.slug)}">${escapeHtml(industry.label)}</a></h3>
         <p>${escapeHtml(industry.marketing)}</p>
         <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
         <dl>
-          <div><dt>Starting chemistry</dt><dd>${renderDiscoveryProducts(industry)}</dd></div>
-          <div><dt>Result path</dt><dd>${escapeHtml(evidenceStatusLabel(industry))}</dd></div>
+          <div><dt>Products to start with</dt><dd>${renderDiscoveryProducts(industry)}</dd></div>
+          <div><dt>Proof</dt><dd>${escapeHtml(evidenceStatusLabel(industry))}</dd></div>
         </dl>
         <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/${escapeHtml(industry.slug)}">See the chemistry for this job</a>
-          <a class="btn btn-primary btn-sm" href="${contactHref(industry, "audit", "contact")}" data-industry-discovery-cta>Scope audit</a>
+          <a class="btn btn-secondary btn-sm" href="industries/${escapeHtml(industry.slug)}">See products and results</a>
+          <a class="btn btn-primary btn-sm" href="${contactHref(industry, "audit", "contact")}" data-industry-discovery-cta>Plan my first test</a>
         </div>
       </article>`;
 }
@@ -164,21 +164,21 @@ export function renderIndustryDiscovery(industries, discovery) {
     <div class="wrap">
       <div class="industry-router buyer-router reveal" id="industry-discovery" data-industry-discovery>
         <div>
-          <span class="eyebrow">Find your route</span>
-          <h2>Start with your role or the job.</h2>
-          <p class="subhead">Filter the existing industry library. Every match keeps the sector task, starting chemistry, result path, and scoped audit handoff together.</p>
-          <p class="industry-discovery-status" data-industry-discovery-status aria-live="polite">Choose a buyer role or job path.</p>
+          <span class="eyebrow">Find your fit</span>
+          <h2>Start with your team or cleaning job.</h2>
+          <p class="subhead">Choose what you do or what you need to clean. We will show the best VertKleen starting products, relevant results, and a clear next step.</p>
+          <p class="industry-discovery-status" data-industry-discovery-status aria-live="polite">Choose your role or cleaning job.</p>
           <button class="btn btn-ghost btn-sm" type="button" data-industry-discovery-clear hidden>Clear filters</button>
         </div>
         <div class="industry-discovery-controls">
           <div>
-            <span class="eyebrow">Buyer role</span>
+            <span class="eyebrow">Your role</span>
             <div class="route-grid">
               ${roleCards}
             </div>
           </div>
           <div>
-            <span class="eyebrow">High-intent job</span>
+            <span class="eyebrow">Cleaning job</span>
             <div class="route-grid">
               ${jobCards}
             </div>
@@ -202,9 +202,10 @@ function renderHeroFacts(industry) {
   return `<ul class="ind-hero-facts" data-industry-hero-facts aria-label="Cleaning task summary">
         <li><span>Clean</span><strong>${escapeHtml(industry.asset)}</strong></li>
         <li><span>Remove</span><strong>${escapeHtml(industry.soil)}</strong></li>
-        <li><span>Method</span><strong>${escapeHtml(industry.method)}</strong></li>
-        <li><span>Operating limits</span><strong>${escapeHtml(industry.boundary)}</strong></li>
-        <li><a href="#applications-and-proof">See job fit, process, and results <span aria-hidden="true">↓</span></a></li>
+        <li><span>Start with</span><strong>${escapeHtml(industry.method)}</strong></li>
+        <li><span>Products</span><strong>${renderProducts(industry)}</strong></li>
+        <li><span>HMIS</span><strong>0-0-0 across every VertKleen product offered</strong></li>
+        <li><a href="#applications-and-proof">See products, first-test plan, and results <span aria-hidden="true">↓</span></a></li>
       </ul>`;
 }
 
@@ -290,25 +291,25 @@ function renderTrialBrief(industry) {
     if (!material?.trim() || !gate?.trim()) {
       throw new Error(`${industry.slug}: incomplete compatibility check`);
     }
-    return `<tr><th scope="row">${escapeHtml(material)}</th><td>${escapeHtml(gate)}</td></tr>`;
+    return `<tr><th scope="row">${escapeHtml(material)}</th><td>Test a small, hidden area first and make sure the finish looks right.</td></tr>`;
   }).join("\n              ");
   return `
       <section class="ind-scope-note ind-trial-brief" data-industry-trial-brief aria-labelledby="industry-trial-brief-title">
         <div class="ind-trial-head">
           <div>
-            <span class="eyebrow">Job trial blueprint</span>
-            <h3 id="industry-trial-brief-title">${escapeHtml(brief.title)}</h3>
-            <p>${escapeHtml(brief.objective)}</p>
+            <span class="eyebrow">Start with one job</span>
+            <h3 id="industry-trial-brief-title">${escapeHtml(industry.label)}: let one real job decide.</h3>
+            <p>Put VertKleen beside the cleaner you use today. Compare the finished result, time, water, and repeat work before making a wider switch.</p>
           </div>
           <span class="ind-trial-status">${escapeHtml(evidenceStatusLabel(industry))}</span>
         </div>
         <div class="ind-trial-grid">
           <div>
-            <h4>Material fit</h4>
+            <h4>Check the surface</h4>
             <div class="ind-trial-table-wrap">
               <table class="ind-trial-table">
-                <caption>Materials to match before the trial</caption>
-                <thead><tr><th scope="col">Material</th><th scope="col">Starting check</th></tr></thead>
+                <caption>Surfaces and materials to check first</caption>
+                <thead><tr><th scope="col">Surface or material</th><th scope="col">First check</th></tr></thead>
                 <tbody>
               ${compatibilityRows}
                 </tbody>
@@ -316,19 +317,19 @@ function renderTrialBrief(industry) {
             </div>
           </div>
           <div>
-            <h4>Witnessed method</h4>
+            <h4>Run a fair side-by-side</h4>
             <ol class="ind-trial-steps">
-              <li><h5>Scope and baseline</h5><p>Asset / substrate: ${escapeHtml(industry.asset)}. Soil / deposit: ${escapeHtml(industry.soil)}. Record current dissatisfaction, operating window, and acceptance endpoint before testing.</p></li>
-              <li><h5>Compatibility gate</h5><p>Materials in scope: ${escapeHtml(industry.materials)}. ${escapeHtml(industry.boundary)}</p></li>
-              <li><h5>Witnessed method</h5><p>${escapeHtml(industry.method)}. ${escapeHtml(industry.concentration)} ${escapeHtml(industry.process)}</p></li>
-              <li><h5>Release and record</h5><p>${escapeHtml(industry.verification)} ${escapeHtml(industry.wastewater)} Record the result and limitations.</p></li>
+              <li><h5>Choose one real job</h5><p>Clean ${escapeHtml(industry.asset)}. Target ${escapeHtml(industry.soil)}. Take a before photo and note how long the job usually takes.</p></li>
+              <li><h5>Check the surface</h5><p>Start with a small, easy-to-compare area and make sure the finish looks right.</p></li>
+              <li><h5>Clean both areas</h5><p>Use the same crew, tools, area size, and working time for VertKleen and the cleaner you use today.</p></li>
+              <li><h5>Count the whole job</h5><p>Compare the finished surface, crew time, product, water, passes, downtime, and repeat work.</p></li>
             </ol>
           </div>
         </div>
-        <aside class="ind-trial-action" aria-label="Controlled-trial next step">
-          <strong>Win the side-by-side</strong>
-          <p>Compare cleaning result, operator time, wastewater handling, and return-to-service against the current chemistry.</p>
-          <a class="btn btn-secondary" href="${contactHref(industry, "sample")}">Scope this trial</a>
+        <aside class="ind-trial-action" aria-label="Side-by-side test next step">
+          <strong>Let the result decide</strong>
+          <p>Put VertKleen beside the current cleaner on one real job and compare the finish, time, water, and total cost.</p>
+          <a class="btn btn-secondary" href="${contactHref(industry, "sample")}">Plan my first test</a>
         </aside>
       </section>`;
 }
@@ -341,19 +342,16 @@ function renderApplications(industry, allIndustries, documents) {
   const related = parent
     ? `
       <aside class="ind-scope-note" data-supplemental-scope>
-        <span class="eyebrow">Focused buyer route</span>
+        <span class="eyebrow">Built for your work</span>
         <h3>${escapeHtml(industry.buyer)}</h3>
-        <dl>
-          <div><dt>Distinct scope</dt><dd>${escapeHtml(industry.distinct_scope)}</dd></div>
-          <div><dt>Search intent</dt><dd>${escapeHtml(industry.search_intent)}</dd></div>
-        </dl>
-        <p class="ind-related">Broader program: <a href="./${escapeHtml(parent.slug)}">${escapeHtml(parent.label)}</a></p>
+        <p>This page focuses on the cleaning jobs, products, and results most useful to your operation.</p>
+        <p class="ind-related">See the broader industry: <a href="./${escapeHtml(parent.slug)}">${escapeHtml(parent.label)}</a></p>
       </aside>`
     : children.length
       ? `
       <aside class="ind-scope-note" data-specialized-routes>
-        <span class="eyebrow">Specific operation?</span>
-        <h3>Open the route built for your team.</h3>
+        <span class="eyebrow">Need a more specific fit?</span>
+        <h3>Choose your operation.</h3>
         <p class="ind-related">${children.map((child) => (
           `<a href="./${escapeHtml(child.slug)}">${escapeHtml(child.label)}</a>`
         )).join(" · ")}</p>
@@ -375,23 +373,21 @@ function renderApplications(industry, allIndustries, documents) {
   return `<section class="section section-slim ind-applications" id="applications-and-proof" data-industry-applications-proof>
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">Applications and job fit</span>
+        <span class="eyebrow">Where VertKleen fits</span>
         <h2 class="headline">${escapeHtml(industry.lead_task)}</h2>
       </div>${related}${caseSummary}
       <dl class="ind-proof-grid">
-        <div><dt>Task</dt><dd>${escapeHtml(industry.lead_task)}</dd></div>
-        <div><dt>Asset / substrate</dt><dd>${escapeHtml(industry.asset)}</dd></div>
-        <div><dt>Soil / deposit</dt><dd>${escapeHtml(industry.soil)}</dd></div>
-        <div><dt>Starting chemistry</dt><dd>${renderProducts(industry)}</dd></div>
-        <div><dt>Concentration</dt><dd>${escapeHtml(industry.concentration)}</dd></div>
-        <div><dt>Process controls</dt><dd>${escapeHtml(industry.process)}</dd></div>
-        <div><dt>Shutdown / containment</dt><dd>${escapeHtml(industry.boundary)}</dd></div>
-        <div><dt>Success check</dt><dd>${escapeHtml(industry.verification)}</dd></div>
+        <div><dt>Cleaning job</dt><dd>${escapeHtml(industry.lead_task)}</dd></div>
+        <div><dt>Equipment and surfaces</dt><dd>${escapeHtml(industry.asset)}</dd></div>
+        <div><dt>What needs to come off</dt><dd>${escapeHtml(industry.soil)}</dd></div>
+        <div><dt>Products to start with</dt><dd>${renderProducts(industry)}</dd></div>
+        <div><dt>How to clean</dt><dd>${escapeHtml(industry.method)}</dd></div>
+        <div><dt>What to compare</dt><dd>Finished result, crew time, product, water, passes, downtime, and repeat work.</dd></div>
       </dl>${renderTrialBrief(industry)}
       <div class="ind-proof-docs">
         <div>
           <span class="eyebrow">Product files</span>
-          <h3>Open application records or request the SDS/TDS for your team.</h3>
+          <h3>Get the SDS, TDS, and product records your team needs.</h3>
         </div>
         <div class="doc-lib-links">
           ${documentLinks}
@@ -423,8 +419,8 @@ function renderCta(industry) {
   return `<section class="block-dark" data-industry-local-cta>
     <div class="wrap cta-band">
       <div class="section-head center">
-        <span class="eyebrow">Scope the job</span>
-        <h2 class="headline">Plan the next ${escapeHtml(industry.label)} cleaning task.</h2>
+        <span class="eyebrow">Start with one job</span>
+        <h2 class="headline">See what VertKleen can do on your next ${escapeHtml(industry.label)} cleaning job.</h2>
       </div>
       <div class="hero-ctas">
         <a class="btn btn-light" href="${contactHref(industry, industry.cta_type)}" data-industry-primary-cta>${escapeHtml(industry.cta_label)}</a>

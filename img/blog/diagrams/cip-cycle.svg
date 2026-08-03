@@ -1,18 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
-  <title id="title">Soil-matched clean-in-place cycle</title>
-  <desc id="desc">A five-stage cycle: pre-rinse, CR organic soil lift, rinse, HCR mineral removal, and verified release.</desc>
+  <title id="title">A practical clean-in-place cycle</title>
+  <desc id="desc">Five clear steps: rinse, cut grease and organic buildup with CR, rinse again, remove beer stone with HCR, and finish with the plant’s normal checks.</desc>
   <rect width="1200" height="675" rx="28" fill="#f3f8f8"/>
-  <text x="72" y="92" fill="#142326" font-family="Arial,sans-serif" font-size="44" font-weight="700">Build the cycle around the soil.</text>
+  <text x="72" y="92" fill="#142326" font-family="Arial,sans-serif" font-size="44" font-weight="700">Match each step to the buildup.</text>
   <g font-family="Arial,sans-serif" text-anchor="middle">
-    <g transform="translate(126 316)"><circle r="92" fill="#dfecee"/><text y="-6" fill="#142326" font-size="25" font-weight="700">Pre-rinse</text><text y="30" fill="#52676a" font-size="19">Remove loose soil</text></g>
-    <g transform="translate(365 316)"><circle r="92" fill="#0e7c86"/><text y="-6" fill="#fff" font-size="25" font-weight="700">CR cycle</text><text y="30" fill="#d8f2f3" font-size="19">Lift organic soil</text></g>
-    <g transform="translate(600 316)"><circle r="92" fill="#dfecee"/><text y="-6" fill="#142326" font-size="25" font-weight="700">Rinse</text><text y="30" fill="#52676a" font-size="19">Clear released load</text></g>
-    <g transform="translate(835 316)"><circle r="92" fill="#0b3438"/><text y="-6" fill="#fff" font-size="25" font-weight="700">HCR cycle</text><text y="30" fill="#c8e7e9" font-size="19">Remove beer stone</text></g>
-    <g transform="translate(1074 316)"><circle r="92" fill="#67d6dd"/><text y="-6" fill="#0b3438" font-size="25" font-weight="700">Release</text><text y="30" fill="#0b3438" font-size="19">Verify rinse + SOP</text></g>
+    <g transform="translate(126 316)"><circle r="92" fill="#dfecee"/><text y="-6" fill="#142326" font-size="25" font-weight="700">Pre-rinse</text><text y="30" fill="#52676a" font-size="19">Wash away loose soil</text></g>
+    <g transform="translate(365 316)"><circle r="92" fill="#0e7c86"/><text y="-6" fill="#fff" font-size="25" font-weight="700">CR cycle</text><text y="30" fill="#d8f2f3" font-size="19">Cut grease + organics</text></g>
+    <g transform="translate(600 316)"><circle r="92" fill="#dfecee"/><text y="-6" fill="#142326" font-size="25" font-weight="700">Rinse</text><text y="30" fill="#52676a" font-size="19">Carry loosened soil out</text></g>
+    <g transform="translate(835 316)"><circle r="92" fill="#0b3438"/><text y="-6" fill="#fff" font-size="25" font-weight="700">HCR cycle</text><text y="30" fill="#c8e7e9" font-size="19">Clear beer stone</text></g>
+    <g transform="translate(1074 316)"><circle r="92" fill="#67d6dd"/><text y="-6" fill="#0b3438" font-size="25" font-weight="700">Final check</text><text y="30" fill="#0b3438" font-size="19">Rinse + normal checks</text></g>
   </g>
   <g fill="none" stroke="#6a8588" stroke-width="6" stroke-linecap="round">
     <path d="M220 316H267"/><path d="M459 316H502"/><path d="M694 316H737"/><path d="M929 316H976"/>
   </g>
   <g fill="#6a8588"><path d="M267 316l-18-12v24z"/><path d="M502 316l-18-12v24z"/><path d="M737 316l-18-12v24z"/><path d="M976 316l-18-12v24z"/></g>
-  <text x="600" y="540" text-anchor="middle" fill="#52676a" font-family="Arial,sans-serif" font-size="23">Cleaning prepares the system. The facility’s validated sanitation and release procedure still governs production.</text>
+  <text x="600" y="540" text-anchor="middle" fill="#52676a" font-family="Arial,sans-serif" font-size="23">CR and HCR clear the buildup. Finish with the plant’s normal sanitation check.</text>
 </svg>

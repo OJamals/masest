@@ -404,7 +404,7 @@ function industrySchema(ind, plain) {
         url: "https://masest.co/",
         logo: "https://masest.co/img/masest-logo.png",
         brand: "VertKleen",
-        description: "VertKleen replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
+        description: "VertKleen replaces harsh acids, caustics, and solvent-heavy cleaners with industrial-strength HMIS 0-0-0 products.",
         areaServed: "United States and international commercial accounts",
         contactPoint: { "@type": "ContactPoint", contactType: "sales", url: "https://masest.co/contact" }
       },
@@ -459,14 +459,14 @@ function imageGalleryBlock(ind) {
   const taskFigs = (tasks || []).map(([alt, caption, filename], index) => `
         <figure class="ind-shot ind-shot-wide" data-evidence-kind="generated">
           <img src="../img/industries/tasks/${filename || `${ind.slug}-${String(index + 1).padStart(2, "0")}.webp`}" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="1200" height="750">
-          <figcaption><span class="ind-media-kind">Representative setup</span>${caption}</figcaption>
+          <figcaption><span class="ind-media-kind">Cleaning setup</span>${caption}</figcaption>
         </figure>`).join("");
 
   const sample = SAMPLE_GALLERY[ind.slug];
   const sampleFig = sample ? `
         <figure class="ind-shot ind-shot-wide" data-evidence-kind="generated">
           <img src="../img/industries/samples/${ind.slug}.webp" alt="${sample[0].replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="840" height="520">
-          <figcaption><span class="ind-media-kind">Representative setup</span>${sample[1]}</figcaption>
+          <figcaption><span class="ind-media-kind">Cleaning setup</span>${sample[1]}</figcaption>
         </figure>` : "";
 
   const shots = FIELD_GALLERY_SLUGS.has(ind.slug)

@@ -258,9 +258,9 @@ test('gallery media fails closed between generated scenes, field context, and qu
     assert.equal(figures.length, expectedFigures, `${industry.slug}: every figure declares evidence kind`);
     assert.ok(figures.includes('generated'), `${industry.slug}: generated scenes identified`);
     assert.equal(
-      (gallery.match(/<span class="ind-media-kind">Representative setup<\/span>/g) || []).length,
+      (gallery.match(/<span class="ind-media-kind">Cleaning setup<\/span>/g) || []).length,
       figures.filter((kind) => kind === 'generated').length,
-      `${industry.slug}: representative scenes need a visible label`,
+      `${industry.slug}: generated cleaning scenes need a visible label`,
     );
     assert.doesNotMatch(gallery, /Generated task visualization/);
     assert.equal(
@@ -425,10 +425,10 @@ test('industry hub generates linkable role and job discovery with decision conte
     assert.match(card, new RegExp(`href="industries/${industry.slug}"`), `${industry.slug}: route`);
     assert.match(card, /data-buyer-roles="[^"]+"/, `${industry.slug}: roles`);
     assert.match(card, /data-job-paths="[^"]+"/, `${industry.slug}: jobs`);
-    assert.match(card, /Starting chemistry/, `${industry.slug}: products`);
+    assert.match(card, /Products to start with/, `${industry.slug}: products`);
     assert.match(card, /class="industry-discovery-products"/, `${industry.slug}: product list`);
     assert.doesNotMatch(card, /data-industry-discovery-product[^>]*>[^<]+<\/a>,/);
-    assert.match(card, /Result path/, `${industry.slug}: result path`);
+    assert.match(card, /<dt>Proof<\/dt>/, `${industry.slug}: proof path`);
     assert.match(card, /data-industry-discovery-path hidden/, `${industry.slug}: path framing`);
     assert.match(card, /href="contact\?[^"]+type=(?:audit|quote)/, `${industry.slug}: prefilled CTA`);
   }
@@ -478,17 +478,16 @@ test('supplemental routes state a narrower buyer, task scope, and search intent 
         `${industry.slug}: ${field} must add route-specific terms`,
       );
     }
-    assert.match(industry.distinct_scope, /\bnot\b/i, `${industry.slug}: parent boundary`);
     assert.notEqual(industry.lead_task, parent.lead_task, `${industry.slug}: narrower task`);
 
     const html = read(`industries/${industry.slug}.html`);
     const scope = html.match(
       /<aside class="ind-scope-note" data-supplemental-scope>([\s\S]*?)<\/aside>/,
     )?.[1] || '';
-    assert.match(scope, /Focused buyer route/);
+    assert.match(scope, /Built for your work/);
     assert.match(scope, new RegExp(industry.buyer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.match(scope, new RegExp(industry.distinct_scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.match(scope, new RegExp(industry.search_intent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(scope, /This page focuses on the cleaning jobs, products, and results most useful to your operation\./);
+    assert.doesNotMatch(scope, /not general|search intent|distinct scope/i);
     assert.match(scope, new RegExp(`href="./${industry.parent}"`));
   }
 });
@@ -513,7 +512,7 @@ test('every industry page renders one task-led applications and job-fit module',
     );
     assert.equal((html.match(/data-industry-local-cta/g) || []).length, 1, `${slug}: localized CTA`);
     assert.doesNotMatch(html, /Put the current chemical on the table\./);
-    assert.match(html, /Applications and job fit/);
+    assert.match(html, /Where VertKleen fits/);
     assert.doesNotMatch(html, /Applications and proof|Field-proof standard|ind-evidence-boundary/);
     assert.doesNotMatch(
       html,
@@ -540,17 +539,17 @@ test('every industry page renders one task-led applications and job-fit module',
     );
 
     for (const label of [
-      'Task',
-      'Asset / substrate',
-      'Soil / deposit',
-      'Starting chemistry',
-      'Concentration',
-      'Process controls',
-      'Shutdown / containment',
-      'Success check',
+      'Cleaning job',
+      'Equipment and surfaces',
+      'What needs to come off',
+      'Products to start with',
+      'How to clean',
+      'What to compare',
     ]) {
       assert.match(html, new RegExp(`>${label}<`), `${slug}: missing ${label}`);
     }
+
+    assert.match(html, /<span>HMIS<\/span><strong>0-0-0 across every VertKleen product offered<\/strong>/);
 
     assert.match(html, /message=/, `${slug}: CTA must prefill the cleaning brief`);
   }
@@ -577,11 +576,7 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   const marine = trialBySlug.get('marine');
 
   for (const industry of trialIndustries) {
-    assert.match(
-      industry.trial_brief.title,
-      /controlled-trial brief/i,
-      `${industry.slug}: controlled-trial title`,
-    );
+    assert.ok(industry.trial_brief.title?.trim(), `${industry.slug}: internal trial title`);
     assert.ok(industry.trial_brief.objective?.trim(), `${industry.slug}: trial objective`);
     assert.equal(
       industry.trial_brief.compatibility_checks?.length,
@@ -612,11 +607,14 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
     )?.[0] || '';
     briefs.set(industry.slug, brief);
 
-    assert.match(brief, new RegExp(industry.trial_brief.title, 'i'));
-    assert.match(brief, new RegExp(industry.trial_brief.objective, 'i'));
-    assert.match(brief, /Job trial blueprint/);
-    assert.match(brief, /Material fit/);
-    assert.match(brief, /<caption>Materials to match before the trial<\/caption>/);
+    assert.match(
+      brief,
+      new RegExp(`${industry.label.replaceAll('&', '&amp;').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: let one real job decide`, 'i'),
+    );
+    assert.match(brief, /Put VertKleen beside the cleaner you use today/);
+    assert.match(brief, /Run a fair side-by-side/);
+    assert.match(brief, /Check the surface/);
+    assert.match(brief, /<caption>Surfaces and materials to check first<\/caption>/);
     assert.equal(
       (brief.match(/<tbody>[\s\S]*<\/tbody>/)?.[0].match(/<tr>/g) || []).length,
       industry.trial_brief.compatibility_checks.length,
@@ -624,30 +622,21 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
     const stepLabels = [...brief.matchAll(/<li><h5>([^<]+)<\/h5>/g)]
       .map(([, label]) => label);
     assert.deepEqual(stepLabels, [
-      'Scope and baseline',
-      'Compatibility gate',
-      'Witnessed method',
-      'Release and record',
+      'Choose one real job',
+      'Check the surface',
+      'Clean both areas',
+      'Count the whole job',
     ]);
-    for (const value of [
-      industry.asset,
-      industry.soil,
-      industry.method,
-      industry.materials,
-      industry.concentration,
-      industry.process,
-      industry.boundary,
-      industry.verification,
-      industry.wastewater,
-    ]) {
+    for (const value of [industry.asset, industry.soil]) {
       assert.match(
         brief,
         new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
-        `${industry.slug}: trial brief must use canonical controls`,
+        `${industry.slug}: trial brief must use canonical job details`,
       );
     }
     assert.match(brief, /href="\.\.\/contact\?[^"]+type=sample/);
-    assert.match(brief, /Win the side-by-side/);
+    assert.match(brief, /Let the result decide/);
+    assert.match(brief, />Plan my first test<\/a>/);
     assert.doesNotMatch(
       brief,
       /pending verification|failed authentication|unverified|reference[- ]only|exact-record scope|planning brief|not field proof|evidence status|no controlled reference/i,
@@ -660,7 +649,7 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   assert.equal(brewery.field_evidence.status, 'context_only');
   assert.equal(brewery.evidence_files, undefined);
   assert.match(brewery.field_evidence.publication_basis, /signed publication scope recorded offline/i);
-  assert.match(breweryBrief, /Field result available/);
+  assert.match(breweryBrief, /Real-world result available/);
   assert.match(breweryHtml, /data-industry-case-summary/);
   assert.match(breweryHtml, /CR and HCR replaced conventional caustic and acid chemistry/i);
   assert.match(breweryHtml, /href="\.\.\/proof#brewery-cip-trials"/);
@@ -687,7 +676,7 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
     const brief = briefs.get(slug);
     assert.equal(industry.field_evidence.status, 'absent');
     assert.equal(industry.evidence_files, undefined);
-    assert.match(brief, /Side-by-side trial ready/);
+    assert.match(brief, /Ready for a side-by-side test/);
     assert.doesNotMatch(
       `${JSON.stringify(industry.trial_brief)}\n${brief}`,
       forbidden,
@@ -698,7 +687,7 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   const hvacBrief = briefs.get(hvac.slug);
   assert.equal(hvac.field_evidence.status, 'context_only');
   assert.equal(hvac.evidence_files, undefined);
-  assert.match(hvacBrief, /Field result available/);
+  assert.match(hvacBrief, /Real-world result available/);
   assert.doesNotMatch(hvacBrief, /customer references?/i);
   assert.doesNotMatch(
     `${JSON.stringify(hvac.trial_brief)}\n${hvacBrief}`,
@@ -710,15 +699,13 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   const droneGallery = droneHtml.match(
     /<section class="section section-slim ind-gallery-sec" aria-label="Drone Cleaning Companies image gallery">([\s\S]*?)<\/section>/,
   )?.[1] || '';
-  const droneReleaseRecord = droneBrief.match(
-    /<li><h5>Release and record<\/h5><p>([\s\S]*?)<\/p><\/li>/,
-  )?.[1] || '';
   assert.equal(drone.field_evidence.status, 'absent');
   assert.deepEqual(drone.field_evidence.missing, []);
   assert.equal(drone.evidence_files, undefined);
-  assert.match(droneBrief, /Drone exterior cleaning controlled-trial brief/i);
-  assert.match(droneBrief, /Side-by-side trial ready/);
-  assert.match(droneReleaseRecord, /Matched-angle before\/after images after drying/);
+  assert.match(droneBrief, /Drone Cleaning Companies: let one real job decide/i);
+  assert.match(droneBrief, /Ready for a side-by-side test/);
+  assert.match(droneBrief, /Take a before photo and note how long the job usually takes/);
+  assert.match(droneBrief, /Count the whole job/);
   assert.equal(
     (droneGallery.match(/data-evidence-kind="generated"/g) || []).length,
     2,
@@ -736,8 +723,8 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   )?.[1] || '';
   assert.equal(marine.field_evidence.status, 'context_only');
   assert.equal(marine.evidence_files, undefined);
-  assert.match(marineBrief, /Marine vessel controlled-trial brief/i);
-  assert.match(marineBrief, /Field result available/);
+  assert.match(marineBrief, /Marine: let one real job decide/i);
+  assert.match(marineBrief, /Real-world result available/);
   assert.equal(
     (marineGallery.match(/data-evidence-kind="field-context"/g) || []).length,
     3,

@@ -66,10 +66,13 @@ test("products page omits the retired replacement checker and keeps the catalog 
 
 test("about page exposes latest quote-service catalog from seed data", () => {
   const about = read("about.html");
+  const serviceData = JSON.parse(read("data/services.json"));
 
   assert.match(about, /id="serviceCatalog"/);
-  assert.match(about, /35 quote-service line items/);
-  assert.match(about, /4 service packages/);
+  assert.match(about, /Every service has a line item and a price/);
+  assert.match(about, /Browse service pricing/);
+  assert.equal(serviceData.services.length, 35);
+  assert.equal(serviceData.service_packages.length, 4);
   assert.match(serviceCatalog, /function initServiceCatalog/);
   assert.match(serviceCatalog, /data\/services\.json/);
 });
@@ -107,7 +110,8 @@ test("generated product details include source-backed application media", () => 
   const product = read("products/hcr.html");
 
   assert.match(product, /class="product-application-media"/);
-  assert.match(product, /Representative application/);
+  assert.match(product, /Built for real work/);
+  assert.match(product, /280× less corrosion/);
   assert.doesNotMatch(product, /Request a Quote/);
   assert.doesNotMatch(product, /type=distributor/);
 });
@@ -142,8 +146,8 @@ test("products page keeps the conversion-results strip between catalog and CTA",
 
 test("program function map is optional below the tiers", () => {
   const programs = read("programs.html");
-  const tiersIndex = programs.indexOf("Four program tiers, from manual dosing to full lifecycle");
-  const mapIndex = programs.indexOf("The chemistry stack, translated function by function");
+  const tiersIndex = programs.indexOf("Four service levels, from quarterly care to full lifecycle support");
+  const mapIndex = programs.indexOf("See which VertKleen product replaces each conventional chemical");
   const mapDisclosureIndex = programs.indexOf('class="resource-disclosure program-map-disclosure');
 
   assert.ok(tiersIndex > -1, "expected tiers content");
@@ -156,8 +160,6 @@ test("program function map is optional below the tiers", () => {
 test("proof page leads with results and expandable conversion evidence", () => {
   const proof = read("proof.html");
   const proofCards = JSON.parse(read("data/content/proof.json")).proof_cards;
-  const productRecordCount = proofCards
-    .filter((card) => card.publication_scope === "Published product record").length;
   const heroIndex = proof.indexOf("Results strong enough to replace the old chemistry.");
   const libraryIndex = proof.indexOf('class="proof-library');
 
@@ -166,15 +168,12 @@ test("proof page leads with results and expandable conversion evidence", () => {
   assert.ok(heroIndex < libraryIndex, "hero should lead proof library");
   assert.doesNotMatch(proof, /proof-decision-strip/);
   assert.doesNotMatch(proof, /class="proof-decision"/);
-  assert.match(proof, /Request this comparison/);
+  assert.match(proof, /Plan a side-by-side test/);
   assert.match(proof, /Real-world transformations/);
   assert.match(proof, /Brewery chemistry that beat the old playbook/);
   assert.equal((proof.match(/data-proof-card/g) || []).length, proofCards.length);
-  assert.equal(
-    (proof.match(/Published result summary/g) || []).length,
-    proofCards.length - productRecordCount,
-  );
-  assert.equal((proof.match(/Published product record/g) || []).length, productRecordCount);
+  assert.equal((proof.match(/See how it worked/g) || []).length, proofCards.length);
+  assert.doesNotMatch(proof, /Published result summary|Published product record|Source:/);
   assert.equal((proof.match(/<details class="case-disclosure"/g) || []).length, proofCards.length);
   assert.doesNotMatch(proof, /href="docs\/(?:brewery-cip-trial-brewlando|carib-brewery-lab-report)\.pdf"/);
   assert.doesNotMatch(proof, /30 min|36 hours|280&#215;|\$75|2,500 square feet/);
@@ -199,10 +198,10 @@ test("industries page routes buyers before the long industry list", () => {
   assert.ok(routerIndex > -1, "expected industry buyer router");
   assert.ok(gridIndex > -1, "expected industry grid to remain");
   assert.ok(routerIndex < gridIndex, "router should precede dense industry list");
-  assert.match(industries, /Start with your role or the job/);
+  assert.match(industries, /Start with your team or cleaning job/);
   assert.match(industries, /Facility \/ operations/);
   assert.match(industries, /Degrease/);
-  assert.match(industries, /Result path/);
+  assert.match(industries, /Products to start with/);
 });
 
 test("industry router stacks route cards on mobile", () => {
@@ -221,7 +220,7 @@ test("contact page makes quote and audit intent obvious", () => {
   assert.ok(firstFieldIndex > -1, "expected form fields to remain");
   assert.ok(chooserIndex < firstFieldIndex, "intent chooser should sit before form fields");
   assert.match(contact, /Quote/);
-  assert.match(contact, /Chemical Audit/);
+  assert.match(contact, /Replace a Cleaner/);
 });
 
 test("footer carries secondary navigation in grouped lanes", () => {
@@ -391,8 +390,8 @@ test("scrolly story keeps its static summary out of the visual flow", () => {
   assert.match(summary, /aria-labelledby="storySummaryTitle"/);
   assert.match(summary, /id="storySummaryTitle"/);
   assert.match(summary, /The field problem/);
-  assert.match(summary, /The Replacement Ledger/);
-  assert.match(summary, /One documented trial brief/);
+  assert.match(summary, /What VertKleen replaces/);
+  assert.match(summary, /One fair side-by-side/);
 });
 
 test("scrolly opener states the VertKleen mechanism early", () => {
@@ -401,8 +400,8 @@ test("scrolly opener states the VertKleen mechanism early", () => {
   const actOne = index.match(/<section class="act" data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actOne, /class="story-promise"/);
-  assert.match(actOne, /Industrial cleaning power, engineered around people and equipment/);
-  assert.match(actOne, /controlled mineral-removal and soil-lift chemistry/);
+  assert.match(actOne, /Industrial cleaning power without the harsh-chemical tradeoff/);
+  assert.match(actOne, /removes scale, rust, grease, oil, and industrial buildup/);
   assert.match(storyCss, /\.story-promise/);
 });
 
@@ -442,8 +441,8 @@ test("scrolly act 3 combines conventional burden and VertKleen mechanism", () =>
   assert.match(actThree, /Caustic soda \/ lye/);
   assert.match(actThree, /Glutaraldehyde/);
   assert.match(actThree, /Chlorinated solvent/);
-  assert.match(actThree, /How the job works/);
-  assert.match(actThree, /React, complex, rinse/);
+  assert.match(actThree, /How VertKleen gets it clean/);
+  assert.match(actThree, /Break down and rinse away/);
   assert.match(actThree, /data-target="115000"/);
   assert.match(actThree, /class="cost-sources"/);
   for (const product of ["VertKleen HCR", "VertKleen CR", "VertKleen Neutral", "VertKleen Purgo"]) {
@@ -557,5 +556,5 @@ test("scrolly Scene 3 HMIS intro remains readable", () => {
 
   assert.ok(intro, "expected Scene 3 HMIS intro copy");
   assert.doesNotMatch(intro[1], /data-out/, "HMIS intro stays up while the ledger builds");
-  assert.match(intro[2], /VertKleen mineral removal, soil lift, and operating value/);
+  assert.match(intro[2], /The cleaning job stays hard\. The chemical burden does not/);
 });

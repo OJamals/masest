@@ -93,9 +93,9 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.equal(services.status, 200, "services page should exist");
     const servicesHtml = await services.text();
     assert.match(servicesHtml, /data-service-catalog/, "services page should render the service catalog");
-    assert.match(servicesHtml, /Prove the switch before you scale it/);
-    assert.match(servicesHtml, /completed-task economics/);
-    assert.match(servicesHtml, /35 quote-service line items plus 4 service packages/);
+    assert.match(servicesHtml, /Test the switch before you roll it out/);
+    assert.match(servicesHtml, /Compare the finish, labor, water, and total job cost/);
+    assert.match(servicesHtml, /With 35 line items and 4 packages/);
     assert.match(
       servicesHtml,
       /<img src="img\/representative\/applications\/deposit-analysis-service-v1\.webp"[^>]*width="1536" height="1024">/,
@@ -106,7 +106,7 @@ test("products page is shop-focused and routes services to a standalone page", a
     const schema = JSON.parse(servicesHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)<\/script>/)[1]);
     const serviceNode = schema["@graph"].find((node) => node["@type"] === "Service");
     assert.equal(serviceNode.offers.offerCount, 35);
-    assert.match(serviceNode.offers.description, /quote-service line items/);
+    assert.match(serviceNode.offers.description, /35 individual services/);
 
     const duplicateCatalogPages = readdirSync(root)
       .filter((name) => name.endsWith(".html") && name !== "services.html")

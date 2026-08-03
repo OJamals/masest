@@ -15,7 +15,7 @@
       "active": true,
       "public_visible": true,
       "sort": 1,
-      "description": "CIP caustic replacement for brewery lines, kegs, tanks, organics, and pH",
+      "description": "Caustic replacement for yeast, protein, fat, and organic film in brewery lines, kegs, and tanks",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -31,7 +31,7 @@
       "active": true,
       "public_visible": true,
       "sort": 2,
-      "description": "HVAC caustic replacement for drains, grease, and organic buildup",
+      "description": "Concentrated caustic replacement for HVAC drains, equipment, grease, and organic buildup",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -47,7 +47,7 @@
       "active": true,
       "public_visible": true,
       "sort": 3,
-      "description": "CIP synthetic-acid beer-stone remover for brewery cleaning",
+      "description": "Acid replacement for beer stone, scale, and rust in brewery cleaning cycles",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -63,7 +63,7 @@
       "active": true,
       "public_visible": true,
       "sort": 4,
-      "description": "HVAC synthetic HCl replacement for calcium, scale, and rust",
+      "description": "Bulk acid replacement for calcium, scale, and rust in HVAC systems and equipment",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -79,7 +79,7 @@
       "active": true,
       "public_visible": true,
       "sort": 5,
-      "description": "HCl-style descaling for coils, towers, pumps, and loops",
+      "description": "Fume-free alternative to hydrochloric acid for coils, towers, pumps, and loops",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -95,7 +95,7 @@
       "active": true,
       "public_visible": true,
       "sort": 6,
-      "description": "High-active degreaser with current-document review and controlled-trial support",
+      "description": "High-strength industrial degreaser for heavy oil, grease, floors, equipment, and parts",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -111,7 +111,7 @@
       "active": true,
       "public_visible": true,
       "sort": 7,
-      "description": "CR HD-style degreasing for scrubbers and recirculating wash",
+      "description": "Low-foam industrial degreaser for scrubbers, parts washers, and recirculating equipment",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -175,7 +175,7 @@
       "active": true,
       "public_visible": true,
       "sort": 11,
-      "description": "Water-treatment and odor-control chemistry for organic-load management in towers, drains, process water, and facility programs",
+      "description": "Treats odor-causing organic buildup in towers, drains, process water, and facility programs",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -191,7 +191,7 @@
       "active": true,
       "public_visible": true,
       "sort": 12,
-      "description": "HF/HCl-free aluminum brightening with strong Acid Brightening Index proof",
+      "description": "HF/HCl-free aluminum cleaner that removes oxidation and restores a brighter finish",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -223,7 +223,7 @@
       "active": true,
       "public_visible": true,
       "sort": 14,
-      "description": "Specialty acid replacement for quote-scoped water and process jobs",
+      "description": "Specialty acid replacement for stubborn rust, scale, and hard mineral deposits",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -239,7 +239,7 @@
       "active": true,
       "public_visible": true,
       "sort": 15,
-      "description": "Heavy-metal-free cooling tower inhibitor; NSF/ANSI 60 status reviewed by request",
+      "description": "Heavy-metal-free scale and corrosion control with NSF/ANSI/CAN 60 certification",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     }
   ],
@@ -1239,7 +1239,7 @@
     {
       "sku": "MS-LAB-WTR-RAW-WATER-STANDARD-ANALYSIS",
       "name": "Raw Water - Standard Analysis",
-      "summary": "Receive a sample-specific baseline water-analysis report; sample point, requested analytes, method, and interpretation scope are confirmed before testing.",
+      "summary": "See what is in your incoming water and get a clear baseline for treatment decisions.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1250,7 +1250,7 @@
     {
       "sku": "MS-LAB-WTR-TOWER-WATER-STANDARD-BIO-COUNTS",
       "name": "Tower Water - Standard + Bio Counts",
-      "summary": "Receive water-analysis results plus biological counts for the specified cooling-tower sample; collection conditions, method, and interpretation scope are confirmed first.",
+      "summary": "See the chemistry and biological activity in your cooling-tower water so you can tune the program with confidence.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1261,7 +1261,7 @@
     {
       "sku": "MS-LAB-WTR-CHILL-WATER-STANDARD-BIO-COUNTS",
       "name": "Chill Water - Standard + Bio Counts",
-      "summary": "Receive water-analysis results plus biological counts for the specified chilled-water sample; collection conditions, method, and interpretation scope are confirmed first.",
+      "summary": "Check chilled-water chemistry and biological activity before small issues become expensive system problems.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1272,7 +1272,7 @@
     {
       "sku": "MS-LAB-WTR-CLOSED-LOOP-WATER-STANDARD-BIO-COUNTS",
       "name": "Closed Loop Water - Standard + Bio Counts",
-      "summary": "Receive water-analysis results plus biological counts for the specified closed-loop sample; collection conditions, method, and interpretation scope are confirmed first.",
+      "summary": "Check closed-loop water chemistry and biological activity to keep the system clean, stable, and protected.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1283,7 +1283,7 @@
     {
       "sku": "MS-LAB-WTR-STEAM-BOILER-WATER-STANDARD",
       "name": "Steam Boiler Water - Standard",
-      "summary": "Receive a standard result report for the specified boiler-water sample to support program review; analytes, method, and interpretation scope are confirmed first.",
+      "summary": "See how your boiler water is performing and where the treatment program may need attention.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1294,7 +1294,7 @@
     {
       "sku": "MS-LAB-WTR-PRETREATMENT-WATER-SOFT-DEGAS",
       "name": "Pretreatment Water (Soft/Degas)",
-      "summary": "Receive a standard result report for the specified softened or degasified pretreatment-water sample; analytes, method, and interpretation scope are confirmed first.",
+      "summary": "Check softened or degasified pretreatment water before it reaches the boiler system.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1305,7 +1305,7 @@
     {
       "sku": "MS-LAB-WTR-BOILER-FEED-WATER-STANDARD",
       "name": "Boiler Feed Water - Standard",
-      "summary": "Receive a standard result report for the specified boiler-feed sample to support program review; analytes, method, and interpretation scope are confirmed first.",
+      "summary": "Check boiler-feed water quality to catch scale and corrosion risks before they reach the boiler.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1316,7 +1316,7 @@
     {
       "sku": "MS-LAB-WTR-POLISHER-WATER-STANDARD",
       "name": "Polisher Water - Standard",
-      "summary": "Receive a standard result report for the specified polisher-water sample; analytes, method, and interpretation scope are confirmed before testing.",
+      "summary": "Confirm how well the polishing step is cleaning the water and spot breakthrough early.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1327,7 +1327,7 @@
     {
       "sku": "MS-LAB-WTR-STEAM-CONDENSATE-STANDARD",
       "name": "Steam Condensate - Standard",
-      "summary": "Receive a standard result report for the specified condensate sample to support return-system review; analytes, method, and interpretation scope are confirmed first.",
+      "summary": "Check steam condensate quality and see what the return system is sending back to the boiler.",
       "category": "Lab Testing - Water Analysis",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1338,7 +1338,7 @@
     {
       "sku": "MS-LAB-BIO-BIOLOGICAL-COUNTS-HPC-DIP-SLIDE",
       "name": "Biological Counts (HPC/dip-slide)",
-      "summary": "Receive reported HPC or dip-slide count results for the specified sample and method; the result is a program performance indicator, not a measure of illness risk.",
+      "summary": "Track biological activity with an HPC or dip-slide count and see whether the water program is staying on course.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1349,7 +1349,7 @@
     {
       "sku": "MS-LAB-BIO-LEGIONELLA-FULL-CULTURE-SPECIE-ID",
       "name": "Legionella - Full Culture + Specie ID",
-      "summary": "Receive lab-reported culture and species-identification results for the specified sample; collection plan, turnaround, and interpretation boundary are confirmed first.",
+      "summary": "Find out whether Legionella is present and which species the lab identifies through full culture testing.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1360,7 +1360,7 @@
     {
       "sku": "MS-LAB-BIO-LEGIONELLA-PCR-POS-NEG",
       "name": "Legionella - PCR Pos/Neg",
-      "summary": "Receive a qualitative PCR result for the specified sample; collection plan, method, turnaround, and interpretation boundary are confirmed first.",
+      "summary": "Get a fast positive-or-negative PCR result for Legionella in the submitted water sample.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1371,7 +1371,7 @@
     {
       "sku": "MS-LAB-BIO-BIOLOGICAL-IDENTIFICATIONS",
       "name": "Biological Identifications",
-      "summary": "Receive a reported biological identification for the submitted sample within the agreed method and scope; health-risk conclusions are not included unless separately scoped.",
+      "summary": "Identify the biological growth found in a water or deposit sample and get a clearer picture of the system problem.",
       "category": "Lab Testing - Biological",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1382,7 +1382,7 @@
     {
       "sku": "MS-LAB-MAT-CORROSION-COUPON-ANALYSIS-INCL-PHOTO",
       "name": "Corrosion Coupon Analysis (incl. photo)",
-      "summary": "Receive coupon measurements, condition observations, and a photo record for the agreed exposure period; engineering conclusions are separate unless scoped.",
+      "summary": "See how much corrosion occurred during the exposure period, with measurements, condition notes, and photos.",
       "category": "Lab Testing - Materials",
       "unit": "per coupon",
       "mode": "quote_service",
@@ -1393,7 +1393,7 @@
     {
       "sku": "MS-LAB-MAT-PIPE-ANALYSIS-DEPOSIT-MEASUREMENTS-PHOTOS",
       "name": "Pipe Analysis (Deposit + Measurements + Photos)",
-      "summary": "Receive deposit observations, pipe measurements, and a photo record for the submitted section; destructive work, sample return, and recommendations are confirmed in scope.",
+      "summary": "See what built up inside a pipe section, how the pipe changed, and what the measurements and photos reveal.",
       "category": "Lab Testing - Materials",
       "unit": "per pipe",
       "mode": "quote_service",
@@ -1404,7 +1404,7 @@
     {
       "sku": "MS-LAB-MAT-DEPOSIT-ANALYSIS-STANDARD",
       "name": "Deposit Analysis - Standard",
-      "summary": "Receive an analytical result summary for the submitted deposit within the agreed method; source diagnosis and treatment recommendations are separate unless scoped.",
+      "summary": "Learn what a deposit contains so you can choose a better cleaning or treatment approach.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1415,7 +1415,7 @@
     {
       "sku": "MS-LAB-MAT-SINGLE-ELEMENT-ANALYSIS-ICP-OR-IC",
       "name": "Single Element Analysis (ICP or IC)",
-      "summary": "Receive a reported result for one agreed element by ICP or IC; sample matrix, method, and reporting boundary are confirmed before testing.",
+      "summary": "Measure one target element by ICP or IC and get a clear reported result for the submitted sample.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1426,7 +1426,7 @@
     {
       "sku": "MS-LAB-MAT-ABBREVIATED-ANALYSIS-ICP-OR-IC",
       "name": "Abbreviated Analysis (ICP or IC)",
-      "summary": "Receive a bounded ICP or IC screening report for agreed targets; full characterization and engineering interpretation are separate unless scoped.",
+      "summary": "Screen a sample for selected elements or ions with a focused ICP or IC report.",
       "category": "Lab Testing - Materials",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1437,7 +1437,7 @@
     {
       "sku": "MS-BID-SPEC-CREATION",
       "name": "Water Treatment Bid Specification Creation",
-      "summary": "Receive a draft water-treatment specification built from the supplied system inventory, operating needs, evaluation criteria, and required evidence.",
+      "summary": "Turn your system needs into a clear water-treatment bid specification that vendors can answer and your team can compare.",
       "category": "Bid Support",
       "unit": "each",
       "mode": "quote_service",
@@ -1448,7 +1448,7 @@
     {
       "sku": "MS-BID-SPEC-REVIEW",
       "name": "Water Treatment Bid Review",
-      "summary": "Receive marked-up specification findings and decision notes against the supplied operating needs, incumbent scope, evaluation criteria, and deadline.",
+      "summary": "Find gaps, vague requirements, and hidden cost risks in a water-treatment bid before your team makes a decision.",
       "category": "Bid Support",
       "unit": "each",
       "mode": "quote_service",
@@ -1459,7 +1459,7 @@
     {
       "sku": "MS-BID-BID-INTERVIEW",
       "name": "Water Treatment Bid Interview",
-      "summary": "Receive structured interview preparation and decision notes tied to the supplied solicitation and evaluation criteria; participation does not imply eligibility or award.",
+      "summary": "Prepare sharper vendor questions, keep the interview focused, and leave with clearer answers for the buying decision.",
       "category": "Bid Support",
       "unit": "each",
       "mode": "quote_service",
@@ -1470,7 +1470,7 @@
     {
       "sku": "MS-CONS-CONSULTING-SERVICES-GENERAL",
       "name": "Consulting Services (general)",
-      "summary": "Receive a bounded technical working session or memo addressing one defined operating decision; field work, testing, and implementation are separate unless scoped.",
+      "summary": "Work through one water, cleaning, or facility decision with a MASEST specialist and leave with a clear next step.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "mode": "quote_service",
@@ -1481,7 +1481,7 @@
     {
       "sku": "MS-CONS-EQUIPMENT-INSPECTIONS",
       "name": "Equipment Inspections",
-      "summary": "Receive documented condition observations, available measurements, and a photo record for the agreed asset and access scope, followed by a findings handoff.",
+      "summary": "Get an experienced look at equipment condition, supported by measurements, photos, and practical findings.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "mode": "quote_service",
@@ -1492,7 +1492,7 @@
     {
       "sku": "MS-CONS-ULTRASONIC-BORESCOPE-TESTING",
       "name": "Ultrasonic / Borescope Testing",
-      "summary": "Receive recorded ultrasonic measurements or borescope observations for the agreed asset locations; access, isolation, and interpretation limits are confirmed first.",
+      "summary": "Look inside hard-to-reach equipment and measure material condition with ultrasonic or borescope testing.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "mode": "quote_service",
@@ -1503,7 +1503,7 @@
     {
       "sku": "MS-CONS-SCANNING-ELECTRON-MICROSCOPE-TESTING",
       "name": "Scanning Electron Microscope Testing",
-      "summary": "Receive microscope imagery and observed-feature reporting for the submitted sample; preparation, sample return, and interpretation boundary are confirmed first.",
+      "summary": "See fine surface and deposit details through high-magnification microscope images and clear observations.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "mode": "quote_service",
@@ -1514,7 +1514,7 @@
     {
       "sku": "MS-CONS-SPRINKLER-SYSTEM-TESTING",
       "name": "Sprinkler System Testing",
-      "summary": "Receive test observations and results for the agreed sprinkler-system scope; access, method, and any regulatory-use boundary are confirmed before work.",
+      "summary": "Check sprinkler-system water and condition, document the results, and identify problems that need attention.",
       "category": "Consulting Services",
       "unit": "per hour, 2hr min",
       "mode": "quote_service",
@@ -1525,7 +1525,7 @@
     {
       "sku": "MS-CONS-PARTICLE-SIZE",
       "name": "Particle Size Analysis",
-      "summary": "Receive a particle-size result report for the submitted sample and agreed method; identification and source diagnosis are not included unless scoped.",
+      "summary": "Measure the size range and distribution of particles in the submitted sample.",
       "category": "Consulting Services",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1536,7 +1536,7 @@
     {
       "sku": "MS-CONS-PARTICLE-ID",
       "name": "Particle Size Analysis + Particle ID",
-      "summary": "Receive particle-size results plus identification within the agreed analytical method; source diagnosis and engineering recommendations are separate unless scoped.",
+      "summary": "Measure particle size and identify what the particles are to narrow down where they came from.",
       "category": "Consulting Services",
       "unit": "per sample",
       "mode": "quote_service",
@@ -1547,7 +1547,7 @@
     {
       "sku": "MS-FLD-ON-SITE-SAMPLE-COLLECTION-TRAVEL-QUOTED",
       "name": "On-Site Sample Collection (travel quoted)",
-      "summary": "Receive a site collection record, labeled samples, and the agreed chain-of-custody handoff; access, travel, containers, preservation, and lab work are confirmed first.",
+      "summary": "Have MASEST collect, label, and route site samples so the testing starts with a clean, reliable handoff.",
       "category": "Field Services",
       "unit": "per visit",
       "mode": "quote_service",
@@ -1558,7 +1558,7 @@
     {
       "sku": "MS-FLD-ON-SITE-SAMPLING-FEE-STANDARD-VISIT",
       "name": "On-Site Sampling Fee (standard visit)",
-      "summary": "Receive collection of the agreed sample set during a standard visit plus a sample record; site access, travel boundary, and lab testing are confirmed separately.",
+      "summary": "Add professional on-site sample collection to a standard visit, complete with a clear sample record.",
       "category": "Field Services",
       "unit": "per visit",
       "mode": "quote_service",
@@ -1569,7 +1569,7 @@
     {
       "sku": "MS-WMP-RISK-ASSESSMENT-ASHRAE-188",
       "name": "Risk Assessment (ASHRAE 188)",
-      "summary": "Receive a building- and system-specific risk assessment documenting the system inventory, risk factors, and control priorities against the agreed ASHRAE 188 project scope.",
+      "summary": "Find the water-system risks in your building and prioritize the controls your team needs under ASHRAE 188.",
       "sort_order": 10,
       "lifecycle_stage": "Assess",
       "category": "Water Management Plan",
@@ -1582,7 +1582,7 @@
     {
       "sku": "MS-WMP-WMP-DEVELOPMENT-ASHRAE-188",
       "name": "WMP Development (ASHRAE 188)",
-      "summary": "Receive a building-specific written plan defining the program team, control locations and limits, monitoring, corrective actions, records, and review cadence.",
+      "summary": "Get a practical Water Management Plan built around your building, systems, team, controls, and review schedule.",
       "sort_order": 20,
       "lifecycle_stage": "Develop",
       "category": "Water Management Plan",
@@ -1595,7 +1595,7 @@
     {
       "sku": "MS-WMP-PLAN-CERTIFICATION",
       "name": "Plan Certification",
-      "summary": "Receive a MASEST-issued plan review statement against the agreed project scope; this is not government, ASHRAE, CDC, or third-party accreditation.",
+      "summary": "Have MASEST review your plan against the project requirements and issue a clear written statement of the result.",
       "sort_order": 30,
       "lifecycle_stage": "Confirm",
       "category": "Water Management Plan",
@@ -1608,7 +1608,7 @@
     {
       "sku": "MS-WMP-PLAN-RENEWAL-ANNUAL",
       "name": "Plan Renewal (annual)",
-      "summary": "Receive an annual plan review and updated document reflecting supplied system changes, program records, findings, and agreed corrective actions.",
+      "summary": "Keep the plan current with an annual review of system changes, records, findings, and follow-up actions.",
       "sort_order": 60,
       "lifecycle_stage": "Renew",
       "category": "Water Management Plan",
@@ -1621,7 +1621,7 @@
     {
       "sku": "MS-WMP-MONTHLY-DASHBOARD-ACCESS",
       "name": "Monthly Dashboard Access",
-      "summary": "Receive monthly dashboard access for agreed program records and monitoring status; data entry, alert, review, and follow-up ownership are confirmed in scope.",
+      "summary": "See monthly water-program records, monitoring status, alerts, and follow-up work in one dashboard.",
       "sort_order": 40,
       "lifecycle_stage": "Monitor",
       "category": "Water Management Plan",
@@ -1636,7 +1636,7 @@
     {
       "sku": "MS-PKG-INITIAL-SAMPLING-VISIT-PACKAGE",
       "name": "Initial Sampling Visit Package",
-      "summary": "Receive a scoped initial visit, collection record, and agreed samples routed for selected testing; travel, lab methods, and turnaround are confirmed before scheduling.",
+      "summary": "Start with an on-site visit, professional sample collection, and the lab tests your building needs most.",
       "category": "Service Packages",
       "unit": "package",
       "mode": "quote_service",
@@ -1647,7 +1647,7 @@
     {
       "sku": "MS-PKG-WATER-MANAGEMENT-PLAN-SETUP-ANNUAL",
       "name": "Water Management Plan Setup (annual)",
-      "summary": "Receive an annual setup engagement covering risk review, plan development, implementation handoff, and the agreed first-year review cadence for the building and systems.",
+      "summary": "Launch a building-specific Water Management Plan with risk review, plan development, team handoff, and first-year support.",
       "category": "Service Packages",
       "unit": "package",
       "mode": "quote_service",
@@ -1658,7 +1658,7 @@
     {
       "sku": "MS-PKG-QUARTERLY-AUDIT",
       "name": "Quarterly Audit",
-      "summary": "Receive a quarterly program-record review, findings, action list, and owner handoff against the agreed Water Management Plan scope.",
+      "summary": "Review the program every quarter, catch gaps early, and leave each audit with a clear action list and owners.",
       "sort_order": 50,
       "lifecycle_stage": "Audit",
       "category": "Service Packages",
@@ -1671,7 +1671,7 @@
     {
       "sku": "MS-PKG-YEARLY-RECERTIFICATION",
       "name": "Yearly Recertification",
-      "summary": "Receive an annual MASEST review statement plus identified plan updates against the agreed program scope; this is not government, ASHRAE, CDC, or third-party accreditation.",
+      "summary": "Give the program an annual checkup, update the plan, and receive a written MASEST review statement.",
       "sort_order": 70,
       "lifecycle_stage": "Recertify",
       "category": "Service Packages",

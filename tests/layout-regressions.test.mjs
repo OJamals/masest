@@ -250,7 +250,7 @@ test("services catalog stays visually connected to the next section on desktop",
       await assert.doesNotReject(rawWaterCard.locator("p").waitFor());
       assert.match(
         await rawWaterCard.locator("p").textContent(),
-        /Receive a sample\s*-\s*specific baseline water\s*-\s*analysis report/,
+        /See what is in your incoming water and get a clear baseline for treatment decisions/,
       );
       assert.equal(await activePanel.locator(".service-card .btn").first().textContent(), "Request water analysis");
 
@@ -262,7 +262,7 @@ test("services catalog stays visually connected to the next section on desktop",
       );
       assert.match(
         await materialsPanel.locator(".service-category-media figcaption").textContent(),
-        /Representative service setup/,
+        /Built around the real problem/,
       );
 
       await page.locator('[data-service-tab="Bid Support"]').click();
@@ -273,7 +273,7 @@ test("services catalog stays visually connected to the next section on desktop",
       );
       assert.match(
         await bidPanel.locator(".service-category-media figcaption").textContent(),
-        /Representative service setup/,
+        /Built around the real problem/,
       );
 
       await page.locator('[data-service-tab="Water Management Plan"]').click();
@@ -284,7 +284,7 @@ test("services catalog stays visually connected to the next section on desktop",
       );
       assert.match(
         await wmpPanel.locator(".service-category-media figcaption").textContent(),
-        /Representative service setup/,
+        /Built around the real problem/,
       );
       assert.deepEqual(
         await wmpPanel.locator(".service-card h3").allTextContents(),
@@ -298,7 +298,7 @@ test("services catalog stays visually connected to the next section on desktop",
       );
       assert.match(
         await wmpPanel.locator(".service-card p").first().textContent(),
-        /Receive a building\s*-\s*and system\s*-\s*specific risk assessment/,
+        /Find the water\s*-\s*system risks in your building and prioritize the controls your team needs/,
       );
       assert.deepEqual(
         await wmpPanel.locator(".service-lifecycle b").allTextContents(),

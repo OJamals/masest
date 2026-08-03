@@ -34,8 +34,8 @@ test("static summary matches four visual acts", () => {
   for (const phrase of [
     "The field problem",
     "Buildup becomes operating cost",
-    "The Replacement Ledger",
-    "One documented trial brief",
+    "What VertKleen replaces",
+    "One fair side-by-side",
   ]) {
     assert.match(summary, new RegExp(phrase));
   }

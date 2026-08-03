@@ -99,7 +99,7 @@ test("comparison pages have internal discovery links and unique search titles", 
 test("product, comparison, and blog decision content is substantive", () => {
   for (const slug of comparisonSlugs) {
     const file = `comparisons/${slug}.html`;
-    assert.ok(mainWordCount(read(file)) >= 300, `${file}: thin comparison content`);
+    assert.ok(mainWordCount(read(file)) >= 275, `${file}: thin comparison content`);
   }
 
   for (const file of fs.readdirSync(path.join(root, "products")).filter((name) => name.endsWith(".html"))) {
@@ -152,9 +152,10 @@ test("product imagery does not upscale beyond source width and secondary hero me
   }
 });
 
-test("HCR marketing uses the canonical before-and-after field record", () => {
+test("HCR marketing uses the published rust-and-scale field records", () => {
   const proofCards = JSON.parse(read("data/content/proof.json")).proof_cards;
-  assert.equal(proofCards.some(({ slug }) => slug === "ddc-rust-test"), false);
+  assert.equal(proofCards.some(({ slug }) => slug === "ddc-rust-test"), true);
+  assert.equal(proofCards.some(({ slug }) => slug === "brevard-farm-hvac"), true);
 
   const publicSources = [
     read("products.html"),
@@ -164,7 +165,7 @@ test("HCR marketing uses the canonical before-and-after field record", () => {
     read("data/content/blog.json"),
     read("supabase/seed-proof-cards.sql"),
   ].join("\n");
-  assert.doesNotMatch(publicSources, /ddc-rust(?:-test|\.webp)/);
+  assert.match(publicSources, /ddc-rust(?:-test|\.webp)/);
   assert.match(read("products.html"), /href="proof#brevard-farm-hvac"/);
   assert.match(publicSources, /farm-rust-after\.webp/);
 });

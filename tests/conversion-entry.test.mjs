@@ -28,7 +28,7 @@ test("mobile discovery opens directly on the catalog without redundant routing c
 test("request page leads into the form before process reassurance", () => {
   const contact = read("contact.html");
   const css = read("css/style.css");
-  const start = contact.indexOf('href="#quoteForm">Build my replacement plan');
+  const start = contact.indexOf('href="#quoteForm">Find my VertKleen product');
   const form = contact.indexOf('id="quoteForm"');
   const assurance = contact.indexOf('class="quote-assurance"');
 
@@ -59,8 +59,8 @@ test("static product hero exposes buying context before long copy", () => {
   assert.ok(buy > facts, "price and pack controls should follow product highlights");
   assert.ok(description > buy, "buying context should appear before the long product description");
   assert.match(product, /<b>HMIS<\/b>0-0-0/);
-  assert.match(product, /<b>Alternative to<\/b>Conventional brewery acid-cleaning and beer-stone programs/);
-  assert.match(product, /class="btn btn-secondary"[^>]*>Request a CIP mineral-cycle review<\/a>/);
+  assert.match(product, /<b>Alternative to<\/b>Conventional brewery acids and beer-stone cleaners/);
+  assert.match(product, /class="btn btn-secondary"[^>]*>Plan my brewery cleaning cycle<\/a>/);
   assert.match(product, /class="product-back-link"[^>]*>All products<\/a>/);
 });
 
@@ -70,12 +70,12 @@ test("animated homepage copy keeps stable accessible names", () => {
   assert.match(home, /<section class="act"[^>]*aria-labelledby="storyAct1Title">/);
   assert.match(
     home,
-    /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial cleaning power, engineered around people and equipment\.<\/h1>/,
+    /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial cleaning power without the harsh-chemical tradeoff\.<\/h1>/,
   );
   assert.match(home, /aria-label="Shop VertKleen by cleaning job"/);
   assert.match(home, /aria-label="Plan a VertKleen field trial"/);
   assert.doesNotMatch(home, /starting candidate|trial candidate|Candidate only after|path to approval/i);
-  assert.match(home, /React, complex, rinse/);
+  assert.match(home, /Break down and rinse away/);
   assert.match(home, /Completed-task cost/);
   assert.doesNotMatch(home, /class="cmp-table cmp-jobs"/);
 });
@@ -89,15 +89,15 @@ test("CIP pricing label stays consistent across entry, detail, and resource surf
 
   assert.match(products, />CIP pricing<\/a>/);
   assert.match(pricing, /<title>CIP Pricing \| MASEST VertKleen<\/title>/);
-  assert.match(pricing, /<h1 class="display">Price each CIP cycle around soil and throughput\.<\/h1>/);
+  assert.match(pricing, /<h1 class="display">Put a real price on every CIP cycle\.<\/h1>/);
   assert.equal(segment?.title, "CIP pricing");
   assert.match(
     segment?.rows.find((row) => row.product_slug === "cr")?.application || "",
-    /High-pH soil-lift chemistry[\s\S]*wetting and sequestration/,
+    /Cuts through fat, protein, yeast, and organic film/,
   );
   assert.match(
     segment?.rows.find((row) => row.product_slug === "hcr")?.application || "",
-    /Mineral-removal chemistry[\s\S]*complexing dissolved minerals/,
+    /Breaks down beer stone, rust, calcium, and hard-water scale/,
   );
   assert.doesNotMatch(
     segment?.rows.find((row) => row.product_slug === "purgo")?.application || "",
@@ -119,8 +119,8 @@ test("support routes use task-first science copy without changing destinations",
     catalogData: read("js/main/catalog-data.js"),
   };
 
-  assert.match(pages.about, />Request an application review<\/a>/);
-  assert.match(pages.services, />Prove the switch before you scale it\.<\/h1>/);
+  assert.match(pages.about, />Request a service quote<\/a>/);
+  assert.match(pages.services, />Test the switch before you roll it out\.<\/h1>/);
   for (const label of [
     "Request water analysis",
     "Request biological testing",
@@ -129,15 +129,15 @@ test("support routes use task-first science copy without changing destinations",
     "Request technical review",
     "Request site sampling",
     "Request a WMP review",
-    "Request package scope",
+    "Request a package",
   ]) {
     assert.match(pages.serviceCatalog, new RegExp(label));
   }
   assert.doesNotMatch(pages.serviceCatalog, /Request a deposit test|Request a wash benchmark|Request a cycle review/);
-  assert.match(pages.serviceCatalog, /Define sample point, operating state, analytes, and decision needed/);
-  assert.match(pages.serviceCatalog, /Define facility risk, control measures, monitoring, corrective actions, and review cadence/);
-  assert.match(pages.programs, />Request a chemistry-program quote<\/a>/);
-  assert.match(pages.resources, />Request an application protocol<\/a>/);
+  assert.match(pages.serviceCatalog, /See what is in your water and get a clearer next step/);
+  assert.match(pages.serviceCatalog, /Build a practical water plan around your facility, systems, team, and day-to-day work/);
+  assert.match(pages.programs, />Price my water-treatment program<\/a>/);
+  assert.match(pages.resources, />Get my cleaning plan<\/a>/);
   assert.match(pages.newsletter, />One mechanism\. One field result\. One practical win\.<\/h1>/);
   assert.match(pages.hvacPricing, />Price the result, not the gallon\.<\/h1>/);
   assert.match(pages.hvacPricing, />Request completed-task pricing<\/a>/);

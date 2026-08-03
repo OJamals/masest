@@ -1,26 +1,13 @@
 {
-  "generated_at": "2026-07-31T06:21:05.675Z",
+  "generated_at": "2026-08-03T12:50:35.365Z",
   "files": {
-    "blog.json": {
-      "count": 13,
-      "counts": {
-        "blog_posts": 13
-      },
-      "sha256": "6b562473305bf12be3a2d1c257b38362841dfb44c6545374c0f931f7add61c52"
-    },
-    "faqs.json": {
+    "services.json": {
       "count": 0,
       "counts": {
-        "faq_blocks": 0
+        "services": 0,
+        "service_packages": 0
       },
-      "sha256": "7adb17e0896c20986f8bb876d3cdc4d783c94ff42754e0066881096522171991"
-    },
-    "industry-sectors.json": {
-      "count": 16,
-      "counts": {
-        "industry_sectors": 16
-      },
-      "sha256": "66f7f97460dd16831f38423d14f8c2c105664dbb9712b631f23b2074ae5631a3"
+      "sha256": "caace5dfa00db85731dca749a536e3af7846799821af38892ed5e44981e819c6"
     },
     "page-meta.json": {
       "count": 0,
@@ -29,19 +16,12 @@
       },
       "sha256": "31e97727aede770128842520a93813c5f2b0a78de74374ef3960b7778668b968"
     },
-    "page-sections.json": {
-      "count": 0,
-      "counts": {
-        "page_sections": 0
-      },
-      "sha256": "821f70f7015adbbc3108bf28458e4d453e52c680f0933500b6efb1f694ff43d6"
-    },
     "proof.json": {
-      "count": 14,
+      "count": 15,
       "counts": {
-        "proof_cards": 14
+        "proof_cards": 15
       },
-      "sha256": "aa165ad36b94d4b413eb56f657ad46a8dd6517d5fd27ac5b908f37c71fe2efeb"
+      "sha256": "76801e9b9ad7c98b1753b114c5d554be98883dc3eb759dbbdc9623bd7f7f96c7"
     },
     "resources.json": {
       "count": 0,
@@ -50,13 +30,33 @@
       },
       "sha256": "ffd438651b1964415da13a244110d26426dc267e94c00f559b0c17f4da993e27"
     },
-    "services.json": {
+    "industry-sectors.json": {
+      "count": 16,
+      "counts": {
+        "industry_sectors": 16
+      },
+      "sha256": "ca3bc3e93af42262ac0c9263b855d9266ef1c52839a3e08dcd8b53ceeefa0ddd"
+    },
+    "faqs.json": {
       "count": 0,
       "counts": {
-        "services": 0,
-        "service_packages": 0
+        "faq_blocks": 0
       },
-      "sha256": "caace5dfa00db85731dca749a536e3af7846799821af38892ed5e44981e819c6"
+      "sha256": "7adb17e0896c20986f8bb876d3cdc4d783c94ff42754e0066881096522171991"
+    },
+    "page-sections.json": {
+      "count": 0,
+      "counts": {
+        "page_sections": 0
+      },
+      "sha256": "821f70f7015adbbc3108bf28458e4d453e52c680f0933500b6efb1f694ff43d6"
+    },
+    "blog.json": {
+      "count": 13,
+      "counts": {
+        "blog_posts": 13
+      },
+      "sha256": "b10fda030392b53e3e0729ee4a49797359d54207e8e41ebb444b78c0f50142a5"
     }
   }
 }

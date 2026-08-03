@@ -90,7 +90,7 @@ test("quote-submit analytics carries request type, industry, and product metadat
 });
 
 test("contact page exposes all five public request types", () => {
-  for (const label of ["Quote", "Chemical Audit", "Sample Kit", "Distributor"]) {
+  for (const label of ["Quote", "Replace a Cleaner", "Sample Kit", "Product Docs", "Distributor"]) {
     assert.match(contact, new RegExp(label));
   }
   assert.match(contact, /data-intent="technical"/, "technical document requests should be a first-class contact intent");
@@ -258,10 +258,10 @@ test("task economics and operating boundaries survive URL prefill, editing, and 
       );
 
       await page.fill("#fWastewaterRoute", "Edited permitted route");
-      await page.getByRole("button", { name: "Technical Docs" }).click();
+      await page.getByRole("button", { name: "Product Docs" }).click();
       assert.equal(await page.locator("#quoteTaskDetails").isVisible(), false);
       assert.equal(await page.locator("#fCurrentChemical").isDisabled(), true);
-      await page.getByRole("button", { name: "Chemical Audit" }).click();
+      await page.getByRole("button", { name: "Replace a Cleaner" }).click();
       assert.equal(await page.locator("#quoteTaskDetails").isVisible(), true);
       assert.equal(await page.inputValue("#fWastewaterRoute"), "Edited permitted route");
 

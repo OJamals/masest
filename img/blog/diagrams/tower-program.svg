@@ -1,23 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
-  <title id="title">Cooling-tower maintenance program</title>
-  <desc id="desc">Recurring water treatment surrounds inspection, periodic cleaning, verification, and restart.</desc>
+  <title id="title">A practical cooling-tower cleaning plan</title>
+  <desc id="desc">Treat the water, check the tower, remove buildup, confirm flow, and return to normal operation.</desc>
   <rect width="1200" height="675" rx="28" fill="#f3f8f8"/>
-  <text x="72" y="92" fill="#142326" font-family="Arial,sans-serif" font-size="44" font-weight="700">Cleaning belongs inside the program.</text>
+  <text x="72" y="92" fill="#142326" font-family="Arial,sans-serif" font-size="44" font-weight="700">Treat the water. Clean what builds up.</text>
   <g font-family="Arial,sans-serif">
     <rect x="72" y="154" width="1056" height="112" rx="18" fill="#0b3438"/>
-    <text x="108" y="203" fill="#fff" font-size="27" font-weight="700">Recurring control</text>
-    <text x="108" y="241" fill="#c8e7e9" font-size="21">WaterSafe60 for scale and corrosion pressure • Purgo for scoped organic-load and odor control</text>
+    <text x="108" y="203" fill="#fff" font-size="27" font-weight="700">Ongoing care</text>
+    <text x="108" y="241" fill="#c8e7e9" font-size="21">WaterSafe60 helps manage scale and corrosion • Purgo helps control organic buildup and odor</text>
     <g transform="translate(72 330)">
-      <rect width="236" height="176" rx="18" fill="#fff" stroke="#b9d7d9" stroke-width="3"/><text x="24" y="55" fill="#142326" font-size="25" font-weight="700">1. Inspect</text><text x="24" y="95" fill="#52676a" font-size="19"><tspan x="24">Deposit, metallurgy,</tspan><tspan x="24" dy="28">volume, performance</tspan></text>
+      <rect width="236" height="176" rx="18" fill="#fff" stroke="#b9d7d9" stroke-width="3"/><text x="24" y="55" fill="#142326" font-size="25" font-weight="700">1. Look</text><text x="24" y="95" fill="#52676a" font-size="19"><tspan x="24">Buildup, surface,</tspan><tspan x="24" dy="28">water volume, output</tspan></text>
     </g>
     <g transform="translate(368 330)">
-      <rect width="236" height="176" rx="18" fill="#fff" stroke="#b9d7d9" stroke-width="3"/><text x="24" y="55" fill="#142326" font-size="25" font-weight="700">2. Clean</text><text x="24" y="95" fill="#52676a" font-size="19"><tspan x="24">HCR or Descaler for</tspan><tspan x="24" dy="28">established mineral load</tspan></text>
+      <rect width="236" height="176" rx="18" fill="#fff" stroke="#b9d7d9" stroke-width="3"/><text x="24" y="55" fill="#142326" font-size="25" font-weight="700">2. Clean</text><text x="24" y="95" fill="#52676a" font-size="19"><tspan x="24">HCR or Descaler for</tspan><tspan x="24" dy="28">hard mineral scale</tspan></text>
     </g>
     <g transform="translate(664 330)">
-      <rect width="236" height="176" rx="18" fill="#fff" stroke="#b9d7d9" stroke-width="3"/><text x="24" y="55" fill="#142326" font-size="25" font-weight="700">3. Verify</text><text x="24" y="95" fill="#52676a" font-size="19"><tspan x="24">Rinse, condition, flow,</tspan><tspan x="24" dy="28">and release endpoint</tspan></text>
+      <rect width="236" height="176" rx="18" fill="#fff" stroke="#b9d7d9" stroke-width="3"/><text x="24" y="55" fill="#142326" font-size="25" font-weight="700">3. Check</text><text x="24" y="95" fill="#52676a" font-size="19"><tspan x="24">Rinse, surface, flow,</tspan><tspan x="24" dy="28">ready-to-run checks</tspan></text>
     </g>
     <g transform="translate(960 330)">
-      <rect width="168" height="176" rx="18" fill="#67d6dd"/><text x="24" y="55" fill="#0b3438" font-size="25" font-weight="700">4. Restart</text><text x="24" y="95" fill="#0b3438" font-size="19"><tspan x="24">Return to</tspan><tspan x="24" dy="28">controlled dose</tspan></text>
+      <rect width="168" height="176" rx="18" fill="#67d6dd"/><text x="24" y="55" fill="#0b3438" font-size="25" font-weight="700">4. Restart</text><text x="24" y="95" fill="#0b3438" font-size="19"><tspan x="24">Return to</tspan><tspan x="24" dy="28">normal treatment</tspan></text>
     </g>
   </g>
   <path d="M190 558H1038" stroke="#0e7c86" stroke-width="7" stroke-linecap="round"/>

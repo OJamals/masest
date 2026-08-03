@@ -98,7 +98,7 @@ const ORG = {
   url: `${BASE}/`,
   logo: `${BASE}/img/masest-logo.png`,
   brand: "VertKleen",
-  description: "VertKleen replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
+  description: "VertKleen replaces harsh acids, caustics, and solvent-heavy cleaners with industrial-strength HMIS 0-0-0 products.",
   areaServed: "United States and international commercial accounts",
   contactPoint: { "@type": "ContactPoint", contactType: "sales", url: `${BASE}/contact` },
 };
@@ -178,7 +178,7 @@ function productProofRecords(productId) {
       throw new Error(`Missing published result summary ${slug}`);
     }
     if (records.has(slug)) throw new Error(`Proof ${slug} mixes authority and result mappings`);
-    records.set(slug, { ...proof, record_label: "Documented result summary" });
+    records.set(slug, { ...proof, record_label: "Real-world result" });
   }
   return [...records.values()];
 }
@@ -463,8 +463,8 @@ async function processPage(file, meta, isPrivate = false) {
   return 0;
 }
 
-// DBNPA is a program component with no stocked small packs; static-page route
-// copy treats it as quote-only even though runtime buy logic keys on QUOTE_FIRST_IDS.
+// Retain DBNPA as a legacy quote-only ID for old records. It is discontinued,
+// excluded from CATALOG_ORDER, and has no public product route.
 const QUOTE_ONLY_IDS = new Set([...QUOTE_FIRST_IDS, "dbnpa"]);
 
 function terminate(part) {
@@ -475,7 +475,7 @@ function terminate(part) {
 function productRouteCopy(id) {
   return QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
-    : "Small packs ship from stock where available; drums and totes are quoted.";
+    : "Small packs are available online; drums and totes are quoted to fit the job.";
 }
 
 function productDescription(id, product) {
@@ -575,7 +575,7 @@ function productPage(id, product, reviewsSnapshot) {
   const applicationMedia = applicationImage
     ? `<figure class="product-application-media">
         <img src="../${attr(product.application_image)}" alt="${attr(applicationImage.alt)}" width="${applicationImage.width}" height="${applicationImage.height}" loading="lazy" decoding="async">
-        <figcaption><b>Representative application</b><span>Final method, compatibility, containment, and PPE follow the site procedure and current SDS.</span></figcaption>
+        <figcaption><b>Built for real work</b><span>A look at the kind of cleaning job this product is made to handle.</span></figcaption>
       </figure>`
     : "";
   const uses = (product.uses || copy.fits || []).map((item) => `<li>${text(item)}</li>`).join("\n");
@@ -609,7 +609,7 @@ function productPage(id, product, reviewsSnapshot) {
   ].filter(Boolean).join("\n        ");
   const procurement = QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
-    : "Small packs ship from stock where available; drums, totes, and program supply are quoted.";
+    : "Buy small packs online or ask us to price drums, totes, and recurring supply.";
   const replacement = String(product.replaces || "Industrial chemistry")
     .replace(/^(?:Replaces|Compared with|Evaluated against|Evaluated for)\s+/i, "");
   const supply = QUOTE_ONLY_IDS.has(id) ? "Quoted to fit" : "Small packs in stock";
@@ -692,7 +692,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         <ul class="product-fit-list">${uses}</ul>
       </article>
       <article class="product-static-panel">
-        <h2>What backs the switch.</h2>
+        <h2>Why teams make the switch.</h2>
         <ul class="spec-list">${specs}</ul>${backingSections ? `
         ${backingSections}` : ""}
       </article>
@@ -702,17 +702,16 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     <div class="wrap">
       <article class="product-static-panel product-handling-panel">
         <div>
-          <span class="eyebrow">Operating profile</span>
-          <h2 id="product-handling-${id}">Strong cleaning. Simpler work-area controls.</h2>
-          <p>Current VertKleen documentation records an HMIS 0-0-0 profile and shipping without hazardous-material freight requirements. Routine use does not require special ventilation or area clearance.</p>
+          <span class="eyebrow">HMIS 0-0-0</span>
+          <h2 id="product-handling-${id}">Serious cleaning power. A much easier workday.</h2>
+          <p>Every VertKleen product MASEST offers is HMIS 0-0-0 and ships non-hazmat. Crews get industrial cleaning power with simpler freight, storage, training, and day-to-day handling.</p>
         </div>
         <ul class="product-handling-list">
-          <li><b>HMIS 0-0-0</b><span>Health, flammability, and physical-hazard ratings.</span></li>
-          <li><b>Non-hazmat shipping</b><span>No hazardous-material freight requirement.</span></li>
-          <li><b>No special clearance</b><span>No special ventilation or area-clearance requirement for routine use.</span></li>
-          <li><b>Mild contact irritation</b><span>Eye or skin contact may be mildly irritating; no chemical burns or permanent damage.</span></li>
+          <li><b>HMIS 0-0-0</b><span>Zero for health, flammability, and physical hazard.</span></li>
+          <li><b>Non-hazmat shipping</b><span>Simpler freight without hazmat requirements.</span></li>
+          <li><b>Standard ventilation</b><span>No special ventilation or area clearance for routine cleaning.</span></li>
+          <li><b>One linewide standard</b><span>Every VertKleen product we offer carries the same 0-0-0 profile.</span></li>
         </ul>
-        <p class="product-data-note">Use the current product label and SDS for the exact SKU, concentration, task, and site procedure.</p>
       </article>
     </div>
   </section>

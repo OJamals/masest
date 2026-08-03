@@ -14,21 +14,21 @@ const CATEGORY_COPY = {
     icon: "ph-drop",
     title: "Water analysis",
     note: "Raw, tower, chilled, closed-loop, boiler, pretreatment, polisher, and condensate testing.",
-    description: "Define sample point, operating state, analytes, and decision needed before lab scope.",
+    description: "See what is in your water and get a clearer next step for the treatment program.",
     cta: "Request water analysis"
   },
   "Lab Testing - Biological": {
     icon: "ph-test-tube",
     title: "Biological testing",
     note: "Biological counts, Legionella culture, Legionella PCR, and biological identification.",
-    description: "Confirm sample plan, test method, turnaround, and interpretation boundary before biological testing.",
+    description: "Measure biological activity and identify what may be growing in the system.",
     cta: "Request biological testing"
   },
   "Testing - Materials": {
     icon: "ph-magnifying-glass",
     title: "Materials testing",
     note: "Corrosion coupon, pipe, deposit, single-element, and abbreviated material analysis.",
-    description: "Define sample, condition, measurements, photos, and analytical question before materials testing.",
+    description: "Learn what a deposit, pipe, or corrosion sample can tell you about the equipment problem.",
     representative_image: "/img/representative/applications/deposit-analysis-service-v1.webp",
     cta: "Request materials analysis"
   },
@@ -36,14 +36,14 @@ const CATEGORY_COPY = {
     icon: "ph-compass-tool",
     title: "Consulting",
     note: "Equipment inspections, ultrasonic and borescope testing, sprinkler testing, and particle work.",
-    description: "Define asset, condition, test method, access, and decision-ready deliverable before technical review.",
+    description: "Get experienced eyes, useful measurements, and a clear path forward for an equipment problem.",
     cta: "Request technical review"
   },
   "Bid Support": {
     icon: "ph-file-text",
     title: "Bid support",
     note: "Specification creation, spec review, and buyer-side bid interview support.",
-    description: "Define operating needs, deliverables, evaluation criteria, and interview support before bid work begins.",
+    description: "Write a stronger bid, ask sharper questions, and compare vendors on what matters to your operation.",
     representative_image: "/img/representative/applications/bid-wmp-review-desk-v1.webp",
     cta: "Request bid support"
   },
@@ -51,14 +51,14 @@ const CATEGORY_COPY = {
     icon: "ph-hard-hat",
     title: "Field services",
     note: "On-site sample collection and standard sampling visits.",
-    description: "Confirm sample points, site access, travel, chain of custody, and field conditions before collection.",
+    description: "Have MASEST collect and route samples so your testing starts with reliable field work.",
     cta: "Request site sampling"
   },
   "Water Management Plan": {
     icon: "ph-clipboard-text",
     title: "Water management",
     note: "ASHRAE 188 assessment, plan writing, renewal, and dashboard access.",
-    description: "Define facility risk, control measures, monitoring, corrective actions, and review cadence before plan work begins.",
+    description: "Build a practical water plan around your facility, systems, team, and day-to-day work.",
     representative_image: "/img/representative/applications/bid-wmp-review-desk-v1.webp",
     cta: "Request a WMP review"
   },
@@ -66,8 +66,8 @@ const CATEGORY_COPY = {
     icon: "ph-package",
     title: "Packages",
     note: "Bundled initial sampling, annual setup, quarterly audit, and yearly recertification.",
-    description: "Bundle sampling, planning, audit, or recertification work under one scoped engagement.",
-    cta: "Request package scope"
+    description: "Bundle sampling, planning, audits, and annual support into one easier engagement.",
+    cta: "Request a package"
   }
 };
 
@@ -162,10 +162,10 @@ function renderCategoryMedia(copy) {
   if (!copy.representative_image) return "";
   return `
     <figure class="service-category-media">
-      <img src="${htmlEscape(copy.representative_image)}" alt="Representative ${htmlEscape(copy.title.toLowerCase())} setup" width="1536" height="1024" loading="lazy" decoding="async">
+      <img src="${htmlEscape(copy.representative_image)}" alt="${htmlEscape(copy.title)} service setup" width="1536" height="1024" loading="lazy" decoding="async">
       <figcaption>
-        <b>Representative service setup</b>
-        <span>Final scope, access, schedule, and deliverables are confirmed before work begins.</span>
+        <b>Built around the real problem</b>
+        <span>Testing, planning, and field support shaped around your equipment and the decision in front of you.</span>
       </figcaption>
     </figure>
   `;
@@ -186,8 +186,8 @@ function renderServiceCard(item) {
   const copy = CATEGORY_COPY[categoryKey(item.category)] || {};
   const description = normalizeText(item.summary)
     || copy.description
-    || "Final scope, schedule, and deliverables are confirmed before work begins.";
-  const cta = copy.cta || "Request service scope";
+    || "Tell us what you need to learn or fix, and we will help you choose the right service.";
+  const cta = copy.cta || "Request service";
 
   return `
     <article class="service-card" data-service-sku="${htmlEscape(sku)}">
@@ -239,7 +239,7 @@ function renderPanels(groups) {
     .filter((category) => groups.has(category))
     .map((category, index) => {
       const items = groups.get(category).slice().sort(serviceSort);
-      const copy = CATEGORY_COPY[category] || { icon: "ph-briefcase", title: displayCategory(category), note: "Quote-confirmed technical service." };
+      const copy = CATEGORY_COPY[category] || { icon: "ph-briefcase", title: displayCategory(category), note: "Practical help for a specific facility need." };
       const prices = items.map((item) => Number(item.public_price)).filter(Number.isFinite);
       const low = prices.length ? Math.min(...prices) : null;
       const high = prices.length ? Math.max(...prices) : null;
@@ -340,7 +340,7 @@ function renderCatalog(root, catalog) {
   updateSummary(catalog, items);
 
   if (!items.length) {
-    root.innerHTML = `<div class="service-empty"><b>No services listed yet.</b><p>Use the contact form and MASEST will scope the service you need.</p><a class="btn btn-secondary btn-sm" href="contact">Request service</a></div>`;
+    root.innerHTML = `<div class="service-empty"><b>No services listed yet.</b><p>Tell us what you need to test, understand, or fix, and we will help.</p><a class="btn btn-secondary btn-sm" href="contact">Request service</a></div>`;
     return;
   }
 
@@ -419,7 +419,7 @@ export function initServiceCatalog() {
     })
     .catch(() => {
       roots.forEach((root) => {
-        root.innerHTML = `<div class="service-error"><b>Service catalog could not load.</b><p>Use the contact form and MASEST will confirm service scope manually.</p><a class="btn btn-secondary btn-sm" href="contact">Request service</a></div>`;
+        root.innerHTML = `<div class="service-error"><b>Service catalog could not load.</b><p>Tell us what you need, and the MASEST team will help directly.</p><a class="btn btn-secondary btn-sm" href="contact">Request service</a></div>`;
       });
     });
 }

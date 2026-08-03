@@ -30,11 +30,9 @@ export function proofCardHtml(card) {
         <p class="case-result">${escapeHtml(card?.result || "")}</p>
         ${chips.length ? `<div class="case-meta">${chips.map((chip) => `<span class="case-chip">${escapeHtml(chip)}</span>`).join("")}</div>` : ""}
         <details class="case-disclosure">
-          <summary>View result details</summary>
+          <summary>See how it worked</summary>
           <div class="case-disclosure-body">
             ${card?.narrative ? `<p class="case-narrative">${escapeHtml(card.narrative)}</p>` : ""}
-            ${card?.publication_scope ? `<span class="case-publication">${escapeHtml(card.publication_scope)}</span>` : ""}
-            ${card?.source ? `<span class="case-source">${escapeHtml(card.source)}</span>` : ""}
           </div>
         </details>
       </div>

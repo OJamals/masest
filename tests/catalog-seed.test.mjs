@@ -261,7 +261,7 @@ test("public catalog excludes non-canonical program aliases", () => {
   const slugs = data.products.map((product) => product.slug);
   assert.equal(data.products.length, 15);
   assert.ok(!slugs.includes("crs"), "CRS needs owner confirmation before public ecommerce listing");
-  assert.ok(!slugs.includes("dbnpa"), "DBNPA stays a program component, not canonical parent SKU");
+  assert.ok(!slugs.includes("dbnpa"), "discontinued DBNPA must stay out of the public catalog");
   assert.ok(!slugs.includes("pg100"), "PG/EG glycol products are not in the canonical catalog");
   assert.ok(!slugs.includes("eg5050"), "PG/EG glycol products are not in the canonical catalog");
 });
@@ -311,8 +311,9 @@ test("site copy respects documentation claim guardrails", () => {
     catalog().products.every((product) => product.hmis === "0-0-0"),
     "every offered product must retain its confirmed HMIS 0-0-0 rating",
   );
-  assert.match(publicMarketingCopy, /Every offered VertKleen product is HMIS 0-0-0/i);
-  assert.match(productsHtml, /Every offered VertKleen product is HMIS 0-0-0/i);
+  assert.match(publicMarketingCopy, /HMIS 0-0-0 across every product|Every VertKleen product is HMIS 0-0-0/i);
+  assert.match(productsHtml, /Every VertKleen product we (?:offer|sell) is HMIS 0-0-0/i);
+  assert.doesNotMatch(`${programsHtml}\n${readSite("contact.html")}`, /\bDBNPA\b/i);
   assert.doesNotMatch(resourcesHtml, /Boeing\/Airbus certified degreaser/);
   assert.doesNotMatch(catalogJs, /EPA-registered/);
   assert.doesNotMatch(programsHtml, /EPA-registered/);

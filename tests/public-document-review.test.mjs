@@ -235,8 +235,8 @@ test("proof cards expose conversion records without approval-process copy", () =
     assert.ok(proof.includes(card.title), `${card.slug}: fallback title must match the snapshot`);
     assert.ok(proof.includes(card.result), `${card.slug}: fallback result must match the snapshot`);
     assert.ok(proof.includes(card.narrative), `${card.slug}: fallback narrative must match the snapshot`);
-    assert.ok(proof.includes(card.publication_scope), `${card.slug}: fallback publication scope must match the snapshot`);
-    assert.ok(proof.includes(card.source), `${card.slug}: fallback source must match the snapshot`);
+    assert.equal(proof.includes(card.publication_scope), false, `${card.slug}: internal publication label must stay out of public copy`);
+    assert.equal(proof.includes(card.source), false, `${card.slug}: internal source label must stay out of public copy`);
     assert.ok(seed.includes(card.title), `${card.slug}: CMS seed title must match the snapshot`);
     assert.ok(seed.includes(card.result), `${card.slug}: CMS seed result must match the snapshot`);
     assert.ok(seed.includes(card.narrative), `${card.slug}: CMS seed narrative must match the snapshot`);

@@ -7,7 +7,7 @@
     "build:content": "node tools/build-content.mjs",
     "build:images": "node tools/build-image-library.mjs",
     "verify:cms-images": "node tools/build-image-library.mjs --verify-cms",
-    "build:industries": "node tools/build-industry-pages.mjs",
+    "build:industries": "node tools/gen_industries.mjs && node tools/build-industry-pages.mjs",
     "build:blog": "node tools/build-blog.mjs",
     "build:reviews": "node tools/build-reviews.mjs",
     "preseo-inject": "node tools/build-reviews.mjs",

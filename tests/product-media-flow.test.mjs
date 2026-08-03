@@ -71,8 +71,8 @@ test("product detail publishes product-specific SEO metadata", async () => {
       }));
 
       assert.equal(meta.title, "VertKleen CIP HCR | MASEST VertKleen");
-      assert.match(meta.description, /Controlled mineral removal for brewery acid-wash steps/);
-      assert.match(meta.description, /Target beer stone and mineral film/);
+      assert.match(meta.description, /Remove beer stone, scale, and rust/);
+      assert.match(meta.description, /Clean tanks, kegs, lines, and heat exchangers/);
       assert.equal(meta.ogTitle, "VertKleen CIP HCR | MASEST VertKleen");
       assert.equal(meta.ogDescription, meta.description);
       assert.doesNotMatch(meta.description, /Replaces Replaces/);

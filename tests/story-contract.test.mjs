@@ -53,9 +53,9 @@ test("third act is one operational ledger with task-matched chemistry", () => {
     assert.match(actThree, new RegExp(`href="products/${product}"`));
   }
   assert.equal((actThree.match(/class="hmis-chip is-safe"/g) || []).length, 4);
-  assert.match(actThree, /React, complex, rinse/);
+  assert.match(actThree, /How VertKleen gets it clean/);
   assert.doesNotMatch(actThree, /starting candidate|trial candidate|Candidate only after/i);
-  assert.match(actThree, /Ratings vary by manufacturer and concentration; typical SDS values are shown/);
+  assert.match(actThree, /The table uses common SDS ratings for conventional cleaners/);
   assert.match(actThree, /OSHA 2026 penalty schedule/);
   assert.match(actThree, /Liberty Mutual 2025 Workplace Safety Index/);
   assert.doesNotMatch(actThree, /DBNPA/);
@@ -67,8 +67,8 @@ test("fourth act is an asymmetric proof and action close", () => {
   assert.match(actFour, /class="proof-close"/);
   assert.match(actFour, /class="proof-panel"/);
   assert.match(actFour, /class="close-action"/);
-  assert.match(actFour, /data-target="6">6<\/span><span class="cost-per"> job inputs/);
-  assert.match(actFour, /Current chemical, dilution, labor, water, downtime, and disposal/);
+  assert.match(actFour, /data-target="6">6<\/span><span class="cost-per"> numbers that matter/);
+  assert.match(actFour, /Current cleaner, dilution, labor, water, downtime, and disposal/);
   assert.match(actFour, /href="products#catalog"/);
   assert.doesNotMatch(actFour, /zero-axis|savior-zero-scale|grid-template-columns:\s*repeat\(3/);
 });
