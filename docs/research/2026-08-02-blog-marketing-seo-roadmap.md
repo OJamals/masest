@@ -10,14 +10,14 @@ Turn the current blog into three connected search paths:
 2. Proof: show a documented VertKleen result on a recognizable job.
 3. Conversion: send the qualified reader to a product match, trial plan, or quote.
 
-The current 11 articles already cover controlled trials, CIP, cooling towers, HMIS 0-0-0, descaling, and four product comparisons. New pages should deepen those clusters, not create near-duplicate URLs.
+The current 13 articles already cover controlled trials, CIP, cooling towers, HMIS 0-0-0, descaling, four product comparisons, and two field-record case studies. New pages should deepen those clusters, not create near-duplicate URLs.
 
 ## Publication queue
 
-| Priority | Proposed article | Primary search intent | VertKleen proof or product | Required visual | Conversion target |
+| Priority | Article | Primary search intent | VertKleen proof or product | Required visual | Conversion target |
 | --- | --- | --- | --- | --- | --- |
-| 1 | How HCR cleaned a 20-year HVAC base plate after a 36-hour CLR attempt | Industrial descaling case study | Brevard Schools: CLR 36 hours; DDC selected HCR; HCR 30 minutes | Annotated timeline, before/after, cycle facts | HCR trial request |
-| 2 | Heavy-duty warehouse degreasing: the CR HD distribution-center case | Warehouse floor degreaser, forklift degreaser | Walmart distribution-center replacement and savings | Area workflow, task-cost ledger | CR HD sample |
+| 1 | Published: [How HCR cleaned a 20-year HVAC base plate after a 36-hour CLR attempt](/blog/hcr-brevard-hvac-rust-case-study) | Industrial descaling case study | Brevard Schools: CLR 36 hours; DDC selected HCR; HCR 30 minutes | Annotated timeline, before/after, cycle facts | HCR trial request |
+| 2 | Published: [Inside a three-site Walmart distribution-center switch to CR HD](/blog/cr-hd-walmart-distribution-center-case-study) | Warehouse floor degreaser, forklift degreaser | CR HD supplied to DC-8851, DC-7023, and DC-6099 as a Simple Green replacement; no CR HD-specific savings total in the source record | Area workflow, task-cost ledger | CR HD sample |
 | 3 | Brewery CIP field report: seven Florida breweries, two soil families | Brewery CIP chemicals, beer stone cleaner | CR and HCR work across tanks, kegs, lines, and heat exchangers | Circuit map, soil-stage matrix | CIP cycle review |
 | 4 | Industrial descaler cost calculator: price the shutdown, not the gallon | Industrial descaler cost | HCR and Descaler | Interactive or downloadable task-cost calculator | Quote with system inputs |
 | 5 | Cooling-tower descaling procedure and restart checklist | Cooling tower descaling procedure | HCR, Descaler, WaterSafe60, Purgo | Printable loop and restart checklist | Tower-program review |
@@ -31,7 +31,7 @@ The current 11 articles already cover controlled trials, CIP, cooling towers, HM
 
 ## Recommended sequence
 
-Publish the three case studies first. They convert the strongest existing proof into crawlable, shareable pages and give every related guide a credible internal link.
+The first two case studies are published. Complete the seven-brewery case next; together, these pages convert the strongest existing proof into crawlable, shareable pages and give every related guide a credible internal link.
 
 Publish the calculator and two procedural guides next. They target buyers already planning work and can earn repeat visits, downloads, and quote submissions.
 

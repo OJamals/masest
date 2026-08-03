@@ -392,3 +392,40 @@ test("a missing CMS hero falls back without aborting the blog publish", () => {
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("Walmart CR HD case preserves the field-record boundary and renders its decision tools", () => {
+  const slug = "cr-hd-walmart-distribution-center-case-study";
+  const post = SEED.blog_posts.find((entry) => entry.slug === slug);
+  const comparison = SEED.blog_posts.find((entry) => entry.slug === "cr-hd-vs-simple-green");
+  assert.ok(post, "Walmart CR HD case must exist in the Blog CMS snapshot");
+  assert.ok(comparison, "CR HD comparison must exist in the Blog CMS snapshot");
+  assert.equal(post.category, "technical");
+  assert.equal(post.author, "MASEST Technical Team");
+  assert.ok(post.tags.includes("warehouse"));
+  assert.ok(post.tags.includes("cr-hd"));
+  for (const site of ["DC-8851", "DC-7023", "DC-6099"]) assert.ok(post.body.includes(site));
+  assert.match(post.body, /Simple Green replacement/);
+  assert.match(post.body, /more than \$10,000 per year saved at DC-8851/);
+  assert.match(post.body, /separate VertKleen Descaler plumbing program/);
+  assert.match(post.body, /It is not a CR HD savings claim/);
+  assert.match(post.body, /generated, unbranded warehouse trial illustration/);
+  assert.ok(!post.body.includes("/img/blog/cases/cr-hd-walmart-forklift-area.webp"));
+  assert.ok(!post.body.includes("/img/blog/cases/cr-hd-walmart-crown-fleet.webp"));
+  assert.doesNotMatch(post.body, /documented purchasing and operating savings/i);
+  assert.ok(comparison.body.includes(`](/blog/${slug})`));
+  assert.doesNotMatch(comparison.body, /documented purchasing and operating savings/i);
+
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
+    const html = readFileSync(join(out, "blog", `${slug}.html`), "utf8");
+    assert.equal((html.match(/<table>/g) || []).length, 3);
+    assert.match(html, /src="\/img\/blog\/warehouse-degreasing-trial-hero\.webp"[^>]+width="1440" height="810"/);
+    assert.match(html, /src="\/img\/blog\/cases\/cr-hd-walmart-product-field\.webp"[^>]+width="367" height="670"/);
+    assert.match(html, /src="\/img\/blog\/diagrams\/warehouse-degreasing-trial\.svg"[^>]+width="1200" height="675"/);
+    assert.match(html, /"image":"https:\/\/masest\.co\/img\/blog\/warehouse-degreasing-trial-hero\.webp"/);
+    assert.match(html, /href="\/contact\?type=sample&amp;product=CR%20HD#quoteForm"/);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});

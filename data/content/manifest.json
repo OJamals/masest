@@ -2,11 +2,11 @@
   "generated_at": "2026-07-31T06:21:05.675Z",
   "files": {
     "blog.json": {
-      "count": 12,
+      "count": 13,
       "counts": {
-        "blog_posts": 12
+        "blog_posts": 13
       },
-      "sha256": "af99c20dc2f64fec7e5a7413f109a2d063dcbcbeb0fd0df4b2681cd87193fcbd"
+      "sha256": "6b562473305bf12be3a2d1c257b38362841dfb44c6545374c0f931f7add61c52"
     },
     "faqs.json": {
       "count": 0,

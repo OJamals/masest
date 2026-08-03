@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 219,
+  "count": 221,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -73,6 +73,20 @@
       "source": "site"
     },
     {
+      "storage_path": "/img/blog/cases/cr-hd-walmart-product-field.webp",
+      "public_url": "/img/blog/cases/cr-hd-walmart-product-field.webp",
+      "filename": "cr-hd-walmart-product-field.webp",
+      "alt": "VertKleen CR HD field container and diluted sample",
+      "width": 367,
+      "height": 670,
+      "byte_size": 37382,
+      "sha256": "1feeb36a35773f974393de9a2ab9075b63cd487d79ba663a31b187962d19d391",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
       "storage_path": "/img/blog/cases/hcr-brevard-after.webp",
       "public_url": "/img/blog/cases/hcr-brevard-after.webp",
       "filename": "hcr-brevard-after.webp",
@@ -137,6 +151,20 @@
       "height": 675,
       "byte_size": 44756,
       "sha256": "b419a37f7ed14d00898cd96f018fae7875b7ca0d467ccabe5c53e508066ac1d7",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/warehouse-degreasing-trial-hero.webp",
+      "public_url": "/img/blog/warehouse-degreasing-trial-hero.webp",
+      "filename": "warehouse-degreasing-trial-hero.webp",
+      "alt": "Maintenance worker running a controlled warehouse floor-degreasing trial with an automatic scrubber",
+      "width": 1440,
+      "height": 810,
+      "byte_size": 142326,
+      "sha256": "e00b1d47727e72986fc5f8c2e6057aebee6acdce54828d514958a9fafbabc068",
       "mime_type": "image/webp",
       "category": "blog",
       "status": "available",
