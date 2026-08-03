@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">WaterSafe60 job-planning path</title>
+  <desc id="desc">Define the water-system goal, measure the starting point, choose the feed method, and track the finished result.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1b28"/>
+      <stop offset="1" stop-color="#123f50"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0l10 5-10 5z" fill="#62ded7"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="675" rx="36" fill="url(#bg)"/>
+  <text x="64" y="82" fill="#fff" font-family="Arial, sans-serif" font-size="34" font-weight="700">Start with the water-system goal.</text>
+  <text x="64" y="120" fill="#c0d5dc" font-family="Arial, sans-serif" font-size="20">A measured plan makes the first WaterSafe60 run easier to tune and repeat.</text>
+
+  <path d="M170 330H1030" fill="none" stroke="#62ded7" stroke-width="8" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <g font-family="Arial, sans-serif" text-anchor="middle">
+    <g transform="translate(165 330)">
+      <circle r="76" fill="#fff"/>
+      <path d="M0-39c22 29 35 49 35 68a35 35 0 01-70 0c0-19 13-39 35-68z" fill="none" stroke="#087c7b" stroke-width="9"/>
+      <text y="120" fill="#fff" font-size="23" font-weight="700">1. Define the job</text>
+      <text y="151" fill="#c0d5dc" font-size="17">pH, scale, corrosion,</text>
+      <text y="175" fill="#c0d5dc" font-size="17">well, or pipe cleaning</text>
+    </g>
+    <g transform="translate(455 330)">
+      <circle r="76" fill="#62ded7"/>
+      <path d="M-36 29h72M-27 10h54M-18-9h36M0-39v30" fill="none" stroke="#10242d" stroke-width="9" stroke-linecap="round"/>
+      <text y="120" fill="#fff" font-size="23" font-weight="700">2. Measure</text>
+      <text y="151" fill="#c0d5dc" font-size="17">Volume, pH, hardness,</text>
+      <text y="175" fill="#c0d5dc" font-size="17">flow, and visible buildup</text>
+    </g>
+    <g transform="translate(745 330)">
+      <circle r="76" fill="#fff"/>
+      <path d="M-38-9h76v54h-76zM0-41v32M-14-41h28M-23 45v15M23 45v15" fill="none" stroke="#087c7b" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="120" fill="#fff" font-size="23" font-weight="700">3. Choose the feed</text>
+      <text y="151" fill="#c0d5dc" font-size="17">Meter, circulate, clean,</text>
+      <text y="175" fill="#c0d5dc" font-size="17">or run the well program</text>
+    </g>
+    <g transform="translate(1035 330)">
+      <circle r="76" fill="#62ded7"/>
+      <path d="M-38 7l23 23 52-58M-37 49h74" fill="none" stroke="#10242d" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="120" fill="#fff" font-size="23" font-weight="700">4. Track the result</text>
+      <text y="151" fill="#c0d5dc" font-size="17">Tune, inspect, record,</text>
+      <text y="175" fill="#c0d5dc" font-size="17">and repeat with confidence</text>
+    </g>
+  </g>
+
+  <rect x="64" y="548" width="1072" height="78" rx="20" fill="#fff" fill-opacity=".08" stroke="#62ded7" stroke-opacity=".4" stroke-width="2"/>
+  <text x="92" y="581" fill="#62ded7" font-family="Arial, sans-serif" font-size="18" font-weight="700">ONE PLAN, CLEAR CHECKPOINTS</text>
+  <text x="92" y="610" fill="#fff" font-family="Arial, sans-serif" font-size="23" font-weight="700">Starting condition + product use + finished result + next adjustment.</text>
+</svg>

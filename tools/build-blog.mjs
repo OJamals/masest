@@ -337,7 +337,7 @@ function xmlEscape(s) {
 }
 
 function feedXml(posts) {
-  const items = posts.slice(0, 20).map((p) => `    <item>
+  const items = posts.map((p) => `    <item>
       <title>${xmlEscape(p.title)}</title>
       <link>${BASE}/blog/${p.slug}</link>
       <guid isPermaLink="true">${BASE}/blog/${p.slug}</guid>

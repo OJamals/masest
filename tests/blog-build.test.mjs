@@ -107,6 +107,29 @@ const SEO_INTENT_POSTS = [
       "/industries/fleet-trucking-car-washes",
     ],
   },
+  {
+    slug: "watersafe60-water-treatment-guide",
+    hero: "/img/blog/watersafe60-water-treatment-hero.webp",
+    diagram: "/img/blog/diagrams/watersafe60-job-plan.svg",
+    product: "WaterSafe60",
+    links: [
+      "/products/watersafe60",
+      "/industries/municipalities-water-utilities",
+      "/industries/mechanical-contractors-water-treatment",
+      "/proof#watersafe60-nsf60",
+    ],
+  },
+  {
+    slug: "drone-building-cleaning-guide",
+    hero: "/img/industries/tasks/drone-cleaning-companies-01.webp",
+    diagram: "/img/blog/diagrams/drone-building-cleaning-plan.svg",
+    product: "MultiWash",
+    links: [
+      "/products/multiwash",
+      "/industries/drone-cleaning-companies",
+      "/proof#uf-shands-drone-wash",
+    ],
+  },
 ];
 
 test("blog_post content type is registered", () => {

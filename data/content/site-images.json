@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 228,
+  "count": 229,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -3175,6 +3175,20 @@
       "height": 811,
       "byte_size": 91430,
       "sha256": "c78be72dcf01b50d91fb0fd00bd5c2ceb6b529eee941d889f2d6503af5099bab",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/watersafe60-water-treatment-hero.webp",
+      "public_url": "/img/blog/watersafe60-water-treatment-hero.webp",
+      "filename": "watersafe60-water-treatment-hero.webp",
+      "alt": "Water-treatment technician collecting a clear sample at a clean pump-station manifold",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 91886,
+      "sha256": "ab6cbe0974d5e2224a22dd50859c25000ca4d4f9f6e2147e8733c5a6dbb03d56",
       "mime_type": "image/webp",
       "category": "blog",
       "status": "available",
