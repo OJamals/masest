@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Five-step commercial-kitchen degreasing cycle</title>
+  <desc id="desc">Clear the line, apply cleaner, allow dwell, agitate heavy grease, then rinse and inspect.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101c25"/>
+      <stop offset="1" stop-color="#173740"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0l10 5-10 5z" fill="#5be0d5"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="675" rx="36" fill="url(#bg)"/>
+  <text x="64" y="82" fill="#fff" font-family="Arial, sans-serif" font-size="34" font-weight="700">Close strong. Reopen clean.</text>
+  <text x="64" y="120" fill="#bed0d3" font-family="Arial, sans-serif" font-size="20">Run the cookline in one order while the kitchen is empty.</text>
+  <path d="M156 320H1040" fill="none" stroke="#5be0d5" stroke-width="8" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <g font-family="Arial, sans-serif" text-anchor="middle">
+    <g transform="translate(150 320)">
+      <circle r="70" fill="#fff"/>
+      <path d="M-34 20h68M-25-20h50M-18-34h36" fill="none" stroke="#087c7b" stroke-width="9" stroke-linecap="round"/>
+      <text y="112" fill="#fff" font-size="23" font-weight="700">1. Clear</text>
+      <text y="143" fill="#bed0d3" font-size="17">Cool and empty line</text>
+    </g>
+    <g transform="translate(375 320)">
+      <circle r="70" fill="#5be0d5"/>
+      <path d="M-10-35h20v28M-30 30h60M0-7c-18 17-28 29-28 46h56C28 22 18 10 0-7z" fill="none" stroke="#10242d" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="112" fill="#fff" font-size="23" font-weight="700">2. Apply</text>
+      <text y="143" fill="#bed0d3" font-size="17">Cover greasy soil</text>
+    </g>
+    <g transform="translate(600 320)">
+      <circle r="70" fill="#fff"/>
+      <circle r="34" fill="none" stroke="#087c7b" stroke-width="8"/>
+      <path d="M0-24V2l21 14" fill="none" stroke="#087c7b" stroke-width="8" stroke-linecap="round"/>
+      <text y="112" fill="#fff" font-size="23" font-weight="700">3. Dwell</text>
+      <text y="143" fill="#bed0d3" font-size="17">Let cleaner work</text>
+    </g>
+    <g transform="translate(825 320)">
+      <circle r="70" fill="#5be0d5"/>
+      <path d="M-38 19l58-58M-22 35l58-58M-39-2l37 37" fill="none" stroke="#10242d" stroke-width="9" stroke-linecap="round"/>
+      <text y="112" fill="#fff" font-size="23" font-weight="700">4. Agitate</text>
+      <text y="143" fill="#bed0d3" font-size="17">Work stubborn spots</text>
+    </g>
+    <g transform="translate(1050 320)">
+      <circle r="70" fill="#fff"/>
+      <path d="M-35 2l22 22 48-52" fill="none" stroke="#087c7b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="112" fill="#fff" font-size="23" font-weight="700">5. Rinse</text>
+      <text y="143" fill="#bed0d3" font-size="17">Dry and inspect</text>
+    </g>
+  </g>
+  <rect x="64" y="528" width="1072" height="90" rx="20" fill="#fff" fill-opacity=".08" stroke="#5be0d5" stroke-opacity=".4" stroke-width="2"/>
+  <text x="92" y="565" fill="#5be0d5" font-family="Arial, sans-serif" font-size="18" font-weight="700">COMPARE THE FULL CLOSE</text>
+  <text x="92" y="597" fill="#fff" font-family="Arial, sans-serif" font-size="24" font-weight="700">Product + dwell + passes + water + minutes until the line reopens.</text>
+</svg>

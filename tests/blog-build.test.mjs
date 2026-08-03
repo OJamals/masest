@@ -61,6 +61,29 @@ const SEO_INTENT_POSTS = [
       "/blog/cr-hd-walmart-distribution-center-case-study",
     ],
   },
+  {
+    slug: "commercial-kitchen-degreasing-guide",
+    hero: "/img/blog/commercial-kitchen-degreasing-hero.webp",
+    diagram: "/img/blog/diagrams/commercial-kitchen-degreasing-cycle.svg",
+    product: "CR HD",
+    links: [
+      "/products/crhd",
+      "/industries/restaurants-commercial-kitchens",
+      "/proof#commercial-kitchen-crhd",
+    ],
+  },
+  {
+    slug: "how-to-clean-oxidized-aluminum-boat",
+    hero: "/img/blog/aluminum-boat-cleaning-hero.webp",
+    diagram: "/img/blog/diagrams/aluminum-boat-cleaning-cycle.svg",
+    product: "AlumiBrite",
+    links: [
+      "/products/alumibrite",
+      "/products/torque",
+      "/industries/marine-marinas-boatyards",
+      "/proof#airboat-alumibrite",
+    ],
+  },
 ];
 
 test("blog_post content type is registered", () => {

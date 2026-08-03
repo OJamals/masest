@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 223,
+  "count": 225,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -3119,6 +3119,34 @@
       "height": 811,
       "byte_size": 147274,
       "sha256": "dadb1f0579b4a95ce1313a645992653eb01f26ff6af2cce24971605c6deb464f",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/commercial-kitchen-degreasing-hero.webp",
+      "public_url": "/img/blog/commercial-kitchen-degreasing-hero.webp",
+      "filename": "commercial-kitchen-degreasing-hero.webp",
+      "alt": "Kitchen cleaning professional removing baked-on grease from a stainless-steel commercial cookline",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 89520,
+      "sha256": "65d2cc7f2aae94a7a4fa29839d2c55ffd432bec157a62fe73e74a3204c49aba7",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/aluminum-boat-cleaning-hero.webp",
+      "public_url": "/img/blog/aluminum-boat-cleaning-hero.webp",
+      "filename": "aluminum-boat-cleaning-hero.webp",
+      "alt": "Marine technician rinsing oxidation from an unpainted aluminum airboat hull",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 141192,
+      "sha256": "ddeac9c1bb2d93524a85e22a7998774e13868e79d50f6242cc086b39ee0ebbd3",
       "mime_type": "image/webp",
       "category": "blog",
       "status": "available",

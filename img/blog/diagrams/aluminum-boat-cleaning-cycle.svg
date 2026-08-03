@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Five-step aluminum-boat cleaning cycle</title>
+  <desc id="desc">Wash loose soil, test one panel, apply aluminum cleaner, rinse clean, and finish the restored surface.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fbfb"/>
+      <stop offset="1" stop-color="#e7f4f3"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0l10 5-10 5z" fill="#118c8b"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="675" rx="36" fill="url(#bg)"/>
+  <text x="64" y="82" fill="#10242d" font-family="Arial, sans-serif" font-size="34" font-weight="700">Restore aluminum one panel at a time.</text>
+  <text x="64" y="120" fill="#4e6269" font-family="Arial, sans-serif" font-size="20">Use one small test area to set the finish before cleaning the full vessel.</text>
+  <path d="M168 306H1020" fill="none" stroke="#118c8b" stroke-width="8" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <g font-family="Arial, sans-serif" text-anchor="middle">
+    <g transform="translate(150 306)">
+      <circle r="72" fill="#10242d"/>
+      <path d="M0-38c18 24 29 39 29 56a29 29 0 01-58 0c0-17 11-32 29-56z" fill="none" stroke="#fff" stroke-width="9"/>
+      <text y="116" fill="#10242d" font-size="24" font-weight="700">1. Wash</text>
+      <text y="148" fill="#53676e" font-size="18">Remove loose soil</text>
+    </g>
+    <g transform="translate(375 306)">
+      <circle r="72" fill="#087c7b"/>
+      <rect x="-32" y="-32" width="64" height="64" rx="8" fill="none" stroke="#fff" stroke-width="9"/>
+      <path d="M-18 12l13 13 28-31" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="116" fill="#10242d" font-size="24" font-weight="700">2. Test</text>
+      <text y="148" fill="#53676e" font-size="18">Set one small panel</text>
+    </g>
+    <g transform="translate(600 306)">
+      <circle r="72" fill="#10242d"/>
+      <path d="M-10-38h20v29M-33 29h66M0-9c-18 17-29 30-29 47h58C29 21 18 8 0-9z" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="116" fill="#10242d" font-size="24" font-weight="700">3. Apply</text>
+      <text y="148" fill="#53676e" font-size="18">Loosen dull oxide film</text>
+    </g>
+    <g transform="translate(825 306)">
+      <circle r="72" fill="#087c7b"/>
+      <path d="M-38 16c25-24 51-34 76-29M16-30l24 17-24 17" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="116" fill="#10242d" font-size="24" font-weight="700">4. Rinse</text>
+      <text y="148" fill="#53676e" font-size="18">Reveal even aluminum</text>
+    </g>
+    <g transform="translate(1050 306)">
+      <circle r="72" fill="#10242d"/>
+      <path d="M-32 18c18-42 49-42 64 0M-25 22h50" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+      <text y="116" fill="#10242d" font-size="24" font-weight="700">5. Finish</text>
+      <text y="148" fill="#53676e" font-size="18">Wash and protect</text>
+    </g>
+  </g>
+  <rect x="64" y="526" width="1072" height="92" rx="20" fill="#fff" stroke="#cce3e1" stroke-width="2"/>
+  <text x="92" y="565" fill="#118c8b" font-family="Arial, sans-serif" font-size="18" font-weight="700">MAKE THE TEST PANEL DECIDE</text>
+  <text x="92" y="597" fill="#10242d" font-family="Arial, sans-serif" font-size="24" font-weight="700">Same surface + same dwell + same rinse = a finish the crew can repeat.</text>
+</svg>
