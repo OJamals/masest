@@ -130,6 +130,29 @@ const SEO_INTENT_POSTS = [
       "/proof#uf-shands-drone-wash",
     ],
   },
+  {
+    slug: "descaler-fire-pump-walmart-case-study",
+    hero: "/img/blog/descaler-fire-pump-case-hero.webp",
+    diagram: "/img/blog/diagrams/fire-pump-descaling-timeline.svg",
+    product: "Descaler",
+    links: [
+      "/products/descaler",
+      "/industries/plumbing",
+      "/proof#fire-pump-descaler",
+    ],
+  },
+  {
+    slug: "hvac-condensate-drain-line-cleaning-guide",
+    hero: "/img/blog/hvac-drain-line-cleaning-hero.webp",
+    diagram: "/img/blog/diagrams/hvac-drain-cleaning-route.svg",
+    product: "HVAC CR",
+    links: [
+      "/products/cr2",
+      "/products/descaler",
+      "/industries/hvac-water",
+      "/proof#cr2-caustic-replacement",
+    ],
+  },
 ];
 
 test("blog_post content type is registered", () => {

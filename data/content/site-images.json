@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 229,
+  "count": 231,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -3189,6 +3189,34 @@
       "height": 811,
       "byte_size": 91886,
       "sha256": "ab6cbe0974d5e2224a22dd50859c25000ca4d4f9f6e2147e8733c5a6dbb03d56",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/descaler-fire-pump-case-hero.webp",
+      "public_url": "/img/blog/descaler-fire-pump-case-hero.webp",
+      "filename": "descaler-fire-pump-case-hero.webp",
+      "alt": "Fire-protection technician inspecting mineral scale inside an opened commercial fire-pump component",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 130038,
+      "sha256": "5e928af68442bfa2e73537e893c8ff9befa7c67b9ab9a5c4435996e7d2c37f87",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/hvac-drain-line-cleaning-hero.webp",
+      "public_url": "/img/blog/hvac-drain-line-cleaning-hero.webp",
+      "filename": "hvac-drain-line-cleaning-hero.webp",
+      "alt": "Commercial HVAC technician servicing an air-handler condensate pan and drain line",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 94430,
+      "sha256": "84283d91b790f8d19c22d03480e1f66d3cc7b88f26e6da8f2ceb9b3f94b051c8",
       "mime_type": "image/webp",
       "category": "blog",
       "status": "available",

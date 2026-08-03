@@ -28,7 +28,12 @@ function inline(src) {
   s = s.replace(/!\[([^\]]*)\]\(((?:[^()\s]|\([^()]*\))+)\)(?:\{([1-9]\d{0,3})x([1-9]\d{0,3})\})?/g, (_m, alt, url, rawWidth, rawHeight) => {
     const width = rawWidth ? Math.min(Number(rawWidth), 4096) : 1200;
     const height = rawHeight ? Math.min(Number(rawHeight), 4096) : 675;
-    return isSafeUrl(url) ? `<img src="${url.trim()}" alt="${alt}" width="${width}" height="${height}" loading="lazy" decoding="async">` : alt;
+    if (!isSafeUrl(url)) return alt;
+    const src = url.trim();
+    const image = `<img src="${src}" alt="${alt}" width="${width}" height="${height}" loading="lazy" decoding="async">`;
+    return src.startsWith("/img/blog/diagrams/")
+      ? `<span class="md-diagram-scroll" tabindex="0" role="group" aria-label="${alt}: scroll horizontally to view full diagram">${image}</span>`
+      : image;
   });
   s = s.replace(/\[([^\]]+)\]\(((?:[^()\s]|\([^()]*\))+)\)/g, (_m, txt, url) =>
     isSafeUrl(url) ? `<a href="${url.trim()}">${txt}</a>` : txt);

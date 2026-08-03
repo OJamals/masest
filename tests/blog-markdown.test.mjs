@@ -78,6 +78,13 @@ test("images preserve declared intrinsic dimensions", () => {
   assert.match(out, /<img src="\/img\/blog\/cases\/result\.webp" alt="Field result" width="580" height="559"/);
 });
 
+test("blog diagrams expose a keyboard-scrollable viewer with exact dimensions", () => {
+  const out = renderMarkdown("![Cleaning route](/img/blog/diagrams/route.svg){1440x560}");
+  assert.match(out, /class="md-diagram-scroll" tabindex="0" role="group"/);
+  assert.match(out, /aria-label="Cleaning route: scroll horizontally to view full diagram"/);
+  assert.match(out, /width="1440" height="560"/);
+});
+
 test("readingTime is at least 1 minute", () => {
   assert.equal(readingTime(""), 1);
   assert.equal(readingTime(new Array(400).fill("w").join(" ")), 2);

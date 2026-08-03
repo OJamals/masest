@@ -46,6 +46,9 @@
 .blog-body code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
 .blog-body :not(pre) > code { background: rgba(0,0,0,.06); padding: 2px 6px; border-radius: 5px; }
 .blog-body img { max-width: 100%; height: auto; border-radius: 10px; }
+.blog-body .md-diagram-scroll { display: block; overflow-x: auto; overscroll-behavior-inline: contain; border-radius: 10px; }
+.blog-body .md-diagram-scroll:focus-visible { outline: 3px solid var(--brand, #0e7c86); outline-offset: 3px; }
+.blog-body .md-diagram-scroll img { display: block; width: 100%; max-width: none; }
 .blog-body .md-table-scroll { margin: 26px 0; overflow-x: auto; border: 1px solid var(--line, #dbe4e6); border-radius: 12px; background: var(--surface, #fff); }
 .blog-body .md-table-scroll:focus-visible { outline: 3px solid var(--brand, #0e7c86); outline-offset: 3px; }
 .blog-body table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: .92rem; line-height: 1.5; }
@@ -74,6 +77,7 @@
 @media (max-width: 640px) {
   .blog-post { padding-top: 32px; }
   .blog-body { font-size: 1rem; }
+  .blog-body .md-diagram-scroll img { width: 720px; }
   .blog-body th,
   .blog-body td { padding: 11px 12px; }
 }

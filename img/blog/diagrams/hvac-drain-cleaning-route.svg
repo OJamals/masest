@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="560" viewBox="0 0 1440 560" role="img" aria-labelledby="title desc">
+  <title id="title">Commercial HVAC condensate drain cleaning route</title>
+  <desc id="desc">A five-point route from the drain pan through the trap and drain line to the termination, with product choices for organic buildup and mineral scale.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#10263f" flood-opacity=".09"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#4c6f95"/>
+    </marker>
+  </defs>
+  <rect width="1440" height="560" rx="28" fill="#f4f8fb"/>
+  <text x="48" y="58" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="700" fill="#10263f">Clean the whole condensate path</text>
+  <text x="48" y="91" font-family="Inter, Arial, sans-serif" font-size="18" fill="#52677c">A clear pan means little if buildup still blocks the trap or line.</text>
+
+  <g font-family="Inter, Arial, sans-serif" filter="url(#shadow)">
+    <g transform="translate(36 132)">
+      <rect width="250" height="210" rx="18" fill="#fff"/>
+      <circle cx="42" cy="32" r="22" fill="#2d78aa"/>
+      <text x="42" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">1</text>
+      <text x="24" y="95" font-size="23" font-weight="700" fill="#10263f">Drain pan</text>
+      <text x="24" y="132" font-size="17" fill="#52677c">Remove loose debris.</text>
+      <text x="24" y="158" font-size="17" fill="#52677c">Find slime, grease, or</text>
+      <text x="24" y="184" font-size="17" fill="#52677c">mineral crust.</text>
+    </g>
+    <g transform="translate(314 132)">
+      <rect width="250" height="210" rx="18" fill="#fff"/>
+      <circle cx="42" cy="32" r="22" fill="#2d78aa"/>
+      <text x="42" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">2</text>
+      <text x="24" y="95" font-size="23" font-weight="700" fill="#10263f">Trap + cleanout</text>
+      <text x="24" y="132" font-size="17" fill="#52677c">Open the best service</text>
+      <text x="24" y="158" font-size="17" fill="#52677c">point. Check both sides</text>
+      <text x="24" y="184" font-size="17" fill="#52677c">of the trap.</text>
+    </g>
+    <g transform="translate(592 132)">
+      <rect width="250" height="210" rx="18" fill="#fff"/>
+      <circle cx="42" cy="32" r="22" fill="#2d78aa"/>
+      <text x="42" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">3</text>
+      <text x="24" y="95" font-size="23" font-weight="700" fill="#10263f">Branch line</text>
+      <text x="24" y="132" font-size="17" fill="#52677c">Give the cleaner contact</text>
+      <text x="24" y="158" font-size="17" fill="#52677c">time. Work toward the</text>
+      <text x="24" y="184" font-size="17" fill="#52677c">known outlet.</text>
+    </g>
+    <g transform="translate(870 132)">
+      <rect width="250" height="210" rx="18" fill="#fff"/>
+      <circle cx="42" cy="32" r="22" fill="#2d78aa"/>
+      <text x="42" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">4</text>
+      <text x="24" y="95" font-size="23" font-weight="700" fill="#10263f">Main run</text>
+      <text x="24" y="132" font-size="17" fill="#52677c">Clear the full path, not</text>
+      <text x="24" y="158" font-size="17" fill="#52677c">only the nearest visible</text>
+      <text x="24" y="184" font-size="17" fill="#52677c">restriction.</text>
+    </g>
+    <g transform="translate(1148 132)">
+      <rect width="250" height="210" rx="18" fill="#fff"/>
+      <circle cx="42" cy="32" r="22" fill="#2b8a69"/>
+      <text x="42" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">5</text>
+      <text x="24" y="95" font-size="23" font-weight="700" fill="#10263f">Termination</text>
+      <text x="24" y="132" font-size="17" fill="#52677c">Confirm free discharge.</text>
+      <text x="24" y="158" font-size="17" fill="#52677c">Watch flow before closing</text>
+      <text x="24" y="184" font-size="17" fill="#52677c">the unit.</text>
+    </g>
+  </g>
+
+  <g stroke="#4c6f95" stroke-width="4" marker-end="url(#arrow)">
+    <path d="M286 237H306"/>
+    <path d="M564 237H584"/>
+    <path d="M842 237H862"/>
+    <path d="M1120 237H1140"/>
+  </g>
+
+  <rect x="48" y="395" width="656" height="112" rx="20" fill="#e8f4fb"/>
+  <circle cx="88" cy="451" r="22" fill="#2d78aa"/>
+  <text x="88" y="459" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#fff">A</text>
+  <text x="126" y="439" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="700" fill="#10263f">Algae, slime, grease, organic film</text>
+  <text x="126" y="473" font-family="Inter, Arial, sans-serif" font-size="18" fill="#52677c">Start with VertKleen HVAC CR.</text>
+
+  <rect x="736" y="395" width="656" height="112" rx="20" fill="#edf7f2"/>
+  <circle cx="776" cy="451" r="22" fill="#2b8a69"/>
+  <text x="776" y="459" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#fff">B</text>
+  <text x="814" y="439" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="700" fill="#10263f">Hard mineral scale</text>
+  <text x="814" y="473" font-family="Inter, Arial, sans-serif" font-size="18" fill="#52677c">Start with VertKleen Descaler.</text>
+</svg>
