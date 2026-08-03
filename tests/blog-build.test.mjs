@@ -176,6 +176,29 @@ const SEO_INTENT_POSTS = [
       "/blog/lam3-vs-wet-forget",
     ],
   },
+  {
+    slug: "low-foam-degreaser-parts-washers-floor-scrubbers",
+    hero: "/img/blog/low-foam-parts-washer-hero.webp",
+    diagram: "/img/blog/diagrams/low-foam-wash-equipment-plan.svg",
+    product: "CR HD Low Foam",
+    links: [
+      "/products/cr-hd-low-foam",
+      "/industries/manufacturing",
+      "/blog/warehouse-floor-degreasing-guide",
+      "/proof",
+    ],
+  },
+  {
+    slug: "commercial-drain-odor-control-guide",
+    hero: "/img/blog/commercial-drain-odor-control-hero.webp",
+    diagram: "/img/blog/diagrams/commercial-drain-odor-route.svg",
+    product: "Purgo",
+    links: [
+      "/products/purgo",
+      "/industries/restaurants-commercial-kitchens",
+      "/industries/hotels-property-management",
+    ],
+  },
 ];
 
 test("blog_post content type is registered", () => {
@@ -414,6 +437,10 @@ test("buildBlog writes an index listing every post with filter data", () => {
     assert.match(idx, /data-cms-page="blog"/);
     assert.match(idx, /canonical" href="https:\/\/masest\.co\/blog"/);
     assert.match(idx, /"brand":"VertKleen"/);
+    assert.match(
+      idx,
+      /"description":"VertKleen pairs industrial cleaning performance with HMIS 0-0-0 across every current product MASEST offers\."/,
+    );
     assert.match(idx, /"contactPoint":\{"@type":"ContactPoint","contactType":"sales","url":"https:\/\/masest\.co\/contact"\}/);
   } finally {
     rmSync(out, { recursive: true, force: true });

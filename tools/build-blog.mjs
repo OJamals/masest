@@ -51,7 +51,7 @@ const ORG = {
   url: `${BASE}/`,
   logo: `${BASE}/img/masest-logo.png`,
   brand: "VertKleen",
-  description: "VertKleen replaces conventional acids, caustics, and solvent-heavy cleaners with mineral-removal, soil-lift, and bio-active chemistry.",
+  description: "VertKleen pairs industrial cleaning performance with HMIS 0-0-0 across every current product MASEST offers.",
   areaServed: "United States and international commercial accounts",
   contactPoint: {
     "@type": "ContactPoint",

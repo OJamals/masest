@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="560" viewBox="0 0 1440 560" role="img" aria-labelledby="title desc">
+  <title id="title">Low-foam wash equipment trial plan</title>
+  <desc id="desc">Five steps for testing VertKleen CR HD Low Foam in a parts washer, floor scrubber, or recirculating wash system.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#10263f" flood-opacity=".09"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#6f8799"/>
+    </marker>
+  </defs>
+  <rect width="1440" height="560" rx="28" fill="#f3f7fa"/>
+  <text x="48" y="58" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="700" fill="#10263f">Keep low-foam wash equipment moving</text>
+  <text x="48" y="91" font-family="Inter, Arial, sans-serif" font-size="18" fill="#52677c">Parts washers • floor scrubbers • recirculating systems • HMIS 0-0-0</text>
+
+  <path d="M150 151H1285" stroke="#b4c4cf" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <g transform="translate(36 122)" filter="url(#shadow)">
+      <rect width="250" height="244" rx="18" fill="#fff"/>
+      <circle cx="42" cy="29" r="22" fill="#405f73"/>
+      <text x="42" y="37" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">1</text>
+      <text x="24" y="91" font-size="23" font-weight="700" fill="#10263f">Load real soil</text>
+      <text x="24" y="130" font-size="17" fill="#52677c">Choose repeatable parts</text>
+      <text x="24" y="156" font-size="17" fill="#52677c">or one marked lane.</text>
+      <text x="24" y="182" font-size="17" fill="#52677c">Record the starting finish.</text>
+    </g>
+
+    <g transform="translate(314 122)" filter="url(#shadow)">
+      <rect width="250" height="244" rx="18" fill="#fff"/>
+      <circle cx="42" cy="29" r="22" fill="#2d78aa"/>
+      <text x="42" y="37" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">2</text>
+      <text x="24" y="91" font-size="23" font-weight="700" fill="#10263f">Set the wash</text>
+      <text x="24" y="130" font-size="17" fill="#52677c">Match dilution, water</text>
+      <text x="24" y="156" font-size="17" fill="#52677c">temperature, and cycle</text>
+      <text x="24" y="182" font-size="17" fill="#52677c">to the machine.</text>
+    </g>
+
+    <g transform="translate(592 122)" filter="url(#shadow)">
+      <rect width="250" height="244" rx="18" fill="#fff"/>
+      <circle cx="42" cy="29" r="22" fill="#2b8a69"/>
+      <text x="42" y="37" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">3</text>
+      <text x="24" y="91" font-size="23" font-weight="700" fill="#10263f">Run one cycle</text>
+      <text x="24" y="130" font-size="17" fill="#52677c">Keep load, time, spray,</text>
+      <text x="24" y="156" font-size="17" fill="#52677c">and operator consistent.</text>
+      <text x="24" y="182" font-size="17" fill="#52677c">Let low foam work.</text>
+    </g>
+
+    <g transform="translate(870 122)" filter="url(#shadow)">
+      <rect width="250" height="244" rx="18" fill="#fff"/>
+      <circle cx="42" cy="29" r="22" fill="#5d75a3"/>
+      <text x="42" y="37" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">4</text>
+      <text x="24" y="91" font-size="23" font-weight="700" fill="#10263f">Check the machine</text>
+      <text x="24" y="130" font-size="17" fill="#52677c">Watch pickup, rinse,</text>
+      <text x="24" y="156" font-size="17" fill="#52677c">foam stops, and bath</text>
+      <text x="24" y="182" font-size="17" fill="#52677c">condition.</text>
+    </g>
+
+    <g transform="translate(1148 122)" filter="url(#shadow)">
+      <rect width="250" height="244" rx="18" fill="#fff"/>
+      <circle cx="42" cy="29" r="22" fill="#d6922d"/>
+      <text x="42" y="37" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">5</text>
+      <text x="24" y="91" font-size="23" font-weight="700" fill="#10263f">Count the result</text>
+      <text x="24" y="130" font-size="17" fill="#52677c">Compare clean parts,</text>
+      <text x="24" y="156" font-size="17" fill="#52677c">rework, rinse time,</text>
+      <text x="24" y="182" font-size="17" fill="#52677c">and bath life.</text>
+    </g>
+  </g>
+
+  <rect x="48" y="410" width="1344" height="102" rx="20" fill="#10263f"/>
+  <text x="720" y="451" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#7fd6dc">BETTER MACHINE FIT</text>
+  <text x="720" y="487" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600" fill="#fff">Low foam lets pumps, scrubbers, recovery systems, and parts washers stay focused on cleaning.</text>
+</svg>
