@@ -404,7 +404,7 @@ function industrySchema(ind, plain) {
         url: "https://masest.co/",
         logo: "https://masest.co/img/masest-logo.png",
         brand: "VertKleen",
-        description: "VertKleen replaces harsh acids, caustics, and solvent-heavy cleaners with industrial-strength HMIS 0-0-0 products.",
+        description: "VertKleen pairs industrial cleaning performance with HMIS 0-0-0 across every current product MASEST offers.",
         areaServed: "United States and international commercial accounts",
         contactPoint: { "@type": "ContactPoint", contactType: "sales", url: "https://masest.co/contact" }
       },

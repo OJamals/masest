@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 233,
+  "count": 235,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -3245,6 +3245,34 @@
       "height": 811,
       "byte_size": 180592,
       "sha256": "ec43817632f083b62a5033d5610c98367a4df5608b2c706bf146f891d29044dd",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/low-foam-parts-washer-hero.webp",
+      "public_url": "/img/blog/low-foam-parts-washer-hero.webp",
+      "filename": "low-foam-parts-washer-hero.webp",
+      "alt": "Industrial maintenance technician inspecting a clean metal housing above a low-foam parts washer",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 129808,
+      "sha256": "bfe6cf56337e466d1ab5cd1166128f1ffbf7a2dbf84bfc231f7a150fde163012",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/commercial-drain-odor-control-hero.webp",
+      "public_url": "/img/blog/commercial-drain-odor-control-hero.webp",
+      "filename": "commercial-drain-odor-control-hero.webp",
+      "alt": "Facility-maintenance technician applying a measured odor-control treatment to a cleaned commercial floor drain",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 108076,
+      "sha256": "868baf2d2f2b79d4bf7cbcdb08044a5f4415cae6071b659b084745742e45cbfe",
       "mime_type": "image/webp",
       "category": "blog",
       "status": "available",
