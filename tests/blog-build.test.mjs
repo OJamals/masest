@@ -153,6 +153,29 @@ const SEO_INTENT_POSTS = [
       "/proof#cr2-caustic-replacement",
     ],
   },
+  {
+    slug: "neutral-ph-industrial-degreaser-guide",
+    hero: "/img/blog/neutral-ph-industrial-degreaser-hero.webp",
+    diagram: "/img/blog/diagrams/neutral-degreaser-dilution-guide.svg",
+    product: "Neutral",
+    links: [
+      "/products/neutral",
+      "/industries/food-beverage",
+      "/industries/aviation-fbos-mro-airports",
+    ],
+  },
+  {
+    slug: "how-to-remove-moss-algae-without-pressure-washing",
+    hero: "/img/blog/lam3-moss-algae-cleaning-hero.webp",
+    diagram: "/img/blog/diagrams/lam3-spray-walk-away-plan.svg",
+    product: "LAM3",
+    links: [
+      "/products/lam3",
+      "/industries/drone-cleaning-companies",
+      "/proof#property-grout-moss",
+      "/blog/lam3-vs-wet-forget",
+    ],
+  },
 ];
 
 test("blog_post content type is registered", () => {

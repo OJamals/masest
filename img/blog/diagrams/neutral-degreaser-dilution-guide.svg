@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="560" viewBox="0 0 1440 560" role="img" aria-labelledby="title desc">
+  <title id="title">VertKleen Neutral dilution guide</title>
+  <desc id="desc">Four label dilution ratios for heavy degreasing, degreasing, general cleaning, and floors, followed by the application and rinse sequence.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#10263f" flood-opacity=".09"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="560" rx="28" fill="#f4f8fb"/>
+  <text x="48" y="58" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="700" fill="#10263f">Match the Neutral dilution to the job</text>
+  <text x="48" y="91" font-family="Inter, Arial, sans-serif" font-size="18" fill="#52677c">pH 7.5 • HMIS 0-0-0 • label ratios shown as water to product</text>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <g transform="translate(48 126)" filter="url(#shadow)">
+      <rect width="312" height="236" rx="18" fill="#fff"/>
+      <rect width="312" height="12" rx="6" fill="#173b5f"/>
+      <text x="26" y="77" font-size="46" font-weight="800" fill="#173b5f">3:1</text>
+      <text x="26" y="119" font-size="23" font-weight="700" fill="#10263f">Heavy degreasing</text>
+      <text x="26" y="158" font-size="17" fill="#52677c">Start here for the</text>
+      <text x="26" y="184" font-size="17" fill="#52677c">hardest oil and grease.</text>
+      <text x="26" y="216" font-size="15" font-weight="700" fill="#2b8a69">STRONGEST LABEL MIX</text>
+    </g>
+
+    <g transform="translate(392 126)" filter="url(#shadow)">
+      <rect width="312" height="236" rx="18" fill="#fff"/>
+      <rect width="312" height="12" rx="6" fill="#2d78aa"/>
+      <text x="26" y="77" font-size="46" font-weight="800" fill="#2d78aa">10:1</text>
+      <text x="26" y="119" font-size="23" font-weight="700" fill="#10263f">Degreasing</text>
+      <text x="26" y="158" font-size="17" fill="#52677c">Oil, fats, and grime on</text>
+      <text x="26" y="184" font-size="17" fill="#52677c">equipment and work areas.</text>
+      <text x="26" y="216" font-size="15" font-weight="700" fill="#2d78aa">CORE DEGREASING MIX</text>
+    </g>
+
+    <g transform="translate(736 126)" filter="url(#shadow)">
+      <rect width="312" height="236" rx="18" fill="#fff"/>
+      <rect width="312" height="12" rx="6" fill="#5c75a6"/>
+      <text x="26" y="77" font-size="46" font-weight="800" fill="#5c75a6">30:1</text>
+      <text x="26" y="119" font-size="23" font-weight="700" fill="#10263f">General cleaning</text>
+      <text x="26" y="158" font-size="17" fill="#52677c">Routine dirt, soot, and</text>
+      <text x="26" y="184" font-size="17" fill="#52677c">frequent maintenance soil.</text>
+      <text x="26" y="216" font-size="15" font-weight="700" fill="#5c75a6">DAILY CLEANING MIX</text>
+    </g>
+
+    <g transform="translate(1080 126)" filter="url(#shadow)">
+      <rect width="312" height="236" rx="18" fill="#fff"/>
+      <rect width="312" height="12" rx="6" fill="#2b8a69"/>
+      <text x="26" y="77" font-size="46" font-weight="800" fill="#2b8a69">40:1</text>
+      <text x="26" y="119" font-size="23" font-weight="700" fill="#10263f">Floors</text>
+      <text x="26" y="158" font-size="17" fill="#52677c">Routine floor washing by</text>
+      <text x="26" y="184" font-size="17" fill="#52677c">mop, brush, or scrubber.</text>
+      <text x="26" y="216" font-size="15" font-weight="700" fill="#2b8a69">HIGHEST DILUTION</text>
+    </g>
+  </g>
+
+  <rect x="48" y="406" width="1344" height="106" rx="20" fill="#10263f"/>
+  <text x="78" y="446" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#7fd6dc">WORKFLOW</text>
+  <text x="78" y="484" font-family="Inter, Arial, sans-serif" font-size="23" font-weight="600" fill="#fff">Test a small area  →  Apply  →  Brush or agitate  →  Rinse with fresh water  →  Inspect dry</text>
+</svg>

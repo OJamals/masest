@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 231,
+  "count": 233,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -3217,6 +3217,34 @@
       "height": 811,
       "byte_size": 94430,
       "sha256": "84283d91b790f8d19c22d03480e1f66d3cc7b88f26e6da8f2ceb9b3f94b051c8",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/neutral-ph-industrial-degreaser-hero.webp",
+      "public_url": "/img/blog/neutral-ph-industrial-degreaser-hero.webp",
+      "filename": "neutral-ph-industrial-degreaser-hero.webp",
+      "alt": "Technician removing oily residue from finished industrial equipment with a hand sprayer and cloth",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 109322,
+      "sha256": "7f3a144983429389ea59ec56b2be933fa7abbcf2ed4b815c54999659e86cbe06",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/lam3-moss-algae-cleaning-hero.webp",
+      "public_url": "/img/blog/lam3-moss-algae-cleaning-hero.webp",
+      "filename": "lam3-moss-algae-cleaning-hero.webp",
+      "alt": "Property-maintenance technician applying a low-pressure treatment to moss- and algae-stained concrete",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 180592,
+      "sha256": "ec43817632f083b62a5033d5610c98367a4df5608b2c706bf146f891d29044dd",
       "mime_type": "image/webp",
       "category": "blog",
       "status": "available",
