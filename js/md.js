@@ -3,7 +3,7 @@
 // tools/_md.mjs re-exports this so the static build and the admin live preview
 // render identically. Supports: #..#### headings, **bold**, *italic*, `code`,
 // fenced ``` blocks, [links](url), ![images](url), - / * / 1. lists,
-// > blockquotes, --- hr, paragraphs. All text is HTML-escaped before markup is
+// pipe tables, > blockquotes, --- hr, paragraphs. All text is HTML-escaped before markup is
 // applied; no raw-HTML passthrough. Known limitation: inline markup is not
 // suppressed inside inline `code` spans (acceptable for authored content).
 
@@ -65,10 +65,30 @@ function renderCard(fields = {}) {
   const href = escapeHtml(fields.href || "#");
   const image = fields.image && isSafeUrl(fields.image) ? escapeHtml(fields.image) : "";
   const alt = escapeHtml(fields.alt || fields.title || "Reference");
+  const width = /^\d+$/.test(fields.width || "") && Number(fields.width) > 0 ? fields.width : "";
+  const height = /^\d+$/.test(fields.height || "") && Number(fields.height) > 0 ? fields.height : "";
+  const dims = width && height ? ` width="${width}" height="${height}"` : "";
   return `<a class="md-card" href="${href}" data-md-card data-md-title="${title}" data-md-image="${image}" data-md-alt="${alt}">
-    ${image ? `<img src="${image}" alt="${alt}" width="1200" height="675" loading="lazy" decoding="async">` : `<span class="md-card-thumb" aria-hidden="true"></span>`}
+    ${image ? `<img src="${image}" alt="${alt}"${dims} loading="lazy" decoding="async">` : `<span class="md-card-thumb" aria-hidden="true"></span>`}
     <span><strong>${title}</strong><small>${href}</small></span>
   </a>`;
+}
+
+function tableCells(line) {
+  return line.trim().slice(1, -1).split("|").map((cell) => cell.trim());
+}
+
+function isTableDivider(line, columns) {
+  const cells = /^\s*\|.*\|\s*$/.test(line) ? tableCells(line) : [];
+  return cells.length === columns && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function renderTable(headers, rows) {
+  const head = headers.map((cell) => `<th scope="col">${inline(cell)}</th>`).join("");
+  const body = rows.map((cells) => `<tr>${cells.map((cell, index) => (
+    index === 0 ? `<th scope="row">${inline(cell)}</th>` : `<td>${inline(cell)}</td>`
+  )).join("")}</tr>`).join("");
+  return `<div class="md-table-scroll" tabindex="0">\n<table><thead><tr>${head}</tr></thead>\n<tbody>${body}</tbody></table>\n</div>`;
 }
 
 const BLOCK_START = /^(#{1,4}\s|```|\s*>|\s*[-*]\s|\s*\d+\.\s)/;
@@ -93,6 +113,21 @@ export function renderMarkdown(src) {
     if (HR.test(line)) { out.push("<hr>"); i++; continue; }
     const card = cardAttrs(line);
     if (card) { out.push(renderCard(card)); i++; continue; }
+    if (/^\s*\|.*\|\s*$/.test(line)) {
+      const headers = tableCells(line);
+      if (isTableDivider(lines[i + 1] || "", headers.length)) {
+        const rows = [];
+        i += 2;
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
+          const cells = tableCells(lines[i]);
+          if (cells.length !== headers.length) break;
+          rows.push(cells);
+          i++;
+        }
+        out.push(renderTable(headers, rows));
+        continue;
+      }
+    }
     const h = line.match(/^(#{1,4})\s+(.*)$/);
     if (h) { out.push(`<h${h[1].length}>${inline(h[2].trim())}</h${h[1].length}>`); i++; continue; }
     if (/^\s*>\s?/.test(line)) {

@@ -47,6 +47,32 @@ test("blockquote and hr", () => {
   assert.equal(renderMarkdown("---"), "<hr>");
 });
 
+test("tables render with accessible column and row headers", () => {
+  const out = renderMarkdown([
+    "| Input | VertKleen | Comparator |",
+    "| --- | --- | --- |",
+    "| HMIS | **0-0-0** | Current SDS |",
+  ].join("\n"));
+
+  assert.equal(out, [
+    '<div class="md-table-scroll" tabindex="0">',
+    '<table><thead><tr><th scope="col">Input</th><th scope="col">VertKleen</th><th scope="col">Comparator</th></tr></thead>',
+    '<tbody><tr><th scope="row">HMIS</th><td><strong>0-0-0</strong></td><td>Current SDS</td></tr></tbody></table>',
+    "</div>",
+  ].join("\n"));
+});
+
+test("table cells escape HTML", () => {
+  const out = renderMarkdown("| Input | Result |\n| --- | --- |\n| <script> | safe |");
+  assert.match(out, /&lt;script&gt;/);
+  assert.doesNotMatch(out, /<script>/);
+});
+
+test("cards preserve declared intrinsic image dimensions", () => {
+  const out = renderMarkdown("[[card:title=Result|href=/proof|image=/result.webp|alt=Result image|width=919|height=690]]");
+  assert.match(out, /<img src="\/result\.webp" alt="Result image" width="919" height="690"/);
+});
+
 test("readingTime is at least 1 minute", () => {
   assert.equal(readingTime(""), 1);
   assert.equal(readingTime(new Array(400).fill("w").join(" ")), 2);

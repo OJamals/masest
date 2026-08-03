@@ -320,6 +320,7 @@ ${cards}
       <a class="btn btn-primary" href="products#catalog">Browse by cleaning problem</a>
     </div>
   </section>
+  <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="blog" data-cms-region="body"></div>
 </main>
 <script type="module" src="js/main.js?v=20260730a"></script>
 <script type="module" src="js/blog-index.js"></script>

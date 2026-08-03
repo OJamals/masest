@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Controlled descaling circulation loop</title>
+  <desc id="desc">The loop isolates equipment, circulates product, monitors reaction, rinses, and verifies the endpoint.</desc>
+  <rect width="1200" height="675" rx="28" fill="#f3f8f8"/>
+  <text x="72" y="92" fill="#142326" font-family="Arial,sans-serif" font-size="44" font-weight="700">Control the loop, not only the chemistry.</text>
+  <g fill="none" stroke="#0e7c86" stroke-width="18" stroke-linecap="round">
+    <path d="M290 210H900Q1020 210 1020 330V390Q1020 510 900 510H290Q170 510 170 390V330Q170 210 290 210Z"/>
+  </g>
+  <g font-family="Arial,sans-serif" text-anchor="middle">
+    <g transform="translate(252 210)"><circle r="76" fill="#fff" stroke="#b9d7d9" stroke-width="3"/><text y="-5" fill="#142326" font-size="24" font-weight="700">Isolate</text><text y="28" fill="#52676a" font-size="17">equipment</text></g>
+    <g transform="translate(600 210)"><circle r="76" fill="#0e7c86"/><text y="-5" fill="#fff" font-size="24" font-weight="700">Circulate</text><text y="28" fill="#d8f2f3" font-size="17">matched dose</text></g>
+    <g transform="translate(948 286)"><circle r="76" fill="#fff" stroke="#b9d7d9" stroke-width="3"/><text y="-5" fill="#142326" font-size="24" font-weight="700">Monitor</text><text y="28" fill="#52676a" font-size="17">reaction + flow</text></g>
+    <g transform="translate(720 510)"><circle r="76" fill="#0b3438"/><text y="-5" fill="#fff" font-size="24" font-weight="700">Rinse</text><text y="28" fill="#c8e7e9" font-size="17">to endpoint</text></g>
+    <g transform="translate(372 510)"><circle r="76" fill="#67d6dd"/><text y="-5" fill="#0b3438" font-size="24" font-weight="700">Verify</text><text y="28" fill="#0b3438" font-size="17">condition + restart</text></g>
+  </g>
+</svg>

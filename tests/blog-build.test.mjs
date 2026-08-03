@@ -209,6 +209,7 @@ test("buildBlog writes an index listing every post with filter data", () => {
       assert.ok(idx.includes(`data-category="${p.category}"`), `${p.slug} category attr`);
     }
     assert.match(idx, /data-blog-filter/);
+    assert.match(idx, /data-cms-page="blog"/);
     assert.match(idx, /canonical" href="https:\/\/masest\.co\/blog"/);
     assert.match(idx, /"brand":"VertKleen"/);
     assert.match(idx, /"contactPoint":\{"@type":"ContactPoint","contactType":"sales","url":"https:\/\/masest\.co\/contact"\}/);
