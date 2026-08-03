@@ -38,6 +38,30 @@ const P3_AUTHORITY_POSTS = [
     ],
   },
 ];
+const SEO_INTENT_POSTS = [
+  {
+    slug: "how-to-descale-heat-exchanger",
+    hero: "/img/blog/heat-exchanger-descaling-hero.webp",
+    diagram: "/img/blog/diagrams/heat-exchanger-loop.svg",
+    product: "HCR",
+    links: [
+      "/products/hcr",
+      "/industries/hvac-water",
+      "/blog/hcr-brevard-hvac-rust-case-study",
+    ],
+  },
+  {
+    slug: "warehouse-floor-degreasing-guide",
+    hero: "/img/blog/warehouse-floor-degreasing-hero.webp",
+    diagram: "/img/blog/diagrams/warehouse-floor-cycle.svg",
+    product: "CR HD",
+    links: [
+      "/products/crhd",
+      "/industries/distribution-cold-storage",
+      "/blog/cr-hd-walmart-distribution-center-case-study",
+    ],
+  },
+];
 
 test("blog_post content type is registered", () => {
   const def = CONTENT_TYPE_DEFINITIONS.blog_post;
@@ -137,6 +161,34 @@ test("P3 authority posts connect products to practical outcomes in plain languag
         html,
         /safe to discharge|guarantees? compliance|VertKleen WaterSafe60 is NSF|EPA-registered VertKleen/i,
       );
+    }
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("SEO intent posts connect buyer searches to products, proof, and trial CTAs", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
+    for (const expected of SEO_INTENT_POSTS) {
+      const post = SEED.blog_posts.find(({ slug }) => slug === expected.slug);
+      assert.ok(post, `${expected.slug} must exist in the Blog CMS snapshot`);
+      assert.equal(post.hero, expected.hero);
+      assert.ok(post.body.includes(expected.diagram));
+      assert.ok(post.body.includes(expected.product));
+      assert.match(post.body, /HMIS 0-0-0/);
+      assert.match(post.body, /\[Plan my .+\]\(\/contact\?type=audit/);
+      for (const link of expected.links) {
+        assert.ok(
+          post.body.includes(`](${link})`) || post.body.includes(`href=${link}`),
+          `${expected.slug} must link ${link}`,
+        );
+      }
+
+      const html = readFileSync(join(out, "blog", `${expected.slug}.html`), "utf8");
+      assert.ok(html.includes(`src="${expected.hero}"`));
+      assert.ok(html.includes(`src="${expected.diagram}"`));
     }
   } finally {
     rmSync(out, { recursive: true, force: true });

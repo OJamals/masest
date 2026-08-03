@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 221,
+  "count": 223,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -3093,6 +3093,34 @@
       "sha256": "5506291c24caafc35dda35fba9b03f831fab866c2911bd56b70525388c0f51a7",
       "mime_type": "image/webp",
       "category": "story",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/heat-exchanger-descaling-hero.webp",
+      "public_url": "/img/blog/heat-exchanger-descaling-hero.webp",
+      "filename": "heat-exchanger-descaling-hero.webp",
+      "alt": "Technician running a closed-loop descaling setup on a plate-and-frame heat exchanger",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 151598,
+      "sha256": "2c773fe68aa8ba7c6637534a8e8cb6ad13a76d84c840eb413219c298b9f1ba17",
+      "mime_type": "image/webp",
+      "category": "blog",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/blog/warehouse-floor-degreasing-hero.webp",
+      "public_url": "/img/blog/warehouse-floor-degreasing-hero.webp",
+      "filename": "warehouse-floor-degreasing-hero.webp",
+      "alt": "Worker using a ride-on floor scrubber to remove tire marks and tracked soil from a warehouse lane",
+      "width": 1440,
+      "height": 811,
+      "byte_size": 147274,
+      "sha256": "dadb1f0579b4a95ce1313a645992653eb01f26ff6af2cce24971605c6deb464f",
+      "mime_type": "image/webp",
+      "category": "blog",
       "status": "available",
       "source": "site"
     }
