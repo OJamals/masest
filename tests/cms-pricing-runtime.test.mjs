@@ -173,7 +173,7 @@ test("tracked bootstrap and static pages contain no authoritative price values",
   assert.doesNotMatch(read("products/hcr.html"), /"@type":"Offer"/);
 });
 
-test("August 3 workbook migration updates every catalog retail price and scoped HVAC tiers", () => {
+test("August 3 workbook prices preserve the across-the-board increase", () => {
   const catalog = JSON.parse(read("data/catalog.seed.json"));
   const migration = read("supabase/update-pricing-2026-08-03.sql");
   const rows = [...migration.matchAll(/\('([^']+)',\s*'(\{[^']+\})'::jsonb\)/g)]
@@ -185,12 +185,12 @@ test("August 3 workbook migration updates every catalog retail price and scoped 
   assert.deepEqual([...byVsku.keys()].sort(), catalogVskus);
   assert.ok(rows.every((row) => Number.isFinite(row.tiers.retail)));
   assert.equal(rows.filter((row) => Number.isFinite(row.tiers.hvac)).length, 45);
-  assert.deepEqual(byVsku.get("VK-CR-1G"), { retail: 19.27, hvac: 22.02 });
-  assert.deepEqual(byVsku.get("VK-HCR-1G"), { retail: 21.63, hvac: 24.72 });
-  assert.deepEqual(byVsku.get("VK-HCR-55G"), { retail: 925.44, hvac: 925.44 });
-  assert.deepEqual(byVsku.get("VK-WS60-275G"), { retail: 3468.64 });
+  assert.deepEqual(byVsku.get("VK-CR-1G"), { retail: 21.2, hvac: 24.22 });
+  assert.deepEqual(byVsku.get("VK-HCR-1G"), { retail: 23.79, hvac: 27.19 });
+  assert.deepEqual(byVsku.get("VK-HCR-55G"), { retail: 1017.98, hvac: 1017.98 });
+  assert.deepEqual(byVsku.get("VK-WS60-275G"), { retail: 3815.5 });
 
-  assert.match(migration, /5af05df29fe8df8dac2e7002e597e031c916d0bc378f6c26998ab002206bc5c9/);
-  assert.match(migration, /begin;[\s\S]+public\.set_variant_pricing[\s\S]+commit;/i);
+  assert.match(migration, /10fd5121dce990fdc37803b62ed7c8e31f7b0403ba6cd275cb51d1e54aefa831/);
+  assert.match(migration, /(?:^|\n)do \$\$[\s\S]+public\.set_variant_pricing[\s\S]+\$\$;\s*$/i);
   assert.doesNotMatch(migration, /update\s+public\.services|content_entries|public_price/i);
 });
