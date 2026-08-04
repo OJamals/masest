@@ -11,8 +11,8 @@ const SRC = readFileSync(new URL("../functions/api/stripe-webhook.js", import.me
 // tests/stripe-webhook-shape.test.mjs); some contract checks below assert delegation
 // to it and pin the money math at its source of truth.
 const SHAPE = readFileSync(new URL("../functions/_lib/order-shape.js", import.meta.url), "utf8");
-const EFFECTS = readFileSync(new URL("../functions/_lib/stripe-effects.js", import.meta.url), "utf8");
-const EFFECT_SQL = readFileSync(new URL("../supabase/schema-stripe-effects.sql", import.meta.url), "utf8");
+const EFFECTS = readFileSync(new URL("../functions/_lib/integration-effects.js", import.meta.url), "utf8");
+const EFFECT_SQL = readFileSync(new URL("../supabase/schema-integration-effect-handlers.sql", import.meta.url), "utf8");
 
 // --- Unit: escapeHtml (imported, executed for real) ---
 test("escapeHtml escapes all five HTML-significant characters", () => {
@@ -86,7 +86,7 @@ test("webhook durably enqueues stock after persistence; worker applies it atomic
     "settled order plans must include stock decrement");
   assert.match(EFFECTS, /'oversell-alert'[\s\S]*'stock-decrement'/,
     "oversell alert must depend on completed stock result");
-  assert.match(EFFECT_SQL, /create\s+or\s+replace\s+function\s+public\.apply_stripe_stock_effect/i);
+  assert.match(EFFECT_SQL, /create\s+or\s+replace\s+function\s+public\.apply_integration_stock_effect/i);
   assert.match(EFFECT_SQL, /select\s+public\.decrement_variant_stock/i,
     "stock provider RPC must reuse the atomic decrement primitive");
   assert.match(EFFECT_SQL, /provider_succeeded_at\s*=\s*now\(\)/i,

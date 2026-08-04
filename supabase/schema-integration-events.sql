@@ -453,12 +453,20 @@ begin
        and provider_event_id = btrim(coalesce(p_provider_event_id, ''))
      for update;
 
-    if v_event.payload_sha256 is distinct from lower(btrim(coalesce(p_payload_sha256, '')))
+    -- Redelivery verification time is receipt-specific, not provider-event identity.
+    -- Keep first receipt immutable without turning later valid signatures into collisions.
+    -- Pre-cutover Stripe events carry synthetic receipt fields; their effect identities
+    -- still compare below, allowing safe recovery after runtime cutover.
+    if not (
+      v_event.provider = 'stripe'
+      and v_event.metadata ->> 'migrated_from' = 'stripe_webhook_effects'
+    ) and (
+       v_event.payload_sha256 is distinct from lower(btrim(coalesce(p_payload_sha256, '')))
        or v_event.provider_event_type is distinct from btrim(coalesce(p_event_type, ''))
        or v_event.provider_object_id is distinct from nullif(btrim(coalesce(p_provider_object_id, '')), '')
        or v_event.occurred_at is distinct from p_occurred_at
-       or v_event.signature_verified_at is distinct from p_signature_verified_at
-       or v_event.metadata is distinct from coalesce(p_metadata, '{}'::jsonb) then
+       or v_event.metadata is distinct from coalesce(p_metadata, '{}'::jsonb)
+    ) then
       raise exception 'integration_event_identity_collision';
     end if;
   end if;
@@ -515,6 +523,19 @@ begin
       end if;
     end if;
   end loop;
+
+  if jsonb_array_length(coalesce(p_effects, '[]'::jsonb)) = 0
+     and not exists (
+       select 1 from public.integration_effects where event_id = v_event.id
+     ) then
+    update public.integration_events
+       set status = 'ignored',
+           processed_at = coalesce(processed_at, now()),
+           lease_owner = null,
+           lease_expires_at = null,
+           last_error_code = null
+     where id = v_event.id;
+  end if;
 
   return v_event.id;
 end;

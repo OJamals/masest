@@ -171,7 +171,7 @@ export function disputeEffects({
 
 function cleanPayload(effectType, payload) {
   const allowed = PAYLOAD_KEYS[effectType];
-  if (!allowed) throw new Error(`unknown Stripe effect type: ${effectType}`);
+  if (!allowed) throw new Error(`unknown integration effect type: ${effectType}`);
   const clean = JSON.parse(JSON.stringify(payload || {}));
   for (const key of Object.keys(clean)) {
     if (!allowed.has(key)) {
@@ -181,46 +181,77 @@ function cleanPayload(effectType, payload) {
   return clean;
 }
 
-export function toStripeEffectRows(stripeEventId, effects) {
-  const eventId = String(stripeEventId || '').trim();
-  if (!eventId || eventId.length > 255) throw new Error('invalid Stripe event id');
+export function toIntegrationEffectRows(effects) {
   const source = Array.isArray(effects) ? effects : [];
   const keys = new Set();
   const rows = source.map((entry) => {
     const effectKey = String(entry?.effect_key || '').trim();
     if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(effectKey)) {
-      throw new Error(`invalid Stripe effect key: ${effectKey}`);
+      throw new Error(`invalid integration effect key: ${effectKey}`);
     }
-    if (keys.has(effectKey)) throw new Error(`duplicate Stripe effect key: ${effectKey}`);
+    if (keys.has(effectKey)) throw new Error(`duplicate integration effect key: ${effectKey}`);
     keys.add(effectKey);
     return {
-      stripe_event_id: eventId,
       effect_key: effectKey,
       effect_type: entry.effect_type,
+      aggregate_type: entry.aggregate_type || null,
+      aggregate_id: entry.aggregate_id || null,
       payload: cleanPayload(entry.effect_type, entry.payload),
       depends_on_effect_key: entry.depends_on_effect_key || null,
+      max_attempts: entry.max_attempts || 8,
     };
   });
   for (const row of rows) {
     if (row.depends_on_effect_key && !keys.has(row.depends_on_effect_key)) {
-      throw new Error(`missing Stripe effect dependency: ${row.depends_on_effect_key}`);
+      throw new Error(`missing integration effect dependency: ${row.depends_on_effect_key}`);
     }
   }
   return rows;
 }
 
-export async function enqueueStripeEffects(sb, stripeEventId, effects) {
+async function sha256Hex(value) {
+  const bytes = new TextEncoder().encode(String(value ?? ''));
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function stripeEventOccurredAt(stripeEvent) {
+  const seconds = Number(stripeEvent?.created);
+  return Number.isFinite(seconds) && seconds > 0
+    ? new Date(seconds * 1000).toISOString()
+    : null;
+}
+
+export async function enqueueIntegrationEffects(sb, stripeEvent, rawBody, effects) {
+  const providerEventId = String(stripeEvent?.id || '').trim();
+  const providerEventType = String(stripeEvent?.type || '').trim();
+  if (!providerEventId || providerEventId.length > 512) {
+    return { error: new Error('invalid Stripe event id') };
+  }
+  if (!providerEventType || providerEventType.length > 160) {
+    return { error: new Error('invalid Stripe event type') };
+  }
   let rows;
   try {
-    rows = toStripeEffectRows(stripeEventId, effects);
+    rows = toIntegrationEffectRows(effects);
   } catch (error) {
     return { error };
   }
-  if (!rows.length) return { error: null };
   try {
-    const { error } = await sb.from('stripe_webhook_effects').upsert(rows, {
-      onConflict: 'stripe_event_id,effect_key',
-      ignoreDuplicates: true,
+    const occurredAt = stripeEventOccurredAt(stripeEvent);
+    const { error } = await sb.rpc('ingest_integration_event', {
+      p_provider: 'stripe',
+      p_environment_or_tenant: stripeEvent?.livemode ? 'production' : 'test',
+      p_provider_event_id: providerEventId,
+      p_event_type: providerEventType,
+      p_provider_object_id: String(stripeEvent?.data?.object?.id || '').trim() || null,
+      p_occurred_at: occurredAt,
+      p_signature_verified_at: new Date().toISOString(),
+      p_payload_sha256: await sha256Hex(rawBody),
+      p_metadata: { source: 'stripe_webhook' },
+      p_effects: rows,
     });
     return { error: error || null };
   } catch (error) {
@@ -229,7 +260,7 @@ export async function enqueueStripeEffects(sb, stripeEventId, effects) {
 }
 
 export function effectIdempotencyKey(effectRow) {
-  return `stripe/${effectRow.stripe_event_id}/${effectRow.effect_key}`;
+  return `${effectRow.provider}/${effectRow.provider_event_id}/${effectRow.effect_key}`;
 }
 
 function errorWithCode(code) {
@@ -284,7 +315,9 @@ function addressOf(order) {
 
 async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
   const { order, lines } = await loadOrder(sb, effectRow.payload.order_id);
-  if (order.status === 'cancelled' || order.status === 'refunded') return true;
+  if (order.status === 'cancelled' || order.status === 'refunded') {
+    return { skipped: 'order_terminal' };
+  }
   if (!order.customer_email) throw errorWithCode('effect_order_email_missing');
   const pending = Boolean(effectRow.payload.pending);
   const currency = (order.currency || 'usd').toUpperCase();
@@ -363,9 +396,9 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
 }
 
 async function dependencyResult(sb, effectRow) {
-  const { data, error } = await sb.from('stripe_webhook_effects')
+  const { data, error } = await sb.from('integration_effects')
     .select('provider_result')
-    .eq('stripe_event_id', effectRow.stripe_event_id)
+    .eq('event_id', effectRow.event_id)
     .eq('effect_key', effectRow.depends_on_effect_key)
     .maybeSingle();
   if (error || !data) throw errorWithCode('effect_dependency_missing');
@@ -374,8 +407,9 @@ async function dependencyResult(sb, effectRow) {
 
 async function sendOversellEffect(env, sb, effectRow, send) {
   const result = await dependencyResult(sb, effectRow);
+  if (result.skipped) return { skipped: result.skipped };
   const shorted = Array.isArray(result.shorted_skus) ? result.shorted_skus : [];
-  if (!shorted.length) return true;
+  if (!shorted.length) return { skipped: 'no_oversell' };
   const staff = env.ORDER_NOTIFY_EMAIL || env.SALES_EMAIL || env.ADMIN_EMAIL;
   if (!staff) throw errorWithCode('effect_staff_email_missing');
   const { order } = await loadOrder(sb, effectRow.payload.order_id);
@@ -522,22 +556,31 @@ function notificationFromEffect(effectRow) {
   }
 }
 
-export async function deliverStripeEffect({ env, sb, effect: effectRow }, dependencies = {}) {
+export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, dependencies = {}) {
   const send = dependencies.sendEmail || sendEmail;
+  if (effectRow.provider !== 'stripe') throw errorWithCode('unsupported_integration_provider');
   if (effectRow.effect_type === 'stock_decrement') {
-    await rpcData(sb, 'apply_stripe_stock_effect', {
+    const result = await rpcData(sb, 'apply_integration_stock_effect', {
       p_effect_id: effectRow.id,
       p_worker_id: effectRow.lease_owner,
     });
-    return { providerRecorded: true };
+    return {
+      providerRecorded: true,
+      providerResult: result || {},
+      skipped: Boolean(result?.skipped),
+    };
   }
   if (effectRow.effect_type === 'company_notification') {
-    await rpcData(sb, 'deliver_stripe_notification_effect', {
+    const result = await rpcData(sb, 'deliver_integration_notification_effect', {
       p_effect_id: effectRow.id,
       p_worker_id: effectRow.lease_owner,
       p_notification: notificationFromEffect(effectRow),
     });
-    return { providerRecorded: true };
+    return {
+      providerRecorded: true,
+      providerResult: result || {},
+      skipped: Boolean(result?.skipped),
+    };
   }
 
   let delivered;
@@ -554,10 +597,13 @@ export async function deliverStripeEffect({ env, sb, effect: effectRow }, depend
   } else if (effectRow.effect_type === 'dispute_alert') {
     delivered = await sendDisputeEffect(env, effectRow, send);
   } else {
-    throw errorWithCode('unknown_stripe_effect_type');
+    throw errorWithCode('unknown_integration_effect_type');
+  }
+  if (delivered && typeof delivered === 'object' && delivered.skipped) {
+    return { providerRecorded: false, providerResult: delivered, skipped: true };
   }
   if (delivered !== true) throw errorWithCode('effect_provider_failed');
-  return { providerRecorded: false };
+  return { providerRecorded: false, providerResult: {}, skipped: false };
 }
 
 function errorCode(error) {
@@ -567,14 +613,24 @@ function errorCode(error) {
     .slice(0, 80);
 }
 
-export async function runStripeEffectsWorker({
+async function integrationEventForEffect(sb, effectRow) {
+  const { data, error } = await sb.from('integration_events')
+    .select('provider,environment_or_tenant,provider_event_id,provider_event_type')
+    .eq('id', effectRow.event_id)
+    .maybeSingle();
+  if (error || !data) throw errorWithCode('integration_event_not_found');
+  return data;
+}
+
+export async function runIntegrationEffectsWorker({
   env,
   sb = adminClient(env),
   workerId,
   limit = 10,
   leaseSeconds = 60,
 }, dependencies = {}) {
-  const deliverEffect = dependencies.deliverEffect || deliverStripeEffect;
+  const deliverEffect = dependencies.deliverEffect || deliverIntegrationEffect;
+  const loadEvent = dependencies.loadEvent || integrationEventForEffect;
   const batchLimit = Math.min(Math.max(Number(limit) || 10, 1), 25);
   const boundedLeaseSeconds = Math.min(Math.max(Number(leaseSeconds) || 60, 15), 900);
   const summary = {
@@ -582,39 +638,49 @@ export async function runStripeEffectsWorker({
     completed: 0,
     retried: 0,
     dead: 0,
+    skipped: 0,
+    providerAcknowledged: 0,
+    providerCallSkipped: 0,
   };
   // Claim one at a time so later rows do not burn their leases while earlier provider
   // calls run. The invocation remains bounded by batchLimit.
   for (let index = 0; index < batchLimit; index++) {
-    const claimed = await rpcData(sb, 'claim_stripe_webhook_effects', {
+    const claimed = await rpcData(sb, 'claim_integration_effects', {
       p_worker_id: workerId,
       p_limit: 1,
       p_lease_seconds: boundedLeaseSeconds,
     });
     if (!Array.isArray(claimed) || !claimed.length) break;
-    const effectRow = claimed[0];
+    const claimedEffect = claimed[0];
     summary.claimed += 1;
     try {
+      const integrationEvent = await loadEvent(sb, claimedEffect);
+      const effectRow = { ...claimedEffect, ...integrationEvent };
       if (!effectRow.provider_succeeded_at) {
         const outcome = await deliverEffect({ env, sb, effect: effectRow });
         if (!outcome?.providerRecorded) {
-          const recorded = await rpcData(sb, 'record_stripe_webhook_effect_success', {
+          const recorded = await rpcData(sb, 'record_integration_effect_success', {
             p_effect_id: effectRow.id,
             p_worker_id: workerId,
-            p_result: {},
+            p_result: outcome?.providerResult || {},
           });
           if (recorded !== true) throw errorWithCode('effect_success_record_failed');
         }
+        if (outcome?.skipped) summary.skipped += 1;
+        else summary.providerAcknowledged += 1;
+      } else {
+        summary.providerCallSkipped += 1;
+        if (effectRow.provider_result?.skipped) summary.skipped += 1;
       }
-      const completed = await rpcData(sb, 'complete_stripe_webhook_effect', {
+      const completed = await rpcData(sb, 'complete_integration_effect', {
         p_effect_id: effectRow.id,
         p_worker_id: workerId,
       });
       if (completed !== true) throw errorWithCode('effect_completion_failed');
       summary.completed += 1;
     } catch (error) {
-      const status = await rpcData(sb, 'retry_stripe_webhook_effect', {
-        p_effect_id: effectRow.id,
+      const status = await rpcData(sb, 'fail_integration_effect', {
+        p_effect_id: claimedEffect.id,
         p_worker_id: workerId,
         p_error_code: errorCode(error),
         p_max_attempts: 8,

@@ -41,7 +41,7 @@ const NON_STAFF_GATES = {
   "blog-newsletter.js": /BLOG_NEWSLETTER_SECRET/,
   // Automation-only Stripe effect worker. The operator-owned scheduler has no staff
   // session; a constant-time shared-secret header gates the bounded lease worker.
-  "stripe-effects.js": /STRIPE_EFFECTS_WORKER_SECRET/,
+  "integration-effects.js": /STRIPE_EFFECTS_WORKER_SECRET/,
 };
 
 // Routes allowed to touch the DB before the staff guard, ONLY inside a vetted gate.

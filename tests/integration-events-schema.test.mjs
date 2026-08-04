@@ -110,6 +110,13 @@ test('duplicate effect identity compares immutable routing and retry fields fail
   }
 });
 
+test('zero-effect provider receipts terminalize as ignored instead of remaining unclaimable', () => {
+  const sql = read('supabase/schema-integration-events.sql');
+  assert.match(sql, /jsonb_array_length[\s\S]*=\s*0[\s\S]*status\s*=\s*'ignored'/i);
+  assert.match(sql, /jsonb_array_length[\s\S]*not exists[\s\S]*integration_effects[\s\S]*event_id\s*=\s*v_event\.id/i);
+  assert.match(sql, /status\s*=\s*'ignored'[\s\S]*processed_at\s*=\s*coalesce\(processed_at,\s*now\(\)\)/i);
+});
+
 test('RLS and grants deny public roles and rollback removes only generic objects', () => {
   const sql = read('supabase/schema-integration-events.sql');
   const rollback = read('supabase/rollback-integration-events.sql');
@@ -127,16 +134,18 @@ test('RLS and grants deny public roles and rollback removes only generic objects
   assert.doesNotMatch(rollback, /drop\s+function\s+if\s+exists\s+public\.(claim|complete|retry)_stripe_webhook_effect/i);
 });
 
-test('duplicate event collision compares every deterministic immutable receipt field', () => {
+test('duplicate event collision compares deterministic provider identity but permits redelivery verification time', () => {
   const sql = read('supabase/schema-integration-events.sql');
   const collision = sql.slice(
-    sql.indexOf('if v_event.payload_sha256 is distinct'),
+    sql.indexOf('-- Redelivery verification time is receipt-specific'),
     sql.indexOf("raise exception 'integration_event_identity_collision'"),
   );
   for (const field of [
     'payload_sha256', 'provider_event_type', 'provider_object_id',
-    'occurred_at', 'signature_verified_at', 'metadata',
+    'occurred_at', 'metadata',
   ]) {
     assert.match(collision, new RegExp(`v_event\\.${field}`, 'i'));
   }
+  assert.doesNotMatch(collision, /v_event\.signature_verified_at\s+is distinct/i);
+  assert.match(collision, /migrated_from[\s\S]*stripe_webhook_effects/i);
 });

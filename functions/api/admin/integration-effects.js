@@ -1,8 +1,8 @@
-// POST /api/admin/stripe-effects
-// Operator/scheduler entry point for bounded Stripe webhook effect processing.
-// No scheduler is provisioned here; STRIPE_EFFECTS_WORKER_SECRET owns access.
+// POST /api/admin/integration-effects
+// Operator/scheduler entry point for bounded provider effect processing.
+// Existing STRIPE_EFFECTS_WORKER_SECRET binding remains the cutover access secret.
 import { json } from '../../_lib/supabase.js';
-import { runStripeEffectsWorker } from '../../_lib/stripe-effects.js';
+import { runIntegrationEffectsWorker } from '../../_lib/integration-effects.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 
 function boundedLimit(request) {
@@ -11,18 +11,18 @@ function boundedLimit(request) {
 }
 
 function newWorkerId() {
-  return `stripe-effects:${globalThis.crypto.randomUUID()}`;
+  return `integration-effects:${globalThis.crypto.randomUUID()}`;
 }
 
-export function createStripeEffectsWorkerHandler(dependencies = {}) {
-  const runWorker = dependencies.runWorker || runStripeEffectsWorker;
+export function createIntegrationEffectsWorkerHandler(dependencies = {}) {
+  const runWorker = dependencies.runWorker || runIntegrationEffectsWorker;
   const workerId = dependencies.workerId || newWorkerId;
-  return async function stripeEffectsWorkerHandler({ request, env }) {
+  return async function integrationEffectsWorkerHandler({ request, env }) {
     const configuredSecret = env.STRIPE_EFFECTS_WORKER_SECRET || '';
     if (!configuredSecret) {
-      return json(503, { error: 'stripe_effects_worker_not_configured' });
+      return json(503, { error: 'integration_effects_worker_not_configured' });
     }
-    const providedSecret = request.headers.get('x-stripe-effects-secret') || '';
+    const providedSecret = request.headers.get('x-integration-effects-secret') || '';
     if (!timingSafeEqual(providedSecret, configuredSecret)) {
       return json(401, { error: 'unauthorized' });
     }
@@ -34,12 +34,12 @@ export function createStripeEffectsWorkerHandler(dependencies = {}) {
       });
       return json(200, result);
     } catch {
-      return json(503, { error: 'stripe_effects_worker_failed' });
+      return json(503, { error: 'integration_effects_worker_failed' });
     }
   };
 }
 
-const defaultHandler = createStripeEffectsWorkerHandler();
+const defaultHandler = createIntegrationEffectsWorkerHandler();
 
 export async function onRequestPost(context) {
   return defaultHandler(context);

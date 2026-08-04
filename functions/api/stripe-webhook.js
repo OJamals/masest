@@ -34,9 +34,9 @@ import {
   billingRecoveryEffects,
   checkoutOrderEffects,
   disputeEffects,
-  enqueueStripeEffects,
+  enqueueIntegrationEffects,
   subscriptionActivationEffects,
-} from '../_lib/stripe-effects.js';
+} from '../_lib/integration-effects.js';
 import { stripeRuntimeError } from '../_lib/stripe-runtime.js';
 import {
   finalizeQuoteOrder,
@@ -63,9 +63,9 @@ export function classifyOrderInsert(error) {
   return 'error';
 }
 
-async function enqueueRequiredEffects(sb, stripeEventId, effects) {
-  const { error } = await enqueueStripeEffects(sb, stripeEventId, effects);
-  if (error) console.error('stripe_effect_enqueue_failed', error?.code || error?.name || 'unknown');
+async function enqueueRequiredEffects(sb, event, rawBody, effects) {
+  const { error } = await enqueueIntegrationEffects(sb, event, rawBody, effects);
+  if (error) console.error('integration_effect_enqueue_failed', error?.code || error?.name || 'unknown');
   return error;
 }
 
@@ -145,11 +145,11 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   });
 
   const sig = request.headers.get('stripe-signature');
-  const raw = await request.text(); // raw body required for signature verification
+  const rawBody = await request.text(); // raw body required for signature verification
 
   let event;
   try {
-    event = await constructEvent({ raw, sig, whSecret });
+    event = await constructEvent({ raw: rawBody, sig, whSecret });
   } catch {
     // Signature failures are unauthenticated input. Do not reflect Stripe parser
     // details that could help an attacker distinguish configuration or payload issues.
@@ -181,7 +181,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       }
       const enqueueError = await enqueueRequiredEffects(
         sb,
-        event.id,
+        event,
+        rawBody,
         subscriptionActivationEffects({
           companyId: s.metadata?.company_id || null,
           tier: s.metadata?.tier || null,
@@ -287,7 +288,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     }
     const enqueueError = await enqueueRequiredEffects(
       sb,
-      event.id,
+      event,
+      rawBody,
       checkoutOrderEffects({
         orderId: order.id,
         companyId: order.company_id || s.metadata?.company_id || null,
@@ -344,7 +346,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     }
     const enqueueError = await enqueueRequiredEffects(
       sb,
-      event.id,
+      event,
+      rawBody,
       checkoutOrderEffects({
         orderId: effectOrder.id,
         companyId: effectOrder.company_id,
@@ -390,7 +393,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     }
     const enqueueError = await enqueueRequiredEffects(
       sb,
-      event.id,
+      event,
+      rawBody,
       achFailedEffects({
         orderId: effectOrder.id,
         companyId: effectOrder.company_id,
@@ -430,7 +434,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     }
     const enqueueError = await enqueueRequiredEffects(
       sb,
-      event.id,
+      event,
+      rawBody,
       billingFailureEffects(plan),
     );
     if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });
@@ -455,7 +460,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     if (isDelinquentStatus(row?.status)) {
       const enqueueError = await enqueueRequiredEffects(
         sb,
-        event.id,
+        event,
+        rawBody,
         billingRecoveryEffects(plan),
       );
       if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });
@@ -478,7 +484,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     }
     const enqueueError = await enqueueRequiredEffects(
       sb,
-      event.id,
+      event,
+      rawBody,
       disputeEffects({ ...plan, orderId }),
     );
     if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });

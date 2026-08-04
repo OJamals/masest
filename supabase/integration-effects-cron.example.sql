@@ -1,4 +1,4 @@
--- Stripe webhook side-effect worker schedule template.
+-- Generic integration effect worker schedule template.
 -- Replace <STRIPE_EFFECTS_WORKER_SECRET> before applying. Keep this value
 -- identical to Cloudflare Pages STRIPE_EFFECTS_WORKER_SECRET.
 
@@ -10,15 +10,20 @@ where exists (
   select 1 from cron.job where jobname = 'stripe-effects'
 );
 
+select cron.unschedule('integration-effects')
+where exists (
+  select 1 from cron.job where jobname = 'integration-effects'
+);
+
 select cron.schedule(
-  'stripe-effects',
+  'integration-effects',
   '*/1 * * * *',
   $$
   select net.http_post(
-    url := 'https://masest.co/api/admin/stripe-effects?limit=25',
+    url := 'https://masest.co/api/admin/integration-effects?limit=25',
     headers := jsonb_build_object(
       'content-type', 'application/json',
-      'x-stripe-effects-secret', '<STRIPE_EFFECTS_WORKER_SECRET>'
+      'x-integration-effects-secret', '<STRIPE_EFFECTS_WORKER_SECRET>'
     ),
     body := '{}'::jsonb
   );

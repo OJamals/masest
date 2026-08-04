@@ -1,6 +1,5 @@
--- Durable Stripe webhook effect ledger.
--- Apply only after operator approval; no production migration or scheduler is created here.
--- Idempotent: safe to re-run after schema-phase5.sql and schema-order-integrity.sql.
+-- Roll back generic-worker cutover by reconstructing the legacy Stripe ledger/RPCs.
+-- Apply only with the old runtime/cron rollback. Generic rows remain authoritative evidence.
 
 create table if not exists public.stripe_webhook_effects (
   id uuid primary key default gen_random_uuid(),
@@ -484,3 +483,129 @@ grant execute on function public.complete_stripe_webhook_effect(uuid, text) to s
 grant execute on function public.retry_stripe_webhook_effect(uuid, text, text, integer, integer) to service_role;
 grant execute on function public.apply_stripe_stock_effect(uuid, text) to service_role;
 grant execute on function public.deliver_stripe_notification_effect(uuid, text, jsonb) to service_role;
+
+insert into public.stripe_webhook_effects (
+  id,
+  stripe_event_id,
+  effect_key,
+  effect_type,
+  payload,
+  depends_on_effect_key,
+  status,
+  attempt_count,
+  available_at,
+  lease_owner,
+  lease_expires_at,
+  provider_succeeded_at,
+  provider_result,
+  last_error_code,
+  completed_at,
+  dead_at,
+  created_at,
+  updated_at
+)
+select
+  effect.id,
+  event.provider_event_id,
+  effect.effect_key,
+  effect.effect_type,
+  effect.payload,
+  effect.depends_on_effect_key,
+  effect.status,
+  effect.attempt_count,
+  effect.available_at,
+  effect.lease_owner,
+  effect.lease_expires_at,
+  effect.provider_succeeded_at,
+  effect.provider_result,
+  effect.last_error_code,
+  effect.completed_at,
+  effect.dead_at,
+  effect.created_at,
+  effect.updated_at
+from public.integration_effects as effect
+join public.integration_events as event on event.id = effect.event_id
+where event.provider = 'stripe'
+on conflict (id) do nothing;
+
+do $$
+declare
+  v_source_count bigint;
+  v_target_count bigint;
+  v_source_sha256 text;
+  v_target_sha256 text;
+begin
+  select count(*)
+    into v_source_count
+    from public.integration_effects as effect
+    join public.integration_events as event on event.id = effect.event_id
+   where event.provider = 'stripe'
+  ;
+  select count(*) into v_target_count from public.stripe_webhook_effects;
+  if v_source_count is distinct from v_target_count then
+    raise exception 'rollback_stripe_effect_count_mismatch';
+  end if;
+
+  select encode(extensions.digest(convert_to(
+    coalesce(string_agg(row_value, E'\n' order by row_value), ''), 'UTF8'
+  ), 'sha256'), 'hex')
+  into v_source_sha256
+  from (
+    select jsonb_build_object(
+      'id', effect.id,
+      'event', event.provider_event_id,
+      'key', effect.effect_key,
+      'type', effect.effect_type,
+      'payload', effect.payload,
+      'depends', effect.depends_on_effect_key,
+      'status', effect.status,
+      'attempts', effect.attempt_count,
+      'available', effect.available_at,
+      'lease_owner', effect.lease_owner,
+      'lease_expires', effect.lease_expires_at,
+      'provider_succeeded', effect.provider_succeeded_at,
+      'provider_result', effect.provider_result,
+      'error', effect.last_error_code,
+      'completed', effect.completed_at,
+      'dead', effect.dead_at,
+      'created', effect.created_at,
+      'updated', effect.updated_at
+    )::text as row_value
+    from public.integration_effects as effect
+    join public.integration_events as event on event.id = effect.event_id
+   where event.provider = 'stripe'
+  ) as source_rows;
+
+  select encode(extensions.digest(convert_to(
+    coalesce(string_agg(row_value, E'\n' order by row_value), ''), 'UTF8'
+  ), 'sha256'), 'hex')
+  into v_target_sha256
+  from (
+    select jsonb_build_object(
+      'id', effect.id,
+      'event', effect.stripe_event_id,
+      'key', effect.effect_key,
+      'type', effect.effect_type,
+      'payload', effect.payload,
+      'depends', effect.depends_on_effect_key,
+      'status', effect.status,
+      'attempts', effect.attempt_count,
+      'available', effect.available_at,
+      'lease_owner', effect.lease_owner,
+      'lease_expires', effect.lease_expires_at,
+      'provider_succeeded', effect.provider_succeeded_at,
+      'provider_result', effect.provider_result,
+      'error', effect.last_error_code,
+      'completed', effect.completed_at,
+      'dead', effect.dead_at,
+      'created', effect.created_at,
+      'updated', effect.updated_at
+    )::text as row_value
+    from public.stripe_webhook_effects as effect
+  ) as target_rows;
+
+  if v_source_sha256 is distinct from v_target_sha256 then
+    raise exception 'rollback_stripe_effect_checksum_mismatch';
+  end if;
+end;
+$$;

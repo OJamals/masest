@@ -19,11 +19,11 @@ test("checkout validates stock-tracked variants before creating payment or NET o
 
 test("stripe webhook durably schedules atomic variant stock decrement after paid checkout", () => {
   const webhook = read("functions/api/stripe-webhook.js");
-  const effects = read("functions/_lib/stripe-effects.js");
-  const schema = read("supabase/schema-stripe-effects.sql");
+  const effects = read("functions/_lib/integration-effects.js");
+  const schema = read("supabase/schema-integration-effect-handlers.sql");
   assert.match(webhook, /checkoutOrderEffects/);
   assert.match(effects, /effect\('stock-decrement',\s*'stock_decrement'/);
-  assert.match(effects, /apply_stripe_stock_effect/);
+  assert.match(effects, /apply_integration_stock_effect/);
   assert.match(schema, /select\s+public\.decrement_variant_stock/i);
   assert.doesNotMatch(effects, /from\('products'\)\.select\('sku,track_stock,stock'\)/,
     "Stripe effects must not decrement parent product stock");

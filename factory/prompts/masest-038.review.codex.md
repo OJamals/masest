@@ -1,18 +1,24 @@
----
-id: masest-038
-title: Cut Stripe effects to generic integration worker
-agent: codex
-risk: high
-grill: completed
-verification:
-  - node --test tests/integration-effects.test.mjs tests/stripe-effects.test.mjs tests/money-flow-handlers.test.mjs
-  - npm run check
-  - npm run build
-  - npm run verify:site
-  - git diff --check
----
+Review Loop Factory spec `masest-038` against current working tree.
 
-# Grill Gate
+        Native adapter: `codex`
+        Spec path: `/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-038.md`
+
+        Review stance:
+        - Findings first. Focus correctness, regressions, tests, security, maintainability.
+        - Compare implementation against acceptance criteria.
+        - Run or inspect verification evidence:
+        - `node --test tests/integration-effects.test.mjs tests/stripe-effects.test.mjs tests/money-flow-handlers.test.mjs`
+- `npm run check`
+- `npm run build`
+- `npm run verify:site`
+- `git diff --check`
+        - If accepted, say `ACCEPTED`.
+        - If not accepted, say `CHANGES_REQUESTED` and list blocking items.
+        - Do not move files. Operator or CLI archive step moves accepted specs.
+
+        Spec:
+        ---
+        # Grill Gate
 
 - Owner: MASEST maintainer; user approved deeper Stripe, shipping, Intuit, website, CMS/CRM integration.
 - Problem: generic ledger from `masest-037` has no operational value until production Stripe effects use one generic worker while retaining exact order confirmation, stock, oversell, dispute, ACH, billing, company notification, and QBO behavior.

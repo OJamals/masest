@@ -641,6 +641,10 @@ function webhookDb(calls, persistResults, effectResults = []) {
       calls.push([`rpc.${name}`, args]);
       if (name === 'persist_stripe_order') return persistResults.shift();
       if (name === 'link_order_provider_object') return { data: `link-${args.p_object_type}`, error: null };
+      if (name === 'ingest_integration_event') {
+        calls.push(['effects.ingest', args.p_effects, args]);
+        return effectResults.shift() || { data: 'integration-event-1', error: null };
+      }
       throw new Error(`unexpected webhook RPC: ${name}`);
     },
     from(table) {
@@ -660,14 +664,6 @@ function webhookDb(calls, persistResults, effectResults = []) {
           async maybeSingle() {
             calls.push('orders.effect-recovery');
             return { data: { id: 'order-1', order_number: 'MST-00000123', company_id: null }, error: null };
-          },
-        };
-      }
-      if (table === 'stripe_webhook_effects') {
-        return {
-          async upsert(rows, options) {
-            calls.push(['effects.upsert', rows, options]);
-            return effectResults.shift() || { data: null, error: null };
           },
         };
       }
@@ -754,11 +750,16 @@ test('duplicate webhook delivery recovers and enqueues the same effects before 2
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.deepEqual(result, { status: 200, body: { received: true, duplicate: true } });
   assert.equal(calls.includes('orders.effect-recovery'), true);
-  const enqueue = calls.find((call) => Array.isArray(call) && call[0] === 'effects.upsert');
+  const enqueue = calls.find((call) => Array.isArray(call) && call[0] === 'effects.ingest');
   assert.ok(enqueue);
-  assert.deepEqual(enqueue[2], {
-    onConflict: 'stripe_event_id,effect_key',
-    ignoreDuplicates: true,
+  assert.deepEqual({
+    provider: enqueue[2].p_provider,
+    eventId: enqueue[2].p_provider_event_id,
+    effectKeys: enqueue[2].p_effects.map((effect) => effect.effect_key),
+  }, {
+    provider: 'stripe',
+    eventId: 'evt_checkout',
+    effectKeys: ['stock-decrement', 'oversell-alert', 'buyer-confirmation'],
   });
 });
 
@@ -776,15 +777,15 @@ test('webhook persistence failure retries; effects enqueue only after durable or
 
   const first = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.deepEqual(first, { status: 503, body: { error: 'order_persist_failed' } });
-  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.upsert'), false);
+  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.ingest'), false);
 
   const second = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.equal(second.status, 200);
   const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
   const successfulPersist = labels.lastIndexOf('rpc.persist_stripe_order');
-  const enqueue = labels.indexOf('effects.upsert');
+  const enqueue = labels.indexOf('effects.ingest');
   assert.ok(successfulPersist < enqueue);
-  assert.equal(labels.filter((label) => label === 'effects.upsert').length, 1);
+  assert.equal(labels.filter((label) => label === 'effects.ingest').length, 1);
 });
 
 test('webhook enqueue failure prevents acknowledgement after order persistence', async () => {
@@ -847,6 +848,10 @@ function achDb(calls, claimResults) {
   return {
     async rpc(name, args) {
       calls.push([`rpc.${name}`, args]);
+      if (name === 'ingest_integration_event') {
+        calls.push(['effects.ingest', args.p_effects, args]);
+        return { data: 'integration-event-1', error: null };
+      }
       throw new Error(`unexpected ACH RPC: ${name}`);
     },
     from(table) {
@@ -862,14 +867,6 @@ function achDb(calls, claimResults) {
               return { data: { id: 'order-1', status, company_id: null }, error: null };
             }
             return claimResults.shift();
-          },
-        };
-      }
-      if (table === 'stripe_webhook_effects') {
-        return {
-          async upsert(rows, options) {
-            calls.push(['effects.upsert', rows, options]);
-            return { data: null, error: null };
           },
         };
       }
@@ -900,8 +897,8 @@ test('concurrent ACH success deliveries have one claim and duplicate-safe effect
   assert.deepEqual(second, { status: 200, body: { received: true, duplicate: true } });
   const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
   assert.equal(labels.filter((label) => label === 'orders.claim').length, 1);
-  assert.equal(labels.filter((label) => label === 'effects.upsert').length, 2);
-  const enqueues = calls.filter((call) => Array.isArray(call) && call[0] === 'effects.upsert');
+  assert.equal(labels.filter((label) => label === 'effects.ingest').length, 2);
+  const enqueues = calls.filter((call) => Array.isArray(call) && call[0] === 'effects.ingest');
   assert.deepEqual(enqueues[0][1], enqueues[1][1]);
 });
 
@@ -948,7 +945,7 @@ test('ACH claim failure returns retryable 503 before stock decrement', async () 
 
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.deepEqual(result, { status: 503, body: { error: 'order_update_failed' } });
-  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.upsert'), false);
+  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.ingest'), false);
 });
 
 test('test-mode ACH settlement remains outside the production QBO queue', async () => {

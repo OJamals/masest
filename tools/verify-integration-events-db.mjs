@@ -202,7 +202,6 @@ try {
     [3, 'fixture.changed'],
     [4, 'changed-object'],
     [5, new Date('2026-08-04T12:01:00.000Z')],
-    [6, new Date('2026-08-04T12:01:01.000Z')],
     [7, 'b'.repeat(64)],
     [8, JSON.stringify({ fixture: false })],
   ];
@@ -216,6 +215,10 @@ try {
       (error) => error.message.includes('integration_event_identity_collision'),
     );
   }
+
+  const redeliveryArgs = [...duplicateArgs];
+  redeliveryArgs[6] = new Date('2026-08-04T12:01:01.000Z');
+  assert.equal((await client.query(ingestSql, redeliveryArgs)).rows[0].id, firstId);
 
   const changedEffect = [...duplicateArgs];
   changedEffect[9] = JSON.stringify([{

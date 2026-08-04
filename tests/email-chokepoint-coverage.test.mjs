@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 const STRIPE = read("../functions/api/stripe-webhook.js");
-const STRIPE_EFFECTS = read("../functions/_lib/stripe-effects.js");
+const STRIPE_EFFECTS = read("../functions/_lib/integration-effects.js");
 const TEAM = read("../functions/api/account/team.js");
 
 test("order confirmation email routes through sendEmail (logged + suppressed)", () => {
