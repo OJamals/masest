@@ -34,9 +34,12 @@ fi
 git restore --source="$BASE" -- \
   admin.html \
   functions/_lib/shipstation-orders.js \
+  functions/api/admin/orders.js \
   functions/api/admin/shipstation.js \
+  js/admin.js \
   js/admin/orders.js \
   supabase/schema-shipstation.sql \
+  tests/admin-order-detail.test.mjs \
   tests/admin-event-delegation.test.mjs \
   tests/shipstation-admin.test.mjs \
   tests/shipstation-orders.test.mjs

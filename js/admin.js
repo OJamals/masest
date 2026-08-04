@@ -505,7 +505,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   orders: async () => {
-    const { ORDER_STATUSES, createOrdersTab } = await import('./admin/orders.js?v=20260730a');
+    const { ORDER_STATUSES, createOrdersTab } = await import('./admin/orders.js?v=20260804a');
     const { renderOrders, wireOrders } = createOrdersTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
     });
