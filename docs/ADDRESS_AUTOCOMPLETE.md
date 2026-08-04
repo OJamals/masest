@@ -17,4 +17,6 @@ Apply both Google Cloud restrictions:
 
 Do not authorize preview or localhost hosts on the production key. Use a separate restricted development key if local autocomplete is needed. Missing/invalid config leaves all manual address fields functional.
 
-References: [Place Autocomplete Widget](https://developers.google.com/maps/documentation/javascript/place-autocomplete-new), [Google Maps Platform security guidance](https://developers.google.com/maps/api-security-best-practices).
+The production CSP allows Google Maps JavaScript/Places resources through `*.googleapis.com`, `*.gstatic.com`, `fonts.googleapis.com`, and `fonts.gstatic.com`. Keep those directives aligned with Google's current CSP guide when changing the widget or Maps loader.
+
+References: [Place Autocomplete Widget](https://developers.google.com/maps/documentation/javascript/place-autocomplete-new), [Google Maps Platform CSP guide](https://developers.google.com/maps/documentation/javascript/content-security-policy), [Google Maps Platform security guidance](https://developers.google.com/maps/api-security-best-practices).
