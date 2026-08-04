@@ -15,6 +15,7 @@ import {
   planRefundReconcile,
 } from '../_lib/dunning.js';
 import { qboFullDocumentRefund } from '../_lib/refund.js';
+import { linkOrderProviderObject } from '../_lib/order-integrations.js';
 import {
   centsToAmount,
   stripeQboSyncStatus,
@@ -138,6 +139,10 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
     return stripe.checkout.sessions.retrieve(id);
   });
+  const updateCheckoutSession = dependencies.updateCheckoutSession || (async (id, params) => {
+    const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
+    return stripe.checkout.sessions.update(id, params);
+  });
 
   const sig = request.headers.get('stripe-signature');
   const raw = await request.text(); // raw body required for signature verification
@@ -235,13 +240,50 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     // the order id, enqueue the same unique rows, and only then acknowledge.
     if (insertOutcome === 'duplicate') {
       const { data: existingOrder, error: lookupError } = await sb.from('orders')
-        .select('id,company_id')
+        .select('id,order_number,company_id')
         .eq('stripe_payment_intent', s.payment_intent)
         .maybeSingle();
       if (lookupError || !existingOrder) {
         return json(503, { error: 'order_effect_recovery_failed' });
       }
       order = existingOrder;
+    } else {
+      const { data: persistedOrder, error: lookupError } = await sb.from('orders')
+        .select('id,order_number,company_id')
+        .eq('id', order.id)
+        .maybeSingle();
+      if (lookupError || !persistedOrder?.order_number) {
+        return json(503, { error: 'order_reference_recovery_failed' });
+      }
+      order = persistedOrder;
+    }
+
+    try {
+      await linkOrderProviderObject(sb, {
+        orderId: order.id,
+        provider: 'stripe',
+        objectType: 'checkout_session',
+        providerObjectId: s.id,
+        metadata: { order_number: order.order_number, livemode: Boolean(s.livemode) },
+      });
+      await linkOrderProviderObject(sb, {
+        orderId: order.id,
+        provider: 'stripe',
+        objectType: 'payment_intent',
+        providerObjectId: s.payment_intent,
+        metadata: { order_number: order.order_number, livemode: Boolean(s.livemode) },
+      });
+    } catch (error) {
+      console.error('order_provider_link_failed', error?.code || error?.name || 'unknown');
+      return json(503, { error: 'order_provider_link_failed' });
+    }
+    try {
+      if (s.metadata?.order_number !== order.order_number) {
+        await updateCheckoutSession(s.id, { metadata: { order_number: order.order_number } });
+      }
+    } catch (error) {
+      console.error('stripe_order_metadata_failed', error?.code || error?.name || 'unknown');
+      return json(503, { error: 'stripe_order_metadata_failed' });
     }
     const enqueueError = await enqueueRequiredEffects(
       sb,
@@ -450,12 +492,30 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     const charge = event.data.object;
     if (charge.payment_intent) {
       const { data: order } = await sb.from('orders')
-        .select('id,company_id,status,total,refunded_amount,qbo_sync_status')
+        .select('id,order_number,company_id,status,total,refunded_amount,qbo_sync_status')
         .eq('stripe_payment_intent', charge.payment_intent).maybeSingle();
       if (order) {
         const plan = planRefundReconcile(charge, order);
         const patch = { refunded_amount: plan.refundedAmount };
         if (plan.fullyRefunded) patch.status = 'refunded';
+        try {
+          for (const refund of charge?.refunds?.data || []) {
+            if (!refund?.id || refund.status === 'failed' || refund.status === 'canceled') continue;
+            await linkOrderProviderObject(sb, {
+              orderId: order.id,
+              provider: 'stripe',
+              objectType: 'refund',
+              providerObjectId: refund.id,
+              metadata: {
+                order_number: order.order_number,
+                amount: centsToAmount(refund.amount),
+                currency: String(charge.currency || 'usd').toLowerCase(),
+              },
+            });
+          }
+        } catch (linkError) {
+          return json(503, { error: 'stripe_refund_link_failed' });
+        }
         // Queue accounting first. Stripe refund ids make this upsert idempotent, so if
         // the order patch fails a retry can safely replay the queue before reconciling.
         const qboQueueError = await enqueueQboRefundRows(sb, qboRefundRowsFromCharge(charge, order, plan));

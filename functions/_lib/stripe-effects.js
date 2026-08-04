@@ -1,5 +1,6 @@
 import { adminClient, companyEmails, htmlEscape, sendEmail } from './supabase.js';
 import { technicalDocumentRequestNoteHtml } from './order-email.js';
+import { orderReference } from './order-integrations.js';
 
 const PAYLOAD_KEYS = Object.freeze({
   stock_decrement: new Set(['order_id']),
@@ -245,7 +246,7 @@ async function rpcData(sb, name, args) {
 
 async function loadOrder(sb, orderId) {
   const { data: order, error: orderError } = await sb.from('orders')
-    .select('id,status,customer_email,subtotal,shipping,tax,total,currency,purchase_order_number,ship_address')
+    .select('id,order_number,status,customer_email,subtotal,shipping,tax,total,currency,purchase_order_number,ship_address')
     .eq('id', orderId)
     .maybeSingle();
   if (orderError || !order) throw errorWithCode('effect_order_not_found');
@@ -288,7 +289,8 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
   const pending = Boolean(effectRow.payload.pending);
   const currency = (order.currency || 'usd').toUpperCase();
   const money = (value) => `${currency} ${Number(value || 0).toFixed(2)}`;
-  const ref = order.id ? ` #${order.id}` : '';
+  const reference = orderReference(order);
+  const ref = reference ? ` #${reference}` : '';
   const rows = lines.map((line) =>
     `<tr>`
     + `<td style="padding:8px 0;border-bottom:1px solid #eef">${htmlEscape(line.name)} `
@@ -377,11 +379,12 @@ async function sendOversellEffect(env, sb, effectRow, send) {
   const staff = env.ORDER_NOTIFY_EMAIL || env.SALES_EMAIL || env.ADMIN_EMAIL;
   if (!staff) throw errorWithCode('effect_staff_email_missing');
   const { order } = await loadOrder(sb, effectRow.payload.order_id);
+  const reference = orderReference(order) || '?';
   return send(env, {
     to: [staff],
-    subject: `⚠ Oversell on paid order ${order.id || '?'}`,
+    subject: `⚠ Oversell on paid order ${reference}`,
     html: billingEmailHtml(env, 'Paid order exceeds available stock', [
-      `Order <b>${htmlEscape(order.id || '?')}</b> was paid, but inventory could not cover: <b>${shorted.map(htmlEscape).join(', ')}</b>.`,
+      `Order <b>${htmlEscape(reference)}</b> was paid, but inventory could not cover: <b>${shorted.map(htmlEscape).join(', ')}</b>.`,
       'Stock was not decremented for those lines. Restock and ship, split the shipment, or refund the affected lines from the admin orders tab.',
     ]),
     category: 'order',
@@ -392,12 +395,13 @@ async function sendOversellEffect(env, sb, effectRow, send) {
 async function sendAchFailureEffect(env, sb, effectRow, send) {
   const { order } = await loadOrder(sb, effectRow.payload.order_id);
   if (!order.customer_email) throw errorWithCode('effect_order_email_missing');
+  const reference = orderReference(order);
   return send(env, {
     to: [order.customer_email],
     bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
-    subject: `Your MASEST order #${order.id} could not be completed`,
+    subject: `Your MASEST order #${reference} could not be completed`,
     html: billingEmailHtml(env, 'Your bank payment didn’t go through', [
-      `The bank (ACH) payment for order <b>${htmlEscape(order.id)}</b> failed, so the order was cancelled and nothing will ship.`,
+      `The bank (ACH) payment for order <b>${htmlEscape(reference)}</b> failed, so the order was cancelled and nothing will ship.`,
       'No products were charged to you beyond the failed debit. To reorder, return to the cart and pay by card, or reply to this email for help.',
     ], { url: `${env.APP_URL || 'https://masest.co'}/cart.html`, text: 'Return to cart' }),
     category: 'order',

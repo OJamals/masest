@@ -69,7 +69,7 @@ test("QBO invoice auto-sync notifies the buyer company when the invoice is ready
 
   assert.match(src, /notifyInvoiceReady\(/, "QBO sync should notify buyers when an invoice is created");
   assert.match(src, /from\('notifications'\)\.insert/, "QBO sync should write an in-app buyer notification");
-  assert.match(src, /QuickBooks invoice \$\{result\.docId\}/,
+  assert.match(src, /QuickBooks invoice \$\{result\.docId\}[\s\S]*orderReference\(order\)/,
     "buyer notification should include the QuickBooks invoice id");
 });
 

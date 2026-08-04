@@ -1,5 +1,6 @@
 import { adminClient } from './supabase.js';
 import { recordAudit } from './audit.js';
+import { linkOrderProviderObject } from './order-integrations.js';
 import {
   ShipStationError,
   buildRateRequest,
@@ -71,7 +72,7 @@ function existingLabel(order) {
 
 async function defaultLoadOrder(env, id) {
   const { data, error } = await adminClient(env).from('orders')
-    .select('id,status,customer_email,currency,ship_address,shipstation_shipment_id,shipstation_label_id,shipstation_label_status,shipstation_label_url,tracking_number,tracking_url,order_items(sku,name,qty,unit_price)')
+    .select('id,order_number,status,customer_email,currency,ship_address,shipstation_shipment_id,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,tracking_number,tracking_url,order_items(sku,name,qty,unit_price)')
     .eq('id', id)
     .single();
   if (error) throw new ShipStationError(error.code === 'PGRST116' ? 'shipping_order_not_found' : 'shipping_database_failed');
@@ -178,6 +179,21 @@ async function defaultAudit(env, context, action, id, detail) {
   });
 }
 
+async function defaultLinkProviderObject(env, input) {
+  return linkOrderProviderObject(adminClient(env), input);
+}
+
+async function linkShipStationObject(link, env, order, objectType, providerObjectId) {
+  if (!text(providerObjectId, 255)) return null;
+  return link(env, {
+    orderId: order.id,
+    provider: 'shipstation',
+    objectType,
+    providerObjectId,
+    metadata: { order_number: order.order_number || null },
+  });
+}
+
 function assertShippable(order) {
   if (!order) throw new ShipStationError('shipping_order_not_found');
   if (!SHIPPABLE_STATUSES.has(text(order.status, 40))) {
@@ -196,6 +212,7 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
   const loadPackageProfiles = dependencies.loadPackageProfiles || defaultLoadPackageProfiles;
   const quoteRates = dependencies.quoteRates || defaultQuoteRates;
   const persistRate = dependencies.persistRate || defaultPersistRate;
+  const linkProviderObject = dependencies.linkProviderObject || defaultLinkProviderObject;
   const audit = dependencies.audit || defaultAudit;
   const order = await loadOrder(env, id);
   assertShippable(order);
@@ -230,6 +247,7 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
     shipstation_label_status: 'rated',
     shipstation_error: null,
   });
+  await linkShipStationObject(linkProviderObject, env, order, 'shipment', shipmentId);
   await audit(env, context, 'shipstation_rates_quoted', id, {
     shipment_id: shipmentId,
     carrier_ids: carrierIds,
@@ -256,9 +274,15 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   const persistLabel = dependencies.persistLabel || defaultPersistLabel;
   const insertShipmentEvent = dependencies.insertShipmentEvent || defaultInsertShipmentEvent;
   const audit = dependencies.audit || defaultAudit;
+  const linkProviderObject = dependencies.linkProviderObject || defaultLinkProviderObject;
   let order = await loadOrder(env, id);
   assertShippable(order);
-  if (order.shipstation_label_id) return existingLabel(order);
+  if (order.shipstation_label_id) {
+    await linkShipStationObject(linkProviderObject, env, order, 'shipment', order.shipstation_shipment_id);
+    await linkShipStationObject(linkProviderObject, env, order, 'rate', order.shipstation_rate_id);
+    await linkShipStationObject(linkProviderObject, env, order, 'label', order.shipstation_label_id);
+    return existingLabel(order);
+  }
   const shipmentId = providerId(order.shipstation_shipment_id, 'shipstation_shipment_required');
   if (['purchasing', 'reconcile_required'].includes(text(order.shipstation_label_status, 40))) {
     throw new ShipStationError('shipstation_label_purchase_locked');
@@ -271,7 +295,12 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   const claimed = await claimLabel(env, id, rateId);
   if (!claimed) {
     order = await loadOrder(env, id);
-    if (order?.shipstation_label_id) return existingLabel(order);
+    if (order?.shipstation_label_id) {
+      await linkShipStationObject(linkProviderObject, env, order, 'shipment', order.shipstation_shipment_id);
+      await linkShipStationObject(linkProviderObject, env, order, 'rate', order.shipstation_rate_id);
+      await linkShipStationObject(linkProviderObject, env, order, 'label', order.shipstation_label_id);
+      return existingLabel(order);
+    }
     throw new ShipStationError('shipstation_label_purchase_locked');
   }
 
@@ -333,6 +362,9 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     tracking_url: trackingUrl,
   };
   await persistLabel(env, id, patch);
+  await linkShipStationObject(linkProviderObject, env, order, 'shipment', patch.shipstation_shipment_id);
+  await linkShipStationObject(linkProviderObject, env, order, 'rate', rateId);
+  await linkShipStationObject(linkProviderObject, env, order, 'label', labelId);
   await insertShipmentEvent(env, id, {
     status: 'packing',
     carrier: patch.carrier,

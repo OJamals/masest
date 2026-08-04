@@ -13,6 +13,7 @@ import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 import { planNetSettlement, netAging } from '../../_lib/credit.js';
 import { escapeLike } from '../../_lib/crm.js';
 import { decorateOrderLifecycle, planOrderStatusWrite, settledOrderStatus, shouldPromoteToFulfilled } from '../../_lib/order-lifecycle.js';
+import { orderReference } from '../../_lib/order-integrations.js';
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const WRITABLE_ORDER_STATUSES = ORDER_STATUSES.filter((status) => status !== 'cart');
@@ -116,18 +117,20 @@ function toCsv(rows) {
   return rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
 }
 
-async function notifyCompany(sb, env, request, companyId, label, extra) {
+async function notifyCompany(sb, env, request, companyId, label, extra, order = null) {
   if (!companyId) return [];
+  const reference = orderReference(order);
+  const title = reference ? `Order ${reference} ${label}` : `Order ${label}`;
   await sb.from('notifications').insert({
-    company_id: companyId, type: 'order', title: `Order ${label}`,
+    company_id: companyId, type: 'order', title,
     body: extra || `Your order is now "${label}".`, link: '/dashboard.html#orders',
   }).then(() => {}, () => {});
   const appUrl = env.APP_URL || new URL(request.url).origin;
   const emails = await companyEmails(sb, companyId, 'orders');
   await sendEmail(env, {
-    to: emails, subject: `Order ${label}`,
+    to: emails, subject: title,
     html: emailLayout({
-      heading: `Order ${label}`,
+      heading: title,
       bodyHtml: `<p>${htmlEscape(extra || `Your MASEST order status is now "${label}".`)}</p>`,
       ctaText: 'View your order', ctaUrl: `${appUrl}/dashboard.html#orders`,
     }),
@@ -146,6 +149,7 @@ async function sendTrackingEmail(env, request, order, label, extra, recipients) 
   if (!unique.length) return false;
 
   const appUrl = env.APP_URL || new URL(request.url).origin;
+  const reference = orderReference(order);
   const details = [
     order?.carrier ? `<li><strong>Carrier:</strong> ${htmlEscape(order.carrier)}</li>` : '',
     order?.tracking_number ? `<li><strong>Tracking #:</strong> ${htmlEscape(order.tracking_number)}</li>` : '',
@@ -154,9 +158,9 @@ async function sendTrackingEmail(env, request, order, label, extra, recipients) 
 
   return sendEmail(env, {
     to: unique,
-    subject: `Order ${label}`,
+    subject: `Order ${reference} ${label}`,
     html: emailLayout({
-      heading: `Order ${label}`,
+      heading: `Order ${reference} ${label}`,
       bodyHtml: `<p>${htmlEscape(extra || `Your order is now "${label}".`)}</p>${details ? `<ul>${details}</ul>` : ''}`,
       // Delivered points at the dashboard (reorder + order history); in-transit
       // states keep the carrier tracking link front and center.
@@ -191,7 +195,7 @@ export async function onRequest({ request, env }) {
     const detailId = params.get('id');
     if (detailId) {
       const { data: order, error } = await sb.from('orders')
-        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at)')
+        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at),order_provider_links(provider,object_type,provider_object_id,metadata,created_at)')
         .eq('id', detailId).single();
       if (error) return json(error.code === 'PGRST116' ? 404 : 500, { error: error.message });
       const { data: timeline } = await sb.from('audit_log')
@@ -208,7 +212,7 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,ship_address,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,shipstation_shipment_id,shipstation_label_id,shipstation_rate_id,shipstation_carrier_id,shipstation_service_code,shipstation_label_url,shipstation_cost,shipstation_label_status,shipstation_error,shipstation_updated_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
+      .select('id,order_number,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,ship_address,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,shipstation_shipment_id,shipstation_label_id,shipstation_rate_id,shipstation_carrier_id,shipstation_service_code,shipstation_label_url,shipstation_cost,shipstation_label_status,shipstation_error,shipstation_updated_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
@@ -217,7 +221,7 @@ export async function onRequest({ request, env }) {
     const search = String(params.get('search') || '').trim().replace(/[,()]/g, ' ').trim();
     if (search) {
       const like = `%${escapeLike(search)}%`;
-      const ors = [`customer_email.ilike.${like}`, `tracking_number.ilike.${like}`];
+      const ors = [`order_number.ilike.${like}`, `customer_email.ilike.${like}`, `tracking_number.ilike.${like}`];
       if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search)) ors.push(`id.eq.${search}`);
       const { data: cos } = await sb.from('companies').select('id').ilike('name', like).limit(50);
       const coIds = (cos || []).map((c) => c.id).filter(Boolean);
@@ -232,7 +236,7 @@ export async function onRequest({ request, env }) {
       for (const o of data || []) {
         const lifecycle = decorateOrderLifecycle(o).lifecycle;
         const items = (o.order_items || []).map((i) => `${i.qty}x ${i.name || i.sku}`).join('; ');
-        rows.push([o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.purchase_order_number || '', o.status, lifecycle.label, lifecycle.next_action, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '', o.qbo_intuit_tid || '', o.qbo_payment_intuit_tid || '',
+        rows.push([o.order_number || o.id, o.created_at, o.companies?.name || o.company_id || 'Guest', o.customer_email || '', o.purchase_order_number || '', o.status, lifecycle.label, lifecycle.next_action, o.payment_method || '', `${o.qbo_doc_type || ''} ${o.qbo_doc_id || o.qbo_invoice_id || ''}`.trim(), o.qbo_payment_id || '', o.qbo_intuit_tid || '', o.qbo_payment_intuit_tid || '',
           o.tracking_status || '', o.carrier || '', o.tracking_number || '', o.estimated_delivery_at || '',
           o.subtotal ?? '', o.shipping ?? '', o.tax ?? '', o.total ?? '', o.currency || '', items]);
       }
@@ -267,9 +271,22 @@ export async function onRequest({ request, env }) {
       };
       const { data: order, error } = await sb.from('orders')
         .insert(orderInsert)
-        .select('id,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
+        .select('id,order_number,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
         .single();
       if (error) return json(500, { error: error.message });
+      try {
+        await linkOrderProviderObject(sb, {
+          orderId: order.id, provider: 'quickbooks', objectType: 'invoice', providerObjectId: invoiceId,
+          metadata: { order_number: order.order_number },
+        });
+        await linkOrderProviderObject(sb, {
+          orderId: order.id, provider: 'quickbooks', objectType: 'payment', providerObjectId: paymentId,
+          metadata: { order_number: order.order_number },
+        });
+      } catch (linkError) {
+        await sb.from('orders').delete().eq('id', order.id).then(() => {}, () => {});
+        return json(linkError?.code === '23505' ? 409 : 500, { error: 'qbo_provider_link_failed' });
+      }
       const orderItems = normalized.items.map((item) => ({ ...item, order_id: order.id }));
       const { error: itemsError } = await sb.from('order_items').insert(orderItems);
       if (itemsError) {
@@ -297,7 +314,7 @@ export async function onRequest({ request, env }) {
       const { data: order, error } = await sb.from('orders')
         .update(normalized.patch)
         .eq('id', body.id)
-        .select('id,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
+        .select('id,order_number,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
         .single();
       if (error) return json(500, { error: error.message });
 
@@ -313,7 +330,7 @@ export async function onRequest({ request, env }) {
       }
       if (order.status !== before.status) {
         const statusLabel = order.status.replace('_', ' ');
-        const recipients = await notifyCompany(sb, env, request, order.company_id, statusLabel);
+        const recipients = await notifyCompany(sb, env, request, order.company_id, statusLabel, null, order);
         await notifyBuyerTracking(env, request, order, statusLabel, null, recipients);
       }
       await recordAudit(sb, { user, action: 'order.update', targetType: 'order', targetId: body.id, detail: { company_id: order.company_id, status: order.status, previous_status: before.status, item_count: normalized.items.length } });
@@ -335,7 +352,7 @@ export async function onRequest({ request, env }) {
     if (body.action === 'refund') {
       if (!staffCan(role, 'order.refund')) return json(403, { error: 'forbidden', message: 'Refunds require finance or owner access.' });
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,customer_email,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,qbo_sync_status,order_items(sku,qty,backordered)').eq('id', body.id).single();
+        .select('id,order_number,company_id,customer_email,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,qbo_sync_status,order_items(sku,qty,backordered)').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       if (!ord) return json(404, { error: 'not_found' });
       if (REFUND_BLOCKING_STATUSES.has(ord.status)) {
@@ -364,6 +381,18 @@ export async function onRequest({ request, env }) {
       } catch (err) {
         return json(502, { error: 'stripe_refund_failed', detail: err?.message || String(err) });
       }
+      if (!stripeRefund?.id) return json(502, { error: 'stripe_refund_id_missing' });
+      try {
+        await linkOrderProviderObject(sb, {
+          orderId: ord.id,
+          provider: 'stripe',
+          objectType: 'refund',
+          providerObjectId: stripeRefund?.id,
+          metadata: { order_number: ord.order_number, amount: plan.amount, currency: ord.currency },
+        });
+      } catch (linkError) {
+        return json(linkError?.code === '23505' ? 409 : 503, { error: 'stripe_refund_link_failed' });
+      }
       const update = { refunded_amount: plan.newRefundedAmount };
       if (plan.fullyRefunded) update.status = 'refunded';
       const { data: updated, error: e2 } = await sb.from('orders').update(update)
@@ -391,7 +420,7 @@ export async function onRequest({ request, env }) {
       const refundMsg = plan.fullyRefunded
         ? 'Your MASEST order was refunded. The amount will return to your original payment method.'
         : `A partial refund of $${plan.amount.toFixed(2)} was issued to your original payment method.`;
-      const refundRecipients = await notifyCompany(sb, env, request, updated?.company_id, label, refundMsg);
+      const refundRecipients = await notifyCompany(sb, env, request, updated?.company_id, label, refundMsg, ord);
       // Guest orders have no company — email the buyer directly (excluded if already covered).
       await notifyBuyerTracking(env, request, ord, label, refundMsg, refundRecipients);
       await recordAudit(sb, {
@@ -409,11 +438,19 @@ export async function onRequest({ request, env }) {
       if (!invoiceId) return json(400, { error: 'qbo_invoice_id_required' });
 
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,status,payment_method').eq('id', body.id).single();
+        .select('id,order_number,company_id,status,payment_method').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       if (!ord) return json(404, { error: 'not_found' });
       if (ord.payment_method !== 'net') {
         return json(400, { error: 'qbo_invoice_not_net', message: 'Only NET orders can be linked to QuickBooks invoices.' });
+      }
+      try {
+        await linkOrderProviderObject(sb, {
+          orderId: ord.id, provider: 'quickbooks', objectType: 'invoice', providerObjectId: invoiceId,
+          metadata: { order_number: ord.order_number },
+        });
+      } catch (linkError) {
+        return json(linkError?.code === '23505' ? 409 : 500, { error: 'qbo_provider_link_failed' });
       }
 
       const { data: order, error } = await sb.from('orders')
@@ -426,10 +463,10 @@ export async function onRequest({ request, env }) {
           qbo_error: null,
         })
         .eq('id', body.id)
-        .select('id,company_id,status,qbo_invoice_id,qbo_sync_status,qbo_doc_id,qbo_doc_type')
+        .select('id,order_number,company_id,status,qbo_invoice_id,qbo_sync_status,qbo_doc_id,qbo_doc_type')
         .single();
       if (error) return json(500, { error: error.message });
-      await notifyCompany(sb, env, request, order?.company_id, 'invoice ready', `QuickBooks invoice ${invoiceId} is linked to your order.`);
+      await notifyCompany(sb, env, request, order?.company_id, 'invoice ready', `QuickBooks invoice ${invoiceId} is linked to your order.`, order);
       await recordAudit(sb, { user, action: 'order.record_qbo_invoice', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, qbo_invoice_id: invoiceId } });
       return json(200, { ok: true, order });
     }
@@ -440,11 +477,19 @@ export async function onRequest({ request, env }) {
       if (!paymentId) return json(400, { error: 'qbo_payment_id_required' });
 
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,customer_email,status,payment_method,tracking_status,tracking_number').eq('id', body.id).single();
+        .select('id,order_number,company_id,customer_email,status,payment_method,tracking_status,tracking_number').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       if (!ord) return json(404, { error: 'not_found' });
       if (ord.payment_method !== 'net') {
         return json(400, { error: 'qbo_payment_not_net', message: 'Only NET orders can record QuickBooks Payments settlement ids.' });
+      }
+      try {
+        await linkOrderProviderObject(sb, {
+          orderId: ord.id, provider: 'quickbooks', objectType: 'payment', providerObjectId: paymentId,
+          metadata: { order_number: ord.order_number },
+        });
+      } catch (linkError) {
+        return json(linkError?.code === '23505' ? 409 : 500, { error: 'qbo_provider_link_failed' });
       }
 
       const { data: order, error } = await sb.from('orders')
@@ -454,11 +499,11 @@ export async function onRequest({ request, env }) {
           qbo_error: null,
         })
         .eq('id', body.id)
-        .select('id,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
+        .select('id,order_number,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
         .single();
       if (error) return json(500, { error: error.message });
       const notifyBody = `QuickBooks payment ${paymentId} is recorded for your order.`;
-      const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, 'payment received', notifyBody);
+      const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, 'payment received', notifyBody, order);
       await notifyBuyerTracking(env, request, order, 'payment received', notifyBody, companyRecipients);
       await recordAudit(sb, { user, action: 'order.record_qbo_payment', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, qbo_payment_id: paymentId } });
       return json(200, { ok: true, order });
@@ -469,7 +514,7 @@ export async function onRequest({ request, env }) {
     if (body.action === 'mark_net_paid') {
       if (!staffCan(role, 'company.credit')) return json(403, { error: 'forbidden' });
       const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,company_id,customer_email,status,payment_method,tracking_status,tracking_number').eq('id', body.id).single();
+        .select('id,order_number,company_id,customer_email,status,payment_method,tracking_status,tracking_number').eq('id', body.id).single();
       if (e1) return json(500, { error: e1.message });
       const plan = planNetSettlement(ord, { reference: body.reference });
       if (!plan.ok) return json(400, { error: plan.error });
@@ -477,13 +522,13 @@ export async function onRequest({ request, env }) {
       const { data: order, error } = await sb.from('orders')
         .update({ ...plan.update, status: settledOrderStatus(ord, plan.update.status) })
         .eq('id', body.id)
-        .select('id,company_id,customer_email,status,payment_method,total,currency')
+        .select('id,order_number,company_id,customer_email,status,payment_method,total,currency')
         .single();
       if (error) return json(500, { error: error.message });
       const notifyBody = plan.reference
         ? `Your NET balance is settled (reference ${plan.reference}). Payment received — thank you.`
         : 'Your NET balance is settled. Payment received — thank you.';
-      const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, 'payment received', notifyBody);
+      const companyRecipients = await notifyCompany(sb, env, request, order?.company_id, 'payment received', notifyBody, order);
       await notifyBuyerTracking(env, request, order, 'payment received', notifyBody, companyRecipients);
       await recordAudit(sb, { user, action: 'order.mark_net_paid', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, reference: plan.reference } });
       return json(200, { ok: true, order });
@@ -528,7 +573,7 @@ export async function onRequest({ request, env }) {
 
       const { data: order, error } = await sb.from('orders').update(update)
         .eq('id', body.id)
-        .select('id,company_id,customer_email,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
+        .select('id,order_number,company_id,customer_email,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
         .single();
       if (error) return json(500, { error: error.message });
       // Append a customer-visible shipment event (history) — best-effort; never fail the update.
@@ -550,7 +595,7 @@ export async function onRequest({ request, env }) {
       // notifyCompany's generic email doesn't shadow the tracking link.
       if (order?.company_id) {
         await sb.from('notifications').insert({
-          company_id: order.company_id, type: 'order', title: `Order ${notifyLabel}`,
+          company_id: order.company_id, type: 'order', title: `Order ${orderReference(order)} ${notifyLabel}`,
           body: notifyBody || `Your order is now "${notifyLabel}".`, link: '/dashboard.html#orders',
         }).then(() => {}, () => {});
       }
@@ -575,7 +620,7 @@ export async function onRequest({ request, env }) {
     const statusPlan = planOrderStatusWrite(before, body.status);
     if (!statusPlan.ok) return json(400, { error: statusPlan.error });
     const { data: order, error } = await sb.from('orders').update({ status: statusPlan.status })
-      .eq('id', body.id).select('id,company_id,customer_email,status,total,currency').single();
+      .eq('id', body.id).select('id,order_number,company_id,customer_email,status,total,currency').single();
     if (error) return json(500, { error: error.message });
     // Cancelling an open NET order is the sanctioned NET-cancel path (refund action
     // rejects NET). Its stock was decremented at placement — return it exactly once,
@@ -586,7 +631,7 @@ export async function onRequest({ request, env }) {
       }
     }
     const statusLabel = body.status.replace('_', ' ');
-    const statusRecipients = await notifyCompany(sb, env, request, order?.company_id, statusLabel);
+    const statusRecipients = await notifyCompany(sb, env, request, order?.company_id, statusLabel, null, order);
     // Guest orders have no company — email the buyer directly (excluded if already covered).
     await notifyBuyerTracking(env, request, order, statusLabel, null, statusRecipients);
     await recordAudit(sb, { user, action: 'order.set_status', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, status: body.status, previous_status: before.status } });

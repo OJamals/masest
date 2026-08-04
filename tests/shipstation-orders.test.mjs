@@ -5,6 +5,7 @@ import { buyOrderLabel, rateOrderShipment } from '../functions/_lib/shipstation-
 
 const order = {
   id: '70f81af0-5ae5-4ea7-953b-f612b6e0ed91',
+  order_number: 'MST-00000123',
   status: 'paid',
   customer_email: 'buyer@example.com',
   currency: 'usd',
@@ -27,6 +28,7 @@ const order = {
 test('rateOrderShipment quotes connected carriers and persists provider shipment ID', async () => {
   let sentPayload;
   let persisted;
+  const links = [];
   const result = await rateOrderShipment(
     { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-warehouse-1' },
     {
@@ -64,6 +66,7 @@ test('rateOrderShipment quotes connected carriers and persists provider shipment
         };
       },
       persistRate: async (_env, orderId, patch) => { persisted = { orderId, patch }; },
+      linkProviderObject: async (_env, link) => { links.push(link); },
       audit: async () => {},
     },
   );
@@ -91,6 +94,13 @@ test('rateOrderShipment quotes connected carriers and persists provider shipment
     currency: 'usd',
     delivery_days: 3,
     estimated_delivery_date: '2026-08-08T00:00:00Z',
+  }]);
+  assert.deepEqual(links, [{
+    orderId: order.id,
+    provider: 'shipstation',
+    objectType: 'shipment',
+    providerObjectId: 'se-shipment-1',
+    metadata: { order_number: order.order_number },
   }]);
 });
 
@@ -128,6 +138,7 @@ test('rateOrderShipment uses CMS variant package profiles when staff leaves pack
         return { rate_response: { shipment_id: 'se-shipment-1', rates: [] } };
       },
       persistRate: async () => {},
+      linkProviderObject: async () => {},
       audit: async () => {},
     },
   );
@@ -139,6 +150,7 @@ test('rateOrderShipment uses CMS variant package profiles when staff leaves pack
 test('buyOrderLabel verifies rate ownership, then atomically claims and persists label', async () => {
   const calls = [];
   let persisted;
+  const links = [];
   const result = await buyOrderLabel(
     { SHIPSTATION_API_KEY: 'secret' },
     { order_id: order.id, rate_id: 'se-rate-1' },
@@ -162,6 +174,7 @@ test('buyOrderLabel verifies rate ownership, then atomically claims and persists
         };
       },
       persistLabel: async (_env, orderId, patch) => { persisted = { orderId, patch }; },
+      linkProviderObject: async (_env, link) => { links.push(link); },
       insertShipmentEvent: async () => {},
       audit: async () => {},
     },
@@ -182,6 +195,11 @@ test('buyOrderLabel verifies rate ownership, then atomically claims and persists
   assert.equal(persisted.patch.shipped_at, undefined);
   assert.equal(result.label_url, 'https://api.shipstation.com/v2/downloads/label.pdf');
   assert.equal(result.already_purchased, false);
+  assert.deepEqual(links.map((link) => [link.objectType, link.providerObjectId]), [
+    ['shipment', 'se-shipment-1'],
+    ['rate', 'se-rate-1'],
+    ['label', 'se-label-1'],
+  ]);
 });
 
 test('buyOrderLabel blocks shipment mismatch before claim or charge', async () => {
@@ -204,6 +222,7 @@ test('buyOrderLabel blocks shipment mismatch before claim or charge', async () =
 });
 
 test('buyOrderLabel is idempotent after a label exists', async () => {
+  const links = [];
   const existing = {
     ...order,
     shipstation_shipment_id: 'se-shipment-1',
@@ -218,6 +237,7 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
     { user: { id: 'staff-1' } },
     {
       loadOrder: async () => existing,
+      linkProviderObject: async (_env, link) => links.push(link),
       getRate: async () => assert.fail('existing label must return before provider call'),
       claimLabel: async () => assert.fail('existing label must not claim'),
       purchaseLabel: async () => assert.fail('existing label must not charge'),
@@ -225,6 +245,10 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
   );
   assert.equal(result.already_purchased, true);
   assert.equal(result.label_id, 'se-label-existing');
+  assert.deepEqual(links.map((link) => [link.objectType, link.providerObjectId]), [
+    ['shipment', 'se-shipment-1'],
+    ['label', 'se-label-existing'],
+  ]);
 });
 
 test('buyOrderLabel locks provider error responses for manual reconciliation', async () => {

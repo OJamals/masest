@@ -47,6 +47,13 @@ test("qbo-sync endpoint posts claimed orders and records terminal sync state", (
   assert.doesNotMatch(SRC, /qbo_document_sync_not_implemented|json\(501,/,
     "worker must not leave successfully claimed orders at the placeholder implementation boundary");
 });
+
+test("qbo-sync joins the created invoice and linked payment to the canonical order", () => {
+  assert.match(SRC, /import\s*\{[^}]*linkOrderProviderObject[^}]*\}/);
+  assert.match(SRC, /provider:\s*'quickbooks'[\s\S]*objectType:\s*'invoice'[\s\S]*providerObjectId:\s*result\.docId/);
+  assert.match(SRC, /provider:\s*'quickbooks'[\s\S]*objectType:\s*'payment'[\s\S]*providerObjectId:\s*result\.paymentId/);
+  assert.match(SRC, /metadata:\s*\{\s*order_number:\s*order\.order_number\s*\}/);
+});
 test("qbo-sync exposes a reusable worker for staff-triggered manual runs", () => {
   assert.match(SRC, /export async function runQboSync\(/,
     "order sync should remain independently reusable");

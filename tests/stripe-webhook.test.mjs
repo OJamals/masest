@@ -70,6 +70,14 @@ test("webhook treats the RPC unique violation as an idempotent Stripe retry", ()
     "a recovered duplicate must be acknowledged with HTTP 200 duplicate=true");
 });
 
+test("webhook joins each Stripe object to the canonical order and writes its public number back", () => {
+  assert.match(SRC, /linkOrderProviderObject\([\s\S]*objectType:\s*'checkout_session'/);
+  assert.match(SRC, /linkOrderProviderObject\([\s\S]*objectType:\s*'payment_intent'/);
+  assert.match(SRC, /updateCheckoutSession\(s\.id,\s*\{\s*metadata:\s*\{\s*order_number:/);
+  assert.match(SRC, /select\('id,order_number,company_id'\)/,
+    "the webhook must load the DB-assigned public number before provider linking");
+});
+
 // --- Contract: inventory decrement is a durable, idempotent provider effect ---
 test("webhook durably enqueues stock after persistence; worker applies it atomically", () => {
   assert.match(SRC, /stage:\s*settled\s*\?\s*'card'\s*:\s*'ach_pending'/,

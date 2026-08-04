@@ -11,6 +11,7 @@ import {
 } from '../_lib/qbo.js';
 import { qboConfigEnv } from '../_lib/qbo-config.js';
 import { timingSafeEqual } from '../_lib/secret.js';
+import { linkOrderProviderObject, orderReference } from '../_lib/order-integrations.js';
 
 // #26 — a doc that exhausts MAX_ATTEMPTS dead-letters to 'error' and stops retrying.
 // Email staff once per run per queue so it doesn't rot silently in the table.
@@ -203,6 +204,20 @@ async function markSynced(sb, order, result) {
   if (result.intuitTids?.length) patch.qbo_intuit_tids = result.intuitTids;
   if (result.paymentId) patch.qbo_payment_id = result.paymentId;
   if (result.docType === 'invoice' || result.docType === 'invoice_payment') patch.qbo_invoice_id = result.docId;
+  await linkOrderProviderObject(sb, {
+    orderId: order.id,
+    provider: 'quickbooks',
+    objectType: 'invoice',
+    providerObjectId: result.docId,
+    metadata: { order_number: order.order_number },
+  });
+  await linkOrderProviderObject(sb, {
+    orderId: order.id,
+    provider: 'quickbooks',
+    objectType: 'payment',
+    providerObjectId: result.paymentId,
+    metadata: { order_number: order.order_number },
+  });
   const { error } = await sb.from('orders').update(patch).eq('id', order.id);
   if (error) throw new Error(error.message || 'qbo_order_update_failed');
 }
@@ -213,7 +228,7 @@ async function notifyInvoiceReady(sb, order, result) {
     company_id: order.company_id,
     type: 'order',
     title: 'Order invoice ready',
-    body: `QuickBooks invoice ${result.docId} is linked to your order.`,
+    body: `QuickBooks invoice ${result.docId} is linked to order ${orderReference(order)}.`,
     link: '/dashboard.html#orders',
   });
 }
@@ -309,7 +324,7 @@ export async function runQboRefundSync({ env, batch = 10 }) {
   try {
     const orderIds = [...new Set(refunds.map((r) => r.order_id))];
     const { data: ords, error: oerr } = await sb.from('orders')
-      .select('id,company_id,customer_email,payment_method,total,shipping,tax,stripe_payment_intent')
+      .select('id,order_number,company_id,customer_email,payment_method,total,shipping,tax,stripe_payment_intent')
       .in('id', orderIds);
     if (oerr) throw new Error(oerr.message || 'qbo_refund_order_read_failed');
     ordersById = Object.fromEntries((ords || []).map((o) => [o.id, o]));
@@ -333,6 +348,13 @@ export async function runQboRefundSync({ env, batch = 10 }) {
       const items = refund.fully_refunded ? qboItemsWithShipping(orderLines, order) : orderLines;
       const result = await syncRefund(sb, qboEnv, credentials.accessToken, credentials.realmId, refund, order, items, companyNames, {
         taxExempt: taxExemptIds.has(order.company_id),
+      });
+      await linkOrderProviderObject(sb, {
+        orderId: order.id,
+        provider: 'quickbooks',
+        objectType: 'credit_memo',
+        providerObjectId: result.creditMemoId,
+        metadata: { order_number: order.order_number },
       });
       const { error: uerr } = await sb.from('qbo_refunds').update({
         qbo_sync_status: 'synced',

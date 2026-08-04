@@ -17,6 +17,7 @@ import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
 import { finalizeQuoteOrder } from '../_lib/quote-order.js';
 import { stripeRuntimeError, stripeShippingRatesError } from '../_lib/stripe-runtime.js';
+import { orderReference } from '../_lib/order-integrations.js';
 
 const CHECKOUT_BODY_MAX_BYTES = 64 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -36,7 +37,8 @@ async function sendNetOrderConfirmation({
     const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
     const currency = lines[0]?.currency || 'usd';
     const total = lines.reduce((s, l) => s + (Number(l.unit_price) || 0) * (Number(l.qty) || 0), 0);
-    const ref = order?.id ? ` #${order.id}` : '';
+    const reference = orderReference(order);
+    const ref = reference ? ` #${reference}` : '';
     const bodyHtml = `<p style="margin:0 0 16px;color:#556;font-size:14px;line-height:1.5">Your order is placed on account. A QuickBooks invoice will follow under your NET terms; no payment is due now.</p>`
       + (purchaseOrderNumber
         ? `<p style="margin:0 0 16px;color:#556;font-size:14px"><b>Purchase order:</b> ${htmlEscape(purchaseOrderNumber)}</p>`
@@ -69,6 +71,13 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const checkRateLimit = dependencies.rateLimit || rateLimit;
   const parseBody = dependencies.readBoundedJson || readBoundedJson;
   const sendNetConfirmation = dependencies.sendNetOrderConfirmation || sendNetOrderConfirmation;
+  const loadOrderIdentity = dependencies.loadOrderIdentity || (async (sb, id) => {
+    const { data, error } = await sb.from('orders')
+      .select('id,order_number')
+      .eq('id', id)
+      .maybeSingle();
+    return error ? null : data;
+  });
   const createStripe = dependencies.createStripe
     || ((secret) => new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() }));
   const validateShippingRates = dependencies.validateShippingRates || stripeShippingRatesError;
@@ -210,6 +219,8 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       return json(409, { error: probe.reason || 'net_order_rejected' });
     }
     if (probe.duplicate) {
+      const order = await loadOrderIdentity(sb, probe.order_id);
+      if (!order?.order_number) return json(503, { error: 'order_reference_recovery_failed' });
       if (quoteContext) {
         const finalized = await finalizeQuoteOrder(sb, {
           quoteId: quoteContext.quoteId,
@@ -220,7 +231,8 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       }
       return json(200, {
         net: true,
-        order_id: probe.order_id,
+        order_id: order.id,
+        order_number: order.order_number,
         duplicate: true,
         message: 'Order placed on account. A QuickBooks invoice will follow (NET terms).',
       });
@@ -378,7 +390,8 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       return json(409, { error: placed.reason || 'net_order_rejected' });
     }
 
-    const order = { id: placed.order_id };
+    const order = await loadOrderIdentity(sb, placed.order_id);
+    if (!order?.order_number) return json(503, { error: 'order_reference_recovery_failed' });
 
     if (quoteContext) {
       const finalized = await finalizeQuoteOrder(sb, {
@@ -402,6 +415,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     return json(placed.duplicate ? 200 : 201, {
       net: true,
       order_id: order.id,
+      order_number: order.order_number,
       duplicate: !!placed.duplicate,
       message: 'Order placed on account. A QuickBooks invoice will follow (NET terms).',
     });

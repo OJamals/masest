@@ -484,10 +484,11 @@ async function renderOrders({ append = false } = {}) {
   const orderHtml = list.length ? list.map((o, i) => {
     const items = o.order_items || [];
     const n = items.reduce((s, it) => s + (it.qty || 0), 0);
+    const reference = o.order_number || o.id;
     const lines = items.map((it) => `<div class="dash-row dash-order-line"><span>${esc(it.name)} × ${it.qty}</span><span>${money(it.line_total, o.currency)}</span></div>`).join('');
     return `<details class="dash-order-card">
       <summary class="dash-order-summary">
-        <span>${fmtDate(o.created_at)} · ${orderLifecycleBadge(o)} · ${n} item${n === 1 ? '' : 's'}</span>
+        <span>${esc(reference)} · ${fmtDate(o.created_at)} · ${orderLifecycleBadge(o)} · ${n} item${n === 1 ? '' : 's'}</span>
         <b>${money(o.total, o.currency)}</b>
         <i class="ph ph-caret-down dash-order-caret" aria-hidden="true"></i></summary>
       <div class="dash-order-lines">${lines}

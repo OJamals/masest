@@ -46,3 +46,15 @@ test("tracking updates email buyer + company recipients once, deduplicated", () 
   assert.match(ADMIN_ORDERS, /await sendTrackingEmail\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*\[order\?\.customer_email,\s*\.\.\.companyRecipients\]\)/);
   assert.match(ADMIN_ORDERS, /htmlEscape/);
 });
+
+test("public order number is used across confirmation, tracking, dashboard, admin, and CSV", () => {
+  assert.match(CHECKOUT, /order_number:\s*order\.order_number/);
+  assert.match(STRIPE_EFFECTS, /select\('id,order_number,status,/);
+  assert.match(STRIPE_EFFECTS, /orderReference\(order\)/);
+  assert.match(ACCOUNT_ORDERS, /select\('id,order_number,status,/);
+  assert.match(ADMIN_ORDERS, /select\('id,order_number,status,/);
+  assert.match(ADMIN_ORDERS, /const reference = orderReference\(order\)[\s\S]*subject:\s*`Order \$\{reference\} \$\{label\}`/);
+  assert.match(ADMIN_ORDERS, /rows\.push\(\[o\.order_number \|\| o\.id,/);
+  assert.match(DASHBOARD, /o\.order_number \|\| o\.id/);
+  assert.match(ADMIN_ORDER_UI, /order\.order_number \|\| order\.id/);
+});

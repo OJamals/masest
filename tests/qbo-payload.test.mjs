@@ -13,6 +13,7 @@ import {
 
 const order = {
   id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  order_number: "MST-00000123",
   tax: 7.5,
   total: 107.5,
 };
@@ -29,8 +30,8 @@ test("invoice payload maps one QBO line per order item", () => {
   const payload = buildInvoicePayload({ order, items, customerRef: "55", itemRefs });
 
   assert.equal(payload.CustomerRef.value, "55");
-  assert.equal(payload.DocNumber, "a1b2c3d4e5f67890abcde");
-  assert.equal(payload.PrivateNote, `MASEST order ${order.id}`);
+  assert.equal(payload.DocNumber, order.order_number);
+  assert.equal(payload.PrivateNote, `MASEST order ${order.order_number}`);
   assert.equal(payload.Line.length, 2);
   assert.equal(payload.Line[0].DetailType, "SalesItemLineDetail");
   assert.equal(payload.Line[0].Amount, 50);
@@ -48,7 +49,7 @@ test("invoice private note carries the customer purchase-order reference", () =>
     customerRef: "55",
     itemRefs,
   });
-  assert.equal(payload.PrivateNote, `MASEST order ${order.id}; Customer PO PO-1042`);
+  assert.equal(payload.PrivateNote, `MASEST order ${order.order_number}; Customer PO PO-1042`);
 });
 
 test("QBO order items add one shipping line for the Stripe shipping charge", () => {
@@ -64,7 +65,7 @@ test("invoice payload shares document structure and carries balance due", () => 
   const payload = buildInvoicePayload({ order, items, customerRef: "55", itemRefs });
 
   assert.equal(payload.CustomerRef.value, "55");
-  assert.equal(payload.DocNumber, "a1b2c3d4e5f67890abcde");
+  assert.equal(payload.DocNumber, order.order_number);
   assert.equal(payload.Line[1].SalesItemLineDetail.ItemRef.value, "102");
   assert.equal(payload.TxnTaxDetail.TotalTax, 7.5);
   assert.equal(payload.Balance, 107.5);
@@ -107,6 +108,7 @@ test("invoice payment payload links Stripe payment to the QuickBooks invoice", (
   assert.equal(payload.CustomerRef.value, "55");
   assert.equal(payload.TotalAmt, 107.5);
   assert.equal(payload.PaymentRefNum, "pi_123");
+  assert.equal(payload.PrivateNote, `Stripe payment for MASEST order ${order.order_number}`);
   assert.equal(payload.Line[0].Amount, 107.5);
   assert.equal(payload.Line[0].LinkedTxn[0].TxnId, "inv-900");
   assert.equal(payload.Line[0].LinkedTxn[0].TxnType, "Invoice");

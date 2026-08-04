@@ -74,6 +74,15 @@ function checkoutDb(calls, shippingEntries = []) {
           },
         };
       }
+      if (table === 'orders') {
+        return {
+          select() { return this; },
+          eq() { return this; },
+          async maybeSingle() {
+            return { data: { id: 'order-1', order_number: 'MST-00000123' }, error: null };
+          },
+        };
+      }
       throw new Error(`unexpected checkout table: ${table}`);
     },
     async rpc(name, args) {
@@ -260,6 +269,7 @@ test('NET checkout delegates the complete ledger mutation and PO reference to pl
 
   assert.equal(result.status, 201);
   assert.equal(result.body.order_id, 'order-1');
+  assert.equal(result.body.order_number, 'MST-00000123');
   assert.equal(result.body.duplicate, false);
   const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
   assert.deepEqual(labels, ['rpc.place_net_order_v3', 'variants.read', 'rpc.place_net_order_v3']);
@@ -279,6 +289,7 @@ test('NET checkout delegates the complete ledger mutation and PO reference to pl
     line_total: 50,
   }]);
   assert.equal(emails.length, 1);
+  assert.equal(emails[0].order.order_number, 'MST-00000123');
 });
 
 test('response-loss retry returns the original NET order before depleted-stock validation', async () => {
@@ -313,6 +324,7 @@ test('response-loss retry returns the original NET order before depleted-stock v
 
   assert.equal(result.status, 200);
   assert.equal(result.body.order_id, 'order-1');
+  assert.equal(result.body.order_number, 'MST-00000123');
   assert.equal(result.body.duplicate, true);
   assert.equal(emails.length, 0);
   assert.deepEqual(calls.map((call) => call[0]), ['rpc.place_net_order_v3']);
@@ -347,6 +359,7 @@ test('duplicate NET response returns the original order without another email', 
     body: {
       net: true,
       order_id: 'order-1',
+      order_number: 'MST-00000123',
       duplicate: true,
       message: 'Order placed on account. A QuickBooks invoice will follow (NET terms).',
     },
@@ -627,6 +640,7 @@ function webhookDb(calls, persistResults, effectResults = []) {
     async rpc(name, args) {
       calls.push([`rpc.${name}`, args]);
       if (name === 'persist_stripe_order') return persistResults.shift();
+      if (name === 'link_order_provider_object') return { data: `link-${args.p_object_type}`, error: null };
       throw new Error(`unexpected webhook RPC: ${name}`);
     },
     from(table) {
@@ -645,7 +659,7 @@ function webhookDb(calls, persistResults, effectResults = []) {
           eq() { return this; },
           async maybeSingle() {
             calls.push('orders.effect-recovery');
-            return { data: { id: 'order-1', company_id: null }, error: null };
+            return { data: { id: 'order-1', order_number: 'MST-00000123', company_id: null }, error: null };
           },
         };
       }
@@ -697,6 +711,7 @@ test('webhook hydrates an incomplete checkout event before persisting the paid o
       calls.push(['stripe.session.retrieve', id]);
       return complete;
     },
+    updateCheckoutSession: async (id, params) => { calls.push(['stripe.session.update', id, params]); },
     adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
   });
 
@@ -717,12 +732,23 @@ test('webhook hydrates an incomplete checkout event before persisting the paid o
     line_total: 25,
     backordered: false,
   }]);
+  assert.deepEqual(calls.filter((call) => Array.isArray(call) && call[0] === 'rpc.link_order_provider_object')
+    .map((call) => [call[1].p_object_type, call[1].p_provider_object_id]), [
+    ['checkout_session', 'cs_1'],
+    ['payment_intent', 'pi_1'],
+  ]);
+  assert.deepEqual(calls.find((call) => Array.isArray(call) && call[0] === 'stripe.session.update'), [
+    'stripe.session.update',
+    'cs_1',
+    { metadata: { order_number: 'MST-00000123' } },
+  ]);
 });
 
 test('duplicate webhook delivery recovers and enqueues the same effects before 200', async () => {
   const calls = [];
   const handler = createStripeWebhookHandler({
     constructEvent: async () => ({ id: 'evt_checkout', type: 'checkout.session.completed', data: { object: paidSession() } }),
+    updateCheckoutSession: async () => {},
     adminClient: () => webhookDb(calls, [{ data: null, error: { code: '23505' } }]),
   });
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
@@ -744,6 +770,7 @@ test('webhook persistence failure retries; effects enqueue only after durable or
   ];
   const handler = createStripeWebhookHandler({
     constructEvent: async () => ({ id: 'evt_checkout', type: 'checkout.session.completed', data: { object: paidSession() } }),
+    updateCheckoutSession: async () => {},
     adminClient: () => webhookDb(calls, persistResults),
   });
 
@@ -768,6 +795,7 @@ test('webhook enqueue failure prevents acknowledgement after order persistence',
       type: 'checkout.session.completed',
       data: { object: paidSession() },
     }),
+    updateCheckoutSession: async () => {},
     adminClient: () => webhookDb(
       calls,
       [{ data: { id: 'order-1' }, error: null }],
@@ -792,6 +820,7 @@ test('quoted Stripe sessions finalize card orders but retain ACH drafts while pe
         type: 'checkout.session.completed',
         data: { object: session },
       }),
+      updateCheckoutSession: async () => {},
       adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
       finalizeQuoteOrder: async (_sb, input) => {
         transitions.push(['finalize', input]);
@@ -1003,6 +1032,11 @@ test('refund queue retries before order reconciliation and accepts duplicate rep
     { data: null, error: { code: '23505', message: 'duplicate refund id' } },
   ];
   const db = {
+    async rpc(name, args) {
+      calls.push([`rpc.${name}`, args]);
+      assert.equal(name, 'link_order_provider_object');
+      return { data: `link-${args.p_provider_object_id}`, error: null };
+    },
     from(table) {
       if (table === 'orders') {
         let operation = 'select';
@@ -1016,7 +1050,14 @@ test('refund queue retries before order reconciliation and accepts duplicate rep
           async maybeSingle() {
             assert.equal(operation, 'select');
             return {
-              data: { id: 'order-1', company_id: 'company-1', status: 'paid', total: 25, refunded_amount: 0 },
+              data: {
+                id: 'order-1',
+                order_number: 'MST-00000123',
+                company_id: 'company-1',
+                status: 'paid',
+                total: 25,
+                refunded_amount: 0,
+              },
               error: null,
             };
           },
@@ -1048,14 +1089,21 @@ test('refund queue retries before order reconciliation and accepts duplicate rep
   const second = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.equal(second.status, 200);
   const labels = calls.map((call) => call[0]);
+  assert.equal(labels.filter((label) => label === 'rpc.link_order_provider_object').length, 2);
   assert.equal(labels.filter((label) => label === 'qbo_refunds.insert').length, 2);
   assert.equal(labels.filter((label) => label === 'orders.update').length, 1);
+  assert.ok(labels.lastIndexOf('rpc.link_order_provider_object') < labels.lastIndexOf('qbo_refunds.insert'));
   assert.ok(labels.lastIndexOf('qbo_refunds.insert') < labels.indexOf('orders.update'));
 });
 
 test('refund of a QBO-skipped Stripe test order never queues a production credit memo', async () => {
   const calls = [];
   const db = {
+    async rpc(name, args) {
+      calls.push([`rpc.${name}`, args]);
+      assert.equal(name, 'link_order_provider_object');
+      return { data: `link-${args.p_provider_object_id}`, error: null };
+    },
     from(table) {
       if (table !== 'orders') throw new Error(`unexpected refund table: ${table}`);
       let operation = 'select';
@@ -1071,6 +1119,7 @@ test('refund of a QBO-skipped Stripe test order never queues a production credit
           return {
             data: {
               id: 'order-test',
+              order_number: 'MST-00000124',
               company_id: 'company-1',
               status: 'paid',
               total: 25,
@@ -1100,5 +1149,6 @@ test('refund of a QBO-skipped Stripe test order never queues a production credit
 
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.equal(result.status, 200);
+  assert.equal(calls.filter(([label]) => label === 'rpc.link_order_provider_object').length, 1);
   assert.equal(calls.filter(([label]) => label === 'orders.update').length, 1);
 });

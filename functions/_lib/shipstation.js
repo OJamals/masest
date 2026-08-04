@@ -1,3 +1,5 @@
+import { orderReference } from './order-integrations.js';
+
 const API_BASE_URL = 'https://api.shipstation.com/v2';
 
 function text(value) {
@@ -88,14 +90,14 @@ export function buildRateRequest({ order, packages, warehouseId, carrierIds, pho
   if (!warehouse) throw new ShipStationError('shipstation_warehouse_required');
   if (!carriers.length) throw new ShipStationError('shipstation_carriers_required');
   const normalizedPackages = normalizePackages(packages);
-  const orderId = text(order?.id);
-  if (!orderId) throw new ShipStationError('shipping_order_required');
+  const reference = text(orderReference(order));
+  if (!reference) throw new ShipStationError('shipping_order_required');
   const currency = text(order?.currency || 'usd').toLowerCase();
   return {
     rate_options: { carrier_ids: carriers },
     shipment: {
       validate_address: 'validate_and_clean',
-      shipment_number: orderId.slice(0, 50),
+      shipment_number: reference.slice(0, 50),
       warehouse_id: warehouse,
       ship_to: stripeShipTo(order, { phone, residential }),
       packages: normalizedPackages,

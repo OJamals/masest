@@ -1,5 +1,6 @@
 import { qboConfigEnv } from './qbo-config.js';
 import { intuitTidFromHeaders, intuitTidSuffix } from './intuit.js';
+import { orderReference } from './order-integrations.js';
 
 const OAUTH_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
@@ -73,8 +74,12 @@ export function nextSyncState(attempts, nowMs = Date.now()) {
   };
 }
 
-export function docNumber(orderId) {
-  return String(orderId || '').replaceAll('-', '').slice(0, 21);
+export function docNumber(orderOrId) {
+  if (orderOrId && typeof orderOrId === 'object' && orderOrId.order_number) {
+    return String(orderOrId.order_number).slice(0, 21);
+  }
+  const fallback = orderOrId && typeof orderOrId === 'object' ? orderOrId.id : orderOrId;
+  return String(fallback || '').replaceAll('-', '').slice(0, 21);
 }
 
 function lineFor(item, itemRefs, taxExempt = false) {
@@ -163,12 +168,12 @@ export function qboCustomerPayload({ key, displayName, email, phone, billingAddr
 function baseDocumentPayload({ order, items, customerRef, itemRefs, taxExempt = false }) {
   const billEmail = billEmailFor(order);
   const privateNote = [
-    order.qbo_private_note || `MASEST order ${order.id}`,
+    order.qbo_private_note || `MASEST order ${orderReference(order)}`,
     order.purchase_order_number ? `Customer PO ${cleanText(order.purchase_order_number, 64)}` : '',
   ].filter(Boolean).join('; ');
   return {
     CustomerRef: { value: customerRef },
-    DocNumber: docNumber(order.id),
+    DocNumber: docNumber(order),
     PrivateNote: privateNote,
     Line: documentLines({ order, items, itemRefs, taxExempt }),
     TxnTaxDetail: { TotalTax: Number(order.tax || 0) },
@@ -197,11 +202,12 @@ export function buildInvoicePayload(input) {
 
 export function buildInvoicePaymentPayload({ order, customerRef, invoiceId }) {
   const total = Number(order?.total || 0);
+  const reference = orderReference(order);
   return {
     CustomerRef: { value: customerRef },
     TotalAmt: total,
     PaymentRefNum: docNumber(order?.stripe_payment_intent || order?.id),
-    PrivateNote: order?.qbo_payment_note || `Stripe payment for MASEST order ${order?.id}`,
+    PrivateNote: order?.qbo_payment_note || `Stripe payment for MASEST order ${reference}`,
     Line: [
       {
         Amount: total,
@@ -223,6 +229,7 @@ export function buildInvoicePaymentPayload({ order, customerRef, invoiceId }) {
 // owner can recategorize in QBO).
 // ponytail: single-line partial credit memo; only full refunds reverse exact lines.
 export function buildCreditMemoPayload({ order, items = [], customerRef, itemRefs, taxExempt = false, amount, fullyRefunded = false }) {
+  const reference = orderReference(order);
   let lines;
   if (fullyRefunded) {
     lines = documentLines({ order, items, itemRefs, taxExempt });
@@ -234,7 +241,7 @@ export function buildCreditMemoPayload({ order, items = [], customerRef, itemRef
     lines = [{
       DetailType: 'SalesItemLineDetail',
       Amount: refundAmount,
-      Description: `Partial refund for order ${order.id}`,
+      Description: `Partial refund for order ${reference}`,
       SalesItemLineDetail: {
         ItemRef: { value: ref },
         Qty: 1,
@@ -246,7 +253,7 @@ export function buildCreditMemoPayload({ order, items = [], customerRef, itemRef
   const billEmail = billEmailFor(order);
   return {
     CustomerRef: { value: customerRef },
-    PrivateNote: `MASEST refund for order ${order.id}`,
+    PrivateNote: `MASEST refund for order ${reference}`,
     Line: lines,
     // Only a full reversal carries the original tax; a partial dollar refund is posted untaxed.
     ...(fullyRefunded ? { TxnTaxDetail: { TotalTax: Number(order.tax || 0) } } : {}),

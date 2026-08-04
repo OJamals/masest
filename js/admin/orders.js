@@ -299,6 +299,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     }
     box.innerHTML = `<div class="admin-order-list">${orders.map((order) => {
       const id = esc(order.id);
+      const reference = esc(order.order_number || order.id);
       const items = (order.order_items || [])
         .map((item) => `<li>${esc(item.qty)} x ${esc(item.name || item.sku)}</li>`)
         .join('');
@@ -315,7 +316,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       return `<article class="admin-order-card">
         <div class="admin-order-head">
           <div>
-            <span class="admin-kicker">${esc(date(order.created_at))}</span>
+            <span class="admin-kicker">${reference} · ${esc(date(order.created_at))}</span>
             <h3>${esc(order.companies?.name || order.company_name || order.company_id || 'Guest')}</h3>
           </div>
           <b>${esc(money(order.total ?? order.subtotal, order.currency))}</b>
@@ -406,13 +407,20 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
           `<li><b>${esc(e.status)}</b> — ${esc(date(e.created_at))}${e.carrier ? ` · ${esc(e.carrier)}` : ''}${e.tracking_number ? ` ${esc(e.tracking_number)}` : ''}${e.note ? ` — ${esc(e.note)}` : ''}</li>`).join('')}</ul>`
       : '';
     const lifecycle = lifecycleFor(order);
-    return `<h3 style="margin:0 0 4px">Order ${esc(order.id)}</h3>
+    const providerLinks = (order.order_provider_links || [])
+      .slice().sort((a, b) => `${a.provider}:${a.object_type}`.localeCompare(`${b.provider}:${b.object_type}`));
+    const providerLedger = providerLinks.length
+      ? `<h4 style="margin:16px 0 4px">Provider ledger</h4><ul style="margin:0;padding-left:18px">${providerLinks.map((link) =>
+          `<li><b>${esc(link.provider)}</b> ${esc(link.object_type)} — <code>${esc(link.provider_object_id)}</code></li>`).join('')}</ul>`
+      : '<h4 style="margin:16px 0 4px">Provider ledger</h4><p class="muted" style="margin:0">No external provider objects linked.</p>';
+    return `<h3 style="margin:0 0 4px">Order ${esc(order.order_number || order.id)}</h3>
       <p class="muted" style="margin:0 0 12px">${esc(order.companies?.name || order.company_id || 'Guest')} · ${esc(order.customer_email || '')} · ${esc(lifecycle.label)} · ${esc(order.status)} · ${esc(order.payment_method || '')}</p>
       ${order.purchase_order_number ? `<p style="margin:0 0 12px"><b>Purchase order:</b> ${esc(order.purchase_order_number)}</p>` : ''}
       <table class="adm" style="width:100%"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Line</th></tr></thead><tbody>${items}</tbody></table>
       <p style="margin:12px 0 0"><b>Total</b> ${esc(money(order.total ?? order.subtotal, order.currency))}${Number(order.tax) ? ` (tax ${esc(money(order.tax, order.currency))})` : ''}${Number(order.refunded_amount) > 0 ? ` · refunded ${esc(money(order.refunded_amount, order.currency))}` : ''}</p>
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
       ${shipHistory}
+      ${providerLedger}
       <h4 style="margin:16px 0 4px">Staff timeline</h4><ul style="margin:0;padding-left:18px">${events}</ul>`;
   }
 

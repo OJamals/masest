@@ -1,8 +1,8 @@
 // GET /api/order?session_id=cs_… — order summary for the confirmation page.
-// Reads the Stripe Checkout Session directly (expand line_items), so it works the instant
-// the buyer is redirected back — no dependency on the webhook having written the DB order yet.
+// Reads the Stripe Checkout Session directly (expand line_items), so totals work the instant
+// the buyer returns. The canonical number is resolved best-effort from Stripe metadata or DB.
 import Stripe from 'stripe';
-import { json } from '../_lib/supabase.js';
+import { adminClient, json } from '../_lib/supabase.js';
 
 const RESPONSE_HEADERS = {
   'cache-control': 'private, no-store',
@@ -37,7 +37,18 @@ export async function onRequestGet({ request, env }) {
       qty: li.quantity,
       amount_total: (li.amount_total ?? 0) / 100,
     }));
+    let orderNumber = String(s.metadata?.order_number || '').trim() || null;
+    if (!orderNumber && s.payment_intent) {
+      try {
+        const { data } = await adminClient(env).from('orders')
+          .select('order_number')
+          .eq('stripe_payment_intent', String(s.payment_intent))
+          .maybeSingle();
+        orderNumber = data?.order_number || null;
+      } catch { /* webhook may still be persisting; summary remains valid without the number */ }
+    }
     return response(200, {
+      order_number: orderNumber,
       email_hint: maskEmail(s.customer_details?.email || s.customer_email),
       currency: (s.currency || 'usd').toUpperCase(),
       amount_total: (s.amount_total ?? 0) / 100,

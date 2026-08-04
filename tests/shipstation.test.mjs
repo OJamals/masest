@@ -194,6 +194,7 @@ test('ShipStation rate requests normalize multi-package dimensions and the Strip
   const payload = buildRateRequest({
     order: {
       id: '70f81af0-5ae5-4ea7-953b-f612b6e0ed91',
+      order_number: 'MST-00000123',
       customer_email: 'buyer@example.com',
       ship_address: {
         name: 'Buyer Name',
@@ -216,7 +217,7 @@ test('ShipStation rate requests normalize multi-package dimensions and the Strip
 
   assert.deepEqual(payload.rate_options, { carrier_ids: ['se-ups', 'se-fedex'] });
   assert.equal(payload.shipment.external_shipment_id, undefined);
-  assert.equal(payload.shipment.shipment_number, '70f81af0-5ae5-4ea7-953b-f612b6e0ed91');
+  assert.equal(payload.shipment.shipment_number, 'MST-00000123');
   assert.equal(payload.shipment.warehouse_id, 'se-warehouse-1');
   assert.deepEqual(payload.shipment.ship_to, {
     name: 'Buyer Name',

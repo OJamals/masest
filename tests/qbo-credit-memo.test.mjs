@@ -5,7 +5,7 @@ import { buildCreditMemoPayload, syncRefund } from '../functions/_lib/qbo.js';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
-const order = { id: 'ord-1', tax: 5, customer_email: 'a@b.com' };
+const order = { id: 'ord-1', order_number: 'MST-00000123', tax: 5, customer_email: 'a@b.com' };
 const items = [
   { sku: 'VK-1', name: 'A', qty: 2, unit_price: 10, line_total: 20 },
   { sku: 'VK-2', name: 'B', qty: 1, unit_price: 7, line_total: 7 },
@@ -53,6 +53,7 @@ test('full refund credit memo reverses every invoice line + carries tax', () => 
   assert.equal(p.Line[0].Amount, 20);
   assert.equal(p.TxnTaxDetail.TotalTax, 5);
   assert.equal(p.BillEmail.Address, 'a@b.com');
+  assert.equal(p.PrivateNote, 'MASEST refund for order MST-00000123');
 });
 
 test('full refund credit memo reverses the original Stripe discount', () => {
@@ -81,6 +82,7 @@ test('partial refund posts a single dollar line, untaxed', () => {
   assert.equal(p.Line[0].Amount, 12.5);
   assert.equal(p.Line[0].SalesItemLineDetail.UnitPrice, 12.5);
   assert.equal(p.Line[0].SalesItemLineDetail.ItemRef.value, '101');
+  assert.equal(p.Line[0].Description, 'Partial refund for order MST-00000123');
   assert.equal(p.TxnTaxDetail, undefined);
 });
 
