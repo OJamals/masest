@@ -89,6 +89,10 @@ export async function onRequestGet({ request, env }) {
   return json(200, {
     connected: Boolean(data?.refresh_token || data?.access_token),
     qbo_config: qboConfigStatus(env),
+    qbo_webhook: {
+      configured: Boolean(env.QBO_WEBHOOK_VERIFIER_TOKEN),
+      url: `${env.APP_URL || 'https://masest.co'}/api/qbo-webhook`,
+    },
     realm_id: data?.realm_id || null,
     access_expires_at: data?.access_expires_at || null,
     last_intuit_tid: data?.last_intuit_tid || null,

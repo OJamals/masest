@@ -38,8 +38,8 @@ export async function renderShipStationStatus() {
       : '<b>0 connected carriers</b><span>Connect carrier accounts in ShipStation API.</span>';
     webhook.textContent = info.webhook?.ready
       ? info.webhook.authentication === 'verified'
-        ? 'Tracking webhook registered with verified custom-header authentication.'
-        : 'Tracking webhook registered; ShipStation masks configured custom headers in status responses.'
+        ? 'Tracking webhook registered; custom token configured. Incoming requests also require ShipEngine RSA verification.'
+        : 'Tracking webhook registered; provider masks custom headers. Incoming requests still require custom token + ShipEngine RSA verification.'
       : info.config?.webhook_token === 'missing'
         ? 'Tracking webhook token missing from server configuration.'
         : 'Tracking webhook not registered or authentication header differs.';

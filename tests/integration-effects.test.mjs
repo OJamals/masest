@@ -10,7 +10,7 @@ test('Stripe webhook and generic worker use integration event/effect contracts o
   const route = read('functions/api/admin/integration-effects.js');
 
   assert.match(effects, /export async function enqueueIntegrationEffects/);
-  assert.match(effects, /ingest_integration_event/);
+  assert.match(effects, /ingest_provider_event/);
   assert.match(effects, /claim_integration_effects/);
   assert.match(effects, /record_integration_effect_success/);
   assert.match(effects, /complete_integration_effect/);

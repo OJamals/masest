@@ -1,6 +1,7 @@
 import { adminClient, companyEmails, htmlEscape, sendEmail } from './supabase.js';
 import { technicalDocumentRequestNoteHtml } from './order-email.js';
 import { orderReference } from './order-integrations.js';
+import { routeInboundMessageReply } from './resend-inbound.js';
 
 const PAYLOAD_KEYS = Object.freeze({
   stock_decrement: new Set(['order_id']),
@@ -32,6 +33,31 @@ const PAYLOAD_KEYS = Object.freeze({
     'currency',
     'reason',
     'status',
+  ]),
+  shipstation_tracking_projection: new Set([
+    'tracking_number',
+    'tracking_status',
+    'status_code',
+    'event_code',
+    'occurred_at',
+    'note',
+    'estimated_delivery_at',
+    'event_key',
+  ]),
+  resend_delivery_projection: new Set([
+    'resend_id',
+    'event_type',
+    'status',
+    'occurred_at',
+    'recipient_digests',
+  ]),
+  resend_inbound_reply: new Set(['resend_id']),
+  qbo_change_projection: new Set([
+    'realm_id',
+    'entity_name',
+    'entity_id',
+    'operation',
+    'occurred_at',
   ]),
 });
 
@@ -209,12 +235,55 @@ export function toIntegrationEffectRows(effects) {
   return rows;
 }
 
-async function sha256Hex(value) {
+export async function sha256Hex(value) {
   const bytes = new TextEncoder().encode(String(value ?? ''));
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('');
+}
+
+export async function ingestProviderEvent(sb, descriptor, rawBody, effects) {
+  const provider = String(descriptor?.provider || '').trim().toLowerCase();
+  const environmentOrTenant = String(descriptor?.environmentOrTenant || '').trim();
+  const providerEventId = String(descriptor?.providerEventId || '').trim();
+  const providerEventType = String(descriptor?.providerEventType || '').trim();
+  if (!/^[a-z][a-z0-9_-]{0,31}$/.test(provider)) {
+    return { error: new Error('invalid integration provider') };
+  }
+  if (!environmentOrTenant || environmentOrTenant.length > 128) {
+    return { error: new Error('invalid integration environment') };
+  }
+  if (!providerEventId || providerEventId.length > 512) {
+    return { error: new Error('invalid provider event id') };
+  }
+  if (!providerEventType || providerEventType.length > 160) {
+    return { error: new Error('invalid provider event type') };
+  }
+  let rows;
+  try {
+    rows = toIntegrationEffectRows(effects);
+  } catch (error) {
+    return { error };
+  }
+  try {
+    const { data, error } = await sb.rpc('ingest_provider_event', {
+      p_provider: provider,
+      p_environment_or_tenant: environmentOrTenant,
+      p_provider_event_id: providerEventId,
+      p_event_type: providerEventType,
+      p_provider_object_id: String(descriptor?.providerObjectId || '').trim() || null,
+      p_occurred_at: descriptor?.occurredAt || null,
+      p_signature_verified_at: descriptor?.signatureVerifiedAt || new Date().toISOString(),
+      p_payload_sha256: await sha256Hex(rawBody),
+      p_metadata: descriptor?.metadata || {},
+      p_effects: rows,
+      p_transport_id: String(descriptor?.transportId || '').trim() || null,
+    });
+    return { data: data || null, error: error || null };
+  } catch (error) {
+    return { error };
+  }
 }
 
 function stripeEventOccurredAt(stripeEvent) {
@@ -233,30 +302,16 @@ export async function enqueueIntegrationEffects(sb, stripeEvent, rawBody, effect
   if (!providerEventType || providerEventType.length > 160) {
     return { error: new Error('invalid Stripe event type') };
   }
-  let rows;
-  try {
-    rows = toIntegrationEffectRows(effects);
-  } catch (error) {
-    return { error };
-  }
-  try {
-    const occurredAt = stripeEventOccurredAt(stripeEvent);
-    const { error } = await sb.rpc('ingest_integration_event', {
-      p_provider: 'stripe',
-      p_environment_or_tenant: stripeEvent?.livemode ? 'production' : 'test',
-      p_provider_event_id: providerEventId,
-      p_event_type: providerEventType,
-      p_provider_object_id: String(stripeEvent?.data?.object?.id || '').trim() || null,
-      p_occurred_at: occurredAt,
-      p_signature_verified_at: new Date().toISOString(),
-      p_payload_sha256: await sha256Hex(rawBody),
-      p_metadata: { source: 'stripe_webhook' },
-      p_effects: rows,
-    });
-    return { error: error || null };
-  } catch (error) {
-    return { error };
-  }
+  const result = await ingestProviderEvent(sb, {
+    provider: 'stripe',
+    environmentOrTenant: stripeEvent?.livemode ? 'production' : 'test',
+    providerEventId,
+    providerEventType,
+    providerObjectId: stripeEvent?.data?.object?.id,
+    occurredAt: stripeEventOccurredAt(stripeEvent),
+    metadata: { source: 'stripe_webhook' },
+  }, rawBody, effects);
+  return { error: result?.error || null };
 }
 
 export function effectIdempotencyKey(effectRow) {
@@ -558,6 +613,36 @@ function notificationFromEffect(effectRow) {
 
 export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, dependencies = {}) {
   const send = dependencies.sendEmail || sendEmail;
+  const localProjectionRpc = {
+    shipstation_tracking_projection: 'apply_shipstation_tracking_integration_effect',
+    resend_delivery_projection: 'apply_resend_delivery_integration_effect',
+    qbo_change_projection: 'apply_qbo_change_integration_effect',
+  }[effectRow.effect_type];
+  if (localProjectionRpc) {
+    const result = await rpcData(sb, localProjectionRpc, {
+      p_effect_id: effectRow.id,
+      p_worker_id: effectRow.lease_owner,
+    });
+    return {
+      providerRecorded: true,
+      providerResult: result || {},
+      skipped: Boolean(result?.skipped),
+    };
+  }
+  if (effectRow.effect_type === 'resend_inbound_reply') {
+    const routed = await (dependencies.routeInboundReply || routeInboundMessageReply)(env, {
+      data: { email_id: effectRow.payload?.resend_id },
+    });
+    return {
+      providerRecorded: false,
+      providerResult: {
+        routed: routed?.routed === true,
+        duplicate: routed?.duplicate === true,
+        skipped: routed?.routed === true ? undefined : String(routed?.reason || 'unmatched_reply'),
+      },
+      skipped: routed?.routed !== true,
+    };
+  }
   if (effectRow.provider !== 'stripe') throw errorWithCode('unsupported_integration_provider');
   if (effectRow.effect_type === 'stock_decrement') {
     const result = await rpcData(sb, 'apply_integration_stock_effect', {

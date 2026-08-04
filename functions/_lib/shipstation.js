@@ -1,4 +1,6 @@
 import { orderReference } from './order-integrations.js';
+import { normalizeShipStationTrackingUpdate } from './shipstation-tracking.js';
+import { ingestShipStationTrackingUpdate } from './shipstation-tracking-ingest.js';
 
 const API_BASE_URL = 'https://api.shipstation.com/v2';
 
@@ -142,6 +144,19 @@ export async function shipStationRequest(env, path, options = {}, dependencies =
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new ShipStationError(`shipstation_http_${response.status}`, response.status);
   return payload;
+}
+
+export async function fetchShipStationLabelTracking(env, labelId, dependencies = {}) {
+  const id = text(labelId);
+  if (!/^se-[a-z0-9-]+$/i.test(id)) throw new ShipStationError('shipstation_label_required');
+  const request = dependencies.request || shipStationRequest;
+  const payload = await request(env, `/labels/${encodeURIComponent(id)}/track`, {}, dependencies);
+  const update = await normalizeShipStationTrackingUpdate(payload);
+  if (!update) throw new ShipStationError('shipstation_tracking_response_invalid');
+  const ingest = dependencies.ingestTracking || ingestShipStationTrackingUpdate;
+  const result = await ingest(env, update, dependencies);
+  if (result?.error) throw result.error;
+  return update;
 }
 
 function carrierSummary(carrier) {

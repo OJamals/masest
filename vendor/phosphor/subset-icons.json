@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 258,
-  "usedCount": 150,
+  "count": 259,
+  "usedCount": 151,
   "bufferCount": 108,
   "icons": [
     {
@@ -882,6 +882,11 @@
     {
       "name": "plant",
       "cp": "EBAE",
+      "src": "used"
+    },
+    {
+      "name": "play",
+      "cp": "E3D0",
       "src": "used"
     },
     {

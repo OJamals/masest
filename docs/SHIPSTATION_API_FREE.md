@@ -40,6 +40,7 @@ Apply once through Supabase SQL Editor or the normal migration runner:
 ```text
 supabase/schema-shipments.sql
 supabase/schema-shipstation.sql
+supabase/schema-provider-inbox.sql
 ```
 
 Both migrations are additive/re-runnable. Shipment migration supplies customer-visible status history. ShipStation migration adds provider IDs/status/cost fields, variant package profiles, provider-event idempotency, state constraints, and service-role-only label/tracking RPCs.
@@ -70,9 +71,10 @@ Copy desired `warehouses[].warehouse_id` into `SHIPSTATION_WAREHOUSE_ID`. Endpoi
 5. Select **Get live rates**. API quotes every carrier connected to this V2 key.
 6. Select rate, then **Buy 4 × 6 PDF label**. Confirmation is required because ShipStation API Free has no sandbox and purchase charges the connected carrier account.
 7. Open PDF label. Order moves to `packing`; label creation alone does not mark it shipped.
-8. After deployment, open **Admin → Integrations → ShipStation API Free** and click **Configure tracking webhook**. It registers `track` at `/api/shipstation-webhook` with `X-MASEST-Webhook-Token` authentication.
+8. After deployment, open **Admin → Integrations → ShipStation API Free** and click **Configure tracking webhook**. It registers `track` at `/api/shipstation-webhook` with `X-MASEST-Webhook-Token`; the handler also verifies ShipEngine's RSA-SHA256 signature, timestamp, key ID, and official JWKS.
    ShipStation currently omits custom headers from webhook list responses; the admin status reports this as provider-masked rather than falsely claiming header verification.
-9. Carrier updates advance `packing`, `shipped`, `blocked`, or `delivered` idempotently. Existing manual tracking control remains available for recovery.
+9. Carrier updates enter the generic provider inbox before ACK. The worker writes immutable shipment history and advances `packing`, `shipped`, `blocked`, or `delivered` only when provider occurrence time is current. Existing manual tracking control remains available for recovery.
+10. Webhook redeliveries and `GET /labels/{label_id}/track` reconciliation use the same canonical tracking normalizer. Identity is `canonical:v2:<sha256>` over fixed, sanitized mutation fields—not raw JSON—so whitespace/key order cannot duplicate work and a real tracking change cannot collide.
 
 ## Duplicate-charge guard
 

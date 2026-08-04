@@ -39,7 +39,7 @@ function resolvedQuery(result) {
 function effectCaptureDb(calls, tables = {}) {
   return {
     async rpc(name, args) {
-      if (name === 'ingest_integration_event') {
+      if (name === 'ingest_provider_event') {
         calls.push(['effects.ingest', args.p_effects, args]);
         return { data: 'integration-event-1', error: null };
       }
@@ -282,7 +282,7 @@ test('enqueue is duplicate-safe and surfaces persistence failure before acknowle
   };
   const sb = {
     async rpc(name, args) {
-      assert.equal(name, 'ingest_integration_event');
+      assert.equal(name, 'ingest_provider_event');
       calls.push(args);
       return { data: 'integration-event-1', error: null };
     },

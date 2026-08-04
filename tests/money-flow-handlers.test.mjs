@@ -641,7 +641,7 @@ function webhookDb(calls, persistResults, effectResults = []) {
       calls.push([`rpc.${name}`, args]);
       if (name === 'persist_stripe_order') return persistResults.shift();
       if (name === 'link_order_provider_object') return { data: `link-${args.p_object_type}`, error: null };
-      if (name === 'ingest_integration_event') {
+      if (name === 'ingest_provider_event') {
         calls.push(['effects.ingest', args.p_effects, args]);
         return effectResults.shift() || { data: 'integration-event-1', error: null };
       }
@@ -848,7 +848,7 @@ function achDb(calls, claimResults) {
   return {
     async rpc(name, args) {
       calls.push([`rpc.${name}`, args]);
-      if (name === 'ingest_integration_event') {
+      if (name === 'ingest_provider_event') {
         calls.push(['effects.ingest', args.p_effects, args]);
         return { data: 'integration-event-1', error: null };
       }

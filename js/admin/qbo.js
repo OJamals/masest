@@ -125,7 +125,14 @@ export async function renderQboStatus() {
       status.textContent = info.connected ? `Connected${info.realm_id ? ` (${info.realm_id})` : ""}.` : "Ready to connect.";
       status.dataset.state = info.connected ? "ok" : ""; // ready-to-connect is a neutral state, not an error
     }
-    if (detail) detail.textContent = qboConfigDetail(qboConfig, info);
+    if (detail) {
+      const webhook = info.qbo_webhook?.configured
+        ? 'Inbound Intuit webhook verifier configured.'
+        : 'Inbound Intuit webhook verifier missing.';
+      detail.textContent = `${qboConfigDetail(qboConfig, info)} ${webhook}`;
+      if (!info.qbo_webhook?.configured) detail.dataset.state = 'warn';
+      else delete detail.dataset.state;
+    }
     button.innerHTML = info.connected ? '<i class="ph ph-plugs-connected"></i> Reconnect QuickBooks' : '<i class="ph ph-plugs-connected"></i> Connect QuickBooks';
     button.disabled = !configReady;
     if (syncButton) syncButton.disabled = !allowSync;

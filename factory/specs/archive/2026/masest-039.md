@@ -5,7 +5,7 @@ agent: codex
 risk: high
 grill: completed
 verification:
-  - node --test tests/integration-provider-inbox.test.mjs tests/shipstation-webhook.test.mjs tests/resend-webhook.test.mjs tests/qbo-webhook.test.mjs
+  - node --test tests/integration-provider-inbox.test.mjs tests/shipstation-webhook.test.mjs tests/resend-webhook.test.mjs tests/resend-inbound.test.mjs tests/qbo-webhook.test.mjs
   - npm run check
   - npm run build
   - npm run verify:site

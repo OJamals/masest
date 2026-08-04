@@ -4,11 +4,16 @@ import test from 'node:test';
 import {
   buildRateRequest,
   configureShipStationTrackingWebhook,
+  fetchShipStationLabelTracking,
   normalizePackages,
   shipStationConfig,
   shipStationRequest,
   shipStationStatus,
 } from '../functions/_lib/shipstation.js';
+import {
+  createShipStationWebhookHandler,
+  trackingUpdateFromPayload,
+} from '../functions/api/shipstation-webhook.js';
 
 test('ShipStation client keeps the API key server-side and authenticates V2 requests', async () => {
   const calls = [];
@@ -38,6 +43,44 @@ test('ShipStation client keeps the API key server-side and authenticates V2 requ
   assert.equal(calls[0].url, 'https://api.shipstation.com/v2/carriers');
   assert.equal(calls[0].options.headers['API-Key'], 'secret-api-key');
   assert.equal(JSON.stringify(config).includes('secret-api-key'), false);
+});
+
+test('ShipStation label tracking fetch converges on webhook canonical normalization', async () => {
+  const direct = {
+    tracking_number: '1Z999AA10123456784',
+    status_code: 'DE',
+    status_description: 'Delivered',
+    estimated_delivery_date: '2026-08-08T00:00:00Z',
+    actual_delivery_date: '2026-08-07T16:10:00Z',
+    events: [{ occurred_at: '2026-08-07T16:10:00Z', event_code: 'DELIVERED', description: 'Delivered' }],
+  };
+  const ingestions = [];
+  const ingestProviderEvent = async (_sb, descriptor, canonical, effects) => {
+    ingestions.push({ descriptor, canonical, effects });
+    return { data: 'event-id', error: null };
+  };
+  const fetched = await fetchShipStationLabelTracking(
+    { SHIPSTATION_API_KEY: 'secret' },
+    'se-label-1',
+    { request: async () => direct, sb: {}, ingestProviderEvent },
+  );
+  const webhook = await trackingUpdateFromPayload({ resource_type: 'API_TRACK', data: direct });
+  assert.deepEqual(fetched, webhook);
+  const handler = createShipStationWebhookHandler({
+    verifySignature: async () => true,
+    trackingIngestDependencies: { sb: {}, ingestProviderEvent },
+  });
+  const response = await handler({
+    env: { SHIPSTATION_WEBHOOK_TOKEN: 'hook-token' },
+    request: new Request('https://masest.co/api/shipstation-webhook', {
+      method: 'POST',
+      headers: { 'x-masest-webhook-token': 'hook-token' },
+      body: JSON.stringify({ resource_type: 'API_TRACK', data: direct }),
+    }),
+  });
+  assert.equal(response.status, 200);
+  assert.equal(ingestions.length, 2);
+  assert.deepEqual(ingestions[0], ingestions[1]);
 });
 
 test('ShipStation status fails readiness when configured warehouse is unavailable', async () => {

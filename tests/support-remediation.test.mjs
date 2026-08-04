@@ -40,10 +40,10 @@ test('presence expires when a close/unload signal is lost', () => {
 });
 
 test('inbound replies preserve buyer identity, reopen threads, honor staff prefs, and route to current support UI', () => {
-  const source = read('functions/api/resend-webhook.js');
-  assert.match(source, /user_id:\s*member\.id/);
-  assert.match(source, /recordSupportMessage/);
-  assert.match(source, /adminMessageRecipients\(sb,\s*alertKind,\s*env\)/);
+  const source = read('functions/_lib/resend-inbound.js');
+  assert.match(source, /userId:\s*member\.id/);
+  assert.match(source, /upsertInboundMessage/);
+  assert.match(source, /adminMessageRecipients\)\(sb,\s*alertKind,\s*env\)/);
   assert.match(source, /admin\.html#support-settings/);
   assert.doesNotMatch(source, /staffRecipients\(env\)/);
 });

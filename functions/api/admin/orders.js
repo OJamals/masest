@@ -181,6 +181,56 @@ async function notifyBuyerTracking(env, request, order, label, extra, exclude = 
   return sendTrackingEmail(env, request, order, label, extra, [email]);
 }
 
+const INTEGRATION_TIMELINE_SELECT = 'id,event_id,effect_type,status,attempt_count,last_error_code,provider_result,created_at,completed_at,dead_at';
+
+export async function loadOrderIntegrationTimeline(sb, orderId, trackingNumber = null) {
+  const queries = [
+    sb.from('integration_effects').select(INTEGRATION_TIMELINE_SELECT)
+      .contains('payload', { order_id: orderId }).order('created_at', { ascending: false }).limit(50),
+    sb.from('integration_effects').select(INTEGRATION_TIMELINE_SELECT)
+      .contains('provider_result', { order_id: orderId }).order('created_at', { ascending: false }).limit(50),
+  ];
+  if (trackingNumber) {
+    queries.push(sb.from('integration_effects').select(INTEGRATION_TIMELINE_SELECT)
+      .eq('aggregate_type', 'shipment').eq('aggregate_id', trackingNumber)
+      .order('created_at', { ascending: false }).limit(50));
+  }
+  const responses = await Promise.all(queries);
+  const failed = responses.find((response) => response.error);
+  if (failed?.error) throw failed.error;
+  const effects = [...new Map(responses
+    .flatMap((response) => response.data || [])
+    .map((effect) => [effect.id, effect])).values()]
+    .sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')))
+    .slice(0, 50);
+  const eventIds = [...new Set(effects.map((effect) => effect.event_id).filter(Boolean))];
+  let events = [];
+  if (eventIds.length) {
+    const response = await sb.from('integration_events')
+      .select('id,provider,provider_event_type,occurred_at,received_at')
+      .in('id', eventIds);
+    if (response.error) throw response.error;
+    events = response.data || [];
+  }
+  const eventById = new Map(events.map((event) => [event.id, event]));
+  return effects.map((effect) => ({
+    id: effect.id,
+    provider: eventById.get(effect.event_id)?.provider || 'unknown',
+    event_type: eventById.get(effect.event_id)?.provider_event_type || null,
+    effect_type: effect.effect_type,
+    status: effect.status,
+    attempt_count: effect.attempt_count,
+    last_error_code: effect.last_error_code || null,
+    result: effect.provider_result ? {
+      applied: effect.provider_result.applied,
+      skipped: effect.provider_result.skipped,
+    } : null,
+    created_at: effect.created_at,
+    completed_at: effect.completed_at,
+    dead_at: effect.dead_at,
+  }));
+}
+
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
@@ -202,9 +252,16 @@ export async function onRequest({ request, env }) {
         .select('action,actor_email,detail,created_at')
         .eq('target_type', 'order').eq('target_id', detailId)
         .order('created_at', { ascending: false }).limit(50);
+      let integrationTimeline;
+      try {
+        integrationTimeline = await loadOrderIntegrationTimeline(sb, detailId, order.tracking_number);
+      } catch {
+        return json(503, { error: 'order_integration_timeline_unavailable' });
+      }
       return json(200, {
         order: decorateOrderLifecycle({ ...order, net_aging: netAging(order, order.companies?.net_terms_days) }),
         timeline: timeline || [],
+        integration_timeline: integrationTimeline,
       });
     }
 

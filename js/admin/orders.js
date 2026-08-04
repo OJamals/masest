@@ -386,7 +386,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
 
   // Row actions are delegated once on the stable #admOrders container (#36): a single
   // listener per action survives every innerHTML re-render instead of re-binding per row.
-  function orderDetailHtml(order, timeline) {
+  function orderDetailHtml(order, timeline, integrationTimeline = []) {
     const addr = order.ship_address?.address || order.ship_address || null;
     const shipLines = addr
       ? [addr.line1, addr.line2, [addr.city, addr.state, addr.postal_code].filter(Boolean).join(', '), addr.country]
@@ -413,6 +413,10 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       ? `<h4 style="margin:16px 0 4px">Provider ledger</h4><ul style="margin:0;padding-left:18px">${providerLinks.map((link) =>
           `<li><b>${esc(link.provider)}</b> ${esc(link.object_type)} — <code>${esc(link.provider_object_id)}</code></li>`).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Provider ledger</h4><p class="muted" style="margin:0">No external provider objects linked.</p>';
+    const integrationHistory = integrationTimeline.length
+      ? `<h4 style="margin:16px 0 4px">Integration delivery</h4><ul style="margin:0;padding-left:18px">${integrationTimeline.map((entry) =>
+          `<li><b>${esc(entry.provider)}</b> ${esc(entry.effect_type)} — ${esc(entry.status)} · ${esc(date(entry.completed_at || entry.dead_at || entry.created_at))}${entry.result?.skipped ? ` · ${esc(entry.result.skipped)}` : ''}${entry.last_error_code ? ` · <code>${esc(entry.last_error_code)}</code>` : ''}</li>`).join('')}</ul>`
+      : '<h4 style="margin:16px 0 4px">Integration delivery</h4><p class="muted" style="margin:0">No order-scoped provider effects.</p>';
     return `<h3 style="margin:0 0 4px">Order ${esc(order.order_number || order.id)}</h3>
       <p class="muted" style="margin:0 0 12px">${esc(order.companies?.name || order.company_id || 'Guest')} · ${esc(order.customer_email || '')} · ${esc(lifecycle.label)} · ${esc(order.status)} · ${esc(order.payment_method || '')}</p>
       ${order.purchase_order_number ? `<p style="margin:0 0 12px"><b>Purchase order:</b> ${esc(order.purchase_order_number)}</p>` : ''}
@@ -421,6 +425,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
       ${shipHistory}
       ${providerLedger}
+      ${integrationHistory}
       <h4 style="margin:16px 0 4px">Staff timeline</h4><ul style="margin:0;padding-left:18px">${events}</ul>`;
   }
 
@@ -465,7 +470,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       button.disabled = true;
       try {
         const res = await api('/api/admin/orders?id=' + encodeURIComponent(button.dataset.orderDetail));
-        detailDialog(orderDetailHtml(res.order, res.timeline));
+        detailDialog(orderDetailHtml(res.order, res.timeline, res.integration_timeline));
       } catch (err) {
         message('ordStatus', err.data?.error || 'Could not load order detail. Retry.', 'err');
       } finally {
