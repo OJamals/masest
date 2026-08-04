@@ -29,7 +29,11 @@ export async function userFromRequest(request, env) {
 export function json(status, body, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'content-type': 'application/json', ...extraHeaders },
+    headers: {
+      'content-type': 'application/json',
+      'cache-control': 'no-store',
+      ...extraHeaders,
+    },
   });
 }
 

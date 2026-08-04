@@ -6,9 +6,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { emailLayout } from "../functions/_lib/supabase.js";
+import { emailLayout, json } from "../functions/_lib/supabase.js";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("JSON responses default to no-store while explicit cache policy wins", () => {
+  assert.equal(json(401, { error: "unauthenticated" }).headers.get("cache-control"), "no-store");
+  assert.equal(
+    json(200, { ok: true }, { "cache-control": "public, max-age=60" }).headers.get("cache-control"),
+    "public, max-age=60",
+  );
+});
 
 test("emailLayout escapes CTA text and blocks unsafe CTA URLs", () => {
   const unsafe = emailLayout({
