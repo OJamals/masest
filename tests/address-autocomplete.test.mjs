@@ -47,8 +47,13 @@ test('Google Place address components map deterministically to the saved-address
 
 test('dashboard mounts autocomplete as progressive enhancement while retaining manual fields', () => {
   const html = readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+  const docs = readFileSync(new URL('../docs/ADDRESS_AUTOCOMPLETE.md', import.meta.url), 'utf8');
   const source = readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
   assert.match(html, /id="addressAutocompleteMount"/);
+  assert.match(html, /gmp-place-autocomplete[^}]*color-scheme:\s*light/);
+  for (const referrer of ['https://masest.co', 'https://masest.co/*', 'https://www.masest.co', 'https://www.masest.co/*']) {
+    assert.ok(docs.includes(`\`${referrer}\``));
+  }
   for (const id of ['aLine1', 'aLine2', 'aCity', 'aState', 'aZip']) assert.match(html, new RegExp(`id="${id}"`));
   assert.match(source, /mountAddressAutocomplete/);
   assert.match(source, /line1:\s*\$\('aLine1'\)/);

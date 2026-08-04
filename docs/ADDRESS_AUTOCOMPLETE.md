@@ -12,7 +12,11 @@ Keep the value in gitignored `.dev.vars` and the Cloudflare Pages production sec
 
 Apply both Google Cloud restrictions:
 
-- Website referrers: `https://masest.co/*`, `https://www.masest.co/*`
+- Website referrers (all four entries are required because some browsers send only the origin):
+  - `https://masest.co`
+  - `https://masest.co/*`
+  - `https://www.masest.co`
+  - `https://www.masest.co/*`
 - API restrictions: **Maps JavaScript API**, **Places API (New)**
 
 Do not authorize preview or localhost hosts on the production key. Use a separate restricted development key if local autocomplete is needed. Missing/invalid config leaves all manual address fields functional.
