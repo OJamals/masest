@@ -114,6 +114,26 @@ Or set the individual secrets:
 - `QBO_INCOME_ACCOUNT_ID` (optional; otherwise auto-detected after connection)
 - `QBO_ENVIRONMENT=sandbox` or `production`
 
+Admin **Finance → Stripe payout reconciliation** is read-only. It reads recent live
+standard payouts and their balance transactions, using integer minor-unit totals. It does
+not create QuickBooks transactions. The future posting gate remains fail-closed until all
+account IDs below are explicit Cloudflare production bindings:
+
+- `QBO_INCOME_ACCOUNT_ID`
+- `QBO_SHIPPING_INCOME_ACCOUNT_ID`
+- `QBO_MERCHANT_FEES_ACCOUNT_ID`
+- `QBO_POSTAGE_EXPENSE_ACCOUNT_ID`
+- `QBO_STRIPE_CLEARING_ACCOUNT_ID`
+- `QBO_BANK_ACCOUNT_ID`
+- `QBO_TAX_LIABILITY_ACCOUNT_ID`
+- `QBO_DISCOUNTS_ACCOUNT_ID`
+- `QBO_REFUNDS_ACCOUNT_ID`
+- `QBO_DISPUTES_ACCOUNT_ID`
+
+Only presence/missing state is returned to the browser. Account IDs and provider objects
+remain server-side. An accountant-reviewed journal design is required before adding any
+posting route.
+
 Connect QuickBooks from `admin.html`. The schedule triggers `POST /api/qbo-sync`; manual runs can use the same endpoint with header `x-qbo-sync-secret: $QBO_SYNC_SECRET`.
 Configure Intuit production webhooks at `https://masest.co/api/qbo-webhook`. The route verifies the raw body with `QBO_WEBHOOK_VERIFIER_TOKEN`, records `intuit-t-id` as transport audit only, accepts request bodies through 2 MiB, and ACKs only after one atomic generic provider receipt/effect batch commits. Current CloudEvent types are parsed from authoritative `qbo.<entity>.<operation>.vN` segments; variable `data` fields never define routing identity.
 Generated NET invoices are created with online card and ACH payment options enabled; the connected QuickBooks Online company must have QuickBooks Payments enabled for those options to appear to buyers.

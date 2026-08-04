@@ -771,6 +771,7 @@
           <div><p class="adm-eyebrow">Finance</p><h2>Reports &amp; exports</h2><p class="muted">Run revenue and tax summaries or export operational records.</p></div>
         </div>
         <div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reporting period</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" name="report_from" type="date" class="adm-input"></label><label class="field">To<input id="repTo" name="report_to" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button"><i class="ph ph-chart-line-up" aria-hidden="true"></i> Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i> Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-users-three" aria-hidden="true"></i> Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div>
+        <div id="admStripePayouts" class="adm-card adm-workspace-card" data-capability-scope="company.credit"><div class="adm-panel-header"><div><h2>Stripe payout reconciliation</h2><p class="muted">Read-only composition of the three most recent live standard payouts. QuickBooks posting stays blocked until every account mapping is present and the journal design is accountant-reviewed.</p></div><button id="stripePayoutRefresh" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh</button></div><p id="stripePayoutStatus" class="adm-status" role="status" aria-live="polite">Open Finance to load payouts.</p><div id="stripePayoutMappings"></div><div id="stripePayoutList" class="adm-list"></div></div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="integrations">
@@ -1027,6 +1028,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260804a"></script>
+<script type="module" src="js/admin.js?v=20260804b"></script>
 </body>
 </html>
