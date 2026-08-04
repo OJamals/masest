@@ -38,10 +38,24 @@ test('orders UI supports multi-package rates and confirms live label purchase', 
   const source = await read('../js/admin/orders.js');
   assert.match(source, /function parseShippingPackages/);
   assert.match(source, /data-shipstation-rates/);
+  assert.match(source, /data-split-items="\$\{esc\(splitItemsJson\)\}"/);
+  assert.match(source, /JSON\.parse\(button\.dataset\.splitItems\)/);
+  const updateHandler = source.slice(source.indexOf("'[data-shipstation-update-shipment]'"), source.indexOf("'[data-shipstation-cancel-shipment]'"));
+  assert.match(updateHandler, /JSON\.parse\(button\.dataset\.splitItems\)/);
   assert.match(source, /data-shipstation-buy-label/);
   assert.match(source, /ShipStation will charge/);
   assert.match(source, /action: 'rates'/);
   assert.match(source, /action: 'buy_label'/);
+  assert.match(source, /Persisted rate/);
+  assert.match(source, /shipment\.order_shipment_rates/);
+  assert.match(source, /activeShipmentLabels/);
+  assert.match(source, /active label \$\{esc\(labelId\)\}/);
+  assert.match(source, /button\.closest\('\.adm-shipstation-void'\)/);
+  assert.match(source, /button\.closest\('\[data-order-shipment-control\]'\)/);
+  const buyHandler = source.slice(source.indexOf("'[data-shipstation-buy-label]'"), source.indexOf("'[data-shipstation-void-label]'"));
+  assert.match(buyHandler, /shipment_id: rate\.dataset\.shipmentId/);
+  const ordersApi = await read('../functions/api/admin/orders.js');
+  assert.match(ordersApi, /order_shipment_rates\(provider_rate_id,provider_shipment_id,shipment_revision/);
 });
 
 test('orders UI proxies label documents and confirms reconciliation and returns', async () => {

@@ -22,6 +22,12 @@ alter table public.orders add column if not exists shipstation_return_charge_eve
 alter table public.orders add column if not exists shipstation_return_tracking_number text;
 alter table public.orders add column if not exists shipstation_return_error text;
 alter table public.orders add column if not exists shipstation_return_updated_at timestamptz;
+-- Normalized 13.3c shipment/package/rate tables and service-only lifecycle RPCs
+-- are defined in schema-shipstation-shipments.sql.
+alter table public.orders add column if not exists shipstation_order_shipment_id uuid;
+alter table public.orders add column if not exists shipstation_shipment_revision integer;
+alter table public.orders add column if not exists shipstation_package_hash text;
+alter table public.orders add column if not exists shipstation_shipment_state text;
 
 -- CMS-owned default parcel per sellable variant. Staff may override at quote time.
 alter table public.product_variants add column if not exists shipping_weight_lb numeric(10,3);
@@ -439,26 +445,73 @@ security definer
 set search_path = public
 as $$
 declare
-  v_claimed uuid;
+  v_order public.orders%rowtype;
+  v_link public.order_provider_links%rowtype;
+  v_purchase public.order_financial_entries%rowtype;
 begin
   if p_label_id is null or p_label_id !~ '^se-[A-Za-z0-9_-]+$' then
     return false;
   end if;
 
+  select * into v_order from public.orders where id = p_order_id for update;
+  if not found
+     or v_order.status::text not in ('paid', 'net_open', 'net_paid', 'fulfilled')
+     or coalesce(v_order.tracking_status, 'processing') in (
+       'shipped', 'in_transit', 'out_for_delivery', 'delivered'
+     ) then
+    return false;
+  end if;
+
+  select * into v_link
+    from public.order_provider_links
+   where order_id = p_order_id
+     and provider = 'shipstation'
+     and object_type = 'label'
+     and provider_object_id = p_label_id;
+  if v_order.shipstation_label_id is distinct from p_label_id and not found then
+    return false;
+  end if;
+  if exists (
+    select 1 from public.order_financial_entries
+     where order_id = p_order_id
+       and source = 'shipstation'
+       and entry_type = 'postage_void_requested'
+       and provider_object_id = p_label_id
+  ) then
+    return false;
+  end if;
+  select * into v_purchase
+    from public.order_financial_entries
+   where order_id = p_order_id
+     and source = 'shipstation'
+     and entry_type = 'postage_purchase'
+     and provider_object_id = p_label_id;
+
   update public.orders
-     set shipstation_label_status = 'voiding',
+     set shipstation_order_shipment_id = coalesce(
+           nullif(v_link.metadata->>'order_shipment_id', '')::uuid,
+           shipstation_order_shipment_id
+         ),
+         shipstation_shipment_revision = coalesce(
+           nullif(v_link.metadata->>'revision', '')::integer,
+           shipstation_shipment_revision
+         ),
+         shipstation_shipment_id = coalesce(
+           nullif(v_link.metadata->>'shipment_id', ''),
+           shipstation_shipment_id
+         ),
+         shipstation_rate_id = coalesce(nullif(v_link.metadata->>'rate_id', ''), shipstation_rate_id),
+         shipstation_label_id = p_label_id,
+         shipstation_cost = coalesce(v_purchase.amount, shipstation_cost),
+         shipstation_label_status = 'voiding',
          shipstation_error = null,
          shipstation_updated_at = now()
    where id = p_order_id
-     and status::text in ('paid', 'net_open', 'net_paid', 'fulfilled')
-     and shipstation_label_id = p_label_id
-     and shipstation_label_status in ('label_purchased', 'label_void_failed')
-     and coalesce(tracking_status, 'processing') not in (
-       'shipped', 'in_transit', 'out_for_delivery', 'delivered'
-     )
-  returning id into v_claimed;
+     and coalesce(shipstation_label_status, '') not in (
+       'purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'
+     );
 
-  return v_claimed is not null;
+  return found;
 end;
 $$;
 revoke all on function public.claim_shipstation_label_void(uuid, text) from public, anon, authenticated;
@@ -508,6 +561,16 @@ begin
          shipstation_updated_at = now()
    where id = p_order_id;
 
+  perform public.link_order_provider_object(
+    p_order_id, 'shipstation', 'label', p_label_id,
+    jsonb_strip_nulls(jsonb_build_object(
+      'shipment_id', v_order.shipstation_shipment_id,
+      'order_shipment_id', v_order.shipstation_order_shipment_id,
+      'rate_id', v_order.shipstation_rate_id,
+      'status', 'label_voided'
+    ))
+  );
+
   v_financial_id := public.record_order_financial_entry(
     p_order_id,
     'shipstation',
@@ -518,7 +581,11 @@ begin
     'pending',
     nullif(trim(p_actor_id), ''),
     trim(p_reason),
-    jsonb_strip_nulls(jsonb_build_object('provider_message', nullif(trim(p_provider_message), '')))
+    jsonb_strip_nulls(jsonb_build_object(
+      'shipment_id', v_order.shipstation_shipment_id,
+      'order_shipment_id', v_order.shipstation_order_shipment_id,
+      'provider_message', nullif(trim(p_provider_message), '')
+    ))
   );
 
   insert into public.shipment_events (

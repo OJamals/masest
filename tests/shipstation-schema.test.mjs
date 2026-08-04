@@ -47,6 +47,10 @@ test('ShipStation migration persists provider state and atomically guards label 
   assert.match(migration, /grant execute on function public\.claim_shipstation_return_label\(uuid, text\) to service_role/);
   assert.match(migration, /grant execute on function public\.finalize_shipstation_return_label/);
   assert.match(migration, /grant execute on function public\.finalize_shipstation_label_reconciliation/);
+  assert.match(migration, /object_type = 'label'[\s\S]{0,200}provider_object_id = p_label_id/);
+  assert.match(migration, /entry_type = 'postage_void_requested'[\s\S]{0,160}provider_object_id = p_label_id/);
+  assert.match(migration, /shipstation_order_shipment_id = coalesce/);
+  assert.match(migration, /'status', 'label_voided'/);
 });
 
 test('ShipStation migration supports idempotent provider tracking events and CMS package profiles', async () => {

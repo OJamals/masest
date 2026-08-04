@@ -153,6 +153,10 @@ alter table public.orders add column if not exists shipstation_return_charge_eve
 alter table public.orders add column if not exists shipstation_return_tracking_number text;
 alter table public.orders add column if not exists shipstation_return_error text;
 alter table public.orders add column if not exists shipstation_return_updated_at timestamptz;
+alter table public.orders add column if not exists shipstation_order_shipment_id uuid;
+alter table public.orders add column if not exists shipstation_shipment_revision integer;
+alter table public.orders add column if not exists shipstation_package_hash text;
+alter table public.orders add column if not exists shipstation_shipment_state text;
 
 create index if not exists orders_tracking_status_idx
   on public.orders (tracking_status, estimated_delivery_at, created_at desc);

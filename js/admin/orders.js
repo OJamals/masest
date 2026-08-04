@@ -3,9 +3,9 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260804c';
-import { captureDirty, restoreDirty } from './edits.js?v=20260804c';
-import { createSavedViews } from './saved-views.js?v=20260804c';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260804d';
+import { captureDirty, restoreDirty } from './edits.js?v=20260804d';
+import { createSavedViews } from './saved-views.js?v=20260804d';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const OPEN_NET_STATUS_OPTIONS = ['net_open', 'cancelled'];
@@ -169,6 +169,21 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     });
   }
 
+  function parseShippingSplitItems(raw) {
+    const rows = String(raw || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (!rows.length) return undefined;
+    const seen = new Set();
+    return rows.map((line) => {
+      const [sku, rawQuantity, extra] = line.split(',').map((part) => part.trim());
+      const quantity = Number(rawQuantity);
+      if (!sku || extra || seen.has(sku) || !Number.isSafeInteger(quantity) || quantity <= 0) {
+        throw new Error('Use unique SKU, quantity lines for split allocation.');
+      }
+      seen.add(sku);
+      return { sku, quantity };
+    });
+  }
+
   function orderEditor(order) {
     const id = esc(order.id);
     return `<details class="adm-order-editor" data-capability-scope="order.write">
@@ -197,6 +212,34 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     const labelState = String(order.shipstation_label_status || '');
     const labelVoided = ['label_voided', 'voided'].includes(labelState);
     const activeLabel = Boolean(order.shipstation_label_id) && !labelVoided;
+    const orderShipmentId = String(order.shipstation_order_shipment_id || '');
+    const shipmentRevision = Number.isInteger(Number(order.shipstation_shipment_revision))
+      ? Number(order.shipstation_shipment_revision)
+      : 0;
+    const shipmentState = String(order.shipstation_shipment_state || '');
+    const persistedShipments = Array.isArray(order.order_shipments) && order.order_shipments.length
+      ? order.order_shipments
+      : orderShipmentId
+        ? [{ id: orderShipmentId, split_key: 'default', revision: shipmentRevision, status: shipmentState }]
+        : [];
+    const voidedLabelIds = new Set((Array.isArray(order.order_financial_entries) ? order.order_financial_entries : [])
+      .filter((entry) => entry?.source === 'shipstation' && entry?.entry_type === 'postage_void_requested')
+      .map((entry) => String(entry.provider_object_id || ''))
+      .filter(Boolean));
+    const activeShipmentLabels = (Array.isArray(order.order_provider_links) ? order.order_provider_links : [])
+      .filter((link) => link?.provider === 'shipstation'
+        && link?.object_type === 'label'
+        && link?.provider_object_id
+        && !voidedLabelIds.has(String(link.provider_object_id)));
+    const hasAnyActiveLabel = activeLabel || activeShipmentLabels.length > 0;
+    const shipmentRevisions = Object.fromEntries(persistedShipments
+      .filter((shipment) => shipment.status !== 'cancelled')
+      .map((shipment) => [
+      String(shipment.split_key || 'default'),
+      Number(shipment.revision || 0),
+      ]));
+    const hasShipmentReconcile = persistedShipments.some((shipment) => shipment.operation_state === 'reconcile_required'
+      || shipment.status === 'reconcile_required');
     const voidBlocked = ['shipped', 'in_transit', 'out_for_delivery', 'delivered'].includes(order.tracking_status);
     const labelSummary = ['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState)
       ? `<span class="badge" data-s="changes_requested">${esc(order.shipstation_label_status.replaceAll('_', ' '))}</span><small class="muted">Check ShipStation before retrying; prior purchase result may be pending or uncertain.</small>`
@@ -236,7 +279,8 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
               <small class="muted">Carrier-default billing applies. Delayed charges remain pending financial evidence until carrier acceptance.</small>
             </details>`
       : '';
-    const voidControl = activeLabel && ['label_purchased', 'label_void_failed'].includes(labelState)
+    const projectedLabelLinked = activeShipmentLabels.some((link) => String(link.provider_object_id) === String(order.shipstation_label_id));
+    const voidControl = activeLabel && !projectedLabelLinked && ['label_purchased', 'label_void_failed'].includes(labelState)
       ? `<details class="adm-shipstation-void" data-capability-scope="order.write">
           <summary>${voidBlocked ? 'Void unavailable after carrier movement' : 'Void label / request carrier refund'}</summary>
           ${voidBlocked ? '<small class="muted">Use carrier support/claims workflow after shipment movement.</small>' : `
@@ -247,17 +291,80 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
           `}
         </details>`
       : '';
-    const quoteControl = shippable && !activeLabel && !['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState) ? `<div data-capability-scope="order.write">
+    const shipmentControls = persistedShipments.map((shipment) => {
+      const split = String(shipment.split_key || 'default');
+      const generation = Number(shipment.generation || 0);
+      const splitLabel = `${split}${generation ? ` #${generation + 1}` : ''}`;
+      const revision = Number(shipment.revision || 0);
+      const splitItemsJson = JSON.stringify(Array.isArray(shipment.item_allocations)
+        ? shipment.item_allocations
+        : []);
+      const state = String(shipment.operation_state === 'reconcile_required' ? 'reconcile_required' : shipment.status || '');
+      if (state === 'reconcile_required') return `<details class="adm-shipstation-reconcile" data-capability-scope="order.write" data-order-shipment-control>
+        <summary>Reconcile ${esc(splitLabel)} shipment · revision ${revision}</summary>
+        <label class="admin-input-wide">Reason <textarea class="adm-textarea" data-shipstation-shipment-reconcile-reason rows="2" maxlength="280" placeholder="Why this shipment operation must be reconciled"></textarea></label>
+        <label class="adm-check"><input data-shipstation-shipment-reconcile-confirm type="checkbox"> Confirm provider read-only reconciliation.</label>
+        <button class="btn btn-secondary btn-sm" data-shipstation-reconcile-shipment="${id}" data-order-shipment-id="${esc(shipment.id)}" data-revision="${revision}" data-split-key="${esc(split)}" type="button">Reconcile shipment</button>
+      </details>`;
+      if (state !== 'rated') return '';
+      const shipmentLabel = activeShipmentLabels.find((link) => {
+        const metadata = link?.metadata && typeof link.metadata === 'object' ? link.metadata : {};
+        return String(metadata.order_shipment_id || '') === String(shipment.id)
+          || String(metadata.shipment_id || '') === String(shipment.provider_shipment_id || '');
+      });
+      if (shipmentLabel) {
+        const labelId = String(shipmentLabel.provider_object_id);
+        return `<details class="adm-shipstation-void" data-capability-scope="order.write" data-order-shipment-control>
+          <summary>${esc(splitLabel)} shipment · active label ${esc(labelId)}</summary>
+          <button class="btn btn-ghost btn-sm" data-shipstation-download-label="${id}" data-label-id="${esc(labelId)}" type="button">Download label</button>
+          ${voidBlocked ? '<small class="muted">Void unavailable after carrier movement.</small>' : `
+            <label class="admin-input-wide">Reason <textarea class="adm-textarea" data-shipstation-void-reason="${id}" rows="2" maxlength="280" placeholder="Why this label must be voided"></textarea></label>
+            <label class="adm-check"><input data-shipstation-void-confirm="${id}" type="checkbox"> Confirm ShipStation void/refund request.</label>
+            <button class="btn btn-ghost btn-sm adm-order-danger" data-shipstation-void-label="${id}" data-label-id="${esc(labelId)}" type="button">Void label</button>
+          `}
+        </details>`;
+      }
+      const persistedRates = (Array.isArray(shipment.order_shipment_rates) ? shipment.order_shipment_rates : [])
+        .filter((rate) => !rate.invalidated_at
+          && Number(rate.shipment_revision) === revision
+          && String(rate.provider_shipment_id || '') === String(shipment.provider_shipment_id || ''));
+      const rateControl = persistedRates.length ? `<label>Persisted rate <select class="adm-select" data-shipstation-rate="${id}" data-order-shipment-id="${esc(shipment.id)}" data-shipment-id="${esc(shipment.provider_shipment_id || '')}" data-revision="${revision}">
+          ${persistedRates.map((rate) => {
+            const exponent = Number.isSafeInteger(Number(rate.currency_exponent)) ? Number(rate.currency_exponent) : 2;
+            const amount = Number(rate.amount_minor) / (10 ** exponent);
+            const etaText = rate.delivery_days != null ? ` · ${rate.delivery_days} day(s)` : '';
+            const label = `${rate.carrier_name || rate.carrier_code} · ${rate.service_type || rate.service_code} · ${money(amount, rate.currency)}${etaText}`;
+            return `<option value="${esc(rate.provider_rate_id)}" ${rate.selected ? 'selected' : ''}>${esc(label)}</option>`;
+          }).join('')}
+        </select></label>
+        <button class="btn btn-primary btn-sm" data-shipstation-buy-label="${id}" type="button">Buy 4 × 6 PDF label</button>
+        <small class="muted">Persisted current-revision rates; re-rate if carrier pricing expired.</small>`
+        : '<small class="muted">No persisted current-revision rates. Update shipment packages + rates.</small>';
+      return `<details class="adm-shipstation-shipment" data-capability-scope="order.write" data-order-shipment-control>
+        <summary>Rate or fulfill ${esc(splitLabel)} shipment · revision ${revision}</summary>
+        ${rateControl}
+        ${hasAnyActiveLabel ? '<small class="muted">Shipment edits/cancellation locked until every active label is voided.</small>' : `
+          <label class="admin-input-wide">Change reason <textarea class="adm-textarea" data-shipstation-shipment-reason rows="2" maxlength="280" placeholder="Why package/shipment data changed"></textarea></label>
+          <button class="btn btn-secondary btn-sm" data-shipstation-update-shipment="${id}" data-order-shipment-id="${esc(shipment.id)}" data-revision="${revision}" data-split-key="${esc(split)}" data-split-items="${esc(splitItemsJson)}" type="button">Update shipment packages + rates</button>
+          <label class="adm-check"><input data-shipstation-cancel-confirm type="checkbox"> Confirm shipment cancellation; all linked labels must already be voided.</label>
+          <button class="btn btn-ghost btn-sm adm-order-danger" data-shipstation-cancel-shipment="${id}" data-order-shipment-id="${esc(shipment.id)}" data-revision="${revision}" data-split-key="${esc(split)}" type="button">Cancel shipment</button>
+        `}
+      </details>`;
+    }).join('');
+    const quoteControl = shippable && !activeLabel && !['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState) && !hasShipmentReconcile ? `<div data-capability-scope="order.write">
       <label>Phone <input class="adm-input" data-shipstation-phone="${id}" type="tel" value="${esc(phone)}" placeholder="+1 321-555-0100" autocomplete="tel"></label>
       <label>Address type <select class="adm-select" data-shipstation-residential="${id}"><option value="unknown">Unknown</option><option value="yes">Residential</option><option value="no">Commercial</option></select></label>
+      <label>Split key <input class="adm-input" data-shipstation-split="${id}" data-shipment-revisions="${esc(JSON.stringify(shipmentRevisions))}" value="default" pattern="[a-z0-9][a-z0-9_-]{0,39}" maxlength="40" aria-label="Shipment split key"></label>
+      <label class="admin-input-wide">Split item allocation <textarea class="adm-textarea" data-shipstation-split-items="${id}" rows="2" placeholder="Blank for default/full order&#10;VK-HCR-5G, 1"></textarea><small class="muted">Non-default split requires one unique SKU, quantity line. Across active splits, quantities cannot exceed order items.</small></label>
       <label class="admin-input-wide">Package override <textarea class="adm-textarea adm-shipstation-packages" data-shipstation-packages="${id}" rows="2" placeholder="Leave blank for CMS package profiles&#10;42.5, 14, 14, 18" aria-describedby="shipstation-format-${id}"></textarea><small id="shipstation-format-${id}" class="muted">Blank uses each variant's CMS shipping profile. Override: one/package line with weight_lb, length_in, width_in, height_in.</small></label>
-      <button class="btn btn-secondary btn-sm" data-shipstation-rates="${id}" type="button">Get live rates</button>
+      <button class="btn btn-secondary btn-sm" data-shipstation-rates="${id}" type="button">Create new split shipment + rates</button>
       <div class="adm-shipstation-results" data-shipstation-results="${id}" role="status" aria-live="polite"></div>
     </div>` : '';
     const shipStation = `<details class="adm-track adm-shipstation">
       <summary><b>ShipStation API Free</b>${order.shipstation_label_status ? ` ${statusBadge(order.shipstation_label_status)}` : ''}</summary>
       <div class="adm-track-controls">
         ${labelSummary}
+        ${shipmentControls}
         ${reconcileControl}
         ${voidControl}
         ${returnControl}
@@ -279,12 +386,13 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     </details>${shipStation}`;
   }
 
-  function renderShipStationRates(root, orderId, rates) {
+  function renderShipStationRates(root, orderId, response) {
+    const rates = response?.rates || [];
     if (!rates.length) {
       root.innerHTML = '<small class="muted">No valid rates returned. Check package/address data and connected carriers.</small>';
       return;
     }
-    root.innerHTML = `<label>Live rate <select class="adm-select" data-shipstation-rate="${esc(orderId)}">
+    root.innerHTML = `<div data-order-shipment-control><label>Live rate <select class="adm-select" data-shipstation-rate="${esc(orderId)}" data-order-shipment-id="${esc(response.order_shipment_id || '')}" data-shipment-id="${esc(response.shipment_id || '')}" data-revision="${esc(response.revision ?? '')}">
       ${rates.map((rate) => {
         const eta = rate.delivery_days != null ? ` · ${rate.delivery_days} day(s)` : '';
         const label = `${rate.carrier_name || rate.carrier_code} · ${rate.service_type || rate.service_code} · ${money(rate.amount, rate.currency)}${eta}`;
@@ -292,7 +400,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       }).join('')}
     </select></label>
     <button class="btn btn-primary btn-sm" data-shipstation-buy-label="${esc(orderId)}" type="button">Buy 4 × 6 PDF label</button>
-    <small class="muted">Live purchase; charged through connected ShipStation carrier account.</small>`;
+    <small class="muted">Live purchase; charged through connected ShipStation carrier account.</small></div>`;
   }
 
   function admOrdersPager() {
@@ -437,6 +545,16 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
 
   // Row actions are delegated once on the stable #admOrders container (#36): a single
   // listener per action survives every innerHTML re-render instead of re-binding per row.
+  function auditDetail(event) {
+    const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
+    const values = [];
+    if (detail.split_key) values.push(`split ${esc(detail.split_key)}`);
+    if (detail.revision != null) values.push(`revision ${esc(detail.revision)}`);
+    if (detail.package_hash) values.push(`hash <code>${esc(detail.package_hash)}</code>`);
+    if (detail.reason) values.push(`reason: ${esc(detail.reason)}`);
+    return values.length ? ` · <small class="muted">${values.join(' · ')}</small>` : '';
+  }
+
   function orderDetailHtml(order, timeline, integrationTimeline = []) {
     const addr = order.ship_address?.address || order.ship_address || null;
     const shipLines = addr
@@ -449,7 +567,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       <td style="text-align:right">${esc(money(i.unit_price, order.currency))}</td>
       <td style="text-align:right">${esc(money(i.line_total, order.currency))}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No items</td></tr>';
     const events = (timeline || []).map((e) =>
-      `<li><b>${esc(e.action)}</b> — ${esc(date(e.created_at))}${e.actor_email ? ` by ${esc(e.actor_email)}` : ''}</li>`).join('')
+      `<li><b>${esc(e.action)}</b> — ${esc(date(e.created_at))}${e.actor_email ? ` by ${esc(e.actor_email)}` : ''}${auditDetail(e)}</li>`).join('')
       || '<li class="muted">No staff actions recorded</li>';
     const shipEvents = (order.shipment_events || [])
       .slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -469,6 +587,25 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       ? `<h4 style="margin:16px 0 4px">Provider ledger</h4><ul style="margin:0;padding-left:18px">${providerLinks.map((link) =>
           `<li><b>${esc(link.provider)}</b> ${esc(link.object_type)} — ${providerObject(link)}</li>`).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Provider ledger</h4><p class="muted" style="margin:0">No external provider objects linked.</p>';
+    const normalizedShipments = (order.order_shipments || [])
+      .slice().sort((a, b) => String(a.split_key).localeCompare(String(b.split_key)));
+    const shipmentLedger = normalizedShipments.length
+      ? `<h4 style="margin:16px 0 4px">Persisted shipments & packages</h4><ul style="margin:0;padding-left:18px">${normalizedShipments.map((shipment) => {
+          const packageSummary = (shipment.order_shipment_packages || [])
+            .slice().sort((a, b) => Number(a.sequence) - Number(b.sequence))
+            .map((pkg) => {
+              const dimensions = pkg.length_in == null ? '' : ` · ${pkg.length_in} × ${pkg.width_in} × ${pkg.height_in} in`;
+              return `#${pkg.sequence} ${pkg.weight_value} ${pkg.weight_unit}${dimensions}`;
+            }).join('; ') || 'no persisted packages';
+          const selectedRate = (shipment.order_shipment_rates || []).find((rate) => rate.selected && !rate.invalidated_at);
+          const selectedSummary = selectedRate
+            ? ` · selected ${esc(selectedRate.carrier_name || selectedRate.carrier_code || '')} ${esc(selectedRate.service_type || selectedRate.service_code || '')} ${esc(money(Number(selectedRate.amount_minor) / (10 ** Number(selectedRate.currency_exponent || 0)), selectedRate.currency))}`
+            : '';
+          const allocationSummary = (shipment.item_allocations || [])
+            .map((item) => `${item.sku} × ${item.quantity}`).join(', ') || 'no item allocation';
+          return `<li><b>${esc(shipment.split_key)}</b> · revision ${esc(shipment.revision)} · provider ${esc(shipment.status)} · <code>${esc(shipment.provider_shipment_id || shipment.external_shipment_id)}</code>${selectedSummary}<br><small class="muted">${esc(allocationSummary)} · ${esc(packageSummary)} · hash ${esc(shipment.package_hash || 'pending')}</small></li>`;
+        }).join('')}</ul>`
+      : '<h4 style="margin:16px 0 4px">Persisted shipments & packages</h4><p class="muted" style="margin:0">No normalized shipment revision yet.</p>';
     const integrationHistory = integrationTimeline.length
       ? `<h4 style="margin:16px 0 4px">Integration delivery</h4><ul style="margin:0;padding-left:18px">${integrationTimeline.map((entry) =>
           `<li><b>${esc(entry.provider)}</b> ${esc(entry.effect_type)} — ${esc(entry.status)} · ${esc(date(entry.completed_at || entry.dead_at || entry.created_at))}${entry.result?.skipped ? ` · ${esc(entry.result.skipped)}` : ''}${entry.last_error_code ? ` · <code>${esc(entry.last_error_code)}</code>` : ''}</li>`).join('')}</ul>`
@@ -481,9 +618,10 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     const pendingPostage = financialEntries
       .filter((entry) => entry.recognition_state === 'pending')
       .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+    const pendingPostageLabel = pendingPostage < 0 ? 'pending carrier credit' : 'pending carrier charge';
     const financialLedger = financialEntries.length
       ? `<h4 style="margin:16px 0 4px">Financial evidence</h4>
-        <p class="muted" style="margin:0 0 4px">Realized postage ${esc(money(realizedPostage, order.currency))}${pendingPostage ? ` · pending provider amount ${esc(money(pendingPostage, order.currency))}` : ''}</p>
+        <p class="muted" style="margin:0 0 4px">Realized postage ${esc(money(realizedPostage, order.currency))}${pendingPostage ? ` · ${pendingPostageLabel} ${esc(money(pendingPostage, order.currency))}` : ''}</p>
         <ul style="margin:0;padding-left:18px">${financialEntries.map((entry) =>
           `<li><b>${esc(entry.source)}</b> ${esc(entry.entry_type.replaceAll('_', ' '))} — ${esc(money(entry.amount, entry.currency))} · ${esc(entry.recognition_state)} · <code>${esc(entry.provider_object_id)}</code>${entry.reason ? ` — ${esc(entry.reason)}` : ''}</li>`).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Financial evidence</h4><p class="muted" style="margin:0">No provider cost entries.</p>';
@@ -494,6 +632,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       <p style="margin:12px 0 0"><b>Total</b> ${esc(money(order.total ?? order.subtotal, order.currency))}${Number(order.tax) ? ` (tax ${esc(money(order.tax, order.currency))})` : ''}${Number(order.refunded_amount) > 0 ? ` · refunded ${esc(money(order.refunded_amount, order.currency))}` : ''}</p>
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
       ${shipHistory}
+      ${shipmentLedger}
       ${providerLedger}
       ${financialLedger}
       ${integrationHistory}
@@ -658,9 +797,11 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       const pick = (name) => box.querySelector(`[data-shipstation-${name}="${CSS.escape(id)}"]`);
       const results = pick('results');
       let packages;
+      let splitItems;
       try {
         const rawPackages = pick('packages')?.value.trim();
         packages = rawPackages ? parseShippingPackages(rawPackages) : undefined;
+        splitItems = parseShippingSplitItems(pick('split-items')?.value);
         if (!pick('phone')?.value.trim()) throw new Error('Shipping phone is required by ShipStation.');
       } catch (err) {
         message('ordStatus', err.message || 'Check package details.', 'err');
@@ -669,6 +810,8 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       button.disabled = true;
       results.textContent = 'Loading live rates…';
       try {
+        const splitKey = pick('split')?.value.trim() || 'default';
+        const knownRevisions = JSON.parse(pick('split')?.dataset.shipmentRevisions || '{}');
         const res = await api('/api/admin/shipstation', {
           method: 'POST',
           body: {
@@ -676,10 +819,15 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
             order_id: id,
             phone: pick('phone').value.trim(),
             residential: pick('residential').value,
+            split_key: splitKey,
+            expected_revision: Number(knownRevisions[splitKey] || 0),
             ...(packages ? { packages } : {}),
+            ...(splitItems ? { split_items: splitItems } : {}),
           },
         });
-        renderShipStationRates(results, id, res.rates || []);
+        knownRevisions[res.split_key || splitKey] = Number(res.revision || 0);
+        pick('split').dataset.shipmentRevisions = JSON.stringify(knownRevisions);
+        renderShipStationRates(results, id, res);
         message('ordStatus', `${(res.rates || []).length} live rate(s) loaded using ${res.packages_source || 'provided'} package data.`, 'ok');
       } catch (err) {
         results.textContent = '';
@@ -688,9 +836,127 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         button.disabled = false;
       }
     });
+    delegate(box, 'click', '[data-shipstation-update-shipment]', async (event, button) => {
+      const id = button.dataset.shipstationUpdateShipment;
+      const pick = (name) => box.querySelector(`[data-shipstation-${name}="${CSS.escape(id)}"]`);
+      const results = pick('results');
+      const control = button.closest('[data-order-shipment-control]');
+      const reason = control?.querySelector('[data-shipstation-shipment-reason]')?.value.trim() || '';
+      if (reason.length < 8) {
+        message('ordStatus', 'Enter a specific shipment change reason (at least 8 characters).', 'err');
+        return;
+      }
+      let packages;
+      let splitItems;
+      try {
+        const rawPackages = pick('packages')?.value.trim();
+        packages = rawPackages ? parseShippingPackages(rawPackages) : undefined;
+        splitItems = parseShippingSplitItems(pick('split-items')?.value);
+        if (!splitItems && button.dataset.splitItems) {
+          const persistedItems = JSON.parse(button.dataset.splitItems);
+          splitItems = Array.isArray(persistedItems) && persistedItems.length ? persistedItems : undefined;
+        }
+      } catch (err) {
+        message('ordStatus', err.message || 'Check package and split details.', 'err');
+        return;
+      }
+      button.disabled = true;
+      message('ordStatus', 'Updating persisted ShipStation shipment…');
+      try {
+        const res = await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: {
+            action: 'update_shipment',
+            order_id: id,
+            order_shipment_id: button.dataset.orderShipmentId,
+            expected_revision: Number(button.dataset.revision),
+            reason,
+            phone: pick('phone')?.value.trim() || '',
+            residential: pick('residential')?.value || 'unknown',
+            split_key: button.dataset.splitKey || 'default',
+            ...(packages ? { packages } : {}),
+            ...(splitItems ? { split_items: splitItems } : {}),
+          },
+        });
+        renderShipStationRates(results, id, res);
+        message('ordStatus', `Shipment packages updated; ${(res.rates || []).length} replacement rate(s) persisted.`, 'ok');
+      } catch (err) {
+        message('ordStatus', err.data?.error || err.message || 'Shipment update uncertain. Reconcile before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-shipstation-cancel-shipment]', async (event, button) => {
+      const id = button.dataset.shipstationCancelShipment;
+      const control = button.closest('[data-order-shipment-control]');
+      const reason = control?.querySelector('[data-shipstation-shipment-reason]')?.value.trim() || '';
+      const confirmed = control?.querySelector('[data-shipstation-cancel-confirm]')?.checked === true;
+      if (reason.length < 8) {
+        message('ordStatus', 'Enter a specific shipment cancellation reason (at least 8 characters).', 'err');
+        return;
+      }
+      if (!confirmed) {
+        message('ordStatus', 'Confirm shipment cancellation first.', 'err');
+        return;
+      }
+      if (!(await confirmDialog('Cancel this provider shipment? Every linked label must already be voided.', {
+        confirmText: 'Cancel shipment',
+        cancelText: 'Keep shipment',
+        danger: true,
+      }))) return;
+      button.disabled = true;
+      try {
+        await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: {
+            action: 'cancel_shipment',
+            order_id: id,
+            order_shipment_id: button.dataset.orderShipmentId,
+            expected_revision: Number(button.dataset.revision),
+            split_key: button.dataset.splitKey || 'default',
+            confirm: true,
+            reason,
+          },
+        });
+        message('ordStatus', 'Provider shipment cancelled; provider history retained.', 'ok');
+        await refreshOrder(id);
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Shipment cancellation uncertain. Reconcile before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-shipstation-reconcile-shipment]', async (event, button) => {
+      const id = button.dataset.shipstationReconcileShipment;
+      const control = button.closest('[data-order-shipment-control]');
+      const reason = control?.querySelector('[data-shipstation-shipment-reconcile-reason]')?.value.trim() || '';
+      const confirmed = control?.querySelector('[data-shipstation-shipment-reconcile-confirm]')?.checked === true;
+      if (reason.length < 8 || !confirmed) {
+        message('ordStatus', 'Enter a specific reconciliation reason and confirm read-only provider lookup.', 'err');
+        return;
+      }
+      button.disabled = true;
+      try {
+        await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: {
+            action: 'reconcile_shipment',
+            order_id: id,
+            order_shipment_id: button.dataset.orderShipmentId,
+            confirm: true,
+            reason,
+          },
+        });
+        message('ordStatus', 'Shipment operation reconciled without purchase.', 'ok');
+        await refreshOrder(id);
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Shipment reconciliation unresolved.', 'err');
+        button.disabled = false;
+      }
+    });
     delegate(box, 'click', '[data-shipstation-buy-label]', async (event, button) => {
       const id = button.dataset.shipstationBuyLabel;
-      const rate = box.querySelector(`[data-shipstation-rate="${CSS.escape(id)}"]`);
+      const control = button.closest('[data-order-shipment-control]');
+      const rate = control?.querySelector(`[data-shipstation-rate="${CSS.escape(id)}"]`)
+        || box.querySelector(`[data-shipstation-rate="${CSS.escape(id)}"]`);
       if (!rate?.value) { message('ordStatus', 'Load and select a live rate first.', 'err'); return; }
       const selected = rate.options[rate.selectedIndex]?.textContent || 'selected rate';
       if (!(await confirmDialog(`Buy ${selected}? ShipStation will charge the connected carrier account.`, {
@@ -700,14 +966,35 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       button.disabled = true;
       message('ordStatus', 'Buying ShipStation label…');
       try {
+        if (!rate.dataset.orderShipmentId || rate.dataset.revision === '') {
+          throw new Error('Persisted shipment revision missing. Re-rate before purchase.');
+        }
+        await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: {
+            action: 'select_shipment_rate',
+            order_id: id,
+            order_shipment_id: rate.dataset.orderShipmentId,
+            expected_revision: Number(rate.dataset.revision),
+            shipment_id: rate.dataset.shipmentId,
+            rate_id: rate.value,
+          },
+        });
         const res = await api('/api/admin/shipstation', {
           method: 'POST',
-          body: { action: 'buy_label', order_id: id, rate_id: rate.value },
+          body: {
+            action: 'buy_label',
+            order_id: id,
+            order_shipment_id: rate.dataset.orderShipmentId,
+            expected_revision: Number(rate.dataset.revision),
+            shipment_id: rate.dataset.shipmentId,
+            rate_id: rate.value,
+          },
         });
         message('ordStatus', res.already_purchased ? 'Existing label loaded; no second purchase.' : 'Label purchased. Order moved to packing.', 'ok');
         await refreshOrder(id);
       } catch (err) {
-        message('ordStatus', err.data?.error || 'Label purchase failed. Check ShipStation before retrying.', 'err');
+        message('ordStatus', err.data?.error || err.message || 'Label purchase failed. Check ShipStation before retrying.', 'err');
         button.disabled = false;
       }
     });
@@ -778,8 +1065,9 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     delegate(box, 'click', '[data-shipstation-void-label]', async (event, button) => {
       const id = button.dataset.shipstationVoidLabel;
       const labelId = button.dataset.labelId;
-      const reason = box.querySelector(`[data-shipstation-void-reason="${CSS.escape(id)}"]`)?.value.trim() || '';
-      const confirmed = box.querySelector(`[data-shipstation-void-confirm="${CSS.escape(id)}"]`)?.checked === true;
+      const control = button.closest('.adm-shipstation-void');
+      const reason = control?.querySelector(`[data-shipstation-void-reason="${CSS.escape(id)}"]`)?.value.trim() || '';
+      const confirmed = control?.querySelector(`[data-shipstation-void-confirm="${CSS.escape(id)}"]`)?.checked === true;
       if (reason.length < 8) {
         message('ordStatus', 'Enter a specific void reason (at least 8 characters).', 'err');
         return;

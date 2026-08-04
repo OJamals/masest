@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import test from 'node:test';
 
 import {
@@ -22,6 +22,10 @@ const siteImageByPath = new Map(siteImages.map((asset) => [asset.public_url, ass
 const documentReview = JSON.parse(read('data/public-document-review.json'));
 const fieldSourceRoot = process.env.MASEST_DOCUMENT_SOURCE_ROOT
   || join(homedir(), 'Desktop', 'masest');
+const resolveFieldSource = (source) => [
+  join(fieldSourceRoot, source),
+  join(fieldSourceRoot, 'docs', basename(source)),
+].find((candidate) => existsSync(candidate));
 const restrictedDocuments = new Set(documentReview.documents
   .filter((document) => document.status === 'restricted')
   .map((document) => document.path));
@@ -229,8 +233,8 @@ test('gallery media fails closed between generated scenes, field context, and qu
         );
         assert.match(evidence.source_sha256 || '', /^[a-f0-9]{64}$/, `${industry.slug}: source hash`);
         if (existsSync(fieldSourceRoot)) {
-          const sourcePath = join(fieldSourceRoot, evidence.source);
-          assert.ok(existsSync(sourcePath), `${industry.slug}: missing context source ${evidence.source}`);
+          const sourcePath = resolveFieldSource(evidence.source);
+          assert.ok(sourcePath, `${industry.slug}: missing context source ${evidence.source}`);
           assert.equal(
             createHash('sha256').update(readFileSync(sourcePath)).digest('hex'),
             evidence.source_sha256,

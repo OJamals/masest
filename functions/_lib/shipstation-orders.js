@@ -5,6 +5,7 @@ import { recordOrderFinancialEntry } from './order-financial-ledger.js';
 import {
   ShipStationError,
   buildRateRequest,
+  normalizePackages,
   shipStationRequest,
 } from './shipstation.js';
 
@@ -16,6 +17,7 @@ const LABEL_DOWNLOAD_PREFIXES = [
   ['api.shipengine.com', '/v1/downloads/'],
   ['api.shipstation.com', '/v2/downloads/'],
 ];
+const MASEST_SHIPSTATION_WAREHOUSE_ID = 'se-2287981';
 
 function text(value, max = 240) {
   return String(value ?? '').trim().slice(0, max);
@@ -35,6 +37,87 @@ function providerId(value, code) {
   return id;
 }
 
+function externalShipmentId(value) {
+  const id = String(value ?? '').trim();
+  if (!id || id.length > 50) throw new ShipStationError('shipstation_external_shipment_id_invalid');
+  return id;
+}
+
+function rowId(value, code = 'shipstation_order_shipment_required') {
+  const id = text(value, 80);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    throw new ShipStationError(code);
+  }
+  return id;
+}
+
+function splitKey(value) {
+  const key = text(value || 'default', 40).toLowerCase();
+  if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(key)) throw new ShipStationError('shipstation_split_key_invalid');
+  return key;
+}
+
+function expectedRevision(value) {
+  const revision = Number(value);
+  if (!Number.isSafeInteger(revision) || revision < 0) {
+    throw new ShipStationError('shipstation_shipment_revision_required');
+  }
+  return revision;
+}
+
+function normalizeSplitItems(order, input, key) {
+  const orderItems = Array.isArray(order?.order_items) ? order.order_items : [];
+  const available = new Map();
+  for (const item of orderItems) {
+    const sku = text(item?.sku, 160);
+    const quantity = Math.max(0, Math.floor(number(item?.qty) || 0));
+    if (sku && quantity) available.set(sku, (available.get(sku) || 0) + quantity);
+  }
+  const requested = Array.isArray(input) && input.length
+    ? input
+    : key === 'default'
+      ? [...available].map(([sku, quantity]) => ({ sku, quantity }))
+      : null;
+  if (!requested) throw new ShipStationError('shipstation_split_items_required');
+  const seen = new Set();
+  return requested.map((item) => {
+    const sku = text(item?.sku, 160);
+    const quantity = Number(item?.quantity ?? item?.qty);
+    if (!sku || seen.has(sku) || !Number.isSafeInteger(quantity) || quantity <= 0 || quantity > (available.get(sku) || 0)) {
+      throw new ShipStationError('shipstation_split_items_invalid');
+    }
+    seen.add(sku);
+    return { sku, quantity };
+  });
+}
+
+function allocatedOrderItems(order, itemAllocations) {
+  const allocationBySku = new Map(itemAllocations.map((item) => [item.sku, item.quantity]));
+  const selected = new Map();
+  for (const item of Array.isArray(order?.order_items) ? order.order_items : []) {
+    const sku = text(item?.sku, 160);
+    if (allocationBySku.has(sku) && !selected.has(sku)) {
+      selected.set(sku, { ...item, sku, qty: allocationBySku.get(sku) });
+    }
+  }
+  return [...selected.values()];
+}
+
+function configuredWarehouseId(env) {
+  const warehouseId = text(env?.SHIPSTATION_WAREHOUSE_ID, 100);
+  if (!warehouseId) throw new ShipStationError('shipstation_warehouse_required');
+  if (warehouseId !== MASEST_SHIPSTATION_WAREHOUSE_ID) {
+    throw new ShipStationError('shipstation_warehouse_mismatch');
+  }
+  return warehouseId;
+}
+
+function reason(value) {
+  const result = text(value, 280);
+  if (result.length < 8) throw new ShipStationError('shipstation_reason_required');
+  return result;
+}
+
 function number(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
@@ -45,12 +128,33 @@ function money(value) {
   return number(value);
 }
 
+const CURRENCY_EXPONENTS = new Map([
+  ['bhd', 3], ['jod', 3], ['kwd', 3], ['omr', 3], ['tnd', 3],
+  ['bif', 0], ['clp', 0], ['djf', 0], ['gnf', 0], ['jpy', 0],
+  ['kmf', 0], ['krw', 0], ['mga', 0], ['pyg', 0], ['rwf', 0],
+  ['ugx', 0], ['vnd', 0], ['vuv', 0], ['xaf', 0], ['xof', 0], ['xpf', 0],
+]);
+
+function amountToMinor(value, currency) {
+  const amount = money(value);
+  const code = text(currency, 8).toLowerCase();
+  if (!Number.isFinite(amount) || amount < 0 || !/^[a-z]{3}$/.test(code)) {
+    throw new ShipStationError('shipstation_rate_response_invalid');
+  }
+  const exponent = CURRENCY_EXPONENTS.get(code) ?? 2;
+  const scaled = Math.round((amount + Number.EPSILON) * (10 ** exponent));
+  if (!Number.isSafeInteger(scaled)) throw new ShipStationError('shipstation_rate_response_invalid');
+  return { amountMinor: scaled, currencyExponent: exponent };
+}
+
 function payloadList(payload, key) {
   if (Array.isArray(payload)) return payload;
   return Array.isArray(payload?.[key]) ? payload[key] : [];
 }
 
 function safeRate(rate) {
+  const currency = text(rate?.shipping_amount?.currency || rate?.currency, 8).toLowerCase();
+  const { amountMinor, currencyExponent } = amountToMinor(rate?.shipping_amount ?? rate?.amount, currency);
   return {
     rate_id: text(rate?.rate_id, 100),
     shipment_id: text(rate?.shipment_id, 100),
@@ -60,10 +164,29 @@ function safeRate(rate) {
     service_code: text(rate?.service_code, 100),
     service_type: text(rate?.service_type || rate?.service_code, 120),
     amount: money(rate?.shipping_amount ?? rate?.amount),
-    currency: text(rate?.shipping_amount?.currency || rate?.currency || 'usd', 8).toLowerCase(),
+    amount_minor: amountMinor,
+    currency,
+    currency_exponent: currencyExponent,
     delivery_days: number(rate?.delivery_days ?? rate?.carrier_delivery_days),
     estimated_delivery_date: text(rate?.estimated_delivery_date, 80) || null,
   };
+}
+
+export async function stablePackageHash(input) {
+  const normalized = normalizePackages(input);
+  const canonical = normalized.map((pkg, index) => [
+    index + 1,
+    pkg.package_code,
+    pkg.weight.unit,
+    pkg.weight.value.toFixed(3),
+    pkg.dimensions?.unit || '',
+    pkg.dimensions ? pkg.dimensions.length.toFixed(3) : '',
+    pkg.dimensions ? pkg.dimensions.width.toFixed(3) : '',
+    pkg.dimensions ? pkg.dimensions.height.toFixed(3) : '',
+  ].join('|')).join('\n');
+  const bytes = new TextEncoder().encode(canonical);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 function existingLabel(order) {
@@ -71,15 +194,69 @@ function existingLabel(order) {
     already_purchased: true,
     label_id: text(order?.shipstation_label_id, 100),
     shipment_id: text(order?.shipstation_shipment_id, 100),
+    order_shipment_id: text(order?.shipstation_order_shipment_id, 80) || null,
+    revision: Number.isSafeInteger(Number(order?.shipstation_shipment_revision))
+      ? Number(order.shipstation_shipment_revision)
+      : null,
+    rate_id: text(order?.shipstation_rate_id, 100) || null,
     status: text(order?.shipstation_label_status, 80) || 'label_purchased',
     tracking_number: text(order?.tracking_number, 160) || null,
     tracking_url: text(order?.tracking_url, 1000) || null,
+    cost: money(order?.shipstation_cost),
+    currency: text(order?.currency || 'usd', 8).toLowerCase(),
+  };
+}
+
+function labelHasVoidEvidence(order, labelId) {
+  return Array.isArray(order?.order_financial_entries)
+    && order.order_financial_entries.some((entry) => entry?.source === 'shipstation'
+      && entry?.entry_type === 'postage_void_requested'
+      && text(entry?.provider_object_id, 100) === labelId);
+}
+
+function linkedOutboundLabel(order, { labelId, orderShipmentId, shipmentId } = {}) {
+  if (!Array.isArray(order?.order_provider_links)) return null;
+  return order.order_provider_links.find((link) => {
+    if (link?.provider !== 'shipstation' || link?.object_type !== 'label') return false;
+    const linkedLabelId = text(link?.provider_object_id, 100);
+    if (!linkedLabelId || labelHasVoidEvidence(order, linkedLabelId)) return false;
+    const metadata = link?.metadata && typeof link.metadata === 'object' ? link.metadata : {};
+    if (labelId && linkedLabelId !== labelId) return false;
+    if (orderShipmentId && text(metadata.order_shipment_id, 80) !== orderShipmentId) return false;
+    if (shipmentId && text(metadata.shipment_id, 100) !== shipmentId) return false;
+    return true;
+  }) || null;
+}
+
+function existingLabelForShipment(order, orderShipmentId, shipmentId) {
+  const projectedOrderShipmentId = text(order?.shipstation_order_shipment_id, 80);
+  if ((!projectedOrderShipmentId || projectedOrderShipmentId === orderShipmentId)
+    && text(order?.shipstation_shipment_id, 100) === shipmentId
+    && order?.shipstation_label_id
+    && !['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
+    return existingLabel(order);
+  }
+  const link = linkedOutboundLabel(order, { orderShipmentId, shipmentId });
+  if (!link) return null;
+  const metadata = link.metadata && typeof link.metadata === 'object' ? link.metadata : {};
+  return {
+    already_purchased: true,
+    label_id: text(link.provider_object_id, 100),
+    shipment_id: text(metadata.shipment_id, 100),
+    order_shipment_id: text(metadata.order_shipment_id, 80) || null,
+    revision: Number.isSafeInteger(Number(metadata.revision)) ? Number(metadata.revision) : null,
+    rate_id: text(metadata.rate_id, 100) || null,
+    status: text(metadata.status, 80) || 'label_purchased',
+    tracking_number: text(metadata.tracking_number, 160) || null,
+    tracking_url: text(metadata.tracking_url, 1000) || null,
+    cost: money(metadata.cost),
+    currency: text(metadata.currency || order?.currency || 'usd', 8).toLowerCase(),
   };
 }
 
 async function defaultLoadOrder(env, id) {
   const { data, error } = await adminClient(env).from('orders')
-    .select('id,order_number,status,customer_email,currency,ship_address,created_at,updated_at,shipstation_shipment_id,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,shipstation_cost,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,tracking_status,carrier,tracking_number,tracking_url,order_items(sku,name,qty,unit_price),order_provider_links(provider,object_type,provider_object_id,metadata)')
+    .select('id,order_number,status,customer_email,currency,ship_address,created_at,updated_at,shipstation_shipment_id,shipstation_order_shipment_id,shipstation_shipment_revision,shipstation_package_hash,shipstation_shipment_state,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,shipstation_cost,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,tracking_status,carrier,tracking_number,tracking_url,order_items(sku,name,qty,unit_price),order_provider_links(provider,object_type,provider_object_id,metadata),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,metadata)')
     .eq('id', id)
     .single();
   if (error) throw new ShipStationError(error.code === 'PGRST116' ? 'shipping_order_not_found' : 'shipping_database_failed');
@@ -89,6 +266,45 @@ async function defaultLoadOrder(env, id) {
 async function defaultListCarriers(env) {
   const payload = await shipStationRequest(env, '/carriers');
   return payloadList(payload, 'carriers');
+}
+
+function carrierSupportsMultiPackage(carrier, serviceCode = '') {
+  const services = Array.isArray(carrier?.services) ? carrier.services : [];
+  if (serviceCode) {
+    return services.some((service) => text(service?.service_code, 100) === serviceCode
+      && service?.is_multi_package_supported === true);
+  }
+  return carrier?.has_multi_package_supporting_services === true
+    || services.some((service) => service?.is_multi_package_supported === true);
+}
+
+async function resolveCarrierSelection(env, listCarriers, requested = [], packageCount = 1) {
+  const carriers = await listCarriers(env);
+  const connectedIds = new Set(carriers.map((carrier) => text(carrier?.carrier_id, 100)).filter(Boolean));
+  if (!connectedIds.size) throw new ShipStationError('shipstation_no_connected_carriers');
+  const requestedIds = [...new Set((requested || []).map((value) => text(value, 100)).filter(Boolean))];
+  if (requestedIds.some((carrierId) => !connectedIds.has(carrierId))) {
+    throw new ShipStationError('shipstation_carrier_not_connected');
+  }
+  let carrierIds = requestedIds.length ? requestedIds : [...connectedIds];
+  if (packageCount > 1) {
+    const supported = new Set(carriers
+      .filter((carrier) => carrierSupportsMultiPackage(carrier))
+      .map((carrier) => text(carrier?.carrier_id, 100)));
+    if (requestedIds.some((carrierId) => !supported.has(carrierId))) {
+      throw new ShipStationError('shipstation_multi_package_unsupported');
+    }
+    carrierIds = carrierIds.filter((carrierId) => supported.has(carrierId));
+    if (!carrierIds.length) throw new ShipStationError('shipstation_multi_package_unsupported');
+  }
+  return { carrierIds, carriers };
+}
+
+function safeRatesForPackages(payload, packages, carriers) {
+  const rates = payloadList(payload, 'rates').map(safeRate).filter((rate) => rate.rate_id);
+  if (packages.length <= 1) return rates;
+  const byId = new Map(carriers.map((carrier) => [text(carrier?.carrier_id, 100), carrier]));
+  return rates.filter((rate) => carrierSupportsMultiPackage(byId.get(rate.carrier_id), rate.service_code));
 }
 
 export function packagesFromOrderItems(order, variants) {
@@ -144,6 +360,163 @@ async function defaultPersistRate(env, id, patch) {
   if (error) throw new ShipStationError('shipping_database_failed');
 }
 
+function throwShipmentRpcError(error, fallback = 'shipping_database_failed') {
+  const message = text(error?.message, 500).toLowerCase();
+  if (/revision|stale/.test(message)) throw new ShipStationError('shipstation_shipment_revision_conflict', 409);
+  if (message.includes('order_shipment_split_exists')) {
+    throw new ShipStationError('shipstation_shipment_split_exists', 409);
+  }
+  if (message.includes('order_shipment_operation_locked')) {
+    throw new ShipStationError('shipstation_shipment_operation_locked', 409);
+  }
+  if (message.includes('order_shipment_locked_by_label')) {
+    throw new ShipStationError('shipstation_shipment_locked_by_label', 409);
+  }
+  if (message.includes('order_shipment_item_conservation_failed')) {
+    throw new ShipStationError('shipstation_split_item_conservation_failed', 409);
+  }
+  if (message.includes('order_shipment_items_')) {
+    throw new ShipStationError('shipstation_split_items_invalid');
+  }
+  throw new ShipStationError(fallback);
+}
+
+async function defaultClaimShipmentOperation(env, input) {
+  const { data, error } = await adminClient(env).rpc('claim_order_shipment_operation', {
+    p_order_id: input.orderId,
+    p_order_shipment_id: input.orderShipmentId || null,
+    p_split_key: input.splitKey || 'default',
+    p_expected_revision: input.expectedRevision,
+    p_operation: input.operation,
+    p_package_hash: input.packageHash || null,
+    p_pending_payload: input.pendingPayload || {},
+  });
+  if (error) {
+    throwShipmentRpcError(error);
+  }
+  if (data?.claimed !== true) throw new ShipStationError('shipstation_shipment_operation_locked', 409);
+  return data;
+}
+
+async function defaultFinalizeShipmentOperation(env, input) {
+  const { data, error } = await adminClient(env).rpc('finalize_order_shipment_operation', {
+    p_order_shipment_id: input.orderShipmentId,
+    p_expected_revision: input.expectedRevision,
+    p_provider_shipment_id: input.providerShipmentId || null,
+    p_status: input.status,
+    p_package_hash: input.packageHash || null,
+    p_packages: input.packages || [],
+    p_rates: input.rates || [],
+    p_actor_id: input.actorId || null,
+    p_actor_email: input.actorEmail || null,
+    p_reason: input.reason || null,
+  });
+  if (error || data?.applied !== true) {
+    if (error) throwShipmentRpcError(error);
+    throw new ShipStationError('shipping_database_failed');
+  }
+  return data;
+}
+
+async function defaultFailShipmentOperation(env, input) {
+  const rpc = input.reconcile === false
+    ? 'release_order_shipment_operation'
+    : 'fail_order_shipment_operation';
+  const { data, error } = await adminClient(env).rpc(rpc, {
+    p_order_shipment_id: input.orderShipmentId,
+    p_expected_revision: input.expectedRevision,
+    p_error_code: text(input.errorCode || 'shipstation_request_failed', 160),
+  });
+  if (error) throwShipmentRpcError(error);
+  if (data !== true) throw new ShipStationError('shipstation_shipment_operation_locked', 409);
+}
+
+function shipmentFailureNeedsReconciliation(error, providerAccepted, operation) {
+  if (providerAccepted) return true;
+  const status = Number(error?.status || 0);
+  if (operation === 'create' && status === 409) return true;
+  return status < 400 || status >= 500 || status === 429;
+}
+
+async function recordShipmentFailure(
+  failShipmentOperation, env, claim, error, providerAccepted, operation, orderShipmentId = null,
+) {
+  await failShipmentOperation(env, {
+    orderShipmentId: orderShipmentId || rowId(claim.id),
+    expectedRevision: Number(claim.revision),
+    errorCode: error?.code || 'shipstation_request_failed',
+    reconcile: shipmentFailureNeedsReconciliation(error, providerAccepted, operation),
+  }).catch(() => {});
+}
+
+async function defaultLoadShipmentOperation(env, input) {
+  let query = adminClient(env).from('order_shipments')
+    .select('id,order_id,split_key,revision,provider_shipment_id,external_shipment_id,package_hash,status,operation,operation_state,pending_payload,selected_rate_id')
+    .eq('order_id', input.orderId);
+  query = input.orderShipmentId
+    ? query.eq('id', input.orderShipmentId)
+    : query.eq('split_key', input.splitKey || 'default').order('revision', { ascending: false });
+  const { data, error } = await query.limit(1).maybeSingle();
+  if (error) throw new ShipStationError('shipping_database_failed');
+  if (!data) throw new ShipStationError('shipstation_order_shipment_not_found');
+  return data;
+}
+
+async function defaultListOrderShipments(env, id) {
+  const { data, error } = await adminClient(env).from('order_shipments')
+    .select('id,split_key,generation,revision,provider_shipment_id,external_shipment_id,package_hash,status,operation,operation_state,selected_rate_id,item_allocations,error_code,updated_at,order_shipment_packages(sequence,package_code,weight_value,weight_unit,length_in,width_in,height_in,package_hash),order_shipment_rates(provider_rate_id,carrier_id,carrier_code,carrier_name,service_code,service_type,amount_minor,currency,currency_exponent,package_hash,delivery_days,estimated_delivery_at,selected,invalidated_at)')
+    .eq('order_id', id)
+    .order('split_key', { ascending: true });
+  if (error) throw new ShipStationError('shipping_database_failed');
+  return data || [];
+}
+
+async function defaultUpdateShipment(env, shipmentId, payload) {
+  return shipStationRequest(env, '/shipments/' + encodeURIComponent(shipmentId), {
+    method: 'PUT',
+    body: payload,
+  });
+}
+
+async function defaultCancelShipment(env, shipmentId) {
+  return shipStationRequest(env, '/shipments/' + encodeURIComponent(shipmentId) + '/cancel', { method: 'PUT' });
+}
+
+async function defaultGetShipment(env, shipmentId) {
+  return shipStationRequest(env, '/shipments/' + encodeURIComponent(shipmentId));
+}
+
+async function defaultGetShipmentByExternalId(env, id) {
+  return shipStationRequest(env, '/shipments/external_shipment_id/' + encodeURIComponent(id));
+}
+
+async function defaultSelectShipmentRate(env, input) {
+  const { data, error } = await adminClient(env).rpc('select_order_shipment_rate', {
+    p_order_id: input.orderId,
+    p_order_shipment_id: input.orderShipmentId,
+    p_expected_revision: input.expectedRevision,
+    p_rate_id: input.rateId,
+  });
+  if (error || data?.selected !== true) {
+    if (error) throwShipmentRpcError(error, 'shipstation_rate_selection_invalid');
+    throw new ShipStationError('shipstation_rate_selection_invalid');
+  }
+  return data;
+}
+
+async function defaultVerifySelectedRate(env, input) {
+  const { data, error } = await adminClient(env).rpc('verify_order_shipment_rate', {
+    p_order_id: input.orderId,
+    p_order_shipment_id: input.orderShipmentId,
+    p_expected_revision: input.expectedRevision,
+    p_shipment_id: input.shipmentId,
+    p_rate_id: input.rateId,
+  });
+  if (error) throw new ShipStationError('shipping_database_failed');
+  if (data?.selected !== true) throw new ShipStationError('shipstation_rate_selection_invalid');
+  return data;
+}
+
 async function defaultGetRate(env, rateId) {
   return shipStationRequest(env, `/rates/${encodeURIComponent(rateId)}`);
 }
@@ -187,10 +560,12 @@ async function defaultFetchDocument(url, options) {
   return fetch(url, options);
 }
 
-async function defaultClaimLabel(env, id, rateId) {
-  const { data, error } = await adminClient(env).rpc('claim_shipstation_label_purchase', {
-    p_order_id: id,
-    p_rate_id: rateId,
+async function defaultClaimLabel(env, input) {
+  const { data, error } = await adminClient(env).rpc('claim_order_shipment_label_purchase', {
+    p_order_id: input.orderId,
+    p_order_shipment_id: input.orderShipmentId,
+    p_expected_revision: input.expectedRevision,
+    p_rate_id: input.rateId,
   });
   if (error) throw new ShipStationError('shipping_database_failed');
   return data === true;
@@ -305,14 +680,14 @@ async function defaultRecordFinancialEntry(env, entry) {
   }
 }
 
-async function linkShipStationObject(link, env, order, objectType, providerObjectId) {
+async function linkShipStationObject(link, env, order, objectType, providerObjectId, metadata = {}) {
   if (!text(providerObjectId, 255)) return null;
   return link(env, {
     orderId: order.id,
     provider: 'shipstation',
     objectType,
     providerObjectId,
-    metadata: { order_number: order.order_number || null },
+    metadata: { order_number: order.order_number || null, ...metadata },
   });
 }
 
@@ -424,7 +799,11 @@ function assertOrderLabel(order, labelId) {
     && order.order_provider_links.some((link) => link?.provider === 'shipstation'
       && link?.object_type === 'return_label'
       && text(link?.provider_object_id, 100) === labelId);
-  if (labelId === outbound) return 'outbound';
+  const linkedOutbound = Array.isArray(order.order_provider_links)
+    && order.order_provider_links.some((link) => link?.provider === 'shipstation'
+      && link?.object_type === 'label'
+      && text(link?.provider_object_id, 100) === labelId);
+  if (labelId === outbound || linkedOutbound) return 'outbound';
   if (labelId === returned || linkedReturn) return 'return';
   throw new ShipStationError('shipstation_label_order_mismatch');
 }
@@ -527,6 +906,12 @@ export async function getOrderLabel(env, input, _context = {}, dependencies = {}
   return safe;
 }
 
+export async function listOrderShipments(env, input, _context = {}, dependencies = {}) {
+  const id = orderId(input?.order_id);
+  const listShipments = dependencies.listOrderShipments || defaultListOrderShipments;
+  return { order_id: id, shipments: await listShipments(env, id) };
+}
+
 export async function downloadOrderLabel(env, input, _context = {}, dependencies = {}) {
   const format = text(input?.format || 'pdf', 12).toLowerCase();
   if (!LABEL_FORMATS.has(format)) throw new ShipStationError('shipstation_label_document_format_invalid');
@@ -550,74 +935,384 @@ export async function downloadOrderLabel(env, input, _context = {}, dependencies
   });
 }
 
+async function prepareShipment(env, input, order, listCarriers, loadPackageProfiles) {
+  const orderSplitKey = splitKey(input?.split_key);
+  const itemAllocations = normalizeSplitItems(order, input?.split_items, orderSplitKey);
+  const shipmentOrder = {
+    ...order,
+    order_items: allocatedOrderItems(order, itemAllocations),
+  };
+  const manualPackages = Array.isArray(input?.packages) && input.packages.length > 0;
+  const sourcePackages = manualPackages ? input.packages : await loadPackageProfiles(env, shipmentOrder);
+  const packages = normalizePackages(sourcePackages);
+  const { carrierIds, carriers } = await resolveCarrierSelection(
+    env, listCarriers, input?.carrier_ids, packages.length,
+  );
+  const packageHash = await stablePackageHash(packages);
+  const pendingPayload = {
+    packages,
+    items: itemAllocations,
+    carrier_ids: carrierIds,
+    phone: text(input?.phone, 40),
+    residential: text(input?.residential, 12),
+  };
+  return {
+    orderSplitKey, shipmentOrder, manualPackages, packages, carrierIds, carriers, packageHash, pendingPayload,
+  };
+}
+
 export async function rateOrderShipment(env, input, context = {}, dependencies = {}) {
   const id = orderId(input?.order_id);
-  const warehouseId = text(env?.SHIPSTATION_WAREHOUSE_ID, 100);
   if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
-  if (!warehouseId) throw new ShipStationError('shipstation_warehouse_required');
+  const warehouseId = configuredWarehouseId(env);
 
   const loadOrder = dependencies.loadOrder || defaultLoadOrder;
   const listCarriers = dependencies.listCarriers || defaultListCarriers;
   const loadPackageProfiles = dependencies.loadPackageProfiles || defaultLoadPackageProfiles;
   const quoteRates = dependencies.quoteRates || defaultQuoteRates;
-  const persistRate = dependencies.persistRate || defaultPersistRate;
-  const linkProviderObject = dependencies.linkProviderObject || defaultLinkProviderObject;
-  const audit = dependencies.audit || defaultAudit;
+  const claimShipmentOperation = dependencies.claimShipmentOperation || defaultClaimShipmentOperation;
+  const finalizeShipmentOperation = dependencies.finalizeShipmentOperation || defaultFinalizeShipmentOperation;
+  const failShipmentOperation = dependencies.failShipmentOperation || defaultFailShipmentOperation;
   const order = await loadOrder(env, id);
   assertShippable(order);
-  if (order.shipstation_label_id) throw new ShipStationError('shipstation_label_already_purchased');
+  assertShipmentMutable(order);
 
-  const carriers = await listCarriers(env);
-  const connectedIds = new Set(carriers.map((carrier) => text(carrier?.carrier_id, 100)).filter(Boolean));
-  if (!connectedIds.size) throw new ShipStationError('shipstation_no_connected_carriers');
-  const requestedIds = [...new Set((input?.carrier_ids || []).map((value) => text(value, 100)).filter(Boolean))];
-  if (requestedIds.some((carrierId) => !connectedIds.has(carrierId))) {
-    throw new ShipStationError('shipstation_carrier_not_connected');
-  }
-  const carrierIds = requestedIds.length ? requestedIds : [...connectedIds];
-  const manualPackages = Array.isArray(input?.packages) && input.packages.length > 0;
-  const packages = manualPackages ? input.packages : await loadPackageProfiles(env, order);
+  const revision = input?.expected_revision == null ? 0 : expectedRevision(input.expected_revision);
+  const {
+    orderSplitKey, shipmentOrder, manualPackages, packages, carrierIds, carriers, packageHash, pendingPayload,
+  } = await prepareShipment(env, input, order, listCarriers, loadPackageProfiles);
   const payload = buildRateRequest({
-    order,
+    order: shipmentOrder,
     packages,
     warehouseId,
     carrierIds,
+    phone: pendingPayload.phone,
+    residential: pendingPayload.residential,
+  });
+  const claim = await claimShipmentOperation(env, {
+    orderId: id,
+    splitKey: orderSplitKey,
+    expectedRevision: revision,
+    operation: 'create',
+    packageHash,
+    pendingPayload,
+  });
+  const providerExternalShipmentId = externalShipmentId(claim?.external_shipment_id);
+  payload.shipment.external_shipment_id = providerExternalShipmentId;
+
+  let response;
+  let rates;
+  let shipmentId;
+  let finalized;
+  let providerAccepted = false;
+  try {
+    const provider = await quoteRates(env, payload);
+    providerAccepted = true;
+    response = provider?.rate_response || provider || {};
+    rates = safeRatesForPackages(response, packages, carriers);
+    shipmentId = text(response?.shipment_id || rates[0]?.shipment_id, 100);
+    if (!shipmentId) throw new ShipStationError('shipstation_rate_response_invalid');
+    finalized = await finalizeShipmentOperation(env, {
+      orderShipmentId: rowId(claim.id),
+      expectedRevision: Number(claim.revision),
+      providerShipmentId: shipmentId,
+      status: 'rated',
+      packageHash,
+      packages,
+      rates,
+      actorId: context?.user?.id,
+      actorEmail: context?.user?.email,
+      reason: 'Shipment created and rated',
+    });
+  } catch (error) {
+    await recordShipmentFailure(failShipmentOperation, env, claim, error, providerAccepted, 'create');
+    throw error;
+  }
+  return {
+    order_shipment_id: claim.id,
+    shipment_id: shipmentId,
+    external_shipment_id: providerExternalShipmentId,
+    split_key: orderSplitKey,
+    revision: Number(finalized?.revision ?? claim.revision),
+    package_hash: packageHash,
+    rates,
+    packages,
+    packages_source: manualPackages ? 'manual' : 'cms',
+  };
+}
+
+function assertShipmentMutable(order) {
+  const labelId = text(order?.shipstation_label_id, 100);
+  const labelState = text(order?.shipstation_label_status, 80);
+  if (labelId && !['label_voided', 'voided'].includes(labelState)) {
+    throw new ShipStationError('shipstation_shipment_locked_by_label', 409);
+  }
+  if (['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState)) {
+    throw new ShipStationError('shipstation_shipment_locked_by_label', 409);
+  }
+}
+
+function shipmentPayload(order, packages, warehouseId, input) {
+  return buildRateRequest({
+    order,
+    packages,
+    warehouseId,
+    carrierIds: ['internal-not-sent'],
     phone: text(input?.phone, 40),
     residential: text(input?.residential, 12),
-  });
-  const provider = await quoteRates(env, payload);
-  const response = provider?.rate_response || provider || {};
-  const rates = payloadList(response, 'rates').map(safeRate).filter((rate) => rate.rate_id);
-  const shipmentId = text(response?.shipment_id || rates[0]?.shipment_id, 100);
-  if (!shipmentId) throw new ShipStationError('shipstation_rate_response_invalid');
+  }).shipment;
+}
 
-  await persistRate(env, id, {
-    shipstation_shipment_id: shipmentId,
-    shipstation_label_status: 'rated',
-    shipstation_error: null,
+export async function updateOrderShipment(env, input, context = {}, dependencies = {}) {
+  const id = orderId(input?.order_id);
+  const orderShipmentId = rowId(input?.order_shipment_id);
+  const revision = expectedRevision(input?.expected_revision);
+  const operationReason = reason(input?.reason);
+  if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
+  const warehouseId = configuredWarehouseId(env);
+
+  const loadOrder = dependencies.loadOrder || defaultLoadOrder;
+  const listCarriers = dependencies.listCarriers || defaultListCarriers;
+  const loadPackageProfiles = dependencies.loadPackageProfiles || defaultLoadPackageProfiles;
+  const claimShipmentOperation = dependencies.claimShipmentOperation || defaultClaimShipmentOperation;
+  const updateShipment = dependencies.updateShipment || defaultUpdateShipment;
+  const quoteRates = dependencies.quoteRates || defaultQuoteRates;
+  const finalizeShipmentOperation = dependencies.finalizeShipmentOperation || defaultFinalizeShipmentOperation;
+  const failShipmentOperation = dependencies.failShipmentOperation || defaultFailShipmentOperation;
+  const order = await loadOrder(env, id);
+  assertShippable(order);
+  assertShipmentMutable(order);
+
+  const {
+    orderSplitKey, shipmentOrder, packages, carrierIds, carriers, packageHash, pendingPayload,
+  } = await prepareShipment(env, input, order, listCarriers, loadPackageProfiles);
+  const claim = await claimShipmentOperation(env, {
+    orderId: id,
+    orderShipmentId,
+    splitKey: orderSplitKey,
+    expectedRevision: revision,
+    operation: 'update',
+    packageHash,
+    pendingPayload,
   });
-  await linkShipStationObject(linkProviderObject, env, order, 'shipment', shipmentId);
-  await audit(env, context, 'shipstation_rates_quoted', id, {
-    shipment_id: shipmentId,
-    carrier_ids: carrierIds,
-    rate_count: rates.length,
-    package_count: payload.shipment.packages.length,
+  const providerShipmentId = providerId(claim?.provider_shipment_id, 'shipstation_shipment_required');
+  const payload = shipmentPayload(shipmentOrder, packages, warehouseId, input);
+  let finalized;
+  let rates;
+  let providerAccepted = false;
+  try {
+    const provider = await updateShipment(env, providerShipmentId, payload);
+    providerAccepted = true;
+    const responseId = text(provider?.shipment_id || providerShipmentId, 100);
+    if (responseId !== providerShipmentId) throw new ShipStationError('shipstation_shipment_response_invalid');
+    const quoted = await quoteRates(env, {
+      shipment_id: providerShipmentId,
+      rate_options: { carrier_ids: carrierIds },
+    });
+    const rateResponse = quoted?.rate_response || quoted || {};
+    rates = safeRatesForPackages(rateResponse, packages, carriers);
+    finalized = await finalizeShipmentOperation(env, {
+      orderShipmentId,
+      expectedRevision: Number(claim.revision),
+      providerShipmentId,
+      status: 'rated',
+      packageHash,
+      packages,
+      rates,
+      actorId: context?.user?.id,
+      actorEmail: context?.user?.email,
+      reason: operationReason,
+    });
+  } catch (error) {
+    await recordShipmentFailure(
+      failShipmentOperation, env, claim, error, providerAccepted, 'update', orderShipmentId,
+    );
+    throw error;
+  }
+  return {
+    order_shipment_id: orderShipmentId,
+    shipment_id: providerShipmentId,
+    revision: finalized.revision,
+    status: finalized.status || 'rated',
+    package_hash: packageHash,
+    packages,
+    rates,
+  };
+}
+
+export async function cancelOrderShipment(env, input, context = {}, dependencies = {}) {
+  const id = orderId(input?.order_id);
+  const orderShipmentId = rowId(input?.order_shipment_id);
+  const revision = expectedRevision(input?.expected_revision);
+  if (input?.confirm !== true) throw new ShipStationError('shipstation_confirmation_required');
+  const operationReason = reason(input?.reason);
+  if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
+
+  const loadOrder = dependencies.loadOrder || defaultLoadOrder;
+  const claimShipmentOperation = dependencies.claimShipmentOperation || defaultClaimShipmentOperation;
+  const cancelShipment = dependencies.cancelShipment || defaultCancelShipment;
+  const finalizeShipmentOperation = dependencies.finalizeShipmentOperation || defaultFinalizeShipmentOperation;
+  const failShipmentOperation = dependencies.failShipmentOperation || defaultFailShipmentOperation;
+  const order = await loadOrder(env, id);
+  assertShippable(order);
+  assertShipmentMutable(order);
+  const claim = await claimShipmentOperation(env, {
+    orderId: id,
+    orderShipmentId,
+    splitKey: splitKey(input?.split_key),
+    expectedRevision: revision,
+    operation: 'cancel',
+    pendingPayload: {},
+  });
+  const providerShipmentId = providerId(claim?.provider_shipment_id, 'shipstation_shipment_required');
+  let finalized;
+  let providerAccepted = false;
+  try {
+    await cancelShipment(env, providerShipmentId);
+    providerAccepted = true;
+    finalized = await finalizeShipmentOperation(env, {
+      orderShipmentId,
+      expectedRevision: Number(claim.revision),
+      providerShipmentId,
+      status: 'cancelled',
+      packages: [],
+      rates: [],
+      actorId: context?.user?.id,
+      actorEmail: context?.user?.email,
+      reason: operationReason,
+    });
+  } catch (error) {
+    await recordShipmentFailure(
+      failShipmentOperation, env, claim, error, providerAccepted, 'cancel', orderShipmentId,
+    );
+    throw error;
+  }
+  return {
+    order_shipment_id: orderShipmentId,
+    shipment_id: providerShipmentId,
+    revision: finalized.revision,
+    status: 'cancelled',
+  };
+}
+
+export async function selectOrderShipmentRate(env, input, _context = {}, dependencies = {}) {
+  if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
+  const selectShipmentRate = dependencies.selectShipmentRate || defaultSelectShipmentRate;
+  return selectShipmentRate(env, {
+    orderId: orderId(input?.order_id),
+    orderShipmentId: rowId(input?.order_shipment_id),
+    expectedRevision: expectedRevision(input?.expected_revision),
+    rateId: providerId(input?.rate_id, 'shipstation_rate_required'),
+  });
+}
+
+function providerShipmentPackages(provider, fallback = []) {
+  const raw = Array.isArray(provider?.packages) && provider.packages.length ? provider.packages : fallback;
+  return normalizePackages(raw);
+}
+
+export async function reconcileOrderShipment(env, input, context = {}, dependencies = {}) {
+  const id = orderId(input?.order_id);
+  const orderShipmentId = rowId(input?.order_shipment_id);
+  if (input?.confirm !== true) throw new ShipStationError('shipstation_confirmation_required');
+  const operationReason = reason(input?.reason);
+  if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
+  const loadShipmentOperation = dependencies.loadShipmentOperation || defaultLoadShipmentOperation;
+  const getShipment = dependencies.getShipment || defaultGetShipment;
+  const getShipmentByExternalId = dependencies.getShipmentByExternalId || defaultGetShipmentByExternalId;
+  const listCarriers = dependencies.listCarriers || defaultListCarriers;
+  const quoteRates = dependencies.quoteRates || defaultQuoteRates;
+  const finalizeShipmentOperation = dependencies.finalizeShipmentOperation || defaultFinalizeShipmentOperation;
+  const state = await loadShipmentOperation(env, { orderId: id, orderShipmentId });
+  if (state.operation_state !== 'reconcile_required') {
+    throw new ShipStationError('shipstation_shipment_reconciliation_not_required');
+  }
+
+  let provider;
+  if (state.provider_shipment_id) {
+    const expectedProviderShipmentId = providerId(
+      state.provider_shipment_id, 'shipstation_shipment_required',
+    );
+    provider = await getShipment(env, expectedProviderShipmentId);
+    if (providerId(provider?.shipment_id, 'shipstation_shipment_required') !== expectedProviderShipmentId) {
+      throw new ShipStationError('shipstation_shipment_reconciliation_mismatch');
+    }
+  } else {
+    const expectedExternalId = externalShipmentId(state.external_shipment_id);
+    try {
+      provider = await getShipmentByExternalId(env, expectedExternalId);
+    } catch (error) {
+      if (error?.status === 404 || error?.code === 'shipstation_http_404') {
+        throw new ShipStationError('shipstation_shipment_reconciliation_unresolved');
+      }
+      throw error;
+    }
+    if (String(provider?.external_shipment_id || '').trim() !== expectedExternalId) {
+      throw new ShipStationError('shipstation_shipment_reconciliation_mismatch');
+    }
+  }
+  const providerShipmentId = providerId(provider?.shipment_id || state.provider_shipment_id, 'shipstation_shipment_required');
+  const providerStatus = text(provider?.shipment_status || provider?.status, 80).toLowerCase();
+  if (state.operation === 'cancel' && providerStatus !== 'cancelled') {
+    throw new ShipStationError('shipstation_shipment_reconciliation_unresolved');
+  }
+  const packages = state.operation === 'cancel'
+    ? []
+    : providerShipmentPackages(provider, state.pending_payload?.packages || []);
+  const packageHash = state.operation === 'cancel' ? state.package_hash : await stablePackageHash(packages);
+  const expectedPackageHash = state.operation === 'cancel'
+    ? state.package_hash
+    : await stablePackageHash(state.pending_payload?.packages || []);
+  if (state.operation !== 'cancel' && packageHash !== expectedPackageHash) {
+    throw new ShipStationError('shipstation_shipment_reconciliation_mismatch');
+  }
+  let rates = [];
+  if (state.operation !== 'cancel') {
+    const { carrierIds, carriers } = await resolveCarrierSelection(
+      env, listCarriers, state.pending_payload?.carrier_ids, packages.length,
+    );
+    const quoted = await quoteRates(env, {
+      shipment_id: providerShipmentId,
+      rate_options: { carrier_ids: carrierIds },
+    });
+    const rateResponse = quoted?.rate_response || quoted || {};
+    rates = safeRatesForPackages(rateResponse, packages, carriers);
+  }
+  const finalized = await finalizeShipmentOperation(env, {
+    orderShipmentId,
+    expectedRevision: Number(state.revision),
+    providerShipmentId,
+    status: state.operation === 'cancel' ? 'cancelled' : 'rated',
+    packageHash,
+    packages,
+    rates,
+    actorId: context?.user?.id,
+    actorEmail: context?.user?.email,
+    reason: operationReason,
   });
   return {
-    shipment_id: shipmentId,
-    rates,
-    packages: payload.shipment.packages,
-    packages_source: manualPackages ? 'manual' : 'cms',
+    reconciled: true,
+    order_shipment_id: orderShipmentId,
+    shipment_id: providerShipmentId,
+    revision: finalized.revision,
+    status: finalized.status || (state.operation === 'cancel' ? 'cancelled' : 'rated'),
   };
 }
 
 export async function buyOrderLabel(env, input, context = {}, dependencies = {}) {
   const id = orderId(input?.order_id);
   const rateId = providerId(input?.rate_id, 'shipstation_rate_required');
+  const orderShipmentId = rowId(input?.order_shipment_id);
+  const revision = expectedRevision(input?.expected_revision);
+  const requestedShipmentId = providerId(
+    input?.shipment_id || input?.provider_shipment_id,
+    'shipstation_shipment_required',
+  );
   if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
 
   const loadOrder = dependencies.loadOrder || defaultLoadOrder;
   const getRate = dependencies.getRate || defaultGetRate;
+  const verifySelectedRate = dependencies.verifySelectedRate || defaultVerifySelectedRate;
   const claimLabel = dependencies.claimLabel || defaultClaimLabel;
   const purchaseLabel = dependencies.purchaseLabel || defaultPurchaseLabel;
   const persistLabel = dependencies.persistLabel || defaultPersistLabel;
@@ -627,21 +1322,51 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   const recordFinancialEntry = dependencies.recordFinancialEntry || defaultRecordFinancialEntry;
   let order = await loadOrder(env, id);
   assertShippable(order);
-  if (order.shipstation_label_id && !['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
-    await linkShipStationObject(linkProviderObject, env, order, 'shipment', order.shipstation_shipment_id);
-    await linkShipStationObject(linkProviderObject, env, order, 'rate', order.shipstation_rate_id);
-    await linkShipStationObject(linkProviderObject, env, order, 'label', order.shipstation_label_id);
+  const selectedRate = await verifySelectedRate(env, {
+    orderId: id,
+    orderShipmentId,
+    expectedRevision: revision,
+    shipmentId: requestedShipmentId,
+    rateId,
+  });
+  if (!selectedRate || selectedRate === true
+      || rowId(selectedRate.order_shipment_id) !== orderShipmentId
+      || Number(selectedRate.revision) !== revision
+      || providerId(selectedRate.shipment_id, 'shipstation_shipment_required') !== requestedShipmentId) {
+    throw new ShipStationError('shipstation_rate_selection_invalid');
+  }
+  const shipmentId = requestedShipmentId;
+  const existing = existingLabelForShipment(order, orderShipmentId, requestedShipmentId);
+  if (existing) {
+    if ((existing.order_shipment_id && existing.order_shipment_id !== orderShipmentId)
+      || (existing.revision != null && existing.revision !== revision)
+      || (existing.rate_id && existing.rate_id !== rateId)) {
+      throw new ShipStationError('shipstation_label_order_mismatch');
+    }
+    await linkShipStationObject(linkProviderObject, env, order, 'shipment', requestedShipmentId, {
+      order_shipment_id: orderShipmentId,
+      revision,
+    });
+    await linkShipStationObject(linkProviderObject, env, order, 'rate', rateId, {
+      shipment_id: requestedShipmentId,
+    });
+    await linkShipStationObject(linkProviderObject, env, order, 'label', existing.label_id, {
+      order_shipment_id: orderShipmentId,
+      revision,
+      shipment_id: requestedShipmentId,
+      rate_id: rateId,
+      status: existing.status,
+    });
     await recordPostagePurchase(recordFinancialEntry, env, order, {
-      labelId: order.shipstation_label_id,
-      shipmentId: order.shipstation_shipment_id,
-      rateId: order.shipstation_rate_id,
-      cost: order.shipstation_cost,
-      currency: order.currency,
+      labelId: existing.label_id,
+      shipmentId: requestedShipmentId,
+      rateId,
+      cost: existing.cost,
+      currency: existing.currency,
       actorId: context?.user?.id,
     });
-    return existingLabel(order);
+    return existing;
   }
-  const shipmentId = providerId(order.shipstation_shipment_id, 'shipstation_shipment_required');
   if (['purchasing', 'reconcile_required'].includes(text(order.shipstation_label_status, 40))) {
     throw new ShipStationError('shipstation_label_purchase_locked');
   }
@@ -650,23 +1375,23 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   if (text(rate?.shipment_id, 100) !== shipmentId) {
     throw new ShipStationError('shipstation_rate_order_mismatch');
   }
-  const claimed = await claimLabel(env, id, rateId);
+  const providerRate = safeRate(rate);
+  if (providerRate.rate_id !== rateId
+    || providerRate.amount_minor !== Number(selectedRate.amount_minor)
+    || providerRate.currency !== text(selectedRate.currency, 8).toLowerCase()
+    || providerRate.currency_exponent !== Number(selectedRate.currency_exponent)) {
+    throw new ShipStationError('shipstation_rate_snapshot_mismatch');
+  }
+  const claimed = await claimLabel(env, {
+    orderId: id,
+    orderShipmentId,
+    expectedRevision: revision,
+    rateId,
+  });
   if (!claimed) {
     order = await loadOrder(env, id);
-    if (order?.shipstation_label_id && !['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
-      await linkShipStationObject(linkProviderObject, env, order, 'shipment', order.shipstation_shipment_id);
-      await linkShipStationObject(linkProviderObject, env, order, 'rate', order.shipstation_rate_id);
-      await linkShipStationObject(linkProviderObject, env, order, 'label', order.shipstation_label_id);
-      await recordPostagePurchase(recordFinancialEntry, env, order, {
-        labelId: order.shipstation_label_id,
-        shipmentId: order.shipstation_shipment_id,
-        rateId: order.shipstation_rate_id,
-        cost: order.shipstation_cost,
-        currency: order.currency,
-        actorId: context?.user?.id,
-      });
-      return existingLabel(order);
-    }
+    const concurrentExisting = existingLabelForShipment(order, orderShipmentId, requestedShipmentId);
+    if (concurrentExisting) return concurrentExisting;
     throw new ShipStationError('shipstation_label_purchase_locked');
   }
 
@@ -728,9 +1453,25 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     tracking_url: trackingUrl,
   };
   await persistLabel(env, id, patch);
-  await linkShipStationObject(linkProviderObject, env, order, 'shipment', patch.shipstation_shipment_id);
-  await linkShipStationObject(linkProviderObject, env, order, 'rate', rateId);
-  await linkShipStationObject(linkProviderObject, env, order, 'label', labelId);
+  await linkShipStationObject(linkProviderObject, env, order, 'shipment', patch.shipstation_shipment_id, {
+    order_shipment_id: orderShipmentId,
+    revision,
+  });
+  await linkShipStationObject(linkProviderObject, env, order, 'rate', rateId, {
+    shipment_id: patch.shipstation_shipment_id,
+  });
+  await linkShipStationObject(linkProviderObject, env, order, 'label', labelId, {
+    order_shipment_id: orderShipmentId,
+    revision,
+    shipment_id: patch.shipstation_shipment_id,
+    rate_id: rateId,
+    status: labelStatus,
+    tracking_number: trackingNumber,
+    tracking_url: trackingUrl,
+    carrier: patch.carrier,
+    cost: patch.shipstation_cost,
+    currency: text(label?.shipment_cost?.currency || order.currency || 'usd', 8).toLowerCase(),
+  });
   await recordPostagePurchase(recordFinancialEntry, env, order, {
     labelId,
     shipmentId: patch.shipstation_shipment_id,
@@ -782,17 +1523,25 @@ export async function voidOrderLabel(env, input, context = {}, dependencies = {}
 
   let order = await loadOrder(env, id);
   assertShippable(order);
-  if (text(order.shipstation_label_id, 100) !== labelId) {
+  const projectedLabel = text(order.shipstation_label_id, 100) === labelId;
+  const linkedLabel = Array.isArray(order.order_provider_links)
+    && order.order_provider_links.some((link) => link?.provider === 'shipstation'
+      && link?.object_type === 'label'
+      && text(link?.provider_object_id, 100) === labelId);
+  if (!projectedLabel && !linkedLabel) {
     throw new ShipStationError('shipstation_label_order_mismatch');
   }
-  if (['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
-    await finalizeVoid(env, {
-      orderId: id,
-      labelId,
-      actorId: text(context?.user?.id, 80) || null,
-      reason,
-      providerMessage: null,
-    });
+  if ((projectedLabel && ['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40)))
+      || labelHasVoidEvidence(order, labelId)) {
+    if (projectedLabel) {
+      await finalizeVoid(env, {
+        orderId: id,
+        labelId,
+        actorId: text(context?.user?.id, 80) || null,
+        reason,
+        providerMessage: null,
+      });
+    }
     return { already_voided: true, label_id: labelId, status: 'label_voided', refund_state: 'pending' };
   }
   if (VOID_BLOCKING_TRACKING_STATUSES.has(text(order.tracking_status, 40))) {

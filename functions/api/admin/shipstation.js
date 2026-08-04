@@ -7,15 +7,20 @@ import {
 } from '../../_lib/shipstation.js';
 import {
   buyOrderLabel,
+  cancelOrderShipment,
   createOrderReturnLabel,
   downloadOrderLabel,
   getOrderLabel,
+  listOrderShipments,
   rateOrderShipment,
   reconcileOrderLabelPurchase,
+  reconcileOrderShipment,
+  selectOrderShipmentRate,
+  updateOrderShipment,
   voidOrderLabel,
 } from '../../_lib/shipstation-orders.js';
 
-const LABEL_GET_ACTIONS = new Set(['label', 'label_document']);
+const LABEL_GET_ACTIONS = new Set(['label', 'label_document', 'shipments']);
 
 function isLabelGet(request) {
   if (request.method !== 'GET') return false;
@@ -30,7 +35,14 @@ function noStore(response) {
 
 function errorResponse(error, cacheSafe = false) {
   const code = error?.code || 'shipstation_request_failed';
-  const status = error?.status >= 400 ? 502 : 400;
+  const status = [
+    'shipstation_shipment_revision_conflict',
+    'shipstation_shipment_split_exists',
+    'shipstation_shipment_operation_locked',
+    'shipstation_shipment_locked_by_label',
+    'shipstation_split_item_conservation_failed',
+  ]
+    .includes(code) ? 409 : error?.status >= 400 ? 502 : 400;
   const response = json(status, { error: code });
   return cacheSafe ? noStore(response) : response;
 }
@@ -39,9 +51,14 @@ export function createShipStationAdminHandler(dependencies = {}) {
   const requireStaffImpl = dependencies.requireStaff || requireStaff;
   const statusImpl = dependencies.status || shipStationStatus;
   const rateOrderImpl = dependencies.rateOrder || rateOrderShipment;
+  const updateShipmentImpl = dependencies.updateShipment || updateOrderShipment;
+  const cancelShipmentImpl = dependencies.cancelShipment || cancelOrderShipment;
+  const reconcileShipmentImpl = dependencies.reconcileShipment || reconcileOrderShipment;
+  const selectShipmentRateImpl = dependencies.selectShipmentRate || selectOrderShipmentRate;
   const buyLabelImpl = dependencies.buyLabel || buyOrderLabel;
   const voidLabelImpl = dependencies.voidLabel || voidOrderLabel;
   const getLabelImpl = dependencies.getLabel || getOrderLabel;
+  const listShipmentsImpl = dependencies.listShipments || listOrderShipments;
   const downloadLabelImpl = dependencies.downloadLabel || downloadOrderLabel;
   const reconcileLabelImpl = dependencies.reconcileLabel || reconcileOrderLabelPurchase;
   const returnLabelImpl = dependencies.returnLabel || createOrderReturnLabel;
@@ -61,9 +78,14 @@ export function createShipStationAdminHandler(dependencies = {}) {
     return handleShipStationRequest({ request, env, user, role }, {
       status: statusImpl,
       rateOrder: rateOrderImpl,
+      updateShipment: updateShipmentImpl,
+      cancelShipment: cancelShipmentImpl,
+      reconcileShipment: reconcileShipmentImpl,
+      selectShipmentRate: selectShipmentRateImpl,
       buyLabel: buyLabelImpl,
       voidLabel: voidLabelImpl,
       getLabel: getLabelImpl,
+      listShipments: listShipmentsImpl,
       downloadLabel: downloadLabelImpl,
       reconcileLabel: reconcileLabelImpl,
       returnLabel: returnLabelImpl,
@@ -86,6 +108,7 @@ async function handleShipStationRequest({ request, env, user, role }, dependenci
         format: params.get('format'),
       };
       if (action === 'label') return noStore(json(200, await dependencies.getLabel(env, input, { user, role })));
+      if (action === 'shipments') return noStore(json(200, await dependencies.listShipments(env, input, { user, role })));
       return noStore(await dependencies.downloadLabel(env, input, { user, role }));
     }
     if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
@@ -94,7 +117,21 @@ async function handleShipStationRequest({ request, env, user, role }, dependenci
     if (body.action === 'configure_tracking_webhook' && !staffCan(role, 'integration.configure')) {
       return json(403, { error: 'forbidden' });
     }
-    if (body.action === 'rates') return json(200, await dependencies.rateOrder(env, body, { user, role }));
+    if (body.action === 'rates' || body.action === 'create_shipment') {
+      return json(200, await dependencies.rateOrder(env, body, { user, role }));
+    }
+    if (body.action === 'update_shipment') {
+      return json(200, await dependencies.updateShipment(env, body, { user, role }));
+    }
+    if (body.action === 'cancel_shipment') {
+      return json(200, await dependencies.cancelShipment(env, body, { user, role }));
+    }
+    if (body.action === 'reconcile_shipment') {
+      return json(200, await dependencies.reconcileShipment(env, body, { user, role }));
+    }
+    if (body.action === 'select_shipment_rate') {
+      return json(200, await dependencies.selectShipmentRate(env, body, { user, role }));
+    }
     if (body.action === 'buy_label') return json(200, await dependencies.buyLabel(env, body, { user, role }));
     if (body.action === 'void_label') return json(200, await dependencies.voidLabel(env, body, { user, role }));
     if (body.action === 'reconcile_label_purchase') {
@@ -124,9 +161,14 @@ export async function onRequest({ request, env }) {
   return handleShipStationRequest({ request, env, user, role }, {
     status: shipStationStatus,
     rateOrder: rateOrderShipment,
+    updateShipment: updateOrderShipment,
+    cancelShipment: cancelOrderShipment,
+    reconcileShipment: reconcileOrderShipment,
+    selectShipmentRate: selectOrderShipmentRate,
     buyLabel: buyOrderLabel,
     voidLabel: voidOrderLabel,
     getLabel: getOrderLabel,
+    listShipments: listOrderShipments,
     downloadLabel: downloadOrderLabel,
     reconcileLabel: reconcileOrderLabelPurchase,
     returnLabel: createOrderReturnLabel,

@@ -1,11 +1,11 @@
-import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260804c";
+import { esc, confirmDialog, restoreFocusOnClose } from "../util.js?v=20260804d";
 import {
   assetUrl,
   formatAssetBytes,
   loadSiteImageAssets,
   mergeSiteImageAssets,
   prepareImageUpload,
-} from "./site-image-library.js?v=20260804c";
+} from "./site-image-library.js?v=20260804d";
 
 function assetOption(asset = {}, selectedUrl = "") {
   const url = assetUrl(asset);

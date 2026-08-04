@@ -42,10 +42,11 @@ Apply once through Supabase SQL Editor or the normal migration runner:
 ```text
 supabase/schema-shipments.sql
 supabase/schema-shipstation.sql
+supabase/schema-shipstation-shipments.sql
 supabase/schema-provider-inbox.sql
 ```
 
-All migrations are additive/re-runnable. Shipment migration supplies customer-visible status history. ShipStation migration adds provider IDs/status/cost fields, variant package profiles, provider-event idempotency, immutable `order_financial_entries`, state constraints, and service-role-only label/tracking/void RPCs.
+All migrations are re-runnable. Shipment migration supplies customer-visible status history. ShipStation migrations add provider IDs/status/cost fields, variant package profiles, normalized split shipments/packages/rates, provider-event idempotency, immutable `order_financial_entries`, state constraints, and service-role-only shipment/label/tracking/void RPCs. `order_shipments.status` is provider-shipment operation state; customer-visible fulfillment remains `orders.tracking_status` plus `shipment_events`.
 
 Transactional verification and rollback:
 

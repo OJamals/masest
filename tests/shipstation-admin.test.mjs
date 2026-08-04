@@ -85,6 +85,10 @@ test('ShipStation admin endpoint gates label reads, emits no-store, and dispatch
       calls.push(['download', input]);
       return new Response('PDF', { headers: { 'content-type': 'application/pdf' } });
     },
+    listShipments: async (_env, input) => {
+      calls.push(['shipments', input]);
+      return { order_id: input.order_id, shipments: [] };
+    },
     reconcileLabel: async (_env, input) => { calls.push(['reconcile', input]); return { reconciled: true }; },
     returnLabel: async (_env, input) => { calls.push(['return', input]); return { label_id: 'se-return-1' }; },
   });
@@ -99,13 +103,18 @@ test('ShipStation admin endpoint gates label reads, emits no-store, and dispatch
   assert.equal(document.headers.get('cache-control'), 'no-store');
   assert.equal(await document.text(), 'PDF');
 
+  const shipments = await handler({ request: queryRequest('action=shipments&order_id=order-1'), env: {} });
+  assert.equal(shipments.status, 200);
+  assert.equal(shipments.headers.get('cache-control'), 'no-store');
+  assert.deepEqual((await shipments.json()).shipments, []);
+
   assert.equal((await handler({
     request: request('POST', { action: 'reconcile_label_purchase', order_id: 'order-1', confirm: true, reason: 'Repair timeout' }), env: {},
   })).status, 200);
   assert.equal((await handler({
     request: request('POST', { action: 'return_label', order_id: 'order-1', label_id: 'se-label-1', confirm: true, reason: 'Customer return' }), env: {},
   })).status, 200);
-  assert.deepEqual(calls.map(([action]) => action), ['get', 'download', 'reconcile', 'return']);
+  assert.deepEqual(calls.map(([action]) => action), ['get', 'download', 'shipments', 'reconcile', 'return']);
 
   const readOnly = createShipStationAdminHandler({
     requireStaff: async () => ({ user: { id: 'staff-1' }, staff: true, role: 'read_only' }),
@@ -153,4 +162,38 @@ test('ShipStation label read converts auth backend failures to no-store errors',
   assert.equal(response.status, 502);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.deepEqual(await response.json(), { error: 'auth_backend_down' });
+});
+
+test('ShipStation admin dispatches normalized shipment revision actions and preserves conflicts', async () => {
+  const calls = [];
+  const handler = createShipStationAdminHandler({
+    requireStaff: async () => ({ user: { id: 'staff-1' }, staff: true, role: 'owner' }),
+    updateShipment: async (_env, input) => { calls.push(['update', input]); return { revision: 2 }; },
+    cancelShipment: async (_env, input) => { calls.push(['cancel', input]); return { status: 'cancelled' }; },
+    reconcileShipment: async (_env, input) => { calls.push(['reconcile', input]); return { reconciled: true }; },
+    selectShipmentRate: async (_env, input) => { calls.push(['select', input]); return { selected: true }; },
+  });
+  for (const body of [
+    { action: 'update_shipment', order_id: 'order-1' },
+    { action: 'cancel_shipment', order_id: 'order-1' },
+    { action: 'reconcile_shipment', order_id: 'order-1' },
+    { action: 'select_shipment_rate', order_id: 'order-1' },
+  ]) assert.equal((await handler({ request: request('POST', body), env: {} })).status, 200);
+  assert.deepEqual(calls.map(([action]) => action), ['update', 'cancel', 'reconcile', 'select']);
+
+  const conflict = createShipStationAdminHandler({
+    requireStaff: async () => ({ user: { id: 'staff-1' }, staff: true, role: 'owner' }),
+    updateShipment: async () => {
+      throw Object.assign(new Error('stale revision'), {
+        code: 'shipstation_shipment_revision_conflict',
+        status: 409,
+      });
+    },
+  });
+  const response = await conflict({
+    request: request('POST', { action: 'update_shipment', order_id: 'order-1' }),
+    env: {},
+  });
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), { error: 'shipstation_shipment_revision_conflict' });
 });

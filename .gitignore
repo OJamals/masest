@@ -26,6 +26,12 @@ blob-report/
 .headroom/
 .serena/
 
+# Loop Factory runtime output; specs remain versioned source contracts.
+/factory/prompts/
+/factory/reviews/
+/factory/runs/
+/.artifacts/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

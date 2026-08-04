@@ -93,6 +93,27 @@ test('getOrderLabel authorizes a return label linked through the order provider 
   assert.doesNotMatch(JSON.stringify(result), /downloads|label_download|token/);
 });
 
+test('getOrderLabel authorizes an outbound split label linked through the order provider ledger', async () => {
+  const linkedLabel = { ...providerLabel, label_id: 'se-label-split-a', shipment_id: 'se-shipment-split-a' };
+  const order = {
+    ...baseOrder,
+    order_provider_links: [{
+      provider: 'shipstation',
+      object_type: 'label',
+      provider_object_id: 'se-label-split-a',
+      metadata: { shipment_id: 'se-shipment-split-a' },
+    }],
+  };
+  const result = await getOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: ORDER_ID, label_id: 'se-label-split-a' },
+    {},
+    { loadOrder: async () => order, getLabel: async () => linkedLabel },
+  );
+  assert.equal(result.label_id, 'se-label-split-a');
+  assert.equal(result.is_return_label, false);
+});
+
 test('downloadOrderLabel proxies allowlisted bytes with no-store and no provider URL', async () => {
   let fetched;
   let providerReads = 0;

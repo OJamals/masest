@@ -22,6 +22,10 @@ function positiveNumber(value) {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
+function hasPackagePrecision(value) {
+  return Math.abs((value * 1000) - Math.round(value * 1000)) < 1e-7;
+}
+
 export function normalizePackages(input) {
   if (!Array.isArray(input) || !input.length) {
     throw new ShipStationError('shipping_packages_required');
@@ -30,7 +34,8 @@ export function normalizePackages(input) {
   return input.map((raw) => {
     const value = positiveNumber(raw?.weight?.value ?? raw?.weight ?? raw?.weight_value);
     const unit = text(raw?.weight?.unit || raw?.unit || raw?.weight_unit || 'pound').toLowerCase();
-    if (!value || !['pound', 'ounce', 'gram', 'kilogram'].includes(unit)) {
+    if (!value || value > 10_000 || !hasPackagePrecision(value)
+      || !['pound', 'ounce', 'gram', 'kilogram'].includes(unit)) {
       throw new ShipStationError('invalid_package_weight');
     }
     const dimensions = [
@@ -39,7 +44,7 @@ export function normalizePackages(input) {
       raw?.dimensions?.height ?? raw?.height,
     ].map(positiveNumber);
     const hasAnyDimension = dimensions.some(Boolean);
-    if (hasAnyDimension && dimensions.some((dimension) => !dimension)) {
+    if (hasAnyDimension && dimensions.some((dimension) => !dimension || dimension > 1_000 || !hasPackagePrecision(dimension))) {
       throw new ShipStationError('invalid_package_dimensions');
     }
     return {

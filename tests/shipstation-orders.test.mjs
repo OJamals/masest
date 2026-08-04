@@ -27,12 +27,44 @@ const order = {
   tracking_status: 'processing',
 };
 
-test('rateOrderShipment quotes connected carriers and persists provider shipment ID', async () => {
+const normalizedShipmentId = 'a024352e-2dc8-4a6c-ad44-eb57e7701408';
+const shipmentLifecycleDeps = {
+  claimShipmentOperation: async () => ({
+    claimed: true,
+    id: normalizedShipmentId,
+    revision: 0,
+    external_shipment_id: 'masest-order-default-0',
+  }),
+  finalizeShipmentOperation: async () => ({ applied: true, revision: 0, status: 'rated' }),
+  failShipmentOperation: async () => assert.fail('successful rate must not enter reconciliation'),
+};
+const selectedRateSnapshot = {
+  selected: true,
+  order_shipment_id: normalizedShipmentId,
+  shipment_id: 'se-shipment-1',
+  revision: 0,
+  amount_minor: 4122,
+  currency: 'usd',
+  currency_exponent: 2,
+};
+const labelInput = (rateId = 'se-rate-1') => ({
+  order_id: order.id,
+  order_shipment_id: normalizedShipmentId,
+  expected_revision: 0,
+  shipment_id: 'se-shipment-1',
+  rate_id: rateId,
+});
+const providerRate = {
+  rate_id: 'se-rate-1',
+  shipment_id: 'se-shipment-1',
+  shipping_amount: { currency: 'usd', amount: 41.22 },
+};
+
+test('rateOrderShipment quotes connected carriers and atomically finalizes provider shipment ID', async () => {
   let sentPayload;
-  let persisted;
-  const links = [];
+  let finalized;
   const result = await rateOrderShipment(
-    { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-warehouse-1' },
+    { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
     {
       order_id: order.id,
       phone: '+1 321-555-0100',
@@ -42,6 +74,7 @@ test('rateOrderShipment quotes connected carriers and persists provider shipment
     },
     { user: { id: 'staff-1' }, role: 'owner' },
     {
+      ...shipmentLifecycleDeps,
       loadOrder: async () => order,
       listCarriers: async () => [
         { carrier_id: 'se-ups', carrier_code: 'ups', friendly_name: 'UPS' },
@@ -67,23 +100,23 @@ test('rateOrderShipment quotes connected carriers and persists provider shipment
           },
         };
       },
-      persistRate: async (_env, orderId, patch) => { persisted = { orderId, patch }; },
-      linkProviderObject: async (_env, link) => { links.push(link); },
-      audit: async () => {},
+      finalizeShipmentOperation: async (_env, input) => {
+        finalized = input;
+        return { applied: true, revision: 0, status: 'rated' };
+      },
     },
   );
 
   assert.deepEqual(sentPayload.rate_options.carrier_ids, ['se-ups']);
   assert.equal(sentPayload.shipment.ship_to.phone, '+1 321-555-0100');
   assert.equal(sentPayload.shipment.ship_to.address_residential_indicator, 'yes');
-  assert.deepEqual(persisted, {
-    orderId: order.id,
-    patch: {
-      shipstation_shipment_id: 'se-shipment-1',
-      shipstation_label_status: 'rated',
-      shipstation_error: null,
-    },
-  });
+  assert.equal(sentPayload.shipment.external_shipment_id, 'masest-order-default-0');
+  assert.equal(finalized.orderShipmentId, normalizedShipmentId);
+  assert.equal(finalized.providerShipmentId, 'se-shipment-1');
+  assert.equal(finalized.status, 'rated');
+  assert.match(finalized.packageHash, /^[a-f0-9]{64}$/);
+  assert.equal(finalized.packages.length, 1);
+  assert.equal(finalized.rates.length, 1);
   assert.deepEqual(result.rates, [{
     rate_id: 'se-rate-1',
     shipment_id: 'se-shipment-1',
@@ -93,23 +126,18 @@ test('rateOrderShipment quotes connected carriers and persists provider shipment
     service_code: 'ups_ground',
     service_type: 'UPS Ground',
     amount: 41.22,
+    amount_minor: 4122,
     currency: 'usd',
+    currency_exponent: 2,
     delivery_days: 3,
     estimated_delivery_date: '2026-08-08T00:00:00Z',
-  }]);
-  assert.deepEqual(links, [{
-    orderId: order.id,
-    provider: 'shipstation',
-    objectType: 'shipment',
-    providerObjectId: 'se-shipment-1',
-    metadata: { order_number: order.order_number },
   }]);
 });
 
 test('rateOrderShipment rejects carrier IDs not connected to this API key', async () => {
   await assert.rejects(
     rateOrderShipment(
-      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-warehouse-1' },
+      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
       { order_id: order.id, phone: '+1 321-555-0100', packages: [{ weight: 1 }], carrier_ids: ['se-fake'] },
       { user: { id: 'staff-1' } },
       {
@@ -122,18 +150,90 @@ test('rateOrderShipment rejects carrier IDs not connected to this API key', asyn
   );
 });
 
+test('rateOrderShipment rejects multi-package carriers without an explicitly supported service', async () => {
+  await assert.rejects(
+    rateOrderShipment(
+      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+      {
+        order_id: order.id,
+        packages: [{ weight: 1 }, { weight: 1 }],
+        carrier_ids: ['se-ups'],
+      },
+      {},
+      {
+        loadOrder: async () => order,
+        listCarriers: async () => [{ carrier_id: 'se-ups', services: [] }],
+        claimShipmentOperation: async () => assert.fail('unsupported carrier must fail before claim'),
+        quoteRates: async () => assert.fail('unsupported carrier must fail before provider quote'),
+      },
+    ),
+    (error) => error.code === 'shipstation_multi_package_unsupported',
+  );
+});
+
+test('rateOrderShipment persists only service-confirmed multi-package rates', async () => {
+  let finalized;
+  await rateOrderShipment(
+    { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+    {
+      order_id: order.id,
+      phone: '+1 321-555-0100',
+      packages: [{ weight: 1 }, { weight: 1 }],
+      carrier_ids: ['se-ups'],
+    },
+    {},
+    {
+      ...shipmentLifecycleDeps,
+      loadOrder: async () => order,
+      listCarriers: async () => [{
+        carrier_id: 'se-ups',
+        has_multi_package_supporting_services: true,
+        services: [
+          { service_code: 'ups_ground', is_multi_package_supported: true },
+          { service_code: 'ups_unsupported', is_multi_package_supported: false },
+        ],
+      }],
+      quoteRates: async () => ({ rate_response: {
+        shipment_id: 'se-shipment-1',
+        rates: [
+          {
+            rate_id: 'se-rate-supported', shipment_id: 'se-shipment-1', carrier_id: 'se-ups',
+            service_code: 'ups_ground', shipping_amount: { currency: 'usd', amount: 20 },
+          },
+          {
+            rate_id: 'se-rate-unsupported', shipment_id: 'se-shipment-1', carrier_id: 'se-ups',
+            service_code: 'ups_unsupported', shipping_amount: { currency: 'usd', amount: 10 },
+          },
+        ],
+      } }),
+      finalizeShipmentOperation: async (_env, input) => {
+        finalized = input;
+        return { applied: true, revision: 0, status: 'rated' };
+      },
+    },
+  );
+  assert.deepEqual(finalized.rates.map((rate) => rate.rate_id), ['se-rate-supported']);
+});
+
 test('rateOrderShipment uses CMS variant package profiles when staff leaves packages blank', async () => {
   let sentPayload;
+  let profiledOrder;
   const result = await rateOrderShipment(
-    { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-warehouse-1' },
-    { order_id: order.id, phone: '+1 321-555-0100' },
+    { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+    {
+      order_id: order.id,
+      phone: '+1 321-555-0100',
+      split_key: 'first-jug',
+      split_items: [{ sku: 'VK-HCR-5G', quantity: 1 }],
+    },
     { user: { id: 'staff-1' } },
     {
+      ...shipmentLifecycleDeps,
       loadOrder: async () => ({ ...order, order_items: [{ ...order.order_items[0], qty: 2 }] }),
-      loadPackageProfiles: async () => [
-        { weight: 42.5, unit: 'pound', length: 14, width: 14, height: 18 },
-        { weight: 42.5, unit: 'pound', length: 14, width: 14, height: 18 },
-      ],
+      loadPackageProfiles: async (_env, shipmentOrder) => {
+        profiledOrder = shipmentOrder;
+        return [{ weight: 42.5, unit: 'pound', length: 14, width: 14, height: 18 }];
+      },
       listCarriers: async () => [{ carrier_id: 'se-ups' }],
       quoteRates: async (_env, payload) => {
         sentPayload = payload;
@@ -144,24 +244,156 @@ test('rateOrderShipment uses CMS variant package profiles when staff leaves pack
       audit: async () => {},
     },
   );
-  assert.equal(sentPayload.shipment.packages.length, 2);
+  assert.equal(profiledOrder.order_items[0].qty, 1);
+  assert.equal(sentPayload.shipment.packages.length, 1);
   assert.equal(sentPayload.shipment.packages[0].weight.value, 42.5);
   assert.equal(result.packages_source, 'cms');
 });
 
-test('buyOrderLabel verifies rate ownership, then atomically claims and persists label', async () => {
+test('rateOrderShipment aggregates duplicate order-item SKUs before package lookup and allocation claim', async () => {
+  let profiledOrder;
+  let claimed;
+  const duplicateSkuOrder = {
+    ...order,
+    order_items: [
+      { ...order.order_items[0], qty: 1 },
+      { ...order.order_items[0], qty: 2 },
+    ],
+  };
+  await rateOrderShipment(
+    { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+    { order_id: order.id, phone: '+1 321-555-0100' },
+    { user: { id: 'staff-1' } },
+    {
+      ...shipmentLifecycleDeps,
+      loadOrder: async () => duplicateSkuOrder,
+      loadPackageProfiles: async (_env, shipmentOrder) => {
+        profiledOrder = shipmentOrder;
+        return [{ weight: 48, unit: 'pound' }];
+      },
+      listCarriers: async () => [{ carrier_id: 'se-ups' }],
+      claimShipmentOperation: async (_env, input) => {
+        claimed = input;
+        return shipmentLifecycleDeps.claimShipmentOperation();
+      },
+      quoteRates: async () => ({ rate_response: { shipment_id: 'se-shipment-1', rates: [] } }),
+    },
+  );
+  assert.deepEqual(profiledOrder.order_items.map(({ sku, qty }) => ({ sku, qty })), [
+    { sku: 'VK-HCR-5G', qty: 3 },
+  ]);
+  assert.deepEqual(claimed.pendingPayload.items, [{ sku: 'VK-HCR-5G', quantity: 3 }]);
+});
+
+test('rateOrderShipment requires Masest warehouse se-2287981 before provider access', async () => {
+  await assert.rejects(
+    rateOrderShipment(
+      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-wrong' },
+      { order_id: order.id, phone: '+1 321-555-0100', packages: [{ weight: 1 }] },
+      {},
+      { loadOrder: async () => assert.fail('warehouse mismatch must fail before order/provider access') },
+    ),
+    (error) => error.code === 'shipstation_warehouse_mismatch',
+  );
+});
+
+test('rateOrderShipment locks uncertain create for reconciliation instead of blind retry', async () => {
+  let failure;
+  await assert.rejects(
+    rateOrderShipment(
+      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+      {
+        order_id: order.id,
+        phone: '+1 321-555-0100',
+        packages: [{ weight: 42.5, unit: 'pound', length: 14, width: 14, height: 18 }],
+      },
+      { user: { id: 'staff-1' } },
+      {
+        loadOrder: async () => order,
+        listCarriers: async () => [{ carrier_id: 'se-ups' }],
+        claimShipmentOperation: async () => ({
+          id: normalizedShipmentId,
+          revision: 0,
+          external_shipment_id: 'masest-order-default-0',
+        }),
+        quoteRates: async () => {
+          throw Object.assign(new Error('timeout'), { code: 'shipstation_network_failed' });
+        },
+        failShipmentOperation: async (_env, input) => { failure = input; },
+      },
+    ),
+    (error) => error.code === 'shipstation_network_failed',
+  );
+  assert.deepEqual(failure, {
+    orderShipmentId: normalizedShipmentId,
+    expectedRevision: 0,
+    errorCode: 'shipstation_network_failed',
+    reconcile: true,
+  });
+});
+
+test('rateOrderShipment releases deterministic provider rejection for corrected retry', async () => {
+  let failure;
+  await assert.rejects(
+    rateOrderShipment(
+      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+      { order_id: order.id, phone: '+1 321-555-0100', packages: [{ weight: 1 }] },
+      {},
+      {
+        loadOrder: async () => order,
+        listCarriers: async () => [{ carrier_id: 'se-ups' }],
+        claimShipmentOperation: shipmentLifecycleDeps.claimShipmentOperation,
+        quoteRates: async () => {
+          throw Object.assign(new Error('invalid address'), { code: 'shipstation_http_400', status: 400 });
+        },
+        failShipmentOperation: async (_env, input) => { failure = input; },
+      },
+    ),
+    (error) => error.code === 'shipstation_http_400',
+  );
+  assert.equal(failure.reconcile, false);
+});
+
+test('rateOrderShipment reconciles provider conflict through the exact external shipment ID', async () => {
+  let failure;
+  await assert.rejects(
+    rateOrderShipment(
+      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+      { order_id: order.id, phone: '+1 321-555-0100', packages: [{ weight: 1 }] },
+      {},
+      {
+        loadOrder: async () => order,
+        listCarriers: async () => [{ carrier_id: 'se-ups' }],
+        claimShipmentOperation: shipmentLifecycleDeps.claimShipmentOperation,
+        quoteRates: async (_env, payload) => {
+          assert.equal(payload.shipment.external_shipment_id, 'masest-order-default-0');
+          throw Object.assign(new Error('duplicate external shipment'), {
+            code: 'shipstation_http_409', status: 409,
+          });
+        },
+        failShipmentOperation: async (_env, input) => { failure = input; },
+      },
+    ),
+    (error) => error.code === 'shipstation_http_409',
+  );
+  assert.equal(failure.reconcile, true);
+  assert.equal(failure.orderShipmentId, normalizedShipmentId);
+});
+
+test('buyOrderLabel purchases a selected nondefault shipment even when legacy order projection points elsewhere', async () => {
   const calls = [];
   let persisted;
   const financialEntries = [];
   const links = [];
   const result = await buyOrderLabel(
     { SHIPSTATION_API_KEY: 'secret' },
-    { order_id: order.id, rate_id: 'se-rate-1' },
+    labelInput(),
     { user: { id: 'staff-1' }, role: 'owner' },
     {
-      loadOrder: async () => ({ ...order, shipstation_shipment_id: 'se-shipment-1' }),
-      getRate: async () => ({ rate_id: 'se-rate-1', shipment_id: 'se-shipment-1' }),
-      claimLabel: async () => { calls.push('claim'); return true; },
+      loadOrder: async () => ({ ...order, shipstation_shipment_id: 'se-legacy-shipment' }),
+      verifySelectedRate: async () => selectedRateSnapshot,
+      getRate: async () => providerRate,
+      claimLabel: async (_env, input) => { calls.push(['claim', input]); return true; },
       purchaseLabel: async (_env, rateId, body) => {
         calls.push(['purchase', rateId, body]);
         return {
@@ -184,7 +416,12 @@ test('buyOrderLabel verifies rate ownership, then atomically claims and persists
     },
   );
 
-  assert.equal(calls[0], 'claim');
+  assert.deepEqual(calls[0], ['claim', {
+    orderId: order.id,
+    orderShipmentId: normalizedShipmentId,
+    expectedRevision: 0,
+    rateId: 'se-rate-1',
+  }]);
   assert.deepEqual(calls[1][2], {
     validate_address: 'validate_and_clean',
     label_layout: '4x6',
@@ -205,6 +442,19 @@ test('buyOrderLabel verifies rate ownership, then atomically claims and persists
     ['rate', 'se-rate-1'],
     ['label', 'se-label-1'],
   ]);
+  assert.deepEqual(links[2].metadata, {
+    order_number: order.order_number,
+    order_shipment_id: normalizedShipmentId,
+    revision: 0,
+    shipment_id: 'se-shipment-1',
+    rate_id: 'se-rate-1',
+    status: 'label_purchased',
+    tracking_number: '1Z999AA10123456784',
+    tracking_url: 'https://www.ups.com/track?loc=en_US&tracknum=1Z999AA10123456784',
+    carrier: 'se-ups',
+    cost: 41.22,
+    currency: 'usd',
+  });
   assert.deepEqual(financialEntries, [{
     orderId: order.id,
     source: 'shipstation',
@@ -224,11 +474,12 @@ test('buyOrderLabel blocks shipment mismatch before claim or charge', async () =
   await assert.rejects(
     buyOrderLabel(
       { SHIPSTATION_API_KEY: 'secret' },
-      { order_id: order.id, rate_id: 'se-rate-1' },
+      labelInput(),
       { user: { id: 'staff-1' } },
       {
         loadOrder: async () => ({ ...order, shipstation_shipment_id: 'se-shipment-1' }),
-        getRate: async () => ({ rate_id: 'se-rate-1', shipment_id: 'se-other-shipment' }),
+        verifySelectedRate: async () => selectedRateSnapshot,
+        getRate: async () => ({ ...providerRate, shipment_id: 'se-other-shipment' }),
         claimLabel: async () => { claimed = true; return true; },
         purchaseLabel: async () => assert.fail('mismatch must never charge'),
       },
@@ -252,10 +503,11 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
   };
   const result = await buyOrderLabel(
     { SHIPSTATION_API_KEY: 'secret' },
-    { order_id: order.id, rate_id: 'se-rate-1' },
+    labelInput(),
     { user: { id: 'staff-1' } },
     {
       loadOrder: async () => existing,
+      verifySelectedRate: async () => selectedRateSnapshot,
       linkProviderObject: async (_env, link) => links.push(link),
       recordFinancialEntry: async (_env, entry) => financialEntries.push(entry),
       getRate: async () => assert.fail('existing label must return before provider call'),
@@ -269,6 +521,7 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
   assert.doesNotMatch(JSON.stringify(result), /api\.shipstation\.com\/v2\/downloads/);
   assert.deepEqual(links.map((link) => [link.objectType, link.providerObjectId]), [
     ['shipment', 'se-shipment-1'],
+    ['rate', 'se-rate-1'],
     ['label', 'se-label-existing'],
   ]);
   assert.equal(financialEntries.length, 1, 'retry repairs missing purchase ledger evidence');
@@ -276,16 +529,140 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
   assert.equal(financialEntries[0].amount, 12.34);
 });
 
+test('buyOrderLabel permits one active label per normalized split and retries the exact linked split idempotently', async () => {
+  const otherShipmentId = 'cc20e770-d601-4e22-8b49-35ec1242f5fd';
+  const projection = {
+    ...order,
+    shipstation_order_shipment_id: otherShipmentId,
+    shipstation_shipment_id: 'se-shipment-other',
+    shipstation_label_id: 'se-label-other',
+    shipstation_label_status: 'label_purchased',
+    order_provider_links: [{
+      provider: 'shipstation',
+      object_type: 'label',
+      provider_object_id: 'se-label-other',
+      metadata: { order_shipment_id: otherShipmentId, shipment_id: 'se-shipment-other', status: 'label_purchased' },
+    }],
+    order_financial_entries: [],
+  };
+  let charged = 0;
+  const first = await buyOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    labelInput(),
+    { user: { id: 'staff-1' } },
+    {
+      loadOrder: async () => projection,
+      verifySelectedRate: async () => selectedRateSnapshot,
+      getRate: async () => providerRate,
+      claimLabel: async () => true,
+      purchaseLabel: async () => {
+        charged += 1;
+        return { label_id: 'se-label-split-b', shipment_id: 'se-shipment-1', status: 'completed', shipment_cost: { currency: 'usd', amount: 41.22 } };
+      },
+      persistLabel: async () => {},
+      linkProviderObject: async () => {},
+      recordFinancialEntry: async () => {},
+      insertShipmentEvent: async () => {},
+      audit: async () => {},
+    },
+  );
+  assert.equal(first.label_id, 'se-label-split-b');
+  assert.equal(charged, 1);
+
+  const linkedRetry = {
+    ...projection,
+    order_provider_links: [...projection.order_provider_links, {
+      provider: 'shipstation',
+      object_type: 'label',
+      provider_object_id: 'se-label-split-b',
+      metadata: {
+        order_shipment_id: normalizedShipmentId,
+        shipment_id: 'se-shipment-1',
+        rate_id: 'se-rate-1',
+        status: 'label_purchased',
+        cost: 41.22,
+        currency: 'usd',
+      },
+    }],
+  };
+  let verifiedRetries = 0;
+  const retry = await buyOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    labelInput(),
+    {},
+    {
+      loadOrder: async () => linkedRetry,
+      linkProviderObject: async () => {},
+      recordFinancialEntry: async () => {},
+      verifySelectedRate: async () => {
+        verifiedRetries += 1;
+        return selectedRateSnapshot;
+      },
+      getRate: async () => assert.fail('verified linked split retry must not refetch provider rate'),
+      purchaseLabel: async () => assert.fail('linked split retry must not charge'),
+    },
+  );
+  assert.equal(retry.already_purchased, true);
+  assert.equal(retry.label_id, 'se-label-split-b');
+  assert.equal(verifiedRetries, 1);
+  assert.equal(charged, 1);
+});
+
+test('buyOrderLabel blocks changed provider money before claim or charge', async () => {
+  let claimed = false;
+  await assert.rejects(
+    buyOrderLabel(
+      { SHIPSTATION_API_KEY: 'secret' },
+      labelInput(),
+      { user: { id: 'staff-1' } },
+      {
+        loadOrder: async () => ({ ...order, shipstation_shipment_id: 'se-shipment-1' }),
+        verifySelectedRate: async () => selectedRateSnapshot,
+        getRate: async () => ({ ...providerRate, shipping_amount: { currency: 'cad', amount: 41.22 } }),
+        claimLabel: async () => { claimed = true; return true; },
+        purchaseLabel: async () => assert.fail('changed rate must never charge'),
+      },
+    ),
+    (error) => error.code === 'shipstation_rate_snapshot_mismatch',
+  );
+  assert.equal(claimed, false);
+});
+
+test('buyOrderLabel rejects missing or malformed provider currency before claim or charge', async () => {
+  for (const currency of [undefined, 'US_DOLLARS']) {
+    let claimed = false;
+    const shippingAmount = { amount: 41.22 };
+    if (currency !== undefined) shippingAmount.currency = currency;
+    await assert.rejects(
+      buyOrderLabel(
+        { SHIPSTATION_API_KEY: 'secret' },
+        labelInput(),
+        { user: { id: 'staff-1' } },
+        {
+          loadOrder: async () => order,
+          verifySelectedRate: async () => selectedRateSnapshot,
+          getRate: async () => ({ ...providerRate, shipping_amount: shippingAmount }),
+          claimLabel: async () => { claimed = true; return true; },
+          purchaseLabel: async () => assert.fail('malformed currency must never charge'),
+        },
+      ),
+      (error) => error.code === 'shipstation_rate_response_invalid',
+    );
+    assert.equal(claimed, false);
+  }
+});
+
 test('buyOrderLabel locks provider error responses for manual reconciliation', async () => {
   let persisted;
   await assert.rejects(
     buyOrderLabel(
       { SHIPSTATION_API_KEY: 'secret' },
-      { order_id: order.id, rate_id: 'se-rate-1' },
+      labelInput(),
       { user: { id: 'staff-1' } },
       {
         loadOrder: async () => ({ ...order, shipstation_shipment_id: 'se-shipment-1' }),
-        getRate: async () => ({ rate_id: 'se-rate-1', shipment_id: 'se-shipment-1' }),
+        verifySelectedRate: async () => selectedRateSnapshot,
+        getRate: async () => providerRate,
         claimLabel: async () => true,
         purchaseLabel: async () => ({
           label_id: 'se-label-error',
@@ -346,6 +723,35 @@ test('voidOrderLabel claims once, confirms provider void, and records pending re
   assert.equal(audit.action, 'shipstation_label_voided');
   assert.equal(result.already_voided, false);
   assert.equal(result.refund_state, 'pending');
+});
+
+test('voidOrderLabel accepts an exact linked split label even when legacy projection points to another split', async () => {
+  let claimed = false;
+  const result = await voidOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: order.id, label_id: 'se-label-split-a', confirm: true, reason: 'Cancel first split label' },
+    {},
+    {
+      loadOrder: async () => ({
+        ...order,
+        shipstation_label_id: 'se-label-split-b',
+        shipstation_label_status: 'label_purchased',
+        order_provider_links: [{
+          provider: 'shipstation',
+          object_type: 'label',
+          provider_object_id: 'se-label-split-a',
+          metadata: { order_shipment_id: normalizedShipmentId, shipment_id: 'se-shipment-1' },
+        }],
+        order_financial_entries: [],
+      }),
+      claimVoid: async () => { claimed = true; return true; },
+      voidLabel: async () => ({ approved: true }),
+      finalizeVoid: async () => ({ applied: true }),
+      audit: async () => {},
+    },
+  );
+  assert.equal(claimed, true);
+  assert.equal(result.label_id, 'se-label-split-a');
 });
 
 test('voidOrderLabel is idempotent after same label is voided', async () => {
@@ -491,11 +897,16 @@ test('buyOrderLabel permits replacement after a confirmed void', async () => {
   let purchased = false;
   const result = await buyOrderLabel(
     { SHIPSTATION_API_KEY: 'secret' },
-    { order_id: order.id, rate_id: 'se-rate-2' },
+    labelInput('se-rate-2'),
     { user: { id: 'staff-1' } },
     {
       loadOrder: async () => ({ ...labeledOrder, shipstation_label_status: 'label_voided' }),
-      getRate: async () => ({ rate_id: 'se-rate-2', shipment_id: 'se-shipment-1' }),
+      verifySelectedRate: async () => ({ ...selectedRateSnapshot, amount_minor: 4000 }),
+      getRate: async () => ({
+        rate_id: 'se-rate-2',
+        shipment_id: 'se-shipment-1',
+        shipping_amount: { currency: 'usd', amount: 40 },
+      }),
       claimLabel: async () => true,
       purchaseLabel: async () => { purchased = true; return { label_id: 'se-label-2', shipment_id: 'se-shipment-1', status: 'completed', shipment_cost: { currency: 'usd', amount: 40 } }; },
       persistLabel: async () => {},
