@@ -1,0 +1,44 @@
+{
+  "generated_at": "2026-08-03",
+  "generator": "OpenAI built-in imagegen",
+  "evidence_class": "illustrative_generated_scene",
+  "public_use_label": "Illustrative cleaning setup",
+  "assets": [
+    {
+      "id": "marine-surface-cleaning",
+      "web_file": "images/marine-surface-cleaning.jpg",
+      "source_file": "images/source/marine-surface-cleaning.png",
+      "dimensions": { "width": 1200, "height": 750 },
+      "alt": "Marine technician washing salt film and waterline grime from a workboat hull on a contained service pad",
+      "caption": "Contained hull and waterline wash setup",
+      "prompt": "Photorealistic commercial boatyard scene showing a trained marine maintenance technician washing salt film and waterline grime from a premium white workboat hull on a contained service pad. Modern U.S. boatyard; vessel safely supported ashore; wash-water berm and recovery drain visible; technician uses a soft brush and gentle low-pressure rinse on gelcoat; realistic PPE; premium editorial industrial photography; wide composition with copy space; no product containers, brand, text, watermark, direct surface-water discharge, or exaggerated result."
+    },
+    {
+      "id": "marine-engine-room-cleaning",
+      "web_file": "images/marine-engine-room-cleaning.jpg",
+      "source_file": "images/source/marine-engine-room-cleaning.png",
+      "dimensions": { "width": 1200, "height": 750 },
+      "alt": "Marine technician cleaning oily residue from a machinery support surface with wiping and vacuum recovery",
+      "caption": "Controlled engine-room surface cleaning and recovery",
+      "prompt": "Photorealistic yacht engine-room maintenance scene showing a marine technician cleaning oily film from an accessible bilge and machinery support surface using controlled wet wiping and absorbent recovery. Realistic compact engine room; isolated equipment; stainless and painted mechanical surfaces; practical gloves and eye protection; no open spraying near energized systems; premium documentary realism; no product containers, brand, text, watermark, unsafe mist, or exaggerated result."
+    },
+    {
+      "id": "hvac-airside-coil-cleaning",
+      "web_file": "images/hvac-airside-coil-cleaning.jpg",
+      "source_file": "images/source/hvac-airside-coil-cleaning.png",
+      "dimensions": { "width": 1200, "height": 750 },
+      "alt": "HVAC technician applying a gentle perpendicular rinse to an isolated rooftop condenser coil over runoff containment",
+      "caption": "Fin-safe rooftop condenser-coil cleaning setup",
+      "prompt": "Photorealistic commercial HVAC technician performing fin-safe, low-pressure cleaning on an isolated rooftop condenser coil. Electrical/control compartment closed and weather-sealed; lockout at a separate closed disconnect away from spray; runoff captured in a low-profile recovery mat; gentle perpendicular rinse across aluminum fins; premium technical realism; no bent fins, product containers, logo, text, watermark, dramatic foam, or unsupported result graphic."
+    },
+    {
+      "id": "hvac-waterside-heat-exchanger-cleaning",
+      "web_file": "images/hvac-waterside-heat-exchanger-cleaning.jpg",
+      "source_file": "images/source/hvac-waterside-heat-exchanger-cleaning.png",
+      "dimensions": { "width": 1200, "height": 750 },
+      "alt": "Technician monitoring a temporary closed-loop cleaning rig connected to an isolated plate heat exchanger",
+      "caption": "Closed-loop plate heat-exchanger cleaning setup",
+      "prompt": "Photorealistic mechanical-room scene showing a technician operating a temporary closed-loop cleaning rig connected to an isolated plate heat exchanger. Real valves, isolation points, flexible supply and return hoses, compact reservoir, pump, containment tray, and sample station; technician checks a handheld meter and return flow; premium engineering realism; no product labels, brand, text, watermark, open splash, impossible plumbing, or claim graphics."
+    }
+  ]
+}
