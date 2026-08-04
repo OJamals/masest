@@ -1,6 +1,7 @@
 import { adminClient } from './supabase.js';
 import { recordAudit } from './audit.js';
 import { linkOrderProviderObject } from './order-integrations.js';
+import { recordOrderFinancialEntry } from './order-financial-ledger.js';
 import {
   ShipStationError,
   buildRateRequest,
@@ -8,6 +9,7 @@ import {
 } from './shipstation.js';
 
 const SHIPPABLE_STATUSES = new Set(['paid', 'net_open', 'net_paid', 'fulfilled']);
+const VOID_BLOCKING_TRACKING_STATUSES = new Set(['shipped', 'in_transit', 'out_for_delivery', 'delivered']);
 
 function text(value, max = 240) {
   return String(value ?? '').trim().slice(0, max);
@@ -72,7 +74,7 @@ function existingLabel(order) {
 
 async function defaultLoadOrder(env, id) {
   const { data, error } = await adminClient(env).from('orders')
-    .select('id,order_number,status,customer_email,currency,ship_address,shipstation_shipment_id,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,tracking_number,tracking_url,order_items(sku,name,qty,unit_price)')
+    .select('id,order_number,status,customer_email,currency,ship_address,shipstation_shipment_id,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,shipstation_cost,tracking_status,carrier,tracking_number,tracking_url,order_items(sku,name,qty,unit_price)')
     .eq('id', id)
     .single();
   if (error) throw new ShipStationError(error.code === 'PGRST116' ? 'shipping_order_not_found' : 'shipping_database_failed');
@@ -157,6 +159,36 @@ async function defaultPurchaseLabel(env, rateId, body) {
   });
 }
 
+async function defaultClaimVoid(env, id, labelId) {
+  const { data, error } = await adminClient(env).rpc('claim_shipstation_label_void', {
+    p_order_id: id,
+    p_label_id: labelId,
+  });
+  if (error) throw new ShipStationError('shipping_database_failed');
+  return data === true;
+}
+
+async function defaultVoidLabel(env, labelId) {
+  try {
+    return await shipStationRequest(env, `/labels/${encodeURIComponent(labelId)}/void`, { method: 'PUT' });
+  } catch (error) {
+    if (error instanceof ShipStationError) throw error;
+    throw new ShipStationError('shipstation_network_failed', 503);
+  }
+}
+
+async function defaultFinalizeVoid(env, input) {
+  const { data, error } = await adminClient(env).rpc('finalize_shipstation_label_void', {
+    p_order_id: input.orderId,
+    p_label_id: input.labelId,
+    p_actor_id: input.actorId || null,
+    p_reason: input.reason,
+    p_provider_message: input.providerMessage || null,
+  });
+  if (error || data?.applied !== true) throw new ShipStationError('shipping_database_failed');
+  return data;
+}
+
 async function defaultPersistLabel(env, id, patch) {
   const { error } = await adminClient(env).from('orders')
     .update({ ...patch, shipstation_updated_at: new Date().toISOString() })
@@ -183,6 +215,14 @@ async function defaultLinkProviderObject(env, input) {
   return linkOrderProviderObject(adminClient(env), input);
 }
 
+async function defaultRecordFinancialEntry(env, entry) {
+  try {
+    await recordOrderFinancialEntry(env, entry);
+  } catch {
+    throw new ShipStationError('shipping_database_failed');
+  }
+}
+
 async function linkShipStationObject(link, env, order, objectType, providerObjectId) {
   if (!text(providerObjectId, 255)) return null;
   return link(env, {
@@ -199,6 +239,26 @@ function assertShippable(order) {
   if (!SHIPPABLE_STATUSES.has(text(order.status, 40))) {
     throw new ShipStationError('shipping_order_not_shippable');
   }
+}
+
+async function recordPostagePurchase(recordFinancialEntry, env, order, input) {
+  const cost = money(input.cost);
+  if (cost == null || cost < 0) return;
+  await recordFinancialEntry(env, {
+    orderId: order.id,
+    source: 'shipstation',
+    entryType: 'postage_purchase',
+    providerObjectId: input.labelId,
+    amount: cost,
+    currency: text(input.currency || order.currency || 'usd', 8).toLowerCase(),
+    state: 'recognized',
+    actorId: text(input.actorId, 80) || null,
+    reason: null,
+    metadata: {
+      shipment_id: text(input.shipmentId, 100) || null,
+      rate_id: text(input.rateId, 100) || null,
+    },
+  });
 }
 
 export async function rateOrderShipment(env, input, context = {}, dependencies = {}) {
@@ -275,12 +335,21 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   const insertShipmentEvent = dependencies.insertShipmentEvent || defaultInsertShipmentEvent;
   const audit = dependencies.audit || defaultAudit;
   const linkProviderObject = dependencies.linkProviderObject || defaultLinkProviderObject;
+  const recordFinancialEntry = dependencies.recordFinancialEntry || defaultRecordFinancialEntry;
   let order = await loadOrder(env, id);
   assertShippable(order);
-  if (order.shipstation_label_id) {
+  if (order.shipstation_label_id && !['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
     await linkShipStationObject(linkProviderObject, env, order, 'shipment', order.shipstation_shipment_id);
     await linkShipStationObject(linkProviderObject, env, order, 'rate', order.shipstation_rate_id);
     await linkShipStationObject(linkProviderObject, env, order, 'label', order.shipstation_label_id);
+    await recordPostagePurchase(recordFinancialEntry, env, order, {
+      labelId: order.shipstation_label_id,
+      shipmentId: order.shipstation_shipment_id,
+      rateId: order.shipstation_rate_id,
+      cost: order.shipstation_cost,
+      currency: order.currency,
+      actorId: context?.user?.id,
+    });
     return existingLabel(order);
   }
   const shipmentId = providerId(order.shipstation_shipment_id, 'shipstation_shipment_required');
@@ -295,10 +364,18 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   const claimed = await claimLabel(env, id, rateId);
   if (!claimed) {
     order = await loadOrder(env, id);
-    if (order?.shipstation_label_id) {
+    if (order?.shipstation_label_id && !['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
       await linkShipStationObject(linkProviderObject, env, order, 'shipment', order.shipstation_shipment_id);
       await linkShipStationObject(linkProviderObject, env, order, 'rate', order.shipstation_rate_id);
       await linkShipStationObject(linkProviderObject, env, order, 'label', order.shipstation_label_id);
+      await recordPostagePurchase(recordFinancialEntry, env, order, {
+        labelId: order.shipstation_label_id,
+        shipmentId: order.shipstation_shipment_id,
+        rateId: order.shipstation_rate_id,
+        cost: order.shipstation_cost,
+        currency: order.currency,
+        actorId: context?.user?.id,
+      });
       return existingLabel(order);
     }
     throw new ShipStationError('shipstation_label_purchase_locked');
@@ -365,6 +442,14 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   await linkShipStationObject(linkProviderObject, env, order, 'shipment', patch.shipstation_shipment_id);
   await linkShipStationObject(linkProviderObject, env, order, 'rate', rateId);
   await linkShipStationObject(linkProviderObject, env, order, 'label', labelId);
+  await recordPostagePurchase(recordFinancialEntry, env, order, {
+    labelId,
+    shipmentId: patch.shipstation_shipment_id,
+    rateId,
+    cost: patch.shipstation_cost,
+    currency: label?.shipment_cost?.currency,
+    actorId: context?.user?.id,
+  });
   await insertShipmentEvent(env, id, {
     status: 'packing',
     carrier: patch.carrier,
@@ -389,5 +474,96 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     tracking_url: trackingUrl,
     cost: patch.shipstation_cost,
     currency: text(label?.shipment_cost?.currency || 'usd', 8).toLowerCase(),
+  };
+}
+
+export async function voidOrderLabel(env, input, context = {}, dependencies = {}) {
+  const id = orderId(input?.order_id);
+  const labelId = providerId(input?.label_id, 'shipstation_label_required');
+  const reason = text(input?.reason, 280);
+  if (input?.confirm !== true) throw new ShipStationError('shipstation_label_void_confirmation_required');
+  if (reason.length < 8) throw new ShipStationError('shipstation_label_void_reason_required');
+  if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
+
+  const loadOrder = dependencies.loadOrder || defaultLoadOrder;
+  const claimVoid = dependencies.claimVoid || defaultClaimVoid;
+  const voidLabel = dependencies.voidLabel || defaultVoidLabel;
+  const finalizeVoid = dependencies.finalizeVoid || defaultFinalizeVoid;
+  const persistLabel = dependencies.persistLabel || defaultPersistLabel;
+  const audit = dependencies.audit || defaultAudit;
+
+  let order = await loadOrder(env, id);
+  assertShippable(order);
+  if (text(order.shipstation_label_id, 100) !== labelId) {
+    throw new ShipStationError('shipstation_label_order_mismatch');
+  }
+  if (['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
+    await finalizeVoid(env, {
+      orderId: id,
+      labelId,
+      actorId: text(context?.user?.id, 80) || null,
+      reason,
+      providerMessage: null,
+    });
+    return { already_voided: true, label_id: labelId, status: 'label_voided', refund_state: 'pending' };
+  }
+  if (VOID_BLOCKING_TRACKING_STATUSES.has(text(order.tracking_status, 40))) {
+    throw new ShipStationError('shipstation_label_void_blocked');
+  }
+
+  const claimed = await claimVoid(env, id, labelId);
+  if (!claimed) {
+    order = await loadOrder(env, id);
+    if (text(order?.shipstation_label_id, 100) === labelId
+      && ['label_voided', 'voided'].includes(text(order?.shipstation_label_status, 40))) {
+      await finalizeVoid(env, {
+        orderId: id,
+        labelId,
+        actorId: text(context?.user?.id, 80) || null,
+        reason,
+        providerMessage: null,
+      });
+      return { already_voided: true, label_id: labelId, status: 'label_voided', refund_state: 'pending' };
+    }
+    throw new ShipStationError('shipstation_label_void_locked');
+  }
+
+  let provider;
+  try {
+    provider = await voidLabel(env, labelId);
+  } catch (error) {
+    await persistLabel(env, id, {
+      shipstation_label_status: 'void_reconcile_required',
+      shipstation_error: text(error?.code || 'shipstation_label_void_failed', 160),
+    }).catch(() => {});
+    throw error;
+  }
+  if (provider?.approved !== true) {
+    await persistLabel(env, id, {
+      shipstation_label_status: 'label_void_failed',
+      shipstation_error: 'shipstation_label_void_rejected',
+    });
+    throw new ShipStationError('shipstation_label_void_rejected');
+  }
+
+  const providerMessage = text(provider?.message, 240) || null;
+  await finalizeVoid(env, {
+    orderId: id,
+    labelId,
+    actorId: text(context?.user?.id, 80) || null,
+    reason,
+    providerMessage,
+  });
+  await audit(env, context, 'shipstation_label_voided', id, {
+    label_id: labelId,
+    reason,
+    refund_state: 'pending',
+  }).catch(() => {});
+  return {
+    already_voided: false,
+    label_id: labelId,
+    status: 'label_voided',
+    refund_state: 'pending',
+    message: providerMessage,
   };
 }

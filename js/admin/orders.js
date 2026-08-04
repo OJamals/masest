@@ -195,22 +195,44 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const ship = order.ship_address || {};
     const phone = ship.phone || ship.address?.phone || '';
     const labelUrl = safeUrl(order.shipstation_label_url || '');
-    const labelSummary = ['purchasing', 'reconcile_required'].includes(order.shipstation_label_status)
+    const labelState = String(order.shipstation_label_status || '');
+    const labelVoided = ['label_voided', 'voided'].includes(labelState);
+    const activeLabel = Boolean(order.shipstation_label_id) && !labelVoided;
+    const voidBlocked = ['shipped', 'in_transit', 'out_for_delivery', 'delivered'].includes(order.tracking_status);
+    const labelSummary = ['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState)
       ? `<span class="badge" data-s="changes_requested">${esc(order.shipstation_label_status.replaceAll('_', ' '))}</span><small class="muted">Check ShipStation before retrying; prior purchase result may be pending or uncertain.</small>`
-      : order.shipstation_label_id
-        ? `<span class="badge" data-s="published">${order.shipstation_label_status === 'label_pending' ? 'label pending' : 'label purchased'}</span>${labelUrl && labelUrl !== '#' ? ` <a class="btn btn-ghost btn-sm" href="${esc(labelUrl)}" target="_blank" rel="noopener">Open PDF label</a>` : ''}`
+      : labelVoided
+        ? '<span class="badge" data-s="archived">label voided</span><small class="muted">Carrier refund requested; pending finance reconciliation. Re-rate to buy a replacement.</small>'
+        : activeLabel
+          ? `<span class="badge" data-s="published">${order.shipstation_label_status === 'label_pending' ? 'label pending' : 'label purchased'}</span>${labelUrl && labelUrl !== '#' ? ` <a class="btn btn-ghost btn-sm" href="${esc(labelUrl)}" target="_blank" rel="noopener">Open PDF label</a>` : ''}`
+          : labelState === 'label_void_failed'
+            ? '<span class="badge" data-s="changes_requested">void rejected</span><small class="muted">Label remains active. Review carrier response before retrying.</small>'
         : '';
     const shippable = ['paid', 'net_open', 'net_paid', 'fulfilled'].includes(order.status);
+    const voidControl = activeLabel && ['label_purchased', 'label_void_failed'].includes(labelState)
+      ? `<details class="adm-shipstation-void">
+          <summary>${voidBlocked ? 'Void unavailable after carrier movement' : 'Void label / request carrier refund'}</summary>
+          ${voidBlocked ? '<small class="muted">Use carrier support/claims workflow after shipment movement.</small>' : `
+            <label class="admin-input-wide">Reason <textarea class="adm-textarea" data-shipstation-void-reason="${id}" name="shipstation_void_reason_${id}" rows="2" maxlength="280" placeholder="Why this label must be voided" aria-label="Void reason for order ${id}"></textarea></label>
+            <label class="adm-check"><input data-shipstation-void-confirm="${id}" name="shipstation_void_confirm_${id}" type="checkbox"> I confirm this calls ShipStation now and requests carrier refund.</label>
+            <button class="btn btn-ghost btn-sm adm-order-danger" data-shipstation-void-label="${id}" data-label-id="${esc(order.shipstation_label_id)}" type="button">Void label</button>
+            <small class="muted">Approval confirms void/refund request only. Carrier credit remains pending until reconciled.</small>
+          `}
+        </details>`
+      : '';
+    const quoteControl = shippable && !activeLabel && !['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState) ? `
+      <label>Phone <input class="adm-input" data-shipstation-phone="${id}" type="tel" value="${esc(phone)}" placeholder="+1 321-555-0100" autocomplete="tel"></label>
+      <label>Address type <select class="adm-select" data-shipstation-residential="${id}"><option value="unknown">Unknown</option><option value="yes">Residential</option><option value="no">Commercial</option></select></label>
+      <label class="admin-input-wide">Package override <textarea class="adm-textarea adm-shipstation-packages" data-shipstation-packages="${id}" rows="2" placeholder="Leave blank for CMS package profiles&#10;42.5, 14, 14, 18" aria-describedby="shipstation-format-${id}"></textarea><small id="shipstation-format-${id}" class="muted">Blank uses each variant's CMS shipping profile. Override: one/package line with weight_lb, length_in, width_in, height_in.</small></label>
+      <button class="btn btn-secondary btn-sm" data-shipstation-rates="${id}" type="button">Get live rates</button>
+      <div class="adm-shipstation-results" data-shipstation-results="${id}" role="status" aria-live="polite"></div>
+    ` : '';
     const shipStation = `<details class="adm-track adm-shipstation" data-capability-scope="order.write">
       <summary><b>ShipStation API Free</b>${order.shipstation_label_status ? ` ${statusBadge(order.shipstation_label_status)}` : ''}</summary>
       <div class="adm-track-controls">
-        ${labelSummary || (shippable ? `
-          <label>Phone <input class="adm-input" data-shipstation-phone="${id}" type="tel" value="${esc(phone)}" placeholder="+1 321-555-0100" autocomplete="tel"></label>
-          <label>Address type <select class="adm-select" data-shipstation-residential="${id}"><option value="unknown">Unknown</option><option value="yes">Residential</option><option value="no">Commercial</option></select></label>
-          <label class="admin-input-wide">Package override <textarea class="adm-textarea adm-shipstation-packages" data-shipstation-packages="${id}" rows="2" placeholder="Leave blank for CMS package profiles&#10;42.5, 14, 14, 18" aria-describedby="shipstation-format-${id}"></textarea><small id="shipstation-format-${id}" class="muted">Blank uses each variant's CMS shipping profile. Override: one/package line with weight_lb, length_in, width_in, height_in.</small></label>
-          <button class="btn btn-secondary btn-sm" data-shipstation-rates="${id}" type="button">Get live rates</button>
-          <div class="adm-shipstation-results" data-shipstation-results="${id}" role="status" aria-live="polite"></div>
-        ` : '<small class="muted">Order must be paid, approved NET, or fulfilled before label purchase.</small>')}
+        ${labelSummary}
+        ${voidControl}
+        ${quoteControl || (!activeLabel && !shippable ? '<small class="muted">Order must be paid, approved NET, or fulfilled before label purchase.</small>' : '')}
       </div>
     </details>`;
     return `${qboReconciliation(order)}<details class="adm-track" data-capability-scope="order.write"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
@@ -417,6 +439,20 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       ? `<h4 style="margin:16px 0 4px">Integration delivery</h4><ul style="margin:0;padding-left:18px">${integrationTimeline.map((entry) =>
           `<li><b>${esc(entry.provider)}</b> ${esc(entry.effect_type)} — ${esc(entry.status)} · ${esc(date(entry.completed_at || entry.dead_at || entry.created_at))}${entry.result?.skipped ? ` · ${esc(entry.result.skipped)}` : ''}${entry.last_error_code ? ` · <code>${esc(entry.last_error_code)}</code>` : ''}</li>`).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Integration delivery</h4><p class="muted" style="margin:0">No order-scoped provider effects.</p>';
+    const financialEntries = (order.order_financial_entries || [])
+      .slice().sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+    const realizedPostage = financialEntries
+      .filter((entry) => entry.recognition_state === 'recognized')
+      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+    const pendingPostage = financialEntries
+      .filter((entry) => entry.recognition_state === 'pending')
+      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+    const financialLedger = financialEntries.length
+      ? `<h4 style="margin:16px 0 4px">Financial evidence</h4>
+        <p class="muted" style="margin:0 0 4px">Realized postage ${esc(money(realizedPostage, order.currency))}${pendingPostage ? ` · pending carrier credit ${esc(money(pendingPostage, order.currency))}` : ''}</p>
+        <ul style="margin:0;padding-left:18px">${financialEntries.map((entry) =>
+          `<li><b>${esc(entry.source)}</b> ${esc(entry.entry_type.replaceAll('_', ' '))} — ${esc(money(entry.amount, entry.currency))} · ${esc(entry.recognition_state)} · <code>${esc(entry.provider_object_id)}</code>${entry.reason ? ` — ${esc(entry.reason)}` : ''}</li>`).join('')}</ul>`
+      : '<h4 style="margin:16px 0 4px">Financial evidence</h4><p class="muted" style="margin:0">No provider cost entries.</p>';
     return `<h3 style="margin:0 0 4px">Order ${esc(order.order_number || order.id)}</h3>
       <p class="muted" style="margin:0 0 12px">${esc(order.companies?.name || order.company_id || 'Guest')} · ${esc(order.customer_email || '')} · ${esc(lifecycle.label)} · ${esc(order.status)} · ${esc(order.payment_method || '')}</p>
       ${order.purchase_order_number ? `<p style="margin:0 0 12px"><b>Purchase order:</b> ${esc(order.purchase_order_number)}</p>` : ''}
@@ -425,6 +461,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
       ${shipHistory}
       ${providerLedger}
+      ${financialLedger}
       ${integrationHistory}
       <h4 style="margin:16px 0 4px">Staff timeline</h4><ul style="margin:0;padding-left:18px">${events}</ul>`;
   }
@@ -610,6 +647,35 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Label purchase failed. Check ShipStation before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-shipstation-void-label]', async (event, button) => {
+      const id = button.dataset.shipstationVoidLabel;
+      const labelId = button.dataset.labelId;
+      const reason = box.querySelector(`[data-shipstation-void-reason="${CSS.escape(id)}"]`)?.value.trim() || '';
+      const confirmed = box.querySelector(`[data-shipstation-void-confirm="${CSS.escape(id)}"]`)?.checked === true;
+      if (reason.length < 8) {
+        message('ordStatus', 'Enter a specific void reason (at least 8 characters).', 'err');
+        return;
+      }
+      if (!confirmed) {
+        message('ordStatus', 'Confirm the ShipStation void/refund request first.', 'err');
+        return;
+      }
+      button.disabled = true;
+      message('ordStatus', 'Voiding ShipStation label…');
+      try {
+        const res = await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: { action: 'void_label', order_id: id, label_id: labelId, confirm: true, reason },
+        });
+        message('ordStatus', res.already_voided
+          ? 'Label was already voided; no second provider request.'
+          : 'Label voided. Carrier refund request recorded as pending.', 'ok');
+        await refreshOrder(id);
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Label void failed. Check ShipStation before retrying.', 'err');
         button.disabled = false;
       }
     });

@@ -16,6 +16,7 @@ test("detail endpoint reads ?id, joins items+timeline, exposes backordered", () 
   assert.match(API, /contains\('provider_result', \{ order_id: orderId \}\)/);
   assert.match(API, /eq\('aggregate_type', 'shipment'\)/);
   assert.match(API, /integration_timeline/);
+  assert.match(API, /order_financial_entries\(source,entry_type,provider_object_id,amount,currency,recognition_state,reason,metadata,created_at\)/);
   assert.match(API, /order_items\(sku,product_sku,name,qty,unit_price,line_total,backordered\)/); // list select too
 });
 
@@ -59,5 +60,12 @@ test("UI fetches detail by id and opens the modal with a backorder badge", () =>
   assert.match(UI, /\/api\/admin\/orders\?id=/);
   assert.match(UI, /detailDialog\(/);
   assert.match(UI, /Integration delivery/);
+  assert.match(UI, /Financial evidence/);
+  assert.match(UI, /pending carrier credit/);
   assert.match(UI, /backordered \? ' <span class="badge badge-warning">backordered/);
+});
+
+test('orders with immutable provider financial evidence return a stable delete conflict', () => {
+  assert.match(API, /error\?\.code === '23503'/);
+  assert.match(API, /order_has_financial_history/);
 });

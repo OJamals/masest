@@ -5,7 +5,7 @@ import {
   ShipStationError,
   shipStationStatus,
 } from '../../_lib/shipstation.js';
-import { buyOrderLabel, rateOrderShipment } from '../../_lib/shipstation-orders.js';
+import { buyOrderLabel, rateOrderShipment, voidOrderLabel } from '../../_lib/shipstation-orders.js';
 
 function errorResponse(error) {
   const code = error?.code || 'shipstation_request_failed';
@@ -18,6 +18,7 @@ export function createShipStationAdminHandler(dependencies = {}) {
   const statusImpl = dependencies.status || shipStationStatus;
   const rateOrderImpl = dependencies.rateOrder || rateOrderShipment;
   const buyLabelImpl = dependencies.buyLabel || buyOrderLabel;
+  const voidLabelImpl = dependencies.voidLabel || voidOrderLabel;
   const configureWebhookImpl = dependencies.configureWebhook || configureShipStationTrackingWebhook;
 
   return async function shipStationAdminHandler({ request, env }) {
@@ -28,6 +29,7 @@ export function createShipStationAdminHandler(dependencies = {}) {
       status: statusImpl,
       rateOrder: rateOrderImpl,
       buyLabel: buyLabelImpl,
+      voidLabel: voidLabelImpl,
       configureWebhook: configureWebhookImpl,
     });
   };
@@ -44,6 +46,7 @@ async function handleShipStationRequest({ request, env, user, role }, dependenci
     }
     if (body.action === 'rates') return json(200, await dependencies.rateOrder(env, body, { user, role }));
     if (body.action === 'buy_label') return json(200, await dependencies.buyLabel(env, body, { user, role }));
+    if (body.action === 'void_label') return json(200, await dependencies.voidLabel(env, body, { user, role }));
     if (body.action === 'configure_tracking_webhook') {
       return json(200, await dependencies.configureWebhook(env, { user, role }));
     }
@@ -61,6 +64,7 @@ export async function onRequest({ request, env }) {
     status: shipStationStatus,
     rateOrder: rateOrderShipment,
     buyLabel: buyOrderLabel,
+    voidLabel: voidOrderLabel,
     configureWebhook: configureShipStationTrackingWebhook,
   });
 }

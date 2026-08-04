@@ -38,7 +38,7 @@ test('ShipStation admin endpoint is staff-gated and exposes redacted connection 
   assert.equal((await denied({ request: request(), env: {} })).status, 401);
 });
 
-test('ShipStation admin endpoint rejects read-only mutations and dispatches rate and label actions', async () => {
+test('ShipStation admin endpoint rejects read-only mutations and dispatches rate, buy, void, and webhook actions', async () => {
   const readOnly = createShipStationAdminHandler({
     requireStaff: async () => ({ user: { id: 'staff-1' }, staff: true, role: 'read_only' }),
   });
@@ -52,6 +52,7 @@ test('ShipStation admin endpoint rejects read-only mutations and dispatches rate
     requireStaff: async () => ({ user: { id: 'staff-1' }, staff: true, role: 'owner' }),
     rateOrder: async (_env, input) => { calls.push(['rates', input]); return { rates: [] }; },
     buyLabel: async (_env, input) => { calls.push(['label', input]); return { label_id: 'se-label-1' }; },
+    voidLabel: async (_env, input) => { calls.push(['void', input]); return { label_id: 'se-label-1', status: 'label_voided' }; },
     configureWebhook: async () => { calls.push(['webhook']); return { configured: true }; },
   });
   assert.equal((await handler({
@@ -63,8 +64,12 @@ test('ShipStation admin endpoint rejects read-only mutations and dispatches rate
     env: {},
   })).status, 200);
   assert.equal((await handler({
+    request: request('POST', { action: 'void_label', order_id: 'order-1', label_id: 'se-label-1', confirm: true, reason: 'Wrong package' }),
+    env: {},
+  })).status, 200);
+  assert.equal((await handler({
     request: request('POST', { action: 'configure_tracking_webhook' }),
     env: {},
   })).status, 200);
-  assert.deepEqual(calls.map(([action]) => action), ['rates', 'label', 'webhook']);
+  assert.deepEqual(calls.map(([action]) => action), ['rates', 'label', 'void', 'webhook']);
 });

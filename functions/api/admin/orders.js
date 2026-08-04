@@ -245,7 +245,7 @@ export async function onRequest({ request, env }) {
     const detailId = params.get('id');
     if (detailId) {
       const { data: order, error } = await sb.from('orders')
-        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at),order_provider_links(provider,object_type,provider_object_id,metadata,created_at)')
+        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at),order_provider_links(provider,object_type,provider_object_id,metadata,created_at),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,reason,metadata,created_at)')
         .eq('id', detailId).single();
       if (error) return json(error.code === 'PGRST116' ? 404 : 500, { error: error.message });
       const { data: timeline } = await sb.from('audit_log')
@@ -401,6 +401,9 @@ export async function onRequest({ request, env }) {
         .eq('id', body.id).single();
       if (readErr) return json(readErr.code === 'PGRST116' ? 404 : 500, { error: readErr.message });
       const { error } = await sb.from('orders').delete().eq('id', body.id);
+      if (error?.code === '23503') {
+        return json(409, { error: 'order_has_financial_history', message: 'Orders with provider financial entries are retained for reconciliation.' });
+      }
       if (error) return json(500, { error: error.message });
       await recordAudit(sb, { user, action: 'order.delete', targetType: 'order', targetId: body.id, detail: order });
       return json(200, { ok: true, deleted: true });

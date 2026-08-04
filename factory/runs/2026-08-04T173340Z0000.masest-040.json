@@ -1,0 +1,15 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-040.implement.codex.md)"
+  ],
+  "created_at": "2026-08-04T17:33:40+00:00",
+  "id": "masest-040",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-040.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-040.md",
+  "spec_sha256": "df332afbcfe660aa17aeaa6cf7a9664f3a22112995fe862f4b02dbb3bc190f71",
+  "status": "planned",
+  "title": "Add safe ShipStation label void and immutable postage evidence"
+}

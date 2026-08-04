@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buyOrderLabel, rateOrderShipment } from '../functions/_lib/shipstation-orders.js';
+import { buyOrderLabel, rateOrderShipment, voidOrderLabel } from '../functions/_lib/shipstation-orders.js';
 
 const order = {
   id: '70f81af0-5ae5-4ea7-953b-f612b6e0ed91',
@@ -23,6 +23,8 @@ const order = {
   shipstation_shipment_id: null,
   shipstation_label_id: null,
   shipstation_label_status: null,
+  shipstation_cost: null,
+  tracking_status: 'processing',
 };
 
 test('rateOrderShipment quotes connected carriers and persists provider shipment ID', async () => {
@@ -150,6 +152,7 @@ test('rateOrderShipment uses CMS variant package profiles when staff leaves pack
 test('buyOrderLabel verifies rate ownership, then atomically claims and persists label', async () => {
   const calls = [];
   let persisted;
+  const financialEntries = [];
   const links = [];
   const result = await buyOrderLabel(
     { SHIPSTATION_API_KEY: 'secret' },
@@ -175,6 +178,7 @@ test('buyOrderLabel verifies rate ownership, then atomically claims and persists
       },
       persistLabel: async (_env, orderId, patch) => { persisted = { orderId, patch }; },
       linkProviderObject: async (_env, link) => { links.push(link); },
+      recordFinancialEntry: async (_env, entry) => { financialEntries.push(entry); },
       insertShipmentEvent: async () => {},
       audit: async () => {},
     },
@@ -200,6 +204,18 @@ test('buyOrderLabel verifies rate ownership, then atomically claims and persists
     ['rate', 'se-rate-1'],
     ['label', 'se-label-1'],
   ]);
+  assert.deepEqual(financialEntries, [{
+    orderId: order.id,
+    source: 'shipstation',
+    entryType: 'postage_purchase',
+    providerObjectId: 'se-label-1',
+    amount: 41.22,
+    currency: 'usd',
+    state: 'recognized',
+    actorId: 'staff-1',
+    reason: null,
+    metadata: { shipment_id: 'se-shipment-1', rate_id: 'se-rate-1' },
+  }]);
 });
 
 test('buyOrderLabel blocks shipment mismatch before claim or charge', async () => {
@@ -223,6 +239,7 @@ test('buyOrderLabel blocks shipment mismatch before claim or charge', async () =
 
 test('buyOrderLabel is idempotent after a label exists', async () => {
   const links = [];
+  const financialEntries = [];
   const existing = {
     ...order,
     shipstation_shipment_id: 'se-shipment-1',
@@ -230,6 +247,7 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
     shipstation_label_status: 'label_purchased',
     shipstation_label_url: 'https://api.shipstation.com/v2/downloads/existing.pdf',
     tracking_number: '9400111899223856928499',
+    shipstation_cost: 12.34,
   };
   const result = await buyOrderLabel(
     { SHIPSTATION_API_KEY: 'secret' },
@@ -238,6 +256,7 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
     {
       loadOrder: async () => existing,
       linkProviderObject: async (_env, link) => links.push(link),
+      recordFinancialEntry: async (_env, entry) => financialEntries.push(entry),
       getRate: async () => assert.fail('existing label must return before provider call'),
       claimLabel: async () => assert.fail('existing label must not claim'),
       purchaseLabel: async () => assert.fail('existing label must not charge'),
@@ -249,6 +268,9 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
     ['shipment', 'se-shipment-1'],
     ['label', 'se-label-existing'],
   ]);
+  assert.equal(financialEntries.length, 1, 'retry repairs missing purchase ledger evidence');
+  assert.equal(financialEntries[0].entryType, 'postage_purchase');
+  assert.equal(financialEntries[0].amount, 12.34);
 });
 
 test('buyOrderLabel locks provider error responses for manual reconciliation', async () => {
@@ -277,4 +299,209 @@ test('buyOrderLabel locks provider error responses for manual reconciliation', a
   assert.equal(persisted.shipstation_label_id, 'se-label-error');
   assert.equal(persisted.shipstation_label_status, 'reconcile_required');
   assert.equal(persisted.tracking_status, undefined);
+});
+
+const labeledOrder = {
+  ...order,
+  shipstation_shipment_id: 'se-shipment-1',
+  shipstation_rate_id: 'se-rate-1',
+  shipstation_label_id: 'se-label-1',
+  shipstation_label_status: 'label_purchased',
+  shipstation_label_url: 'https://api.shipstation.com/v2/downloads/label.pdf',
+  shipstation_cost: 41.22,
+  tracking_status: 'packing',
+  carrier: 'ups',
+  tracking_number: '1Z999AA10123456784',
+  tracking_url: 'https://www.ups.com/track?loc=en_US&tracknum=1Z999AA10123456784',
+};
+
+test('voidOrderLabel claims once, confirms provider void, and records pending refund evidence', async () => {
+  const calls = [];
+  let finalized;
+  let audit;
+  const result = await voidOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Wrong package selected' },
+    { user: { id: 'staff-1' }, role: 'owner' },
+    {
+      loadOrder: async () => labeledOrder,
+      claimVoid: async () => { calls.push('claim'); return true; },
+      voidLabel: async (_env, labelId) => { calls.push(['provider', labelId]); return { approved: true, message: 'Label voided' }; },
+      finalizeVoid: async (_env, input) => { finalized = input; calls.push(['finalize', input]); },
+      audit: async (_env, _context, action, id, detail) => { audit = { action, id, detail }; },
+    },
+  );
+
+  assert.deepEqual(calls.slice(0, 2), ['claim', ['provider', 'se-label-1']]);
+  assert.deepEqual(finalized, {
+    orderId: order.id,
+    labelId: 'se-label-1',
+    actorId: 'staff-1',
+    reason: 'Wrong package selected',
+    providerMessage: 'Label voided',
+  });
+  assert.equal(audit.action, 'shipstation_label_voided');
+  assert.equal(result.already_voided, false);
+  assert.equal(result.refund_state, 'pending');
+});
+
+test('voidOrderLabel is idempotent after same label is voided', async () => {
+  const result = await voidOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Retry after timeout' },
+    { user: { id: 'staff-1' } },
+    {
+      loadOrder: async () => ({ ...labeledOrder, shipstation_label_status: 'label_voided' }),
+      finalizeVoid: async () => {},
+      claimVoid: async () => assert.fail('already voided must not claim'),
+      voidLabel: async () => assert.fail('already voided must not call provider'),
+    },
+  );
+  assert.equal(result.already_voided, true);
+  assert.equal(result.label_id, 'se-label-1');
+});
+
+test('voidOrderLabel blocks carrier movement before claim/provider access', async () => {
+  let claimed = false;
+  await assert.rejects(
+    voidOrderLabel(
+      { SHIPSTATION_API_KEY: 'secret' },
+      { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Customer changed address' },
+      { user: { id: 'staff-1' } },
+      {
+        loadOrder: async () => ({ ...labeledOrder, tracking_status: 'in_transit' }),
+        claimVoid: async () => { claimed = true; return true; },
+        voidLabel: async () => assert.fail('moving shipment must not call provider'),
+      },
+    ),
+    (error) => error.code === 'shipstation_label_void_blocked',
+  );
+  assert.equal(claimed, false);
+});
+
+test('voidOrderLabel records rejected and ambiguous provider outcomes without refund evidence', async () => {
+  for (const fixture of [
+    { provider: async () => ({ approved: false, message: 'Carrier denied void' }), code: 'shipstation_label_void_rejected', state: 'label_void_failed' },
+    { provider: async () => { throw Object.assign(new Error('bad request'), { code: 'shipstation_http_400', status: 400 }); }, code: 'shipstation_http_400', state: 'void_reconcile_required' },
+    { provider: async () => { throw Object.assign(new Error('conflict'), { code: 'shipstation_http_409', status: 409 }); }, code: 'shipstation_http_409', state: 'void_reconcile_required' },
+    { provider: async () => { throw Object.assign(new Error('throttled'), { code: 'shipstation_http_429', status: 429 }); }, code: 'shipstation_http_429', state: 'void_reconcile_required' },
+    { provider: async () => { throw Object.assign(new Error('provider timeout'), { code: 'shipstation_http_503', status: 503 }); }, code: 'shipstation_http_503', state: 'void_reconcile_required' },
+  ]) {
+    let persisted;
+    let finalizeCalls = 0;
+    await assert.rejects(
+      voidOrderLabel(
+        { SHIPSTATION_API_KEY: 'secret' },
+        { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Duplicate shipment label' },
+        { user: { id: 'staff-1' } },
+        {
+          loadOrder: async () => labeledOrder,
+          claimVoid: async () => true,
+          voidLabel: fixture.provider,
+          persistLabel: async (_env, _id, patch) => { persisted = patch; },
+          finalizeVoid: async () => { finalizeCalls += 1; },
+        },
+      ),
+      (error) => error.code === fixture.code,
+    );
+    assert.equal(persisted.shipstation_label_status, fixture.state);
+    assert.equal(finalizeCalls, 0);
+  }
+});
+
+test('voidOrderLabel default provider adapter sends exact PUT void request', async () => {
+  const originalFetch = globalThis.fetch;
+  let providerRequest;
+  globalThis.fetch = async (url, options) => {
+    providerRequest = { url, options };
+    return new Response(JSON.stringify({ approved: true, message: 'Accepted' }), {
+      status: 202,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  try {
+    const result = await voidOrderLabel(
+      { SHIPSTATION_API_KEY: 'secret' },
+      { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Wrong package selected' },
+      { user: { id: 'staff-1' } },
+      {
+        loadOrder: async () => labeledOrder,
+        claimVoid: async () => true,
+        finalizeVoid: async () => {},
+        audit: async () => {},
+      },
+    );
+    assert.equal(result.status, 'label_voided');
+    assert.equal(providerRequest.url, 'https://api.shipstation.com/v2/labels/se-label-1/void');
+    assert.equal(providerRequest.options.method, 'PUT');
+    assert.equal(providerRequest.options.headers['API-Key'], 'secret');
+    assert.equal(providerRequest.options.body, undefined);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('voidOrderLabel requires confirmation, reason, and exact order label before claim', async () => {
+  for (const fixture of [
+    { input: { order_id: order.id, label_id: 'se-label-1', confirm: false, reason: 'Wrong package selected' }, code: 'shipstation_label_void_confirmation_required' },
+    { input: { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'short' }, code: 'shipstation_label_void_reason_required' },
+  ]) {
+    await assert.rejects(
+      voidOrderLabel({ SHIPSTATION_API_KEY: 'secret' }, fixture.input, {}, {
+        loadOrder: async () => assert.fail('input rejection must precede order read'),
+      }),
+      (error) => error.code === fixture.code,
+    );
+  }
+  await assert.rejects(
+    voidOrderLabel(
+      { SHIPSTATION_API_KEY: 'secret' },
+      { order_id: order.id, label_id: 'se-label-other', confirm: true, reason: 'Wrong package selected' },
+      {},
+      {
+        loadOrder: async () => labeledOrder,
+        claimVoid: async () => assert.fail('mismatch must precede claim'),
+      },
+    ),
+    (error) => error.code === 'shipstation_label_order_mismatch',
+  );
+});
+
+test('voidOrderLabel retry repairs atomic finalization without a second provider call', async () => {
+  let finalized = 0;
+  const result = await voidOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Repair pending ledger' },
+    { user: { id: 'staff-1' } },
+    {
+      loadOrder: async () => ({ ...labeledOrder, shipstation_label_status: 'label_voided' }),
+      finalizeVoid: async () => { finalized += 1; },
+      claimVoid: async () => assert.fail('already voided must not claim'),
+      voidLabel: async () => assert.fail('already voided must not call provider'),
+    },
+  );
+  assert.equal(result.already_voided, true);
+  assert.equal(finalized, 1);
+});
+
+test('buyOrderLabel permits replacement after a confirmed void', async () => {
+  let purchased = false;
+  const result = await buyOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: order.id, rate_id: 'se-rate-2' },
+    { user: { id: 'staff-1' } },
+    {
+      loadOrder: async () => ({ ...labeledOrder, shipstation_label_status: 'label_voided' }),
+      getRate: async () => ({ rate_id: 'se-rate-2', shipment_id: 'se-shipment-1' }),
+      claimLabel: async () => true,
+      purchaseLabel: async () => { purchased = true; return { label_id: 'se-label-2', shipment_id: 'se-shipment-1', status: 'completed', shipment_cost: { currency: 'usd', amount: 40 } }; },
+      persistLabel: async () => {},
+      linkProviderObject: async () => {},
+      insertShipmentEvent: async () => {},
+      recordFinancialEntry: async () => {},
+      audit: async () => {},
+    },
+  );
+  assert.equal(purchased, true);
+  assert.equal(result.label_id, 'se-label-2');
 });
