@@ -79,7 +79,7 @@ test('staffAccessSummary exposes only the current role capabilities', () => {
 
   const readOnly = staffAccessSummary('read_only');
   assert.equal(readOnly.can_write, false);
-  assert.deepEqual(readOnly.capabilities, []);
+  assert.deepEqual(readOnly.capabilities, ['order.read']);
 });
 
 test('stats attaches per-user access context after the org-wide cache lookup', () => {

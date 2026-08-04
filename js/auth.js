@@ -5,6 +5,7 @@
  * CDN — an esm.sh 503 outage previously took down all auth site-wide. Regenerate the
  * bundle per the header in that file. */
 import { createClient } from '../vendor/supabase-js.esm.js';
+import { fetchBlobWithAuth } from './auth-blob.js?v=20260804c';
 
 const url = window.MASEST_SUPABASE_URL;
 const anon = window.MASEST_SUPABASE_ANON;
@@ -219,4 +220,13 @@ export async function api(path, { method = 'GET', body, keepalive = false, _retr
     throw Object.assign(new Error(out.error || 'request_failed'), { status: r.status, data: out });
   }
   return out;
+}
+
+export async function apiBlob(path) {
+  return fetchBlobWithAuth(path, {
+    getToken,
+    refreshSession,
+    onExpired: emitSessionExpired,
+    fetchImpl: fetch,
+  });
 }

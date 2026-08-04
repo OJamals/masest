@@ -258,8 +258,10 @@ export async function onRequest({ request, env }) {
       } catch {
         return json(503, { error: 'order_integration_timeline_unavailable' });
       }
+      const safeOrder = { ...order };
+      delete safeOrder.shipstation_label_url;
       return json(200, {
-        order: decorateOrderLifecycle({ ...order, net_aging: netAging(order, order.companies?.net_terms_days) }),
+        order: decorateOrderLifecycle({ ...safeOrder, net_aging: netAging(order, order.companies?.net_terms_days) }),
         timeline: timeline || [],
         integration_timeline: integrationTimeline,
       });
@@ -269,7 +271,7 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,order_number,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,ship_address,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,shipstation_shipment_id,shipstation_label_id,shipstation_rate_id,shipstation_carrier_id,shipstation_service_code,shipstation_label_url,shipstation_cost,shipstation_label_status,shipstation_error,shipstation_updated_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
+      .select('id,order_number,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,ship_address,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,shipstation_shipment_id,shipstation_label_id,shipstation_rate_id,shipstation_carrier_id,shipstation_service_code,shipstation_cost,shipstation_label_status,shipstation_error,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);

@@ -197,7 +197,8 @@ test('buyOrderLabel verifies rate ownership, then atomically claims and persists
   assert.equal(persisted.patch.shipstation_label_status, 'label_purchased');
   assert.equal(persisted.patch.tracking_status, 'packing');
   assert.equal(persisted.patch.shipped_at, undefined);
-  assert.equal(result.label_url, 'https://api.shipstation.com/v2/downloads/label.pdf');
+  assert.equal('label_url' in result, false);
+  assert.doesNotMatch(JSON.stringify(result), /api\.shipstation\.com\/v2\/downloads/);
   assert.equal(result.already_purchased, false);
   assert.deepEqual(links.map((link) => [link.objectType, link.providerObjectId]), [
     ['shipment', 'se-shipment-1'],
@@ -264,6 +265,8 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
   );
   assert.equal(result.already_purchased, true);
   assert.equal(result.label_id, 'se-label-existing');
+  assert.equal('label_url' in result, false);
+  assert.doesNotMatch(JSON.stringify(result), /api\.shipstation\.com\/v2\/downloads/);
   assert.deepEqual(links.map((link) => [link.objectType, link.providerObjectId]), [
     ['shipment', 'se-shipment-1'],
     ['label', 'se-label-existing'],

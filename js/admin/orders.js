@@ -3,14 +3,14 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, safeUrl, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260804b';
-import { captureDirty, restoreDirty } from './edits.js?v=20260804b';
-import { createSavedViews } from './saved-views.js?v=20260804b';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260804c';
+import { captureDirty, restoreDirty } from './edits.js?v=20260804c';
+import { createSavedViews } from './saved-views.js?v=20260804c';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const OPEN_NET_STATUS_OPTIONS = ['net_open', 'cancelled'];
 
-export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats }) {
+export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats }) {
   const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
 
   function qboReconciliation(order) {
@@ -194,7 +194,6 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
     const ship = order.ship_address || {};
     const phone = ship.phone || ship.address?.phone || '';
-    const labelUrl = safeUrl(order.shipstation_label_url || '');
     const labelState = String(order.shipstation_label_status || '');
     const labelVoided = ['label_voided', 'voided'].includes(labelState);
     const activeLabel = Boolean(order.shipstation_label_id) && !labelVoided;
@@ -204,13 +203,41 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       : labelVoided
         ? '<span class="badge" data-s="archived">label voided</span><small class="muted">Carrier refund requested; pending finance reconciliation. Re-rate to buy a replacement.</small>'
         : activeLabel
-          ? `<span class="badge" data-s="published">${order.shipstation_label_status === 'label_pending' ? 'label pending' : 'label purchased'}</span>${labelUrl && labelUrl !== '#' ? ` <a class="btn btn-ghost btn-sm" href="${esc(labelUrl)}" target="_blank" rel="noopener">Open PDF label</a>` : ''}`
+          ? `<span class="badge" data-s="published">${order.shipstation_label_status === 'label_pending' ? 'label pending' : 'label purchased'}</span>
+            <button class="btn btn-ghost btn-sm" data-shipstation-download-label="${id}" data-label-id="${esc(order.shipstation_label_id)}" type="button">Download label</button>`
           : labelState === 'label_void_failed'
             ? '<span class="badge" data-s="changes_requested">void rejected</span><small class="muted">Label remains active. Review carrier response before retrying.</small>'
         : '';
     const shippable = ['paid', 'net_open', 'net_paid', 'fulfilled'].includes(order.status);
+    const reconcileControl = ['purchasing', 'reconcile_required'].includes(labelState)
+      ? `<details class="adm-shipstation-reconcile" data-capability-scope="order.write">
+          <summary>Reconcile uncertain label purchase</summary>
+          <label class="admin-input-wide">Reason <textarea class="adm-textarea" data-shipstation-reconcile-reason="${id}" name="shipstation_reconcile_reason_${id}" rows="2" maxlength="280" placeholder="Why this purchase must be reconciled" aria-label="Reconciliation reason for order ${id}"></textarea></label>
+          <label class="adm-check"><input data-shipstation-reconcile-confirm="${id}" name="shipstation_reconcile_confirm_${id}" type="checkbox"> Confirm reconciliation of the uncertain carrier charge.</label>
+          <button class="btn btn-secondary btn-sm" data-shipstation-reconcile-label="${id}" type="button">Reconcile purchase</button>
+          <small class="muted">Searches at most 200 recent labels for this exact shipment. It never purchases a label.</small>
+        </details>`
+      : '';
+    const returnLabelId = String(order.shipstation_return_label_id || '');
+    const returnState = String(order.shipstation_return_label_status || '');
+    const returnControl = activeLabel
+      ? returnLabelId
+        ? `<div class="adm-shipstation-return">
+            <span class="badge" data-s="published">${esc(returnState.replaceAll('_', ' ') || 'return label created')}</span>
+            <button class="btn btn-ghost btn-sm" data-shipstation-download-label="${id}" data-label-id="${esc(returnLabelId)}" type="button">Download return label</button>
+          </div>`
+        : ['return_purchasing', 'return_reconcile_required'].includes(returnState)
+          ? `<small class="muted" data-capability-scope="order.write">Return-label state is ${esc(returnState.replaceAll('_', ' '))}; inspect ShipStation before retrying.</small>`
+          : `<details class="adm-shipstation-return" data-capability-scope="order.write">
+              <summary>Create return label</summary>
+              <label class="admin-input-wide">Reason <textarea class="adm-textarea" data-shipstation-return-reason="${id}" name="shipstation_return_reason_${id}" rows="2" maxlength="280" placeholder="Why a return label is required" aria-label="Return-label reason for order ${id}"></textarea></label>
+              <label class="adm-check"><input data-shipstation-return-confirm="${id}" name="shipstation_return_confirm_${id}" type="checkbox"> Confirm return-label carrier charge.</label>
+              <button class="btn btn-secondary btn-sm" data-shipstation-return-label="${id}" data-label-id="${esc(order.shipstation_label_id)}" type="button">Create return label</button>
+              <small class="muted">Carrier-default billing applies. Delayed charges remain pending financial evidence until carrier acceptance.</small>
+            </details>`
+      : '';
     const voidControl = activeLabel && ['label_purchased', 'label_void_failed'].includes(labelState)
-      ? `<details class="adm-shipstation-void">
+      ? `<details class="adm-shipstation-void" data-capability-scope="order.write">
           <summary>${voidBlocked ? 'Void unavailable after carrier movement' : 'Void label / request carrier refund'}</summary>
           ${voidBlocked ? '<small class="muted">Use carrier support/claims workflow after shipment movement.</small>' : `
             <label class="admin-input-wide">Reason <textarea class="adm-textarea" data-shipstation-void-reason="${id}" name="shipstation_void_reason_${id}" rows="2" maxlength="280" placeholder="Why this label must be voided" aria-label="Void reason for order ${id}"></textarea></label>
@@ -220,18 +247,20 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
           `}
         </details>`
       : '';
-    const quoteControl = shippable && !activeLabel && !['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState) ? `
+    const quoteControl = shippable && !activeLabel && !['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState) ? `<div data-capability-scope="order.write">
       <label>Phone <input class="adm-input" data-shipstation-phone="${id}" type="tel" value="${esc(phone)}" placeholder="+1 321-555-0100" autocomplete="tel"></label>
       <label>Address type <select class="adm-select" data-shipstation-residential="${id}"><option value="unknown">Unknown</option><option value="yes">Residential</option><option value="no">Commercial</option></select></label>
       <label class="admin-input-wide">Package override <textarea class="adm-textarea adm-shipstation-packages" data-shipstation-packages="${id}" rows="2" placeholder="Leave blank for CMS package profiles&#10;42.5, 14, 14, 18" aria-describedby="shipstation-format-${id}"></textarea><small id="shipstation-format-${id}" class="muted">Blank uses each variant's CMS shipping profile. Override: one/package line with weight_lb, length_in, width_in, height_in.</small></label>
       <button class="btn btn-secondary btn-sm" data-shipstation-rates="${id}" type="button">Get live rates</button>
       <div class="adm-shipstation-results" data-shipstation-results="${id}" role="status" aria-live="polite"></div>
-    ` : '';
-    const shipStation = `<details class="adm-track adm-shipstation" data-capability-scope="order.write">
+    </div>` : '';
+    const shipStation = `<details class="adm-track adm-shipstation">
       <summary><b>ShipStation API Free</b>${order.shipstation_label_status ? ` ${statusBadge(order.shipstation_label_status)}` : ''}</summary>
       <div class="adm-track-controls">
         ${labelSummary}
+        ${reconcileControl}
         ${voidControl}
+        ${returnControl}
         ${quoteControl || (!activeLabel && !shippable ? '<small class="muted">Order must be paid, approved NET, or fulfilled before label purchase.</small>' : '')}
       </div>
     </details>`;
@@ -431,9 +460,14 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     const lifecycle = lifecycleFor(order);
     const providerLinks = (order.order_provider_links || [])
       .slice().sort((a, b) => `${a.provider}:${a.object_type}`.localeCompare(`${b.provider}:${b.object_type}`));
+    const providerObject = (link) => {
+      const id = esc(link.provider_object_id);
+      if (link.provider !== 'shipstation' || !['label', 'return_label'].includes(link.object_type)) return `<code>${id}</code>`;
+      return `<button class="btn btn-ghost btn-sm" data-shipstation-download-label="${esc(order.id)}" data-label-id="${esc(link.provider_object_id)}" type="button"><code>${id}</code></button>`;
+    };
     const providerLedger = providerLinks.length
       ? `<h4 style="margin:16px 0 4px">Provider ledger</h4><ul style="margin:0;padding-left:18px">${providerLinks.map((link) =>
-          `<li><b>${esc(link.provider)}</b> ${esc(link.object_type)} — <code>${esc(link.provider_object_id)}</code></li>`).join('')}</ul>`
+          `<li><b>${esc(link.provider)}</b> ${esc(link.object_type)} — ${providerObject(link)}</li>`).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Provider ledger</h4><p class="muted" style="margin:0">No external provider objects linked.</p>';
     const integrationHistory = integrationTimeline.length
       ? `<h4 style="margin:16px 0 4px">Integration delivery</h4><ul style="margin:0;padding-left:18px">${integrationTimeline.map((entry) =>
@@ -449,7 +483,7 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
     const financialLedger = financialEntries.length
       ? `<h4 style="margin:16px 0 4px">Financial evidence</h4>
-        <p class="muted" style="margin:0 0 4px">Realized postage ${esc(money(realizedPostage, order.currency))}${pendingPostage ? ` · pending carrier credit ${esc(money(pendingPostage, order.currency))}` : ''}</p>
+        <p class="muted" style="margin:0 0 4px">Realized postage ${esc(money(realizedPostage, order.currency))}${pendingPostage ? ` · pending provider amount ${esc(money(pendingPostage, order.currency))}` : ''}</p>
         <ul style="margin:0;padding-left:18px">${financialEntries.map((entry) =>
           `<li><b>${esc(entry.source)}</b> ${esc(entry.entry_type.replaceAll('_', ' '))} — ${esc(money(entry.amount, entry.currency))} · ${esc(entry.recognition_state)} · <code>${esc(entry.provider_object_id)}</code>${entry.reason ? ` — ${esc(entry.reason)}` : ''}</li>`).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Financial evidence</h4><p class="muted" style="margin:0">No provider cost entries.</p>';
@@ -464,6 +498,32 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       ${financialLedger}
       ${integrationHistory}
       <h4 style="margin:16px 0 4px">Staff timeline</h4><ul style="margin:0;padding-left:18px">${events}</ul>`;
+  }
+
+  function wireLabelDownloads(root) {
+    delegate(root, 'click', '[data-shipstation-download-label]', async (event, button) => {
+      const id = button.dataset.shipstationDownloadLabel;
+      const labelId = button.dataset.labelId;
+      const url = `/api/admin/shipstation?action=label_document&order_id=${encodeURIComponent(id)}&label_id=${encodeURIComponent(labelId)}&format=pdf`;
+      button.disabled = true;
+      message('ordStatus', 'Preparing authenticated label download…');
+      try {
+        const blob = await apiBlob(url);
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = `${id}-label-${labelId}.pdf`.replace(/[^A-Za-z0-9_.-]+/g, '-');
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        message('ordStatus', 'Label downloaded.', 'ok');
+      } catch (error) {
+        message('ordStatus', error.data?.error || 'Could not download label. Refresh and retry.', 'err');
+      } finally {
+        button.disabled = false;
+      }
+    });
   }
 
   function wireOrders() {
@@ -507,7 +567,8 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
       button.disabled = true;
       try {
         const res = await api('/api/admin/orders?id=' + encodeURIComponent(button.dataset.orderDetail));
-        detailDialog(orderDetailHtml(res.order, res.timeline, res.integration_timeline));
+        const dialog = detailDialog(orderDetailHtml(res.order, res.timeline, res.integration_timeline));
+        if (dialog) wireLabelDownloads(dialog);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Could not load order detail. Retry.', 'err');
       } finally {
@@ -647,6 +708,70 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Label purchase failed. Check ShipStation before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    wireLabelDownloads(box);
+    delegate(box, 'click', '[data-shipstation-reconcile-label]', async (event, button) => {
+      const id = button.dataset.shipstationReconcileLabel;
+      const reason = box.querySelector(`[data-shipstation-reconcile-reason="${CSS.escape(id)}"]`)?.value.trim() || '';
+      const confirmed = box.querySelector(`[data-shipstation-reconcile-confirm="${CSS.escape(id)}"]`)?.checked === true;
+      if (reason.length < 8) {
+        message('ordStatus', 'Enter a specific reconciliation reason (at least 8 characters).', 'err');
+        return;
+      }
+      if (!confirmed) {
+        message('ordStatus', 'Confirm reconciliation of the uncertain purchase first.', 'err');
+        return;
+      }
+      if (!(await confirmDialog('Search recent ShipStation labels for this exact shipment? This does not buy a new label.', {
+        confirmText: 'Reconcile purchase',
+        cancelText: 'Cancel',
+      }))) return;
+      button.disabled = true;
+      message('ordStatus', 'Reconciling uncertain ShipStation purchase…');
+      try {
+        await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: { action: 'reconcile_label_purchase', order_id: id, confirm: true, reason },
+        });
+        message('ordStatus', 'Existing label reconciled; no new purchase.', 'ok');
+        await refreshOrder(id);
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Reconciliation unresolved. Inspect ShipStation before retrying.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-shipstation-return-label]', async (event, button) => {
+      const id = button.dataset.shipstationReturnLabel;
+      const labelId = button.dataset.labelId;
+      const reason = box.querySelector(`[data-shipstation-return-reason="${CSS.escape(id)}"]`)?.value.trim() || '';
+      const confirmed = box.querySelector(`[data-shipstation-return-confirm="${CSS.escape(id)}"]`)?.checked === true;
+      if (reason.length < 8) {
+        message('ordStatus', 'Enter a specific return-label reason (at least 8 characters).', 'err');
+        return;
+      }
+      if (!confirmed) {
+        message('ordStatus', 'Confirm the return-label carrier charge first.', 'err');
+        return;
+      }
+      if (!(await confirmDialog('Create a return label now? The connected carrier account may be charged.', {
+        confirmText: 'Create return label',
+        cancelText: 'Cancel',
+      }))) return;
+      button.disabled = true;
+      message('ordStatus', 'Creating ShipStation return label…');
+      try {
+        const res = await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: { action: 'return_label', order_id: id, label_id: labelId, confirm: true, reason },
+        });
+        message('ordStatus', res.already_created
+          ? 'Existing return label loaded; no second provider request.'
+          : 'Return label created and financial evidence recorded.', 'ok');
+        await refreshOrder(id);
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Return-label result uncertain. Inspect ShipStation before retrying.', 'err');
         button.disabled = false;
       }
     });

@@ -1,0 +1,15 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /Users/omar/Claude/Projects/MASEST/factory/prompts/masest-042.implement.codex.md)"
+  ],
+  "created_at": "2026-08-04T18:56:45+00:00",
+  "id": "masest-042",
+  "prompt_path": "/Users/omar/Claude/Projects/MASEST/factory/prompts/masest-042.implement.codex.md",
+  "spec_path": "/Users/omar/Claude/Projects/MASEST/factory/specs/active/masest-042.md",
+  "spec_sha256": "5b1a9077ecc7a5ea9c30b9bb1b4654d48305b61efb0350a4754daca6bc9e7642",
+  "status": "planned",
+  "title": "Safe ShipStation label documents, returns, and purchase reconciliation"
+}

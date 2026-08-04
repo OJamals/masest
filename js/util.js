@@ -184,11 +184,12 @@ export function detailDialog(html) {
   dlg.className = 'detail-dialog';
   dlg.innerHTML = `<div class="detail-dialog-body">${html}</div>`
     + `<form method="dialog" class="detail-dialog-actions"><button class="btn btn-ghost btn-sm" value="close" type="submit">Close</button></form>`;
-  if (typeof dlg.showModal !== 'function') return;
+  if (typeof dlg.showModal !== 'function') return null;
   document.body.appendChild(dlg);
   restoreFocusOnClose(dlg);
   dlg.addEventListener('close', () => dlg.remove());
   dlg.showModal();
+  return dlg;
 }
 
 /* ---- Toast notifications (non-blocking alert replacement) ---- */

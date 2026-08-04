@@ -43,3 +43,26 @@ test('orders UI supports multi-package rates and confirms live label purchase', 
   assert.match(source, /action: 'rates'/);
   assert.match(source, /action: 'buy_label'/);
 });
+
+test('orders UI proxies label documents and confirms reconciliation and returns', async () => {
+  const [source, ordersApi, adminEntry] = await Promise.all([
+    read('../js/admin/orders.js'),
+    read('../functions/api/admin/orders.js'),
+    read('../js/admin.js'),
+  ]);
+  assert.match(source, /data-shipstation-download-label/);
+  assert.match(source, /data-shipstation-reconcile-label/);
+  assert.match(source, /data-shipstation-return-label/);
+  assert.match(source, /action: 'reconcile_label_purchase'/);
+  assert.match(source, /action: 'return_label'/);
+  assert.match(source, /\/api\/admin\/shipstation\?action=label_document/);
+  assert.match(source, /await apiBlob\(url\)/);
+  assert.match(adminEntry, /\$, api, apiBlob, state/);
+  assert.doesNotMatch(source, /window\.open\(url/);
+  assert.doesNotMatch(source, /shipstation_label_url[^\n]+href=/);
+  assert.match(source, /Confirm return-label carrier charge/);
+  assert.match(source, /Confirm reconciliation/);
+  assert.match(ordersApi, /delete safeOrder\.shipstation_label_url/);
+  const listSelect = ordersApi.match(/\.select\('id,order_number,[^']+'/)?.[0] || '';
+  assert.doesNotMatch(listSelect, /shipstation_label_url/);
+});

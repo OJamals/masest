@@ -27,6 +27,7 @@ export const STAFF_ROLES = ["owner", "finance", "support", "read_only"];
 // in this batch; everything else stays open to any staff (tightened in a follow-up).
 const STAFF_CAPABILITIES = {
   "admin.write": ["owner", "finance", "support"],
+  "order.read": ["owner", "finance", "support", "read_only"],
   "order.write": ["owner", "finance", "support"],
   "order.delete": ["owner"],
   "order.refund": ["owner", "finance"],

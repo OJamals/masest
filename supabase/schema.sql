@@ -145,6 +145,14 @@ alter table public.orders add column if not exists shipstation_cost numeric(12,2
 alter table public.orders add column if not exists shipstation_label_status text;
 alter table public.orders add column if not exists shipstation_error text;
 alter table public.orders add column if not exists shipstation_updated_at timestamptz;
+alter table public.orders add column if not exists shipstation_return_label_id text;
+alter table public.orders add column if not exists shipstation_return_label_status text;
+alter table public.orders add column if not exists shipstation_return_cost numeric(12,2);
+alter table public.orders add column if not exists shipstation_return_currency text;
+alter table public.orders add column if not exists shipstation_return_charge_event text;
+alter table public.orders add column if not exists shipstation_return_tracking_number text;
+alter table public.orders add column if not exists shipstation_return_error text;
+alter table public.orders add column if not exists shipstation_return_updated_at timestamptz;
 
 create index if not exists orders_tracking_status_idx
   on public.orders (tracking_status, estimated_delivery_at, created_at desc);
