@@ -39,6 +39,9 @@
   .dash-status[data-state=ok] { color: var(--accent-ink); }
   .dash-status[data-state=err] { color: var(--status-danger-ink); }
   .dash-status[data-state=busy] { color: var(--muted); }
+  .dash-address-autocomplete { grid-column: 1 / -1; }
+  .dash-address-autocomplete gmp-place-autocomplete { display: block; width: 100%; color: var(--ink); font: inherit; }
+  .dash-address-autocomplete small { display: block; margin-top: 6px; color: var(--muted); }
   .setup-list { display: grid; gap: 10px; margin-top: 14px; }
   .setup-step { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: #fff; }
   .setup-step[data-setup-state="done"] { background: color-mix(in srgb, var(--accent) 5%, transparent); border-color: color-mix(in srgb, var(--accent) 18%, transparent); }
@@ -632,6 +635,7 @@
                 <div class="field-grid">
                   <div class="field"><label for="aType">Address type</label>
                     <select id="aType" name="address_type"><option value="ship">Shipping</option><option value="bill">Billing</option></select></div>
+                  <div id="addressAutocompleteMount" class="field dash-address-autocomplete" hidden><small>Select a suggestion to fill the fields below. Manual entry remains available.</small></div>
                   <div class="field"><label for="aLine1">Address line 1 *</label><input id="aLine1" name="address_line1" autocomplete="address-line1" required></div>
                   <div class="field"><label for="aLine2">Address line 2</label><input id="aLine2" name="address_line2" autocomplete="address-line2"></div>
                   <div class="field"><label for="aCity">City *</label><input id="aCity" name="city" autocomplete="address-level2" required></div>

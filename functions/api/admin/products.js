@@ -19,7 +19,7 @@ const BASE_COLUMNS = [
   'sort',
 ];
 const MEDIA_COLUMNS = ['image_url', 'photo_alt', 'gallery'];
-const VARIANT_SELECT = 'product_variants(id,vsku,product_sku,label,gallons,price,currency,stripe_price_id,stock,track_stock,active,sort)';
+const VARIANT_SELECT = 'product_variants(id,vsku,product_sku,label,gallons,price,currency,stripe_price_id,stock,track_stock,active,sort,shipping_weight_lb,shipping_length_in,shipping_width_in,shipping_height_in)';
 const PRODUCT_WRITABLE = [
   'name',
   'mode',
@@ -46,6 +46,10 @@ const VARIANT_WRITABLE = [
   'track_stock',
   'active',
   'sort',
+  'shipping_weight_lb',
+  'shipping_length_in',
+  'shipping_width_in',
+  'shipping_height_in',
 ];
 const PRICE_MANAGED_MESSAGE = 'Prices are managed in Admin > Pricing. Update them there.';
 
@@ -156,6 +160,31 @@ export function normalizeVariant(input) {
     row.stock = stock;
   } else if (row.stock === '') {
     row.stock = null;
+  }
+
+  if (row.shipping_weight_lb !== undefined) {
+    if (row.shipping_weight_lb === '' || row.shipping_weight_lb === null) row.shipping_weight_lb = null;
+    else {
+      const weight = Number(row.shipping_weight_lb);
+      if (!Number.isFinite(weight) || weight <= 0) return { error: 'invalid_shipping_weight' };
+      row.shipping_weight_lb = weight;
+    }
+  }
+
+  const dimensionKeys = ['shipping_length_in', 'shipping_width_in', 'shipping_height_in'];
+  if (dimensionKeys.some((key) => row[key] !== undefined)) {
+    for (const key of dimensionKeys) {
+      if (row[key] === '' || row[key] === null || row[key] === undefined) row[key] = null;
+      else {
+        const dimension = Number(row[key]);
+        if (!Number.isFinite(dimension) || dimension <= 0) return { error: 'invalid_shipping_dimensions' };
+        row[key] = dimension;
+      }
+    }
+    const populated = dimensionKeys.filter((key) => row[key] != null).length;
+    if (populated !== 0 && populated !== dimensionKeys.length) {
+      return { error: 'incomplete_shipping_dimensions' };
+    }
   }
 
   row.currency = String(row.currency || 'usd').toLowerCase();

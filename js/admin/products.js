@@ -187,6 +187,10 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       <label>Gallons <input class="adm-input" type="number" min="0" step="0.01" value="${esc(v.gallons ?? '')}" data-vfield="gallons" aria-label="Gallons"></label>
       <label>Price <output class="adm-managed-price" aria-label="Workbook-managed variant price">${v.price == null ? 'Workbook managed' : esc(`USD ${Number(v.price).toFixed(2)}`)}</output></label>
       <label>Stock <input class="adm-input" type="number" min="0" step="1" value="${esc(v.stock ?? '')}" data-vfield="stock" aria-label="Variant stock"></label>
+      <label>Ship lb <input class="adm-input" type="number" min="0.001" step="0.001" value="${esc(v.shipping_weight_lb ?? '')}" data-vfield="shipping_weight_lb" aria-label="Shipping weight pounds"></label>
+      <label>Length in <input class="adm-input" type="number" min="0.01" step="0.01" value="${esc(v.shipping_length_in ?? '')}" data-vfield="shipping_length_in" aria-label="Package length inches"></label>
+      <label>Width in <input class="adm-input" type="number" min="0.01" step="0.01" value="${esc(v.shipping_width_in ?? '')}" data-vfield="shipping_width_in" aria-label="Package width inches"></label>
+      <label>Height in <input class="adm-input" type="number" min="0.01" step="0.01" value="${esc(v.shipping_height_in ?? '')}" data-vfield="shipping_height_in" aria-label="Package height inches"></label>
       <label class="variant-active"><input type="checkbox" ${v.active !== false ? 'checked' : ''} data-vfield="active"> Active</label>
       <button class="btn btn-primary btn-sm" data-save-variant="${esc(v.vsku)}" type="button">Save</button>
       <button class="btn btn-ghost btn-sm" data-remove-variant="${esc(v.vsku)}" type="button">Remove</button>
@@ -296,6 +300,10 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         label: $('nvLabel').value.trim(),
         gallons: $('nvGallons').value,
         stock: $('nvStock').value,
+        shipping_weight_lb: $('nvShipWeight').value,
+        shipping_length_in: $('nvShipLength').value,
+        shipping_width_in: $('nvShipWidth').value,
+        shipping_height_in: $('nvShipHeight').value,
         track_stock: $('nvStock').value !== '',
         active: true,
       };

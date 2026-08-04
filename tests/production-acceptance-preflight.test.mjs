@@ -20,6 +20,10 @@ const completeEnv = {
   STRIPE_EFFECTS_WORKER_SECRET: "stripe_effects_secret",
   STRIPE_PUBLISHABLE_KEY: "pk_live_public",
   STRIPE_SHIPPING_RATE_IDS: "shr_live_ground",
+  SHIPSTATION_API_KEY: "shipstation_secret",
+  SHIPSTATION_WAREHOUSE_ID: "se-warehouse-1",
+  SHIPSTATION_WEBHOOK_TOKEN: "shipstation_webhook_secret",
+  GC_AUTOCOMPLETE_API_KEY: `AIza${"x".repeat(32)}`,
   QBO_CLIENT_ID: "qbo_client",
   QBO_CLIENT_SECRET: "qbo_secret",
   QBO_REDIRECT_URI: "https://masest.co/api/admin/qbo/callback",
@@ -40,7 +44,7 @@ test("redactValue reports presence without leaking secret values", () => {
 test("acceptanceEnvGroups names the live integration gates", () => {
   assert.deepEqual(
     acceptanceEnvGroups.map((group) => group.id),
-    ["supabase", "stripe", "stripe_effects", "qbo", "cms_publish"],
+    ["supabase", "stripe", "stripe_effects", "shipstation", "google_address", "qbo", "cms_publish"],
   );
   assert.deepEqual(
     acceptanceEnvGroups.find((group) => group.id === "stripe").required,
@@ -49,6 +53,14 @@ test("acceptanceEnvGroups names the live integration gates", () => {
   assert.deepEqual(
     acceptanceEnvGroups.find((group) => group.id === "stripe_effects").required,
     ["STRIPE_EFFECTS_WORKER_SECRET"],
+  );
+  assert.deepEqual(
+    acceptanceEnvGroups.find((group) => group.id === "shipstation").required,
+    ["SHIPSTATION_API_KEY", "SHIPSTATION_WAREHOUSE_ID", "SHIPSTATION_WEBHOOK_TOKEN"],
+  );
+  assert.deepEqual(
+    acceptanceEnvGroups.find((group) => group.id === "google_address").required,
+    ["GC_AUTOCOMPLETE_API_KEY"],
   );
 });
 
@@ -73,6 +85,8 @@ test("buildPreflightReport fails closed and redacts missing env checks", () => {
   assert.equal(report.checks.git_clean.ok, false);
   assert.equal(report.checks.env_supabase.ok, false);
   assert.equal(report.checks.env_stripe.ok, false);
+  assert.equal(report.checks.env_shipstation.ok, false);
+  assert.equal(report.checks.env_google_address.ok, false);
   assert.equal(report.checks.env_qbo.ok, false);
   assert.equal(report.checks.env_cms_publish.ok, false);
   assert.equal(JSON.stringify(report).includes("sk_live_secret"), false);
@@ -243,6 +257,10 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
           "STRIPE_WEBHOOK_SECRET",
           "STRIPE_EFFECTS_WORKER_SECRET",
           "STRIPE_SHIPPING_RATE_IDS",
+          "SHIPSTATION_API_KEY",
+          "SHIPSTATION_WAREHOUSE_ID",
+          "SHIPSTATION_WEBHOOK_TOKEN",
+          "GC_AUTOCOMPLETE_API_KEY",
           "CONTENT_PUBLISH_HOOK_URL",
         ].map((key) => [key, { type: "secret_text" }])),
       },
@@ -274,6 +292,8 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
   assert.equal(report.checks.env_cms_publish.ok, true);
   assert.equal(report.checks.env_stripe.ok, true);
   assert.equal(report.checks.env_stripe_effects.ok, true);
+  assert.equal(report.checks.env_shipstation.ok, true);
+  assert.equal(report.checks.env_google_address.ok, true);
   assert.equal(report.checks.env_qbo.ok, false);
   assert.deepEqual(report.checks.env_stripe.details.missing, []);
   assert.equal(JSON.stringify(report).includes("cloudflare:secret_text"), false);
@@ -292,6 +312,10 @@ test("buildPreflightReport accepts a Cloudflare QBO connect key bundle", () => {
           STRIPE_WEBHOOK_SECRET: { type: "secret_text" },
           STRIPE_EFFECTS_WORKER_SECRET: { type: "secret_text" },
           STRIPE_SHIPPING_RATE_IDS: { type: "secret_text" },
+          SHIPSTATION_API_KEY: { type: "secret_text" },
+          SHIPSTATION_WAREHOUSE_ID: { type: "plain_text", value: "se-warehouse-1" },
+          SHIPSTATION_WEBHOOK_TOKEN: { type: "secret_text" },
+          GC_AUTOCOMPLETE_API_KEY: { type: "secret_text" },
           CONTENT_PUBLISH_HOOK_URL: { type: "secret_text" },
           QBO_CONNECT_KEY: { type: "secret_text" },
         },

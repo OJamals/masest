@@ -37,6 +37,7 @@ const STAFF_CAPABILITIES = {
   "content.publish": ["owner"],
   "content.review": ["owner"],
   "content.write": ["owner"],
+  "integration.configure": ["owner"],
   "user.manage": ["owner"],
   "user.role": ["owner"],
 };

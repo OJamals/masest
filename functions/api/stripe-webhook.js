@@ -36,6 +36,7 @@ import {
   enqueueStripeEffects,
   subscriptionActivationEffects,
 } from '../_lib/stripe-effects.js';
+import { stripeRuntimeError } from '../_lib/stripe-runtime.js';
 import {
   finalizeQuoteOrder,
   markQuotePaymentPending,
@@ -131,6 +132,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const secret = env.STRIPE_SECRET_KEY;
   const whSecret = env.STRIPE_WEBHOOK_SECRET;
   if (!secret || !whSecret) return json(500, { error: 'stripe_not_configured' });
+  const runtimeError = stripeRuntimeError(env);
+  if (runtimeError) return json(503, { error: runtimeError });
   const retrieveCheckoutSession = dependencies.retrieveCheckoutSession || (async (id) => {
     const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
     return stripe.checkout.sessions.retrieve(id);

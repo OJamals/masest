@@ -135,9 +135,23 @@ alter table public.orders add column if not exists tracking_number text;
 alter table public.orders add column if not exists tracking_url text;
 alter table public.orders add column if not exists estimated_delivery_at timestamptz;
 alter table public.orders add column if not exists shipped_at timestamptz;
+alter table public.orders add column if not exists shipstation_shipment_id text;
+alter table public.orders add column if not exists shipstation_label_id text;
+alter table public.orders add column if not exists shipstation_rate_id text;
+alter table public.orders add column if not exists shipstation_carrier_id text;
+alter table public.orders add column if not exists shipstation_service_code text;
+alter table public.orders add column if not exists shipstation_label_url text;
+alter table public.orders add column if not exists shipstation_cost numeric(12,2);
+alter table public.orders add column if not exists shipstation_label_status text;
+alter table public.orders add column if not exists shipstation_error text;
+alter table public.orders add column if not exists shipstation_updated_at timestamptz;
 
 create index if not exists orders_tracking_status_idx
   on public.orders (tracking_status, estimated_delivery_at, created_at desc);
+create unique index if not exists orders_shipstation_shipment_uidx
+  on public.orders (shipstation_shipment_id) where shipstation_shipment_id is not null;
+create unique index if not exists orders_shipstation_label_uidx
+  on public.orders (shipstation_label_id) where shipstation_label_id is not null;
 
 create table if not exists public.order_items (
   id          uuid primary key default gen_random_uuid(),
@@ -255,10 +269,31 @@ create table if not exists public.product_variants (
   price           numeric(12,2),
   currency        text not null default 'usd',
   stripe_price_id text,
+  shipping_weight_lb numeric(10,3) check (shipping_weight_lb is null or shipping_weight_lb > 0),
+  shipping_length_in numeric(8,2),
+  shipping_width_in numeric(8,2),
+  shipping_height_in numeric(8,2),
   active          boolean not null default true,
   sort            int not null default 0,
   created_at      timestamptz not null default now()
 );
+alter table public.product_variants add column if not exists shipping_weight_lb numeric(10,3);
+alter table public.product_variants add column if not exists shipping_length_in numeric(8,2);
+alter table public.product_variants add column if not exists shipping_width_in numeric(8,2);
+alter table public.product_variants add column if not exists shipping_height_in numeric(8,2);
+do $$ begin
+  alter table public.product_variants add constraint product_variants_shipping_weight_positive
+    check (shipping_weight_lb is null or shipping_weight_lb > 0);
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_shipping_dimensions_complete
+    check (
+      (shipping_length_in is null and shipping_width_in is null and shipping_height_in is null)
+      or (shipping_length_in > 0 and shipping_width_in > 0 and shipping_height_in > 0)
+    );
+exception when duplicate_object then null;
+end $$;
 create index if not exists product_variants_sku_idx on public.product_variants(product_sku);
 
 alter table public.product_variants enable row level security;

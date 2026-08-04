@@ -16,6 +16,7 @@ import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
 import { finalizeQuoteOrder } from '../_lib/quote-order.js';
+import { stripeRuntimeError, stripeShippingRatesError } from '../_lib/stripe-runtime.js';
 
 const CHECKOUT_BODY_MAX_BYTES = 64 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -70,6 +71,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const sendNetConfirmation = dependencies.sendNetOrderConfirmation || sendNetOrderConfirmation;
   const createStripe = dependencies.createStripe
     || ((secret) => new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() }));
+  const validateShippingRates = dependencies.validateShippingRates || stripeShippingRatesError;
 
   const rl = await checkRateLimit(env, 'checkout', clientIp(request), { limit: 20, windowSec: 60 });
   if (!rl.ok) {
@@ -409,6 +411,8 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   if (!secret) return json(500, { error: 'stripe_not_configured' });
   const appUrl = String(env.APP_URL || '').replace(/\/+$/, '');
   if (!appUrl) return json(500, { error: 'app_url_not_configured' });
+  const runtimeError = stripeRuntimeError(env);
+  if (runtimeError) return json(503, { error: runtimeError });
   let shippingRateIds = parseStripeShippingRateIds(env.STRIPE_SHIPPING_RATE_IDS);
   try {
     const { data: entries, error } = await sb.from('content_entries')
@@ -422,6 +426,8 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     // Keep env config as emergency fallback while CMS is unavailable.
   }
   if (!shippingRateIds?.length) return json(503, { error: 'shipping_not_configured' });
+  const shippingRateError = await validateShippingRates(env, shippingRateIds);
+  if (shippingRateError) return json(503, { error: shippingRateError });
   const stripe = createStripe(secret);
 
   const taxEnabled = env.STRIPE_TAX_ENABLED === 'true';

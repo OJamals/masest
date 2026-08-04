@@ -26,6 +26,16 @@ export const acceptanceEnvGroups = [
     required: ["STRIPE_EFFECTS_WORKER_SECRET"],
   },
   {
+    id: "shipstation",
+    label: "ShipStation API Free fulfillment",
+    required: ["SHIPSTATION_API_KEY", "SHIPSTATION_WAREHOUSE_ID", "SHIPSTATION_WEBHOOK_TOKEN"],
+  },
+  {
+    id: "google_address",
+    label: "Google Places saved-address autocomplete",
+    required: ["GC_AUTOCOMPLETE_API_KEY"],
+  },
+  {
     id: "qbo",
     label: "QuickBooks Online sync",
     required: [],
@@ -194,7 +204,7 @@ export function buildPreflightReport({
     ready: blockers.length === 0,
     mode: "non_mutating_preflight",
     env_source: envSource,
-    live_mutation_boundary: "stop for explicit operator go/no-go before QA records, CMS publish, Stripe, or QBO mutations",
+    live_mutation_boundary: "stop for explicit operator go/no-go before QA records, CMS publish, Stripe, ShipStation label purchase, or QBO mutations",
     checks,
     blockers,
   };

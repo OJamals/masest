@@ -484,14 +484,20 @@ const featureLoader = createFeatureLoader({
   },
   integrations: async () => {
     const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260730a');
+    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260730a');
+    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260730a');
     return {
       wire() {
         $('qboConnect')?.addEventListener('click', connectQbo);
         $('qboSyncNow')?.addEventListener('click', runQboSync);
         $('qboDisconnect')?.addEventListener('click', disconnectQbo);
+        wireShipStationStatus();
       },
       async render() {
-        try { await renderQboStatus(); }
+        try {
+          const qboStatusPromise = renderQboStatus();
+          await Promise.all([qboStatusPromise, renderStripeStatus(), renderShipStationStatus()]);
+        }
         finally { applyCapabilityUi(document.body, state.staff); }
       },
     };

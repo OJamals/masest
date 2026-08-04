@@ -30,6 +30,7 @@ test('high-risk admin controls declare the same capabilities as their APIs', () 
 
   assert.match(html, /adm-order-create" data-capability="order\.write" data-capability-mode="hide"/);
   assert.match(html, /id="admInventory" data-capability-scope="admin\.write"/);
+  assert.match(html, /id="shipstationConfigureWebhook"[\s\S]*data-capability="integration\.configure"/);
   assert.match(orders, /data-refund-order=.*data-capability="order\.refund"/);
   assert.match(orders, /data-delete-order=.*data-capability="order\.delete"/);
   assert.match(orders, /data-mark-net-paid-order=.*data-capability="company\.credit"/);

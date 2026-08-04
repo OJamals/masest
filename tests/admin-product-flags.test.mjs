@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeProduct } from "../functions/api/admin/products.js";
+import { normalizeProduct, normalizeVariant } from "../functions/api/admin/products.js";
 
 const base = { sku: "cr" };
 
@@ -32,4 +32,29 @@ test("sort coerces to int or null; a float is rejected", () => {
   assert.equal(normalizeProduct({ ...base, sort: "3" }).row.sort, 3);
   assert.equal(normalizeProduct({ ...base, sort: "" }).row.sort, null);
   assert.deepEqual(normalizeProduct({ ...base, sort: "1.5" }), { error: "invalid_sort" });
+});
+
+test('variant shipping profile normalizes weight and optional all-or-none dimensions', () => {
+  const baseVariant = { vsku: 'VK-HCR-5G', product_sku: 'hcr', label: '5 gal' };
+  assert.deepEqual(normalizeVariant({
+    ...baseVariant,
+    shipping_weight_lb: '42.5',
+    shipping_length_in: '14',
+    shipping_width_in: '14',
+    shipping_height_in: '18',
+  }).row, {
+    vsku: 'VK-HCR-5G',
+    product_sku: 'hcr',
+    label: '5 gal',
+    shipping_weight_lb: 42.5,
+    shipping_length_in: 14,
+    shipping_width_in: 14,
+    shipping_height_in: 18,
+    gallons: 0,
+    currency: 'usd',
+    track_stock: false,
+    active: true,
+  });
+  assert.equal(normalizeVariant({ ...baseVariant, shipping_weight_lb: '0' }).error, 'invalid_shipping_weight');
+  assert.equal(normalizeVariant({ ...baseVariant, shipping_length_in: '14' }).error, 'incomplete_shipping_dimensions');
 });

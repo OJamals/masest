@@ -172,6 +172,12 @@
   .adm-track-controls .adm-input,
   .adm-track-controls .adm-select { flex: 1 1 140px; max-width: 100%; }
   .adm-track-controls .admin-input-wide { flex-basis: 210px; }
+  .adm-track-controls label { display: grid; gap: 5px; flex: 1 1 150px; min-width: 0; font-size: .78rem; font-weight: 800; }
+  .adm-track-controls label.admin-input-wide { flex-basis: 330px; }
+  .adm-shipstation summary { gap: 8px; }
+  .adm-shipstation-packages { min-height: 76px; resize: vertical; }
+  .adm-shipstation-results { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: 8px; align-items: end; min-width: 0; }
+  .adm-shipstation-results label { flex: 1 1 320px; }
   .admin-input-sm { flex: 1 1 150px; max-width: 170px; }
   .admin-input-md { flex: 1 1 170px; max-width: 210px; }
   .admin-order-actions .admin-input-sm { flex-basis: 220px; max-width: 260px; min-width: min(100%, 180px); }
@@ -772,6 +778,8 @@
           <div><p class="adm-eyebrow">System connections</p><h2>Integrations</h2><p class="muted">Connection readiness, sync queues, failures, and recovery controls.</p></div>
         </div>
         <div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks…</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected" aria-hidden="true"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs" aria-hidden="true"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div>
+        <div id="admStripe" class="adm-card adm-qbo-card"><div class="adm-panel-header"><div><h2>Stripe</h2><p class="muted">Production payment key, CMS shipping rates, and signed order webhook.</p></div></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="stripeStatus" class="adm-status" role="status">Checking Stripe…</p><p id="stripeConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking server-side payment mode.</p><p id="stripeShippingRatesStatus" class="adm-qbo-detail" aria-live="polite">Checking CMS shipping rates.</p></div><div class="adm-qbo-queue" aria-label="Stripe webhook readiness"><small>Order webhook</small><b id="stripeWebhookStatus">Checking…</b></div></div></div>
+        <div id="admShipStation" class="adm-card adm-qbo-card"><div class="adm-panel-header"><div><h2>ShipStation API Free</h2><p class="muted">Live USPS, UPS, and FedEx rates, 4 × 6 PDF labels, and tracking updates.</p></div><button id="shipstationRefresh" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh</button></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="shipstationStatus" class="adm-status" role="status">Checking ShipStation…</p><p id="shipstationConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking server-side configuration.</p><p id="shipstationWebhookStatus" class="adm-qbo-detail" aria-live="polite">Checking tracking webhook.</p></div><div id="shipstationCarriers" class="adm-qbo-queue" aria-label="ShipStation connected carriers"><small>Carriers</small><b>Checking…</b></div></div><div class="adm-inline-actions"><button id="shipstationConfigureWebhook" class="btn btn-secondary btn-sm" type="button" data-capability="integration.configure"><i class="ph ph-link-simple" aria-hidden="true"></i> Configure tracking webhook</button></div></div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="orders">
@@ -885,6 +893,10 @@
             <label>Gallons <input id="nvGallons" name="gallons" class="adm-input" type="number" min="0" step="0.01"></label>
             <label>Price <input id="nvPrice" name="price" class="adm-input" value="Managed in Pricing" readonly aria-describedby="catalogPriceGovernance"></label>
             <label>Stock <input id="nvStock" name="stock" class="adm-input" type="number" min="0" step="1"></label>
+            <label>Ship lb <input id="nvShipWeight" name="shipping_weight_lb" class="adm-input" type="number" min="0.001" step="0.001"></label>
+            <label>Length in <input id="nvShipLength" name="shipping_length_in" class="adm-input" type="number" min="0.01" step="0.01"></label>
+            <label>Width in <input id="nvShipWidth" name="shipping_width_in" class="adm-input" type="number" min="0.01" step="0.01"></label>
+            <label>Height in <input id="nvShipHeight" name="shipping_height_in" class="adm-input" type="number" min="0.01" step="0.01"></label>
             <button class="btn btn-primary" type="submit">Save variant</button>
           </form>
           <p id="variantCreateStatus" class="adm-status" role="status" aria-live="polite"></p>

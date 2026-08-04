@@ -17,6 +17,7 @@ const CAPABILITY_LABELS = Object.freeze({
   'content.publish': 'owner publishing access',
   'content.review': 'owner review access',
   'content.write': 'owner CMS access',
+  'integration.configure': 'owner integration access',
   'user.manage': 'owner user-management access',
   'user.role': 'owner role-management access',
 });

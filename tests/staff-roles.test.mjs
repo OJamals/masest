@@ -67,6 +67,7 @@ test('staffAccessSummary exposes only the current role capabilities', () => {
   assert.equal(owner.can_write, true);
   assert.ok(owner.capabilities.includes('product.write'));
   assert.ok(owner.capabilities.includes('user.manage'));
+  assert.ok(owner.capabilities.includes('integration.configure'));
 
   const support = staffAccessSummary('support', 'support@example.com');
   assert.equal(support.can_write, true);
@@ -74,6 +75,7 @@ test('staffAccessSummary exposes only the current role capabilities', () => {
   assert.ok(support.capabilities.includes('company.view_as'));
   assert.ok(!support.capabilities.includes('company.credit'));
   assert.ok(!support.capabilities.includes('product.write'));
+  assert.ok(!support.capabilities.includes('integration.configure'));
 
   const readOnly = staffAccessSummary('read_only');
   assert.equal(readOnly.can_write, false);

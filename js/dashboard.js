@@ -9,6 +9,7 @@ import {
 } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 import { initBusinessHub } from './business.js?v=20260725f';
+import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260725f';
 
 const $ = (id) => document.getElementById(id);
 
@@ -949,6 +950,16 @@ function wireAddressForm() {
       loaded.addresses = false; renderAddresses();
     } catch (err) { status.textContent = err.data?.error === 'address_incomplete' ? 'Fill in all required fields.' : 'Could not save.'; status.dataset.state = 'err'; }
   });
+  mountAddressAutocomplete({
+    mount: $('addressAutocompleteMount'),
+    fields: {
+      line1: $('aLine1'),
+      line2: $('aLine2'),
+      city: $('aCity'),
+      state: $('aState'),
+      zip: $('aZip'),
+    },
+  }).catch(() => {});
 }
 
 /* ---------- payment ---------- */

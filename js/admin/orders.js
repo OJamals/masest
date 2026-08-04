@@ -3,7 +3,7 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260730a';
+import { esc, safeUrl, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260730a';
 import { captureDirty, restoreDirty } from './edits.js?v=20260730a';
 import { createSavedViews } from './saved-views.js?v=20260730a';
 
@@ -150,6 +150,25 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
     });
   }
 
+  function parseShippingPackages(raw) {
+    const rows = String(raw || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (!rows.length) throw new Error('Add at least one package.');
+    if (rows.length > 20) throw new Error('ShipStation supports at most 20 packages per quote.');
+    return rows.map((line) => {
+      const parts = line.split(',').map((part) => part.trim());
+      if (![1, 4].includes(parts.length)) throw new Error('Use weight_lb or weight_lb, length_in, width_in, height_in per line.');
+      const values = parts.map(Number);
+      if (values.some((value) => !Number.isFinite(value) || value <= 0)) {
+        throw new Error('Package weight and dimensions must be positive numbers.');
+      }
+      return {
+        weight: values[0],
+        unit: 'pound',
+        ...(values.length === 4 ? { length: values[1], width: values[2], height: values[3] } : {}),
+      };
+    });
+  }
+
   function orderEditor(order) {
     const id = esc(order.id);
     return `<details class="adm-order-editor" data-capability-scope="order.write">
@@ -173,7 +192,28 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
   function trackingControls(order) {
     const id = esc(order.id);
     const eta = order.estimated_delivery_at ? new Date(order.estimated_delivery_at).toISOString().slice(0, 16) : '';
-    return `${qboReconciliation(order)}<details class="adm-track" data-capability-scope="admin.write"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
+    const ship = order.ship_address || {};
+    const phone = ship.phone || ship.address?.phone || '';
+    const labelUrl = safeUrl(order.shipstation_label_url || '');
+    const labelSummary = ['purchasing', 'reconcile_required'].includes(order.shipstation_label_status)
+      ? `<span class="badge" data-s="changes_requested">${esc(order.shipstation_label_status.replaceAll('_', ' '))}</span><small class="muted">Check ShipStation before retrying; prior purchase result may be pending or uncertain.</small>`
+      : order.shipstation_label_id
+        ? `<span class="badge" data-s="published">${order.shipstation_label_status === 'label_pending' ? 'label pending' : 'label purchased'}</span>${labelUrl && labelUrl !== '#' ? ` <a class="btn btn-ghost btn-sm" href="${esc(labelUrl)}" target="_blank" rel="noopener">Open PDF label</a>` : ''}`
+        : '';
+    const shippable = ['paid', 'net_open', 'net_paid', 'fulfilled'].includes(order.status);
+    const shipStation = `<details class="adm-track adm-shipstation" data-capability-scope="order.write">
+      <summary><b>ShipStation API Free</b>${order.shipstation_label_status ? ` ${statusBadge(order.shipstation_label_status)}` : ''}</summary>
+      <div class="adm-track-controls">
+        ${labelSummary || (shippable ? `
+          <label>Phone <input class="adm-input" data-shipstation-phone="${id}" type="tel" value="${esc(phone)}" placeholder="+1 321-555-0100" autocomplete="tel"></label>
+          <label>Address type <select class="adm-select" data-shipstation-residential="${id}"><option value="unknown">Unknown</option><option value="yes">Residential</option><option value="no">Commercial</option></select></label>
+          <label class="admin-input-wide">Package override <textarea class="adm-textarea adm-shipstation-packages" data-shipstation-packages="${id}" rows="2" placeholder="Leave blank for CMS package profiles&#10;42.5, 14, 14, 18" aria-describedby="shipstation-format-${id}"></textarea><small id="shipstation-format-${id}" class="muted">Blank uses each variant's CMS shipping profile. Override: one/package line with weight_lb, length_in, width_in, height_in.</small></label>
+          <button class="btn btn-secondary btn-sm" data-shipstation-rates="${id}" type="button">Get live rates</button>
+          <div class="adm-shipstation-results" data-shipstation-results="${id}" role="status" aria-live="polite"></div>
+        ` : '<small class="muted">Order must be paid, approved NET, or fulfilled before label purchase.</small>')}
+      </div>
+    </details>`;
+    return `${qboReconciliation(order)}<details class="adm-track" data-capability-scope="order.write"><summary>${statusBadge(order.tracking_status || 'processing')}</summary>
       <div class="adm-track-controls">
         <select class="adm-select" data-track-status="${id}" aria-label="Tracking status for order ${id}">
           ${['processing', 'packing', 'shipped', 'delivered', 'blocked'].map((status) => `<option value="${status}" ${status === (order.tracking_status || 'processing') ? 'selected' : ''}>${status.replaceAll('_', ' ')}</option>`).join('')}
@@ -185,7 +225,23 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         <input class="adm-input admin-input-wide" data-track-note="${id}" placeholder="Note (shown to customer)" aria-label="Shipment note">
         <button class="btn btn-ghost btn-sm" data-save-tracking="${id}" type="button">Save tracking</button>
       </div>
-    </details>`;
+    </details>${shipStation}`;
+  }
+
+  function renderShipStationRates(root, orderId, rates) {
+    if (!rates.length) {
+      root.innerHTML = '<small class="muted">No valid rates returned. Check package/address data and connected carriers.</small>';
+      return;
+    }
+    root.innerHTML = `<label>Live rate <select class="adm-select" data-shipstation-rate="${esc(orderId)}">
+      ${rates.map((rate) => {
+        const eta = rate.delivery_days != null ? ` · ${rate.delivery_days} day(s)` : '';
+        const label = `${rate.carrier_name || rate.carrier_code} · ${rate.service_type || rate.service_code} · ${money(rate.amount, rate.currency)}${eta}`;
+        return `<option value="${esc(rate.rate_id)}">${esc(label)}</option>`;
+      }).join('')}
+    </select></label>
+    <button class="btn btn-primary btn-sm" data-shipstation-buy-label="${esc(orderId)}" type="button">Buy 4 × 6 PDF label</button>
+    <small class="muted">Live purchase; charged through connected ShipStation carrier account.</small>`;
   }
 
   function admOrdersPager() {
@@ -483,6 +539,64 @@ export function createOrdersTab({ $, api, state, message, admSkeleton, admEmpty,
         await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Could not update tracking. Retry.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-shipstation-rates]', async (event, button) => {
+      const id = button.dataset.shipstationRates;
+      const pick = (name) => box.querySelector(`[data-shipstation-${name}="${CSS.escape(id)}"]`);
+      const results = pick('results');
+      let packages;
+      try {
+        const rawPackages = pick('packages')?.value.trim();
+        packages = rawPackages ? parseShippingPackages(rawPackages) : undefined;
+        if (!pick('phone')?.value.trim()) throw new Error('Shipping phone is required by ShipStation.');
+      } catch (err) {
+        message('ordStatus', err.message || 'Check package details.', 'err');
+        return;
+      }
+      button.disabled = true;
+      results.textContent = 'Loading live rates…';
+      try {
+        const res = await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: {
+            action: 'rates',
+            order_id: id,
+            phone: pick('phone').value.trim(),
+            residential: pick('residential').value,
+            ...(packages ? { packages } : {}),
+          },
+        });
+        renderShipStationRates(results, id, res.rates || []);
+        message('ordStatus', `${(res.rates || []).length} live rate(s) loaded using ${res.packages_source || 'provided'} package data.`, 'ok');
+      } catch (err) {
+        results.textContent = '';
+        message('ordStatus', err.data?.error || 'Could not load ShipStation rates. Check integration configuration.', 'err');
+      } finally {
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-shipstation-buy-label]', async (event, button) => {
+      const id = button.dataset.shipstationBuyLabel;
+      const rate = box.querySelector(`[data-shipstation-rate="${CSS.escape(id)}"]`);
+      if (!rate?.value) { message('ordStatus', 'Load and select a live rate first.', 'err'); return; }
+      const selected = rate.options[rate.selectedIndex]?.textContent || 'selected rate';
+      if (!(await confirmDialog(`Buy ${selected}? ShipStation will charge the connected carrier account.`, {
+        confirmText: 'Buy label',
+        cancelText: 'Cancel',
+      }))) return;
+      button.disabled = true;
+      message('ordStatus', 'Buying ShipStation label…');
+      try {
+        const res = await api('/api/admin/shipstation', {
+          method: 'POST',
+          body: { action: 'buy_label', order_id: id, rate_id: rate.value },
+        });
+        message('ordStatus', res.already_purchased ? 'Existing label loaded; no second purchase.' : 'Label purchased. Order moved to packing.', 'ok');
+        await refreshOrder(id);
+      } catch (err) {
+        message('ordStatus', err.data?.error || 'Label purchase failed. Check ShipStation before retrying.', 'err');
         button.disabled = false;
       }
     });
