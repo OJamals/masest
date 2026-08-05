@@ -66,7 +66,14 @@ function loadGoogleMaps(apiKey) {
   return mapsLoader;
 }
 
-export async function mountAddressAutocomplete({ mount, fields, fetchImpl } = {}) {
+export async function mountAddressAutocomplete({
+  mount,
+  fields,
+  fetchImpl,
+  onSelect,
+  placeholder = 'Start typing a U.S. street address',
+  ariaLabel = 'Find a street address',
+} = {}) {
   if (!mount) return { enabled: false };
   const config = await loadConfig(fetchImpl);
   if (!config.enabled || !config.api_key) return { enabled: false };
@@ -74,8 +81,8 @@ export async function mountAddressAutocomplete({ mount, fields, fetchImpl } = {}
   const { PlaceAutocompleteElement } = await globalThis.google.maps.importLibrary('places');
   const autocomplete = new PlaceAutocompleteElement();
   autocomplete.includedRegionCodes = config.included_region_codes || ['us'];
-  autocomplete.placeholder = 'Start typing a U.S. street address';
-  autocomplete.setAttribute('aria-label', 'Find a street address');
+  autocomplete.placeholder = placeholder;
+  autocomplete.setAttribute('aria-label', ariaLabel);
   autocomplete.addEventListener('gmp-select', async (event) => {
     try {
       const place = event.placePrediction.toPlace();
@@ -84,6 +91,7 @@ export async function mountAddressAutocomplete({ mount, fields, fetchImpl } = {}
       if (address.country && address.country !== 'US') return;
       fillAddressFields(fields, address);
       mount.dataset.state = 'selected';
+      onSelect?.(address, autocomplete);
     } catch {
       mount.dataset.state = 'error';
     }

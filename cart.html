@@ -57,24 +57,27 @@
               <a class="btn btn-primary" id="checkoutContinue" href="checkout.html">Continue to checkout</a>
             </div>
           </div>
-          <div class="cart-path cart-path-quote cart-quote-prompt">
-            <div class="cart-path-heading">
-              <span>Formal quote</span>
-              <small>Get documented pricing before purchase.</small>
+          <details class="cart-secondary-options">
+            <summary>Formal quote and saved requisition</summary>
+            <div class="cart-path cart-path-quote cart-quote-prompt">
+              <div class="cart-path-heading">
+                <span>Formal quote</span>
+                <small>Get documented pricing before purchase.</small>
+              </div>
+              <a class="btn btn-secondary" id="checkoutQuote" href="contact.html?type=quote">Get formal quote</a>
             </div>
-            <a class="btn btn-secondary" id="checkoutQuote" href="contact.html?type=quote">Get formal quote</a>
-          </div>
-          <form id="saveRequisitionForm" class="cart-requisition cart-path cart-path-requisition" hidden>
-            <div class="cart-path-heading">
-              <span>Save requisition</span>
-              <small>Keep these canonical order lines for repeat purchasing.</small>
-            </div>
-            <label class="field-label" for="requisitionName">Save this cart</label>
-            <input id="requisitionName" name="requisition_name" class="cart-input" type="text" maxlength="80" autocomplete="off" placeholder="Monthly plant supplies">
-            <p class="cart-field-help">Save a named requisition to your buyer account for fast repeat orders.</p>
-            <div class="cart-actions"><button class="btn btn-secondary" id="saveRequisition" type="submit">Save requisition</button></div>
-            <p id="requisitionStatus" class="cart-field-help" role="status" aria-live="polite"></p>
-          </form>
+            <form id="saveRequisitionForm" class="cart-requisition cart-path cart-path-requisition" hidden>
+              <div class="cart-path-heading">
+                <span>Save requisition</span>
+                <small>Keep these canonical order lines for repeat purchasing.</small>
+              </div>
+              <label class="field-label" for="requisitionName">Save this cart</label>
+              <input id="requisitionName" name="requisition_name" class="cart-input" type="text" maxlength="80" autocomplete="off" placeholder="Monthly plant supplies">
+              <p class="cart-field-help">Save a named requisition to your buyer account for fast repeat orders.</p>
+              <div class="cart-actions"><button class="btn btn-secondary" id="saveRequisition" type="submit">Save requisition</button></div>
+              <p id="requisitionStatus" class="cart-field-help" role="status" aria-live="polite"></p>
+            </form>
+          </details>
           <p class="cart-checkout-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Address verification and live shipping rates come next; payment stays on Stripe.</p>
           <div id="cartAccount" class="cart-account" hidden></div>
         </div>

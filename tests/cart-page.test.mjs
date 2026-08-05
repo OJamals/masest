@@ -168,7 +168,7 @@ test("cart routes purchasable SKUs to delivery checkout before provider validati
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.locator("#checkoutContinue").click();
       await page.waitForURL(/\/checkout\.html$/);
-      await page.getByRole("heading", { name: "Delivery and business details" }).waitFor();
+      await page.getByRole("heading", { name: "Delivery checkout" }).waitFor();
     } finally {
       await browser.close();
     }

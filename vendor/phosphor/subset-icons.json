@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 259,
-  "usedCount": 151,
+  "count": 261,
+  "usedCount": 153,
   "bufferCount": 108,
   "icons": [
     {
@@ -262,6 +262,11 @@
     {
       "name": "circle",
       "cp": "E18A",
+      "src": "used"
+    },
+    {
+      "name": "circle-notch",
+      "cp": "EB44",
       "src": "used"
     },
     {
@@ -763,6 +768,11 @@
       "name": "megaphone",
       "cp": "E324",
       "src": "buffer"
+    },
+    {
+      "name": "minus",
+      "cp": "E32A",
+      "src": "used"
     },
     {
       "name": "money",
