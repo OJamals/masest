@@ -3699,26 +3699,6 @@ fully clickable cards) ---- */
   border-radius: 14px;
   background: var(--surface);
 }
-.cart-line-product {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-}
-.cart-line-product > div { min-width: 0; }
-.cart-line-media {
-  display: grid;
-  place-items: center;
-  width: 80px;
-  height: 88px;
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 6px;
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  background: #fbfcfc;
-}
-.cart-line-media img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .cart-line > div { min-width: 0; }
 .cart-line h2,
 .cart-line h3 { margin: 3px 0 6px; font-size: 1.08rem; }
@@ -3894,15 +3874,8 @@ fully clickable cards) ---- */
   .confirmation-grid { grid-template-columns: 1fr; }
   .confirmation-grid .route-card:last-child { grid-column: auto; }
   .cart-summary { position: static; }
+  .cart-line { grid-template-columns: 1fr; }
   .cart-line .btn { justify-content: center; }
-}
-
-@media (max-width: 640px) {
-  .cart-line { grid-template-columns: minmax(0, 1fr) auto; gap: 14px; }
-  .cart-line-product { grid-column: 1 / -1; }
-  .cart-line label { width: 84px; }
-  .cart-line .btn { align-self: end; }
-  .cart-line-media { width: 68px; height: 76px; }
 }
 
 @media (max-width: 520px) {

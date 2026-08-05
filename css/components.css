@@ -851,3 +851,37 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
     transform: none;
   }
 }
+
+/* Cart product identity: keep product photography coupled to its line copy. */
+.cart-line-product {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.cart-line-product > div { min-width: 0; }
+.cart-line-media {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 88px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: #fbfcfc;
+}
+.cart-line-media img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+@media (max-width: 860px) {
+  .cart-line { grid-template-columns: minmax(0, 1fr) 84px auto; }
+}
+
+@media (max-width: 640px) {
+  .cart-line { grid-template-columns: minmax(0, 1fr) auto; gap: 14px; }
+  .cart-line-product { grid-column: 1 / -1; }
+  .cart-line label { width: 84px; }
+  .cart-line .btn { align-self: end; }
+  .cart-line-media { width: 68px; height: 76px; }
+}
