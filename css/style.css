@@ -4050,6 +4050,8 @@ body.checkout-flow-page::before { display: none; }
 }
 .checkout-inline-action:hover { border-color: var(--accent); color: var(--accent-ink); }
 .checkout-po-field { width: min(100%, 520px); margin-top: 12px; }
+#shippingAddressControl { margin-top: 18px; }
+.checkout-saved:not([hidden]) + #shippingAddressControl { margin-top: 0; }
 .checkout-check {
   display: flex;
   align-items: center;
@@ -4269,6 +4271,17 @@ body.checkout-flow-page::before { display: none; }
   .checkout-text-action + .checkout-text-action { margin-left: 4px; }
   .checkout-line { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; }
   .checkout-line-media { width: 64px; height: 76px; }
+}
+
+@media (max-width: 360px) {
+  .checkout-header { grid-template-columns: 38px minmax(0, 1fr); gap: 8px; padding-inline: 12px; }
+  .checkout-brand img { width: 34px; height: 42px; }
+  .checkout-steps { gap: 3px; font-size: .72rem; }
+  .checkout-steps > * { gap: 3px; }
+  .checkout-steps > * + *::before { width: 4px; }
+  .checkout-steps span span,
+  .checkout-steps a span,
+  .checkout-steps b span { width: 22px; height: 22px; font-size: .66rem; }
 }
 
 /* Commerce refinement: keep catalog and product decisions in scan range. */
