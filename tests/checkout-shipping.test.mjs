@@ -103,6 +103,15 @@ test("live rates use variant package profiles, sort by cost, and issue cart-boun
         rate_response: {
           rates: [
             {
+              rate_id: "se-rate-media",
+              carrier_id: "se-usps",
+              carrier_friendly_name: "USPS",
+              service_code: "usps_media_mail",
+              service_type: "USPS Media Mail",
+              shipping_amount: { amount: 18.39, currency: "usd" },
+              delivery_days: 7,
+            },
+            {
               rate_id: "se-rate-priority",
               carrier_id: "se-usps",
               carrier_friendly_name: "USPS",
@@ -113,6 +122,15 @@ test("live rates use variant package profiles, sort by cost, and issue cart-boun
             },
             {
               rate_id: "se-rate-ground",
+              carrier_id: "se-usps",
+              carrier_friendly_name: "USPS",
+              service_code: "usps_ground_advantage",
+              service_type: "Ground Advantage",
+              shipping_amount: { amount: 24.5, currency: "usd" },
+              delivery_days: 5,
+            },
+            {
+              rate_id: "se-rate-ground-duplicate",
               carrier_id: "se-usps",
               carrier_friendly_name: "USPS",
               service_code: "usps_ground_advantage",
@@ -135,6 +153,7 @@ test("live rates use variant package profiles, sort by cost, and issue cart-boun
   assert.equal(providerPayload.shipment.ship_to.postal_code, "32901");
   assert.equal(providerPayload.shipment.items[0].unit_price, 11.44);
   assert.deepEqual(result.rates.map((rate) => rate.amount_minor), [2450, 3125]);
+  assert.equal(result.rates.some((rate) => /media|library/i.test(rate.service_type)), false);
   assert.equal(result.rates[0].token.includes("se-rate-ground"), false);
 
   const selection = await verifyShippingSelectionToken({

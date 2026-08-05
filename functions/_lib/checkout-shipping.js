@@ -142,14 +142,29 @@ function normalizeRate(rate) {
   };
 }
 
+const INELIGIBLE_CHECKOUT_SERVICE = /(?:media|library)[ _-]?mail/i;
+
+function checkoutEligibleRate(rate) {
+  return !INELIGIBLE_CHECKOUT_SERVICE.test(`${rate.service_code} ${rate.service_type}`);
+}
+
 function providerRates(payload) {
   const source = payload?.rate_response?.rates || payload?.rates || [];
-  return (Array.isArray(source) ? source : [])
+  const rates = (Array.isArray(source) ? source : [])
     .map(normalizeRate)
     .filter(Boolean)
+    .filter(checkoutEligibleRate)
     .sort((a, b) => a.amount_minor - b.amount_minor
       || (a.delivery_days ?? 999) - (b.delivery_days ?? 999)
       || a.service_type.localeCompare(b.service_type));
+  const seen = new Set();
+  return rates.filter((rate) => {
+    const key = [rate.carrier_name, rate.service_code, rate.service_type, rate.amount_minor,
+      rate.delivery_days, rate.estimated_delivery_date].join('|').toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function roundMeasure(value) {
