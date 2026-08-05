@@ -51,7 +51,7 @@
           <div class="cart-path cart-path-primary">
             <div class="cart-path-heading">
               <span>Continue to checkout</span>
-              <small>Confirm business, delivery, billing, and live shipping rates.</small>
+              <small>Confirm shipping details, billing, and live carrier rates.</small>
             </div>
             <div class="cart-actions">
               <a class="btn btn-primary" id="checkoutContinue" href="checkout.html">Continue to checkout</a>
@@ -88,6 +88,7 @@
 <script type="module">
   import { items, remove, setQty } from "./js/cart.js";
   import { api, me, getToken } from "./js/auth.js?v=20260711w";
+  import { safeUrl } from "./js/util.js";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -120,6 +121,8 @@
             name: `${productName} - ${label}`,
             price: p.price == null ? null : Number(p.price),
             currency: p.currency || parent.currency || "usd",
+            imageUrl: parent.image_url || p.image_url || "",
+            imageAlt: parent.photo_alt || p.photo_alt || `${productName} product photo`,
             purchasable: parent.active !== false && (parent.mode || p.mode) === "buy" && p.active !== false && p.price != null,
           });
           return;
@@ -131,6 +134,8 @@
             name: p.name,
             price: p.price == null ? null : Number(p.price),
             currency: p.currency || "usd",
+            imageUrl: p.image_url || "",
+            imageAlt: p.photo_alt || `${p.name || p.sku} product photo`,
             purchasable: p.active !== false && p.mode === "buy" && p.price != null,
           });
           return;
@@ -141,6 +146,8 @@
             name: `${p.name} - ${v.label}`,
             price: v.price == null ? null : Number(v.price),
             currency: v.currency || p.currency || "usd",
+            imageUrl: p.image_url || v.image_url || "",
+            imageAlt: p.photo_alt || v.photo_alt || `${p.name || v.name || v.vsku} product photo`,
             purchasable: p.active !== false && p.mode === "buy" && v.active !== false && v.price != null,
           });
         });
@@ -227,12 +234,19 @@
       const safeSku = esc(item.sku);
       const safeName = esc(name);
       const safeDetail = esc(detail);
+      const imageUrl = safeUrl(meta?.imageUrl);
+      const media = imageUrl && imageUrl !== "#"
+        ? `<figure class="cart-line-media"><img src="${esc(imageUrl)}" alt="${esc(meta?.imageAlt || `${name} product photo`)}" width="80" height="88" loading="lazy" decoding="async"></figure>`
+        : "";
       return `
       <article class="cart-line">
-        <div>
-          <span class="eyebrow">${safeSku}</span>
-          <h2>${safeName}</h2>
-          <p>${safeDetail}</p>
+        <div class="cart-line-product">
+          ${media}
+          <div>
+            <span class="eyebrow">${safeSku}</span>
+            <h2>${safeName}</h2>
+            <p>${safeDetail}</p>
+          </div>
         </div>
         <label>
           <span>Qty</span>

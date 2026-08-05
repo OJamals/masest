@@ -8,7 +8,7 @@ const escapeHtml = (value) => clean(value).replace(/[&<>"']/g, (char) => ({
 
 export function checkoutAddress(values, prefix) {
   return {
-    name: clean(values.contactName),
+    name: [clean(values.firstName), clean(values.lastName)].filter(Boolean).join(' '),
     company: clean(values.businessName),
     phone: clean(values.phone),
     address1: clean(values[`${prefix}Address1`]),
@@ -61,13 +61,38 @@ function productMeta(parent, variant) {
 }
 
 export function uniqueServiceRates(rates = []) {
-  const seen = new Set();
-  return rates.map((rate, index) => ({ rate, index })).filter(({ rate }) => {
+  const cheapest = new Map();
+  rates.forEach((rate, index) => {
     const key = `${clean(rate.carrier_name).toLowerCase()}|${clean(rate.service_type).toLowerCase()}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    const current = cheapest.get(key);
+    const amount = Number(rate.amount_minor);
+    const currentAmount = Number(current?.rate?.amount_minor);
+    if (!current || (Number.isFinite(amount) && (!Number.isFinite(currentAmount) || amount < currentAmount))) {
+      cheapest.set(key, { rate, index });
+    }
   });
+  const amount = ({ rate }) => Number.isFinite(Number(rate.amount_minor)) ? Number(rate.amount_minor) : Number.POSITIVE_INFINITY;
+  return [...cheapest.values()].sort((a, b) => amount(a) - amount(b) || a.index - b.index);
+}
+
+export function groupServiceRates(rates = [], visibleCount = 3) {
+  const unique = uniqueServiceRates(rates);
+  const count = Math.max(1, Number(visibleCount) || 3);
+  return { recommended: unique.slice(0, count), additional: unique.slice(count) };
+}
+
+export function shippingServiceLabel(rate = {}) {
+  const carrier = clean(rate.carrier_name).replace(/\s+One Balance$/i, '');
+  const service = clean(rate.service_type);
+  if (!service) return carrier;
+  if (!carrier) return service;
+  const escapedCarrier = carrier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return service.replace(new RegExp(`^${escapedCarrier}[®™]?\\s*(?:[·–—-]\\s*)?`, 'i'), '').trim() || service;
+}
+
+function shippingServiceSummary(rate = {}) {
+  const carrier = clean(rate.carrier_name).replace(/\s+One Balance$/i, '');
+  return [carrier, shippingServiceLabel(rate)].filter(Boolean).join(' ');
 }
 
 function flattenCatalog(products) {
@@ -83,6 +108,20 @@ function flattenCatalog(products) {
     }
   }
   return catalog;
+}
+
+export function cartPricing(cart = [], catalog = new Map()) {
+  let total = 0;
+  let currency = null;
+  for (const line of cart) {
+    const product = catalog.get(line.sku);
+    if (!Number.isFinite(product?.price)) return { known: false, total: null, currency: currency || 'usd' };
+    const productCurrency = clean(product.currency || 'usd').toLowerCase();
+    if (currency && productCurrency !== currency) return { known: false, total: null, currency };
+    currency = productCurrency;
+    total += product.price * line.qty;
+  }
+  return { known: true, total, currency: currency || 'usd' };
 }
 
 function formValues(form) {
@@ -108,7 +147,7 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260805b'),
+    import('./address-autocomplete.js?v=20260805c'),
     import('./auth.js?v=20260711w'),
   ]);
   const { checkout, items } = cartModule;
@@ -130,7 +169,7 @@ async function boot() {
   const sameBilling = document.getElementById('billingSameAsShipping');
   const billingFields = document.getElementById('billingAddressFields');
   const shippingPending = document.getElementById('shippingPending');
-  const state = { catalog: new Map(), saved: [], token: null, quote: null, selectedRate: 0 };
+  const state = { catalog: new Map(), saved: [], token: null, quote: null, selectedRate: null };
 
   function showStatus(message, kind = '') {
     status.textContent = message;
@@ -161,6 +200,7 @@ async function boot() {
 
   function showManualAddress(prefix, focus = true) {
     const ui = addressElements(prefix);
+    document.getElementById(`${prefix}AddressLabel`).htmlFor = `${prefix}Address1`;
     ui.mount.hidden = true;
     ui.line1.hidden = false;
     ui.details.hidden = false;
@@ -184,27 +224,30 @@ async function boot() {
   }
 
   function invalidateRates() {
+    const hadQuote = Boolean(state.quote);
     state.quote = null;
+    state.selectedRate = null;
     rateOptions.replaceChildren();
     ratesBox.hidden = true;
     pay.disabled = true;
     payHint.textContent = 'Confirm your address and select a shipping method to continue.';
-    shippingPending.innerHTML = '<i class="ph ph-circle-notch" aria-hidden="true"></i> Shipping calculated after address confirmation.';
-    renderTotals();
-  }
-
-  function subtotal() {
-    return cart.reduce((sum, line) => sum + (state.catalog.get(line.sku)?.price || 0) * line.qty, 0);
+    shippingPending.textContent = 'Shipping calculated after address confirmation.';
+    calculate.classList.add('btn-primary');
+    calculate.classList.remove('btn-secondary', 'checkout-recalculate');
+    calculate.textContent = 'Confirm address & view rates';
+    showStatus('');
+    if (hadQuote) renderTotals();
   }
 
   function renderTotals() {
-    const currency = state.catalog.get(cart[0]?.sku)?.currency || 'usd';
+    const pricing = cartPricing(cart, state.catalog);
+    const { currency } = pricing;
     const shipping = state.quote?.rates?.[state.selectedRate]?.amount_minor;
     document.getElementById('checkoutTotals').innerHTML = `<dl>
-      <div><dt>Product subtotal</dt><dd>${money(subtotal(), currency)}</dd></div>
+      <div><dt>Product subtotal</dt><dd>${pricing.known ? money(pricing.total, currency) : 'At payment'}</dd></div>
       <div><dt>Shipping<small>${shipping == null ? 'Select a shipping method' : 'Selected carrier rate'}</small></dt><dd>${shipping == null ? '—' : money(shipping / 100, currency)}</dd></div>
       <div><dt>Tax</dt><dd>At payment</dd></div>
-      <div class="cart-total-row"><dt>Estimated total</dt><dd>${money(subtotal() + (shipping || 0) / 100, currency)}</dd></div>
+      <div class="cart-total-row"><dt>Estimated total</dt><dd>${pricing.known ? money(pricing.total + (shipping || 0) / 100, currency) : 'At payment'}</dd></div>
     </dl>`;
   }
 
@@ -220,20 +263,34 @@ async function boot() {
   }
 
   function renderRates() {
-    const rates = uniqueServiceRates(state.quote.rates);
-    rateOptions.replaceChildren(...rates.map(({ rate, index }, position) => {
+    const { recommended, additional } = groupServiceRates(state.quote.rates);
+    const rates = [...recommended, ...additional];
+    const renderRate = ({ rate, index }, position) => {
       const label = document.createElement('label');
       label.className = 'checkout-rate';
       const radio = document.createElement('input');
       radio.type = 'radio'; radio.name = 'shippingRate'; radio.value = String(index); radio.checked = index === state.selectedRate;
       const text = document.createElement('span');
       const delivery = rate.delivery_days ? `${rate.delivery_days} business days` : 'Carrier estimate at shipment';
-      text.innerHTML = `<b>${escapeHtml(rate.carrier_name)} · ${escapeHtml(rate.service_type)}</b><small>${escapeHtml(delivery)}${position === 0 ? ' · Lowest rate' : ''}</small>`;
+      const carrier = clean(rate.carrier_name).replace(/\s+One Balance$/i, '');
+      text.innerHTML = `<b>${escapeHtml(shippingServiceLabel(rate))}</b><small>${escapeHtml(carrier)} · ${escapeHtml(delivery)}${position === 0 ? ' · Lowest rate' : ''}</small>`;
       const price = document.createElement('strong');
       price.textContent = money(rate.amount_minor / 100, rate.currency);
       label.append(radio, text, price);
       return label;
-    }));
+    };
+    rateOptions.replaceChildren(...recommended.map(renderRate));
+    if (additional.length) {
+      const more = document.createElement('details');
+      more.className = 'checkout-rate-more';
+      const summary = document.createElement('summary');
+      summary.textContent = `Show ${additional.length} more shipping methods`;
+      const options = document.createElement('div');
+      options.className = 'checkout-rate-more-options';
+      options.append(...additional.map((entry, index) => renderRate(entry, recommended.length + index)));
+      more.append(summary, options);
+      rateOptions.append(more);
+    }
     ratesBox.hidden = false;
     pay.disabled = !rates.length;
     payHint.textContent = rates.length ? 'Secure payment opens on Stripe.' : 'No shipping method is available.';
@@ -242,6 +299,11 @@ async function boot() {
       ? `Google standardized the address · ${state.quote.package_count} package${state.quote.package_count === 1 ? '' : 's'}`
       : `Google verified the address · ${state.quote.package_count} package${state.quote.package_count === 1 ? '' : 's'}`;
     shippingPending.innerHTML = `<i class="ph ph-check-circle" aria-hidden="true"></i> ${state.quote.package_count} package${state.quote.package_count === 1 ? '' : 's'} rated with live carrier pricing.`;
+    calculate.classList.remove('btn-primary');
+    calculate.classList.add('btn-secondary', 'checkout-recalculate');
+    calculate.textContent = 'Recalculate rates';
+    const selected = state.quote.rates[state.selectedRate];
+    showStatus(`Address verified. ${shippingServiceSummary(selected)} selected. Continue to secure payment.`, 'ok');
     renderTotals();
   }
 
@@ -286,6 +348,7 @@ async function boot() {
         invalidateRates();
       },
     });
+    if (result.enabled) document.getElementById(`${prefix}AddressLabel`).htmlFor = result.autocomplete.id;
     if (!result.enabled) showManualAddress(prefix, false);
   }
 
@@ -324,10 +387,21 @@ async function boot() {
   }
   toggleBilling();
   sameBilling.addEventListener('change', () => { toggleBilling(); invalidateRates(); });
-  form.addEventListener('input', invalidateRates);
+  const rateBoundFields = new Set([
+    'firstName', 'lastName', 'phone', 'businessName',
+    'shippingAutocomplete', 'billingAutocomplete',
+    'shippingAddress1', 'shippingAddress2', 'shippingCity', 'shippingState', 'shippingPostalCode', 'shippingResidential',
+    'billingAddress1', 'billingAddress2', 'billingCity', 'billingState', 'billingPostalCode',
+  ]);
+  form.addEventListener('input', (event) => {
+    if (rateBoundFields.has(event.target.name)) invalidateRates();
+  });
   rateOptions.addEventListener('change', (event) => {
     if (event.target.name !== 'shippingRate') return;
     state.selectedRate = Number(event.target.value);
+    const selected = state.quote?.rates?.[state.selectedRate];
+    payHint.textContent = `${shippingServiceSummary(selected)} selected. Secure payment opens on Stripe.`;
+    showStatus(`${shippingServiceSummary(selected)} selected. Continue to secure payment.`, 'ok');
     renderTotals();
   });
 
@@ -337,7 +411,11 @@ async function boot() {
   state.token = await getToken().catch(() => null);
   const account = await me().catch(() => null);
   if (account && !account.needs_profile) {
+    const [firstName = '', ...lastName] = clean(account.profile?.full_name || account.full_name).split(/\s+/);
+    document.getElementById('firstName').value = firstName;
+    document.getElementById('lastName').value = lastName.join(' ');
     document.getElementById('checkoutEmail').value = account.email || '';
+    document.getElementById('phone').value = account.profile?.phone || account.phone || '';
     document.getElementById('businessName').value = account.company?.name || '';
     try {
       const saved = await api('/api/account/addresses');
@@ -385,12 +463,11 @@ async function boot() {
         showAddressDetails('billing');
       }
       renderRates();
-      showStatus('Address verified. Select a shipping method, then continue to payment.', 'ok');
     } catch (error) {
       showStatus(checkoutError(error), 'err');
     } finally {
       calculate.disabled = false;
-      calculate.textContent = 'Confirm address & view rates';
+      calculate.textContent = state.quote ? 'Recalculate rates' : 'Confirm address & view rates';
     }
   });
 
@@ -413,8 +490,9 @@ async function boot() {
     showStatus('Saving verified order details and opening Stripe.');
     try {
       if (state.token && document.getElementById('saveAddress').checked) {
-        await saveForReuse('ship', state.quote.address);
-        await saveForReuse('bill', state.quote.billing_address);
+        const reusable = [['ship', state.quote.address], ['bill', state.quote.billing_address]]
+          .filter(([, address]) => clean(address?.address1));
+        await Promise.allSettled(reusable.map(([type, address]) => saveForReuse(type, address)));
       }
       const values = formValues(form);
       await checkout({

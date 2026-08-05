@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260727b&amp;checkout=20260805a">
+  <link rel="stylesheet" href="css/style.css?v=20260727b&amp;checkout=20260805c">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/checkout.js?v=20260805b"></script>
+  <script type="module" src="js/checkout.js?v=20260805c"></script>
 </head>
 <body class="checkout-flow-page">
 <a class="skip-link" href="#main">Skip to checkout</a>
@@ -44,29 +44,25 @@
     <form id="checkoutDetails" class="checkout-details" novalidate>
       <h1 class="sr-only">Delivery checkout</h1>
 
-      <section class="checkout-section" aria-labelledby="contactTitle">
-        <h2 id="contactTitle"><span>1.</span> Contact</h2>
-        <div class="checkout-contact-grid">
-          <div class="field"><label for="contactName">Contact name</label><input id="contactName" name="contactName" autocomplete="name" required></div>
-          <div class="field"><label for="checkoutEmail">Email</label><input id="checkoutEmail" name="email" type="email" autocomplete="email" required></div>
-          <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required></div>
-          <div class="field checkout-business-name"><label for="businessName">Business name <span class="optional">Optional</span></label><input id="businessName" name="businessName" autocomplete="organization"></div>
+      <section class="checkout-section" aria-labelledby="shippingDetailsTitle">
+        <h2 id="shippingDetailsTitle"><span>1.</span> Shipping details</h2>
+        <div class="checkout-contact-grid checkout-shipping-grid">
+          <div class="field"><label for="firstName">First name</label><input id="firstName" name="firstName" maxlength="60" autocomplete="shipping given-name" required></div>
+          <div class="field"><label for="lastName">Last name</label><input id="lastName" name="lastName" maxlength="60" autocomplete="shipping family-name" required></div>
+          <div class="field"><label for="checkoutEmail">Email</label><input id="checkoutEmail" name="email" type="email" autocomplete="shipping email" required></div>
+          <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" inputmode="tel" maxlength="40" autocomplete="shipping tel" required></div>
+          <div class="field checkout-business-name"><label for="businessName">Business name <span class="optional">Optional</span></label><input id="businessName" name="businessName" autocomplete="shipping organization"></div>
         </div>
         <button id="poToggle" class="checkout-inline-action" type="button" aria-expanded="false" aria-controls="purchaseOrderField"><i class="ph ph-plus" aria-hidden="true"></i> Add PO number</button>
         <div id="purchaseOrderField" class="field checkout-po-field" hidden>
           <label for="purchaseOrderNumber">Purchase order number <span class="optional">Optional</span></label>
           <input id="purchaseOrderNumber" name="purchaseOrderNumber" maxlength="64" autocomplete="off">
         </div>
-        <label id="saveAddressWrap" class="checkout-check checkout-save" hidden><input id="saveAddress" name="saveAddress" type="checkbox" checked> Save to my account for faster checkout</label>
-      </section>
-
-      <section class="checkout-section" aria-labelledby="shippingTitle">
-        <h2 id="shippingTitle"><span>2.</span> Delivery address</h2>
         <div id="shippingSavedWrap" class="field checkout-saved" hidden><label for="shippingSaved">Saved address</label><select id="shippingSaved" name="shippingSaved"><option value="">Use a new address</option></select></div>
 
         <div id="shippingAddressControl" class="checkout-address-control">
-          <label id="shippingAddressLabel" for="shippingAddress1">Address</label>
-          <div id="shippingAutocomplete" class="address-autocomplete" aria-labelledby="shippingAddressLabel" hidden></div>
+          <label id="shippingAddressLabel" for="shippingAddress1">Street address</label>
+          <div id="shippingAutocomplete" class="address-autocomplete" hidden></div>
           <input id="shippingAddress1" name="shippingAddress1" autocomplete="shipping address-line1" placeholder="Street address" required hidden>
         </div>
         <button id="shippingManualToggle" class="checkout-text-action" type="button" aria-expanded="false" aria-controls="shippingAddressDetails">Enter address manually</button>
@@ -80,7 +76,8 @@
           <label class="checkout-check checkout-residential"><input id="shippingResidential" name="shippingResidential" type="checkbox"> Residential delivery</label>
         </div>
 
-        <p id="shippingPending" class="checkout-shipping-state"><i class="ph ph-circle-notch" aria-hidden="true"></i> Shipping calculated after address confirmation.</p>
+        <label id="saveAddressWrap" class="checkout-check checkout-save" hidden><input id="saveAddress" name="saveAddress" type="checkbox" checked> Save to my account for faster checkout</label>
+        <p id="shippingPending" class="checkout-shipping-state">Shipping calculated after address confirmation.</p>
       </section>
 
       <div class="checkout-bottom-row">
@@ -100,7 +97,7 @@
         <div id="billingSavedWrap" class="field checkout-saved" hidden><label for="billingSaved">Saved billing address</label><select id="billingSaved" name="billingSaved"><option value="">Use a new address</option></select></div>
         <div id="billingAddressControl" class="checkout-address-control">
           <label id="billingAddressLabel" for="billingAddress1">Address</label>
-          <div id="billingAutocomplete" class="address-autocomplete" aria-labelledby="billingAddressLabel" hidden></div>
+          <div id="billingAutocomplete" class="address-autocomplete" hidden></div>
           <input id="billingAddress1" name="billingAddress1" autocomplete="billing address-line1" placeholder="Street address" required hidden>
         </div>
         <button id="billingManualToggle" class="checkout-text-action" type="button" aria-expanded="false" aria-controls="billingAddressDetails">Enter address manually</button>
@@ -120,11 +117,11 @@
     <aside class="checkout-summary" aria-labelledby="checkoutSummaryTitle">
       <h2 id="checkoutSummaryTitle">Order summary</h2>
       <div id="checkoutLines" class="checkout-summary-lines"></div>
-      <div id="checkoutTotals" class="cart-estimate checkout-totals"></div>
+      <div id="checkoutTotals" class="cart-estimate checkout-totals" aria-live="polite" aria-atomic="true"></div>
       <section id="shippingRates" class="checkout-rates" aria-labelledby="shippingRatesTitle" hidden>
         <h3 id="shippingRatesTitle">Shipping method</h3>
         <p id="addressVerification" class="checkout-verified"></p>
-        <div id="shippingRateOptions"></div>
+        <div id="shippingRateOptions" role="radiogroup" aria-labelledby="shippingRatesTitle"></div>
       </section>
       <button id="checkoutPay" class="btn btn-primary checkout-primary" type="button" disabled>Continue to payment <i class="ph ph-lock-key" aria-hidden="true"></i></button>
       <p id="checkoutPayHint" class="checkout-pay-hint">Confirm your address and select a shipping method to continue.</p>

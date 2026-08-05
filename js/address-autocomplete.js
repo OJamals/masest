@@ -84,7 +84,7 @@ export async function mountAddressAutocomplete({
   autocomplete.setAttribute('name', mount.id);
   autocomplete.includedRegionCodes = config.included_region_codes || ['us'];
   autocomplete.placeholder = placeholder;
-  autocomplete.setAttribute('aria-label', ariaLabel);
+  autocomplete.description = ariaLabel;
   autocomplete.addEventListener('gmp-select', async (event) => {
     try {
       const place = event.placePrediction.toPlace();

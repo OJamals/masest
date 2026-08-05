@@ -188,6 +188,9 @@ test("cart uses a conventional order summary without catalog policy duplication"
 
       await page.getByText("2 items").waitFor();
       await page.getByText("$34.60", { exact: true }).first().waitFor();
+      const productImage = page.locator('.cart-line-media img');
+      assert.equal(await productImage.getAttribute('src'), 'https://example.com/hcr.png');
+      assert.equal(await productImage.getAttribute('alt'), 'VertKleen HCR pail');
       await page.getByRole("link", { name: "Continue to checkout", exact: true }).waitFor();
       await page.getByRole("link", { name: "Get formal quote" }).waitFor();
       assert.equal(await page.locator(".cart-path-primary").count(), 1);

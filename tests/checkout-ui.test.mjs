@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { uniqueServiceRates } from '../js/checkout.js';
+import { groupServiceRates, shippingServiceLabel, uniqueServiceRates } from '../js/checkout.js';
 
 const root = new URL('../', import.meta.url);
 const checkout = readFileSync(new URL('checkout.html', root), 'utf8');
@@ -14,8 +14,12 @@ test('checkout uses enclosed commerce chrome and a compact linear flow', () => {
   assert.match(checkout, /<body class="checkout-flow-page">/);
   assert.doesNotMatch(checkout, /src="js\/main\.js/);
   assert.match(checkout, /class="checkout-header"/);
-  assert.match(checkout, /class="checkout-section"[^>]*aria-labelledby="contactTitle"/);
-  assert.match(checkout, /class="checkout-section"[^>]*aria-labelledby="shippingTitle"/);
+  assert.match(checkout, /class="checkout-section"[^>]*aria-labelledby="shippingDetailsTitle"/);
+  assert.match(checkout, /id="shippingDetailsTitle"[^>]*>[^<]*<span>1\.<\/span> Shipping details/);
+  assert.doesNotMatch(checkout, /id="contactTitle"|id="shippingTitle"/);
+  assert.match(checkout, /id="firstName"[^>]*autocomplete="shipping given-name"/);
+  assert.match(checkout, /id="lastName"[^>]*autocomplete="shipping family-name"/);
+  assert.doesNotMatch(checkout, /class="address-autocomplete"[^>]*aria-labelledby/);
   assert.match(checkout, /id="businessOptions"/);
   assert.match(checkout, /id="poToggle"/);
   assert.match(checkout, /id="purchaseOrderField"[^>]*hidden/);
@@ -31,7 +35,11 @@ test('Google autocomplete owns the visible address line with manual fallback', (
   assert.match(autocompleteSource, /onSelect/);
   assert.match(autocompleteSource, /autocomplete\.id = `\$\{mount\.id\}Input`/);
   assert.match(autocompleteSource, /autocomplete\.setAttribute\('name', mount\.id\)/);
+  assert.match(autocompleteSource, /autocomplete\.description = ariaLabel/);
+  assert.doesNotMatch(autocompleteSource, /autocomplete\.setAttribute\('aria-label'/);
+  assert.doesNotMatch(autocompleteSource, /autocomplete\.setAttribute\('role'/);
   assert.match(checkoutSource, /showManualAddress/);
+  assert.match(checkoutSource, /AddressLabel`\)\.htmlFor = result\.autocomplete\.id/);
 });
 
 test('checkout summary supports product imagery and progressive shipping totals', () => {
@@ -43,11 +51,39 @@ test('checkout summary supports product imagery and progressive shipping totals'
 
 test('shipping choices keep the cheapest rate for each carrier service', () => {
   const rates = uniqueServiceRates([
-    { carrier_name: 'USPS', service_type: 'Priority Mail', amount_minor: 962 },
-    { carrier_name: 'USPS', service_type: 'Priority Mail', amount_minor: 1059 },
-    { carrier_name: 'UPS', service_type: 'Ground', amount_minor: 2515 },
+    { carrier_name: 'USPS', service_type: 'Priority Mail', amount_minor: 1059, token: 'usps-high' },
+    { carrier_name: 'UPS', service_type: 'Ground', amount_minor: 2515, token: 'ups-ground' },
+    { carrier_name: 'USPS', service_type: 'Priority Mail', amount_minor: 962, token: 'usps-low' },
   ]);
-  assert.deepEqual(rates.map(({ index, rate }) => [index, rate.amount_minor]), [[0, 962], [2, 2515]]);
+  assert.deepEqual(rates.map(({ index, rate }) => [index, rate.amount_minor, rate.token]), [
+    [2, 962, 'usps-low'], [1, 2515, 'ups-ground'],
+  ]);
+});
+
+test('shipping choices prioritize three rates and keep remaining original tokens available', () => {
+  const rates = Array.from({ length: 5 }, (_, index) => ({
+    carrier_name: index % 2 ? 'UPS' : 'USPS',
+    service_type: `Service ${index}`,
+    amount_minor: 900 + index,
+    token: `rate-${index}`,
+  }));
+  const groups = groupServiceRates(rates);
+  assert.deepEqual(groups.recommended.map(({ index }) => index), [0, 1, 2]);
+  assert.deepEqual(groups.additional.map(({ index }) => index), [3, 4]);
+  assert.equal(groups.additional[0].rate.token, 'rate-3');
+  assert.equal(shippingServiceLabel({ carrier_name: 'USPS', service_type: 'USPS Priority Mail' }), 'Priority Mail');
+  assert.equal(shippingServiceLabel({ carrier_name: 'UPS', service_type: 'Ground' }), 'Ground');
+});
+
+test('audited cart and checkout states are compact and unambiguous', () => {
+  assert.match(cart, /cart-line-media/);
+  assert.match(checkoutSource, /Show .* more shipping methods/);
+  assert.match(checkoutSource, /Recalculate rates/);
+  assert.match(checkoutSource, /'shippingAutocomplete', 'billingAutocomplete'/);
+  assert.match(checkoutSource, /Promise\.allSettled/);
+  assert.match(checkoutSource, /if \(hadQuote\) renderTotals\(\)/);
+  assert.doesNotMatch(checkout, /ph-circle-notch/);
+  assert.doesNotMatch(checkoutSource, /ph-circle-notch/);
 });
 
 test('secondary cart actions stay collapsed behind one compact disclosure', () => {
