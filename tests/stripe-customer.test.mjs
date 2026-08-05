@@ -3,11 +3,20 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { ensureCompanyStripeCustomer } from "../functions/_lib/stripe-customer.js";
 
-function fakeStripe(customerId = "cus_created") {
+function fakeStripe(customerId = "cus_created", options = {}) {
   const calls = [];
   return {
     calls,
     customers: {
+      async retrieve(id) {
+        calls.push({ retrieve: id });
+        if (options.missingIds?.includes(id)) {
+          const error = new Error("No such customer");
+          error.code = "resource_missing";
+          throw error;
+        }
+        return { id, deleted: options.deletedIds?.includes(id) === true };
+      },
       async create(payload, options) {
         calls.push({ payload, options });
         return { id: customerId };
@@ -74,8 +83,37 @@ test("existing Stripe customer is reused without a create call", async () => {
   });
 
   assert.equal(customerId, "cus_existing");
-  assert.equal(stripe.calls.length, 0);
+  assert.deepEqual(stripe.calls, [{ retrieve: "cus_existing" }]);
   assert.equal(calls.update, null);
+});
+
+test("stale test-mode customer is replaced for the active Stripe account", async () => {
+  const stripe = fakeStripe("cus_live", { missingIds: ["cus_test_stale"] });
+  const { sb, calls } = fakeCompanyStore("cus_test_stale");
+
+  const customerId = await ensureCompanyStripeCustomer({
+    stripe,
+    sb,
+    company: { ...company, stripe_customer_id: "cus_test_stale" },
+    email: "billing@example.com",
+  });
+
+  assert.equal(customerId, "cus_live");
+  assert.deepEqual(stripe.calls, [
+    { retrieve: "cus_test_stale" },
+    {
+      payload: {
+        email: "billing@example.com",
+        name: "MASEST Industries",
+        metadata: { company_id: "company_123" },
+      },
+      options: { idempotencyKey: "company-customer:company_123:replace:cus_test_stale" },
+    },
+  ]);
+  assert.deepEqual(calls.updateFilters, [
+    ["eq", "id", "company_123"],
+    ["eq", "stripe_customer_id", "cus_test_stale"],
+  ]);
 });
 
 test("missing customer is created idempotently and conditionally persisted", async () => {

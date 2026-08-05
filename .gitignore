@@ -31,6 +31,7 @@ blob-report/
 /factory/reviews/
 /factory/runs/
 /.artifacts/
+/artifacts/
 
 # Beads / Dolt files (added by bd init)
 .dolt/

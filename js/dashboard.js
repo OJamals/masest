@@ -898,6 +898,7 @@ function editAddress(a) {
         <option value="ship"${a.type !== 'bill' ? ' selected' : ''}>Shipping</option>
         <option value="bill"${a.type === 'bill' ? ' selected' : ''}>Billing</option>
       </select></label></div>
+      <div id="addrEditAutocompleteMount" class="address-autocomplete" hidden></div>
       <div class="field"><label>Address line 1<input name="line1" value="${val(a.line1)}" required></label></div>
       <div class="field"><label>Address line 2<input name="line2" value="${val(a.line2)}"></label></div>
       <div class="field"><label>City<input name="city" value="${val(a.city)}" required></label></div>
@@ -911,6 +912,17 @@ function editAddress(a) {
     </menu>`;
   document.body.appendChild(dlg);
   dlg.showModal();
+  const editForm = dlg.querySelector('#addrEditForm');
+  mountAddressAutocomplete({
+    mount: dlg.querySelector('#addrEditAutocompleteMount'),
+    fields: {
+      line1: editForm.elements.namedItem('line1'),
+      line2: editForm.elements.namedItem('line2'),
+      city: editForm.elements.namedItem('city'),
+      state: editForm.elements.namedItem('state'),
+      zip: editForm.elements.namedItem('zip'),
+    },
+  }).catch(() => {});
   dlg.querySelector('input')?.focus();
   const close = () => { dlg.close(); dlg.remove(); };
   dlg.addEventListener('cancel', () => { dlg.remove(); }, { once: true });
@@ -929,7 +941,8 @@ function editAddress(a) {
       await api('/api/account/addresses', { method: 'PATCH', body: { address } });
       close(); loaded.addresses = false; renderAddresses();
     } catch (err) {
-      status.textContent = err.data?.error === 'address_incomplete' ? 'Fill in all required fields.' : 'Could not save. Try again.';
+      status.textContent = ['address_incomplete', 'address_not_deliverable'].includes(err.data?.error)
+        ? 'Enter a complete, deliverable address.' : 'Could not save. Try again.';
       status.dataset.state = 'err'; e.target.disabled = false;
     }
   });
@@ -946,10 +959,16 @@ function wireAddressForm() {
     };
     status.textContent = 'Saving…'; status.dataset.state = '';
     try {
-      await api('/api/account/addresses', { method: 'POST', body: { address } });
-      e.target.reset(); status.textContent = 'Saved.'; status.dataset.state = 'ok';
+      const result = await api('/api/account/addresses', { method: 'POST', body: { address } });
+      e.target.reset();
+      status.textContent = result.validation?.corrected ? 'Verified, standardized, and saved.' : 'Verified and saved.';
+      status.dataset.state = 'ok';
       loaded.addresses = false; renderAddresses();
-    } catch (err) { status.textContent = err.data?.error === 'address_incomplete' ? 'Fill in all required fields.' : 'Could not save.'; status.dataset.state = 'err'; }
+    } catch (err) {
+      status.textContent = ['address_incomplete', 'address_not_deliverable'].includes(err.data?.error)
+        ? 'Enter a complete, deliverable address.' : 'Could not save.';
+      status.dataset.state = 'err';
+    }
   });
   mountAddressAutocomplete({
     mount: $('addressAutocompleteMount'),

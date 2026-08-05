@@ -491,6 +491,7 @@ test("commerce setup exposes a complete buyer cart path", () => {
   const main = read("js/main.js");
   const products = read("products.html");
   const cart = read("cart.html");
+  const checkout = read("checkout.html");
   const confirmation = read("order-confirmed.html");
   const cartJs = read("js/cart.js");
 
@@ -500,8 +501,11 @@ test("commerce setup exposes a complete buyer cart path", () => {
   assert.match(commerceUi, /initCartButtons/);
   assert.match(products, /id="shopGrid"/);
   assert.match(cart, /id="cartLines"/);
-  assert.match(cart, /id="checkoutPay"/);
-  assert.match(cart, /id="checkoutNet"/);
+  assert.match(cart, /id="checkoutContinue"/);
+  assert.match(checkout, /id="shippingAddress1"/);
+  assert.match(checkout, /id="billingSameAsShipping"/);
+  assert.match(checkout, /id="shippingRates"/);
+  assert.match(checkout, /id="checkoutPay"/);
   assert.match(cart, /contact\.html\?type=quote/);
   assert.match(confirmation, /session_id/);
 assert.match(confirmation, /contact\.html\?type=quote/);

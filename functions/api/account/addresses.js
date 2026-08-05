@@ -1,6 +1,7 @@
 // /api/account/addresses - saved ship/bill addresses for the caller's company.
 // GET -> list | POST { address } -> create | DELETE { id } -> remove
 import { requireCompany, json, readBody } from '../../_lib/supabase.js';
+import { AddressValidationError, validateGoogleAddress } from '../../_lib/address-validation.js';
 
 const MAX = { line1: 160, line2: 160, city: 80, zip: 20 };
 
@@ -33,8 +34,43 @@ function isMissingRpc(error) {
   return /PGRST202|Could not find.*create_company_address|function.*create_company_address/i.test(text);
 }
 
-export async function onRequest({ request, env }) {
-  const ctx = await requireCompany(request, env);
+async function verifiedAddress(row, env, validateAddress) {
+  const validation = await validateAddress({
+    address1: row.line1,
+    address2: row.line2,
+    city: row.city,
+    state: row.state,
+    postal_code: row.zip,
+    country: row.country,
+  }, env);
+  return {
+    row: {
+      ...row,
+      line1: validation.address.address1,
+      line2: validation.address.address2 || '',
+      city: validation.address.city,
+      state: validation.address.state,
+      zip: validation.address.postal_code,
+      country: validation.address.country,
+    },
+    validation: {
+      corrected: validation.corrected === true,
+      formatted_address: validation.formatted_address || null,
+      possible_next_action: validation.possible_next_action || 'ACCEPT',
+    },
+  };
+}
+
+function validationError(error) {
+  if (!(error instanceof AddressValidationError)) return null;
+  return json(error.status, { error: error.code, ...error.details });
+}
+
+export async function handleAddresses({ request, env }, dependencies = {}) {
+  const validateAddress = dependencies.validateAddress || validateGoogleAddress;
+  const ctx = dependencies.requireCompany
+    ? await dependencies.requireCompany(request, env)
+    : await requireCompany(request, env);
   if (ctx.error) return ctx.error;
   const { companyId, sb } = ctx;
 
@@ -54,7 +90,15 @@ export async function onRequest({ request, env }) {
     const normalized = normalizeAddress(body.address || body || {});
     if (normalized.error) return json(400, normalized);
 
-    const row = { company_id: companyId, ...normalized.row };
+    let verified;
+    try {
+      verified = await verifiedAddress(normalized.row, env, validateAddress);
+    } catch (error) {
+      const response = validationError(error);
+      if (response) return response;
+      return json(503, { error: 'address_validation_unavailable' });
+    }
+    const row = { company_id: companyId, ...verified.row };
     const rpc = await sb.rpc('create_company_address', {
       p_company_id: companyId,
       p_type: row.type,
@@ -65,7 +109,7 @@ export async function onRequest({ request, env }) {
       p_zip: row.zip,
       p_is_default: row.is_default,
     });
-    if (!rpc.error) return json(201, { ok: true, id: rpc.data });
+    if (!rpc.error) return json(201, { ok: true, id: rpc.data, validation: verified.validation });
     if (!isMissingRpc(rpc.error)) return json(500, { error: 'server_error' });
 
     const { data, error } = await sb.from('addresses').insert(row).select('id').single();
@@ -80,7 +124,7 @@ export async function onRequest({ request, env }) {
       if (reset.error) return json(500, { error: 'server_error' });
     }
 
-    return json(201, { ok: true, id: data.id });
+    return json(201, { ok: true, id: data.id, validation: verified.validation });
   }
 
   if (request.method === 'PATCH') {
@@ -96,11 +140,20 @@ export async function onRequest({ request, env }) {
     if (!existing) return json(404, { error: 'not_found' });
 
     const patch = {};
+    let validation = null;
     const editsFields = ['line1', 'line2', 'city', 'state', 'zip', 'type'].some((k) => src[k] !== undefined);
     if (editsFields) {
       const normalized = normalizeAddress(src);
       if (normalized.error) return json(400, normalized);
-      Object.assign(patch, normalized.row);
+      try {
+        const verified = await verifiedAddress(normalized.row, env, validateAddress);
+        Object.assign(patch, verified.row);
+        validation = verified.validation;
+      } catch (error) {
+        const response = validationError(error);
+        if (response) return response;
+        return json(503, { error: 'address_validation_unavailable' });
+      }
       delete patch.is_default; // default handled explicitly below
     }
     const makeDefault = src.is_default === true;
@@ -121,7 +174,7 @@ export async function onRequest({ request, env }) {
     const { error: upErr } = await sb.from('addresses')
       .update(patch).eq('id', id).eq('company_id', companyId);
     if (upErr) return json(500, { error: 'server_error' });
-    return json(200, { ok: true, id });
+    return json(200, { ok: true, id, ...(validation ? { validation } : {}) });
   }
 
   if (request.method === 'DELETE') {
@@ -134,4 +187,14 @@ export async function onRequest({ request, env }) {
   }
 
   return json(405, { error: 'method_not_allowed' });
+}
+
+export function createAddressesHandler(dependencies = {}) {
+  return (context) => handleAddresses(context, dependencies);
+}
+
+export async function onRequest({ request, env }) {
+  const company = await requireCompany(request, env);
+  if (company.error) return company.error;
+  return handleAddresses({ request, env }, { requireCompany: async () => company });
 }

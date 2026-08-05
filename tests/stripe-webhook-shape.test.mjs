@@ -147,6 +147,38 @@ test("orderRowFromSession falls back: customer_details ship address, usd currenc
   assert.equal(row.total, 0);
 });
 
+test("orderRowFromSession rebuilds a pre-collected checkout shipping address from signed metadata", () => {
+  const row = orderRowFromSession({
+    payment_status: "paid",
+    metadata: {
+      ship_name: "Omar Buyer",
+      ship_company: "Acme HVAC",
+      ship_phone: "321-555-0100",
+      ship_address1: "100 Main St",
+      ship_address2: "Suite 2",
+      ship_city: "Melbourne",
+      ship_state: "FL",
+      ship_postal_code: "32901",
+      ship_country: "US",
+      ship_residential: "no",
+    },
+  });
+  assert.deepEqual(row.ship_address, {
+    name: "Omar Buyer",
+    company: "Acme HVAC",
+    phone: "321-555-0100",
+    address: {
+      line1: "100 Main St",
+      line2: "Suite 2",
+      city: "Melbourne",
+      state: "FL",
+      postal_code: "32901",
+      country: "US",
+    },
+    residential: false,
+  });
+});
+
 test("cartLines normalizes raw cart entries to order lines", () => {
   assert.deepEqual(
     cartLines([{ sku: "VK-1", product_sku: "vk", name: "VK 1gal", qty: 2, unit_price: 9.5 }, { sku: "VK-2", qty: 1, unit_price: 4 }]),

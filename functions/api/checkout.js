@@ -10,6 +10,7 @@ import {
   shippingRateIdsFromContentEntries,
 } from '../_lib/checkout-session.js';
 import { ensureCompanyStripeCustomer } from '../_lib/stripe-customer.js';
+import { CheckoutShippingError, verifyShippingSelectionToken } from '../_lib/checkout-shipping.js';
 import { isMissingFunctionError } from '../_lib/credit.js';
 import { orderItemsTableHtml, technicalDocumentRequestNoteHtml } from '../_lib/order-email.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
@@ -81,6 +82,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const createStripe = dependencies.createStripe
     || ((secret) => new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() }));
   const validateShippingRates = dependencies.validateShippingRates || stripeShippingRatesError;
+  const verifyShippingSelection = dependencies.verifyShippingSelectionToken || verifyShippingSelectionToken;
 
   const rl = await checkRateLimit(env, 'checkout', clientIp(request), { limit: 20, windowSec: 60 });
   if (!rl.ok) {
@@ -113,6 +115,21 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   if (!qtyBySku) return json(400, { error: 'bad_request' });
   const skus = Object.keys(qtyBySku);
   if (!skus.length) return json(400, { error: 'cart_empty' });
+  let shippingSelection = null;
+  if (mode === 'pay' && body.shipping_quote_token) {
+    try {
+      shippingSelection = await verifyShippingSelection({
+        secret: env.SHIPPING_QUOTE_SECRET,
+        token: body.shipping_quote_token,
+        cart: Object.entries(qtyBySku).map(([sku, qty]) => ({ sku, qty })),
+      });
+    } catch (error) {
+      if (error instanceof CheckoutShippingError) return json(error.status, { error: error.code });
+      return json(400, { error: 'shipping_quote_invalid' });
+    }
+  } else if (mode === 'pay' && env.SHIPPING_QUOTE_SECRET) {
+    return json(400, { error: 'shipping_quote_required' });
+  }
 
   const sb = getAdminClient(env);
   const { user } = await getUserFromRequest(request, env);
@@ -427,21 +444,24 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   if (!appUrl) return json(500, { error: 'app_url_not_configured' });
   const runtimeError = stripeRuntimeError(env);
   if (runtimeError) return json(503, { error: runtimeError });
-  let shippingRateIds = parseStripeShippingRateIds(env.STRIPE_SHIPPING_RATE_IDS);
-  try {
-    const { data: entries, error } = await sb.from('content_entries')
-      .select('slug,payload')
-      .eq('type', 'shipping_rate')
-      .eq('status', 'published')
-      .eq('locale', 'en')
-      .order('slug');
-    if (!error && entries?.length) shippingRateIds = shippingRateIdsFromContentEntries(entries);
-  } catch {
-    // Keep env config as emergency fallback while CMS is unavailable.
+  let shippingRateIds = [];
+  if (!shippingSelection) {
+    shippingRateIds = parseStripeShippingRateIds(env.STRIPE_SHIPPING_RATE_IDS);
+    try {
+      const { data: entries, error } = await sb.from('content_entries')
+        .select('slug,payload')
+        .eq('type', 'shipping_rate')
+        .eq('status', 'published')
+        .eq('locale', 'en')
+        .order('slug');
+      if (!error && entries?.length) shippingRateIds = shippingRateIdsFromContentEntries(entries);
+    } catch {
+      // Keep env config as emergency fallback while CMS is unavailable.
+    }
+    if (!shippingRateIds?.length) return json(503, { error: 'shipping_not_configured' });
+    const shippingRateError = await validateShippingRates(env, shippingRateIds);
+    if (shippingRateError) return json(503, { error: shippingRateError });
   }
-  if (!shippingRateIds?.length) return json(503, { error: 'shipping_not_configured' });
-  const shippingRateError = await validateShippingRates(env, shippingRateIds);
-  if (shippingRateError) return json(503, { error: shippingRateError });
   const stripe = createStripe(secret);
 
   const taxEnabled = env.STRIPE_TAX_ENABLED === 'true';
@@ -474,10 +494,37 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     }
     if (taxEnabled) {
       try {
-        await stripe.customers.update(customerId, { tax_exempt: company.tax_exempt ? 'exempt' : 'none' });
+        await stripe.customers.update(customerId, {
+          tax_exempt: company.tax_exempt ? 'exempt' : 'none'
+        });
       } catch {
-        // Preserve checkout availability if the optional tax-state update fails.
-        customerId = null;
+        return json(502, { error: 'stripe_customer_setup_failed' });
+      }
+    }
+    if (shippingSelection) {
+      try {
+        const shippingAddress = shippingSelection.address;
+        const billingAddress = shippingSelection.billing_address || shippingAddress;
+        const stripeAddress = (address) => ({
+          line1: address.address1,
+          line2: address.address2 || undefined,
+          city: address.city,
+          state: address.state,
+          postal_code: address.postal_code,
+          country: address.country,
+        });
+        await stripe.customers.update(customerId, {
+          name: shippingAddress.company || shippingAddress.name,
+          phone: shippingAddress.phone || undefined,
+          address: stripeAddress(billingAddress),
+          shipping: {
+            name: shippingAddress.name,
+            phone: shippingAddress.phone || undefined,
+            address: stripeAddress(shippingAddress),
+          },
+        });
+      } catch {
+        return json(502, { error: 'stripe_customer_setup_failed' });
       }
     }
   }
@@ -492,6 +539,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       taxEnabled,
       customerId,
       shippingRateIds,
+      shippingSelection,
       purchaseOrderNumber,
       quoteId: quoteContext?.quoteId || null,
       quoteOrderId: quoteContext?.quoteOrderId || null,

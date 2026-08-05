@@ -52,6 +52,72 @@ test("configured Stripe shipping rates become checkout shipping options", () => 
   ]);
 });
 
+test("a signed carrier quote becomes one inline Stripe rate and pre-collected ship metadata", () => {
+  const p = buildStripeCheckoutSessionParams({
+    ...base,
+    email: "x@y.co",
+    shippingSelection: {
+      address: {
+        name: "Omar Buyer",
+        company: "Acme HVAC",
+        phone: "321-555-0100",
+        address1: "100 Main St",
+        address2: "Suite 2",
+        city: "Melbourne",
+        state: "FL",
+        postal_code: "32901",
+        country: "US",
+        residential: false,
+      },
+      billing_address: {
+        name: "Omar Buyer",
+        company: "Acme HVAC",
+        phone: "321-555-0100",
+        address1: "200 Billing Ave",
+        address2: "",
+        city: "Melbourne",
+        state: "FL",
+        postal_code: "32902",
+        country: "US",
+        residential: false,
+      },
+      billing_same_as_shipping: false,
+      rate: {
+        rate_id: "se-rate-ground",
+        carrier_id: "se-usps",
+        carrier_name: "USPS",
+        service_code: "usps_ground_advantage",
+        service_type: "Ground Advantage",
+        amount_minor: 2450,
+        currency: "usd",
+        delivery_days: 5,
+      },
+    },
+  });
+  assert.equal(p.shipping_address_collection, undefined);
+  assert.deepEqual(p.shipping_options, [{
+    shipping_rate_data: {
+      type: "fixed_amount",
+      display_name: "USPS — Ground Advantage",
+      fixed_amount: { amount: 2450, currency: "usd" },
+      delivery_estimate: { maximum: { unit: "business_day", value: 5 } },
+      metadata: {
+        provider: "shipengine",
+        provider_rate_id: "se-rate-ground",
+        carrier_id: "se-usps",
+        service_code: "usps_ground_advantage",
+      },
+    },
+  }]);
+  assert.equal(p.metadata.ship_address1, "100 Main St");
+  assert.equal(p.metadata.ship_postal_code, "32901");
+  assert.equal(p.metadata.bill_address1, "200 Billing Ave");
+  assert.equal(p.metadata.billing_same_as_shipping, "no");
+  assert.equal(p.billing_address_collection, "auto");
+  assert.equal(p.metadata.shipping_rate_id, "se-rate-ground");
+  assert.equal(p.cancel_url, "https://masest.co/checkout.html");
+});
+
 test("shipping-rate config trims and deduplicates valid Stripe IDs, rejects invalid config", () => {
   assert.deepEqual(
     parseStripeShippingRateIds(" shr_ground,shr_express,shr_ground "),

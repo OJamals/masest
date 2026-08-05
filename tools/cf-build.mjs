@@ -31,7 +31,7 @@ const rewritableExtensions = new Set(['.css', '.html', '.js', '.json', '.xml']);
 
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
-  /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^factory\//, /^node_modules(\/|$)/,
+  /^functions\//, /^supabase\//, /^tools\//, /^tests\//, /^factory\//, /^artifacts\//, /^node_modules(\/|$)/,
   /^dist\//, /^tmp\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
   /^\.github\//, /^\.vscode\//, /^docs\/research\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,

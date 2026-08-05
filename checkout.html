@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Checkout | MASEST</title>
+  <meta name="description" content="Verify delivery details, compare live shipping rates, and continue to secure payment.">
+  <meta name="theme-color" content="#fafbfc">
+  <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
+  <link rel="stylesheet" href="vendor/phosphor/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260727b">
+  <link rel="stylesheet" href="css/navigation.css?v=20260713a">
+  <link rel="stylesheet" href="css/components.css">
+  <script src="js/config.js" defer></script>
+  <script src="js/track.js" defer></script>
+  <script type="module" src="js/main.js?v=20260730a"></script>
+  <script type="module" src="js/checkout.js?v=20260804a"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<noscript><nav class="nojs-nav" aria-label="Site"><a href="index.html"><b>MASEST</b></a><a href="products.html">Products</a><a href="services.html">Services</a><span>Use Cases</span><a href="industries.html">Industries</a><a href="proof.html">Proof</a><a href="resources.html">Resources</a></nav></noscript>
+<main id="main">
+  <section class="section">
+    <div class="container checkout-page">
+      <nav class="checkout-steps" aria-label="Checkout progress">
+        <a href="cart.html"><span>1</span> Cart</a>
+        <b aria-current="step"><span>2</span> Delivery</b>
+        <span><span>3</span> Payment</span>
+      </nav>
+      <div class="section-head checkout-heading">
+        <p class="eyebrow">Secure checkout</p>
+        <h1>Delivery and business details</h1>
+        <p>Verify addresses, compare live carrier rates, then continue to Stripe.</p>
+      </div>
+
+      <div id="checkoutEmpty" class="cart-empty" hidden>
+        <h2>Your cart is empty.</h2>
+        <p>Add a purchase-ready product before checkout.</p>
+        <a class="btn btn-primary" href="products.html">Browse products</a>
+      </div>
+
+      <div id="checkoutShell" class="checkout-shell" hidden>
+        <form id="checkoutDetails" class="checkout-details" novalidate>
+          <section class="checkout-card" aria-labelledby="businessTitle">
+            <div class="checkout-card-head"><span>1</span><div><h2 id="businessTitle">Business and contact</h2><p>Used for order confirmation and fulfillment questions.</p></div></div>
+            <div class="form-grid">
+              <div class="field"><label for="businessName">Business / organization</label><input id="businessName" name="businessName" autocomplete="organization"></div>
+              <div class="field"><label for="contactName">Contact name</label><input id="contactName" name="contactName" autocomplete="name" required></div>
+              <div class="field"><label for="checkoutEmail">Email</label><input id="checkoutEmail" name="email" type="email" autocomplete="email" required></div>
+              <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel" required></div>
+              <div class="field full"><label for="purchaseOrderNumber">Purchase order number <span class="optional">Optional</span></label><input id="purchaseOrderNumber" name="purchaseOrderNumber" maxlength="64" autocomplete="off"></div>
+            </div>
+          </section>
+
+          <section class="checkout-card" aria-labelledby="shippingTitle">
+            <div class="checkout-card-head"><span>2</span><div><h2 id="shippingTitle">Shipping address</h2><p>Google verifies this address before live ShipEngine rates load.</p></div></div>
+            <div id="shippingSavedWrap" class="field checkout-saved" hidden><label for="shippingSaved">Saved shipping address</label><select id="shippingSaved" name="shippingSaved"><option value="">Enter a new address</option></select></div>
+            <div id="shippingAutocomplete" class="address-autocomplete" hidden></div>
+            <div class="form-grid">
+              <div class="field full"><label for="shippingAddress1">Street address</label><input id="shippingAddress1" name="shippingAddress1" autocomplete="shipping address-line1" required></div>
+              <div class="field full"><label for="shippingAddress2">Suite, unit, building <span class="optional">Optional</span></label><input id="shippingAddress2" name="shippingAddress2" autocomplete="shipping address-line2"></div>
+              <div class="field"><label for="shippingCity">City</label><input id="shippingCity" name="shippingCity" autocomplete="shipping address-level2" required></div>
+              <div class="field"><label for="shippingState">State</label><input id="shippingState" name="shippingState" maxlength="2" autocomplete="shipping address-level1" required></div>
+              <div class="field"><label for="shippingPostalCode">ZIP code</label><input id="shippingPostalCode" name="shippingPostalCode" inputmode="numeric" autocomplete="shipping postal-code" required></div>
+              <label class="checkout-check"><input id="shippingResidential" name="shippingResidential" type="checkbox"> Residential delivery</label>
+            </div>
+          </section>
+
+          <section class="checkout-card" aria-labelledby="billingTitle">
+            <div class="checkout-card-head"><span>3</span><div><h2 id="billingTitle">Billing address</h2><p>Stored with payment and accounting context.</p></div></div>
+            <label class="checkout-check checkout-check-prominent"><input id="billingSameAsShipping" name="billingSameAsShipping" type="checkbox" checked> Billing address is same as shipping</label>
+            <fieldset id="billingAddressFields" hidden>
+              <legend class="sr-only">Billing address fields</legend>
+              <div id="billingSavedWrap" class="field checkout-saved" hidden><label for="billingSaved">Saved billing address</label><select id="billingSaved" name="billingSaved"><option value="">Enter a new address</option></select></div>
+              <div id="billingAutocomplete" class="address-autocomplete" hidden></div>
+              <div class="form-grid">
+                <div class="field full"><label for="billingAddress1">Street address</label><input id="billingAddress1" name="billingAddress1" autocomplete="billing address-line1" required></div>
+                <div class="field full"><label for="billingAddress2">Suite, unit, building <span class="optional">Optional</span></label><input id="billingAddress2" name="billingAddress2" autocomplete="billing address-line2"></div>
+                <div class="field"><label for="billingCity">City</label><input id="billingCity" name="billingCity" autocomplete="billing address-level2" required></div>
+                <div class="field"><label for="billingState">State</label><input id="billingState" name="billingState" maxlength="2" autocomplete="billing address-level1" required></div>
+                <div class="field"><label for="billingPostalCode">ZIP code</label><input id="billingPostalCode" name="billingPostalCode" inputmode="numeric" autocomplete="billing postal-code" required></div>
+              </div>
+            </fieldset>
+          </section>
+
+          <label id="saveAddressWrap" class="checkout-check checkout-save" hidden><input id="saveAddress" name="saveAddress" type="checkbox" checked> Save shipping and billing addresses to this account</label>
+          <p id="checkoutStatus" class="cart-status" role="status" aria-live="polite" hidden></p>
+          <button id="calculateShipping" class="btn btn-primary checkout-primary" type="submit">Verify address and calculate shipping</button>
+        </form>
+
+        <aside class="checkout-summary" aria-labelledby="checkoutSummaryTitle">
+          <div class="cart-summary-head"><p class="eyebrow">Order</p><h2 id="checkoutSummaryTitle">Order summary</h2></div>
+          <div id="checkoutLines" class="checkout-summary-lines"></div>
+          <div id="checkoutTotals" class="cart-estimate"></div>
+          <section id="shippingRates" class="checkout-rates" aria-labelledby="shippingRatesTitle" hidden>
+            <h3 id="shippingRatesTitle">Shipping method</h3>
+            <p id="addressVerification" class="checkout-verified"></p>
+            <div id="shippingRateOptions"></div>
+          </section>
+          <button id="checkoutPay" class="btn btn-primary checkout-primary" type="button" disabled>Continue to secure payment</button>
+          <p class="cart-checkout-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Product total, selected shipping, and tax transfer to Stripe. Card and ACH supported.</p>
+          <a class="checkout-back" href="cart.html">Return to cart</a>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

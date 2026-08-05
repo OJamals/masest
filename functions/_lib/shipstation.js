@@ -99,7 +99,6 @@ export function buildRateRequest({ order, packages, warehouseId, carrierIds, pho
   const normalizedPackages = normalizePackages(packages);
   const reference = text(orderReference(order));
   if (!reference) throw new ShipStationError('shipping_order_required');
-  const currency = text(order?.currency || 'usd').toLowerCase();
   return {
     rate_options: { carrier_ids: carriers },
     shipment: {
@@ -112,7 +111,7 @@ export function buildRateRequest({ order, packages, warehouseId, carrierIds, pho
         sku: text(item?.sku),
         name: text(item?.name || item?.sku),
         quantity: Math.max(1, Math.floor(Number(item?.qty) || 1)),
-        unit_price: { currency, amount: Number(item?.unit_price) || 0 },
+        unit_price: Number(item?.unit_price) || 0,
       })),
       confirmation: 'none',
       insurance_provider: 'none',

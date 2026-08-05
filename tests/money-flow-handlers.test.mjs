@@ -191,6 +191,55 @@ test('paid checkout executes Request/env handler and creates Stripe session', as
   assert.deepEqual(calls, ['variants.read', 'shipping.read', 'stripe.session.create']);
 });
 
+test('paid checkout verifies a signed carrier selection and bypasses legacy fixed rates', async () => {
+  const calls = [];
+  let sessionParams;
+  const shippingSelection = {
+    address: {
+      name: 'Omar Buyer', company: 'Acme HVAC', phone: '321-555-0100',
+      address1: '100 Main St', address2: '', city: 'Melbourne', state: 'FL',
+      postal_code: '32901', country: 'US', residential: false,
+    },
+    rate: {
+      rate_id: 'se-rate-ground', carrier_id: 'se-usps', carrier_name: 'USPS',
+      service_code: 'usps_ground_advantage', service_type: 'Ground Advantage',
+      amount_minor: 2450, currency: 'usd', delivery_days: 5,
+    },
+  };
+  const handler = createCheckoutHandler({
+    adminClient: () => checkoutDb(calls),
+    tierForRequest: async () => ({ tier: 'retail' }),
+    userFromRequest: async () => ({ user: null }),
+    verifyShippingSelectionToken: async ({ token, cart }) => {
+      assert.equal(token, 'opaque.signed');
+      assert.deepEqual(cart, [{ sku: 'VK-1', qty: 2 }]);
+      return shippingSelection;
+    },
+    createStripe: () => ({
+      checkout: { sessions: { async create(params) {
+        calls.push('stripe.session.create');
+        sessionParams = params;
+        return { url: 'https://checkout.stripe.test/session' };
+      } } },
+    }),
+  });
+  const result = await responseJson(await handler({
+    request: jsonRequest('https://masest.test/api/checkout', {
+      cart: [{ sku: 'VK-1', qty: 2 }],
+      shipping_quote_token: 'opaque.signed',
+    }),
+    env: {
+      STRIPE_SECRET_KEY: 'sk_test',
+      SHIPPING_QUOTE_SECRET: 'q'.repeat(48),
+      APP_URL: 'https://masest.test',
+    },
+  }));
+  assert.deepEqual(result, { status: 200, body: { url: 'https://checkout.stripe.test/session' } });
+  assert.equal(sessionParams.shipping_options[0].shipping_rate_data.fixed_amount.amount, 2450);
+  assert.equal(sessionParams.metadata.ship_postal_code, '32901');
+  assert.deepEqual(calls, ['variants.read', 'stripe.session.create']);
+});
+
 test('published CMS shipping rates override environment fallback', async () => {
   const calls = [];
   let sessionParams;

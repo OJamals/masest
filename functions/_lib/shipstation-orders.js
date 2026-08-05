@@ -307,7 +307,7 @@ function safeRatesForPackages(payload, packages, carriers) {
   return rates.filter((rate) => carrierSupportsMultiPackage(byId.get(rate.carrier_id), rate.service_code));
 }
 
-export function packagesFromOrderItems(order, variants) {
+export function packagesFromOrderItems(order, variants, { maxPackages = 20 } = {}) {
   const profileBySku = new Map((variants || []).map((variant) => [text(variant?.vsku, 160), variant]));
   const packages = [];
   for (const item of order?.order_items || []) {
@@ -322,7 +322,7 @@ export function packagesFromOrderItems(order, variants) {
     const populated = dimensions.filter((value) => value && value > 0).length;
     if (populated !== 0 && populated !== 3) throw new ShipStationError('shipping_package_profile_invalid');
     const qty = Math.max(1, Math.floor(number(item?.qty) || 1));
-    if (packages.length + qty > 20) throw new ShipStationError('too_many_shipping_packages');
+    if (packages.length + qty > maxPackages) throw new ShipStationError('too_many_shipping_packages');
     for (let index = 0; index < qty; index += 1) {
       packages.push({
         weight,

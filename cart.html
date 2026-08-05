@@ -48,22 +48,15 @@
         <p id="cartStatus" class="cart-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
         <div id="checkoutActive">
           <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
-          <form id="checkoutForm" class="cart-path cart-path-primary" novalidate>
+          <div class="cart-path cart-path-primary">
             <div class="cart-path-heading">
-              <span>Pay now</span>
-              <small>Secure Card / ACH checkout</small>
+              <span>Continue to checkout</span>
+              <small>Confirm business, delivery, billing, and live shipping rates.</small>
             </div>
-            <label class="field-label" for="checkoutEmail">Receipt email</label>
-            <input id="checkoutEmail" name="email" class="cart-input" type="email" autocomplete="email" spellcheck="false" inputmode="email" aria-describedby="checkoutEmailHelp" placeholder="buyer@company.com">
-            <p id="checkoutEmailHelp" class="cart-field-help">Optional. Order confirmation is sent to this address.</p>
-            <label class="field-label" for="checkoutPurchaseOrder">Purchase order number</label>
-            <input id="checkoutPurchaseOrder" name="purchase_order_number" class="cart-input" type="text" maxlength="64" autocomplete="off" spellcheck="false" aria-describedby="checkoutPurchaseOrderHelp" placeholder="PO-1042">
-            <p id="checkoutPurchaseOrderHelp" class="cart-field-help">Optional. This reference appears with the order and accounting record.</p>
             <div class="cart-actions">
-              <button class="btn btn-primary" id="checkoutPay" type="submit">Pay now</button>
-              <button class="btn btn-secondary" id="checkoutNet" type="button" hidden>Place order with NET terms</button>
+              <a class="btn btn-primary" id="checkoutContinue" href="checkout.html">Continue to checkout</a>
             </div>
-          </form>
+          </div>
           <div class="cart-path cart-path-quote cart-quote-prompt">
             <div class="cart-path-heading">
               <span>Formal quote</span>
@@ -82,7 +75,7 @@
             <div class="cart-actions"><button class="btn btn-secondary" id="saveRequisition" type="submit">Save requisition</button></div>
             <p id="requisitionStatus" class="cart-field-help" role="status" aria-live="polite"></p>
           </form>
-          <p class="cart-checkout-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Secure Card / ACH checkout. Freight is confirmed separately before fulfillment.</p>
+          <p class="cart-checkout-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Address verification and live shipping rates come next; payment stays on Stripe.</p>
           <div id="cartAccount" class="cart-account" hidden></div>
         </div>
       </aside>
@@ -90,7 +83,7 @@
   </section>
 </main>
 <script type="module">
-  import { checkout, clear, items, remove, setQty } from "./js/cart.js";
+  import { items, remove, setQty } from "./js/cart.js";
   import { api, me, getToken } from "./js/auth.js?v=20260711w";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
@@ -155,12 +148,8 @@
   const lines = document.getElementById("cartLines");
   const estimate = document.getElementById("cartEstimate");
   const status = document.getElementById("cartStatus");
-  const email = document.getElementById("checkoutEmail");
-  const purchaseOrder = document.getElementById("checkoutPurchaseOrder");
-  const checkoutPay = document.getElementById("checkoutPay");
-  const checkoutNet = document.getElementById("checkoutNet");
+  const checkoutContinue = document.getElementById("checkoutContinue");
   const checkoutQuote = document.getElementById("checkoutQuote");
-  const checkoutForm = document.getElementById("checkoutForm");
   const saveRequisitionForm = document.getElementById("saveRequisitionForm");
   const saveRequisition = document.getElementById("saveRequisition");
   const requisitionName = document.getElementById("requisitionName");
@@ -168,68 +157,6 @@
   const summary = document.querySelector(".cart-summary");
   const shell = document.querySelector(".cart-shell");
   let canSaveRequisition = false;
-  const checkoutLabels = {
-    pay: checkoutPay.textContent,
-    net: checkoutNet.textContent,
-  };
-
-  // NET terms require an approved business account. Returns null if the user is
-  // logged out or the auth client/CDN is unavailable.
-  async function getAuthToken() {
-    try {
-      return (await getToken()) || null;
-    } catch (err) {
-      return null;
-    }
-  }
-
-  function setCheckoutDisabled(disabled) {
-    checkoutPay.disabled = disabled;
-    checkoutNet.disabled = disabled;
-  }
-
-  function setCheckoutPending(mode, pending) {
-    const button = mode === "net" ? checkoutNet : checkoutPay;
-    button.textContent = pending
-      ? mode === "net" ? "Checking account terms…" : "Starting checkout…"
-      : checkoutLabels[mode];
-    if (pending) button.setAttribute("aria-busy", "true");
-    else button.removeAttribute("aria-busy");
-  }
-
-  function checkoutErrorMessage(err) {
-    if (err?.code === "not_purchasable") {
-      return err.message || "Some SKUs need bulk freight review. Send a quote request and MASEST will confirm availability.";
-    }
-    if (err?.code === "auth_required_for_net") {
-      return "NET terms require an approved business account. Send a quote request and MASEST will confirm account terms.";
-    }
-    if (err?.code === "net_terms_unavailable") {
-      return "NET terms are not available for this account yet. Send a quote request for approval and terms review.";
-    }
-    if (err?.code === "stripe_not_configured") {
-      return "Online checkout is not configured yet. Send a quote request and MASEST will complete the order path.";
-    }
-    if (err?.code === "credit_limit_exceeded") {
-      const avail = Number(err.available || 0).toFixed(2);
-      const total = Number(err.order_total || 0).toFixed(2);
-      return `This $${total} order exceeds your available credit ($${avail}). Pay now with a card, or send a quote request and MASEST will review your account terms.`;
-    }
-    if (err?.code === "out_of_stock") {
-      return err.message || "Some items do not have enough stock. Adjust quantities or request a quote.";
-    }
-    if (err?.code === "mixed_currency") {
-      return err.message || "Items in your cart use different currencies. Order them separately.";
-    }
-    if (err?.code === "stripe_error" || err?.code === "server_error") {
-      return "Checkout hit a temporary error. Try again in a moment, or send a quote request and MASEST will complete the order.";
-    }
-    if (err?.message === "cart_empty") return "Add at least one product before checkout.";
-    // Server error messages are written for buyers — prefer them over the generic fallback.
-    if (err?.message && err.message !== err.code) return err.message;
-    return "Checkout is not available for this cart. Send a quote request and MASEST will confirm the order path.";
-  }
-
   function productName(sku) {
     const fallback = fallbackNames[String(sku).toLowerCase()];
     const name = vmap.get(sku)?.name || fallback || sku;
@@ -238,8 +165,6 @@
 
   function quoteUrl(cartItems) {
     const params = new URLSearchParams({ type: "quote" });
-    const receiptEmail = email?.value?.trim();
-    if (receiptEmail) params.set("email", receiptEmail);
     if (cartItems.length) {
       params.set("message", `Cart quote request: ${cartItems.map((item) => `${productName(item.sku)} x ${item.qty}`).join("; ")}.`);
     }
@@ -250,14 +175,6 @@
     if (checkoutQuote) checkoutQuote.href = quoteUrl(items());
   }
 
-  function checkoutReady() {
-    const cartItems = items();
-    return cartItems.length > 0 && !cartItems.some(item => {
-      const meta = vmap.get(item.sku);
-      return meta && !meta.purchasable;
-    });
-  }
-
   function render() {
     const cartItems = items();
     saveRequisitionForm.hidden = !canSaveRequisition || !cartItems.length;
@@ -266,7 +183,8 @@
       const meta = vmap.get(item.sku);
       return meta && !meta.purchasable;
     });
-    setCheckoutDisabled(cartItems.length === 0 || hasBlockedLine);
+    checkoutContinue.setAttribute("aria-disabled", hasBlockedLine ? "true" : "false");
+    checkoutContinue.tabIndex = hasBlockedLine ? -1 : 0;
     if (hasBlockedLine) {
       status.dataset.state = "err";
       status.textContent = "Remove bulk freight items before checkout, or send a quote request.";
@@ -276,19 +194,14 @@
       status.textContent = "";
       status.hidden = true;
     }
-    const hasSuccess = status.dataset.state === "ok" && Boolean(status.textContent);
-    // Empty carts keep only the short continuation message. Successful NET
-    // orders keep their confirmation visible after the cart is cleared.
     const checkoutActive = document.getElementById("checkoutActive");
-    const summaryHidden = !cartItems.length && !hasSuccess;
+    const summaryHidden = !cartItems.length;
     if (summary) summary.hidden = summaryHidden;
     if (shell) shell.classList.toggle("is-empty", summaryHidden);
     if (checkoutActive) checkoutActive.hidden = !cartItems.length;
-    if (status && !cartItems.length) status.hidden = !hasSuccess;
+    if (status && !cartItems.length) status.hidden = true;
     if (!cartItems.length) {
-      lines.innerHTML = hasSuccess
-        ? `<div class="cart-empty"><h2>Order submitted.</h2><p>Your cart is clear. Follow fulfillment and invoice updates from your account.</p><a class="btn btn-primary" href="dashboard.html#orders">View your orders</a></div>`
-        : `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse products</a></div>`;
+      lines.innerHTML = `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse products</a></div>`;
       updateSubtotal();
       return;
     }
@@ -353,7 +266,7 @@
     const itemLabel = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
     estimate.innerHTML = `
       <dl>
-        <div><dt>Shipping</dt><dd>Confirmed separately</dd></div>
+        <div><dt>Shipping</dt><dd>Calculated next</dd></div>
         <div><dt>Tax</dt><dd>Calculated at checkout</dd></div>
         <div class="cart-total-row"><dt>Estimated subtotal <span class="cart-total-count">${itemLabel}</span></dt><dd>${subtotalText}</dd></div>
       </dl>
@@ -385,72 +298,10 @@
     remove(sku);
     render();
   });
-
-  async function runCheckout(mode) {
-    if (!items().length) {
-      status.dataset.state = "err";
-      status.textContent = "Add at least one product before checkout.";
-      status.hidden = false;
-      setCheckoutDisabled(true);
-      return;
-    }
-    const receiptEmail = email.value.trim();
-    const purchaseOrderNumber = purchaseOrder.value.trim();
-    if (receiptEmail && !email.checkValidity()) {
-      status.dataset.state = "err";
-      status.textContent = "Enter a valid receipt email, or leave the field blank.";
-      status.hidden = false;
-      email.focus();
-      email.reportValidity();
-      return;
-    }
-    setCheckoutDisabled(true);
-    setCheckoutPending(mode, true);
-    status.dataset.state = "";
-    status.textContent = mode === "net" ? "Checking account terms…" : "Starting checkout…";
-    status.hidden = false;
-    // Card checkout remains available to guests, but an authenticated buyer must carry
-    // their token so the resulting Stripe order stays attached to the business account.
-    let token = await getAuthToken();
-    if (mode === "net" && !token) {
-      status.dataset.state = "err";
-      status.textContent = "Sign in to your approved business account to use NET terms, or send a quote request.";
-      status.hidden = false;
-      setCheckoutPending(mode, false);
-      setCheckoutDisabled(!checkoutReady());
-      return;
-    }
-    try {
-      const result = await checkout({
-        mode,
-        email: receiptEmail,
-        token,
-        purchaseOrderNumber,
-      });
-      if (result.net) {
-        status.dataset.state = "ok";
-        status.textContent = result.message || "Order placed on account.";
-        status.hidden = false;
-        setCheckoutPending(mode, false);
-        // NET success never reaches order-confirmed.html — close the funnel here.
-        try { if (typeof window.mtrack === "function") window.mtrack("order_confirmed"); } catch (e) { /* best-effort */ }
-        clear();
-        render();
-      }
-    } catch (err) {
-      status.dataset.state = "err";
-      status.textContent = checkoutErrorMessage(err);
-      status.hidden = false;
-      setCheckoutPending(mode, false);
-      setCheckoutDisabled(!checkoutReady());
-    }
-  }
-
-  checkoutForm.addEventListener("submit", event => {
-    event.preventDefault();
-    runCheckout("pay");
+  checkoutContinue.addEventListener("click", event => {
+    if (checkoutContinue.getAttribute("aria-disabled") === "true") event.preventDefault();
   });
-  checkoutNet.addEventListener("click", () => runCheckout("net"));
+
   saveRequisitionForm.addEventListener("submit", async event => {
     event.preventDefault();
     const name = requisitionName.value.trim();
@@ -473,7 +324,6 @@
       saveRequisition.disabled = false;
     }
   });
-  email?.addEventListener("input", syncQuoteHref);
   // Account strip: guests get a sign-in/register option (returns to cart); members see their account.
   async function renderCartAccount() {
     const box = document.getElementById("cartAccount");
@@ -482,21 +332,14 @@
     try { data = await me(); } catch {}
     if (data && !data.needs_profile) {
       const approved = data.company?.status === "approved";
-      const canUseNetTerms = data.can_use_net_terms === true;
       canSaveRequisition = Boolean(data.company);
-      checkoutNet.hidden = !canUseNetTerms;
-      const accountMessage = canUseNetTerms
-        ? `NET terms available for <b>${esc(data.email)}</b>.`
-        : approved
-          ? `Signed in as <b>${esc(data.email)}</b>. NET terms are not enabled for this account.`
-          : `Signed in as <b>${esc(data.email)}</b>. NET terms pending approval.`;
+      const accountMessage = approved
+        ? `Signed in as <b>${esc(data.email)}</b>. Saved addresses load during checkout.`
+        : `Signed in as <b>${esc(data.email)}</b>. Account approval pending.`;
       box.innerHTML = `<i class="ph ph-user-circle" aria-hidden="true"></i> ${accountMessage}`;
-      const email = document.getElementById("checkoutEmail");
-      if (email && !email.value) email.value = data.email || "";
     } else {
       canSaveRequisition = false;
-      checkoutNet.hidden = true;
-      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Have an account? <a href="account.html?return=cart.html">Sign in</a> for saved requisitions, details, and approved NET terms.`;
+      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Have an account? <a href="account.html?return=cart.html">Sign in</a> for saved requisitions and reusable checkout addresses.`;
     }
     render();
     box.hidden = false;

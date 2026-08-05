@@ -68,8 +68,7 @@ test("static catalog does not show cart controls without commerce metadata", asy
       // of the visual and accessibility trees until it can be used.
       await page.locator(".cart-empty").waitFor();
       assert.equal(await page.locator(".cart-summary").isVisible(), false);
-      assert.equal(await page.locator("#checkoutPay").isVisible(), false);
-      assert.equal(await page.locator("#checkoutPay").isDisabled(), true);
+      assert.equal(await page.locator("#checkoutContinue").isVisible(), false);
     } finally {
       await browser.close();
     }
@@ -158,27 +157,18 @@ test("priced products can be added to the cart", async () => {
   });
 });
 
-test("cart page explains bulk freight review when checkout rejects a SKU", async () => {
+test("cart routes purchasable SKUs to delivery checkout before provider validation", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await routeProducts(page);
-      await page.route("**/api/checkout", route => route.fulfill({
-        status: 400,
-        contentType: "application/json",
-        body: JSON.stringify({
-          error: "not_purchasable",
-          message: "Some SKUs need bulk freight review.",
-        }),
-      }));
-
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
       await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ "hcr-1": 1 })));
       await page.reload({ waitUntil: "domcontentloaded" });
-      await page.locator("#checkoutPay").click();
-
-      await page.getByText(/bulk freight review/i).waitFor();
+      await page.locator("#checkoutContinue").click();
+      await page.waitForURL(/\/checkout\.html$/);
+      await page.getByRole("heading", { name: "Delivery and business details" }).waitFor();
     } finally {
       await browser.close();
     }
@@ -198,8 +188,7 @@ test("cart uses a conventional order summary without catalog policy duplication"
 
       await page.getByText("2 items").waitFor();
       await page.getByText("$34.60", { exact: true }).first().waitFor();
-      await page.getByRole("button", { name: "Pay now", exact: true }).waitFor();
-      assert.equal(await page.getByRole("button", { name: "Place order with NET terms" }).isVisible(), false);
+      await page.getByRole("link", { name: "Continue to checkout", exact: true }).waitFor();
       await page.getByRole("link", { name: "Get formal quote" }).waitFor();
       assert.equal(await page.locator(".cart-path-primary").count(), 1);
       assert.equal(await page.locator(".cart-path-quote").count(), 1);
@@ -207,7 +196,7 @@ test("cart uses a conventional order summary without catalog policy duplication"
       assert.equal(await page.getByText(/200\+ jugs/i).count(), 0);
       assert.equal(await page.getByText(/Prices valid six months/i).count(), 0);
       assert.equal(await page.locator("#shipZone").count(), 0);
-      assert.match(await page.locator(".cart-estimate").textContent(), /ShippingConfirmed separately/);
+      assert.match(await page.locator(".cart-estimate").textContent(), /ShippingCalculated next/);
       assert.match(await page.locator(".cart-estimate").textContent(), /TaxCalculated at checkout/);
       assert.match(await page.locator(".cart-estimate").textContent(), /Final product pricing and discounts are confirmed at checkout/);
     } finally {

@@ -155,6 +155,7 @@ export async function checkout({
   email,
   token,
   purchaseOrderNumber,
+  shippingQuoteToken,
 } = {}) {
   const line = items();
   if (!line.length) throw new Error("cart_empty");
@@ -168,6 +169,7 @@ export async function checkout({
     mode,
     email,
     purchase_order_number: purchaseOrderNumber,
+    shipping_quote_token: shippingQuoteToken || undefined,
     cart: line,
   };
   const quote = acceptedQuoteContext(line);

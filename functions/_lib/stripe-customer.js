@@ -1,19 +1,32 @@
 export async function ensureCompanyStripeCustomer({ stripe, sb, company, email }) {
-  if (company.stripe_customer_id) return company.stripe_customer_id;
+  const previousCustomerId = company.stripe_customer_id || null;
+  if (previousCustomerId) {
+    try {
+      const existing = await stripe.customers.retrieve(previousCustomerId);
+      if (existing && !existing.deleted) return previousCustomerId;
+    } catch (error) {
+      if (error?.code !== 'resource_missing') throw error;
+    }
+  }
 
   const customer = await stripe.customers.create({
     email: email || undefined,
     name: company.name || undefined,
     metadata: { company_id: company.id },
   }, {
-    idempotencyKey: `company-customer:${company.id}`,
+    idempotencyKey: previousCustomerId
+      ? `company-customer:${company.id}:replace:${previousCustomerId}`
+      : `company-customer:${company.id}`,
   });
 
-  const { data: saved, error: saveError } = await sb
+  let update = sb
     .from('companies')
     .update({ stripe_customer_id: customer.id })
-    .eq('id', company.id)
-    .is('stripe_customer_id', null)
+    .eq('id', company.id);
+  update = previousCustomerId
+    ? update.eq('stripe_customer_id', previousCustomerId)
+    : update.is('stripe_customer_id', null);
+  const { data: saved, error: saveError } = await update
     .select('stripe_customer_id')
     .maybeSingle();
   if (saveError) throw new Error('stripe_customer_persist_failed');

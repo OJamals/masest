@@ -83,6 +83,7 @@ test("Cloudflare build excludes internal research and audit artifacts", () => {
     "local builds must exercise unignored new site files before commit",
   );
   assert.match(build, /\^factory\\\//, "Loop Factory run artifacts must not publish");
+  assert.match(build, /\^artifacts\\\//, "internal QA and handoff artifacts must not publish");
   assert.match(build, /\^audit-\[\^\/\]\+\\\/\//, "dated audit capture folders must not publish");
   assert.match(build, /\^audits\?\\\/\//, "generic audit capture folders must not publish");
   assert.match(build, /\^masest\\\.co-audit\\\//, "downloaded site audit captures must not publish");

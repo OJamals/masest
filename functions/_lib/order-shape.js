@@ -72,6 +72,20 @@ export function normalizeCartQuantities(cart, {
 // stays pure (no checkout-session import).
 export function orderRowFromSession(session, customerEmail = null) {
   const s = session || {};
+  const metadataAddress = s.metadata?.ship_address1 ? {
+    name: s.metadata.ship_name || null,
+    company: s.metadata.ship_company || null,
+    phone: s.metadata.ship_phone || null,
+    address: {
+      line1: s.metadata.ship_address1,
+      line2: s.metadata.ship_address2 || null,
+      city: s.metadata.ship_city || null,
+      state: s.metadata.ship_state || null,
+      postal_code: s.metadata.ship_postal_code || null,
+      country: s.metadata.ship_country || 'US',
+    },
+    residential: s.metadata.ship_residential === 'yes',
+  } : null;
   // ACH (us_bank_account) sessions complete while the debit is still processing
   // (payment_status 'unpaid') and can fail days later — those orders start as
   // pending_payment and are promoted/cancelled by the async_payment_* events.
@@ -91,7 +105,7 @@ export function orderRowFromSession(session, customerEmail = null) {
     stripe_payment_intent: s.payment_intent,
     customer_email: customerEmail ?? null,
     purchase_order_number: s.metadata?.purchase_order_number || null,
-    ship_address: s.shipping_details || s.customer_details || null,
+    ship_address: s.shipping_details || metadataAddress || s.customer_details || null,
   };
 }
 

@@ -9,7 +9,7 @@
 // product_variants) and split across cart, cart2, cart3… keys. 40 chunks × 450 chars
 // comfortably holds 300+ cart lines while staying under Stripe's 50-key limit.
 const CART_CHUNK_SIZE = 450;
-const CART_MAX_CHUNKS = 40;
+const CART_MAX_CHUNKS = 20;
 
 export function normalizePurchaseOrderNumber(value) {
   if (value == null) return { value: null };
@@ -67,6 +67,7 @@ export function buildStripeCheckoutSessionParams({
   taxEnabled = false,
   customerId = null,
   shippingRateIds = [],
+  shippingSelection = null,
   purchaseOrderNumber = null,
   quoteId = null,
   quoteOrderId = null,
@@ -81,6 +82,30 @@ export function buildStripeCheckoutSessionParams({
     unit_price: Number(product.price),
     backordered: !!product.backordered,
   }));
+  const selectedAddress = shippingSelection?.address || null;
+  const selectedBillingAddress = shippingSelection?.billing_address || selectedAddress;
+  const selectedRate = shippingSelection?.rate || null;
+  const inlineShippingOption = selectedRate ? {
+    shipping_rate_data: {
+      type: "fixed_amount",
+      display_name: [selectedRate.carrier_name, selectedRate.service_type].filter(Boolean).join(" — ") || "Shipping",
+      fixed_amount: {
+        amount: Math.max(0, Math.round(Number(selectedRate.amount_minor) || 0)),
+        currency: selectedRate.currency || "usd",
+      },
+      ...(Number(selectedRate.delivery_days) > 0 ? {
+        delivery_estimate: {
+          maximum: { unit: "business_day", value: Math.ceil(Number(selectedRate.delivery_days)) },
+        },
+      } : {}),
+      metadata: {
+        provider: "shipengine",
+        provider_rate_id: selectedRate.rate_id || "",
+        carrier_id: selectedRate.carrier_id || "",
+        service_code: selectedRate.service_code || "",
+      },
+    },
+  } : null;
 
   const params = {
     mode: "payment",
@@ -112,17 +137,39 @@ export function buildStripeCheckoutSessionParams({
     // Gated by STRIPE_TAX_ENABLED (see caller). Off by default; requires a Stripe
     // origin/head-office address before it can be flipped on, or sessions error.
     automatic_tax: { enabled: !!taxEnabled },
-    shipping_address_collection: { allowed_countries: ["US"] },
-    shipping_options: shippingRateIds.map((shipping_rate) => ({ shipping_rate })),
-    billing_address_collection: "required",
+    ...(selectedAddress ? {} : { shipping_address_collection: { allowed_countries: ["US"] } }),
+    shipping_options: inlineShippingOption
+      ? [inlineShippingOption]
+      : shippingRateIds.map((shipping_rate) => ({ shipping_rate })),
+    billing_address_collection: selectedBillingAddress ? "auto" : "required",
     success_url: `${appUrl}/order-confirmed.html?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/cart.html`,
+    cancel_url: `${appUrl}/${selectedAddress ? "checkout.html" : "cart.html"}`,
     metadata: {
       company_id: companyId || "",
       buyer_email: cleanEmail,
       purchase_order_number: purchaseOrderNumber || "",
       quote_id: quoteId || "",
       quote_order_id: quoteOrderId || "",
+      shipping_rate_id: selectedRate?.rate_id || "",
+      shipping_carrier_id: selectedRate?.carrier_id || "",
+      shipping_service_code: selectedRate?.service_code || "",
+      ship_name: selectedAddress?.name || "",
+      ship_company: selectedAddress?.company || "",
+      ship_phone: selectedAddress?.phone || "",
+      ship_address1: selectedAddress?.address1 || "",
+      ship_address2: selectedAddress?.address2 || "",
+      ship_city: selectedAddress?.city || "",
+      ship_state: selectedAddress?.state || "",
+      ship_postal_code: selectedAddress?.postal_code || "",
+      ship_country: selectedAddress?.country || "",
+      ship_residential: selectedAddress ? (selectedAddress.residential ? "yes" : "no") : "",
+      billing_same_as_shipping: shippingSelection?.billing_same_as_shipping === false ? "no" : "yes",
+      bill_address1: selectedBillingAddress?.address1 || "",
+      bill_address2: selectedBillingAddress?.address2 || "",
+      bill_city: selectedBillingAddress?.city || "",
+      bill_state: selectedBillingAddress?.state || "",
+      bill_postal_code: selectedBillingAddress?.postal_code || "",
+      bill_country: selectedBillingAddress?.country || "",
       ...cartMetadataEntries(cart),
     },
   };
@@ -133,7 +180,7 @@ export function buildStripeCheckoutSessionParams({
     params.customer = customerId;
     // Persist the address captured at checkout back onto the Customer so Stripe Tax
     // (and exemption) resolve on this and future invoices.
-    params.customer_update = { address: "auto", shipping: "auto", name: "auto" };
+    if (!selectedAddress) params.customer_update = { address: "auto", shipping: "auto", name: "auto" };
   } else if (cleanEmail) {
     params.customer_email = cleanEmail;
   }
