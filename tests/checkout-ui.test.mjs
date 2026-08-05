@@ -29,6 +29,8 @@ test('Google autocomplete owns the visible address line with manual fallback', (
   assert.match(checkout, /id="shippingAddressDetails"[^>]*hidden/);
   assert.match(checkout, /id="shippingSuiteToggle"/);
   assert.match(autocompleteSource, /onSelect/);
+  assert.match(autocompleteSource, /autocomplete\.id = `\$\{mount\.id\}Input`/);
+  assert.match(autocompleteSource, /autocomplete\.setAttribute\('name', mount\.id\)/);
   assert.match(checkoutSource, /showManualAddress/);
 });
 

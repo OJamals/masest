@@ -80,6 +80,8 @@ export async function mountAddressAutocomplete({
   await loadGoogleMaps(config.api_key);
   const { PlaceAutocompleteElement } = await globalThis.google.maps.importLibrary('places');
   const autocomplete = new PlaceAutocompleteElement();
+  autocomplete.id = `${mount.id}Input`;
+  autocomplete.setAttribute('name', mount.id);
   autocomplete.includedRegionCodes = config.included_region_codes || ['us'];
   autocomplete.placeholder = placeholder;
   autocomplete.setAttribute('aria-label', ariaLabel);
