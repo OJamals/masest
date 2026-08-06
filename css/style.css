@@ -4245,6 +4245,8 @@ body.checkout-flow-page::before { display: none; }
     to { opacity: 1; transform: translateY(0); }
   }
 }
+.checkout-rate-note { margin: 10px 0 0; color: var(--muted); font-size: .76rem; line-height: 1.45; text-wrap: pretty; }
+.checkout-rate-note:empty { display: none; }
 .checkout-rate-more { color: var(--accent-ink); }
 .checkout-rate-more > summary {
   display: flex;

@@ -109,6 +109,35 @@ export function groupServiceRates(rates = [], visibleCount = 3) {
 // in UTC calendar space so the date reads the same wherever it is shown.
 const utcDay = (date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 
+// A carrier's estimate is TRANSIT time measured from the moment it takes possession, and
+// it quotes the good case. Two things sit between the buyer clicking pay and that moment:
+//
+//   cutoffHourEt  Orders placed after the warehouse stops picking for the day are handed
+//                 over the next business day. Melbourne FL, so the cutoff is Eastern.
+//   handlingDays  Pick, pack, and label a chemical order — not instant.
+//
+// bufferDays then covers the carrier's own optimism, and turns the answer into a range.
+// A range is also what buyers prefer: an honest "Aug 11–13" beats a confident "Aug 11"
+// that slips. Tune these here; they are the whole policy.
+export const FULFILLMENT_POLICY = Object.freeze({
+  cutoffHourEt: 14,
+  handlingDays: 1,
+  bufferDays: 1,
+});
+
+function easternHour(now) {
+  const hour = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour: 'numeric', hour12: false,
+  }).format(now);
+  return Number(hour) % 24;
+}
+
+// Business days between the order and the carrier taking possession.
+export function dispatchDelayBusinessDays(now = new Date(), policy = FULFILLMENT_POLICY) {
+  const afterCutoff = easternHour(now) >= Number(policy.cutoffHourEt);
+  return (afterCutoff ? 1 : 0) + Math.max(0, Number(policy.handlingDays) || 0);
+}
+
 export function businessDaysFromNow(days, from = new Date()) {
   const count = Number(days);
   if (!Number.isFinite(count) || count <= 0) return null;
@@ -122,16 +151,54 @@ export function businessDaysFromNow(days, from = new Date()) {
   return date;
 }
 
-export function arrivalLabel(rate = {}, now = new Date()) {
+// The window a buyer can actually plan around: the carrier's transit estimate pushed out
+// by the time it takes to get the goods to the carrier, then widened by the buffer.
+// Explains the gap between a carrier's quoted transit time and the dates shown. Without
+// it, a buyer who checks the carrier's own site sees a sooner date and assumes we padded
+// it arbitrarily.
+export function fulfillmentNote(policy = FULFILLMENT_POLICY) {
+  const handling = Math.max(0, Number(policy.handlingDays) || 0);
+  const hour = Number(policy.cutoffHourEt) || 0;
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const display = hour % 12 === 0 ? 12 : hour % 12;
+  const parts = [];
+  if (handling > 0) {
+    parts.push(`Dates include ${handling} business day${handling === 1 ? '' : 's'} for order handling`);
+  }
+  if (hour > 0 && hour < 24) {
+    parts.push(`orders placed after ${display}:00 ${suffix} ET ship the next business day`);
+  }
+  return parts.length ? `${parts.join('; ')}.` : '';
+}
+
+export function arrivalWindow(rate = {}, now = new Date(), policy = FULFILLMENT_POLICY) {
   const iso = clean(rate.estimated_delivery_date);
-  const parsed = iso ? new Date(iso) : businessDaysFromNow(rate.delivery_days, now);
-  if (!parsed || Number.isNaN(parsed.getTime())) return null;
-  const days = Math.round((utcDay(parsed) - utcDay(now)) / 86400000);
-  if (days <= 0) return 'Arrives today';
-  if (days === 1) return 'Arrives tomorrow';
-  return `Arrives ${new Intl.DateTimeFormat('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
-  }).format(parsed)}`;
+  const base = iso ? new Date(iso) : businessDaysFromNow(rate.delivery_days, now);
+  if (!base || Number.isNaN(base.getTime())) return null;
+  const dispatch = dispatchDelayBusinessDays(now, policy);
+  const earliest = dispatch > 0 ? businessDaysFromNow(dispatch, base) : new Date(utcDay(base));
+  const buffer = Math.max(0, Number(policy.bufferDays) || 0);
+  return { earliest, latest: buffer > 0 ? businessDaysFromNow(buffer, earliest) : earliest };
+}
+
+const arrivalDay = (date) => new Intl.DateTimeFormat('en-US', {
+  weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+}).format(date);
+const arrivalMonthDay = (date) => new Intl.DateTimeFormat('en-US', {
+  month: 'short', day: 'numeric', timeZone: 'UTC',
+}).format(date);
+
+export function arrivalLabel(rate = {}, now = new Date(), policy = FULFILLMENT_POLICY) {
+  const window = arrivalWindow(rate, now, policy);
+  if (!window) return null;
+  const { earliest, latest } = window;
+  if (utcDay(earliest) === utcDay(latest)) return `Arrives ${arrivalDay(earliest)}`;
+  // Same month reads as "Aug 11–13"; across a boundary it needs both months spelled out.
+  const sameMonth = earliest.getUTCMonth() === latest.getUTCMonth()
+    && earliest.getUTCFullYear() === latest.getUTCFullYear();
+  return sameMonth
+    ? `Arrives ${arrivalMonthDay(earliest)}–${latest.getUTCDate()}`
+    : `Arrives ${arrivalMonthDay(earliest)} – ${arrivalMonthDay(latest)}`;
 }
 
 export function shippingServiceLabel(rate = {}) {
@@ -359,6 +426,10 @@ async function boot() {
       more.append(summary, options);
       rateOptions.append(more);
     }
+    // Rendered from the policy rather than written as copy, so the note can never claim a
+    // handling time the dates were not actually calculated with.
+    const note = document.getElementById('shippingRateNote');
+    if (note) note.textContent = fulfillmentNote();
     ratesBox.hidden = false;
     pay.disabled = !rates.length;
     payHint.textContent = rates.length ? 'Secure payment opens on Stripe.' : 'No shipping method is available.';

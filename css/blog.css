@@ -45,7 +45,9 @@
 .blog-body pre { background: #1e1e2e; color: #e5e7eb; padding: 18px; border-radius: 10px; overflow-x: auto; }
 .blog-body code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
 .blog-body :not(pre) > code { background: rgba(0,0,0,.06); padding: 2px 6px; border-radius: 5px; }
-.blog-body img { max-width: 100%; height: auto; border-radius: 10px; }
+/* Neutral black at 10%, inset so it costs no layout — gives article images a defined edge
+   against the page instead of bleeding into it when the photo has a light background. */
+.blog-body img { max-width: 100%; height: auto; border-radius: 10px; outline: 1px solid rgba(0, 0, 0, .1); outline-offset: -1px; }
 .blog-body .md-diagram-scroll { display: block; overflow-x: auto; overscroll-behavior-inline: contain; border-radius: 10px; }
 .blog-body .md-diagram-scroll:focus-visible { outline: 3px solid var(--brand, #0e7c86); outline-offset: 3px; }
 .blog-body .md-diagram-scroll img { display: block; width: 100%; max-width: none; }

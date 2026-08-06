@@ -87,6 +87,9 @@ export async function updatePassword() { return {}; }
 export async function orders() { return fixtures.orders; }
 export async function catalog() { return fixtures.productsPayload.products; }
 export async function getToken() { return "stub-token"; }
+// Must mirror every binding admin.js imports from auth.js — a missing export breaks the
+// module link and the admin panels never render.
+export async function apiBlob() { return new Blob([""], { type: "application/pdf" }); }
 export async function api(path, options = {}) {
   const url = new URL(path, window.location.origin);
   const pathname = url.pathname;

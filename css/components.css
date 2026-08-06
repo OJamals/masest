@@ -531,7 +531,7 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
 .adm-md-preview-body blockquote { margin: 10px 0; padding: 2px 16px; border-left: 4px solid var(--brand, #0e7c86); color: var(--muted, #555); font-style: italic; }
 .adm-md-preview-body pre { background: #1e1e2e; color: #e5e7eb; padding: 12px; border-radius: 8px; overflow-x: auto; }
 .adm-md-preview-body :not(pre) > code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
-.adm-md-preview-body img { max-width: 100%; height: auto; border-radius: 6px; }
+.adm-md-preview-body img { max-width: 100%; height: auto; border-radius: 6px; outline: 1px solid rgba(0, 0, 0, .1); outline-offset: -1px; }
 .adm-md-preview-body hr { border: 0; border-top: 1px solid var(--line, #e5e7eb); margin: 14px 0; }
 
 /* Admin: tag chip editor for CMS list fields with widget:"chips". */

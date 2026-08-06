@@ -15,6 +15,10 @@ export async function updatePassword() { return {}; }
 export async function orders() { return []; }
 export async function catalog() { return []; }
 export async function getToken() { return "stub-token"; }
+// admin.js imports apiBlob for label/CSV downloads. A stub missing any binding the module
+// graph imports fails the whole graph to link, so admin never boots and every assertion
+// below times out on a selector that was never going to appear.
+export async function apiBlob() { return new Blob([""], { type: "application/pdf" }); }
 export async function api(path) {
   const pathname = new URL(path, window.location.origin).pathname;
   if (pathname.startsWith("/api/admin/stats")) return { orders: 1, revenue: 0, pending_companies: 1, unread_messages: 0, new_quotes: 0, low_stock: 0, setup_followups: [], recent_orders: [], companies: { pending: 1, approved: 2, suspended: 0 }, accounts: { pending: 1, approved: 2, suspended: 0 }, commerce: {}, crm: {}, catalog_health: {}, analytics: {}, traffic: {}, request_queue: Array.from({ length: 12 }, (_, index) => ({ label: "Follow up with Great Lakes Industrial Water Treatment and Facilities Procurement about a multi-site VertKleen evaluation", value: index + 1, href: index % 2 ? "#quotes" : "#crm" })), staff_context: window.__TEST_STAFF_CONTEXT };
