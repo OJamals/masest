@@ -21,5 +21,20 @@ export async function ingestShipStationTrackingUpdate(env, update, dependencies 
     aggregate_id: update.tracking_number,
     payload: update,
     max_attempts: 3,
+  }, {
+    // The projection owns the state transition; this effect owns telling the buyer about
+    // it. Splitting them means a Resend outage retries the email without re-applying the
+    // status, and the projection's own result decides whether an email is warranted at all
+    // (unmatched order, stale scan, repeated in-transit ping → skipped).
+    effect_key: 'shipment-notification',
+    effect_type: 'shipment_notification',
+    aggregate_type: 'shipment',
+    aggregate_id: update.tracking_number,
+    depends_on_effect_key: 'tracking-projection',
+    payload: {
+      tracking_number: update.tracking_number,
+      tracking_status: update.tracking_status,
+    },
+    max_attempts: 5,
   }]);
 }

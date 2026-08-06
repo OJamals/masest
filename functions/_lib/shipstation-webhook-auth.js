@@ -17,11 +17,21 @@ function timestampMillis(value) {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
+// Distinguishes "the provider's key service is unreachable" (retry) from "this key id is
+// not published" (reject). Returning null for both made an outage look like a forgery.
+const KEYS_UNAVAILABLE = Symbol('jwks_unavailable');
+
 async function publicKey(kid, request = fetch) {
   if (cachedKeys.has(kid)) return cachedKeys.get(kid);
-  const response = await request(JWKS_URL, { headers: { accept: 'application/json' } });
-  if (!response.ok) return null;
+  let response;
+  try {
+    response = await request(JWKS_URL, { headers: { accept: 'application/json' } });
+  } catch {
+    return KEYS_UNAVAILABLE;
+  }
+  if (!response.ok) return response.status >= 500 ? KEYS_UNAVAILABLE : null;
   const body = await response.json().catch(() => null);
+  if (!body) return KEYS_UNAVAILABLE;
   const jwk = (Array.isArray(body?.keys) ? body.keys : []).find((entry) => entry?.kid === kid);
   if (!jwk) return null;
   const key = await crypto.subtle.importKey(
@@ -46,6 +56,7 @@ export async function verifyShipStationSignature(headers, rawBody, options = {})
   if (!Number.isFinite(signedAt) || Math.abs(nowMs - signedAt) > toleranceSeconds * 1000) return false;
   try {
     const key = await publicKey(kid, options.fetch || fetch);
+    if (key === KEYS_UNAVAILABLE) return 'key_unavailable';
     if (!key) return false;
     return crypto.subtle.verify(
       { name: 'RSASSA-PKCS1-v1_5' },

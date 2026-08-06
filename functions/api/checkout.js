@@ -10,6 +10,7 @@ import {
   shippingRateIdsFromContentEntries,
 } from '../_lib/checkout-session.js';
 import { ensureCompanyStripeCustomer } from '../_lib/stripe-customer.js';
+import { guestStripeCustomer, stripeCustomerAddress } from '../_lib/stripe-customer.js';
 import { CheckoutShippingError, verifyShippingSelectionToken } from '../_lib/checkout-shipping.js';
 import { isMissingFunctionError } from '../_lib/credit.js';
 import { orderItemsTableHtml, technicalDocumentRequestNoteHtml } from '../_lib/order-email.js';
@@ -69,6 +70,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const getTierForRequest = dependencies.tierForRequest || tierForRequest;
   const getTierPriceMap = dependencies.tierPriceMap || tierPriceMap;
   const getStripeCustomer = dependencies.ensureCompanyStripeCustomer || ensureCompanyStripeCustomer;
+  const createGuestCustomer = dependencies.guestStripeCustomer || guestStripeCustomer;
   const checkRateLimit = dependencies.rateLimit || rateLimit;
   const parseBody = dependencies.readBoundedJson || readBoundedJson;
   const sendNetConfirmation = dependencies.sendNetOrderConfirmation || sendNetOrderConfirmation;
@@ -505,27 +507,34 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       try {
         const shippingAddress = shippingSelection.address;
         const billingAddress = shippingSelection.billing_address || shippingAddress;
-        const stripeAddress = (address) => ({
-          line1: address.address1,
-          line2: address.address2 || undefined,
-          city: address.city,
-          state: address.state,
-          postal_code: address.postal_code,
-          country: address.country,
-        });
         await stripe.customers.update(customerId, {
           name: shippingAddress.company || shippingAddress.name,
           phone: shippingAddress.phone || undefined,
-          address: stripeAddress(billingAddress),
+          address: stripeCustomerAddress(billingAddress),
           shipping: {
             name: shippingAddress.name,
             phone: shippingAddress.phone || undefined,
-            address: stripeAddress(shippingAddress),
+            address: stripeCustomerAddress(shippingAddress),
           },
         });
       } catch {
         return json(502, { error: 'stripe_customer_setup_failed' });
       }
+    }
+  } else if (shippingSelection) {
+    // Guest with a validated address: bind it to a Customer so Stripe sees the addresses
+    // the buyer already confirmed. Failure here is not worth losing the sale — fall back
+    // to the email-only session, which is exactly the previous behavior.
+    try {
+      customerId = await createGuestCustomer({
+        stripe,
+        email: body.email || user?.email || '',
+        shippingAddress: shippingSelection.address,
+        billingAddress: shippingSelection.billing_address || shippingSelection.address,
+        rateId: shippingSelection.rate?.rate_id || null,
+      });
+    } catch {
+      customerId = null;
     }
   }
 

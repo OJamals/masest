@@ -2,10 +2,15 @@ import { normalizeCartQuantities } from './order-shape.js';
 import { AddressValidationError, validateGoogleAddress } from './address-validation.js';
 import { buildRateRequest, shipStationRequest } from './shipstation.js';
 import { packagesFromOrderItems } from './shipstation-orders.js';
+import { adminClient } from './supabase.js';
+import { combinePackagesForRates } from './shipping-packages.js';
 
 const QUOTE_TTL_SECONDS = 15 * 60;
-const MAX_CHECKOUT_CARTON_WEIGHT_LB = 50;
 const encoder = new TextEncoder();
+
+// Re-exported for existing importers (tests + fulfillment) now that the implementation
+// is shared with shipstation-orders.js.
+export { combinePackagesForRates } from './shipping-packages.js';
 
 export class CheckoutShippingError extends Error {
   constructor(code, status = 400, details = {}) {
@@ -167,71 +172,45 @@ function providerRates(payload) {
   });
 }
 
-function roundMeasure(value) {
-  return Math.round(value * 100) / 100;
+// Best-effort: the fallback path recomputes cartons with this same module, so a lost row
+// costs the exact snapshot, not correctness. Never fail a rate quote on a bookkeeping write.
+async function defaultPersistShippingQuotes(env, rows) {
+  if (!rows.length) return { ok: false, skipped: 'no_rows' };
+  if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {
+    return { ok: false, skipped: 'supabase_not_configured' };
+  }
+  try {
+    const { error } = await adminClient(env)
+      .from('checkout_shipping_quotes')
+      .upsert(rows, { onConflict: 'rate_id' });
+    if (error) {
+      console.error('checkout_shipping_quote_persist_failed', error?.code || error?.message || 'unknown');
+      return { ok: false, error };
+    }
+    return { ok: true, count: rows.length };
+  } catch (error) {
+    console.error('checkout_shipping_quote_persist_failed', error?.message || error);
+    return { ok: false, error };
+  }
 }
 
-function packedDimensions(items) {
-  let best;
-  for (let rowCount = 1; rowCount <= items.length; rowCount += 1) {
-    const rows = Array.from({ length: rowCount }, () => ({ length: 0, width: 0 }));
-    for (const item of items) {
-      const length = Math.max(item.length, item.width);
-      const width = Math.min(item.length, item.width);
-      const row = rows.reduce((shortest, candidate) => (
-        candidate.length < shortest.length ? candidate : shortest
-      ));
-      row.length += length;
-      row.width = Math.max(row.width, width);
-    }
-    const footprint = {
-      length: Math.max(...rows.map((row) => row.length)),
-      width: rows.reduce((sum, row) => sum + row.width, 0),
-    };
-    const candidate = {
-      length: Math.max(footprint.length, footprint.width),
-      width: Math.min(footprint.length, footprint.width),
-      height: Math.max(...items.map((item) => item.height)),
-    };
-    const lengthAndGirth = candidate.length + 2 * (candidate.width + candidate.height);
-    if (!best || lengthAndGirth < best.lengthAndGirth) best = { ...candidate, lengthAndGirth };
+// Read back the carton plan the buyer was actually quoted. Called by the Stripe webhook
+// with the rate id carried in checkout-session metadata.
+export async function loadShippingQuotePlan(env, rateId, dependencies = {}) {
+  const id = String(rateId || '').trim();
+  if (!id) return null;
+  const sb = dependencies.sb || adminClient(env);
+  try {
+    const { data, error } = await sb
+      .from('checkout_shipping_quotes')
+      .select('rate_id,carrier_id,service_code,amount_minor,currency,packages,rate')
+      .eq('rate_id', id)
+      .maybeSingle();
+    if (error || !data) return null;
+    return Array.isArray(data.packages) && data.packages.length ? data : null;
+  } catch {
+    return null;
   }
-  return {
-    length: roundMeasure(best.length),
-    width: roundMeasure(best.width),
-    height: roundMeasure(best.height),
-    unit: 'inch',
-  };
-}
-
-export function combinePackagesForRates(packages, maxWeightLb = MAX_CHECKOUT_CARTON_WEIGHT_LB) {
-  const units = packages.map((pkg) => ({
-    weight: Number(pkg?.weight?.value ?? pkg?.weight),
-    length: Number(pkg?.dimensions?.length ?? pkg?.length),
-    width: Number(pkg?.dimensions?.width ?? pkg?.width),
-    height: Number(pkg?.dimensions?.height ?? pkg?.height),
-  }));
-  if (units.some((unit) => ![unit.weight, unit.length, unit.width, unit.height]
-    .every((value) => Number.isFinite(value) && value > 0))) {
-    throw new CheckoutShippingError('shipping_package_profile_missing', 409);
-  }
-  units.sort((a, b) => b.weight - a.weight
-    || (b.length * b.width * b.height) - (a.length * a.width * a.height));
-  const cartons = [];
-  for (const unit of units) {
-    let carton = cartons.find((candidate) => candidate.weight + unit.weight <= maxWeightLb);
-    if (!carton) {
-      carton = { weight: 0, items: [] };
-      cartons.push(carton);
-    }
-    carton.weight += unit.weight;
-    carton.items.push(unit);
-  }
-  return cartons.map((carton) => ({
-    package_code: 'package',
-    weight: { value: roundMeasure(carton.weight), unit: 'pound' },
-    dimensions: packedDimensions(carton.items),
-  }));
 }
 
 function checkoutOrder({ cart, variants, address, email, now }) {
@@ -306,16 +285,6 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
   const address = normalizeShippingAddress(validation.address);
   const billingAddress = normalizeShippingAddress(billingValidation.address);
   const order = checkoutOrder({ cart, variants, address, email: input.email, now });
-  let packages;
-  try {
-    const units = packagesFromOrderItems(order, variants, { maxPackages: 250 });
-    packages = combinePackagesForRates(units);
-  } catch (error) {
-    if (error?.code === 'too_many_shipping_packages') {
-      throw new CheckoutShippingError('shipping_cart_too_large', 409);
-    }
-    throw new CheckoutShippingError('shipping_package_profile_missing', 409);
-  }
   const listCarriers = dependencies.listCarriers
     || ((runtimeEnv) => shipStationRequest(runtimeEnv, '/carriers'));
   const quoteRates = dependencies.quoteRates
@@ -324,17 +293,34 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
   const carriers = Array.isArray(carrierPayload?.carriers) ? carrierPayload.carriers : [];
   const carrierIds = [...new Set(carriers.map((carrier) => clean(carrier?.carrier_id, 100)).filter(Boolean))];
   if (!carrierIds.length) throw new CheckoutShippingError('shipping_carriers_unavailable', 503);
-  const request = buildRateRequest({
-    order,
-    packages,
-    warehouseId: env.SHIPSTATION_WAREHOUSE_ID,
-    carrierIds,
-    phone: address.phone,
-    residential: address.residential ? 'yes' : 'no',
-  });
+  // buildRateRequest re-validates the carton list and enforces the provider's 20-package
+  // ceiling, so it has to sit inside the same mapping as the packing step — otherwise a
+  // heavy-but-valid cart escapes as a bare ShipStationError and surfaces as a misleading
+  // 502 "no carrier rate available" instead of 409 shipping_cart_too_large.
+  let packages;
+  let request;
+  try {
+    const units = packagesFromOrderItems(order, variants, { maxPackages: 250 });
+    packages = combinePackagesForRates(units);
+    request = buildRateRequest({
+      order,
+      packages,
+      warehouseId: env.SHIPSTATION_WAREHOUSE_ID,
+      carrierIds,
+      phone: address.phone,
+      residential: address.residential ? 'yes' : 'no',
+    });
+  } catch (error) {
+    if (error instanceof CheckoutShippingError) throw error;
+    if (error?.code === 'too_many_shipping_packages') {
+      throw new CheckoutShippingError('shipping_cart_too_large', 409);
+    }
+    throw new CheckoutShippingError('shipping_package_profile_missing', 409);
+  }
   const rates = providerRates(await quoteRates(env, request));
   if (!rates.length) throw new CheckoutShippingError('shipping_rates_unavailable', 502);
-  const signedRates = await Promise.all(rates.slice(0, 12).map(async (rate) => ({
+  const offered = rates.slice(0, 12);
+  const signedRates = await Promise.all(offered.map(async (rate) => ({
     ...rate,
     token: await createShippingSelectionToken({
       secret: env.SHIPPING_QUOTE_SECRET,
@@ -345,6 +331,23 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
       rate,
       now,
     }),
+  })));
+  // Persist the exact carton plan behind every offered rate. The buyer leaves for Stripe
+  // and comes back as a webhook; without this the fulfillment side has to re-guess the
+  // packing and can buy a shipment that differs from the one the buyer paid for.
+  const persistQuotes = dependencies.persistShippingQuotes || defaultPersistShippingQuotes;
+  await persistQuotes(env, offered.map((rate) => ({
+    rate_id: rate.rate_id,
+    carrier_id: rate.carrier_id || null,
+    service_code: rate.service_code || null,
+    amount_minor: rate.amount_minor,
+    currency: rate.currency,
+    cart,
+    address,
+    billing_address: billingAddress,
+    packages,
+    rate,
+    expires_at: new Date(now() + QUOTE_TTL_SECONDS * 1000).toISOString(),
   })));
   return {
     address,

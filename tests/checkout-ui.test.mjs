@@ -86,7 +86,14 @@ test('audited cart and checkout states are compact and unambiguous', () => {
   assert.doesNotMatch(checkoutSource, /ph-circle-notch/);
 });
 
-test('secondary cart actions stay collapsed behind one compact disclosure', () => {
+test('the requisition form stays collapsed but the quote route does not', () => {
   assert.match(cart, /<details class="cart-secondary-options"/);
-  assert.match(cart, /Formal quote and saved requisition/);
+  assert.match(cart, /Saved requisition/);
+  // Bulk sizes (55 gal drums, 275 gal totes) are quote-routed and cannot be bought
+  // online, so "Get formal quote" is the only path for a large share of buyers. It was
+  // collapsed into the disclosure alongside the requisition form, which hid the primary
+  // action for those buyers behind a closed <details> — it stays visible.
+  const disclosure = cart.slice(cart.indexOf('<details class="cart-secondary-options"'));
+  assert.doesNotMatch(disclosure, /Get formal quote/);
+  assert.match(cart, /id="checkoutQuote"/);
 });

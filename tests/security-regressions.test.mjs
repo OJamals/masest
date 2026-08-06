@@ -44,7 +44,11 @@ test("admin notifications escape staff-controlled email text", () => {
   // The dynamic `extra` body can carry staff input (e.g. a manual NET settlement
   // reference). Both notification paths must escape it before it reaches the email.
   assert.match(orders, /bodyHtml: `<p>\$\{htmlEscape\(extra \|\|/, "notifyCompany must escape extra");
-  assert.match(orders, /htmlEscape\(extra \|\| `Your order is now/, "notifyBuyerTracking must escape extra");
+  // The shipment-email body moved into the shared builder so the automatic carrier-scan
+  // path and the manual staff update render identically — the escape moved with it.
+  const orderEmail = read("functions/_lib/order-email.js");
+  assert.match(orderEmail, /htmlEscape\(extra \|\| `Your order is now/, "shipmentEmailHtml must escape extra");
+  assert.match(orders, /shipmentEmailHtml\(order, label, extra\)/, "tracking email must use the escaping builder");
   assert.match(offers, /htmlEscape\(title\)/);
   assert.match(offers, /htmlEscape\(String\(body\.body \|\| ''\)\)/);
 });

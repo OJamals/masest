@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260727b">
+  <link rel="stylesheet" href="css/style.css?v=20260806a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
   <link rel="stylesheet" href="css/components.css?v=20260805a">
   <script src="js/config.js" defer></script>
@@ -57,15 +57,18 @@
               <a class="btn btn-primary" id="checkoutContinue" href="checkout.html">Continue to checkout</a>
             </div>
           </div>
-          <details class="cart-secondary-options">
-            <summary>Formal quote and saved requisition</summary>
-            <div class="cart-path cart-path-quote cart-quote-prompt">
-              <div class="cart-path-heading">
-                <span>Formal quote</span>
-                <small>Get documented pricing before purchase.</small>
-              </div>
-              <a class="btn btn-secondary" id="checkoutQuote" href="contact.html?type=quote">Get formal quote</a>
+          <!-- Bulk sizes are quote-routed and cannot be bought online, so this is the only
+               path for a large share of buyers. It stays visible; only the requisition
+               form (account-holders, rarely used) sits behind the disclosure. -->
+          <div class="cart-path cart-path-quote cart-quote-prompt">
+            <div class="cart-path-heading">
+              <span>Formal quote</span>
+              <small>Get documented pricing before purchase.</small>
             </div>
+            <a class="btn btn-secondary" id="checkoutQuote" href="contact.html?type=quote">Get formal quote</a>
+          </div>
+          <details class="cart-secondary-options">
+            <summary>Saved requisition</summary>
             <form id="saveRequisitionForm" class="cart-requisition cart-path cart-path-requisition" hidden>
               <div class="cart-path-heading">
                 <span>Save requisition</span>

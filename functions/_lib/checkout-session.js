@@ -6,8 +6,8 @@
 // to customer_email.
 // Stripe caps every metadata value at 500 characters, so the cart is stored in a
 // compact shape (short keys, no display names — the webhook re-derives names from
-// product_variants) and split across cart, cart2, cart3… keys. 40 chunks × 450 chars
-// comfortably holds 300+ cart lines while staying under Stripe's 50-key limit.
+// product_variants) and split across cart, cart2, cart3… keys. 20 chunks × 450 chars holds
+// ~150 cart lines; with the 25 fixed keys below that stays under Stripe's 50-key limit.
 const CART_CHUNK_SIZE = 450;
 const CART_MAX_CHUNKS = 20;
 
@@ -93,6 +93,9 @@ export function buildStripeCheckoutSessionParams({
         amount: Math.max(0, Math.round(Number(selectedRate.amount_minor) || 0)),
         currency: selectedRate.currency || "usd",
       },
+      // Required once automatic_tax is enabled: Stripe rejects a shipping rate whose tax
+      // behavior is unspecified. Set it now so flipping STRIPE_TAX_ENABLED is not an outage.
+      tax_behavior: "exclusive",
       ...(Number(selectedRate.delivery_days) > 0 ? {
         delivery_estimate: {
           maximum: { unit: "business_day", value: Math.ceil(Number(selectedRate.delivery_days)) },

@@ -1,4 +1,4 @@
-import { adminClient } from './supabase.js';
+import { adminClient, emailLayout, htmlEscape, sendEmail } from './supabase.js';
 import { recordAudit } from './audit.js';
 import { linkOrderProviderObject } from './order-integrations.js';
 import { recordOrderFinancialEntry } from './order-financial-ledger.js';
@@ -8,6 +8,7 @@ import {
   normalizePackages,
   shipStationRequest,
 } from './shipstation.js';
+import { combinePackagesForRates, normalizePackagePlan } from './shipping-packages.js';
 
 const SHIPPABLE_STATUSES = new Set(['paid', 'net_open', 'net_paid', 'fulfilled']);
 const VOID_BLOCKING_TRACKING_STATUSES = new Set(['shipped', 'in_transit', 'out_for_delivery', 'delivered']);
@@ -103,10 +104,46 @@ function allocatedOrderItems(order, itemAllocations) {
   return [...selected.values()];
 }
 
+// The constant is the known-good production warehouse, kept as a guard against a typo'd or
+// half-configured env. A deliberate override is allowed (account rebuild, second warehouse)
+// via SHIPSTATION_WAREHOUSE_ALLOW_OVERRIDE so a provider-side change is not an outage.
+async function sendReturnLabelEmail(env, order, { labelUrl, trackingNumber, returnLabelId, reason }) {
+  const to = text(order?.customer_email, 254);
+  if (!to || !env?.RESEND_API_KEY) return false;
+  const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
+  const reference = text(order?.order_number, 60) || text(order?.id, 40);
+  const details = [
+    trackingNumber ? `<li><strong>Return tracking #:</strong> ${htmlEscape(trackingNumber)}</li>` : '',
+    reason ? `<li><strong>Reason on file:</strong> ${htmlEscape(reason)}</li>` : '',
+  ].filter(Boolean).join('');
+  try {
+    return await sendEmail(env, {
+      to: [to],
+      bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
+      subject: `Your return label for MASEST order ${reference}`,
+      html: emailLayout({
+        heading: `Return label for order ${reference}`,
+        bodyHtml: `<p>Print the label below, tape it to the sealed carton, and drop it with the carrier. Keep the products in their original packaging where you can.</p>${details ? `<ul>${details}</ul>` : ''}<p>Once the carrier scans it we will confirm the return and process any refund.</p>`,
+        ctaText: labelUrl ? 'Print return label' : 'View your orders',
+        ctaUrl: labelUrl || `${appUrl}/dashboard.html#orders`,
+      }),
+      category: 'order',
+      // One send per label, so a retried staff click cannot spam the buyer.
+      idempotencyKey: `return-label:${returnLabelId}`,
+    });
+  } catch {
+    return false;
+  }
+}
+
 function configuredWarehouseId(env) {
   const warehouseId = text(env?.SHIPSTATION_WAREHOUSE_ID, 100);
   if (!warehouseId) throw new ShipStationError('shipstation_warehouse_required');
-  if (warehouseId !== MASEST_SHIPSTATION_WAREHOUSE_ID) {
+  if (warehouseId !== MASEST_SHIPSTATION_WAREHOUSE_ID
+    && text(env?.SHIPSTATION_WAREHOUSE_ALLOW_OVERRIDE, 8).toLowerCase() !== 'true') {
+    throw new ShipStationError('shipstation_warehouse_mismatch');
+  }
+  if (!/^se-[a-z0-9_-]+$/i.test(warehouseId)) {
     throw new ShipStationError('shipstation_warehouse_mismatch');
   }
   return warehouseId;
@@ -256,7 +293,7 @@ function existingLabelForShipment(order, orderShipmentId, shipmentId) {
 
 async function defaultLoadOrder(env, id) {
   const { data, error } = await adminClient(env).from('orders')
-    .select('id,order_number,status,customer_email,currency,ship_address,created_at,updated_at,shipstation_shipment_id,shipstation_order_shipment_id,shipstation_shipment_revision,shipstation_package_hash,shipstation_shipment_state,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,shipstation_cost,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,tracking_status,carrier,tracking_number,tracking_url,order_items(sku,name,qty,unit_price),order_provider_links(provider,object_type,provider_object_id,metadata),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,metadata)')
+    .select('id,order_number,status,customer_email,currency,ship_address,created_at,updated_at,shipping_package_plan,paid_shipping_rate_id,paid_shipping_carrier_id,paid_shipping_service_code,shipstation_shipment_id,shipstation_order_shipment_id,shipstation_shipment_revision,shipstation_package_hash,shipstation_shipment_state,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,shipstation_cost,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,tracking_status,carrier,tracking_number,tracking_url,order_items(sku,name,qty,unit_price),order_provider_links(provider,object_type,provider_object_id,metadata),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,metadata)')
     .eq('id', id)
     .single();
   if (error) throw new ShipStationError(error.code === 'PGRST116' ? 'shipping_order_not_found' : 'shipping_database_failed');
@@ -339,6 +376,9 @@ export function packagesFromOrderItems(order, variants, { maxPackages = 20 } = {
   return packages;
 }
 
+// Fulfillment must derive cartons exactly the way checkout rated them. `maxPackages` is the
+// pre-consolidation unit count (matching /api/shipping-rates); combinePackagesForRates then
+// packs those units into the same ≤50 lb cartons the buyer was quoted on.
 async function defaultLoadPackageProfiles(env, order) {
   const skus = [...new Set((order?.order_items || []).map((item) => text(item?.sku, 160)).filter(Boolean))];
   if (!skus.length) throw new ShipStationError('shipping_package_profile_missing');
@@ -346,7 +386,25 @@ async function defaultLoadPackageProfiles(env, order) {
     .select('vsku,shipping_weight_lb,shipping_length_in,shipping_width_in,shipping_height_in')
     .in('vsku', skus);
   if (error) throw new ShipStationError('shipping_database_failed');
-  return packagesFromOrderItems(order, data || []);
+  const units = packagesFromOrderItems(order, data || [], { maxPackages: 250 });
+  return combinePackagesForRates(units);
+}
+
+// A persisted checkout plan describes the WHOLE order. A partial split ships a subset, so
+// the plan no longer represents it and the packing must be recomputed for that subset.
+function allocationCoversOrder(order, itemAllocations) {
+  const allocated = new Map(itemAllocations.map((item) => [item.sku, item.quantity]));
+  const ordered = new Map();
+  for (const item of Array.isArray(order?.order_items) ? order.order_items : []) {
+    const sku = text(item?.sku, 160);
+    const quantity = Math.max(0, Math.floor(number(item?.qty) || 0));
+    if (sku && quantity) ordered.set(sku, (ordered.get(sku) || 0) + quantity);
+  }
+  if (allocated.size !== ordered.size) return false;
+  for (const [sku, quantity] of ordered) {
+    if (allocated.get(sku) !== quantity) return false;
+  }
+  return true;
 }
 
 async function defaultQuoteRates(env, payload) {
@@ -943,7 +1001,16 @@ async function prepareShipment(env, input, order, listCarriers, loadPackageProfi
     order_items: allocatedOrderItems(order, itemAllocations),
   };
   const manualPackages = Array.isArray(input?.packages) && input.packages.length > 0;
-  const sourcePackages = manualPackages ? input.packages : await loadPackageProfiles(env, shipmentOrder);
+  // Replay the carton plan the buyer was rated on whenever this shipment covers the whole
+  // order. Recomputing instead would be a second independent guess at the packing, and any
+  // drift means MASEST buys a shipment the buyer did not pay for.
+  const quotedPlan = manualPackages || !allocationCoversOrder(order, itemAllocations)
+    ? null
+    : normalizePackagePlan(order?.shipping_package_plan);
+  const packagesSource = manualPackages ? 'manual' : quotedPlan ? 'checkout_quote' : 'catalog';
+  const sourcePackages = manualPackages
+    ? input.packages
+    : quotedPlan || await loadPackageProfiles(env, shipmentOrder);
   const packages = normalizePackages(sourcePackages);
   const { carrierIds, carriers } = await resolveCarrierSelection(
     env, listCarriers, input?.carrier_ids, packages.length,
@@ -957,8 +1024,33 @@ async function prepareShipment(env, input, order, listCarriers, loadPackageProfi
     residential: text(input?.residential, 12),
   };
   return {
-    orderSplitKey, shipmentOrder, manualPackages, packages, carrierIds, carriers, packageHash, pendingPayload,
+    orderSplitKey,
+    shipmentOrder,
+    manualPackages,
+    packagesSource,
+    packages,
+    carrierIds,
+    carriers,
+    packageHash,
+    pendingPayload,
   };
+}
+
+// Flag the rate matching the service the buyer selected at checkout so the operator buys
+// what was paid for instead of re-shopping blind, and so a forced divergence is deliberate.
+function markPaidService(rates, order) {
+  const paidCarrier = text(order?.paid_shipping_carrier_id, 100).toLowerCase();
+  const paidService = text(order?.paid_shipping_service_code, 100).toLowerCase();
+  if (!paidService && !paidCarrier) return { rates, paidRateId: null };
+  let paidRateId = null;
+  const marked = (rates || []).map((rate) => {
+    const isPaid = Boolean(paidService)
+      && text(rate?.service_code, 100).toLowerCase() === paidService
+      && (!paidCarrier || text(rate?.carrier_id, 100).toLowerCase() === paidCarrier);
+    if (isPaid && !paidRateId) paidRateId = rate.rate_id || null;
+    return { ...rate, paid_service: isPaid };
+  });
+  return { rates: marked, paidRateId };
 }
 
 export async function rateOrderShipment(env, input, context = {}, dependencies = {}) {
@@ -979,7 +1071,7 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
 
   const revision = input?.expected_revision == null ? 0 : expectedRevision(input.expected_revision);
   const {
-    orderSplitKey, shipmentOrder, manualPackages, packages, carrierIds, carriers, packageHash, pendingPayload,
+    orderSplitKey, shipmentOrder, packagesSource, packages, carrierIds, carriers, packageHash, pendingPayload,
   } = await prepareShipment(env, input, order, listCarriers, loadPackageProfiles);
   const payload = buildRateRequest({
     order: shipmentOrder,
@@ -1009,7 +1101,7 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
     const provider = await quoteRates(env, payload);
     providerAccepted = true;
     response = provider?.rate_response || provider || {};
-    rates = safeRatesForPackages(response, packages, carriers);
+    rates = markPaidService(safeRatesForPackages(response, packages, carriers), order).rates;
     shipmentId = text(response?.shipment_id || rates[0]?.shipment_id, 100);
     if (!shipmentId) throw new ShipStationError('shipstation_rate_response_invalid');
     finalized = await finalizeShipmentOperation(env, {
@@ -1037,7 +1129,12 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
     package_hash: packageHash,
     rates,
     packages,
-    packages_source: manualPackages ? 'manual' : 'cms',
+    packages_source: packagesSource,
+    paid_service: {
+      carrier_id: text(order?.paid_shipping_carrier_id, 100) || null,
+      service_code: text(order?.paid_shipping_service_code, 100) || null,
+      matched: rates.some((rate) => rate.paid_service === true),
+    },
   };
 }
 
@@ -1896,8 +1993,17 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     recognition_state: returnRecognitionState(chargeEvent),
     reason,
   });
+  // A return label nobody can print is not a return. Send it to the buyer as soon as it
+  // exists; best-effort, because the label is already bought and paid for either way.
+  const emailed = await (dependencies.sendReturnLabelEmail || sendReturnLabelEmail)(env, order, {
+    labelUrl: text(label?.label_download?.pdf || label?.label_download?.href || label?.label_download, 1000) || null,
+    trackingNumber,
+    returnLabelId,
+    reason,
+  });
   return {
     already_created: false,
+    emailed,
     ...safeLabel(label),
     label_id: returnLabelId,
     outbound_label_id: outboundLabelId,

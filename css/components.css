@@ -594,6 +594,14 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
 .confirm-dialog-msg { margin: 0; font-size: 1.1rem; line-height: 1.45; }
 .confirm-dialog-field { display: grid; gap: 8px; font-weight: 700; color: var(--ink, #15171c); }
 .confirm-dialog-field .adm-input { box-sizing: border-box; width: 100%; margin: 0; }
+/* Consequence list for authorising dialogs: what this action will actually do, listed
+   before the operator types a reason. Reads as a receipt, not decoration. */
+.confirm-dialog-consequences { display: grid; gap: 6px; margin: -4px 0 0; padding: 14px 16px; list-style: none; font-size: .9rem; line-height: 1.45; background: var(--surface-muted, #f4f7f7); border-radius: 14px; }
+.confirm-dialog-consequences li { display: flex; gap: 8px; }
+.confirm-dialog-consequences li::before { content: "→"; flex: none; color: var(--brand-ink, #0e7c86); font-weight: 700; }
+.confirm-dialog-input { box-sizing: border-box; width: 100%; margin: -8px 0 0; padding: 10px 12px; font: inherit; font-size: .95rem; color: inherit; background: var(--surface, #fff); border: 1px solid var(--line, #d7e3e3); border-radius: 12px; resize: vertical; }
+.confirm-dialog-input:focus-visible { outline: 2px solid var(--brand-ink, #0e7c86); outline-offset: 1px; }
+.confirm-dialog-error { margin: -8px 0 0; font-size: .86rem; color: var(--status-danger-ink); }
 .confirm-dialog-library { display: grid; gap: 10px; }
 .confirm-dialog-library-head { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
 .confirm-dialog-library-head p { margin: 4px 0 0; font-size: .86rem; line-height: 1.4; }

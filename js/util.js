@@ -176,6 +176,77 @@ export const confirmDialog = (message, { confirmText = 'Confirm', cancelText = '
     dlg.querySelector('button[value="confirm"]').focus();
   });
 
+// Confirm dialog that also collects a required reason, and can list the exact consequences
+// of the action above the input. Used where an operator is authorising something
+// irreversible (cancelling a paid order) and the record of *why* matters as much as the
+// approval. Returns Promise<string|null> — the trimmed reason, or null when cancelled.
+//
+// `consequences` are plain strings written with textContent, so caller data is never
+// interpolated into markup.
+export const promptDialog = (message, {
+  label = 'Reason',
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  danger = false,
+  minLength = 8,
+  consequences = [],
+} = {}) => new Promise((resolve) => {
+  const dlg = document.createElement('dialog');
+  const dialogId = `prompt-dialog-${++confirmDialogId}`;
+  dlg.className = 'confirm-dialog';
+  dlg.setAttribute('aria-labelledby', `${dialogId}-title`);
+  dlg.setAttribute('aria-describedby', `${dialogId}-message`);
+  dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
+      <h2 class="sr-only" id="${dialogId}-title">Confirm action</h2>
+      <p class="confirm-dialog-msg" id="${dialogId}-message"></p>
+      <ul class="confirm-dialog-consequences"${consequences.length ? '' : ' hidden'}></ul>
+      <label class="confirm-dialog-field" for="${dialogId}-reason"></label>
+      <textarea id="${dialogId}-reason" name="reason" class="confirm-dialog-input" rows="3" required
+        minlength="${Number(minLength) || 0}"></textarea>
+      <p class="confirm-dialog-error" role="alert" hidden></p>
+      <menu class="confirm-dialog-actions">
+        <button value="cancel" class="btn btn-ghost btn-sm" type="submit" formnovalidate>${esc(cancelText)}</button>
+        <button value="confirm" class="btn btn-sm${danger ? ' btn-danger' : ''}" type="submit">${esc(confirmText)}</button>
+      </menu>
+    </form>`;
+  dlg.querySelector('.confirm-dialog-msg').textContent = message;
+  dlg.querySelector('.confirm-dialog-field').textContent = label;
+  const list = dlg.querySelector('.confirm-dialog-consequences');
+  for (const entry of consequences) {
+    const item = document.createElement('li');
+    item.textContent = entry;
+    list.appendChild(item);
+  }
+  if (typeof dlg.showModal !== 'function') {
+    const answer = window.prompt(`${message}\n\n${label}`);
+    resolve(answer && answer.trim().length >= minLength ? answer.trim() : null);
+    return;
+  }
+  const input = dlg.querySelector('.confirm-dialog-input');
+  const error = dlg.querySelector('.confirm-dialog-error');
+  let submitted = null;
+  dlg.querySelector('button[value="confirm"]').addEventListener('click', (event) => {
+    const value = input.value.trim();
+    if (value.length < minLength) {
+      // Keep the dialog open rather than silently discarding the operator's intent.
+      event.preventDefault();
+      error.textContent = `Enter at least ${minLength} characters.`;
+      error.hidden = false;
+      input.focus();
+      return;
+    }
+    submitted = value;
+  });
+  document.body.appendChild(dlg);
+  restoreFocusOnClose(dlg);
+  dlg.addEventListener('close', () => {
+    resolve(dlg.returnValue === 'confirm' ? submitted : null);
+    dlg.remove();
+  });
+  dlg.showModal();
+  input.focus();
+});
+
 // Read-only detail modal. `html` is trusted markup the caller assembles with esc()'d
 // data (admin views only). Native <dialog> — accessible, no framework. No-op on
 // browsers without showModal().

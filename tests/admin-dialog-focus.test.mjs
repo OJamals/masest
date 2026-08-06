@@ -8,8 +8,12 @@ test('shared dialogs explicitly restore focus after every close path', () => {
   const util = read('js/util.js');
   assert.match(util, /export const restoreFocusOnClose/);
   assert.match(util, /target\.focus\(\{ preventScroll: true \}\)/);
-  assert.equal((util.match(/document\.createElement\(['"]dialog['"]\)/g) || []).length, 2);
-  assert.equal((util.match(/restoreFocusOnClose\(dlg\)/g) || []).length, 2);
+  // Every dialog util.js builds must restore the invoker — asserted as a ratio rather
+  // than a fixed count, so adding a dialog cannot pass by leaving the number alone.
+  const dialogs = (util.match(/document\.createElement\(['"]dialog['"]\)/g) || []).length;
+  const restorers = (util.match(/restoreFocusOnClose\(dlg\)/g) || []).length;
+  assert.ok(dialogs >= 2, 'util.js should build the shared dialogs');
+  assert.equal(restorers, dialogs, 'util.js must restore the invoker for every dialog');
 });
 
 for (const path of [

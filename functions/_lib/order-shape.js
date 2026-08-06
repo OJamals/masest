@@ -106,6 +106,11 @@ export function orderRowFromSession(session, customerEmail = null) {
     customer_email: customerEmail ?? null,
     purchase_order_number: s.metadata?.purchase_order_number || null,
     ship_address: s.shipping_details || metadataAddress || s.customer_details || null,
+    // What the buyer actually selected and paid for. Fulfillment pre-selects this service
+    // instead of re-shopping blind, and any divergence stays visible to staff.
+    paid_shipping_rate_id: s.metadata?.shipping_rate_id || null,
+    paid_shipping_carrier_id: s.metadata?.shipping_carrier_id || null,
+    paid_shipping_service_code: s.metadata?.shipping_service_code || null,
   };
 }
 

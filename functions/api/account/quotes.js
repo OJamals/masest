@@ -10,20 +10,15 @@ import { escapeLike } from '../../_lib/crm.js';
 import { quotePayloadWithOffer } from '../../_lib/quote-convert.js';
 import { guardQuoteOffer } from '../../_lib/quote-order.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
+import { canTransitionOffer, quoteLifecycle } from '../../_lib/quote-lifecycle.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACCEPT_BODY_MAX_BYTES = 4 * 1024;
 
-// Internal status/pipeline stage → the state a customer should see.
+// The buyer-visible state comes from the shared lifecycle module so staff and buyer can
+// never be looking at two different names for the same quote.
 function publicState(quote) {
-  if (quote.payload?.offer_status === 'ordered') return 'Order placed';
-  if (quote.payload?.offer_status === 'payment_pending') return 'Payment pending';
-  if (quote.payload?.offer_status === 'accepted') return 'Accepted';
-  if (quote.payload?.offer_status === 'sent') return 'Quote ready';
-  if (quote.pipeline_stage === 'won') return 'Quoted';
-  if (quote.pipeline_stage === 'lost' || quote.status === 'closed') return 'Closed';
-  if (quote.status === 'contacted' || (quote.pipeline_stage && quote.pipeline_stage !== 'new')) return 'In review';
-  return 'Received';
+  return quoteLifecycle(quote).label;
 }
 
 export async function onRequestGet({ request, env }) {
@@ -77,6 +72,8 @@ export async function onRequestGet({ request, env }) {
       product: q.product || '',
       industry: q.industry || '',
       state: publicState(q),
+      lifecycle: quoteLifecycle(q),
+      expires_at: q.payload?.offer_expires_at || null,
       offer: offer ? {
         id: offer.id,
         subtotal: Number(offer.subtotal || 0),
@@ -86,6 +83,9 @@ export async function onRequestGet({ request, env }) {
       } : null,
       can_accept: ['sent', 'accepted'].includes(q.payload?.offer_status)
         && offerById.has(q.payload?.offer_order_id),
+      // Declining is available whenever accepting is, so a buyer who is not going ahead
+      // has a way to say so instead of the quote ageing into a follow-up queue forever.
+      can_decline: canTransitionOffer(q, 'declined'),
     };
   });
   return json(200, { quotes, ...pageEnvelope(data, { limit, offset, count }) }, { 'cache-control': 'private, no-store' });
@@ -106,7 +106,7 @@ export async function onRequestPost({ request, env }) {
     });
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'bad_request' });
-  if (body.action !== 'accept_offer') return json(400, { error: 'invalid_action' });
+  if (!['accept_offer', 'decline_offer'].includes(body.action)) return json(400, { error: 'invalid_action' });
   const quoteId = String(body.id || '');
   if (!UUID.test(quoteId)) return json(400, { error: 'invalid_quote_id' });
 
@@ -119,6 +119,35 @@ export async function onRequestPost({ request, env }) {
     .maybeSingle();
   if (quoteError) return json(500, { error: 'server_error' });
   if (!quote) return json(404, { error: 'not_found' });
+
+  // Declining closes the loop without touching the draft order: staff may still revise and
+  // re-send, and the reason lands on the CRM record where follow-up decisions get made.
+  if (body.action === 'decline_offer') {
+    if (!canTransitionOffer(quote, 'declined')) return json(409, { error: 'offer_unavailable' });
+    const declinedAt = new Date().toISOString();
+    const reason = String(body.reason || '').trim().slice(0, 500);
+    const payload = quotePayloadWithOffer(quote.payload, {
+      orderId: quote.payload?.offer_order_id,
+      status: 'declined',
+      at: declinedAt,
+    });
+    if (reason) payload.offer_declined_reason = reason;
+    const declineQuery = sb.from('quotes')
+      .update({
+        payload,
+        pipeline_stage: 'lost',
+        next_step: reason ? `Buyer declined: ${reason}` : 'Buyer declined the quote',
+        handled_at: declinedAt,
+      })
+      .eq('id', quote.id)
+      .eq('status', quote.status);
+    const { data: declined, error: declineError } = await guardQuoteOffer(declineQuery, quote.payload)
+      .select('id')
+      .maybeSingle();
+    if (declineError) return json(500, { error: 'server_error' });
+    if (!declined) return json(409, { error: 'quote_changed' });
+    return json(200, { ok: true, quote_id: quote.id, declined: true }, { 'cache-control': 'private, no-store' });
+  }
   if (quote.payload?.offer_status === 'ordered') {
     return json(409, { error: 'already_ordered', order_id: quote.payload?.final_order_id || null });
   }

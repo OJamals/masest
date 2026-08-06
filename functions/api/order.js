@@ -47,13 +47,19 @@ export async function onRequestGet({ request, env }) {
         orderNumber = data?.order_number || null;
       } catch { /* webhook may still be persisting; summary remains valid without the number */ }
     }
+    // Shipping is never a Stripe line item, so without it the itemised list silently sums
+    // to less than the total the buyer just paid.
+    const amountShipping = (s.shipping_cost?.amount_subtotal ?? s.total_details?.amount_shipping ?? 0) / 100;
     return response(200, {
       order_number: orderNumber,
       email_hint: maskEmail(s.customer_details?.email || s.customer_email),
       currency: (s.currency || 'usd').toUpperCase(),
       amount_total: (s.amount_total ?? 0) / 100,
       amount_subtotal: (s.amount_subtotal ?? 0) / 100,
+      amount_shipping: amountShipping,
+      amount_discount: (s.total_details?.amount_discount ?? 0) / 100,
       total_tax: (s.total_details?.amount_tax ?? 0) / 100,
+      shipping_service: String(s.metadata?.shipping_service_code || '').trim() || null,
       payment_status: s.payment_status,
       lines,
     });

@@ -97,7 +97,26 @@ test("orderRowFromSession mirrors the paid-order insert incl. qbo + customer_ema
     customer_email: "buyer@x.com",
     purchase_order_number: "PO-1042",
     ship_address: { address: { line1: "1 A St" } },
+    // What the buyer selected at checkout, so fulfilment can buy the service that was
+    // paid for instead of re-shopping rates blind.
+    paid_shipping_rate_id: null,
+    paid_shipping_carrier_id: null,
+    paid_shipping_service_code: null,
   });
+});
+
+test("orderRowFromSession carries the selected carrier service off session metadata", () => {
+  const row = orderRowFromSession({
+    payment_intent: "pi_5",
+    metadata: {
+      shipping_rate_id: "se-rate-ground",
+      shipping_carrier_id: "se-usps",
+      shipping_service_code: "usps_ground_advantage",
+    },
+  });
+  assert.equal(row.paid_shipping_rate_id, "se-rate-ground");
+  assert.equal(row.paid_shipping_carrier_id, "se-usps");
+  assert.equal(row.paid_shipping_service_code, "usps_ground_advantage");
 });
 
 test("orderRowFromSession: unsettled ACH session -> pending_payment with QBO sync held", () => {

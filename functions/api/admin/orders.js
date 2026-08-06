@@ -7,13 +7,24 @@ import Stripe from 'stripe';
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
-import { computeRefund, qboFullDocumentRefund } from '../../_lib/refund.js';
+import { computeLineRefund, computeRefund, qboFullDocumentRefund } from '../../_lib/refund.js';
 import { stockDecrements, stockIncrements } from '../../_lib/order-shape.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 import { planNetSettlement, netAging } from '../../_lib/credit.js';
 import { escapeLike } from '../../_lib/crm.js';
 import { decorateOrderLifecycle, planOrderStatusWrite, settledOrderStatus, shouldPromoteToFulfilled } from '../../_lib/order-lifecycle.js';
 import { orderReference } from '../../_lib/order-integrations.js';
+import { shipmentEmailCta, shipmentEmailHtml, shipmentNotice } from '../../_lib/order-email.js';
+import {
+  cancellationEventId,
+  orderCancellationEffects,
+  planOrderCancellation,
+} from '../../_lib/order-cancellation.js';
+import { ingestProviderEvent } from '../../_lib/integration-effects.js';
+import { packingSlipHtml } from '../../_lib/packing-slip.js';
+
+// Statuses where an order is a live commitment a human should acknowledge.
+const ACCEPTABLE_STATUSES = new Set(['paid', 'net_open', 'pending_payment']);
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const WRITABLE_ORDER_STATUSES = ORDER_STATUSES.filter((status) => status !== 'cart');
@@ -150,24 +161,13 @@ async function sendTrackingEmail(env, request, order, label, extra, recipients) 
 
   const appUrl = env.APP_URL || new URL(request.url).origin;
   const reference = orderReference(order);
-  const details = [
-    order?.carrier ? `<li><strong>Carrier:</strong> ${htmlEscape(order.carrier)}</li>` : '',
-    order?.tracking_number ? `<li><strong>Tracking #:</strong> ${htmlEscape(order.tracking_number)}</li>` : '',
-    order?.estimated_delivery_at ? `<li><strong>Estimated delivery:</strong> ${htmlEscape(order.estimated_delivery_at)}</li>` : '',
-  ].filter(Boolean).join('');
-
   return sendEmail(env, {
     to: unique,
     subject: `Order ${reference} ${label}`,
     html: emailLayout({
       heading: `Order ${reference} ${label}`,
-      bodyHtml: `<p>${htmlEscape(extra || `Your order is now "${label}".`)}</p>${details ? `<ul>${details}</ul>` : ''}`,
-      // Delivered points at the dashboard (reorder + order history); in-transit
-      // states keep the carrier tracking link front and center.
-      ctaText: label === 'delivered' ? 'View order & reorder'
-        : order?.tracking_url ? 'Track shipment' : 'Visit MASEST',
-      ctaUrl: label === 'delivered' ? `${appUrl}/dashboard.html#orders`
-        : order?.tracking_url || appUrl,
+      bodyHtml: shipmentEmailHtml(order, label, extra),
+      ...shipmentEmailCta(order, label, appUrl),
     }),
     category: 'order',
   });
@@ -241,11 +241,49 @@ export async function onRequest({ request, env }) {
   if (request.method === 'GET') {
     const params = new URL(request.url).searchParams;
 
+    // Buyer cancellation/return queue. Open requests are work that has a person waiting on
+    // the other end, so they get their own listing rather than a per-order lookup.
+    if (params.get('view') === 'requests') {
+      const status = params.get('status') || 'open';
+      let query = sb.from('order_requests')
+        .select('id,order_id,type,status,reason,line_items,requested_email,resolution_note,created_at,resolved_at,orders(order_number,status,tracking_status,customer_email,total,currency,company_id)')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (status !== 'all') query = query.eq('status', status);
+      const { data, error } = await query;
+      if (error) return json(500, { error: error.message });
+      return json(200, { requests: data || [] });
+    }
+
+    // Printable packing slip for the warehouse. Scoped to one shipment when a split key is
+    // given, so a partial shipment is packed against its own document.
+    if (params.get('format') === 'packing_slip' && params.get('id')) {
+      const { data: order, error } = await sb.from('orders')
+        .select('id,order_number,purchase_order_number,ship_address,carrier,tracking_number,order_items(sku,name,qty,backordered),order_shipments(split_key,item_allocations,status)')
+        .eq('id', params.get('id')).single();
+      if (error) return json(error.code === 'PGRST116' ? 404 : 500, { error: error.message });
+      const splitKey = params.get('split_key');
+      const shipment = splitKey
+        ? (order.order_shipments || []).find((entry) => entry.split_key === splitKey) || null
+        : null;
+      return new Response(packingSlipHtml(order, {
+        shipment,
+        generatedAt: new Date().toISOString().slice(0, 10),
+      }), {
+        status: 200,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+    }
+
     // Per-order drill-down (#95): full detail + staff-action timeline for one order.
     const detailId = params.get('id');
     if (detailId) {
       const { data: order, error } = await sb.from('orders')
-        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at),order_provider_links(provider,object_type,provider_object_id,metadata,created_at),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,reason,metadata,created_at),order_shipments(id,split_key,generation,revision,provider_shipment_id,external_shipment_id,package_hash,status,operation,operation_state,selected_rate_id,item_allocations,error_code,updated_at,order_shipment_packages(sequence,package_code,weight_value,weight_unit,length_in,width_in,height_in,package_hash),order_shipment_rates(provider_rate_id,provider_shipment_id,shipment_revision,carrier_id,carrier_code,carrier_name,service_code,service_type,amount_minor,currency,currency_exponent,package_hash,delivery_days,estimated_delivery_at,selected,invalidated_at))')
+        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at),order_provider_links(provider,object_type,provider_object_id,metadata,created_at),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,reason,metadata,created_at),order_shipments(id,split_key,generation,revision,provider_shipment_id,external_shipment_id,package_hash,status,operation,operation_state,selected_rate_id,item_allocations,error_code,updated_at,order_shipment_packages(sequence,package_code,weight_value,weight_unit,length_in,width_in,height_in,package_hash),order_shipment_rates(provider_rate_id,provider_shipment_id,shipment_revision,carrier_id,carrier_code,carrier_name,service_code,service_type,amount_minor,currency,currency_exponent,package_hash,delivery_days,estimated_delivery_at,selected,invalidated_at)),order_requests(id,type,status,reason,line_items,requested_email,resolution_note,created_at,resolved_at)')
         .eq('id', detailId).single();
       if (error) return json(error.code === 'PGRST116' ? 404 : 500, { error: error.message });
       const { data: timeline } = await sb.from('audit_log')
@@ -311,6 +349,123 @@ export async function onRequest({ request, env }) {
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await readBody(request);
+
+    // Operational acknowledgement. Separating "we have seen and owned this order" from
+    // "a label exists" is what lets the queue show what still needs a human.
+    if (body.action === 'accept_order') {
+      if (!staffCan(role, 'order.write')) return json(403, { error: 'forbidden' });
+      const { data: order, error: readErr } = await sb.from('orders')
+        .select('id,order_number,status,accepted_at,company_id,customer_email')
+        .eq('id', body.id).single();
+      if (readErr) return json(readErr.code === 'PGRST116' ? 404 : 500, { error: readErr.message });
+      if (!ACCEPTABLE_STATUSES.has(order.status)) {
+        return json(409, { error: 'not_acceptable', message: `Order is ${order.status}.` });
+      }
+      if (order.accepted_at) {
+        return json(200, { ok: true, already_accepted: true, order });
+      }
+      const { data: accepted, error } = await sb.from('orders')
+        .update({ accepted_at: new Date().toISOString(), accepted_by: user?.id || null })
+        .eq('id', body.id)
+        .is('accepted_at', null)
+        .select('id,order_number,status,accepted_at')
+        .maybeSingle();
+      if (error) return json(500, { error: error.message });
+      // Lost the race with a concurrent accept — that is success, not a conflict.
+      if (!accepted) return json(200, { ok: true, already_accepted: true, order });
+      await recordAudit(sb, {
+        user, action: 'order.accept', targetType: 'order', targetId: body.id,
+        detail: { company_id: order.company_id },
+      });
+      return json(200, { ok: true, order: accepted });
+    }
+
+    // Cancellation is a plan first, an action second. Without `confirm` this returns the
+    // exact consequences so the operator approves a specific reversal rather than a verb.
+    if (body.action === 'cancel_order') {
+      if (!staffCan(role, 'order.refund')) {
+        return json(403, { error: 'forbidden', message: 'Cancelling a paid order requires finance or owner access.' });
+      }
+      const { data: order, error: readErr } = await sb.from('orders')
+        .select('id,order_number,status,company_id,customer_email,payment_method,total,currency,refunded_amount,qbo_sync_status,stripe_payment_intent,tracking_status,tracking_number,shipstation_label_id,shipstation_label_status,shipstation_cost,order_items(sku,qty,unit_price,backordered)')
+        .eq('id', body.id).single();
+      if (readErr) return json(readErr.code === 'PGRST116' ? 404 : 500, { error: readErr.message });
+      const plan = planOrderCancellation(order, { reason: body.reason });
+      if (body.confirm !== true) return json(200, { ok: true, preflight: true, plan });
+
+      const reason = String(body.reason || '').trim();
+      if (reason.length < 8) {
+        return json(400, { error: 'cancel_reason_required', message: 'Give a reason of at least 8 characters — it is recorded on the order and shown to the buyer.' });
+      }
+      if (plan.blockers.includes('already_cancelled')) return json(200, { ok: true, already_cancelled: true });
+      if (plan.blockers.includes('not_an_order')) return json(409, { error: 'not_an_order' });
+      // A delivered or in-transit order can still be cancelled (disputes, refusals), but
+      // only when staff acknowledge the parcel and its postage are already gone.
+      if (plan.blockers.includes('shipment_in_transit') && body.acknowledge_in_transit !== true) {
+        return json(409, { error: 'shipment_in_transit', plan });
+      }
+      const attempt = Math.max(1, Math.floor(Number(body.attempt) || 1));
+      const enqueued = await ingestProviderEvent(sb, {
+        provider: 'masest',
+        environmentOrTenant: 'production',
+        providerEventId: cancellationEventId(order.id, attempt),
+        providerEventType: 'order.cancel',
+        providerObjectId: order.id,
+        occurredAt: new Date().toISOString(),
+        metadata: { source: 'admin_orders', actor: user?.email || null },
+      }, JSON.stringify({ order_id: order.id, reason, attempt }), orderCancellationEffects({ ...plan, reason }));
+      if (enqueued?.error) return json(503, { error: 'cancellation_enqueue_failed' });
+      await recordAudit(sb, {
+        user, action: 'order.cancel', targetType: 'order', targetId: body.id,
+        detail: { reason, attempt, plan },
+      });
+      return json(202, {
+        ok: true,
+        cancelling: true,
+        plan,
+        message: 'Cancellation queued. Label void, refund, restock, and the buyer notice run in order and are visible on the order timeline.',
+      });
+    }
+
+    // Approve or decline a buyer request. Approval does not duplicate the cancel/return
+    // logic — it records the decision and points staff at the action that performs it, so
+    // there is exactly one audited path that moves money or buys a label.
+    if (body.action === 'resolve_request') {
+      if (!staffCan(role, 'order.write')) return json(403, { error: 'forbidden' });
+      const decision = String(body.decision || '').trim();
+      if (!['approved', 'declined'].includes(decision)) return json(400, { error: 'invalid_decision' });
+      const { data: existing, error: readErr } = await sb.from('order_requests')
+        .select('id,order_id,type,status,reason,requested_email')
+        .eq('id', body.request_id).single();
+      if (readErr) return json(readErr.code === 'PGRST116' ? 404 : 500, { error: readErr.message });
+      if (existing.status !== 'open') {
+        return json(409, { error: 'request_already_resolved', status: existing.status });
+      }
+      const { data: resolved, error } = await sb.from('order_requests')
+        .update({
+          status: decision,
+          resolved_by: user?.id || null,
+          resolution_note: optionalText(body.note, 1000),
+          resolved_at: new Date().toISOString(),
+        })
+        .eq('id', body.request_id)
+        .eq('status', 'open')
+        .select('id,order_id,type,status,resolved_at')
+        .maybeSingle();
+      if (error) return json(500, { error: error.message });
+      if (!resolved) return json(409, { error: 'request_already_resolved' });
+      await recordAudit(sb, {
+        user, action: `order.request_${decision}`, targetType: 'order', targetId: existing.order_id,
+        detail: { request_id: existing.id, type: existing.type },
+      });
+      return json(200, {
+        ok: true,
+        request: resolved,
+        next_action: decision === 'approved'
+          ? (existing.type === 'cancel' ? 'cancel_order' : 'return_label')
+          : null,
+      });
+    }
 
     if (body.action === 'create_order') {
       if (!staffCan(role, 'order.write')) return json(403, { error: 'forbidden' });
@@ -423,8 +578,19 @@ export async function onRequest({ request, env }) {
       if (ord.payment_method !== 'stripe' || !ord.stripe_payment_intent) {
         return json(400, { error: 'not_refundable', message: 'Only Stripe-paid orders can be refunded here. Cancel NET orders by setting status to cancelled.' });
       }
-      // amount omitted → refund the whole remaining balance; otherwise a partial refund.
-      const plan = computeRefund({ total: ord.total, refundedAmount: ord.refunded_amount, requestedAmount: body.amount });
+      // Three shapes: `lines` (staff pick SKUs, amount derived from the order's own
+      // prices), `amount` (partial), or neither (whole remaining balance). Line refunds
+      // are the only shape that can restock precisely, because they name the goods.
+      let lineRefund = null;
+      if (body.lines !== undefined) {
+        lineRefund = computeLineRefund({ orderItems: ord.order_items, lines: body.lines });
+        if (!lineRefund.ok) return json(400, { error: lineRefund.error });
+      }
+      const plan = computeRefund({
+        total: ord.total,
+        refundedAmount: ord.refunded_amount,
+        requestedAmount: lineRefund ? lineRefund.amount : body.amount,
+      });
       if (!plan.ok) return json(400, { error: plan.error });
       const secret = env.STRIPE_SECRET_KEY;
       if (!secret) return json(500, { error: 'stripe_not_configured' });
@@ -460,12 +626,12 @@ export async function onRequest({ request, env }) {
       const { data: updated, error: e2 } = await sb.from('orders').update(update)
         .eq('id', body.id).select('id,company_id,status,total,refunded_amount').single();
       if (e2) return json(500, { error: e2.message });
-      // Return refunded line items to inventory only on a full refund (a partial
-      // amount can't be mapped to specific lines). Best-effort: never fail the refund.
-      if (plan.fullyRefunded) {
-        for (const args of stockIncrements(ord.order_items)) {
-          await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
-        }
+      // Restock what the refund actually covered: named lines when staff picked them,
+      // the whole order on a full refund. A bare partial amount maps to no specific goods,
+      // so it restocks nothing. Best-effort: never fail the refund on inventory.
+      const restockSource = lineRefund ? lineRefund.lines : plan.fullyRefunded ? ord.order_items : [];
+      for (const args of stockIncrements(restockSource)) {
+        await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
       }
       // Queue a reversing QBO credit memo (#22) so the books match the refund. The
       // worker posts it and retries on failure; best-effort here — never fail the
@@ -642,16 +808,16 @@ export async function onRequest({ request, env }) {
       await sb.from('shipment_events').insert({
         order_id: body.id, status: trackingStatus, carrier, tracking_number: trackingNumber, note,
       }).then(() => {}, () => {});
-      const shipped = ['shipped', 'delivered'].includes(trackingStatus) && trackingNumber;
-      // Delivered gets its own close-the-loop message (it used to reuse "shipped",
-      // and delivered-without-a-tracking-number fell to "tracking updated").
-      const delivered = trackingStatus === 'delivered';
-      const notifyLabel = delivered ? 'delivered' : shipped ? 'shipped' : 'tracking updated';
-      const notifyBody = delivered
-        ? 'Your order was delivered. Reorder anytime from your dashboard, and reply to this email if anything arrived short or damaged.'
-        : shipped
-          ? `Your order has shipped. ${carrier || 'Carrier'} ${trackingNumber}`.trim()
-          : `${carrier || 'Carrier'} ${trackingNumber || ''}`.trim();
+      // Same copy the automatic carrier-scan path sends, so a buyer never gets two
+      // differently worded notices for the same shipment. Delivered closes the loop on its
+      // own; "shipped" without a parcel number has nothing to track, so it reads as a
+      // generic tracking update.
+      const noticeStatus = trackingStatus === 'delivered' || (trackingStatus === 'shipped' && trackingNumber)
+        ? trackingStatus
+        : 'tracking';
+      const notice = shipmentNotice(noticeStatus, { carrier, trackingNumber });
+      const notifyLabel = notice.label;
+      const notifyBody = notice.body;
       // One rich tracking email (carrier/number/ETA + Track-shipment link) to buyer +
       // company order recipients; the in-app notification is inserted directly so
       // notifyCompany's generic email doesn't shadow the tracking link.

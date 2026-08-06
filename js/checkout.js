@@ -34,16 +34,34 @@ export function addressMatches(saved, current) {
 
 function checkoutError(error) {
   const code = error?.data?.error || error?.code || error?.message;
+  // Errors that name specific cart lines are useless without those lines — a buyer told
+  // only "checkout could not continue" has no way to find the one item at fault.
+  const skus = Array.isArray(error?.data?.skus) ? error.data.skus.filter(Boolean) : [];
+  const skuList = skus.length ? ` (${skus.join(', ')})` : '';
   return ({
     address_incomplete: 'Enter a complete U.S. address.',
     shipping_address_incomplete: 'Enter a complete shipping address and phone number.',
+    shipping_address_invalid: 'One of the address fields has an unexpected character or is too long.',
+    shipping_domestic_only: 'Online checkout ships within the United States. Request a quote for international freight.',
     address_not_deliverable: 'Google could not confirm this delivery address. Review the street, unit, city, state, and ZIP.',
     address_validation_unavailable: 'Address verification is temporarily unavailable. Try again.',
+    address_validation_not_configured: 'Address verification is offline. Contact MASEST and we will place this order for you.',
     shipping_package_profile_missing: 'A cart item is missing shipping dimensions. Return to the cart and request a freight quote.',
     shipping_cart_too_large: 'This cart needs freight planning. Send a quote request for a consolidated shipment.',
     shipping_rates_unavailable: 'No live carrier rate is available for this address and cart.',
+    shipping_rates_not_configured: 'Live shipping rates are offline. Contact MASEST and we will place this order for you.',
+    shipping_quote_not_configured: 'Live shipping rates are offline. Contact MASEST and we will place this order for you.',
+    shipping_carriers_unavailable: 'No carrier is available right now. Try again shortly.',
     shipping_quote_expired: 'Shipping rate expired. Recalculate shipping before payment.',
     shipping_quote_cart_changed: 'Cart changed. Recalculate shipping before payment.',
+    shipping_quote_required: 'Calculate shipping before continuing to payment.',
+    shipping_quote_invalid: 'Shipping selection could not be verified. Recalculate rates.',
+    shipping_product_unavailable: `An item in your cart is not available for online checkout${skuList}. Request a quote instead.`,
+    out_of_stock: `Not enough stock for every item${skuList}. Adjust quantities in the cart or request a quote.`,
+    not_purchasable: `These items need bulk freight review before checkout${skuList}. Use the quote form.`,
+    mixed_currency: 'Items in your cart use different currencies. Order them separately.',
+    rate_limited: 'Too many shipping calculations. Wait a moment and try again.',
+    request_too_large: 'This cart is too large to process here. Request a quote instead.',
     stripe_customer_setup_failed: 'Stripe could not update this account address. Try again.',
     credit_limit_exceeded: `This order exceeds available credit (${money(error?.data?.available || 0)} remaining). Choose Stripe payment or contact MASEST about account terms.`,
     stripe_error: 'Stripe could not start payment. Try again.',

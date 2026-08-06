@@ -3,9 +3,9 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, rowMatchesQuery } from '../util.js?v=20260804d';
-import { captureDirty, restoreDirty } from './edits.js?v=20260804d';
-import { createSavedViews } from './saved-views.js?v=20260804d';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260806a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260806a';
+import { createSavedViews } from './saved-views.js?v=20260806a';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const OPEN_NET_STATUS_OPTIONS = ['net_open', 'cancelled'];
@@ -472,6 +472,14 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         <input class="adm-input admin-input-md" data-refund-amount="${id}" data-capability="order.refund" type="number" min="0" step="0.01" placeholder="Amount (blank = full)" aria-label="Partial refund amount for order ${id} (leave blank to refund the full balance)">
         <button class="btn btn-ghost btn-sm" data-refund-order="${id}" data-capability="order.refund" type="button">Refund</button>
         ${Number(order.refunded_amount) > 0 ? `<span class="muted admin-inline-note">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : '';
+      // Acceptance is the "a human owns this" marker the queue sorts on; cancellation
+      // reverses label + payment + stock + books in one confirmed pass.
+      const openStatus = ['paid', 'net_open', 'pending_payment'].includes(order.status);
+      const lifecycleControls = `
+        ${openStatus && !order.accepted_at ? `<button class="btn btn-primary btn-sm" data-accept-order="${id}" data-capability="order.write" type="button">Accept order</button>` : ''}
+        ${order.accepted_at ? `<span class="muted admin-inline-note">accepted ${esc(date(order.accepted_at))}</span>` : ''}
+        <a class="btn btn-ghost btn-sm" href="/api/admin/orders?id=${encodeURIComponent(id)}&amp;format=packing_slip" target="_blank" rel="noopener">Packing slip</a>
+        ${['cancelled', 'refunded', 'cart'].includes(order.status) ? '' : `<button class="btn btn-ghost btn-sm adm-order-danger" data-cancel-order="${id}" data-capability="order.refund" type="button">Cancel &amp; reverse</button>`}`;
       return `<article class="admin-order-card">
         <div class="admin-order-head">
           <div>
@@ -493,6 +501,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
           <button class="btn btn-ghost btn-sm" data-save-order="${id}" data-capability="order.write" type="button">Save</button>
           ${netControls}
           ${refundControls}
+          ${lifecycleControls}
         </div>
       </article>`;
     }).join('')}</div>` + admOrdersPager();
@@ -717,9 +726,9 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     delegate(box, 'click', '[data-save-order]', async (event, button) => {
       const id = button.dataset.saveOrder;
       const status = box.querySelector(`[data-order-status="${CSS.escape(id)}"]`).value;
-      // Cancelling is destructive (can trigger customer notification/credit release) —
-      // confirm, matching the refund/mark-NET-paid actions on this same tab.
-      if (status === 'cancelled' && !(await confirmDialog('Cancel this order? The customer may be notified and any reserved stock released.', { confirmText: 'Cancel order', cancelText: 'Keep', danger: true }))) return;
+      // A bare status write to 'cancelled' moves no money, voids no label, and returns no
+      // stock — it just relabels the row. Route it through the real reversal instead.
+      if (status === 'cancelled') { await cancelOrderFlow(id); return; }
       button.disabled = true;
       try {
         await api('/api/admin/orders', { method: 'POST', body: { id, status } });
@@ -739,7 +748,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         message('ordStatus', err.message || 'Check the order fields.', 'err');
         return;
       }
-      if (body.status === 'cancelled' && !(await confirmDialog('Cancel this order? The customer may be notified and any reserved stock released.', { confirmText: 'Cancel order', cancelText: 'Keep', danger: true }))) return;
+      if (body.status === 'cancelled') { await cancelOrderFlow(id); return; }
       button.disabled = true;
       try {
         await api('/api/admin/orders', { method: 'POST', body });
@@ -748,6 +757,96 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         await refreshStats?.();
       } catch (err) {
         message('ordStatus', err.data?.message || err.data?.error || 'Could not update the order. Retry.', 'err');
+        button.disabled = false;
+      }
+    });
+    // Turn the server's preflight into the sentences an operator has to agree to. The plan
+    // is authoritative: the dialog never guesses at what will happen, it reads it back.
+    function cancellationConsequences(plan) {
+      const lines = [];
+      lines.push(plan.label.will_void
+        ? `Void shipping label ${plan.label.label_id}${plan.label.postage_at_risk ? ` (recover ${money(plan.label.postage_at_risk, plan.refund.currency)} postage)` : ''}.`
+        : `No label will be voided (${(plan.label.reason || 'none').replace(/_/g, ' ')}).`);
+      lines.push(plan.refund.will_refund
+        ? `Refund ${money(plan.refund.amount, plan.refund.currency)} to the original payment method.`
+        : `No Stripe refund (${(plan.refund.reason || 'none').replace(/_/g, ' ')}).`);
+      lines.push(plan.restock.will_restock
+        ? `Return ${plan.restock.lines.reduce((sum, line) => sum + line.qty, 0)} unit(s) to stock: ${plan.restock.lines.map((line) => `${line.sku} ×${line.qty}`).join(', ')}.`
+        : 'No stock is returned.');
+      if (plan.accounting.will_credit_memo) lines.push('Queue a reversing QuickBooks credit memo.');
+      if (plan.notification.buyer) lines.push(`Email ${plan.notification.buyer} that the order was cancelled.`);
+      if (plan.blockers.includes('shipment_in_transit')) {
+        lines.push('WARNING: the parcel is already moving. It will not be recalled and the postage is spent.');
+      }
+      return lines;
+    }
+
+    async function cancelOrderFlow(id) {
+      let plan;
+      try {
+        const preflight = await api('/api/admin/orders', { method: 'POST', body: { id, action: 'cancel_order' } });
+        plan = preflight.plan;
+      } catch (err) {
+        message('ordStatus', err.data?.message || err.data?.error || 'Could not prepare the cancellation.', 'err');
+        return;
+      }
+      if (plan.blockers.includes('already_cancelled')) {
+        message('ordStatus', 'Order is already cancelled.', 'ok');
+        return;
+      }
+      if (plan.blockers.includes('already_refunded')) {
+        message('ordStatus', 'Order is already fully refunded; cancel is not available.', 'err');
+        return;
+      }
+      const reason = await promptDialog(
+        `Cancel order ${plan.order_number || id}? This runs every step below.`,
+        {
+          label: 'Reason (recorded on the order and shown to the buyer)',
+          confirmText: 'Cancel & reverse',
+          cancelText: 'Keep order',
+          danger: true,
+          minLength: 8,
+          consequences: cancellationConsequences(plan),
+        },
+      );
+      if (!reason) return;
+      try {
+        await api('/api/admin/orders', {
+          method: 'POST',
+          body: {
+            id,
+            action: 'cancel_order',
+            confirm: true,
+            reason,
+            acknowledge_in_transit: plan.blockers.includes('shipment_in_transit'),
+          },
+        });
+        message('ordStatus', 'Cancellation queued. Track each step on the order timeline.', 'ok');
+        await refreshOrder(id);
+        await refreshStats?.();
+      } catch (err) {
+        message('ordStatus', err.data?.message || err.data?.error || 'Could not cancel the order. Retry.', 'err');
+      }
+    }
+
+    delegate(box, 'click', '[data-accept-order]', async (event, button) => {
+      const id = button.dataset.acceptOrder;
+      button.disabled = true;
+      try {
+        const result = await api('/api/admin/orders', { method: 'POST', body: { id, action: 'accept_order' } });
+        message('ordStatus', result.already_accepted ? 'Order was already accepted.' : 'Order accepted.', 'ok');
+        await refreshOrder(id);
+      } catch (err) {
+        message('ordStatus', err.data?.message || err.data?.error || 'Could not accept the order. Retry.', 'err');
+        button.disabled = false;
+      }
+    });
+    delegate(box, 'click', '[data-cancel-order]', async (event, button) => {
+      const id = button.dataset.cancelOrder;
+      button.disabled = true;
+      try {
+        await cancelOrderFlow(id);
+      } finally {
         button.disabled = false;
       }
     });

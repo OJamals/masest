@@ -7,7 +7,7 @@ import {
   items as cartItems,
   replaceWithQuote,
 } from './cart.js';
-import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 import { initBusinessHub } from './business.js?v=20260805c';
 import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260805c';
 
@@ -481,6 +481,30 @@ async function renderOrders({ append = false } = {}) {
       return `<div class="dash-row"><span><b>${esc(requisition.requisition_name)}</b><small class="muted">${itemCount} item${itemCount === 1 ? '' : 's'} · ${fmtDate(requisition.created_at)}</small></span><span class="dash-action-row dash-action-row--flush"><b>${money(requisition.total, requisition.currency)}</b><button class="btn btn-primary btn-sm" type="button" data-request-requisition-quote="${esc(requisition.id)}">Request quote</button><button class="btn btn-ghost btn-sm" type="button" data-use-requisition="${esc(requisition.id)}">Use</button><button class="btn btn-ghost btn-sm" type="button" data-delete-requisition="${esc(requisition.id)}">Delete</button></span></div>`;
     }).join('') : '<div class="empty-state"><i class="ph ph-clipboard-text empty-icon" aria-hidden="true"></i><div class="empty-title">No saved requisitions</div><div class="empty-body">Build a repeat order in the cart, then save it here for later.</div></div>'}
   </section>`;
+  // Mirrors availableOrderRequests() on the server, which re-validates and is
+  // authoritative — this only decides whether to offer the button at all.
+  const RETURN_WINDOW_MS = 30 * 86400000;
+  function orderRequest(order) {
+    const status = String(order.status || '');
+    if (['cancelled', 'refunded', 'cart'].includes(status)) return null;
+    if ((order.order_requests || []).some((entry) => entry.status === 'open')) return 'pending';
+    const tracking = String(order.tracking_status || '');
+    if (!['shipped', 'delivered'].includes(tracking) && status !== 'fulfilled') return 'cancel';
+    if (tracking === 'delivered' || status === 'fulfilled') {
+      const shippedAt = Date.parse(order.shipped_at || order.updated_at || '');
+      if (Number.isFinite(shippedAt) && (Date.now() - shippedAt) <= RETURN_WINDOW_MS) return 'return';
+    }
+    return null;
+  }
+  function orderRequestButton(order) {
+    const kind = orderRequest(order);
+    if (!kind) return '';
+    if (kind === 'pending') return '<span class="muted dash-request-pending">Request received — we are on it.</span>';
+    return `<button class="btn btn-ghost btn-sm" data-order-request="${esc(order.id)}" data-request-type="${kind}">${
+      kind === 'cancel' ? 'Request cancellation' : 'Request return'
+    }</button>`;
+  }
+
   const orderHtml = list.length ? list.map((o, i) => {
     const items = o.order_items || [];
     const n = items.reduce((s, it) => s + (it.qty || 0), 0);
@@ -497,6 +521,7 @@ async function renderOrders({ append = false } = {}) {
         ${o.qbo_invoice_id ? `<p class="muted">Invoice: ${esc(o.qbo_invoice_id)}</p>` : ''}
         ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
         ${o.payment_method === 'stripe' ? `<button class="btn btn-ghost btn-sm" data-receipt="${esc(o.id)}">Receipt</button>` : ''}
+        ${orderRequestButton(o)}
       </div></details>`;
   }).join('') + pagerHtml('data-load-more-orders', st)
     : '<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>';
@@ -534,6 +559,37 @@ async function renderOrders({ append = false } = {}) {
   box.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', async () => {
     const o = list[Number(b.dataset.reorder)];
     restoreCart(o.id, b, 'None of these items are available to reorder.');
+  }));
+  box.querySelectorAll('[data-order-request]').forEach((button) => button.addEventListener('click', async () => {
+    const type = button.dataset.requestType;
+    const reason = await promptDialog(
+      type === 'cancel'
+        ? 'Request cancellation for this order?'
+        : 'Request a return for this order?',
+      {
+        label: 'What happened? (so we can act on it)',
+        confirmText: type === 'cancel' ? 'Request cancellation' : 'Request return',
+        cancelText: 'Never mind',
+        minLength: 8,
+        consequences: type === 'cancel'
+          ? ['A MASEST specialist reviews it before anything is charged back.', 'If it has already shipped we will arrange a return instead.']
+          : ['We email a prepaid return label once it is approved.', 'Keep the products in their original packaging where you can.'],
+      },
+    );
+    if (!reason) return;
+    button.disabled = true;
+    try {
+      const result = await api('/api/account/order-requests', {
+        method: 'POST',
+        body: { order_id: button.dataset.orderRequest, type, reason },
+      });
+      toast(result.message || 'Request received.', { variant: 'success' });
+      pages.orders = { items: [], offset: 0, total: null, hasMore: false };
+      await renderOrders();
+    } catch (error) {
+      toast(error.data?.message || error.data?.error || 'Could not send the request. Try again.', { variant: 'error' });
+      button.disabled = false;
+    }
   }));
   box.querySelectorAll('[data-delete-requisition]').forEach((button) => button.addEventListener('click', async () => {
     if (!(await confirmDialog('Delete this saved requisition?', { confirmText: 'Delete', cancelText: 'Keep' }))) return;

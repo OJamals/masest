@@ -97,6 +97,9 @@ test("a signed carrier quote becomes one inline Stripe rate and pre-collected sh
   assert.equal(p.shipping_address_collection, undefined);
   assert.deepEqual(p.shipping_options, [{
     shipping_rate_data: {
+      // Stripe rejects a shipping rate with unspecified tax behavior once automatic_tax
+      // is enabled, so the inline rate always declares it.
+      tax_behavior: "exclusive",
       type: "fixed_amount",
       display_name: "USPS — Ground Advantage",
       fixed_amount: { amount: 2450, currency: "usd" },

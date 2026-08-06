@@ -36,6 +36,64 @@ export function orderItemsTableHtml(lines, { currency = 'usd', subtotal = null, 
     + (totals ? `<table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">${totals}</table>` : '');
 }
 
+// Copy for a shipment state change, keyed on the buyer-visible tracking status. Shared so
+// an automatic carrier scan and a manual staff update read identically to the buyer.
+export function shipmentNotice(trackingStatus, { carrier = null, trackingNumber = null } = {}) {
+  const status = String(trackingStatus || '').trim();
+  if (status === 'delivered') {
+    return {
+      label: 'delivered',
+      body: 'Your order was delivered. Reorder anytime from your dashboard, and reply to this email if anything arrived short or damaged.',
+    };
+  }
+  if (status === 'shipped') {
+    return {
+      label: 'shipped',
+      body: trackingNumber
+        ? `Your order has shipped. ${[carrier || 'Carrier', trackingNumber].filter(Boolean).join(' ')}`.trim()
+        : 'Your order has shipped.',
+    };
+  }
+  if (status === 'blocked') {
+    return {
+      label: 'on hold',
+      body: 'The carrier reported an exception on your shipment. MASEST is following up — reply to this email if you need it sooner.',
+    };
+  }
+  if (status === 'packing') {
+    return { label: 'packing', body: 'Your order is being packed and a shipping label has been created.' };
+  }
+  return {
+    label: 'tracking updated',
+    body: [carrier || 'Carrier', trackingNumber || ''].filter(Boolean).join(' ').trim()
+      || 'Your order tracking was updated.',
+  };
+}
+
+// Rich shipment email body: carrier / tracking # / ETA. Pure — the caller supplies the
+// layout shell, so the effect worker and the admin update path render the same email.
+export function shipmentEmailHtml(order, label, extra) {
+  const details = [
+    order?.carrier ? `<li><strong>Carrier:</strong> ${htmlEscape(order.carrier)}</li>` : '',
+    order?.tracking_number ? `<li><strong>Tracking #:</strong> ${htmlEscape(order.tracking_number)}</li>` : '',
+    order?.estimated_delivery_at ? `<li><strong>Estimated delivery:</strong> ${htmlEscape(order.estimated_delivery_at)}</li>` : '',
+  ].filter(Boolean).join('');
+  return `<p>${htmlEscape(extra || `Your order is now "${label}".`)}</p>${details ? `<ul>${details}</ul>` : ''}`;
+}
+
+// Delivered points at the dashboard (reorder + history); in-transit states keep the
+// carrier tracking link front and center.
+export function shipmentEmailCta(order, label, appUrl = 'https://masest.co') {
+  const base = String(appUrl || 'https://masest.co').replace(/\/+$/, '');
+  if (label === 'delivered') {
+    return { ctaText: 'View order & reorder', ctaUrl: `${base}/dashboard.html#orders` };
+  }
+  return {
+    ctaText: order?.tracking_url ? 'Track shipment' : 'Visit MASEST',
+    ctaUrl: order?.tracking_url || base,
+  };
+}
+
 export function technicalDocumentRequestNoteHtml(appUrl = 'https://masest.co') {
   const base = htmlEscape(String(appUrl).replace(/\/+$/, ''));
   return `<p style="margin:14px 0 0;color:#556;font-size:13px;line-height:1.5">`

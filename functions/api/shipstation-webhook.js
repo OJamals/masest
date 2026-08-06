@@ -53,14 +53,23 @@ export function createShipStationWebhookHandler(dependencies = {}) {
         error: error instanceof RequestBodyTooLargeError ? 'request_too_large' : 'bad_request',
       });
     }
-    if (!await verifySignature(request.headers, rawBody)) {
-      return json(401, { error: 'invalid_signature' });
+    const verified = await verifySignature(request.headers, rawBody);
+    // A JWKS fetch failure is an outage, not a forgery. Answering 401 would drop real
+    // tracking events permanently; 503 keeps them in the provider's retry queue.
+    if (verified === 'key_unavailable') {
+      return json(503, { error: 'signature_keys_unavailable' });
     }
+    if (!verified) return json(401, { error: 'invalid_signature' });
     let payload;
     try {
       payload = JSON.parse(rawBody);
     } catch {
       return json(400, { error: 'bad_request' });
+    }
+    // ShipStation delivers more than API_TRACK on a shared endpoint, and a 4xx teaches the
+    // provider to disable it. Anything this handler does not project is acknowledged.
+    if (payload?.resource_type !== 'API_TRACK') {
+      return json(200, { received: true, ignored: 'unsupported_resource_type' });
     }
     const update = await trackingUpdateFromPayload(payload);
     if (!update) return json(400, { error: 'invalid_tracking_event' });

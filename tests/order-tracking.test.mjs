@@ -42,9 +42,14 @@ test("staff orders API can update tracking metadata and notify buyers", () => {
   assert.match(ADMIN_ORDERS, /tracking_number/);
   assert.match(ADMIN_ORDERS, /tracking_url/);
   assert.match(ADMIN_ORDERS, /estimated_delivery_at/);
-  // Delivered closes the loop with its own label/body; shipped and generic updates keep theirs.
-  assert.match(ADMIN_ORDERS, /const notifyLabel\s*=\s*delivered\s*\?\s*['"]delivered['"]\s*:\s*shipped\s*\?\s*['"]shipped['"]\s*:\s*['"]tracking updated['"]/);
-  assert.match(ADMIN_ORDERS, /Your order was delivered\./);
+  // Delivered closes the loop with its own label/body; shipped and generic updates keep
+  // theirs. The copy lives in the shared builder so an automatic carrier scan and a manual
+  // staff update cannot word the same event differently.
+  assert.match(ADMIN_ORDERS, /const notice\s*=\s*shipmentNotice\(noticeStatus,\s*\{ carrier, trackingNumber \}\)/);
+  assert.match(ADMIN_ORDERS, /trackingStatus === 'delivered' \|\| \(trackingStatus === 'shipped' && trackingNumber\)/);
+  const ORDER_EMAIL = readFileSync(new URL('../functions/_lib/order-email.js', import.meta.url), 'utf8');
+  assert.match(ORDER_EMAIL, /Your order was delivered\./);
+  assert.match(ORDER_EMAIL, /Your order has shipped\./);
   // One rich tracking email goes to buyer + company recipients (sendTrackingEmail), so
   // the clickable tracking link is never shadowed by the generic notifyCompany email.
   assert.match(ADMIN_ORDERS, /await sendTrackingEmail\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*\[order\?\.customer_email,\s*\.\.\.companyRecipients\]\)/);

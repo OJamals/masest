@@ -215,7 +215,7 @@ test('rateOrderShipment persists only service-confirmed multi-package rates', as
   assert.deepEqual(finalized.rates.map((rate) => rate.rate_id), ['se-rate-supported']);
 });
 
-test('rateOrderShipment uses CMS variant package profiles when staff leaves packages blank', async () => {
+test('rateOrderShipment falls back to catalog package profiles for a partial split', async () => {
   let sentPayload;
   let profiledOrder;
   const result = await rateOrderShipment(
@@ -247,7 +247,75 @@ test('rateOrderShipment uses CMS variant package profiles when staff leaves pack
   assert.equal(profiledOrder.order_items[0].qty, 1);
   assert.equal(sentPayload.shipment.packages.length, 1);
   assert.equal(sentPayload.shipment.packages[0].weight.value, 42.5);
-  assert.equal(result.packages_source, 'cms');
+  // This shipment covers 1 of 2 units, so the whole-order carton plan from checkout does
+  // not describe it and packing is recomputed from the variant profiles.
+  assert.equal(result.packages_source, 'catalog');
+});
+
+test('rateOrderShipment replays the checkout carton plan when the shipment covers the order', async () => {
+  const plan = [{
+    package_code: 'package',
+    weight: { value: 50, unit: 'pound' },
+    dimensions: { unit: 'inch', length: 20, width: 10, height: 15 },
+  }];
+  let sentPayload;
+  let profilesLoaded = false;
+  const result = await rateOrderShipment(
+    { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+    { order_id: order.id, phone: '+1 321-555-0100' },
+    { user: { id: 'staff-1' } },
+    {
+      ...shipmentLifecycleDeps,
+      loadOrder: async () => ({ ...order, shipping_package_plan: plan }),
+      loadPackageProfiles: async () => { profilesLoaded = true; return []; },
+      listCarriers: async () => [{ carrier_id: 'se-ups' }],
+      quoteRates: async (_env, payload) => {
+        sentPayload = payload;
+        return { rate_response: { shipment_id: 'se-shipment-2', rates: [] } };
+      },
+      persistRate: async () => {},
+      linkProviderObject: async () => {},
+      audit: async () => {},
+    },
+  );
+  // The buyer paid for this exact carton; re-deriving it would be a second guess.
+  assert.equal(profilesLoaded, false);
+  assert.equal(result.packages_source, 'checkout_quote');
+  assert.equal(sentPayload.shipment.packages.length, 1);
+  assert.equal(sentPayload.shipment.packages[0].weight.value, 50);
+});
+
+test('rateOrderShipment flags the service the buyer actually paid for', async () => {
+  const result = await rateOrderShipment(
+    { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+    { order_id: order.id, phone: '+1 321-555-0100' },
+    { user: { id: 'staff-1' } },
+    {
+      ...shipmentLifecycleDeps,
+      loadOrder: async () => ({
+        ...order,
+        paid_shipping_carrier_id: 'se-usps',
+        paid_shipping_service_code: 'usps_ground_advantage',
+      }),
+      loadPackageProfiles: async () => [{ weight: 20, unit: 'pound', length: 10, width: 10, height: 12 }],
+      listCarriers: async () => [{ carrier_id: 'se-usps' }],
+      quoteRates: async () => ({
+        rate_response: {
+          shipment_id: 'se-shipment-3',
+          rates: [
+            { rate_id: 'r1', carrier_id: 'se-usps', service_code: 'usps_priority', shipping_amount: { amount: 30, currency: 'usd' } },
+            { rate_id: 'r2', carrier_id: 'se-usps', service_code: 'usps_ground_advantage', shipping_amount: { amount: 24.5, currency: 'usd' } },
+          ],
+        },
+      }),
+      persistRate: async () => {},
+      linkProviderObject: async () => {},
+      audit: async () => {},
+    },
+  );
+  assert.equal(result.paid_service.matched, true);
+  assert.equal(result.rates.find((rate) => rate.paid_service).rate_id, 'r2');
+  assert.equal(result.rates.filter((rate) => rate.paid_service).length, 1);
 });
 
 test('rateOrderShipment aggregates duplicate order-item SKUs before package lookup and allocation claim', async () => {

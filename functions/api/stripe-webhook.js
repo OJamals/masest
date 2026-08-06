@@ -7,6 +7,7 @@
 import Stripe from 'stripe';
 import { adminClient, json, htmlEscape } from '../_lib/supabase.js';
 import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
+import { loadShippingQuotePlan } from '../_lib/checkout-shipping.js';
 import {
   isDelinquentStatus,
   planFailedPayment,
@@ -122,6 +123,7 @@ async function transitionQuotedCheckout(sb, session, finalOrderId, transition, e
 
 export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
+  const loadShippingPlan = dependencies.loadShippingQuotePlan || loadShippingQuotePlan;
   const finalizeQuotedOrder = dependencies.finalizeQuoteOrder || finalizeQuoteOrder;
   const markQuotedOrderPending = dependencies.markQuotePaymentPending || markQuotePaymentPending;
   const reopenQuotedOrder = dependencies.reopenQuoteAfterPaymentFailure || reopenQuoteAfterPaymentFailure;
@@ -222,8 +224,14 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     let lines = cart.length ? cartLines(cart) : [];
     if (lines.length) await enrichLineNames(sb, lines);
     const itemRows = orderItemRows(lines, null);
+    const orderRow = orderRowFromSession(s, buyerEmailFromStripeSession(s));
+    // Carry the exact carton plan the buyer was rated on into the order, so the label is
+    // bought for the shipment that was actually paid for. Absent (older session, expired
+    // snapshot) the fulfillment side recomputes with the same consolidation module.
+    const quotePlan = await loadShippingPlan(env, s.metadata?.shipping_rate_id);
+    if (quotePlan?.packages) orderRow.shipping_package_plan = quotePlan.packages;
     const { data: persisted, error: persistErr } = await sb.rpc('persist_stripe_order', {
-      p_order: orderRowFromSession(s, buyerEmailFromStripeSession(s)),
+      p_order: orderRow,
       p_items: itemRows,
     });
     let order = persisted?.id ? { id: persisted.id, company_id: s.metadata?.company_id || null } : null;

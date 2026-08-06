@@ -9,12 +9,25 @@ function text(value) {
 }
 
 export class ShipStationError extends Error {
-  constructor(code, status = 0) {
+  constructor(code, status = 0, detail = null) {
     super(code);
     this.name = 'ShipStationError';
     this.code = code;
     this.status = status;
+    // Provider-supplied explanation, when there is one. Kept off the wire by callers that
+    // return codes to browsers, but invaluable in logs: a bare shipstation_http_400 says
+    // nothing about which package, address, or service the provider rejected.
+    this.detail = detail;
   }
+}
+
+function providerErrorDetail(payload) {
+  const errors = Array.isArray(payload?.errors) ? payload.errors : [];
+  const messages = errors
+    .map((entry) => String(entry?.message || entry?.error_code || '').trim())
+    .filter(Boolean);
+  const detail = messages.length ? messages.join('; ') : String(payload?.message || '').trim();
+  return detail ? detail.slice(0, 500) : null;
 }
 
 function positiveNumber(value) {
@@ -146,7 +159,11 @@ export async function shipStationRequest(env, path, options = {}, dependencies =
     ...(options.body == null ? {} : { body: JSON.stringify(options.body) }),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ShipStationError(`shipstation_http_${response.status}`, response.status);
+  if (!response.ok) {
+    const detail = providerErrorDetail(payload);
+    if (detail) console.error('shipstation_request_failed', route, response.status, detail);
+    throw new ShipStationError(`shipstation_http_${response.status}`, response.status, detail);
+  }
   return payload;
 }
 
