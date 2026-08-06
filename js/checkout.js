@@ -109,34 +109,15 @@ export function groupServiceRates(rates = [], visibleCount = 3) {
 // in UTC calendar space so the date reads the same wherever it is shown.
 const utcDay = (date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 
-// A carrier's estimate is TRANSIT time measured from the moment it takes possession, and
-// it quotes the good case. Two things sit between the buyer clicking pay and that moment:
+// Handling and the warehouse cutoff are applied server-side, by sending the real dispatch
+// date as ship_date on the rate request (functions/_lib/fulfillment-schedule.js). The
+// carrier then answers with an arrival date that already accounts for it, using its own
+// service calendar and holidays. So nothing is shifted here — shifting again would
+// double-count the handling and quote every option a day slower than it is.
 //
-//   cutoffHourEt  Orders placed after the warehouse stops picking for the day are handed
-//                 over the next business day. Melbourne FL, so the cutoff is Eastern.
-//   handlingDays  Pick, pack, and label a chemical order — not instant.
-//
-// bufferDays then covers the carrier's own optimism, and turns the answer into a range.
-// A range is also what buyers prefer: an honest "Aug 11–13" beats a confident "Aug 11"
-// that slips. Tune these here; they are the whole policy.
-export const FULFILLMENT_POLICY = Object.freeze({
-  cutoffHourEt: 14,
-  handlingDays: 1,
-  bufferDays: 1,
-});
-
-function easternHour(now) {
-  const hour = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York', hour: 'numeric', hour12: false,
-  }).format(now);
-  return Number(hour) % 24;
-}
-
-// Business days between the order and the carrier taking possession.
-export function dispatchDelayBusinessDays(now = new Date(), policy = FULFILLMENT_POLICY) {
-  const afterCutoff = easternHour(now) >= Number(policy.cutoffHourEt);
-  return (afterCutoff ? 1 : 0) + Math.max(0, Number(policy.handlingDays) || 0);
-}
+// bufferDays exists only as a lever: raise it to widen the shown answer into a range once
+// real delivered-vs-promised data from shipment_events justifies a number.
+export const DATE_DISPLAY_POLICY = Object.freeze({ bufferDays: 0 });
 
 export function businessDaysFromNow(days, from = new Date()) {
   const count = Number(days);
@@ -152,13 +133,12 @@ export function businessDaysFromNow(days, from = new Date()) {
 }
 
 // The window a buyer can actually plan around: the carrier's transit estimate pushed out
-// by the time it takes to get the goods to the carrier, then widened by the buffer.
-// Explains the gap between a carrier's quoted transit time and the dates shown. Without
-// it, a buyer who checks the carrier's own site sees a sooner date and assumes we padded
-// it arbitrarily.
-export function fulfillmentNote(policy = FULFILLMENT_POLICY) {
-  const handling = Math.max(0, Number(policy.handlingDays) || 0);
-  const hour = Number(policy.cutoffHourEt) || 0;
+// Explains why the shown date is later than the raw transit time a buyer would see on the
+// carrier's own site. Rendered from the server's fulfillment object rather than written as
+// copy, so the explanation cannot describe a policy the dates were not built with.
+export function fulfillmentNote(fulfillment = {}) {
+  const handling = Math.max(0, Number(fulfillment.handling_days) || 0);
+  const hour = Number(fulfillment.cutoff_hour_et) || 0;
   const suffix = hour >= 12 ? 'PM' : 'AM';
   const display = hour % 12 === 0 ? 12 : hour % 12;
   const parts = [];
@@ -171,12 +151,16 @@ export function fulfillmentNote(policy = FULFILLMENT_POLICY) {
   return parts.length ? `${parts.join('; ')}.` : '';
 }
 
-export function arrivalWindow(rate = {}, now = new Date(), policy = FULFILLMENT_POLICY) {
+// The carrier's own answer, already computed from the dispatch date the server sent it.
+// `shipDate` matters only on the fallback path, where the provider returned a transit-day
+// count instead of a date — counting those from today would silently drop the handling time
+// that the ship_date had accounted for.
+export function arrivalWindow(rate = {}, { shipDate = null, policy = DATE_DISPLAY_POLICY } = {}) {
   const iso = clean(rate.estimated_delivery_date);
-  const base = iso ? new Date(iso) : businessDaysFromNow(rate.delivery_days, now);
+  const from = shipDate ? new Date(`${clean(shipDate)}T00:00:00Z`) : new Date();
+  const base = iso ? new Date(iso) : businessDaysFromNow(rate.delivery_days, from);
   if (!base || Number.isNaN(base.getTime())) return null;
-  const dispatch = dispatchDelayBusinessDays(now, policy);
-  const earliest = dispatch > 0 ? businessDaysFromNow(dispatch, base) : new Date(utcDay(base));
+  const earliest = new Date(utcDay(base));
   const buffer = Math.max(0, Number(policy.bufferDays) || 0);
   return { earliest, latest: buffer > 0 ? businessDaysFromNow(buffer, earliest) : earliest };
 }
@@ -188,8 +172,8 @@ const arrivalMonthDay = (date) => new Intl.DateTimeFormat('en-US', {
   month: 'short', day: 'numeric', timeZone: 'UTC',
 }).format(date);
 
-export function arrivalLabel(rate = {}, now = new Date(), policy = FULFILLMENT_POLICY) {
-  const window = arrivalWindow(rate, now, policy);
+export function arrivalLabel(rate = {}, options = {}) {
+  const window = arrivalWindow(rate, options);
   if (!window) return null;
   const { earliest, latest } = window;
   if (utcDay(earliest) === utcDay(latest)) return `Arrives ${arrivalDay(earliest)}`;
@@ -359,6 +343,9 @@ async function boot() {
     if (hadQuote) renderTotals();
   }
 
+  // The dispatch date the rates were quoted against, as returned by /api/shipping-rates.
+  const shipDate = () => state.quote?.fulfillment?.ship_date || null;
+
   function renderTotals() {
     const pricing = cartPricing(cart, state.catalog);
     const { currency } = pricing;
@@ -368,7 +355,8 @@ async function boot() {
     // actually making — pay more, get it sooner — is legible in one place.
     const shippingNote = shipping == null
       ? 'Select a shipping method'
-      : [shippingServiceSummary(selected), arrivalLabel(selected)].filter(Boolean).join(' · ');
+      : [shippingServiceSummary(selected), arrivalLabel(selected, { shipDate: shipDate() })]
+        .filter(Boolean).join(' · ');
     document.getElementById('checkoutTotals').innerHTML = `<dl>
       <div><dt>Product subtotal</dt><dd>${pricing.known ? money(pricing.total, currency) : 'At payment'}</dd></div>
       <div><dt>Shipping<small>${escapeHtml(shippingNote)}</small></dt><dd>${shipping == null ? '—' : money(shipping / 100, currency)}</dd></div>
@@ -400,7 +388,7 @@ async function boot() {
       radio.type = 'radio'; radio.name = 'shippingRate'; radio.value = String(index); radio.checked = index === state.selectedRate;
       const text = document.createElement('span');
       const carrier = clean(rate.carrier_name).replace(/\s+One Balance$/i, '');
-      const arrival = arrivalLabel(rate);
+      const arrival = arrivalLabel(rate, { shipDate: shipDate() });
       // Lead with the date, fall back to the service name only when the carrier gave no
       // estimate — a row whose headline is "Carrier estimate at shipment" tells the buyer
       // nothing they can decide on.
@@ -429,7 +417,7 @@ async function boot() {
     // Rendered from the policy rather than written as copy, so the note can never claim a
     // handling time the dates were not actually calculated with.
     const note = document.getElementById('shippingRateNote');
-    if (note) note.textContent = fulfillmentNote();
+    if (note) note.textContent = fulfillmentNote(state.quote?.fulfillment);
     ratesBox.hidden = false;
     pay.disabled = !rates.length;
     payHint.textContent = rates.length ? 'Secure payment opens on Stripe.' : 'No shipping method is available.';

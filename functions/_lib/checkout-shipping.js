@@ -4,6 +4,7 @@ import { buildRateRequest, shipStationRequest } from './shipstation.js';
 import { packagesFromOrderItems } from './shipstation-orders.js';
 import { adminClient } from './supabase.js';
 import { combinePackagesForRates } from './shipping-packages.js';
+import { fulfillmentSummary } from './fulfillment-schedule.js';
 
 const QUOTE_TTL_SECONDS = 15 * 60;
 const encoder = new TextEncoder();
@@ -285,6 +286,8 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
   const address = normalizeShippingAddress(validation.address);
   const billingAddress = normalizeShippingAddress(billingValidation.address);
   const order = checkoutOrder({ cart, variants, address, email: input.email, now });
+  // The carrier prices transit from the day it collects, so tell it which day that is.
+  const fulfillment = (dependencies.fulfillmentSummary || fulfillmentSummary)(new Date(now()));
   const listCarriers = dependencies.listCarriers
     || ((runtimeEnv) => shipStationRequest(runtimeEnv, '/carriers'));
   const quoteRates = dependencies.quoteRates
@@ -309,6 +312,7 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
       carrierIds,
       phone: address.phone,
       residential: address.residential ? 'yes' : 'no',
+      shipDate: fulfillment.ship_date,
     });
   } catch (error) {
     if (error instanceof CheckoutShippingError) throw error;
@@ -359,6 +363,9 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
       possible_next_action: validation.possible_next_action || 'ACCEPT',
     },
     package_count: packages.length,
+    // The browser renders its "dates include handling" note from this, so the explanation
+    // and the dates can never describe different policies.
+    fulfillment,
     rates: signedRates,
   };
 }

@@ -104,7 +104,7 @@ function stripeShipTo(order, overrides = {}) {
   };
 }
 
-export function buildRateRequest({ order, packages, warehouseId, carrierIds, phone, residential }) {
+export function buildRateRequest({ order, packages, warehouseId, carrierIds, phone, residential, shipDate }) {
   const warehouse = text(warehouseId);
   const carriers = [...new Set((carrierIds || []).map(text).filter(Boolean))];
   if (!warehouse) throw new ShipStationError('shipstation_warehouse_required');
@@ -117,6 +117,9 @@ export function buildRateRequest({ order, packages, warehouseId, carrierIds, pho
     shipment: {
       validate_address: 'validate_and_clean',
       shipment_number: reference.slice(0, 50),
+      // Without this the provider assumes the parcel ships today and quotes transit from a
+      // label that has not been bought yet, which reads back as an impossibly early date.
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(text(shipDate)) ? { ship_date: text(shipDate) } : {}),
       warehouse_id: warehouse,
       ship_to: stripeShipTo(order, { phone, residential }),
       packages: normalizedPackages,
