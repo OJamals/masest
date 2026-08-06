@@ -151,7 +151,12 @@
   @media (prefers-reduced-motion: reduce) { .dash-order-caret { transition: none; } }
   .dash-order-lines { padding: 8px 0 4px; }
   .dash-order-line { padding: 7px 0; }
+  /* Order totals and line amounts sit in a visual column; tabular figures keep that
+     column aligned across rows of differing digit widths. */
+  .dash-order-summary > b,
+  .dash-order-line span:last-child { font-variant-numeric: tabular-nums; }
   .dash-reorder { margin-top: 8px; }
+  .dash-request-pending { display: inline-flex; align-items: center; min-height: 40px; font-size: .82rem; text-wrap: pretty; }
   .notif-body { flex: 1; }
   .notif-time { font-size: .78rem; }
   .notif-link { font-weight: 700; }

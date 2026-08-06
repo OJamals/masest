@@ -31,6 +31,24 @@ export function requestDetailsHtml(quote) {
   return rows ? `<div class="quote-request-summary">${rows}</div>` : '';
 }
 
+// Buyer-facing wording for each offer state, mirroring functions/_lib/quote-lifecycle.js.
+// Staff were reading raw column values ("payment_pending"), which is both unpolished and
+// ambiguous — it left it unclear whether the buyer or MASEST was being waited on.
+const OFFER_STATUS_LABELS = {
+  sent: 'Quote sent',
+  revised: 'Revised quote sent',
+  accepted: 'Buyer accepted',
+  declined: 'Buyer declined',
+  expired: 'Offer expired',
+  payment_pending: 'Payment pending',
+  ordered: 'Order placed',
+};
+
+export function offerStatusLabel(status) {
+  const key = String(status || '').trim();
+  return OFFER_STATUS_LABELS[key] || key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+}
+
 export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager }) {
   const QUOTE_STATUSES = ['new', 'contacted', 'closed', 'spam'];
   const STAGES = ['new', 'qualified', 'sample_audit', 'proposal', 'won', 'lost'];
@@ -366,7 +384,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       return `<li>${esc(doc.title || item.document_id || 'Document')} · ${esc(item.status || 'pending')}</li>`;
     }).join('');
     return `
-      <p class="muted">${esc(workspace.requisition_name || 'Saved requisition')} · ${esc(workspace.currency || 'usd').toUpperCase()}${workspace.offer_status ? ` · ${esc(workspace.offer_status)}` : ''}</p>
+      <p class="muted">${esc(workspace.requisition_name || 'Saved requisition')} · ${esc(workspace.currency || 'usd').toUpperCase()}${workspace.offer_status ? ` · ${esc(offerStatusLabel(workspace.offer_status))}` : ''}</p>
       <div class="quote-offer-lines" aria-label="Quote line items">${lines || '<p class="muted">No line items.</p>'}</div>
       <div class="adm-tools" style="justify-content:flex-end">
         <button class="btn btn-primary btn-sm" data-send-quote type="button"${lines && !['accepted', 'ordered', 'payment_pending'].includes(workspace.offer_status) ? '' : ' disabled'}>${workspace.offer_status === 'ordered' ? 'Order placed' : (workspace.offer_status === 'payment_pending' ? 'Payment pending' : (workspace.offer_status === 'accepted' ? 'Buyer accepted' : (workspace.offer_status === 'sent' ? 'Resend quote' : 'Send quote')))}</button>

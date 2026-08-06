@@ -99,6 +99,41 @@ export function groupServiceRates(rates = [], visibleCount = 3) {
   return { recommended: unique.slice(0, count), additional: unique.slice(count) };
 }
 
+// "Arrives Tue, Aug 11" beats "5 business days": a buyer comparing options is deciding
+// whether the goods land before a job starts, not counting transit days. The carrier's own
+// estimated_delivery_date is authoritative; delivery_days is the fallback, projected over
+// business days only so a Friday quote doesn't promise a Sunday delivery.
+// A delivery date is a calendar date, not an instant. Carriers send it as UTC midnight, so
+// formatting it in the viewer's local zone renders the PREVIOUS day for everyone west of
+// UTC — a buyer in Florida would be told Monday for a Tuesday delivery. All of this works
+// in UTC calendar space so the date reads the same wherever it is shown.
+const utcDay = (date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+
+export function businessDaysFromNow(days, from = new Date()) {
+  const count = Number(days);
+  if (!Number.isFinite(count) || count <= 0) return null;
+  const date = new Date(utcDay(from));
+  let remaining = Math.ceil(count);
+  while (remaining > 0) {
+    date.setUTCDate(date.getUTCDate() + 1);
+    const day = date.getUTCDay();
+    if (day !== 0 && day !== 6) remaining -= 1;
+  }
+  return date;
+}
+
+export function arrivalLabel(rate = {}, now = new Date()) {
+  const iso = clean(rate.estimated_delivery_date);
+  const parsed = iso ? new Date(iso) : businessDaysFromNow(rate.delivery_days, now);
+  if (!parsed || Number.isNaN(parsed.getTime())) return null;
+  const days = Math.round((utcDay(parsed) - utcDay(now)) / 86400000);
+  if (days <= 0) return 'Arrives today';
+  if (days === 1) return 'Arrives tomorrow';
+  return `Arrives ${new Intl.DateTimeFormat('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+  }).format(parsed)}`;
+}
+
 export function shippingServiceLabel(rate = {}) {
   const carrier = clean(rate.carrier_name).replace(/\s+One Balance$/i, '');
   const service = clean(rate.service_type);
@@ -260,10 +295,16 @@ async function boot() {
   function renderTotals() {
     const pricing = cartPricing(cart, state.catalog);
     const { currency } = pricing;
-    const shipping = state.quote?.rates?.[state.selectedRate]?.amount_minor;
+    const selected = state.quote?.rates?.[state.selectedRate];
+    const shipping = selected?.amount_minor;
+    // Put the delivery date next to the money it costs, so the trade-off the buyer is
+    // actually making — pay more, get it sooner — is legible in one place.
+    const shippingNote = shipping == null
+      ? 'Select a shipping method'
+      : [shippingServiceSummary(selected), arrivalLabel(selected)].filter(Boolean).join(' · ');
     document.getElementById('checkoutTotals').innerHTML = `<dl>
       <div><dt>Product subtotal</dt><dd>${pricing.known ? money(pricing.total, currency) : 'At payment'}</dd></div>
-      <div><dt>Shipping<small>${shipping == null ? 'Select a shipping method' : 'Selected carrier rate'}</small></dt><dd>${shipping == null ? '—' : money(shipping / 100, currency)}</dd></div>
+      <div><dt>Shipping<small>${escapeHtml(shippingNote)}</small></dt><dd>${shipping == null ? '—' : money(shipping / 100, currency)}</dd></div>
       <div><dt>Tax</dt><dd>At payment</dd></div>
       <div class="cart-total-row"><dt>Estimated total</dt><dd>${pricing.known ? money(pricing.total + (shipping || 0) / 100, currency) : 'At payment'}</dd></div>
     </dl>`;
@@ -286,12 +327,21 @@ async function boot() {
     const renderRate = ({ rate, index }, position) => {
       const label = document.createElement('label');
       label.className = 'checkout-rate';
+      // Stagger the options in rather than dropping the whole block at once.
+      label.style.setProperty('--rate-delay', `${Math.min(position, 6) * 40}ms`);
       const radio = document.createElement('input');
       radio.type = 'radio'; radio.name = 'shippingRate'; radio.value = String(index); radio.checked = index === state.selectedRate;
       const text = document.createElement('span');
-      const delivery = rate.delivery_days ? `${rate.delivery_days} business days` : 'Carrier estimate at shipment';
       const carrier = clean(rate.carrier_name).replace(/\s+One Balance$/i, '');
-      text.innerHTML = `<b>${escapeHtml(shippingServiceLabel(rate))}</b><small>${escapeHtml(carrier)} · ${escapeHtml(delivery)}${position === 0 ? ' · Lowest rate' : ''}</small>`;
+      const arrival = arrivalLabel(rate);
+      // Lead with the date, fall back to the service name only when the carrier gave no
+      // estimate — a row whose headline is "Carrier estimate at shipment" tells the buyer
+      // nothing they can decide on.
+      const service = [carrier, shippingServiceLabel(rate)].filter(Boolean).join(' ');
+      const meta = [arrival ? service : null, position === 0 ? 'Lowest rate' : null].filter(Boolean).join(' · ');
+      text.innerHTML = `<b>${escapeHtml(arrival || service)}</b>${
+        meta ? `<small>${escapeHtml(meta)}</small>` : '<small>Carrier estimate at shipment</small>'
+      }`;
       const price = document.createElement('strong');
       price.textContent = money(rate.amount_minor / 100, rate.currency);
       label.append(radio, text, price);

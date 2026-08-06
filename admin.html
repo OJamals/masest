@@ -120,8 +120,13 @@
   .company-admin-fields span { color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
   .admin-order-list,
   .company-admin-list { display: grid; gap: 12px; }
+  /* Concentric: the inputs inside sit at --r-input (10px) with 14px of card padding,
+     so the card is 24px. Matching the child's 10px made the corners read as pinched. */
   .admin-order-card,
-  .company-admin-card { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 14px; box-shadow: var(--shadow-xs); }
+  .company-admin-card { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); padding: 14px; box-shadow: var(--shadow-xs); }
+  /* Order totals and money columns rewrite on refresh — keep the digits from jittering. */
+  .admin-order-head > b,
+  .admin-order-meta b { font-variant-numeric: tabular-nums; }
   .admin-order-head,
   .company-admin-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
   .admin-order-head h3,

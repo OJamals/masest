@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/style.css?v=20260806a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/checkout.js?v=20260805c"></script>
+  <script type="module" src="js/checkout.js?v=20260806a"></script>
 </head>
 <body class="checkout-flow-page">
 <a class="skip-link" href="#main">Skip to checkout</a>
@@ -50,7 +50,7 @@
           <div class="field"><label for="firstName">First name</label><input id="firstName" name="firstName" maxlength="60" autocomplete="shipping given-name" required></div>
           <div class="field"><label for="lastName">Last name</label><input id="lastName" name="lastName" maxlength="60" autocomplete="shipping family-name" required></div>
           <div class="field"><label for="checkoutEmail">Email</label><input id="checkoutEmail" name="email" type="email" autocomplete="shipping email" required></div>
-          <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" inputmode="tel" maxlength="40" autocomplete="shipping tel" required></div>
+          <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" inputmode="tel" maxlength="40" autocomplete="shipping tel" aria-describedby="phoneHint" required><small id="phoneHint" class="field-hint">Carriers require it for freight delivery contact.</small></div>
           <div class="field checkout-business-name"><label for="businessName">Business name <span class="optional">Optional</span></label><input id="businessName" name="businessName" autocomplete="shipping organization"></div>
         </div>
         <button id="poToggle" class="checkout-inline-action" type="button" aria-expanded="false" aria-controls="purchaseOrderField"><i class="ph ph-plus" aria-hidden="true"></i> Add PO number</button>

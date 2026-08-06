@@ -382,10 +382,12 @@ one accent) ---------- */
   display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px;
   border-radius: var(--r-pill); font-size: 1rem; font-weight: 700; cursor: pointer;
   border: 0; white-space: nowrap; font-family: var(--font); letter-spacing: -.01em;
-  transition: transform .35s var(--ease-out), background .25s var(--ease-out),
+  transition: transform .35s var(--ease-out), scale .12s var(--ease-out), background .25s var(--ease-out),
               border-color .25s var(--ease-out), box-shadow .35s var(--ease-out), color .2s;
 }
-.btn:active { transform: scale(.97); }
+/* `scale` as its own property, not inside `transform` — otherwise the press would cancel
+   the hover's translateY and the button would jump down as you click it. */
+.btn:active { scale: .96; }
 .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(10,91,98,.25), 0 8px 20px -8px rgba(14,124,134,.55); }
 .btn-primary:hover { background: var(--accent-ink); box-shadow: 0 2px 4px rgba(10,91,98,.28), 0 14px 28px -10px rgba(14,124,134,.62); transform: translateY(-1px); }
 .btn-secondary { background: var(--accent-soft); color: var(--accent-ink); border: 1.5px solid rgba(14,124,134,.18); box-shadow: var(--shadow-xs); }
@@ -3967,7 +3969,13 @@ body.checkout-flow-page::before { display: none; }
   font-size: clamp(1.25rem, 2vw, 1.48rem);
   line-height: 1.2;
   letter-spacing: -.025em;
+  text-wrap: balance;
 }
+/* Short supporting copy throughout checkout — never leave a single word stranded on the
+   last line at the moment a buyer is deciding whether to trust the page. */
+.checkout-flow-page p,
+.checkout-flow-page .checkout-rate small,
+.checkout-flow-page label { text-wrap: pretty; }
 .checkout-section h2 span { margin-right: 4px; }
 .checkout-contact-grid {
   display: grid;
@@ -4002,18 +4010,28 @@ body.checkout-flow-page::before { display: none; }
   box-shadow: 0 0 0 2px rgba(14,124,134,.12);
 }
 .checkout-flow-page .optional { color: var(--muted); font-size: .76rem; font-weight: 500; }
+/* Justify a required field that looks nosy. Buyers who don't know why you want a phone
+   number type a fake one, and the carrier calls it on delivery day. */
+.checkout-flow-page .field-hint { display: block; margin-top: 6px; color: var(--muted); font-size: .76rem; font-weight: 500; line-height: 1.4; text-wrap: pretty; }
+/* Checkout is heavily mobile, so these text actions take the 44px touch target rather
+   than the 40px that suffices in a dense desktop admin. */
 .checkout-inline-action,
 .checkout-text-action {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 40px;
+  min-height: 44px;
   border: 0;
   background: transparent;
   color: var(--accent-ink);
   font: 700 .84rem/1 var(--font);
   cursor: pointer;
+  transition-property: color, border-color, scale;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
 }
+.checkout-text-action:active,
+.checkout-inline-action:active { scale: .96; }
 .checkout-inline-action {
   margin-top: 12px;
   padding: 8px 12px;
@@ -4166,7 +4184,9 @@ body.checkout-flow-page::before { display: none; }
   border-radius: 8px;
   background: var(--surface);
 }
-.checkout-line-media img { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* Neutral black at 10% — never a tinted near-black, which picks up the surface behind it
+   and reads as dirt on the product edge. */
+.checkout-line-media img { display: block; width: 100%; height: 100%; object-fit: contain; outline: 1px solid rgba(0, 0, 0, .1); outline-offset: -1px; border-radius: inherit; }
 .checkout-line span { min-width: 0; }
 .checkout-line b { display: block; color: var(--ink); font-size: .92rem; line-height: 1.35; }
 .checkout-line small { display: block; margin-top: 5px; color: var(--muted); font-size: .78rem; }
@@ -4176,7 +4196,10 @@ body.checkout-flow-page::before { display: none; }
 .checkout-totals dl > div { display: flex; justify-content: space-between; gap: 18px; }
 .checkout-totals dt,
 .checkout-totals dd { color: var(--ink); font-size: .94rem; }
-.checkout-totals dt small { display: block; margin-top: 4px; color: var(--muted); font-size: .78rem; font-weight: 500; }
+/* Every amount here rewrites as the buyer switches shipping method; tabular figures keep
+   the column from twitching on each change. */
+.checkout-totals dd { font-variant-numeric: tabular-nums; }
+.checkout-totals dt small { display: block; margin-top: 4px; color: var(--muted); font-size: .78rem; font-weight: 500; text-wrap: pretty; }
 .checkout-totals .cart-total-row { margin-top: 4px; padding-top: 22px; border-top-color: var(--line); }
 .checkout-totals .cart-total-row dt { font-size: 1rem; }
 .checkout-totals .cart-total-row dd { font-size: 1.55rem; }
@@ -4184,12 +4207,44 @@ body.checkout-flow-page::before { display: none; }
 .checkout-rates h3 { margin: 0 0 6px; font-size: 1rem; }
 .checkout-verified { margin: 0 0 12px; color: var(--status-success-ink); font-size: .8rem; line-height: 1.45; }
 #shippingRateOptions { display: grid; gap: 9px; }
-.checkout-rate { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.checkout-rate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  /* 44px keeps every option a comfortable target even though the radio is 17px. */
+  min-height: 56px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  transition-property: border-color, background-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+}
+.checkout-rate:hover { border-color: var(--accent-soft-line, rgba(14,124,134,.35)); }
 .checkout-rate:has(input:checked) { border-color: var(--accent); background: var(--accent-tint); box-shadow: 0 0 0 2px rgba(14,124,134,.1); }
+.checkout-rate:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .checkout-rate input { width: 17px; height: 17px; accent-color: var(--accent); }
-.checkout-rate b { display: block; font-size: .82rem; }
-.checkout-rate small { display: block; margin-top: 3px; color: var(--muted); font-size: .74rem; line-height: 1.35; }
+/* The arrival date is the headline — it is what a buyer compares options on. */
+.checkout-rate b { display: block; font-size: .88rem; letter-spacing: -.01em; }
+.checkout-rate small { display: block; margin-top: 3px; color: var(--muted); font-size: .74rem; line-height: 1.35; text-wrap: pretty; }
 .checkout-rate strong { font-size: .86rem; font-variant-numeric: tabular-nums; }
+
+/* Rates arrive after a network round trip, so they animate in rather than snapping.
+   Keyframes are correct here: this is a one-shot enter, not an interactive state. */
+@media (prefers-reduced-motion: no-preference) {
+  .checkout-rate {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: checkoutRateIn 260ms var(--ease-out) forwards;
+    animation-delay: var(--rate-delay, 0ms);
+  }
+  @keyframes checkoutRateIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
 .checkout-rate-more { color: var(--accent-ink); }
 .checkout-rate-more > summary {
   display: flex;
@@ -6835,8 +6890,12 @@ body.products-page .conversion-proof .proof-pill em {
   box-shadow: var(--surface-edge), var(--shadow-md);
 }
 
+/* Press depth lives on the `scale` property (see .btn:active). Scaling here too would
+   compound — .985 × .96 = .946 — and land below the point where a press stops reading as
+   tactile and starts reading as the button flinching. */
 :where(.btn, .btn-sm, .nav-cta, .nav-cart, .nav-links a, .nav-group summary, .lead-action-bar a):active {
-  transform: translateY(1px) scale(.985);
+  transform: translateY(1px);
+  scale: .96;
 }
 
 :where(.btn, .btn-sm, .nav-cta, .nav-cart, .lead-action-bar a):focus-visible {
@@ -7958,6 +8017,6 @@ body.product-detail-page main > section.product-static-section {
    button). transform-only transition leaves the existing instant hover recolor
    untouched. */
 .shop-card-add,
-.shop-card-quote { transition: transform .12s var(--ease-out); }
+.shop-card-quote { transition-property: scale; transition-duration: .12s; transition-timing-function: var(--ease-out); }
 .shop-card-add:active,
-.shop-card-quote:active { transform: scale(.97); }
+.shop-card-quote:active { scale: .96; }
