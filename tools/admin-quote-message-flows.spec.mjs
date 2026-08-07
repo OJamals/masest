@@ -50,8 +50,18 @@ async function bootAsStaff(page) {
   await page.route("**/*.supabase.co/**", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify({ data: { session: null }, session: null }),
   }));
+  // No staff_context on purpose: normalizeStaffContext() grants the historical
+  // full-owner UI only when the field is absent. Spelling out role:"owner"
+  // without a capabilities array fails closed and disables every control.
   await page.route("**/api/admin/stats", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify({}),
+  }));
+  // The support console posts inbox presence on open; unrouted it would 501
+  // against the static server on every drawer toggle.
+  await page.route("**/api/admin/message-settings", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({
+      notify_admin_support_requests: true, notify_admin_messages: false,
+    }),
   }));
 }
 
@@ -232,32 +242,40 @@ test("staff replies to a support thread with the expected payload", async ({ pag
       // Single-thread view (also re-fetched after the reply posts).
       return route.fulfill({
         status: 200, contentType: "application/json",
-        body: JSON.stringify({ messages: [{ id: "m-1", sender_role: "buyer", body: "When does my order ship?", created_at: "2026-06-18T10:00:00Z" }] }),
+        body: JSON.stringify({
+          thread: { company_id: "co-1", company_name: "Acme Mfg", status: "open" },
+          messages: [{ id: "m-1", sender_role: "buyer", body: "When does my order ship?", created_at: "2026-06-18T10:00:00Z" }],
+        }),
       });
     }
     // Thread list.
     return route.fulfill({
       status: 200, contentType: "application/json",
-      body: JSON.stringify({ threads: [{ company_id: "co-1", company_name: "Acme Mfg", last_body: "When does my order ship?", unread: 1 }] }),
+      body: JSON.stringify({ threads: [{ company_id: "co-1", company_name: "Acme Mfg", last_body: "When does my order ship?", unanswered: true, status: "open" }] }),
     });
   });
 
+  // #messages is one of the hashes that opens the shared support console. It
+  // used to activate a panel holding a second, admin-only inbox; that drawer and
+  // its #adminSupportDrawer / #replyForm markup are gone.
   await page.goto(`${BASE_URL}/admin.html#messages`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
 
-  const thread = page.locator('[data-company-thread="co-1"]');
-  await expect(thread).toBeAttached();
-  await page.locator("#adminSupportLauncher").evaluate((launcher) => launcher.click());
-  await expect(page.locator("#adminSupportDrawer")).toBeVisible();
-  await expect(page.locator("#adminSupportLauncher")).toHaveCSS("color", "rgb(255, 255, 255)");
-  await expect(page.locator("#adminSupportDrawer")).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  await expect(page.locator("#admThreadView")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  const drawer = page.locator(".site-support__drawer");
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(page.locator(".site-support__launcher")).toHaveCSS("color", "rgb(255, 255, 255)");
+
+  const thread = page.locator('.site-support__thread[data-company-id="co-1"]');
+  await expect(thread).toBeVisible();
   await thread.click();
-  await expect(page.locator("#replyForm")).toBeVisible();
-  await page.locator("#replyBody").fill("Ships Friday via LTL freight.");
+
+  const reply = page.locator(".site-support__reply");
+  await expect(reply).toBeVisible();
+  await page.locator("#siteSupportReply").fill("Ships Friday via LTL freight.");
 
   const replyResp = page.waitForResponse((r) => r.url().includes("/api/admin/messages") && r.request().method() === "POST");
-  await page.locator('#replyForm button[type="submit"]').click();
+  await reply.locator('button[type="submit"]').click();
   await replyResp;
 
   expect(replyBody).toEqual({ company_id: "co-1", body: "Ships Friday via LTL freight." });

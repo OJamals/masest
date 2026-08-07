@@ -156,9 +156,12 @@ test("staff auth stays neutral while booting and does not flash the gate between
 
 test("overview requests no lazy feature and a stale module load cannot dispatch its render", async ({ page }) => {
   await stubStaffBoot(page);
+  // threads.js is deliberately absent: the support console is the one feature
+  // boot mounts eagerly, because its launcher belongs on every tab rather than
+  // only after staff has opened a particular one. Asserted below.
   const lazyModules = [
     "traffic.js", "seo.js", "qbo.js", "orders.js", "companies.js", "products.js",
-    "pricing.js", "inventory.js", "coupons.js", "content.js", "threads.js", "quotes.js",
+    "pricing.js", "inventory.js", "coupons.js", "content.js", "quotes.js",
     "reviews.js", "newsletter.js", "crm-workspace.js", "offers.js", "crm.js",
   ];
   const requestedModules = [];
@@ -182,6 +185,7 @@ test("overview requests no lazy feature and a stale module load cannot dispatch 
   await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
   expect(requestedModules.filter((name) => lazyModules.includes(name))).toEqual([]);
+  await expect.poll(() => requestedModules.includes("threads.js")).toBe(true);
 
   await page.locator('[data-tab="orders"]').click();
   await ordersRequested;
@@ -239,8 +243,25 @@ test("a render already in flight cannot finish after the newer workspace render"
             document.body.dataset.featureRenderWinner = "content";
             document.body.dataset.contentRenderComplete = "true";
           },
-          renderBlog() {
-            document.body.dataset.featureRenderWinner = "blog";
+          renderBlog() {},
+        };
+      }
+    `,
+  }));
+  // Blog stopped being a workspace of its own — it is a sub-view of Content, and
+  // its toggle re-renders in place without going through setTab. So the race has
+  // to be run between two real workspaces to exercise the render token at all.
+  await page.route("**/js/admin/reviews.js*", (route) => route.fulfill({
+    status: 200,
+    contentType: "text/javascript",
+    body: `
+      export function createReviewsTab() {
+        return {
+          wireReviews() {},
+          wireManualReviewForm() {},
+          refreshReviewsBadge() {},
+          renderReviews() {
+            document.body.dataset.featureRenderWinner = "reviews";
           },
         };
       }
@@ -256,12 +277,14 @@ test("a render already in flight cannot finish after the newer workspace render"
   await expect(page.locator("#admApp")).toBeVisible();
   await page.locator('[data-tab="content"]').click();
   await contentRenderStarted;
-  await page.locator('[data-tab="blog"]').click();
+  await page.locator('[data-tab="reviews"]').click();
   releaseContentRender();
 
-  await expect(page.locator('[data-panel="blog"]')).toHaveAttribute("data-active", "true");
+  await expect(page.locator('[data-panel="reviews"]')).toHaveAttribute("data-active", "true");
+  // The stale render does finish — the point is that finishing last does not let
+  // it repaint a workspace staff has already navigated away from.
   await expect.poll(() => page.locator("body").getAttribute("data-content-render-complete")).toBe("true");
-  await expect(page.locator("body")).toHaveAttribute("data-feature-render-winner", "blog");
+  await expect(page.locator("body")).toHaveAttribute("data-feature-render-winner", "reviews");
 });
 
 test("staff login fields stay focusable, selectable, and password-manager compatible", async ({ page }) => {
