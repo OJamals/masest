@@ -160,3 +160,92 @@ test("quotes list bulk action posts an ids array", async ({ page }) => {
   await expect.poll(() => captured).not.toBeNull();
   expect(captured).toMatchObject({ ids: ["q-1"], pipeline_stage: "proposal" });
 });
+
+// The List/Board/Reports switcher is the Sales workspace's own navigation, so it is
+// pinned to the same contract as every other sub-view toggle in the console: a
+// labelled group above the filter row, not a bare pill buried under it.
+//
+// The visibility assertions matter more than they look. `.adm-tools` and
+// `.adm-panel-header` both carry `display:flex`, which beats the UA `[hidden]` rule,
+// so the code setting `.hidden = true` was a silent no-op and five dead filter
+// controls stayed on screen over Board and Reports. Asserting the attribute would
+// have passed the whole time — assert what the user can see.
+test("quote view switcher is a labelled sub-view toggle that hides the list-only filters", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/quotes**", (route) => {
+    const url = route.request().url();
+    if (url.includes("view=pipeline")) return route.fulfill(json({ summary: SUMMARY }));
+    return route.fulfill(json({ quotes: [QUOTE], total: 1, has_more: false, new_count: 1, urgent_count: 0 }));
+  });
+  await page.route("**/api/admin/companies**", (route) => route.fulfill(json({ companies: [], total: 0, has_more: false })));
+
+  await page.goto(`${BASE_URL}/admin.html#quotes`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+
+  const panel = page.locator('.adm-panel[data-panel="quotes"]');
+  const toggle = panel.locator(".pipe-toggle");
+  const filters = panel.locator(".adm-tools").first();
+
+  // A panel-level control, above the filter row, announced as one group.
+  await expect(panel.locator(":scope > .pipe-toggle")).toHaveCount(1);
+  await expect(toggle).toHaveAttribute("role", "group");
+  await expect(toggle).toHaveAttribute("aria-label", /quote/i);
+  const toggleBox = await toggle.boundingBox();
+  const filterBox = await filters.boundingBox();
+  expect(toggleBox.y).toBeLessThan(filterBox.y);
+
+  // Selection is exposed, not just painted.
+  await expect(toggle.locator('[data-view="list"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle.locator('[data-view="board"]')).toHaveAttribute("aria-pressed", "false");
+
+  // List is the only view the filters drive, so they go away with it.
+  await expect(filters).toBeVisible();
+  await toggle.locator('[data-view="board"]').click();
+  await expect(toggle.locator('[data-view="board"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(filters).toBeHidden();
+  await expect(panel.locator(".adm-panel-header")).toBeHidden();
+
+  // The board scrolls inside its card rather than pushing it past the viewport.
+  await expect(page.locator(".pipe-col")).toHaveCount(6);
+  const overflow = await panel.evaluate((el) => {
+    const card = el.querySelector(".adm-workspace-card");
+    return Math.round(card.getBoundingClientRect().right - document.documentElement.clientWidth);
+  });
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  await toggle.locator('[data-view="list"]').click();
+  await expect(filters).toBeVisible();
+});
+
+test("quote list summarises the rows it is showing", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/quotes**", (route) => {
+    const url = route.request().url();
+    if (url.includes("view=pipeline")) return route.fulfill(json({ summary: SUMMARY }));
+    return route.fulfill(json({ quotes: [QUOTE], total: 1, has_more: false, new_count: 1, urgent_count: 0 }));
+  });
+  await page.route("**/api/admin/companies**", (route) => route.fulfill(json({ companies: [], total: 0, has_more: false })));
+
+  await page.goto(`${BASE_URL}/admin.html#quotes`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+
+  // QUOTE is one open, unassigned, never-scheduled deal worth 4200.
+  const stats = page.locator('.adm-panel[data-panel="quotes"] .crm-quick-stats');
+  await expect(stats).toBeVisible();
+  await expect(stats).toContainText("1 showing");
+  await expect(stats).toContainText("1 open");
+  await expect(stats).toContainText("4,200");
+  await expect(stats).toContainText("0 overdue");
+  await expect(stats).toContainText("1 unassigned");
+
+  // Filtering the only row out has to move the summary with it.
+  await page.locator("#qFilter").selectOption("closed");
+  await expect(stats).toHaveCount(0);
+
+  // Each of the row's three status chips names the axis it belongs to.
+  await page.locator("#qFilter").selectOption("");
+  const badges = page.locator('.adm-panel[data-panel="quotes"] .quote-item summary .badge');
+  await expect(badges.nth(0)).toHaveAttribute("title", /^Stage: /);
+  await expect(badges.nth(1)).toHaveAttribute("title", /^Status: /);
+  await expect(badges.nth(2)).toHaveAttribute("title", /^Priority: /);
+});

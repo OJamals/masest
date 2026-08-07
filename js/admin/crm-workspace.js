@@ -44,13 +44,15 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
   }
 
+  // The heading is named for the tab that opens it. "Relationship workspace"
+  // appeared nowhere in the nav, so the heading never confirmed the click.
   function shell() {
     const view = state.crmView || 'tasks';
     return `<div class="crm-ws">
       <div class="crm-ws-head">
         <div>
           <p class="adm-eyebrow">CRM</p>
-          <h2>Relationship workspace</h2>
+          <h2>People &amp; follow-ups</h2>
           <p class="muted">Follow up on open work, then jump straight into the account, quote, or contact that needs attention.</p>
         </div>
       </div>

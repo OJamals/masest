@@ -104,27 +104,48 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     return t != null && (Date.now() - t) > STALE_DAYS * 86400e3;
   }
 
-  // ---- View toggle (injected once above #admQuotes, survives list innerHTML swaps) ----
+  // ---- View toggle (injected once, survives list innerHTML swaps) ----
+  // List, Board and Reports are three workspaces over the same leads, not three
+  // shapes of one list, so the switcher sits where every other panel-level toggle
+  // sits — under the title, above the filter row it does not belong to. It used to
+  // sit inside the card *below* those five filters, which only drive List.
+  function quotesPanel() { return $('admQuotes')?.closest('[data-panel="quotes"]') || null; }
   function reflectToggle() {
-    const wrap = $('admQuotes')?.parentElement?.querySelector('.pipe-toggle');
+    const wrap = quotesPanel()?.querySelector('.pipe-toggle');
     if (!wrap) return;
     const view = state.quotesView || 'list';
-    wrap.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('is-active', b.dataset.view === view));
+    wrap.querySelectorAll('[data-view]').forEach((b) => {
+      const on = b.dataset.view === view;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
     // The filter toolbar only drives the List view — showing live-looking dead
-    // controls over Board/Reports reads as broken filtering.
-    const tools = $('admQuotes')?.closest('[data-panel="quotes"]')?.querySelector('.adm-tools');
+    // controls over Board/Reports reads as broken filtering. Its card header
+    // ("Quote queue · Combine filters…") names those controls, so it goes with them.
+    const panel = quotesPanel();
+    const tools = panel?.querySelector('.adm-tools');
     if (tools) tools.hidden = view !== 'list';
+    const toolsHead = panel?.querySelector('.adm-panel-header');
+    if (toolsHead) toolsHead.hidden = view !== 'list';
   }
   function ensureToggle() {
+    const panel = quotesPanel();
     const box = $('admQuotes');
-    if (!box || !box.parentElement) return;
-    if (box.parentElement.querySelector('.pipe-toggle')) { reflectToggle(); return; }
+    if (!panel || !box) return;
+    if (panel.querySelector('.pipe-toggle')) { reflectToggle(); return; }
     const wrap = document.createElement('div');
-    wrap.className = 'pipe-toggle';
-    wrap.innerHTML = `<button class="btn btn-ghost btn-sm" data-view="list" type="button">List</button>
-      <button class="btn btn-ghost btn-sm" data-view="board" type="button">Board</button>
-      <button class="btn btn-ghost btn-sm" data-view="report" type="button">Reports</button>`;
-    box.parentElement.insertBefore(wrap, box);
+    // .crm-tabs carries the console's shared sub-view language (its own track, an
+    // accent-filled selected pill). .pipe-toggle alone inverted it: selected was the
+    // grey every other toggle uses for *un*selected. The class is kept so the
+    // pipeline spec's selectors and the shared spacing rule still match.
+    wrap.className = 'crm-tabs pipe-toggle';
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', 'Quote workspaces');
+    wrap.innerHTML = `<button class="btn btn-ghost btn-sm" data-view="list" type="button" aria-pressed="true">List</button>
+      <button class="btn btn-ghost btn-sm" data-view="board" type="button" aria-pressed="false">Board</button>
+      <button class="btn btn-ghost btn-sm" data-view="report" type="button" aria-pressed="false">Reports</button>`;
+    const card = box.closest('.adm-card') || box;
+    (card.parentElement || panel).insertBefore(wrap, card);
     wrap.addEventListener('click', (event) => {
       const b = event.target.closest('[data-view]');
       if (!b) return;
@@ -605,6 +626,33 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   }
 
   // ---- List view (the original accordion pipeline) ----
+  // List is where staff land, and it was the one view carrying no pipeline context:
+  // Board has the forecast strip and Reports has the KPI cards, so answering "how
+  // much is open and what is late" meant leaving the view you filter in. These
+  // counts are derived from the rows actually on screen, so unlike the server's
+  // ?view=pipeline summary they answer the question *as filtered*.
+  function listStats(rows) {
+    const now = Date.now();
+    const open = rows.filter((q) => !['closed', 'spam'].includes(q.status) && !['won', 'lost'].includes(q.pipeline_stage));
+    const openValue = open.reduce((sum, q) => sum + (Number(q.deal_value) || 0), 0);
+    const overdue = open.filter((q) => q.due_at && new Date(q.due_at).getTime() <= now).length;
+    const unassigned = open.filter((q) => !q.assigned_to).length;
+    return `<div class="crm-quick-stats" aria-label="Quote pipeline summary">
+      <span><b>${rows.length}</b> showing</span>
+      <span><b>${open.length}</b> open</span>
+      <span><b>${fmtMoney(openValue)}</b> open value</span>
+      <span><b>${overdue}</b> overdue</span>
+      <span><b>${unassigned}</b> unassigned</span>
+    </div>`;
+  }
+
+  // A row carries three independent status axes. Rendered as three bare chips they
+  // read as one soup ("qualified new urgent") with nothing saying which is which.
+  // data-s still carries the raw value, so badge colouring is unchanged.
+  function axisBadge(axis, value, label) {
+    return `<span class="badge" data-s="${esc(value)}" title="${esc(`${axis}: ${label}`)}"><span class="sr-only">${esc(axis)}: </span>${esc(label)}</span>`;
+  }
+
   function renderList() {
     const box = $('admQuotes');
     const snap = captureDirty(box);
@@ -647,7 +695,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     // Rows are read-only summaries (S3): every edit happens in the deal drawer, so
     // the row keeps just the one-click stage move and the door into the drawer —
     // eight inline controls used to duplicate the whole drawer form here.
-    box.innerHTML = bulkBar + quotes.map((quote) => {
+    box.innerHTML = listStats(quotes) + bulkBar + quotes.map((quote) => {
       const id = esc(quote.id);
       const score = Number.isFinite(Number(quote.lead_score)) ? Number(quote.lead_score) : 0;
       const meta = [
@@ -660,9 +708,9 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
           <summary>
             <label class="q-check-wrap"><input type="checkbox" class="q-check" value="${id}" aria-label="Select lead"></label>
             <b>${esc(quote.company || quote.name || quote.email)}</b>
-            ${statusBadge(quote.pipeline_stage || 'new')}
-            ${statusBadge(quote.status || 'new')}
-            ${statusBadge(quote.priority || 'normal')}
+            ${axisBadge('Stage', quote.pipeline_stage || 'new', STAGE_LABELS[quote.pipeline_stage] || STAGE_LABELS.new)}
+            ${axisBadge('Status', quote.status || 'new', quote.status || 'new')}
+            ${axisBadge('Priority', quote.priority || 'normal', quote.priority || 'normal')}
             <span class="muted">${fmtMoney(quote.deal_value)} · Score ${esc(score)}</span>
           </summary>
           <p>${esc(quote.message || '')}</p>

@@ -115,6 +115,15 @@
   .adm-panel[data-active="true"] { display: grid; gap: 12px; align-content: start; align-items: start; }
   .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: start; max-width: 100%; }
   .adm-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  /* This display beats the UA [hidden] rule, so the Quotes filter row stayed on
+     screen over Board and Reports — five live-looking controls driving nothing. */
+  .adm-tools[hidden] { display: none; }
+  .adm-panel-header[hidden] { display: none; }
+  /* .adm-workspace-card is a grid, so #admQuotes took min-width:auto and grew to
+     the board's full six-column width. That defeats .pipe-board's own overflow-x
+     and pushed the last stage column, the saved-view buttons and the search field
+     past the card, which clips. Let the track shrink so the board scrolls itself. */
+  #admQuotes { min-width: 0; }
   .adm-main .btn-sm { min-height: 40px !important; padding: 8px 14px; justify-content: center; line-height: 1.2; }
   .adm-main :where(.adm-tools, .adm-inline-actions, .company-detail-actions, .company-user-actions, .account-filterbar, .crm-inbox-tools) { row-gap: 10px; column-gap: 10px; }
   .adm-main :where(.crm-tabs, .pipe-toggle, .saved-views) { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -128,6 +137,10 @@
      Borrow the sidebar's selected-tab language so the answer is visible at a glance. */
   .adm-main .crm-tabs .btn { background: transparent; color: var(--ink-soft); }
   .adm-main .crm-tabs .btn.is-active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; }
+  /* .crm-quick-stats is right-aligned because in the CRM inbox it is a rail beside
+     a header. The quote list's summary is a standalone row over the rows it counts,
+     so it reads from the same left edge as the bulk bar and the rows themselves. */
+  .adm-main .adm-panel[data-panel="quotes"] .crm-quick-stats { justify-content: flex-start; margin-bottom: 12px; }
   .adm-main .saved-views { padding: 12px 0 0; border-top: 1px solid var(--line-soft); }
   .adm-main .saved-views-label { flex: 0 0 100%; color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
   .adm-main .saved-views .adm-select { flex: 1 1 180px; max-width: none; }
@@ -1000,7 +1013,10 @@
 
       <section class="adm-panel" role="tabpanel" data-panel="quotes">
         <div class="adm-panel-title">
-          <div><h2>Quotes &amp; follow-up</h2><p class="muted">Prioritize inbound opportunities, assign ownership, and keep the next action visible.</p></div>
+          <!-- "Quotes &amp; follow-up" collided with the sibling Sales tab literally
+               named "People &amp; follow-ups"; two tabs in one group both claimed the
+               same job. This panel is the pipeline — list, board and reports. -->
+          <div><h2>Quotes &amp; pipeline</h2><p class="muted">Prioritize inbound opportunities, assign ownership, and keep the next action visible.</p></div>
           </div>
         <div class="adm-card adm-workspace-card">
           <div class="adm-panel-header"><div><h3>Quote queue</h3><p class="muted">Combine filters, then save the view for repeat workflows.</p></div></div>
