@@ -4,6 +4,7 @@ import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
 import { taskRow, taskPatch, validSubject, taskDigest } from '../../../_lib/crm.js';
 import { timingSafeEqual } from '../../../_lib/secret.js';
+import { recordAutomationRun } from '../../../_lib/automation-runs.js';
 
 const SELECT = 'id,subject_type,subject_id,title,due_at,assigned_to,status,created_by,created_at,completed_at,completed_by';
 
@@ -102,7 +103,7 @@ export async function onRequest({ request, env }) {
     if (body.action === 'sweep_due' && env.QUOTE_CRM_SECRET &&
         timingSafeEqual(request.headers.get('x-quote-crm-secret'), env.QUOTE_CRM_SECRET)) {
       const sb = adminClient(env);
-      const result = await sweepDueTasks({ sb, env });
+      const result = await recordAutomationRun(sb, 'crm_task_digest', () => sweepDueTasks({ sb, env }));
       return json(result.ok ? 200 : 500, result);
     }
     // fall through to authenticated handler (re-uses `body`)

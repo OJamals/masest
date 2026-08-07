@@ -4,6 +4,7 @@
 import { json } from '../../_lib/supabase.js';
 import { runIntegrationEffectsWorker } from '../../_lib/integration-effects.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
+import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
 function boundedLimit(request) {
   const value = Number(new URL(request.url).searchParams.get('limit'));
@@ -42,5 +43,7 @@ export function createIntegrationEffectsWorkerHandler(dependencies = {}) {
 const defaultHandler = createIntegrationEffectsWorkerHandler();
 
 export async function onRequestPost(context) {
-  return defaultHandler(context);
+  // Already has a health surface of its own; the ledger gives it the same
+  // last-run line as every other job so one card answers for all of them.
+  return recordAutomationRun(adminClient(context.env), 'integration_effects', () => defaultHandler(context));
 }

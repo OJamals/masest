@@ -4,6 +4,7 @@ import { buildCompanySetup, setupStepBreakdown } from '../../_lib/setup.js';
 import { cached } from '../../_lib/cache.js';
 import { orderLifecycle } from '../../_lib/order-lifecycle.js';
 import { staffAccessSummary } from '../../_lib/authz.js';
+import { summarizeAutomationRuns, automationAttentionCount } from '../../_lib/automation-runs.js';
 
 // Count queries + a 1000-row scan per load; result is org-wide, so cache it
 // briefly (no-op until RATE_KV is bound). Staff auth runs BEFORE the cache lookup.
@@ -108,6 +109,9 @@ async function computeStats(sb) {
     urgentQuotes,
     overdueTasks,
     pendingDocumentRequests,
+    contentDrafts,
+    contentScheduled,
+    contentScheduleOverdue,
   ] = await Promise.all([
     count('companies', (q) => q.eq('status', 'pending')),
     count('companies', (q) => q.eq('status', 'approved')),
@@ -125,6 +129,11 @@ async function computeStats(sb) {
     count('quotes', (q) => q.eq('priority', 'urgent').neq('status', 'closed').neq('status', 'spam')),
     count('crm_tasks', (q) => q.eq('status', 'open').not('due_at', 'is', null).lte('due_at', nowIso)),
     count('technical_document_requests', (q) => q.eq('status', 'pending')),
+    count('content_entries', (q) => q.eq('status', 'draft')),
+    count('content_entries', (q) => q.eq('status', 'scheduled')),
+    // Scheduled, its time has passed, still not published: the publish cron is
+    // not doing its job and nothing else would have said so.
+    count('content_entries', (q) => q.eq('status', 'scheduled').lte('scheduled_at', nowIso)),
   ]);
 
   const byStatus = recentOrders.reduce((m, order) => {
@@ -164,6 +173,23 @@ async function computeStats(sb) {
     suspended: suspendedCompanies,
     setup_steps: setup_followups.open_steps,
   };
+  // Automation health, best-effort: the ledger is a separate schema, and the
+  // Overview must still render when it has not been applied.
+  let automation = { attention: 0, available: false };
+  try {
+    const { data: runs, error: runsError } = await sb
+      .from('automation_run_latest')
+      .select('job,started_at,ok,processed,error_code');
+    if (!runsError) {
+      automation = { attention: automationAttentionCount(summarizeAutomationRuns(runs || [])), available: true };
+    }
+  } catch { /* keep attention at 0 rather than failing the whole snapshot */ }
+
+  const content = {
+    drafts: contentDrafts,
+    scheduled: contentScheduled,
+    schedule_overdue: contentScheduleOverdue,
+  };
   const catalog_health = {
     buy: buyCount,
     quote: quoteCount,
@@ -202,6 +228,8 @@ async function computeStats(sb) {
     crm: crm,
     accounts: accounts,
     catalog_health: catalog_health,
+    content,
+    automation,
     analytics: analytics,
     request_queue,
   };

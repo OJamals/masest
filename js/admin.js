@@ -404,6 +404,7 @@ const opsGroupIcons = {
  Commerce: 'ph-currency-dollar',
  CRM: 'ph-address-book',
  Accounts: 'ph-buildings',
+ Publishing: 'ph-note-pencil',
  'Catalog + analytics': 'ph-chart-line-up',
 };
 
@@ -428,6 +429,7 @@ function renderOpsSummary(stats = {}) {
  const accounts = stats.accounts || {};
  const catalog = stats.catalog_health || {};
  const analytics = stats.analytics || {};
+ const content = stats.content || {};
  // Third element routes the number into the workspace that owns the work:
  // { tab, control?, value? } sets that queue's own filter on arrival. A number
  // with no honest filter still routes to its workspace rather than dead-ending.
@@ -447,6 +449,13 @@ function renderOpsSummary(stats = {}) {
  // Drove the sidebar badge but was missing from "work that needs attention",
  // which is the one place staff start their day.
  ['Overdue follow-ups', fmtInt(stats.crm_tasks?.overdue ?? crm.tasks_overdue), { tab: 'crm' }],
+ ]],
+ ['Publishing', [
+ ['Drafts', fmtInt(content.drafts), { tab: 'content' }],
+ ['Scheduled', fmtInt(content.scheduled), { tab: 'content' }],
+ // Scheduled time passed, still unpublished: the publish sweep is not running.
+ ['Scheduled past due', fmtInt(content.schedule_overdue), { tab: 'integrations' }],
+ ['Automations needing attention', fmtInt(stats.automation?.attention), { tab: 'integrations' }],
  ]],
  ['Accounts', [
  ['Pending', fmtInt(accounts.pending), { tab: 'companies', acctView: 'companies' }],
@@ -591,18 +600,21 @@ const featureLoader = createFeatureLoader({
     const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260806b');
     const { renderStripeStatus } = await import('./admin/stripe.js?v=20260806b');
     const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260806b');
+    const { createAutomationCard } = await import('./admin/automation.js?v=20260806b');
+    const { renderAutomation } = createAutomationCard({ $, api, admSkeleton });
     return {
       wire() {
         $('qboConnect')?.addEventListener('click', connectQbo);
         $('qboSyncNow')?.addEventListener('click', runQboSync);
         $('qboDisconnect')?.addEventListener('click', disconnectQbo);
+        $('automationRefresh')?.addEventListener('click', () => renderAutomation());
         wireShipStationStatus();
         wireIntegrationHealth();
       },
       async render() {
         try {
           const qboStatusPromise = renderQboStatus();
-          await Promise.all([qboStatusPromise, renderStripeStatus(), renderShipStationStatus(), renderIntegrationHealth()]);
+          await Promise.all([qboStatusPromise, renderStripeStatus(), renderShipStationStatus(), renderIntegrationHealth(), renderAutomation()]);
         }
         finally { applyCapabilityUi(document.body, state.staff); }
       },

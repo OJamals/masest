@@ -10,6 +10,7 @@ import { escapeLike } from '../../_lib/crm.js';
 import { recordSupportMessage } from '../../_lib/support-messages.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { createQuoteLeadLifecycle, createSupabaseQuoteLeadStore } from '../../_lib/quote-leads.js';
+import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
 const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,source,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
 
@@ -162,10 +163,10 @@ export async function onRequest({ request, env }) {
     body = await readBody(request);
     if (body.action === 'sweep_due' && env.QUOTE_CRM_SECRET && timingSafeEqual(request.headers.get('x-quote-crm-secret'), env.QUOTE_CRM_SECRET)) {
       const sb = adminClient(env);
-      const result = await quoteLeadLifecycle({ sb, env }).sweepDue({
+      const result = await recordAutomationRun(sb, 'quote_sweep', () => quoteLeadLifecycle({ sb, env }).sweepDue({
         actor: 'automation',
         batch: body.batch,
-      });
+      }));
       return json(result.ok ? 200 : 500, result);
     }
   }

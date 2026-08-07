@@ -7,6 +7,7 @@ import {
   triggerContentPublishBuild,
 } from "../../_lib/content.js";
 import { timingSafeEqual } from "../../_lib/secret.js";
+import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
 function contentPublication(repository, env) {
   return createContentPublicationLifecycle({
@@ -24,10 +25,14 @@ export async function onRequest({ request, env }) {
       || !timingSafeEqual(cronHeader, env.CONTENT_PUBLISH_CRON_SECRET)) {
       return json(401, { error: "unauthorized" });
     }
-    const repository = createContentRepository(adminClient(env));
-    const response = await contentPublication(repository, env).publishScheduled({
-      userId: null,
-      system: true,
+    const sb = adminClient(env);
+    const repository = createContentRepository(sb);
+    const response = await recordAutomationRun(sb, 'content_publish', async (run) => {
+      const outcome = await contentPublication(repository, env).publishScheduled({ userId: null, system: true });
+      run.processed = Number(outcome?.result?.count ?? 0) || 0;
+      // ok is carried explicitly: the outcome is a {status, result} envelope, not
+      // a Response, so the recorder cannot infer success from it.
+      return { ...outcome, ok: outcome.status < 400, error: outcome.result?.error };
     });
     return json(response.status, response.result);
   }

@@ -12,6 +12,7 @@ import {
 import { qboConfigEnv } from '../_lib/qbo-config.js';
 import { timingSafeEqual } from '../_lib/secret.js';
 import { linkOrderProviderObject, orderReference } from '../_lib/order-integrations.js';
+import { recordAutomationRun } from '../_lib/automation-runs.js';
 
 // #26 — a doc that exhausts MAX_ATTEMPTS dead-letters to 'error' and stops retrying.
 // Email staff once per run per queue so it doesn't rot silently in the table.
@@ -485,5 +486,5 @@ export async function onRequestPost({ request, env }) {
   }
   // Businesses are linked first, then every financial queue is drained.
   const batch = boundedBatch(request);
-  return runAllQboSync({ env, batch });
+  return recordAutomationRun(adminClient(env), 'qbo_sync', () => runAllQboSync({ env, batch }));
 }

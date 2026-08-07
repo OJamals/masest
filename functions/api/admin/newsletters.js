@@ -12,6 +12,7 @@ import {
 } from '../../_lib/newsletter-delivery.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
+import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
 async function resolveNewsletterAudience(env, sb, n) {
   const populations = Array.isArray(n.audience?.populations) ? n.audience.populations : [];
@@ -142,7 +143,7 @@ export async function onRequest({ request, env }) {
       || !timingSafeEqual(request.headers.get('x-newsletter-cron-secret'), env.NEWSLETTER_CRON_SECRET)) {
       return json(401, { error: 'unauthorized' });
     }
-    return sweepDue(env);
+    return recordAutomationRun(adminClient(env), 'newsletter_sweep', () => sweepDue(env));
   }
 
   const { user, staff, role } = await requireStaff(request, env);
