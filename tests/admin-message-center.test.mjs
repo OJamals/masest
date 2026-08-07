@@ -90,5 +90,11 @@ test('company message action opens its support thread instead of settings', () =
   assert.doesNotMatch(companies, /data-company-detail-tab="messages"/);
   assert.match(companies, /data-company-support-thread/);
   assert.match(companies, /openSupportThread\?\.\(company\.id\)/);
-  assert.match(read('js/admin/threads.js'), /return \{ renderThreads, wireThreads, openThread \}/);
+  // The adapter must hand out both console entry points — one thread (Accounts
+  // "message this business") and the whole inbox (Overview unread count, the
+  // settings page's way back in) — rather than any caller mounting its own.
+  const adapterExports = read('js/admin/threads.js').match(/return \{([^}]*)\}/)?.[1] || '';
+  for (const name of ['renderThreads', 'wireThreads', 'openThread', 'openConsole']) {
+    assert.ok(adapterExports.includes(name), `threads.js must expose ${name}`);
+  }
 });

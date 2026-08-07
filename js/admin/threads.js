@@ -15,7 +15,7 @@ export function createThreadsTab({ $, api, state, message }) {
   // One console per document, lazily mounted. initAdminSupport() returns null if
   // one is already present, so a second call cannot produce a second inbox.
   function ensureConsole() {
-    consolePromise ||= import('../admin-support.js?v=20260807b')
+    consolePromise ||= import('../admin-support.js?v=20260807c')
       .then(({ initAdminSupport }) => initAdminSupport({
         auth: { api },
         root: '/',
@@ -55,13 +55,22 @@ export function createThreadsTab({ $, api, state, message }) {
     await support?.openThread?.(companyId);
   }
 
+  // Support work is conversations, not settings. Overview's unread count and the
+  // settings page both need to land staff in the inbox, so the console's open()
+  // is part of this adapter's surface rather than something callers reimplement.
+  async function openConsole() {
+    const support = await ensureConsole();
+    await support?.open?.();
+  }
+
   function wireThreads() {
     for (const id of ['adminNotifySupportRequests', 'adminNotifyMessages']) {
       $(id)?.addEventListener('change', savePrefs);
     }
+    $('supportOpenConsole')?.addEventListener('click', () => void openConsole());
     void loadPrefs();
     void ensureConsole();
   }
 
-  return { renderThreads, wireThreads, openThread };
+  return { renderThreads, wireThreads, openThread, openConsole };
 }

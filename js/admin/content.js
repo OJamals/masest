@@ -1,15 +1,15 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260807b";
-import { renderMarkdown } from "../md.js?v=20260807b";
-import { supabase } from "../auth.js?v=20260807b";
-import { createContentAssets } from "./content-assets.js?v=20260807b";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260807b";
-import { createContentRevisions } from "./content-revisions.js?v=20260807b";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260807c";
+import { renderMarkdown } from "../md.js?v=20260807c";
+import { supabase } from "../auth.js?v=20260807c";
+import { createContentAssets } from "./content-assets.js?v=20260807c";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260807c";
+import { createContentRevisions } from "./content-revisions.js?v=20260807c";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260807b";
+} from "./rich-editor.js?v=20260807c";
 import {
   CONTENT_TYPE_DEFINITIONS,
   contentPageOptionsFromSitemap,
@@ -18,7 +18,7 @@ import {
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260807b";
+} from "../content-types.js?v=20260807c";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "image_after", "og_image", "hero"]);

@@ -57,6 +57,13 @@ async function bootAsStaff(page) {
     contentType: "application/json",
     body: JSON.stringify({ data: { session: null }, session: null }),
   }));
+  // Playwright matches routes last-registered-first, so the catch-all goes first
+  // and the specific stubs below it actually win.
+  await page.route("**/api/admin/**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({}),
+  }));
   await page.route("**/api/admin/stats", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -70,11 +77,6 @@ async function bootAsStaff(page) {
         ? [entry({ type: "blog_post", slug: "descaling-101", title: "Descaling 101", status: "draft" })]
         : [entry()],
     }),
-  }));
-  await page.route("**/api/admin/**", (route) => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({}),
   }));
 }
 
@@ -94,11 +96,11 @@ test("Content hosts pages and blog as sub-views, remounting the editor on switch
   await expect(page.locator('[data-content-panel="blog"]')).toBeVisible();
   await expect(page.locator('[data-content-panel="pages"]')).toBeHidden();
   await expect(page.locator('[data-content-view="blog"]')).toHaveAttribute("aria-pressed", "true");
-  // The blog editor is mounted, not just revealed.
-  await expect(page.locator("#admBlog #contentList")).toBeVisible();
+  // The blog editor is mounted with blog data, not just revealed.
+  await expect(page.locator("#admBlog #contentList")).toContainText("Descaling 101");
 
   await page.locator('[data-content-view="pages"]').click();
-  await expect(page.locator("#admContent #contentList")).toBeVisible();
+  await expect(page.locator("#admContent #contentList")).toContainText("Water analysis");
 
   expect(errors, `page errors: ${errors.join(" | ")}`).toEqual([]);
 });
@@ -108,6 +110,6 @@ test("legacy #blog deep link lands on the blog sub-view", async ({ page }) => {
   await page.goto(`${BASE_URL}/admin.html#blog`);
   await expect(page.locator('[data-panel="content"]')).toHaveAttribute("data-active", "true");
   await expect(page.locator('[data-content-panel="blog"]')).toBeVisible();
-  await expect(page.locator("#admBlog #contentList")).toBeVisible();
+  await expect(page.locator("#admBlog #contentList")).toContainText("Descaling 101");
   await expect(page).toHaveURL(/#content$/);
 });

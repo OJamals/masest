@@ -772,7 +772,6 @@
               <span aria-hidden="true">Customers</span>
               <button class="adm-tab" role="tab" data-tab="companies" type="button"><i class="ph ph-buildings" aria-hidden="true"></i> Accounts <span class="pill" id="aBadgePending" hidden>0</span></button>
               <button class="adm-tab" role="tab" data-tab="crm" type="button"><i class="ph ph-address-book" aria-hidden="true"></i> People &amp; follow-ups <span class="pill" id="aBadgeCrm" hidden>0</span></button>
-              <button class="adm-tab" role="tab" data-tab="support-settings" type="button"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Customer support</button>
             </div>
             <div class="adm-nav-group" role="presentation">
               <span aria-hidden="true">Publishing</span>
@@ -1013,14 +1012,21 @@
         </div>
       </section>
 
-      <section class="adm-panel" role="tabpanel" data-panel="support-settings">
+      <!-- Not a tab: conversations live in the support console (every page has the
+           launcher), so its two notification prefs are reached from that console's
+           settings gear rather than squatting a top-level sidebar slot. Kept as a
+           routable panel so #support-settings deep links and the emailed staff
+           alert links still resolve. -->
+      <section class="adm-panel" data-panel="support-settings">
         <div class="adm-panel-title">
-          <div><h2>Support settings</h2><p class="muted">Choose when staff receives support email alerts. Open conversations live in the support drawer.</p></div>
+          <div><h2>Support settings</h2><p class="muted">Choose when staff receives support email alerts.</p></div>
         </div>
         <div class="adm-card admin-support-settings">
           <label><input id="adminNotifySupportRequests" type="checkbox"><span><b>New support requests</b><br><small class="muted">Email staff who enable this setting when a buyer starts or reopens a support thread.</small></span></label>
           <label><input id="adminNotifyMessages" type="checkbox"><span><b>Follow-up messages while away</b><br><small class="muted">Email staff who enable this setting when a buyer follows up while their support drawer is closed or inactive.</small></span></label>
           <p id="adminSupportSettingsStatus" class="adm-status" aria-live="polite"></p>
+          <!-- Reached from the console's gear, so it needs a way back in. -->
+          <p><button id="supportOpenConsole" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-lifebuoy" aria-hidden="true"></i> Open conversations</button></p>
         </div>
       </section>
 
@@ -1110,6 +1116,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260807b"></script>
+<script type="module" src="js/admin.js?v=20260807c"></script>
 </body>
 </html>
