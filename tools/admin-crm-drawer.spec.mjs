@@ -85,13 +85,19 @@ test("company drawer shows CRM tabs and posts a note", async ({ page }) => {
   // because admin.js boot() triggers on DOMContentLoaded + hash determines first tab.
   await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
-  // The nav buttons are static markup, so they are clickable before admin.js attaches its
-  // delegated handler — a click that lands first is dropped with no retry, and the company
-  // list below then never arrives. data-active is only set by setTab, so waiting for it
-  // proves the console is wired. Under full-suite parallelism this raced often enough to
-  // look like an intermittent product regression.
-  await page.waitForSelector('.adm-panel[data-panel="companies"][data-active="true"]');
-  await page.getByRole("button", { name: "Businesses & approvals" }).click();
+  // #acctToggle is static markup in admin.html, so "Businesses & approvals" is clickable
+  // from first paint — but its delegation is attached by wireCompanies(), which only runs
+  // once the LAZY companies feature module loads. A click in that window is dropped with no
+  // retry: the sub-view stays on Users and the company list never arrives. data-active is
+  // set by setTab before the module is even requested, so it cannot prove the toggle is
+  // live. showAcctView flips aria-pressed synchronously on a click that registered, so
+  // clicking until it is set is the reliable gate.
+  const businesses = page.getByRole("button", { name: "Businesses & approvals" });
+  await expect(businesses).toBeVisible();
+  await expect(async () => {
+    if ((await businesses.getAttribute("aria-pressed")) !== "true") await businesses.click();
+    await expect(businesses).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
+  }).toPass({ timeout: 15000 });
 
   // Wait for the company list to render and the open-company button to appear.
   await expect(page.locator('[data-open-company="co-1"]')).toBeVisible();

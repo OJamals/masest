@@ -44,6 +44,31 @@ async function bootAsStaff(page) {
 }
 
 const json = (body, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(body) });
+
+// #acctToggle ("Users" / "Businesses & approvals" / …) is static markup in admin.html, so
+// its buttons are visible and clickable from first paint — but their delegation is attached
+// by wireCompanies(), which only runs once the LAZY companies feature module loads. A click
+// that lands in that window is dropped with no retry: the sub-view stays on Users, the
+// business queue is never fetched, and the card never arrives. Reproduced 4/14 under
+// --workers=4; the dump showed aria-pressed="false" on Businesses and only the ?limit=500
+// directory request, never the ?limit=100&offset=0 queue load.
+//
+// data-active is set by setTab before the module is even requested, so it cannot prove the
+// toggle is live. Waiting for the panel's aria-busy to clear does prove it, but deadlocks
+// the stale-overlap test below, which deliberately holds its directory request in flight.
+//
+// The precondition that actually matters is "the click registered", and showAcctView flips
+// aria-pressed synchronously — before any fetch — so that is the signal. Clicking only while
+// the view is still unselected keeps this idempotent: a dropped click issues no request, so
+// the request counts the stale-overlap test asserts on stay exact.
+async function selectAccountView(page, name) {
+  const button = page.getByRole("button", { name });
+  await expect(button).toBeVisible();
+  await expect(async () => {
+    if ((await button.getAttribute("aria-pressed")) !== "true") await button.click();
+    await expect(button).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
+  }).toPass({ timeout: 15000 });
+}
 const USER = {
   id: "user-1",
   email: "buyer@example.com",
@@ -170,12 +195,7 @@ test("business approval cards expose edit and guarded delete actions with center
     route.fulfill(json({ companies: [COMPANY], total: 1, has_more: false })));
 
   await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
-  // #acctToggle is static markup, so its buttons are visible and clickable before admin.js
-  // boots and attaches delegation — a click that lands first is dropped with no retry, and
-  // the card below then never arrives. data-active is only set once setTab has run, so it
-  // is the signal that the console is actually listening.
-  await page.waitForSelector('.adm-panel[data-panel="companies"][data-active="true"]');
-  await page.getByRole("button", { name: "Businesses & approvals" }).click();
+  await selectAccountView(page, "Businesses & approvals");
 
   const card = page.locator(".company-admin-card", { hasText: COMPANY.name });
   await expect(card).toBeVisible();
@@ -225,7 +245,7 @@ test("business approval queue ignores stale overlapping directory and view loads
   const businesses = page.getByRole("button", { name: "Businesses & approvals" });
   const users = page.getByRole("button", { name: "Users", exact: true });
 
-  await businesses.click();
+  await selectAccountView(page, "Businesses & approvals");
   await expect.poll(() => pendingCompanyRoutes.length).toBe(1);
   await users.click();
   await businesses.click();
