@@ -72,6 +72,8 @@ test('admin label void requires inline reason and explicit confirmation payload'
 test('admin shell cache-busts the release carrying label void and finance evidence', () => {
   const html = read('admin.html');
   const admin = read('js/admin.js');
-  assert.match(html, /js\/admin\.js\?v=20260807c/);
-  assert.match(admin, /\.\/admin\/orders\.js\?v=20260807c/);
+  // Derived from the deployed entry so a release bump stays a one-line change.
+  const release = html.match(/js\/admin\.js\?v=(\d{8}[a-z])/)?.[1];
+  assert.ok(release, 'admin.html must cache-bust the admin entrypoint');
+  assert.match(admin, new RegExp(`\\./admin/orders\\.js\\?v=${release}`));
 });

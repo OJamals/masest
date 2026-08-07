@@ -273,39 +273,9 @@
   .adm-status[data-state="warn"] { color: var(--status-warning-ink); }
   .adm-status[data-state="err"] { color: var(--status-danger-ink); }
   .muted { color: var(--muted); }
-  .thread-layout { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 14px; }
-  #replyForm { grid-template-columns: minmax(0, 1fr) auto; }
-  #replyForm > .btn { min-width: 120px; }
-  .thread-list { display: grid; align-content: start; gap: 8px; }
-  .thread-list button { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-align: left; padding: 10px; cursor: pointer; }
-  .support-reply-form { margin-top: 12px; grid-template-columns: minmax(0, 1fr) auto; }
-  .support-thread-item { display: flex; justify-content: space-between; gap: 10px; align-items: start; width: 100%; }
-  .support-thread-item small { display: block; margin-top: 4px; color: var(--muted); line-height: 1.35; }
-  .support-thread-item.is-unanswered { border-color: var(--accent); background: var(--accent-soft); font-weight: 800; }
-  .support-thread-item.is-selected { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .support-thread-meta { display: grid; justify-items: end; gap: 5px; flex: 0 0 auto; }
-  .support-unanswered { color: var(--status-warning-ink); font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
-  .support-thread-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-  .support-thread-head h3 { margin: 0; }
-  .admin-support-launcher { position: fixed; z-index: 90; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 9px; min-height: 52px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--ink); color: var(--surface, #fff); box-shadow: var(--shadow-lg); cursor: pointer; font: inherit; font-weight: 800; }
-  .admin-support-launcher > i { font-size: 1.2rem; }
-  .admin-support-launcher__label { white-space: nowrap; }
-  .admin-support-unread { display: inline-grid; min-width: 22px; min-height: 22px; place-items: center; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--surface, #fff); font-size: .72rem; font-variant-numeric: tabular-nums; }
-  .admin-support-unread[hidden] { display: none; }
-  .admin-support-drawer { position: fixed; z-index: 89; right: 20px; bottom: 84px; width: min(900px, calc(100vw - 40px)); max-height: min(720px, calc(100dvh - 112px)); display: grid; grid-template-columns: minmax(250px, 310px) minmax(0, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--surface, #fff); box-shadow: var(--shadow-lg); }
-  .admin-support-drawer[hidden] { display: none; }
-  .admin-support-drawer__list { min-height: 0; overflow: auto; padding: 12px; background: var(--panel); }
-  .admin-support-drawer__view { min-height: 0; overflow: auto; padding: 16px; background: var(--surface, #fff); }
-  .support-load-earlier { margin: 0 0 12px; }
-  .admin-support-drawer__head { display: flex; align-items: start; justify-content: space-between; gap: 8px; padding: 4px 4px 12px; }
-  .admin-support-drawer__head h2 { margin: 0; font-size: 1.05rem; }
-  .admin-support-drawer__head p { margin: 3px 0 0; }
-  .admin-support-settings { display: grid; gap: 12px; max-width: 680px; }
-  .admin-support-settings label { display: flex; gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
-  @media (max-width: 720px) { .admin-support-drawer { right: 12px; bottom: 76px; width: calc(100vw - 24px); max-height: calc(100dvh - 92px); grid-template-columns: 1fr; } .admin-support-drawer__view { max-height: 54dvh; } .admin-support-launcher { right: 12px; bottom: 12px; } }
-  .msg-thread { display: grid; gap: 8px; max-height: 420px; overflow: auto; padding: 4px; }
-  .msg { max-width: 76%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; background: var(--surface); }
-  .msg[data-role="staff"] { justify-self: end; background: var(--accent-soft); border-color: var(--line); }
+  /* The admin drawer, its launcher, its thread list and its message bubbles all
+     used to be styled here. That inbox is gone — css/admin-support.css dresses
+     the one shared console now — so those rules went with it. */
   .quote-item { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px; }
   .quote-request-summary { display: grid; gap: 6px; margin: 8px 0; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel); color: var(--ink-soft); font-size: .84rem; line-height: 1.35; }
   .quote-request-summary span { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
@@ -561,7 +531,7 @@
   .account-detail-section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
   .account-filterbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .account-filterbar .btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
-  @media (max-width: 920px) { .adm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thread-layout { grid-template-columns: 1fr; } }
+  @media (max-width: 920px) { .adm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 640px) { .adm-wrap { padding: 0 18px; } .adm-grid, .adm-form-grid { grid-template-columns: 1fr; } .adm-form-grid .wide { grid-column: auto; } }
   @media (max-width: 640px) { #gateTitle { font-size: 24px; } }
   .adm-tabs-wrap { overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; }
@@ -601,14 +571,13 @@
   .adm-sidebar .adm-tab[aria-selected="true"] { border-color: rgba(14,124,134,.24); background: var(--accent-soft); color: var(--accent-ink); }
   .adm-tab i { flex: 0 0 auto; }
   .adm-tab .pill { margin-left: 0; }
-  .adm-card, .adm-panel, .adm-table-wrap, .thread-layout, .quote-item { min-width: 0; }
+  .adm-card, .adm-panel, .adm-table-wrap, .quote-item { min-width: 0; }
   .adm-card { box-shadow: var(--surface-edge), var(--shadow-xs); overflow: hidden; overflow-wrap: anywhere; }
-  .adm-card p, .adm-card small, .adm-card label, .quote-item, .thread-list button, table.adm td { overflow-wrap: anywhere; }
+  .adm-card p, .adm-card small, .adm-card label, .quote-item, table.adm td { overflow-wrap: anywhere; }
   .quote-item > summary { display: flex; align-items: center; min-height: 44px; padding: 8px 0; line-height: 1.35; }
   .adm-report-card .dash-row span, .adm-card[data-setup-followups] .dash-row span, .adm-traffic-report .dash-row span { min-width: 0; overflow-wrap: anywhere; }
   .adm-panel-header { flex-wrap: wrap; }
   .adm-tools > * { min-width: 0; }
-  .msg { overflow-wrap: anywhere; }
   .variant-stack { min-width: 0; }
   .adm-governance-note { border-color: rgba(14,124,134,.24); background: var(--accent-tint); }
   .adm-governance-note h2 { display: flex; align-items: center; gap: 8px; }
@@ -644,8 +613,7 @@
     .adm-tools { align-items: stretch; }
     .adm-tools > * { width: 100%; max-width: none; }
     .adm-form-grid > .btn { width: 100%; justify-self: stretch; }
-    .account-detail .adm-form-grid,
-    #replyForm { grid-template-columns: 1fr; }
+    .account-detail .adm-form-grid { grid-template-columns: 1fr; }
     .adm-content-hub-metrics span { flex: 1 1 120px; }
     .adm-content-workspace-tabs { margin-inline: -2px; padding-inline: 2px; }
     .adm-content-workspace-tab { flex: 0 0 auto; }
@@ -1025,23 +993,10 @@
         </div>
       </section>
 
-      <!-- Not a tab: conversations live in the support console (every page has the
-           launcher), so its two notification prefs are reached from that console's
-           settings gear rather than squatting a top-level sidebar slot. Kept as a
-           routable panel so #support-settings deep links and the emailed staff
-           alert links still resolve. -->
-      <section class="adm-panel" data-panel="support-settings">
-        <div class="adm-panel-title">
-          <div><h2>Support settings</h2><p class="muted">Choose when staff receives support email alerts.</p></div>
-        </div>
-        <div class="adm-card admin-support-settings">
-          <label><input id="adminNotifySupportRequests" type="checkbox"><span><b>New support requests</b><br><small class="muted">Email staff who enable this setting when a buyer starts or reopens a support thread.</small></span></label>
-          <label><input id="adminNotifyMessages" type="checkbox"><span><b>Follow-up messages while away</b><br><small class="muted">Email staff who enable this setting when a buyer follows up while their support drawer is closed or inactive.</small></span></label>
-          <p id="adminSupportSettingsStatus" class="adm-status" aria-live="polite"></p>
-          <!-- Reached from the console's gear, so it needs a way back in. -->
-          <p><button id="supportOpenConsole" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-lifebuoy" aria-hidden="true"></i> Open conversations</button></p>
-        </div>
-      </section>
+      <!-- No support panel here on purpose: conversations AND their two
+           notification prefs live in the support console, which every page
+           already carries. #support / #support-settings / #messages open that
+           console over the current workspace instead of navigating anywhere. -->
 
       <section class="adm-panel" role="tabpanel" data-panel="quotes">
         <div class="adm-panel-title">
@@ -1129,6 +1084,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260807c"></script>
+<script type="module" src="js/admin.js?v=20260807d"></script>
 </body>
 </html>

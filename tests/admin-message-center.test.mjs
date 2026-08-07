@@ -57,8 +57,12 @@ test('support API persists thread lifecycle and admin message preferences', () =
 test('admin inbox surfaces unanswered threads, lifecycle controls, and notification settings', () => {
   const html = read('admin.html');
   const threads = read('js/admin-support.js');
-  assert.match(html, /id="adminNotifySupportRequests"/);
-  assert.match(html, /id="adminNotifyMessages"/);
+  // The prefs moved into the console's settings view; admin.html no longer ships
+  // a support panel at all.
+  assert.match(threads, /"adminNotifySupportRequests", "notify_admin_support_requests"/);
+  assert.match(threads, /"adminNotifyMessages", "notify_admin_messages"/);
+  assert.match(threads, /<input id="\$\{id\}" type="checkbox" data-support-pref="\$\{key\}">/);
+  assert.doesNotMatch(html, /data-panel="support-settings"/);
   assert.match(threads, /unanswered/);
   assert.match(threads, /Mark resolved/);
   assert.match(threads, /Reopen/);
@@ -80,7 +84,10 @@ test('admin shell does not mount buyer chat, account navigation, or user notific
   }
   const threads = read('js/admin-support.js');
   assert.match(threads, /\/api\/admin\/messages/);
-  assert.match(read('js/admin/threads.js'), /\/api\/admin\/message-settings/);
+  // Prefs are the console's own view now, so the admin adapter only hands out
+  // its entry points and never talks to that endpoint itself.
+  assert.match(threads, /\/api\/admin\/message-settings/);
+  assert.match(read('js/admin/threads.js'), /openSettings/);
 });
 
 test('company message action opens its support thread instead of settings', () => {

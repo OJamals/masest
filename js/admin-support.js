@@ -15,6 +15,17 @@ const routeSuppressesSupport = () => (
   && location.hash.replace(/^#/, "") === "messages"
 ) || document.body.classList.contains("support-suppressed");
 
+// Staff notification prefs. These used to live on their own admin page, which
+// the drawer covered on a phone the moment the gear navigated there — so they
+// are a view of the console now, not a page you leave the console for. The ids
+// are kept from that page so deep-linked tooling still finds them.
+const SUPPORT_PREFS = [
+  ["adminNotifySupportRequests", "notify_admin_support_requests", "New support requests",
+    "Email me when a buyer starts or reopens a support thread."],
+  ["adminNotifyMessages", "notify_admin_messages", "Follow-up messages while away",
+    "Email me when a buyer follows up while my support drawer is closed or inactive."],
+];
+
 export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   // One console per document. admin.html used to ship its own static drawer +
   // launcher and this bailed there; both surfaces now mount this same console.
@@ -23,7 +34,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/admin-support.css?v=20260807a`;
+    stylesheet.href = `${root}css/admin-support.css?v=20260807d`;
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }
@@ -34,17 +45,31 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   shell.className = "site-support";
   shell.hidden = routeSuppressesSupport();
   shell.innerHTML = `
-    <section class="site-support__drawer" role="dialog" aria-modal="false" aria-labelledby="siteSupportTitle" hidden>
+    <section class="site-support__drawer" role="dialog" aria-modal="false" aria-labelledby="siteSupportTitle" data-view="inbox" hidden>
       <div class="site-support__list-pane">
         <header class="site-support__header">
           <div><p>Customer support</p><h2 id="siteSupportTitle">Open chats</h2><span data-support-summary>Loading…</span></div>
           <div class="site-support__header-actions">
-            <a href="${root}admin.html#support-settings" aria-label="Customer support settings" title="Customer support settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg></a>
+            <button type="button" data-support-settings-toggle aria-label="Customer support settings" title="Customer support settings" aria-expanded="false" aria-controls="siteSupportSettings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg></button>
           </div>
         </header>
         <div class="site-support__threads" aria-label="Open customer chats"></div>
       </div>
-      <div class="site-support__conversation"><header class="site-support__conversation-toolbar"><p>Customer inbox</p><button type="button" aria-label="Close support menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></header><div class="site-support__conversation-body"><div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div></div></div>
+      <div class="site-support__conversation">
+        <header class="site-support__conversation-toolbar">
+          <div class="site-support__toolbar-lead">
+            <button type="button" data-support-back aria-label="Back to conversations" title="Back to conversations" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>
+            <p data-support-view-label>Customer inbox</p>
+          </div>
+          <button type="button" aria-label="Close support menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+        </header>
+        <div class="site-support__conversation-body"><div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div></div>
+        <div class="site-support__settings" id="siteSupportSettings" hidden>
+          <p class="site-support__settings-intro">Choose when you get support email alerts. These apply to your staff account only.</p>
+          ${SUPPORT_PREFS.map(([id, key, title, help]) => `<label><input id="${id}" type="checkbox" data-support-pref="${key}"><span><b>${title}</b><small>${help}</small></span></label>`).join("")}
+          <p class="site-support__settings-status" id="adminSupportSettingsStatus" role="status" aria-live="polite"></p>
+        </div>
+      </div>
     </section>
     <button class="site-support__launcher" type="button" aria-label="Open customer support" aria-expanded="false" aria-controls="adminSupportConsole"><i class="ph ph-lifebuoy" aria-hidden="true"></i><span>Customer support</span><b data-support-count hidden>0</b></button>`;
   document.body.append(shell);
@@ -62,6 +87,12 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   const view = shell.querySelector(".site-support__conversation-body");
   const summary = shell.querySelector("[data-support-summary]");
   const counter = shell.querySelector("[data-support-count]");
+  const settings = shell.querySelector(".site-support__settings");
+  const settingsStatus = shell.querySelector(".site-support__settings-status");
+  const settingsToggle = shell.querySelector("[data-support-settings-toggle]");
+  const back = shell.querySelector("[data-support-back]");
+  const viewLabel = shell.querySelector("[data-support-view-label]");
+  let prefsLoaded = false;
   let threads = [];
   let threadsLoaded = false;
   let selected = null;
@@ -82,18 +113,69 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     catch { if (presenceOpen === open) presenceOpen = !open; }
   };
 
-  const setOpen = (open, { restoreFocus = true } = {}) => {
+  const prefInputs = () => [...settings.querySelectorAll("[data-support-pref]")];
+
+  // Fetched the first time the settings view is opened rather than at mount:
+  // this console loads on every staff page view, and most of them never ask.
+  const loadPrefs = async () => {
+    if (prefsLoaded) return;
+    try {
+      const data = await auth.api("/api/admin/message-settings");
+      prefInputs().forEach((input) => { input.checked = data[input.dataset.supportPref] === true; });
+      prefsLoaded = true;
+      settingsStatus.textContent = "";
+    } catch { settingsStatus.textContent = "Could not load settings."; }
+  };
+
+  const savePrefs = async () => {
+    settingsStatus.textContent = "Saving…";
+    try {
+      await auth.api("/api/admin/message-settings", {
+        method: "PATCH",
+        body: Object.fromEntries(prefInputs().map((input) => [input.dataset.supportPref, input.checked])),
+      });
+      settingsStatus.textContent = "Saved.";
+    } catch { settingsStatus.textContent = "Could not save settings."; }
+  };
+
+  const setView = (next) => {
+    const isSettings = next === "settings";
+    drawer.dataset.view = isSettings ? "settings" : "inbox";
+    settings.hidden = !isSettings;
+    view.hidden = isSettings;
+    back.hidden = !isSettings;
+    viewLabel.textContent = isSettings ? "Support settings" : "Customer inbox";
+    settingsToggle.setAttribute("aria-expanded", String(isSettings));
+    if (isSettings) void loadPrefs();
+  };
+
+  const setOpen = (open, { restoreFocus = true, focus = null } = {}) => {
     drawer.hidden = !open;
     launcher.setAttribute("aria-expanded", String(open));
     launcher.setAttribute("aria-label", open ? "Close customer support" : "Open customer support");
     if (open) {
       void setPresence(true);
       void loadThreads();
-      requestAnimationFrame(() => (list.querySelector("button") || close).focus());
+      requestAnimationFrame(() => (focus || list.querySelector("button") || close).focus());
     } else {
       void setPresence(false);
+      // Reopening lands on conversations; settings is somewhere you go, not a state
+      // the console gets stuck in.
+      setView("inbox");
       if (restoreFocus) launcher.focus();
     }
+  };
+
+  const openSettings = () => {
+    setView("settings");
+    setOpen(true, { focus: prefInputs()[0] || back });
+  };
+
+  // Leaving settings hands focus back to the gear that opened them — except at
+  // phone width, where the pane holding that gear is not on screen.
+  const leaveSettings = () => {
+    setView("inbox");
+    (settingsToggle.offsetParent ? settingsToggle : list.querySelector("button") || close).focus();
   };
   const syncRouteVisibility = () => {
     const suppressed = routeSuppressesSupport();
@@ -181,13 +263,36 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
 
   list.addEventListener("click", (event) => {
     const button = event.target.closest("[data-company-id]");
-    if (button) void openThread(button.dataset.companyId);
+    if (!button) return;
+    setView("inbox");
+    void openThread(button.dataset.companyId);
   });
   launcher.addEventListener("click", () => setOpen(drawer.hidden));
   close.addEventListener("click", () => setOpen(false));
+  settingsToggle.addEventListener("click", () => setView(drawer.dataset.view === "settings" ? "inbox" : "settings"));
+  back.addEventListener("click", leaveSettings);
+  settings.addEventListener("change", (event) => { if (event.target.matches("[data-support-pref]")) void savePrefs(); });
+
+  // Staff menus and emailed alerts open this console where staff already are.
+  // Their href is a real fallback: on a route that suppresses the console the
+  // click is left alone and the browser navigates to admin.html instead.
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-support-open]");
+    if (!trigger || shell.hidden) return;
+    event.preventDefault();
+    trigger.closest("details[open]")?.removeAttribute("open");
+    if (trigger.dataset.supportOpen === "settings") openSettings();
+    else { setView("inbox"); setOpen(true); }
+  });
   document.addEventListener("masest:support-route", syncRouteVisibility);
   window.addEventListener("hashchange", syncRouteVisibility);
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !drawer.hidden) setOpen(false); });
+  // Escape backs out one level, so it does not throw away the drawer from a view
+  // the staff member only meant to leave.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || drawer.hidden) return;
+    if (drawer.dataset.view === "settings") leaveSettings();
+    else setOpen(false);
+  });
   document.addEventListener("visibilitychange", () => {
     if (drawer.hidden) return;
     void setPresence(!document.hidden, { force: true, keepalive: document.hidden });
@@ -204,8 +309,9 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   // Returned so the admin console can open a specific company thread from the
   // Accounts tab instead of shipping a second inbox implementation.
   return {
-    openThread: (companyId) => { setOpen(true); return openThread(companyId); },
-    open: () => setOpen(true),
+    openThread: (companyId) => { setView("inbox"); setOpen(true); return openThread(companyId); },
+    open: () => { setView("inbox"); setOpen(true); },
+    openSettings,
     refresh: () => loadThreads(),
   };
 }

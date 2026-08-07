@@ -83,8 +83,11 @@ export async function routeInboundMessageReply(env, event, dependencies = {}) {
       html: emailLayout({
         heading: 'New customer email reply',
         bodyHtml: `<p>From: ${htmlEscape(sender)}</p><blockquote style="border-left:3px solid #0e7c86;padding-left:12px;color:#334;margin:12px 0">${htmlEscape(body.slice(0, 500))}</blockquote>`,
+        // #support opens the support console over the admin console. This alert
+        // is about a message, so it lands staff on the message — it used to land
+        // them on notification preferences instead.
         ctaText: 'Open customer support',
-        ctaUrl: `${env.APP_URL || 'https://masest.co'}/admin.html#support-settings`,
+        ctaUrl: `${env.APP_URL || 'https://masest.co'}/admin.html#support`,
       }),
       category: 'staff_alert',
       idempotencyKey: `resend-inbound-alert/${emailId}`,

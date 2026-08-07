@@ -44,7 +44,10 @@ test('inbound replies preserve buyer identity, reopen threads, honor staff prefs
   assert.match(source, /userId:\s*member\.id/);
   assert.match(source, /upsertInboundMessage/);
   assert.match(source, /adminMessageRecipients\)\(sb,\s*alertKind,\s*env\)/);
-  assert.match(source, /admin\.html#support-settings/);
+  // The alert is about a message, so it opens the inbox — not the notification
+  // preferences staff used to land on.
+  assert.match(source, /admin\.html#support`/);
+  assert.doesNotMatch(source, /#support-settings/);
   assert.doesNotMatch(source, /staffRecipients\(env\)/);
 });
 
@@ -60,9 +63,12 @@ test('admin support console has durable controls, live refresh, correct selectio
   assert.match(source, /const canWrite = staff\?\.role !== "read_only"/);
   assert.match(source, /read-only access/);
   assert.match(source, /setInterval\([\s\S]{0,200}loadThreads/);
-  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /event\.key !== "Escape"/);
   assert.match(source, /aria-pressed/);
-  assert.match(source, /admin\.html#support-settings/);
+  // Settings are a view of this console, not a page it links out to: the gear is
+  // a toggle, and nothing here navigates staff away from the drawer.
+  assert.match(source, /data-support-settings-toggle/);
+  assert.doesNotMatch(source, /admin\.html#support/);
 });
 
 test('customer chat links to full inbox and uses expiring keepalive presence', () => {
@@ -87,10 +93,20 @@ test('public staff accounts receive a full support workspace instead of buyer ch
   assert.match(support, /Mark resolved/);
   assert.match(support, /Escalate/);
   assert.match(support, /Needs reply/);
-  assert.match(support, /admin\.html#support-settings/);
   assert.match(support, /link\.textContent = "Customer support"/);
   assert.match(read('js/main/chrome.js'), /site-support__launcher, \.customer-chat__toggle/);
-  assert.match(read('js/account-nav.js'), /'Customer support', 'admin\.html#support-settings'/);
+  // The staff menu opens this console in place; its href is only the fallback
+  // for routes where the console suppresses itself.
+  assert.match(read('js/account-nav.js'), /'Customer support', 'admin\.html#support', 'data-support-open'/);
+  assert.match(support, /\[data-support-open\]/);
+  // Notification prefs are a view of the drawer. On a phone the drawer covered
+  // the page they used to live on, so leaving the console to reach them was the
+  // bug; the settings pane and its back affordance are the fix.
+  assert.match(support, /site-support__settings/);
+  assert.match(support, /data-support-pref/);
+  assert.match(support, /data-support-back/);
+  assert.match(support, /drawer\.dataset\.view/);
+  assert.match(styles, /\.site-support__drawer\[data-view="settings"\] \.site-support__list-pane \{ display: none; \}/);
   assert.match(styles, /height:\s*min\(620px, calc\(100dvh - 104px\)\)/);
   assert.match(styles, /\.site-support__drawer \{[\s\S]*padding:\s*0;/);
   assert.match(styles, /overflow-y:\s*auto/);

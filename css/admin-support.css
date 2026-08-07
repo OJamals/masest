@@ -76,7 +76,21 @@
 .site-support__conversation-toolbar p { margin: 0; color: var(--ink-soft, #626a73); font-size: .72rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
 .site-support__conversation-toolbar :is(a, button) { display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--ink, #15171c); font-size: 1.1rem; cursor: pointer; }
 .site-support__conversation-toolbar button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
-.site-support__conversation-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
+/* Pulled left by the button's own dead space so the label keeps the toolbar's
+   16px inset whether or not the back arrow is showing. */
+.site-support__toolbar-lead { display: flex; min-width: 0; align-items: center; gap: 4px; margin-left: -10px; }
+.site-support__toolbar-lead > button[hidden] { display: none; }
+/* Both views own the second row, so the one that is showing fills the pane. */
+.site-support__conversation-body,
+.site-support__settings { grid-row: 2; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
+.site-support__settings { display: grid; align-content: start; gap: 10px; }
+.site-support__settings[hidden] { display: none; }
+.site-support__settings-intro { margin: 0 0 2px; color: var(--ink-soft, #626a73); font-size: .85rem; line-height: 1.5; }
+.site-support__settings label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line, #dfe3e7); border-radius: 11px; background: var(--paper, #fff); cursor: pointer; }
+.site-support__settings input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent, #118894); }
+.site-support__settings b { display: block; font-size: .92rem; }
+.site-support__settings small { display: block; margin-top: 3px; color: var(--ink-soft, #626a73); font-size: .8rem; line-height: 1.45; }
+.site-support__settings-status { margin: 0; min-height: 1.2em; color: var(--ink-soft, #626a73); font-size: .8rem; }
 .site-support__conversation-empty { display: grid; min-height: 100%; align-content: center; justify-items: center; gap: 8px; max-width: 34ch; margin: 0 auto; color: var(--ink-soft, #626a73); text-align: center; }
 .site-support__conversation-empty > i { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--accent, #118894) 12%, white); color: var(--accent, #118894); font-size: 1.45rem; }
 .site-support__conversation-empty h3,
@@ -118,10 +132,19 @@
 
 @media (max-width: 720px) {
   .site-support { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
-  .site-support__drawer { bottom: 64px; grid-template-columns: 1fr; width: calc(100vw - 24px); height: min(720px, calc(100dvh - 88px)); }
-  .site-support__list-pane { max-height: 42%; border-right: 0; border-bottom: 1px solid var(--line, #dfe3e7); }
+  /* Stacked, so the rows must be declared. Left implicit both are `auto` and
+     align-content:stretch splits the spare height between them, which clipped
+     the thread list and left a dead band above the conversation. The cap has to
+     sit on the TRACK: a percentage max-height on the pane resolves against its
+     own content-sized row, so it only ever shrank the pane inside a row that had
+     already grown. fit-content(42%) measures against the drawer's real height. */
+  .site-support__drawer { bottom: 64px; grid-template-columns: 1fr; grid-template-rows: fit-content(42%) minmax(0, 1fr); width: calc(100vw - 24px); height: min(720px, calc(100dvh - 88px)); }
+  .site-support__list-pane { border-right: 0; border-bottom: 1px solid var(--line, #dfe3e7); }
   .site-support__conversation { min-height: 0; }
   .site-support__messages { max-height: 28dvh; }
+  /* The whole reason settings moved in here: at phone width a thread list above
+     them leaves a strip too short to use. Desktop keeps both panes. */
+  .site-support__drawer[data-view="settings"] .site-support__list-pane { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

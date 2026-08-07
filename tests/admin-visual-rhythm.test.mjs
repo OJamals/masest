@@ -45,8 +45,8 @@ test("admin detail rows and compact forms keep label/value separation", () => {
   );
   assert.match(
     html,
-    /@media \(max-width:\s*720px\)[\s\S]*\.account-detail \.adm-form-grid,[\s\S]*#replyForm\s*\{\s*grid-template-columns:\s*1fr;/,
-    "compact account and reply forms should collapse back to one column on mobile",
+    /@media \(max-width:\s*720px\)[\s\S]*\.account-detail \.adm-form-grid \{\s*grid-template-columns:\s*1fr;/,
+    "the compact account form should collapse back to one column on mobile",
   );
 });
 
@@ -60,10 +60,5 @@ test("admin file, locale, and reply controls have enough intrinsic width", () =>
     html,
     /#contentLocale\s*\{\s*min-width:\s*112px;\s*\}/,
     "the content locale select should fit the English locale label",
-  );
-  assert.match(
-    html,
-    /#replyForm > \.btn\s*\{\s*min-width:\s*120px;\s*\}/,
-    "the desktop message reply button should fit its label",
   );
 });

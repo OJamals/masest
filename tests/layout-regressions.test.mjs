@@ -502,7 +502,7 @@ test("admin panels start compactly without stretched empty control rails", async
     const browser = await launchTestBrowser();
     const { context, page } = await newAuthedPage(browser, { width: 1440, height: 1000 });
     try {
-      for (const hash of ["overview", "orders", "companies", "products", "support-settings", "quotes", "reviews", "newsletter", "crm"]) {
+      for (const hash of ["overview", "orders", "companies", "products", "quotes", "reviews", "newsletter", "crm"]) {
         await page.goto(`${BASE_URL}/admin.html#${hash}`, { waitUntil: "domcontentloaded" });
         await page.waitForSelector(`.adm-panel[data-panel="${hash}"][data-active="true"]`, { timeout: 10000 });
         const metrics = await page.evaluate((panelName) => {

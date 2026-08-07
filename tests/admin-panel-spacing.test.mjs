@@ -105,7 +105,7 @@ test("admin panel content starts at the sidebar top without inherited section pa
     await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
     const page = await context.newPage();
     try {
-      for (const hash of ["orders", "companies", "products", "support-settings", "quotes", "reviews", "newsletter", "crm", "analytics", "finance", "integrations"]) {
+      for (const hash of ["orders", "companies", "products", "quotes", "reviews", "newsletter", "crm", "analytics", "finance", "integrations"]) {
         await page.goto(`${BASE_URL}/admin.html#${hash}`, { waitUntil: "domcontentloaded" });
         await page.waitForSelector(`.adm-panel[data-panel="${hash}"][data-active="true"]`, { timeout: 10000 });
         await page.waitForTimeout(150);
@@ -117,7 +117,7 @@ test("admin panel content starts at the sidebar top without inherited section pa
           };
           const panel = document.querySelector(`.adm-panel[data-panel="${panelName}"]`);
           const sidebar = document.querySelector(".adm-sidebar");
-          const candidates = [...panel.querySelectorAll(".adm-panel-title, .adm-tools > *, .crm-tabs > *, .adm-card, .adm-table-wrap, .thread-layout, .adm-panel-list, .adm-grid")]
+          const candidates = [...panel.querySelectorAll(".adm-panel-title, .adm-tools > *, .crm-tabs > *, .adm-card, .adm-table-wrap, .adm-panel-list, .adm-grid")]
             .filter(visible);
           const first = candidates.reduce((best, element) => (
             !best || element.getBoundingClientRect().top < best.getBoundingClientRect().top ? element : best

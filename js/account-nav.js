@@ -28,9 +28,13 @@ const ACCOUNT_MENU = [
 // Staff operate the store rather than shop it, so on public pages they get their
 // own destinations instead of a buyer's Orders / Addresses / Notifications — and
 // no cart. Password management stays, since staff still own their login.
+// "Customer support" opens the support console over the page staff is already
+// on — data-support-open is claimed by js/admin-support.js. The href is a real
+// fallback, not decoration: on a route where the console suppresses itself the
+// click is left alone and the browser navigates to the admin console instead.
 const STAFF_MENU = [
   ['ph-shield-check', 'Admin console', 'admin.html'],
-  ['ph-lifebuoy', 'Customer support', 'admin.html#support-settings'],
+  ['ph-lifebuoy', 'Customer support', 'admin.html#support', 'data-support-open'],
 ];
 const STAFF_ACCOUNT_MENU = [
   ['ph-user', 'Profile & security', 'dashboard.html#profile'],
@@ -162,11 +166,11 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
     const label = data.profile?.full_name || data.company?.name || data.email || 'Account';
     const isStaff = data.can_admin === true;
     const accountMenu = isStaff ? STAFF_MENU : MENU;
-    const items = accountMenu.map(([i, l, h]) => {
+    const items = accountMenu.map(([i, l, h, attr = '']) => {
       const isNotifications = l === 'Notifications';
       const marker = isNotifications ? ' data-account-nav-notifications' : '';
       const count = isNotifications ? '<span class="acct-menu-count" hidden>0</span>' : '';
-      return `<a href="${root}${h}"${marker}><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}${count}</a>`;
+      return `<a href="${root}${h}"${attr ? ` ${attr}` : ''}${marker}><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}${count}</a>`;
     }).join('');
     const accountItems = (isStaff ? STAFF_ACCOUNT_MENU : ACCOUNT_MENU)
       .map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');

@@ -1,21 +1,24 @@
-/* Admin support: settings prefs + a handle on the shared customer-support console.
+/* Admin support: a handle on the shared customer-support console.
  *
  * The inbox itself lives in js/admin-support.js and is the SAME console public
  * pages mount. admin.html used to ship a second, near-identical drawer with its
  * own launcher, so staff saw one support UI on /admin and a different-looking
- * one everywhere else — both driving the same threads. This module no longer
- * renders an inbox; it mounts that console and keeps the notification prefs that
- * belong to the Customer support tab.
+ * one everywhere else — both driving the same threads. This module renders
+ * nothing of its own; it mounts that console and exposes its entry points to
+ * the rest of admin.js.
+ *
+ * The notification prefs used to live here too, on a #support-settings page.
+ * They are a view of the console now — a phone-width drawer covered the page it
+ * had just navigated to — so this module no longer loads or saves them.
  */
 
-export function createThreadsTab({ $, api, state, message }) {
-  const prefs = ['notify_admin_support_requests', 'notify_admin_messages'];
+export function createThreadsTab({ api, state }) {
   let consolePromise = null;
 
   // One console per document, lazily mounted. initAdminSupport() returns null if
   // one is already present, so a second call cannot produce a second inbox.
   function ensureConsole() {
-    consolePromise ||= import('../admin-support.js?v=20260807c')
+    consolePromise ||= import('../admin-support.js?v=20260807d')
       .then(({ initAdminSupport }) => initAdminSupport({
         auth: { api },
         root: '/',
@@ -25,24 +28,8 @@ export function createThreadsTab({ $, api, state, message }) {
     return consolePromise;
   }
 
-  async function savePrefs() {
-    const body = Object.fromEntries(prefs.map((key) => [key, Boolean($(key === 'notify_admin_support_requests' ? 'adminNotifySupportRequests' : 'adminNotifyMessages')?.checked)]));
-    try {
-      await api('/api/admin/message-settings', { method: 'PATCH', body });
-      message('adminSupportSettingsStatus', 'Saved.', 'ok');
-    } catch { message('adminSupportSettingsStatus', 'Could not save settings.', 'err'); }
-  }
-
-  async function loadPrefs() {
-    try {
-      const data = await api('/api/admin/message-settings');
-      $('adminNotifySupportRequests').checked = data.notify_admin_support_requests === true;
-      $('adminNotifyMessages').checked = data.notify_admin_messages === true;
-    } catch { message('adminSupportSettingsStatus', 'Could not load settings.', 'err'); }
-  }
-
-  // The console polls its own thread list, so a tab render only has to make sure
-  // it exists and pull a fresh count.
+  // The console polls its own thread list, so a render only has to make sure it
+  // exists and pull a fresh count.
   async function renderThreads() {
     const support = await ensureConsole();
     await support?.refresh?.();
@@ -55,22 +42,19 @@ export function createThreadsTab({ $, api, state, message }) {
     await support?.openThread?.(companyId);
   }
 
-  // Support work is conversations, not settings. Overview's unread count and the
-  // settings page both need to land staff in the inbox, so the console's open()
-  // is part of this adapter's surface rather than something callers reimplement.
   async function openConsole() {
     const support = await ensureConsole();
     await support?.open?.();
   }
 
+  async function openSettings() {
+    const support = await ensureConsole();
+    await support?.openSettings?.();
+  }
+
   function wireThreads() {
-    for (const id of ['adminNotifySupportRequests', 'adminNotifyMessages']) {
-      $(id)?.addEventListener('change', savePrefs);
-    }
-    $('supportOpenConsole')?.addEventListener('click', () => void openConsole());
-    void loadPrefs();
     void ensureConsole();
   }
 
-  return { renderThreads, wireThreads, openThread, openConsole };
+  return { renderThreads, wireThreads, openThread, openConsole, openSettings };
 }

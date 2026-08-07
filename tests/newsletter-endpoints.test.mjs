@@ -157,7 +157,10 @@ test('newsletters: send_now returns 202 after materialization and never invokes 
   assert.match(ui, /Queued \$\{Number\(res\.total \|\| 0\)\.toLocaleString\(\)\} recipients for delivery/);
   assert.doesNotMatch(ui, /Sent to \$\{res\.sent\} of \$\{res\.audience\}/);
   const adminEntry = readFileSync(new URL('../js/admin.js', import.meta.url), 'utf8');
-  assert.match(adminEntry, /\.\/admin\/newsletter\.js\?v=20260807c/);
+  // Derived from the deployed entry so a release bump stays a one-line change.
+  const release = readFileSync(new URL('../admin.html', import.meta.url), 'utf8').match(/js\/admin\.js\?v=(\d{8}[a-z])/)?.[1];
+  assert.ok(release, 'admin.html must cache-bust the admin entrypoint');
+  assert.match(adminEntry, new RegExp(`\\./admin/newsletter\\.js\\?v=${release}`));
 });
 
 test('blog sweep materializes recipient rows and performs no request-time fanout', () => {

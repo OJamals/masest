@@ -64,7 +64,7 @@ const AUTH_STEPS = [
   ...["overview", "analytics", "finance", "integrations", "orders", "companies", "products"]
     .map((panel) => [`admin-${panel}`, `/admin.html#${panel}`]),
   ["admin-pricing", "/admin.html#pricing"],
-  ...["content", "blog", "support-settings", "quotes", "reviews", "newsletter", "crm"]
+  ...["content", "blog", "quotes", "reviews", "newsletter", "crm"]
     .map((panel) => [`admin-${panel}`, `/admin.html#${panel}`]),
 ];
 

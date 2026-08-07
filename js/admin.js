@@ -1,11 +1,11 @@
 /* MASEST staff admin console. */
-import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260807c';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260807c';
-import { editKey } from './admin/edits.js?v=20260807c';
-import { createFeatureLoader } from './admin/feature-loader.js?v=20260807c';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260807c';
-import { renderAdminChrome, setAdminChromeUser } from './admin/chrome.js?v=20260807c';
-import { createAdminSearch } from './admin/search.js?v=20260807c';
+import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260807d';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260807d';
+import { editKey } from './admin/edits.js?v=20260807d';
+import { createFeatureLoader } from './admin/feature-loader.js?v=20260807d';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260807d';
+import { renderAdminChrome, setAdminChromeUser } from './admin/chrome.js?v=20260807d';
+import { createAdminSearch } from './admin/search.js?v=20260807d';
 
 const $ = (id) => document.getElementById(id);
 
@@ -52,7 +52,7 @@ function routeOpsMetric(route) {
   const task = setTab(route.tab, route.acctView ? { acctView: route.acctView } : {});
   // Unread support messages are conversations, not a settings page: land staff in
   // the inbox they already have on every surface.
-  if (route.support) return Promise.resolve(task).then(showSupportConsole);
+  if (route.support) return Promise.resolve(task).then(() => showSupportConsole());
   if (!route.control) return task;
   return Promise.resolve(task).then(() => {
     const control = $(route.control);
@@ -217,7 +217,6 @@ const FEATURE_GROUP_BY_TAB = {
   companies: 'companies',
   products: 'products',
   content: 'content',
-  'support-settings': 'support',
   quotes: 'quotes',
   reviews: 'reviews',
   newsletter: 'newsletter',
@@ -230,7 +229,6 @@ const FEATURE_LABEL_BY_TAB = {
   companies: 'Accounts',
   products: 'Products',
   content: 'Content',
-  'support-settings': 'Support',
   quotes: 'Quotes',
   reviews: 'Reviews',
   newsletter: 'Newsletter',
@@ -330,7 +328,13 @@ function setTab(tab, context = {}) {
   const focusQuickBooks = tab === 'quickbooks' || tab === 'qbo';
   if (focusQuickBooks) tab = 'integrations';
   if (tab === 'pricing') tab = 'products';
-  if (tab === 'messages') tab = 'support-settings';
+  // Support is an overlay staff carries on every page, not a workspace. The
+  // hashes that used to land on a settings panel open the console over whatever
+  // they were already doing, so an emailed alert no longer costs them their place.
+  const supportView = tab === 'support-settings' ? 'settings'
+    : (tab === 'support' || tab === 'messages') ? 'inbox'
+      : null;
+  if (supportView) tab = state.tab || 'overview';
   if (tab === 'offers') tab = 'newsletter';
   if (tab === 'traffic' || tab === 'seo') tab = 'analytics';
   if (tab === 'reports' || tab === 'exports') tab = 'finance';
@@ -346,9 +350,9 @@ function setTab(tab, context = {}) {
   const tabs = [...document.querySelectorAll('[data-tab]')];
   tabs.forEach((button) => button.setAttribute('aria-selected', String(button.dataset.tab === state.tab)));
   const activeTab = tabs.find((button) => button.dataset.tab === state.tab);
-  // Support settings is a routable destination with no sidebar tab. Without the
-  // fallback every tab would go tabindex="-1" and the sidebar would drop out of
-  // the keyboard tab order entirely while that panel is open.
+  // Any routable panel with no sidebar tab needs this fallback: without it every
+  // tab goes tabindex="-1" and the sidebar drops out of the keyboard tab order
+  // entirely while that panel is open.
   rovingTabindex(tabs, (t) => t === (activeTab || tabs[0]));
   if ($('admNavCurrent')) {
     let text = '';
@@ -388,6 +392,7 @@ function setTab(tab, context = {}) {
       requestAnimationFrame(() => document.getElementById('admQbo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     });
   }
+  if (supportView) void showSupportConsole({ view: supportView });
   return task;
 }
 
@@ -520,7 +525,7 @@ async function downloadCsv(url, filename, statusId) {
 // Reports & exports card (#96). Bound once — the overview tab re-renders on each visit.
 let reportsWired = false;
 function wireReports() {
-  void import('./admin/stripe.js?v=20260807c').then(({ wireStripePayouts, renderStripePayouts }) => {
+  void import('./admin/stripe.js?v=20260807d').then(({ wireStripePayouts, renderStripePayouts }) => {
     wireStripePayouts();
     return renderStripePayouts();
   }).catch(() => {
@@ -594,14 +599,14 @@ function wireDirtyControls(ids) {
   });
 }
 
-// The feature loader hands back only render()/wire(), so the console's open()
-// is captured here when the support group is built.
-let openSupportConsole = async () => {};
+// The feature loader hands back only render()/wire(), so the console's own entry
+// points are captured here when the support group is built.
+let supportEntry = {};
 const featureLoader = createFeatureLoader({
   analytics: async () => {
     const [{ createTrafficRenderer }, { createSeoAudit }] = await Promise.all([
-      import('./admin/traffic.js?v=20260807c'),
-      import('./admin/seo.js?v=20260807c'),
+      import('./admin/traffic.js?v=20260807d'),
+      import('./admin/seo.js?v=20260807d'),
     ]);
     const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
     const runSeoAudit = createSeoAudit({ $, state });
@@ -611,11 +616,11 @@ const featureLoader = createFeatureLoader({
     };
   },
   integrations: async () => {
-    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260807c');
-    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260807c');
-    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260807c');
-    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260807c');
-    const { createAutomationCard } = await import('./admin/automation.js?v=20260807c');
+    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260807d');
+    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260807d');
+    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260807d');
+    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260807d');
+    const { createAutomationCard } = await import('./admin/automation.js?v=20260807d');
     const { renderAutomation } = createAutomationCard({ $, api, admSkeleton });
     return {
       wire() {
@@ -636,7 +641,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   orders: async () => {
-    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260807c');
+    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260807d');
     const { renderOrders, wireOrders } = createOrdersTab({
       $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
     });
@@ -663,8 +668,8 @@ const featureLoader = createFeatureLoader({
   },
   companies: async () => {
     const [{ createCompaniesTab }, { createCrmPanel }] = await Promise.all([
-      import('./admin/companies.js?v=20260807c'),
-      import('./admin/crm.js?v=20260807c'),
+      import('./admin/companies.js?v=20260807d'),
+      import('./admin/crm.js?v=20260807d'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const { renderCompanies, wireCompanies, openCompanyDetail, showAcctView } = createCompaniesTab({
@@ -677,7 +682,7 @@ const featureLoader = createFeatureLoader({
       admListPager,
       crm,
       setTab,
-      openSupportThread: (id) => setTab('support-settings', { openCompanyId: id }),
+      openSupportThread: (id) => showSupportConsole({ companyId: id }),
       refreshStats,
     });
     return {
@@ -702,10 +707,10 @@ const featureLoader = createFeatureLoader({
       { createInventoryCard },
       { createCouponsCard },
     ] = await Promise.all([
-      import('./admin/products.js?v=20260807c'),
-      import('./admin/pricing.js?v=20260807c'),
-      import('./admin/inventory.js?v=20260807c'),
-      import('./admin/coupons.js?v=20260807c'),
+      import('./admin/products.js?v=20260807d'),
+      import('./admin/pricing.js?v=20260807d'),
+      import('./admin/inventory.js?v=20260807d'),
+      import('./admin/coupons.js?v=20260807d'),
     ]);
     const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({
       $, api, state, message, admSkeleton, admEmpty,
@@ -743,7 +748,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260807c');
+    const { createContentTab } = await import('./admin/content.js?v=20260807d');
     const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -784,23 +789,20 @@ const featureLoader = createFeatureLoader({
     };
   },
   support: async () => {
-    const { createThreadsTab } = await import('./admin/threads.js?v=20260807c');
-    const { renderThreads, wireThreads, openThread, openConsole } = createThreadsTab({
-      $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats,
-    });
-    openSupportConsole = openConsole;
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260807d');
+    const { renderThreads, wireThreads, openThread, openConsole, openSettings } = createThreadsTab({ api, state });
+    supportEntry = { openThread, openConsole, openSettings };
     return {
       wire() {
         wireThreads();
       },
-      async render(options) {
-        await renderThreads(options);
-        if (options.openCompanyId) await openThread(options.openCompanyId);
+      async render() {
+        await renderThreads();
       },
     };
   },
   quotes: async () => {
-    const { createQuotesTab } = await import('./admin/quotes.js?v=20260807c');
+    const { createQuotesTab } = await import('./admin/quotes.js?v=20260807d');
     const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager,
     });
@@ -821,7 +823,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   reviews: async () => {
-    const { createReviewsTab } = await import('./admin/reviews.js?v=20260807c');
+    const { createReviewsTab } = await import('./admin/reviews.js?v=20260807d');
     const {
       renderReviews,
       wireReviews,
@@ -841,8 +843,8 @@ const featureLoader = createFeatureLoader({
   },
   newsletter: async () => {
     const [{ createNewsletterTab }, { createOffersTab }] = await Promise.all([
-      import('./admin/newsletter.js?v=20260807c'),
-      import('./admin/offers.js?v=20260807c'),
+      import('./admin/newsletter.js?v=20260807d'),
+      import('./admin/offers.js?v=20260807d'),
     ]);
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
@@ -864,8 +866,8 @@ const featureLoader = createFeatureLoader({
   },
   crm: async () => {
     const [{ createCrmWorkspace }, { createCrmPanel }] = await Promise.all([
-      import('./admin/crm-workspace.js?v=20260807c'),
-      import('./admin/crm.js?v=20260807c'),
+      import('./admin/crm-workspace.js?v=20260807d'),
+      import('./admin/crm.js?v=20260807d'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const openSubject = (type, id, label) => {
@@ -900,13 +902,17 @@ function mountSupportConsole() {
   // same mount an early boot call started instead of racing past a "pending" flag.
   supportMount ||= featureLoader.load('support')
     .then((support) => support.wire())
-    .catch(() => { /* settings page still loads prefs; console stays unavailable */ });
+    .catch(() => { /* console stays unavailable; every other workspace still works */ });
   return supportMount;
 }
 
-async function showSupportConsole() {
+// Every way into support goes through here: the sidebar-less #support hashes,
+// Overview's unread count, and the Accounts tab's "message this business".
+async function showSupportConsole({ view = 'inbox', companyId = null } = {}) {
   await mountSupportConsole();
-  await openSupportConsole();
+  if (companyId) return supportEntry.openThread?.(companyId);
+  if (view === 'settings') return supportEntry.openSettings?.();
+  return supportEntry.openConsole?.();
 }
 
 // --- Cloudflare Turnstile on the staff gate (mirrors account.html sign-in) ---

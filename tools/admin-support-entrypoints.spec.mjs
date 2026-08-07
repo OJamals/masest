@@ -1,8 +1,8 @@
-// Support settings stopped being a sidebar tab: conversations live in the shared
-// console, so the two notification prefs hang off that console instead of a
-// top-level slot. These prove the entry points still land staff in the inbox —
-// the Overview unread count and the settings page's way back in — and that the
-// settings destination itself still resolves for deep links and emailed alerts.
+// Customer support is an overlay staff carries on every page, not a workspace.
+// It has no sidebar tab and no destination page: the notification prefs are a
+// view of the console itself. These prove every entry point lands staff in that
+// console without leaving the workspace they were in — and that at phone width
+// the settings are actually operable, which is the bug that moved them here.
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { test, expect } from "@playwright/test";
@@ -72,40 +72,139 @@ async function bootAsStaff(page) {
   }));
 }
 
-test("Customer support no longer holds a sidebar slot but stays reachable", async ({ page }) => {
+test("#support-settings opens the console on its settings view, not a page", async ({ page }) => {
   await bootAsStaff(page);
   await page.goto(`${BASE_URL}/admin.html#support-settings`);
 
+  // Neither a tab nor a panel — the whole destination is gone.
   await expect(page.locator('[data-tab="support-settings"]')).toHaveCount(0);
-  await expect(page.locator('[data-panel="support-settings"]')).toHaveAttribute("data-active", "true");
-  // Prefs load from the API, so the destination is functional, not a husk.
+  await expect(page.locator('[data-panel="support-settings"]')).toHaveCount(0);
+
+  const drawer = page.locator(".site-support__drawer");
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toHaveAttribute("data-view", "settings");
+  // Prefs load from the API, so this is a functional view, not a husk.
   await expect(page.locator("#adminNotifySupportRequests")).toBeChecked();
   await expect(page.locator("#adminNotifyMessages")).not.toBeChecked();
 
-  // The sidebar must stay in the keyboard tab order even with no tab selected.
+  // Staff keep the workspace they were on; support opens over it.
+  await expect(page.locator('[data-panel="overview"]')).toHaveAttribute("data-active", "true");
   const focusable = await page.locator('.adm-tabs [data-tab][tabindex="0"]').count();
   expect(focusable).toBe(1);
-  await expect(page.locator("#admNavCurrent")).toHaveText("Support settings");
 });
 
-test("the settings page and Overview's unread count both open the inbox", async ({ page }) => {
+test("the gear toggles settings and the back arrow returns to conversations", async ({ page }) => {
   await bootAsStaff(page);
+  await page.goto(`${BASE_URL}/admin.html#support`);
+
+  const drawer = page.locator(".site-support__drawer");
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toHaveAttribute("data-view", "inbox");
+
+  await page.locator("[data-support-settings-toggle]").click();
+  await expect(drawer).toHaveAttribute("data-view", "settings");
+  await expect(page.locator("[data-support-settings-toggle]")).toHaveAttribute("aria-expanded", "true");
+
+  await page.locator("[data-support-back]").click();
+  await expect(drawer).toHaveAttribute("data-view", "inbox");
+  await expect(page.locator("[data-support-back]")).toBeHidden();
+  // Escape from the inbox closes the drawer rather than only backing out a view.
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+});
+
+test("at phone width the settings are operable, not covered by the drawer", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/admin.html#support-settings`);
 
   const drawer = page.locator(".site-support__drawer");
-  await expect(drawer).toBeHidden();
-  await page.locator("#supportOpenConsole").click();
   await expect(drawer).toBeVisible();
-  // Same-document hash navigation does not reload, so close the drawer before
-  // reaching for a control it would otherwise cover.
-  await page.keyboard.press("Escape");
+  // The thread list would otherwise squeeze the prefs into an unusable strip.
+  await expect(page.locator(".site-support__list-pane")).toBeHidden();
+
+  // This is the regression: the click only lands if nothing is over the control.
+  // It used to be the drawer itself, covering the page the gear navigated to.
+  const pref = page.locator("#adminNotifySupportRequests");
+  await expect(pref).toBeChecked();
+  await pref.click();
+  await expect(pref).not.toBeChecked();
+  await expect(page.locator(".site-support__settings-status")).toHaveText("Saved.");
+});
+
+test("at phone width the stacked panes fill the drawer with no dead band", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/messages**");
+  await page.route("**/api/admin/messages**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      threads: [
+        { company_id: "c1", company_name: "Acme HVAC", last_body: "Chiller loop is fouling again.", last_at: "2026-08-07T10:00:00Z", unanswered: true, status: "open" },
+        { company_id: "c2", company_name: "Northbay", last_body: "Thanks, received.", last_at: "2026-08-06T10:00:00Z", unanswered: false, status: "open" },
+      ],
+    }),
+  }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/admin.html#support`);
+  await page.waitForSelector(".site-support__drawer:not([hidden])");
+  await expect(page.locator(".site-support__thread")).toHaveCount(2);
+
+  const box = await page.evaluate(() => {
+    const rect = (selector) => document.querySelector(selector).getBoundingClientRect();
+    const drawer = rect(".site-support__drawer");
+    const listPane = rect(".site-support__list-pane");
+    const conversation = rect(".site-support__conversation");
+    const threads = document.querySelector(".site-support__threads");
+    return {
+      gap: Math.round(conversation.top - listPane.bottom),
+      slack: Math.round(drawer.bottom - conversation.bottom),
+      listShare: listPane.height / drawer.height,
+      threadsClipped: threads.scrollHeight - threads.clientHeight,
+    };
+  });
+
+  // Implicit auto rows used to split the drawer's spare height between the two
+  // panes, stranding a ~220px band above the conversation and clipping the list.
+  expect(box.gap).toBe(0);
+  expect(box.slack).toBeLessThanOrEqual(1);
+  // A short list keeps its own height; it may never eat more than the 42% cap.
+  expect(box.listShare).toBeLessThanOrEqual(0.43);
+  expect(box.threadsClipped).toBe(0);
+});
+
+test("Overview's unread count opens the inbox without leaving Overview", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.goto(`${BASE_URL}/admin.html#overview`);
+
+  const drawer = page.locator(".site-support__drawer");
   await expect(drawer).toBeHidden();
 
-  await page.locator('[data-tab="overview"]').click();
   const unread = page.locator('[data-ops-route*="support"]');
   await expect(unread).toContainText("Unread messages");
   await unread.click();
   await expect(drawer).toBeVisible();
-  // Opening the inbox must not navigate away from Overview.
+  await expect(drawer).toHaveAttribute("data-view", "inbox");
   await expect(page.locator('[data-panel="overview"]')).toHaveAttribute("data-active", "true");
+});
+
+test("a [data-support-open] link opens the console in place instead of navigating", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.goto(`${BASE_URL}/admin.html#orders`);
+  await expect(page.locator(".site-support__launcher")).toBeVisible();
+
+  // Stands in for the staff account menu on a public page: same attribute, same
+  // handler. The href must NOT be followed while the console is mounted.
+  await page.evaluate(() => {
+    const link = document.createElement("a");
+    link.href = "/admin.html#support";
+    link.dataset.supportOpen = "";
+    link.id = "staffMenuSupportProbe";
+    link.textContent = "Customer support";
+    document.body.append(link);
+  });
+  await page.locator("#staffMenuSupportProbe").click();
+
+  await expect(page.locator(".site-support__drawer")).toBeVisible();
+  await expect(page.locator('[data-panel="orders"]')).toHaveAttribute("data-active", "true");
 });

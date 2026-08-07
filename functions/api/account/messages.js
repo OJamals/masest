@@ -83,8 +83,10 @@ export async function onRequest({ request, env }) {
           html: emailLayout({
             heading: firstRequest ? 'New support request' : 'New customer message',
             bodyHtml: `<p>Company: ${htmlEscape(company?.name || companyId)}</p><p>${htmlEscape(text.slice(0, 500))}</p>`,
+            // #support opens the support console over the admin console, on the
+            // conversation this alert is about — not on notification settings.
             ctaText: 'Open customer messages',
-            ctaUrl: `${env.APP_URL || new URL(request.url).origin}/admin.html#support-settings`,
+            ctaUrl: `${env.APP_URL || new URL(request.url).origin}/admin.html#support`,
           }),
           category: 'staff_alert',
         });
