@@ -85,6 +85,12 @@ test("company drawer shows CRM tabs and posts a note", async ({ page }) => {
   // because admin.js boot() triggers on DOMContentLoaded + hash determines first tab.
   await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
+  // The nav buttons are static markup, so they are clickable before admin.js attaches its
+  // delegated handler — a click that lands first is dropped with no retry, and the company
+  // list below then never arrives. data-active is only set by setTab, so waiting for it
+  // proves the console is wired. Under full-suite parallelism this raced often enough to
+  // look like an intermittent product regression.
+  await page.waitForSelector('.adm-panel[data-panel="companies"][data-active="true"]');
   await page.getByRole("button", { name: "Businesses & approvals" }).click();
 
   // Wait for the company list to render and the open-company button to appear.
