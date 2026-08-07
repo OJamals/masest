@@ -13,12 +13,42 @@
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css?v=20260725f">
 <style>
-  .adm-wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
-  body .adm-hero { min-height: 0; padding-top: 24px; padding-bottom: 20px; }
-  .adm-hero h1 { font-size: clamp(2rem, 4vw, 2.75rem); line-height: 1; letter-spacing: -.035em; margin: 0; }
-  .adm-hero .subhead { max-width: 72ch; margin-top: 8px; font-size: .95rem; line-height: 1.45; }
+  /* The staff chrome bar is sticky at 59px, so anchor jumps and scrollIntoView
+     (the #qbo deep link, for one) would otherwise land their target underneath
+     it. Reserve the bar plus a little breathing room. */
+  html { scroll-padding-top: 75px; }
+  .adm-wrap { max-width: 1400px; margin: 0 auto; padding: 0 22px; }
+  /* Staff chrome: one compact bar, no storefront links/cart/footer. */
+  .adm-chrome-inner { display: flex; align-items: center; gap: 14px; }
+  .adm-chrome .nav-logo { flex: 0 0 auto; }
+  .adm-chrome-label { flex: 1 1 auto; color: var(--muted); font-size: .78rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+  .adm-chrome-user { color: var(--ink-soft); font-size: .85rem; font-weight: 700; }
+  .adm-chrome-user[hidden] { display: none; }
+  /* Cross-entity search: one box for orders, quotes, accounts, people, products. */
+  .adm-chrome-search { flex: 0 1 420px; min-width: 0; }
+  .adm-search-global { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); }
+  .adm-search-global:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .adm-search-icon { color: var(--muted); font-size: 1rem; }
+  .adm-search-input { flex: 1 1 auto; min-width: 0; min-height: 38px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .9rem; }
+  .adm-search-input:focus { outline: none; }
+  .adm-search-input::-webkit-search-cancel-button { display: none; }
+  .adm-search-kbd { flex: 0 0 auto; padding: 2px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-raised); color: var(--muted); font-size: .68rem; font-weight: 800; }
+  .adm-search-results { position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; right: 0; max-height: min(60vh, 460px); overflow-y: auto; padding: 6px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); box-shadow: var(--shadow-lg, var(--shadow-sm)); }
+  .adm-search-results[hidden] { display: none; }
+  .adm-search-group + .adm-search-group { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line-soft); }
+  .adm-search-group-label { margin: 4px 8px; color: var(--muted); font-size: .68rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+  .adm-search-option { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 8px; border-radius: var(--r-input); cursor: pointer; }
+  .adm-search-option i { flex: 0 0 auto; color: var(--accent); font-size: 1rem; }
+  .adm-search-option[aria-selected="true"] { background: var(--accent-soft); }
+  .adm-search-option-copy { display: grid; min-width: 0; }
+  .adm-search-option-copy b { font-size: .9rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .adm-search-option-copy small { color: var(--muted); font-size: .76rem; overflow-wrap: anywhere; }
+  .adm-search-option .badge { margin-left: auto; flex: 0 0 auto; }
+  .adm-search-empty { margin: 0; padding: 14px 10px; color: var(--muted); font-size: .85rem; }
+  @media (max-width: 900px) { .adm-chrome-label { display: none; } }
+  @media (max-width: 640px) { .adm-chrome-user, .adm-search-kbd { display: none; } .adm-chrome-search { flex: 1 1 auto; } }
   #gateTitle { font-size: 28px; line-height: 1.12; margin: 0 0 8px; }
-  .adm-shell { display: grid; gap: 18px; padding: 16px 0 72px; }
+  .adm-shell { display: grid; gap: 14px; padding: 16px 0 40px; }
   .adm-tabs { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; }
   .adm-tab { position: relative; overflow: visible; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 12px; font: inherit; cursor: pointer; transition: transform .15s var(--ease-out), border-color .18s var(--ease-out), background-color .18s var(--ease-out), color .18s var(--ease-out); }
   .adm-tab:active { transform: scale(.96); }
@@ -27,27 +57,24 @@
   .adm-tab .pill { position: absolute; top: -7px; right: -7px; margin-left: 0; box-shadow: 0 0 0 2px var(--surface); }
   .adm-tab .pill[hidden] { display: none; }
   .adm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .adm-card { border: 1px solid transparent; border-radius: var(--r-card); background: var(--surface); padding: 16px; box-shadow: var(--surface-edge), var(--shadow-xs); }
-.adm-card h2, .adm-card h3 { margin: 0 0 12px; font-size: 1rem; }
+  .adm-card { border: 1px solid transparent; border-radius: var(--r-card); background: var(--surface); padding: 14px; box-shadow: var(--surface-edge), var(--shadow-xs); }
+.adm-card h2, .adm-card h3 { margin: 0 0 10px; font-size: 1rem; }
 .adm-card :where(h2, h3) { text-wrap: balance; }
 .adm-card :where(p, li, small) { text-wrap: pretty; }
 .adm-stat { display: grid; gap: 4px; min-height: 92px; }
 .adm-stat b { font-size: 1.25rem; }
 .adm-stat b,
-.adm-overview-marker b,
 .pill,
 .adm-mini-table .num {
   font-variant-numeric: tabular-nums;
 }
-.adm-overview-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: clamp(18px, 3vw, 28px); background: var(--surface-raised); box-shadow: var(--shadow-sm), var(--surface-edge); }
-.adm-overview-head h2 { margin: 0; font-size: clamp(1.45rem, 2.6vw, 2rem); line-height: 1.12; }
-.adm-overview-head p.muted { max-width: 62ch; margin: 8px 0 0; }
-.adm-overview-marker { min-width: 156px; display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--surface); box-shadow: var(--shadow-xs); }
-.adm-overview-marker span { color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-.adm-overview-marker b { color: var(--accent-ink); font-size: 1rem; line-height: 1.25; }
-.adm-workspace-head { padding: clamp(18px, 2.4vw, 24px); }
-.adm-workspace-head .adm-overview-marker { min-width: 146px; }
-.adm-workspace-card { display: grid; gap: 14px; }
+/* Panel title: a heading row, not a card. Each workspace already carries its own
+   card header ("Order queue", "Quote queue"), so stacking a full card on top of
+   it cost ~170px above the fold and said the same thing twice. */
+.adm-panel-title { padding: 0 2px 2px; }
+.adm-panel-title h2 { margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.7rem); line-height: 1.15; letter-spacing: -.02em; }
+.adm-panel-title p.muted { max-width: 62ch; margin: 4px 0 0; font-size: .9rem; }
+.adm-workspace-card { display: grid; gap: 12px; }
 .adm-workspace-card > .adm-tools { width: 100%; }
 .adm-workspace-card > .adm-tools .adm-search { flex: 1 1 240px; max-width: none; }
 .adm-workspace-card > .adm-tools .btn:last-child { margin-left: auto; }
@@ -63,8 +90,15 @@
 .adm-report-card h2 i { color: var(--accent); font-size: 1.1rem; }
 .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 5px 0; }
 .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: right; font-variant-numeric: tabular-nums; }
+/* Overview numbers are entry points into the work they count, not readouts. */
+.adm-report-card a.dash-row-route { margin: 0 -8px; padding: 5px 8px; border-radius: var(--r-input); color: inherit; text-decoration: none; }
+.adm-report-card a.dash-row-route:hover,
+.adm-report-card a.dash-row-route:focus-visible { background: var(--accent-tint); color: var(--accent-ink); outline: none; }
+.adm-report-card a.dash-row-route .ph-arrow-right { flex: 0 0 auto; color: var(--muted); font-size: .9rem; opacity: 0; transition: opacity .14s var(--ease-out); }
+.adm-report-card a.dash-row-route:hover .ph-arrow-right,
+.adm-report-card a.dash-row-route:focus-visible .ph-arrow-right { opacity: 1; color: var(--accent-ink); }
 .adm-action-list { display: grid; gap: 8px; }
-.adm-action-card { position: sticky; top: 96px; box-shadow: var(--shadow-xs); }
+.adm-action-card { position: sticky; top: 75px; box-shadow: var(--shadow-xs); }
 .adm-action-item { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 56px; padding: 10px; border: 1px solid transparent; border-radius: var(--r-input); background: var(--surface); color: inherit; text-decoration: none; box-shadow: var(--surface-edge), var(--shadow-xs); transition: transform .14s var(--ease-out), border-color .14s var(--ease-out), background-color .14s var(--ease-out), box-shadow .14s var(--ease-out); }
 .adm-action-item:active { transform: scale(.96); }
 .adm-action-item:hover, .adm-action-item:focus-visible { border-color: var(--accent); background: var(--accent-tint); box-shadow: var(--surface-edge), var(--shadow-sm); }
@@ -78,7 +112,7 @@
 .adm-mini-table th { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .07em; }
 .adm-mini-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .adm-panel { display: none; padding: 0; }
-  .adm-panel[data-active="true"] { display: grid; gap: 16px; align-content: start; align-items: start; }
+  .adm-panel[data-active="true"] { display: grid; gap: 12px; align-content: start; align-items: start; }
   .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: start; max-width: 100%; }
   .adm-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .adm-main .btn-sm { min-height: 40px !important; padding: 8px 14px; justify-content: center; line-height: 1.2; }
@@ -171,6 +205,17 @@
   .adm-track-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; min-width: 0; }
   .admin-order-actions,
   .company-admin-actions { align-items: flex-start; }
+  /* Queue rows stay scannable: only the action that moves an order forward sits
+     on the surface, and the 30-control edit surface (edit, tracking, split
+     shipments, QBO ids, refunds) opens on demand. */
+  .admin-order-primary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .adm-order-manage { margin-top: 10px; border-top: 1px solid var(--line-soft); }
+  .adm-order-manage > summary { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 2px; color: var(--ink-soft); font-size: .85rem; font-weight: 700; cursor: pointer; list-style: none; }
+  .adm-order-manage > summary::-webkit-details-marker { display: none; }
+  .adm-order-manage > summary:hover { color: var(--accent-ink); }
+  .adm-order-manage > summary i { color: var(--muted); font-size: 1rem; }
+  .adm-order-manage[open] > summary { color: var(--accent-ink); }
+  .adm-order-manage > .admin-order-actions { padding: 4px 0 10px; }
   .adm-track { flex: 1 1 100%; min-width: 0; }
   .adm-track summary { display: flex; align-items: center; min-height: 44px; padding: 8px 0; cursor: pointer; line-height: 1.35; }
   .adm-track-controls { margin-top: 8px; }
@@ -201,6 +246,16 @@
   .adm-order-editor .adm-form-grid { margin-top: 10px; }
   .adm-order-editor { flex: 1 1 100%; min-width: 0; border-top: 1px solid var(--line-soft); padding-top: 4px; }
   .adm-order-lines { min-height: 92px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; line-height: 1.45; }
+  /* Structured line items replace the pipe-delimited blob staff used to type. */
+  .adm-order-lines-field { display: grid; gap: 8px; justify-items: start; }
+  .adm-field-label { color: var(--ink-soft); font-size: .82rem; font-weight: 700; }
+  #ordCreateLines,
+  .adm-order-line-list { display: grid; gap: 8px; width: 100%; }
+  .adm-order-line-row { display: grid; grid-template-columns: minmax(90px, .8fr) minmax(90px, .8fr) minmax(140px, 1.4fr) 74px 110px auto auto; gap: 8px; align-items: center; }
+  .adm-order-line-row .admin-select-all { white-space: nowrap; }
+  .adm-order-create-totals { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding-top: 6px; color: var(--ink-soft); font-size: .85rem; font-weight: 700; }
+  .adm-order-create-totals output { margin-left: 6px; color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
+  @media (max-width: 900px) { .adm-order-line-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .adm-order-danger { margin-left: auto; }
   .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px; background: var(--panel); color: var(--ink-soft); font-size: .75rem; }
   .badge[data-s="paid"], .badge[data-s="fulfilled"], .badge[data-s="net_paid"], .badge[data-s="approved"], .badge[data-s="verified"], .badge[data-s="active"], .badge[data-s="delivered"], .badge[data-s="complete"], .badge[data-s="won"], .badge[data-s="published"] { background: var(--status-success-bg); color: var(--status-success-ink); }
@@ -502,7 +557,7 @@
   .account-filterbar .btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
   @media (max-width: 920px) { .adm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thread-layout { grid-template-columns: 1fr; } }
   @media (max-width: 640px) { .adm-wrap { padding: 0 18px; } .adm-grid, .adm-form-grid { grid-template-columns: 1fr; } .adm-form-grid .wide { grid-column: auto; } }
-  @media (max-width: 640px) { .adm-hero h1 { font-size: 42px; } #gateTitle { font-size: 24px; } }
+  @media (max-width: 640px) { #gateTitle { font-size: 24px; } }
   .adm-tabs-wrap { overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; }
   .adm-tabs-wrap .adm-tabs { min-width: max-content; margin-bottom: 0; }
   .adm-panel-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
@@ -516,9 +571,11 @@
   .adm-select-sm { max-width: 220px; }
   .adm-select-xs { max-width: 180px; }
   .adm-select-md { max-width: 190px; }
-  .adm-layout { display: grid; grid-template-columns: minmax(200px, 240px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .adm-layout { display: grid; grid-template-columns: minmax(196px, 224px) minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; align-self: start; overflow-anchor: none; }
-  .adm-sidebar.adm-tabs-wrap { position: sticky; top: 96px; align-self: start; max-height: calc(100vh - 120px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: auto; scrollbar-gutter: stable; padding: 12px; margin-bottom: 0; border: 1px solid var(--line-soft); border-radius: var(--r-card); background: rgba(255,255,255,.76); box-shadow: var(--shadow-xs); }
+  /* Sticky offset tracks the 59px staff chrome bar (was 96px, tuned for the
+     removed hero); keeps the rail aligned with the panel top at scroll 0. */
+  .adm-sidebar.adm-tabs-wrap { position: sticky; top: 75px; align-self: start; max-height: calc(100vh - 99px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: auto; scrollbar-gutter: stable; padding: 12px; margin-bottom: 0; border: 1px solid var(--line-soft); border-radius: var(--r-card); background: rgba(255,255,255,.76); box-shadow: var(--shadow-xs); }
   .adm-role-context { display: grid; gap: 4px; min-width: 0; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
   .adm-role-context .badge { justify-self: start; text-transform: none; }
   .adm-role-context small { color: var(--muted); font-size: .72rem; line-height: 1.35; overflow-wrap: anywhere; }
@@ -530,11 +587,11 @@
   .adm-nav-toggle-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .adm-nav-toggle i { transition: transform .16s var(--ease-out); }
   .adm-sidebar.is-open .adm-nav-toggle i { transform: rotate(180deg); }
-  .adm-sidebar .adm-tabs { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin-top: 12px; }
+  .adm-sidebar .adm-tabs { display: flex; flex-direction: column; gap: 4px; min-width: 0; margin-top: 10px; }
   .adm-nav-group { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); }
   .adm-nav-group:first-child { border-top: 0; padding-top: 0; }
   .adm-nav-group > span { color: var(--ink-soft); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 0 10px 4px; }
-  .adm-sidebar .adm-tab { width: 100%; min-height: 42px; justify-content: flex-start; border-radius: var(--r-input); padding: 10px; color: var(--ink-soft); font-weight: 700; font-size: .9rem; line-height: 1.2; text-align: left; }
+  .adm-sidebar .adm-tab { width: 100%; min-height: 40px; justify-content: flex-start; border-radius: var(--r-input); padding: 8px 10px; color: var(--ink-soft); font-weight: 700; font-size: .88rem; line-height: 1.2; text-align: left; }
   .adm-sidebar .adm-tab[aria-selected="true"] { border-color: rgba(14,124,134,.24); background: var(--accent-soft); color: var(--accent-ink); }
   .adm-tab i { flex: 0 0 auto; }
   .adm-tab .pill { margin-left: 0; }
@@ -572,8 +629,6 @@
   @media (max-width: 720px) {
     .adm-wrap { padding: 0 18px; }
     .adm-panel[data-active="true"] > :where(.crm-tabs, .adm-tools) { justify-self: stretch; }
-    .adm-overview-head { grid-template-columns: 1fr; }
-    .adm-overview-marker { min-width: 0; }
     .adm-workspace-card > .adm-tools .btn:last-child { margin-left: 0; }
     .adm-governance-note-compact { grid-template-columns: 1fr; gap: 8px; }
     .adm-catalog-browser .adm-panel-header { align-items: stretch; }
@@ -645,9 +700,6 @@
     .adm-nav-group { min-width: 184px; scroll-snap-align: start; }
   }
   @media (max-width: 640px) {
-    .adm-hero { padding-top: 24px; padding-bottom: 16px; }
-    .adm-hero h1 { font-size: 34px; }
-    .adm-hero .subhead { margin-top: 10px; font-size: .95rem; line-height: 1.45; }
     .adm-panel-header { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: left; }
@@ -676,12 +728,7 @@
 <!-- Shared header/footer are injected by chrome.js (loaded via main.js below). -->
 
 <main id="main">
-  <section class="page-hero adm-hero">
-    <div class="adm-wrap">
-      <h1>Operations control room.</h1>
-      <p class="subhead">Manage orders, accounts, products, website content, buyer messages, follow-ups, quotes, and traffic from one focused workspace.</p>
-    </div>
-  </section>
+  <h1 class="sr-only">Operations control room</h1>
 
   <section class="adm-wrap adm-shell">
       <div id="admGate" class="adm-card" hidden>
@@ -744,17 +791,13 @@
         <div class="adm-main">
 
  <section class="adm-panel" role="tabpanel" data-panel="overview">
-        <div class="adm-card adm-overview-head">
+        <div class="adm-panel-title">
           <div>
-            <p class="adm-eyebrow">Staff console</p>
+            
             <h2>Work that needs attention</h2>
             <p class="muted">Latest staff API snapshot.</p>
           </div>
-          <div class="adm-overview-marker" aria-label="Overview source">
-            <span>Source</span>
-            <b>Admin API snapshot</b>
           </div>
-        </div>
         <div id="admStats" class="adm-grid" hidden></div>
         <div class="adm-overview-layout">
           <div id="admOpsSummary" class="adm-ops-summary" aria-live="polite"></div>
@@ -763,25 +806,24 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="analytics">
-        <div class="adm-card adm-overview-head">
-          <div><p class="adm-eyebrow">Insights</p><h2>Analytics &amp; site health</h2><p class="muted">Traffic, conversion signals, campaigns, and public-page SEO checks.</p></div>
-          <div class="adm-overview-marker"><span>Window</span><b>Latest 14 days</b></div>
-        </div>
+        <div class="adm-panel-title">
+          <div><h2>Analytics &amp; site health</h2><p class="muted">Traffic, conversion signals, campaigns, and public-page SEO checks.</p></div>
+          </div>
         <div id="admSeo" class="adm-card">Scanning pages...</div>
         <div id="admTraffic" class="adm-card">Loading…</div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="finance">
-        <div class="adm-card adm-overview-head">
-          <div><p class="adm-eyebrow">Finance</p><h2>Reports &amp; exports</h2><p class="muted">Run revenue and tax summaries or export operational records.</p></div>
+        <div class="adm-panel-title">
+          <div><h2>Reports &amp; exports</h2><p class="muted">Run revenue and tax summaries or export operational records.</p></div>
         </div>
         <div id="admReports" class="adm-card"><div class="adm-panel-header"><h2>Reporting period</h2></div><div class="adm-inline-actions adm-report-controls"><label class="field">From<input id="repFrom" name="report_from" type="date" class="adm-input"></label><label class="field">To<input id="repTo" name="report_to" type="date" class="adm-input"></label><button id="repRun" class="btn btn-primary btn-sm" type="button"><i class="ph ph-chart-line-up" aria-hidden="true"></i> Revenue / tax report</button><button id="repOrdersCsv" class="btn btn-secondary btn-sm" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i> Orders CSV</button><button id="repCustomersCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-users-three" aria-hidden="true"></i> Customers CSV</button><button id="repQuotesCsv" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Quotes CSV</button></div><div id="repResult" class="adm-status" role="status" aria-live="polite"></div></div>
         <div id="admStripePayouts" class="adm-card adm-workspace-card" data-capability-scope="company.credit"><div class="adm-panel-header"><div><h2>Stripe payout reconciliation</h2><p class="muted">Read-only composition of the three most recent live standard payouts. QuickBooks posting stays blocked until every account mapping is present and the journal design is accountant-reviewed.</p></div><button id="stripePayoutRefresh" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh</button></div><p id="stripePayoutStatus" class="adm-status" role="status" aria-live="polite">Open Finance to load payouts.</p><div id="stripePayoutMappings"></div><div id="stripePayoutList" class="adm-list"></div></div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="integrations">
-        <div class="adm-card adm-overview-head">
-          <div><p class="adm-eyebrow">System connections</p><h2>Integrations</h2><p class="muted">Connection readiness, sync queues, failures, and recovery controls.</p></div>
+        <div class="adm-panel-title">
+          <div><h2>Integrations</h2><p class="muted">Connection readiness, sync queues, failures, and recovery controls.</p></div>
         </div>
         <div id="admQbo" class="adm-card adm-qbo-card"><div class="adm-panel-header"><h2>QuickBooks</h2></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="qboStatus" class="adm-status" role="status">Checking QuickBooks…</p><p id="qboConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking Cloudflare runtime configuration.</p></div><div class="adm-qbo-queue" aria-label="QuickBooks sync queue"><small>Sync queue</small><b id="qboSyncSummary">0 pending, 0 errored, 0 synced</b></div></div><div class="adm-inline-actions adm-qbo-actions"><button id="qboConnect" class="btn btn-primary btn-sm" type="button"><i class="ph ph-plugs-connected" aria-hidden="true"></i> Connect QuickBooks</button><button id="qboSyncNow" class="btn btn-secondary btn-sm" type="button" disabled><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Run sync</button><button id="qboDisconnect" class="btn btn-ghost btn-sm" type="button" hidden><i class="ph ph-plugs" aria-hidden="true"></i> Disconnect</button></div><p id="qboSyncStatus" class="adm-status" role="status" aria-live="polite"></p><div id="qboFailedOrders" class="adm-list"></div></div>
         <div id="admStripe" class="adm-card adm-qbo-card"><div class="adm-panel-header"><div><h2>Stripe</h2><p class="muted">Production payment key, CMS shipping rates, and signed order webhook.</p></div></div><div class="adm-qbo-status-grid"><div class="adm-qbo-readiness"><p id="stripeStatus" class="adm-status" role="status">Checking Stripe…</p><p id="stripeConfigDetail" class="adm-qbo-detail" aria-live="polite">Checking server-side payment mode.</p><p id="stripeShippingRatesStatus" class="adm-qbo-detail" aria-live="polite">Checking CMS shipping rates.</p></div><div class="adm-qbo-queue" aria-label="Stripe webhook readiness"><small>Order webhook</small><b id="stripeWebhookStatus">Checking…</b></div></div></div>
@@ -790,10 +832,9 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="orders">
-        <div class="adm-card adm-overview-head adm-workspace-head">
-          <div><p class="adm-eyebrow">Commerce</p><h2>Orders &amp; fulfillment</h2><p class="muted">Find an order, move it through fulfillment, and handle payment or shipment exceptions.</p></div>
-          <div class="adm-overview-marker"><span>Primary task</span><b>Fulfillment queue</b></div>
-        </div>
+        <div class="adm-panel-title">
+          <div><h2>Orders &amp; fulfillment</h2><p class="muted">Find an order, move it through fulfillment, and handle payment or shipment exceptions.</p></div>
+          </div>
         <div class="adm-card adm-workspace-card">
           <div class="adm-panel-header"><div><h3>Order queue</h3><p class="muted">Filters and saved views stay scoped to this queue.</p></div></div>
           <div class="adm-tools">
@@ -808,14 +849,21 @@
           <summary><span class="adm-summary-icon"><i class="ph ph-plus" aria-hidden="true"></i></span><span class="adm-summary-copy"><b>Create manual order</b><small>Use for phone, invoice, or staff-assisted orders that did not originate in checkout.</small></span><i class="ph ph-caret-down adm-summary-caret" aria-hidden="true"></i></summary>
           <form onsubmit="return false" id="ordCreateForm" class="adm-form-grid">
             <label class="wide">Customer email <input id="ordCreateEmail" name="customer_email" class="adm-input" type="email" autocomplete="off" spellcheck="false"></label>
-            <label class="wide">Company ID <input id="ordCreateCompany" name="company_id" class="adm-input" autocomplete="off" spellcheck="false"></label>
+            <label class="wide">Find business <input id="ordCreateCompanySearch" name="company_search" class="adm-input" type="search" autocomplete="off" spellcheck="false" placeholder="Type a business name"></label>
+            <label class="wide">Business <select id="ordCreateCompany" name="company_id" class="adm-select"><option value="">No business (guest order)</option></select></label>
             <label>Status <select id="ordCreateStatus" name="status" class="adm-select"><option value="net_open">NET open</option><option value="paid">Paid</option><option value="pending_payment">Pending payment</option><option value="net_paid">NET paid</option><option value="fulfilled">Fulfilled</option><option value="cancelled">Cancelled</option></select></label>
             <label>Payment <select id="ordCreatePayment" name="payment_method" class="adm-select"><option value="net">NET / invoice</option><option value="stripe">Card / external</option></select></label>
-            <label>Subtotal <input id="ordCreateSubtotal" name="subtotal" class="adm-input" type="number" min="0" step="0.01"></label>
             <label>Tax <input id="ordCreateTax" name="tax" class="adm-input" type="number" min="0" step="0.01" value="0"></label>
-            <label>Total <input id="ordCreateTotal" name="total" class="adm-input" type="number" min="0" step="0.01"></label>
             <label>Currency <input id="ordCreateCurrency" name="currency" class="adm-input" value="usd" autocomplete="off"></label>
-            <label class="full">Line items <textarea id="ordCreateItems" name="line_items" class="adm-textarea adm-order-lines" placeholder="SKU | Product SKU | Name | Qty | Unit price | backordered"></textarea></label>
+            <div class="full adm-order-lines-field">
+              <span class="adm-field-label" id="ordCreateLinesLabel">Line items</span>
+              <div id="ordCreateLines" role="group" aria-labelledby="ordCreateLinesLabel"></div>
+              <button id="ordCreateAddLine" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-plus" aria-hidden="true"></i> Add line</button>
+            </div>
+            <div class="wide adm-order-create-totals">
+              <span>Subtotal <output id="ordCreateSubtotal" for="ordCreateLines">0.00</output></span>
+              <span>Total <output id="ordCreateTotal" for="ordCreateLines">0.00</output></span>
+            </div>
             <button id="ordCreateSubmit" class="btn btn-primary" type="submit">Create order</button>
           </form>
           <p id="ordCreateStatusText" class="adm-status" role="status" aria-live="polite"></p>
@@ -823,10 +871,9 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="companies">
-        <div class="adm-card adm-overview-head adm-workspace-head">
-          <div><p class="adm-eyebrow">Customer operations</p><h2>Accounts &amp; approvals</h2><p class="muted">Manage customer access, business onboarding, document requests, roles, credit, and approval status.</p></div>
-          <div class="adm-overview-marker"><span>Primary task</span><b>Review approvals</b></div>
-        </div>
+        <div class="adm-panel-title">
+          <div><h2>Accounts &amp; approvals</h2><p class="muted">Manage customer access, business onboarding, document requests, roles, credit, and approval status.</p></div>
+          </div>
         <div class="crm-tabs" id="acctToggle" role="group" aria-label="Accounts sections">
           <button class="btn btn-ghost btn-sm is-active" type="button" data-acct-view="users" aria-pressed="true">Users</button>
           <button class="btn btn-ghost btn-sm" type="button" data-acct-view="companies" aria-pressed="false">Businesses &amp; approvals</button>
@@ -856,10 +903,18 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="products">
-        <div class="adm-card adm-overview-head adm-workspace-head">
-          <div><p class="adm-eyebrow">Catalog</p><h2>Products &amp; inventory</h2><p class="muted">Search and edit the live catalog, monitor stock, and manage product media.</p></div>
-          <div class="adm-overview-marker"><span>Pricing control</span><b>CMS managed</b></div>
+        <div class="adm-panel-title">
+          <div><h2>Products &amp; inventory</h2><p class="muted">Browse and edit the catalog, manage stock, or administer prices and promo codes.</p></div>
+          </div>
+        <!-- Six unrelated jobs used to stack in this one panel. Catalog browsing,
+             stock, and price administration are separate tasks done by different
+             people at different times, so they get separate workspaces. -->
+        <div class="crm-tabs" id="prodToggle" role="group" aria-label="Product workspaces">
+          <button class="btn btn-ghost btn-sm is-active" type="button" data-prod-view="catalog" aria-pressed="true">Catalog</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-prod-view="inventory" aria-pressed="false">Inventory</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-prod-view="pricing" aria-pressed="false">Pricing &amp; promos</button>
         </div>
+        <div data-prod-panel="catalog">
         <div class="adm-card adm-governance-note adm-governance-note-compact" id="catalogPriceGovernance" role="note">
           <h2><i class="ph ph-shield-check" aria-hidden="true"></i> CMS-managed pricing</h2>
           <p>Use the Pricing workspace for product, customer-tier, service, and program prices. Catalog seed files are bootstrap and recovery data only.</p>
@@ -868,14 +923,6 @@
           <div class="adm-panel-header"><div><h2>Product catalog</h2><p class="muted">Search first, then edit the matching product or variant in place.</p></div><input id="prodSearch" name="product_search" class="adm-search" type="search" autocomplete="off" placeholder="Search name, SKU, or variant" aria-label="Search products"></div>
           <div id="admProducts" class="adm-table-wrap">Loading…</div>
           <p id="prodStatus" class="adm-status" role="status" aria-live="polite"></p>
-        </div>
-        <div class="adm-card" id="admInventory" data-capability-scope="admin.write">
-          <div class="adm-panel-header"><h2>Inventory</h2><button id="invReorderCsv" class="btn btn-ghost btn-sm" type="button">Reorder CSV</button></div>
-          <p class="muted">Bulk-set stock: one <code>vsku,stock</code> per line (a header row is ignored).</p>
-          <textarea id="invCsv" name="stock_csv" class="adm-textarea" placeholder="VK-1,120&#10;VK-2,0" aria-label="Bulk stock CSV"></textarea>
-          <div class="adm-inline-actions"><button id="invApply" class="btn btn-primary btn-sm" type="button">Apply stock</button><span id="invStatus" class="adm-status" role="status" aria-live="polite"></span></div>
-          <h3 class="adm-inv-subhead">Low stock</h3>
-          <div id="invLow" class="adm-list">Loading…</div>
         </div>
         <details class="adm-card adm-summary-card" data-capability="product.write" data-capability-mode="hide">
           <summary><span class="adm-summary-icon"><i class="ph ph-cube" aria-hidden="true"></i></span><span class="adm-summary-copy"><b>Add or overwrite a product</b><small>Create a new base product or replace one by SKU.</small></span><i class="ph ph-caret-down adm-summary-caret" aria-hidden="true"></i></summary>
@@ -910,6 +957,18 @@
         </details>
         <!-- Pricing (promo codes + tier price search) folded in from its own tab
              2026-07-07 — one catalog surface; #pricing deep links land here. -->
+        </div>
+        <div data-prod-panel="inventory" hidden>
+        <div class="adm-card" id="admInventory" data-capability-scope="admin.write">
+          <div class="adm-panel-header"><h2>Inventory</h2><button id="invReorderCsv" class="btn btn-ghost btn-sm" type="button">Reorder CSV</button></div>
+          <p class="muted">Bulk-set stock: one <code>vsku,stock</code> per line (a header row is ignored).</p>
+          <textarea id="invCsv" name="stock_csv" class="adm-textarea" placeholder="VK-1,120&#10;VK-2,0" aria-label="Bulk stock CSV"></textarea>
+          <div class="adm-inline-actions"><button id="invApply" class="btn btn-primary btn-sm" type="button">Apply stock</button><span id="invStatus" class="adm-status" role="status" aria-live="polite"></span></div>
+          <h3 class="adm-inv-subhead">Low stock</h3>
+          <div id="invLow" class="adm-list">Loading…</div>
+        </div>
+        </div>
+        <div data-prod-panel="pricing" hidden>
         <div class="adm-card" id="admCoupons" data-capability-scope="admin.write">
           <div class="adm-panel-header"><h2>Promo codes</h2></div>
           <p class="muted">Stripe promotion codes — buyers enter them at card checkout. (NET on-account orders don't take promo codes.)</p>
@@ -930,6 +989,7 @@
           <p id="pricingStatus" class="adm-status" role="status" aria-live="polite"></p>
           <div id="admPricing">Loading…</div>
         </div>
+        </div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="content">
@@ -941,8 +1001,8 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="support-settings">
-        <div class="adm-card adm-overview-head adm-workspace-head">
-          <div><p class="adm-eyebrow">Customer support</p><h2>Support settings</h2><p class="muted">Choose when staff receives support email alerts. Open conversations live in the support drawer.</p></div>
+        <div class="adm-panel-title">
+          <div><h2>Support settings</h2><p class="muted">Choose when staff receives support email alerts. Open conversations live in the support drawer.</p></div>
         </div>
         <div class="adm-card admin-support-settings">
           <label><input id="adminNotifySupportRequests" type="checkbox"><span><b>New support requests</b><br><small class="muted">Email staff who enable this setting when a buyer starts or reopens a support thread.</small></span></label>
@@ -952,10 +1012,9 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="quotes">
-        <div class="adm-card adm-overview-head adm-workspace-head">
-          <div><p class="adm-eyebrow">Lead generation</p><h2>Quotes &amp; follow-up</h2><p class="muted">Prioritize inbound opportunities, assign ownership, and keep the next action visible.</p></div>
-          <div class="adm-overview-marker"><span>Workflow</span><b>Follow-up pipeline</b></div>
-        </div>
+        <div class="adm-panel-title">
+          <div><h2>Quotes &amp; follow-up</h2><p class="muted">Prioritize inbound opportunities, assign ownership, and keep the next action visible.</p></div>
+          </div>
         <div class="adm-card adm-workspace-card">
           <div class="adm-panel-header"><div><h3>Quote queue</h3><p class="muted">Combine filters, then save the view for repeat workflows.</p></div></div>
           <div class="adm-tools">
@@ -971,8 +1030,8 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="reviews">
-        <div class="adm-card adm-overview-head adm-workspace-head">
-          <div><p class="adm-eyebrow">Trust &amp; moderation</p><h2>Customer reviews</h2><p class="muted">Moderate submitted reviews and add documented feedback without obscuring verification status.</p></div>
+        <div class="adm-panel-title">
+          <div><h2>Customer reviews</h2><p class="muted">Moderate submitted reviews and add documented feedback without obscuring verification status.</p></div>
         </div>
         <div class="adm-card adm-workspace-card">
           <div class="adm-tools"><select id="rvFilter" name="review_status" class="adm-select adm-select-sm" aria-label="Filter reviews by moderation status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></div>
@@ -996,10 +1055,22 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="newsletter">
-        <div id="admNewsletter"></div>
+        <div class="adm-panel-title">
+          <h2>Newsletter &amp; announcements</h2>
+          <p class="muted">Two separate outbound paths with different audiences. Pick the one you mean before composing.</p>
+        </div>
+        <!-- Both paths send irreversibly to different lists. Stacking them on one
+             screen made it easy to compose for subscribers and send to accounts,
+             so only one is visible at a time. -->
+        <div class="crm-tabs" id="nlToggle" role="group" aria-label="Newsletter sections">
+          <button class="btn btn-ghost btn-sm is-active" type="button" data-nl-view="campaigns" aria-pressed="true">Subscriber campaigns</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-nl-view="announcements" aria-pressed="false">Account announcements</button>
+        </div>
+        <div id="admNewsletter" data-nl-panel="campaigns"></div>
+        <div data-nl-panel="announcements" hidden>
         <div class="adm-card adm-newsletter-offer">
-          <h2>Send an offer / announcement</h2>
-          <p class="muted admin-inline-note">Send a dashboard notification to matching <b>customer accounts</b>, with optional email delivery. Use the campaign editor above for scheduled subscriber and lead campaigns.</p>
+          <h2>Send an account announcement</h2>
+          <p class="muted admin-inline-note">Goes to <b>customer accounts</b> as a dashboard notification, optionally by email — <b>not</b> to newsletter subscribers or leads. For scheduled subscriber and lead campaigns use <b>Subscriber campaigns</b>.</p>
           <form onsubmit="return false" id="offerForm" class="adm-form-grid" data-capability-scope="admin.write">
             <label class="wide">Title <input id="ofTitle" name="title" class="adm-input" autocomplete="off" required></label>
             <label class="wide">CTA URL <input id="ofCta" name="cta_url" class="adm-input" autocomplete="off" spellcheck="false" value="/products.html"></label>
@@ -1010,7 +1081,8 @@
           </form>
           <p id="offerStatus" class="adm-status" role="status" aria-live="polite"></p>
         </div>
-        <div class="adm-card"><h2>Recent sends</h2><div id="admOffers">Loading…</div></div>
+        <div class="adm-card"><h2>Recent announcement sends</h2><div id="admOffers">Loading…</div></div>
+        </div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="crm">
@@ -1020,7 +1092,7 @@
         <button id="adminSupportLauncher" class="admin-support-launcher" type="button" aria-label="Open customer support" aria-controls="adminSupportDrawer" aria-expanded="false"><i class="ph ph-lifebuoy" aria-hidden="true"></i><span class="admin-support-launcher__label">Customer support</span><span id="adminSupportUnread" class="admin-support-unread" hidden>0</span></button>
         <aside id="adminSupportDrawer" class="admin-support-drawer" role="dialog" aria-modal="false" aria-labelledby="adminSupportTitle" hidden>
           <div class="admin-support-drawer__list">
-            <header class="admin-support-drawer__head"><div><p class="adm-eyebrow">Customer support</p><h2 id="adminSupportTitle">Open chats</h2><p id="adminSupportSummary" class="muted">Loading…</p></div><div class="adm-inline-actions"><button id="adminSupportSettings" class="gbtn" type="button" aria-label="Customer support settings"><i class="ph ph-gear-six" aria-hidden="true"></i></button><button id="adminSupportClose" class="gbtn" type="button" aria-label="Close support menu"><i class="ph ph-x" aria-hidden="true"></i></button></div></header>
+            <header class="admin-support-drawer__head"><div><h2 id="adminSupportTitle">Open chats</h2><p id="adminSupportSummary" class="muted">Loading…</p></div><div class="adm-inline-actions"><button id="adminSupportSettings" class="gbtn" type="button" aria-label="Customer support settings"><i class="ph ph-gear-six" aria-hidden="true"></i></button><button id="adminSupportClose" class="gbtn" type="button" aria-label="Close support menu"><i class="ph ph-x" aria-hidden="true"></i></button></div></header>
             <div id="admThreads" class="thread-list">Loading…</div>
           </div>
           <div id="admThreadView" class="admin-support-drawer__view">Select a customer conversation.</div>
@@ -1033,6 +1105,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260806a"></script>
+<script type="module" src="js/admin.js?v=20260806b"></script>
 </body>
 </html>

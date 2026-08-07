@@ -73,12 +73,18 @@ test("admin top navigation owns the signed-in identity and sign-out action", asy
     try {
       await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector('.adm-panel[data-panel="overview"][data-active="true"]', { timeout: 10000 });
-      await page.locator(".acct-name").waitFor();
+      // Staff identity + sign out are rendered natively by the staff chrome. The
+      // buyer account dropdown (.acct-name) is deliberately not mounted here — it
+      // links Orders / Addresses / Payment / Notifications off the buyer account
+      // API, which admin modules must not carry (see admin-message-center).
+      await page.locator("#admChromeUser:not([hidden])").waitFor();
 
-      assert.equal(await page.locator(".acct-name").textContent(), "Avery");
+      assert.equal(await page.locator("#admChromeUser").textContent(), "staff@example.test");
+      assert.equal(await page.locator("#admSignOut").count(), 1, "sign out belongs in the top staff bar");
       assert.equal(await page.locator(".nav-signin").count(), 0, "signed-in admin must not retain a Sign in link");
+      assert.equal(await page.locator(".nav-cart").count(), 0, "staff console must not carry the storefront cart");
       assert.equal(await page.locator("#admGreeting").count(), 0, "admin body must not duplicate signed-in identity");
-      assert.equal(await page.locator("#admLogout").count(), 0, "sign out belongs in the top account menu");
+      assert.equal(await page.locator("#admLogout").count(), 0, "sign out belongs in the top staff bar");
       assert.equal(await page.locator("#admRoleBadge").textContent(), "Owner access");
     } finally {
       await context.close();
@@ -111,7 +117,7 @@ test("admin panel content starts at the sidebar top without inherited section pa
           };
           const panel = document.querySelector(`.adm-panel[data-panel="${panelName}"]`);
           const sidebar = document.querySelector(".adm-sidebar");
-          const candidates = [...panel.querySelectorAll(".adm-tools > *, .crm-tabs > *, .adm-card, .adm-table-wrap, .thread-layout, .adm-panel-list, .adm-grid")]
+          const candidates = [...panel.querySelectorAll(".adm-panel-title, .adm-tools > *, .crm-tabs > *, .adm-card, .adm-table-wrap, .thread-layout, .adm-panel-list, .adm-grid")]
             .filter(visible);
           const first = candidates.reduce((best, element) => (
             !best || element.getBoundingClientRect().top < best.getBoundingClientRect().top ? element : best

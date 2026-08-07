@@ -3,9 +3,9 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260806a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260806a';
-import { ORDER_STATUSES } from './orders.js?v=20260806a';
+import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260806b';
+import { captureDirty, restoreDirty } from './edits.js?v=20260806b';
+import { ORDER_STATUSES } from './orders.js?v=20260806b';
 
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
@@ -1241,5 +1241,5 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     else await renderAllUsers({ refetch });
   }
 
-  return { renderCompanies, wireCompanies, openCompanyDetail };
+  return { renderCompanies, wireCompanies, openCompanyDetail, showAcctView };
 }

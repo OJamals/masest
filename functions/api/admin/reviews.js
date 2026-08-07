@@ -35,12 +35,18 @@ export async function onRequestPost({ request, env }) {
   const sb = adminClient(env);
   const now = new Date().toISOString();
 
+  // Moderation is inherently a batch job ("approve these eight"), so one code
+  // path serves a single id and a selection: `ids` wins when present, `id` is
+  // the single-row form.
   if (body.action === 'approve' || body.action === 'reject') {
-    if (!body.id) return json(400, { error: 'missing_id' });
+    const ids = [...new Set((Array.isArray(body.ids) ? body.ids : [body.id]).filter(Boolean))].slice(0, 200);
+    if (!ids.length) return json(400, { error: 'missing_id' });
     const status = body.action === 'approve' ? 'approved' : 'rejected';
-    const { error } = await sb.from('product_reviews')
-      .update({ status, staff_note: body.staff_note || null, updated_at: now }).eq('id', body.id);
-    return error ? json(500, { error: 'update_failed' }) : json(200, { ok: true });
+    const { data, error } = await sb.from('product_reviews')
+      .update({ status, staff_note: body.staff_note || null, updated_at: now })
+      .in('id', ids)
+      .select('id');
+    return error ? json(500, { error: 'update_failed' }) : json(200, { ok: true, updated: (data || []).length });
   }
 
   if (body.action === 'edit') {

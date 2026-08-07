@@ -34,7 +34,13 @@ test('admin orders API can remove orders behind an owner-only capability', () =>
 
 test('admin orders tab exposes create, edit, fulfillment, and remove controls', () => {
   assert.match(ADMIN_HTML, /id="ordCreateForm"/);
-  assert.match(ADMIN_HTML, /id="ordCreateItems"/);
+  // Structured line-item rows replaced the pipe-delimited textarea, and the
+  // business is picked by name rather than pasted as a raw id.
+  assert.match(ADMIN_HTML, /id="ordCreateLines"/);
+  assert.match(ADMIN_HTML, /id="ordCreateAddLine"/);
+  assert.match(ADMIN_HTML, /id="ordCreateCompanySearch"/);
+  assert.doesNotMatch(ADMIN_HTML, /id="ordCreateItems"/, 'the pipe-delimited line-item blob should be gone');
+  assert.doesNotMatch(ADMIN_HTML, /Company ID/, 'staff should not be asked to paste a company id');
   assert.match(ADMIN_ORDERS_UI, /data-save-order-edit=/);
   assert.match(ADMIN_ORDERS_UI, /data-delete-order=/);
   assert.match(ADMIN_ORDERS_UI, /data-track-status/);

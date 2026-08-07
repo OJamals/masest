@@ -1,15 +1,83 @@
 /* MASEST staff admin console. */
-import { login, api, apiBlob, getToken } from './auth.js?v=20260806a';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260806a';
-import { editKey } from './admin/edits.js?v=20260806a';
-import { createFeatureLoader } from './admin/feature-loader.js?v=20260806a';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260806a';
-import { renderChrome } from './main/chrome.js?v=20260806a';
+import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260806b';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260806b';
+import { editKey } from './admin/edits.js?v=20260806b';
+import { createFeatureLoader } from './admin/feature-loader.js?v=20260806b';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260806b';
+import { renderAdminChrome, setAdminChromeUser } from './admin/chrome.js?v=20260806b';
+import { createAdminSearch } from './admin/search.js?v=20260806b';
 
 const $ = (id) => document.getElementById(id);
 
-// Admin owns its staff-only runtime, but still needs shared site navigation.
-renderChrome({ authModule: "/js/auth.js?v=20260806a", resolveSession: true });
+// Staff console chrome: one compact bar with staff identity + sign out. No
+// storefront nav, cart, or marketing footer (see js/admin/chrome.js for why).
+const adminChrome = renderAdminChrome({ onSignOut: () => { void logout(); } });
+
+// Cross-entity search lives in the chrome but only after the staff gate clears.
+let searchMounted = false;
+function mountGlobalSearch() {
+  const slot = adminChrome?.querySelector('.adm-chrome-search');
+  if (searchMounted || !slot) return;
+  searchMounted = true;
+  createAdminSearch({ api, esc, debounce, onSelect: routeSearchResult }).mount(slot);
+}
+
+// Show-one-of-N sub-views inside a panel (Newsletter send paths, Products
+// workspaces). Generic because three panels now need the same behaviour, and a
+// panel that stacks unrelated jobs is harder to read than one that names them.
+function wireSubViews(toggleId, key) {
+  const toggle = $(toggleId);
+  if (!toggle || toggle.dataset.wired) return;
+  toggle.dataset.wired = '1';
+  const viewAttr = `data-${key}-view`;
+  const panelAttr = `data-${key}-panel`;
+  toggle.addEventListener('click', (event) => {
+    const button = event.target.closest(`[${viewAttr}]`);
+    if (!button) return;
+    const view = button.getAttribute(viewAttr);
+    toggle.querySelectorAll(`[${viewAttr}]`).forEach((tab) => {
+      const active = tab.getAttribute(viewAttr) === view;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-pressed', String(active));
+    });
+    document.querySelectorAll(`[${panelAttr}]`).forEach((panel) => {
+      panel.hidden = panel.getAttribute(panelAttr) !== view;
+    });
+  });
+}
+
+// Overview numbers are entry points, not readouts: clicking one lands on the
+// workspace that owns that work with the matching filter already applied.
+function routeOpsMetric(route) {
+  const task = setTab(route.tab, route.acctView ? { acctView: route.acctView } : {});
+  if (!route.control) return task;
+  return Promise.resolve(task).then(() => {
+    const control = $(route.control);
+    if (!control) return;
+    control.value = route.value;
+    control.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
+// Land on the workspace that owns the record: a drawer where the tab has one,
+// otherwise the queue's own search box so the row is on screen upon arrival.
+function routeSearchResult(item) {
+  const context = {};
+  if (item.tab === 'quotes' && item.open) context.openQuoteId = item.open;
+  if (item.tab === 'companies' && item.open) context.openCompanyId = item.open;
+  if (item.tab === 'crm' && item.open) {
+    context.openContactId = item.open;
+    context.openContactName = item.title;
+  }
+  const task = setTab(item.tab, context);
+  if (!item.search) return task;
+  const box = { orders: 'ordSearch', products: 'prodSearch' }[item.tab];
+  return Promise.resolve(task).then(() => {
+    if (!box || !$(box)) return;
+    $(box).value = item.search;
+    $(box).dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
 
 // #28 dirty-edit guard: flag an inline control the moment the user edits it, so a
 // later sibling save / cache re-render can snapshot and restore it (see admin/edits.js).
@@ -47,6 +115,7 @@ const state = {
 
 function applyStaffContext(value) {
   state.staff = normalizeStaffContext(value);
+  setAdminChromeUser(state.staff.email);
   if ($('admRoleBadge')) {
     $('admRoleBadge').textContent = `${staffRoleLabel(state.staff.role)} access`;
     $('admRoleBadge').dataset.s = state.staff.role === 'read_only' ? 'changes_requested' : 'published';
@@ -100,6 +169,7 @@ async function boot() {
     applyStaffContext(stats.staff_context);
     $('admGate').hidden = true;
     $('admApp').hidden = false;
+    mountGlobalSearch();
     renderStats(stats);
     setTab(location.hash.slice(1) || 'overview');
   } catch (err) {
@@ -115,12 +185,25 @@ async function boot() {
  }
 }
 
+// Hold the OUTGOING panel's height across a tab swap so the viewport doesn't
+// lurch (and the scroll position doesn't collapse) while the incoming panel's
+// feature module loads. Released as soon as that render settles.
+//
+// This used to only ever GROW min-height and never reset it, which meant every
+// short tab inherited the tallest tab's scroll height for the rest of the
+// session — after visiting Orders, Overview (2.5k px of content) carried a
+// ~13k px min-height and ~10k px of dead scroll below it.
 function reserveAdminHeight() {
   const main = document.querySelector('.adm-main');
   if (!main) return;
-  const current = Number.parseFloat(main.style.minHeight) || 0;
-  const visibleHeight = Math.ceil(main.getBoundingClientRect().height);
-  if (visibleHeight > current) main.style.minHeight = `${visibleHeight}px`;
+  main.style.minHeight = `${Math.ceil(main.getBoundingClientRect().height)}px`;
+}
+
+function releaseAdminHeight(tab, token) {
+  // A newer navigation already reserved its own height; leave it alone.
+  if (!isCurrentRender(tab, token)) return;
+  const main = document.querySelector('.adm-main');
+  if (main) main.style.minHeight = '';
 }
 
 const FEATURE_GROUP_BY_TAB = {
@@ -280,6 +363,12 @@ function setTab(tab, context = {}) {
   else if (FEATURE_GROUP_BY_TAB[state.tab]) {
     task = renderFeatureTab(state.tab, token, { ...context, tab: state.tab, refetch: !cached }, invalidated);
   }
+  // Drop the swap reservation once this panel's render has settled, so a short
+  // tab never keeps a tall tab's scroll height.
+  const settledTab = state.tab;
+  void Promise.resolve(task)
+    .catch(() => {})
+    .then(() => requestAnimationFrame(() => releaseAdminHeight(settledTab, token)));
   if (focusQuickBooks) {
     void task.then(() => {
       if (!isCurrentRender('integrations', token)) return;
@@ -339,38 +428,47 @@ function renderOpsSummary(stats = {}) {
  const accounts = stats.accounts || {};
  const catalog = stats.catalog_health || {};
  const analytics = stats.analytics || {};
+ // Third element routes the number into the workspace that owns the work:
+ // { tab, control?, value? } sets that queue's own filter on arrival. A number
+ // with no honest filter still routes to its workspace rather than dead-ending.
  const groups = [
  ['Commerce', [
- ['30d revenue', money(commerce.revenue_30d || 0, 'usd')],
- ['Orders (7d)', fmtInt(stats.commerce?.orders_7d ?? stats.orders?.total)],
- ['AOV', money(commerce.average_order_value || 0, 'usd')],
- ['Fulfillment queue', fmtInt(commerce.fulfillment_queue)],
- ['NET exposure', money(commerce.net_exposure || 0, 'usd')],
+ ['30d revenue', money(commerce.revenue_30d || 0, 'usd'), { tab: 'finance' }],
+ ['Orders (7d)', fmtInt(stats.commerce?.orders_7d ?? stats.orders?.total), { tab: 'orders' }],
+ ['AOV', money(commerce.average_order_value || 0, 'usd'), { tab: 'finance' }],
+ ['Fulfillment queue', fmtInt(commerce.fulfillment_queue), { tab: 'orders', control: 'ordFilter', value: 'needs_fulfillment' }],
+ ['NET exposure', money(commerce.net_exposure || 0, 'usd'), { tab: 'orders', control: 'ordFilter', value: 'net_open' }],
  ]],
  ['CRM', [
- ['Unread messages', fmtInt(crm.unread_messages)],
- ['New quotes', fmtInt(crm.quotes_new)],
- ['Urgent quotes', fmtInt(crm.quotes_urgent)],
- ['Quote follow-ups due', fmtInt(stats.quotes_due?.overdue ?? crm.quotes_overdue)],
+ ['Unread messages', fmtInt(crm.unread_messages), { tab: 'support-settings' }],
+ ['New quotes', fmtInt(crm.quotes_new), { tab: 'quotes', control: 'qFilter', value: 'new' }],
+ ['Urgent quotes', fmtInt(crm.quotes_urgent), { tab: 'quotes', control: 'qPriority', value: 'urgent' }],
+ ['Quote follow-ups due', fmtInt(stats.quotes_due?.overdue ?? crm.quotes_overdue), { tab: 'quotes', control: 'qDue', value: 'overdue' }],
+ // Drove the sidebar badge but was missing from "work that needs attention",
+ // which is the one place staff start their day.
+ ['Overdue follow-ups', fmtInt(stats.crm_tasks?.overdue ?? crm.tasks_overdue), { tab: 'crm' }],
  ]],
  ['Accounts', [
- ['Pending', fmtInt(accounts.pending)],
- ['Approved', fmtInt(accounts.approved)],
- ['Suspended', fmtInt(accounts.suspended)],
- ['Setup follow-ups', fmtInt(stats.setup_followups?.companies ?? crm.setup_followups)],
+ ['Pending', fmtInt(accounts.pending), { tab: 'companies', acctView: 'companies' }],
+ ['Approved', fmtInt(accounts.approved), { tab: 'companies', acctView: 'companies' }],
+ ['Suspended', fmtInt(accounts.suspended), { tab: 'companies', acctView: 'companies' }],
+ ['Setup follow-ups', fmtInt(stats.setup_followups?.companies ?? crm.setup_followups), { tab: 'companies', acctView: 'companies' }],
  ]],
  ['Catalog + analytics', [
- ['Buy SKUs', fmtInt(catalog.buy)],
- ['Low stock', fmtInt(catalog.low_stock)],
- ['Views (7d)', fmtInt(stats.traffic?.views_7d)],
- ['7d quote submits', fmtInt(analytics.quote_submits_7d)],
- ['Quote rate', pct(analytics.quote_conversion_rate)],
+ ['Buy SKUs', fmtInt(catalog.buy), { tab: 'products' }],
+ ['Low stock', fmtInt(catalog.low_stock), { tab: 'products' }],
+ ['Views (7d)', fmtInt(stats.traffic?.views_7d), { tab: 'analytics' }],
+ ['7d quote submits', fmtInt(analytics.quote_submits_7d), { tab: 'analytics' }],
+ ['Quote rate', pct(analytics.quote_conversion_rate), { tab: 'analytics' }],
  ]],
  ];
+ const row = ([label, value, route]) => {
+   const body = `<span>${esc(label)}</span><b data-numeric>${esc(value)}</b>`;
+   if (!route) return `<div class="dash-row">${body}</div>`;
+   return `<a class="dash-row dash-row-route" href="#${esc(route.tab)}" data-ops-route="${esc(JSON.stringify(route))}">${body}<i class="ph ph-arrow-right" aria-hidden="true"></i></a>`;
+ };
  return `<div class="adm-report-grid">${groups.map(([title, rows]) => `
- <div class="adm-card adm-report-card"><h2><i class="ph ${opsGroupIcons[title] || 'ph-chart-bar'}" aria-hidden="true"></i>${esc(title)}</h2>${rows.map(([label, value]) => `
- <div class="dash-row"><span>${esc(label)}</span><b data-numeric>${esc(value)}</b></div>
- `).join('')}</div>`).join('')}${renderSetupFollowups(stats)}</div>`;
+ <div class="adm-card adm-report-card"><h2><i class="ph ${opsGroupIcons[title] || 'ph-chart-bar'}" aria-hidden="true"></i>${esc(title)}</h2>${rows.map(row).join('')}</div>`).join('')}${renderSetupFollowups(stats)}</div>`;
 }
 
 function renderRequestQueue(requests = []) {
@@ -400,7 +498,7 @@ async function downloadCsv(url, filename, statusId) {
 // Reports & exports card (#96). Bound once — the overview tab re-renders on each visit.
 let reportsWired = false;
 function wireReports() {
-  void import('./admin/stripe.js?v=20260806a').then(({ wireStripePayouts, renderStripePayouts }) => {
+  void import('./admin/stripe.js?v=20260806b').then(({ wireStripePayouts, renderStripePayouts }) => {
     wireStripePayouts();
     return renderStripePayouts();
   }).catch(() => {
@@ -478,8 +576,8 @@ let supportReady = false;
 const featureLoader = createFeatureLoader({
   analytics: async () => {
     const [{ createTrafficRenderer }, { createSeoAudit }] = await Promise.all([
-      import('./admin/traffic.js?v=20260806a'),
-      import('./admin/seo.js?v=20260806a'),
+      import('./admin/traffic.js?v=20260806b'),
+      import('./admin/seo.js?v=20260806b'),
     ]);
     const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
     const runSeoAudit = createSeoAudit({ $, state });
@@ -489,10 +587,10 @@ const featureLoader = createFeatureLoader({
     };
   },
   integrations: async () => {
-    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260806a');
-    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260806a');
-    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260806a');
-    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260806a');
+    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260806b');
+    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260806b');
+    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260806b');
+    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260806b');
     return {
       wire() {
         $('qboConnect')?.addEventListener('click', connectQbo);
@@ -511,12 +609,15 @@ const featureLoader = createFeatureLoader({
     };
   },
   orders: async () => {
-    const { ORDER_STATUSES, createOrdersTab } = await import('./admin/orders.js?v=20260806a');
+    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260806b');
     const { renderOrders, wireOrders } = createOrdersTab({
       $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
     });
     return {
       wire() {
+        // The lifecycle view leads: "what still needs shipping" is the queue staff
+        // work from, and it is the one view no single status value could express.
+        $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${NEEDS_FULFILLMENT}">Needs fulfillment</option>`);
         ORDER_STATUSES.forEach((status) => {
           $('ordFilter').insertAdjacentHTML('beforeend', `<option value="${status}">${status.replaceAll('_', ' ')}</option>`);
         });
@@ -535,11 +636,11 @@ const featureLoader = createFeatureLoader({
   },
   companies: async () => {
     const [{ createCompaniesTab }, { createCrmPanel }] = await Promise.all([
-      import('./admin/companies.js?v=20260806a'),
-      import('./admin/crm.js?v=20260806a'),
+      import('./admin/companies.js?v=20260806b'),
+      import('./admin/crm.js?v=20260806b'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
-    const { renderCompanies, wireCompanies, openCompanyDetail } = createCompaniesTab({
+    const { renderCompanies, wireCompanies, openCompanyDetail, showAcctView } = createCompaniesTab({
       $,
       api,
       state,
@@ -560,6 +661,9 @@ const featureLoader = createFeatureLoader({
       },
       async render(options) {
         await renderCompanies(options);
+        // Overview account numbers land on the businesses list, not the Users
+        // sub-view they would otherwise default to.
+        if (options.acctView) showAcctView(options.acctView);
         if (options.openCompanyId) await openCompanyDetail(options.openCompanyId);
       },
     };
@@ -571,10 +675,10 @@ const featureLoader = createFeatureLoader({
       { createInventoryCard },
       { createCouponsCard },
     ] = await Promise.all([
-      import('./admin/products.js?v=20260806a'),
-      import('./admin/pricing.js?v=20260806a'),
-      import('./admin/inventory.js?v=20260806a'),
-      import('./admin/coupons.js?v=20260806a'),
+      import('./admin/products.js?v=20260806b'),
+      import('./admin/pricing.js?v=20260806b'),
+      import('./admin/inventory.js?v=20260806b'),
+      import('./admin/coupons.js?v=20260806b'),
     ]);
     const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({
       $, api, state, message, admSkeleton, admEmpty,
@@ -596,6 +700,9 @@ const featureLoader = createFeatureLoader({
         wirePricing();
         wireInventory();
         wireCoupons();
+        // Catalog browsing, stock, and price administration are separate jobs;
+        // stacking all six on one screen made none of them findable.
+        wireSubViews('prodToggle', 'prod');
       },
       async render(options) {
         const renders = [
@@ -609,7 +716,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260806a');
+    const { createContentTab } = await import('./admin/content.js?v=20260806b');
     const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -622,7 +729,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   support: async () => {
-    const { createThreadsTab } = await import('./admin/threads.js?v=20260806a');
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260806b');
     const { renderThreads, wireThreads, openThread } = createThreadsTab({
       $, api, state, message, admSkeleton, admEmpty, sourceLabel, refreshStats,
     });
@@ -638,7 +745,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   quotes: async () => {
-    const { createQuotesTab } = await import('./admin/quotes.js?v=20260806a');
+    const { createQuotesTab } = await import('./admin/quotes.js?v=20260806b');
     const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager,
     });
@@ -659,7 +766,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   reviews: async () => {
-    const { createReviewsTab } = await import('./admin/reviews.js?v=20260806a');
+    const { createReviewsTab } = await import('./admin/reviews.js?v=20260806b');
     const {
       renderReviews,
       wireReviews,
@@ -679,8 +786,8 @@ const featureLoader = createFeatureLoader({
   },
   newsletter: async () => {
     const [{ createNewsletterTab }, { createOffersTab }] = await Promise.all([
-      import('./admin/newsletter.js?v=20260806a'),
-      import('./admin/offers.js?v=20260806a'),
+      import('./admin/newsletter.js?v=20260806b'),
+      import('./admin/offers.js?v=20260806b'),
     ]);
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
@@ -692,14 +799,18 @@ const featureLoader = createFeatureLoader({
       wire() {
         wireNewsletter();
         wireOfferForm();
+        // Only one send surface visible at a time: the campaign editor reaches
+        // subscribers and leads, the announcement form reaches customer accounts,
+        // and both send irreversibly.
+        wireSubViews('nlToggle', 'nl');
       },
       render: (options) => Promise.all([renderNewsletter(options), renderOffers(options)]),
     };
   },
   crm: async () => {
     const [{ createCrmWorkspace }, { createCrmPanel }] = await Promise.all([
-      import('./admin/crm-workspace.js?v=20260806a'),
-      import('./admin/crm.js?v=20260806a'),
+      import('./admin/crm-workspace.js?v=20260806b'),
+      import('./admin/crm.js?v=20260806b'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const openSubject = (type, id, label) => {
@@ -713,7 +824,14 @@ const featureLoader = createFeatureLoader({
     });
     return {
       wire: wireCrm,
-      render: (options) => renderCrm(options),
+      render: async (options) => {
+        const rendered = await renderCrm(options);
+        // Global-search deep link into a person's drawer.
+        if (options?.openContactId) {
+          openSubject('contact', options.openContactId, options.openContactName);
+        }
+        return rendered;
+      },
     };
   },
 });
@@ -784,6 +902,14 @@ function wireAdminSidebarScrollRelease() {
 function wire() {
   wireAdminSidebarScrollRelease();
   linkTabsToPanels(document, 'adm');
+  // Delegated: the Overview repaints its rows on every visit and after each
+  // refreshStats(), so per-element listeners would be rebound or lost.
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest?.('[data-ops-route]');
+    if (!link) return;
+    event.preventDefault();
+    try { void routeOpsMetric(JSON.parse(link.dataset.opsRoute)); } catch { /* keep the href fallback */ }
+  });
   document.querySelectorAll('[data-tab]').forEach((button) => {
     button.addEventListener('click', () => setTab(button.dataset.tab));
   });

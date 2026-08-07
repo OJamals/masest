@@ -28,6 +28,8 @@ const ACCEPTABLE_STATUSES = new Set(['paid', 'net_open', 'pending_payment']);
 
 const ORDER_STATUSES = ['cart', 'pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 const WRITABLE_ORDER_STATUSES = ORDER_STATUSES.filter((status) => status !== 'cart');
+/* Pseudo-status for the fulfillment queue: a lifecycle view, not a column value. */
+const NEEDS_FULFILLMENT = 'needs_fulfillment';
 const PAYMENT_METHODS = ['stripe', 'net'];
 const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
 const TRACKING_STATUSES = ['processing', 'packing', 'shipped', 'delivered', 'blocked'];
@@ -312,7 +314,16 @@ export async function onRequest({ request, env }) {
       .select('id,order_number,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,ship_address,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,shipstation_shipment_id,shipstation_order_shipment_id,shipstation_shipment_revision,shipstation_package_hash,shipstation_shipment_state,shipstation_label_id,shipstation_rate_id,shipstation_carrier_id,shipstation_service_code,shipstation_cost,shipstation_label_status,shipstation_error,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),order_provider_links(provider,object_type,provider_object_id,metadata),order_financial_entries(source,entry_type,provider_object_id,recognition_state),order_shipments(id,split_key,generation,revision,status,operation_state,provider_shipment_id,external_shipment_id,package_hash,item_allocations,order_shipment_packages(sequence,package_code,weight_value,weight_unit,length_in,width_in,height_in,package_hash),order_shipment_rates(provider_rate_id,provider_shipment_id,shipment_revision,carrier_id,carrier_code,carrier_name,service_code,service_type,amount_minor,currency,currency_exponent,delivery_days,estimated_delivery_at,selected,invalidated_at))', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
-    if (status && ORDER_STATUSES.includes(status)) q = q.eq('status', status);
+    // "Needs fulfillment" is the queue the Overview counts, so the deep link from
+    // that number has to select exactly the same rows: everything still owed a
+    // shipment. Mirrors orderLifecycle().requires_fulfillment — open status, not
+    // yet delivered — rather than any single status value.
+    if (status === NEEDS_FULFILLMENT) {
+      q = q.not('status', 'in', '(cart,cancelled,refunded,pending_payment)')
+        .or('tracking_status.is.null,tracking_status.neq.delivered');
+    } else if (status && ORDER_STATUSES.includes(status)) {
+      q = q.eq('status', status);
+    }
     // Server-side search so results aren't limited to the loaded page. Commas and
     // parens are stripped — they would break the PostgREST or= filter syntax.
     const search = String(params.get('search') || '').trim().replace(/[,()]/g, ' ').trim();
@@ -378,6 +389,37 @@ export async function onRequest({ request, env }) {
         detail: { company_id: order.company_id },
       });
       return json(200, { ok: true, order: accepted });
+    }
+
+    // Batch form of accept_order for the queue's select-all. Accept is the one
+    // order action that is safe to apply in bulk: it stamps ownership, is
+    // idempotent, and changes no money, stock, or fulfillment state. Status moves
+    // stay one-at-a-time because each is guarded by its own transition plan.
+    if (body.action === 'accept_orders') {
+      if (!staffCan(role, 'order.write')) return json(403, { error: 'forbidden' });
+      const ids = [...new Set((Array.isArray(body.ids) ? body.ids : []).filter(Boolean))].slice(0, 200);
+      if (!ids.length) return json(400, { error: 'ids_required' });
+      const { data: rows, error: readErr } = await sb.from('orders')
+        .select('id,status,accepted_at').in('id', ids);
+      if (readErr) return json(500, { error: readErr.message });
+      const eligible = (rows || []).filter((order) => ACCEPTABLE_STATUSES.has(order.status) && !order.accepted_at);
+      if (!eligible.length) {
+        return json(200, { ok: true, accepted: 0, skipped: ids.length });
+      }
+      const { data: accepted, error } = await sb.from('orders')
+        .update({ accepted_at: new Date().toISOString(), accepted_by: user?.id || null })
+        .in('id', eligible.map((order) => order.id))
+        .is('accepted_at', null)
+        .select('id');
+      if (error) return json(500, { error: error.message });
+      const acceptedIds = (accepted || []).map((order) => order.id);
+      if (acceptedIds.length) {
+        await recordAudit(sb, {
+          user, action: 'order.accept_bulk', targetType: 'order', targetId: acceptedIds[0],
+          detail: { order_ids: acceptedIds, count: acceptedIds.length },
+        });
+      }
+      return json(200, { ok: true, accepted: acceptedIds.length, skipped: ids.length - acceptedIds.length });
     }
 
     // Cancellation is a plan first, an action second. Without `confirm` this returns the

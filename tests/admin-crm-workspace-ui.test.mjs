@@ -32,8 +32,10 @@ test('admin.html declares the CRM tab + panel', () => {
 
 test('admin.js wires the workspace tab', () => {
   assert.match(ADMIN, /import\(\s*'\.\/admin\/crm-workspace\.js\?v=\d{8}[a-z]'\s*\)/);
-  assert.match(ADMIN, /render:\s*\(options\)\s*=>\s*renderCrm\(options\)/);
+  assert.match(ADMIN, /const rendered = await renderCrm\(options\);/);
   assert.match(ADMIN, /wire:\s*wireCrm/);
+  // Global search routes into a person's drawer via the same openSubject path.
+  assert.match(ADMIN, /options\?\.openContactId[\s\S]{0,120}openSubject\('contact', options\.openContactId/);
 });
 
 test('account announcements live with newsletter publishing, not CRM follow-ups', () => {

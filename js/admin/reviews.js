@@ -4,7 +4,7 @@
 // Shared primitives ($, api, state, message, admSkeleton, admEmpty) and the
 // admin-local statusBadge / badge helpers are injected; esc/confirmDialog/delegate/
 // dateTime come from util.js — mirrors js/admin/threads.js + js/admin/orders.js.
-import { esc, confirmDialog, delegate, dateTime as date } from '../util.js?v=20260806a';
+import { esc, confirmDialog, delegate, dateTime as date } from '../util.js?v=20260806b';
 
 export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge }) {
   // Filled stars in accent ink, unfilled dimmed via opacity — avoids relying on the
@@ -49,11 +49,18 @@ export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty
       box.innerHTML = admEmpty('ph-star', 'No reviews', status === 'pending' ? 'New reviews awaiting moderation appear here.' : 'No reviews match this filter.');
       return;
     }
-    box.innerHTML = reviews.map((r) => {
+    // Moderation is a batch job: a queue of pending reviews is read once and
+    // dispositioned together, so selection + one apply beats two clicks per row.
+    const bulkBar = `<div class="adm-tools adm-tools-flush" data-capability-scope="admin.write">
+      <label class="admin-select-all"><input type="checkbox" id="rvAll" aria-label="Select all reviews"> Select all</label>
+      <button class="btn btn-ghost btn-sm" data-review-bulk="approve" type="button">Approve selected</button>
+      <button class="btn btn-ghost btn-sm" data-review-bulk="reject" type="button">Reject selected</button>
+    </div>`;
+    box.innerHTML = bulkBar + reviews.map((r) => {
       const id = esc(r.id);
       return `<article class="quote-item" data-review-id="${id}" data-capability-scope="admin.write">
         <div class="dash-row">
-          <span><b>${esc(r.kind)}:${esc(r.sku)}</b> ${stars(r.rating)} ${statusBadge(r.status)}</span>
+          <span><label class="admin-select-all"><input type="checkbox" class="rv-check" value="${id}" aria-label="Select review by ${esc(r.author_name || 'anonymous')}"></label> <b>${esc(r.kind)}:${esc(r.sku)}</b> ${stars(r.rating)} ${statusBadge(r.status)}</span>
           <span class="muted">${esc(date(r.created_at))}</span>
         </div>
         <p class="muted" style="margin:4px 0">
@@ -87,6 +94,23 @@ export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty
   function wireReviews() {
     const box = $('admReviews');
     if (!box) return;
+    delegate(box, 'change', '#rvAll', (event, all) => {
+      box.querySelectorAll('.rv-check').forEach((check) => { check.checked = all.checked; });
+    });
+    delegate(box, 'click', '[data-review-bulk]', async (event, button) => {
+      const action = button.dataset.reviewBulk;
+      const ids = [...box.querySelectorAll('.rv-check:checked')].map((check) => check.value);
+      if (!ids.length) { message('rvStatus', 'Select at least one review.', 'err'); return; }
+      button.disabled = true;
+      try {
+        const res = await api('/api/admin/reviews', { method: 'POST', body: { action, ids } });
+        message('rvStatus', `${action === 'approve' ? 'Approved' : 'Rejected'} ${res.updated ?? ids.length} review(s).`, 'ok');
+        await renderReviews({ refetch: true });
+      } catch (err) {
+        message('rvStatus', err.data?.error || `Could not ${action} the selected reviews. Retry.`, 'err');
+        button.disabled = false;
+      }
+    });
     delegate(box, 'click', '[data-review-approve]', async (event, button) => {
       const id = button.dataset.reviewApprove;
       button.disabled = true;

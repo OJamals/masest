@@ -24,8 +24,11 @@ test("admin dashboard has production shell affordances without inline layout hac
   const html = read("admin.html");
   const js = read("js/admin.js");
 
-  assert.match(html, /body \.adm-hero\s*\{[^}]*padding-top:\s*24px[^}]*padding-bottom:\s*20px/);
-  assert.match(html, /\.adm-hero h1\s*\{[^}]*font-size:\s*clamp\(2rem,\s*4vw,\s*2\.75rem\)/);
+  // The marketing hero was removed: an operator opens straight into the work.
+  // A screen-reader-only h1 keeps the document outline intact.
+  assert.doesNotMatch(html, /class="page-hero adm-hero"/, "admin should not carry a marketing hero");
+  assert.match(html, /<h1 class="sr-only">Operations control room<\/h1>/);
+  assert.match(html, /\.adm-panel-title h2\s*\{[^}]*font-size:\s*clamp\(/);
   assert.match(html, /adm-tabs-wrap/, "admin tab rail should keep its mobile-safe scroll container class");
   assert.match(html, /class="adm-layout"/, "admin app should use a dashboard-style two-column shell");
   assert.match(html, /class="adm-sidebar adm-tabs-wrap"/, "admin sections should live in a sidebar rail");

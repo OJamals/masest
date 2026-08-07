@@ -514,20 +514,22 @@ test("admin panels start compactly without stretched empty control rails", async
           const panel = document.querySelector(`.adm-panel[data-panel="${panelName}"]`);
           const sidebar = document.querySelector(".adm-sidebar");
           const shell = document.querySelector(".adm-shell");
-          const subhead = document.querySelector(".adm-hero .subhead");
+          // The console starts directly under its staff chrome bar (the marketing
+          // hero was removed; there is no subhead to measure from).
+          const chrome = document.querySelector("header.nav");
           const control = panel.querySelector(":scope > .crm-tabs, :scope > .adm-tools");
           const controlRect = control?.getBoundingClientRect();
           const childRects = control ? [...control.children].filter(visible).map((child) => child.getBoundingClientRect()) : [];
           const childLeft = childRects.length ? Math.min(...childRects.map((rect) => rect.left)) : 0;
           const childRight = childRects.length ? Math.max(...childRects.map((rect) => rect.right)) : 0;
           return {
-            shellGap: Math.round(shell.getBoundingClientRect().top - subhead.getBoundingClientRect().bottom),
+            shellGap: Math.round(shell.getBoundingClientRect().top - chrome.getBoundingClientRect().bottom),
             panelTopGap: Math.round(panel.getBoundingClientRect().top - sidebar.getBoundingClientRect().top),
             controlEmptyRail: controlRect ? Math.round(controlRect.width - (childRight - childLeft)) : 0,
           };
         }, hash);
 
-        assert.ok(metrics.shellGap <= 64, `${hash} admin shell leaves ${metrics.shellGap}px after the hero copy`);
+        assert.ok(metrics.shellGap <= 64, `${hash} admin shell leaves ${metrics.shellGap}px after the staff chrome`);
         assert.ok(Math.abs(metrics.panelTopGap) <= 4, `${hash} panel starts ${metrics.panelTopGap}px away from the sidebar top`);
         assert.ok(metrics.controlEmptyRail <= 64, `${hash} control rail leaves ${metrics.controlEmptyRail}px of empty space`);
       }

@@ -26,8 +26,10 @@ test('operational workspaces share the same page-level heading pattern', () => {
 
   for (const [name, next] of sections) {
     const source = panel(name, next);
-    assert.match(source, /adm-card adm-overview-head adm-workspace-head/, `${name} should have a workspace heading`);
-    assert.match(source, /<p class="adm-eyebrow">[^<]+<\/p><h2>[^<]+<\/h2><p class="muted">/, `${name} should explain the workspace`);
+    // Compact heading row, not a stacked header card: each workspace already
+    // carries its own card header below this.
+    assert.match(source, /class="adm-panel-title"/, `${name} should have a workspace heading`);
+    assert.match(source, /<h2>[^<]+<\/h2><p class="muted">/, `${name} should explain the workspace`);
   }
 });
 

@@ -3,11 +3,14 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260806a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260806a';
-import { createSavedViews } from './saved-views.js?v=20260806a';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260806b';
+import { captureDirty, restoreDirty } from './edits.js?v=20260806b';
+import { createSavedViews } from './saved-views.js?v=20260806b';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
+/* Lifecycle view rather than a column value: everything still owed a shipment.
+   Selects the same rows the Overview "Fulfillment queue" number counts. */
+export const NEEDS_FULFILLMENT = 'needs_fulfillment';
 const OPEN_NET_STATUS_OPTIONS = ['net_open', 'cancelled'];
 
 export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats }) {
@@ -107,47 +110,70 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       .join('');
   }
 
-  function orderItemsText(order) {
-    return (order.order_items || [])
-      .map((item) => [
-        item.sku || '',
-        item.product_sku || '',
-        item.name || item.sku || '',
-        item.qty || 1,
-        item.unit_price || 0,
-        item.backordered ? 'yes' : '',
-      ].join(' | '))
-      .join('\n');
+
+  // Manual orders are taken over the phone. They used to be entered as a
+  // pipe-delimited blob ("SKU | Product SKU | Name | Qty | Unit price"), which is
+  // a data format rather than a UI: no validation until submit, no per-field
+  // error, and subtotal/tax/total typed by hand could silently disagree with the
+  // lines. These are structured rows with running totals derived from them.
+  function orderLineRow(item = {}) {
+    return `<div class="adm-order-line-row">
+      <input class="adm-input" data-line="sku" placeholder="SKU" aria-label="Line item SKU" autocomplete="off" spellcheck="false" value="${esc(item.sku || '')}">
+      <input class="adm-input" data-line="product_sku" placeholder="Product SKU" aria-label="Line item product SKU (optional)" autocomplete="off" spellcheck="false" value="${esc(item.product_sku || '')}">
+      <input class="adm-input" data-line="name" placeholder="Name" aria-label="Line item name" autocomplete="off" value="${esc(item.name || '')}">
+      <input class="adm-input" data-line="qty" type="number" min="1" step="1" value="${esc(item.qty ?? 1)}" aria-label="Line item quantity">
+      <input class="adm-input" data-line="unit_price" type="number" min="0" step="0.01" placeholder="Unit price" aria-label="Line item unit price" value="${esc(item.unit_price ?? '')}">
+      <label class="admin-select-all"><input type="checkbox" data-line="backordered" aria-label="Line item backordered"${item.backordered ? ' checked' : ''}> Backordered</label>
+      <button class="btn btn-ghost btn-sm" data-line-remove type="button" aria-label="Remove this line item">Remove</button>
+    </div>`;
   }
 
-  function parseOrderItemLines(raw) {
-    const rows = String(raw || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    if (!rows.length) throw new Error('Add at least one line item.');
-    return rows.map((line) => {
-      const parts = line.split('|').map((part) => part.trim());
-      let sku, product_sku, name, qty, unit_price, backordered;
-      if (parts.length >= 5) {
-        [sku, product_sku, name, qty, unit_price, backordered] = parts;
-      } else if (parts.length === 4) {
-        [sku, name, qty, unit_price] = parts;
-        product_sku = '';
-      } else {
-        throw new Error('Use SKU | Product SKU | Name | Qty | Unit price for each item.');
-      }
-      const nQty = Math.floor(Number(qty));
-      const nPrice = Number(unit_price);
-      if (!sku || !name || !Number.isFinite(nQty) || nQty <= 0 || !Number.isFinite(nPrice) || nPrice < 0) {
-        throw new Error('Each item needs a SKU, name, positive quantity, and valid unit price.');
-      }
+  function orderLineRows(order) {
+    const items = order.order_items || [];
+    return (items.length ? items : [{}]).map(orderLineRow).join('');
+  }
+
+  /* Shared by the create form and the per-order editor so both enforce the same
+     contract on a line item. */
+  function readLinesFrom(container) {
+    const rows = [...(container?.querySelectorAll('.adm-order-line-row') || [])];
+    const items = rows.map((row) => {
+      const pick = (field) => row.querySelector(`[data-line="${field}"]`);
       return {
-        sku,
-        product_sku: product_sku || null,
-        name,
-        qty: nQty,
-        unit_price: nPrice,
-        backordered: /^(y|yes|true|1)$/i.test(backordered || ''),
+        sku: pick('sku')?.value.trim() || '',
+        product_sku: pick('product_sku')?.value.trim() || null,
+        name: pick('name')?.value.trim() || '',
+        qty: Math.floor(Number(pick('qty')?.value)),
+        unit_price: Number(pick('unit_price')?.value),
+        backordered: Boolean(pick('backordered')?.checked),
       };
-    });
+    }).filter((item) => item.sku || item.name || item.unit_price);
+    if (!items.length) throw new Error('Add at least one line item.');
+    for (const item of items) {
+      if (!item.sku || !item.name || !Number.isFinite(item.qty) || item.qty <= 0
+        || !Number.isFinite(item.unit_price) || item.unit_price < 0) {
+        throw new Error('Each line needs a SKU, name, positive quantity, and a valid unit price.');
+      }
+    }
+    return items;
+  }
+
+  /* Subtotal and total are derived from the lines, so they cannot disagree.
+     Deliberately independent of readLinesFrom()'s submit-time validation: the
+     running total has to follow the money fields while a row is still being
+     filled in, not sit at zero until its SKU and name are also present. */
+  function refreshOrderCreateTotals() {
+    const rows = [...($('ordCreateLines')?.querySelectorAll('.adm-order-line-row') || [])];
+    const subtotal = rows.reduce((sum, row) => {
+      const qty = Number(row.querySelector('[data-line="qty"]')?.value);
+      const price = Number(row.querySelector('[data-line="unit_price"]')?.value);
+      if (!Number.isFinite(qty) || !Number.isFinite(price) || qty <= 0 || price < 0) return sum;
+      return sum + (qty * price);
+    }, 0);
+    const tax = Number($('ordCreateTax')?.value) || 0;
+    const fixed = (n) => (Math.round(n * 100) / 100).toFixed(2);
+    if ($('ordCreateSubtotal')) $('ordCreateSubtotal').value = fixed(subtotal);
+    if ($('ordCreateTotal')) $('ordCreateTotal').value = fixed(subtotal + tax);
   }
 
   function parseShippingPackages(raw) {
@@ -197,7 +223,11 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         <label>Tax <input class="adm-input" data-edit-tax="${id}" type="number" min="0" step="0.01" value="${esc(order.tax ?? 0)}"></label>
         <label>Total <input class="adm-input" data-edit-total="${id}" type="number" min="0" step="0.01" value="${esc(order.total ?? order.subtotal ?? '')}"></label>
         <label>Currency <input class="adm-input" data-edit-currency="${id}" value="${esc(order.currency || 'usd')}"></label>
-        <label class="full">Line items <textarea class="adm-textarea adm-order-lines" data-edit-items="${id}">${esc(orderItemsText(order))}</textarea></label>
+        <div class="full adm-order-lines-field">
+          <span class="adm-field-label" id="ordEditLinesLabel-${id}">Line items</span>
+          <div class="adm-order-line-list" data-edit-lines="${id}" role="group" aria-labelledby="ordEditLinesLabel-${id}">${orderLineRows(order)}</div>
+          <button class="btn btn-ghost btn-sm" data-edit-add-line="${id}" type="button"><i class="ph ph-plus" aria-hidden="true"></i> Add line</button>
+        </div>
         <button class="btn btn-primary btn-sm" data-save-order-edit="${id}" type="button">Save changes</button>
         <button class="btn btn-ghost btn-sm adm-order-danger" data-delete-order="${id}" data-capability="order.delete" type="button">Remove order</button>
       </div>
@@ -456,7 +486,14 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       box.innerHTML = admEmpty('ph-package', q ? 'No matching orders' : 'No orders yet', q ? 'No orders match your search.' : 'Orders appear here once customers check out.') + admOrdersPager();
       return;
     }
-    box.innerHTML = `<div class="admin-order-list">${orders.map((order) => {
+    // Accept is the only order action safe to batch — it stamps ownership and
+    // touches no money, stock, or fulfillment state. Status moves stay per-row
+    // because each is guarded by its own transition plan.
+    const bulkBar = `<div class="adm-tools adm-tools-flush" data-capability-scope="order.write">
+      <label class="admin-select-all"><input type="checkbox" id="ordAll" aria-label="Select all orders"> Select all</label>
+      <button class="btn btn-ghost btn-sm" id="ordBulkAccept" type="button">Accept selected</button>
+    </div>`;
+    box.innerHTML = bulkBar + `<div class="admin-order-list">${orders.map((order) => {
       const id = esc(order.id);
       const reference = esc(order.order_number || order.id);
       const items = (order.order_items || [])
@@ -475,15 +512,19 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       // Acceptance is the "a human owns this" marker the queue sorts on; cancellation
       // reverses label + payment + stock + books in one confirmed pass.
       const openStatus = ['paid', 'net_open', 'pending_payment'].includes(order.status);
+      // The one action that moves this row through the queue stays on the surface;
+      // everything else lives behind "Manage order" so the queue stays scannable.
+      const primaryAction = openStatus && !order.accepted_at
+        ? `<button class="btn btn-primary btn-sm" data-accept-order="${id}" data-capability="order.write" type="button">Accept order</button>`
+        : '';
       const lifecycleControls = `
-        ${openStatus && !order.accepted_at ? `<button class="btn btn-primary btn-sm" data-accept-order="${id}" data-capability="order.write" type="button">Accept order</button>` : ''}
         ${order.accepted_at ? `<span class="muted admin-inline-note">accepted ${esc(date(order.accepted_at))}</span>` : ''}
         <a class="btn btn-ghost btn-sm" href="/api/admin/orders?id=${encodeURIComponent(id)}&amp;format=packing_slip" target="_blank" rel="noopener">Packing slip</a>
         ${['cancelled', 'refunded', 'cart'].includes(order.status) ? '' : `<button class="btn btn-ghost btn-sm adm-order-danger" data-cancel-order="${id}" data-capability="order.refund" type="button">Cancel &amp; reverse</button>`}`;
       return `<article class="admin-order-card">
         <div class="admin-order-head">
           <div>
-            <span class="admin-kicker">${reference} · ${esc(date(order.created_at))}</span>
+            <span class="admin-kicker"><label class="admin-select-all"><input type="checkbox" class="ord-check" value="${id}" data-capability="order.write" aria-label="Select order ${reference}"></label> ${reference} · ${esc(date(order.created_at))}</span>
             <h3>${esc(order.companies?.name || order.company_name || order.company_id || 'Guest')}</h3>
           </div>
           <b>${esc(money(order.total ?? order.subtotal, order.currency))}</b>
@@ -494,15 +535,21 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
           ${lifecycleSummary(order)}
           <label><span>Status</span><select class="adm-select" data-order-status="${id}" data-capability="order.write">${orderStatusOptions(order.status, order)}</select></label>
         </div>
-        <div class="admin-order-actions">
+        <div class="admin-order-primary">
           <button class="btn btn-ghost btn-sm" data-order-detail="${id}" type="button">Details</button>
-          ${orderEditor(order)}
-          ${trackingControls(order)}
-          <button class="btn btn-ghost btn-sm" data-save-order="${id}" data-capability="order.write" type="button">Save</button>
-          ${netControls}
-          ${refundControls}
-          ${lifecycleControls}
+          ${primaryAction}
         </div>
+        <details class="adm-order-manage">
+          <summary><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Manage order</summary>
+          <div class="admin-order-actions">
+            ${orderEditor(order)}
+            ${trackingControls(order)}
+            <button class="btn btn-ghost btn-sm" data-save-order="${id}" data-capability="order.write" type="button">Save</button>
+            ${netControls}
+            ${refundControls}
+            ${lifecycleControls}
+          </div>
+        </details>
       </article>`;
     }).join('')}</div>` + admOrdersPager();
     restoreDirty(box, snap);
@@ -531,7 +578,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       tax: $('ordCreateTax')?.value,
       total: $('ordCreateTotal')?.value,
       currency: $('ordCreateCurrency')?.value.trim() || 'usd',
-      items: parseOrderItemLines($('ordCreateItems')?.value),
+      items: readLinesFrom($('ordCreateLines')),
     };
   }
 
@@ -548,7 +595,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       tax: pick('tax')?.value,
       total: pick('total')?.value,
       currency: pick('currency')?.value.trim() || 'usd',
-      items: parseOrderItemLines(pick('items')?.value),
+      items: readLinesFrom(pick('lines')),
     };
   }
 
@@ -680,6 +727,46 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     const createForm = $('ordCreateForm');
     if (createForm && !createForm.dataset.wired) {
       createForm.dataset.wired = '1';
+      const lines = $('ordCreateLines');
+      const addLine = () => { lines?.insertAdjacentHTML('beforeend', orderLineRow()); refreshOrderCreateTotals(); };
+      if (lines && !lines.children.length) addLine();
+      $('ordCreateAddLine')?.addEventListener('click', addLine);
+      createForm.addEventListener('input', refreshOrderCreateTotals);
+      delegate(createForm, 'click', '[data-line-remove]', (event, button) => {
+        // Always leave one row so the form never becomes a dead end.
+        if (lines.querySelectorAll('.adm-order-line-row').length > 1) button.closest('.adm-order-line-row').remove();
+        else button.closest('.adm-order-line-row').querySelectorAll('input').forEach((input) => {
+          if (input.type === 'checkbox') input.checked = false;
+          else input.value = input.dataset.line === 'qty' ? '1' : '';
+        });
+        refreshOrderCreateTotals();
+      });
+
+      // Business picker: staff type a name instead of pasting a UUID.
+      const companySearch = $('ordCreateCompanySearch');
+      const companySelect = $('ordCreateCompany');
+      if (companySearch && companySelect) {
+        let lookupSeq = 0;
+        let lookupTimer;
+        const runLookup = (fn) => { clearTimeout(lookupTimer); lookupTimer = setTimeout(fn, 220); };
+        companySearch.addEventListener('input', () => runLookup(async () => {
+          const term = companySearch.value.trim();
+          const token = ++lookupSeq;
+          if (term.length < 2) {
+            companySelect.innerHTML = '<option value="">No business (guest order)</option>';
+            return;
+          }
+          try {
+            const res = await api(`/api/admin/companies?search=${encodeURIComponent(term)}&limit=20`);
+            if (token !== lookupSeq) return; // a newer keystroke already won
+            const options = (res.companies || [])
+              .map((company) => `<option value="${esc(company.id)}">${esc(company.name)}${company.status === 'approved' ? '' : ` (${esc(company.status)})`}</option>`)
+              .join('');
+            companySelect.innerHTML = `<option value="">No business (guest order)</option>${options}`;
+            if (!options) message('ordCreateStatusText', `No business matches “${term}”.`, '');
+          } catch { /* leave the current options in place */ }
+        }));
+      }
       createForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const button = $('ordCreateSubmit');
@@ -700,6 +787,10 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
           if ($('ordCreatePayment')) $('ordCreatePayment').value = 'net';
           if ($('ordCreateTax')) $('ordCreateTax').value = '0';
           if ($('ordCreateCurrency')) $('ordCreateCurrency').value = 'usd';
+          // form.reset() clears field values but not the rows we appended.
+          if (lines) lines.innerHTML = orderLineRow();
+          if (companySelect) companySelect.innerHTML = '<option value="">No business (guest order)</option>';
+          refreshOrderCreateTotals();
           state.orders = [];
           state.ordersOffset = 0;
           await renderOrders({ refetch: true });
@@ -829,6 +920,43 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       }
     }
 
+    // Line-item rows in the per-order editor. Same markup and reader as the
+    // create form, so both surfaces enforce one contract.
+    delegate(box, 'click', '[data-edit-add-line]', (event, button) => {
+      box.querySelector(`[data-edit-lines="${CSS.escape(button.dataset.editAddLine)}"]`)
+        ?.insertAdjacentHTML('beforeend', orderLineRow());
+    });
+    delegate(box, 'click', '[data-line-remove]', (event, button) => {
+      const list = button.closest('.adm-order-line-list');
+      if (!list) return; // the create form has its own handler
+      if (list.querySelectorAll('.adm-order-line-row').length > 1) button.closest('.adm-order-line-row').remove();
+      else button.closest('.adm-order-line-row').querySelectorAll('input').forEach((input) => {
+        if (input.type === 'checkbox') input.checked = false;
+        else input.value = input.dataset.line === 'qty' ? '1' : '';
+      });
+    });
+    delegate(box, 'change', '#ordAll', (event, all) => {
+      box.querySelectorAll('.ord-check').forEach((check) => { check.checked = all.checked; });
+    });
+    delegate(box, 'click', '#ordBulkAccept', async (event, button) => {
+      const ids = [...box.querySelectorAll('.ord-check:checked')].map((check) => check.value);
+      if (!ids.length) { message('ordStatus', 'Select at least one order.', 'err'); return; }
+      button.disabled = true;
+      try {
+        const result = await api('/api/admin/orders', { method: 'POST', body: { action: 'accept_orders', ids } });
+        // Already-accepted or closed rows are skipped rather than failed, so the
+        // count tells the operator what actually moved.
+        message('ordStatus', result.skipped
+          ? `Accepted ${result.accepted} order(s); ${result.skipped} skipped (already accepted or closed).`
+          : `Accepted ${result.accepted} order(s).`, 'ok');
+        await renderOrders({ refetch: true });
+        await refreshStats?.();
+      } catch (err) {
+        message('ordStatus', err.data?.message || err.data?.error || 'Bulk accept failed. Retry.', 'err');
+      } finally {
+        button.disabled = false;
+      }
+    });
     delegate(box, 'click', '[data-accept-order]', async (event, button) => {
       const id = button.dataset.acceptOrder;
       button.disabled = true;

@@ -60,8 +60,10 @@ test("shared chrome renders decoded, named logos on root and nested routes", asy
     ]) {
       const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
       try {
+        // admin.html is excluded: the staff console renders its own chrome with no
+        // marketing footer, so it has no .foot-logo. Its logo is covered by the
+        // staff-chrome guard in tests/admin-shared-chrome.test.mjs.
         for (const [route, visibleNavLogo] of [
-          ["admin.html", "logo-ink"],
           ["index.html", "logo-grad"],
           ["products/hcr.html", "logo-ink"],
         ]) {
