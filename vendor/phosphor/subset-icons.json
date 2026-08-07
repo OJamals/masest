@@ -1,8 +1,8 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 261,
-  "usedCount": 153,
-  "bufferCount": 108,
+  "count": 260,
+  "usedCount": 151,
+  "bufferCount": 109,
   "icons": [
     {
       "name": "address-book",
@@ -552,7 +552,7 @@
     {
       "name": "gear-six",
       "cp": "E272",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "gift",
@@ -788,11 +788,6 @@
       "name": "mountains",
       "cp": "E7AE",
       "src": "buffer"
-    },
-    {
-      "name": "newspaper",
-      "cp": "E344",
-      "src": "used"
     },
     {
       "name": "note",

@@ -725,7 +725,9 @@
 </head>
 <body class="site-soft-bg">
 <a class="skip-link" href="#main">Skip to content</a>
-<!-- Shared header/footer are injected by chrome.js (loaded via main.js below). -->
+<!-- Staff chrome is injected by js/admin/chrome.js from the admin entrypoint.
+     This page deliberately does not load the storefront main bundle: no
+     storefront nav, cart, or marketing footer on a staff console. -->
 
 <main id="main">
   <h1 class="sr-only">Operations control room</h1>
@@ -774,9 +776,8 @@
             </div>
             <div class="adm-nav-group" role="presentation">
               <span aria-hidden="true">Publishing</span>
-              <button class="adm-tab" role="tab" data-tab="content" type="button"><i class="ph ph-note-pencil" aria-hidden="true"></i> Website content</button>
+              <button class="adm-tab" role="tab" data-tab="content" type="button"><i class="ph ph-note-pencil" aria-hidden="true"></i> Content</button>
               <button class="adm-tab" role="tab" data-tab="reviews" type="button"><i class="ph ph-star" aria-hidden="true"></i> Reviews <span class="pill" id="aBadgeReviews" hidden>0</span></button>
-              <button class="adm-tab" role="tab" data-tab="blog" type="button"><i class="ph ph-newspaper" aria-hidden="true"></i> Blog</button>
               <button class="adm-tab" role="tab" data-tab="newsletter" type="button"><i class="ph ph-envelope-simple" aria-hidden="true"></i> Newsletter</button>
             </div>
             <div class="adm-nav-group" role="presentation">
@@ -997,11 +998,19 @@
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="content">
-        <div id="admContent">Loading…</div>
-      </section>
-
-      <section class="adm-panel" role="tabpanel" data-panel="blog">
-        <div id="admBlog">Loading…</div>
+        <!-- Pages and blog posts were two sidebar tabs driving one editor module,
+             which can only ever have one of them mounted at a time. They are the
+             same job on two content types, so they share one workspace. -->
+        <div class="crm-tabs" id="contentToggle" role="group" aria-label="Content workspaces">
+          <button class="btn btn-ghost btn-sm is-active" type="button" data-content-view="pages" aria-pressed="true">Website content</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-content-view="blog" aria-pressed="false">Blog posts</button>
+        </div>
+        <div data-content-panel="pages">
+          <div id="admContent">Loading…</div>
+        </div>
+        <div data-content-panel="blog" hidden>
+          <div id="admBlog">Loading…</div>
+        </div>
       </section>
 
       <section class="adm-panel" role="tabpanel" data-panel="support-settings">
@@ -1101,6 +1110,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260807a"></script>
+<script type="module" src="js/admin.js?v=20260807b"></script>
 </body>
 </html>

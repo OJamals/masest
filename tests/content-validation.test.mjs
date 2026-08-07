@@ -141,12 +141,24 @@ test("admin shell exposes a native Content tab and panel", () => {
   assert.match(html, /id="admContent"/);
 });
 
-test("admin shell exposes a dedicated Blog tab in Publishing", () => {
+test("pages and blog posts share one Content workspace instead of two tabs", () => {
   const html = readFileSync(new URL("../admin.html", import.meta.url), "utf8");
-  assert.match(html, /data-tab="blog"/);
-  assert.match(html, /data-panel="blog"/);
-  assert.match(html, /id="admBlog"/);
-  assert.match(html, /Publishing[\s\S]*data-tab="blog"[\s\S]*data-tab="newsletter"/);
+  const admin = readFileSync(new URL("../js/admin.js", import.meta.url), "utf8");
+
+  // One sidebar entry, one panel, both editor roots inside it.
+  assert.doesNotMatch(html, /data-tab="blog"/);
+  assert.doesNotMatch(html, /data-panel="blog"/);
+  assert.match(html, /data-content-view="pages"/);
+  assert.match(html, /data-content-view="blog"/);
+  assert.match(html, /data-content-panel="pages"[\s\S]*id="admContent"/);
+  assert.match(html, /data-content-panel="blog"[\s\S]*id="admBlog"/);
+  assert.match(html, /Publishing[\s\S]*data-tab="content"[\s\S]*data-tab="newsletter"/);
+
+  // Legacy #blog deep links still land on the blog sub-view.
+  assert.match(admin, /tab === 'blog'.*state\.contentView = 'blog'.*tab = 'content'/);
+  // The editor mounts one root and clears the other, so a sub-view switch must
+  // re-render rather than unhide — guard that the toggle calls the renderers.
+  assert.match(admin, /renderBlog\(\)\s*:\s*renderContent\(\)/);
 });
 
 test("admin content module is registered with lazy render and wire hooks", () => {
@@ -155,7 +167,7 @@ test("admin content module is registered with lazy render and wire hooks", () =>
 
   assert.match(admin, /import\(\s*'\.\/admin\/content\.js\?v=\d{8}[a-z]'\s*\)/);
   assert.match(admin, /content:\s*async\s*\(\)\s*=>/);
-  assert.match(admin, /options\.tab === 'blog'\s*\?\s*renderBlog\(options\)\s*:\s*renderContent\(options\)/);
+  assert.match(admin, /renderBlog\(options\)\s*:\s*renderContent\(options\)/);
   assert.match(admin, /wireContent\(\)/);
   assert.match(admin, /wireBlog\(\)/);
   assert.match(module, /export function createContentTab/);
