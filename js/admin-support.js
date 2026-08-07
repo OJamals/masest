@@ -16,12 +16,14 @@ const routeSuppressesSupport = () => (
 ) || document.body.classList.contains("support-suppressed");
 
 export function initAdminSupport({ auth, root = "", staff = null } = {}) {
-  if (document.getElementById("adminSupportConsole") || document.getElementById("adminSupportLauncher") || !auth?.api) return;
+  // One console per document. admin.html used to ship its own static drawer +
+  // launcher and this bailed there; both surfaces now mount this same console.
+  if (document.getElementById("adminSupportConsole") || !auth?.api) return null;
 
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/admin-support.css?v=20260711e`;
+    stylesheet.href = `${root}css/admin-support.css?v=20260807a`;
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }
@@ -38,20 +40,19 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
           <div><p>Customer support</p><h2 id="siteSupportTitle">Open chats</h2><span data-support-summary>Loading…</span></div>
           <div class="site-support__header-actions">
             <a href="${root}admin.html#support-settings" aria-label="Customer support settings" title="Customer support settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg></a>
-            <button type="button" aria-label="Close support menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
           </div>
         </header>
         <div class="site-support__threads" aria-label="Open customer chats"></div>
       </div>
-      <div class="site-support__conversation"><header class="site-support__conversation-toolbar"><p>Customer inbox</p><a href="${root}admin.html#support-settings" aria-label="Customer support settings" title="Customer support settings"><i class="ph ph-gear-six" aria-hidden="true"></i></a></header><div class="site-support__conversation-body"><div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div></div></div>
+      <div class="site-support__conversation"><header class="site-support__conversation-toolbar"><p>Customer inbox</p><button type="button" aria-label="Close support menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></header><div class="site-support__conversation-body"><div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div></div></div>
     </section>
-    <button class="site-support__launcher" type="button" aria-label="Open admin support" aria-expanded="false" aria-controls="adminSupportConsole"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H8l-4 3V5Z"/><path d="M8 9h8M8 13h5"/></svg><span>Support</span><b data-support-count hidden>0</b></button>`;
+    <button class="site-support__launcher" type="button" aria-label="Open customer support" aria-expanded="false" aria-controls="adminSupportConsole"><i class="ph ph-lifebuoy" aria-hidden="true"></i><span>Customer support</span><b data-support-count hidden>0</b></button>`;
   document.body.append(shell);
 
   document.querySelectorAll("[data-customer-chat-open]").forEach((link) => {
     link.textContent = "Customer support";
     link.setAttribute("href", "#adminSupportConsole");
-    link.setAttribute("aria-label", "Open admin support");
+    link.setAttribute("aria-label", "Open customer support");
   });
 
   const drawer = shell.querySelector(".site-support__drawer");
@@ -84,7 +85,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   const setOpen = (open, { restoreFocus = true } = {}) => {
     drawer.hidden = !open;
     launcher.setAttribute("aria-expanded", String(open));
-    launcher.setAttribute("aria-label", open ? "Close admin support" : "Open admin support");
+    launcher.setAttribute("aria-label", open ? "Close customer support" : "Open customer support");
     if (open) {
       void setPresence(true);
       void loadThreads();
@@ -199,4 +200,12 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     if (!drawer.hidden && Date.now() - lastPresencePing > PRESENCE_HEARTBEAT_MS) void setPresence(true, { force: true });
   }, POLL_MS);
   void loadThreads();
+
+  // Returned so the admin console can open a specific company thread from the
+  // Accounts tab instead of shipping a second inbox implementation.
+  return {
+    openThread: (companyId) => { setOpen(true); return openThread(companyId); },
+    open: () => setOpen(true),
+    refresh: () => loadThreads(),
+  };
 }

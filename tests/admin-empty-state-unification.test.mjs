@@ -13,9 +13,11 @@ test("admin list empties use the shared admEmpty primitive, not ad-hoc <p class=
   );
   assert.doesNotMatch(pricing, /<p class="muted"[^>]*>No (?:variants|pricing records)/, "pricing should drop hand-rolled empties");
 
-  const threads = read("js/admin/threads.js");
-  assert.match(threads, /admEmpty\('ph-[a-z-]+', 'No conversations'/, "threads should use admEmpty");
-  assert.doesNotMatch(threads, /<p class="muted">No conversations/, "threads should drop the hand-rolled empty");
+  // The inbox moved to the shared js/admin-support.js console (one support UI on
+  // both admin and public surfaces), which ships its own empty state.
+  const support = read("js/admin-support.js");
+  assert.match(support, /site-support__empty/, "support console should render an empty state");
+  assert.doesNotMatch(read("js/admin/threads.js"), /<p class="muted">No conversations/, "threads should not hand-roll an empty");
 
   const coupons = read("js/admin/coupons.js");
   assert.match(coupons, /admEmpty\('ph-[a-z-]+', 'No promo codes yet'/, "coupons should use admEmpty");
@@ -25,12 +27,13 @@ test("admin list empties use the shared admEmpty primitive, not ad-hoc <p class=
 test("tabs that render list empties are wired with admEmpty", () => {
   const admin = read("js/admin.js");
   assert.match(admin, /createPricingTab\(\{[^}]*\badmEmpty\b/, "pricing tab should receive admEmpty");
-  assert.match(admin, /createThreadsTab\(\{[^}]*\badmEmpty\b/, "threads tab should receive admEmpty");
 
   const pricing = read("js/admin/pricing.js");
   assert.match(pricing, /createPricingTab\(\{[^}]*\badmEmpty\b/, "pricing factory should destructure admEmpty");
+  // threads.js delegates the inbox to js/admin-support.js, so it renders no list
+  // of its own and takes no empty-state primitive.
   const threads = read("js/admin/threads.js");
-  assert.match(threads, /createThreadsTab\(\{[^}]*\badmEmpty\b/, "threads factory should destructure admEmpty");
+  assert.doesNotMatch(threads, /admEmpty/, "threads should not render list empties");
 });
 
 test("coupons and low-stock lists show a loading skeleton like sibling tabs", () => {

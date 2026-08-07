@@ -425,4 +425,4 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { loadPricingData } from "./pricing-data.js?v=20260730a";
+import { loadPricingData } from "./pricing-data.js?v=20260807a";

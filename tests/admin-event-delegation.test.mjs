@@ -23,7 +23,6 @@ const TABS = [
   { mod: 'companies', wire: 'wireCompanies', container: 'admCompanies' },
   { mod: 'products', wire: 'wireProducts', container: 'admProducts' },
   { mod: 'quotes', wire: 'wireQuotes', container: 'admQuotes' },
-  { mod: 'threads', wire: 'wireThreads', container: 'admThreads' },
 ];
 
 for (const { mod, wire, container } of TABS) {

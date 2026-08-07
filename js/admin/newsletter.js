@@ -4,15 +4,15 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260806b';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260807a';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260806b';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260806b';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260806b';
+} from './rich-editor.js?v=20260807a';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260807a';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260807a';
 
 const SECTIONS = [
   ['compose', 'Compose'],

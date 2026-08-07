@@ -4,16 +4,44 @@ import test from 'node:test';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('admin keeps a labeled customer-support launcher visible when unread count is empty', () => {
+test('one customer-support console serves admin and public surfaces', () => {
   const html = read('admin.html');
-  const sharedSupport = read('js/admin-support.js');
+  const support = read('js/admin-support.js');
+  const threads = read('js/admin/threads.js');
+  const customerChat = read('js/customer-chat.js');
 
-  assert.match(html, /id="adminSupportLauncher"[^>]*aria-label="Open customer support"/);
-  assert.match(html, /ph-lifebuoy/);
-  assert.match(html, /class="admin-support-launcher__label">Customer support<\/span>/);
-  assert.match(html, /id="adminSupportUnread" class="admin-support-unread" hidden>0<\/span>/);
-  assert.match(html, /\.admin-support-unread\[hidden\] \{ display: none; \}/);
-  assert.match(sharedSupport, /document\.getElementById\("adminSupportLauncher"\)/);
+  // admin.html used to ship its own static drawer + launcher, so staff saw one
+  // support UI on /admin and a different-looking one on every other page.
+  for (const stale of ['adminSupportDrawer', 'adminSupportLauncher', 'admThreads', 'admThreadView']) {
+    assert.doesNotMatch(html, new RegExp(stale), `${stale} should no longer be static markup`);
+  }
+  // The one console injects its own launcher, labelled the same everywhere.
+  assert.match(support, /class="site-support__launcher"[^>]*aria-label="Open customer support"/);
+  assert.match(support, /ph-lifebuoy/);
+  assert.match(support, /<span>Customer support<\/span>/);
+  // Mounted from both entry points, and guarded so a document can only get one.
+  assert.match(threads, /import\('\.\.\/admin-support\.js\?v=\d{8}[a-z]'\)/);
+  assert.match(customerChat, /import\("\.\/admin-support\.js\?v=\d{8}[a-z]"\)/);
+  assert.match(support, /if \(document\.getElementById\("adminSupportConsole"\) \|\| !auth\?\.api\) return null;/);
+  // Buyers still get the chat widget; only staff swap to the console.
+  assert.match(customerChat, /account\?\.can_admin/);
+});
+
+test('support console puts close top-right and settings top-left', () => {
+  const support = read('js/admin-support.js');
+  const css = read('css/admin-support.css');
+
+  // List-pane header owns settings; the conversation toolbar owns close.
+  const listHeader = support.match(/<div class="site-support__header-actions">[\s\S]*?<\/div>/)[0];
+  assert.match(listHeader, /aria-label="Customer support settings"/);
+  assert.doesNotMatch(listHeader, /Close support menu/, 'close should not sit in the list header');
+
+  const toolbar = support.match(/<header class="site-support__conversation-toolbar">[\s\S]*?<\/header>/)[0];
+  assert.match(toolbar, /aria-label="Close support menu"/);
+  assert.doesNotMatch(toolbar, /Customer support settings/, 'the duplicate gear should be gone');
+
+  // The gear was previously hidden here and duplicated in the toolbar.
+  assert.doesNotMatch(css, /\.site-support__header-actions > a \{ display: none; \}/);
 });
 
 test('admin renders its own staff chrome, not the storefront nav', () => {

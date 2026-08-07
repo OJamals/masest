@@ -56,12 +56,12 @@ test('support API persists thread lifecycle and admin message preferences', () =
 
 test('admin inbox surfaces unanswered threads, lifecycle controls, and notification settings', () => {
   const html = read('admin.html');
-  const threads = read('js/admin/threads.js');
+  const threads = read('js/admin-support.js');
   assert.match(html, /id="adminNotifySupportRequests"/);
   assert.match(html, /id="adminNotifyMessages"/);
   assert.match(threads, /unanswered/);
   assert.match(threads, /Mark resolved/);
-  assert.match(threads, /Reopen thread/);
+  assert.match(threads, /Reopen/);
   assert.match(threads, /Escalate/);
   assert.match(threads, /message-settings/);
 });
@@ -78,17 +78,17 @@ test('admin shell does not mount buyer chat, account navigation, or user notific
     assert.doesNotMatch(source, /\/api\/account\//, `${path} must use staff APIs only`);
     assert.doesNotMatch(source, /customer-chat|account-nav|dashboard\.js/, `${path} must not import buyer UI`);
   }
-  const threads = read('js/admin/threads.js');
+  const threads = read('js/admin-support.js');
   assert.match(threads, /\/api\/admin\/messages/);
-  assert.match(threads, /\/api\/admin\/message-settings/);
+  assert.match(read('js/admin/threads.js'), /\/api\/admin\/message-settings/);
 });
 
 test('company message action opens its support thread instead of settings', () => {
   const companies = read('js/admin/companies.js');
-  const threads = read('js/admin/threads.js');
+  const threads = read('js/admin-support.js');
 
   assert.doesNotMatch(companies, /data-company-detail-tab="messages"/);
   assert.match(companies, /data-company-support-thread/);
   assert.match(companies, /openSupportThread\?\.\(company\.id\)/);
-  assert.match(threads, /return \{ renderThreads, wireThreads, openThread \}/);
+  assert.match(read('js/admin/threads.js'), /return \{ renderThreads, wireThreads, openThread \}/);
 });

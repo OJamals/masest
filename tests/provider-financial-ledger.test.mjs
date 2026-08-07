@@ -72,6 +72,6 @@ test('admin label void requires inline reason and explicit confirmation payload'
 test('admin shell cache-busts the release carrying label void and finance evidence', () => {
   const html = read('admin.html');
   const admin = read('js/admin.js');
-  assert.match(html, /js\/admin\.js\?v=20260806b/);
-  assert.match(admin, /\.\/admin\/orders\.js\?v=20260806b/);
+  assert.match(html, /js\/admin\.js\?v=20260807a/);
+  assert.match(admin, /\.\/admin\/orders\.js\?v=20260807a/);
 });

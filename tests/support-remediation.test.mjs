@@ -48,15 +48,21 @@ test('inbound replies preserve buyer identity, reopen threads, honor staff prefs
   assert.doesNotMatch(source, /staffRecipients\(env\)/);
 });
 
-test('admin support drawer has durable controls, live refresh, correct selection, and keyboard close', () => {
-  const source = read('js/admin/threads.js');
-  assert.match(source, /status === 'escalated'/);
-  assert.match(source, /secondaryStatus = status === 'escalated' \? 'open' : 'escalated'/);
-  assert.match(source, /data-capability="admin\.write"/);
-  assert.match(source, /setInterval\([^)]*renderThreads|setInterval\([\s\S]*renderThreads/);
-  assert.match(source, /event\.key === 'Escape'/);
+test('admin support console has durable controls, live refresh, correct selection, and keyboard close', () => {
+  // The inbox now lives in the one shared console rather than a second drawer in
+  // admin.html; these assert the behaviours, not the old expression syntax.
+  const source = read('js/admin-support.js');
+  // Lifecycle: resolve, escalate, and escalate toggles back to open.
+  assert.match(source, /selected\.status === "escalated"/);
+  assert.match(source, /data-status="complete"/);
+  assert.match(source, /data-status="\$\{escalated \? "open" : "escalated"\}"/);
+  // Read-only staff get a notice instead of a reply box.
+  assert.match(source, /const canWrite = staff\?\.role !== "read_only"/);
+  assert.match(source, /read-only access/);
+  assert.match(source, /setInterval\([\s\S]{0,200}loadThreads/);
+  assert.match(source, /event\.key === "Escape"/);
   assert.match(source, /aria-pressed/);
-  assert.match(source, /setDrawer\(false\)[\s\S]*support-settings/);
+  assert.match(source, /admin\.html#support-settings/);
 });
 
 test('customer chat links to full inbox and uses expiring keepalive presence', () => {
