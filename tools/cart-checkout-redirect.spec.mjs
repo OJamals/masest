@@ -64,6 +64,19 @@ async function fillShippingAddress(page) {
   await page.locator("#shippingPostalCode").fill("33601");
 }
 
+// Street address is the longest thing a buyer types here. It is also the only checkout
+// control that sits bare in .checkout-address-control rather than inside a .field, so it
+// does not inherit `width:100%` — without an explicit width it collapses to the UA's
+// default `size=20` (~183px in a 624px column) the moment manual entry is used.
+async function expectAddressInputFillsColumn(page, id) {
+  const box = await page.locator(`#${id}`).evaluate((el) => ({
+    input: el.getBoundingClientRect().width,
+    parent: el.parentElement.getBoundingClientRect().width,
+  }));
+  expect(box.parent).toBeGreaterThan(0);
+  expect(box.input / box.parent).toBeGreaterThan(0.95);
+}
+
 test("Card/ACH checkout posts the cart payload and redirects to the Stripe session url", async ({ page }) => {
   await page.route("**/api/products", (route) => route.fulfill({
     status: 200,
@@ -106,6 +119,7 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
 
   await fillCheckoutContact(page, { email: "buyer@example.com", po: "PO-1042" });
   await fillShippingAddress(page);
+  await expectAddressInputFillsColumn(page, "shippingAddress1");
 
   // Payment stays shut until the address is verified and a rate is chosen.
   const payBtn = page.locator("#checkoutPay");
@@ -196,6 +210,17 @@ test("an approved business gets the same card checkout, not an on-account button
 
   await page.goto(`${BASE_URL}/checkout.html`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("button", { name: /NET terms/i })).toHaveCount(0);
+
+  // Billing carries the same bare address input as shipping, so it needs the same guard.
+  // The real checkbox is visually replaced by .checkout-switch, which swallows the click,
+  // so drive it the way the page does — through its label.
+  await page.locator('label[for="billingSameAsShipping"]').click();
+  await expect(page.locator("#billingSameAsShipping")).not.toBeChecked();
+  const billingManual = page.locator("#billingManualToggle");
+  if (await billingManual.isVisible()) await billingManual.click();
+  await expect(page.locator("#billingAddress1")).toBeVisible();
+  await expectAddressInputFillsColumn(page, "billingAddress1");
+
   // The route to sales lives inside the collapsed "Business purchasing options" disclosure,
   // so match the element — a closed <details> keeps its contents out of the a11y tree.
   await expect(page.locator('#businessOptions a[href="contact.html?type=quote"]')).toHaveCount(1);

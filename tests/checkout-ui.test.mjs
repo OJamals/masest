@@ -97,3 +97,16 @@ test('the requisition form stays collapsed but the quote route does not', () => 
   assert.doesNotMatch(disclosure, /Get formal quote/);
   assert.match(cart, /id="checkoutQuote"/);
 });
+
+// The address line-1 inputs are the only checkout controls that sit bare in
+// .checkout-address-control instead of inside a .field, so they do not inherit the
+// `width:100%` that .field input carries. Without an explicit width they collapse to the
+// UA's default `size=20` — the longest field on the page rendering at ~183px inside a
+// 624px column, on the manual-entry path. tools/cart-checkout-redirect.spec.mjs asserts
+// the rendered width; this catches the rule being dropped without opening a browser.
+test('bare address inputs declare their own width', () => {
+  const style = readFileSync(new URL('css/style.css', root), 'utf8');
+  const block = style.match(/\.checkout-address-control > input \{[^}]*\}/);
+  assert.ok(block, '.checkout-address-control > input must be styled');
+  assert.match(block[0], /width:\s*100%/, 'bare address inputs must fill their column');
+});

@@ -4002,9 +4002,14 @@ body.checkout-flow-page::before { display: none; }
   font-size: .8rem;
   font-weight: 700;
 }
+/* The address line-1 inputs sit bare in .checkout-address-control rather than inside a
+   .field, so they never inherit the `width:100%` that .field input carries. Without it
+   they fall back to the UA's default `size=20` — the longest field on the page rendering
+   at ~183px inside a 624px column, on the manual-entry path of the checkout form. */
 .checkout-flow-page .field input,
 .checkout-flow-page .field select,
 .checkout-address-control > input {
+  width: 100%;
   min-height: 46px;
   padding: 11px 14px;
   border: 1px solid var(--line-strong);
