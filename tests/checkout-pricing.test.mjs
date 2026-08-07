@@ -64,11 +64,12 @@ test("Stripe line amounts are computed from the server price", () => {
   assert.match(CHECKOUT_SESSION, /product\.stripe_price_id/);
 });
 
-test("NET account orders persist the server price and matching line totals", () => {
-  assert.match(SRC, /unit_price:\s*Number\(\s*p\.price\s*\)/,
-    "NET order line unit_price must be the numeric server price");
-  assert.match(SRC, /line_total:\s*Number\(\s*p\.price\s*\)\s*\*\s*qtyBySku\[p\.sku\]/,
-    "NET line_total must be server price * server-normalized qty");
-  assert.match(SRC, /subtotal\s*=\s*sellable\.reduce\([\s\S]*?Number\(p\.price\)\s*\*\s*qtyBySku\[p\.sku\]/,
-    "NET subtotal must sum server price * qty");
+// The endpoint prices card/ACH orders only; it writes no order rows of its own, so there
+// is no app-side unit_price/line_total to pin. The one price it must never trust is the
+// client's — every line is re-priced from product_variants or an accepted quote above.
+test("checkout writes no order lines of its own", () => {
+  assert.doesNotMatch(SRC, /unit_price:\s*Number\(\s*p\.price\s*\)/,
+    "checkout must not build order-item rows in the Worker");
+  assert.doesNotMatch(SRC, /from\(['"]order_items['"]\)\.insert/,
+    "checkout must not insert order items");
 });

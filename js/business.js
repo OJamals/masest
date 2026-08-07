@@ -73,14 +73,16 @@ function renderProfile(data) {
   if (!c) {
     box.innerHTML = `
       <h2>Your business</h2>
-      <p class="muted">Your user account is active. Register your business below to unlock B2B ordering, NET terms, service programs, and QuickBooks invoicing — MASEST reviews and approves each business before those features turn on.</p>`;
+      <p class="muted">Your user account is active. Register your business below to unlock B2B ordering, service programs, and QuickBooks invoicing — MASEST reviews and approves each business before those features turn on.</p>`;
     return;
   }
   const label = STATUS_LABEL[status] || 'Not set up';
+  // NET is never self-serve: online checkout takes card/ACH only, and orders on account are
+  // raised by the account team from an accepted quote. Say so instead of promising an unlock.
   const note = {
     approved: data.can_use_net_terms
-      ? 'Your business is verified. B2B ordering, NET terms, programs, and QuickBooks invoicing are unlocked.'
-      : 'Your business is verified. B2B ordering, programs, and QuickBooks invoicing are unlocked. NET terms are not enabled yet.',
+      ? `Your business is verified. B2B ordering, programs, and QuickBooks invoicing are unlocked. Your account carries NET-${esc(c.net_terms_days || 0)} terms — <a href="contact.html?type=quote">request a quote</a> and your account team places the order on those terms.`
+      : 'Your business is verified. B2B ordering, programs, and QuickBooks invoicing are unlocked. To buy on NET terms, <a href="contact.html?type=quote">request a quote</a> and your account team will arrange them.',
     pending: 'We’re verifying your business — this usually takes 1–2 business days. You’ll get a dashboard notification when it’s approved.',
     rejected: c.rejection_reason ? `We couldn’t verify this business: ${esc(c.rejection_reason)} Update the details below and resubmit.` : 'We couldn’t verify this business yet. Update the details below and resubmit.',
     suspended: 'This account is suspended. Contact your account team to restore access.',
@@ -168,8 +170,10 @@ function renderCompanySetupForm(data) {
   }
   const heading = isCreate ? 'Register your business' : status === 'approved' ? 'Business details' : 'Verification details';
   const submitText = isCreate ? 'Submit for approval' : status === 'rejected' ? 'Update & resubmit' : 'Save business details';
+  // "Requested payment terms" is a request routed to sales, not a self-serve switch —
+  // say so here so the field is never read as unlocking NET checkout.
   const intro = isCreate
-    ? 'Start with the essentials. Add tax and verification details only when they apply.'
+    ? 'Start with the essentials. Add tax and verification details only when they apply. Requested payment terms go to your account team for review.'
     : status === 'approved'
       ? 'Your business is verified. Keep these details current for invoicing and compliance.'
       : 'Keep these details current while we verify your business.';
@@ -333,12 +337,12 @@ async function renderInvoicing(data) {
   if (data.can_checkout !== true) {
     box.innerHTML = `
       <h2>Business invoices</h2>
-      <p class="lead">NET invoicing through QuickBooks unlocks once your business is verified. Card payments are always available in <a href="#payment">Payment methods</a>.</p>`;
+      <p class="lead">Once your business is verified, your account team can place orders on NET terms and bill them through QuickBooks. Card payments are always available in <a href="#payment">Payment methods</a>.</p>`;
     return;
   }
   box.innerHTML = `
     <h2>Business invoices</h2>
-    <p class="lead">Your NET orders are billed through QuickBooks. Track invoices and your credit here; card payments stay in <a href="#payment">Payment methods</a>.</p>
+    <p class="lead">Your NET orders are billed through QuickBooks. Track invoices and your credit here; card payments stay in <a href="#payment">Payment methods</a>. To order on terms, <a href="contact.html?type=quote">request a quote</a>.</p>
     <div id="invSummary" class="biz-inv-summary"><div class="skeleton skeleton-block biz-inv-summary-skeleton"></div></div>
     <div id="invList"><div class="skeleton skeleton-block biz-inv-list-skeleton"></div></div>`;
   let out;

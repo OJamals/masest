@@ -3,8 +3,9 @@
 //        returns a retryable 5xx (so Stripe re-delivers) instead of a 200.
 //   #8 — Duplicate orders: a unique guard on orders.stripe_payment_intent makes the
 //        webhook idempotent under concurrent Stripe delivery (insert conflict -> 200).
-//   #9 — Credit-limit race: NET orders are placed via the complete atomic locking RPC
-//        (place_net_order_v3); missing v3 fails closed with no non-atomic fallback.
+//   #9 — Credit-limit race: the atomic locking RPC (place_net_order_v3) owns the NET
+//        ledger. Self-serve NET checkout is gone, so the public endpoint must place no
+//        NET order and run no credit decision; only the staff quote path reaches the RPC.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -61,17 +62,15 @@ test('isMissingFunctionError is true only for undefined-function error codes', (
   assert.equal(isMissingFunctionError(undefined), false);
 });
 
-test('checkout places NET orders via place_net_order_v3 only', () => {
-  assert.match(CHECKOUT, /\.rpc\(\s*'place_net_order_v3'/, 'must call the complete ledger RPC');
-  assert.doesNotMatch(CHECKOUT, /\.rpc\(\s*'place_net_order'/, 'must never call v1 from the Worker');
+test('checkout places no NET order at all', () => {
+  assert.doesNotMatch(CHECKOUT, /\.rpc\(\s*'place_net_order/, 'the public endpoint must call no NET ledger RPC');
+  assert.doesNotMatch(CHECKOUT, /request_key/, 'NET request-key idempotency belongs to the staff path');
 });
 
-test('checkout has no app-side NET ledger mutation fallback', () => {
-  assert.match(CHECKOUT, /isMissingFunctionError\(/, 'must detect a missing v3 RPC');
-  assert.match(CHECKOUT, /net_order_unavailable/, 'missing v3 must fail closed');
-  assert.doesNotMatch(CHECKOUT, /from\(['"]orders['"]\)\.insert/, 'Worker must not insert NET order headers');
-  assert.doesNotMatch(CHECKOUT, /from\(['"]order_items['"]\)\.insert/, 'Worker must not insert NET order items');
-  assert.doesNotMatch(CHECKOUT, /decrement_variant_stock/, 'Worker must not mutate NET stock');
+test('checkout mutates no order ledger of its own', () => {
+  assert.doesNotMatch(CHECKOUT, /from\(['"]orders['"]\)\.insert/, 'Worker must not insert order headers');
+  assert.doesNotMatch(CHECKOUT, /from\(['"]order_items['"]\)\.insert/, 'Worker must not insert order items');
+  assert.doesNotMatch(CHECKOUT, /decrement_variant_stock/, 'Worker must not mutate stock');
 });
 
 test('checkout no longer leaks the raw order-insert error message', () => {

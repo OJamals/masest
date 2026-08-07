@@ -5,7 +5,6 @@ import { safeUrl } from "./util.js";
 import { normalizeCartLines, normalizeCartQty } from "./cart-shape.js";
 
 const KEY = "masest_cart";
-const NET_REQUEST_KEY = "masest_net_request_v1";
 const QUOTE_KEY = "masest_quote_checkout_v1";
 
 export class CheckoutError extends Error {
@@ -41,41 +40,7 @@ function cartSignature(lines) {
   );
 }
 
-function newRequestKey() {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
-}
-
-function netRequestKey(lines, purchaseOrderNumber) {
-  const cart = JSON.stringify({
-    cart: cartSignature(lines),
-    purchase_order_number: String(purchaseOrderNumber || "").trim(),
-  });
-  try {
-    const stored = JSON.parse(localStorage.getItem(NET_REQUEST_KEY) || "null");
-    if (
-      stored
-      && typeof stored === "object"
-      && typeof stored.key === "string"
-      && stored.key.length > 0
-      && stored.key.length <= 128
-      && stored.cart === cart
-    ) {
-      return stored.key;
-    }
-  } catch {
-    // Replace malformed convenience storage below.
-  }
-
-  const key = newRequestKey();
-  localStorage.setItem(NET_REQUEST_KEY, JSON.stringify({ key, cart }));
-  return key;
-}
-
 function write(cart) {
-  localStorage.removeItem(NET_REQUEST_KEY);
   localStorage.removeItem(QUOTE_KEY);
   localStorage.setItem(KEY, JSON.stringify(cart));
   const detail = { count: count(), items: items() };
@@ -150,8 +115,9 @@ function acceptedQuoteContext(lines) {
   }
 }
 
+// Card/ACH only. Ordering on NET terms is not self-serve — sales raises those orders
+// from an accepted quote, so this never asks /api/checkout for anything but 'pay'.
 export async function checkout({
-  mode = "pay",
   email,
   token,
   purchaseOrderNumber,
@@ -166,7 +132,7 @@ export async function checkout({
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
   const payload = {
-    mode,
+    mode: "pay",
     email,
     purchase_order_number: purchaseOrderNumber,
     shipping_quote_token: shippingQuoteToken || undefined,
@@ -174,7 +140,6 @@ export async function checkout({
   };
   const quote = acceptedQuoteContext(line);
   if (quote) Object.assign(payload, quote);
-  if (mode === "net") payload.request_key = netRequestKey(line, purchaseOrderNumber);
 
   const response = await fetch("/api/checkout", {
     method: "POST",

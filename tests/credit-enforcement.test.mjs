@@ -5,20 +5,22 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (p) => readFileSync(new URL(p, root), "utf8");
 
-test("checkout imports credit helper at the correct depth", () => {
+// Online checkout is card/ACH only. NET orders are raised by staff from an accepted quote
+// (functions/api/admin/quotes.js), so no credit decision may live on the public endpoint —
+// a credit check there would be a self-serve NET path by another name.
+test("checkout runs no credit decision and places no NET order", () => {
   const src = read("functions/api/checkout.js");
-  assert.match(src, /from\s+['"]\.\.\/_lib\/credit\.js['"]/, "checkout.js must import ../_lib/credit.js");
+  assert.doesNotMatch(src, /_lib\/credit\.js/, "checkout.js must not import the credit helper");
+  assert.doesNotMatch(src, /place_net_order/, "checkout.js must not call any NET ledger RPC");
+  assert.doesNotMatch(src, /credit_limit/, "checkout.js must not read or enforce a credit limit");
+  assert.doesNotMatch(src, /from\(['"]orders['"]\)\.insert/, "Worker must not insert order headers");
+  assert.doesNotMatch(src, /from\(['"]order_items['"]\)\.insert/, "Worker must not insert order items");
 });
 
-test("checkout NET branch delegates credit and ledger writes to place_net_order_v3", () => {
+test("checkout refuses an on-account mode instead of charging the card", () => {
   const src = read("functions/api/checkout.js");
-  assert.match(src, /\.rpc\(\s*['"]place_net_order_v3['"]/, "must call the complete NET ledger RPC");
-  assert.match(src, /credit_limit_exceeded/, "must return the credit_limit_exceeded error");
-  assert.match(src, /net_order_unavailable/, "must 503 when the v3 RPC is unavailable");
-  // company select must load credit_limit
-  assert.match(src, /select\('id,status,net_terms_days,credit_limit'\)/, "net company select must include credit_limit");
-  assert.doesNotMatch(src, /from\(['"]orders['"]\)\.insert/, "Worker must not insert NET order headers");
-  assert.doesNotMatch(src, /from\(['"]order_items['"]\)\.insert/, "Worker must not insert NET order items");
+  assert.match(src, /body\.mode\s*!==\s*'pay'/, "any mode other than 'pay' must be rejected outright");
+  assert.match(src, /net_checkout_unavailable/, "the refusal must name the unsupported on-account mode");
 });
 
 test("account/me imports credit helper at the correct depth and returns a credit block", () => {
@@ -36,8 +38,9 @@ test("dashboard renders balance owed + credit available from ACCOUNT.credit", ()
   assert.match(js, /Credit available/, "dashboard must label available credit");
 });
 
-test("cart surfaces a credit_limit_exceeded buyer message", () => {
+test("checkout tells a buyer where on-account ordering actually happens", () => {
   const checkout = read("js/checkout.js");
-  assert.match(checkout, /credit_limit_exceeded/, "checkout must handle the credit_limit_exceeded code");
-  assert.match(checkout, /available credit/i, "checkout message must mention available credit");
+  assert.doesNotMatch(checkout, /credit_limit_exceeded/, "the storefront can no longer receive a credit verdict");
+  assert.match(checkout, /net_checkout_unavailable/, "checkout must map the on-account refusal");
+  assert.match(checkout, /account team/i, "the message must route the buyer to the account team");
 });

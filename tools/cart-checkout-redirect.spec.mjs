@@ -130,12 +130,73 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
 });
 
 
-// There is deliberately no NET-terms test here. b7c20088 removed the storefront's
-// "Place order with NET terms" button when it split cart.html and checkout.html, and that
-// removal is intentional: NET orders are placed through sales, not self-serve. js/checkout.js
-// is the client's only checkout() caller and it always sends mode:'pay'.
+// DECISION ON RECORD: NET-terms checkout stays off the storefront. b7c20088 removed the
+// "Place order with NET terms" button when it split cart.html and checkout.html, and the
+// cleanup pass that followed removed what sat behind it — mode:'net' in
+// functions/api/checkout.js and the request_key builder in js/cart.js are gone, and the
+// dashboard/business copy no longer says NET ordering is "unlocked". On-account orders are
+// raised by sales from an accepted quote (functions/api/admin/quotes.js ->
+// _lib/quote-convert.js netOrderRow()); js/checkout.js is the client's only checkout()
+// caller and the payload hardcodes mode:'pay'.
 //
-// functions/api/checkout.js still implements mode:'net', js/cart.js still builds its
-// request_key, and dashboard.js + business.js still tell approved businesses NET terms are
-// "unlocked" — all of that is now unreachable from the storefront and wants its own cleanup
-// pass. Do not restore a NET case here to chase those; they are server and copy, not UI.
+// So the case below is a negative guard, not a NET flow: it pins that no on-account
+// affordance came back and that the one NET route left is the link to sales. The positive
+// half lives outside the browser — tests/credit-enforcement.test.mjs (the endpoint refuses
+// any non-'pay' mode) and tests/business-net-terms-copy.test.mjs (the copy routes to the
+// quote form). If the decision is ever reversed, all three move together.
+test("an approved business gets the same card checkout, not an on-account button", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.MASEST_SUPABASE_URL = "https://example.supabase.co";
+    window.MASEST_SUPABASE_ANON = "anon";
+  });
+  await page.route("**/vendor/supabase-js.esm.js", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/javascript",
+    body: `
+      export function createClient() {
+        return {
+          auth: {
+            getSession: async () => ({ data: { session: { access_token: "business-token" } } })
+          }
+        };
+      }
+    `,
+  }));
+  await page.route("**/api/account/me", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      email: "buyer@example.com",
+      needs_profile: false,
+      can_use_net_terms: true,
+      company: { status: "approved", net_terms_days: 30 },
+    }),
+  }));
+  await page.route("**/api/products", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [
+        { sku: "crhd", name: "VertKleen CR-HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+      ],
+    }),
+  }));
+  // An approved business must reach Stripe like everyone else, so nothing may post here
+  // before the buyer has earned an enabled #checkoutPay.
+  await page.route("**/api/checkout", (route) => route.fulfill({
+    status: 500, contentType: "application/json", body: JSON.stringify({ error: "checkout must not be reached" }),
+  }));
+
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ crhd: 2 })));
+  await page.reload({ waitUntil: "domcontentloaded" });
+
+  await expect(page.locator(".cart-summary")).toBeVisible();
+  await expect(page.getByRole("button", { name: /NET terms/i })).toHaveCount(0);
+
+  await page.goto(`${BASE_URL}/checkout.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: /NET terms/i })).toHaveCount(0);
+  // The route to sales lives inside the collapsed "Business purchasing options" disclosure,
+  // so match the element — a closed <details> keeps its contents out of the a11y tree.
+  await expect(page.locator('#businessOptions a[href="contact.html?type=quote"]')).toHaveCount(1);
+});

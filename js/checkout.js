@@ -63,7 +63,7 @@ function checkoutError(error) {
     rate_limited: 'Too many shipping calculations. Wait a moment and try again.',
     request_too_large: 'This cart is too large to process here. Request a quote instead.',
     stripe_customer_setup_failed: 'Stripe could not update this account address. Try again.',
-    credit_limit_exceeded: `This order exceeds available credit (${money(error?.data?.available || 0)} remaining). Choose Stripe payment or contact MASEST about account terms.`,
+    net_checkout_unavailable: 'Ordering on account is arranged by your MASEST account team. Request a quote to order on NET terms.',
     stripe_error: 'Stripe could not start payment. Try again.',
   })[code] || 'Checkout could not continue. Review the form and try again.';
 }
@@ -623,7 +623,7 @@ async function boot() {
       }
       const values = formValues(form);
       await checkout({
-        mode: 'pay', email: clean(values.email), token: state.token,
+        email: clean(values.email), token: state.token,
         purchaseOrderNumber: clean(values.purchaseOrderNumber), shippingQuoteToken: rate.token,
       });
     } catch (error) {

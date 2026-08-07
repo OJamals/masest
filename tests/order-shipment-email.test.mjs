@@ -18,7 +18,6 @@ const ADMIN_ORDER_UI = read("js/admin/orders.js");
 test("orders persist buyer email for shipment notifications", () => {
   assert.match(SCHEMA, /customer_email\s+text/i);
   assert.match(SCHEMA, /alter table public\.orders add column if not exists customer_email\s+text/i);
-  assert.match(CHECKOUT, /p_email:\s*user\.email\s*\|\|\s*null/);
   assert.match(ORDER_INTEGRITY,
     /function\s+public\.place_net_order_v2[\s\S]*customer_email[\s\S]*p_email/i);
   // The Stripe paid-order row is built by order-shape.js; the webhook resolves the
@@ -28,7 +27,9 @@ test("orders persist buyer email for shipment notifications", () => {
 });
 
 test("shipping and purchase-order references reach confirmations and order views", () => {
-  assert.match(CHECKOUT, /Purchase order:/);
+  // Checkout is card/ACH only, so it carries the PO into the Stripe session rather than
+  // rendering a confirmation itself — the paid-order email is built in integration-effects.
+  assert.match(CHECKOUT, /purchaseOrderNumber,/);
   assert.match(STRIPE_EFFECTS, /Purchase order:/);
   assert.match(STRIPE_EFFECTS, />Shipping<\/td>/);
   assert.match(ACCOUNT_ORDERS, /currency,purchase_order_number,/);
@@ -48,7 +49,6 @@ test("tracking updates email buyer + company recipients once, deduplicated", () 
 });
 
 test("public order number is used across confirmation, tracking, dashboard, admin, and CSV", () => {
-  assert.match(CHECKOUT, /order_number:\s*order\.order_number/);
   assert.match(STRIPE_EFFECTS, /select\('id,order_number,status,/);
   assert.match(STRIPE_EFFECTS, /orderReference\(order\)/);
   assert.match(ACCOUNT_ORDERS, /select\('id,order_number,status,/);

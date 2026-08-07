@@ -295,153 +295,36 @@ test('paid checkout fails closed before Stripe when shipping rates are not confi
   assert.deepEqual(calls, ['variants.read', 'shipping.read']);
 });
 
-test('NET checkout delegates the complete ledger mutation and PO reference to place_net_order_v3', async () => {
-  const calls = [];
-  const emails = [];
-  const db = checkoutDb(calls);
-  const handler = createCheckoutHandler({
-    adminClient: () => db,
-    tierForRequest: async () => ({ tier: 'retail' }),
-    userFromRequest: async () => ({ user: { id: 'user-1', email: 'buyer@example.com' } }),
-    sendNetOrderConfirmation: async (payload) => { emails.push(payload); },
-  });
-
-  const result = await responseJson(await handler({
-    request: jsonRequest('https://masest.test/api/checkout', {
-      mode: 'net',
-      request_key: 'request-1',
-      purchase_order_number: ' PO-1042 ',
-      cart: [{ sku: 'VK-1', qty: 2 }],
-    }),
-    env: {},
-  }));
-
-  assert.equal(result.status, 201);
-  assert.equal(result.body.order_id, 'order-1');
-  assert.equal(result.body.order_number, 'MST-00000123');
-  assert.equal(result.body.duplicate, false);
-  const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
-  assert.deepEqual(labels, ['rpc.place_net_order_v3', 'variants.read', 'rpc.place_net_order_v3']);
-  const rpcCalls = calls.filter((call) => Array.isArray(call) && call[0] === 'rpc.place_net_order_v3');
-  assert.equal(rpcCalls[0][1].p_probe, true);
-  assert.equal(rpcCalls[0][1].p_purchase_order_number, 'PO-1042');
-  const rpcArgs = rpcCalls[1][1];
-  assert.equal(rpcArgs.p_probe, false);
-  assert.equal(rpcArgs.p_request_key, 'request-1');
-  assert.equal(rpcArgs.p_purchase_order_number, 'PO-1042');
-  assert.deepEqual(rpcArgs.p_items, [{
-    sku: 'VK-1',
-    product_sku: 'VK',
-    name: 'VertKleen - 1 gal',
-    qty: 2,
-    unit_price: 25,
-    line_total: 50,
-  }]);
-  assert.equal(emails.length, 1);
-  assert.equal(emails[0].order.order_number, 'MST-00000123');
-});
-
-test('response-loss retry returns the original NET order before depleted-stock validation', async () => {
-  const calls = [];
-  const emails = [];
-  const db = checkoutDb(calls);
-  const originalFrom = db.from;
-  db.from = (table) => {
-    if (table === 'product_variants') throw new Error('duplicate retry must not re-read catalog stock');
-    return originalFrom(table);
-  };
-  db.rpc = async (name, args) => {
-    calls.push([`rpc.${name}`, args]);
-    assert.equal(args.p_probe, true);
-    return { data: { order_id: 'order-1', duplicate: true, rejected: false }, error: null };
-  };
-  const handler = createCheckoutHandler({
-    adminClient: () => db,
-    tierForRequest: async () => { throw new Error('duplicate retry must not reprice'); },
-    userFromRequest: async () => ({ user: { id: 'user-1', email: 'buyer@example.com' } }),
-    sendNetOrderConfirmation: async (payload) => { emails.push(payload); },
-  });
-
-  const result = await responseJson(await handler({
-    request: jsonRequest('https://masest.test/api/checkout', {
-      mode: 'net',
-      request_key: 'request-1',
-      cart: [{ sku: 'VK-1', qty: 2 }],
-    }),
-    env: {},
-  }));
-
-  assert.equal(result.status, 200);
-  assert.equal(result.body.order_id, 'order-1');
-  assert.equal(result.body.order_number, 'MST-00000123');
-  assert.equal(result.body.duplicate, true);
-  assert.equal(emails.length, 0);
-  assert.deepEqual(calls.map((call) => call[0]), ['rpc.place_net_order_v3']);
-});
-
-test('duplicate NET response returns the original order without another email', async () => {
-  const calls = [];
-  const emails = [];
-  const db = checkoutDb(calls);
-  db.rpc = async (name, args) => {
-    calls.push([`rpc.${name}`, args]);
-    return { data: { order_id: 'order-1', duplicate: true, rejected: false }, error: null };
-  };
-  const handler = createCheckoutHandler({
-    adminClient: () => db,
-    tierForRequest: async () => ({ tier: 'retail' }),
-    userFromRequest: async () => ({ user: { id: 'user-1', email: 'buyer@example.com' } }),
-    sendNetOrderConfirmation: async (payload) => { emails.push(payload); },
-  });
-
-  const result = await responseJson(await handler({
-    request: jsonRequest('https://masest.test/api/checkout', {
-      mode: 'net',
-      request_key: 'request-1',
-      cart: [{ sku: 'VK-1', qty: 2 }],
-    }),
-    env: {},
-  }));
-
-  assert.deepEqual(result, {
-    status: 200,
-    body: {
-      net: true,
-      order_id: 'order-1',
-      order_number: 'MST-00000123',
-      duplicate: true,
-      message: 'Order placed on account. A QuickBooks invoice will follow (NET terms).',
-    },
-  });
-  assert.equal(emails.length, 0);
-});
-
-test('missing place_net_order_v3 fails closed with no older RPC call', async () => {
+// Self-serve NET ordering was removed with the cart/checkout split. A caller that still
+// asks for on-account terms must be refused outright — never silently repriced onto a
+// card, and never allowed to reach the ledger, the catalog, or Stripe.
+test('an on-account checkout request is refused before any DB or Stripe call', async () => {
   const calls = [];
   const db = checkoutDb(calls);
-  db.rpc = async (name, args) => {
-    calls.push([`rpc.${name}`, args]);
-    return { data: null, error: { code: 'PGRST202' } };
-  };
+  db.rpc = async (name) => { throw new Error(`no RPC may run: ${name}`); };
   const handler = createCheckoutHandler({
     adminClient: () => db,
-    tierForRequest: async () => ({ tier: 'retail' }),
+    createStripe: () => { throw new Error('Stripe must not run'); },
+    tierForRequest: async () => { throw new Error('pricing must not run'); },
     userFromRequest: async () => ({ user: { id: 'user-1', email: 'buyer@example.com' } }),
   });
 
-  const result = await responseJson(await handler({
-    request: jsonRequest('https://masest.test/api/checkout', {
-      mode: 'net',
-      request_key: 'request-1',
-      cart: [{ sku: 'VK-1', qty: 2 }],
-    }),
-    env: {},
-  }));
+  for (const mode of ['net', 'invoice', 'NET']) {
+    const result = await responseJson(await handler({
+      request: jsonRequest('https://masest.test/api/checkout', {
+        mode,
+        request_key: 'request-1',
+        purchase_order_number: ' PO-1042 ',
+        cart: [{ sku: 'VK-1', qty: 2 }],
+      }),
+      env: {},
+    }));
 
-  assert.deepEqual(result, { status: 503, body: { error: 'net_order_unavailable' } });
-  assert.deepEqual(calls.map((call) => Array.isArray(call) ? call[0] : call), [
-    'rpc.place_net_order_v3',
-  ]);
+    assert.equal(result.status, 400, `mode '${mode}' must be refused`);
+    assert.equal(result.body.error, 'net_checkout_unavailable');
+    assert.match(result.body.message, /account team/i);
+  }
+  assert.deepEqual(calls, [], 'a refused request must touch nothing');
 });
 
 test('checkout rejects invalid purchase-order numbers before DB or provider calls', async () => {

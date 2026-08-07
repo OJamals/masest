@@ -1,5 +1,7 @@
 // Shared B2B credit logic — single source of truth for a company's open NET balance and
-// available credit. Used by checkout.js (enforcement) and account/me.js (display).
+// available credit. NET orders are raised by staff from an accepted quote (admin/quotes.js),
+// so this is read/settlement only: account/me.js and account/invoices.js display it,
+// admin/orders.js ages and settles it. Online checkout is card/ACH and never touches it.
 //
 // Outstanding = sum of order totals still owed on account (status 'net_open').
 //   'net_paid' = settled (excluded); every other status is not NET-owed (excluded).
@@ -13,9 +15,8 @@ export function round2(n) {
 }
 
 // True when a Supabase RPC failed because the function isn't deployed yet — Postgres
-// undefined_function (42883) or PostgREST's "function not found" (PGRST202). Lets
-// checkout.js prefer the atomic place_net_order RPC but fall back to the in-app credit
-// check when the migration hasn't been applied, so NET checkout never hard-breaks.
+// undefined_function (42883) or PostgREST's "function not found" (PGRST202). Lets an
+// RPC caller tell "migration not applied" apart from a real failure and fail closed.
 export function isMissingFunctionError(error) {
   return error?.code === '42883' || error?.code === 'PGRST202';
 }

@@ -47,33 +47,49 @@ test("cart recovers from corrupt storage and emits updated totals", async () => 
   assert.deepEqual(events.at(-1).items, cart.items());
 });
 
-test("checkout sends normalized line items and clears NET orders", async () => {
+test("checkout sends normalized line items and clears the cart on success", async () => {
   const { store, events } = installBrowserGlobals();
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options });
-    return new Response(JSON.stringify({ net: true, order_id: "ord_123" }), { status: 201 });
+    return new Response(JSON.stringify({ order_id: "ord_123" }), { status: 201 });
   };
 
   const cart = await freshCartModule();
   cart.add("hcr", 2);
   const result = await cart.checkout({
-    mode: "net",
     token: "abc",
     purchaseOrderNumber: "PO-1042",
   });
 
-  assert.deepEqual(result, { net: true, order_id: "ord_123" });
+  assert.deepEqual(result, { order_id: "ord_123" });
   assert.equal(calls[0].url, "/api/checkout");
   assert.equal(calls[0].options.headers.Authorization, "Bearer abc");
   const requestBody = JSON.parse(calls[0].options.body);
   assert.deepEqual(requestBody.cart, [{ sku: "hcr", qty: 2 }]);
-  assert.equal(requestBody.mode, "net");
   assert.equal(requestBody.purchase_order_number, "PO-1042");
-  assert.match(requestBody.request_key, /^[a-zA-Z0-9-]+$/);
   assert.equal(store.get("masest_cart"), "{}");
-  assert.equal(store.has("masest_net_request_v1"), false);
   assert.equal(events.at(-1).count, 0);
+});
+
+// Self-serve NET checkout is gone: on-account orders are raised by staff from an accepted
+// quote. The cart must therefore be structurally incapable of asking for anything else,
+// whatever a caller passes — no mode override, and no NET request-key idempotency.
+test("checkout always asks for card/ACH and never carries a NET request key", async () => {
+  const { store } = installBrowserGlobals();
+  const bodies = [];
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return new Response(JSON.stringify({ order_id: "ord_1" }), { status: 201 });
+  };
+
+  const cart = await freshCartModule();
+  cart.add("hcr", 1);
+  await cart.checkout({ mode: "net", purchaseOrderNumber: "PO-1" });
+
+  assert.equal(bodies[0].mode, "pay", "a caller must not be able to select on-account terms");
+  assert.equal("request_key" in bodies[0], false, "no NET idempotency key may be sent");
+  assert.equal(store.has("masest_net_request_v1"), false, "no NET request key may be stored");
 });
 
 test("accepted quote checkout sends only quote identity and invalidates it on cart changes", async () => {
@@ -81,7 +97,7 @@ test("accepted quote checkout sends only quote identity and invalidates it on ca
   const bodies = [];
   globalThis.fetch = async (_url, options) => {
     bodies.push(JSON.parse(options.body));
-    return new Response(JSON.stringify({ net: true, order_id: "ord_quoted" }), { status: 201 });
+    return new Response(JSON.stringify({ order_id: "ord_quoted" }), { status: 201 });
   };
 
   const cart = await freshCartModule();
@@ -93,7 +109,7 @@ test("accepted quote checkout sends only quote identity and invalidates it on ca
       { sku: "VK-2", qty: 1, unit_price: 999 },
     ],
   });
-  await cart.checkout({ mode: "net" });
+  await cart.checkout();
 
   assert.deepEqual(bodies[0].cart, [
     { sku: "VK-1", qty: 2 },
@@ -113,74 +129,19 @@ test("accepted quote checkout sends only quote identity and invalidates it on ca
     bodies.push(JSON.parse(options.body));
     throw new TypeError("offline");
   };
-  await assert.rejects(() => cart.checkout({ mode: "pay" }), /offline/);
+  await assert.rejects(() => cart.checkout(), /offline/);
   assert.equal(bodies[1].quote_id, undefined);
   assert.equal(bodies[1].quote_order_id, undefined);
 });
 
-test("NET checkout retains one request key across response-loss retries", async () => {
-  const { store } = installBrowserGlobals();
-  const requestKeys = [];
-  let attempts = 0;
-  globalThis.fetch = async (_url, options) => {
-    requestKeys.push(JSON.parse(options.body).request_key);
-    attempts += 1;
-    if (attempts === 1) throw new TypeError("network response lost");
-    return new Response(JSON.stringify({
-      net: true,
-      order_id: "ord_123",
-      duplicate: true
-    }), { status: 200 });
-  };
+test("a failed checkout keeps the cart intact for a retry", async () => {
+  installBrowserGlobals();
+  globalThis.fetch = async () => { throw new TypeError("network response lost"); };
 
   const cart = await freshCartModule();
   cart.add("hcr", 2);
-  await assert.rejects(() => cart.checkout({ mode: "net" }), /network response lost/);
+  await assert.rejects(() => cart.checkout(), /network response lost/);
   assert.equal(cart.count(), 2, "failed response must retain the logical cart");
-  assert.ok(store.get("masest_net_request_v1"), "failed response must retain its request key");
-
-  const result = await cart.checkout({ mode: "net" });
-  assert.equal(result.duplicate, true);
-  assert.equal(requestKeys[0], requestKeys[1]);
-});
-
-test("cart mutation starts a new NET logical attempt", async () => {
-  installBrowserGlobals();
-  const requestKeys = [];
-  globalThis.fetch = async (_url, options) => {
-    requestKeys.push(JSON.parse(options.body).request_key);
-    throw new TypeError("offline");
-  };
-
-  const cart = await freshCartModule();
-  cart.add("hcr", 1);
-  await assert.rejects(() => cart.checkout({ mode: "net" }), /offline/);
-  cart.setQty("hcr", 2);
-  await assert.rejects(() => cart.checkout({ mode: "net" }), /offline/);
-
-  assert.notEqual(requestKeys[0], requestKeys[1]);
-});
-
-test("changing the purchase-order number starts a new NET logical attempt", async () => {
-  installBrowserGlobals();
-  const requestKeys = [];
-  globalThis.fetch = async (_url, options) => {
-    requestKeys.push(JSON.parse(options.body).request_key);
-    throw new TypeError("offline");
-  };
-
-  const cart = await freshCartModule();
-  cart.add("hcr", 1);
-  await assert.rejects(
-    () => cart.checkout({ mode: "net", purchaseOrderNumber: "PO-1" }),
-    /offline/,
-  );
-  await assert.rejects(
-    () => cart.checkout({ mode: "net", purchaseOrderNumber: "PO-2" }),
-    /offline/,
-  );
-
-  assert.notEqual(requestKeys[0], requestKeys[1]);
 });
 
 test("checkout exposes server rejection details for bulk freight messaging", async () => {

@@ -8,8 +8,8 @@ import {
   replaceWithQuote,
 } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
-import { initBusinessHub } from './business.js?v=20260806a';
-import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260806a';
+import { initBusinessHub } from './business.js?v=20260807e';
+import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260807e';
 
 const $ = (id) => document.getElementById(id);
 
@@ -194,7 +194,7 @@ function renderOverviewWorkspace() {
   const netState = ACCOUNT?.can_use_net_terms ? `NET-${c?.net_terms_days || 0}` : 'Not enabled';
   const body = c
     ? 'Procurement, order tracking, account-team messages, and business readiness in one workspace.'
-    : 'Create a business profile to unlock B2B ordering, NET terms, programs, and account-team support.';
+    : 'Create a business profile to unlock B2B ordering, programs, and account-team support.';
   box.innerHTML = `
     <div>
       <p class="dash-eyebrow">User workspace</p>
@@ -214,9 +214,9 @@ async function renderOverview() {
   const banner = $('approvalBanner');
   if (!c) {
     // The "Business setup" steps card is the single setup CTA — only banner when it's absent.
-    banner.innerHTML = ACCOUNT?.setup?.steps?.length ? '' : `<div class="banner info"><i class="ph ph-rocket-launch" aria-hidden="true"></i><span>Your account is ready. <a href="#business">Set up your business</a> to unlock B2B ordering, NET terms, QuickBooks invoicing, and service programs.</span></div>`;
+    banner.innerHTML = ACCOUNT?.setup?.steps?.length ? '' : `<div class="banner info"><i class="ph ph-rocket-launch" aria-hidden="true"></i><span>Your account is ready. <a href="#business">Set up your business</a> to unlock B2B ordering, QuickBooks invoicing, and service programs.</span></div>`;
   } else if (c.status === 'pending') {
-    banner.innerHTML = `<div class="banner info"><i class="ph ph-clock-countdown" aria-hidden="true"></i><span>We’re verifying your business — usually 1–2 business days. B2B ordering, NET terms, and programs unlock once it’s approved.</span></div>`;
+    banner.innerHTML = `<div class="banner info"><i class="ph ph-clock-countdown" aria-hidden="true"></i><span>We’re verifying your business — usually 1–2 business days. B2B ordering and programs unlock once it’s approved.</span></div>`;
   } else if (c.status === 'rejected' || c.status === 'suspended') {
     banner.innerHTML = `<div class="banner warn"><i class="ph ph-warning-circle" aria-hidden="true"></i><span>Your business needs attention. <a href="#business">Review your business details</a> to continue.</span></div>`;
   } else { banner.innerHTML = ''; }
@@ -228,7 +228,7 @@ async function renderOverview() {
     <div class="dash-row"><span>Business</span><b>${esc(c?.name || 'Not set up')}</b></div>
     <div class="dash-row"><span>Verification</span>${c ? statusBadge(c.status || 'pending', bizStatusLabel(c.status)) : '<span class="badge" data-s="pending">Not set up</span>'}</div>
     <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : (c ? 'Under review' : 'Set up business')}</b></div>
-    <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + c?.net_terms_days : 'Not enabled'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
+    <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + esc(c?.net_terms_days) : '<a href="contact.html?type=quote">Request NET terms</a>'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
     <div class="dash-row"><span>Balance owed</span><b>${money(ACCOUNT.credit.net_outstanding, 'usd')}</b></div>
     <div class="dash-row"><span>Credit available</span><b>${money(ACCOUNT.credit.credit_available, 'usd')}</b></div>` : ''}`;
 
