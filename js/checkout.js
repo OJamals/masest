@@ -249,19 +249,37 @@ function fillAddress(prefix, address) {
 }
 
 async function boot() {
-  const [cartModule, autocompleteModule, authModule] = await Promise.all([
+  const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260805c'),
+    import('./address-autocomplete.js?v=20260807e'),
     import('./auth.js?v=20260711w'),
+    import('./staff-surface.js?v=20260807e'),
   ]);
   const { checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;
   const { api, getToken, me } = authModule;
+  const { isStaffAccount, replaceBuyerSurface } = staffModule;
   const cart = items();
   const empty = document.getElementById('checkoutEmpty');
   const shell = document.getElementById('checkoutShell');
   if (!cart.length) { empty.hidden = false; return; }
   shell.hidden = false;
+
+  // Staff do not buy through the storefront — they raise orders in the admin
+  // console, which is why the nav hides their cart. Gated here, before any
+  // listener is wired or catalog fetched, so the rest of boot never runs for
+  // them. After the shell is shown rather than before it, so a signed-in buyer
+  // does not stare at a blank page waiting on /api/account/me; nothing can be
+  // paid in that window anyway, since payment unlocks only once a live shipping
+  // rate has been calculated and selected.
+  const staffAccount = await me().catch(() => null);
+  if (isStaffAccount(staffAccount)) {
+    replaceBuyerSurface(document.getElementById('main'), {
+      title: 'Checkout is a customer surface',
+      body: 'Staff place and edit orders in the admin console, where pricing, terms, and the customer account are all in one place.',
+    });
+    return;
+  }
 
   const form = document.getElementById('checkoutDetails');
   const status = document.getElementById('checkoutStatus');
@@ -536,7 +554,7 @@ async function boot() {
   mountAddress('billing').catch(() => showManualAddress('billing', false));
 
   state.token = await getToken().catch(() => null);
-  const account = await me().catch(() => null);
+  const account = staffAccount; // resolved by the staff gate above; one me() per load
   if (account && !account.needs_profile) {
     const [firstName = '', ...lastName] = clean(account.profile?.full_name || account.full_name).split(/\s+/);
     document.getElementById('firstName').value = firstName;

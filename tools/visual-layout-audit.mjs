@@ -53,7 +53,11 @@ const PUBLIC_STEPS = [
   ["newsletter", "/newsletter.html"],
 ];
 
-const AUTH_STEPS = [
+// Two authenticated audiences, two contexts: the dashboard is a buyer's and the
+// console is staff's. A staff account on dashboard.html renders the staff view
+// (js/staff-surface.js), so auditing these under one fixture would shoot the wrong
+// page for every dashboard-* step.
+const DASHBOARD_STEPS = [
   ["dashboard-overview", "/dashboard.html#overview"],
   ["dashboard-orders", "/dashboard.html#orders"],
   ["dashboard-messages", "/dashboard.html#messages"],
@@ -61,6 +65,9 @@ const AUTH_STEPS = [
   ["dashboard-business", "/dashboard.html#business"],
   ["dashboard-addresses", "/dashboard.html#addresses"],
   ["dashboard-profile", "/dashboard.html#profile"],
+];
+
+const ADMIN_STEPS = [
   ...["overview", "analytics", "finance", "integrations", "orders", "companies", "products"]
     .map((panel) => [`admin-${panel}`, `/admin.html#${panel}`]),
   ["admin-pricing", "/admin.html#pricing"],
@@ -190,7 +197,7 @@ function catalogFixtures() {
   return { products };
 }
 
-function authModule() {
+function authModule({ canAdmin = true } = {}) {
   const now = "2026-07-06T18:30:00Z";
   const productsPayload = catalogFixtures();
   const pricingPayload = pricingFixtures();
@@ -210,8 +217,8 @@ function authModule() {
       can_checkout: true,
       can_use_net_terms: true,
       credit: { net_outstanding: 1840, credit_available: 4160 },
-      staff: { role: "admin" },
-      can_admin: true,
+      staff: canAdmin ? { role: "admin" } : null,
+      can_admin: canAdmin,
     },
     productsPayload,
     pricingPayload,
@@ -420,7 +427,7 @@ async function withServer(fn) {
   }
 }
 
-async function newContext(browser, viewport, authenticated) {
+async function newContext(browser, viewport, authenticated, { canAdmin = true } = {}) {
   const context = await browser.newContext({
     viewport,
     deviceScaleFactor: 1,
@@ -438,7 +445,7 @@ async function newContext(browser, viewport, authenticated) {
   await context.route("**/js/auth.js*", (route) => route.fulfill({
     status: 200,
     contentType: "text/javascript",
-    body: authModule(),
+    body: authModule({ canAdmin }),
   }));
   await context.route("**/api/services", (route) => route.fulfill({
     status: 200,
@@ -745,11 +752,17 @@ async function main() {
         } finally {
           await publicContext.close();
         }
-        const authContext = await newContext(browser, viewport, true);
+        const buyerContext = await newContext(browser, viewport, true, { canAdmin: false });
         try {
-          for (const step of AUTH_STEPS) rows.push(await captureStep(authContext, mode, step, true));
+          for (const step of DASHBOARD_STEPS) rows.push(await captureStep(buyerContext, mode, step, true));
         } finally {
-          await authContext.close();
+          await buyerContext.close();
+        }
+        const staffContext = await newContext(browser, viewport, true, { canAdmin: true });
+        try {
+          for (const step of ADMIN_STEPS) rows.push(await captureStep(staffContext, mode, step, true));
+        } finally {
+          await staffContext.close();
         }
       }
     } finally {

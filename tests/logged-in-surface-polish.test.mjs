@@ -102,7 +102,11 @@ test("visual QA padding contracts cover disclosures and dense admin controls", (
   assert.match(audit, /hasCornerCounterOverflow[\s\S]*\.dash-tab, \.adm-tab/, "visual audit should allow only tab counter pills to extend outside button corners");
   assert.doesNotMatch(audit, /async function captureStep\(browser/, "visual audit should not churn one browser context per page");
   assert.match(audit, /const publicContext = await newContext\(browser, viewport, false\)/, "visual audit should reuse one public context per viewport");
-  assert.match(audit, /const authContext = await newContext\(browser, viewport, true\)/, "visual audit should reuse one authenticated context per viewport");
+  // Two authenticated contexts per viewport, not one per page: the dashboard has to
+  // be shot as a buyer and the console as staff, because staff no longer render the
+  // buyer dashboard at all (js/staff-surface.js).
+  assert.match(audit, /const buyerContext = await newContext\(browser, viewport, true, \{ canAdmin: false \}\)/, "visual audit should shoot the customer dashboard as a buyer");
+  assert.match(audit, /const staffContext = await newContext\(browser, viewport, true, \{ canAdmin: true \}\)/, "visual audit should shoot the admin console as staff");
   assert.match(audit, /await page\.close\(\)/, "each captured page should still be released promptly");
   assert.doesNotMatch(audit, /admin-(?:messages|offers|traffic)/, "visual audit should target current admin panels, not legacy hash aliases");
   assert.match(audit, /\["admin-pricing", "\/admin\.html#pricing"\]/, "visual audit should capture the unified pricing workspace");

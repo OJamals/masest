@@ -114,6 +114,9 @@
   .dash-nav-group > span { color: var(--ink-soft); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 0 10px 4px; }
   .dash-sidebar .dash-tab { width: 100%; justify-content: flex-start; }
   .dash-main { min-width: 0; overflow-anchor: none; }
+  /* Staff keep only Profile & security (js/staff-surface.js), so the section rail
+     is removed and the panel takes the full width instead of the narrow column. */
+  [data-dash-audience="staff"] .dash-layout { grid-template-columns: minmax(0, 1fr); }
   .dash-section-title { font-size: 1.3rem; margin-bottom: 14px; text-wrap: balance; }
   .dash-section-title-lg { font-size: 1.4rem; }
   .dash-section-title-tight { margin-bottom: 0; }
@@ -720,7 +723,7 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/main.js?v=20260807d"></script>
+<script type="module" src="js/main.js?v=20260807e"></script>
 <script src="js/track.js" defer></script>
 <script type="module" src="js/dashboard.js?v=20260807e"></script>
 </body>

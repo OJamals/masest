@@ -6,14 +6,14 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260807d";
-const ADMIN_RELEASE = "20260807d";
-const ADMIN_PAGE_RELEASE = "20260807d";
-const CHROME_RELEASE = "20260807d";
-const ACCOUNT_NAV_RELEASE = "20260807d";
-const CUSTOMER_CHAT_RELEASE = "20260807d";
+const MAIN_RELEASE = "20260807e";
+const ADMIN_RELEASE = "20260807e";
+const ADMIN_PAGE_RELEASE = "20260807e";
+const CHROME_RELEASE = "20260807e";
+const ACCOUNT_NAV_RELEASE = "20260807e";
+const CUSTOMER_CHAT_RELEASE = "20260807e";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
-const CONTENT_RELEASE = "20260807d";
+const CONTENT_RELEASE = "20260807e";
 const STORY_RELEASE = "20260726a";
 // The shared support console sits in both module graphs, so it rides ADMIN_RELEASE.
 const SUPPORT_RELEASE = ADMIN_RELEASE;
@@ -23,7 +23,10 @@ function filesUnder(path) {
   return readdirSync(new URL(path, root), { withFileTypes: true }).flatMap((entry) => {
     const child = `${path}${entry.name}`;
     if (entry.isDirectory()) {
-      if ([".git", "backups", "dist", "node_modules"].includes(entry.name)) return [];
+      // .claude holds agent worktrees and _local a gitignored archive — both are whole
+      // copies of this repo pinned at whatever release they were cut from. Grading them
+      // fails this test on a stale checkout that is not part of the deploy at all.
+      if ([".git", ".claude", "_local", "backups", "dist", "node_modules"].includes(entry.name)) return [];
       return filesUnder(`${child}/`);
     }
     return [child];

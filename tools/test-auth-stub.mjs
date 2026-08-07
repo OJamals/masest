@@ -67,8 +67,15 @@ const reviews = [
   { id: 'rv-1', kind: 'product', sku: 'hcr', rating: 5, title: 'Cut our descaling window in half', body: 'Chiller loop cleared in one pass.', author_name: 'Dana Ruiz', status: 'pending', verified_purchase: true, created_at: '2026-06-20T00:00:00Z' },
 ];
 
-export function authStubModule() {
-  const fixtures = { account, orders, quotes, companies, stats, messages, reviews };
+/* canAdmin selects which product the caller is testing. The admin console needs a
+ * staff account; the customer dashboard, cart, and checkout need a buyer, because
+ * staff now get the staff view on those surfaces (js/staff-surface.js) instead of
+ * the buyer one. Defaults to staff so existing admin callers are unchanged. */
+export function authStubModule({ canAdmin = true } = {}) {
+  const fixtures = {
+    account: { ...account, can_admin: canAdmin, staff: canAdmin ? account.staff : null },
+    orders, quotes, companies, stats, messages, reviews,
+  };
   return `
 const fixtures = ${JSON.stringify(fixtures)};
 const okSession = { access_token: "stub-token", user: { id: "u-1", email: fixtures.account.email } };

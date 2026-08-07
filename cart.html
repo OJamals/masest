@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="css/components.css?v=20260805a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260807d"></script>
+  <script type="module" src="js/main.js?v=20260807e"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -92,6 +92,7 @@
   import { items, remove, setQty } from "./js/cart.js";
   import { api, me, getToken } from "./js/auth.js?v=20260711w";
   import { safeUrl } from "./js/util.js";
+  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260807e";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -345,11 +346,10 @@
     }
   });
   // Account strip: guests get a sign-in/register option (returns to cart); members see their account.
-  async function renderCartAccount() {
+  // Takes the already-resolved snapshot from boot so the page calls me() once.
+  function renderCartAccount(data) {
     const box = document.getElementById("cartAccount");
     if (!box) return;
-    let data = null;
-    try { data = await me(); } catch {}
     if (data && !data.needs_profile) {
       const approved = data.company?.status === "approved";
       canSaveRequisition = Boolean(data.company);
@@ -368,7 +368,20 @@
   catalogReady = isLocalStaticPreview();
   render();
   if (!catalogReady) loadCatalog().finally(() => { catalogReady = true; render(); });
-  renderCartAccount();
+  // One me() for both jobs. Staff run the store rather than shop it — the nav already
+  // hides their cart, and the page has to agree or typing /cart walks straight back
+  // into checkout. Deliberately not awaited before the first render: a signed-in
+  // buyer would then wait on /api/account/me to see lines they already have locally.
+  me().catch(() => null).then((account) => {
+    if (isStaffAccount(account)) {
+      replaceBuyerSurface(document.getElementById("main"), {
+        title: "The cart is a customer surface",
+        body: "Staff raise orders for a customer in the admin console, where their pricing, terms, and account history are already loaded.",
+      });
+      return;
+    }
+    renderCartAccount(account);
+  });
 </script>
 </body>
 </html>

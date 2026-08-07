@@ -71,7 +71,10 @@ async function stubRefreshableSession(page) {
           email: "buyer@example.test",
           profile: { id: "profile-1", full_name: "Hydrated Buyer", role: "admin" },
           company: { id: "company-1", name: "Hydrated Co" },
-          can_admin: true,
+          // A buyer who is a company admin, not platform staff — the profile.role
+          // above is the company role. can_admin would route this to the staff
+          // view, which has no #bizApp for the business target to hydrate.
+          can_admin: false,
           can_checkout: true,
         }),
       });

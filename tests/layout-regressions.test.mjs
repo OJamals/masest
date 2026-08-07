@@ -41,7 +41,11 @@ function productsPayload() {
   };
 }
 
-function authModule() {
+// canAdmin picks which product the page under test is: the admin console needs a
+// staff account, the customer dashboard needs a buyer. They are not interchangeable
+// any more — a staff account on dashboard.html now gets the staff view (one panel,
+// no sidebar), so an admin fixture would quietly stop measuring the buyer layout.
+function authModule({ canAdmin = true } = {}) {
   const fixtures = {
     account: {
       email: "buyer@acmehvac.test",
@@ -55,8 +59,8 @@ function authModule() {
       can_checkout: true,
       can_use_net_terms: true,
       credit: { net_outstanding: 1840, credit_available: 4160 },
-      staff: { role: "admin" },
-      can_admin: true,
+      staff: canAdmin ? { role: "admin" } : null,
+      can_admin: canAdmin,
     },
     productsPayload: productsPayload(),
     orders: [
@@ -148,7 +152,7 @@ async function withServer(fn) {
   }
 }
 
-async function newAuthedPage(browser, viewport) {
+async function newAuthedPage(browser, viewport, { canAdmin = true } = {}) {
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, reducedMotion: "reduce" });
   await context.addInitScript(() => {
     window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
@@ -156,7 +160,7 @@ async function newAuthedPage(browser, viewport) {
     localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
   });
   const page = await context.newPage();
-  await page.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule() }));
+  await page.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule({ canAdmin }) }));
   return { context, page };
 }
 
@@ -340,7 +344,7 @@ test("mobile dashboard navigation shows all account sections without horizontal 
     const browser = await launchTestBrowser();
     try {
       for (const hash of ["overview", "business"]) {
-        const { context, page } = await newAuthedPage(browser, { width: 390, height: 844 });
+        const { context, page } = await newAuthedPage(browser, { width: 390, height: 844 }, { canAdmin: false });
         try {
           await page.goto(`${BASE_URL}/dashboard.html#${hash}`, { waitUntil: "domcontentloaded" });
           await page.waitForSelector(`.dash-panel[data-panel="${hash}"]:not([hidden])`, { timeout: 10000 });
@@ -375,7 +379,7 @@ test("dashboard sidebar scrolls independently for user and business panels", asy
     const browser = await launchTestBrowser();
     try {
       for (const hash of ["overview", "business"]) {
-        const { context, page } = await newAuthedPage(browser, { width: 1280, height: 520 });
+        const { context, page } = await newAuthedPage(browser, { width: 1280, height: 520 }, { canAdmin: false });
         try {
           await page.goto(`${BASE_URL}/dashboard.html#${hash}`, { waitUntil: "domcontentloaded" });
           await page.waitForSelector(`.dash-panel[data-panel="${hash}"]:not([hidden])`, { timeout: 10000 });

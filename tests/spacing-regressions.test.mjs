@@ -40,7 +40,7 @@ function report(violations) {
     .join('\n');
 }
 
-async function auditRoutes(open) {
+async function auditRoutes(open, { canAdmin = true } = {}) {
   const site = await startStaticTestServer(ROOT);
   const browser = await launchTestBrowser();
   const violations = [];
@@ -54,7 +54,7 @@ async function auditRoutes(open) {
       });
       const page = await context.newPage();
       await page.route('**/js/auth.js*', (route) => route.fulfill({
-        status: 200, contentType: 'text/javascript', body: authStubModule(),
+        status: 200, contentType: 'text/javascript', body: authStubModule({ canAdmin }),
       }));
       try {
         for await (const label of open(page, site.baseUrl)) {
@@ -79,7 +79,9 @@ test('public pages keep text, cards, and controls spaced apart', async () => {
       await page.waitForTimeout(700);
       yield route;
     }
-  });
+    // A buyer, not staff: PUBLIC_ROUTES includes cart.html, which serves staff a
+    // notice instead of the cart lines this test exists to measure.
+  }, { canAdmin: false });
   assert.equal(violations.length, 0, `spacing regressions on public pages:\n${report(violations)}`);
 });
 
@@ -102,6 +104,7 @@ test('customer dashboard keeps text, cards, and controls spaced apart', async ()
       await page.waitForTimeout(900);
       yield `dashboard#${tab}`;
     }
-  });
+    // A buyer: a staff account only ever renders the profile panel here.
+  }, { canAdmin: false });
   assert.equal(violations.length, 0, `spacing regressions in the customer dashboard:\n${report(violations)}`);
 });

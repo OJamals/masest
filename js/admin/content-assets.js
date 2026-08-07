@@ -1,6 +1,6 @@
 // CMS asset controls: reusable viewer, optimized upload, and existing-path registration.
-import { assetUrl, prepareImageUpload } from "./site-image-library.js?v=20260807d";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260807d";
+import { assetUrl, prepareImageUpload } from "./site-image-library.js?v=20260807e";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260807e";
 
 export function createContentAssets({ $, api, setStatus, applyChosenAsset }) {
   let assetTargetField = "image";

@@ -10,6 +10,7 @@ import {
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 import { initBusinessHub } from './business.js?v=20260807e';
 import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260807e';
+import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260807e';
 
 const $ = (id) => document.getElementById(id);
 
@@ -1084,7 +1085,10 @@ async function renderPayment() {
 /* ---------- profile ---------- */
 function renderProfile() {
   loaded.profile = true;
-  $('pfCompany').value = ACCOUNT?.company?.name || '';
+  // Company is a buyer concept; the staff view drops that field (and the GDPR
+  // privacy card below), so every lookup here has to tolerate a missing node.
+  const company = $('pfCompany');
+  if (company) company.value = ACCOUNT?.company?.name || '';
   $('pfName').value = ACCOUNT?.profile?.full_name || '';
   $('pfPhone').value = ACCOUNT?.profile?.phone || '';
 }
@@ -1098,7 +1102,7 @@ function wireProfileForm() {
       // Keep the in-memory snapshot and greeting in step with the saved name.
       if (ACCOUNT?.profile) { ACCOUNT.profile.full_name = $('pfName').value.trim(); ACCOUNT.profile.phone = $('pfPhone').value.trim(); }
       const greet = $('dashGreeting');
-      if (greet && ACCOUNT?.profile?.full_name) greet.textContent = `Welcome back, ${ACCOUNT.profile.full_name}.`;
+      if (greet && ACCOUNT?.profile?.full_name) greet.textContent = greetingText();
     } catch { status.textContent = 'Could not save.'; status.dataset.state = 'err'; }
   });
 }
@@ -1126,8 +1130,11 @@ function wireSecurityForm() {
     }
   });
 
-  // GDPR data export — stream the JSON document to a file download.
-  $('dataExportBtn').addEventListener('click', async () => {
+  // GDPR data export — stream the JSON document to a file download. Optional
+  // because the staff view drops the whole Privacy & data card: exporting and
+  // self-deleting are data-subject rights over a buyer account, and a staff
+  // login is closed from the admin Users tab instead.
+  $('dataExportBtn')?.addEventListener('click', async () => {
     const status = $('privacyStatus');
     status.textContent = 'Preparing export…'; status.dataset.state = '';
     try {
@@ -1141,7 +1148,7 @@ function wireSecurityForm() {
   });
 
   // GDPR account deletion — irreversible; double-confirm via the shared dialog (no native confirm()).
-  $('acctDeleteBtn').addEventListener('click', async () => {
+  $('acctDeleteBtn')?.addEventListener('click', async () => {
     const ok = await confirmDialog(
       'Permanently delete your account? Your sign-in and personal details are erased. Order history is kept (anonymized) for tax and accounting records. This cannot be undone.',
       { confirmText: 'Delete account', cancelText: 'Keep account', danger: true },
@@ -1260,6 +1267,56 @@ async function syncNotifBadge() {
   } catch { /* the live poller will retry */ }
 }
 
+/* ---------- staff ----------
+ * Staff run the store; this workspace is a buyer's. The nav already routes them to
+ * the admin console and hides the cart, but dashboard.html is reachable by typing
+ * it, and until this gate existed an admin who did got the whole customer surface —
+ * cart prompts, orders, business verification, NET terms.
+ *
+ * Profile & security is the one section that survives, because it is their login
+ * rather than a buyer feature, and it is exactly where the staff account menu
+ * points. Everything else is removed rather than hidden: hidden tabs still sit in
+ * the tablist's roving focus order, and hidden panels still answer the deep links
+ * (#orders, #business) the gate is meant to close. */
+const STAFF_DASH_TAB = 'profile';
+
+function greetingText() {
+  const name = ACCOUNT?.profile?.full_name;
+  if (isStaffAccount(ACCOUNT)) return `Signed in as staff${name ? ', ' + name : ''}.`;
+  return `Welcome back${name ? ', ' + name : ''}.`;
+}
+
+function bootStaffAccount() {
+  document.body.dataset.dashAudience = 'staff';
+  $('dashApp').hidden = false;
+  $('dashGreeting').textContent = greetingText();
+
+  document.querySelectorAll('.dash-tab').forEach((tab) => { if (tab.dataset.tab !== STAFF_DASH_TAB) tab.remove(); });
+  document.querySelectorAll('.dash-panel').forEach((panel) => { if (panel.dataset.panel !== STAFF_DASH_TAB) panel.remove(); });
+  // One destination left, so the section rail is noise. The layout drops to a
+  // single column through [data-dash-audience="staff"] in dashboard.html.
+  document.querySelector('.dash-sidebar')?.remove();
+  // Company is the buyer's business account, and export/delete are data-subject
+  // rights over one. Neither belongs to a staff login.
+  $('pfCompany')?.closest('.field')?.remove();
+  $('dataExportBtn')?.closest('.dash-card')?.remove();
+
+  const panel = document.querySelector(`.dash-panel[data-panel="${STAFF_DASH_TAB}"]`);
+  panel.hidden = false;
+  panel.prepend(staffSurfaceNotice({
+    title: 'Your work lives in the admin console',
+    body: 'Orders, accounts, messages, and the catalog are all managed there. This page keeps only your own sign-in details.',
+  }));
+
+  // A stale buyer deep link (#orders, #business) must not leave the page showing a
+  // hash for a section that no longer exists.
+  const pinHash = () => { if (location.hash.slice(1) !== STAFF_DASH_TAB) history.replaceState(null, '', '#' + STAFF_DASH_TAB); };
+  pinHash();
+  window.addEventListener('hashchange', pinHash);
+
+  wireProfileForm(); wireSecurityForm(); renderProfile();
+}
+
 /* ---------- boot ---------- */
 async function boot() {
   try { ACCOUNT = await me(); }
@@ -1268,8 +1325,9 @@ async function boot() {
     return;
   }
   if (!ACCOUNT) { $('dashGuest').hidden = false; return; }
+  if (isStaffAccount(ACCOUNT)) { bootStaffAccount(); return; }
   $('dashApp').hidden = false;
-  $('dashGreeting').textContent = `Welcome back${ACCOUNT.profile?.full_name ? ', ' + ACCOUNT.profile.full_name : ''}.`;
+  $('dashGreeting').textContent = greetingText();
   wireTabs(); wireMessageForm(); wireMessageSettings(); wireNotifications(); wireAddressForm(); wireProfileForm(); wireSecurityForm();
   // Route to the deep-linked tab immediately. Overview now lazy-loads through
   // loadTab like every other tab, so a deep link to #orders/#business no longer

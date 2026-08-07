@@ -196,7 +196,9 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
   else actions.insertBefore(mount, burger || null);
 
   // Unread notification badge on the avatar (non-blocking; signed-in full accounts only).
-  if (api && data?.company && !data.needs_profile) {
+  // Not for staff: it counts a buyer's own order and message alerts, and staff have no
+  // Notifications destination to open — theirs is the support console's own inbox.
+  if (api && data?.company && !data.needs_profile && data.can_admin !== true) {
     api('/api/account/notifications').then(({ unread }) => {
       const av = mount.querySelector('.acct-avatar');
       const notifLink = mount.querySelector('[data-account-nav-notifications]');

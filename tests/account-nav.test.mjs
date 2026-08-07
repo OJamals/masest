@@ -87,8 +87,8 @@ test("account dropdown identifies notification badge source", () => {
   assert.match(nav, /data-account-nav-notifications/, "notification menu row should be targetable for unread source count");
   assert.match(nav, /\.acct-menu-count/, "dropdown should style per-row unread counts");
   assert.match(nav, /notifLink\??\.querySelector\(['"]\.acct-menu-count['"]\)/, "unread fetch should update the Notifications row count");
-  assert.match(nav, /if \(api && data\?\.company && !data\.needs_profile\)/,
-    "company-less document requesters must not call company-scoped notifications");
+  assert.match(nav, /if \(api && data\?\.company && !data\.needs_profile && data\.can_admin !== true\)/,
+    "company-less document requesters must not call company-scoped notifications, and staff have no buyer alerts to count");
 });
 
 test("account dropdown only exposes admin console from explicit admin access", () => {
